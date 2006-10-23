@@ -1,0 +1,12 @@
+salut-connection-manager.xml	SalutConnectionManager	ConnectionManager
+salut-connection.xml	SalutConnection	Connection, ConnectionInterfacePresence
+salut-contact-channel.xml	SalutContactChannel	ChannelTypeContactList, ChannelInterfaceGroup
+salut-im-channel.xml	SalutIMChannel	ChannelTypeText
+
+
+
+#salut-muc-channel.xml	SalutMucChannel	ChannelTypeText, ChannelInterfaceGroup, ChannelInterfacePassword, PropertiesInterface
+#salut-media-channel.xml	SalutMediaChannel	ChannelTypeStreamedMedia, ChannelInterfaceGroup, ChannelInterfaceMediaSignalling
+#salut-media-session.xml	SalutMediaSession	MediaSessionHandler
+#salut-media-stream.xml	SalutMediaStream	MediaStreamHandler
+#salut-roomlist-channel.xml	SalutRoomlistChannel	ChannelTypeRoomList
