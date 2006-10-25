@@ -540,6 +540,8 @@ _connection_disconnected(SalutLmConnection *conn, gint state, gpointer userdata)
     if (addrs != NULL) {
       g_array_free(addrs, TRUE);
     }
+    g_object_unref(priv->lm_connection);
+    priv->lm_connection = NULL;
     priv->state = CHANNEL_NOT_CONNECTED;
   }
 }
