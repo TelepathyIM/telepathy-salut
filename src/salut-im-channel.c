@@ -489,6 +489,10 @@ _connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
   int i;
 
   addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
+  if (addrs == NULL) {
+    return;
+  }
+
   i = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conn), A_INDEX)); 
 
   if (addrs->len <= i) {
