@@ -9,6 +9,8 @@ BUILT_SOURCES = \
     salut-im-channel-glue.h \
     salut-im-channel-signals-marshal.h \
     salut-im-channel-signals-marshal.c \
+    salut-lm-connection-signals-marshal.h \
+    salut-lm-connection-signals-marshal.c \
     salut-self-signals-marshal.h \
     salut-self-signals-marshal.c \
     salut-contact-signals-marshal.h \
@@ -58,6 +60,8 @@ CORE_SOURCES = \
     salut-im-manager.h \
     salut-im-channel.c \
     salut-im-channel.h \
+    salut-lm-connection.c \
+    salut-lm-connection.h \
     salut-contact.h \
     salut-contact.c \
     salut-self.h \
@@ -100,6 +104,7 @@ CORE_SOURCES = \
     debug.c \
     debug.h \
     ansi.h \
+    lm-parser.h \
     $(BUILT_SOURCES)
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES)

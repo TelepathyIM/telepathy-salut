@@ -34,6 +34,8 @@
 #include "salut-im-channel-signals-marshal.h"
 #include "salut-im-channel-glue.h"
 
+#include "salut-lm-connection.h"
+
 #include "salut-connection.h"
 #include "salut-contact.h"
 
@@ -42,6 +44,9 @@
 #include "telepathy-helpers.h"
 #include "telepathy-interfaces.h"
 #include "telepathy-errors.h"
+
+#define A_ARRAY "__salut_im_channel_address_array__"
+#define A_INDEX "__salut_im_channel_address_index__"
 
 G_DEFINE_TYPE_WITH_CODE(SalutIMChannel, salut_im_channel, G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE(TP_TYPE_CHANNEL_IFACE, NULL));
@@ -54,6 +59,14 @@ enum {
   CHANNEL_TEXT_SEND_ERROR_PERMISSION_DENIED,
   CHANNEL_TEXT_SEND_ERROR_TOO_LONG
 };
+
+/* Channel state */
+typedef enum {
+  CHANNEL_NOT_CONNECTED = 0, 
+  CHANNEL_CONNECTING,
+  CHANNEL_CONNECTED
+} ChannelState;
+ 
 
 /* signal enum */
 enum {
@@ -90,11 +103,11 @@ struct _SalutIMChannelPrivate
   Handle handle;
   SalutContact *contact;
   SalutConnection *connection;
-  LmConnection *lm_connection;
+  SalutLmConnection *lm_connection;
   /* Outcoming and incoming message queues */
   GQueue *out_queue;
   GQueue *in_queue;
-  gboolean closed;
+  ChannelState state;
 };
 
 #define SALUT_IM_CHANNEL_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_IM_CHANNEL, SalutIMChannelPrivate))
@@ -102,6 +115,8 @@ struct _SalutIMChannelPrivate
 typedef struct _SalutIMChannelMessage SalutIMChannelMessage;
 
 struct _SalutIMChannelMessage {
+  guint id;
+  guint time;
   guint type;
   gchar *text;
 };
@@ -115,8 +130,42 @@ salut_im_channel_message_new(guint type, const gchar *text) {
   return msg;
 }
 
+static SalutIMChannelMessage *
+salut_im_channel_message_new_received(LmMessage *message) {
+  SalutIMChannelMessage *msg;
+  static guint id = 1;
+  LmMessageNode *node;
+  const gchar *type;
+  const gchar *body = "";
+
+  /* FIXME decent id generation */
+  msg = g_new(SalutIMChannelMessage, 1);
+  msg->time = time(NULL);
+  msg->id = id++;
+  lm_message_ref(message);
+
+  node = lm_message_node_get_child(message->node, "body");
+  type = lm_message_node_get_attribute(message->node, "type");
+
+  msg->type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE;
+  if (node) {
+    body = lm_message_node_get_value(node);
+    if (strncmp(body, "/me ", 4) == 0) {
+      msg->type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
+      body += 4;
+    } else if (type != NULL && strcmp("type", "chat") == 0) {
+      msg->type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
+    }
+  }
+  msg->text = g_strdup(body);
+  DEBUG("Received message: %s(%d)", msg->text, msg->type);
+
+  return msg;
+}
+
 static void 
 salut_im_channel_message_free(SalutIMChannelMessage *message) {
+  /* FIXME UGLY!*/
   g_free(message->text);
   g_free(message);
 }
@@ -128,11 +177,12 @@ salut_im_channel_init (SalutIMChannel *obj)
   /* allocate any data required by the object here */
   priv->object_path = NULL;
   priv->contact = NULL;
-  priv->closed = FALSE;
   priv->lm_connection = NULL;
   priv->in_queue = g_queue_new();
   priv->out_queue = g_queue_new();
+  priv->state = CHANNEL_NOT_CONNECTED;
 }
+
 
 static void
 salut_im_channel_get_property (GObject    *object,
@@ -330,14 +380,18 @@ salut_im_channel_dispose (GObject *object)
   SalutIMChannel *self = SALUT_IM_CHANNEL (object);
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
-  DEBUG("Disposing channel for %d %d", priv->handle, priv->dispose_has_run);
   if (priv->dispose_has_run)
     return;
 
   priv->dispose_has_run = TRUE;
 
-  if (!priv->closed) {
-    g_signal_emit(self, signals[CLOSED], 0);
+  if (priv->state != CHANNEL_NOT_CONNECTED) {
+    salut_im_channel_close(self, NULL);
+  }
+
+  if (priv->lm_connection) {
+    g_object_unref(priv->lm_connection);
+    priv->lm_connection = NULL;
   }
 
   handle_unref(priv->connection->handle_repo, TP_HANDLE_TYPE_CONTACT, 
@@ -369,15 +423,6 @@ salut_im_channel_finalize (GObject *object)
 }
 
 static void
-_enqueue_message(SalutIMChannel *self, GQueue *queue, 
-                 guint type, const gchar *text) {
-  SalutIMChannelMessage *msg;
-
-  msg = salut_im_channel_message_new(type, text);
-  g_queue_push_tail(queue, msg);
-}
-
-static void
 _sendout_message(SalutIMChannel * self, guint type, const gchar *text) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   LmMessage *msg;
@@ -405,8 +450,8 @@ _sendout_message(SalutIMChannel * self, guint type, const gchar *text) {
   } else {
     lm_message_node_add_child(msg->node, "body", text);
   }
-
-  if (lm_connection_send(priv->lm_connection, msg, NULL)) {
+  
+  if (salut_lm_connection_send(priv->lm_connection, msg, NULL)) {
     g_signal_emit(self, signals[SENT], 0, time(NULL), type, text);
   } else  {
     g_signal_emit(self, signals[SEND_ERROR], CHANNEL_TEXT_SEND_ERROR_UNKNOWN, 
@@ -415,46 +460,78 @@ _sendout_message(SalutIMChannel * self, guint type, const gchar *text) {
   lm_message_unref(msg);
 }
 
-static gboolean
-_try_connect(SalutIMChannel *self, struct sockaddr_storage *addr) {
+static void
+_flush_queue(SalutIMChannel *self) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  GError *error = NULL;
-  int fd;
-  int ret;
+  SalutIMChannelMessage *msg;
+  /*Connected!, flusch the queue ! */
+  while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
+    _sendout_message(self, msg->type, msg->text);
+    salut_im_channel_message_free(msg);
+  }
+}
 
-  /* we've got a sockaddr, get ourselves a socket and connect */
-  if (getnameinfo((struct sockaddr *)addr, sizeof(struct sockaddr_storage),
-      host, NI_MAXHOST, port, NI_MAXSERV, 
-      NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
-    DEBUG("Trying to connect to %s port %s", host, port);
+static void
+_connection_got_message(SalutLmConnection *conn, 
+                        LmMessage *message, gpointer userdata) {
+  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutIMChannelMessage *m;
+
+  m = salut_im_channel_message_new_received(message);
+  g_queue_push_tail(priv->in_queue, m);
+}
+
+static void
+_connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
+  GArray *addrs;
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  int i;
+
+  addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
+  i = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conn), A_INDEX)); 
+
+  if (addrs->len <= i) {
+    /* Failure */
+    /* FIXME signal this up, probably sendError all queued outgoing stuff */
+    g_array_free(addrs, TRUE);
+    g_object_set_data(G_OBJECT(conn), A_ARRAY, NULL);
+    priv->state = CHANNEL_NOT_CONNECTED;
   } else {
-    DEBUG("Connecting..");
+    salut_contact_address_t *addr;
+    addr = &g_array_index(addrs, salut_contact_address_t, i);
+    g_object_set_data(G_OBJECT(conn), A_INDEX, GINT_TO_POINTER(++i));
+    if (!salut_lm_connection_open_sockaddr(conn, &(addr->address), NULL)) {
+      _connect_to_next(self, conn);
+    }
   }
+}
 
-  fd = socket(addr->ss_family, SOCK_STREAM, 0);
-  if (fd < 0) {
-    DEBUG("Getting socket failed: %s", strerror(errno));
-    return FALSE;
-  } 
+static void
+_connection_connected(SalutLmConnection *conn, gint state, gpointer userdata) {
+  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  GArray *addrs;
+  
+  addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
+  g_array_free(addrs, TRUE);
+  g_object_set_data(G_OBJECT(conn), A_ARRAY, NULL);
 
-  ret = connect(fd, (struct sockaddr *)addr, sizeof(struct sockaddr_storage));
-  if (ret < 0) {
-    DEBUG("Connecting failed: %s", strerror(errno));
-    return FALSE;
+  priv->state = SALUT_LM_CONNECTED;
+  _flush_queue(self);
+}
+
+static void
+_connection_disconnected(SalutLmConnection *conn, gint state, gpointer userdata) {
+  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->state == CHANNEL_CONNECTING) {
+    _connect_to_next(self, conn); 
+  } else  {
+    /* FIXME cleanup */
+    priv->state = CHANNEL_NOT_CONNECTED;
   }
-
-  priv->lm_connection = lm_connection_new_local_from_fd(fd, FALSE);
-  if (!lm_connection_open(priv->lm_connection, NULL, NULL, NULL, &error)) {
-    lm_connection_unref(priv->lm_connection);
-    priv->lm_connection = NULL;
-    DEBUG("lm_connection_open failed: %s", error->message);
-    g_error_free(error);
-    return FALSE;
-  }
-
-  return TRUE;
 }
 
 static void
@@ -462,46 +539,49 @@ _setup_connection(SalutIMChannel *self) {
   /* FIXME do a non-blocking connect */
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GArray *addrs;
-  salut_contact_address_t *addr;
-  int i;
 
-  addrs = salut_contact_get_addresses(priv->contact);
-  for (i = 0; i < addrs->len; i++) {
-    addr = &g_array_index(addrs, salut_contact_address_t, i);
-    if (_try_connect(self, &(addr->address))) {
-      SalutIMChannelMessage *msg;
-      /*Connected!, flusch the queue ! */
-      while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
-        _sendout_message(self, msg->type, msg->text);
-        salut_im_channel_message_free(msg);
-      }
-      goto connected;
-    }
+  DEBUG("Setting up the lm connection...");
+  if (priv->lm_connection == NULL) {
+    priv->lm_connection = salut_lm_connection_new();
+    g_signal_connect(priv->lm_connection, "state_changed::disconnected",
+                     G_CALLBACK(_connection_disconnected), self);
+    g_signal_connect(priv->lm_connection, "state_changed::connected",
+                     G_CALLBACK(_connection_connected), self);
+    g_signal_connect(priv->lm_connection, "message_received::message",
+                     G_CALLBACK(_connection_got_message), self);
   }
 
-connected:
-  g_array_free(addrs, TRUE);
+  g_assert(priv->lm_connection->state == SALUT_LM_DISCONNECTED);
+  priv->state = CHANNEL_CONNECTING;
+  
+  addrs = salut_contact_get_addresses(priv->contact);
+
+  /* FIXME 
+   * Add this with _full so the array is destroyed on object finalisation */
+  g_object_set_data(G_OBJECT(priv->lm_connection), A_ARRAY, addrs);
+  g_object_set_data(G_OBJECT(priv->lm_connection), A_INDEX, GINT_TO_POINTER(0));
+
+  _connect_to_next(self, priv->lm_connection);
 }
 
 static void
 _send_message(SalutIMChannel * self, guint type, const gchar *text) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutIMChannelMessage *msg;
 
-  if (!priv->lm_connection) {
-    _enqueue_message(self, priv->out_queue, type, text);
-    _setup_connection(self);
-    return;
+  switch (priv->state) {
+    case CHANNEL_NOT_CONNECTED:
+      _setup_connection(self);
+      /* fallthrough */
+    case CHANNEL_CONNECTING:
+      msg = salut_im_channel_message_new(type, text);
+      g_queue_push_tail(priv->out_queue, msg);
+      break;
+    case CHANNEL_CONNECTED:
+      /* Connected and the queue is empty, so push it out directly */
+      _sendout_message(self, type, text);
+      break;
   }
-  
-  if (!g_queue_is_empty(priv->out_queue)) {
-    /* Queue isn't empty, so something is still ongoing before it can be
-     * flushed */
-    _enqueue_message(self, priv->out_queue, type, text);
-    return;
-  }
-
-  /* Connected and the queue is empty, so push it out directly */
-  _sendout_message(self, type, text);
 }
 
 /**
@@ -538,7 +618,18 @@ gboolean
 salut_im_channel_close (SalutIMChannel *self, GError **error) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
 
-  priv->closed = TRUE;
+  switch (priv->state) {
+    case CHANNEL_NOT_CONNECTED:
+      /* FIXME return an error ? */
+      break;
+    case CHANNEL_CONNECTING:
+    case CHANNEL_CONNECTED:
+      /* FIXME shout about queued messages ? */
+      salut_lm_connection_close(priv->lm_connection);
+      break;
+  }
+  priv->state = CHANNEL_NOT_CONNECTED;
+
   g_signal_emit(self, signals[CLOSED], 0);
    
   return TRUE;
