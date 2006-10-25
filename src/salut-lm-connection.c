@@ -245,12 +245,23 @@ _send_stream_init(SalutLmConnection *self) {
 
 void
 _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
-/*  SalutLmConnection *self = SALUT_LM_CONNECTION_GET_PRIVATE (data);
+  SalutLmConnection *self = SALUT_LM_CONNECTION_GET_PRIVATE (data);
   SalutLmConnectionPrivate *priv = 
      SALUT_LM_CONNECTION_GET_PRIVATE (connection);
-     */
 
-  DEBUG("Got message\n");
+   if (lm_message_get_type(message) == LM_MESSAGE_TYPE_STREAM) {
+     if (self->state != SALUT_LM_CONNECTING) {
+       _do_disconnect(self);
+       return;
+     }
+     if (priv->incoming) {
+       _send_stream_init(SalutLmConnection *self);
+     }
+     priv->state = SALUT_LM_CONNECTED;
+     g_signal_emit(self, signals[STATE_CHANGED], 
+                g_quark_from_static_string("connected"),
+                self->state);
+   }
 }
 
 static gboolean
