@@ -32,7 +32,7 @@
 #include "salut-lm-connection-signals-marshal.h"
 
 #define XML_STREAM_INIT "<?xml version='1.0' encoding='UTF-8'?>" \
-                        "<streamm:stream xmlns='jabber:client' "\
+                        "<stream:stream xmlns='jabber:client' "\
                         "xmlns:stream='http://etherx.jabber.org/streams'>"
 
 #define DEBUG_FLAG DEBUG_NET
@@ -248,6 +248,7 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
   SalutLmConnection *self = SALUT_LM_CONNECTION(data);
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
 
+   DEBUG("Got message");
    if (lm_message_get_type(message) == LM_MESSAGE_TYPE_STREAM) {
      if (self->state != SALUT_LM_CONNECTING) {
        DEBUG("Got stream initiation on the wrong moment");
