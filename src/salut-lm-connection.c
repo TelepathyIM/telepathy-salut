@@ -43,6 +43,8 @@
 static gboolean
 _channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data);
 
+static void _do_disconnect(SalutLmConnection *self);
+
 G_DEFINE_TYPE(SalutLmConnection, salut_lm_connection, G_TYPE_OBJECT)
 
 /* signal enum */
@@ -144,8 +146,25 @@ salut_lm_connection_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  /* release any references held by the object here */
-  if (priv->channel) {
+  _do_disconnect(self);
+
+  if (G_OBJECT_CLASS (salut_lm_connection_parent_class)->dispose)
+    G_OBJECT_CLASS (salut_lm_connection_parent_class)->dispose (object);
+}
+
+void
+salut_lm_connection_finalize (GObject *object)
+{
+
+  G_OBJECT_CLASS (salut_lm_connection_parent_class)->finalize (object);
+}
+
+static void
+_do_disconnect(SalutLmConnection *self) {
+  SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
+
+  priv->fd = -1;
+  if (priv->channel != NULL) {
     g_source_remove(priv->watch_in);
     if (priv->watch_out) 
       g_source_remove(priv->watch_out);
@@ -160,26 +179,18 @@ salut_lm_connection_dispose (GObject *object)
     priv->parser = NULL;
   }
 
-  if (G_OBJECT_CLASS (salut_lm_connection_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_lm_connection_parent_class)->dispose (object);
-}
-
-void
-salut_lm_connection_finalize (GObject *object)
-{
-  SalutLmConnection *self = SALUT_LM_CONNECTION (object);
-  SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
-
-  /* free any data held directly by the object here */
   if (priv->output_buffer) {
     g_string_free(priv->output_buffer, TRUE);
     priv->output_buffer = NULL;
   }
 
-  G_OBJECT_CLASS (salut_lm_connection_parent_class)->finalize (object);
+  self->state = SALUT_LM_DISCONNECTED;
+  g_signal_emit(self, signals[STATE_CHANGED], 
+                g_quark_from_static_string("disconnected"),
+                self->state);
 }
 
-gboolean
+static gboolean
 _try_write(SalutLmConnection *self, gchar *data, int len, gsize *written) {
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
   GIOStatus status;
@@ -191,7 +202,8 @@ _try_write(SalutLmConnection *self, gchar *data, int len, gsize *written) {
       break;
     case G_IO_STATUS_ERROR:
     case G_IO_STATUS_EOF:
-      DEBUG("FIXME handle error on write problem");
+      DEBUG("Writing chars failed, closing the connection");
+      _do_disconnect(self);
       return FALSE;
       break;
   }
@@ -199,7 +211,7 @@ _try_write(SalutLmConnection *self, gchar *data, int len, gsize *written) {
   return TRUE;
 }
 
-void
+static void
 _writeout(SalutLmConnection *self, gchar *data, gsize len) {
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
   gsize written = 0;
@@ -259,6 +271,8 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
     case G_IO_STATUS_ERROR:
     case G_IO_STATUS_EOF:
       /* FIXME disconnection and tear down the connection */
+      DEBUG("Failed to read from the connection, closing..");
+      _do_disconnect(self);
       return FALSE;
     case G_IO_STATUS_AGAIN:
       break;
@@ -437,7 +451,8 @@ salut_lm_connection_get_address(SalutLmConnection *connection,
 
 void
 salut_lm_connection_close(SalutLmConnection *connection) {
-  ; 
+  DEBUG("Connection close requested");
+  _do_disconnect(connection);
 }
 
 
