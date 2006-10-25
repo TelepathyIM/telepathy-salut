@@ -335,8 +335,7 @@ _avahi_service_resolver_cb(AvahiServiceResolver *resolver,
 
   switch (event) {
     case AVAHI_RESOLVER_FOUND: {
-      /* Double check if this address is always the same */
-      printf("--> %p\n", self); 
+      /* FIXME: Double check if this address is always the same */
       priv->address = *a;
       priv->port = port;
       g_signal_emit(self, signals[FOUND], 0,
