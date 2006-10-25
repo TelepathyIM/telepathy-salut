@@ -497,6 +497,7 @@ _connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
     g_array_free(addrs, TRUE);
     g_object_set_data(G_OBJECT(conn), A_ARRAY, NULL);
     priv->state = CHANNEL_NOT_CONNECTED;
+    DEBUG("All connection attempts failed");
   } else {
     salut_contact_address_t *addr;
     addr = &g_array_index(addrs, salut_contact_address_t, i);
