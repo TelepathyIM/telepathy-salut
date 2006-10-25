@@ -23,6 +23,7 @@ typedef enum
   DEBUG_CONNECTION    = 1 << 8,
   DEBUG_IM            = 1 << 9,
   DEBUG_PERSIST       = 1 << 10,
+  DEBUG_NET           = 1 << 11,
 } DebugFlags;
 
 void debug_set_flags_from_env ();
