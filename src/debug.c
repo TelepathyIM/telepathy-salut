@@ -21,6 +21,7 @@ GDebugKey keys[] = {
   { "net",           DEBUG_NET },
   { "connection",    DEBUG_CONNECTION },
   { "persist",       DEBUG_PERSIST },
+  { "self",          DEBUG_SELF },
   { "all",           ~0 },
   { 0, },
 };
