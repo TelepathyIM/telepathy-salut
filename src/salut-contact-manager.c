@@ -38,6 +38,10 @@
 #include "handle-types.h"
 #include "gintset.h"
 
+#define DEBUG_FLAG DEBUG_CONTACTS
+#include "debug.h"
+
+
 static void salut_contact_manager_factory_iface_init(gpointer *g_iface, 
                                                      gpointer *iface_data);
 static SalutContactChannel *
@@ -250,6 +254,7 @@ browser_removed(SalutAvahiServiceBrowser *browser,
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
   SalutContact *contact = g_hash_table_lookup(priv->contacts, name);
 
+  DEBUG("Browser removed for %s", name);
   if (contact != NULL) {
     salut_contact_remove_service(contact, interface, protocol, 
                                  name, type, domain);

@@ -276,6 +276,19 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   }
 }
 
+static void
+contact_failed_cb(SalutAvahiServiceResolver  *resolver, GError *error, 
+                   gpointer userdata) {
+  SalutContact *self = SALUT_CONTACT (userdata);
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  priv->resolvers = g_list_remove(priv->resolvers, resolver);
+  g_object_unref(resolver);
+  if (g_list_length(priv->resolvers) == 0 && priv->found) {
+    g_signal_emit(self, signals[LOST], 0);
+  }
+}
+
 void
 salut_contact_add_service(SalutContact *contact, 
                           AvahiIfIndex interface, AvahiProtocol protocol,
@@ -283,7 +296,7 @@ salut_contact_add_service(SalutContact *contact,
                           const char *domain) {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
   SalutAvahiServiceResolver *resolver;
-  resolver =  find_resolver(contact, interface, protocol, name, type, domain);
+  resolver = find_resolver(contact, interface, protocol, name, type, domain);
 
   if (resolver) 
     return;
@@ -293,6 +306,7 @@ salut_contact_add_service(SalutContact *contact,
                                                    name, type, domain, 
                                                    protocol, 0);
   g_signal_connect(resolver, "found", G_CALLBACK(contact_resolved_cb), contact);
+  g_signal_connect(resolver, "failure", G_CALLBACK(contact_failed_cb), contact);
   if (!salut_avahi_service_resolver_attach(resolver, priv->client, NULL)) {
     g_warning("Failed to attach resolver");
   }
