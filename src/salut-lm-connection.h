@@ -66,6 +66,13 @@ GType salut_lm_connection_get_type(void);
 SalutLmConnection *
 salut_lm_connection_new(void);
 
+/* FIXME ugly unsymmetrica abi between open and _from */
+SalutLmConnection *
+salut_lm_connection_new_from_fd(int fd);
+
+void
+salut_lm_connection_fd_start(SalutLmConnection *connection);
+
 void
 salut_lm_connection_set_incoming(SalutLmConnection *connetion,
                                  gboolean incoming);
@@ -79,6 +86,11 @@ gboolean
 salut_lm_connection_send(SalutLmConnection *connection,
                          LmMessage *message,
                          GError **error);
+
+gboolean
+salut_lm_connection_get_address(SalutLmConnection *connection, 
+                                struct sockaddr_storage *addr,
+                                socklen_t *len);
 
 void
 salut_lm_connection_close(SalutLmConnection *connection);

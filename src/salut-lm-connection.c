@@ -34,10 +34,14 @@
 #define XML_STREAM_INIT "<?xml version='1.0' encoding='UTF-8'?>" \
                         "<streamm:stream xmlns='jabber:client' "\
                         "xmlns:stream='http://etherx.jabber.org/streams'>"
+
 #define DEBUG_FLAG DEBUG_NET
 #include <debug.h>
 
 #define BUFSIZE 1024
+
+static gboolean
+_channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data);
 
 G_DEFINE_TYPE(SalutLmConnection, salut_lm_connection, G_TYPE_OBJECT)
 
@@ -64,6 +68,7 @@ struct _SalutLmConnectionPrivate
   guint watch_in;
   guint watch_out;
   guint watch_err;
+  int fd;
   GString *output_buffer;
 };
 
@@ -78,6 +83,10 @@ salut_lm_connection_init (SalutLmConnection *self)
   priv->incoming = FALSE;
   priv->channel = NULL;
   priv->output_buffer = NULL;
+  priv->watch_in = 0;
+  priv->watch_out = 0;
+  priv->watch_err = 0;
+  priv->fd = -1;
 }
 
 static void salut_lm_connection_dispose (GObject *object);
@@ -138,7 +147,8 @@ salut_lm_connection_dispose (GObject *object)
   /* release any references held by the object here */
   if (priv->channel) {
     g_source_remove(priv->watch_in);
-    g_source_remove(priv->watch_out);
+    if (priv->watch_out) 
+      g_source_remove(priv->watch_out);
     g_source_remove(priv->watch_err);
     g_io_channel_shutdown(priv->channel, FALSE, NULL);
     g_io_channel_unref(priv->channel);
@@ -209,6 +219,10 @@ _writeout(SalutLmConnection *self, gchar *data, gsize len) {
   } else {
     priv->output_buffer = g_string_new_len(data + written, len - written);
   }
+  if (!priv->watch_out) {
+    priv->watch_out = 
+      g_io_add_watch(priv->channel, G_IO_OUT, _channel_io_out, self);
+  }
 }
 
 void
@@ -226,7 +240,7 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
   DEBUG("Got message\n");
 }
 
-gboolean
+static gboolean
 _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   SalutLmConnection *self = SALUT_LM_CONNECTION (data);
   SalutLmConnectionPrivate *priv = 
@@ -252,7 +266,7 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   return TRUE;
 }
 
-gboolean
+static gboolean
 _channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data) {
   SalutLmConnection *self = SALUT_LM_CONNECTION (data);
   SalutLmConnectionPrivate *priv = 
@@ -267,20 +281,57 @@ _channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data) {
   if (written > 0 ) {
     priv->output_buffer = g_string_erase(priv->output_buffer, 0, written);
   }
+  if (priv->output_buffer->len == 0) {
+    priv->watch_out = 0;
+    return FALSE;
+  }
+
   return TRUE;
 }
 
-gboolean
+static gboolean
 _channel_io_err(GIOChannel *source, GIOCondition condition, gpointer data) {
   /* Either _HUP or _ERR */
   DEBUG("ERR");
   return TRUE;
 }
 
+static void
+_setup_connection(SalutLmConnection *self, int fd) {
+  /* We did make the tcp connection, so no setup everything */
+  SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
+  fcntl(fd, F_SETFL, O_NONBLOCK);
+
+  priv->channel = g_io_channel_unix_new(fd);
+  g_io_channel_set_close_on_unref(priv->channel, TRUE);
+  g_io_channel_set_encoding(priv->channel, NULL, NULL);
+  g_io_channel_set_buffered(priv->channel, FALSE);
+
+  priv->watch_in = 
+    g_io_add_watch(priv->channel, G_IO_IN, _channel_io_in, self);
+  priv->watch_err = 
+    g_io_add_watch(priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, self);
+
+  if (!priv->incoming) {
+    _send_stream_init(self);
+  }
+}
+
 
 SalutLmConnection *
 salut_lm_connection_new(void) {
   return g_object_new(SALUT_TYPE_LM_CONNECTION, NULL);
+}
+
+SalutLmConnection *
+salut_lm_connection_new_from_fd(int fd) {
+  SalutLmConnection *self = salut_lm_connection_new();
+  SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
+
+  priv->incoming = TRUE;
+  priv->fd = fd;
+
+  return self;
 }
 
 gboolean
@@ -328,28 +379,12 @@ salut_lm_connection_open_sockaddr(SalutLmConnection *connection,
   }
 
   connection->state = SALUT_LM_CONNECTING;
+  _setup_connection(connection, fd);
+  priv->fd = fd;
+
   g_signal_emit(connection, signals[STATE_CHANGED], 
                 g_quark_from_static_string("connecting"),
                 connection->state);
-
-  /* We did make the tcp connection, so no setup everything */
-  fcntl(fd, F_SETFL, O_NONBLOCK);
-
-  priv->channel = g_io_channel_unix_new(fd);
-  g_io_channel_set_close_on_unref(priv->channel, TRUE);
-  g_io_channel_set_encoding(priv->channel, NULL, NULL);
-  g_io_channel_set_buffered(priv->channel, FALSE);
-
-  priv->watch_in = 
-    g_io_add_watch(priv->channel, G_IO_IN, _channel_io_in, connection);
-  priv->watch_out = 
-    g_io_add_watch(priv->channel, G_IO_OUT, _channel_io_in, connection);
-  priv->watch_err = 
-    g_io_add_watch(priv->channel, G_IO_ERR|G_IO_HUP, 
-                   _channel_io_err, connection);
-
-  _send_stream_init(connection);
-
 
   priv->parser = lm_parser_new(_message_parsed, connection, NULL);
   return TRUE;
@@ -376,6 +411,28 @@ salut_lm_connection_set_incoming(SalutLmConnection *connection,
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (connection);
   g_assert(connection->state == SALUT_LM_DISCONNECTED);
   priv->incoming = incoming;
+}
+
+void
+salut_lm_connection_fd_start(SalutLmConnection *connection) {
+   SalutLmConnectionPrivate *priv = 
+     SALUT_LM_CONNECTION_GET_PRIVATE (connection);
+
+  g_assert(priv->fd >= 0);
+  g_assert(priv->channel == NULL);
+
+  _setup_connection(connection, priv->fd);
+}
+
+gboolean
+salut_lm_connection_get_address(SalutLmConnection *connection, 
+                                struct sockaddr_storage *addr,
+                                socklen_t *len) {
+  SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (connection); 
+  g_assert(priv->fd >= 0);
+  g_assert(*len == sizeof(struct sockaddr_storage));
+
+  return (getpeername(priv->fd, (struct sockaddr *) addr, len) == 0);
 }
 
 void
