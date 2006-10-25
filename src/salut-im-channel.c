@@ -525,15 +525,30 @@ static void
 _connection_disconnected(SalutLmConnection *conn, gint state, gpointer userdata) {
   SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  GArray *addrs;
 
   if (priv->state == CHANNEL_CONNECTING) {
     _connect_to_next(self, conn); 
   } else  {
     /* FIXME cleanup */
+    addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
+    if (addrs != NULL) {
+      g_array_free(addrs, TRUE);
+    }
     priv->state = CHANNEL_NOT_CONNECTED;
   }
 }
 
+static void
+_attach_callbacks_to_connection(SalutIMChannel *self) {
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  g_signal_connect(priv->lm_connection, "state_changed::disconnected",
+                   G_CALLBACK(_connection_disconnected), self);
+  g_signal_connect(priv->lm_connection, "state_changed::connected",
+                   G_CALLBACK(_connection_connected), self);
+  g_signal_connect(priv->lm_connection, "message_received::message",
+                   G_CALLBACK(_connection_got_message), self);
+}
 static void
 _setup_connection(SalutIMChannel *self) {
   /* FIXME do a non-blocking connect */
@@ -543,12 +558,7 @@ _setup_connection(SalutIMChannel *self) {
   DEBUG("Setting up the lm connection...");
   if (priv->lm_connection == NULL) {
     priv->lm_connection = salut_lm_connection_new();
-    g_signal_connect(priv->lm_connection, "state_changed::disconnected",
-                     G_CALLBACK(_connection_disconnected), self);
-    g_signal_connect(priv->lm_connection, "state_changed::connected",
-                     G_CALLBACK(_connection_connected), self);
-    g_signal_connect(priv->lm_connection, "message_received::message",
-                     G_CALLBACK(_connection_got_message), self);
+    _attach_callbacks_to_connection(self);
   }
 
   g_assert(priv->lm_connection->state == SALUT_LM_DISCONNECTED);
@@ -582,6 +592,24 @@ _send_message(SalutIMChannel * self, guint type, const gchar *text) {
       _sendout_message(self, type, text);
       break;
   }
+}
+
+void
+salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan); 
+  /* FIXME if we already have a connection, we throw this one out..
+   * Which can be not quite what the other side expects.. And strange things
+   * can happen when two * sides try to initiate at the same time */
+  if (priv->lm_connection != NULL) {
+    g_object_unref(conn);
+    DEBUG("Already had a connection for: %s", priv->contact->name);
+    return;
+  }
+  DEBUG("New connection for: %s", priv->contact->name);
+  priv->lm_connection = conn;
+  _attach_callbacks_to_connection(chan);
+  priv->state = CHANNEL_CONNECTING;
+  salut_lm_connection_fd_start(conn);
 }
 
 /**
@@ -618,6 +646,7 @@ gboolean
 salut_im_channel_close (SalutIMChannel *self, GError **error) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
 
+  priv->state = CHANNEL_NOT_CONNECTED;
   switch (priv->state) {
     case CHANNEL_NOT_CONNECTED:
       /* FIXME return an error ? */
@@ -628,7 +657,6 @@ salut_im_channel_close (SalutIMChannel *self, GError **error) {
       salut_lm_connection_close(priv->lm_connection);
       break;
   }
-  priv->state = CHANNEL_NOT_CONNECTED;
 
   g_signal_emit(self, signals[CLOSED], 0);
    

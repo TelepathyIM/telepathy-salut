@@ -304,3 +304,37 @@ salut_im_manager_new(SalutConnection *connection,
 
   return ret;
 }
+
+void
+salut_im_manager_handle_connection(SalutImManager *mgr,
+                                        SalutLmConnection *connection) {
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  SalutContact *contact;
+  SalutIMChannel *chan;
+  Handle handle;
+  struct sockaddr_storage addr;
+  size_t size = sizeof(struct sockaddr_storage);
+  /* FIXME we assume that one box has only one user... We can only know for
+   * sure who we're talking too when they sent the first message */
+  if (!salut_lm_connection_get_address(connection, &addr, &size)) {
+    goto notfound;
+  }
+
+  contact = 
+    salut_contact_manager_find_contact_by_address(priv->contact_manager, &addr);
+
+  if (contact == NULL) {
+    goto notfound;
+  }
+  handle = handle_for_contact(priv->connection->handle_repo, contact->name);
+
+  chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
+  if (chan == NULL) {
+    chan = salut_im_manager_new_channel(mgr, handle);
+  }
+  salut_im_channel_add_connection(chan, connection);
+
+  return ;
+notfound:
+  g_object_unref(connection);
+}

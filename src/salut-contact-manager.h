@@ -65,4 +65,8 @@ gboolean salut_contact_manager_start(SalutContactManager *mgr, GError **error);
 SalutContact *
 salut_contact_manager_get_contact(SalutContactManager *mgr, Handle handle);
 
+SalutContact *
+salut_contact_manager_find_contact_by_address(SalutContactManager *mgr, 
+                                              struct sockaddr_storage *address);
+
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/

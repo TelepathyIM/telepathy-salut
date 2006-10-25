@@ -466,3 +466,18 @@ salut_contact_manager_get_contact(SalutContactManager *mgr, Handle handle) {
   return ret;
 }
 
+static gboolean
+_find_by_address(gpointer key, gpointer value, gpointer user_data) {
+  struct sockaddr_storage *address = (struct sockaddr_storage *)user_data;
+  SalutContact *contact = SALUT_CONTACT(value);
+  return salut_contact_has_address(contact, address);
+}
+
+/* FIXME function name is just too long */
+SalutContact *
+salut_contact_manager_find_contact_by_address(SalutContactManager *mgr, 
+                                              struct sockaddr_storage *address)
+{
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
+  return g_hash_table_find(priv->contacts, _find_by_address, address);
+}

@@ -205,6 +205,7 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
     DEBUG("New connection..");
   }
   g_signal_emit(self, signals[NEW_CONNECTION], 0, conn);
+  g_object_unref(conn);
 
   return TRUE;
 }

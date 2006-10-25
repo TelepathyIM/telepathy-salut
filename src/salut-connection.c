@@ -586,6 +586,20 @@ _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
 }
 
 static void
+_self_new_connection_cb(SalutSelf *s, SalutLmConnection *conn, gpointer data) {
+  SalutConnection *self = SALUT_CONNECTION(data);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+
+  if (priv->im_manager == NULL) {
+    /* Got a connection before we had an im manager.. Ignore */
+    return;
+  }
+  /* Get a ref and let the lower layers handle it */
+  g_object_ref(conn);
+  salut_im_manager_handle_connection(priv->im_manager, conn);
+}
+
+static void
 _salut_avahi_client_failed_cb(SalutAvahiClient *c, 
                               SalutAvahiClientState state,
                               gpointer data) {
@@ -614,6 +628,8 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                    G_CALLBACK(_self_established_cb), self);
   g_signal_connect(priv->self, "failure", 
                    G_CALLBACK(_self_failed_cb), self);
+  g_signal_connect(priv->self, "new-connection", 
+                   G_CALLBACK(_self_new_connection_cb), self);
   if (!salut_self_announce(priv->self, NULL)) {
     _salut_connection_disconnect(self);
   }

@@ -391,3 +391,50 @@ salut_contact_get_addresses(SalutContact *contact) {
 
   return addresses;
 }
+
+static gint
+_compare_address(gconstpointer a, gconstpointer b) {
+  SalutAvahiServiceResolver *resolver = SALUT_AVAHI_SERVICE_RESOLVER(a);
+  struct sockaddr_storage addr_a;
+  struct sockaddr_storage *addr_b = (struct sockaddr_storage *)b;
+  AvahiIfIndex ifindex;
+  AvahiAddress address;
+  uint16_t port;
+
+  g_object_get(resolver, "interface", &ifindex, NULL);
+  if (!salut_avahi_service_resolver_get_address(resolver, &address, &port)) {
+    return -1;
+  }
+  _avahi_address_to_sockaddr(&address, port, ifindex, &addr_a);
+
+  if ( ((struct sockaddr *)&addr_a)->sa_family 
+       != ((struct sockaddr *)addr_b)->sa_family) {
+    return -1;
+  }
+
+  switch (((struct sockaddr *)&addr_a)->sa_family) {
+    case AF_INET6: {
+      struct sockaddr_in *a4 = (struct sockaddr_in *)&addr_a;
+      struct sockaddr_in *b4 = (struct sockaddr_in *)addr_b;
+      return b4->sin_addr.s_addr - a4->sin_addr.s_addr;
+    }
+    case AF_INET: {
+      struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)&addr_a;
+      struct sockaddr_in6 *b6 = (struct sockaddr_in6 *)addr_b;
+      /* FIXME should we compare the scope_id too ? */
+      return memcmp(a6->sin6_addr.s6_addr, b6->sin6_addr.s6_addr, 16);
+    }
+    default:
+      g_assert_not_reached();
+  }
+  return 0;
+}
+
+gboolean
+salut_contact_has_address(SalutContact *contact,
+                           struct sockaddr_storage *address) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+  return 
+     (g_list_find_custom(priv->resolvers, address, _compare_address) != NULL);
+}
+

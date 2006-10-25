@@ -58,4 +58,7 @@ SalutImManager *
 salut_im_manager_new(SalutConnection *connection,
                      SalutContactManager *contact_manager);
 
+void
+salut_im_manager_handle_connection(SalutImManager *mgr,
+                                   SalutLmConnection *connection);
 #endif /* #ifndef __SALUT_IM_MANAGER_H__*/

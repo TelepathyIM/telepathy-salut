@@ -216,6 +216,7 @@ _writeout(SalutLmConnection *self, gchar *data, gsize len) {
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
   gsize written = 0;
 
+  DEBUG("OUT: %s", data);
   if (priv->output_buffer == NULL || priv->output_buffer->len == 0) {
     /* We've got nothing buffer yet so try to write out directly */
     if (!_try_write(self, data, len, &written)) {
@@ -266,6 +267,7 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   switch (status) {
     case G_IO_STATUS_NORMAL:
       buf[read] = '\0';
+      DEBUG("IN: %s", buf);
       lm_parser_parse(priv->parser, buf);
       break;
     case G_IO_STATUS_ERROR:
@@ -325,6 +327,8 @@ _setup_connection(SalutLmConnection *self, int fd) {
     g_io_add_watch(priv->channel, G_IO_IN, _channel_io_in, self);
   priv->watch_err = 
     g_io_add_watch(priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, self);
+
+  priv->parser = lm_parser_new(_message_parsed, self, NULL);
 
   if (!priv->incoming) {
     _send_stream_init(self);
@@ -400,7 +404,6 @@ salut_lm_connection_open_sockaddr(SalutLmConnection *connection,
                 g_quark_from_static_string("connecting"),
                 connection->state);
 
-  priv->parser = lm_parser_new(_message_parsed, connection, NULL);
   return TRUE;
 
 failed:

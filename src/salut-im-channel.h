@@ -21,6 +21,7 @@
 #define __SALUT_IM_CHANNEL_H__
 
 #include <glib-object.h>
+#include "salut-lm-connection.h"
 
 G_BEGIN_DECLS
 
@@ -51,6 +52,8 @@ GType salut_im_channel_get_type(void);
 #define SALUT_IM_CHANNEL_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, SalutIMChannelClass))
 
+void
+salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn);
 
 gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *obj, const GArray * ids, GError **error);
 gboolean salut_im_channel_close (SalutIMChannel *obj, GError **error);

@@ -83,6 +83,10 @@ typedef struct {
 GArray *
 salut_contact_get_addresses(SalutContact *contact);
 
+gboolean
+salut_contact_has_address(SalutContact *contact,
+                           struct sockaddr_storage *address);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_CONTACT_H__*/
