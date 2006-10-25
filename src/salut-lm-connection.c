@@ -245,22 +245,26 @@ _send_stream_init(SalutLmConnection *self) {
 
 void
 _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
-  SalutLmConnection *self = SALUT_LM_CONNECTION_GET_PRIVATE (data);
-  SalutLmConnectionPrivate *priv = 
-     SALUT_LM_CONNECTION_GET_PRIVATE (connection);
+  SalutLmConnection *self = SALUT_LM_CONNECTION(data);
+  SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
 
    if (lm_message_get_type(message) == LM_MESSAGE_TYPE_STREAM) {
      if (self->state != SALUT_LM_CONNECTING) {
+       DEBUG("Got stream initiation on the wrong moment");
        _do_disconnect(self);
        return;
      }
      if (priv->incoming) {
-       _send_stream_init(SalutLmConnection *self);
+       _send_stream_init(self);
      }
-     priv->state = SALUT_LM_CONNECTED;
+     self->state = SALUT_LM_CONNECTED;
      g_signal_emit(self, signals[STATE_CHANGED], 
                 g_quark_from_static_string("connected"),
                 self->state);
+   } else if (self->state != SALUT_LM_CONNECTED) {
+       DEBUG("Got data before stream negotiation");
+       _do_disconnect(self);
+       return;
    }
 }
 
