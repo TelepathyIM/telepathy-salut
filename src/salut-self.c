@@ -20,11 +20,23 @@
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
 
 #include "salut-self.h"
 #include "salut-self-signals-marshal.h"
 
+#include "salut-lm-connection.h"
+
 #include "salut-avahi-entry-group.h"
+#include "telepathy-errors.h"
+
+#define DEBUG_FLAG DEBUG_SELF
+#include <debug.h>
 
 G_DEFINE_TYPE(SalutSelf, salut_self, G_TYPE_OBJECT)
 
@@ -48,6 +60,9 @@ struct _SalutSelfPrivate
   gchar *last_name;
   gchar *jid;
   gchar *email;
+
+  GIOChannel *listener;
+  guint io_watch_in;
 
   SalutAvahiClient *client;
   SalutAvahiEntryGroup *presence_group;
@@ -75,6 +90,7 @@ salut_self_init (SalutSelf *obj)
   priv->client = NULL;
   priv->presence_group = NULL;
   priv->presence = NULL;
+  priv->listener = NULL;
 }
 
 static void salut_self_dispose (GObject *object);
@@ -108,6 +124,17 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
                   g_cclosure_marshal_VOID__POINTER,
                   G_TYPE_NONE, 0);
 
+  signals[NEW_CONNECTION] =
+    g_signal_new ("new-connection",
+                  G_OBJECT_CLASS_TYPE (salut_self_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__OBJECT,
+                  G_TYPE_NONE, 
+                  1,
+                  SALUT_TYPE_LM_CONNECTION);
+
 }
 
 void
@@ -124,9 +151,15 @@ salut_self_dispose (GObject *object)
   /* release any references held by the object here */
   g_object_unref(priv->client); 
   priv->client = NULL;
+
   g_object_unref(priv->presence_group); 
   priv->presence_group = NULL;
   priv->presence = NULL;
+  if (priv->listener) {
+    g_io_channel_unref(priv->listener);
+    g_source_remove(priv->io_watch_in);
+    priv->listener = NULL;
+  }
 
   if (G_OBJECT_CLASS (salut_self_parent_class)->dispose)
     G_OBJECT_CLASS (salut_self_parent_class)->dispose (object);
@@ -148,6 +181,33 @@ salut_self_finalize (GObject *object)
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
 
+static gboolean 
+_listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
+  SalutSelf *self = SALUT_SELF(data);
+  int fd;
+  int nfd;
+  char host[NI_MAXHOST];
+  char port[NI_MAXSERV];
+  struct sockaddr_storage addr;
+  socklen_t addrlen = sizeof(struct sockaddr_storage);
+  SalutLmConnection *conn;
+
+
+  fd = g_io_channel_unix_get_fd(source);
+  nfd = accept(fd, (struct sockaddr *)&addr, &addrlen);
+
+  conn = salut_lm_connection_new_from_fd(nfd);
+  if (getnameinfo((struct sockaddr *)&addr, addrlen,
+      host, NI_MAXHOST, port, NI_MAXSERV, 
+      NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
+    DEBUG("New connection from %s port %s", host, port);
+  } else {
+    DEBUG("New connection..");
+  }
+  g_signal_emit(self, signals[NEW_CONNECTION], 0, conn);
+
+  return TRUE;
+}
 
 SalutSelf *
 salut_self_new(SalutAvahiClient *client,
@@ -168,6 +228,76 @@ salut_self_new(SalutAvahiClient *client,
   return ret;
 }
 
+static int
+self_try_listening_on_port(SalutSelf *self, int port) {
+  int fd = -1, ret, yes = 1;
+  struct addrinfo req, *ans;
+  #define BACKLOG 5
+
+  memset(&req, 0, sizeof(req));
+  req.ai_flags = AI_PASSIVE;
+  req.ai_family = AF_UNSPEC;
+  req.ai_socktype = SOCK_STREAM;
+  req.ai_protocol = IPPROTO_TCP;
+
+  if ((ret = getaddrinfo(NULL, "0", &req, &ans)) != 0) {
+    DEBUG("getaddrinfo failed: %s", gai_strerror(ret));
+    goto error;
+  }
+
+  ((struct sockaddr_in *) ans->ai_addr)->sin_port = ntohs(port);
+
+  fd = socket(ans->ai_family, ans->ai_socktype, ans->ai_protocol);
+
+  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+    DEBUG( "%s", strerror(errno));
+    freeaddrinfo(ans);
+    goto error;
+  }
+
+  if (bind(fd, ans->ai_addr, ans->ai_addrlen) < 0) {
+    DEBUG( "bind failed: %s", strerror(errno));
+    goto error;
+  }
+
+  ret = listen(fd, BACKLOG);
+  if (ret == -1) {
+    DEBUG( "listen: %s", strerror(errno));
+    goto error;
+  }
+  
+  return fd;
+error:
+  if (fd > 0) {
+    close(fd);
+  }
+  return -1;
+}
+
+static int
+self_start_listening(SalutSelf *self) {
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  int port = 5298;
+  int fd = -1;
+
+  for (; port < 5400 ; port++) {
+    DEBUG("Trying to listen on port %d\n", port);
+    fd = self_try_listening_on_port(self, port);
+    if (fd > 0)
+      break;
+  }
+
+  if (fd < 0) {
+    return -1;
+  }
+  DEBUG("Listining on port %d",port);
+  priv->listener = g_io_channel_unix_new(fd);
+  g_io_channel_set_close_on_unref(priv->listener, TRUE);
+  priv->io_watch_in = g_io_add_watch(priv->listener, G_IO_IN, 
+                                     _listener_io_in, self);
+
+  return port;
+}
 
 static 
 AvahiStringList *create_txt_record(SalutSelf *self) {
@@ -214,6 +344,17 @@ gboolean
 salut_self_announce(SalutSelf *self, GError **error) {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   AvahiStringList *txt_record = NULL;
+  int port;
+ 
+
+  port = self_start_listening(self);
+  if (port < 0) {
+    if (error != NULL) {
+      *error = g_error_new(TELEPATHY_ERRORS, NetworkError, 
+                           "Failed to start listening");
+    }
+    return FALSE;
+  }
 
   priv->presence_group = salut_avahi_entry_group_new();
 
@@ -232,7 +373,7 @@ salut_self_announce(SalutSelf *self, GError **error) {
     goto error;
   };
 
-  self->name = g_strdup_printf("%s@%s", "sjoerd",
+  self->name = g_strdup_printf("%s@%s", g_get_user_name(),
                        avahi_client_get_host_name(priv->client->avahi_client));
   txt_record = create_txt_record(self);
 
@@ -240,7 +381,7 @@ salut_self_announce(SalutSelf *self, GError **error) {
           salut_avahi_entry_group_add_service_strlist(priv->presence_group,
                                                       self->name, 
                                                       "_presence._tcp",
-                                                      5298,
+                                                      port,
                                                       error,
                                                       txt_record)) == NULL) {
     goto error;
@@ -259,10 +400,9 @@ error:
 }
 
 
-gboolean salut_self_set_presence(SalutSelf *self, 
-                                 SalutPresenceId status,
-                                 const gchar *message,
-                                 GError **error) {
+gboolean 
+salut_self_set_presence(SalutSelf *self, SalutPresenceId status, 
+                        const gchar *message, GError **error) {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
   g_assert(status >= 0 && status < SALUT_PRESENCE_NR_PRESENCES);
