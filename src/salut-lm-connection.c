@@ -147,6 +147,11 @@ salut_lm_connection_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
   _do_disconnect(self);
+  if (priv->parser) {
+    lm_parser_free(priv->parser);
+    priv->parser = NULL;
+  }
+
 
   if (G_OBJECT_CLASS (salut_lm_connection_parent_class)->dispose)
     G_OBJECT_CLASS (salut_lm_connection_parent_class)->dispose (object);
@@ -172,11 +177,6 @@ _do_disconnect(SalutLmConnection *self) {
     g_io_channel_shutdown(priv->channel, FALSE, NULL);
     g_io_channel_unref(priv->channel);
     priv->channel = NULL;
-  }
-
-  if (priv->parser) {
-    lm_parser_free(priv->parser);
-    priv->parser = NULL;
   }
 
   if (priv->output_buffer) {
@@ -344,6 +344,11 @@ _setup_connection(SalutLmConnection *self, int fd) {
   priv->watch_err = 
     g_io_add_watch(priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, self);
 
+  if (priv->parser) {
+    /* FIXME closing parser here if was still open is a hack to prevent it from
+     * closing while parsing messages */
+    lm_parser_free(priv->parser);
+  }
   priv->parser = lm_parser_new(_message_parsed, self, NULL);
 
   if (!priv->incoming) {
