@@ -184,10 +184,12 @@ _do_disconnect(SalutLmConnection *self) {
     priv->output_buffer = NULL;
   }
 
-  self->state = SALUT_LM_DISCONNECTED;
-  g_signal_emit(self, signals[STATE_CHANGED], 
-                g_quark_from_static_string("disconnected"),
-                self->state);
+  if (self->state != SALUT_LM_DISCONNECTED) {
+    self->state = SALUT_LM_DISCONNECTED;
+    g_signal_emit(self, signals[STATE_CHANGED], 
+                  g_quark_from_static_string("disconnected"),
+                  self->state);
+  }
 }
 
 static gboolean
