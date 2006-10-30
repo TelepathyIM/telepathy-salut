@@ -253,7 +253,8 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
    DEBUG("Got message");
    if (lm_message_get_type(message) == LM_MESSAGE_TYPE_STREAM) {
      if (self->state != SALUT_LM_CONNECTING) {
-       DEBUG("Got stream initiation on the wrong moment");
+       DEBUG("Got stream initiation on the wrong moment (state: %d)", 
+               self->state);
        _do_disconnect(self);
        return;
      }
