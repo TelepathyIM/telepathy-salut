@@ -48,6 +48,15 @@
 #define A_ARRAY "__salut_im_channel_address_array__"
 #define A_INDEX "__salut_im_channel_address_index__"
 
+#define TP_TYPE_PENDING_MESSAGE_STRUCT (dbus_g_type_get_struct ("GValueArray", \
+      G_TYPE_UINT, \
+      G_TYPE_UINT, \
+      G_TYPE_UINT, \
+      G_TYPE_UINT, \
+      G_TYPE_UINT, \
+      G_TYPE_STRING, \
+      G_TYPE_INVALID))
+
 G_DEFINE_TYPE_WITH_CODE(SalutIMChannel, salut_im_channel, G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE(TP_TYPE_CHANNEL_IFACE, NULL));
 
@@ -165,7 +174,6 @@ salut_im_channel_message_new_received(LmMessage *message) {
 
 static void 
 salut_im_channel_message_free(SalutIMChannelMessage *message) {
-  /* FIXME UGLY!*/
   g_free(message->text);
   g_free(message);
 }
@@ -477,9 +485,12 @@ _connection_got_message(SalutLmConnection *conn,
   SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutIMChannelMessage *m;
+  /* TODO verify the sender */
 
   m = salut_im_channel_message_new_received(message);
   g_queue_push_tail(priv->in_queue, m);
+  g_signal_emit(self, signals[RECEIVED], 0, 
+                m->id, m->time, priv->handle, m->type, 0, m->text); 
 }
 
 static void
@@ -615,6 +626,14 @@ salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
   salut_lm_connection_fd_start(conn);
 }
 
+static gint
+_compare_id(gconstpointer a, gconstpointer b) {
+  SalutIMChannelMessage *msg = (SalutIMChannelMessage *) a;
+  guint id = GPOINTER_TO_INT(b);
+  printf("%u %u", id, msg->id);
+  return id - msg->id;
+}
+
 /**
  * salut_im_channel_acknowledge_pending_messages
  *
@@ -627,9 +646,41 @@ salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *obj, const GArray * ids, GError **error)
-{
-  return TRUE;
+gboolean 
+salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self, 
+                                               const GArray * ids, 
+                                               GError **error) { 
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
+  SalutIMChannelMessage **msgs = NULL;
+  int i;
+  gboolean ret = TRUE;
+  
+  msgs = g_new(SalutIMChannelMessage *, ids->len);
+
+  for (i = 0; i < ids->len ; i++) {
+    guint id = g_array_index(ids, guint, i);
+    msgs[i] = 
+      (SalutIMChannelMessage *)g_queue_find_custom(priv->in_queue, 
+                                                   GINT_TO_POINTER(id),
+                                                   _compare_id);
+    if (msgs[i] == NULL) {
+      DEBUG("invalid message id %u", id);
+      *error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
+                           "invalid message id %u", id);
+      ret = FALSE;
+      goto out;
+    }
+  }
+
+  for (i = 0 ; i < ids->len ; i++) {
+    DEBUG("Acknowledged message id %u", msgs[i]->id);
+    g_queue_remove(priv->in_queue, msgs[i]);
+    salut_im_channel_message_free(msgs[i]);
+  }
+
+out:
+  g_free(msgs); 
+  return ret;
 }
 
 
@@ -777,9 +828,37 @@ salut_im_channel_get_message_types (SalutIMChannel *obj, GArray ** ret,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_list_pending_messages (SalutIMChannel *obj, gboolean clear, 
+salut_im_channel_list_pending_messages (SalutIMChannel *self, gboolean clear, 
                                         GPtrArray ** ret, GError **error) {
-  *ret = g_ptr_array_sized_new(0);
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  GPtrArray *messages = 
+    g_ptr_array_sized_new(g_queue_get_length(priv->in_queue));
+  GList *cur;
+
+  DEBUG("List pending (clear: %d)", clear);
+  for (cur = (clear ? g_queue_pop_head_link(priv->in_queue)
+                    : g_queue_peek_head_link(priv->in_queue));
+       cur != NULL;
+       cur = (clear ? g_queue_pop_head_link(priv->in_queue)
+                    : cur->next)) {
+    SalutIMChannelMessage *msg = (SalutIMChannelMessage *)cur->data;
+    GValue val = {0, };
+    g_value_init(&val, TP_TYPE_PENDING_MESSAGE_STRUCT);
+    g_value_take_boxed(&val, 
+        dbus_g_type_specialized_construct (TP_TYPE_PENDING_MESSAGE_STRUCT));
+    dbus_g_type_struct_set(&val,
+      0, msg->id,
+      1, msg->time,
+      2, priv->handle,
+      3, msg->type,
+      4, 0,
+      5, msg->text,
+      G_MAXUINT);
+    g_ptr_array_add(messages, g_value_get_boxed(&val));
+  }
+
+  *ret = messages;
+
   return TRUE;
 }
 

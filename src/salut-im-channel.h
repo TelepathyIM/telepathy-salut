@@ -55,14 +55,14 @@ GType salut_im_channel_get_type(void);
 void
 salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn);
 
-gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *obj, const GArray * ids, GError **error);
-gboolean salut_im_channel_close (SalutIMChannel *obj, GError **error);
-gboolean salut_im_channel_get_channel_type (SalutIMChannel *obj, gchar ** ret, GError **error);
-gboolean salut_im_channel_get_handle (SalutIMChannel *obj, guint* ret, guint* ret1, GError **error);
-gboolean salut_im_channel_get_interfaces (SalutIMChannel *obj, gchar *** ret, GError **error);
-gboolean salut_im_channel_get_message_types (SalutIMChannel *obj, GArray ** ret, GError **error);
-gboolean salut_im_channel_list_pending_messages (SalutIMChannel *obj, gboolean clear, GPtrArray ** ret, GError **error);
-gboolean salut_im_channel_send (SalutIMChannel *obj, guint type, const gchar * text, GError **error);
+gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self, const GArray * ids, GError **error);
+gboolean salut_im_channel_close (SalutIMChannel *self, GError **error);
+gboolean salut_im_channel_get_channel_type (SalutIMChannel *self, gchar ** ret, GError **error);
+gboolean salut_im_channel_get_handle (SalutIMChannel *self, guint* ret, guint* ret1, GError **error);
+gboolean salut_im_channel_get_interfaces (SalutIMChannel *self, gchar *** ret, GError **error);
+gboolean salut_im_channel_get_message_types (SalutIMChannel *self, GArray ** ret, GError **error);
+gboolean salut_im_channel_list_pending_messages (SalutIMChannel *self, gboolean clear, GPtrArray ** ret, GError **error);
+gboolean salut_im_channel_send (SalutIMChannel *self, guint type, const gchar * text, GError **error);
 
 
 G_END_DECLS
