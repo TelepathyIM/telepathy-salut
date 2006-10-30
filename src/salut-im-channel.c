@@ -489,10 +489,6 @@ _connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
   int i;
 
   addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
-  if (addrs == NULL) {
-    return;
-  }
-
   i = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(conn), A_INDEX)); 
 
   if (addrs->len <= i) {
@@ -500,6 +496,8 @@ _connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
     /* FIXME signal this up, probably sendError all queued outgoing stuff */
     g_array_free(addrs, TRUE);
     g_object_set_data(G_OBJECT(conn), A_ARRAY, NULL);
+    g_object_unref(priv->lm_connection);
+    priv->lm_connection = NULL;
     priv->state = CHANNEL_NOT_CONNECTED;
     DEBUG("All connection attempts failed");
   } else {
@@ -530,16 +528,12 @@ static void
 _connection_disconnected(SalutLmConnection *conn, gint state, gpointer userdata) {
   SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  GArray *addrs;
 
-  if (priv->state == CHANNEL_CONNECTING) {
+  if (!salut_lm_connection_is_incoming(conn) && 
+       priv->state == CHANNEL_CONNECTING) {
     _connect_to_next(self, conn); 
   } else  {
     /* FIXME cleanup */
-    addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
-    if (addrs != NULL) {
-      g_array_free(addrs, TRUE);
-    }
     g_object_unref(priv->lm_connection);
     priv->lm_connection = NULL;
     priv->state = CHANNEL_NOT_CONNECTED;

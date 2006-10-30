@@ -443,6 +443,12 @@ salut_lm_connection_send(SalutLmConnection *connection,
   return TRUE;
 }
 
+gboolean
+salut_lm_connection_is_incoming(SalutLmConnection *connection) {
+  SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (connection);
+  return priv->incoming;
+}
+
 void
 salut_lm_connection_set_incoming(SalutLmConnection *connection, 
                                  gboolean incoming) {

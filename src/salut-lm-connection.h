@@ -73,6 +73,9 @@ salut_lm_connection_new_from_fd(int fd);
 void
 salut_lm_connection_fd_start(SalutLmConnection *connection);
 
+gboolean
+salut_lm_connection_is_incoming(SalutLmConnection *connection);
+
 void
 salut_lm_connection_set_incoming(SalutLmConnection *connetion,
                                  gboolean incoming);
