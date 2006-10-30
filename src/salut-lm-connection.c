@@ -372,6 +372,7 @@ salut_lm_connection_new_from_fd(int fd) {
 
   priv->incoming = TRUE;
   priv->fd = fd;
+  priv->state = SALUT_LM_CONNECTING;   
 
   return self;
 }
