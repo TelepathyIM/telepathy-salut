@@ -646,9 +646,11 @@ gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *obj, con
 gboolean 
 salut_im_channel_close (SalutIMChannel *self, GError **error) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
+  ChannelState oldstate = priv->state;
 
   priv->state = CHANNEL_NOT_CONNECTED;
-  switch (priv->state) {
+
+  switch (oldstate) {
     case CHANNEL_NOT_CONNECTED:
       /* FIXME return an error ? */
       break;
