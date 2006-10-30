@@ -136,8 +136,11 @@ struct _SalutConnectionPrivate
   /* IM channel manager */
   SalutImManager *im_manager;
 
-  /* CHannel requests */
+  /* Channel requests */
   GPtrArray *channel_requests; 
+  /* Whether the channel was created during a request met supress handler is
+   * true */ 
+  gboolean suppress_current;
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
@@ -430,6 +433,8 @@ find_matching_channel_requests (SalutConnection *conn,
       if (handle != request->handle)
         continue;
 
+      /* As soon as one requests wants to suppress, send out a signal
+       * with suppress_handler TRUE */
       if (request->suppress_handler && suppress_handler)
         *suppress_handler = TRUE;
 
@@ -495,7 +500,7 @@ _channel_iface_new_channel_cb(TpChannelFactoryIface *channel_iface,
   gchar *channel_type = NULL;
   guint handle_type = 0;
   Handle handle = 0;
-  gboolean surpress_handler = FALSE;
+  gboolean surpress_handler = priv->suppress_current;
   GPtrArray *requests;
   int i;
 
@@ -510,7 +515,7 @@ _channel_iface_new_channel_cb(TpChannelFactoryIface *channel_iface,
   
   g_signal_emit(self, signals[NEW_CHANNEL], 0, 
                object_path, channel_type, 
-               handle_type, handle, FALSE);
+               handle_type, handle, surpress_handler);
 
   for (i = 0; i < requests->len; i++) {
     ChannelRequest *request = g_ptr_array_index(requests, i);
@@ -1346,6 +1351,7 @@ salut_connection_request_channel (SalutConnection *self, const gchar * type,
 
   DEBUG("Requested channel of type %d for handle %d", handle_type, handle);
 
+  priv->suppress_current = suppress_handler;
   status = tp_channel_factory_iface_request (
     TP_CHANNEL_FACTORY_IFACE(priv->contact_manager), type, 
       (TpHandleType) handle_type, handle, &chan);
@@ -1357,6 +1363,7 @@ salut_connection_request_channel (SalutConnection *self, const gchar * type,
         (TpHandleType) handle_type, handle, &chan);
     status = MAX(s, status);
   }
+  priv->suppress_current = FALSE;
 
 
   switch (status) {
