@@ -47,6 +47,8 @@ static void _do_disconnect(SalutLmConnection *self);
 
 G_DEFINE_TYPE(SalutLmConnection, salut_lm_connection, G_TYPE_OBJECT)
 
+/* TODO implement MESSAGE_SENT signal */
+
 /* signal enum */
 enum
 {
@@ -271,6 +273,18 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
        _do_disconnect(self);
        return;
    }
+   switch (lm_message_get_type(message)) {
+     case LM_MESSAGE_TYPE_MESSAGE:
+       g_signal_emit(self, signals[MESSAGE_RECEIVED], 
+                      g_quark_from_static_string("message") , message);
+       break;
+     case LM_MESSAGE_TYPE_IQ:
+       g_signal_emit(self, signals[MESSAGE_RECEIVED], 
+                      g_quark_from_static_string("iq") , message);
+     default:
+       g_signal_emit(self, signals[MESSAGE_RECEIVED], 
+                      g_quark_from_static_string("unkown") , message);
+   }
 }
 
 static gboolean
@@ -444,7 +458,8 @@ gboolean
 salut_lm_connection_send(SalutLmConnection *connection,
                          LmMessage *message,
                          GError **error) {
-  DEBUG("Sending message");
+  gchar *message_string = lm_message_node_to_string(message->node);
+  _writeout(connection, message_string, strlen(message_string));    
   return TRUE;
 }
 
