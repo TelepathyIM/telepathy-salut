@@ -261,6 +261,7 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
      if (priv->incoming) {
        _send_stream_init(self);
      }
+     DEBUG("Connection established");
      self->state = SALUT_LM_CONNECTED;
      g_signal_emit(self, signals[STATE_CHANGED], 
                 g_quark_from_static_string("connected"),
@@ -372,7 +373,7 @@ salut_lm_connection_new_from_fd(int fd) {
 
   priv->incoming = TRUE;
   priv->fd = fd;
-  priv->state = SALUT_LM_CONNECTING;   
+  self->state = SALUT_LM_CONNECTING;   
 
   return self;
 }

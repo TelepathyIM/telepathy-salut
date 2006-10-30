@@ -517,8 +517,10 @@ _connection_connected(SalutLmConnection *conn, gint state, gpointer userdata) {
   GArray *addrs;
   
   addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
-  g_array_free(addrs, TRUE);
-  g_object_set_data(G_OBJECT(conn), A_ARRAY, NULL);
+  if (addrs) {
+    g_array_free(addrs, TRUE);
+    g_object_set_data(G_OBJECT(conn), A_ARRAY, NULL);
+  }
 
   priv->state = SALUT_LM_CONNECTED;
   _flush_queue(self);
