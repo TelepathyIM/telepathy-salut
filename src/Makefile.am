@@ -48,63 +48,88 @@ BUILT_SOURCES = \
 # correctly clean the generated source files
 CLEANFILES = $(BUILT_SOURCES)
 
+dist-hook:
+	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
+
+EXTRA_DIST = \
+   group-mixin-signals-marshal.list                     \
+   salut-avahi-client-signals-marshal.list              \
+   salut-avahi-entry-group-signals-marshal.list         \
+   salut-avahi-service-browser-signals-marshal.list     \
+   salut-avahi-service-resolver-signals-marshal.list    \
+   salut-connection-manager-signals-marshal.list        \
+   salut-connection-signals-marshal.list                \
+   salut-contact-channel-signals-marshal.list           \
+   salut-contact-manager-signals-marshal.list           \
+   salut-contact-signals-marshal.list                   \
+   salut-im-channel-signals-marshal.list                \
+   salut-im-manager-signals-marshal.list                \
+   salut-lm-connection-signals-marshal.list             \
+   salut-self-signals-marshal.list                      \
+   tp-channel-factory-iface-signals-marshal.list
+ 
+
 bin_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
-CORE_SOURCES = \
-    salut-connection-manager.c \
-    salut-connection-manager.h \
-    salut-contact-manager.c \
-    salut-contact-manager.h \
-    salut-im-manager.c \
-    salut-im-manager.h \
-    salut-im-channel.c \
-    salut-im-channel.h \
-    salut-lm-connection.c \
-    salut-lm-connection.h \
-    salut-contact.h \
-    salut-contact.c \
-    salut-self.h \
-    salut-self.c \
-    salut-contact-channel.c \
-    salut-contact-channel.h \
-    salut-avahi-errors.c \
-    salut-avahi-errors.h \
-    salut-avahi-client.c \
-    salut-avahi-client.h \
-    salut-avahi-entry-group.c \
-    salut-avahi-entry-group.h \
-    salut-avahi-service-browser.c \
-    salut-avahi-service-browser.h \
-    salut-avahi-service-resolver.c \
-    salut-avahi-service-resolver.h \
-    salut-avahi-enums.h  \
-    salut-connection.c \
-    salut-presence.h   \
-    telepathy-errors.c \
-    telepathy-errors.h \
-    telepathy-helpers.c \
-    telepathy-helpers.h \
-    gintset.c \
-    gintset.h \
-    gheap.c \
-    gheap.h \
-    handle-set.c \
-    handle-set.h \
-    handle-repository.c \
-    handle-repository.h \
-    tp-channel-iface.h \
-    tp-channel-iface.c \
-    tp-channel-factory-iface.h \
-    tp-channel-factory-iface.c \
-    salut-contact-channel.h \
-    salut-contact-channel.c \
-    group-mixin.c \
-    group-mixin.h \
-    debug.c \
-    debug.h \
-    ansi.h \
-    lm-parser.h \
+CORE_SOURCES =                                          \
+    salut-connection-manager.c                          \
+    salut-connection-manager.h                          \
+    salut-contact-manager.c                             \
+    salut-contact-manager.h                             \
+    salut-im-manager.c                                  \
+    salut-im-manager.h                                  \
+    salut-im-channel.c                                  \
+    salut-im-channel.h                                  \
+    salut-lm-connection.c                               \
+    salut-lm-connection.h                               \
+    salut-contact.h                                     \
+    salut-contact.c                                     \
+    salut-self.h                                        \
+    salut-self.c                                        \
+    salut-contact-channel.c                             \
+    salut-contact-channel.h                             \
+    salut-avahi-errors.c                                \
+    salut-avahi-errors.h                                \
+    salut-avahi-client.c                                \
+    salut-avahi-client.h                                \
+    salut-avahi-entry-group.c                           \
+    salut-avahi-entry-group.h                           \
+    salut-avahi-service-browser.c                       \
+    salut-avahi-service-browser.h                       \
+    salut-avahi-service-resolver.c                      \
+    salut-avahi-service-resolver.h                      \
+    salut-avahi-enums.h                                 \
+    salut-connection.c                                  \
+    salut-connection.h                                  \
+    salut-presence.h                                    \
+    telepathy-errors.c                                  \
+    telepathy-errors.h                                  \
+    telepathy-constants.h                               \
+    telepathy-helpers.c                                 \
+    telepathy-helpers.h                                 \
+    telepathy-interfaces.h                              \
+    gintset.c                                           \
+    gintset.h                                           \
+    gheap.c                                             \
+    gheap.h                                             \
+    handle-set.c                                        \
+    handle-set.h                                        \
+    handle-types.h                                      \
+    handle-repository.c                                 \
+    handle-repository.h                                 \
+    tp-channel-iface.h                                  \
+    tp-channel-iface.c                                  \
+    tp-channel-factory-iface.h                          \
+    tp-channel-factory-iface.c                          \
+    salut-contact-channel.h                             \
+    salut-contact-channel.c                             \
+    group-mixin.c                                       \
+    group-mixin.h                                       \
+    debug.c                                             \
+    debug.h                                             \
+    ansi.h                                              \
+    lm-parser.h                                         \
     $(BUILT_SOURCES)
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES)
@@ -113,7 +138,6 @@ write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la
 
 telepathy_salut_SOURCES = \
-    salut.h \
     salut.c 
 
 telepathy_salut_LDADD = libsalut-convenience.la
