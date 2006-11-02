@@ -1119,7 +1119,7 @@ void salut_connection_hold_handles (SalutConnection *self,
   gchar *sender;
   int i;
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, *error, context);
+  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
 
   if (!handles_are_valid(self->handle_repo, handle_type, 
                          handles, FALSE, &error)) {
@@ -1237,7 +1237,7 @@ salut_connection_list_channels (SalutConnection *self,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GPtrArray *channels = NULL;
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, *error, context);
+  ERROR_IF_NOT_CONNECTED(self, *error);
 
   channels = g_ptr_array_sized_new(3);
 
@@ -1275,7 +1275,7 @@ salut_connection_release_handles (SalutConnection *self,
   GError *error = NULL;
   int i;
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, *error, context);
+  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
   if (!handles_are_valid(self->handle_repo,
                                 handle_type,
                                 handles,
@@ -1470,7 +1470,8 @@ salut_connection_request_handles (SalutConnection *self,
   int i;
   GArray *handles = NULL;
 
-  ERROR_IF_NOT_CONNECTED(self, *error);
+  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
+
   if (!handle_type_is_valid(handle_type, &error)) {
     DEBUG("Invalid handle type: %d", handle_type);
     dbus_g_method_return_error(context, error);
