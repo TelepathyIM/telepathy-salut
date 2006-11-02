@@ -1119,6 +1119,8 @@ void salut_connection_hold_handles (SalutConnection *self,
   gchar *sender;
   int i;
 
+  ERROR_IF_NOT_CONNECTED_ASYNC(self, *error, context);
+
   if (!handles_are_valid(self->handle_repo, handle_type, 
                          handles, FALSE, &error)) {
     dbus_g_method_return_error (context, error);
@@ -1233,7 +1235,11 @@ salut_connection_list_channels (SalutConnection *self,
                                 GPtrArray ** ret, 
                                 GError **error) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  GPtrArray *channels = g_ptr_array_sized_new(3);
+  GPtrArray *channels = NULL;
+
+  ERROR_IF_NOT_CONNECTED_ASYNC(self, *error, context);
+
+  channels = g_ptr_array_sized_new(3);
 
   if (priv->contact_manager != NULL) {
     tp_channel_factory_iface_foreach(
@@ -1269,6 +1275,7 @@ salut_connection_release_handles (SalutConnection *self,
   GError *error = NULL;
   int i;
 
+  ERROR_IF_NOT_CONNECTED_ASYNC(self, *error, context);
   if (!handles_are_valid(self->handle_repo,
                                 handle_type,
                                 handles,
@@ -1463,6 +1470,7 @@ salut_connection_request_handles (SalutConnection *self,
   int i;
   GArray *handles = NULL;
 
+  ERROR_IF_NOT_CONNECTED(self, *error);
   if (!handle_type_is_valid(handle_type, &error)) {
     DEBUG("Invalid handle type: %d", handle_type);
     dbus_g_method_return_error(context, error);
@@ -1531,6 +1539,7 @@ gboolean
 salut_connection_request_presence (SalutConnection *self, 
                                    const GArray * contacts, GError **error) {
 
+  ERROR_IF_NOT_CONNECTED(self, *error);
   if (!handles_are_valid(self->handle_repo, TP_HANDLE_TYPE_CONTACT,
                          contacts, FALSE, error)) 
     return FALSE;
