@@ -111,6 +111,11 @@ salut_im_manager_dispose (GObject *object)
     g_object_unref(priv->contact_manager);
     priv->contact_manager = NULL;
   }
+  
+  if (priv->connection) {
+    g_object_unref(priv->connection);
+    priv->connection = NULL;
+  }
 
   if (priv->channels) {
     t = priv->channels;
