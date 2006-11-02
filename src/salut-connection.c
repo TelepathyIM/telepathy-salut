@@ -678,12 +678,12 @@ gboolean _salut_connection_register(SalutConnection *conn, char **bus_name,
         msg = "A connection manger already has this busname.";
         break;
       case DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER:
-        msg = "Connection manager already has a connection to this account.";
+        msg = "Connection manager already has a connection.";
         break;
       default:
         msg = "Unknown error return from RequestName";
     }
-
+    DEBUG("Registering connection failed: %s", msg);
     *error = g_error_new (TELEPATHY_ERRORS, NotAvailable, "Error acquiring "
       "bus name %s: %s", conn->bus_name, msg);
 
@@ -961,6 +961,7 @@ gboolean salut_connection_connect (SalutConnection *self, GError **error)
  */
 gboolean salut_connection_disconnect (SalutConnection *self, GError **error)
 {
+  DEBUG("Disconnect request");
   if (self->status != TP_CONN_STATUS_DISCONNECTED)
     return _salut_connection_disconnect(self);
   return TRUE;
@@ -1024,10 +1025,11 @@ gboolean salut_connection_get_protocol (SalutConnection *obj, gchar ** ret, GErr
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_get_self_handle (SalutConnection *obj, guint* ret, GError **error)
-{
-
-  *ret = obj->self_handle;
+gboolean 
+salut_connection_get_self_handle (SalutConnection *self, guint* ret, 
+                                  GError **error) {
+  ERROR_IF_NOT_CONNECTED(self, *error);
+  *ret = self->self_handle;
   return TRUE;
 }
 
@@ -1155,6 +1157,8 @@ salut_connection_inspect_handles (SalutConnection *self, guint handle_type,
   GError *error = NULL;
   const gchar **ret;
   int i;
+
+  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
 
   if (!handles_are_valid(self->handle_repo,
                                 handle_type,

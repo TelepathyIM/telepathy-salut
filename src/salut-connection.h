@@ -76,7 +76,7 @@ gboolean salut_connection_connect (SalutConnection *obj, GError **error);
 gboolean salut_connection_disconnect (SalutConnection *obj, GError **error);
 gboolean salut_connection_get_interfaces (SalutConnection *obj, gchar *** ret, GError **error);
 gboolean salut_connection_get_protocol (SalutConnection *obj, gchar ** ret, GError **error);
-gboolean salut_connection_get_self_handle (SalutConnection *obj, guint* ret, GError **error);
+gboolean salut_connection_get_self_handle (SalutConnection *self, guint* ret, GError **error);
 gboolean salut_connection_get_status (SalutConnection *obj, guint* ret, GError **error);
 gboolean salut_connection_get_statuses (SalutConnection *obj, GHashTable ** ret, GError **error);
 void salut_connection_hold_handles (SalutConnection *obj, guint handle_type, const GArray * handles, DBusGMethodInvocation *context);
