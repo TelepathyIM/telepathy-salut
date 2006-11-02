@@ -50,6 +50,7 @@ G_DEFINE_TYPE(SalutConnectionManager, salut_connection_manager, G_TYPE_OBJECT)
 enum
 {
     NEW_CONNECTION,
+    NO_MORE_CONNECTIONS,
     LAST_SIGNAL
 };
 
@@ -60,8 +61,8 @@ typedef struct _SalutConnectionManagerPrivate SalutConnectionManagerPrivate;
 
 struct _SalutConnectionManagerPrivate
 {
-  GHashTable *channels;
   gboolean dispose_has_run;
+  GHashTable *connections;
 };
 
 #define SALUT_CONNECTION_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONNECTION_MANAGER, SalutConnectionManagerPrivate))
@@ -69,9 +70,11 @@ struct _SalutConnectionManagerPrivate
 static void
 salut_connection_manager_init (SalutConnectionManager *obj)
 {
-  //SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE (obj);
+  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
+  priv->connections = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+                                              NULL, g_object_unref);
 }
 
 static void salut_connection_manager_dispose (GObject *object);
@@ -95,6 +98,14 @@ salut_connection_manager_class_init (SalutConnectionManagerClass *salut_connecti
                   NULL, NULL,
                   salut_connection_manager_marshal_VOID__STRING_STRING_STRING,
                   G_TYPE_NONE, 3, G_TYPE_STRING, DBUS_TYPE_G_OBJECT_PATH, G_TYPE_STRING);
+  signals[NO_MORE_CONNECTIONS] =
+    g_signal_new ("no-more-connections",
+                  G_OBJECT_CLASS_TYPE (salut_connection_manager_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
 
   dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_connection_manager_class), &dbus_glib_salut_connection_manager_object_info);
 }
@@ -104,13 +115,24 @@ salut_connection_manager_dispose (GObject *object)
 {
   SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (object);
   SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE (self);
+  DBusGProxy *bus_proxy;  
+  bus_proxy = tp_get_bus_proxy();;
 
   if (priv->dispose_has_run)
     return;
-
   priv->dispose_has_run = TRUE;
+  
+  if (priv->connections != NULL) {
+    g_hash_table_destroy(priv->connections);
+    priv->connections = NULL;
+  }
+
 
   /* release any references held by the object here */
+  org_freedesktop_DBus_request_name(bus_proxy,
+                                    SALUT_CONN_MGR_BUS_NAME,
+                                    DBUS_NAME_FLAG_DO_NOT_QUEUE,
+                                    NULL, NULL);
 
   if (G_OBJECT_CLASS (salut_connection_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_connection_manager_parent_class)->dispose (object);
@@ -196,6 +218,18 @@ _salut_connection_manager_register(SalutConnectionManager *self) {
 }
 
 /* private */
+static void
+connection_disconnected_cb(SalutConnection *conn, gpointer data) {
+  SalutConnectionManager *mgr = SALUT_CONNECTION_MANAGER(data);
+  SalutConnectionManagerPrivate *priv = 
+    SALUT_CONNECTION_MANAGER_GET_PRIVATE(mgr);
+  g_assert(g_hash_table_remove(priv->connections, conn));
+
+  if (g_hash_table_size(priv->connections) == 0) {
+    g_signal_emit(mgr, signals[NO_MORE_CONNECTIONS], 0);
+  }
+}
+
 static gboolean
 get_parameters (const char *proto, const SalutParamSpec **params, GError **error)
 {
@@ -445,6 +479,8 @@ salut_connection_manager_request_connection (SalutConnectionManager *self,
                                               GError **error)
 {
   SalutConnection *conn = NULL;
+  SalutConnectionManagerPrivate *priv = 
+    SALUT_CONNECTION_MANAGER_GET_PRIVATE(self);
   const SalutParamSpec *paramspec;
   SalutParams params = { 0, };
 
@@ -468,6 +504,9 @@ salut_connection_manager_request_connection (SalutConnectionManager *self,
   if (!_salut_connection_register(conn, bus_name, object_path, error)) {
     goto ERROR;
   }
+  g_hash_table_insert(priv->connections, conn, conn);
+  g_signal_connect(conn, "disconnected", 
+                    G_CALLBACK(connection_disconnected_cb), self);
 
   g_signal_emit(self, signals[NEW_CONNECTION], 0, 
                  *bus_name, *object_path, proto);
