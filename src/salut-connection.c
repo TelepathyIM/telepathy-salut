@@ -97,6 +97,7 @@ enum
     NEW_CHANNEL,
     PRESENCE_UPDATE,
     STATUS_CHANGED,
+    DISCONNECTED,
     LAST_SIGNAL
 };
 
@@ -319,6 +320,15 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
                   salut_connection_marshal_VOID__INT_INT,
                   G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_UINT);
 
+  signals[DISCONNECTED] =
+    g_signal_new ("disconnected",
+                  G_OBJECT_CLASS_TYPE (salut_connection_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
+
   dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_connection_class), &dbus_glib_salut_connection_object_info);
 }
 
@@ -327,9 +337,13 @@ salut_connection_dispose (GObject *object)
 {
   SalutConnection *self = SALUT_CONNECTION (object);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  DBusGProxy *bus_proxy;  
+
 
   if (priv->dispose_has_run)
     return;
+  DEBUG("Disposing connection");
+  bus_proxy = tp_get_bus_proxy();;
 
   priv->dispose_has_run = TRUE;
 
@@ -354,8 +368,13 @@ salut_connection_dispose (GObject *object)
     priv->avahi_client = NULL;
   }
 
-  /* release any references held by the object here */
+  if (NULL != self->bus_name) {
+      dbus_g_proxy_call_no_reply (bus_proxy, "ReleaseName",
+                                  G_TYPE_STRING, self->bus_name,
+                                  G_TYPE_INVALID);
+  }
 
+  /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_connection_parent_class)->dispose)
     G_OBJECT_CLASS (salut_connection_parent_class)->dispose (object);
 }
@@ -459,11 +478,12 @@ salut_connection_finalize (GObject *object)
   g_free(priv->email);
   g_free(priv->jid);
 
+  DEBUG("Finalizing connection");
+
   if (self->handle_repo) {
     handle_repo_destroy(self->handle_repo);
     self->handle_repo = NULL;
   }
-
 
   G_OBJECT_CLASS (salut_connection_parent_class)->finalize (object);
 }
@@ -488,6 +508,9 @@ connection_status_change(SalutConnection *self,
     return;
   self->status = status;
   g_signal_emit (self, signals[STATUS_CHANGED], 0, status, reason);
+  if (status == TP_CONN_STATUS_DISCONNECTED) {
+    g_signal_emit(self, signals[DISCONNECTED], 0);
+  }
 }
 
 void
