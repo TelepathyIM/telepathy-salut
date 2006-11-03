@@ -151,7 +151,7 @@ salut_avahi_service_resolver_get_property (GObject *object,
       g_value_set_int(value, priv->interface);
       break;
     case PROP_NAME:
-      g_value_set_string(value, priv->type);
+      g_value_set_string(value, priv->name);
       break;
     case PROP_TYPE:
       g_value_set_string(value, priv->type);
