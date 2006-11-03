@@ -461,8 +461,9 @@ salut_contact_manager_get_contact(SalutContactManager *mgr, Handle handle) {
   ret =  g_hash_table_lookup(priv->contacts, name);
   
   if (ret != NULL) {
-    DEBUG("Failed to get contact for %s", name);
     g_object_ref(ret);
+  } else {
+    DEBUG("Failed to get contact for %s", name);
   }
 
   return ret;
