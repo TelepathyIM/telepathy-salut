@@ -1505,6 +1505,14 @@ salut_connection_request_handles (SalutConnection *self,
   }
 
   for (n = names; *n != NULL; n++)  {
+    if (*n == '\0') {
+      DEBUG("Request for empty name?!");
+      error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
+                           "Empty handle name");
+      dbus_g_method_return_error(context, error);
+      g_error_free(error);
+      return;
+    }
     DEBUG("Requested handle of type %d for %s", handle_type, *n);
     count++;
   }
