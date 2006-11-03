@@ -1208,6 +1208,7 @@ salut_connection_inspect_handles (SalutConnection *self, guint handle_type,
 
   ret[i] = NULL;
   
+   DEBUG("Returning inspected handle\n");
   dbus_g_method_return(context, ret);
   g_free(ret);
 }
@@ -1383,7 +1384,8 @@ salut_connection_request_channel (SalutConnection *self, const gchar * type,
 
   ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
 
-  DEBUG("Requested channel of type %d for handle %d", handle_type, handle);
+  DEBUG("Requested channel of type %s for handle %d of type %d", 
+        type, handle, handle_type);
 
   priv->suppress_current = suppress_handler;
   status = tp_channel_factory_iface_request (
