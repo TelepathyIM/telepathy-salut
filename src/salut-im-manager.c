@@ -223,13 +223,20 @@ salut_im_manager_factory_iface_request(TpChannelFactoryIface *iface,
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
   }
 
+  /* Don't support opening a channel to our self handle */
+  if (handle == priv->connection->self_handle) {
+     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+  }
+
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
   if (chan != NULL) { 
     *ret = TP_CHANNEL_IFACE(chan);
   } else {
     *ret = TP_CHANNEL_IFACE(salut_im_manager_new_channel(mgr, handle));
   }
-  return TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE;
+
+  return *ret != NULL ? TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE
+                      : TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
 }
 
 static void salut_im_manager_factory_iface_init(gpointer *g_iface, 
@@ -268,14 +275,16 @@ salut_im_manager_new_channel(SalutImManager *mgr, Handle handle) {
 
   g_assert(g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle)) 
              == NULL);
+  DEBUG("Requested channel for handle: %d", handle);
 
+  contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
+  if (contact == NULL) {
+    return NULL;
+  }
   name = handle_inspect(priv->connection->handle_repo, 
                         TP_HANDLE_TYPE_CONTACT, handle);
   path = g_strdup_printf("%s/IMChannel/%u", 
                          priv->connection->object_path, handle);
-
-  contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
-  g_assert(contact != NULL);
   chan = g_object_new(SALUT_TYPE_IM_CHANNEL,
                       "connection", priv->connection,
                       "contact", contact,
