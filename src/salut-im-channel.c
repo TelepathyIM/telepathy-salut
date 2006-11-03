@@ -629,8 +629,7 @@ salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
 static gint
 _compare_id(gconstpointer a, gconstpointer b) {
   SalutIMChannelMessage *msg = (SalutIMChannelMessage *) a;
-  guint id = GPOINTER_TO_INT(b);
-  printf("%u %u", id, msg->id);
+  guint id = GPOINTER_TO_UINT(b);
   return id - msg->id;
 }
 
@@ -651,19 +650,19 @@ salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self,
                                                const GArray * ids, 
                                                GError **error) { 
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
-  SalutIMChannelMessage **msgs = NULL;
+  GList **links = NULL;
   int i;
   gboolean ret = TRUE;
   
-  msgs = g_new(SalutIMChannelMessage *, ids->len);
+  links = g_new(GList *, ids->len);
+
+  DEBUG("Acknowledging %d messages", ids->len);
 
   for (i = 0; i < ids->len ; i++) {
     guint id = g_array_index(ids, guint, i);
-    msgs[i] = 
-      (SalutIMChannelMessage *)g_queue_find_custom(priv->in_queue, 
-                                                   GINT_TO_POINTER(id),
+    links[i] = g_queue_find_custom(priv->in_queue, GUINT_TO_POINTER(id),
                                                    _compare_id);
-    if (msgs[i] == NULL) {
+    if (links[i] == NULL) {
       DEBUG("invalid message id %u", id);
       *error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
                            "invalid message id %u", id);
@@ -673,13 +672,14 @@ salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self,
   }
 
   for (i = 0 ; i < ids->len ; i++) {
-    DEBUG("Acknowledged message id %u", msgs[i]->id);
-    g_queue_remove(priv->in_queue, msgs[i]);
-    salut_im_channel_message_free(msgs[i]);
+    SalutIMChannelMessage *msg = (SalutIMChannelMessage *) links[i]->data;
+    DEBUG("Acknowledged message id %u", msg->id);
+    g_queue_delete_link(priv->in_queue, links[i]);
+    salut_im_channel_message_free(msg);
   }
 
 out:
-  g_free(msgs); 
+  g_free(links); 
   return ret;
 }
 
