@@ -1208,7 +1208,6 @@ salut_connection_inspect_handles (SalutConnection *self, guint handle_type,
 
   ret[i] = NULL;
   
-   DEBUG("Returning inspected handle\n");
   dbus_g_method_return(context, ret);
   g_free(ret);
 }
