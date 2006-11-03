@@ -121,7 +121,7 @@ salut_contact_manager_dispose (GObject *object)
 
   if (priv->dispose_has_run)
     return;
-
+  
   priv->dispose_has_run = TRUE;
   if (priv->connection) {
     g_object_unref(priv->connection);
@@ -206,6 +206,7 @@ contact_lost_cb(SalutContact *contact, gpointer userdata) {
   GIntSet *to_rem = g_intset_new();
   Handle handle;
 
+  DEBUG("Removing %s from contacts", contact->name);
   g_hash_table_remove(priv->contacts, contact->name);
 
   handle = handle_for_contact(priv->connection->handle_repo, contact->name);
@@ -228,12 +229,10 @@ browser_found(SalutAvahiServiceBrowser *browser,
 
   /* FIXME: For now we assume name is unique on the lan */
   contact = g_hash_table_lookup(priv->contacts, name);
-
-
-
   if (contact == NULL) {
     contact = salut_contact_new(priv->client, name);
     g_hash_table_insert(priv->contacts, g_strdup(name), contact);
+    DEBUG("Adding %s to contacts", name);
     g_signal_connect(contact, "found", 
                      G_CALLBACK(contact_found_cb), mgr);
     g_signal_connect(contact, "status-changed", 
@@ -458,10 +457,13 @@ salut_contact_manager_get_contact(SalutContactManager *mgr, Handle handle) {
 
   g_return_val_if_fail(name, NULL);
 
+  DEBUG("Getting contact for: %s", name);
   ret =  g_hash_table_lookup(priv->contacts, name);
-
-  g_return_val_if_fail(ret, NULL);
-  g_object_ref(ret);
+  
+  if (ret != NULL) {
+    DEBUG("Failed to get contact for %s", name);
+    g_object_ref(ret);
+  }
 
   return ret;
 }
