@@ -34,6 +34,8 @@ struct _SalutConnectionManagerClass {
 
 struct _SalutConnectionManager {
     GObject parent;
+
+    gpointer priv;
 };
 
 GType salut_connection_manager_get_type(void);
@@ -53,9 +55,25 @@ GType salut_connection_manager_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONNECTION_MANAGER, SalutConnectionManagerClass))
 
 
-gboolean salut_connection_manager_get_parameters (SalutConnectionManager *obj, const gchar * proto, GPtrArray ** ret, GError **error);
-gboolean salut_connection_manager_list_protocols (SalutConnectionManager *obj, gchar *** ret, GError **error);
-gboolean salut_connection_manager_request_connection (SalutConnectionManager *obj, const gchar * proto, GHashTable * parameters, gchar ** ret, gchar ** ret1, GError **error);
+gboolean
+salut_connection_manager_get_parameters (SalutConnectionManager *self,
+                                         const gchar *proto,
+                                         GPtrArray **ret,
+                                         GError **error);
+
+gboolean
+salut_connection_manager_list_protocols (SalutConnectionManager *self,
+                                         gchar ***ret,
+                                         GError **error);
+
+gboolean
+salut_connection_manager_request_connection (SalutConnectionManager *self,
+                                             const gchar *proto,
+                                             GHashTable *parameters,
+                                             gchar **ret,
+                                             gchar **ret1,
+                                             GError **error);
+
 
 
 G_END_DECLS

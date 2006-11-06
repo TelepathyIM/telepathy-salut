@@ -50,12 +50,16 @@ struct _SalutIMChannelPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_IM_CHANNEL_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_IM_CHANNEL, SalutIMChannelPrivate))
+#define SALUT_IM_CHANNEL_GET_PRIVATE(obj) \
+    ((SalutIMChannelPrivate *)obj->priv)
 
 static void
-salut_im_channel_init (SalutIMChannel *obj)
+salut_im_channel_init (SalutIMChannel *self)
 {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (obj);
+  SalutIMChannelPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+      SALUT_TYPE_IM_CHANNEL, SalutIMChannelPrivate);
+
+  self->priv = priv;
 
   /* allocate any data required by the object here */
 }
@@ -79,7 +83,7 @@ salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_im_channel_marshal_VOID__VOID,
+                  g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
   signals[LOST_MESSAGE] =
@@ -88,7 +92,7 @@ salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_im_channel_marshal_VOID__VOID,
+                  g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
   signals[RECEIVED] =
@@ -97,7 +101,7 @@ salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_im_channel_marshal_VOID__INT_INT_INT_INT_INT_STRING,
+                  salut_im_channel_marshal_VOID__UINT_UINT_UINT_UINT_UINT_STRING,
                   G_TYPE_NONE, 6, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
 
   signals[SEND_ERROR] =
@@ -106,7 +110,7 @@ salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_im_channel_marshal_VOID__INT_INT_INT_STRING,
+                  salut_im_channel_marshal_VOID__UINT_UINT_UINT_STRING,
                   G_TYPE_NONE, 4, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
 
   signals[SENT] =
@@ -115,7 +119,7 @@ salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_im_channel_marshal_VOID__INT_INT_STRING,
+                  salut_im_channel_marshal_VOID__UINT_UINT_STRING,
                   G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
 
   dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_im_channel_class), &dbus_glib_salut_im_channel_object_info);
@@ -154,16 +158,19 @@ salut_im_channel_finalize (GObject *object)
 /**
  * salut_im_channel_acknowledge_pending_messages
  *
- * Implements DBus method AcknowledgePendingMessages
+ * Implements D-Bus method AcknowledgePendingMessages
  * on interface org.freedesktop.Telepathy.Channel.Type.Text
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *obj, const GArray * ids, GError **error)
+gboolean
+salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self,
+                                               const GArray *ids,
+                                               GError **error)
 {
   return TRUE;
 }
@@ -172,16 +179,18 @@ gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *obj, con
 /**
  * salut_im_channel_close
  *
- * Implements DBus method Close
+ * Implements D-Bus method Close
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_close (SalutIMChannel *obj, GError **error)
+gboolean
+salut_im_channel_close (SalutIMChannel *self,
+                        GError **error)
 {
   return TRUE;
 }
@@ -190,16 +199,19 @@ gboolean salut_im_channel_close (SalutIMChannel *obj, GError **error)
 /**
  * salut_im_channel_get_channel_type
  *
- * Implements DBus method GetChannelType
+ * Implements D-Bus method GetChannelType
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_get_channel_type (SalutIMChannel *obj, gchar ** ret, GError **error)
+gboolean
+salut_im_channel_get_channel_type (SalutIMChannel *self,
+                                   gchar **ret,
+                                   GError **error)
 {
   return TRUE;
 }
@@ -208,16 +220,20 @@ gboolean salut_im_channel_get_channel_type (SalutIMChannel *obj, gchar ** ret, G
 /**
  * salut_im_channel_get_handle
  *
- * Implements DBus method GetHandle
+ * Implements D-Bus method GetHandle
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_get_handle (SalutIMChannel *obj, guint* ret, guint* ret1, GError **error)
+gboolean
+salut_im_channel_get_handle (SalutIMChannel *self,
+                             guint *ret,
+                             guint *ret1,
+                             GError **error)
 {
   return TRUE;
 }
@@ -226,16 +242,19 @@ gboolean salut_im_channel_get_handle (SalutIMChannel *obj, guint* ret, guint* re
 /**
  * salut_im_channel_get_interfaces
  *
- * Implements DBus method GetInterfaces
+ * Implements D-Bus method GetInterfaces
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_get_interfaces (SalutIMChannel *obj, gchar *** ret, GError **error)
+gboolean
+salut_im_channel_get_interfaces (SalutIMChannel *self,
+                                 gchar ***ret,
+                                 GError **error)
 {
   return TRUE;
 }
@@ -244,16 +263,19 @@ gboolean salut_im_channel_get_interfaces (SalutIMChannel *obj, gchar *** ret, GE
 /**
  * salut_im_channel_get_message_types
  *
- * Implements DBus method GetMessageTypes
+ * Implements D-Bus method GetMessageTypes
  * on interface org.freedesktop.Telepathy.Channel.Type.Text
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_get_message_types (SalutIMChannel *obj, GArray ** ret, GError **error)
+gboolean
+salut_im_channel_get_message_types (SalutIMChannel *self,
+                                    GArray **ret,
+                                    GError **error)
 {
   return TRUE;
 }
@@ -262,16 +284,20 @@ gboolean salut_im_channel_get_message_types (SalutIMChannel *obj, GArray ** ret,
 /**
  * salut_im_channel_list_pending_messages
  *
- * Implements DBus method ListPendingMessages
+ * Implements D-Bus method ListPendingMessages
  * on interface org.freedesktop.Telepathy.Channel.Type.Text
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_list_pending_messages (SalutIMChannel *obj, gboolean clear, GPtrArray ** ret, GError **error)
+gboolean
+salut_im_channel_list_pending_messages (SalutIMChannel *self,
+                                        gboolean clear,
+                                        GPtrArray **ret,
+                                        GError **error)
 {
   return TRUE;
 }
@@ -280,16 +306,20 @@ gboolean salut_im_channel_list_pending_messages (SalutIMChannel *obj, gboolean c
 /**
  * salut_im_channel_send
  *
- * Implements DBus method Send
+ * Implements D-Bus method Send
  * on interface org.freedesktop.Telepathy.Channel.Type.Text
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_im_channel_send (SalutIMChannel *obj, guint type, const gchar * text, GError **error)
+gboolean
+salut_im_channel_send (SalutIMChannel *self,
+                       guint type,
+                       const gchar *text,
+                       GError **error)
 {
   return TRUE;
 }

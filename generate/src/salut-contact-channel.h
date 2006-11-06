@@ -34,6 +34,8 @@ struct _SalutContactChannelClass {
 
 struct _SalutContactChannel {
     GObject parent;
+
+    gpointer priv;
 };
 
 GType salut_contact_channel_get_type(void);
@@ -53,19 +55,76 @@ GType salut_contact_channel_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT_CHANNEL, SalutContactChannelClass))
 
 
-gboolean salut_contact_channel_add_members (SalutContactChannel *obj, const GArray * contacts, const gchar * message, GError **error);
-gboolean salut_contact_channel_close (SalutContactChannel *obj, GError **error);
-gboolean salut_contact_channel_get_all_members (SalutContactChannel *obj, GArray ** ret, GArray ** ret1, GArray ** ret2, GError **error);
-gboolean salut_contact_channel_get_channel_type (SalutContactChannel *obj, gchar ** ret, GError **error);
-gboolean salut_contact_channel_get_group_flags (SalutContactChannel *obj, guint* ret, GError **error);
-gboolean salut_contact_channel_get_handle (SalutContactChannel *obj, guint* ret, guint* ret1, GError **error);
-gboolean salut_contact_channel_get_handle_owners (SalutContactChannel *obj, const GArray * handles, GArray ** ret, GError **error);
-gboolean salut_contact_channel_get_interfaces (SalutContactChannel *obj, gchar *** ret, GError **error);
-gboolean salut_contact_channel_get_local_pending_members (SalutContactChannel *obj, GArray ** ret, GError **error);
-gboolean salut_contact_channel_get_members (SalutContactChannel *obj, GArray ** ret, GError **error);
-gboolean salut_contact_channel_get_remote_pending_members (SalutContactChannel *obj, GArray ** ret, GError **error);
-gboolean salut_contact_channel_get_self_handle (SalutContactChannel *obj, guint* ret, GError **error);
-gboolean salut_contact_channel_remove_members (SalutContactChannel *obj, const GArray * contacts, const gchar * message, GError **error);
+gboolean
+salut_contact_channel_add_members (SalutContactChannel *self,
+                                   const GArray *contacts,
+                                   const gchar *message,
+                                   GError **error);
+
+gboolean
+salut_contact_channel_close (SalutContactChannel *self,
+                             GError **error);
+
+gboolean
+salut_contact_channel_get_all_members (SalutContactChannel *self,
+                                       GArray **ret,
+                                       GArray **ret1,
+                                       GArray **ret2,
+                                       GError **error);
+
+gboolean
+salut_contact_channel_get_channel_type (SalutContactChannel *self,
+                                        gchar **ret,
+                                        GError **error);
+
+gboolean
+salut_contact_channel_get_group_flags (SalutContactChannel *self,
+                                       guint *ret,
+                                       GError **error);
+
+gboolean
+salut_contact_channel_get_handle (SalutContactChannel *self,
+                                  guint *ret,
+                                  guint *ret1,
+                                  GError **error);
+
+gboolean
+salut_contact_channel_get_handle_owners (SalutContactChannel *self,
+                                         const GArray *handles,
+                                         GArray **ret,
+                                         GError **error);
+
+gboolean
+salut_contact_channel_get_interfaces (SalutContactChannel *self,
+                                      gchar ***ret,
+                                      GError **error);
+
+gboolean
+salut_contact_channel_get_local_pending_members (SalutContactChannel *self,
+                                                 GArray **ret,
+                                                 GError **error);
+
+gboolean
+salut_contact_channel_get_members (SalutContactChannel *self,
+                                   GArray **ret,
+                                   GError **error);
+
+gboolean
+salut_contact_channel_get_remote_pending_members (SalutContactChannel *self,
+                                                  GArray **ret,
+                                                  GError **error);
+
+gboolean
+salut_contact_channel_get_self_handle (SalutContactChannel *self,
+                                       guint *ret,
+                                       GError **error);
+
+gboolean
+salut_contact_channel_remove_members (SalutContactChannel *self,
+                                      const GArray *contacts,
+                                      const gchar *message,
+                                      GError **error);
+
 
 
 G_END_DECLS

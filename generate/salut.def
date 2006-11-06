@@ -1,5 +1,5 @@
 salut-connection-manager.xml	SalutConnectionManager	ConnectionManager
-salut-connection.xml	SalutConnection	Connection, ConnectionInterfacePresence
+salut-connection.xml	SalutConnection	Connection, ConnectionInterfaceAliasing, ConnectionInterfacePresence
 salut-contact-channel.xml	SalutContactChannel	ChannelTypeContactList, ChannelInterfaceGroup
 salut-im-channel.xml	SalutIMChannel	ChannelTypeText
 

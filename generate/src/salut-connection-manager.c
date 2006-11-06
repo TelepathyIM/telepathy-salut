@@ -46,12 +46,16 @@ struct _SalutConnectionManagerPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_CONNECTION_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONNECTION_MANAGER, SalutConnectionManagerPrivate))
+#define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) \
+    ((SalutConnectionManagerPrivate *)obj->priv)
 
 static void
-salut_connection_manager_init (SalutConnectionManager *obj)
+salut_connection_manager_init (SalutConnectionManager *self)
 {
-  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE (obj);
+  SalutConnectionManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+      SALUT_TYPE_CONNECTION_MANAGER, SalutConnectionManagerPrivate);
+
+  self->priv = priv;
 
   /* allocate any data required by the object here */
 }
@@ -114,16 +118,20 @@ salut_connection_manager_finalize (GObject *object)
 /**
  * salut_connection_manager_get_parameters
  *
- * Implements DBus method GetParameters
+ * Implements D-Bus method GetParameters
  * on interface org.freedesktop.Telepathy.ConnectionManager
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_manager_get_parameters (SalutConnectionManager *obj, const gchar * proto, GPtrArray ** ret, GError **error)
+gboolean
+salut_connection_manager_get_parameters (SalutConnectionManager *self,
+                                         const gchar *proto,
+                                         GPtrArray **ret,
+                                         GError **error)
 {
   return TRUE;
 }
@@ -132,16 +140,19 @@ gboolean salut_connection_manager_get_parameters (SalutConnectionManager *obj, c
 /**
  * salut_connection_manager_list_protocols
  *
- * Implements DBus method ListProtocols
+ * Implements D-Bus method ListProtocols
  * on interface org.freedesktop.Telepathy.ConnectionManager
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_manager_list_protocols (SalutConnectionManager *obj, gchar *** ret, GError **error)
+gboolean
+salut_connection_manager_list_protocols (SalutConnectionManager *self,
+                                         gchar ***ret,
+                                         GError **error)
 {
   return TRUE;
 }
@@ -150,16 +161,22 @@ gboolean salut_connection_manager_list_protocols (SalutConnectionManager *obj, g
 /**
  * salut_connection_manager_request_connection
  *
- * Implements DBus method RequestConnection
+ * Implements D-Bus method RequestConnection
  * on interface org.freedesktop.Telepathy.ConnectionManager
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_manager_request_connection (SalutConnectionManager *obj, const gchar * proto, GHashTable * parameters, gchar ** ret, gchar ** ret1, GError **error)
+gboolean
+salut_connection_manager_request_connection (SalutConnectionManager *self,
+                                             const gchar *proto,
+                                             GHashTable *parameters,
+                                             gchar **ret,
+                                             gchar **ret1,
+                                             GError **error)
 {
   return TRUE;
 }

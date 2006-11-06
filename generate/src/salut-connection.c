@@ -32,6 +32,7 @@ G_DEFINE_TYPE(SalutConnection, salut_connection, G_TYPE_OBJECT)
 /* signal enum */
 enum
 {
+    ALIASES_CHANGED,
     NEW_CHANNEL,
     PRESENCE_UPDATE,
     STATUS_CHANGED,
@@ -48,12 +49,16 @@ struct _SalutConnectionPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONNECTION, SalutConnectionPrivate))
+#define SALUT_CONNECTION_GET_PRIVATE(obj) \
+    ((SalutConnectionPrivate *)obj->priv)
 
 static void
-salut_connection_init (SalutConnection *obj)
+salut_connection_init (SalutConnection *self)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (obj);
+  SalutConnectionPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+      SALUT_TYPE_CONNECTION, SalutConnectionPrivate);
+
+  self->priv = priv;
 
   /* allocate any data required by the object here */
 }
@@ -71,13 +76,22 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   object_class->dispose = salut_connection_dispose;
   object_class->finalize = salut_connection_finalize;
 
+  signals[ALIASES_CHANGED] =
+    g_signal_new ("aliases-changed",
+                  G_OBJECT_CLASS_TYPE (salut_connection_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__BOXED,
+                  G_TYPE_NONE, 1, (dbus_g_type_get_collection ("GPtrArray", (dbus_g_type_get_struct ("GValueArray", G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID)))));
+
   signals[NEW_CHANNEL] =
     g_signal_new ("new-channel",
                   G_OBJECT_CLASS_TYPE (salut_connection_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_connection_marshal_VOID__STRING_STRING_INT_INT_BOOLEAN,
+                  salut_connection_marshal_VOID__STRING_STRING_UINT_UINT_BOOLEAN,
                   G_TYPE_NONE, 5, DBUS_TYPE_G_OBJECT_PATH, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_BOOLEAN);
 
   signals[PRESENCE_UPDATE] =
@@ -86,7 +100,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_connection_marshal_VOID__BOXED,
+                  g_cclosure_marshal_VOID__BOXED,
                   G_TYPE_NONE, 1, (dbus_g_type_get_map ("GHashTable", G_TYPE_UINT, (dbus_g_type_get_struct ("GValueArray", G_TYPE_UINT, (dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, (dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE)))), G_TYPE_INVALID)))));
 
   signals[STATUS_CHANGED] =
@@ -95,7 +109,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_connection_marshal_VOID__INT_INT,
+                  salut_connection_marshal_VOID__UINT_UINT,
                   G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_UINT);
 
   dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_connection_class), &dbus_glib_salut_connection_object_info);
@@ -134,16 +148,20 @@ salut_connection_finalize (GObject *object)
 /**
  * salut_connection_add_status
  *
- * Implements DBus method AddStatus
+ * Implements D-Bus method AddStatus
  * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_add_status (SalutConnection *obj, const gchar * status, GHashTable * parms, GError **error)
+gboolean
+salut_connection_add_status (SalutConnection *self,
+                             const gchar *status,
+                             GHashTable *parms,
+                             GError **error)
 {
   return TRUE;
 }
@@ -152,16 +170,18 @@ gboolean salut_connection_add_status (SalutConnection *obj, const gchar * status
 /**
  * salut_connection_clear_status
  *
- * Implements DBus method ClearStatus
+ * Implements D-Bus method ClearStatus
  * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_clear_status (SalutConnection *obj, GError **error)
+gboolean
+salut_connection_clear_status (SalutConnection *self,
+                               GError **error)
 {
   return TRUE;
 }
@@ -170,16 +190,18 @@ gboolean salut_connection_clear_status (SalutConnection *obj, GError **error)
 /**
  * salut_connection_connect
  *
- * Implements DBus method Connect
+ * Implements D-Bus method Connect
  * on interface org.freedesktop.Telepathy.Connection
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_connect (SalutConnection *obj, GError **error)
+gboolean
+salut_connection_connect (SalutConnection *self,
+                          GError **error)
 {
   return TRUE;
 }
@@ -188,16 +210,39 @@ gboolean salut_connection_connect (SalutConnection *obj, GError **error)
 /**
  * salut_connection_disconnect
  *
- * Implements DBus method Disconnect
+ * Implements D-Bus method Disconnect
  * on interface org.freedesktop.Telepathy.Connection
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_disconnect (SalutConnection *obj, GError **error)
+gboolean
+salut_connection_disconnect (SalutConnection *self,
+                             GError **error)
+{
+  return TRUE;
+}
+
+
+/**
+ * salut_connection_get_alias_flags
+ *
+ * Implements D-Bus method GetAliasFlags
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_get_alias_flags (SalutConnection *self,
+                                  guint *ret,
+                                  GError **error)
 {
   return TRUE;
 }
@@ -206,16 +251,19 @@ gboolean salut_connection_disconnect (SalutConnection *obj, GError **error)
 /**
  * salut_connection_get_interfaces
  *
- * Implements DBus method GetInterfaces
+ * Implements D-Bus method GetInterfaces
  * on interface org.freedesktop.Telepathy.Connection
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_get_interfaces (SalutConnection *obj, gchar *** ret, GError **error)
+gboolean
+salut_connection_get_interfaces (SalutConnection *self,
+                                 gchar ***ret,
+                                 GError **error)
 {
   return TRUE;
 }
@@ -224,16 +272,19 @@ gboolean salut_connection_get_interfaces (SalutConnection *obj, gchar *** ret, G
 /**
  * salut_connection_get_protocol
  *
- * Implements DBus method GetProtocol
+ * Implements D-Bus method GetProtocol
  * on interface org.freedesktop.Telepathy.Connection
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_get_protocol (SalutConnection *obj, gchar ** ret, GError **error)
+gboolean
+salut_connection_get_protocol (SalutConnection *self,
+                               gchar **ret,
+                               GError **error)
 {
   return TRUE;
 }
@@ -242,16 +293,19 @@ gboolean salut_connection_get_protocol (SalutConnection *obj, gchar ** ret, GErr
 /**
  * salut_connection_get_self_handle
  *
- * Implements DBus method GetSelfHandle
+ * Implements D-Bus method GetSelfHandle
  * on interface org.freedesktop.Telepathy.Connection
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_get_self_handle (SalutConnection *obj, guint* ret, GError **error)
+gboolean
+salut_connection_get_self_handle (SalutConnection *self,
+                                  guint *ret,
+                                  GError **error)
 {
   return TRUE;
 }
@@ -260,16 +314,19 @@ gboolean salut_connection_get_self_handle (SalutConnection *obj, guint* ret, GEr
 /**
  * salut_connection_get_status
  *
- * Implements DBus method GetStatus
+ * Implements D-Bus method GetStatus
  * on interface org.freedesktop.Telepathy.Connection
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_get_status (SalutConnection *obj, guint* ret, GError **error)
+gboolean
+salut_connection_get_status (SalutConnection *self,
+                             guint *ret,
+                             GError **error)
 {
   return TRUE;
 }
@@ -278,16 +335,19 @@ gboolean salut_connection_get_status (SalutConnection *obj, guint* ret, GError *
 /**
  * salut_connection_get_statuses
  *
- * Implements DBus method GetStatuses
+ * Implements D-Bus method GetStatuses
  * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_get_statuses (SalutConnection *obj, GHashTable ** ret, GError **error)
+gboolean
+salut_connection_get_statuses (SalutConnection *self,
+                               GHashTable **ret,
+                               GError **error)
 {
   return TRUE;
 }
@@ -296,46 +356,57 @@ gboolean salut_connection_get_statuses (SalutConnection *obj, GHashTable ** ret,
 /**
  * salut_connection_hold_handles
  *
- * Implements DBus method HoldHandles
+ * Implements D-Bus method HoldHandles
  * on interface org.freedesktop.Telepathy.Connection
  *
- * @context: The DBUS invocation context to use to return values
+ * @context: The D-Bus invocation context to use to return values
  *           or throw an error.
  */
-gboolean salut_connection_hold_handles (SalutConnection *obj, guint handle_type, const GArray * handles, DBusGMethodInvocation *context)
+void
+salut_connection_hold_handles (SalutConnection *self,
+                               guint handle_type,
+                               const GArray *handles,
+                               DBusGMethodInvocation *context)
 {
-  return TRUE;
+  return;
 }
 
 
 /**
  * salut_connection_inspect_handles
  *
- * Implements DBus method InspectHandles
+ * Implements D-Bus method InspectHandles
  * on interface org.freedesktop.Telepathy.Connection
  *
- * @context: The DBUS invocation context to use to return values
+ * @context: The D-Bus invocation context to use to return values
  *           or throw an error.
  */
-gboolean salut_connection_inspect_handles (SalutConnection *obj, guint handle_type, const GArray * handles, DBusGMethodInvocation *context)
+void
+salut_connection_inspect_handles (SalutConnection *self,
+                                  guint handle_type,
+                                  const GArray *handles,
+                                  DBusGMethodInvocation *context)
 {
-  return TRUE;
+  return;
 }
 
 
 /**
  * salut_connection_list_channels
  *
- * Implements DBus method ListChannels
+ * Implements D-Bus method ListChannels
  * on interface org.freedesktop.Telepathy.Connection
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_list_channels (SalutConnection *obj, GPtrArray ** ret, GError **error)
+gboolean
+salut_connection_list_channels (SalutConnection *self,
+                                GPtrArray **ret,
+                                GError **error)
 {
   return TRUE;
 }
@@ -344,31 +415,60 @@ gboolean salut_connection_list_channels (SalutConnection *obj, GPtrArray ** ret,
 /**
  * salut_connection_release_handles
  *
- * Implements DBus method ReleaseHandles
+ * Implements D-Bus method ReleaseHandles
  * on interface org.freedesktop.Telepathy.Connection
  *
- * @context: The DBUS invocation context to use to return values
+ * @context: The D-Bus invocation context to use to return values
  *           or throw an error.
  */
-gboolean salut_connection_release_handles (SalutConnection *obj, guint handle_type, const GArray * handles, DBusGMethodInvocation *context)
+void
+salut_connection_release_handles (SalutConnection *self,
+                                  guint handle_type,
+                                  const GArray *handles,
+                                  DBusGMethodInvocation *context)
 {
-  return TRUE;
+  return;
 }
 
 
 /**
  * salut_connection_remove_status
  *
- * Implements DBus method RemoveStatus
+ * Implements D-Bus method RemoveStatus
  * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_remove_status (SalutConnection *obj, const gchar * status, GError **error)
+gboolean
+salut_connection_remove_status (SalutConnection *self,
+                                const gchar *status,
+                                GError **error)
+{
+  return TRUE;
+}
+
+
+/**
+ * salut_connection_request_aliases
+ *
+ * Implements D-Bus method RequestAliases
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_request_aliases (SalutConnection *self,
+                                  const GArray *contacts,
+                                  gchar ***ret,
+                                  GError **error)
 {
   return TRUE;
 }
@@ -377,46 +477,80 @@ gboolean salut_connection_remove_status (SalutConnection *obj, const gchar * sta
 /**
  * salut_connection_request_channel
  *
- * Implements DBus method RequestChannel
+ * Implements D-Bus method RequestChannel
  * on interface org.freedesktop.Telepathy.Connection
  *
- * @context: The DBUS invocation context to use to return values
+ * @context: The D-Bus invocation context to use to return values
  *           or throw an error.
  */
-gboolean salut_connection_request_channel (SalutConnection *obj, const gchar * type, guint handle_type, guint handle, gboolean suppress_handler, DBusGMethodInvocation *context)
+void
+salut_connection_request_channel (SalutConnection *self,
+                                  const gchar *type,
+                                  guint handle_type,
+                                  guint handle,
+                                  gboolean suppress_handler,
+                                  DBusGMethodInvocation *context)
 {
-  return TRUE;
+  return;
 }
 
 
 /**
  * salut_connection_request_handles
  *
- * Implements DBus method RequestHandles
+ * Implements D-Bus method RequestHandles
  * on interface org.freedesktop.Telepathy.Connection
  *
- * @context: The DBUS invocation context to use to return values
+ * @context: The D-Bus invocation context to use to return values
  *           or throw an error.
  */
-gboolean salut_connection_request_handles (SalutConnection *obj, guint handle_type, const gchar ** names, DBusGMethodInvocation *context)
+void
+salut_connection_request_handles (SalutConnection *self,
+                                  guint handle_type,
+                                  const gchar **names,
+                                  DBusGMethodInvocation *context)
 {
-  return TRUE;
+  return;
 }
 
 
 /**
  * salut_connection_request_presence
  *
- * Implements DBus method RequestPresence
+ * Implements D-Bus method RequestPresence
  * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_request_presence (SalutConnection *obj, const GArray * contacts, GError **error)
+gboolean
+salut_connection_request_presence (SalutConnection *self,
+                                   const GArray *contacts,
+                                   GError **error)
+{
+  return TRUE;
+}
+
+
+/**
+ * salut_connection_set_aliases
+ *
+ * Implements D-Bus method SetAliases
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_set_aliases (SalutConnection *self,
+                              GHashTable *aliases,
+                              GError **error)
 {
   return TRUE;
 }
@@ -425,16 +559,19 @@ gboolean salut_connection_request_presence (SalutConnection *obj, const GArray *
 /**
  * salut_connection_set_last_activity_time
  *
- * Implements DBus method SetLastActivityTime
+ * Implements D-Bus method SetLastActivityTime
  * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_set_last_activity_time (SalutConnection *obj, guint time, GError **error)
+gboolean
+salut_connection_set_last_activity_time (SalutConnection *self,
+                                         guint time,
+                                         GError **error)
 {
   return TRUE;
 }
@@ -443,16 +580,19 @@ gboolean salut_connection_set_last_activity_time (SalutConnection *obj, guint ti
 /**
  * salut_connection_set_status
  *
- * Implements DBus method SetStatus
+ * Implements D-Bus method SetStatus
  * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_set_status (SalutConnection *obj, GHashTable * statuses, GError **error)
+gboolean
+salut_connection_set_status (SalutConnection *self,
+                             GHashTable *statuses,
+                             GError **error)
 {
   return TRUE;
 }

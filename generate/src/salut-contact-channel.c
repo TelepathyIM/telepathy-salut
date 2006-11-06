@@ -48,12 +48,16 @@ struct _SalutContactChannelPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_CONTACT_CHANNEL_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT_CHANNEL, SalutContactChannelPrivate))
+#define SALUT_CONTACT_CHANNEL_GET_PRIVATE(obj) \
+    ((SalutContactChannelPrivate *)obj->priv)
 
 static void
-salut_contact_channel_init (SalutContactChannel *obj)
+salut_contact_channel_init (SalutContactChannel *self)
 {
-  SalutContactChannelPrivate *priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE (obj);
+  SalutContactChannelPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+      SALUT_TYPE_CONTACT_CHANNEL, SalutContactChannelPrivate);
+
+  self->priv = priv;
 
   /* allocate any data required by the object here */
 }
@@ -77,7 +81,7 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_contact_channel_marshal_VOID__VOID,
+                  g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
   signals[GROUP_FLAGS_CHANGED] =
@@ -86,7 +90,7 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_contact_channel_marshal_VOID__INT_INT,
+                  salut_contact_channel_marshal_VOID__UINT_UINT,
                   G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_UINT);
 
   signals[MEMBERS_CHANGED] =
@@ -95,7 +99,7 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_contact_channel_marshal_VOID__STRING_BOXED_BOXED_BOXED_BOXED_INT_INT,
+                  salut_contact_channel_marshal_VOID__STRING_BOXED_BOXED_BOXED_BOXED_UINT_UINT,
                   G_TYPE_NONE, 7, G_TYPE_STRING, DBUS_TYPE_G_UINT_ARRAY, DBUS_TYPE_G_UINT_ARRAY, DBUS_TYPE_G_UINT_ARRAY, DBUS_TYPE_G_UINT_ARRAY, G_TYPE_UINT, G_TYPE_UINT);
 
   dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_contact_channel_class), &dbus_glib_salut_contact_channel_object_info);
@@ -134,16 +138,20 @@ salut_contact_channel_finalize (GObject *object)
 /**
  * salut_contact_channel_add_members
  *
- * Implements DBus method AddMembers
+ * Implements D-Bus method AddMembers
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_add_members (SalutContactChannel *obj, const GArray * contacts, const gchar * message, GError **error)
+gboolean
+salut_contact_channel_add_members (SalutContactChannel *self,
+                                   const GArray *contacts,
+                                   const gchar *message,
+                                   GError **error)
 {
   return TRUE;
 }
@@ -152,16 +160,18 @@ gboolean salut_contact_channel_add_members (SalutContactChannel *obj, const GArr
 /**
  * salut_contact_channel_close
  *
- * Implements DBus method Close
+ * Implements D-Bus method Close
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_close (SalutContactChannel *obj, GError **error)
+gboolean
+salut_contact_channel_close (SalutContactChannel *self,
+                             GError **error)
 {
   return TRUE;
 }
@@ -170,16 +180,21 @@ gboolean salut_contact_channel_close (SalutContactChannel *obj, GError **error)
 /**
  * salut_contact_channel_get_all_members
  *
- * Implements DBus method GetAllMembers
+ * Implements D-Bus method GetAllMembers
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_all_members (SalutContactChannel *obj, GArray ** ret, GArray ** ret1, GArray ** ret2, GError **error)
+gboolean
+salut_contact_channel_get_all_members (SalutContactChannel *self,
+                                       GArray **ret,
+                                       GArray **ret1,
+                                       GArray **ret2,
+                                       GError **error)
 {
   return TRUE;
 }
@@ -188,16 +203,19 @@ gboolean salut_contact_channel_get_all_members (SalutContactChannel *obj, GArray
 /**
  * salut_contact_channel_get_channel_type
  *
- * Implements DBus method GetChannelType
+ * Implements D-Bus method GetChannelType
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_channel_type (SalutContactChannel *obj, gchar ** ret, GError **error)
+gboolean
+salut_contact_channel_get_channel_type (SalutContactChannel *self,
+                                        gchar **ret,
+                                        GError **error)
 {
   return TRUE;
 }
@@ -206,16 +224,19 @@ gboolean salut_contact_channel_get_channel_type (SalutContactChannel *obj, gchar
 /**
  * salut_contact_channel_get_group_flags
  *
- * Implements DBus method GetGroupFlags
+ * Implements D-Bus method GetGroupFlags
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_group_flags (SalutContactChannel *obj, guint* ret, GError **error)
+gboolean
+salut_contact_channel_get_group_flags (SalutContactChannel *self,
+                                       guint *ret,
+                                       GError **error)
 {
   return TRUE;
 }
@@ -224,16 +245,20 @@ gboolean salut_contact_channel_get_group_flags (SalutContactChannel *obj, guint*
 /**
  * salut_contact_channel_get_handle
  *
- * Implements DBus method GetHandle
+ * Implements D-Bus method GetHandle
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_handle (SalutContactChannel *obj, guint* ret, guint* ret1, GError **error)
+gboolean
+salut_contact_channel_get_handle (SalutContactChannel *self,
+                                  guint *ret,
+                                  guint *ret1,
+                                  GError **error)
 {
   return TRUE;
 }
@@ -242,16 +267,20 @@ gboolean salut_contact_channel_get_handle (SalutContactChannel *obj, guint* ret,
 /**
  * salut_contact_channel_get_handle_owners
  *
- * Implements DBus method GetHandleOwners
+ * Implements D-Bus method GetHandleOwners
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_handle_owners (SalutContactChannel *obj, const GArray * handles, GArray ** ret, GError **error)
+gboolean
+salut_contact_channel_get_handle_owners (SalutContactChannel *self,
+                                         const GArray *handles,
+                                         GArray **ret,
+                                         GError **error)
 {
   return TRUE;
 }
@@ -260,16 +289,19 @@ gboolean salut_contact_channel_get_handle_owners (SalutContactChannel *obj, cons
 /**
  * salut_contact_channel_get_interfaces
  *
- * Implements DBus method GetInterfaces
+ * Implements D-Bus method GetInterfaces
  * on interface org.freedesktop.Telepathy.Channel
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_interfaces (SalutContactChannel *obj, gchar *** ret, GError **error)
+gboolean
+salut_contact_channel_get_interfaces (SalutContactChannel *self,
+                                      gchar ***ret,
+                                      GError **error)
 {
   return TRUE;
 }
@@ -278,16 +310,19 @@ gboolean salut_contact_channel_get_interfaces (SalutContactChannel *obj, gchar *
 /**
  * salut_contact_channel_get_local_pending_members
  *
- * Implements DBus method GetLocalPendingMembers
+ * Implements D-Bus method GetLocalPendingMembers
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_local_pending_members (SalutContactChannel *obj, GArray ** ret, GError **error)
+gboolean
+salut_contact_channel_get_local_pending_members (SalutContactChannel *self,
+                                                 GArray **ret,
+                                                 GError **error)
 {
   return TRUE;
 }
@@ -296,16 +331,19 @@ gboolean salut_contact_channel_get_local_pending_members (SalutContactChannel *o
 /**
  * salut_contact_channel_get_members
  *
- * Implements DBus method GetMembers
+ * Implements D-Bus method GetMembers
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_members (SalutContactChannel *obj, GArray ** ret, GError **error)
+gboolean
+salut_contact_channel_get_members (SalutContactChannel *self,
+                                   GArray **ret,
+                                   GError **error)
 {
   return TRUE;
 }
@@ -314,16 +352,19 @@ gboolean salut_contact_channel_get_members (SalutContactChannel *obj, GArray ** 
 /**
  * salut_contact_channel_get_remote_pending_members
  *
- * Implements DBus method GetRemotePendingMembers
+ * Implements D-Bus method GetRemotePendingMembers
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_remote_pending_members (SalutContactChannel *obj, GArray ** ret, GError **error)
+gboolean
+salut_contact_channel_get_remote_pending_members (SalutContactChannel *self,
+                                                  GArray **ret,
+                                                  GError **error)
 {
   return TRUE;
 }
@@ -332,16 +373,19 @@ gboolean salut_contact_channel_get_remote_pending_members (SalutContactChannel *
 /**
  * salut_contact_channel_get_self_handle
  *
- * Implements DBus method GetSelfHandle
+ * Implements D-Bus method GetSelfHandle
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_self_handle (SalutContactChannel *obj, guint* ret, GError **error)
+gboolean
+salut_contact_channel_get_self_handle (SalutContactChannel *self,
+                                       guint *ret,
+                                       GError **error)
 {
   return TRUE;
 }
@@ -350,16 +394,20 @@ gboolean salut_contact_channel_get_self_handle (SalutContactChannel *obj, guint*
 /**
  * salut_contact_channel_remove_members
  *
- * Implements DBus method RemoveMembers
+ * Implements D-Bus method RemoveMembers
  * on interface org.freedesktop.Telepathy.Channel.Interface.Group
  *
  * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_remove_members (SalutContactChannel *obj, const GArray * contacts, const gchar * message, GError **error)
+gboolean
+salut_contact_channel_remove_members (SalutContactChannel *self,
+                                      const GArray *contacts,
+                                      const gchar *message,
+                                      GError **error)
 {
   return TRUE;
 }
