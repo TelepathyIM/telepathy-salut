@@ -201,7 +201,7 @@ find_resolver(SalutContact *contact,
   info.type = type;
   info.domain = domain;
   ret = g_list_find_custom(priv->resolvers, &info, compare_resolver); 
-  return ret ? SALUT_AVAHI_SERVICE_RESOLVER(ret) : NULL;
+  return ret ? SALUT_AVAHI_SERVICE_RESOLVER(ret->data) : NULL;
 }
 
 
