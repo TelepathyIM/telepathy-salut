@@ -46,7 +46,6 @@ static const SalutPresenceStatusInfo salut_presence_statuses[] = {
   { "available", "avail",   TP_CONN_PRESENCE_TYPE_AVAILABLE },
   { "away",      "away",    TP_CONN_PRESENCE_TYPE_AWAY  },
   { "dnd",       "dnd",     TP_CONN_PRESENCE_TYPE_AWAY  },
-  { "offline",   "offline", TP_CONN_PRESENCE_TYPE_OFFLINE  },
   { NULL, NULL, 0}
 };
 
