@@ -328,7 +328,7 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
   SalutIMChannel *chan;
   Handle handle;
   struct sockaddr_storage addr;
-  size_t size = sizeof(struct sockaddr_storage);
+  socklen_t size = sizeof(struct sockaddr_storage);
   /* FIXME we assume that one box has only one user... We can only know for
    * sure who we're talking too when they sent the first message */
   if (!salut_lm_connection_get_address(connection, &addr, &size)) {
