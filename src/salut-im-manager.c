@@ -291,6 +291,7 @@ salut_im_manager_new_channel(SalutImManager *mgr, Handle handle) {
                       "object-path", path,
                       "handle", handle,
                       NULL);
+  g_object_unref(contact);
   g_free(path);
   g_hash_table_insert(priv->channels, GINT_TO_POINTER(handle), chan);
   g_signal_emit_by_name(mgr, "new-channel", chan);
