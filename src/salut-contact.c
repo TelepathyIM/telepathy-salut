@@ -1,6 +1,6 @@
 /*
  * salut-contact.c - Source for salut_contact
- * Copyright (C) 2005 Collabora Ltd.
+ * Copyright (C) 2005-2006 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -43,6 +43,7 @@ enum
 {
     FOUND,
     STATUS_CHANGED,
+    ALIAS_CHANGED,
     LOST,
     LAST_SIGNAL
 };
@@ -56,6 +57,7 @@ typedef struct _SalutContactPrivate SalutContactPrivate;
 struct _SalutContactPrivate
 {
   gboolean dispose_has_run;
+  gchar *alias;
   SalutAvahiClient *client;
   GList *resolvers;
   gboolean found;
@@ -75,6 +77,7 @@ salut_contact_init (SalutContact *obj)
   priv->client = NULL;
   priv->resolvers = NULL;
   priv->found = FALSE;
+  priv->alias = NULL;
 }
 
 static void salut_contact_dispose (GObject *object);
@@ -98,6 +101,14 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
                                 g_cclosure_marshal_VOID__VOID,
                                 G_TYPE_NONE, 0);
 
+  signals[ALIAS_CHANGED] = g_signal_new("alias-changed",
+                                G_OBJECT_CLASS_TYPE(salut_contact_class),
+                                G_SIGNAL_RUN_LAST,
+                                0,
+                                NULL, NULL,
+                                salut_contact_marshal_VOID__STRING,
+                                G_TYPE_NONE, 1,
+                                G_TYPE_STRING);
   signals[STATUS_CHANGED] = g_signal_new("status-changed",
                                 G_OBJECT_CLASS_TYPE(salut_contact_class),
                                 G_SIGNAL_RUN_LAST,
@@ -144,11 +155,12 @@ salut_contact_dispose (GObject *object)
 void
 salut_contact_finalize (GObject *object) {
   SalutContact *self = SALUT_CONTACT (object);
-  //SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
   g_free(self->name);
   g_free(self->status_message);
+  g_free(priv->alias);
 
   G_OBJECT_CLASS (salut_contact_parent_class)->finalize (object);
 }
@@ -232,6 +244,9 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   AvahiStringList *t;
   gboolean status_changed = FALSE;
+  gboolean alias_changed = FALSE;
+  gchar *first = NULL;
+  gchar *last = NULL;
 
   if (!priv->found) {
     g_signal_emit(self, signals[FOUND], 0);
@@ -270,6 +285,56 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     avahi_free(value);
   }
 
+  if ((t = avahi_string_list_find(txt, "1st")) != NULL) { 
+    gchar *key;
+    avahi_string_list_get_pair(t, &key, &first, NULL);
+    avahi_free(key);
+  }
+  
+  if ((t = avahi_string_list_find(txt, "last")) != NULL) { 
+    gchar *key;
+    avahi_string_list_get_pair(t, &key, &last, NULL);
+    avahi_free(key);
+  }
+
+
+  if (first != NULL || last != NULL) {
+    GString *new_alias = NULL;
+
+    if (first != NULL) {
+      new_alias = g_string_new(first);
+    } 
+
+    if (new_alias != NULL && last != NULL) {
+      new_alias = g_string_append_c(new_alias, ' ');
+      new_alias = g_string_append(new_alias, last);
+    } else if (last != NULL) {
+      new_alias = g_string_new(last);
+    }
+
+    if (*(new_alias->str) == '\0') {
+      DEBUG("Ignoring empty alias");
+      g_string_free(new_alias, TRUE);
+    } else if (priv->alias == NULL 
+               || strcmp(priv->alias, new_alias->str) != 0) {
+      g_free(priv->alias);
+      priv->alias = new_alias->str;
+      g_string_free(new_alias, FALSE);
+      alias_changed = TRUE;
+    } else {
+      g_string_free(new_alias, TRUE);
+    }
+    avahi_free(first);
+    avahi_free(last);
+  } else if (priv->alias != NULL) {
+    g_free(priv->alias);
+    alias_changed = TRUE;
+  }
+
+  if (alias_changed) {
+    g_signal_emit(self, signals[ALIAS_CHANGED], 0, priv->alias); 
+  }
+
   if (status_changed) {
     g_signal_emit(self, signals[STATUS_CHANGED], 0, self->status, 
                                                     self->status_message);
@@ -286,6 +351,7 @@ contact_failed_cb(SalutAvahiServiceResolver  *resolver, GError *error,
   g_object_unref(resolver);
   if (g_list_length(priv->resolvers) == 0 && priv->found) {
     g_signal_emit(self, signals[LOST], 0);
+    priv->found = FALSE;
   }
 }
 
@@ -436,5 +502,14 @@ salut_contact_has_address(SalutContact *contact,
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
   return 
      (g_list_find_custom(priv->resolvers, address, _compare_address) != NULL);
+}
+
+const gchar *
+salut_contact_get_alias(SalutContact *contact) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+  if (priv->alias == NULL) {
+    return contact->name;
+  }
+  return priv->alias;
 }
 

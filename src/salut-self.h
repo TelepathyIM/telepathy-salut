@@ -69,7 +69,8 @@ gboolean salut_self_set_presence(SalutSelf *self,
                                  SalutPresenceId status,
                                  const gchar *message,
                                  GError **error);
-
+const gchar 
+*salut_self_get_alias(SalutSelf *self);
 
 G_END_DECLS
 

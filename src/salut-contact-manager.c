@@ -56,6 +56,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
 enum
 {
   CONTACT_STATUS_CHANGED,
+  CONTACT_ALIAS_CHANGED,
   LAST_SIGNAL
 };
 
@@ -110,6 +111,16 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
                                 G_TYPE_NONE, 3,
                                 SALUT_TYPE_CONTACT,
                                 SALUT_TYPE_PRESENCE_ID,
+                                G_TYPE_STRING);
+
+  signals[CONTACT_ALIAS_CHANGED] = g_signal_new("contact-alias-changed",
+                                G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
+                                G_SIGNAL_RUN_LAST,
+                                0,
+                                NULL, NULL,
+                                salut_contact_manager_marshal_VOID__OBJECT_STRING,
+                                G_TYPE_NONE, 2,
+                                SALUT_TYPE_CONTACT,
                                 G_TYPE_STRING);
 }
 
@@ -200,6 +211,14 @@ contact_state_changed_cb(SalutContact *contact, SalutPresenceId status,
 }
 
 static void
+contact_alias_changed_cb(SalutContact *contact, 
+                         gchar *alias, gpointer userdata) {
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
+
+  g_signal_emit(mgr, signals[CONTACT_ALIAS_CHANGED], 0, contact, alias);
+}
+
+static void
 contact_lost_cb(SalutContact *contact, gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
@@ -251,6 +270,8 @@ browser_found(SalutAvahiServiceBrowser *browser,
                      G_CALLBACK(contact_found_cb), mgr);
     g_signal_connect(contact, "status-changed", 
                      G_CALLBACK(contact_state_changed_cb), mgr);
+    g_signal_connect(contact, "alias-changed", 
+                     G_CALLBACK(contact_alias_changed_cb), mgr);
     g_signal_connect(contact, "lost", 
                      G_CALLBACK(contact_lost_cb), mgr);
     g_object_weak_ref(G_OBJECT(contact), _contact_finalized_cb , mgr);

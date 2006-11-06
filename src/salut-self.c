@@ -61,6 +61,8 @@ struct _SalutSelfPrivate
   gchar *jid;
   gchar *email;
 
+  gchar *alias;
+
   GIOChannel *listener;
   guint io_watch_in;
 
@@ -215,6 +217,7 @@ salut_self_new(SalutAvahiClient *client,
                gchar *first_name, gchar *last_name, 
                gchar *jid, gchar *email) {
   SalutSelfPrivate *priv;
+  GString *alias = NULL;
 
   SalutSelf *ret = g_object_new(SALUT_TYPE_SELF, NULL);
   priv = SALUT_SELF_GET_PRIVATE (ret);
@@ -225,7 +228,27 @@ salut_self_new(SalutAvahiClient *client,
   priv->last_name = g_strdup(last_name);
   priv->jid  = g_strdup(jid);
   priv->email = g_strdup(email);
+  priv->alias = NULL;
 
+  if (first_name != NULL) {
+    alias = g_string_new(first_name);
+  }
+
+  if (last_name != NULL) {
+    if (alias != NULL) {
+      alias = g_string_append_c(alias, ' ');
+      alias = g_string_append(alias, last_name);
+    } else {
+      alias = g_string_new(first_name);
+    } 
+  }
+
+  if (alias != NULL && *(alias->str) != '\0') {
+    priv->alias = alias->str;
+    g_string_free(alias, FALSE);
+  } else {
+    g_string_free(alias, TRUE);
+  }
   return ret;
 }
 
@@ -421,4 +444,13 @@ salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
   salut_avahi_entry_group_service_set(priv->presence, "msg",
                                       self->status_message, NULL);
   return salut_avahi_entry_group_service_thaw(priv->presence, error);
+}
+
+const gchar *
+salut_self_get_alias(SalutSelf *self) {
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  if (priv->alias == NULL) {
+    return self->name;
+  }
+  return priv->alias;
 }

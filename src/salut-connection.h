@@ -90,6 +90,21 @@ gboolean salut_connection_request_presence (SalutConnection *obj, const GArray *
 gboolean salut_connection_set_last_activity_time (SalutConnection *obj, guint time, GError **error);
 gboolean salut_connection_set_status (SalutConnection *obj, GHashTable * statuses, GError **error);
 
+gboolean
+salut_connection_get_alias_flags (SalutConnection *self,
+                                  guint *ret,
+                                  GError **error);
+
+gboolean
+salut_connection_request_aliases (SalutConnection *self,
+                                  const GArray *contacts,
+                                  gchar ***ret,
+                                  GError **error);
+
+gboolean
+salut_connection_set_aliases (SalutConnection *self,
+                              GHashTable *aliases,
+                              GError **error);
 
 G_END_DECLS
 

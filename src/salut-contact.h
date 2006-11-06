@@ -86,6 +86,8 @@ salut_contact_get_addresses(SalutContact *contact);
 gboolean
 salut_contact_has_address(SalutContact *contact,
                            struct sockaddr_storage *address);
+const gchar *
+salut_contact_get_alias(SalutContact *contact);
 
 G_END_DECLS
 

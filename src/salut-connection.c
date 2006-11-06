@@ -66,6 +66,9 @@
       DBUS_TYPE_G_OBJECT_PATH, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_UINT, \
             G_TYPE_INVALID))
 
+#define TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
+      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
+
 /* Protocol as know to telepathy */
 #define PROTOCOL "salut"
 
@@ -94,6 +97,7 @@ G_DEFINE_TYPE(SalutConnection, salut_connection, G_TYPE_OBJECT)
 /* signal enum */
 enum
 {
+    ALIASES_CHANGED,
     NEW_CHANNEL,
     PRESENCE_UPDATE,
     STATUS_CHANGED,
@@ -293,13 +297,22 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
                                    G_PARAM_STATIC_BLURB);
   g_object_class_install_property(object_class, PROP_JID, param_spec);
 
+  signals[ALIASES_CHANGED] =
+    g_signal_new ("aliases-changed",
+                  G_OBJECT_CLASS_TYPE (salut_connection_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__BOXED,
+                  G_TYPE_NONE, 1, (dbus_g_type_get_collection ("GPtrArray", (dbus_g_type_get_struct ("GValueArray", G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID)))));
+
   signals[NEW_CHANNEL] =
     g_signal_new ("new-channel",
                   G_OBJECT_CLASS_TYPE (salut_connection_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_connection_marshal_VOID__STRING_STRING_INT_INT_BOOLEAN,
+                  salut_connection_marshal_VOID__STRING_STRING_UINT_UINT_BOOLEAN,
                   G_TYPE_NONE, 5, DBUS_TYPE_G_OBJECT_PATH, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_BOOLEAN);
 
   signals[PRESENCE_UPDATE] =
@@ -308,7 +321,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_connection_marshal_VOID__BOXED,
+                  g_cclosure_marshal_VOID__BOXED,
                   G_TYPE_NONE, 1, (dbus_g_type_get_map ("GHashTable", G_TYPE_UINT, (dbus_g_type_get_struct ("GValueArray", G_TYPE_UINT, (dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, (dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE)))), G_TYPE_INVALID)))));
 
   signals[STATUS_CHANGED] =
@@ -317,7 +330,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_connection_marshal_VOID__INT_INT,
+                  salut_connection_marshal_VOID__UINT_UINT,
                   G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_UINT);
 
   signals[DISCONNECTED] =
@@ -572,6 +585,32 @@ _contact_manager_contact_status_cb(SalutContactManager *mgr,
                           handle_for_contact(self->handle_repo, contact->name));
 }
 
+void
+_contact_manager_contact_alias_cb(SalutContactManager *mgr, 
+                                  SalutContact *contact,
+                                  gchar *alias,
+                                  gpointer data) {
+  SalutConnection *self = SALUT_CONNECTION(data);
+  GPtrArray *aliases;
+  GValue entry = {0, };
+  guint handle = handle_for_contact(self->handle_repo, contact->name);
+
+  g_value_init(&entry, TP_ALIAS_PAIR_TYPE);
+  g_value_take_boxed(&entry, 
+                     dbus_g_type_specialized_construct(TP_ALIAS_PAIR_TYPE));
+
+  dbus_g_type_struct_set(&entry, 
+                         0, handle,
+                         1, alias,
+                         G_MAXUINT);
+  aliases = g_ptr_array_sized_new(1);
+  g_ptr_array_add(aliases, g_value_get_boxed(&entry));
+
+  DEBUG("Emitting AliasesChanged");
+
+  g_signal_emit(self, signals[ALIASES_CHANGED], 0, aliases);
+}
+
 static void
 _self_established_cb(SalutSelf *s, gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
@@ -586,6 +625,8 @@ _self_established_cb(SalutSelf *s, gpointer data) {
                    G_CALLBACK(_channel_iface_new_channel_cb), self);
   g_signal_connect(priv->contact_manager, "contact-status-changed",
                    G_CALLBACK(_contact_manager_contact_status_cb), self);
+  g_signal_connect(priv->contact_manager, "contact-alias-changed",
+                   G_CALLBACK(_contact_manager_contact_alias_cb), self);
 
   priv->im_manager = salut_im_manager_new(self, priv->contact_manager);
   g_signal_connect(priv->im_manager, "new-channel",
@@ -1005,6 +1046,7 @@ gboolean salut_connection_disconnect (SalutConnection *self, GError **error)
 gboolean salut_connection_get_interfaces (SalutConnection *obj, gchar *** ret, GError **error)
 {
   const gchar *interfaces [] = {
+    TP_IFACE_CONN_INTERFACE_ALIASING,
     TP_IFACE_CONN_INTERFACE_PRESENCE,
     NULL };
   
@@ -1667,3 +1709,91 @@ salut_connection_set_status (SalutConnection *self,
   return ret;
 }
 
+/**
+ * salut_connection_get_alias_flags
+ *
+ * Implements D-Bus method GetAliasFlags
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_get_alias_flags (SalutConnection *self,
+                                  guint *ret,
+                                  GError **error)
+{
+  /* Aliases are set by the contacts 
+   * Actually we concat the first and lastname property */
+  *ret = 0;
+  return TRUE;
+}
+
+/**
+ * salut_connection_request_aliases
+ *
+ * Implements D-Bus method RequestAliases
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_request_aliases (SalutConnection *self,
+                                  const GArray *contacts,
+                                  gchar ***ret,
+                                  GError **error) {
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  int i;
+  gchar **aliases;
+
+  DEBUG("Alias requested");
+
+  ERROR_IF_NOT_CONNECTED(self, *error);
+  if (!handles_are_valid(self->handle_repo, TP_HANDLE_TYPE_CONTACT,
+                                            contacts, FALSE, error)) {
+    return FALSE;
+  }
+
+  aliases = g_new0(gchar *, contacts->len + 1);
+  for (i = 0; i < contacts->len; i++) {
+    Handle handle = g_array_index (contacts, Handle, i);
+    SalutContact *contact;
+    if (handle == self->self_handle) {
+      aliases[i] = g_strdup(salut_self_get_alias(priv->self));
+    } else {
+      contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
+      aliases[i] = g_strdup(salut_contact_get_alias(contact));
+      g_object_unref(contact);
+    }
+  }
+  *ret = aliases;
+  return TRUE;
+}
+
+/**
+ * salut_connection_set_aliases
+ *
+ * Implements D-Bus method SetAliases
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_set_aliases (SalutConnection *self,
+                              GHashTable *aliases,
+                              GError **error) {
+  *error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
+                       "Aliases can't be set on salut");
+  return FALSE;
+}
