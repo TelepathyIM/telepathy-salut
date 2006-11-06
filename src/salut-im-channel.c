@@ -136,6 +136,7 @@ salut_im_channel_message_new(guint type, const gchar *text) {
   msg = g_new(SalutIMChannelMessage, 1);
   msg->type = type;
   msg->text = g_strdup(text);
+  msg->time = time(NULL);
   return msg;
 }
 
@@ -431,7 +432,8 @@ salut_im_channel_finalize (GObject *object)
 }
 
 static void
-_sendout_message(SalutIMChannel * self, guint type, const gchar *text) {
+_sendout_message(SalutIMChannel * self, guint type, 
+                 const gchar *text, const guint timestamp) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   LmMessage *msg;
 
@@ -460,10 +462,10 @@ _sendout_message(SalutIMChannel * self, guint type, const gchar *text) {
   }
   
   if (salut_lm_connection_send(priv->lm_connection, msg, NULL)) {
-    g_signal_emit(self, signals[SENT], 0, time(NULL), type, text);
+    g_signal_emit(self, signals[SENT], 0, timestamp, type, text);
   } else  {
     g_signal_emit(self, signals[SEND_ERROR], CHANNEL_TEXT_SEND_ERROR_UNKNOWN, 
-                  time(NULL), type, text);
+                  timestamp, type, text);
   }
   lm_message_unref(msg);
 }
@@ -474,7 +476,20 @@ _flush_queue(SalutIMChannel *self) {
   SalutIMChannelMessage *msg;
   /*Connected!, flusch the queue ! */
   while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
-    _sendout_message(self, msg->type, msg->text);
+    _sendout_message(self, msg->type, msg->text, msg->time);
+    salut_im_channel_message_free(msg);
+  }
+}
+
+static void
+_error_flush_queue(SalutIMChannel *self) {
+  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutIMChannelMessage *msg;
+  /*Connection failed!, flusch the queue ! */
+  while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
+    DEBUG("Sending out SendError for msg: %s", msg->text);
+    g_signal_emit(self, signals[SEND_ERROR], CHANNEL_TEXT_SEND_ERROR_OFFLINE,
+                  msg->time, msg->type, msg->text);
     salut_im_channel_message_free(msg);
   }
 }
@@ -511,6 +526,7 @@ _connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
     priv->lm_connection = NULL;
     priv->state = CHANNEL_NOT_CONNECTED;
     DEBUG("All connection attempts failed");
+    _error_flush_queue(self);
   } else {
     salut_contact_address_t *addr;
     addr = &g_array_index(addrs, salut_contact_address_t, i);
@@ -595,15 +611,17 @@ _send_message(SalutIMChannel * self, guint type, const gchar *text) {
 
   switch (priv->state) {
     case CHANNEL_NOT_CONNECTED:
+      msg = salut_im_channel_message_new(type, text);
+      g_queue_push_tail(priv->out_queue, msg);
       _setup_connection(self);
-      /* fallthrough */
+      break;
     case CHANNEL_CONNECTING:
       msg = salut_im_channel_message_new(type, text);
       g_queue_push_tail(priv->out_queue, msg);
       break;
     case CHANNEL_CONNECTED:
       /* Connected and the queue is empty, so push it out directly */
-      _sendout_message(self, type, text);
+      _sendout_message(self, type, text, time(NULL));
       break;
   }
 }
@@ -714,6 +732,7 @@ salut_im_channel_close (SalutIMChannel *self, GError **error) {
       break;
   }
 
+  DEBUG("Emitting closed signal for %s", priv->object_path);
   g_signal_emit(self, signals[CLOSED], 0);
    
   return TRUE;
