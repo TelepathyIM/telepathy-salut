@@ -628,14 +628,13 @@ _self_new_connection_cb(SalutSelf *s, SalutLmConnection *conn, gpointer data) {
 }
 
 static void
-_salut_avahi_client_failed_cb(SalutAvahiClient *c, 
+_salut_avahi_client_failure_cb(SalutAvahiClient *c, 
                               SalutAvahiClientState state,
                               gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   /* FIXME better error messages */
-  connection_status_change(self, 
-                               TP_CONN_STATUS_DISCONNECTED, 
-                               TP_CONN_STATUS_REASON_NONE_SPECIFIED);
+  /* FIXME instead of full disconnect we could handle the avahi restart */
+  _salut_connection_disconnect(self);
 }
 
 static void
@@ -770,8 +769,8 @@ _salut_connection_connect(SalutConnection *self, GError **error) {
 
   g_signal_connect(priv->avahi_client, "state-changed::running", 
                    G_CALLBACK(_salut_avahi_client_running_cb), self);
-  g_signal_connect(priv->avahi_client, "state-changed::failed", 
-                   G_CALLBACK(_salut_avahi_client_failed_cb), self);
+  g_signal_connect(priv->avahi_client, "state-changed::failure", 
+                   G_CALLBACK(_salut_avahi_client_failure_cb), self);
 
   if (!salut_avahi_client_start(priv->avahi_client, &client_error)) {
     *error = g_error_new(TELEPATHY_ERRORS, NotAvailable, 
