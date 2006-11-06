@@ -85,7 +85,7 @@ salut_contact_manager_init (SalutContactManager *obj)
   priv->channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                          NULL, g_object_unref);
   priv->contacts = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                          g_free, g_object_unref);
+                                         g_free, NULL);
 }
 
 static void salut_contact_manager_dispose (GObject *object);
@@ -186,6 +186,8 @@ contact_found_cb(SalutContact *contact, gpointer userdata) {
   handle = handle_for_contact(priv->connection->handle_repo, contact->name);
   g_intset_add(to_add, handle);
   change_all_groups(mgr, to_add, to_rem);
+  /* Add an extra ref, to ensure keeping this untill we got the lost signal */
+  g_object_ref(contact);
 }
 
 static void
@@ -195,7 +197,6 @@ contact_state_changed_cb(SalutContact *contact, SalutPresenceId status,
 
   g_signal_emit(mgr, signals[CONTACT_STATUS_CHANGED], 0,
                 contact, status, message);
-
 }
 
 static void
@@ -207,11 +208,24 @@ contact_lost_cb(SalutContact *contact, gpointer userdata) {
   Handle handle;
 
   DEBUG("Removing %s from contacts", contact->name);
-  g_hash_table_remove(priv->contacts, contact->name);
-
   handle = handle_for_contact(priv->connection->handle_repo, contact->name);
   g_intset_add(to_rem, handle);
   change_all_groups(mgr, to_add, to_rem);
+  g_object_unref(contact);
+}
+
+static gboolean 
+_contact_remove_finalized(gpointer key, gpointer value, gpointer data) {
+  return data == value;
+}
+
+static void
+_contact_finalized_cb(gpointer data, GObject *old_object) {
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(data);
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
+  g_hash_table_foreach_remove(priv->contacts, 
+                              _contact_remove_finalized, 
+                              old_object);
 }
 
 static void
@@ -231,7 +245,7 @@ browser_found(SalutAvahiServiceBrowser *browser,
   contact = g_hash_table_lookup(priv->contacts, name);
   if (contact == NULL) {
     contact = salut_contact_new(priv->client, name);
-    g_hash_table_insert(priv->contacts, g_strdup(name), contact);
+    g_hash_table_insert(priv->contacts, g_strdup(contact->name), contact);
     DEBUG("Adding %s to contacts", name);
     g_signal_connect(contact, "found", 
                      G_CALLBACK(contact_found_cb), mgr);
@@ -239,6 +253,9 @@ browser_found(SalutAvahiServiceBrowser *browser,
                      G_CALLBACK(contact_state_changed_cb), mgr);
     g_signal_connect(contact, "lost", 
                      G_CALLBACK(contact_lost_cb), mgr);
+    g_object_weak_ref(G_OBJECT(contact), _contact_finalized_cb , mgr);
+  } else {
+    g_object_ref(contact);
   }
   salut_contact_add_service(contact, interface, protocol, name, type, domain);
 }
@@ -257,6 +274,7 @@ browser_removed(SalutAvahiServiceBrowser *browser,
   if (contact != NULL) {
     salut_contact_remove_service(contact, interface, protocol, 
                                  name, type, domain);
+    g_object_unref(contact);
   } else {
     g_message("Unknown contact removed from service browser");
   }
