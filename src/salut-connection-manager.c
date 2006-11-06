@@ -169,9 +169,11 @@ enum {
 };
 
 static const SalutParamSpec local_jabber_params[] = {
-  { "first-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
+  { "first-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
+     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 
      G_STRUCT_OFFSET(SalutParams, first_name)},
-  { "last-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
+  { "last-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
+     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 
      G_STRUCT_OFFSET(SalutParams, last_name)},
   { "jid", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
      G_STRUCT_OFFSET(SalutParams, jid)},
