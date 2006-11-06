@@ -394,9 +394,6 @@ salut_avahi_service_resolver_attach(SalutAvahiServiceResolver *resolver,
 
   g_assert(client != NULL);
   g_object_ref(client);
-  printf("Resolver attached: %p (%d),  for %s\n", resolver, 
-                                                  priv->aprotocol,
-                                                  priv->name);
 
   priv->client = client;
 
