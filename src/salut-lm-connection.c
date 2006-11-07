@@ -182,7 +182,8 @@ static void
 _do_disconnect(SalutLmConnection *self) {
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
 
-  priv->fd = -1;
+  DEBUG("Closing the connection");
+
   if (priv->channel != NULL) {
     g_source_remove(priv->watch_in);
     if (priv->watch_out) 
@@ -191,7 +192,10 @@ _do_disconnect(SalutLmConnection *self) {
     g_io_channel_shutdown(priv->channel, FALSE, NULL);
     g_io_channel_unref(priv->channel);
     priv->channel = NULL;
+  } else {
+    close(priv->fd);
   }
+  priv->fd = -1;
 
   if (priv->output_buffer) {
     g_string_free(priv->output_buffer, TRUE);
@@ -516,10 +520,19 @@ salut_lm_connection_get_address(SalutLmConnection *connection,
                                 struct sockaddr_storage *addr,
                                 socklen_t *len) {
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (connection); 
+  gboolean success = FALSE;
+  struct sockaddr_in *s4 = (struct sockaddr_in*) addr;
+  struct sockaddr_in6 *s6 = (struct sockaddr_in6*) addr;
   g_assert(priv->fd >= 0);
   g_assert(*len == sizeof(struct sockaddr_storage));
 
-  return (getpeername(priv->fd, (struct sockaddr *) addr, len) == 0);
+  success = (getpeername(priv->fd, (struct sockaddr *) addr, len) == 0);
+  if (s6->sin6_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&(s6->sin6_addr))) {
+    /* Normalize to ipv4 address */
+    s4->sin_family = AF_INET;
+    s4->sin_addr.s_addr = s6->sin6_addr.s6_addr32[3];
+  }
+  return success;
 }
 
 void
