@@ -479,12 +479,12 @@ _compare_address(gconstpointer a, gconstpointer b) {
   }
 
   switch (((struct sockaddr *)&addr_a)->sa_family) {
-    case AF_INET6: {
+    case AF_INET: {
       struct sockaddr_in *a4 = (struct sockaddr_in *)&addr_a;
       struct sockaddr_in *b4 = (struct sockaddr_in *)addr_b;
       return b4->sin_addr.s_addr - a4->sin_addr.s_addr;
     }
-    case AF_INET: {
+    case AF_INET6: {
       struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)&addr_a;
       struct sockaddr_in6 *b6 = (struct sockaddr_in6 *)addr_b;
       /* FIXME should we compare the scope_id too ? */
