@@ -329,6 +329,8 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
   Handle handle;
   struct sockaddr_storage addr;
   socklen_t size = sizeof(struct sockaddr_storage);
+
+  DEBUG("Handling new connection");
   /* FIXME we assume that one box has only one user... We can only know for
    * sure who we're talking too when they sent the first message */
   if (!salut_lm_connection_get_address(connection, &addr, &size)) {
@@ -351,5 +353,6 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
 
   return ;
 notfound:
+  DEBUG("Couldn't find a contact for the connection");
   g_object_unref(connection);
 }

@@ -661,8 +661,10 @@ _self_new_connection_cb(SalutSelf *s, SalutLmConnection *conn, gpointer data) {
 
   if (priv->im_manager == NULL) {
     /* Got a connection before we had an im manager.. Ignore */
+    DEBUG("Connection but no IM manager yet!?");
     return;
   }
+  DEBUG("New connection, passing to the IM manager");
   /* Get a ref and let the lower layers handle it */
   g_object_ref(conn);
   salut_im_manager_handle_connection(priv->im_manager, conn);
