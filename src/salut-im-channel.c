@@ -581,7 +581,7 @@ _connection_disconnected_cb(SalutLmConnection *conn, gint state,
 }
 
 static void
-_initialize_connection(SalutIMChannel *self) {
+_initialise_connection(SalutIMChannel *self) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   g_signal_connect(priv->lm_connection, "state_changed::disconnected",
                    G_CALLBACK(_connection_disconnected_cb), self);
@@ -617,7 +617,7 @@ _setup_connection(SalutIMChannel *self) {
   DEBUG("Setting up the lm connection...");
   if (priv->lm_connection == NULL) {
     priv->lm_connection = salut_lm_connection_new();
-    _initialize_connection(self);
+    _initialise_connection(self);
   }
 
   g_assert(priv->lm_connection->state == SALUT_LM_DISCONNECTED);
@@ -668,7 +668,7 @@ salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
   }
   DEBUG("New connection for: %s", priv->contact->name);
   priv->lm_connection = conn;
-  _initialize_connection(chan);
+  _initialise_connection(chan);
 }
 
 static gint
