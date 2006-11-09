@@ -152,7 +152,6 @@ salut_im_channel_message_new_received(LmMessage *message) {
   msg = g_new(SalutIMChannelMessage, 1);
   msg->time = time(NULL);
   msg->id = id++;
-  lm_message_ref(message);
 
   node = lm_message_node_get_child(message->node, "body");
   type = lm_message_node_get_attribute(message->node, "type");
@@ -495,17 +494,27 @@ _error_flush_queue(SalutIMChannel *self) {
 }
 
 static void
-_connection_got_message(SalutLmConnection *conn, 
-                        LmMessage *message, gpointer userdata) {
-  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
+_connection_got_message_message(SalutIMChannel *self, LmMessage *message) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutIMChannelMessage *m;
   /* TODO verify the sender */
-
   m = salut_im_channel_message_new_received(message);
   g_queue_push_tail(priv->in_queue, m);
   g_signal_emit(self, signals[RECEIVED], 0, 
                 m->id, m->time, priv->handle, m->type, 0, m->text); 
+}
+
+static void
+_connection_got_message_message_cb(SalutLmConnection *conn, 
+                                LmMessage *message, gpointer userdata) {
+  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
+  _connection_got_message_message(self, message);
+}
+
+static void
+_connection_got_message_cb(SalutLmConnection *conn, 
+                        LmMessage *message, gpointer userdata) {
+  salut_lm_connection_ack(conn, message);
 }
 
 static void
@@ -538,7 +547,8 @@ _connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
 }
 
 static void
-_connection_connected(SalutLmConnection *conn, gint state, gpointer userdata) {
+_connection_connected_cb(SalutLmConnection *conn, gint state, 
+                         gpointer userdata) {
   SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GArray *addrs;
@@ -554,7 +564,8 @@ _connection_connected(SalutLmConnection *conn, gint state, gpointer userdata) {
 }
 
 static void
-_connection_disconnected(SalutLmConnection *conn, gint state, gpointer userdata) {
+_connection_disconnected_cb(SalutLmConnection *conn, gint state, 
+                            gpointer userdata) {
   SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
@@ -570,15 +581,33 @@ _connection_disconnected(SalutLmConnection *conn, gint state, gpointer userdata)
 }
 
 static void
-_attach_callbacks_to_connection(SalutIMChannel *self) {
+_initialize_connection(SalutIMChannel *self) {
   SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   g_signal_connect(priv->lm_connection, "state_changed::disconnected",
-                   G_CALLBACK(_connection_disconnected), self);
+                   G_CALLBACK(_connection_disconnected_cb), self);
   g_signal_connect(priv->lm_connection, "state_changed::connected",
-                   G_CALLBACK(_connection_connected), self);
+                   G_CALLBACK(_connection_connected_cb), self);
   g_signal_connect(priv->lm_connection, "message_received::message",
-                   G_CALLBACK(_connection_got_message), self);
+                   G_CALLBACK(_connection_got_message_message_cb), self);
+  g_signal_connect(priv->lm_connection, "message_received",
+                   G_CALLBACK(_connection_got_message_cb), self);
+  /* Sync state with the connection */
+  if (priv->lm_connection->state == SALUT_LM_CONNECTING) {
+    priv->state = CHANNEL_CONNECTING;
+  } else if (priv->lm_connection->state == SALUT_LM_CONNECTED) {
+    priv->state = CHANNEL_CONNECTED;
+    LmMessage *message;
+    _flush_queue(self);
+    while ((message = salut_lm_connection_pop(priv->lm_connection)) != NULL) {
+      if (lm_message_get_type(message) == LM_MESSAGE_TYPE_MESSAGE)
+        _connection_got_message_message(self, message);
+      lm_message_unref(message);
+    }
+  } else {
+    g_assert(priv->state == CHANNEL_NOT_CONNECTED);
+  }
 }
+
 static void
 _setup_connection(SalutIMChannel *self) {
   /* FIXME do a non-blocking connect */
@@ -588,7 +617,7 @@ _setup_connection(SalutIMChannel *self) {
   DEBUG("Setting up the lm connection...");
   if (priv->lm_connection == NULL) {
     priv->lm_connection = salut_lm_connection_new();
-    _attach_callbacks_to_connection(self);
+    _initialize_connection(self);
   }
 
   g_assert(priv->lm_connection->state == SALUT_LM_DISCONNECTED);
@@ -639,9 +668,7 @@ salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
   }
   DEBUG("New connection for: %s", priv->contact->name);
   priv->lm_connection = conn;
-  _attach_callbacks_to_connection(chan);
-  priv->state = CHANNEL_CONNECTING;
-  salut_lm_connection_fd_start(conn);
+  _initialize_connection(chan);
 }
 
 static gint

@@ -45,6 +45,7 @@ struct _SalutLmConnectionClass {
 struct _SalutLmConnection {
     GObject parent;
     SalutLmConnectionState state;
+    GQueue *messages;
 };
 
 GType salut_lm_connection_get_type(void);
@@ -66,12 +67,9 @@ GType salut_lm_connection_get_type(void);
 SalutLmConnection *
 salut_lm_connection_new(void);
 
-/* FIXME ugly unsymmetrica abi between open and _from */
+/* FIXME ugly unsymmetric api between open and _from */
 SalutLmConnection *
 salut_lm_connection_new_from_fd(int fd);
-
-void
-salut_lm_connection_fd_start(SalutLmConnection *connection);
 
 gboolean
 salut_lm_connection_is_incoming(SalutLmConnection *connection);
@@ -89,12 +87,17 @@ gboolean
 salut_lm_connection_send(SalutLmConnection *connection,
                          LmMessage *message,
                          GError **error);
+void
+salut_lm_connection_ack(SalutLmConnection *connection, LmMessage *message);
+
+LmMessage *
+salut_lm_connection_pop(SalutLmConnection *connection);
+
 
 gboolean
 salut_lm_connection_get_address(SalutLmConnection *connection, 
                                 struct sockaddr_storage *addr,
                                 socklen_t *len);
-
 void
 salut_lm_connection_close(SalutLmConnection *connection);
 

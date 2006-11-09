@@ -84,6 +84,7 @@ salut_lm_connection_init (SalutLmConnection *self)
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
   /* allocate any data required by the object here */
   self->state = SALUT_LM_DISCONNECTED;
+  self->messages = g_queue_new();
   priv->incoming = FALSE;
   priv->channel = NULL;
   priv->output_buffer = NULL;
@@ -137,6 +138,12 @@ salut_lm_connection_class_init (SalutLmConnectionClass *salut_lm_connection_clas
                   G_TYPE_POINTER);
 }
 
+static void 
+foreach_lm_unref(gpointer data, gpointer user_data) {
+  LmMessage *msg = (LmMessage *)data;
+  lm_message_unref(msg);
+}
+
 void
 salut_lm_connection_dispose (GObject *object)
 {
@@ -152,6 +159,11 @@ salut_lm_connection_dispose (GObject *object)
   if (priv->parser) {
     lm_parser_free(priv->parser);
     priv->parser = NULL;
+  }
+  if (self->messages) {
+    g_queue_foreach(self->messages, foreach_lm_unref, NULL);
+    g_queue_free(self->messages);
+    self->messages = NULL;
   }
 
 
@@ -170,8 +182,7 @@ static void
 _do_disconnect(SalutLmConnection *self) {
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
 
-  DEBUG("Closing the connection");
-
+  priv->fd = -1;
   if (priv->channel != NULL) {
     g_source_remove(priv->watch_in);
     if (priv->watch_out) 
@@ -180,10 +191,7 @@ _do_disconnect(SalutLmConnection *self) {
     g_io_channel_shutdown(priv->channel, FALSE, NULL);
     g_io_channel_unref(priv->channel);
     priv->channel = NULL;
-  } else {
-    close(priv->fd);
   }
-  priv->fd = -1;
 
   if (priv->output_buffer) {
     g_string_free(priv->output_buffer, TRUE);
@@ -262,6 +270,7 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
        DEBUG("Got stream initiation on the wrong moment (state: %d)", 
                self->state);
        _do_disconnect(self);
+       lm_message_unref(message);
        return;
      }
      if (priv->incoming) {
@@ -272,11 +281,16 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
      g_signal_emit(self, signals[STATE_CHANGED], 
                 g_quark_from_static_string("connected"),
                 self->state);
+     lm_message_unref(message);
+     return;
    } else if (self->state != SALUT_LM_CONNECTED) {
-       DEBUG("Got data before stream negotiation");
-       _do_disconnect(self);
-       return;
+     DEBUG("Got data before stream negotiation");
+     _do_disconnect(self);
+     lm_message_unref(message);
+     return;
    }
+   g_queue_push_tail(self->messages, message);
+   lm_message_ref(message);
    switch (lm_message_get_type(message)) {
      case LM_MESSAGE_TYPE_MESSAGE:
        g_signal_emit(self, signals[MESSAGE_RECEIVED], 
@@ -285,10 +299,12 @@ _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
      case LM_MESSAGE_TYPE_IQ:
        g_signal_emit(self, signals[MESSAGE_RECEIVED], 
                       g_quark_from_static_string("iq") , message);
+       break;
      default:
        g_signal_emit(self, signals[MESSAGE_RECEIVED], 
                       g_quark_from_static_string("unkown") , message);
    }
+   lm_message_unref(message);
 }
 
 static gboolean
@@ -392,6 +408,7 @@ salut_lm_connection_new_from_fd(int fd) {
   priv->incoming = TRUE;
   priv->fd = fd;
   self->state = SALUT_LM_CONNECTING;   
+  _setup_connection(self, priv->fd);
 
   return self;
 }
@@ -482,14 +499,16 @@ salut_lm_connection_set_incoming(SalutLmConnection *connection,
 }
 
 void
-salut_lm_connection_fd_start(SalutLmConnection *connection) {
-   SalutLmConnectionPrivate *priv = 
-     SALUT_LM_CONNECTION_GET_PRIVATE (connection);
+salut_lm_connection_ack(SalutLmConnection *connection, LmMessage *message) {
+  g_assert(g_queue_find(connection->messages, message) != NULL);
+  g_queue_remove(connection->messages, message);
+  lm_message_unref(message);
+}
 
-  g_assert(priv->fd >= 0);
-  g_assert(priv->channel == NULL);
-
-  _setup_connection(connection, priv->fd);
+LmMessage *
+salut_lm_connection_pop(SalutLmConnection *connection) {
+  LmMessage *m = (LmMessage *)g_queue_pop_head(connection->messages);
+  return m;
 }
 
 gboolean
@@ -497,19 +516,10 @@ salut_lm_connection_get_address(SalutLmConnection *connection,
                                 struct sockaddr_storage *addr,
                                 socklen_t *len) {
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (connection); 
-  gboolean success = FALSE;
-  struct sockaddr_in *s4 = (struct sockaddr_in*) addr;
-  struct sockaddr_in6 *s6 = (struct sockaddr_in6*) addr;
   g_assert(priv->fd >= 0);
   g_assert(*len == sizeof(struct sockaddr_storage));
 
-  success = (getpeername(priv->fd, (struct sockaddr *) addr, len) == 0);
-  if (s6->sin6_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&(s6->sin6_addr))) {
-    /* Normalize to ipv4 address */
-    s4->sin_family = AF_INET;
-    s4->sin_addr.s_addr = s6->sin6_addr.s6_addr32[3];
-  }
-  return success;
+  return (getpeername(priv->fd, (struct sockaddr *) addr, len) == 0);
 }
 
 void
