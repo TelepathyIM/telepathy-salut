@@ -67,10 +67,24 @@ struct _SalutImManagerPrivate
   SalutContactManager *contact_manager;
   SalutConnection *connection;
   GHashTable *channels;
+  GHashTable *pending_connections;
   gboolean dispose_has_run;
 };
 
 #define SALUT_IM_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_IM_MANAGER, SalutImManagerPrivate))
+
+static void
+contact_list_destroy(gpointer data) {
+  GList *list = (GList *)data;
+  GList *t = list;
+  while (t != NULL) {
+    SalutContact *contact;
+    contact= SALUT_CONTACT(t->data);
+    g_object_unref(contact);
+    t = g_list_next(t);
+  }
+  g_list_free(list);
+}
 
 static void
 salut_im_manager_init (SalutImManager *obj)
@@ -79,6 +93,10 @@ salut_im_manager_init (SalutImManager *obj)
   /* allocate any data required by the object here */
   priv->channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                          NULL, g_object_unref);
+  priv->pending_connections = g_hash_table_new_full(g_direct_hash, 
+                                                    g_direct_equal,
+                                                    g_object_unref, 
+                                                    contact_list_destroy);
 }
 
 static void salut_im_manager_dispose (GObject *object);
@@ -121,6 +139,11 @@ salut_im_manager_dispose (GObject *object)
     t = priv->channels;
     priv->channels = NULL;
     g_hash_table_destroy(t);
+  }
+
+  if (priv->pending_connections) {
+    g_hash_table_destroy(priv->pending_connections);
+    priv->pending_connections = NULL;
   }
 
   /* release any references held by the object here */
@@ -320,13 +343,78 @@ salut_im_manager_new(SalutConnection *connection,
   return ret;
 }
 
+static void
+found_contact_for_connection(SalutImManager *mgr, 
+                             SalutLmConnection *connection,
+                             SalutContact *contact) {
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  Handle handle;
+  SalutIMChannel *chan;
+
+  handle = handle_for_contact(priv->connection->handle_repo, contact->name);
+
+  chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
+  if (chan == NULL) {
+    chan = salut_im_manager_new_channel(mgr, handle);
+  }
+  /* Add a ref to the connection for the channel, as our ref is removed when
+   * removing the connection from the hash table */
+  g_object_ref(connection);
+  g_hash_table_remove(priv->pending_connections, connection);
+  g_signal_handlers_disconnect_matched(connection, G_SIGNAL_MATCH_DATA,
+                                       0, 0, NULL, NULL, mgr);
+  salut_im_channel_add_connection(chan, connection);
+}
+
+static void
+pending_connection_disconnected_cb(SalutLmConnection *conn, gint state, 
+                                   gpointer userdata) {
+  SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  DEBUG("Pending connection disconnected");
+  g_hash_table_remove(priv->pending_connections, conn);
+}
+
+static void
+pending_connection_message_cb(SalutLmConnection *conn, LmMessage *message,
+                              gpointer userdata) {
+  SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  const char *from;
+  GList *t;
+  from = lm_message_node_get_attribute(message->node, "from");
+  if (from == NULL) {
+    DEBUG("No from in message from pending connection");
+    return;
+  }
+  DEBUG("Got message from %s on pending connection", from);
+  t = g_hash_table_lookup(priv->pending_connections, conn);
+  while (t != NULL) {
+    SalutContact *contact = SALUT_CONTACT(t->data);
+    if (strcmp(contact->name, from) == 0) {
+      struct sockaddr_storage addr;
+      socklen_t size = sizeof(struct sockaddr_storage);
+      if (!salut_lm_connection_get_address(conn, &addr, &size)) {
+        goto nocontact;
+      }
+      if (!salut_contact_has_address(contact, &addr)) {
+        goto nocontact;
+      }
+      found_contact_for_connection(mgr, conn, contact);
+      return;
+    }
+    t = g_list_next(t);
+  }
+nocontact:
+  DEBUG("Contact no longer alive");
+  g_hash_table_remove(priv->pending_connections, conn);
+}
+
 void
 salut_im_manager_handle_connection(SalutImManager *mgr,
                                         SalutLmConnection *connection) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
-  SalutContact *contact;
-  SalutIMChannel *chan;
-  Handle handle;
+  GList *contacts;
   struct sockaddr_storage addr;
   socklen_t size = sizeof(struct sockaddr_storage);
 
@@ -337,21 +425,19 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
     goto notfound;
   }
 
-  contact = 
-    salut_contact_manager_find_contact_by_address(priv->contact_manager, &addr);
-
-  if (contact == NULL) {
+  contacts = 
+    salut_contact_manager_find_contacts_by_address(priv->contact_manager, 
+                                                   &addr);
+  if (contacts == NULL) {
     goto notfound;
   }
-  handle = handle_for_contact(priv->connection->handle_repo, contact->name);
-
-  chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
-  if (chan == NULL) {
-    chan = salut_im_manager_new_channel(mgr, handle);
-  }
-  salut_im_channel_add_connection(chan, connection);
-
+  g_hash_table_insert(priv->pending_connections, connection, contacts); 
+  g_signal_connect(connection, "state-changed::disconnected", 
+                    G_CALLBACK(pending_connection_disconnected_cb), mgr);
+  g_signal_connect(connection, "message-received", 
+                    G_CALLBACK(pending_connection_message_cb), mgr);
   return ;
+
 notfound:
   DEBUG("Couldn't find a contact for the connection");
   g_object_unref(connection);

@@ -444,7 +444,7 @@ salut_contact_manager_get_channel(SalutContactManager *mgr, Handle handle) {
                            handle, NULL));
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
   if (chan == NULL) 
-    chan = salut_contact_manager_new_channel(mgr, handle);
+    chan= salut_contact_manager_new_channel(mgr, handle);
 
   return chan;
 }
@@ -508,18 +508,30 @@ salut_contact_manager_get_contact(SalutContactManager *mgr, Handle handle) {
   return ret;
 }
 
-static gboolean
+static void
 _find_by_address(gpointer key, gpointer value, gpointer user_data) {
-  struct sockaddr_storage *address = (struct sockaddr_storage *)user_data;
+  struct sockaddr_storage *address = 
+    (struct sockaddr_storage *)((gpointer *)user_data)[0];
+  GList **list = (GList **)((gpointer *)user_data)[1];
   SalutContact *contact = SALUT_CONTACT(value);
-  return salut_contact_has_address(contact, address);
+  if (salut_contact_has_address(contact, address)) { 
+    g_object_ref(contact);
+    *list = g_list_append(*list, contact);
+  }
 }
 
 /* FIXME function name is just too long */
-SalutContact *
-salut_contact_manager_find_contact_by_address(SalutContactManager *mgr, 
-                                              struct sockaddr_storage *address)
+GList *
+salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr, 
+                                               struct sockaddr_storage *address)
 {
+  GList *list = NULL;
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
-  return g_hash_table_find(priv->contacts, _find_by_address, address);
+  gpointer data[2];
+
+  data[0] = address;
+  data[1] = &list;
+  g_hash_table_foreach(priv->contacts, _find_by_address, data);
+  return list;
 }
+
