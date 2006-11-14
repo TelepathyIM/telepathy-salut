@@ -38,7 +38,6 @@ typedef enum {
   SALUT_PRESENCE_AVAILABLE,
   SALUT_PRESENCE_AWAY,
   SALUT_PRESENCE_DND,
-  SALUT_PRESENCE_OFFLINE, /* offline is a dummy, FIXME, check handling */
   SALUT_PRESENCE_NR_PRESENCES
 } SalutPresenceId;  
 
