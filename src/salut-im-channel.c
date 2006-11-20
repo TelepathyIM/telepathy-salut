@@ -1,5 +1,5 @@
 /*
- * salut-im-channel.c - Source for SalutIMChannel
+ * salut-im-channel.c - Source for SalutImChannel
  * Copyright (C) 2005 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
@@ -57,7 +57,7 @@
       G_TYPE_STRING, \
       G_TYPE_INVALID))
 
-G_DEFINE_TYPE_WITH_CODE(SalutIMChannel, salut_im_channel, G_TYPE_OBJECT,
+G_DEFINE_TYPE_WITH_CODE(SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE(TP_TYPE_CHANNEL_IFACE, NULL));
 
 /* SendError types */
@@ -83,6 +83,7 @@ enum {
     CLOSED,
     LOST_MESSAGE,
     RECEIVED,
+    RECEIVED_MESSAGE,
     SEND_ERROR,
     SENT,
     LAST_SIGNAL
@@ -103,9 +104,9 @@ enum
 };
 
 /* private structure */
-typedef struct _SalutIMChannelPrivate SalutIMChannelPrivate;
+typedef struct _SalutImChannelPrivate SalutImChannelPrivate;
 
-struct _SalutIMChannelPrivate
+struct _SalutImChannelPrivate
 {
   gboolean dispose_has_run;
   gchar *object_path;
@@ -119,39 +120,58 @@ struct _SalutIMChannelPrivate
   ChannelState state;
 };
 
-#define SALUT_IM_CHANNEL_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_IM_CHANNEL, SalutIMChannelPrivate))
+#define SALUT_IM_CHANNEL_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_IM_CHANNEL, SalutImChannelPrivate))
 
-typedef struct _SalutIMChannelMessage SalutIMChannelMessage;
+typedef struct _SalutImChannelMessage SalutImChannelMessage;
 
-struct _SalutIMChannelMessage {
+struct _SalutImChannelMessage {
   guint id;
   guint time;
   guint type;
   gchar *text;
+  LmMessage *message;
 };
 
-static SalutIMChannelMessage *
+static SalutImChannelMessage *
 salut_im_channel_message_new(guint type, const gchar *text) {
-  SalutIMChannelMessage *msg;
-  msg = g_new(SalutIMChannelMessage, 1);
+  SalutImChannelMessage *msg;
+  msg = g_new0(SalutImChannelMessage, 1);
   msg->type = type;
   msg->text = g_strdup(text);
   msg->time = time(NULL);
+  msg->message = NULL;
   return msg;
 }
 
-static SalutIMChannelMessage *
+static SalutImChannelMessage *
+salut_im_channel_message_new_from_message(LmMessage *message) {
+  SalutImChannelMessage *msg;
+  g_assert(message != NULL);
+
+  msg = g_new(SalutImChannelMessage, 1);
+  msg->type = 0;
+  msg->text = NULL;
+  msg->time = 0;
+
+  lm_message_ref(message);
+  msg->message = message;
+
+  return msg;
+}
+
+static SalutImChannelMessage *
 salut_im_channel_message_new_received(LmMessage *message) {
-  SalutIMChannelMessage *msg;
+  SalutImChannelMessage *msg;
   static guint id = 1;
   LmMessageNode *node;
   const gchar *type;
   const gchar *body = "";
 
   /* FIXME decent id generation */
-  msg = g_new(SalutIMChannelMessage, 1);
+  msg = g_new0(SalutImChannelMessage, 1);
   msg->time = time(NULL);
   msg->id = id++;
+  msg->message = NULL;
 
   node = lm_message_node_get_child(message->node, "body");
   type = lm_message_node_get_attribute(message->node, "type");
@@ -173,15 +193,18 @@ salut_im_channel_message_new_received(LmMessage *message) {
 }
 
 static void 
-salut_im_channel_message_free(SalutIMChannelMessage *message) {
+salut_im_channel_message_free(SalutImChannelMessage *message) {
   g_free(message->text);
+  if (message->message) {
+    lm_message_unref(message->message);
+  }
   g_free(message);
 }
 
 static void
-salut_im_channel_init (SalutIMChannel *obj)
+salut_im_channel_init (SalutImChannel *obj)
 {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (obj); 
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (obj); 
   /* allocate any data required by the object here */
   priv->object_path = NULL;
   priv->contact = NULL;
@@ -198,8 +221,8 @@ salut_im_channel_get_property (GObject    *object,
                                 GValue     *value,
                                 GParamSpec *pspec)
 {
-  SalutIMChannel *chan = SALUT_IM_CHANNEL (object);
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan);
+  SalutImChannel *chan = SALUT_IM_CHANNEL (object);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan);
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
@@ -232,8 +255,8 @@ salut_im_channel_set_property (GObject     *object,
                                 const GValue *value,
                                 GParamSpec   *pspec)
 {
-  SalutIMChannel *chan = SALUT_IM_CHANNEL (object);
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan);
+  SalutImChannel *chan = SALUT_IM_CHANNEL (object);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan);
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
@@ -263,7 +286,7 @@ salut_im_channel_constructor (GType type, guint n_props,
   GObject *obj;
   DBusGConnection *bus;
   gboolean valid;
-  SalutIMChannelPrivate *priv;
+  SalutImChannelPrivate *priv;
 
   /* Parent constructor chain */
   obj = G_OBJECT_CLASS(salut_im_channel_parent_class)->
@@ -287,18 +310,17 @@ static void salut_im_channel_dispose (GObject *object);
 static void salut_im_channel_finalize (GObject *object);
 
 static void
-salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
+salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_im_channel_class);
   GParamSpec *param_spec;
 
-  g_type_class_add_private (salut_im_channel_class, sizeof (SalutIMChannelPrivate));
+  g_type_class_add_private (salut_im_channel_class, sizeof (SalutImChannelPrivate));
 
   object_class->dispose = salut_im_channel_dispose;
   object_class->finalize = salut_im_channel_finalize;
 
   object_class->constructor = salut_im_channel_constructor;
-
   object_class->get_property = salut_im_channel_get_property;
   object_class->set_property = salut_im_channel_set_property;
   
@@ -361,6 +383,15 @@ salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
                   salut_im_channel_marshal_VOID__INT_INT_INT_INT_INT_STRING,
                   G_TYPE_NONE, 6, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
 
+  signals[RECEIVED_MESSAGE] =
+    g_signal_new ("received-message",
+                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  g_signal_accumulator_true_handled, NULL,
+                  salut_im_channel_marshal_BOOLEAN__POINTER,
+                  G_TYPE_BOOLEAN, 1, G_TYPE_POINTER);
+
   signals[SEND_ERROR] =
     g_signal_new ("send-error",
                   G_OBJECT_CLASS_TYPE (salut_im_channel_class),
@@ -385,8 +416,8 @@ salut_im_channel_class_init (SalutIMChannelClass *salut_im_channel_class)
 void
 salut_im_channel_dispose (GObject *object)
 {
-  SalutIMChannel *self = SALUT_IM_CHANNEL (object);
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannel *self = SALUT_IM_CHANNEL (object);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
@@ -416,8 +447,8 @@ salut_im_channel_dispose (GObject *object)
 static void
 salut_im_channel_finalize (GObject *object)
 {
-  SalutIMChannel *self = SALUT_IM_CHANNEL (object);
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannel *self = SALUT_IM_CHANNEL (object);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
   g_free(priv->object_path);
@@ -431,9 +462,9 @@ salut_im_channel_finalize (GObject *object)
 }
 
 static void
-_sendout_message(SalutIMChannel * self, guint type, 
+_sendout_message(SalutImChannel * self, guint type, 
                  const gchar *text, const guint timestamp) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   LmMessage *msg;
 
   guint subtype;
@@ -470,20 +501,26 @@ _sendout_message(SalutIMChannel * self, guint type,
 }
 
 static void
-_flush_queue(SalutIMChannel *self) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutIMChannelMessage *msg;
+_flush_queue(SalutImChannel *self) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelMessage *msg;
   /*Connected!, flusch the queue ! */
   while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
-    _sendout_message(self, msg->type, msg->text, msg->time);
+    if (msg->message != NULL) {
+      if (!salut_lm_connection_send(priv->lm_connection, msg->message, NULL)) {
+        g_warning("Sending message failed");
+      }
+    } else {
+      _sendout_message(self, msg->type, msg->text, msg->time);
+    }
     salut_im_channel_message_free(msg);
   }
 }
 
 static void
-_error_flush_queue(SalutIMChannel *self) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutIMChannelMessage *msg;
+_error_flush_queue(SalutImChannel *self) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelMessage *msg;
   /*Connection failed!, flusch the queue ! */
   while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
     DEBUG("Sending out SendError for msg: %s", msg->text);
@@ -494,10 +531,19 @@ _error_flush_queue(SalutIMChannel *self) {
 }
 
 static void
-_connection_got_message_message(SalutIMChannel *self, LmMessage *message) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutIMChannelMessage *m;
-  /* TODO verify the sender */
+_connection_got_message_message(SalutImChannel *self, LmMessage *message) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelMessage *m;
+  gboolean handled = FALSE;
+
+  g_signal_emit(self, signals[RECEIVED_MESSAGE], 0, message, &handled);
+  if (handled) {
+    /* Some other part handled this message, could be muc invite or voip call
+     * or whatever */
+    return;
+  }
+  printf("Not handled by anything else\n");
+
   m = salut_im_channel_message_new_received(message);
   g_queue_push_tail(priv->in_queue, m);
   g_signal_emit(self, signals[RECEIVED], 0, 
@@ -507,7 +553,8 @@ _connection_got_message_message(SalutIMChannel *self, LmMessage *message) {
 static void
 _connection_got_message_message_cb(SalutLmConnection *conn, 
                                 LmMessage *message, gpointer userdata) {
-  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
+  /* TODO verify the sender */
+  SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
   _connection_got_message_message(self, message);
 }
 
@@ -518,9 +565,9 @@ _connection_got_message_cb(SalutLmConnection *conn,
 }
 
 static void
-_connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
+_connect_to_next(SalutImChannel *self, SalutLmConnection *conn) {
   GArray *addrs;
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   int i;
 
   addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
@@ -549,8 +596,8 @@ _connect_to_next(SalutIMChannel *self, SalutLmConnection *conn) {
 static void
 _connection_connected_cb(SalutLmConnection *conn, gint state, 
                          gpointer userdata) {
-  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GArray *addrs;
   
   addrs = g_object_get_data(G_OBJECT(conn), A_ARRAY);
@@ -566,8 +613,8 @@ _connection_connected_cb(SalutLmConnection *conn, gint state,
 static void
 _connection_disconnected_cb(SalutLmConnection *conn, gint state, 
                             gpointer userdata) {
-  SalutIMChannel  *self = SALUT_IM_CHANNEL(userdata);
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   if (!salut_lm_connection_is_incoming(conn) && 
        priv->state == CHANNEL_CONNECTING) {
@@ -581,8 +628,8 @@ _connection_disconnected_cb(SalutLmConnection *conn, gint state,
 }
 
 static void
-_initialise_connection(SalutIMChannel *self) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+_initialise_connection(SalutImChannel *self) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   g_signal_connect(priv->lm_connection, "state_changed::disconnected",
                    G_CALLBACK(_connection_disconnected_cb), self);
   g_signal_connect(priv->lm_connection, "state_changed::connected",
@@ -609,9 +656,9 @@ _initialise_connection(SalutIMChannel *self) {
 }
 
 static void
-_setup_connection(SalutIMChannel *self) {
+_setup_connection(SalutImChannel *self) {
   /* FIXME do a non-blocking connect */
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GArray *addrs;
 
   DEBUG("Setting up the lm connection...");
@@ -634,19 +681,32 @@ _setup_connection(SalutIMChannel *self) {
 }
 
 static void
-_send_message(SalutIMChannel * self, guint type, const gchar *text) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutIMChannelMessage *msg;
+_send_channel_message(SalutImChannel *self, SalutImChannelMessage *msg) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   switch (priv->state) {
     case CHANNEL_NOT_CONNECTED:
-      msg = salut_im_channel_message_new(type, text);
       g_queue_push_tail(priv->out_queue, msg);
       _setup_connection(self);
       break;
     case CHANNEL_CONNECTING:
-      msg = salut_im_channel_message_new(type, text);
       g_queue_push_tail(priv->out_queue, msg);
+      break;
+    default:
+      g_assert_not_reached();
+      break;
+  }
+}
+static void
+_send_message(SalutImChannel * self, guint type, const gchar *text) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelMessage *msg;
+
+  switch (priv->state) {
+    case CHANNEL_NOT_CONNECTED:
+    case CHANNEL_CONNECTING:
+      msg = salut_im_channel_message_new(type, text);
+      _send_channel_message(self, msg);
       break;
     case CHANNEL_CONNECTED:
       /* Connected and the queue is empty, so push it out directly */
@@ -656,8 +716,27 @@ _send_message(SalutIMChannel * self, guint type, const gchar *text) {
 }
 
 void
-salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan); 
+salut_im_channel_send_message(SalutImChannel * self, LmMessage *message) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelMessage *msg;
+
+  switch (priv->state) {
+    case CHANNEL_NOT_CONNECTED:
+    case CHANNEL_CONNECTING:
+      msg = salut_im_channel_message_new_from_message(message);
+      _send_channel_message(self, msg);
+      break;
+    case CHANNEL_CONNECTED:
+      if (!salut_lm_connection_send(priv->lm_connection, message, NULL)) {
+        g_warning("Sending failed");
+      }
+      lm_message_unref(message);
+  }
+}
+
+void
+salut_im_channel_add_connection(SalutImChannel *chan, SalutLmConnection *conn) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan); 
   /* FIXME if we already have a connection, we throw this one out..
    * Which can be not quite what the other side expects.. And strange things
    * can happen when two * sides try to initiate at the same time */
@@ -673,7 +752,7 @@ salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn) {
 
 static gint
 _compare_id(gconstpointer a, gconstpointer b) {
-  SalutIMChannelMessage *msg = (SalutIMChannelMessage *) a;
+  SalutImChannelMessage *msg = (SalutImChannelMessage *) a;
   guint id = GPOINTER_TO_UINT(b);
   return id - msg->id;
 }
@@ -691,10 +770,10 @@ _compare_id(gconstpointer a, gconstpointer b) {
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self, 
+salut_im_channel_acknowledge_pending_messages (SalutImChannel *self, 
                                                const GArray * ids, 
                                                GError **error) { 
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
   GList **links = NULL;
   int i;
   gboolean ret = TRUE;
@@ -717,7 +796,7 @@ salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self,
   }
 
   for (i = 0 ; i < ids->len ; i++) {
-    SalutIMChannelMessage *msg = (SalutIMChannelMessage *) links[i]->data;
+    SalutImChannelMessage *msg = (SalutImChannelMessage *) links[i]->data;
     DEBUG("Acknowledged message id %u", msg->id);
     g_queue_delete_link(priv->in_queue, links[i]);
     salut_im_channel_message_free(msg);
@@ -742,8 +821,8 @@ out:
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_close (SalutIMChannel *self, GError **error) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
+salut_im_channel_close (SalutImChannel *self, GError **error) {
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
   ChannelState oldstate = priv->state;
 
   priv->state = CHANNEL_NOT_CONNECTED;
@@ -779,7 +858,7 @@ salut_im_channel_close (SalutIMChannel *self, GError **error) {
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_get_channel_type (SalutIMChannel *obj, gchar ** ret, 
+salut_im_channel_get_channel_type (SalutImChannel *obj, gchar ** ret, 
                                    GError **error) {
   *ret = g_strdup(TP_IFACE_CHANNEL_TYPE_TEXT);
 
@@ -800,9 +879,9 @@ salut_im_channel_get_channel_type (SalutIMChannel *obj, gchar ** ret,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_get_handle (SalutIMChannel *obj, guint* ret, guint* ret1, 
+salut_im_channel_get_handle (SalutImChannel *obj, guint* ret, guint* ret1, 
                              GError **error) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (obj); 
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (obj); 
 
   *ret = TP_HANDLE_TYPE_CONTACT;
   *ret1 = priv->handle;
@@ -824,7 +903,7 @@ salut_im_channel_get_handle (SalutIMChannel *obj, guint* ret, guint* ret1,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_get_interfaces (SalutIMChannel *obj, gchar *** ret, 
+salut_im_channel_get_interfaces (SalutImChannel *obj, gchar *** ret, 
                                  GError **error) {
   const char *interfaces[] = { NULL };
 
@@ -847,7 +926,7 @@ salut_im_channel_get_interfaces (SalutIMChannel *obj, gchar *** ret,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_get_message_types (SalutIMChannel *obj, GArray ** ret, 
+salut_im_channel_get_message_types (SalutImChannel *obj, GArray ** ret, 
                                     GError **error) {
   guint types[] = { TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
                     TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
@@ -874,9 +953,9 @@ salut_im_channel_get_message_types (SalutIMChannel *obj, GArray ** ret,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_list_pending_messages (SalutIMChannel *self, gboolean clear, 
+salut_im_channel_list_pending_messages (SalutImChannel *self, gboolean clear, 
                                         GPtrArray ** ret, GError **error) {
-  SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GPtrArray *messages = 
     g_ptr_array_sized_new(g_queue_get_length(priv->in_queue));
   GList *cur;
@@ -887,7 +966,7 @@ salut_im_channel_list_pending_messages (SalutIMChannel *self, gboolean clear,
        cur != NULL;
        cur = (clear ? g_queue_pop_head_link(priv->in_queue)
                     : cur->next)) {
-    SalutIMChannelMessage *msg = (SalutIMChannelMessage *)cur->data;
+    SalutImChannelMessage *msg = (SalutImChannelMessage *)cur->data;
     GValue val = {0, };
     g_value_init(&val, TP_TYPE_PENDING_MESSAGE_STRUCT);
     g_value_take_boxed(&val, 
@@ -922,9 +1001,9 @@ salut_im_channel_list_pending_messages (SalutIMChannel *self, gboolean clear,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 gboolean 
-salut_im_channel_send (SalutIMChannel *self, 
+salut_im_channel_send (SalutImChannel *self, 
                        guint type, const gchar * text, GError **error) {
-  //SalutIMChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
+  //SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
   /* All messaging is done async */
   DEBUG("Sending: %s (%d)", text, type);
   _send_message(self, type, text);

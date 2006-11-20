@@ -1,5 +1,5 @@
 /*
- * salut-im-channel.h - Header for SalutIMChannel
+ * salut-im-channel.h - Header for SalutImChannel
  * Copyright (C) 2005 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
@@ -22,17 +22,18 @@
 
 #include <glib-object.h>
 #include "salut-lm-connection.h"
+#include <loudmouth/loudmouth.h>
 
 G_BEGIN_DECLS
 
-typedef struct _SalutIMChannel SalutIMChannel;
-typedef struct _SalutIMChannelClass SalutIMChannelClass;
+typedef struct _SalutImChannel SalutImChannel;
+typedef struct _SalutImChannelClass SalutImChannelClass;
 
-struct _SalutIMChannelClass {
+struct _SalutImChannelClass {
     GObjectClass parent_class;
 };
 
-struct _SalutIMChannel {
+struct _SalutImChannel {
     GObject parent;
 };
 
@@ -42,27 +43,30 @@ GType salut_im_channel_get_type(void);
 #define SALUT_TYPE_IM_CHANNEL \
   (salut_im_channel_get_type())
 #define SALUT_IM_CHANNEL(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_IM_CHANNEL, SalutIMChannel))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_IM_CHANNEL, SalutImChannel))
 #define SALUT_IM_CHANNEL_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_IM_CHANNEL, SalutIMChannelClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_IM_CHANNEL, SalutImChannelClass))
 #define SALUT_IS_IM_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_IM_CHANNEL))
 #define SALUT_IS_IM_CHANNEL_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_IM_CHANNEL))
 #define SALUT_IM_CHANNEL_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, SalutIMChannelClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, SalutImChannelClass))
 
 void
-salut_im_channel_add_connection(SalutIMChannel *chan, SalutLmConnection *conn);
+salut_im_channel_add_connection(SalutImChannel *chan, SalutLmConnection *conn);
 
-gboolean salut_im_channel_acknowledge_pending_messages (SalutIMChannel *self, const GArray * ids, GError **error);
-gboolean salut_im_channel_close (SalutIMChannel *self, GError **error);
-gboolean salut_im_channel_get_channel_type (SalutIMChannel *self, gchar ** ret, GError **error);
-gboolean salut_im_channel_get_handle (SalutIMChannel *self, guint* ret, guint* ret1, GError **error);
-gboolean salut_im_channel_get_interfaces (SalutIMChannel *self, gchar *** ret, GError **error);
-gboolean salut_im_channel_get_message_types (SalutIMChannel *self, GArray ** ret, GError **error);
-gboolean salut_im_channel_list_pending_messages (SalutIMChannel *self, gboolean clear, GPtrArray ** ret, GError **error);
-gboolean salut_im_channel_send (SalutIMChannel *self, guint type, const gchar * text, GError **error);
+void
+salut_im_channel_send_message(SalutImChannel * self, LmMessage *message);
+
+gboolean salut_im_channel_acknowledge_pending_messages (SalutImChannel *self, const GArray * ids, GError **error);
+gboolean salut_im_channel_close (SalutImChannel *self, GError **error);
+gboolean salut_im_channel_get_channel_type (SalutImChannel *self, gchar ** ret, GError **error);
+gboolean salut_im_channel_get_handle (SalutImChannel *self, guint* ret, guint* ret1, GError **error);
+gboolean salut_im_channel_get_interfaces (SalutImChannel *self, gchar *** ret, GError **error);
+gboolean salut_im_channel_get_message_types (SalutImChannel *self, GArray ** ret, GError **error);
+gboolean salut_im_channel_list_pending_messages (SalutImChannel *self, gboolean clear, GPtrArray ** ret, GError **error);
+gboolean salut_im_channel_send (SalutImChannel *self, guint type, const gchar * text, GError **error);
 
 
 G_END_DECLS
