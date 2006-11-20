@@ -58,6 +58,9 @@ SalutImManager *
 salut_im_manager_new(SalutConnection *connection,
                      SalutContactManager *contact_manager);
 
+SalutImChannel *
+salut_im_manager_get_channel_for_handle(SalutImManager *mgr, 
+                                        Handle handle);
 void
 salut_im_manager_handle_connection(SalutImManager *mgr,
                                    SalutLmConnection *connection);

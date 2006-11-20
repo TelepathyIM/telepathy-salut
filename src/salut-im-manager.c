@@ -40,7 +40,7 @@
 static void salut_im_manager_factory_iface_init(gpointer *g_iface, 
                                                      gpointer *iface_data);
 
-static SalutIMChannel *
+static SalutImChannel *
 salut_im_manager_new_channel(SalutImManager *mgr, Handle handle);
 
 G_DEFINE_TYPE_WITH_CODE(SalutImManager, salut_im_manager, 
@@ -228,7 +228,7 @@ salut_im_manager_factory_iface_request(TpChannelFactoryIface *iface,
                                              TpChannelIface **ret) {
   SalutImManager *mgr = SALUT_IM_MANAGER(iface);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
-  SalutIMChannel *chan;
+  SalutImChannel *chan;
 
   /* We only support text channels */
   if (strcmp(chan_type, TP_IFACE_CHANNEL_TYPE_TEXT)) {
@@ -276,7 +276,7 @@ static void salut_im_manager_factory_iface_init(gpointer *g_iface,
 
 /* private functions */
 static void
-im_channel_closed_cb(SalutIMChannel *chan, gpointer user_data) {
+im_channel_closed_cb(SalutImChannel *chan, gpointer user_data) {
   SalutImManager *self = SALUT_IM_MANAGER(user_data);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(self);
   Handle handle;
@@ -288,10 +288,10 @@ im_channel_closed_cb(SalutIMChannel *chan, gpointer user_data) {
   }
 }
 
-static SalutIMChannel *
+static SalutImChannel *
 salut_im_manager_new_channel(SalutImManager *mgr, Handle handle) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
-  SalutIMChannel *chan;
+  SalutImChannel *chan;
   SalutContact *contact;
   const gchar *name;
   gchar *path = NULL;
@@ -343,13 +343,28 @@ salut_im_manager_new(SalutConnection *connection,
   return ret;
 }
 
+SalutImChannel *
+salut_im_manager_get_channel_for_handle(SalutImManager *mgr, 
+                                        Handle handle) {
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  SalutImChannel *chan;
+  chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
+  if (chan == NULL) {
+    chan = salut_im_manager_new_channel(mgr, handle);
+  }
+  if (chan != NULL) { 
+    g_object_ref(chan);
+  } 
+  return chan;
+}
+
 static void
 found_contact_for_connection(SalutImManager *mgr, 
                              SalutLmConnection *connection,
                              SalutContact *contact) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   Handle handle;
-  SalutIMChannel *chan;
+  SalutImChannel *chan;
 
   handle = handle_for_contact(priv->connection->handle_repo, contact->name);
 
