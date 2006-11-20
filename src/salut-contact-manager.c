@@ -198,6 +198,8 @@ contact_found_cb(SalutContact *contact, gpointer userdata) {
   g_intset_add(to_add, handle);
   change_all_groups(mgr, to_add, to_rem);
   /* Add an extra ref, to ensure keeping this untill we got the lost signal */
+  g_intset_destroy(to_add);
+  g_intset_destroy(to_rem);
   g_object_ref(contact);
 }
 
@@ -230,6 +232,8 @@ contact_lost_cb(SalutContact *contact, gpointer userdata) {
   handle = handle_for_contact(priv->connection->handle_repo, contact->name);
   g_intset_add(to_rem, handle);
   change_all_groups(mgr, to_add, to_rem);
+  g_intset_destroy(to_add);
+  g_intset_destroy(to_rem);
   g_object_unref(contact);
 }
 
