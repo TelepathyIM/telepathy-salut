@@ -113,6 +113,8 @@ CORE_SOURCES =                                          \
     gintset.h                                           \
     gheap.c                                             \
     gheap.h                                             \
+    util.c                                              \
+    util.h                                              \
     handle-set.c                                        \
     handle-set.h                                        \
     handle-types.h                                      \
