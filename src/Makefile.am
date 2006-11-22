@@ -26,6 +26,8 @@ BUILT_SOURCES = \
     tp-channel-factory-iface-signals-marshal.c \
     group-mixin-signals-marshal.h \
     group-mixin-signals-marshal.c \
+    text-mixin-signals-marshal.h \
+    text-mixin-signals-marshal.c \
     salut-contact-channel-glue.h \
     salut-contact-channel-signals-marshal.h \
     salut-contact-channel-signals-marshal.c  \
@@ -53,6 +55,7 @@ dist-hook:
 
 EXTRA_DIST = \
    group-mixin-signals-marshal.list                     \
+   text-mixin-signals-marshal.list                      \
    salut-avahi-client-signals-marshal.list              \
    salut-avahi-entry-group-signals-marshal.list         \
    salut-avahi-service-browser-signals-marshal.list     \
@@ -128,6 +131,8 @@ CORE_SOURCES =                                          \
     salut-contact-channel.c                             \
     group-mixin.c                                       \
     group-mixin.h                                       \
+    text-mixin.c                                        \
+    text-mixin.h                                        \
     debug.c                                             \
     debug.h                                             \
     ansi.h                                              \

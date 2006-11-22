@@ -120,3 +120,12 @@ lm_message_node_get_child_with_namespace (LmMessageNode *node,
 
   return NULL;
 }
+
+/* extend a pointer by an offset, provided the offset is not 0 */
+gpointer
+mixin_offset_cast (gpointer instance, guint offset)
+{
+  g_return_val_if_fail (offset != 0, NULL);
+
+  return ((guchar *) instance + offset);
+}
