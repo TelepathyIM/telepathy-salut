@@ -22,6 +22,7 @@
 
 #include <glib-object.h>
 #include "salut-lm-connection.h"
+#include "text-mixin.h"
 #include <loudmouth/loudmouth.h>
 
 G_BEGIN_DECLS
@@ -31,10 +32,12 @@ typedef struct _SalutImChannelClass SalutImChannelClass;
 
 struct _SalutImChannelClass {
     GObjectClass parent_class;
+    TextMixinClass text_class;
 };
 
 struct _SalutImChannel {
     GObject parent;
+    TextMixin text;
 };
 
 GType salut_im_channel_get_type(void);

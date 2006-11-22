@@ -42,6 +42,7 @@ typedef struct _TextMixinClass TextMixinClass;
 typedef struct _TextMixin TextMixin;
 
 typedef gboolean (*TextMixinSendFunc) (GObject *obj, 
+                                       guint type,
                                        const gchar *text,
                                        LmMessage *message,
                                        GError **error);
@@ -86,14 +87,14 @@ void text_mixin_set_message_types (GObject *obj, ...);
 void text_mixin_finalize (GObject *obj);
 
 /* D-Bus method implementations */
-gboolean text_mixin_receive (GObject *obj, TpChannelTextMessageType type, Handle sender, time_t timestamp, const char *text);
 gboolean text_mixin_acknowledge_pending_messages (GObject *obj, const GArray * ids, GError **error);
 gboolean text_mixin_list_pending_messages (GObject *obj, gboolean clear, GPtrArray ** ret, GError **error);
 gboolean text_mixin_send (GObject *obj, guint type, guint subtype, const char *from, const char * to, const gchar * text, GError **error);
 gboolean text_mixin_get_message_types (GObject *obj, GArray **ret, GError **error);
 
 /* Utility functions for the mixin user */
-gboolean text_mixin_parse_incoming_message (LmMessage *message, const gchar **from, TpChannelTextMessageType *msgtype, const gchar **body, const gchar **body_offset, TextMixinSendError *send_error);
+gboolean text_mixin_parse_incoming_message (LmMessage *message, const gchar **from, TpChannelTextMessageType *msgtype, const gchar **body, const gchar **body_offset);
+gboolean text_mixin_receive (GObject *obj, TpChannelTextMessageType type, Handle sender, time_t timestamp, const char *text);
 void text_mixin_emit_sent (GObject *obj, time_t timestamp, guint type, const char *text);
 void text_mixin_emit_send_error(GObject *obj, TextMixinSendError error, time_t timestamp, TpChannelTextMessageType type, const gchar *text);
 void text_mixin_clear (GObject *obj);

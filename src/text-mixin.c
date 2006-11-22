@@ -557,7 +557,7 @@ gboolean text_mixin_send (GObject *obj, guint type, guint subtype,
       lm_message_node_add_child (msg->node, "body", text);
     }
 
-  result = mixin_cls->send(obj, text, msg, error);
+  result = mixin_cls->send(obj, type, text, msg, error);
   lm_message_unref (msg);
 
   if (!result)
@@ -617,13 +617,11 @@ text_mixin_parse_incoming_message (LmMessage *message,
                         const gchar **from,
                         TpChannelTextMessageType *msgtype,
                         const gchar **body,
-                        const gchar **body_offset,
-                        TextMixinSendError *send_error)
+                        const gchar **body_offset)
 {
   const gchar *type;
   LmMessageNode *node;
 
-  *send_error = CHANNEL_TEXT_SEND_NO_ERROR;
   *from = lm_message_node_get_attribute (message->node, "from");
   if (*from == NULL)
     {

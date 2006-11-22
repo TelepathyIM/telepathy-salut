@@ -45,29 +45,13 @@
 #include "telepathy-interfaces.h"
 #include "telepathy-errors.h"
 
+#include "text-mixin.h"
+
 #define A_ARRAY "__salut_im_channel_address_array__"
 #define A_INDEX "__salut_im_channel_address_index__"
 
-#define TP_TYPE_PENDING_MESSAGE_STRUCT (dbus_g_type_get_struct ("GValueArray", \
-      G_TYPE_UINT, \
-      G_TYPE_UINT, \
-      G_TYPE_UINT, \
-      G_TYPE_UINT, \
-      G_TYPE_UINT, \
-      G_TYPE_STRING, \
-      G_TYPE_INVALID))
-
 G_DEFINE_TYPE_WITH_CODE(SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE(TP_TYPE_CHANNEL_IFACE, NULL));
-
-/* SendError types */
-enum {
-  CHANNEL_TEXT_SEND_ERROR_UNKNOWN = 0,
-  CHANNEL_TEXT_SEND_ERROR_OFFLINE,
-  CHANNEL_TEXT_SEND_ERROR_INVALID_CONTACT,
-  CHANNEL_TEXT_SEND_ERROR_PERMISSION_DENIED,
-  CHANNEL_TEXT_SEND_ERROR_TOO_LONG
-};
 
 /* Channel state */
 typedef enum {
@@ -79,13 +63,7 @@ typedef enum {
 
 /* signal enum */
 enum {
-    ESTABLISHED,
     CLOSED,
-    LOST_MESSAGE,
-    RECEIVED,
-    RECEIVED_MESSAGE,
-    SEND_ERROR,
-    SENT,
     LAST_SIGNAL
 };
 
@@ -116,7 +94,6 @@ struct _SalutImChannelPrivate
   SalutLmConnection *lm_connection;
   /* Outcoming and incoming message queues */
   GQueue *out_queue;
-  GQueue *in_queue;
   ChannelState state;
 };
 
@@ -125,7 +102,6 @@ struct _SalutImChannelPrivate
 typedef struct _SalutImChannelMessage SalutImChannelMessage;
 
 struct _SalutImChannelMessage {
-  guint id;
   guint time;
   guint type;
   gchar *text;
@@ -133,13 +109,14 @@ struct _SalutImChannelMessage {
 };
 
 static SalutImChannelMessage *
-salut_im_channel_message_new(guint type, const gchar *text) {
+salut_im_channel_message_new(guint type, const gchar *text, 
+                             LmMessage *message) {
   SalutImChannelMessage *msg;
   msg = g_new0(SalutImChannelMessage, 1);
   msg->type = type;
   msg->text = g_strdup(text);
   msg->time = time(NULL);
-  msg->message = NULL;
+  msg->message = message;
   return msg;
 }
 
@@ -159,39 +136,6 @@ salut_im_channel_message_new_from_message(LmMessage *message) {
   return msg;
 }
 
-static SalutImChannelMessage *
-salut_im_channel_message_new_received(LmMessage *message) {
-  SalutImChannelMessage *msg;
-  static guint id = 1;
-  LmMessageNode *node;
-  const gchar *type;
-  const gchar *body = "";
-
-  /* FIXME decent id generation */
-  msg = g_new0(SalutImChannelMessage, 1);
-  msg->time = time(NULL);
-  msg->id = id++;
-  msg->message = NULL;
-
-  node = lm_message_node_get_child(message->node, "body");
-  type = lm_message_node_get_attribute(message->node, "type");
-
-  msg->type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE;
-  if (node) {
-    body = lm_message_node_get_value(node);
-    if (strncmp(body, "/me ", 4) == 0) {
-      msg->type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
-      body += 4;
-    } else if (type != NULL && strcmp("type", "chat") == 0) {
-      msg->type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
-    }
-  }
-  msg->text = g_strdup(body);
-  DEBUG("Received message: %s(%d)", msg->text, msg->type);
-
-  return msg;
-}
-
 static void 
 salut_im_channel_message_free(SalutImChannelMessage *message) {
   g_free(message->text);
@@ -201,6 +145,8 @@ salut_im_channel_message_free(SalutImChannelMessage *message) {
   g_free(message);
 }
 
+static gboolean _send_message(GObject *object, guint type, const gchar *text, 
+                              LmMessage *message, GError **error);
 static void
 salut_im_channel_init (SalutImChannel *obj)
 {
@@ -209,7 +155,6 @@ salut_im_channel_init (SalutImChannel *obj)
   priv->object_path = NULL;
   priv->contact = NULL;
   priv->lm_connection = NULL;
-  priv->in_queue = g_queue_new();
   priv->out_queue = g_queue_new();
   priv->state = CHANNEL_NOT_CONNECTED;
 }
@@ -299,6 +244,15 @@ salut_im_channel_constructor (GType type, guint n_props,
                      priv->handle);
   g_assert(valid);
 
+  /* Initialize text mixin */
+  text_mixin_init(obj, G_STRUCT_OFFSET(SalutImChannel, text), 
+                  priv->connection->handle_repo); 
+
+  text_mixin_set_message_types(obj, 
+                               TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
+                               TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
+                               G_MAXUINT);
+
   /* Connect to the bus */
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object(bus, priv->object_path, obj);
@@ -315,7 +269,8 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   GObjectClass *object_class = G_OBJECT_CLASS (salut_im_channel_class);
   GParamSpec *param_spec;
 
-  g_type_class_add_private (salut_im_channel_class, sizeof (SalutImChannelPrivate));
+  g_type_class_add_private (salut_im_channel_class, 
+                            sizeof (SalutImChannelPrivate));
 
   object_class->dispose = salut_im_channel_dispose;
   object_class->finalize = salut_im_channel_finalize;
@@ -365,50 +320,9 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
                   salut_im_channel_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  signals[LOST_MESSAGE] =
-    g_signal_new ("lost-message",
-                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_im_channel_marshal_VOID__VOID,
-                  G_TYPE_NONE, 0);
-
-  signals[RECEIVED] =
-    g_signal_new ("received",
-                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_im_channel_marshal_VOID__INT_INT_INT_INT_INT_STRING,
-                  G_TYPE_NONE, 6, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
-
-  signals[RECEIVED_MESSAGE] =
-    g_signal_new ("received-message",
-                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  g_signal_accumulator_true_handled, NULL,
-                  salut_im_channel_marshal_BOOLEAN__POINTER,
-                  G_TYPE_BOOLEAN, 1, G_TYPE_POINTER);
-
-  signals[SEND_ERROR] =
-    g_signal_new ("send-error",
-                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_im_channel_marshal_VOID__INT_INT_INT_STRING,
-                  G_TYPE_NONE, 4, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
-
-  signals[SENT] =
-    g_signal_new ("sent",
-                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_im_channel_marshal_VOID__INT_INT_STRING,
-                  G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
+  text_mixin_class_init(object_class, 
+                        G_STRUCT_OFFSET(SalutImChannelClass, text_class), 
+                        _send_message);
 
   dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_im_channel_class), &dbus_glib_salut_im_channel_object_info);
 }
@@ -453,51 +367,24 @@ salut_im_channel_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free(priv->object_path);
 
-  g_queue_foreach(priv->in_queue, (GFunc)salut_im_channel_message_free, NULL);
   g_queue_foreach(priv->out_queue, (GFunc)salut_im_channel_message_free, NULL);
-  g_queue_free(priv->in_queue);
   g_queue_free(priv->out_queue);
 
   G_OBJECT_CLASS (salut_im_channel_parent_class)->finalize (object);
 }
 
 static void
-_sendout_message(SalutImChannel * self, guint type, 
-                 const gchar *text, const guint timestamp) {
+_sendout_message(SalutImChannel * self, guint timestamp,
+                 guint type,  const gchar *text, LmMessage *message) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  LmMessage *msg;
-
-  guint subtype;
-  switch (type) {
-    case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
-    case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-      subtype = LM_MESSAGE_SUB_TYPE_CHAT;
-      break;
-    case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-      subtype = LM_MESSAGE_SUB_TYPE_NORMAL;
-      break;
-  }
-
-  msg = lm_message_new_with_sub_type(priv->contact->name, 
-                                    LM_MESSAGE_TYPE_MESSAGE, subtype);
-
-  lm_message_node_set_attribute(msg->node, "from", priv->connection->name); 
-  if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION) {
-    gchar *tmp;
-    tmp = g_strconcat("/me ", text, NULL);
-    lm_message_node_add_child(msg->node, "body", tmp);
-    g_free(tmp);
-  } else {
-    lm_message_node_add_child(msg->node, "body", text);
-  }
   
-  if (salut_lm_connection_send(priv->lm_connection, msg, NULL)) {
-    g_signal_emit(self, signals[SENT], 0, timestamp, type, text);
+  if (salut_lm_connection_send(priv->lm_connection, message, NULL)) {
+    text_mixin_emit_sent(G_OBJECT(self), timestamp, type, text);
   } else  {
-    g_signal_emit(self, signals[SEND_ERROR], CHANNEL_TEXT_SEND_ERROR_UNKNOWN, 
-                  timestamp, type, text);
+    text_mixin_emit_send_error(G_OBJECT(self), 
+                               CHANNEL_TEXT_SEND_ERROR_UNKNOWN, 
+                               timestamp, type, text);
   }
-  lm_message_unref(msg);
 }
 
 static void
@@ -506,12 +393,12 @@ _flush_queue(SalutImChannel *self) {
   SalutImChannelMessage *msg;
   /*Connected!, flusch the queue ! */
   while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
-    if (msg->message != NULL) {
+    if (msg->text == NULL) {
       if (!salut_lm_connection_send(priv->lm_connection, msg->message, NULL)) {
         g_warning("Sending message failed");
       }
     } else {
-      _sendout_message(self, msg->type, msg->text, msg->time);
+      _sendout_message(self, msg->time, msg->type, msg->text, msg->message);
     }
     salut_im_channel_message_free(msg);
   }
@@ -524,8 +411,11 @@ _error_flush_queue(SalutImChannel *self) {
   /*Connection failed!, flusch the queue ! */
   while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
     DEBUG("Sending out SendError for msg: %s", msg->text);
-    g_signal_emit(self, signals[SEND_ERROR], CHANNEL_TEXT_SEND_ERROR_OFFLINE,
-                  msg->time, msg->type, msg->text);
+    if (msg->text != NULL) {
+      text_mixin_emit_send_error(G_OBJECT(self), 
+                               CHANNEL_TEXT_SEND_ERROR_OFFLINE, 
+                               msg->time, msg->type, msg->text);
+    }
     salut_im_channel_message_free(msg);
   }
 }
@@ -533,10 +423,12 @@ _error_flush_queue(SalutImChannel *self) {
 static void
 _connection_got_message_message(SalutImChannel *self, LmMessage *message) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutImChannelMessage *m;
   gboolean handled = FALSE;
+  const gchar *from;
+  TpChannelTextMessageType msgtype;
+  const gchar *body;
+  const gchar *body_offset;
 
-  g_signal_emit(self, signals[RECEIVED_MESSAGE], 0, message, &handled);
   if (handled) {
     /* Some other part handled this message, could be muc invite or voip call
      * or whatever */
@@ -544,10 +436,19 @@ _connection_got_message_message(SalutImChannel *self, LmMessage *message) {
   }
   printf("Not handled by anything else\n");
 
-  m = salut_im_channel_message_new_received(message);
-  g_queue_push_tail(priv->in_queue, m);
-  g_signal_emit(self, signals[RECEIVED], 0, 
-                m->id, m->time, priv->handle, m->type, 0, m->text); 
+  if (!text_mixin_parse_incoming_message(message, &from, &msgtype, 
+                                         &body, &body_offset))  {
+    return;
+  }
+
+  if (body == NULL) {
+    /* No body ? Ignore */
+    return;
+  }
+
+  /* FIXME validate the from */
+  text_mixin_receive(G_OBJECT(self), msgtype, priv->handle, 
+                     time(NULL), body_offset);
 }
 
 static void
@@ -697,22 +598,27 @@ _send_channel_message(SalutImChannel *self, SalutImChannelMessage *msg) {
       break;
   }
 }
-static void
-_send_message(SalutImChannel * self, guint type, const gchar *text) {
+
+static gboolean
+_send_message(GObject *object, guint type, const gchar *text, 
+              LmMessage *message, GError **error) {
+  SalutImChannel *self = SALUT_IM_CHANNEL(object);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutImChannelMessage *msg;
 
   switch (priv->state) {
     case CHANNEL_NOT_CONNECTED:
     case CHANNEL_CONNECTING:
-      msg = salut_im_channel_message_new(type, text);
+      lm_message_ref(message);
+      msg = salut_im_channel_message_new(type, text, message);
       _send_channel_message(self, msg);
       break;
     case CHANNEL_CONNECTED:
       /* Connected and the queue is empty, so push it out directly */
-      _sendout_message(self, type, text, time(NULL));
+      _sendout_message(self, time(NULL), type, text, message);
       break;
   }
+  return TRUE;
 }
 
 void
@@ -750,13 +656,6 @@ salut_im_channel_add_connection(SalutImChannel *chan, SalutLmConnection *conn) {
   _initialise_connection(chan);
 }
 
-static gint
-_compare_id(gconstpointer a, gconstpointer b) {
-  SalutImChannelMessage *msg = (SalutImChannelMessage *) a;
-  guint id = GPOINTER_TO_UINT(b);
-  return id - msg->id;
-}
-
 /**
  * salut_im_channel_acknowledge_pending_messages
  *
@@ -773,38 +672,7 @@ gboolean
 salut_im_channel_acknowledge_pending_messages (SalutImChannel *self, 
                                                const GArray * ids, 
                                                GError **error) { 
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
-  GList **links = NULL;
-  int i;
-  gboolean ret = TRUE;
-  
-  links = g_new(GList *, ids->len);
-
-  DEBUG("Acknowledging %d messages", ids->len);
-
-  for (i = 0; i < ids->len ; i++) {
-    guint id = g_array_index(ids, guint, i);
-    links[i] = g_queue_find_custom(priv->in_queue, GUINT_TO_POINTER(id),
-                                                   _compare_id);
-    if (links[i] == NULL) {
-      DEBUG("invalid message id %u", id);
-      *error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
-                           "invalid message id %u", id);
-      ret = FALSE;
-      goto out;
-    }
-  }
-
-  for (i = 0 ; i < ids->len ; i++) {
-    SalutImChannelMessage *msg = (SalutImChannelMessage *) links[i]->data;
-    DEBUG("Acknowledged message id %u", msg->id);
-    g_queue_delete_link(priv->in_queue, links[i]);
-    salut_im_channel_message_free(msg);
-  }
-
-out:
-  g_free(links); 
-  return ret;
+  return text_mixin_acknowledge_pending_messages(G_OBJECT(self), ids, error);
 }
 
 
@@ -928,15 +796,7 @@ salut_im_channel_get_interfaces (SalutImChannel *obj, gchar *** ret,
 gboolean 
 salut_im_channel_get_message_types (SalutImChannel *obj, GArray ** ret, 
                                     GError **error) {
-  guint types[] = { TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
-                    TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
-                    TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE,
-                  };
-  *ret = g_array_sized_new(FALSE, FALSE, sizeof(guint), 
-                           sizeof(types)/sizeof(guint));
-  g_array_append_vals(*ret, types, sizeof(types)/sizeof(guint));
-
-  return TRUE;
+  return text_mixin_get_message_types(G_OBJECT(obj), ret, error);
 }
 
 
@@ -955,36 +815,7 @@ salut_im_channel_get_message_types (SalutImChannel *obj, GArray ** ret,
 gboolean 
 salut_im_channel_list_pending_messages (SalutImChannel *self, gboolean clear, 
                                         GPtrArray ** ret, GError **error) {
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  GPtrArray *messages = 
-    g_ptr_array_sized_new(g_queue_get_length(priv->in_queue));
-  GList *cur;
-
-  DEBUG("List pending (clear: %d)", clear);
-  for (cur = (clear ? g_queue_pop_head_link(priv->in_queue)
-                    : g_queue_peek_head_link(priv->in_queue));
-       cur != NULL;
-       cur = (clear ? g_queue_pop_head_link(priv->in_queue)
-                    : cur->next)) {
-    SalutImChannelMessage *msg = (SalutImChannelMessage *)cur->data;
-    GValue val = {0, };
-    g_value_init(&val, TP_TYPE_PENDING_MESSAGE_STRUCT);
-    g_value_take_boxed(&val, 
-        dbus_g_type_specialized_construct (TP_TYPE_PENDING_MESSAGE_STRUCT));
-    dbus_g_type_struct_set(&val,
-      0, msg->id,
-      1, msg->time,
-      2, priv->handle,
-      3, msg->type,
-      4, 0,
-      5, msg->text,
-      G_MAXUINT);
-    g_ptr_array_add(messages, g_value_get_boxed(&val));
-  }
-
-  *ret = messages;
-
-  return TRUE;
+  return text_mixin_list_pending_messages(G_OBJECT(self), clear, ret, error);
 }
 
 
@@ -1003,10 +834,8 @@ salut_im_channel_list_pending_messages (SalutImChannel *self, gboolean clear,
 gboolean 
 salut_im_channel_send (SalutImChannel *self, 
                        guint type, const gchar * text, GError **error) {
-  //SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self); 
-  /* All messaging is done async */
-  DEBUG("Sending: %s (%d)", text, type);
-  _send_message(self, type, text);
-
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE(self);
+  text_mixin_send(G_OBJECT(self), type, 0, priv->connection->name, 
+                  priv->contact->name, text, error);
   return TRUE;
 }
