@@ -64,6 +64,7 @@ typedef enum {
 /* signal enum */
 enum {
     CLOSED,
+    RECEIVED_MESSAGE,
     LAST_SIGNAL
 };
 
@@ -310,6 +311,15 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, 
                                    PROP_CONNECTION, param_spec);
+  signals[RECEIVED_MESSAGE] =
+    g_signal_new ("received-message",
+                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  g_signal_accumulator_true_handled, NULL,
+                  salut_im_channel_marshal_BOOLEAN__POINTER,
+                  G_TYPE_BOOLEAN, 1, G_TYPE_POINTER);
+
 
   signals[CLOSED] =
     g_signal_new ("closed",
@@ -332,6 +342,7 @@ salut_im_channel_dispose (GObject *object)
 {
   SalutImChannel *self = SALUT_IM_CHANNEL (object);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
 
   if (priv->dispose_has_run)
     return;
@@ -429,13 +440,12 @@ _connection_got_message_message(SalutImChannel *self, LmMessage *message) {
   const gchar *body;
   const gchar *body_offset;
 
+  g_signal_emit(self, signals[RECEIVED_MESSAGE], 0, message, &handled);
   if (handled) {
     /* Some other part handled this message, could be muc invite or voip call
      * or whatever */
     return;
   }
-  printf("Not handled by anything else\n");
-
   if (!text_mixin_parse_incoming_message(message, &from, &msgtype, 
                                          &body, &body_offset))  {
     return;
