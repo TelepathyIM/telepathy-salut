@@ -263,7 +263,7 @@ _send_stream_init(SalutLmConnection *self) {
   _writeout(self, XML_STREAM_INIT, strlen(XML_STREAM_INIT));
 }
 
-void
+static void
 _message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
   SalutLmConnection *self = SALUT_LM_CONNECTION(data);
   SalutLmConnectionPrivate *priv = SALUT_LM_CONNECTION_GET_PRIVATE (self);
