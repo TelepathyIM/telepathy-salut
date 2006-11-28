@@ -662,6 +662,7 @@ salut_im_channel_add_connection(SalutImChannel *chan, SalutLmConnection *conn) {
     return;
   }
   DEBUG("New connection for: %s", priv->contact->name);
+  g_object_ref(conn);
   priv->lm_connection = conn;
   _initialise_connection(chan);
 }

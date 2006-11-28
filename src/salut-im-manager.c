@@ -372,12 +372,6 @@ found_contact_for_connection(SalutImManager *mgr,
   if (chan == NULL) {
     chan = salut_im_manager_new_channel(mgr, handle);
   }
-  /* Add a ref to the connection for the channel, as our ref is removed when
-   * removing the connection from the hash table */
-  g_object_ref(connection);
-  g_hash_table_remove(priv->pending_connections, connection);
-  g_signal_handlers_disconnect_matched(connection, G_SIGNAL_MATCH_DATA,
-                                       0, 0, NULL, NULL, mgr);
   salut_im_channel_add_connection(chan, connection);
 }
 
@@ -415,7 +409,10 @@ pending_connection_message_cb(SalutLmConnection *conn, LmMessage *message,
       if (!salut_contact_has_address(contact, &addr)) {
         goto nocontact;
       }
+      g_signal_handlers_disconnect_matched(conn, G_SIGNAL_MATCH_DATA,
+                                       0, 0, NULL, NULL, mgr);
       found_contact_for_connection(mgr, conn, contact);
+      g_hash_table_remove(priv->pending_connections, conn);
       return;
     }
     t = g_list_next(t);
@@ -446,11 +443,19 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
   if (contacts == NULL) {
     goto notfound;
   }
-  g_hash_table_insert(priv->pending_connections, connection, contacts); 
-  g_signal_connect(connection, "state-changed::disconnected", 
+
+  if (g_list_length(contacts) == 1) {
+    found_contact_for_connection(mgr, connection, 
+                                  SALUT_CONTACT(contacts->data));
+    g_object_unref(connection);
+    contact_list_destroy(contacts);
+  } else {
+    g_hash_table_insert(priv->pending_connections, connection, contacts); 
+    g_signal_connect(connection, "state-changed::disconnected", 
                     G_CALLBACK(pending_connection_disconnected_cb), mgr);
-  g_signal_connect(connection, "message-received", 
+    g_signal_connect(connection, "message-received", 
                     G_CALLBACK(pending_connection_message_cb), mgr);
+  }
   return ;
 
 notfound:
