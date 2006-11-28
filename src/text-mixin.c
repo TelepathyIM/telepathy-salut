@@ -623,14 +623,7 @@ text_mixin_parse_incoming_message (LmMessage *message,
   LmMessageNode *node;
 
   *from = lm_message_node_get_attribute (message->node, "from");
-  if (*from == NULL)
-    {
-      NODE_DEBUG (message->node, "got a message without a from field");
-      return FALSE;
-    }
-
   type = lm_message_node_get_attribute (message->node, "type");
-
   /*
    * Parse body if it exists.
    */
