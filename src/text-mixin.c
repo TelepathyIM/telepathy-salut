@@ -37,7 +37,6 @@
 #define DEBUG_FLAG DEBUG_IM
 
 #include "debug.h"
-#include "namespaces.h"
 #include "util.h"
 
 #include "text-mixin.h"
