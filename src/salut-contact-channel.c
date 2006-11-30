@@ -41,8 +41,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
 enum
 {
     CLOSED,
-    GROUP_FLAGS_CHANGED,
-    MEMBERS_CHANGED,
     LAST_SIGNAL
 };
 
