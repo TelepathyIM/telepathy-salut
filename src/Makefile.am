@@ -6,9 +6,13 @@ BUILT_SOURCES = \
     salut-contact-manager-signals-marshal.c \
     salut-im-manager-signals-marshal.h \
     salut-im-manager-signals-marshal.c \
+    salut-muc-manager-signals-marshal.h \
+    salut-muc-manager-signals-marshal.c \
     salut-im-channel-glue.h \
     salut-im-channel-signals-marshal.h \
     salut-im-channel-signals-marshal.c \
+    salut-lm-connection-signals-marshal.h \
+    salut-lm-connection-signals-marshal.c \
     salut-self-signals-marshal.h \
     salut-self-signals-marshal.c \
     salut-contact-signals-marshal.h \
@@ -52,22 +56,23 @@ dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
 EXTRA_DIST = \
-  group-mixin-signals-marshal.list                        \
-  salut-avahi-client-signals-marshal.list                 \
-  salut-avahi-entry-group-signals-marshal.list            \
-  salut-avahi-service-browser-signals-marshal.list        \
-  salut-avahi-service-resolver-signals-marshal.list       \
-  salut-connection-manager-signals-marshal.list           \
-  salut-connection-signals-marshal.list                   \
-  salut-contact-channel-signals-marshal.list              \
-  salut-contact-manager-signals-marshal.list              \
-  salut-contact-signals-marshal.list                      \
-  salut-im-channel-signals-marshal.list                   \
-  salut-im-manager-signals-marshal.list                   \
-  salut-self-signals-marshal.list                         \
-  text-mixin-signals-marshal.list                         \
-  tp-channel-factory-iface-signals-marshal.list
-
+   group-mixin-signals-marshal.list                     \
+   text-mixin-signals-marshal.list                      \
+   salut-avahi-client-signals-marshal.list              \
+   salut-avahi-entry-group-signals-marshal.list         \
+   salut-avahi-service-browser-signals-marshal.list     \
+   salut-avahi-service-resolver-signals-marshal.list    \
+   salut-connection-manager-signals-marshal.list        \
+   salut-connection-signals-marshal.list                \
+   salut-contact-channel-signals-marshal.list           \
+   salut-contact-manager-signals-marshal.list           \
+   salut-contact-signals-marshal.list                   \
+   salut-im-channel-signals-marshal.list                \
+   salut-im-manager-signals-marshal.list                \
+   salut-lm-connection-signals-marshal.list             \
+   salut-self-signals-marshal.list                      \
+   tp-channel-factory-iface-signals-marshal.list        \
+   salut-xmpp-connection-signals-marshal.list 
 
 bin_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
@@ -81,6 +86,8 @@ CORE_SOURCES =                                          \
     salut-im-manager.h                                  \
     salut-im-channel.c                                  \
     salut-im-channel.h                                  \
+    salut-lm-connection.c                               \
+    salut-lm-connection.h                               \
     salut-contact.h                                     \
     salut-contact.c                                     \
     salut-self.h                                        \

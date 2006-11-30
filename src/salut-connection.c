@@ -1,4 +1,4 @@
-  /*
+/*
  * salut-connection.c - Source for SalutConnection
  * Copyright (C) 2005 Collabora Ltd.
  *
@@ -39,6 +39,7 @@
 #include "salut-contact-manager.h"
 #include "salut-contact-channel.h"
 #include "salut-im-manager.h"
+#include "salut-muc-manager.h"
 #include "salut-contact.h"
 #include "salut-self.h"
 
@@ -140,6 +141,9 @@ struct _SalutConnectionPrivate
 
   /* IM channel manager */
   SalutImManager *im_manager;
+
+  /* MUC channel manager */
+  SalutMucManager *muc_manager;
 
   /* Channel requests */
   GPtrArray *channel_requests; 
@@ -529,8 +533,8 @@ connection_status_change(SalutConnection *self,
 
 void
 _channel_iface_new_channel_cb(TpChannelFactoryIface *channel_iface, 
-                                SalutContactChannel *channel,
-                                gpointer data) {
+                              TpChannelIface *channel,
+                              gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   gchar *object_path = NULL;
@@ -632,6 +636,10 @@ _self_established_cb(SalutSelf *s, gpointer data) {
 
   priv->im_manager = salut_im_manager_new(self, priv->contact_manager);
   g_signal_connect(priv->im_manager, "new-channel",
+                   G_CALLBACK(_channel_iface_new_channel_cb), self);
+
+  priv->muc_manager = salut_muc_manager_new(self, priv->im_manager);
+  g_signal_connect(priv->muc_manager, "new-channel",
                    G_CALLBACK(_channel_iface_new_channel_cb), self);
 
 
@@ -777,6 +785,11 @@ _salut_connection_disconnect(SalutConnection *self) {
   if (priv->im_manager) {
     g_object_unref(priv->im_manager);
     priv->im_manager = NULL;
+  }
+
+  if (priv->muc_manager) {
+    g_object_unref(priv->muc_manager);
+    priv->muc_manager = NULL;
   }
 
   if (self->handle_repo) {
@@ -1303,19 +1316,21 @@ salut_connection_list_channels (SalutConnection *self,
                                 GError **error) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GPtrArray *channels = NULL;
+  int i;
+  TpChannelFactoryIface *factories[] = 
+    { TP_CHANNEL_FACTORY_IFACE(priv->contact_manager),
+      TP_CHANNEL_FACTORY_IFACE(priv->im_manager),
+      TP_CHANNEL_FACTORY_IFACE(priv->muc_manager),
+      NULL
+    };
+
 
   ERROR_IF_NOT_CONNECTED(self, *error);
 
   channels = g_ptr_array_sized_new(3);
 
-  if (priv->contact_manager != NULL) {
-    tp_channel_factory_iface_foreach(
-      TP_CHANNEL_FACTORY_IFACE(priv->contact_manager), 
-        list_channel_factory_foreach_one, channels);
-  }
-  if (priv->im_manager != NULL) {
-    tp_channel_factory_iface_foreach(
-      TP_CHANNEL_FACTORY_IFACE(priv->im_manager), 
+  for (i = 0; factories[i] != NULL; i++) {
+    tp_channel_factory_iface_foreach(factories[i],
         list_channel_factory_foreach_one, channels);
   }
 
@@ -1420,10 +1435,18 @@ salut_connection_request_channel (SalutConnection *self, const gchar * type,
                                   gboolean suppress_handler, 
                                   DBusGMethodInvocation *context) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpChannelFactoryRequestStatus status, s;
+  TpChannelFactoryRequestStatus status = 
+    TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED ;
   TpChannelIface *chan = NULL;
   gchar *object_path = NULL;
   GError *error = NULL; 
+  TpChannelFactoryIface *factories[] = 
+    { TP_CHANNEL_FACTORY_IFACE(priv->contact_manager),
+      TP_CHANNEL_FACTORY_IFACE(priv->im_manager),
+      TP_CHANNEL_FACTORY_IFACE(priv->muc_manager),
+      NULL
+    };
+  int i;
 
   ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
 
@@ -1431,17 +1454,17 @@ salut_connection_request_channel (SalutConnection *self, const gchar * type,
         type, handle, handle_type);
 
   priv->suppress_current = suppress_handler;
-  status = tp_channel_factory_iface_request (
-    TP_CHANNEL_FACTORY_IFACE(priv->contact_manager), type, 
-      (TpHandleType) handle_type, handle, &chan);
-
-  if (status != TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE ||
-      status != TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED) {
-    s = tp_channel_factory_iface_request (
-      TP_CHANNEL_FACTORY_IFACE(priv->im_manager), type, 
-        (TpHandleType) handle_type, handle, &chan);
-    status = MAX(s, status);
+  for (i = 0; factories[i] != NULL; i++) {
+    TpChannelFactoryRequestStatus prev_status = status;
+    status = tp_channel_factory_iface_request (
+      factories[i], type, (TpHandleType) handle_type, handle, &chan);
+    if (status == TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE ||
+        status == TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED) {
+      break;
+    }
+    status = MAX(prev_status, status);
   }
+
   priv->suppress_current = FALSE;
 
 
@@ -1563,6 +1586,7 @@ salut_connection_request_handles (SalutConnection *self,
   switch (handle_type)  {
     case TP_HANDLE_TYPE_CONTACT:
     case TP_HANDLE_TYPE_LIST:
+    case TP_HANDLE_TYPE_ROOM:
       handles = g_array_sized_new(FALSE, FALSE, sizeof(Handle), count);
       for (i = 0; i < count ; i++) {
         Handle handle;

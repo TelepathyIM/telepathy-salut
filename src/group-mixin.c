@@ -261,6 +261,7 @@ group_mixin_add_members (GObject *obj, const GArray *contacts, const gchar *mess
           continue;
         }
 
+      g_assert(mixin_cls->add_member);
       if (!mixin_cls->add_member (obj, handle, message, error))
         {
           return FALSE;
