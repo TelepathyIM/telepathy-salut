@@ -101,7 +101,7 @@ salut_muc_transport_iface_get_type (void)
 
 gboolean 
 salut_muc_transport_iface_connect(SalutMucTransportIface *iface, 
-                                 GError **error) {
+                                  GError **error) {
   SalutMucTransportIfaceClass *klass = 
     SALUT_MUC_TRANSPORT_IFACE_GET_CLASS(iface);
   g_assert(klass->connect != NULL);
@@ -126,3 +126,21 @@ salut_muc_transport_iface_send(SalutMucTransportIface *iface,
   g_assert(klass->send != NULL);
   return klass->send(iface, message, error, text_error);
 }
+
+const gchar *
+salut_muc_transport_get_protocol(SalutMucTransportIface *iface) {
+  SalutMucTransportIfaceClass *klass = 
+    SALUT_MUC_TRANSPORT_IFACE_GET_CLASS(iface);
+  g_assert(klass->get_protocol != NULL);
+  return klass->get_protocol(iface);
+}
+
+const GHashTable *
+salut_muc_transport_get_parameters(SalutMucTransportIface *iface) { 
+  SalutMucTransportIfaceClass *klass = 
+    SALUT_MUC_TRANSPORT_IFACE_GET_CLASS(iface);
+  g_assert(klass->get_parameters != NULL);
+  return klass->get_parameters(iface);
+}
+
+void salut_muc_transport_iface_close(SalutMucTransportIface *iface); 

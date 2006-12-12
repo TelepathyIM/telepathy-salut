@@ -27,6 +27,8 @@
 #include "salut-muc-manager.h"
 #include "salut-muc-manager-signals-marshal.h"
 
+#include "salut-multicast-muc-transport.h"
+
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
 
@@ -209,8 +211,24 @@ muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
   }
 }
 
+GObject *
+_get_transport(SalutMucManager *mgr, const gchar *name, 
+               const gchar *protocol, GHashTable *parameters, GError **error) {
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
+  SalutMulticastMucTransport *mcast;
+  mcast = salut_multicast_muc_transport_new(priv->connection, name, 
+                                            parameters, NULL);
+  return mcast == NULL ? NULL : G_OBJECT(mcast);
+}
+
+const gchar **
+_get_transport_parameters(SalutMucManager *mgr, const gchar *protocol) {
+  return salut_multicast_muc_transport_get_required_parameters(); 
+}
+
 static SalutMucChannel *
-salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle) {
+salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
+                              GObject *transport) {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   SalutMucChannel *chan;
   const gchar *name;
@@ -228,13 +246,14 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle) {
                       "connection", priv->connection,
                       "im-manager", priv->im_manager,
                       "object-path", path,
+                      "transport", transport,
                       "handle", handle,
                       NULL);
   g_free(path);
 
   g_hash_table_insert(priv->channels, GINT_TO_POINTER(handle), chan);
-  g_signal_emit_by_name(mgr, "new-channel", chan);
   g_signal_connect(chan, "closed", G_CALLBACK(muc_channel_closed_cb), mgr);
+  g_signal_emit_by_name(mgr, "new-channel", chan);
 
   return chan;
 }
@@ -269,7 +288,15 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   if (chan != NULL) { 
     *ret = TP_CHANNEL_IFACE(chan);
   } else {
-    chan = salut_muc_manager_new_channel(mgr, handle);
+    GObject *transport = _get_transport(mgr,
+                                        handle_inspect(
+                                          priv->connection->handle_repo,
+                                          TP_HANDLE_TYPE_ROOM, handle), 
+                                          NULL, NULL, NULL);
+    if (transport == NULL) {
+      return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+    }
+    chan = salut_muc_manager_new_channel(mgr, handle, transport);
     /* We requested the channel, so invite ourselves to it */
     if (chan)  {
       salut_muc_channel_invited(chan, priv->connection->self_handle, "");
@@ -296,6 +323,7 @@ static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
 static gboolean
 _received_message(SalutImChannel *imchannel, 
                   LmMessage *message, gpointer data) {
+  /* FIXME REWRITE! */
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(data);
   LmMessageNode *node;
@@ -305,8 +333,13 @@ _received_message(SalutImChannel *imchannel,
   SalutMucChannel *chan;
   const gchar *room;
   const gchar *reason;
+  const gchar *protocol;
+  const gchar **params;
   Handle room_handle;
   Handle invitor_handle;
+  const gchar **p;
+  GHashTable *params_hash;
+  GObject *transport = NULL;
 
   node = lm_message_node_get_child_with_namespace(message->node, "x",
                                                     NS_LLMUC);
@@ -323,6 +356,7 @@ _received_message(SalutImChannel *imchannel,
     DEBUG("Invalid invitation, discarding");
     return TRUE;
   }
+
   room = lm_message_node_get_value(room_node);
   reason_node = lm_message_node_get_child(invite, "reason");
   if (reason_node == NULL) {
@@ -330,22 +364,69 @@ _received_message(SalutImChannel *imchannel,
   } else {
     reason = lm_message_node_get_value(reason_node);
   }
+  
+  protocol = lm_message_node_get_attribute(invite, "protocol");
+  if (protocol == NULL) { 
+    DEBUG("Invalid invitation, (missing protocol) discarding");
+    return TRUE;
+  }
 
+  params = _get_transport_parameters(self, protocol);
+  if (params == NULL) {
+    DEBUG("Invalid invitation, (unknown protocol) discarding");
+    return TRUE;
+  }
+
+  params_hash = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+  for (p = params ; *p != NULL; p++) {
+    LmMessageNode *param;
+    param = lm_message_node_get_child(invite, *p);
+    if (param == NULL) {
+      DEBUG("Invalid invitation, (missing parameter) discarding");
+      goto discard;
+    }
+    g_hash_table_insert(params_hash, (gchar *)*p, 
+                        g_strdup(lm_message_node_get_value(param)));
+  }
+
+  /* FIXME proper serialisation of handle name */
   /* Create the group if it doesn't exist and myself to local_pending */
   room_handle = handle_for_room(priv->connection->handle_repo, room);
+
   /* FIXME handle properly */
   g_assert(room_handle != 0);
 
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(room_handle));
+
   if (chan == NULL) {
+    transport = _get_transport(self, room, protocol, params_hash, NULL);
+    if (transport == NULL) {
+      DEBUG("Invalid invitation, (wrong protocol parameters) discarding");
+      goto discard;
+    }
+
+    if (transport == NULL) {
+      handle_unref(priv->connection->handle_repo, 
+                   TP_HANDLE_TYPE_ROOM, room_handle);
+      /* FIXME some kinda error to the user maybe ? Ignore for now */
+      goto discard;
+    }
     /* Need to create a new one */
-    chan = salut_muc_manager_new_channel(self, room_handle);
+    chan = salut_muc_manager_new_channel(self, room_handle, transport);
   }
   /* FIXME handle properly */
   g_assert(chan != NULL);
 
   g_object_get(G_OBJECT(imchannel), "handle", &invitor_handle, NULL);
   salut_muc_channel_invited(chan, invitor_handle, reason);
+
+  g_hash_table_destroy(params_hash);
+
+  return TRUE;
+discard:
+  if (params_hash != NULL) {
+    g_hash_table_destroy(params_hash);
+  }
   return TRUE;
 }
 

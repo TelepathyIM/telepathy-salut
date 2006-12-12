@@ -1,6 +1,6 @@
 /*
  * salut-muc-channel.c - Source for SalutMucChannel
- * Copyright (C) 2005 Collabora Ltd.
+ * Copyright (C) 2006 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,7 +31,6 @@
 #include "salut-muc-channel-glue.h"
 
 #include "salut-muc-transport-iface.h"
-#include "salut-multicast-muc-transport.h"
 
 #include "salut-connection.h"
 #include "salut-im-manager.h"
@@ -61,6 +60,7 @@ enum
   PROP_CHANNEL_TYPE,
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
+  PROP_TRANSPORT,
   PROP_CONNECTION,
   PROP_IM_MANAGER,
   LAST_PROPERTY
@@ -131,6 +131,9 @@ salut_muc_channel_get_property (GObject    *object,
     case PROP_IM_MANAGER:
       g_value_set_object (value, priv->im_manager);
       break;
+    case PROP_TRANSPORT:
+      g_value_set_object (value, priv->transport);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -160,6 +163,9 @@ salut_muc_channel_set_property (GObject     *object,
     case PROP_IM_MANAGER:
       priv->im_manager = g_value_get_object (value);
       break;
+    case PROP_TRANSPORT:
+      priv->transport = g_value_get_object (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -187,12 +193,6 @@ salut_muc_channel_constructor (GType type, guint n_props,
                      priv->handle);
   g_assert(valid);
   
-  /* Setup the transport */
-  priv->transport = SALUT_MUC_TRANSPORT_IFACE(
-                          g_object_new(SALUT_TYPE_MULTICAST_MUC_TRANSPORT,
-                                       "connection", priv->connection,
-                                       "muc-name", priv->muc_name,
-                                       NULL));
   g_signal_connect(priv->transport, "message-received::message", 
                    G_CALLBACK(salut_muc_channel_message_received_message), obj);
   g_signal_connect(priv->transport, "message-received::presence", 
@@ -214,7 +214,6 @@ salut_muc_channel_constructor (GType type, guint n_props,
                                TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
                                TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
                                G_MAXUINT);
-
 
   /* Connect to the bus */
   bus = tp_get_bus ();
@@ -243,6 +242,12 @@ salut_muc_channel_init (SalutMucChannel *self)
 static void salut_muc_channel_dispose (GObject *object);
 static void salut_muc_channel_finalize (GObject *object);
 
+static void 
+invitation_append_parameter(gpointer key, gpointer value, gpointer data) {
+  LmMessageNode *node = (LmMessageNode *)data;
+ lm_message_node_add_child(node, (gchar *)key, (gchar *)value);
+}
+
 static LmMessage *
 create_invitation(SalutMucChannel *self, Handle handle, const gchar *message) { 
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
@@ -260,12 +265,18 @@ create_invitation(SalutMucChannel *self, Handle handle, const gchar *message) {
   lm_message_node_set_attribute(x_node, "xmlns", NS_LLMUC);
 
   invite_node = lm_message_node_add_child(x_node, "invite", NULL);
+  lm_message_node_set_attribute(invite_node, "protocol", 
+        salut_muc_transport_get_protocol(priv->transport));
   if (message != NULL && *message != '\0') {
     lm_message_node_add_child(invite_node, "reason", message);
   }
   lm_message_node_add_child(invite_node, "roomname", 
                        handle_inspect(priv->connection->handle_repo,
                                       TP_HANDLE_TYPE_ROOM, priv->handle));
+  g_hash_table_foreach(
+    (GHashTable *)salut_muc_transport_get_parameters(priv->transport), 
+    invitation_append_parameter, invite_node);
+
   return msg;
 }
 
@@ -333,6 +344,16 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
+  param_spec = g_param_spec_object ("transport", 
+                                    "Object implementing a SalutMucTransport",
+                                    "transport object",
+                                    G_TYPE_OBJECT,
+                                    G_PARAM_CONSTRUCT_ONLY |
+                                    G_PARAM_READWRITE |
+                                    G_PARAM_STATIC_NICK |
+                                    G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, 
+                                   PROP_TRANSPORT, param_spec);
   param_spec = g_param_spec_object ("connection", 
                                     "SalutConnection object",
                                     "Salut Connection that owns the"
@@ -408,7 +429,6 @@ salut_muc_channel_finalize (GObject *object)
 
   G_OBJECT_CLASS (salut_muc_channel_parent_class)->finalize (object);
 }
-
 
 void
 salut_muc_channel_invited(SalutMucChannel *self, Handle invitor, 

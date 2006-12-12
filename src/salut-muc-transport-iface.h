@@ -58,12 +58,24 @@ struct _SalutMucTransportIfaceClass {
   void (*close) (SalutMucTransportIface *iface);
   gboolean (*send) (SalutMucTransportIface *iface, LmMessage *message, 
                     GError **error, gint *text_error);
+  const gchar *(*get_protocol)(SalutMucTransportIface *iface);
+  const GHashTable *(*get_parameters) (SalutMucTransportIface *iface);
 };
 
 GType salut_muc_transport_iface_get_type (void);
 
+/* Hash table contains the needed transport to join a channel, 
+ * if parameters == NULL the transport needs to ``create'' a new channel */
 gboolean salut_muc_transport_iface_connect(SalutMucTransportIface *iface, 
-                                          GError **error);
+                                           GError **error);
+
+const gchar *
+salut_muc_transport_get_protocol(SalutMucTransportIface *iface);
+
+/* Current parameters of the transport. str -> str */
+const GHashTable *
+salut_muc_transport_get_parameters(SalutMucTransportIface *iface);
+
 void salut_muc_transport_iface_close(SalutMucTransportIface *iface); 
 
 gboolean salut_muc_transport_iface_send(SalutMucTransportIface *iface, 

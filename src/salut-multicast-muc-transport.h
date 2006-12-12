@@ -35,6 +35,15 @@ struct _SalutMulticastMucTransport {
     GObject parent;
 };
 
+SalutMulticastMucTransport *
+salut_multicast_muc_transport_new(SalutConnection *connection, 
+                                  const gchar *name, 
+                                  GHashTable *parameters,
+                                  GError **error);
+
+const gchar **
+salut_multicast_muc_transport_get_required_parameters(void);
+
 GType salut_multicast_muc_transport_get_type(void);
 
 /* TYPE MACROS */

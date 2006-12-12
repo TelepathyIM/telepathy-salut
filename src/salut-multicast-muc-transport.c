@@ -45,6 +45,9 @@
 
 #define BUFSIZE 1500
 
+#define ADDRESS_KEY "address"
+#define PORT_KEY "port"
+
 static void salut_multicast_muc_transport_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data);
 
@@ -73,7 +76,9 @@ struct _SalutMulticastMucTransportPrivate
   guint watch_in;
   guint watch_err;
   struct sockaddr_storage address;
+  socklen_t addrlen;
   LmParser *parser;
+  GHashTable *parameters;
 };
 
 #define SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MULTICAST_MUC_TRANSPORT, SalutMulticastMucTransportPrivate))
@@ -91,6 +96,7 @@ salut_multicast_muc_transport_init (SalutMulticastMucTransport *obj)
   priv->watch_err = 0;
   priv->parser = NULL;
   priv->channel = NULL;
+  priv->parameters = NULL;
 }
 
 
@@ -195,6 +201,9 @@ salut_multicast_muc_transport_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free(priv->muc_name);
   priv->muc_name = NULL;
+  if (priv->parameters != NULL) {
+    g_hash_table_destroy(priv->parameters);
+  }
 
   G_OBJECT_CLASS (salut_multicast_muc_transport_parent_class)->finalize (object);
 }
@@ -260,39 +269,13 @@ int
 _open_multicast(SalutMulticastMucTransport *self) {
   SalutMulticastMucTransportPrivate *priv = 
     SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(self);
-  int ret;
-  struct addrinfo hints;
-  struct addrinfo *ans; 
   unsigned char yes = 1;
   unsigned char one = 1;
   unsigned char no = 0;
   int fd = -1;
 
-  hints.ai_flags = AI_PASSIVE;
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_protocol = IPPROTO_UDP;
-
-  ret = getaddrinfo("239.192.0.42", "4266", &hints, &ans);
-  if (ret < 0) {
-    DEBUG("Getaddrinfo failed: %s", gai_strerror(ret));
-    goto err;
-  }
-
-  if (ans == NULL) {
-    DEBUG("Couldn't find address");
-    goto err;
-  }
-
-  if (ans->ai_next != NULL) {
-    DEBUG("Address wasn't unique! Ignoring");
-    goto err;
-  }
-
-  memcpy(&(priv->address), ans->ai_addr, ans->ai_addrlen);
-
   /* Only try the first! */
-  switch (ans->ai_family) {
+  switch (priv->address.ss_family) {
     case AF_INET: {
       struct ip_mreq mreq;
       fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -309,7 +292,7 @@ _open_multicast(SalutMulticastMucTransport *self) {
       setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &no, sizeof(no));
       setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, &one, sizeof(one));
 
-      mreq.imr_multiaddr = ((struct sockaddr_in *)ans->ai_addr)->sin_addr;
+      mreq.imr_multiaddr = ((struct sockaddr_in *)&(priv->address))->sin_addr;
       mreq.imr_interface.s_addr = htonl(INADDR_ANY);
       if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, 
            sizeof(mreq)) < 0) {
@@ -317,7 +300,7 @@ _open_multicast(SalutMulticastMucTransport *self) {
         goto err;
       }
 
-      if (bind(fd, ans->ai_addr, ans->ai_addrlen) != 0) {
+      if (bind(fd, (struct sockaddr *)&(priv->address), priv->addrlen ) != 0) {
         DEBUG("Failed to bind to socket: %s", strerror(errno));
         goto err;
       }
@@ -341,7 +324,7 @@ _open_multicast(SalutMulticastMucTransport *self) {
       setsockopt(fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, &one, sizeof(one));
       setsockopt(fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &no, sizeof(no));
 
-      mreq6.ipv6mr_multiaddr = ((struct sockaddr_in6 *)ans->ai_addr)->sin6_addr;
+      mreq6.ipv6mr_multiaddr = ((struct sockaddr_in6 *)&priv->address)->sin6_addr;
       mreq6.ipv6mr_interface = 0;
       if (setsockopt(fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6, 
            sizeof(mreq6)) < 0) {
@@ -349,27 +332,23 @@ _open_multicast(SalutMulticastMucTransport *self) {
         goto err;
       }
 
-      if (bind(fd, ans->ai_addr, ans->ai_addrlen) != 0) {
+      if (bind(fd, (struct sockaddr *)&(priv->address), priv->addrlen ) != 0) {
         DEBUG("Failed to bind to socket: %s", strerror(errno));
         goto err;
       }
       break;
     }
     default:
-      DEBUG("Address from an unsupported address family: %d", ans->ai_family);
+      DEBUG("Address from an unsupported address family: %d", 
+             priv->address.ss_family);
   }
 
-  goto out;
+  return fd;
 err:
   if (fd > 0) {
     close(fd);
   }
-  fd = -1;
-out:
-  if (ans != NULL) {
-    freeaddrinfo(ans);
-  }
-  return fd;
+  return -1;
 }
 
 gboolean 
@@ -466,6 +445,40 @@ salut_multicast_muc_transport_send (SalutMucTransportIface *iface,
   return TRUE;
 }
 
+const gchar **
+salut_multicast_muc_transport_get_required_parameters(void) {
+  static const gchar *parameters[] = { ADDRESS_KEY, PORT_KEY, NULL };
+  return parameters;
+}
+
+const gchar *
+salut_multicast_muc_transport_get_protocol(SalutMucTransportIface *iface) {
+  static const gchar *protocol = "multicast";
+  return protocol;
+}
+
+const GHashTable *
+salut_multicast_muc_transport_get_parameters(SalutMucTransportIface *iface) {
+  SalutMulticastMucTransport *self = 
+    SALUT_MULTICAST_MUC_TRANSPORT(iface);
+  SalutMulticastMucTransportPrivate *priv = 
+    SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(self);
+  char host[NI_MAXHOST];
+  char port[NI_MAXSERV];
+
+  if (priv->parameters == NULL) {
+    priv->parameters = g_hash_table_new_full(g_str_hash, g_str_equal, 
+                                             NULL, g_free);
+    g_assert(getnameinfo((struct sockaddr *)&(priv->address), 
+                         sizeof(priv->address), 
+                         host, NI_MAXHOST,
+                         port, NI_MAXSERV,
+                         NI_NUMERICHOST | NI_NUMERICSERV) == 0);
+    g_hash_table_insert(priv->parameters, ADDRESS_KEY, g_strdup(host));
+    g_hash_table_insert(priv->parameters, PORT_KEY, g_strdup(port));
+  }
+  return priv->parameters;
+}
 
 static void 
 salut_multicast_muc_transport_iface_init(gpointer *g_iface,  
@@ -474,4 +487,75 @@ salut_multicast_muc_transport_iface_init(gpointer *g_iface,
   klass->connect = salut_multicast_muc_transport_connect;
   klass->close = salut_multicast_muc_transport_close;
   klass->send = salut_multicast_muc_transport_send;
+  klass->get_parameters = 
+    salut_multicast_muc_transport_get_parameters;
+  klass->get_protocol =  
+    salut_multicast_muc_transport_get_protocol;
 }
+
+SalutMulticastMucTransport *
+salut_multicast_muc_transport_new(SalutConnection *connection, 
+                                  const gchar *name, 
+                                  GHashTable *parameters, GError **error) {
+  const gchar *address;
+  const gchar *port;
+  SalutMulticastMucTransport *transport;
+  SalutMulticastMucTransportPrivate *priv; 
+  int ret;
+
+  struct addrinfo hints;
+  struct addrinfo *ans; 
+  hints.ai_flags = AI_PASSIVE;
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol = IPPROTO_UDP;
+
+  if (parameters == NULL) {
+    /* FIXME does something randomly */
+    address = "239.192.0.42";
+    port = "4266";
+  } else {
+    address = g_hash_table_lookup(parameters, "address");
+    port = g_hash_table_lookup(parameters, "port");
+  }
+  if (address == NULL || port == NULL) {
+    goto err;
+  }
+
+  ret = getaddrinfo(address, port, &hints, &ans);
+  if (ret < 0) {
+    DEBUG("Getaddrinfo failed: %s", gai_strerror(ret));
+    goto err;
+  }
+
+  if (ans == NULL) {
+    DEBUG("Couldn't find address");
+    goto err;
+  }
+
+  if (ans->ai_next != NULL) {
+    DEBUG("Address wasn't unique! Ignoring");
+    goto err;
+  }
+
+  /* Got an address, so we can init the transport */
+  transport = g_object_new(SALUT_TYPE_MULTICAST_MUC_TRANSPORT,
+                           "connection", connection,
+                           "muc-name", name, 
+                           NULL);
+  priv = SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(transport);
+  memcpy(&(priv->address), ans->ai_addr, ans->ai_addrlen);
+  priv->addrlen = ans->ai_addrlen;
+
+  if (ans != NULL) {
+    freeaddrinfo(ans);
+  }
+  return transport;
+err:
+  /* FIXME set GError in all err cases*/
+  if (ans != NULL) {
+    freeaddrinfo(ans);
+  }
+  return NULL;
+}
+
