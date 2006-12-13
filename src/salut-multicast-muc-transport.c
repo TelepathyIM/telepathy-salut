@@ -50,6 +50,7 @@
 
 static void salut_multicast_muc_transport_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data);
+void salut_multicast_muc_transport_close (SalutMucTransportIface *iface);
 
 G_DEFINE_TYPE_WITH_CODE(SalutMulticastMucTransport, 
                         salut_multicast_muc_transport, 
@@ -176,9 +177,7 @@ salut_multicast_muc_transport_dispose (GObject *object)
   }
 
   if (priv->channel) {
-    g_io_channel_shutdown(priv->channel, FALSE, NULL);
-    g_io_channel_unref(priv->channel);
-    priv->channel = NULL;
+    salut_multicast_muc_transport_close(SALUT_MUC_TRANSPORT_IFACE(self));
   }
 
   if (priv->parser) {
@@ -364,6 +363,8 @@ salut_multicast_muc_transport_connect (SalutMucTransportIface *iface,
     return FALSE;
   }
 
+  g_assert(priv->channel == NULL);
+
   priv->fd = fd;
 
   priv->channel = g_io_channel_unix_new(fd);
@@ -396,10 +397,22 @@ salut_multicast_muc_transport_close (SalutMucTransportIface *iface) {
   /* Ensure we're connected */
   g_assert(priv->fd > 0);
 
-  if (priv->channel != NULL) { 
-    g_io_channel_shutdown(priv->channel, FALSE, NULL);
-    g_io_channel_unref(priv->channel);
+  if (priv->watch_in)  {
+    g_source_remove(priv->watch_in);
+    priv->watch_in = 0;
   }
+
+  if (priv->watch_err) {
+    g_source_remove(priv->watch_err);
+    priv->watch_err = 0;
+  }
+
+  if (priv->channel) {
+    g_io_channel_shutdown(priv->channel, TRUE, NULL);
+    g_io_channel_unref(priv->channel);
+    priv->channel = NULL;
+  }
+
   priv->fd = -1;
 
   lm_parser_free(priv->parser);
