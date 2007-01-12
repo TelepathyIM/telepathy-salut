@@ -106,7 +106,7 @@ salut_transport_mixin_class_init (GObjectClass *obj_cls, glong offset,
                   G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
 
   /* FIXME passing a gzise as ulong */
-  mixin_cls->connect_error_signal_id = 
+  mixin_cls->received_signal_id = 
     g_signal_new ("received",
                   G_OBJECT_CLASS_TYPE (obj_cls),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
