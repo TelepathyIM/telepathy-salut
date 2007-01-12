@@ -1,7 +1,8 @@
 /*
  * salut-connection-manager.c - Source for SalutConnectionManager
- * Copyright (C) 2005 Collabora Ltd.
  * Copyright (C) 2005 Nokia Corporation
+ * Copyright (C) 2006 Collabora Ltd.
+ *   @author: Sjoerd Simons <sjoerd@luon.net>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -157,7 +158,6 @@ typedef struct {
   gchar *last_name;
   gchar *email;
   gchar *jid;
-  gchar *account;
 } SalutParams;
 
 enum {
@@ -179,8 +179,6 @@ static const SalutParamSpec local_jabber_params[] = {
      G_STRUCT_OFFSET(SalutParams, jid)},
   { "email", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
      G_STRUCT_OFFSET(SalutParams, email)},
-  { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
-     G_STRUCT_OFFSET(SalutParams, account)},
   {NULL, NULL, 0, 0, NULL, 0}
 };
 
