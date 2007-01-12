@@ -490,7 +490,7 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
     g_hash_table_insert(priv->pending_connections, connection, contacts); 
     g_signal_connect(connection, "stream-openened",
                      G_CALLBACK(pending_connection_stream_opened_cb), mgr);
-    g_signal_connect(connection, "stanza-received",
+    g_signal_connect(connection, "received-stanza",
                      G_CALLBACK(pending_connection_stanza_received_cb), mgr);
     g_signal_connect(transport, "disconnected", 
                     G_CALLBACK(pending_connection_transport_disconnected_cb), 
