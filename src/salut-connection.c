@@ -655,7 +655,8 @@ _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
 }
 
 static void
-_self_new_connection_cb(SalutSelf *s, SalutLmConnection *conn, gpointer data) {
+_self_new_connection_cb(SalutSelf *s, SalutLLTransport *transport, 
+                        gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
 
@@ -666,8 +667,8 @@ _self_new_connection_cb(SalutSelf *s, SalutLmConnection *conn, gpointer data) {
   }
   DEBUG("New connection, passing to the IM manager");
   /* Get a ref and let the lower layers handle it */
-  g_object_ref(conn);
-  salut_im_manager_handle_connection(priv->im_manager, conn);
+  g_object_ref(transport);
+  salut_im_manager_handle_connection(priv->im_manager, transport);
 }
 
 static void

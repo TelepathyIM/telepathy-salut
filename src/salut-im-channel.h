@@ -21,9 +21,9 @@
 #define __SALUT_IM_CHANNEL_H__
 
 #include <glib-object.h>
-#include "salut-lm-connection.h"
 #include "text-mixin.h"
-#include <loudmouth/loudmouth.h>
+#include "salut-xmpp-stanza.h"
+#include "salut-xmpp-connection.h"
 
 G_BEGIN_DECLS
 
@@ -57,10 +57,10 @@ GType salut_im_channel_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, SalutImChannelClass))
 
 void
-salut_im_channel_add_connection(SalutImChannel *chan, SalutLmConnection *conn);
+salut_im_channel_add_connection(SalutImChannel *chan, SalutXmppConnection *conn);
 
 void
-salut_im_channel_send_message(SalutImChannel * self, LmMessage *message);
+salut_im_channel_send_stanza(SalutImChannel * self, SalutXmppStanza *stanza);
 
 gboolean salut_im_channel_acknowledge_pending_messages (SalutImChannel *self, const GArray * ids, GError **error);
 gboolean salut_im_channel_close (SalutImChannel *self, GError **error);

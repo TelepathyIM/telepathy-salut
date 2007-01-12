@@ -26,6 +26,10 @@
 #include "salut-im-manager-signals-marshal.h"
 #include "salut-contact.h"
 
+#include "salut-transport-mixin.h"
+#include "salut-linklocal-transport.h"
+#include "salut-xmpp-connection.h"
+
 #include "telepathy-errors.h"
 #include "telepathy-interfaces.h"
 #include "telepathy-constants.h"
@@ -47,17 +51,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutImManager, salut_im_manager,
                         G_TYPE_OBJECT,
               G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE, 
                                      salut_im_manager_factory_iface_init));
-
-/* signal enum */
-/*
-enum
-{
-  IM_STATUS_CHANGED,
-  LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
-*/
 
 /* private structure */
 typedef struct _SalutImManagerPrivate SalutImManagerPrivate;
@@ -360,7 +353,7 @@ salut_im_manager_get_channel_for_handle(SalutImManager *mgr,
 
 static void
 found_contact_for_connection(SalutImManager *mgr, 
-                             SalutLmConnection *connection,
+                             SalutXmppConnection *connection,
                              SalutContact *contact) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   Handle handle;
@@ -375,42 +368,77 @@ found_contact_for_connection(SalutImManager *mgr,
   salut_im_channel_add_connection(chan, connection);
 }
 
+
 static void
-pending_connection_disconnected_cb(SalutLmConnection *conn, gint state, 
-                                   gpointer userdata) {
+pending_connection_stream_closed_cb(SalutXmppConnection *connection, 
+                                    gpointer userdata) {
   SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
-  DEBUG("Pending connection disconnected");
-  g_hash_table_remove(priv->pending_connections, conn);
+  DEBUG("Pending connection stream closed");
+  salut_xmpp_connection_close(connection);
+  salut_transport_disconnect(G_OBJECT(connection->transport));
+  g_hash_table_remove(priv->pending_connections, connection);
+}
+
+static gboolean
+has_transport(gpointer key, gpointer value, gpointer user_data) {
+  SalutXmppConnection *conn = SALUT_XMPP_CONNECTION(key);
+
+  return conn->transport == user_data;
 }
 
 static void
-pending_connection_message_cb(SalutLmConnection *conn, LmMessage *message,
-                              gpointer userdata) {
+pending_connection_transport_disconnected_cb(SalutLLTransport *transport,
+                                             gpointer userdata) {
   SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  DEBUG("Pending connection disconnected");
+  g_hash_table_foreach_remove(priv->pending_connections, 
+                              has_transport, transport);
+}
+
+static void
+pending_connection_stream_opened_cb(SalutXmppConnection *conn,
+                                    gchar *to, gchar *from,
+                                    gpointer user_data) {
+  /* Just open the stream, according to the xep there should be no to and from
+   * */
+  salut_xmpp_connection_open(conn, NULL, NULL);
+}
+
+static void
+pending_connection_stanza_received_cb(SalutXmppConnection *conn, 
+                                      SalutXmppStanza *stanza,
+                                      gpointer userdata) {
+  SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+
   const char *from;
   GList *t;
-  from = lm_message_node_get_attribute(message->node, "from");
+  from = salut_xmpp_node_get_attribute(stanza->node, "from");
+
   if (from == NULL) {
     DEBUG("No from in message from pending connection");
     return;
   }
+
   DEBUG("Got message from %s on pending connection", from);
   t = g_hash_table_lookup(priv->pending_connections, conn);
+
   while (t != NULL) {
     SalutContact *contact = SALUT_CONTACT(t->data);
     if (strcmp(contact->name, from) == 0) {
       struct sockaddr_storage addr;
       socklen_t size = sizeof(struct sockaddr_storage);
-      if (!salut_lm_connection_get_address(conn, &addr, &size)) {
+      g_signal_handlers_disconnect_matched(conn, G_SIGNAL_MATCH_DATA,
+                                       0, 0, NULL, NULL, mgr);
+      if (!salut_ll_transport_get_address(SALUT_LL_TRANSPORT(conn->transport), 
+                                           &addr, &size)) {
         goto nocontact;
       }
       if (!salut_contact_has_address(contact, &addr)) {
         goto nocontact;
       }
-      g_signal_handlers_disconnect_matched(conn, G_SIGNAL_MATCH_DATA,
-                                       0, 0, NULL, NULL, mgr);
       found_contact_for_connection(mgr, conn, contact);
       g_hash_table_remove(priv->pending_connections, conn);
       return;
@@ -419,21 +447,22 @@ pending_connection_message_cb(SalutLmConnection *conn, LmMessage *message,
   }
 nocontact:
   DEBUG("Contact no longer alive");
+  salut_xmpp_connection_close(conn);
+  salut_transport_disconnect(G_OBJECT(conn->transport));
   g_hash_table_remove(priv->pending_connections, conn);
 }
 
 void
 salut_im_manager_handle_connection(SalutImManager *mgr,
-                                        SalutLmConnection *connection) {
+                                        SalutLLTransport *transport) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  SalutXmppConnection *connection = NULL;
   GList *contacts;
   struct sockaddr_storage addr;
   socklen_t size = sizeof(struct sockaddr_storage);
 
   DEBUG("Handling new connection");
-  /* FIXME we assume that one box has only one user... We can only know for
-   * sure who we're talking too when they sent the first message */
-  if (!salut_lm_connection_get_address(connection, &addr, &size)) {
+  if (!salut_ll_transport_get_address(transport, &addr, &size)) {
     goto notfound;
   }
 
@@ -444,21 +473,36 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
     goto notfound;
   }
 
+  /* Transport to somebody we know about, connect the xmpp connection */
+  connection = salut_xmpp_connection_new(G_OBJECT(transport));
+
+  /* Unref the transport, the xmpp connection own it now */
+  g_object_unref(transport);
+
+  /* If it's a transport to just one contacts machine, hook it up right away.
+   * This is needed because iChat doesn't send message with to and from data...
+   */
   if (g_list_length(contacts) == 1) {
     found_contact_for_connection(mgr, connection, 
                                   SALUT_CONTACT(contacts->data));
-    g_object_unref(connection);
     contact_list_destroy(contacts);
   } else {
     g_hash_table_insert(priv->pending_connections, connection, contacts); 
-    g_signal_connect(connection, "state-changed::disconnected", 
-                    G_CALLBACK(pending_connection_disconnected_cb), mgr);
-    g_signal_connect(connection, "message-received", 
-                    G_CALLBACK(pending_connection_message_cb), mgr);
+    g_signal_connect(connection, "stream-openened",
+                     G_CALLBACK(pending_connection_stream_opened_cb), mgr);
+    g_signal_connect(connection, "stanza-received",
+                     G_CALLBACK(pending_connection_stanza_received_cb), mgr);
+    g_signal_connect(transport, "disconnected", 
+                    G_CALLBACK(pending_connection_transport_disconnected_cb), 
+                    mgr);
+    g_signal_connect(connection, "stream-closed", 
+                     G_CALLBACK(pending_connection_stream_closed_cb), 
+                     mgr);
   }
   return ;
 
 notfound:
   DEBUG("Couldn't find a contact for the connection");
-  g_object_unref(connection);
+  salut_transport_disconnect(G_OBJECT(transport));
+  g_object_unref(transport);
 }

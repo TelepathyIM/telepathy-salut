@@ -24,7 +24,6 @@
 
 #define _GNU_SOURCE /* Needed for strptime (_XOPEN_SOURCE can also be used). */
 
-#include <loudmouth/loudmouth.h>
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -507,57 +506,52 @@ gboolean text_mixin_list_pending_messages (GObject *obj, gboolean clear, GPtrArr
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean text_mixin_send (GObject *obj, guint type, guint subtype,
+gboolean text_mixin_send (GObject *obj, guint type, 
                           const char *from,
                           const char *to, 
                           const gchar *text,
                           GError **error)
 {
   TextMixinClass *mixin_cls = TEXT_MIXIN_CLASS (G_OBJECT_GET_CLASS (obj));
-  LmMessage *msg;
+  SalutXmppStanza *stanza;
   gboolean result;
 
-  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
-    {
-      DEBUG ("invalid message type %u", type);
+  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE) {
+    DEBUG ("invalid message type %u", type);
 
-      g_set_error (error, TELEPATHY_ERRORS, InvalidArgument,
-          "invalid message type: %u", type);
+    g_set_error (error, TELEPATHY_ERRORS, InvalidArgument,
+        "invalid message type: %u", type);
 
-      return FALSE;
-    }
+    return FALSE;
+  }
+  stanza = salut_xmpp_stanza_new("message");
 
-  if (!subtype)
-    {
-      switch (type)
-        {
-        case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
-        case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-          subtype = LM_MESSAGE_SUB_TYPE_CHAT;
-          break;
-        case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-          subtype = LM_MESSAGE_SUB_TYPE_NORMAL;
-          break;
-        }
-    }
+  switch (type) {
+    case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
+    case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
+      salut_xmpp_node_set_attribute(stanza->node, "type", "chat");
+      break;
+    case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
+      salut_xmpp_node_set_attribute(stanza->node, "type", "normal");
+      break;
+  }
 
-  msg = lm_message_new_with_sub_type (to, LM_MESSAGE_TYPE_MESSAGE, subtype);
-  lm_message_node_set_attribute(msg->node, "from", from);
+  salut_xmpp_node_set_attribute(stanza->node, "from", from);
 
   if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION)
     {
       gchar *tmp;
       tmp = g_strconcat ("/me ", text, NULL);
-      lm_message_node_add_child (msg->node, "body", tmp);
+      salut_xmpp_node_add_child (stanza->node, "body", tmp);
       g_free (tmp);
     }
   else
     {
-      lm_message_node_add_child (msg->node, "body", text);
+      salut_xmpp_node_add_child (stanza->node, "body", text);
     }
 
-  result = mixin_cls->send(obj, type, text, msg, error);
-  lm_message_unref (msg);
+  result = mixin_cls->send(obj, type, text, stanza, error);
+  g_object_unref (G_OBJECT(stanza));
 
   if (!result)
     return FALSE;
@@ -612,25 +606,25 @@ text_mixin_clear (GObject *obj)
 }
 
 gboolean
-text_mixin_parse_incoming_message (LmMessage *message,
+text_mixin_parse_incoming_message (SalutXmppStanza *stanza,
                         const gchar **from,
                         TpChannelTextMessageType *msgtype,
                         const gchar **body,
                         const gchar **body_offset)
 {
   const gchar *type;
-  LmMessageNode *node;
+  SalutXmppNode *node;
 
-  *from = lm_message_node_get_attribute (message->node, "from");
-  type = lm_message_node_get_attribute (message->node, "type");
+  *from = salut_xmpp_node_get_attribute (stanza->node, "from");
+  type = salut_xmpp_node_get_attribute (stanza->node, "type");
   /*
    * Parse body if it exists.
    */
-  node = lm_message_node_get_child (message->node, "body");
+  node = salut_xmpp_node_get_child (stanza->node, "body");
 
   if (node)
     {
-      *body = lm_message_node_get_value (node);
+      *body = node->value;
     }
   else
     {

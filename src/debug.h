@@ -40,13 +40,6 @@ void debug (DebugFlags flag, const gchar *format, ...)
 
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)
 
-#define NODE_DEBUG(n, s) \
-G_STMT_START { \
-  gchar *debug_tmp = lm_message_node_to_string (n); \
-  debug (DEBUG_FLAG, "%s: " s ":\n%s", G_STRFUNC, debug_tmp); \
-  g_free (debug_tmp); \
-} G_STMT_END
-
 #endif /* DEBUG_FLAG */
 
 #else /* ENABLE_DEBUG */

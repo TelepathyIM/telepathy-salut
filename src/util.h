@@ -20,15 +20,9 @@
  */
 
 #include <glib.h>
-#include <loudmouth/loudmouth.h>
-
 
 #ifndef __SALUT_UTIL_H__
 #define __SALUT_UTIL_H__
-
-void lm_message_node_steal_children (LmMessageNode *snatcher, LmMessageNode *mum);
-gboolean lm_message_node_has_namespace (LmMessageNode *node, const gchar *ns, const gchar *tag);
-LmMessageNode *lm_message_node_get_child_with_namespace (LmMessageNode *node, const gchar *name, const gchar *ns);
 
 gpointer mixin_offset_cast (gpointer instance, guint offset);
 #endif /* __SALUT_UTIL_H__ */

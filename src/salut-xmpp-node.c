@@ -71,9 +71,8 @@ tuple_compare_key(gconstpointer a, gconstpointer b) {
   return strcmp(tuple->key, key);
 }
 
-gchar *
-salut_xmpp_node_get_attribute(SalutXmppNode *node, 
-                                           const gchar *key) {
+const gchar *
+salut_xmpp_node_get_attribute(SalutXmppNode *node, const gchar *key) {
   GSList *link;
 
   link = g_slist_find_custom(node->children, key, tuple_compare_key); 
@@ -100,7 +99,7 @@ node_compare_name(gconstpointer a, gconstpointer b) {
 }
 
 SalutXmppNode *
-salut_xmpp_message_node_get_child(SalutXmppNode *node, const gchar *name) {
+salut_xmpp_node_get_child(SalutXmppNode *node, const gchar *name) {
   GSList *link;
 
   link = g_slist_find_custom(node->children, name, node_compare_name); 
@@ -109,7 +108,7 @@ salut_xmpp_message_node_get_child(SalutXmppNode *node, const gchar *name) {
 }
 
 SalutXmppNode *
-salut_xmpp_message_node_add_child(SalutXmppNode *node,
+salut_xmpp_node_add_child(SalutXmppNode *node,
                                               const gchar *name,
                                               const gchar *value) {
   SalutXmppNode *new = salut_xmpp_node_new(name, value);

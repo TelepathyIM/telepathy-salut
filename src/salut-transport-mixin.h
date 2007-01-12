@@ -26,6 +26,14 @@
 
 G_BEGIN_DECLS
 
+typedef enum {
+  SALUT_TRANSPORT_DISCONNECTED,
+  SALUT_TRANSPORT_CONNECTING,
+  SALUT_TRANSPORT_CONNECTED,
+
+} SalutTransportState;
+
+
 typedef struct _SalutTransportMixinClass SalutTransportMixinClass;
 typedef struct _SalutTransportMixin SalutTransportMixin;
 
@@ -37,8 +45,9 @@ typedef void (*SalutTransportMixinDisconnectFunc) (GObject *obj);
 
 struct _SalutTransportMixinClass {
   guint connected_signal_id;
-  guint connect_error_signal_id;
+  guint connecting_signal_id;
   guint disconnected_signal_id;
+  guint connect_error_signal_id;
 
   guint received_signal_id;
   guint error_signal_id;
@@ -48,6 +57,7 @@ struct _SalutTransportMixinClass {
 };
 
 struct _SalutTransportMixin {
+  SalutTransportState state;
 };
 
 GType salut_transport_mixin_get_type(void);
@@ -73,10 +83,10 @@ void salut_transport_mixin_finalize (GObject *obj);
 /* Utility functions for the mixin user */
 void salut_transport_mixin_received_data(GObject *obj, 
                                          const guint8 *data, gsize length);
+void salut_transport_mixin_set_state(GObject *obj, SalutTransportState state);
+SalutTransportState salut_transport_mixin_get_state(GObject *obj);
 
-void salut_transport_mixin_emit_connected (GObject *obj);
 void salut_transport_mixin_emit_connect_error (GObject *obj, GError *error);
-void salut_transport_mixin_emit_disconnected (GObject *obj);
 
 void salut_transport_mixin_emit_send_error(GObject *obj, GError *error);
 

@@ -92,25 +92,6 @@ PKG_CHECK_MODULES(AVAHI, [ avahi-client, avahi-glib ])
 AC_SUBST(AVAHI_CFLAGS)
 AC_SUBST(AVAHI_LIBS)
 
-dnl Check for Loudmouth
-AC_ARG_ENABLE(loudmouth-versioning,
-  AC_HELP_STRING([--disable-loudmouth-versioning],
-                 [Stops configure checking the version of loudmouth to use.]),
-                 enable_loudmouth_versioning=$enableval,
-                 enable_loudmouth_versioning=yes)
-                 
-
-if test x$enable_loudmouth_versioning = xyes; then
-  LOUDMOUTH_VERSION_STR=" >= 1.1.1"
-else
-  LOUDMOUTH_VERSION_STR=""
-fi
-
-PKG_CHECK_MODULES(LOUDMOUTH, loudmouth-1.0$LOUDMOUTH_VERSION_STR)
-
-AC_SUBST(LOUDMOUTH_CFLAGS)
-AC_SUBST(LOUDMOUTH_LIBS)
-
 dnl glibc backtrace functions
 AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
 AC_CHECK_HEADERS(execinfo.h)

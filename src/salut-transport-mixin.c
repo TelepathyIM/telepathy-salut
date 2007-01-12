@@ -77,14 +77,14 @@ salut_transport_mixin_class_init (GObjectClass *obj_cls, glong offset,
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  mixin_cls->connect_error_signal_id = 
-    g_signal_new ("connect-error",
+  mixin_cls->connecting_signal_id = 
+    g_signal_new ("connecting",
                   G_OBJECT_CLASS_TYPE (obj_cls),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  salut_transport_mixin_marshal_VOID__UINT_INT_STRING,
-                  G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
 
   mixin_cls->disconnected_signal_id = 
     g_signal_new ("disconnected",
@@ -94,6 +94,16 @@ salut_transport_mixin_class_init (GObjectClass *obj_cls, glong offset,
                   NULL, NULL,
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
+
+
+  mixin_cls->connect_error_signal_id = 
+    g_signal_new ("connect-error",
+                  G_OBJECT_CLASS_TYPE (obj_cls),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  salut_transport_mixin_marshal_VOID__UINT_INT_STRING,
+                  G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
 
   /* FIXME passing a gzise as ulong */
   mixin_cls->connect_error_signal_id = 
@@ -130,13 +140,13 @@ salut_transport_mixin_init (GObject *obj,
                     GINT_TO_POINTER (offset));
 
   mixin = SALUT_TRANSPORT_MIXIN (obj);
+  mixin->state = SALUT_TRANSPORT_DISCONNECTED;
 }
 
 void
 salut_transport_mixin_finalize (GObject *obj)
 {
   return;
-
 }
 
 void
@@ -148,7 +158,30 @@ salut_transport_mixin_received_data(GObject *obj,
 }
 
 void 
-salut_transport_mixin_emit_connected (GObject *obj) {
+salut_transport_mixin_set_state(GObject *obj, SalutTransportState state) {
+  SalutTransportMixin *mixin = SALUT_TRANSPORT_MIXIN (obj);
+  if (state != mixin->state) {
+    SalutTransportMixinClass *cls = 
+      SALUT_TRANSPORT_MIXIN_CLASS(G_OBJECT_GET_CLASS(obj));
+    mixin->state = state;
+    switch (state) {
+      case SALUT_TRANSPORT_DISCONNECTED:
+        g_signal_emit(obj, cls->disconnected_signal_id, 0);
+        break;
+      case SALUT_TRANSPORT_CONNECTING:
+        g_signal_emit(obj, cls->connecting_signal_id, 0);
+        break;
+      case SALUT_TRANSPORT_CONNECTED:
+        g_signal_emit(obj, cls->connected_signal_id, 0);
+        break;
+    }
+  }
+}
+
+SalutTransportState 
+salut_transport_mixin_get_state(GObject *obj) {
+  SalutTransportMixin *mixin = SALUT_TRANSPORT_MIXIN (obj);
+  return mixin->state;
 }
 
 #define EMIT_ERROR(obj, signal, error)                                                \
@@ -166,11 +199,6 @@ salut_transport_mixin_emit_connect_error (GObject *obj, GError *error) {
 
 void salut_transport_mixin_emit_error(GObject *obj, GError *error) {
   EMIT_ERROR(obj, error, error);
-
-void salut_transport_mixin_emit_disconnected (GObject *obj);
-  SalutTransportMixinClass *cls = 
-    SALUT_TRANSPORT_MIXIN_CLASS(G_OBJECT_GET_CLASS(obj));
-  g_signal_emit(obj, cls->received_signal_id, 0);
 }
 
 gboolean 

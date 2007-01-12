@@ -30,7 +30,7 @@
 #include "salut-self.h"
 #include "salut-self-signals-marshal.h"
 
-#include "salut-lm-connection.h"
+#include "salut-linklocal-transport.h"
 
 #include "salut-avahi-entry-group.h"
 #include "telepathy-errors.h"
@@ -135,7 +135,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
                   g_cclosure_marshal_VOID__OBJECT,
                   G_TYPE_NONE, 
                   1,
-                  SALUT_TYPE_LM_CONNECTION);
+                  SALUT_TYPE_LL_TRANSPORT);
 
 }
 
@@ -192,13 +192,14 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   char port[NI_MAXSERV];
   struct sockaddr_storage addr;
   socklen_t addrlen = sizeof(struct sockaddr_storage);
-  SalutLmConnection *conn;
+  SalutLLTransport *transport;
 
 
   fd = g_io_channel_unix_get_fd(source);
   nfd = accept(fd, (struct sockaddr *)&addr, &addrlen);
 
-  conn = salut_lm_connection_new_from_fd(nfd);
+  transport = salut_ll_transport_new();
+  salut_ll_transport_open_fd(transport, nfd);
   if (getnameinfo((struct sockaddr *)&addr, addrlen,
       host, NI_MAXHOST, port, NI_MAXSERV, 
       NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
@@ -206,8 +207,8 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   } else {
     DEBUG("New connection..");
   }
-  g_signal_emit(self, signals[NEW_CONNECTION], 0, conn);
-  g_object_unref(conn);
+  g_signal_emit(self, signals[NEW_CONNECTION], 0, transport);
+  g_object_unref(transport);
 
   return TRUE;
 }

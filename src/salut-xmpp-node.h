@@ -36,19 +36,19 @@ struct _SalutXmppNode {
 };
 
 
-gchar *salut_xmpp_node_get_attribute(SalutXmppNode *node, 
-                                     const gchar *key);
+const gchar *salut_xmpp_node_get_attribute(SalutXmppNode *node, 
+                                           const gchar *key);
 
 void  salut_xmpp_node_set_attribute(SalutXmppNode *node, 
                                     const gchar *key,
                                     const gchar *value);
 
-SalutXmppNode *salut_xmpp_message_node_get_child(SalutXmppNode *node,
-                                                 const gchar *name);
+SalutXmppNode *salut_xmpp_node_get_child(SalutXmppNode *node,
+                                         const gchar *name);
 
-SalutXmppNode *salut_xmpp_message_node_add_child(SalutXmppNode *node,
-                                                 const gchar *name,
-                                                 const gchar *value);
+SalutXmppNode *salut_xmpp_node_add_child(SalutXmppNode *node,
+                                         const gchar *name,
+                                         const gchar *value);
 
 /* Node creator and destructor, should only be called by the owner, e.g.
  * salut-xmpp-stanza */

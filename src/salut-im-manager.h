@@ -22,6 +22,7 @@
 #include <glib-object.h>
 #include "salut-contact-manager.h"
 #include "salut-im-channel.h"
+#include "salut-linklocal-transport.h"
 #include "handle-types.h"
 
 G_BEGIN_DECLS
@@ -63,5 +64,5 @@ salut_im_manager_get_channel_for_handle(SalutImManager *mgr,
                                         Handle handle);
 void
 salut_im_manager_handle_connection(SalutImManager *mgr,
-                                   SalutLmConnection *connection);
+                                   SalutLLTransport *transport);
 #endif /* #ifndef __SALUT_IM_MANAGER_H__*/
