@@ -528,9 +528,8 @@ _connection_stream_closed_cb(SalutXmppConnection *conn, gpointer userdata) {
 }
 
 static void
-_trans_disconnected_cb(SalutXmppConnection *conn, gint state, 
-                            gpointer userdata) {
-  SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
+_trans_disconnected_cb(SalutLLTransport *transport, gpointer userdata) {
+  SalutImChannel *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   /* FIXME cleanup better (should we flush the queue) */
