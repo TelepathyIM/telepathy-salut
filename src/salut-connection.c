@@ -803,6 +803,9 @@ _salut_connection_connect(SalutConnection *self, GError **error) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GError *client_error = NULL;
 
+  connection_status_change(self, TP_CONN_STATUS_CONNECTING,
+                            TP_CONN_STATUS_REASON_REQUESTED);
+
   self->handle_repo = handle_repo_new();
 
   priv->avahi_client = salut_avahi_client_new(SALUT_AVAHI_CLIENT_FLAG_NO_FAIL);
@@ -820,8 +823,6 @@ _salut_connection_connect(SalutConnection *self, GError **error) {
     goto error;
   }
 
-  connection_status_change(self, TP_CONN_STATUS_CONNECTING,
-                            TP_CONN_STATUS_REASON_REQUESTED);
   return TRUE;
 
 error:
