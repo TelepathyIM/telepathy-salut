@@ -686,9 +686,6 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  connection_status_change(self, 
-                               TP_CONN_STATUS_CONNECTED, 
-                               TP_CONN_STATUS_REASON_NONE_SPECIFIED);
   priv->self = salut_self_new(priv->avahi_client, 
                               priv->first_name,
                               priv->last_name,
