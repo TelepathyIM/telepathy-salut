@@ -288,8 +288,11 @@ static void _start_element_ns(void *user_data,
 
   printf("Element started: %10s \t Namespace: %s \n", localname, uri);
   if (G_UNLIKELY(priv->depth == 0)) {
-    g_assert(!strcmp("stream", (gchar *)localname));
-    g_assert(!strcmp(XMPP_STREAM_NAMESPACE, (gchar *)uri));
+    if (strcmp("stream", (gchar *)localname)
+         || strcmp(XMPP_STREAM_NAMESPACE, (gchar *)uri)) {
+      g_signal_emit(self, signals[PARSE_ERROR], 0); 
+      return;
+    }
     g_signal_emit(self, signals[STREAM_OPENED], 0, NULL, NULL);
     priv->depth++;
     return;
