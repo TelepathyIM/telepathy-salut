@@ -341,6 +341,20 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   }
 }
 
+static void 
+contact_lost(SalutContact *contact) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+
+  contact->status = SALUT_PRESENCE_OFFLINE;
+  g_free(contact->status_message); 
+  contact->status_message = NULL;
+
+  priv->found = FALSE;
+  g_signal_emit(contact, signals[STATUS_CHANGED], 0, 
+                contact->status, contact->status_message);
+  g_signal_emit(contact, signals[LOST], 0);
+}
+
 static void
 contact_failed_cb(SalutAvahiServiceResolver  *resolver, GError *error, 
                    gpointer userdata) {
@@ -350,8 +364,7 @@ contact_failed_cb(SalutAvahiServiceResolver  *resolver, GError *error,
   priv->resolvers = g_list_remove(priv->resolvers, resolver);
   g_object_unref(resolver);
   if (g_list_length(priv->resolvers) == 0 && priv->found) {
-    g_signal_emit(self, signals[LOST], 0);
-    priv->found = FALSE;
+    contact_lost(self);
   }
 }
 
@@ -395,8 +408,7 @@ salut_contact_remove_service(SalutContact *contact,
   priv->resolvers = g_list_remove(priv->resolvers, resolver);
 
   if (g_list_length(priv->resolvers) == 0 && priv->found)  {
-    g_signal_emit(contact, signals[LOST], 0);
-    priv->found = FALSE;
+    contact_lost(contact);
   }
 }
 
