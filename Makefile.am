@@ -2,3 +2,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = src data m4 generate
 
+dist-hook:
+	chmod u+w ${distdir}/ChangeLog
+	if test -d _darcs; then darcs changes >${distdir}/ChangeLog; fi
