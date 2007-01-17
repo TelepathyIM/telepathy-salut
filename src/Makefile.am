@@ -68,11 +68,9 @@ EXTRA_DIST = \
   salut-contact-signals-marshal.list                      \
   salut-im-channel-signals-marshal.list                   \
   salut-im-manager-signals-marshal.list                   \
-  salut-lm-connection-signals-marshal.list                \
   salut-self-signals-marshal.list                         \
   salut-transport-signals-marshal.list                    \
   salut-xmpp-connection-signals-marshal.list              \
-  salut-xmpp-message-signals-marshal.list                 \
   salut-xmpp-stanza-signals-marshal.list                  \
   text-mixin-signals-marshal.list                         \
   tp-channel-factory-iface-signals-marshal.list
