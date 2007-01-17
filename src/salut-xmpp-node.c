@@ -29,11 +29,11 @@ typedef struct {
 } Tuple;
 
 SalutXmppNode *
-salut_xmpp_node_new(const char *name, const gchar *value) {
+salut_xmpp_node_new(const char *name, const gchar *content) {
   SalutXmppNode *result = g_slice_new0(SalutXmppNode);
 
   result->name = g_strdup(name);
-  result->value = g_strdup(value);
+  result->content = g_strdup(content);
 
   return result;
 }
@@ -48,7 +48,7 @@ salut_xmpp_node_free(SalutXmppNode *node) {
   }
 
   g_free(node->name);
-  g_free(node->value);
+  g_free(node->content);
 
   for (l = node->children; l != NULL ; l = l->next) {
     salut_xmpp_node_free((SalutXmppNode *)l->data);
@@ -63,6 +63,32 @@ salut_xmpp_node_free(SalutXmppNode *node) {
   g_slice_free(SalutXmppNode, node);
 }
 
+void 
+salut_xmpp_node_each_attribute(SalutXmppNode *node,
+                               salut_xmpp_node_each_attr_func func,
+                               gpointer user_data) {
+  GSList *l;
+  for (l = node->attributes; l != NULL ; l = l->next) {
+    Tuple *t = (Tuple *)l->data;
+    if (!func(t->key, t->value, user_data)) {
+      return;
+    }
+  }
+}
+
+void 
+salut_xmpp_node_each_child(SalutXmppNode *node,
+                           salut_xmpp_node_each_child_func func,
+                           gpointer user_data) {
+  GSList *l;
+  for (l = node->children; l != NULL ; l = l->next) {
+    SalutXmppNode *n = (SalutXmppNode *)l->data;
+    if (!func(n, user_data)) {
+      return;
+    }
+  }
+}
+
 static gint 
 tuple_compare_key(gconstpointer a, gconstpointer b) {
   const Tuple *tuple = (const Tuple *)a;
@@ -70,6 +96,7 @@ tuple_compare_key(gconstpointer a, gconstpointer b) {
 
   return strcmp(tuple->key, key);
 }
+
 
 const gchar *
 salut_xmpp_node_get_attribute(SalutXmppNode *node, const gchar *key) {
@@ -86,6 +113,18 @@ salut_xmpp_node_set_attribute(SalutXmppNode *node,
   Tuple *t = g_slice_new0(Tuple);
   t->key = g_strdup(key);
   t->value = g_strdup(value);
+
+  node->attributes = g_slist_append(node->attributes, t);
+}
+
+void  
+salut_xmpp_node_set_attribute_n(SalutXmppNode *node, 
+                                const gchar *key, 
+                                const gchar *value,
+                                gsize value_size) {
+  Tuple *t = g_slice_new0(Tuple);
+  t->key = g_strdup(key);
+  t->value = g_strndup(value, value_size);
 
   node->attributes = g_slist_append(node->attributes, t);
 }
@@ -108,11 +147,32 @@ salut_xmpp_node_get_child(SalutXmppNode *node, const gchar *name) {
 }
 
 SalutXmppNode *
-salut_xmpp_node_add_child(SalutXmppNode *node,
-                                              const gchar *name,
-                                              const gchar *value) {
-  SalutXmppNode *new = salut_xmpp_node_new(name, value);
+salut_xmpp_node_add_child(SalutXmppNode *node, const gchar *name,
+                          const gchar *content) {
+  SalutXmppNode *new = salut_xmpp_node_new(name, content);
   node->children = g_slist_append(node->children, new);
 
-  return node;
+  return new;
+}
+
+void 
+salut_xmpp_node_set_content(SalutXmppNode *node, 
+                            const gchar *content) {
+  g_free(node->content);
+  node->content = g_strdup(content); 
+}
+
+void salut_xmpp_node_append_content(SalutXmppNode *node, 
+                                    const gchar *content) {
+  gchar *t = node->content;
+  node->content = g_strconcat(t, content, NULL);
+  g_free(t);
+}
+
+void salut_xmpp_node_append_content_n(SalutXmppNode *node, 
+                                      const gchar *content,
+                                       gsize size) {
+  gsize csize = node->content != NULL ? strlen(node->content) : 0; 
+  node->content = g_realloc(node->content, csize + size + 1);
+  g_strlcpy(node->content + csize, content, size + 1);
 }

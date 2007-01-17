@@ -26,7 +26,6 @@
 #include "salut-im-manager-signals-marshal.h"
 #include "salut-contact.h"
 
-#include "salut-transport-mixin.h"
 #include "salut-linklocal-transport.h"
 #include "salut-xmpp-connection.h"
 
@@ -354,7 +353,8 @@ salut_im_manager_get_channel_for_handle(SalutImManager *mgr,
 static void
 found_contact_for_connection(SalutImManager *mgr, 
                              SalutXmppConnection *connection,
-                             SalutContact *contact) {
+                             SalutContact *contact,
+                             SalutXmppStanza *stanza) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   Handle handle;
   SalutImChannel *chan;
@@ -366,6 +366,9 @@ found_contact_for_connection(SalutImManager *mgr,
     chan = salut_im_manager_new_channel(mgr, handle);
   }
   salut_im_channel_add_connection(chan, connection);
+  if (stanza) {
+    salut_im_channel_received_stanza(chan, stanza);
+  }
 }
 
 
@@ -376,7 +379,7 @@ pending_connection_stream_closed_cb(SalutXmppConnection *connection,
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   DEBUG("Pending connection stream closed");
   salut_xmpp_connection_close(connection);
-  salut_transport_disconnect(G_OBJECT(connection->transport));
+  salut_transport_disconnect(connection->transport);
   g_hash_table_remove(priv->pending_connections, connection);
 }
 
@@ -419,7 +422,7 @@ pending_connection_stanza_received_cb(SalutXmppConnection *conn,
 
   if (from == NULL) {
     DEBUG("No from in message from pending connection");
-    return;
+    goto error;
   }
 
   DEBUG("Got message from %s on pending connection", from);
@@ -434,21 +437,23 @@ pending_connection_stanza_received_cb(SalutXmppConnection *conn,
                                        0, 0, NULL, NULL, mgr);
       if (!salut_ll_transport_get_address(SALUT_LL_TRANSPORT(conn->transport), 
                                            &addr, &size)) {
-        goto nocontact;
+        DEBUG("Contact no longer alive");
+        goto error;
       }
       if (!salut_contact_has_address(contact, &addr)) {
-        goto nocontact;
+        DEBUG("Contact doesn't have that address");
+        goto error;
       }
-      found_contact_for_connection(mgr, conn, contact);
+      found_contact_for_connection(mgr, conn, contact, stanza);
       g_hash_table_remove(priv->pending_connections, conn);
       return;
     }
     t = g_list_next(t);
   }
-nocontact:
-  DEBUG("Contact no longer alive");
+
+error:
   salut_xmpp_connection_close(conn);
-  salut_transport_disconnect(G_OBJECT(conn->transport));
+  salut_transport_disconnect(conn->transport);
   g_hash_table_remove(priv->pending_connections, conn);
 }
 
@@ -474,7 +479,7 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
   }
 
   /* Transport to somebody we know about, connect the xmpp connection */
-  connection = salut_xmpp_connection_new(G_OBJECT(transport));
+  connection = salut_xmpp_connection_new(SALUT_TRANSPORT(transport));
 
   /* Unref the transport, the xmpp connection own it now */
   g_object_unref(transport);
@@ -484,8 +489,9 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
    */
   if (g_list_length(contacts) == 1) {
     found_contact_for_connection(mgr, connection, 
-                                  SALUT_CONTACT(contacts->data));
+                                  SALUT_CONTACT(contacts->data), NULL);
     contact_list_destroy(contacts);
+    g_object_unref(G_OBJECT(connection));
   } else {
     g_hash_table_insert(priv->pending_connections, connection, contacts); 
     g_signal_connect(connection, "stream-openened",
@@ -503,6 +509,6 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
 
 notfound:
   DEBUG("Couldn't find a contact for the connection");
-  salut_transport_disconnect(G_OBJECT(transport));
+  salut_transport_disconnect(SALUT_TRANSPORT(transport));
   g_object_unref(transport);
 }

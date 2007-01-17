@@ -624,12 +624,13 @@ text_mixin_parse_incoming_message (SalutXmppStanza *stanza,
 
   if (node)
     {
-      *body = node->value;
+      *body = node->content;
     }
   else
     {
       *body = NULL;
     }
+
 
   /* Messages starting with /me are ACTION messages, and the /me should be
    * removed. type="chat" messages are NORMAL.  everything else is

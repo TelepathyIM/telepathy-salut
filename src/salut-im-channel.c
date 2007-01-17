@@ -438,14 +438,17 @@ _error_flush_queue(SalutImChannel *self) {
   }
 }
 
-static void
-_connection_got_stanza(SalutImChannel *self, SalutXmppStanza *stanza) {
+void
+salut_im_channel_received_stanza(SalutImChannel *self, 
+                                     SalutXmppStanza *stanza) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   gboolean handled = FALSE;
   const gchar *from;
   TpChannelTextMessageType msgtype;
   const gchar *body;
   const gchar *body_offset;
+
+  DEBUG("Got stanza!"); 
 
   g_signal_emit(self, signals[RECEIVED_STANZA], 0, stanza, &handled);
   if (handled) {
@@ -455,11 +458,13 @@ _connection_got_stanza(SalutImChannel *self, SalutXmppStanza *stanza) {
   }
   if (!text_mixin_parse_incoming_message(stanza, &from, &msgtype, 
                                          &body, &body_offset))  {
+    DEBUG("Stanza not a text message, ignoring"); 
     return;
   }
 
   if (body == NULL) {
     /* No body ? Ignore */
+    DEBUG("Text message without a body"); 
     return;
   }
 
@@ -473,7 +478,7 @@ _connection_got_stanza_cb(SalutXmppConnection *conn,
                           SalutXmppStanza *stanza, gpointer userdata) {
   /* TODO verify the sender */
   SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
-  _connection_got_stanza(self, stanza);
+  salut_im_channel_received_stanza(self, stanza);
 }
 
 static void
@@ -510,7 +515,10 @@ _connection_stream_opened_cb(SalutXmppConnection *conn,
                              gpointer userdata) {
   SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  
+
+  if (salut_ll_transport_is_incoming(SALUT_LL_TRANSPORT(conn->transport))) {
+    salut_xmpp_connection_open(conn, NULL, NULL);
+  }
   priv->state = CHANNEL_CONNECTED;
   _flush_queue(self);
 }
@@ -523,7 +531,7 @@ _connection_stream_closed_cb(SalutXmppConnection *conn, gpointer userdata) {
     /* Other side closed the stream, do the same */
     salut_xmpp_connection_close(conn);
   }
-  salut_transport_disconnect(G_OBJECT(conn->transport));
+  salut_transport_disconnect(conn->transport);
   priv->state = CHANNEL_NOT_CONNECTED;
 }
 
@@ -532,8 +540,12 @@ _trans_disconnected_cb(SalutLLTransport *transport, gpointer userdata) {
   SalutImChannel *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
-  /* FIXME cleanup better (should we flush the queue) */
-  g_object_unref(priv->xmpp_connection);
+  /* FIXME cleanup better (should we flush the queue?) */
+  DEBUG("Transport disconnected");
+  /* Take care not to unref the connection if disposing */
+  if (priv->xmpp_connection && !priv->dispose_has_run) {
+    g_object_unref(priv->xmpp_connection);
+  }
   priv->xmpp_connection = NULL;
   priv->state = CHANNEL_NOT_CONNECTED;
 }
@@ -571,7 +583,10 @@ _setup_connection(SalutImChannel *self) {
   DEBUG("Setting up the xmpp connection...");
   if (priv->xmpp_connection == NULL) {
     transport = salut_ll_transport_new();
-    priv->xmpp_connection = salut_xmpp_connection_new(G_OBJECT(transport));
+    priv->xmpp_connection = 
+      salut_xmpp_connection_new(SALUT_TRANSPORT(transport));
+    /* Let the xmpp connection own the transport */
+    g_object_unref(transport);
     _initialise_connection(self);
   } else {
     transport = SALUT_LL_TRANSPORT(priv->xmpp_connection->transport);
@@ -628,7 +643,7 @@ _send_message(GObject *object, guint type, const gchar *text,
 }
 
 void
-salut_im_channel_send_message(SalutImChannel * self, SalutXmppStanza *stanza) {
+salut_im_channel_send_stanza(SalutImChannel * self, SalutXmppStanza *stanza) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutImChannelMessage *msg;
 
@@ -654,7 +669,6 @@ salut_im_channel_add_connection(SalutImChannel *chan,
    * Which can be not quite what the other side expects.. And strange things
    * can happen when two * sides try to initiate at the same time */
   if (priv->xmpp_connection != NULL) {
-    g_object_unref(conn);
     DEBUG("Already had a connection for: %s", priv->contact->name);
     return;
   }
@@ -709,14 +723,13 @@ salut_im_channel_close (SalutImChannel *self, GError **error) {
       break;
     case CHANNEL_CONNECTING:
     case CHANNEL_CONNECTED:
-      /* FIXME shout about queued messages ? */
+      /* FIXME decent connection closing? */
       salut_xmpp_connection_close(priv->xmpp_connection);
       break;
   }
 
   DEBUG("Emitting closed signal for %s", priv->object_path);
   g_signal_emit(self, signals[CLOSED], 0);
-   
   return TRUE;
 }
 

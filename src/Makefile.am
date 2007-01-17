@@ -16,8 +16,8 @@ BUILT_SOURCES = \
     salut-connection-glue.h \
     salut-connection-signals-marshal.h \
     salut-connection-signals-marshal.c \
-    salut-transport-mixin-signals-marshal.h \
-    salut-transport-mixin-signals-marshal.c \
+    salut-transport-signals-marshal.h \
+    salut-transport-signals-marshal.c \
     salut-xmpp-connection-signals-marshal.h \
     salut-xmpp-connection-signals-marshal.c \
     salut-presence-enumtypes.h \
@@ -113,8 +113,8 @@ CORE_SOURCES =                                          \
     salut-xmpp-node.h                                   \
     salut-linklocal-transport.c                         \
     salut-linklocal-transport.h                         \
-    salut-transport-mixin.c                             \
-    salut-transport-mixin.h                             \
+    salut-transport.c                                   \
+    salut-transport.h                                   \
     telepathy-errors.c                                  \
     telepathy-errors.h                                  \
     telepathy-constants.h                               \
@@ -159,8 +159,8 @@ telepathy_salut_LDADD = libsalut-convenience.la
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
-AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ @GLIB_CFLAGS@ @HANDLE_LEAK_DEBUG_CFLAGS@ @AVAHI_CFLAGS@
-AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @AVAHI_LIBS@
+AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @HANDLE_LEAK_DEBUG_CFLAGS@ @AVAHI_CFLAGS@
+AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
 
 # rule to generate the binding headers
 %-glue.h: ../generate/xml-modified/%.xml

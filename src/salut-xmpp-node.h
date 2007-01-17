@@ -29,30 +29,54 @@ typedef struct _SalutXmppNode SalutXmppNode;
 
 struct _SalutXmppNode {
   gchar *name;
-  gchar *value;
+  gchar *content;
 
   GSList *attributes;
   GSList *children;
 };
 
+typedef gboolean (*salut_xmpp_node_each_attr_func)(const gchar *key, 
+                                                   const gchar *value,
+                                                   gpointer user_data);
+
+typedef gboolean (*salut_xmpp_node_each_child_func)(SalutXmppNode *node,
+                                                    gpointer user_data);
+
+void salut_xmpp_node_each_attribute(SalutXmppNode *node,
+                                    salut_xmpp_node_each_attr_func func,
+                                    gpointer user_data);
+void salut_xmpp_node_each_child(SalutXmppNode *node,
+                                salut_xmpp_node_each_child_func func,
+                                gpointer user_data);
 
 const gchar *salut_xmpp_node_get_attribute(SalutXmppNode *node, 
                                            const gchar *key);
 
 void  salut_xmpp_node_set_attribute(SalutXmppNode *node, 
                                     const gchar *key,
-                                    const gchar *value);
+                                    const gchar *content);
+
+void  salut_xmpp_node_set_attribute_n(SalutXmppNode *node, 
+                                      const gchar *key, 
+                                      const gchar *value,
+                                      gsize value_size);
 
 SalutXmppNode *salut_xmpp_node_get_child(SalutXmppNode *node,
                                          const gchar *name);
 
 SalutXmppNode *salut_xmpp_node_add_child(SalutXmppNode *node,
                                          const gchar *name,
-                                         const gchar *value);
+                                         const gchar *content);
+
+void salut_xmpp_node_set_content(SalutXmppNode *node, const gchar *content);
+void salut_xmpp_node_append_content(SalutXmppNode *node, const gchar *content);
+void salut_xmpp_node_append_content_n(SalutXmppNode *node, 
+                                      const gchar *content,
+                                       gsize size);
 
 /* Node creator and destructor, should only be called by the owner, e.g.
  * salut-xmpp-stanza */
-SalutXmppNode *salut_xmpp_node_new(const char *name, const gchar *value);
+SalutXmppNode *salut_xmpp_node_new(const char *name, const gchar *content);
 /* Frees the node and all it's children! */
 void salut_xmpp_node_free(SalutXmppNode *node);
 

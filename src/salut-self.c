@@ -315,7 +315,7 @@ self_start_listening(SalutSelf *self) {
   if (fd < 0) {
     return -1;
   }
-  DEBUG("Listining on port %d",port);
+  DEBUG("Listening on port %d",port);
   priv->listener = g_io_channel_unix_new(fd);
   g_io_channel_set_close_on_unref(priv->listener, TRUE);
   priv->io_watch_in = g_io_add_watch(priv->listener, G_IO_IN, 

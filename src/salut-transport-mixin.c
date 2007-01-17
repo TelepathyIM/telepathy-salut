@@ -113,7 +113,7 @@ salut_transport_mixin_class_init (GObjectClass *obj_cls, glong offset,
                   0,
                   NULL, NULL,
                   salut_transport_mixin_marshal_VOID__POINTER_ULONG,
-                  G_TYPE_NONE, 6, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_STRING);
+                  G_TYPE_NONE, 2, G_TYPE_POINTER, G_TYPE_ULONG);
 
   mixin_cls->error_signal_id = 
     g_signal_new ("error",

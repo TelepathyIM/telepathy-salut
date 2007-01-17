@@ -521,6 +521,7 @@ connection_status_change(SalutConnection *self,
     return;
   self->status = status;
   g_signal_emit (self, signals[STATUS_CHANGED], 0, status, reason);
+  DEBUG("State changed to %d", status);
   if (status == TP_CONN_STATUS_DISCONNECTED) {
     g_signal_emit(self, signals[DISCONNECTED], 0);
   }
