@@ -286,7 +286,6 @@ static void _start_element_ns(void *user_data,
   SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
   int i;
 
-  printf("Element started: %10s \t Namespace: %s \n", localname, uri);
   if (G_UNLIKELY(priv->depth == 0)) {
     if (strcmp("stream", (gchar *)localname)
          || strcmp(XMPP_STREAM_NAMESPACE, (gchar *)uri)) {
