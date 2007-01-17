@@ -165,7 +165,7 @@ _try_write(SalutLLTransport *self, const guint8 *data, int len, gsize *written) 
     case G_IO_STATUS_AGAIN:
       break;
     case G_IO_STATUS_ERROR:
-      salut_transport_mixin_emit_error(SALUT_TRANSPORT(self), error);
+      salut_transport_emit_error(SALUT_TRANSPORT(self), error);
     case G_IO_STATUS_EOF:
       DEBUG("Writing chars failed, closing the transport");
       _do_disconnect(self);
@@ -222,7 +222,7 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
       salut_transport_received_data(SALUT_TRANSPORT(self), buf, read);
       break;
     case G_IO_STATUS_ERROR:
-      salut_transport_mixin_emit_error(SALUT_TRANSPORT(self), error);
+      salut_transport_emit_error(SALUT_TRANSPORT(self), error);
     case G_IO_STATUS_EOF:
       DEBUG("Failed to read from the transport, closing..");
       _do_disconnect(self);
