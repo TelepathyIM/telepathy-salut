@@ -401,6 +401,13 @@ pending_connection_transport_disconnected_cb(SalutLLTransport *transport,
 }
 
 static void
+connection_parse_error_cb(SalutXmppConnection *conn, gpointer userdata) {
+  DEBUG("Parse error on xml stream, closing connection");
+  /* Just close the transport, the disconnected callback will do the cleanup */
+  salut_transport_disconnect(conn->transport);
+}
+
+static void
 pending_connection_stream_opened_cb(SalutXmppConnection *conn,
                                     gchar *to, gchar *from,
                                     gpointer user_data) {
@@ -434,6 +441,8 @@ pending_connection_stanza_received_cb(SalutXmppConnection *conn,
       struct sockaddr_storage addr;
       socklen_t size = sizeof(struct sockaddr_storage);
       g_signal_handlers_disconnect_matched(conn, G_SIGNAL_MATCH_DATA,
+                                       0, 0, NULL, NULL, mgr);
+      g_signal_handlers_disconnect_matched(conn->transport, G_SIGNAL_MATCH_DATA,
                                        0, 0, NULL, NULL, mgr);
       if (!salut_ll_transport_get_address(SALUT_LL_TRANSPORT(conn->transport), 
                                            &addr, &size)) {
@@ -504,6 +513,8 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
     g_signal_connect(connection, "stream-closed", 
                      G_CALLBACK(pending_connection_stream_closed_cb), 
                      mgr);
+    g_signal_connect(connection, "parse-error",
+                     G_CALLBACK(connection_parse_error_cb), mgr);
   }
   return ;
 

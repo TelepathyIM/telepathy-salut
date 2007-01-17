@@ -536,6 +536,12 @@ _connection_stream_closed_cb(SalutXmppConnection *conn, gpointer userdata) {
 }
 
 static void
+_connection_parse_error_cb(SalutXmppConnection *conn, gpointer userdata) {
+  DEBUG("Parse error, closing connection");
+  salut_transport_disconnect(conn->transport);
+}
+
+static void
 _trans_disconnected_cb(SalutLLTransport *transport, gpointer userdata) {
   SalutImChannel *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
@@ -563,6 +569,8 @@ _initialise_connection(SalutImChannel *self) {
                    G_CALLBACK(_connection_got_stanza_cb), self);
   g_signal_connect(priv->xmpp_connection, "stream-closed",
                    G_CALLBACK(_connection_stream_closed_cb), self);
+  g_signal_connect(priv->xmpp_connection, "parse-error",
+                   G_CALLBACK(_connection_parse_error_cb), self);
 
   /* Sync state with the connection */
   if (priv->xmpp_connection->stream_open) { 
