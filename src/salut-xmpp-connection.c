@@ -356,8 +356,12 @@ _xmpp_connection_received_data(SalutTransport *transport,
 
   g_assert(length > 0);
 
+  /* Temporarily ref myself to ensure we aren't disposed inside inside the xml
+   * callbacks */
+  g_object_ref(self);
   ret = xmlParseChunk(priv->parser, (const char*)data, length, FALSE);
   if (ret < 0) {
     g_signal_emit(self, signals[PARSE_ERROR], 0); 
   } 
+  g_object_unref(self);
 }
