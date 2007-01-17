@@ -46,6 +46,7 @@ enum
 {
   STREAM_OPENED,
   STREAM_CLOSED,
+  PARSE_ERROR,
   RECEIVED_STANZA,
   LAST_SIGNAL
 };
@@ -70,11 +71,14 @@ static void _end_element_ns(void *user_data, const xmlChar *localname,
 
 static void _characters (void *user_data, const xmlChar *ch, int len);
 
+static void _error(void *user_data, xmlErrorPtr error);
+
 static xmlSAXHandler parser_handler = {
   .initialized = XML_SAX2_MAGIC,
   .startElementNs = _start_element_ns,
   .endElementNs   = _end_element_ns,
   .characters     = _characters,
+  .serror         = _error,
 };
 
 struct _SalutXmppConnectionPrivate
@@ -137,6 +141,14 @@ salut_xmpp_connection_class_init (SalutXmppConnectionClass *salut_xmpp_connectio
                  NULL, NULL,
                  g_cclosure_marshal_VOID__OBJECT,
                  G_TYPE_NONE, 1, SALUT_TYPE_XMPP_STANZA);
+  signals[PARSE_ERROR] = 
+    g_signal_new("parse-error", 
+                 G_OBJECT_CLASS_TYPE(salut_xmpp_connection_class),
+                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__VOID,
+                 G_TYPE_NONE, 0);
 }
 
 void
@@ -306,7 +318,7 @@ _characters (void *user_data, const xmlChar *ch, int len) {
 
   if (priv->node != NULL) { 
     salut_xmpp_node_append_content_n(priv->node, (const gchar *)ch, (gsize)len);
-  } 
+  }
 }
 
 static void 
@@ -327,6 +339,12 @@ _end_element_ns(void *user_data, const xmlChar *localname,
   }
 }
 
+static void 
+_error(void *user_data, xmlErrorPtr error) {
+  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
+  g_signal_emit(self, signals[PARSE_ERROR], 0); 
+}
+
 
 static void 
 _xmpp_connection_received_data(SalutTransport *transport,
@@ -340,7 +358,6 @@ _xmpp_connection_received_data(SalutTransport *transport,
 
   ret = xmlParseChunk(priv->parser, (const char*)data, length, FALSE);
   if (ret < 0) {
-    /* FIXME thrown a stream error */
-    g_assert_not_reached();
+    g_signal_emit(self, signals[PARSE_ERROR], 0); 
   } 
 }
