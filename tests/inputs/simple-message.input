@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<stream:stream xmlns='jabber:client' 
+  xmlns:stream='http://etherx.jabber.org/streams'>
+
+  <message to='juliet@example.com' from='romeo@example.net' xml:lang='en'>
+    <body>Art thou not Romeo, and a Montague?</body>
+  </message>
+
+  <message from='romeo@example.net'
+           to='juliet@example.com'
+           xml:lang='en'>
+    <body>Neither, fair saint, if either thee dislike.</body>
+  </message>
+
+</stream:stream>
