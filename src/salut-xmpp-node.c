@@ -220,6 +220,24 @@ salut_xmpp_node_get_ns(SalutXmppNode *node) {
   return g_quark_to_string(node->ns);
 }
 
+const gchar *
+salut_xmpp_node_get_language(SalutXmppNode *node) {
+  return node->language;
+}
+
+void 
+salut_xmpp_node_set_language_n(SalutXmppNode *node, 
+                               const gchar *lang, gsize lang_size) {
+  g_free(node->language);
+  node->language = g_strndup(lang, lang_size);
+}
+
+void 
+salut_xmpp_node_set_language(SalutXmppNode *node, const gchar *lang) {
+  salut_xmpp_node_set_language_n(node, lang, strlen(lang));
+}
+
+
 void 
 salut_xmpp_node_set_content(SalutXmppNode *node, 
                             const gchar *content) {

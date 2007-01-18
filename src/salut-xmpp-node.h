@@ -32,6 +32,7 @@ struct _SalutXmppNode {
   gchar *content;
 
   /* Private */
+  gchar *language;
   GQuark ns;
   GSList *attributes;
   GSList *children;
@@ -103,6 +104,13 @@ SalutXmppNode *salut_xmpp_node_add_child_with_content_ns(SalutXmppNode *node,
 /* Setting/Getting namespaces */
 void salut_xmpp_node_set_ns(SalutXmppNode *node, const gchar *ns);
 const gchar *salut_xmpp_node_get_ns(SalutXmppNode *node);
+
+/* Setting/Getting language */
+const gchar *salut_xmpp_node_get_language(SalutXmppNode *node);
+void salut_xmpp_node_set_language(SalutXmppNode *node, const gchar *lang);
+void salut_xmpp_node_set_language_n(SalutXmppNode *node, 
+                                    const gchar *lang,
+                                    gsize lang_size);
 
 
 /* Setting or adding content */
