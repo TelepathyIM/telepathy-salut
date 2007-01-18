@@ -12,9 +12,9 @@ for x in ./inputs/*.input ; do
     continue
   fi
   xmldiff $x $XMLOUT
-  if [ $? ] ; then
+  if [ ! $? ] ; then
     echo "FAILED: $x - XML output doesn't match the input" >&2
     continue
   fi
-  echo "SUCCESS: $x"
+  echo "SUCCESS: $x" >&2
 done
