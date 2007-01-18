@@ -318,7 +318,7 @@ static void _start_element_ns(void *user_data,
     g_queue_push_tail(priv->nodes, priv->node);
     priv->node = salut_xmpp_node_add_child(priv->node, (gchar *)localname);
   }
-  salut_xmpp_node_set_ns(priv->node, uri);
+  salut_xmpp_node_set_ns(priv->node, (gchar *)uri);
 
   for (i = 0; i < nb_attributes * 5; i+=5) {
     /* Node is localname, prefix, uri, valuestart, valueend */
