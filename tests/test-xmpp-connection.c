@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <glib.h>
 
 #include <salut-xmpp-connection.h>
@@ -7,12 +8,14 @@
 
 #define BUFSIZE 10
 
-FILE *treefile;
+FILE *treefile = NULL;
+FILE *xmlfile = NULL;
 
 gboolean
 send_hook(SalutTransport *transport, const guint8 *data, 
           gsize length, GError **error) {
   /* Nothing for now */
+  fwrite(data, 1, length, xmlfile);
   return TRUE;
 }
 
@@ -22,13 +25,16 @@ parse_error(SalutXmppConnection *connection, gpointer user_data) {
 }
 
 void
-stream_opened(SalutXmppConnection *connection, gpointer user_data) {
+stream_opened(SalutXmppConnection *connection, gchar *to, gchar *from,
+              gpointer user_data) {
   fprintf(treefile, "STREAM OPENED\n");
+  salut_xmpp_connection_open(connection, to, from);
 }
 
 void
 stream_closed(SalutXmppConnection *connection, gpointer user_data) {
   fprintf(treefile, "STREAM CLOSED\n");
+  salut_xmpp_connection_close(connection);
 }
 
 gboolean 
@@ -60,11 +66,12 @@ print_node(SalutXmppNode *node, gint ident) {
 }
 
 void
-received_stanza(SalutXmppConnection *connnection, 
+received_stanza(SalutXmppConnection *connection, 
                 SalutXmppStanza *stanza,
                 gpointer user_data) {
   fprintf(treefile, "-|\n");
   print_node(stanza->node, 2);
+  g_assert(salut_xmpp_connection_send(connection, stanza, NULL));
 }
 
 int
@@ -74,6 +81,7 @@ main(int argc, char **argv) {
   FILE *file;
   int ret;
   guint8 buf[BUFSIZE];
+
   
   g_type_init();
 
@@ -89,7 +97,7 @@ main(int argc, char **argv) {
   g_signal_connect(connection, "received-stanza",
                    G_CALLBACK(received_stanza), NULL);
 
-  g_assert(argc >= 2);
+  g_assert(argc >= 2 && argc < 5);
 
   file = fopen(argv[1], "r");
   g_assert(file != NULL);
@@ -100,6 +108,13 @@ main(int argc, char **argv) {
     treefile = stdout;
   }
   g_assert(treefile != NULL);
+
+  if (argc >= 4) {
+    xmlfile = fopen(argv[3], "w+");
+  } else {
+    xmlfile = stderr;
+  }
+  g_assert(xmlfile != NULL);
 
   while ((ret = fread(buf, 1, BUFSIZE, file)) > 0) {
     test_transport_write(transport, buf, ret);
