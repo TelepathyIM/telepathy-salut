@@ -329,10 +329,11 @@ static void _start_element_ns(void *user_data,
                                    (gchar *)attributes[i+3],
                                    (gsize) (attributes[i+4] - attributes[i+3]));
     } else {
-      salut_xmpp_node_set_attribute_n(priv->node, 
+      salut_xmpp_node_set_attribute_n_ns(priv->node, 
                                    (gchar *)attributes[i], 
                                    (gchar *)attributes[i+3],
-                                   (gsize)(attributes[i+4] - attributes[i+3]));
+                                   (gsize)(attributes[i+4] - attributes[i+3]),
+                                   (gchar *)attributes[i+2]);
     }
   }
   priv->depth++;
