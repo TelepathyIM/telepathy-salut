@@ -4,8 +4,8 @@ noinst_PROGRAMS = \
 test_xmpp_connection_SOURCES = \
     test-xmpp-connection.c
 
-test_xpp_connection_LDADD = \
-    $(top_builddir)/src/libsalut-convinience.la
+test_xmpp_connection_LDADD = \
+    $(top_builddir)/src/libsalut-convenience.la
 
 AM_CFLAGS = $(ERROR_CFLAGS) \
     @DBUS_CFLAGS@ @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @AVAHI_CFLAGS@ \
