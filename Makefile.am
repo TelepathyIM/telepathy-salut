@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src data m4 generate
+SUBDIRS = src data m4 generate tests
 
 dist-hook:
 	chmod u+w ${distdir}/ChangeLog
