@@ -61,6 +61,9 @@ print_node(SalutXmppNode *node, gint ident) {
   salut_xmpp_node_each_attribute(node, print_attribute, GINT_TO_POINTER(ident));
   if (node->content)  
     fprintf(treefile, "%*s |-- Content: %s\n", ident, " ", node->content);
+  if (salut_xmpp_node_get_language(node)) 
+    fprintf(treefile, "%*s |-- Language: %s\n", ident, " ", 
+      salut_xmpp_node_get_language(node));
 
   salut_xmpp_node_each_child(node, print_child, GINT_TO_POINTER(ident + 2));
 }
