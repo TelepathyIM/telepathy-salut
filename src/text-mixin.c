@@ -542,12 +542,12 @@ gboolean text_mixin_send (GObject *obj, guint type,
     {
       gchar *tmp;
       tmp = g_strconcat ("/me ", text, NULL);
-      salut_xmpp_node_add_child (stanza->node, "body", tmp);
+      salut_xmpp_node_add_child_with_content(stanza->node, "body", tmp);
       g_free (tmp);
     }
   else
     {
-      salut_xmpp_node_add_child (stanza->node, "body", text);
+      salut_xmpp_node_add_child_with_content(stanza->node, "body", text);
     }
 
   result = mixin_cls->send(obj, type, text, stanza, error);

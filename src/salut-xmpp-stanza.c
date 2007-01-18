@@ -92,7 +92,7 @@ salut_xmpp_stanza_new(gchar *name) {
   SalutXmppStanza *result;
 
   result = SALUT_XMPP_STANZA(g_object_new(SALUT_TYPE_XMPP_STANZA, NULL));
-  result->node = salut_xmpp_node_new(name, NULL); 
+  result->node = salut_xmpp_node_new(name); 
 
   return result;
 }

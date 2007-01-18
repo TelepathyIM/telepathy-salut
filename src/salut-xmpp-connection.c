@@ -221,7 +221,8 @@ static void
 _xml_write_node(xmlTextWriterPtr xmlwriter, SalutXmppNode *node);
 
 gboolean
-_write_attr(const gchar *key, const gchar *value, gpointer user_data) {
+_write_attr(const gchar *key, const gchar *value, const gchar *ns,
+            gpointer user_data) {
   xmlTextWriterPtr xmlwriter = (xmlTextWriterPtr)user_data;
 
   xmlTextWriterWriteAttribute(xmlwriter, (const xmlChar *)key, 
@@ -301,8 +302,9 @@ static void _start_element_ns(void *user_data,
     priv->node = priv->stanza->node;
   } else {
     g_queue_push_tail(priv->nodes, priv->node);
-    priv->node = salut_xmpp_node_add_child(priv->node, 
-                                            (gchar *)localname, NULL);
+    priv->node = salut_xmpp_node_add_child_ns(priv->node, 
+                                              (gchar *)localname, 
+                                              (gchar *)uri);
   }
   for (i = 0; i < nb_attributes * 5; i+=5) {
     salut_xmpp_node_set_attribute_n(priv->node, 
