@@ -212,7 +212,7 @@ salut_xmpp_node_add_child_with_content_ns(SalutXmppNode *node,
 
 void 
 salut_xmpp_node_set_ns(SalutXmppNode *node, const gchar *ns) {
-  node->ns = g_quark_from_string(ns);
+  node->ns = (ns != NULL) ? g_quark_from_string(ns) : 0;
 }
 
 const gchar *
