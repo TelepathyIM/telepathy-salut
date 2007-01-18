@@ -2,7 +2,9 @@ noinst_PROGRAMS = \
 	test-xmpp-connection
 
 test_xmpp_connection_SOURCES = \
-    test-xmpp-connection.c
+    test-xmpp-connection.c     \
+    test-transport.c           \
+    test-transport.h
 
 test_xmpp_connection_LDADD = \
     $(top_builddir)/src/libsalut-convenience.la
