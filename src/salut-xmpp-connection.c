@@ -310,15 +310,16 @@ static void _start_element_ns(void *user_data,
     priv->depth++;
     return;
   } 
+
   if (priv->stanza == NULL) {
     priv->stanza = salut_xmpp_stanza_new((gchar *)localname);
     priv->node = priv->stanza->node;
   } else {
     g_queue_push_tail(priv->nodes, priv->node);
-    priv->node = salut_xmpp_node_add_child_ns(priv->node, 
-                                              (gchar *)localname, 
-                                              (gchar *)uri);
+    priv->node = salut_xmpp_node_add_child(priv->node, (gchar *)localname);
   }
+  salut_xmpp_node_set_ns(priv->node, uri);
+
   for (i = 0; i < nb_attributes * 5; i+=5) {
     /* Node is localname, prefix, uri, valuestart, valueend */
     if (attributes[i+1] != NULL
