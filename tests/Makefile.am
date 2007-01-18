@@ -17,3 +17,5 @@ AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
 
 TESTS = $(noinst_PROGRAMS)
 
+EXTRA_DIST = \
+  run-test.sh
