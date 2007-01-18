@@ -307,10 +307,19 @@ static void _start_element_ns(void *user_data,
                                               (gchar *)uri);
   }
   for (i = 0; i < nb_attributes * 5; i+=5) {
-    salut_xmpp_node_set_attribute_n(priv->node, 
-                                    (gchar *)attributes[i], 
-                                    (gchar *)attributes[i+3],
-                                    (gsize)(attributes[i+4] - attributes[i+3]));
+    /* Node is localname, prefix, uri, valuestart, valueend */
+    if (attributes[i+1] != NULL
+        && !strcmp((gchar *)attributes[i+1], "xml") 
+        && !strcmp((gchar *)attributes[i], "lang")) {
+      salut_xmpp_node_set_language_n(priv->node, 
+                                   (gchar *)attributes[i+3],
+                                   (gsize) (attributes[i+4] - attributes[i+3]));
+    } else {
+      salut_xmpp_node_set_attribute_n(priv->node, 
+                                   (gchar *)attributes[i], 
+                                   (gchar *)attributes[i+3],
+                                   (gsize)(attributes[i+4] - attributes[i+3]));
+    }
   }
   priv->depth++;
 }
