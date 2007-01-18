@@ -239,9 +239,22 @@ _write_child(SalutXmppNode *node, gpointer user_data) {
 
 static void
 _xml_write_node(xmlTextWriterPtr xmlwriter, SalutXmppNode *node) {
+  const gchar *l;
   xmlTextWriterStartElement(xmlwriter, (const xmlChar*) node->name);
 
   salut_xmpp_node_each_attribute(node, _write_attr, xmlwriter);
+
+  l = salut_xmpp_node_get_language(node);
+  if (l != NULL) {
+    xmlTextWriterWriteAttributeNS(xmlwriter, 
+                                  (const xmlChar *)"xml", 
+                                  (const xmlChar *)"lang", 
+                                  NULL,
+                                  (const xmlChar *)l);
+
+  }
+
+
   salut_xmpp_node_each_child(node, _write_child, xmlwriter);
 
   if (node->content) {
