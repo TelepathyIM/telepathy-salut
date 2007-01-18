@@ -332,6 +332,16 @@ _end_element_ns(void *user_data, const xmlChar *localname,
   SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
 
   priv->depth--;
+
+  if (priv->node && priv->node->content) {
+    /* Remove content if it's purely whitespace */
+    const char *c;
+    for (c = priv->node->content;*c != '\0' && g_ascii_isspace(*c); c++) 
+      ;
+    if (*c == '\0') 
+      salut_xmpp_node_set_content(priv->node, NULL);
+  }
+
   if (priv->depth == 0) {
     g_signal_emit(self, signals[STREAM_CLOSED], 0);
   } else if (priv->depth == 1) {
