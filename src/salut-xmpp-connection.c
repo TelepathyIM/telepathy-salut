@@ -81,6 +81,11 @@ static xmlSAXHandler parser_handler = {
   .serror         = _error,
 };
 
+typedef struct {
+  xmlTextWriterPtr xmlwriter;
+  GQuark ns;
+} _XmppWriterState;
+
 struct _SalutXmppConnectionPrivate
 {
   gboolean dispose_has_run;
@@ -218,35 +223,47 @@ salut_xmpp_connection_close(SalutXmppConnection *connection) {
 }
 
 static void
-_xml_write_node(xmlTextWriterPtr xmlwriter, SalutXmppNode *node);
+_xml_write_node(_XmppWriterState *state, SalutXmppNode *node);
 
 gboolean
 _write_attr(const gchar *key, const gchar *value, const gchar *ns,
             gpointer user_data) {
-  xmlTextWriterPtr xmlwriter = (xmlTextWriterPtr)user_data;
+  _XmppWriterState *state = (_XmppWriterState *)user_data; 
 
-  xmlTextWriterWriteAttribute(xmlwriter, (const xmlChar *)key, 
-                                         (const xmlChar *)value);
+  xmlTextWriterWriteAttribute(state->xmlwriter, (const xmlChar *)key, 
+                                                (const xmlChar *)value);
   return TRUE;
 }
 
 gboolean 
 _write_child(SalutXmppNode *node, gpointer user_data) {
-  _xml_write_node((xmlTextWriterPtr) user_data, node);
+  _xml_write_node((_XmppWriterState *) user_data, node);
   return TRUE;
 }
 
 
 static void
-_xml_write_node(xmlTextWriterPtr xmlwriter, SalutXmppNode *node) {
+_xml_write_node(_XmppWriterState *state, SalutXmppNode *node) {
   const gchar *l;
-  xmlTextWriterStartElement(xmlwriter, (const xmlChar*) node->name);
+  GQuark oldns;
 
-  salut_xmpp_node_each_attribute(node, _write_attr, xmlwriter);
+  oldns = state->ns;
+  
+  if (node->ns == 0 || state->ns == node->ns) {
+    xmlTextWriterStartElement(state->xmlwriter, (const xmlChar*) node->name);
+  } else {
+    state->ns = node->ns;
+    xmlTextWriterStartElementNS(state->xmlwriter, 
+                                NULL,
+                                (const xmlChar*) node->name,
+                                (const xmlChar *)salut_xmpp_node_get_ns(node));
+  }
+
+  salut_xmpp_node_each_attribute(node, _write_attr, state);
 
   l = salut_xmpp_node_get_language(node);
   if (l != NULL) {
-    xmlTextWriterWriteAttributeNS(xmlwriter, 
+    xmlTextWriterWriteAttributeNS(state->xmlwriter, 
                                   (const xmlChar *)"xml", 
                                   (const xmlChar *)"lang", 
                                   NULL,
@@ -255,33 +272,35 @@ _xml_write_node(xmlTextWriterPtr xmlwriter, SalutXmppNode *node) {
   }
 
 
-  salut_xmpp_node_each_child(node, _write_child, xmlwriter);
+  salut_xmpp_node_each_child(node, _write_child, state);
 
   if (node->content) {
-    xmlTextWriterWriteString(xmlwriter, (const xmlChar*)node->content);
+    xmlTextWriterWriteString(state->xmlwriter, (const xmlChar*)node->content);
   }
-  xmlTextWriterEndElement(xmlwriter);
+  xmlTextWriterEndElement(state->xmlwriter);
+  state->ns = oldns;
 }
 
 gboolean
 salut_xmpp_connection_send(SalutXmppConnection *connection, 
                                 SalutXmppStanza *stanza, GError **error) {
   xmlBufferPtr xmlbuffer;
-  xmlTextWriterPtr xmlwriter;
+  _XmppWriterState state;
   gboolean ret;
 
   xmlbuffer = xmlBufferCreate();
-  xmlwriter = xmlNewTextWriterMemory(xmlbuffer, 0);
+  state.xmlwriter = xmlNewTextWriterMemory(xmlbuffer, 0);
+  state.ns = g_quark_from_string("jabber:client");
 
-  xmlTextWriterSetIndent(xmlwriter, 1);
+  xmlTextWriterSetIndent(state.xmlwriter, 1);
 
-  _xml_write_node(xmlwriter, stanza->node);
-  xmlTextWriterFlush(xmlwriter);
+  _xml_write_node(&state, stanza->node);
+  xmlTextWriterFlush(state.xmlwriter);
 
   ret = salut_transport_send(connection->transport, 
                               (const guint8 *)xmlbuffer->content,
                               xmlbuffer->use, error);
-  xmlFreeTextWriter(xmlwriter);
+  xmlFreeTextWriter(state.xmlwriter);
   xmlBufferFree(xmlbuffer);
 
   return ret;
