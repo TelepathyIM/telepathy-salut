@@ -11,8 +11,9 @@ BUILT_SOURCES = \
     salut-im-channel-glue.h \
     salut-im-channel-signals-marshal.h \
     salut-im-channel-signals-marshal.c \
-    salut-lm-connection-signals-marshal.h \
-    salut-lm-connection-signals-marshal.c \
+    salut-muc-channel-glue.h \
+    salut-muc-channel-signals-marshal.h \
+    salut-muc-channel-signals-marshal.c \
     salut-self-signals-marshal.h \
     salut-self-signals-marshal.c \
     salut-contact-signals-marshal.h \
@@ -86,8 +87,14 @@ CORE_SOURCES =                                          \
     salut-im-manager.h                                  \
     salut-im-channel.c                                  \
     salut-im-channel.h                                  \
-    salut-lm-connection.c                               \
-    salut-lm-connection.h                               \
+    salut-muc-manager.c                                 \
+    salut-muc-manager.h                                 \
+    salut-muc-channel.c                                 \
+    salut-muc-transport-iface.h                         \
+    salut-muc-transport-iface.c                         \
+    salut-multicast-muc-transport.h                     \
+    salut-multicast-muc-transport.c                     \
+    salut-muc-channel.h                                 \
     salut-contact.h                                     \
     salut-contact.c                                     \
     salut-self.h                                        \
