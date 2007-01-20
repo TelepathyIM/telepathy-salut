@@ -537,6 +537,7 @@ gboolean text_mixin_send (GObject *obj, guint type,
   }
 
   salut_xmpp_node_set_attribute(stanza->node, "from", from);
+  salut_xmpp_node_set_attribute(stanza->node, "to", to);
 
   if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION)
     {
