@@ -27,6 +27,11 @@ typedef struct {
   gchar *key;
   gchar *value;
   GQuark ns;
+} Attribute;
+
+typedef struct {
+  const gchar *key;
+  GQuark ns;
 } Tuple;
 
 SalutXmppNode *
@@ -55,10 +60,10 @@ salut_xmpp_node_free(SalutXmppNode *node) {
   }
 
   for (l = node->attributes; l != NULL ; l = l->next) {
-    Tuple *t = (Tuple *)l->data;
-    g_free(t->key);
-    g_free(t->value);
-    g_slice_free(Tuple, t);
+    Attribute *a = (Attribute *)l->data;
+    g_free(a->key);
+    g_free(a->value);
+    g_slice_free(Attribute, a);
   }
   g_slice_free(SalutXmppNode, node);
 }
@@ -69,8 +74,8 @@ salut_xmpp_node_each_attribute(SalutXmppNode *node,
                                gpointer user_data) {
   GSList *l;
   for (l = node->attributes; l != NULL ; l = l->next) {
-    Tuple *t = (Tuple *)l->data;
-    if (!func(t->key, t->value, g_quark_to_string(t->ns), user_data)) {
+    Attribute *a = (Attribute *)l->data;
+    if (!func(a->key, a->value, g_quark_to_string(a->ns), user_data)) {
       return;
     }
   }
@@ -90,15 +95,15 @@ salut_xmpp_node_each_child(SalutXmppNode *node,
 }
 
 static gint 
-tuple_compare(gconstpointer a, gconstpointer b) {
-  const Tuple *current = (const Tuple *)a;
+attribute_compare(gconstpointer a, gconstpointer b) {
+  const Attribute *attr = (const Attribute *)a;
   const Tuple *target = (const Tuple *)b;
 
-  if (target->ns != 0 && current->ns != target->ns) {
+  if (target->ns != 0 && attr->ns != target->ns) {
     return FALSE;
   }
 
-  return strcmp(current->key, target->key);
+  return strcmp(attr->key, target->key);
 }
 
 
@@ -112,9 +117,9 @@ salut_xmpp_node_get_attribute_ns(SalutXmppNode *node,
   search.key = (gchar *)key;
   search.ns = (ns != NULL ? g_quark_from_string(ns) : 0);
 
-  link = g_slist_find_custom(node->children, &search, tuple_compare); 
+  link = g_slist_find_custom(node->children, &search, attribute_compare); 
 
-  return (link == NULL) ? NULL : ((Tuple *)(link->data))->value;
+  return (link == NULL) ? NULL : ((Attribute *)(link->data))->value;
 }
 
 const gchar *
@@ -142,12 +147,12 @@ salut_xmpp_node_set_attribute_n_ns(SalutXmppNode *node,
                                    const gchar *value,
                                    gsize value_size,
                                    const gchar *ns) {
-  Tuple *t = g_slice_new0(Tuple);
-  t->key = g_strdup(key);
-  t->value = g_strndup(value, value_size);
-  t->ns = (ns != NULL) ? g_quark_from_string(ns) : 0;
+  Attribute *a = g_slice_new0(Attribute);
+  a->key = g_strdup(key);
+  a->value = g_strndup(value, value_size);
+  a->ns = (ns != NULL) ? g_quark_from_string(ns) : 0;
 
-  node->attributes = g_slist_append(node->attributes, t);
+  node->attributes = g_slist_append(node->attributes, a);
 }
 
 void  
@@ -159,20 +164,35 @@ salut_xmpp_node_set_attribute_n(SalutXmppNode *node,
 }
 
 static gint 
-node_compare_name(gconstpointer a, gconstpointer b) {
+node_compare_child(gconstpointer a, gconstpointer b) {
   const SalutXmppNode *node = (const SalutXmppNode *)a;
-  const gchar *name = (const gchar *)b;
+  Tuple *target = (Tuple *)b;
 
-  return strcmp(node->name, name);
+  if (target->ns != 0 && target->ns != node->ns) {
+    return FALSE;
+  }
+
+  return strcmp(node->name, target->key);
+}
+
+SalutXmppNode *
+salut_xmpp_node_get_child_ns(SalutXmppNode *node, 
+                             const gchar *name,
+                             const gchar *ns) {
+  GSList *link;
+  Tuple t;
+
+  t.key = name;
+  t.ns = g_quark_from_string(ns);
+
+  link = g_slist_find_custom(node->children, &t, node_compare_child); 
+
+  return (link == NULL) ? NULL : (SalutXmppNode *)(link->data);
 }
 
 SalutXmppNode *
 salut_xmpp_node_get_child(SalutXmppNode *node, const gchar *name) {
-  GSList *link;
-
-  link = g_slist_find_custom(node->children, name, node_compare_name); 
-
-  return (link == NULL) ? NULL : (SalutXmppNode *)(link->data);
+  return salut_xmpp_node_get_child_ns(node, name, NULL);
 }
 
 
