@@ -230,8 +230,18 @@ _write_attr(const gchar *key, const gchar *value, const gchar *ns,
             gpointer user_data) {
   _XmppWriterState *state = (_XmppWriterState *)user_data; 
 
-  xmlTextWriterWriteAttribute(state->xmlwriter, (const xmlChar *)key, 
-                                                (const xmlChar *)value);
+
+  if (ns != NULL && g_quark_from_string(ns) != state->ns) {
+    xmlTextWriterWriteAttributeNS(state->xmlwriter, 
+                                     (const xmlChar *)key,
+                                     (const xmlChar *)key, 
+                                     (const xmlChar *)ns,
+                                     (const xmlChar *)value);
+  } else {
+    xmlTextWriterWriteAttribute(state->xmlwriter, 
+                                     (const xmlChar *)key, 
+                                     (const xmlChar *)value);
+  }
   return TRUE;
 }
 
