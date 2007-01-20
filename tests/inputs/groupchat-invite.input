@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<stream:stream xmlns='jabber:client' 
+  xmlns:stream='http://etherx.jabber.org/streams'>
+
+<message
+    from='crone1@shakespeare.lit/desktop'
+    to='darkcave@macbeth.shakespeare.lit'>
+  <x xmlns='http://jabber.org/protocol/muc#user'>
+    <invite to='hecate@shakespeare.lit'>
+      <reason>
+        Hey Hecate, this is the place for all good witches!
+      </reason>
+    </invite>
+  </x>
+</message>
+    
+<message
+    from='darkcave@macbeth.shakespeare.lit'
+    to='hecate@shakespeare.lit'>
+  <body>You have been invited to darkcave@macbeth by crone1@shakespeare.lit.</body>
+  <x xmlns='http://jabber.org/protocol/muc#user'>
+    <invite from='crone1@shakespeare.lit'>
+      <reason>
+        Hey Hecate, this is the place for all good witches!
+      </reason>
+    </invite>
+    <password>cauldronburn</password>
+  </x>
+</message>
+    
+
+</stream:stream>
