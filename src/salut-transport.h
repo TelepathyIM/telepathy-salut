@@ -74,8 +74,6 @@ SalutTransportState salut_transport_get_state(SalutTransport *transport);
 
 void salut_transport_emit_error (SalutTransport *transport, GError *error);
 
-void salut_transport_emit_send_error(SalutTransport *transport, GError *error);
-
 /* Public api */
 gboolean salut_transport_send(SalutTransport *transport, 
                               const guint8 *data, 
