@@ -21,6 +21,7 @@
 #define __SALUT_MULTICAST_MUC_TRANSPORT_H__
 
 #include <glib-object.h>
+#include "salut-transport.h"
 
 G_BEGIN_DECLS
 
@@ -28,11 +29,11 @@ typedef struct _SalutMulticastMucTransport SalutMulticastMucTransport;
 typedef struct _SalutMulticastMucTransportClass SalutMulticastMucTransportClass;
 
 struct _SalutMulticastMucTransportClass {
-    GObjectClass parent_class;
+    SalutTransportClass parent_class;
 };
 
 struct _SalutMulticastMucTransport {
-    GObject parent;
+    SalutTransport parent;
 };
 
 SalutMulticastMucTransport *

@@ -35,9 +35,6 @@
 
 /* For CHANNEL_TEXT_ERROR... */
 #include "text-mixin.h"
-
-#include <loudmouth/loudmouth.h>
-#include "lm-parser.h"
 #include "telepathy-errors.h"
 
 #define DEBUG_FLAG DEBUG_MUC
@@ -48,13 +45,19 @@
 #define ADDRESS_KEY "address"
 #define PORT_KEY "port"
 
+static gboolean 
+salut_multicast_muc_transport_send (SalutTransport *transport, 
+                                    const guint8 *data, gsize size,
+                                    GError **error);
+
+static void 
+salut_multicast_muc_transport_disconnect(SalutTransport *transport);
+
 static void salut_multicast_muc_transport_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data);
-void salut_multicast_muc_transport_close (SalutMucTransportIface *iface);
-
 G_DEFINE_TYPE_WITH_CODE(SalutMulticastMucTransport, 
                         salut_multicast_muc_transport, 
-                        G_TYPE_OBJECT,
+                        SALUT_TYPE_TRANSPORT,
                         G_IMPLEMENT_INTERFACE(SALUT_TYPE_MUC_TRANSPORT_IFACE,
                                      salut_multicast_muc_transport_iface_init));
 
@@ -78,7 +81,6 @@ struct _SalutMulticastMucTransportPrivate
   guint watch_err;
   struct sockaddr_storage address;
   socklen_t addrlen;
-  LmParser *parser;
   GHashTable *parameters;
 };
 
@@ -95,7 +97,6 @@ salut_multicast_muc_transport_init (SalutMulticastMucTransport *obj)
   priv->fd = -1;
   priv->watch_in = 0;
   priv->watch_err = 0;
-  priv->parser = NULL;
   priv->channel = NULL;
   priv->parameters = NULL;
 }
@@ -149,6 +150,9 @@ static void
 salut_multicast_muc_transport_class_init(SalutMulticastMucTransportClass *salut_multicast_muc_transport_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_multicast_muc_transport_class);
+  SalutTransportClass *transport_class =
+      SALUT_TRANSPORT_CLASS(salut_multicast_muc_transport_class);
+
 
   g_type_class_add_private (salut_multicast_muc_transport_class, sizeof (SalutMulticastMucTransportPrivate));
 
@@ -159,6 +163,9 @@ salut_multicast_muc_transport_class_init(SalutMulticastMucTransportClass *salut_
 
   g_object_class_override_property(object_class, PROP_CONNECTION, "connection");
   g_object_class_override_property(object_class, PROP_MUC_NAME, "muc-name");
+
+  transport_class->send = salut_multicast_muc_transport_send;
+  transport_class->disconnect = salut_multicast_muc_transport_disconnect;
 }
 
 void
@@ -177,12 +184,7 @@ salut_multicast_muc_transport_dispose (GObject *object)
   }
 
   if (priv->channel) {
-    salut_multicast_muc_transport_close(SALUT_MUC_TRANSPORT_IFACE(self));
-  }
-
-  if (priv->parser) {
-    lm_parser_free(priv->parser);
-    priv->parser = NULL;
+    salut_multicast_muc_transport_disconnect(SALUT_TRANSPORT(self));
   }
 
   /* release any references held by the object here */
@@ -207,35 +209,13 @@ salut_multicast_muc_transport_finalize (GObject *object)
   G_OBJECT_CLASS (salut_multicast_muc_transport_parent_class)->finalize (object);
 }
 
-static void
-_message_parsed(LmParser *parser, LmMessage *message, gpointer data) {
-  SalutMulticastMucTransport *self = 
-    SALUT_MULTICAST_MUC_TRANSPORT(data);
-
-   switch (lm_message_get_type(message)) {
-     case LM_MESSAGE_TYPE_MESSAGE:
-       g_signal_emit_by_name(self, "message-received::message", message);
-       break;
-     case LM_MESSAGE_TYPE_PRESENCE:
-       g_signal_emit_by_name(self, "message-received::presence", message);
-       break;
-     case LM_MESSAGE_TYPE_IQ:
-       g_signal_emit_by_name(self, "message-received",
-                      g_quark_from_static_string("iq") , message);
-       break;
-     default:
-       g_signal_emit_by_name(self, "message-received",
-                      g_quark_from_static_string("unkown") , message);
-   }
-}
-
 static gboolean
 _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   SalutMulticastMucTransport *self = 
     SALUT_MULTICAST_MUC_TRANSPORT(data);
   SalutMulticastMucTransportPrivate *priv = 
     SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(self);
-  gchar buf[BUFSIZE + 1];
+  guint8 buf[BUFSIZE + 1];
 
   struct sockaddr_storage from;
   int ret;
@@ -244,14 +224,14 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   ret = recvfrom(priv->fd, buf, BUFSIZE, 0, (struct sockaddr *)&from, &len);
   if (ret < 0) {
     DEBUG("recv failed: %s", strerror(errno)); 
-    /* FIXME should disconnect */
+    /* FIXME should throw error */
     return TRUE;
   }
 
   buf[ret]  = '\0';
   DEBUG("Received message: %s", buf);
 
-  lm_parser_parse(priv->parser, buf);
+  salut_transport_received_data(SALUT_TRANSPORT(self), buf, ret);
 
   return TRUE;
 }
@@ -357,9 +337,13 @@ salut_multicast_muc_transport_connect (SalutMucTransportIface *iface,
     SALUT_MULTICAST_MUC_TRANSPORT(iface);
   SalutMulticastMucTransportPrivate *priv = 
     SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(self);
-  int fd = _open_multicast(self);
+  int fd = -1;
+  
+  salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_CONNECTING);
+  fd = _open_multicast(self);
 
   if (fd < 0 ) {
+    salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_DISCONNECTED);
     return FALSE;
   }
 
@@ -378,19 +362,15 @@ salut_multicast_muc_transport_connect (SalutMucTransportIface *iface,
   priv->watch_err = 
     g_io_add_watch(priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, iface);
 
-  if (priv->parser) {
-    lm_parser_free(priv->parser);
-  };
-  priv->parser = lm_parser_new(_message_parsed, self, NULL);
+  salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_CONNECTED);
 
-  g_signal_emit_by_name(self, "connected", priv->connection->self_handle);
   return TRUE;
 }
 
 void 
-salut_multicast_muc_transport_close (SalutMucTransportIface *iface) {
+salut_multicast_muc_transport_disconnect (SalutTransport *transport) {
   SalutMulticastMucTransport *self = 
-    SALUT_MULTICAST_MUC_TRANSPORT(iface);
+    SALUT_MULTICAST_MUC_TRANSPORT(transport);
   SalutMulticastMucTransportPrivate *priv = 
     SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(self);
 
@@ -415,40 +395,28 @@ salut_multicast_muc_transport_close (SalutMucTransportIface *iface) {
 
   priv->fd = -1;
 
-  lm_parser_free(priv->parser);
-  priv->parser = NULL;
-
-  g_signal_emit_by_name(self, "disconnected", priv->connection->self_handle);
+  salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_DISCONNECTED);
 }
 
-gboolean 
-salut_multicast_muc_transport_send (SalutMucTransportIface *iface, 
-                                    LmMessage *message, GError **error,
-                                    gint *texterror) {
+static gboolean 
+salut_multicast_muc_transport_send (SalutTransport *transport, 
+                                    const guint8 *data, gsize size,
+                                    GError **error) {
   SalutMulticastMucTransport *self = 
-    SALUT_MULTICAST_MUC_TRANSPORT(iface);
+    SALUT_MULTICAST_MUC_TRANSPORT(transport);
   SalutMulticastMucTransportPrivate *priv = 
     SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(self);
-  int len;
-  gchar *text;
 
-  text = lm_message_node_to_string(message->node);
-  len = strlen(text);
-
-  if (len > BUFSIZE) {
+  if (size > BUFSIZE) {
     DEBUG("Message too long");
     *error = g_error_new(TELEPATHY_ERRORS, NotAvailable, "Message too long");
-    *texterror = CHANNEL_TEXT_SEND_ERROR_TOO_LONG;
     return FALSE;
   }
 
-  if (sendto(priv->fd, text, len, 0, 
+  if (sendto(priv->fd, data, size, 0, 
              (struct sockaddr *)&(priv->address), 
              sizeof(struct sockaddr_storage)) < 0) {
     DEBUG("send failed: %s", strerror(errno));
-    if (texterror != NULL) {
-      *texterror = CHANNEL_TEXT_SEND_ERROR_UNKNOWN;
-    }
     if (error != NULL) {
       *error = 
         g_error_new(TELEPATHY_ERRORS, NetworkError, "%s", strerror(errno));
@@ -498,8 +466,6 @@ salut_multicast_muc_transport_iface_init(gpointer *g_iface,
                                          gpointer *iface_data) {
   SalutMucTransportIfaceClass *klass = (SalutMucTransportIfaceClass *)g_iface;
   klass->connect = salut_multicast_muc_transport_connect;
-  klass->close = salut_multicast_muc_transport_close;
-  klass->send = salut_multicast_muc_transport_send;
   klass->get_parameters = 
     salut_multicast_muc_transport_get_parameters;
   klass->get_protocol =  

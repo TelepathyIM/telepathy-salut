@@ -31,6 +31,8 @@
 #include "salut-muc-channel-glue.h"
 
 #include "salut-muc-transport-iface.h"
+#include "salut-transport.h"
+#include "salut-xmpp-connection.h"
 
 #include "salut-connection.h"
 #include "salut-im-manager.h"
@@ -76,7 +78,8 @@ struct _SalutMucChannelPrivate
   Handle handle;
   SalutConnection *connection;
   SalutImManager *im_manager;
-  SalutMucTransportIface *transport;
+  SalutTransport *transport;
+  SalutXmppConnection *xmpp_connection;
   gchar *muc_name;
   guint presence_timeout_id;
 };
@@ -86,19 +89,16 @@ struct _SalutMucChannelPrivate
 /* Callback functions */
 static void
 salut_muc_channel_send_presence(SalutMucChannel *self, gboolean joining);
-static gboolean salut_muc_channel_send_message(GObject *object, guint type, 
+static gboolean salut_muc_channel_send_stanza(GObject *object, guint type, 
                                                const gchar *text,
-                                               LmMessage *message,
+                                               SalutXmppStanza *stanza,
                                                GError **error);
-static void salut_muc_channel_message_received_message(
-                                               SalutMucTransportIface *iface,
-                                               LmMessage *message,
-                                               gpointer user_data);
-static void salut_muc_channel_message_received_presence(
-                                               SalutMucTransportIface *iface,
-                                               LmMessage *message,
-                                               gpointer user_data);
-static void salut_muc_channel_connected(SalutMucTransportIface *iface,
+static void salut_muc_channel_received_stanza(SalutXmppConnection *conn,
+                                              SalutXmppStanza *stanza,
+                                              gpointer user_data);
+static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
+                                                SalutXmppStanza *stanza);
+static void salut_muc_channel_connected(SalutTransport *transport,
                                              gpointer user_data);
 static void salut_muc_channel_disconnected(SalutMucTransportIface *iface,
                                              gpointer user_data);
@@ -193,18 +193,21 @@ salut_muc_channel_constructor (GType type, guint n_props,
                      priv->handle);
   g_assert(valid);
   
-  g_signal_connect(priv->transport, "message-received::message", 
-                   G_CALLBACK(salut_muc_channel_message_received_message), obj);
-  g_signal_connect(priv->transport, "message-received::presence", 
-                   G_CALLBACK(salut_muc_channel_message_received_presence), 
-                   obj);
+  priv->xmpp_connection = salut_xmpp_connection_new(priv->transport);
+  /* Transport is now owned by the xmpp connection */
+  g_object_unref(priv->transport);
+
+  g_signal_connect(priv->xmpp_connection, "received-stanza",
+                   G_CALLBACK(salut_muc_channel_received_stanza), obj);
+
   g_signal_connect(priv->transport, "connected", 
                    G_CALLBACK(salut_muc_channel_connected), obj);
   g_signal_connect(priv->transport, "disconnected", 
                    G_CALLBACK(salut_muc_channel_disconnected), obj);
 
   /* FIXME catch errors */
-  salut_muc_transport_iface_connect(priv->transport, NULL);
+  salut_muc_transport_iface_connect(SALUT_MUC_TRANSPORT_IFACE(priv->transport),
+                                    NULL);
 
   /* Text mixin initialisation */
   text_mixin_init(obj, G_STRUCT_OFFSET(SalutMucChannel, text),
@@ -244,37 +247,40 @@ static void salut_muc_channel_finalize (GObject *object);
 
 static void 
 invitation_append_parameter(gpointer key, gpointer value, gpointer data) {
-  LmMessageNode *node = (LmMessageNode *)data;
- lm_message_node_add_child(node, (gchar *)key, (gchar *)value);
+  SalutXmppNode *node = (SalutXmppNode *)data;
+ salut_xmpp_node_add_child_with_content(node, (gchar *)key, (gchar *)value);
 }
 
-static LmMessage *
+static SalutXmppStanza *
 create_invitation(SalutMucChannel *self, Handle handle, const gchar *message) { 
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  LmMessage *msg;
-  LmMessageNode *x_node, *invite_node;
+  SalutXmppStanza *msg;
+  SalutXmppNode *x_node, *invite_node;
   const gchar *name = handle_inspect(priv->connection->handle_repo,
                                      TP_HANDLE_TYPE_CONTACT, handle);
 
-  msg = lm_message_new(name, LM_MESSAGE_TYPE_MESSAGE);
-  lm_message_node_set_attribute(msg->node, "from", priv->connection->name); 
+  msg = salut_xmpp_stanza_new("message");
+  
+  salut_xmpp_node_set_attribute(msg->node, "from", priv->connection->name); 
+  salut_xmpp_node_set_attribute(msg->node, "to", name); 
 
-  lm_message_node_add_child(msg->node, "body", 
-                             "You got an chatroom invitation");
-  x_node = lm_message_node_add_child(msg->node, "x", NULL);
-  lm_message_node_set_attribute(x_node, "xmlns", NS_LLMUC);
+  salut_xmpp_node_add_child_with_content(msg->node, "body", 
+                                         "You got an chatroom invitation");
+  x_node = salut_xmpp_node_add_child_ns(msg->node, "x", NS_LLMUC);
 
-  invite_node = lm_message_node_add_child(x_node, "invite", NULL);
-  lm_message_node_set_attribute(invite_node, "protocol", 
-        salut_muc_transport_get_protocol(priv->transport));
+  invite_node = salut_xmpp_node_add_child(x_node, "invite");
+  salut_xmpp_node_set_attribute(invite_node, "protocol", 
+        salut_muc_transport_get_protocol(
+          SALUT_MUC_TRANSPORT_IFACE(priv->transport)));
   if (message != NULL && *message != '\0') {
-    lm_message_node_add_child(invite_node, "reason", message);
+    salut_xmpp_node_add_child_with_content(invite_node, "reason", message);
   }
-  lm_message_node_add_child(invite_node, "roomname", 
+  salut_xmpp_node_add_child_with_content(invite_node, "roomname", 
                        handle_inspect(priv->connection->handle_repo,
                                       TP_HANDLE_TYPE_ROOM, priv->handle));
   g_hash_table_foreach(
-    (GHashTable *)salut_muc_transport_get_parameters(priv->transport), 
+    (GHashTable *)salut_muc_transport_get_parameters(
+                                   SALUT_MUC_TRANSPORT_IFACE(priv->transport)), 
     invitation_append_parameter, invite_node);
 
   return msg;
@@ -286,7 +292,7 @@ muc_channel_add_member(GObject *obj, Handle handle,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(obj);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   SalutImChannel *im_channel;
-  LmMessage *msg;
+  SalutXmppStanza *stanza;
 
   if (handle == priv->connection->self_handle) {
     GIntSet *empty;
@@ -314,9 +320,8 @@ muc_channel_add_member(GObject *obj, Handle handle,
   DEBUG("Trying to add handle %u to %s over channel: %p\n", 
         handle ,priv->object_path, im_channel);
 
-  msg = create_invitation(self, handle, message);
-  salut_im_channel_send_message(im_channel, msg);
-  lm_message_unref(msg);
+  stanza = create_invitation(self, handle, message);
+  salut_im_channel_send_stanza(im_channel, stanza);
 
   g_object_unref(im_channel);
   return TRUE;
@@ -388,7 +393,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
 
   text_mixin_class_init(object_class,
                         G_STRUCT_OFFSET(SalutMucChannelClass, text_class),
-                        salut_muc_channel_send_message);
+                        salut_muc_channel_send_stanza);
 
   group_mixin_class_init(object_class, 
     G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
@@ -412,6 +417,13 @@ salut_muc_channel_dispose (GObject *object)
     priv->presence_timeout_id = 0;
   }
 
+  if (priv->xmpp_connection != NULL) {
+    g_object_unref(priv->xmpp_connection);
+    priv->xmpp_connection = NULL;
+  }
+
+
+
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
@@ -432,7 +444,7 @@ salut_muc_channel_finalize (GObject *object)
 
 void
 salut_muc_channel_invited(SalutMucChannel *self, Handle invitor, 
-                          const gchar *message) {
+                          const gchar *stanza) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
 
   /* Got invited to this muc channel */
@@ -460,7 +472,7 @@ salut_muc_channel_invited(SalutMucChannel *self, Handle invitor,
     GIntSet *empty = g_intset_new();
     GIntSet *local_pending = g_intset_new();
     g_intset_add(local_pending, priv->connection->self_handle);
-    group_mixin_change_members(G_OBJECT(self), message, 
+    group_mixin_change_members(G_OBJECT(self), stanza, 
                                empty, empty,
                                local_pending, empty,
                                invitor,
@@ -505,9 +517,9 @@ salut_muc_channel_acknowledge_pending_messages (SalutMucChannel *self,
 gboolean
 salut_muc_channel_add_members (SalutMucChannel *self,
                                const GArray *contacts,
-                               const gchar *message,
+                               const gchar *stanza,
                                GError **error) {
-  return group_mixin_add_members (G_OBJECT (self), contacts, message, 
+  return group_mixin_add_members (G_OBJECT (self), contacts, stanza, 
                                          error);
 }
 
@@ -536,7 +548,7 @@ salut_muc_channel_close (SalutMucChannel *self,
   }
 
   salut_muc_channel_send_presence(self, FALSE);
-  salut_muc_transport_iface_close(priv->transport);
+  salut_transport_disconnect(priv->transport);
 
   return TRUE;
 }
@@ -818,10 +830,10 @@ salut_muc_channel_list_pending_messages (SalutMucChannel *self,
 gboolean
 salut_muc_channel_remove_members (SalutMucChannel *self,
                                   const GArray *contacts,
-                                  const gchar *message,
+                                  const gchar *stanza,
                                   GError **error)
 {
-  return group_mixin_remove_members(G_OBJECT (self), contacts, message, error);
+  return group_mixin_remove_members(G_OBJECT (self), contacts, stanza, error);
 }
 
 
@@ -842,23 +854,21 @@ salut_muc_channel_send (SalutMucChannel *self,
                         guint type, const gchar *text,
                         GError **error) { 
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  return text_mixin_send(G_OBJECT(self), type, 0, 
+  return text_mixin_send(G_OBJECT(self), type,
                          priv->connection->name,
                          priv->muc_name, text, error);
 }
 
 /* Private functions */
-static gboolean salut_muc_channel_send_message(GObject *object, guint type, 
+static gboolean salut_muc_channel_send_stanza(GObject *object, guint type, 
                                                const gchar *text,
-                                               LmMessage *message,
+                                               SalutXmppStanza *stanza,
                                                GError **error) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(object);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(object);
-  gint text_error = CHANNEL_TEXT_SEND_NO_ERROR;
 
-  if (!salut_muc_transport_iface_send(priv->transport, message, error, 
-                                      &text_error)) {
-    text_mixin_emit_send_error(G_OBJECT(self), text_error,
+  if (!salut_xmpp_connection_send(priv->xmpp_connection, stanza, error)) {
+    text_mixin_emit_send_error(G_OBJECT(self), CHANNEL_TEXT_SEND_ERROR_UNKNOWN,
                                time(NULL), type, text);
     return FALSE;
   }
@@ -870,18 +880,18 @@ static void
 salut_muc_channel_send_presence(SalutMucChannel *self, 
                                 gboolean joining) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  LmMessage *message;
+  SalutXmppStanza *stanza;
 
-  message = lm_message_new(NULL, LM_MESSAGE_TYPE_PRESENCE);
+  stanza = salut_xmpp_stanza_new("presence");
   if (!joining) {
-    lm_message_node_set_attribute(message->node, "type", "unavailable");
+    salut_xmpp_node_set_attribute(stanza->node, "type", "unavailable");
   }
-  lm_message_node_set_attribute(message->node, "from", priv->connection->name);
-  lm_message_node_set_attribute(message->node, "to", priv->muc_name);
+  salut_xmpp_node_set_attribute(stanza->node, "from", priv->connection->name);
+  salut_xmpp_node_set_attribute(stanza->node, "to", priv->muc_name);
 
   /* FIXME should disconnect if we couldn't sent */
-  salut_muc_transport_iface_send(priv->transport, message, NULL, NULL);
-  lm_message_unref(message);
+  salut_xmpp_connection_send(priv->xmpp_connection, stanza, NULL);
+  g_object_unref(stanza);
 }
 
 static gboolean
@@ -930,18 +940,22 @@ salut_muc_channel_change_members(SalutMucChannel *self,
 }
 
 static void 
-salut_muc_channel_message_received_message(SalutMucTransportIface *iface,
-                                           LmMessage *message,
-                                           gpointer user_data) {
+salut_muc_channel_received_stanza(SalutXmppConnection *conn,
+                                  SalutXmppStanza *stanza,
+                                  gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   const gchar *from, *body, *body_offset;
   TpChannelTextMessageType msgtype;
   Handle from_handle;
 
-  if (!text_mixin_parse_incoming_message(message, &from, &msgtype,
+  if (!strcmp(stanza->node->name, "presence")) {
+    salut_muc_channel_received_presence(self, stanza);
+  }
+
+  if (!text_mixin_parse_incoming_message(stanza, &from, &msgtype,
                                          &body, &body_offset)) {
-    DEBUG("Couldn't parse message");
+    DEBUG("Couldn't parse stanza");
     return;
   }
 
@@ -954,7 +968,7 @@ salut_muc_channel_message_received_message(SalutMucTransportIface *iface,
   if (from_handle == 0) {
     /* FIXME, unknown contact.. Need some way to handle this safely,
      * just adding the contact is somewhat scary */
-    DEBUG("Got message from unknown contact, discarding");
+    DEBUG("Got stanza from unknown contact, discarding");
     return;
   }
 
@@ -965,23 +979,20 @@ salut_muc_channel_message_received_message(SalutMucTransportIface *iface,
                      time(NULL), body_offset);
 }
 
-static void
-salut_muc_channel_message_received_presence(SalutMucTransportIface *iface,
-                                            LmMessage *message,
-                                            gpointer user_data) {
-  SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
+static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
+                                                SalutXmppStanza *stanza) {
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
   gboolean joining = TRUE;
   const gchar *type;
   const gchar *from;
   Handle from_handle;
 
-  type = lm_message_node_get_attribute(message->node, "type");
+  type = salut_xmpp_node_get_attribute(stanza->node, "type");
   if (type != NULL && strcmp(type, "unavailable") == 0) {
     joining = FALSE;
   }
 
-  from = lm_message_node_get_attribute(message->node, "from");
+  from = salut_xmpp_node_get_attribute(stanza->node, "from");
   if (from == NULL) {
     DEBUG("Presence without a from");
     return;
@@ -995,7 +1006,7 @@ salut_muc_channel_message_received_presence(SalutMucTransportIface *iface,
     return;
   }
 
-  salut_muc_channel_change_members(self, from_handle, joining);
+  salut_muc_channel_change_members(channel, from_handle, joining);
 }
 
 static gboolean
@@ -1005,7 +1016,7 @@ salut_muc_channel_dummy_timeout(gpointer data) {
   return FALSE;
 }
 
-static void salut_muc_channel_connected(SalutMucTransportIface *iface,
+static void salut_muc_channel_connected(SalutTransport *transport,
                                         gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);

@@ -52,26 +52,6 @@ salut_muc_transport_iface_base_init (gpointer klass)
                                       G_PARAM_STATIC_NICK |
                                       G_PARAM_STATIC_BLURB);
     g_object_interface_install_property (klass, param_spec);
-
-    g_signal_new("message-received", 
-                 G_OBJECT_CLASS_TYPE(klass),
-                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__POINTER,
-                 G_TYPE_NONE, 1, G_TYPE_POINTER);
-    g_signal_new("connected", G_OBJECT_CLASS_TYPE(klass),
-                 G_SIGNAL_RUN_LAST,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__VOID,
-                 G_TYPE_NONE, 0);
-    g_signal_new("disconnected", G_OBJECT_CLASS_TYPE(klass),
-                 G_SIGNAL_RUN_LAST,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__VOID,
-                 G_TYPE_NONE, 0);
   }
 }
 
@@ -106,25 +86,6 @@ salut_muc_transport_iface_connect(SalutMucTransportIface *iface,
     SALUT_MUC_TRANSPORT_IFACE_GET_CLASS(iface);
   g_assert(klass->connect != NULL);
   return klass->connect(iface, error);
-}
-
-void 
-salut_muc_transport_iface_close(SalutMucTransportIface *iface) {
-  SalutMucTransportIfaceClass *klass = 
-    SALUT_MUC_TRANSPORT_IFACE_GET_CLASS(iface);
-  g_assert(klass->close != NULL);
-  return klass->close(iface);
-}
-
-gboolean 
-salut_muc_transport_iface_send(SalutMucTransportIface *iface, 
-                               LmMessage *message, 
-                               GError **error, 
-                               gint *text_error) {
-  SalutMucTransportIfaceClass *klass = 
-    SALUT_MUC_TRANSPORT_IFACE_GET_CLASS(iface);
-  g_assert(klass->send != NULL);
-  return klass->send(iface, message, error, text_error);
 }
 
 const gchar *

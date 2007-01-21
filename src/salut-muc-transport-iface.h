@@ -22,7 +22,7 @@
 #define __SALUT_MUC_TRANSPORT_IFACE_H__
 
 #include <glib-object.h>
-#include <loudmouth/loudmouth.h>
+#include "salut-xmpp-node.h"
 
 G_BEGIN_DECLS
 
@@ -50,14 +50,10 @@ G_BEGIN_DECLS
 
 typedef struct _SalutMucTransportIface SalutMucTransportIface;
 typedef struct _SalutMucTransportIfaceClass SalutMucTransportIfaceClass;
-typedef void (* SalutMucTransportFunc) (SalutMucTransportIface *, gpointer);
 
 struct _SalutMucTransportIfaceClass {
   GTypeInterface parent_class;
   gboolean (*connect) (SalutMucTransportIface *iface, GError **error);
-  void (*close) (SalutMucTransportIface *iface);
-  gboolean (*send) (SalutMucTransportIface *iface, LmMessage *message, 
-                    GError **error, gint *text_error);
   const gchar *(*get_protocol)(SalutMucTransportIface *iface);
   const GHashTable *(*get_parameters) (SalutMucTransportIface *iface);
 };
@@ -75,14 +71,6 @@ salut_muc_transport_get_protocol(SalutMucTransportIface *iface);
 /* Current parameters of the transport. str -> str */
 const GHashTable *
 salut_muc_transport_get_parameters(SalutMucTransportIface *iface);
-
-void salut_muc_transport_iface_close(SalutMucTransportIface *iface); 
-
-gboolean salut_muc_transport_iface_send(SalutMucTransportIface *iface, 
-                                        LmMessage *message, 
-                                        GError **error,
-                                        gint *text_error);
-
 G_END_DECLS
 
 #endif /* __SALUT_MUC_TRANSPORT_IFACE_H__ */

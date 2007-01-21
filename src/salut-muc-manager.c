@@ -322,18 +322,17 @@ static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
 
 static gboolean
 _received_message(SalutImChannel *imchannel, 
-                  LmMessage *message, gpointer data) {
-  /* FIXME REWRITE! */
+                  SalutXmppStanza *message, gpointer data) {
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(data);
-  LmMessageNode *node;
-  LmMessageNode *invite;
-  LmMessageNode *room_node;
-  LmMessageNode *reason_node;
+  SalutXmppNode *node;
+  SalutXmppNode *invite;
+  SalutXmppNode *room_node;
+  SalutXmppNode *reason_node;
   SalutMucChannel *chan;
-  const gchar *room;
-  const gchar *reason;
-  const gchar *protocol;
+  const gchar *room = NULL;
+  const gchar *reason = NULL;
+  const gchar *protocol = NULL;
   const gchar **params;
   Handle room_handle;
   Handle invitor_handle;
@@ -341,31 +340,31 @@ _received_message(SalutImChannel *imchannel,
   GHashTable *params_hash;
   GObject *transport = NULL;
 
-  node = lm_message_node_get_child_with_namespace(message->node, "x",
-                                                    NS_LLMUC);
+  node = salut_xmpp_node_get_child_ns(message->node, "x", NS_LLMUC);
   if (node == NULL) 
     return FALSE;
 
-  invite = lm_message_node_get_child(node, "invite");
+  invite = salut_xmpp_node_get_child(node, "invite");
   if (invite == NULL)
     return FALSE;
 
-  room_node = lm_message_node_get_child(invite, "roomname");
+  room_node = salut_xmpp_node_get_child(invite, "roomname");
 
   if (room_node == NULL) {
     DEBUG("Invalid invitation, discarding");
     return TRUE;
   }
 
-  room = lm_message_node_get_value(room_node);
-  reason_node = lm_message_node_get_child(invite, "reason");
-  if (reason_node == NULL) {
+  room = room_node->content;
+  reason_node = salut_xmpp_node_get_child(invite, "reason");
+  if (reason_node != NULL) {
+    reason = reason_node->content;
+  }
+  if (reason == NULL) {
     reason = "";
-  } else {
-    reason = lm_message_node_get_value(reason_node);
   }
   
-  protocol = lm_message_node_get_attribute(invite, "protocol");
+  protocol = salut_xmpp_node_get_attribute(invite, "protocol");
   if (protocol == NULL) { 
     DEBUG("Invalid invitation, (missing protocol) discarding");
     return TRUE;
@@ -379,14 +378,14 @@ _received_message(SalutImChannel *imchannel,
 
   params_hash = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
   for (p = params ; *p != NULL; p++) {
-    LmMessageNode *param;
-    param = lm_message_node_get_child(invite, *p);
+    SalutXmppNode *param;
+    param = salut_xmpp_node_get_child(invite, *p);
     if (param == NULL) {
       DEBUG("Invalid invitation, (missing parameter) discarding");
       goto discard;
     }
     g_hash_table_insert(params_hash, (gchar *)*p, 
-                        g_strdup(lm_message_node_get_value(param)));
+                        g_strdup(param->content));
   }
 
   /* FIXME proper serialisation of handle name */
