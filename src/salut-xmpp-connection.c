@@ -24,11 +24,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libxml/parser.h>
 #include <libxml/xmlwriter.h>
 
 #include "salut-xmpp-connection.h"
 #include "salut-xmpp-connection-signals-marshal.h"
+
+#include "salut-xmpp-reader.h"
 #include "salut-transport.h"
 #include "salut-xmpp-stanza.h"
 
@@ -53,47 +54,30 @@ enum
 
 static guint signals[LAST_SIGNAL] = {0};
 
-/* private structure */
-typedef struct _SalutXmppConnectionPrivate SalutXmppConnectionPrivate;
-
-static void _start_element_ns(void *user_data,
-                              const xmlChar *localname,
-                              const xmlChar *prefix,
-                              const xmlChar *uri,
-                              int nb_namespaces,
-                              const xmlChar **namespaces,
-                              int nb_attributes,
-                              int nb_defaulted,
-                              const xmlChar **attributes);
-
-static void _end_element_ns(void *user_data, const xmlChar *localname,
-                            const xmlChar *prefix, const xmlChar *URI);
-
-static void _characters (void *user_data, const xmlChar *ch, int len);
-
-static void _error(void *user_data, xmlErrorPtr error);
-
-static xmlSAXHandler parser_handler = {
-  .initialized = XML_SAX2_MAGIC,
-  .startElementNs = _start_element_ns,
-  .endElementNs   = _end_element_ns,
-  .characters     = _characters,
-  .serror         = _error,
-};
-
 typedef struct {
   xmlTextWriterPtr xmlwriter;
   GQuark ns;
 } _XmppWriterState;
 
+static void 
+_reader_stream_opened_cb(SalutXmppReader *reader, 
+                         const gchar *to, const gchar *from,
+                         gpointer user_data);
+
+static void 
+_reader_stream_closed_cb(SalutXmppReader *reader, gpointer user_data);
+
+static void _reader_received_stanza_cb(SalutXmppReader *reader, 
+                                       SalutXmppStanza *stanza,
+                                       gpointer user_data);
+
+/* private structure */
+typedef struct _SalutXmppConnectionPrivate SalutXmppConnectionPrivate;
+
 struct _SalutXmppConnectionPrivate
 {
+  SalutXmppReader *reader;
   gboolean dispose_has_run;
-  xmlParserCtxtPtr parser;
-  guint depth;
-  SalutXmppStanza *stanza;
-  SalutXmppNode *node;
-  GQueue *nodes;
 };
 
 #define SALUT_XMPP_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_XMPP_CONNECTION, SalutXmppConnectionPrivate))
@@ -102,11 +86,13 @@ static void
 salut_xmpp_connection_init (SalutXmppConnection *obj) {
   SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (obj);
   obj->transport = NULL;
-  priv->parser = xmlCreatePushParserCtxt(&parser_handler, obj, NULL, 0, NULL);
-  priv->depth = 0;
-  priv->stanza = NULL;
-  priv->nodes = g_queue_new();
-  priv->node = NULL;
+  priv->reader = salut_xmpp_reader_new();
+  g_signal_connect(priv->reader, "stream-opened", 
+                    G_CALLBACK(_reader_stream_opened_cb), obj);
+  g_signal_connect(priv->reader, "received-stanza", 
+                    G_CALLBACK(_reader_received_stanza_cb), obj);
+  g_signal_connect(priv->reader, "stream-closed", 
+                    G_CALLBACK(_reader_stream_closed_cb), obj);
 }
 
 static void salut_xmpp_connection_dispose (GObject *object);
@@ -171,6 +157,11 @@ salut_xmpp_connection_dispose (GObject *object)
     self->transport = NULL;
   }
 
+  if (priv->reader != NULL) {
+    g_object_unref(priv->reader);
+    priv->reader = NULL;
+  }
+
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (salut_xmpp_connection_parent_class)->dispose)
@@ -179,14 +170,6 @@ salut_xmpp_connection_dispose (GObject *object)
 
 void
 salut_xmpp_connection_finalize (GObject *object) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (object);
-  SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
-  /* free any data held directly by the object here */
-  if (priv->parser != NULL) {
-    xmlFreeParserCtxt(priv->parser);
-    priv->parser = NULL;
-  }
-
   G_OBJECT_CLASS (salut_xmpp_connection_parent_class)->finalize (object);
 }
 
@@ -316,121 +299,41 @@ salut_xmpp_connection_send(SalutXmppConnection *connection,
   return ret;
 }
 
-static void _start_element_ns(void *user_data,
-                             const xmlChar *localname,
-                             const xmlChar *prefix,
-                             const xmlChar *uri,
-                             int nb_namespaces,
-                             const xmlChar **namespaces,
-                             int nb_attributes,
-                             int nb_defaulted,
-                             const xmlChar **attributes) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
-  SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
-  int i;
-
-  if (G_UNLIKELY(priv->depth == 0)) {
-    if (strcmp("stream", (gchar *)localname)
-         || strcmp(XMPP_STREAM_NAMESPACE, (gchar *)uri)) {
-      g_signal_emit(self, signals[PARSE_ERROR], 0); 
-      return;
-    }
-    g_signal_emit(self, signals[STREAM_OPENED], 0, NULL, NULL);
-    priv->depth++;
-    return;
-  } 
-
-  if (priv->stanza == NULL) {
-    priv->stanza = salut_xmpp_stanza_new((gchar *)localname);
-    priv->node = priv->stanza->node;
-  } else {
-    g_queue_push_tail(priv->nodes, priv->node);
-    priv->node = salut_xmpp_node_add_child(priv->node, (gchar *)localname);
-  }
-  salut_xmpp_node_set_ns(priv->node, (gchar *)uri);
-
-  for (i = 0; i < nb_attributes * 5; i+=5) {
-    /* Node is localname, prefix, uri, valuestart, valueend */
-    if (attributes[i+1] != NULL
-        && !strcmp((gchar *)attributes[i+1], "xml") 
-        && !strcmp((gchar *)attributes[i], "lang")) {
-      salut_xmpp_node_set_language_n(priv->node, 
-                                   (gchar *)attributes[i+3],
-                                   (gsize) (attributes[i+4] - attributes[i+3]));
-    } else {
-      salut_xmpp_node_set_attribute_n_ns(priv->node, 
-                                   (gchar *)attributes[i], 
-                                   (gchar *)attributes[i+3],
-                                   (gsize)(attributes[i+4] - attributes[i+3]),
-                                   (gchar *)attributes[i+2]);
-    }
-  }
-  priv->depth++;
-}
-
-static void 
-_characters (void *user_data, const xmlChar *ch, int len) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
-  SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
-
-  if (priv->node != NULL) { 
-    salut_xmpp_node_append_content_n(priv->node, (const gchar *)ch, (gsize)len);
-  }
-}
-
-static void 
-_end_element_ns(void *user_data, const xmlChar *localname, 
-                const xmlChar *prefix, const xmlChar *uri) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
-  SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
-
-  priv->depth--;
-
-  if (priv->node && priv->node->content) {
-    /* Remove content if it's purely whitespace */
-    const char *c;
-    for (c = priv->node->content;*c != '\0' && g_ascii_isspace(*c); c++) 
-      ;
-    if (*c == '\0') 
-      salut_xmpp_node_set_content(priv->node, NULL);
-  }
-
-  if (priv->depth == 0) {
-    g_signal_emit(self, signals[STREAM_CLOSED], 0);
-  } else if (priv->depth == 1) {
-    g_assert(g_queue_get_length(priv->nodes) == 0);
-    g_signal_emit(self, signals[RECEIVED_STANZA], 0, priv->stanza);
-    g_object_unref(priv->stanza);
-    priv->stanza = NULL;
-    priv->node = NULL;
-  } else {
-    priv->node = (SalutXmppNode *)g_queue_pop_tail(priv->nodes);
-  }
-}
-
-static void 
-_error(void *user_data, xmlErrorPtr error) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
-  g_signal_emit(self, signals[PARSE_ERROR], 0); 
-}
-
-
 static void 
 _xmpp_connection_received_data(SalutTransport *transport,
                                const guint8 *data, gsize length,
                                gpointer user_data) {
   SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
   SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
-  size_t ret;
+  gboolean ret;
+  GError *error = NULL;
 
   g_assert(length > 0);
 
-  /* Temporarily ref myself to ensure we aren't disposed inside inside the xml
-   * callbacks */
-  g_object_ref(self);
-  ret = xmlParseChunk(priv->parser, (const char*)data, length, FALSE);
-  if (ret < 0) {
+  ret = salut_xmpp_reader_push(priv->reader, data, length, &error);
+  if (!ret) {
     g_signal_emit(self, signals[PARSE_ERROR], 0); 
-  } 
-  g_object_unref(self);
+  }
+}
+
+static void 
+_reader_stream_opened_cb(SalutXmppReader *reader, 
+                         const gchar *to, const gchar *from,
+                         gpointer user_data) {
+  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
+  g_signal_emit(self, signals[STREAM_OPENED], 0, to, from);
+}
+
+static void 
+_reader_stream_closed_cb(SalutXmppReader *reader, 
+                         gpointer user_data) {
+  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
+  g_signal_emit(self, signals[STREAM_CLOSED], 0);
+}
+
+static void 
+_reader_received_stanza_cb(SalutXmppReader *reader, SalutXmppStanza *stanza,
+                 gpointer user_data) {
+  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
+  g_signal_emit(self, signals[RECEIVED_STANZA], 0, stanza);
 }

@@ -18,6 +18,8 @@ BUILT_SOURCES = \
     salut-connection-signals-marshal.c \
     salut-transport-signals-marshal.h \
     salut-transport-signals-marshal.c \
+    salut-xmpp-reader-signals-marshal.h \
+    salut-xmpp-reader-signals-marshal.c \
     salut-xmpp-connection-signals-marshal.h \
     salut-xmpp-connection-signals-marshal.c \
     salut-presence-enumtypes.h \
@@ -71,6 +73,7 @@ EXTRA_DIST = \
   salut-self-signals-marshal.list                         \
   salut-transport-signals-marshal.list                    \
   salut-xmpp-connection-signals-marshal.list              \
+  salut-xmpp-reader-signals-marshal.list                  \
   salut-xmpp-stanza-signals-marshal.list                  \
   text-mixin-signals-marshal.list                         \
   tp-channel-factory-iface-signals-marshal.list
@@ -110,6 +113,8 @@ CORE_SOURCES =                                          \
     salut-presence.h                                    \
     salut-xmpp-connection.c                             \
     salut-xmpp-connection.h                             \
+    salut-xmpp-reader.c                                 \
+    salut-xmpp-reader.h                                 \
     salut-xmpp-stanza.c                                 \
     salut-xmpp-stanza.h                                 \
     salut-xmpp-node.c                                   \
