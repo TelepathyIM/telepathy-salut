@@ -107,6 +107,7 @@ salut_xmpp_writer_new(void) {
 void 
 salut_xmpp_writer_stream_open(SalutXmppWriter *writer,
                               const gchar *to, const gchar *from,
+                              const gchar *version,
                               const guint8 **data, gsize *length) {
   SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (writer);
 
@@ -131,14 +132,13 @@ salut_xmpp_writer_stream_open(SalutXmppWriter *writer,
     xmlTextWriterWriteString(priv->xmlwriter, (xmlChar *)"\"");
   }
 
- /*
   if (version != NULL) {
-    xmlTextWriterWriteString(priv->xmlwriter, "\n  version=\"");
+    xmlTextWriterWriteString(priv->xmlwriter, (xmlChar *)"\n  version=\"");
     xmlTextWriterFlush(priv->xmlwriter);
     xmlAttrSerializeTxtContent(priv->buffer, NULL, NULL, (xmlChar *)version);
-    xmlTextWriterWriteString(priv->xmlwriter, "\"");
+    xmlTextWriterWriteString(priv->xmlwriter, (xmlChar *)"\"");
   }
-  */
+
   xmlTextWriterWriteString(priv->xmlwriter, (xmlChar *) ">\n");
   xmlTextWriterFlush(priv->xmlwriter);
 

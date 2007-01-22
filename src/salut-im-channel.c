@@ -504,7 +504,7 @@ _connect_to_next(SalutImChannel *self, SalutLLTransport *transport) {
     } else {
       g_array_free(priv->addresses, TRUE);
       priv->addresses = NULL;
-      salut_xmpp_connection_open(priv->xmpp_connection, NULL, NULL);
+      salut_xmpp_connection_open(priv->xmpp_connection, NULL, NULL, NULL);
     }
   }
 }
@@ -512,12 +512,13 @@ _connect_to_next(SalutImChannel *self, SalutLLTransport *transport) {
 static void
 _connection_stream_opened_cb(SalutXmppConnection *conn, 
                              const gchar *to, const gchar *from,
+                             const gchar *version,
                              gpointer userdata) {
   SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   if (salut_ll_transport_is_incoming(SALUT_LL_TRANSPORT(conn->transport))) {
-    salut_xmpp_connection_open(conn, NULL, NULL);
+    salut_xmpp_connection_open(conn, NULL, NULL, NULL);
   }
   priv->state = CHANNEL_CONNECTED;
   _flush_queue(self);

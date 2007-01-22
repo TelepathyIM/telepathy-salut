@@ -129,8 +129,8 @@ salut_xmpp_reader_class_init (SalutXmppReaderClass *salut_xmpp_reader_class)
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 salut_xmpp_reader_marshal_VOID__STRING_STRING,
-                 G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_STRING);
+                 salut_xmpp_reader_marshal_VOID__STRING_STRING_STRING,
+                 G_TYPE_NONE, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
   signals[STREAM_CLOSED] = 
     g_signal_new("stream-closed", 
                  G_OBJECT_CLASS_TYPE(salut_xmpp_reader_class),
@@ -195,6 +195,7 @@ static void _start_element_ns(void *user_data,
   if (G_UNLIKELY(priv->depth == 0)) {
     gchar *to = NULL;
     gchar *from = NULL;
+    gchar *version = NULL;
 
     if (strcmp("stream", (gchar *)localname)
          || strcmp(XMPP_STREAM_NAMESPACE, (gchar *)uri)) {
@@ -211,8 +212,12 @@ static void _start_element_ns(void *user_data,
         from = g_strndup((gchar *)attributes[i+3],
                          (gsize) (attributes[i+4] - attributes[i+3]));
       }
+      if (!strcmp((gchar *)attributes[i], "version")) {
+        version = g_strndup((gchar *)attributes[i+3],
+                         (gsize) (attributes[i+4] - attributes[i+3]));
+      }
     }
-    g_signal_emit(self, signals[STREAM_OPENED], 0, to, from);
+    g_signal_emit(self, signals[STREAM_OPENED], 0, to, from, version);
     priv->depth++;
     return;
   } 

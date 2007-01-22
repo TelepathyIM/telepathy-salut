@@ -413,7 +413,7 @@ pending_connection_stream_opened_cb(SalutXmppConnection *conn,
                                     gpointer user_data) {
   /* Just open the stream, according to the xep there should be no to and from
    * */
-  salut_xmpp_connection_open(conn, NULL, NULL);
+  salut_xmpp_connection_open(conn, NULL, NULL, NULL);
 }
 
 static void

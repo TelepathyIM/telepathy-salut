@@ -61,7 +61,8 @@ GType salut_xmpp_connection_get_type(void);
 
 SalutXmppConnection *salut_xmpp_connection_new(SalutTransport *transport); 
 void salut_xmpp_connection_open(SalutXmppConnection *connection,
-                                const gchar *to, const gchar *from);
+                                const gchar *to, const gchar *from,
+                                const gchar *version);
 void salut_xmpp_connection_close(SalutXmppConnection *connection);
 gboolean salut_xmpp_connection_send(SalutXmppConnection *connection, 
                                     SalutXmppStanza *stanza, 

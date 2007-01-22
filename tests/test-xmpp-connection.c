@@ -25,10 +25,12 @@ parse_error(SalutXmppConnection *connection, gpointer user_data) {
 }
 
 void
-stream_opened(SalutXmppConnection *connection, gchar *to, gchar *from,
+stream_opened(SalutXmppConnection *connection, 
+              const gchar *to, const gchar *from, const gchar *version,
               gpointer user_data) {
-  fprintf(treefile, "STREAM OPENED to=%s from=%s\n", to, from);
-  salut_xmpp_connection_open(connection, to, from);
+  fprintf(treefile, "STREAM OPENED to=%s from=%s version=%s\n", 
+           to, from, version);
+  salut_xmpp_connection_open(connection, to, from, version);
 }
 
 void

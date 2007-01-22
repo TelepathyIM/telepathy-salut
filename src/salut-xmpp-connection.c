@@ -56,6 +56,7 @@ static guint signals[LAST_SIGNAL] = {0};
 static void 
 _reader_stream_opened_cb(SalutXmppReader *reader, 
                          const gchar *to, const gchar *from,
+                         const gchar *version,
                          gpointer user_data);
 
 static void 
@@ -112,8 +113,8 @@ salut_xmpp_connection_class_init (SalutXmppConnectionClass *salut_xmpp_connectio
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 salut_xmpp_connection_marshal_VOID__STRING_STRING,
-                 G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_STRING);
+                 salut_xmpp_connection_marshal_VOID__STRING_STRING_STRING,
+                 G_TYPE_NONE, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
   signals[STREAM_CLOSED] = 
     g_signal_new("stream-closed", 
                  G_OBJECT_CLASS_TYPE(salut_xmpp_connection_class),
@@ -191,13 +192,15 @@ salut_xmpp_connection_new(SalutTransport *transport)  {
 
 void 
 salut_xmpp_connection_open(SalutXmppConnection *connection,
-                                const gchar *to, const gchar *from) {
+                            const gchar *to, const gchar *from,
+                            const gchar *version) {
   SalutXmppConnectionPrivate *priv = 
     SALUT_XMPP_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
 
-  salut_xmpp_writer_stream_open(priv->writer, to, from, &data, &length);
+  salut_xmpp_writer_stream_open(priv->writer, to, from, 
+                                  version, &data, &length);
   salut_transport_send(connection->transport, data, length, NULL);
 }
 
@@ -247,10 +250,11 @@ _xmpp_connection_received_data(SalutTransport *transport,
 
 static void 
 _reader_stream_opened_cb(SalutXmppReader *reader, 
-                         const gchar *to, const gchar *from,
+                         const gchar *to, const gchar *from, 
+                         const gchar *version,
                          gpointer user_data) {
   SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
-  g_signal_emit(self, signals[STREAM_OPENED], 0, to, from);
+  g_signal_emit(self, signals[STREAM_OPENED], 0, to, from, version);
 }
 
 static void 
