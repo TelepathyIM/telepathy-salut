@@ -115,6 +115,8 @@ CORE_SOURCES =                                          \
     salut-xmpp-connection.h                             \
     salut-xmpp-reader.c                                 \
     salut-xmpp-reader.h                                 \
+    salut-xmpp-writer.c                                 \
+    salut-xmpp-writer.h                                 \
     salut-xmpp-stanza.c                                 \
     salut-xmpp-stanza.h                                 \
     salut-xmpp-node.c                                   \

@@ -24,12 +24,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libxml/xmlwriter.h>
-
 #include "salut-xmpp-connection.h"
 #include "salut-xmpp-connection-signals-marshal.h"
 
 #include "salut-xmpp-reader.h"
+#include "salut-xmpp-writer.h"
 #include "salut-transport.h"
 #include "salut-xmpp-stanza.h"
 
@@ -54,11 +53,6 @@ enum
 
 static guint signals[LAST_SIGNAL] = {0};
 
-typedef struct {
-  xmlTextWriterPtr xmlwriter;
-  GQuark ns;
-} _XmppWriterState;
-
 static void 
 _reader_stream_opened_cb(SalutXmppReader *reader, 
                          const gchar *to, const gchar *from,
@@ -77,6 +71,7 @@ typedef struct _SalutXmppConnectionPrivate SalutXmppConnectionPrivate;
 struct _SalutXmppConnectionPrivate
 {
   SalutXmppReader *reader;
+  SalutXmppWriter *writer;
   gboolean dispose_has_run;
 };
 
@@ -86,6 +81,9 @@ static void
 salut_xmpp_connection_init (SalutXmppConnection *obj) {
   SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (obj);
   obj->transport = NULL;
+
+  priv->writer = salut_xmpp_writer_new();
+
   priv->reader = salut_xmpp_reader_new();
   g_signal_connect(priv->reader, "stream-opened", 
                     G_CALLBACK(_reader_stream_opened_cb), obj);
@@ -162,6 +160,11 @@ salut_xmpp_connection_dispose (GObject *object)
     priv->reader = NULL;
   }
 
+  if (priv->writer != NULL) {
+    g_object_unref(priv->writer);
+    priv->writer = NULL;
+  }
+
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (salut_xmpp_connection_parent_class)->dispose)
@@ -189,114 +192,40 @@ salut_xmpp_connection_new(SalutTransport *transport)  {
 void 
 salut_xmpp_connection_open(SalutXmppConnection *connection,
                                 const gchar *to, const gchar *from) {
-#define XML_STREAM_INIT "<?xml version='1.0' encoding='UTF-8'?>\n"   \
-                          "<stream:stream xmlns='jabber:client' "  \
-                          "xmlns:stream='http://etherx.jabber.org/streams'>\n"
-  salut_transport_send(connection->transport, 
-                        (const guint8 *)XML_STREAM_INIT,
-                        strlen(XML_STREAM_INIT), NULL);
+  SalutXmppConnectionPrivate *priv = 
+    SALUT_XMPP_CONNECTION_GET_PRIVATE (connection);
+  const guint8 *data;
+  gsize length;
+
+  salut_xmpp_writer_stream_open(priv->writer, to, from, &data, &length);
+  salut_transport_send(connection->transport, data, length, NULL);
 }
 
 void 
 salut_xmpp_connection_close(SalutXmppConnection *connection) {
-#define XML_STREAM_CLOSE "</stream:stream>\n"
-  salut_transport_send(connection->transport, 
-                        (const guint8 *)XML_STREAM_CLOSE,
-                        strlen(XML_STREAM_CLOSE), NULL);
-}
+  SalutXmppConnectionPrivate *priv = 
+    SALUT_XMPP_CONNECTION_GET_PRIVATE (connection);
+  const guint8 *data;
+  gsize length;
 
-static void
-_xml_write_node(_XmppWriterState *state, SalutXmppNode *node);
-
-gboolean
-_write_attr(const gchar *key, const gchar *value, const gchar *ns,
-            gpointer user_data) {
-  _XmppWriterState *state = (_XmppWriterState *)user_data; 
-
-
-  if (ns != NULL && g_quark_from_string(ns) != state->ns) {
-    xmlTextWriterWriteAttributeNS(state->xmlwriter, 
-                                     (const xmlChar *)key,
-                                     (const xmlChar *)key, 
-                                     (const xmlChar *)ns,
-                                     (const xmlChar *)value);
-  } else {
-    xmlTextWriterWriteAttribute(state->xmlwriter, 
-                                     (const xmlChar *)key, 
-                                     (const xmlChar *)value);
-  }
-  return TRUE;
-}
-
-gboolean 
-_write_child(SalutXmppNode *node, gpointer user_data) {
-  _xml_write_node((_XmppWriterState *) user_data, node);
-  return TRUE;
-}
-
-
-static void
-_xml_write_node(_XmppWriterState *state, SalutXmppNode *node) {
-  const gchar *l;
-  GQuark oldns;
-
-  oldns = state->ns;
-  
-  if (node->ns == 0 || state->ns == node->ns) {
-    xmlTextWriterStartElement(state->xmlwriter, (const xmlChar*) node->name);
-  } else {
-    state->ns = node->ns;
-    xmlTextWriterStartElementNS(state->xmlwriter, 
-                                NULL,
-                                (const xmlChar*) node->name,
-                                (const xmlChar *)salut_xmpp_node_get_ns(node));
-  }
-
-  salut_xmpp_node_each_attribute(node, _write_attr, state);
-
-  l = salut_xmpp_node_get_language(node);
-  if (l != NULL) {
-    xmlTextWriterWriteAttributeNS(state->xmlwriter, 
-                                  (const xmlChar *)"xml", 
-                                  (const xmlChar *)"lang", 
-                                  NULL,
-                                  (const xmlChar *)l);
-
-  }
-
-
-  salut_xmpp_node_each_child(node, _write_child, state);
-
-  if (node->content) {
-    xmlTextWriterWriteString(state->xmlwriter, (const xmlChar*)node->content);
-  }
-  xmlTextWriterEndElement(state->xmlwriter);
-  state->ns = oldns;
+  salut_xmpp_writer_stream_close(priv->writer, &data, &length);
+  salut_transport_send(connection->transport, data, length, NULL);
 }
 
 gboolean
 salut_xmpp_connection_send(SalutXmppConnection *connection, 
                                 SalutXmppStanza *stanza, GError **error) {
-  xmlBufferPtr xmlbuffer;
-  _XmppWriterState state;
-  gboolean ret;
+  SalutXmppConnectionPrivate *priv = 
+    SALUT_XMPP_CONNECTION_GET_PRIVATE (connection);
+  const guint8 *data;
+  gsize length;
 
-  xmlbuffer = xmlBufferCreate();
-  state.xmlwriter = xmlNewTextWriterMemory(xmlbuffer, 0);
-  state.ns = g_quark_from_string("jabber:client");
+  if (!salut_xmpp_writer_write_stanza(priv->writer, stanza,
+                                      &data, &length, error)) {
+    return FALSE;
+  }
 
-  xmlTextWriterSetIndent(state.xmlwriter, 1);
-
-  _xml_write_node(&state, stanza->node);
-  xmlTextWriterFlush(state.xmlwriter);
-
-  ret = salut_transport_send(connection->transport, 
-                              (const guint8 *)xmlbuffer->content,
-                              xmlbuffer->use, error);
-  xmlFreeTextWriter(state.xmlwriter);
-  xmlBufferFree(xmlbuffer);
-
-  return ret;
+  return salut_transport_send(connection->transport, data, length, error);
 }
 
 static void 
