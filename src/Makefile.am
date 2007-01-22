@@ -145,6 +145,7 @@ CORE_SOURCES =                                          \
     debug.c                                             \
     debug.h                                             \
     ansi.h                                              \
+    namespaces.h                                        \
     $(BUILT_SOURCES)
 
 
