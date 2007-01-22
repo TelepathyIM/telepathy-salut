@@ -27,7 +27,7 @@ parse_error(SalutXmppConnection *connection, gpointer user_data) {
 void
 stream_opened(SalutXmppConnection *connection, gchar *to, gchar *from,
               gpointer user_data) {
-  fprintf(treefile, "STREAM OPENED\n");
+  fprintf(treefile, "STREAM OPENED to=%s from=%s\n", to, from);
   salut_xmpp_connection_open(connection, to, from);
 }
 
