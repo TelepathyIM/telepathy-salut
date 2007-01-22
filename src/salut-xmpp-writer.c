@@ -37,6 +37,7 @@ struct _SalutXmppWriterPrivate
   gboolean dispose_has_run;
   xmlTextWriterPtr xmlwriter;
   GQuark current_ns;
+  GQuark stream_ns;
   xmlBufferPtr buffer;
 };
 
@@ -49,6 +50,7 @@ salut_xmpp_writer_init (SalutXmppWriter *obj)
 
   /* allocate any data required by the object here */
   priv->current_ns = g_quark_from_string("jabber:client");
+  priv->stream_ns = g_quark_from_string("http://etherx.jabber.org/streams");
   priv->buffer = xmlBufferCreate();
   priv->xmlwriter = xmlNewTextWriterMemory(priv->buffer, 0);
   xmlTextWriterSetIndent(priv->xmlwriter, 1);
@@ -161,17 +163,27 @@ _write_attr(const gchar *key, const gchar *value, const gchar *ns,
             gpointer user_data) {
   SalutXmppWriter *self = SALUT_XMPP_WRITER(user_data);
   SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (self);
+  GQuark attrns = 0;
 
+  if (ns != NULL) {
+    attrns = g_quark_from_string(ns);
+  }
 
-  if (ns != NULL && g_quark_from_string(ns) != priv->current_ns) {
+  if (attrns == 0 || attrns == priv->current_ns) {
+    xmlTextWriterWriteAttribute(priv->xmlwriter, 
+                                     (const xmlChar *)key, 
+                                     (const xmlChar *)value);
+  } else if (attrns == priv->stream_ns) {
+    xmlTextWriterWriteAttributeNS(priv->xmlwriter, 
+                                     (const xmlChar *)"stream",
+                                     (const xmlChar *)key, 
+                                     (const xmlChar *)NULL,
+                                     (const xmlChar *)value);
+  } else {
     xmlTextWriterWriteAttributeNS(priv->xmlwriter, 
                                      (const xmlChar *)key,
                                      (const xmlChar *)key, 
                                      (const xmlChar *)ns,
-                                     (const xmlChar *)value);
-  } else {
-    xmlTextWriterWriteAttribute(priv->xmlwriter, 
-                                     (const xmlChar *)key, 
                                      (const xmlChar *)value);
   }
   return TRUE;
@@ -193,13 +205,20 @@ _xml_write_node(SalutXmppWriter *writer, SalutXmppNode *node) {
   oldns = priv->current_ns;
   
   if (node->ns == 0 || oldns == node->ns) {
+    /* Another element in the current namespace */ 
     xmlTextWriterStartElement(priv->xmlwriter, (const xmlChar*) node->name);
+  } else if (node->ns == priv->stream_ns) {
+    xmlTextWriterStartElementNS(priv->xmlwriter, 
+                                (const xmlChar *) "stream",
+                                (const xmlChar *) node->name,
+                                NULL);
+
   } else {
     priv->current_ns = node->ns;
     xmlTextWriterStartElementNS(priv->xmlwriter, 
                                 NULL,
-                                (const xmlChar*) node->name,
-                                (const xmlChar *)salut_xmpp_node_get_ns(node));
+                                (const xmlChar *) node->name,
+                                (const xmlChar *) salut_xmpp_node_get_ns(node));
   }
 
   salut_xmpp_node_each_attribute(node, _write_attr, writer);
