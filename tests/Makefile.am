@@ -15,7 +15,9 @@ AM_CFLAGS = $(ERROR_CFLAGS) \
     -I $(top_srcdir)/src -I $(top_builddir)/src
 AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
 
-TESTS = $(noinst_PROGRAMS)
+TESTS = run-test.sh
 
 EXTRA_DIST = \
   run-test.sh
+
+SUBDIRS = inputs
