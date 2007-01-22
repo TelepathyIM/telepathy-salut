@@ -191,13 +191,26 @@ static void _start_element_ns(void *user_data,
   int i;
 
   if (G_UNLIKELY(priv->depth == 0)) {
+    gchar *to = NULL;
+    gchar *from = NULL;
+
     if (strcmp("stream", (gchar *)localname)
          || strcmp(XMPP_STREAM_NAMESPACE, (gchar *)uri)) {
       priv->error = TRUE;
       g_assert_not_reached();
       return;
     }
-    g_signal_emit(self, signals[STREAM_OPENED], 0, NULL, NULL);
+    for (i = 0; i < nb_attributes * 5; i+=5) {
+      if (!strcmp((gchar *)attributes[i], "to")) {
+        to = g_strndup((gchar *)attributes[i+3],
+                         (gsize) (attributes[i+4] - attributes[i+3]));
+      }
+      if (!strcmp((gchar *)attributes[i], "from")) {
+        from = g_strndup((gchar *)attributes[i+3],
+                         (gsize) (attributes[i+4] - attributes[i+3]));
+      }
+    }
+    g_signal_emit(self, signals[STREAM_OPENED], 0, to, from);
     priv->depth++;
     return;
   } 
