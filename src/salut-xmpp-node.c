@@ -183,7 +183,7 @@ salut_xmpp_node_get_child_ns(SalutXmppNode *node,
   Tuple t;
 
   t.key = name;
-  t.ns = g_quark_from_string(ns);
+  t.ns = (ns != NULL ?  g_quark_from_string(ns) : 0);
 
   link = g_slist_find_custom(node->children, &t, node_compare_child); 
 
