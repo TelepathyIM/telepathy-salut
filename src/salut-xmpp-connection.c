@@ -242,10 +242,13 @@ _xmpp_connection_received_data(SalutTransport *transport,
 
   g_assert(length > 0);
 
+  /* Ensure we're not disposed inside while running the reader is busy */
+  g_object_ref(self);
   ret = salut_xmpp_reader_push(priv->reader, data, length, &error);
   if (!ret) {
     g_signal_emit(self, signals[PARSE_ERROR], 0); 
   }
+  g_object_unref(self);
 }
 
 static void 
