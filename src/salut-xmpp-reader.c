@@ -93,6 +93,8 @@ salut_xmpp_reader_init (SalutXmppReader *obj)
 
   /* allocate any data required by the object here */
   priv->parser = xmlCreatePushParserCtxt(&parser_handler, obj, NULL, 0, NULL);
+  xmlCtxtUseOptions(priv->parser, XML_PARSE_NOENT);
+
   priv->depth = 0;
   priv->stanza = NULL;
   priv->nodes = g_queue_new();
