@@ -299,5 +299,5 @@ salut_xmpp_reader_push(SalutXmppReader *reader,
   g_assert(!priv->error);
   xmlParseChunk(priv->parser, (const char*)data, length, FALSE);
 
-  return priv->error;
+  return !priv->error;
 }
