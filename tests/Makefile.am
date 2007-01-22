@@ -20,4 +20,7 @@ TESTS = run-test.sh
 EXTRA_DIST = \
   run-test.sh
 
+clean-local:
+	-rm -rf outputs
+
 SUBDIRS = inputs
