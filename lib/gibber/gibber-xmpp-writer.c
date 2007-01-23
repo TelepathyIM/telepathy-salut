@@ -49,8 +49,8 @@ gibber_xmpp_writer_init (GibberXmppWriter *obj)
   GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
-  priv->current_ns = g_quark_from_string("jabber:client");
-  priv->stream_ns = g_quark_from_string("http://etherx.jabber.org/streams");
+  priv->current_ns = 0;
+  priv->stream_ns = 0;
   priv->buffer = xmlBufferCreate();
   priv->xmlwriter = xmlNewTextWriterMemory(priv->buffer, 0);
   xmlTextWriterSetIndent(priv->xmlwriter, 1);
@@ -146,6 +146,10 @@ gibber_xmpp_writer_stream_open(GibberXmppWriter *writer,
 
   *data = (const guint8 *)priv->buffer->content;
   *length  = priv->buffer->use;
+
+  /* Set the magic known namespaces */
+  priv->current_ns = g_quark_from_string("jabber:client");
+  priv->stream_ns = g_quark_from_string("http://etherx.jabber.org/streams");
 }
 
 void gibber_xmpp_writer_stream_close(GibberXmppWriter *writer,
