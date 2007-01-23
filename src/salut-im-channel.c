@@ -387,6 +387,8 @@ salut_im_channel_finalize (GObject *object)
   g_queue_foreach(priv->out_queue, (GFunc)salut_im_channel_message_free, NULL);
   g_queue_free(priv->out_queue);
 
+  text_mixin_finalize(G_OBJECT(self));
+
   G_OBJECT_CLASS (salut_im_channel_parent_class)->finalize (object);
 }
 
