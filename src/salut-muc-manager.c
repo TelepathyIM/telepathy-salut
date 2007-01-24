@@ -321,7 +321,7 @@ static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
 }
 
 static gboolean
-_received_message(SalutImChannel *imchannel, 
+_received_stanza(SalutImChannel *imchannel, 
                   SalutXmppStanza *message, gpointer data) {
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(data);
@@ -344,9 +344,13 @@ _received_message(SalutImChannel *imchannel,
   if (node == NULL) 
     return FALSE;
 
+  DEBUG("Got an invitation");
+
   invite = salut_xmpp_node_get_child(node, "invite");
-  if (invite == NULL)
+  if (invite == NULL) {
+    DEBUG("Got invitation, but no invite block!?");
     return FALSE;
+  }
 
   room_node = salut_xmpp_node_get_child(invite, "roomname");
 
@@ -435,8 +439,8 @@ _new_im_channel(TpChannelFactoryIface *channel_iface,
                 gpointer data) {
   SalutImChannel *imchannel = SALUT_IM_CHANNEL(channel);
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
-  g_signal_connect(imchannel, "received-message", 
-                     G_CALLBACK(_received_message),
+  g_signal_connect(imchannel, "received-stanza", 
+                     G_CALLBACK(_received_stanza),
                      self);
 }
 
