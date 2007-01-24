@@ -55,7 +55,7 @@ GType gibber_xmpp_writer_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_WRITER, GibberXmppWriterClass))
 
 
-GibberXmppWriter *gibber_xmpp_writer_new(void);
+SalutXmppWriter *salut_xmpp_writer_new(void);
 
 void gibber_xmpp_writer_stream_open(GibberXmppWriter *writer, 
                                    const gchar *to, const gchar *from,  

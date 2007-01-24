@@ -38,6 +38,7 @@ struct _GibberXmppWriterPrivate
   xmlTextWriterPtr xmlwriter;
   GQuark current_ns;
   GQuark stream_ns;
+  gboolean stream_mode;
   xmlBufferPtr buffer;
 };
 
@@ -53,6 +54,7 @@ gibber_xmpp_writer_init (GibberXmppWriter *obj)
   priv->stream_ns = 0;
   priv->buffer = xmlBufferCreate();
   priv->xmlwriter = xmlNewTextWriterMemory(priv->buffer, 0);
+  priv->stream_mode = TRUE;
   xmlTextWriterSetIndent(priv->xmlwriter, 1);
 }
 
@@ -104,6 +106,16 @@ gibber_xmpp_writer_finalize (GObject *object)
 GibberXmppWriter *
 gibber_xmpp_writer_new(void) {
   return g_object_new(GIBBER_TYPE_XMPP_WRITER, NULL);
+}
+
+SalutXmppWriter *
+salut_xmpp_writer_new_no_stream(void) {
+  SalutXmppWriter *result =  g_object_new(SALUT_TYPE_XMPP_WRITER, NULL);
+  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (result);
+
+  priv->stream_mode = FALSE;
+
+  return result;
 }
 
 void 
@@ -257,6 +269,9 @@ gibber_xmpp_writer_write_stanza(GibberXmppWriter *writer,
 
   xmlBufferEmpty(priv->buffer);
 
+  if (!priv->stream_mode) {
+    xmlTextWriterStartDocument(priv->xmlwriter, "1.0", "utf-8", NULL);
+  }
   _xml_write_node(writer, stanza->node);
   xmlTextWriterFlush(priv->xmlwriter);
 
