@@ -82,6 +82,7 @@ struct _GibberXmppReaderPrivate
   GQueue *nodes;
   gboolean dispose_has_run;
   gboolean error;
+  gboolean stream_mode;
 };
 
 #define GIBBER_XMPP_READER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_READER, GibberXmppReaderPrivate))
@@ -100,6 +101,7 @@ gibber_xmpp_reader_init (GibberXmppReader *obj)
   priv->nodes = g_queue_new();
   priv->node = NULL;
   priv->error = FALSE;
+  priv->stream_mode = TRUE;
 }
 
 static void gibber_xmpp_reader_dispose (GObject *object);
@@ -179,6 +181,16 @@ gibber_xmpp_reader_new(void) {
   return g_object_new(GIBBER_TYPE_XMPP_READER, NULL);
 }
 
+SalutXmppReader *
+salut_xmpp_reader_new_no_stream(void) {
+  SalutXmppReader *result = g_object_new(SALUT_TYPE_XMPP_READER, NULL);
+  SalutXmppReaderPrivate *priv = SALUT_XMPP_READER_GET_PRIVATE (result);
+
+  priv->stream_mode = FALSE;
+
+  return result;
+}
+
 static void _start_element_ns(void *user_data,
                              const xmlChar *localname,
                              const xmlChar *prefix,
@@ -192,7 +204,7 @@ static void _start_element_ns(void *user_data,
   GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (self);
   int i;
 
-  if (G_UNLIKELY(priv->depth == 0)) {
+  if (priv->stream_mode && G_UNLIKELY(priv->depth == 0)) {
     gchar *to = NULL;
     gchar *from = NULL;
     gchar *version = NULL;
@@ -277,9 +289,9 @@ _end_element_ns(void *user_data, const xmlChar *localname,
       gibber_xmpp_node_set_content(priv->node, NULL);
   }
 
-  if (priv->depth == 0) {
+  if (priv->stream_mode && priv->depth == 0) {
     g_signal_emit(self, signals[STREAM_CLOSED], 0);
-  } else if (priv->depth == 1) {
+  } else if (priv->depth <= 1) {
     g_assert(g_queue_get_length(priv->nodes) == 0);
     g_signal_emit(self, signals[RECEIVED_STANZA], 0, priv->stanza);
     g_object_unref(priv->stanza);

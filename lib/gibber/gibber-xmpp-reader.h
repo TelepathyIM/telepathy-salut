@@ -53,8 +53,8 @@ GType gibber_xmpp_reader_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_READER, GibberXmppReaderClass))
 
 
-GibberXmppReader * gibber_xmpp_reader_new(void);
-gboolean gibber_xmpp_reader_push(GibberXmppReader *reader, 
+SalutXmppReader * salut_xmpp_reader_new(void);
+gboolean salut_xmpp_reader_push(SalutXmppReader *reader, 
                                 const guint8 *data, gsize length,
                                 GError **error);
 
