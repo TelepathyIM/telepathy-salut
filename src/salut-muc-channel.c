@@ -439,6 +439,8 @@ salut_muc_channel_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free(priv->object_path);
 
+  text_mixin_finalize(object);
+
   G_OBJECT_CLASS (salut_muc_channel_parent_class)->finalize (object);
 }
 
