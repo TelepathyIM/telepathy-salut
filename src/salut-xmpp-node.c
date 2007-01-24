@@ -100,7 +100,7 @@ attribute_compare(gconstpointer a, gconstpointer b) {
   const Tuple *target = (const Tuple *)b;
 
   if (target->ns != 0 && attr->ns != target->ns) {
-    return FALSE;
+    return 1;
   }
 
   return strcmp(attr->key, target->key);
@@ -117,7 +117,7 @@ salut_xmpp_node_get_attribute_ns(SalutXmppNode *node,
   search.key = (gchar *)key;
   search.ns = (ns != NULL ? g_quark_from_string(ns) : 0);
 
-  link = g_slist_find_custom(node->children, &search, attribute_compare); 
+  link = g_slist_find_custom(node->attributes, &search, attribute_compare); 
 
   return (link == NULL) ? NULL : ((Attribute *)(link->data))->value;
 }
@@ -169,7 +169,7 @@ node_compare_child(gconstpointer a, gconstpointer b) {
   Tuple *target = (Tuple *)b;
 
   if (target->ns != 0 && target->ns != node->ns) {
-    return FALSE;
+    return 1;
   }
 
   return strcmp(node->name, target->key);
