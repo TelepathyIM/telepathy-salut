@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "salut-xmpp-connection.h"
-#include "salut-xmpp-connection-signals-marshal.h"
+#include "salut-muc-connection.h"
+#include "salut-muc-connection-signals-marshal.h"
 
 #include "salut-xmpp-reader.h"
 #include "salut-xmpp-writer.h"
@@ -37,7 +37,7 @@ static void _muc_connection_received_data(SalutTransport *transport,
                                            gsize length,
                                            gpointer user_data);
 
-G_DEFINE_TYPE(SalutMucConnection, salut_muc_connection, G_TYPE_OBJECT)
+G_DEFINE_TYPE(SalutMucConnection, salut_muc_connection, G_TYPE_OBJECT);
 
 /* signal enum */
 enum
@@ -48,15 +48,6 @@ enum
 };
 
 static guint signals[LAST_SIGNAL] = {0};
-
-static void 
-_reader_stream_opened_cb(SalutXmppReader *reader, 
-                         const gchar *to, const gchar *from,
-                         const gchar *version,
-                         gpointer user_data);
-
-static void 
-_reader_stream_closed_cb(SalutXmppReader *reader, gpointer user_data);
 
 static void _reader_received_stanza_cb(SalutXmppReader *reader, 
                                        SalutXmppStanza *stanza,
@@ -79,15 +70,11 @@ salut_muc_connection_init (SalutMucConnection *obj) {
   SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (obj);
   obj->transport = NULL;
 
-  priv->writer = salut_xmpp_writer_new();
+  priv->writer = salut_xmpp_writer_new_no_stream();
+  priv->reader = salut_xmpp_reader_new_no_stream();
 
-  priv->reader = salut_xmpp_reader_new();
-  g_signal_connect(priv->reader, "stream-opened", 
-                    G_CALLBACK(_reader_stream_opened_cb), obj);
   g_signal_connect(priv->reader, "received-stanza", 
                     G_CALLBACK(_reader_received_stanza_cb), obj);
-  g_signal_connect(priv->reader, "stream-closed", 
-                    G_CALLBACK(_reader_stream_closed_cb), obj);
 }
 
 static void salut_muc_connection_dispose (GObject *object);
