@@ -291,7 +291,7 @@ _end_element_ns(void *user_data, const xmlChar *localname,
 
   if (priv->stream_mode && priv->depth == 0) {
     g_signal_emit(self, signals[STREAM_CLOSED], 0);
-  } else if (priv->depth <= 1) {
+  } else if (priv->depth == (priv->stream_mode ? 1 : 0) ) {
     g_assert(g_queue_get_length(priv->nodes) == 0);
     g_signal_emit(self, signals[RECEIVED_STANZA], 0, priv->stanza);
     g_object_unref(priv->stanza);
