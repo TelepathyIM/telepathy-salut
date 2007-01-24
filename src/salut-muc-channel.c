@@ -32,7 +32,7 @@
 
 #include "salut-muc-transport-iface.h"
 #include "salut-transport.h"
-#include "salut-xmpp-connection.h"
+#include "salut-muc-connection.h"
 
 #include "salut-connection.h"
 #include "salut-im-manager.h"
@@ -79,7 +79,7 @@ struct _SalutMucChannelPrivate
   SalutConnection *connection;
   SalutImManager *im_manager;
   SalutTransport *transport;
-  SalutXmppConnection *xmpp_connection;
+  SalutMucConnection *muc_connection;
   gchar *muc_name;
   guint presence_timeout_id;
 };
@@ -193,11 +193,11 @@ salut_muc_channel_constructor (GType type, guint n_props,
                      priv->handle);
   g_assert(valid);
   
-  priv->xmpp_connection = salut_xmpp_connection_new(priv->transport);
+  priv->muc_connection = salut_muc_connection_new(priv->transport);
   /* Transport is now owned by the xmpp connection */
   g_object_unref(priv->transport);
 
-  g_signal_connect(priv->xmpp_connection, "received-stanza",
+  g_signal_connect(priv->muc_connection, "received-stanza",
                    G_CALLBACK(salut_muc_channel_received_stanza), obj);
 
   g_signal_connect(priv->transport, "connected", 
@@ -417,9 +417,9 @@ salut_muc_channel_dispose (GObject *object)
     priv->presence_timeout_id = 0;
   }
 
-  if (priv->xmpp_connection != NULL) {
-    g_object_unref(priv->xmpp_connection);
-    priv->xmpp_connection = NULL;
+  if (priv->muc_connection != NULL) {
+    g_object_unref(priv->muc_connection);
+    priv->muc_connection = NULL;
   }
 
 
@@ -869,7 +869,7 @@ static gboolean salut_muc_channel_send_stanza(GObject *object, guint type,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(object);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(object);
 
-  if (!salut_xmpp_connection_send(priv->xmpp_connection, stanza, error)) {
+  if (!salut_muc_connection_send(priv->muc_connection, stanza, error)) {
     text_mixin_emit_send_error(G_OBJECT(self), CHANNEL_TEXT_SEND_ERROR_UNKNOWN,
                                time(NULL), type, text);
     return FALSE;
@@ -892,7 +892,7 @@ salut_muc_channel_send_presence(SalutMucChannel *self,
   salut_xmpp_node_set_attribute(stanza->node, "to", priv->muc_name);
 
   /* FIXME should disconnect if we couldn't sent */
-  salut_xmpp_connection_send(priv->xmpp_connection, stanza, NULL);
+  salut_muc_connection_send(priv->muc_connection, stanza, NULL);
   g_object_unref(stanza);
 }
 
