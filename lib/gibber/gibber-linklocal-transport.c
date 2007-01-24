@@ -408,5 +408,3 @@ gibber_ll_transport_disconnect(GibberTransport *transport) {
   DEBUG("Connection close requested");
   _do_disconnect(GIBBER_LL_TRANSPORT(transport));
 }
-
-
