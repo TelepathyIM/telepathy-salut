@@ -21,6 +21,12 @@ BUILT_SOURCES = \
     salut-connection-glue.h \
     salut-connection-signals-marshal.h \
     salut-connection-signals-marshal.c \
+    salut-transport-signals-marshal.h \
+    salut-transport-signals-marshal.c \
+    salut-xmpp-reader-signals-marshal.h \
+    salut-xmpp-reader-signals-marshal.c \
+    salut-xmpp-connection-signals-marshal.h \
+    salut-xmpp-connection-signals-marshal.c \
     salut-presence-enumtypes.h \
     salut-presence-enumtypes.c  \
     telepathy-errors-enumtypes.h \
@@ -115,6 +121,20 @@ CORE_SOURCES =                                          \
     salut-connection.c                                  \
     salut-connection.h                                  \
     salut-presence.h                                    \
+    salut-xmpp-connection.c                             \
+    salut-xmpp-connection.h                             \
+    salut-xmpp-reader.c                                 \
+    salut-xmpp-reader.h                                 \
+    salut-xmpp-writer.c                                 \
+    salut-xmpp-writer.h                                 \
+    salut-xmpp-stanza.c                                 \
+    salut-xmpp-stanza.h                                 \
+    salut-xmpp-node.c                                   \
+    salut-xmpp-node.h                                   \
+    salut-linklocal-transport.c                         \
+    salut-linklocal-transport.h                         \
+    salut-transport.c                                   \
+    salut-transport.h                                   \
     telepathy-errors.c                                  \
     telepathy-errors.h                                  \
     telepathy-constants.h                               \
