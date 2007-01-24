@@ -1,5 +1,5 @@
 /*
- * salut-xmpp-connection.h - Header for SalutXmppConnection
+ * salut-xmpp-connection.h - Header for SalutMucConnection
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -28,14 +28,14 @@
 
 G_BEGIN_DECLS
 
-typedef struct _SalutXmppConnection SalutXmppConnection;
-typedef struct _SalutXmppConnectionClass SalutXmppConnectionClass;
+typedef struct _SalutMucConnection SalutMucConnection;
+typedef struct _SalutMucConnectionClass SalutMucConnectionClass;
 
-struct _SalutXmppConnectionClass {
+struct _SalutMucConnectionClass {
     GObjectClass parent_class;
 };
 
-struct _SalutXmppConnection {
+struct _SalutMucConnection {
     GObject parent;
     SalutTransport *transport;
     gboolean stream_open;
@@ -47,20 +47,20 @@ GType salut_muc_connection_get_type(void);
 #define SALUT_TYPE_MUC_CONNECTION \
   (salut_muc_connection_get_type())
 #define SALUT_MUC_CONNECTION(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_MUC_CONNECTION, SalutXmppConnection))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_MUC_CONNECTION, SalutMucConnection))
 #define SALUT_MUC_CONNECTION_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_MUC_CONNECTION, SalutXmppConnectionClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_MUC_CONNECTION, SalutMucConnectionClass))
 #define SALUT_IS_MUC_CONNECTION(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_MUC_CONNECTION))
 #define SALUT_IS_MUC_CONNECTION_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_MUC_CONNECTION))
 #define SALUT_MUC_CONNECTION_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_CONNECTION, SalutXmppConnectionClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_CONNECTION, SalutMucConnectionClass))
 
 
 
-SalutXmppConnection *salut_muc_connection_new(SalutTransport *transport); 
-gboolean salut_muc_connection_send(SalutXmppConnection *connection, 
+SalutMucConnection *salut_muc_connection_new(SalutTransport *transport); 
+gboolean salut_muc_connection_send(SalutMucConnection *connection, 
                                     SalutXmppStanza *stanza, 
                                     GError **error);
 
