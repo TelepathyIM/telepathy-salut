@@ -618,7 +618,7 @@ _self_established_cb(SalutSelf *s, gpointer data) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
 
   self->self_handle = handle_for_contact(self->handle_repo, s->name);
-  handle_ref(self->self_handle);
+  handle_ref(self->handle_repo, TP_HANDLE_TYPE_CONTACT, self->self_handle);
   g_free(self->name);
   self->name = g_strdup(s->name);
 
