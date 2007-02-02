@@ -181,10 +181,10 @@ gibber_xmpp_reader_new(void) {
   return g_object_new(GIBBER_TYPE_XMPP_READER, NULL);
 }
 
-SalutXmppReader *
-salut_xmpp_reader_new_no_stream(void) {
-  SalutXmppReader *result = g_object_new(SALUT_TYPE_XMPP_READER, NULL);
-  SalutXmppReaderPrivate *priv = SALUT_XMPP_READER_GET_PRIVATE (result);
+GibberXmppReader *
+gibber_xmpp_reader_new_no_stream(void) {
+  GibberXmppReader *result = g_object_new(GIBBER_TYPE_XMPP_READER, NULL);
+  GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (result);
 
   priv->stream_mode = FALSE;
 

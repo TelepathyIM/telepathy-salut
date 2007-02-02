@@ -108,10 +108,10 @@ gibber_xmpp_writer_new(void) {
   return g_object_new(GIBBER_TYPE_XMPP_WRITER, NULL);
 }
 
-SalutXmppWriter *
-salut_xmpp_writer_new_no_stream(void) {
-  SalutXmppWriter *result =  g_object_new(SALUT_TYPE_XMPP_WRITER, NULL);
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (result);
+GibberXmppWriter *
+gibber_xmpp_writer_new_no_stream(void) {
+  GibberXmppWriter *result =  g_object_new(GIBBER_TYPE_XMPP_WRITER, NULL);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (result);
 
   priv->stream_mode = FALSE;
 
