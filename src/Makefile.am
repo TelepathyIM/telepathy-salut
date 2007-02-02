@@ -16,12 +16,6 @@ BUILT_SOURCES = \
     salut-connection-glue.h \
     salut-connection-signals-marshal.h \
     salut-connection-signals-marshal.c \
-    salut-transport-signals-marshal.h \
-    salut-transport-signals-marshal.c \
-    salut-xmpp-reader-signals-marshal.h \
-    salut-xmpp-reader-signals-marshal.c \
-    salut-xmpp-connection-signals-marshal.h \
-    salut-xmpp-connection-signals-marshal.c \
     salut-presence-enumtypes.h \
     salut-presence-enumtypes.c  \
     telepathy-errors-enumtypes.h \
@@ -71,10 +65,6 @@ EXTRA_DIST = \
   salut-im-channel-signals-marshal.list                   \
   salut-im-manager-signals-marshal.list                   \
   salut-self-signals-marshal.list                         \
-  salut-transport-signals-marshal.list                    \
-  salut-xmpp-connection-signals-marshal.list              \
-  salut-xmpp-reader-signals-marshal.list                  \
-  salut-xmpp-stanza-signals-marshal.list                  \
   text-mixin-signals-marshal.list                         \
   tp-channel-factory-iface-signals-marshal.list
 
@@ -111,20 +101,6 @@ CORE_SOURCES =                                          \
     salut-connection.c                                  \
     salut-connection.h                                  \
     salut-presence.h                                    \
-    salut-xmpp-connection.c                             \
-    salut-xmpp-connection.h                             \
-    salut-xmpp-reader.c                                 \
-    salut-xmpp-reader.h                                 \
-    salut-xmpp-writer.c                                 \
-    salut-xmpp-writer.h                                 \
-    salut-xmpp-stanza.c                                 \
-    salut-xmpp-stanza.h                                 \
-    salut-xmpp-node.c                                   \
-    salut-xmpp-node.h                                   \
-    salut-linklocal-transport.c                         \
-    salut-linklocal-transport.h                         \
-    salut-transport.c                                   \
-    salut-transport.h                                   \
     telepathy-errors.c                                  \
     telepathy-errors.h                                  \
     telepathy-constants.h                               \
@@ -157,7 +133,9 @@ CORE_SOURCES =                                          \
     ansi.h                                              \
     $(BUILT_SOURCES)
 
-libsalut_convenience_la_SOURCES = $(CORE_SOURCES)
+
+libsalut_convenience_la_SOURCES = $(CORE_SOURCES) 
+libsalut_convenience_la_LIDADD = $(top_builddir)/lib/libgibber.la
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la
@@ -169,8 +147,14 @@ telepathy_salut_LDADD = libsalut-convenience.la
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
-AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @HANDLE_LEAK_DEBUG_CFLAGS@ @AVAHI_CFLAGS@
-AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
+AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ \
+  @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
+  @HANDLE_LEAK_DEBUG_CFLAGS@ \
+  @AVAHI_CFLAGS@ \
+  -I $(top_srcdir)/lib -I $(top_builddir)/lib
+
+AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@ \
+  $(top_builddir)/lib/gibber/libgibber.la
 
 # rule to generate the binding headers
 %-glue.h: ../generate/xml-modified/%.xml

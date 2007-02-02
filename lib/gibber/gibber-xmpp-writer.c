@@ -1,5 +1,5 @@
 /*
- * salut-xmpp-writer.c - Source for SalutXmppWriter
+ * gibber-xmpp-writer.c - Source for GibberXmppWriter
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -25,14 +25,14 @@
 
 #include <libxml/xmlwriter.h>
 
-#include "salut-xmpp-writer.h"
+#include "gibber-xmpp-writer.h"
 
-G_DEFINE_TYPE(SalutXmppWriter, salut_xmpp_writer, G_TYPE_OBJECT)
+G_DEFINE_TYPE(GibberXmppWriter, gibber_xmpp_writer, G_TYPE_OBJECT)
 
 /* private structure */
-typedef struct _SalutXmppWriterPrivate SalutXmppWriterPrivate;
+typedef struct _GibberXmppWriterPrivate GibberXmppWriterPrivate;
 
-struct _SalutXmppWriterPrivate
+struct _GibberXmppWriterPrivate
 {
   gboolean dispose_has_run;
   xmlTextWriterPtr xmlwriter;
@@ -41,12 +41,12 @@ struct _SalutXmppWriterPrivate
   xmlBufferPtr buffer;
 };
 
-#define SALUT_XMPP_WRITER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_XMPP_WRITER, SalutXmppWriterPrivate))
+#define GIBBER_XMPP_WRITER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_WRITER, GibberXmppWriterPrivate))
 
 static void
-salut_xmpp_writer_init (SalutXmppWriter *obj)
+gibber_xmpp_writer_init (GibberXmppWriter *obj)
 {
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (obj);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
   priv->current_ns = g_quark_from_string("jabber:client");
@@ -56,26 +56,26 @@ salut_xmpp_writer_init (SalutXmppWriter *obj)
   xmlTextWriterSetIndent(priv->xmlwriter, 1);
 }
 
-static void salut_xmpp_writer_dispose (GObject *object);
-static void salut_xmpp_writer_finalize (GObject *object);
+static void gibber_xmpp_writer_dispose (GObject *object);
+static void gibber_xmpp_writer_finalize (GObject *object);
 
 static void
-salut_xmpp_writer_class_init (SalutXmppWriterClass *salut_xmpp_writer_class)
+gibber_xmpp_writer_class_init (GibberXmppWriterClass *gibber_xmpp_writer_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_xmpp_writer_class);
+  GObjectClass *object_class = G_OBJECT_CLASS (gibber_xmpp_writer_class);
 
-  g_type_class_add_private (salut_xmpp_writer_class, sizeof (SalutXmppWriterPrivate));
+  g_type_class_add_private (gibber_xmpp_writer_class, sizeof (GibberXmppWriterPrivate));
 
-  object_class->dispose = salut_xmpp_writer_dispose;
-  object_class->finalize = salut_xmpp_writer_finalize;
+  object_class->dispose = gibber_xmpp_writer_dispose;
+  object_class->finalize = gibber_xmpp_writer_finalize;
 
 }
 
 void
-salut_xmpp_writer_dispose (GObject *object)
+gibber_xmpp_writer_dispose (GObject *object)
 {
-  SalutXmppWriter *self = SALUT_XMPP_WRITER (object);
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (self);
+  GibberXmppWriter *self = GIBBER_XMPP_WRITER (object);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
@@ -84,34 +84,34 @@ salut_xmpp_writer_dispose (GObject *object)
 
   /* release any references held by the object here */
 
-  if (G_OBJECT_CLASS (salut_xmpp_writer_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_xmpp_writer_parent_class)->dispose (object);
+  if (G_OBJECT_CLASS (gibber_xmpp_writer_parent_class)->dispose)
+    G_OBJECT_CLASS (gibber_xmpp_writer_parent_class)->dispose (object);
 }
 
 void
-salut_xmpp_writer_finalize (GObject *object)
+gibber_xmpp_writer_finalize (GObject *object)
 {
-  SalutXmppWriter *self = SALUT_XMPP_WRITER (object);
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (self);
+  GibberXmppWriter *self = GIBBER_XMPP_WRITER (object);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
   xmlFreeTextWriter(priv->xmlwriter);
   xmlBufferFree(priv->buffer);
 
-  G_OBJECT_CLASS (salut_xmpp_writer_parent_class)->finalize (object);
+  G_OBJECT_CLASS (gibber_xmpp_writer_parent_class)->finalize (object);
 }
 
-SalutXmppWriter *
-salut_xmpp_writer_new(void) {
-  return g_object_new(SALUT_TYPE_XMPP_WRITER, NULL);
+GibberXmppWriter *
+gibber_xmpp_writer_new(void) {
+  return g_object_new(GIBBER_TYPE_XMPP_WRITER, NULL);
 }
 
 void 
-salut_xmpp_writer_stream_open(SalutXmppWriter *writer,
+gibber_xmpp_writer_stream_open(GibberXmppWriter *writer,
                               const gchar *to, const gchar *from,
                               const gchar *version,
                               const guint8 **data, gsize *length) {
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (writer);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (writer);
 
   xmlBufferEmpty(priv->buffer);
   xmlTextWriterWriteString(priv->xmlwriter, (xmlChar *) 
@@ -148,7 +148,7 @@ salut_xmpp_writer_stream_open(SalutXmppWriter *writer,
   *length  = priv->buffer->use;
 }
 
-void salut_xmpp_writer_stream_close(SalutXmppWriter *writer,
+void gibber_xmpp_writer_stream_close(GibberXmppWriter *writer,
                                    const guint8 **data, gsize *length) {
   static const guint8 *close = (const guint8 *)"</stream:stream>\n";
   *data = close;
@@ -156,13 +156,13 @@ void salut_xmpp_writer_stream_close(SalutXmppWriter *writer,
 }
 
 static void
-_xml_write_node(SalutXmppWriter *writer, SalutXmppNode *node);
+_xml_write_node(GibberXmppWriter *writer, GibberXmppNode *node);
 
 gboolean
 _write_attr(const gchar *key, const gchar *value, const gchar *ns,
             gpointer user_data) {
-  SalutXmppWriter *self = SALUT_XMPP_WRITER(user_data);
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (self);
+  GibberXmppWriter *self = GIBBER_XMPP_WRITER(user_data);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (self);
   GQuark attrns = 0;
 
   if (ns != NULL) {
@@ -190,17 +190,17 @@ _write_attr(const gchar *key, const gchar *value, const gchar *ns,
 }
 
 gboolean 
-_write_child(SalutXmppNode *node, gpointer user_data) {
-  _xml_write_node(SALUT_XMPP_WRITER(user_data), node);
+_write_child(GibberXmppNode *node, gpointer user_data) {
+  _xml_write_node(GIBBER_XMPP_WRITER(user_data), node);
   return TRUE;
 }
 
 
 static void
-_xml_write_node(SalutXmppWriter *writer, SalutXmppNode *node) {
+_xml_write_node(GibberXmppWriter *writer, GibberXmppNode *node) {
   const gchar *l;
   GQuark oldns;
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (writer);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (writer);
 
   oldns = priv->current_ns;
   
@@ -218,12 +218,12 @@ _xml_write_node(SalutXmppWriter *writer, SalutXmppNode *node) {
     xmlTextWriterStartElementNS(priv->xmlwriter, 
                                 NULL,
                                 (const xmlChar *) node->name,
-                                (const xmlChar *) salut_xmpp_node_get_ns(node));
+                                (const xmlChar *) gibber_xmpp_node_get_ns(node));
   }
 
-  salut_xmpp_node_each_attribute(node, _write_attr, writer);
+  gibber_xmpp_node_each_attribute(node, _write_attr, writer);
 
-  l = salut_xmpp_node_get_language(node);
+  l = gibber_xmpp_node_get_language(node);
   if (l != NULL) {
     xmlTextWriterWriteAttributeNS(priv->xmlwriter, 
                                   (const xmlChar *)"xml", 
@@ -234,7 +234,7 @@ _xml_write_node(SalutXmppWriter *writer, SalutXmppNode *node) {
   }
 
 
-  salut_xmpp_node_each_child(node, _write_child, writer);
+  gibber_xmpp_node_each_child(node, _write_child, writer);
 
   if (node->content) {
     xmlTextWriterWriteString(priv->xmlwriter, (const xmlChar*)node->content);
@@ -245,11 +245,11 @@ _xml_write_node(SalutXmppWriter *writer, SalutXmppNode *node) {
 
 
 gboolean 
-salut_xmpp_writer_write_stanza(SalutXmppWriter *writer, 
-                               SalutXmppStanza *stanza,
+gibber_xmpp_writer_write_stanza(GibberXmppWriter *writer, 
+                               GibberXmppStanza *stanza,
                                const guint8 **data, gsize *length,
                                GError **error) {
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (writer);
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (writer);
 
   xmlBufferEmpty(priv->buffer);
 
@@ -263,8 +263,8 @@ salut_xmpp_writer_write_stanza(SalutXmppWriter *writer,
 }
 
 void 
-salut_xmpp_writer_flush(SalutXmppWriter *writer) {
-  SalutXmppWriterPrivate *priv = SALUT_XMPP_WRITER_GET_PRIVATE (writer);
+gibber_xmpp_writer_flush(GibberXmppWriter *writer) {
+  GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (writer);
 
   xmlBufferFree(priv->buffer);
   priv->buffer = xmlBufferCreate();

@@ -22,8 +22,8 @@
 
 #include <glib-object.h>
 #include "text-mixin.h"
-#include "salut-xmpp-stanza.h"
-#include "salut-xmpp-connection.h"
+#include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-xmpp-connection.h>
 
 G_BEGIN_DECLS
 
@@ -57,12 +57,12 @@ GType salut_im_channel_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, SalutImChannelClass))
 
 void salut_im_channel_add_connection(SalutImChannel *chan, 
-                                     SalutXmppConnection *conn);
+                                     GibberXmppConnection *conn);
 
 void salut_im_channel_send_stanza(SalutImChannel * self, 
-                                  SalutXmppStanza *stanza);
+                                  GibberXmppStanza *stanza);
 void salut_im_channel_received_stanza(SalutImChannel *chan, 
-                                      SalutXmppStanza *stanza);
+                                      GibberXmppStanza *stanza);
 
 gboolean salut_im_channel_acknowledge_pending_messages (SalutImChannel *self, const GArray * ids, GError **error);
 gboolean salut_im_channel_close (SalutImChannel *self, GError **error);

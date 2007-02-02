@@ -1,5 +1,5 @@
 /*
- * salut-xmpp-node.h - Header for Salut xmpp nodes
+ * gibber-xmpp-node.h - Header for Gibber xmpp nodes
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -18,16 +18,16 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __SALUT_XMPP_NODE_H__
-#define __SALUT_XMPP_NODE_H__
+#ifndef __GIBBER_XMPP_NODE_H__
+#define __GIBBER_XMPP_NODE_H__
 
 #include <glib.h>
 
 G_BEGIN_DECLS
 
-typedef struct _SalutXmppNode SalutXmppNode;
+typedef struct _GibberXmppNode GibberXmppNode;
 
-struct _SalutXmppNode {
+struct _GibberXmppNode {
   gchar *name;
   gchar *content;
 
@@ -38,94 +38,94 @@ struct _SalutXmppNode {
   GSList *children;
 };
 
-typedef gboolean (*salut_xmpp_node_each_attr_func)(const gchar *key, 
+typedef gboolean (*gibber_xmpp_node_each_attr_func)(const gchar *key, 
                                                    const gchar *value,
                                                    const gchar *ns,
                                                    gpointer user_data);
 
-typedef gboolean (*salut_xmpp_node_each_child_func)(SalutXmppNode *node,
+typedef gboolean (*gibber_xmpp_node_each_child_func)(GibberXmppNode *node,
                                                     gpointer user_data);
 
-void salut_xmpp_node_each_attribute(SalutXmppNode *node,
-                                    salut_xmpp_node_each_attr_func func,
+void gibber_xmpp_node_each_attribute(GibberXmppNode *node,
+                                    gibber_xmpp_node_each_attr_func func,
                                     gpointer user_data);
-void salut_xmpp_node_each_child(SalutXmppNode *node,
-                                salut_xmpp_node_each_child_func func,
+void gibber_xmpp_node_each_child(GibberXmppNode *node,
+                                gibber_xmpp_node_each_child_func func,
                                 gpointer user_data);
 
-const gchar *salut_xmpp_node_get_attribute(SalutXmppNode *node, 
+const gchar *gibber_xmpp_node_get_attribute(GibberXmppNode *node, 
                                            const gchar *key);
-const gchar *salut_xmpp_node_get_attribute_ns(SalutXmppNode *node, 
+const gchar *gibber_xmpp_node_get_attribute_ns(GibberXmppNode *node, 
                                               const gchar *key,
                                               const gchar *ns);
 
-void  salut_xmpp_node_set_attribute(SalutXmppNode *node, 
+void  gibber_xmpp_node_set_attribute(GibberXmppNode *node, 
                                     const gchar *key,
                                     const gchar *value);
 
-void  salut_xmpp_node_set_attribute_ns(SalutXmppNode *node, 
+void  gibber_xmpp_node_set_attribute_ns(GibberXmppNode *node, 
                                        const gchar *key,
                                        const gchar *value,
                                        const gchar *ns);
 
 /* Set attribute with the given size for the value */
-void salut_xmpp_node_set_attribute_n(SalutXmppNode *node, 
+void gibber_xmpp_node_set_attribute_n(GibberXmppNode *node, 
                                       const gchar *key, 
                                       const gchar *value,
                                       gsize value_size);
-void salut_xmpp_node_set_attribute_n_ns(SalutXmppNode *node, 
+void gibber_xmpp_node_set_attribute_n_ns(GibberXmppNode *node, 
                                          const gchar *key, 
                                          const gchar *value,
                                          gsize value_size,
                                          const gchar *ns);
 
 /* Getting children */
-SalutXmppNode *salut_xmpp_node_get_child(SalutXmppNode *node,
+GibberXmppNode *gibber_xmpp_node_get_child(GibberXmppNode *node,
                                          const gchar *name);
-SalutXmppNode *salut_xmpp_node_get_child_ns(SalutXmppNode *node,
+GibberXmppNode *gibber_xmpp_node_get_child_ns(GibberXmppNode *node,
                                             const gchar *name,
                                             const gchar *ns);
 
 /* Creating child nodes */
-SalutXmppNode *salut_xmpp_node_add_child(SalutXmppNode *node, 
+GibberXmppNode *gibber_xmpp_node_add_child(GibberXmppNode *node, 
                                          const gchar *name);
-SalutXmppNode *salut_xmpp_node_add_child_ns(SalutXmppNode *node, 
+GibberXmppNode *gibber_xmpp_node_add_child_ns(GibberXmppNode *node, 
                                             const gchar *name,
                                             const gchar *ns);
 
-SalutXmppNode *salut_xmpp_node_add_child_with_content(SalutXmppNode *node, 
+GibberXmppNode *gibber_xmpp_node_add_child_with_content(GibberXmppNode *node, 
                                                        const gchar *name,
                                                        const char *content);
-SalutXmppNode *salut_xmpp_node_add_child_with_content_ns(SalutXmppNode *node, 
+GibberXmppNode *gibber_xmpp_node_add_child_with_content_ns(GibberXmppNode *node, 
                                                        const gchar *name,
                                                        const gchar *content,
                                                        const gchar *ns);
 
 /* Setting/Getting namespaces */
-void salut_xmpp_node_set_ns(SalutXmppNode *node, const gchar *ns);
-const gchar *salut_xmpp_node_get_ns(SalutXmppNode *node);
+void gibber_xmpp_node_set_ns(GibberXmppNode *node, const gchar *ns);
+const gchar *gibber_xmpp_node_get_ns(GibberXmppNode *node);
 
 /* Setting/Getting language */
-const gchar *salut_xmpp_node_get_language(SalutXmppNode *node);
-void salut_xmpp_node_set_language(SalutXmppNode *node, const gchar *lang);
-void salut_xmpp_node_set_language_n(SalutXmppNode *node, 
+const gchar *gibber_xmpp_node_get_language(GibberXmppNode *node);
+void gibber_xmpp_node_set_language(GibberXmppNode *node, const gchar *lang);
+void gibber_xmpp_node_set_language_n(GibberXmppNode *node, 
                                     const gchar *lang,
                                     gsize lang_size);
 
 
 /* Setting or adding content */
-void salut_xmpp_node_set_content(SalutXmppNode *node, const gchar *content);
-void salut_xmpp_node_append_content(SalutXmppNode *node, const gchar *content);
-void salut_xmpp_node_append_content_n(SalutXmppNode *node, 
+void gibber_xmpp_node_set_content(GibberXmppNode *node, const gchar *content);
+void gibber_xmpp_node_append_content(GibberXmppNode *node, const gchar *content);
+void gibber_xmpp_node_append_content_n(GibberXmppNode *node, 
                                       const gchar *content,
                                        gsize size);
 
 /* Create a new standalone node, usually only used by the stanza object */
-SalutXmppNode *salut_xmpp_node_new(const char *name);
+GibberXmppNode *gibber_xmpp_node_new(const char *name);
 
 /* Frees the node and all it's children! */
-void salut_xmpp_node_free(SalutXmppNode *node);
+void gibber_xmpp_node_free(GibberXmppNode *node);
 
 G_END_DECLS
 
-#endif /* #ifndef __SALUT_XMPP_NODE_H__*/
+#endif /* #ifndef __GIBBER_XMPP_NODE_H__*/

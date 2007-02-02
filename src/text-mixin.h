@@ -24,7 +24,8 @@
 #include "handle-repository.h"
 #include "handle-set.h"
 #include "util.h"
-#include "salut-xmpp-stanza.h"
+
+#include <gibber/gibber-xmpp-stanza.h>
 
 typedef enum {
     CHANNEL_TEXT_SEND_ERROR_UNKNOWN = 0,
@@ -45,7 +46,7 @@ typedef struct _TextMixin TextMixin;
 typedef gboolean (*TextMixinSendFunc) (GObject *obj, 
                                        guint type,
                                        const gchar *text,
-                                       SalutXmppStanza *stanza,
+                                       GibberXmppStanza *stanza,
                                        GError **error);
 
 struct _TextMixinClass {
@@ -94,7 +95,7 @@ gboolean text_mixin_send (GObject *obj, guint type, const char *from, const char
 gboolean text_mixin_get_message_types (GObject *obj, GArray **ret, GError **error);
 
 /* Utility functions for the mixin user */
-gboolean text_mixin_parse_incoming_message (SalutXmppStanza *stanza, const gchar **from, TpChannelTextMessageType *msgtype, const gchar **body, const gchar **body_offset);
+gboolean text_mixin_parse_incoming_message (GibberXmppStanza *stanza, const gchar **from, TpChannelTextMessageType *msgtype, const gchar **body, const gchar **body_offset);
 gboolean text_mixin_receive (GObject *obj, TpChannelTextMessageType type, Handle sender, time_t timestamp, const char *text);
 void text_mixin_emit_sent (GObject *obj, time_t timestamp, guint type, const char *text);
 void text_mixin_emit_send_error(GObject *obj, TextMixinSendError error, time_t timestamp, TpChannelTextMessageType type, const gchar *text);

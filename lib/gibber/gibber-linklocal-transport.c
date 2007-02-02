@@ -1,5 +1,5 @@
 /*
- * salut-linklocal-transport.c - Source for SalutLLTransport
+ * gibber-linklocal-transport.c - Source for GibberLLTransport
  * Copyright (C) 2006 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
  *
@@ -25,11 +25,11 @@
 #include <string.h>
 #include <errno.h>
 
-#include "salut-linklocal-transport.h"
-#include "telepathy-errors.h"
+#include "gibber-linklocal-transport.h"
+//#include "telepathy-errors.h"
 
 #define DEBUG_FLAG DEBUG_NET
-#include "debug.h"
+#include "gibber-debug.h"
 
 /* Buffer size used for reading input */
 #define BUFSIZE 1024
@@ -39,20 +39,20 @@ _channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data);
 
 
 gboolean
-salut_ll_transport_send(SalutTransport *transport, 
+gibber_ll_transport_send(GibberTransport *transport, 
                         const guint8 *data, gsize size,
                         GError **error);
 void
-salut_ll_transport_disconnect(SalutTransport *transport);
+gibber_ll_transport_disconnect(GibberTransport *transport);
 
-static void _do_disconnect(SalutLLTransport *self);
+static void _do_disconnect(GibberLLTransport *self);
 
-G_DEFINE_TYPE(SalutLLTransport, salut_ll_transport, SALUT_TYPE_TRANSPORT)
+G_DEFINE_TYPE(GibberLLTransport, gibber_ll_transport, GIBBER_TYPE_TRANSPORT)
 
 /* private structure */
-typedef struct _SalutLLTransportPrivate SalutLLTransportPrivate;
+typedef struct _GibberLLTransportPrivate GibberLLTransportPrivate;
 
-struct _SalutLLTransportPrivate
+struct _GibberLLTransportPrivate
 {
   GIOChannel *channel;
   gboolean incoming;
@@ -64,12 +64,12 @@ struct _SalutLLTransportPrivate
   GString *output_buffer;
 };
 
-#define SALUT_LL_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_LL_TRANSPORT, SalutLLTransportPrivate))
+#define GIBBER_LL_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_LL_TRANSPORT, GibberLLTransportPrivate))
 
 static void
-salut_ll_transport_init (SalutLLTransport *self)
+gibber_ll_transport_init (GibberLLTransport *self)
 {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
   priv->incoming = FALSE;
   priv->channel = NULL;
   priv->output_buffer = NULL;
@@ -79,31 +79,31 @@ salut_ll_transport_init (SalutLLTransport *self)
   priv->fd = -1;
 }
 
-static void salut_ll_transport_dispose (GObject *object);
-static void salut_ll_transport_finalize (GObject *object);
+static void gibber_ll_transport_dispose (GObject *object);
+static void gibber_ll_transport_finalize (GObject *object);
 
 static void
-salut_ll_transport_class_init (SalutLLTransportClass *salut_ll_transport_class)
+gibber_ll_transport_class_init (GibberLLTransportClass *gibber_ll_transport_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_ll_transport_class);
-  SalutTransportClass *transport_class =
-    SALUT_TRANSPORT_CLASS(salut_ll_transport_class);
+  GObjectClass *object_class = G_OBJECT_CLASS (gibber_ll_transport_class);
+  GibberTransportClass *transport_class =
+    GIBBER_TRANSPORT_CLASS(gibber_ll_transport_class);
 
-  g_type_class_add_private (salut_ll_transport_class, 
-                            sizeof (SalutLLTransportPrivate));
+  g_type_class_add_private (gibber_ll_transport_class, 
+                            sizeof (GibberLLTransportPrivate));
 
-  object_class->dispose = salut_ll_transport_dispose;
-  object_class->finalize = salut_ll_transport_finalize;
+  object_class->dispose = gibber_ll_transport_dispose;
+  object_class->finalize = gibber_ll_transport_finalize;
 
-  transport_class->send = salut_ll_transport_send;
-  transport_class->disconnect = salut_ll_transport_disconnect;
+  transport_class->send = gibber_ll_transport_send;
+  transport_class->disconnect = gibber_ll_transport_disconnect;
 }
 
 void
-salut_ll_transport_dispose (GObject *object)
+gibber_ll_transport_dispose (GObject *object)
 {
-  SalutLLTransport *self = SALUT_LL_TRANSPORT (object);
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+  GibberLLTransport *self = GIBBER_LL_TRANSPORT (object);
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
@@ -112,21 +112,21 @@ salut_ll_transport_dispose (GObject *object)
 
   _do_disconnect(self);
 
-  if (G_OBJECT_CLASS (salut_ll_transport_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_ll_transport_parent_class)->dispose (object);
+  if (G_OBJECT_CLASS (gibber_ll_transport_parent_class)->dispose)
+    G_OBJECT_CLASS (gibber_ll_transport_parent_class)->dispose (object);
 }
 
 void
-salut_ll_transport_finalize (GObject *object)
+gibber_ll_transport_finalize (GObject *object)
 {
-  G_OBJECT_CLASS (salut_ll_transport_parent_class)->finalize (object);
+  G_OBJECT_CLASS (gibber_ll_transport_parent_class)->finalize (object);
 }
 
 static void
-_do_disconnect(SalutLLTransport *self) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+_do_disconnect(GibberLLTransport *self) {
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
 
-  if (SALUT_TRANSPORT(self)->state == SALUT_TRANSPORT_DISCONNECTED) {
+  if (GIBBER_TRANSPORT(self)->state == GIBBER_TRANSPORT_DISCONNECTED) {
     return;
   }
   DEBUG("Closing the transport");
@@ -148,13 +148,13 @@ _do_disconnect(SalutLLTransport *self) {
     priv->output_buffer = NULL;
   }
 
-  salut_transport_set_state(SALUT_TRANSPORT(self), 
-                            SALUT_TRANSPORT_DISCONNECTED);
+  gibber_transport_set_state(GIBBER_TRANSPORT(self), 
+                            GIBBER_TRANSPORT_DISCONNECTED);
 }
 
 static gboolean
-_try_write(SalutLLTransport *self, const guint8 *data, int len, gsize *written) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+_try_write(GibberLLTransport *self, const guint8 *data, int len, gsize *written) {
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
   GIOStatus status;
   GError *error = NULL;
 
@@ -165,7 +165,7 @@ _try_write(SalutLLTransport *self, const guint8 *data, int len, gsize *written) 
     case G_IO_STATUS_AGAIN:
       break;
     case G_IO_STATUS_ERROR:
-      salut_transport_emit_error(SALUT_TRANSPORT(self), error);
+      gibber_transport_emit_error(GIBBER_TRANSPORT(self), error);
     case G_IO_STATUS_EOF:
       DEBUG("Writing chars failed, closing the transport");
       _do_disconnect(self);
@@ -177,8 +177,8 @@ _try_write(SalutLLTransport *self, const guint8 *data, int len, gsize *written) 
 }
 
 static void
-_writeout(SalutLLTransport *self, const guint8 *data, gsize len) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+_writeout(GibberLLTransport *self, const guint8 *data, gsize len) {
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
   gsize written = 0;
 
   DEBUG("OUT: %s", data);
@@ -205,9 +205,9 @@ _writeout(SalutLLTransport *self, const guint8 *data, gsize len) {
 
 static gboolean
 _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
-  SalutLLTransport *self = SALUT_LL_TRANSPORT (data);
-  SalutLLTransportPrivate *priv = 
-     SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+  GibberLLTransport *self = GIBBER_LL_TRANSPORT (data);
+  GibberLLTransportPrivate *priv = 
+     GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
   guint8  buf[BUFSIZE + 1];
   GIOStatus status;
   GError *error = NULL;
@@ -219,10 +219,10 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
     case G_IO_STATUS_NORMAL:
       buf[read] = '\0';
       DEBUG("IN: %s", buf);
-      salut_transport_received_data(SALUT_TRANSPORT(self), buf, read);
+      gibber_transport_received_data(GIBBER_TRANSPORT(self), buf, read);
       break;
     case G_IO_STATUS_ERROR:
-      salut_transport_emit_error(SALUT_TRANSPORT(self), error);
+      gibber_transport_emit_error(GIBBER_TRANSPORT(self), error);
     case G_IO_STATUS_EOF:
       DEBUG("Failed to read from the transport, closing..");
       _do_disconnect(self);
@@ -235,9 +235,9 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
 
 static gboolean
 _channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data) {
-  SalutLLTransport *self = SALUT_LL_TRANSPORT (data);
-  SalutLLTransportPrivate *priv = 
-     SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+  GibberLLTransport *self = GIBBER_LL_TRANSPORT (data);
+  GibberLLTransportPrivate *priv = 
+     GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
   gsize written;
   
   g_assert(priv->output_buffer);
@@ -264,9 +264,9 @@ _channel_io_err(GIOChannel *source, GIOCondition condition, gpointer data) {
 }
 
 static void
-_setup_transport(SalutLLTransport *self, int fd) {
+_setup_transport(GibberLLTransport *self, int fd) {
   /* We did make the tcp transport, so no setup everything */
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (self);
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
   fcntl(fd, F_SETFL, O_NONBLOCK);
 
   priv->channel = g_io_channel_unix_new(fd);
@@ -279,32 +279,32 @@ _setup_transport(SalutLLTransport *self, int fd) {
   priv->watch_err = 
     g_io_add_watch(priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, self);
 
-  salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_CONNECTED);
+  gibber_transport_set_state(GIBBER_TRANSPORT(self), GIBBER_TRANSPORT_CONNECTED);
 }
 
 
-SalutLLTransport *
-salut_ll_transport_new(void) {
-  return g_object_new(SALUT_TYPE_LL_TRANSPORT, NULL);
+GibberLLTransport *
+gibber_ll_transport_new(void) {
+  return g_object_new(GIBBER_TYPE_LL_TRANSPORT, NULL);
 }
 
 void
-salut_ll_transport_open_fd(SalutLLTransport *transport, int fd) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (transport);
+gibber_ll_transport_open_fd(GibberLLTransport *transport, int fd) {
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
 
   priv->incoming = TRUE;
   priv->fd = fd;
 
-  salut_transport_set_state(SALUT_TRANSPORT(transport), 
-                            SALUT_TRANSPORT_CONNECTING);
+  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
+                            GIBBER_TRANSPORT_CONNECTING);
   _setup_transport(transport, priv->fd);
 }
 
 gboolean
-salut_ll_transport_open_sockaddr(SalutLLTransport *transport,
+gibber_ll_transport_open_sockaddr(GibberLLTransport *transport,
                                   struct sockaddr_storage *addr,
                                   GError **error) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (transport);
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
   int fd;
@@ -312,8 +312,8 @@ salut_ll_transport_open_sockaddr(SalutLLTransport *transport,
 
   g_assert(!priv->incoming);
 
-  salut_transport_set_state(SALUT_TRANSPORT(transport), 
-                            SALUT_TRANSPORT_CONNECTING);
+  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
+                            GIBBER_TRANSPORT_CONNECTING);
   if (getnameinfo((struct sockaddr *)addr, sizeof(struct sockaddr_storage),
       host, NI_MAXHOST, port, NI_MAXSERV, 
       NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
@@ -326,9 +326,10 @@ salut_ll_transport_open_sockaddr(SalutLLTransport *transport,
   if (fd < 0) {
     if (error != NULL) {
       /* FIXME, don't abuse TELEPATHY_ERRORS */
-      *error = g_error_new(TELEPATHY_ERRORS, 
+      /* *error = g_error_new(TELEPATHY_ERRORS, 
                            InvalidArgument,
                            "Getting socket failed: %s", strerror(errno));
+      */
     }
     DEBUG("Getting socket failed: %s", strerror(errno));
     goto failed;
@@ -338,9 +339,10 @@ salut_ll_transport_open_sockaddr(SalutLLTransport *transport,
   if (ret < 0) {
     if (error != NULL) {
       /* FIXME, don't abuse TELEPATHY_ERRORS */
-      *error = g_error_new(TELEPATHY_ERRORS, 
+      /* *error = g_error_new(TELEPATHY_ERRORS, 
                            NotAvailable,
                            "Connecting failed: %s", strerror(errno));
+      */
     }
     DEBUG("Connecting failed: %s", strerror(errno));
     goto failed;
@@ -351,8 +353,8 @@ salut_ll_transport_open_sockaddr(SalutLLTransport *transport,
   return TRUE;
 
 failed:
-  salut_transport_set_state(SALUT_TRANSPORT(transport), 
-                            SALUT_TRANSPORT_DISCONNECTED);
+  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
+                            GIBBER_TRANSPORT_DISCONNECTED);
   if (fd >= 0) {
     close(fd);
   }
@@ -360,32 +362,32 @@ failed:
 }
 
 gboolean
-salut_ll_transport_send(SalutTransport *transport,
+gibber_ll_transport_send(GibberTransport *transport,
                         const guint8 *data, gsize size,
                          GError **error) {
-  _writeout(SALUT_LL_TRANSPORT(transport), data, size);    
+  _writeout(GIBBER_LL_TRANSPORT(transport), data, size);    
   return TRUE;
 }
 
 gboolean
-salut_ll_transport_is_incoming(SalutLLTransport *transport) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (transport);
+gibber_ll_transport_is_incoming(GibberLLTransport *transport) {
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
   return priv->incoming;
 }
 
 void
-salut_ll_transport_set_incoming(SalutLLTransport *transport, 
+gibber_ll_transport_set_incoming(GibberLLTransport *transport, 
                                  gboolean incoming) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (transport);
-  g_assert(SALUT_TRANSPORT(transport)->state == SALUT_TRANSPORT_DISCONNECTED);
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
+  g_assert(GIBBER_TRANSPORT(transport)->state == GIBBER_TRANSPORT_DISCONNECTED);
   priv->incoming = incoming;
 }
 
 gboolean
-salut_ll_transport_get_address(SalutLLTransport *transport, 
+gibber_ll_transport_get_address(GibberLLTransport *transport, 
                                 struct sockaddr_storage *addr,
                                 socklen_t *len) {
-  SalutLLTransportPrivate *priv = SALUT_LL_TRANSPORT_GET_PRIVATE (transport); 
+  GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport); 
   gboolean success = FALSE;
   struct sockaddr_in *s4 = (struct sockaddr_in*) addr;
   struct sockaddr_in6 *s6 = (struct sockaddr_in6*) addr;
@@ -402,9 +404,9 @@ salut_ll_transport_get_address(SalutLLTransport *transport,
 }
 
 void
-salut_ll_transport_disconnect(SalutTransport *transport) {
+gibber_ll_transport_disconnect(GibberTransport *transport) {
   DEBUG("Connection close requested");
-  _do_disconnect(SALUT_LL_TRANSPORT(transport));
+  _do_disconnect(GIBBER_LL_TRANSPORT(transport));
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * salut-xmpp-node.c - Code for Salut xmpp nodes
+ * gibber-xmpp-node.c - Code for Gibber xmpp nodes
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -21,7 +21,7 @@
 #include <glib.h>
 #include <string.h>
 
-#include "salut-xmpp-node.h"
+#include "gibber-xmpp-node.h"
 
 typedef struct {
   gchar *key;
@@ -34,9 +34,9 @@ typedef struct {
   GQuark ns;
 } Tuple;
 
-SalutXmppNode *
-salut_xmpp_node_new(const char *name) {
-  SalutXmppNode *result = g_slice_new0(SalutXmppNode);
+GibberXmppNode *
+gibber_xmpp_node_new(const char *name) {
+  GibberXmppNode *result = g_slice_new0(GibberXmppNode);
 
   result->name = g_strdup(name);
 
@@ -45,7 +45,7 @@ salut_xmpp_node_new(const char *name) {
 
 /* Frees the node and all it's children */
 void 
-salut_xmpp_node_free(SalutXmppNode *node) {
+gibber_xmpp_node_free(GibberXmppNode *node) {
   GSList *l;
 
   if (node == NULL)  {
@@ -56,7 +56,7 @@ salut_xmpp_node_free(SalutXmppNode *node) {
   g_free(node->content);
 
   for (l = node->children; l != NULL ; l = l->next) {
-    salut_xmpp_node_free((SalutXmppNode *)l->data);
+    gibber_xmpp_node_free((GibberXmppNode *)l->data);
   }
 
   for (l = node->attributes; l != NULL ; l = l->next) {
@@ -65,12 +65,12 @@ salut_xmpp_node_free(SalutXmppNode *node) {
     g_free(a->value);
     g_slice_free(Attribute, a);
   }
-  g_slice_free(SalutXmppNode, node);
+  g_slice_free(GibberXmppNode, node);
 }
 
 void 
-salut_xmpp_node_each_attribute(SalutXmppNode *node,
-                               salut_xmpp_node_each_attr_func func,
+gibber_xmpp_node_each_attribute(GibberXmppNode *node,
+                               gibber_xmpp_node_each_attr_func func,
                                gpointer user_data) {
   GSList *l;
   for (l = node->attributes; l != NULL ; l = l->next) {
@@ -82,12 +82,12 @@ salut_xmpp_node_each_attribute(SalutXmppNode *node,
 }
 
 void 
-salut_xmpp_node_each_child(SalutXmppNode *node,
-                           salut_xmpp_node_each_child_func func,
+gibber_xmpp_node_each_child(GibberXmppNode *node,
+                           gibber_xmpp_node_each_child_func func,
                            gpointer user_data) {
   GSList *l;
   for (l = node->children; l != NULL ; l = l->next) {
-    SalutXmppNode *n = (SalutXmppNode *)l->data;
+    GibberXmppNode *n = (GibberXmppNode *)l->data;
     if (!func(n, user_data)) {
       return;
     }
@@ -108,7 +108,7 @@ attribute_compare(gconstpointer a, gconstpointer b) {
 
 
 const gchar *
-salut_xmpp_node_get_attribute_ns(SalutXmppNode *node, 
+gibber_xmpp_node_get_attribute_ns(GibberXmppNode *node, 
                                  const gchar *key,
                                  const gchar *ns) {
   GSList *link;
@@ -123,26 +123,26 @@ salut_xmpp_node_get_attribute_ns(SalutXmppNode *node,
 }
 
 const gchar *
-salut_xmpp_node_get_attribute(SalutXmppNode *node, const gchar *key) {
-  return salut_xmpp_node_get_attribute_ns(node, key, NULL);
+gibber_xmpp_node_get_attribute(GibberXmppNode *node, const gchar *key) {
+  return gibber_xmpp_node_get_attribute_ns(node, key, NULL);
 }
 
 void  
-salut_xmpp_node_set_attribute(SalutXmppNode *node, 
+gibber_xmpp_node_set_attribute(GibberXmppNode *node, 
                               const gchar *key, const gchar *value) {
-  salut_xmpp_node_set_attribute_n_ns(node, key, value, strlen(value), NULL);
+  gibber_xmpp_node_set_attribute_n_ns(node, key, value, strlen(value), NULL);
 }
 
 void  
-salut_xmpp_node_set_attribute_ns(SalutXmppNode *node, 
+gibber_xmpp_node_set_attribute_ns(GibberXmppNode *node, 
                                  const gchar *key, 
                                  const gchar *value,
                                  const gchar *ns) {
-  salut_xmpp_node_set_attribute_n_ns(node, key, value, strlen(value), ns);
+  gibber_xmpp_node_set_attribute_n_ns(node, key, value, strlen(value), ns);
 }
 
 void  
-salut_xmpp_node_set_attribute_n_ns(SalutXmppNode *node, 
+gibber_xmpp_node_set_attribute_n_ns(GibberXmppNode *node, 
                                    const gchar *key, 
                                    const gchar *value,
                                    gsize value_size,
@@ -156,16 +156,16 @@ salut_xmpp_node_set_attribute_n_ns(SalutXmppNode *node,
 }
 
 void  
-salut_xmpp_node_set_attribute_n(SalutXmppNode *node, 
+gibber_xmpp_node_set_attribute_n(GibberXmppNode *node, 
                                 const gchar *key, 
                                 const gchar *value,
                                 gsize value_size) {
-  salut_xmpp_node_set_attribute_n_ns(node, key, value, value_size, NULL);
+  gibber_xmpp_node_set_attribute_n_ns(node, key, value, value_size, NULL);
 }
 
 static gint 
 node_compare_child(gconstpointer a, gconstpointer b) {
-  const SalutXmppNode *node = (const SalutXmppNode *)a;
+  const GibberXmppNode *node = (const GibberXmppNode *)a;
   Tuple *target = (Tuple *)b;
 
   if (target->ns != 0 && target->ns != node->ns) {
@@ -175,8 +175,8 @@ node_compare_child(gconstpointer a, gconstpointer b) {
   return strcmp(node->name, target->key);
 }
 
-SalutXmppNode *
-salut_xmpp_node_get_child_ns(SalutXmppNode *node, 
+GibberXmppNode *
+gibber_xmpp_node_get_child_ns(GibberXmppNode *node, 
                              const gchar *name,
                              const gchar *ns) {
   GSList *link;
@@ -187,92 +187,92 @@ salut_xmpp_node_get_child_ns(SalutXmppNode *node,
 
   link = g_slist_find_custom(node->children, &t, node_compare_child); 
 
-  return (link == NULL) ? NULL : (SalutXmppNode *)(link->data);
+  return (link == NULL) ? NULL : (GibberXmppNode *)(link->data);
 }
 
-SalutXmppNode *
-salut_xmpp_node_get_child(SalutXmppNode *node, const gchar *name) {
-  return salut_xmpp_node_get_child_ns(node, name, NULL);
+GibberXmppNode *
+gibber_xmpp_node_get_child(GibberXmppNode *node, const gchar *name) {
+  return gibber_xmpp_node_get_child_ns(node, name, NULL);
 }
 
 
-SalutXmppNode *
-salut_xmpp_node_add_child(SalutXmppNode *node, 
+GibberXmppNode *
+gibber_xmpp_node_add_child(GibberXmppNode *node, 
                           const gchar *name) {
-  return salut_xmpp_node_add_child_with_content_ns(node, name, NULL, NULL);
+  return gibber_xmpp_node_add_child_with_content_ns(node, name, NULL, NULL);
 }
 
-SalutXmppNode *
-salut_xmpp_node_add_child_ns(SalutXmppNode *node, 
+GibberXmppNode *
+gibber_xmpp_node_add_child_ns(GibberXmppNode *node, 
                              const gchar *name,
                              const gchar *ns) {
-  return salut_xmpp_node_add_child_with_content_ns(node, name, NULL, ns);
+  return gibber_xmpp_node_add_child_with_content_ns(node, name, NULL, ns);
 }
 
-SalutXmppNode *
-salut_xmpp_node_add_child_with_content(SalutXmppNode *node, 
+GibberXmppNode *
+gibber_xmpp_node_add_child_with_content(GibberXmppNode *node, 
                                        const gchar *name,
                                        const char *content) {
-  return salut_xmpp_node_add_child_with_content_ns(node, name, content, NULL);
+  return gibber_xmpp_node_add_child_with_content_ns(node, name, content, NULL);
 }
 
-SalutXmppNode *
-salut_xmpp_node_add_child_with_content_ns(SalutXmppNode *node, 
+GibberXmppNode *
+gibber_xmpp_node_add_child_with_content_ns(GibberXmppNode *node, 
                                           const gchar *name,
                                           const gchar *content,
                                           const gchar *ns) {
-  SalutXmppNode *result = salut_xmpp_node_new(name);
+  GibberXmppNode *result = gibber_xmpp_node_new(name);
 
-  salut_xmpp_node_set_content(result, content);
-  salut_xmpp_node_set_ns(result, ns);
+  gibber_xmpp_node_set_content(result, content);
+  gibber_xmpp_node_set_ns(result, ns);
 
   node->children = g_slist_append(node->children, result);
   return result;
 }
 
 void 
-salut_xmpp_node_set_ns(SalutXmppNode *node, const gchar *ns) {
+gibber_xmpp_node_set_ns(GibberXmppNode *node, const gchar *ns) {
   node->ns = (ns != NULL) ? g_quark_from_string(ns) : 0;
 }
 
 const gchar *
-salut_xmpp_node_get_ns(SalutXmppNode *node) {
+gibber_xmpp_node_get_ns(GibberXmppNode *node) {
   return g_quark_to_string(node->ns);
 }
 
 const gchar *
-salut_xmpp_node_get_language(SalutXmppNode *node) {
+gibber_xmpp_node_get_language(GibberXmppNode *node) {
   return node->language;
 }
 
 void 
-salut_xmpp_node_set_language_n(SalutXmppNode *node, 
+gibber_xmpp_node_set_language_n(GibberXmppNode *node, 
                                const gchar *lang, gsize lang_size) {
   g_free(node->language);
   node->language = g_strndup(lang, lang_size);
 }
 
 void 
-salut_xmpp_node_set_language(SalutXmppNode *node, const gchar *lang) {
-  salut_xmpp_node_set_language_n(node, lang, strlen(lang));
+gibber_xmpp_node_set_language(GibberXmppNode *node, const gchar *lang) {
+  gibber_xmpp_node_set_language_n(node, lang, strlen(lang));
 }
 
 
 void 
-salut_xmpp_node_set_content(SalutXmppNode *node, 
+gibber_xmpp_node_set_content(GibberXmppNode *node, 
                             const gchar *content) {
   g_free(node->content);
   node->content = g_strdup(content); 
 }
 
-void salut_xmpp_node_append_content(SalutXmppNode *node, 
+void gibber_xmpp_node_append_content(GibberXmppNode *node, 
                                     const gchar *content) {
   gchar *t = node->content;
   node->content = g_strconcat(t, content, NULL);
   g_free(t);
 }
 
-void salut_xmpp_node_append_content_n(SalutXmppNode *node, 
+void gibber_xmpp_node_append_content_n(GibberXmppNode *node, 
                                       const gchar *content,
                                        gsize size) {
   gsize csize = node->content != NULL ? strlen(node->content) : 0; 

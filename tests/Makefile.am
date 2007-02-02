@@ -7,13 +7,18 @@ test_xmpp_connection_SOURCES = \
     test-transport.h
 
 test_xmpp_connection_LDADD = \
-    $(top_builddir)/src/libsalut-convenience.la
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(AM_LDFLAGS)
 
-AM_CFLAGS = $(ERROR_CFLAGS) \
-    @DBUS_CFLAGS@ @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @AVAHI_CFLAGS@ \
+test_xmpp_connection_CFLAGS = \
+    @LIBXML2_CFLAGS@          \
+    $(AM_CFLAGS)
+
+AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib \
     -I $(top_srcdir)/src -I $(top_builddir)/src
-AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
+
+AM_LDFLAGS = @GLIB_LIBS@
 
 TESTS = run-test.sh
 

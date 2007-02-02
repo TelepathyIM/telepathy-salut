@@ -23,7 +23,7 @@
 
 #include <glib-object.h>
 
-#include <salut-transport.h>
+#include <gibber/gibber-transport.h>
 
 G_BEGIN_DECLS
 
@@ -31,11 +31,11 @@ typedef struct _TestTransport TestTransport;
 typedef struct _TestTransportClass TestTransportClass;
 
 struct _TestTransportClass {
-    SalutTransportClass parent_class;
+    GibberTransportClass parent_class;
 };
 
 struct _TestTransport {
-    SalutTransport parent;
+    GibberTransport parent;
 };
 
 GType test_transport_get_type(void);
@@ -54,7 +54,7 @@ GType test_transport_get_type(void);
 #define TEST_TRANSPORT_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), TEST_TYPE_TRANSPORT, TestTransportClass))
 
-typedef gboolean (*test_transport_send_hook)(SalutTransport *transport,
+typedef gboolean (*test_transport_send_hook)(GibberTransport *transport,
                                              const guint8 *data,
                                              gsize length,
                                              GError **error);

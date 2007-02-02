@@ -657,7 +657,7 @@ _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
 }
 
 static void
-_self_new_connection_cb(SalutSelf *s, SalutLLTransport *transport, 
+_self_new_connection_cb(SalutSelf *s, GibberLLTransport *transport, 
                         gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);

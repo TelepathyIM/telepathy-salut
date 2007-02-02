@@ -2,8 +2,8 @@
 #include <unistd.h>
 #include <glib.h>
 
-#include <salut-xmpp-connection.h>
-#include <salut-transport.h>
+#include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-transport.h>
 #include "test-transport.h"
 
 #define BUFSIZE 10
@@ -12,7 +12,7 @@ FILE *treefile = NULL;
 FILE *xmlfile = NULL;
 
 gboolean
-send_hook(SalutTransport *transport, const guint8 *data, 
+send_hook(GibberTransport *transport, const guint8 *data, 
           gsize length, GError **error) {
   /* Nothing for now */
   fwrite(data, 1, length, xmlfile);
@@ -20,23 +20,23 @@ send_hook(SalutTransport *transport, const guint8 *data,
 }
 
 void
-parse_error(SalutXmppConnection *connection, gpointer user_data) {
+parse_error(GibberXmppConnection *connection, gpointer user_data) {
   fprintf(treefile, "PARSE ERROR\n");
 }
 
 void
-stream_opened(SalutXmppConnection *connection, 
+stream_opened(GibberXmppConnection *connection, 
               const gchar *to, const gchar *from, const gchar *version,
               gpointer user_data) {
   fprintf(treefile, "STREAM OPENED to=%s from=%s version=%s\n", 
            to, from, version);
-  salut_xmpp_connection_open(connection, to, from, version);
+  gibber_xmpp_connection_open(connection, to, from, version);
 }
 
 void
-stream_closed(SalutXmppConnection *connection, gpointer user_data) {
+stream_closed(GibberXmppConnection *connection, gpointer user_data) {
   fprintf(treefile, "STREAM CLOSED\n");
-  salut_xmpp_connection_close(connection);
+  gibber_xmpp_connection_close(connection);
 }
 
 gboolean 
@@ -48,40 +48,40 @@ print_attribute(const gchar *key, const gchar *value, const gchar *ns,
   return TRUE;
 }
 
-void print_node(SalutXmppNode *node, gint ident);
+void print_node(GibberXmppNode *node, gint ident);
 
 gboolean 
-print_child(SalutXmppNode *node, gpointer user_data) {
+print_child(GibberXmppNode *node, gpointer user_data) {
   print_node(node, GPOINTER_TO_INT(user_data));
   return TRUE;
 }
 
 void 
-print_node(SalutXmppNode *node, gint ident) {
+print_node(GibberXmppNode *node, gint ident) {
   fprintf(treefile, "%*s`-+-- Name: %s (ns: %s)\n", ident - 1, " ", 
-                                    node->name, salut_xmpp_node_get_ns(node)); 
-  salut_xmpp_node_each_attribute(node, print_attribute, GINT_TO_POINTER(ident));
+                                    node->name, gibber_xmpp_node_get_ns(node)); 
+  gibber_xmpp_node_each_attribute(node, print_attribute, GINT_TO_POINTER(ident));
   if (node->content)  
     fprintf(treefile, "%*s |-- Content: %s\n", ident, " ", node->content);
-  if (salut_xmpp_node_get_language(node)) 
+  if (gibber_xmpp_node_get_language(node)) 
     fprintf(treefile, "%*s |-- Language: %s\n", ident, " ", 
-      salut_xmpp_node_get_language(node));
+      gibber_xmpp_node_get_language(node));
 
-  salut_xmpp_node_each_child(node, print_child, GINT_TO_POINTER(ident + 2));
+  gibber_xmpp_node_each_child(node, print_child, GINT_TO_POINTER(ident + 2));
 }
 
 void
-received_stanza(SalutXmppConnection *connection, 
-                SalutXmppStanza *stanza,
+received_stanza(GibberXmppConnection *connection, 
+                GibberXmppStanza *stanza,
                 gpointer user_data) {
   fprintf(treefile, "-|\n");
   print_node(stanza->node, 2);
-  g_assert(salut_xmpp_connection_send(connection, stanza, NULL));
+  g_assert(gibber_xmpp_connection_send(connection, stanza, NULL));
 }
 
 int
 main(int argc, char **argv) {
-  SalutXmppConnection *connection;
+  GibberXmppConnection *connection;
   TestTransport *transport;
   FILE *file;
   int ret;
@@ -91,7 +91,7 @@ main(int argc, char **argv) {
   g_type_init();
 
   transport = test_transport_new(send_hook);
-  connection = salut_xmpp_connection_new(SALUT_TRANSPORT(transport));
+  connection = gibber_xmpp_connection_new(GIBBER_TRANSPORT(transport));
 
   g_signal_connect(connection, "parse-error",
                    G_CALLBACK(parse_error), NULL);

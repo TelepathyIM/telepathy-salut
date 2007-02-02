@@ -25,13 +25,13 @@
 #include "test-transport.h"
 
 gboolean
-test_transport_send(SalutTransport *transport, const guint8 *data, gsize size,
+test_transport_send(GibberTransport *transport, const guint8 *data, gsize size,
                                                 GError **error);
 void
-test_transport_disconnect(SalutTransport *transport);
+test_transport_disconnect(GibberTransport *transport);
 
 
-G_DEFINE_TYPE(TestTransport, test_transport, SALUT_TYPE_TRANSPORT)
+G_DEFINE_TYPE(TestTransport, test_transport, GIBBER_TYPE_TRANSPORT)
 
 /* private structure */
 typedef struct _TestTransportPrivate TestTransportPrivate;
@@ -60,8 +60,8 @@ static void
 test_transport_class_init (TestTransportClass *test_transport_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (test_transport_class);
-  SalutTransportClass *transport_class = 
-    SALUT_TRANSPORT_CLASS(test_transport_class);
+  GibberTransportClass *transport_class = 
+    GIBBER_TRANSPORT_CLASS(test_transport_class);
 
   g_type_class_add_private (test_transport_class, sizeof (TestTransportPrivate));
 
@@ -103,7 +103,7 @@ test_transport_finalize (GObject *object)
 
 
 gboolean
-test_transport_send(SalutTransport *transport, 
+test_transport_send(GibberTransport *transport, 
                     const guint8 *data, gsize size, GError **error) {
   TestTransport *self = TEST_TRANSPORT (transport);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
@@ -111,9 +111,9 @@ test_transport_send(SalutTransport *transport,
 }
 
 void
-test_transport_disconnect(SalutTransport *transport) {
-  salut_transport_set_state(SALUT_TRANSPORT(transport), 
-                            SALUT_TRANSPORT_DISCONNECTED);
+test_transport_disconnect(GibberTransport *transport) {
+  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
+                            GIBBER_TRANSPORT_DISCONNECTED);
 }
 
 
@@ -131,5 +131,5 @@ test_transport_new(test_transport_send_hook send) {
 
 void 
 test_transport_write(TestTransport *transport, const guint8 *buf, gsize size) {
-  salut_transport_received_data(SALUT_TRANSPORT(transport), buf, size);
+  gibber_transport_received_data(GIBBER_TRANSPORT(transport), buf, size);
 }

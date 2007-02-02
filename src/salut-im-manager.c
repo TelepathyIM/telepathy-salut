@@ -26,8 +26,8 @@
 #include "salut-im-manager-signals-marshal.h"
 #include "salut-contact.h"
 
-#include "salut-linklocal-transport.h"
-#include "salut-xmpp-connection.h"
+#include <gibber/gibber-linklocal-transport.h>
+#include <gibber/gibber-xmpp-connection.h>
 
 #include "telepathy-errors.h"
 #include "telepathy-interfaces.h"
@@ -352,9 +352,9 @@ salut_im_manager_get_channel_for_handle(SalutImManager *mgr,
 
 static void
 found_contact_for_connection(SalutImManager *mgr, 
-                             SalutXmppConnection *connection,
+                             GibberXmppConnection *connection,
                              SalutContact *contact,
-                             SalutXmppStanza *stanza) {
+                             GibberXmppStanza *stanza) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   Handle handle;
   SalutImChannel *chan;
@@ -373,25 +373,25 @@ found_contact_for_connection(SalutImManager *mgr,
 
 
 static void
-pending_connection_stream_closed_cb(SalutXmppConnection *connection, 
+pending_connection_stream_closed_cb(GibberXmppConnection *connection, 
                                     gpointer userdata) {
   SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   DEBUG("Pending connection stream closed");
-  salut_xmpp_connection_close(connection);
-  salut_transport_disconnect(connection->transport);
+  gibber_xmpp_connection_close(connection);
+  gibber_transport_disconnect(connection->transport);
   g_hash_table_remove(priv->pending_connections, connection);
 }
 
 static gboolean
 has_transport(gpointer key, gpointer value, gpointer user_data) {
-  SalutXmppConnection *conn = SALUT_XMPP_CONNECTION(key);
+  GibberXmppConnection *conn = GIBBER_XMPP_CONNECTION(key);
 
   return conn->transport == user_data;
 }
 
 static void
-pending_connection_transport_disconnected_cb(SalutLLTransport *transport,
+pending_connection_transport_disconnected_cb(GibberLLTransport *transport,
                                              gpointer userdata) {
   SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
@@ -401,31 +401,31 @@ pending_connection_transport_disconnected_cb(SalutLLTransport *transport,
 }
 
 static void
-connection_parse_error_cb(SalutXmppConnection *conn, gpointer userdata) {
+connection_parse_error_cb(GibberXmppConnection *conn, gpointer userdata) {
   DEBUG("Parse error on xml stream, closing connection");
   /* Just close the transport, the disconnected callback will do the cleanup */
-  salut_transport_disconnect(conn->transport);
+  gibber_transport_disconnect(conn->transport);
 }
 
 static void
-pending_connection_stream_opened_cb(SalutXmppConnection *conn,
+pending_connection_stream_opened_cb(GibberXmppConnection *conn,
                                     gchar *to, gchar *from,
                                     gpointer user_data) {
   /* Just open the stream, according to the xep there should be no to and from
    * */
-  salut_xmpp_connection_open(conn, NULL, NULL, NULL);
+  gibber_xmpp_connection_open(conn, NULL, NULL, NULL);
 }
 
 static void
-pending_connection_stanza_received_cb(SalutXmppConnection *conn, 
-                                      SalutXmppStanza *stanza,
+pending_connection_stanza_received_cb(GibberXmppConnection *conn, 
+                                      GibberXmppStanza *stanza,
                                       gpointer userdata) {
   SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
 
   const char *from;
   GList *t;
-  from = salut_xmpp_node_get_attribute(stanza->node, "from");
+  from = gibber_xmpp_node_get_attribute(stanza->node, "from");
 
   if (from == NULL) {
     DEBUG("No from in message from pending connection");
@@ -444,7 +444,7 @@ pending_connection_stanza_received_cb(SalutXmppConnection *conn,
                                        0, 0, NULL, NULL, mgr);
       g_signal_handlers_disconnect_matched(conn->transport, G_SIGNAL_MATCH_DATA,
                                        0, 0, NULL, NULL, mgr);
-      if (!salut_ll_transport_get_address(SALUT_LL_TRANSPORT(conn->transport), 
+      if (!gibber_ll_transport_get_address(GIBBER_LL_TRANSPORT(conn->transport), 
                                            &addr, &size)) {
         DEBUG("Contact no longer alive");
         goto error;
@@ -461,22 +461,22 @@ pending_connection_stanza_received_cb(SalutXmppConnection *conn,
   }
 
 error:
-  salut_xmpp_connection_close(conn);
-  salut_transport_disconnect(conn->transport);
+  gibber_xmpp_connection_close(conn);
+  gibber_transport_disconnect(conn->transport);
   g_hash_table_remove(priv->pending_connections, conn);
 }
 
 void
 salut_im_manager_handle_connection(SalutImManager *mgr,
-                                        SalutLLTransport *transport) {
+                                        GibberLLTransport *transport) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
-  SalutXmppConnection *connection = NULL;
+  GibberXmppConnection *connection = NULL;
   GList *contacts;
   struct sockaddr_storage addr;
   socklen_t size = sizeof(struct sockaddr_storage);
 
   DEBUG("Handling new connection");
-  if (!salut_ll_transport_get_address(transport, &addr, &size)) {
+  if (!gibber_ll_transport_get_address(transport, &addr, &size)) {
     goto notfound;
   }
 
@@ -488,7 +488,7 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
   }
 
   /* Transport to somebody we know about, connect the xmpp connection */
-  connection = salut_xmpp_connection_new(SALUT_TRANSPORT(transport));
+  connection = gibber_xmpp_connection_new(GIBBER_TRANSPORT(transport));
 
   /* Unref the transport, the xmpp connection own it now */
   g_object_unref(transport);
@@ -520,6 +520,6 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
 
 notfound:
   DEBUG("Couldn't find a contact for the connection");
-  salut_transport_disconnect(SALUT_TRANSPORT(transport));
+  gibber_transport_disconnect(GIBBER_TRANSPORT(transport));
   g_object_unref(transport);
 }

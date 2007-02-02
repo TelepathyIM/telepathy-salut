@@ -1,5 +1,5 @@
 /*
- * salut-xmpp-connection.c - Source for SalutXmppConnection
+ * gibber-xmpp-connection.c - Source for GibberXmppConnection
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -24,22 +24,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "salut-xmpp-connection.h"
-#include "salut-xmpp-connection-signals-marshal.h"
+#include "gibber-xmpp-connection.h"
+#include "gibber-xmpp-connection-signals-marshal.h"
 
-#include "salut-xmpp-reader.h"
-#include "salut-xmpp-writer.h"
-#include "salut-transport.h"
-#include "salut-xmpp-stanza.h"
+#include "gibber-xmpp-reader.h"
+#include "gibber-xmpp-writer.h"
+#include "gibber-transport.h"
+#include "gibber-xmpp-stanza.h"
 
 #define XMPP_STREAM_NAMESPACE "http://etherx.jabber.org/streams"
 
-static void _xmpp_connection_received_data(SalutTransport *transport,
+static void _xmpp_connection_received_data(GibberTransport *transport,
                                            const guint8 *data,
                                            gsize length,
                                            gpointer user_data);
 
-G_DEFINE_TYPE(SalutXmppConnection, salut_xmpp_connection, G_TYPE_OBJECT)
+G_DEFINE_TYPE(GibberXmppConnection, gibber_xmpp_connection, G_TYPE_OBJECT)
 
 /* signal enum */
 enum
@@ -54,38 +54,38 @@ enum
 static guint signals[LAST_SIGNAL] = {0};
 
 static void 
-_reader_stream_opened_cb(SalutXmppReader *reader, 
+_reader_stream_opened_cb(GibberXmppReader *reader, 
                          const gchar *to, const gchar *from,
                          const gchar *version,
                          gpointer user_data);
 
 static void 
-_reader_stream_closed_cb(SalutXmppReader *reader, gpointer user_data);
+_reader_stream_closed_cb(GibberXmppReader *reader, gpointer user_data);
 
-static void _reader_received_stanza_cb(SalutXmppReader *reader, 
-                                       SalutXmppStanza *stanza,
+static void _reader_received_stanza_cb(GibberXmppReader *reader, 
+                                       GibberXmppStanza *stanza,
                                        gpointer user_data);
 
 /* private structure */
-typedef struct _SalutXmppConnectionPrivate SalutXmppConnectionPrivate;
+typedef struct _GibberXmppConnectionPrivate GibberXmppConnectionPrivate;
 
-struct _SalutXmppConnectionPrivate
+struct _GibberXmppConnectionPrivate
 {
-  SalutXmppReader *reader;
-  SalutXmppWriter *writer;
+  GibberXmppReader *reader;
+  GibberXmppWriter *writer;
   gboolean dispose_has_run;
 };
 
-#define SALUT_XMPP_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_XMPP_CONNECTION, SalutXmppConnectionPrivate))
+#define GIBBER_XMPP_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_CONNECTION, GibberXmppConnectionPrivate))
 
 static void
-salut_xmpp_connection_init (SalutXmppConnection *obj) {
-  SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (obj);
+gibber_xmpp_connection_init (GibberXmppConnection *obj) {
+  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (obj);
   obj->transport = NULL;
 
-  priv->writer = salut_xmpp_writer_new();
+  priv->writer = gibber_xmpp_writer_new();
 
-  priv->reader = salut_xmpp_reader_new();
+  priv->reader = gibber_xmpp_reader_new();
   g_signal_connect(priv->reader, "stream-opened", 
                     G_CALLBACK(_reader_stream_opened_cb), obj);
   g_signal_connect(priv->reader, "received-stanza", 
@@ -94,30 +94,30 @@ salut_xmpp_connection_init (SalutXmppConnection *obj) {
                     G_CALLBACK(_reader_stream_closed_cb), obj);
 }
 
-static void salut_xmpp_connection_dispose (GObject *object);
-static void salut_xmpp_connection_finalize (GObject *object);
+static void gibber_xmpp_connection_dispose (GObject *object);
+static void gibber_xmpp_connection_finalize (GObject *object);
 
 static void
-salut_xmpp_connection_class_init (SalutXmppConnectionClass *salut_xmpp_connection_class)
+gibber_xmpp_connection_class_init (GibberXmppConnectionClass *gibber_xmpp_connection_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_xmpp_connection_class);
+  GObjectClass *object_class = G_OBJECT_CLASS (gibber_xmpp_connection_class);
 
-  g_type_class_add_private (salut_xmpp_connection_class, sizeof (SalutXmppConnectionPrivate));
+  g_type_class_add_private (gibber_xmpp_connection_class, sizeof (GibberXmppConnectionPrivate));
 
-  object_class->dispose = salut_xmpp_connection_dispose;
-  object_class->finalize = salut_xmpp_connection_finalize;
+  object_class->dispose = gibber_xmpp_connection_dispose;
+  object_class->finalize = gibber_xmpp_connection_finalize;
 
   signals[STREAM_OPENED] = 
     g_signal_new("stream-opened", 
-                 G_OBJECT_CLASS_TYPE(salut_xmpp_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 salut_xmpp_connection_marshal_VOID__STRING_STRING_STRING,
+                 gibber_xmpp_connection_marshal_VOID__STRING_STRING_STRING,
                  G_TYPE_NONE, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
   signals[STREAM_CLOSED] = 
     g_signal_new("stream-closed", 
-                 G_OBJECT_CLASS_TYPE(salut_xmpp_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
@@ -125,15 +125,15 @@ salut_xmpp_connection_class_init (SalutXmppConnectionClass *salut_xmpp_connectio
                  G_TYPE_NONE, 0);
   signals[RECEIVED_STANZA] = 
     g_signal_new("received-stanza", 
-                 G_OBJECT_CLASS_TYPE(salut_xmpp_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
                  g_cclosure_marshal_VOID__OBJECT,
-                 G_TYPE_NONE, 1, SALUT_TYPE_XMPP_STANZA);
+                 G_TYPE_NONE, 1, GIBBER_TYPE_XMPP_STANZA);
   signals[PARSE_ERROR] = 
     g_signal_new("parse-error", 
-                 G_OBJECT_CLASS_TYPE(salut_xmpp_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
@@ -142,10 +142,10 @@ salut_xmpp_connection_class_init (SalutXmppConnectionClass *salut_xmpp_connectio
 }
 
 void
-salut_xmpp_connection_dispose (GObject *object)
+gibber_xmpp_connection_dispose (GObject *object)
 {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (object);
-  SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
+  GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (object);
+  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
@@ -168,21 +168,21 @@ salut_xmpp_connection_dispose (GObject *object)
 
   /* release any references held by the object here */
 
-  if (G_OBJECT_CLASS (salut_xmpp_connection_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_xmpp_connection_parent_class)->dispose (object);
+  if (G_OBJECT_CLASS (gibber_xmpp_connection_parent_class)->dispose)
+    G_OBJECT_CLASS (gibber_xmpp_connection_parent_class)->dispose (object);
 }
 
 void
-salut_xmpp_connection_finalize (GObject *object) {
-  G_OBJECT_CLASS (salut_xmpp_connection_parent_class)->finalize (object);
+gibber_xmpp_connection_finalize (GObject *object) {
+  G_OBJECT_CLASS (gibber_xmpp_connection_parent_class)->finalize (object);
 }
 
 
-SalutXmppConnection *
-salut_xmpp_connection_new(SalutTransport *transport)  {
-  SalutXmppConnection * result;
+GibberXmppConnection *
+gibber_xmpp_connection_new(GibberTransport *transport)  {
+  GibberXmppConnection * result;
 
-  result = g_object_new(SALUT_TYPE_XMPP_CONNECTION, NULL);
+  result = g_object_new(GIBBER_TYPE_XMPP_CONNECTION, NULL);
   result->transport = g_object_ref(transport);
 
   g_signal_connect(transport, "received",
@@ -191,52 +191,52 @@ salut_xmpp_connection_new(SalutTransport *transport)  {
 }
 
 void 
-salut_xmpp_connection_open(SalutXmppConnection *connection,
+gibber_xmpp_connection_open(GibberXmppConnection *connection,
                             const gchar *to, const gchar *from,
                             const gchar *version) {
-  SalutXmppConnectionPrivate *priv = 
-    SALUT_XMPP_CONNECTION_GET_PRIVATE (connection);
+  GibberXmppConnectionPrivate *priv = 
+    GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
 
-  salut_xmpp_writer_stream_open(priv->writer, to, from, 
+  gibber_xmpp_writer_stream_open(priv->writer, to, from, 
                                   version, &data, &length);
-  salut_transport_send(connection->transport, data, length, NULL);
+  gibber_transport_send(connection->transport, data, length, NULL);
 }
 
 void 
-salut_xmpp_connection_close(SalutXmppConnection *connection) {
-  SalutXmppConnectionPrivate *priv = 
-    SALUT_XMPP_CONNECTION_GET_PRIVATE (connection);
+gibber_xmpp_connection_close(GibberXmppConnection *connection) {
+  GibberXmppConnectionPrivate *priv = 
+    GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
 
-  salut_xmpp_writer_stream_close(priv->writer, &data, &length);
-  salut_transport_send(connection->transport, data, length, NULL);
+  gibber_xmpp_writer_stream_close(priv->writer, &data, &length);
+  gibber_transport_send(connection->transport, data, length, NULL);
 }
 
 gboolean
-salut_xmpp_connection_send(SalutXmppConnection *connection, 
-                                SalutXmppStanza *stanza, GError **error) {
-  SalutXmppConnectionPrivate *priv = 
-    SALUT_XMPP_CONNECTION_GET_PRIVATE (connection);
+gibber_xmpp_connection_send(GibberXmppConnection *connection, 
+                                GibberXmppStanza *stanza, GError **error) {
+  GibberXmppConnectionPrivate *priv = 
+    GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
 
-  if (!salut_xmpp_writer_write_stanza(priv->writer, stanza,
+  if (!gibber_xmpp_writer_write_stanza(priv->writer, stanza,
                                       &data, &length, error)) {
     return FALSE;
   }
 
-  return salut_transport_send(connection->transport, data, length, error);
+  return gibber_transport_send(connection->transport, data, length, error);
 }
 
 static void 
-_xmpp_connection_received_data(SalutTransport *transport,
+_xmpp_connection_received_data(GibberTransport *transport,
                                const guint8 *data, gsize length,
                                gpointer user_data) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
-  SalutXmppConnectionPrivate *priv = SALUT_XMPP_CONNECTION_GET_PRIVATE (self);
+  GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
+  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
   gboolean ret;
   GError *error = NULL;
 
@@ -244,7 +244,7 @@ _xmpp_connection_received_data(SalutTransport *transport,
 
   /* Ensure we're not disposed inside while running the reader is busy */
   g_object_ref(self);
-  ret = salut_xmpp_reader_push(priv->reader, data, length, &error);
+  ret = gibber_xmpp_reader_push(priv->reader, data, length, &error);
   if (!ret) {
     g_signal_emit(self, signals[PARSE_ERROR], 0); 
   }
@@ -252,24 +252,24 @@ _xmpp_connection_received_data(SalutTransport *transport,
 }
 
 static void 
-_reader_stream_opened_cb(SalutXmppReader *reader, 
+_reader_stream_opened_cb(GibberXmppReader *reader, 
                          const gchar *to, const gchar *from, 
                          const gchar *version,
                          gpointer user_data) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
+  GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
   g_signal_emit(self, signals[STREAM_OPENED], 0, to, from, version);
 }
 
 static void 
-_reader_stream_closed_cb(SalutXmppReader *reader, 
+_reader_stream_closed_cb(GibberXmppReader *reader, 
                          gpointer user_data) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
+  GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
   g_signal_emit(self, signals[STREAM_CLOSED], 0);
 }
 
 static void 
-_reader_received_stanza_cb(SalutXmppReader *reader, SalutXmppStanza *stanza,
+_reader_received_stanza_cb(GibberXmppReader *reader, GibberXmppStanza *stanza,
                  gpointer user_data) {
-  SalutXmppConnection *self = SALUT_XMPP_CONNECTION (user_data);
+  GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
   g_signal_emit(self, signals[RECEIVED_STANZA], 0, stanza);
 }

@@ -513,7 +513,7 @@ gboolean text_mixin_send (GObject *obj, guint type,
                           GError **error)
 {
   TextMixinClass *mixin_cls = TEXT_MIXIN_CLASS (G_OBJECT_GET_CLASS (obj));
-  SalutXmppStanza *stanza;
+  GibberXmppStanza *stanza;
   gboolean result;
 
   if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE) {
@@ -524,31 +524,31 @@ gboolean text_mixin_send (GObject *obj, guint type,
 
     return FALSE;
   }
-  stanza = salut_xmpp_stanza_new("message");
+  stanza = gibber_xmpp_stanza_new("message");
 
   switch (type) {
     case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
     case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-      salut_xmpp_node_set_attribute(stanza->node, "type", "chat");
+      gibber_xmpp_node_set_attribute(stanza->node, "type", "chat");
       break;
     case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-      salut_xmpp_node_set_attribute(stanza->node, "type", "normal");
+      gibber_xmpp_node_set_attribute(stanza->node, "type", "normal");
       break;
   }
 
-  salut_xmpp_node_set_attribute(stanza->node, "from", from);
-  salut_xmpp_node_set_attribute(stanza->node, "to", to);
+  gibber_xmpp_node_set_attribute(stanza->node, "from", from);
+  gibber_xmpp_node_set_attribute(stanza->node, "to", to);
 
   if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION)
     {
       gchar *tmp;
       tmp = g_strconcat ("/me ", text, NULL);
-      salut_xmpp_node_add_child_with_content(stanza->node, "body", tmp);
+      gibber_xmpp_node_add_child_with_content(stanza->node, "body", tmp);
       g_free (tmp);
     }
   else
     {
-      salut_xmpp_node_add_child_with_content(stanza->node, "body", text);
+      gibber_xmpp_node_add_child_with_content(stanza->node, "body", text);
     }
 
   result = mixin_cls->send(obj, type, text, stanza, error);
@@ -607,21 +607,21 @@ text_mixin_clear (GObject *obj)
 }
 
 gboolean
-text_mixin_parse_incoming_message (SalutXmppStanza *stanza,
+text_mixin_parse_incoming_message (GibberXmppStanza *stanza,
                         const gchar **from,
                         TpChannelTextMessageType *msgtype,
                         const gchar **body,
                         const gchar **body_offset)
 {
   const gchar *type;
-  SalutXmppNode *node;
+  GibberXmppNode *node;
 
-  *from = salut_xmpp_node_get_attribute (stanza->node, "from");
-  type = salut_xmpp_node_get_attribute (stanza->node, "type");
+  *from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  type = gibber_xmpp_node_get_attribute (stanza->node, "type");
   /*
    * Parse body if it exists.
    */
-  node = salut_xmpp_node_get_child (stanza->node, "body");
+  node = gibber_xmpp_node_get_child (stanza->node, "body");
 
   if (node)
     {

@@ -33,9 +33,9 @@
 #include "salut-im-channel-signals-marshal.h"
 #include "salut-im-channel-glue.h"
 
-#include "salut-linklocal-transport.h"
-#include "salut-xmpp-connection.h"
-#include "salut-xmpp-stanza.h"
+#include <gibber/gibber-linklocal-transport.h>
+#include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-xmpp-stanza.h>
 
 #include "salut-connection.h"
 #include "salut-contact.h"
@@ -90,7 +90,7 @@ struct _SalutImChannelPrivate
   Handle handle;
   SalutContact *contact;
   SalutConnection *connection;
-  SalutXmppConnection *xmpp_connection;
+  GibberXmppConnection *xmpp_connection;
   /* Outcoming and incoming message queues */
   GQueue *out_queue;
   ChannelState state;
@@ -107,12 +107,12 @@ struct _SalutImChannelMessage {
   guint time;
   guint type;
   gchar *text;
-  SalutXmppStanza *stanza;
+  GibberXmppStanza *stanza;
 };
 
 static SalutImChannelMessage *
 salut_im_channel_message_new(guint type, const gchar *text, 
-                             SalutXmppStanza *stanza) {
+                             GibberXmppStanza *stanza) {
   SalutImChannelMessage *msg;
   msg = g_new0(SalutImChannelMessage, 1);
   msg->type = type;
@@ -126,7 +126,7 @@ salut_im_channel_message_new(guint type, const gchar *text,
 }
 
 static SalutImChannelMessage *
-salut_im_channel_message_new_from_stanza(SalutXmppStanza *stanza) {
+salut_im_channel_message_new_from_stanza(GibberXmppStanza *stanza) {
   SalutImChannelMessage *msg;
   g_assert(stanza != NULL);
 
@@ -151,7 +151,7 @@ salut_im_channel_message_free(SalutImChannelMessage *message) {
 }
 
 static gboolean _send_message(GObject *object, guint type, const gchar *text, 
-                              SalutXmppStanza *stanza, GError **error);
+                              GibberXmppStanza *stanza, GError **error);
 static void
 salut_im_channel_init (SalutImChannel *obj)
 {
@@ -324,7 +324,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
                   0,
                   g_signal_accumulator_true_handled, NULL,
                   salut_im_channel_marshal_BOOLEAN__OBJECT,
-                  G_TYPE_BOOLEAN, 1, SALUT_TYPE_XMPP_STANZA);
+                  G_TYPE_BOOLEAN, 1, GIBBER_TYPE_XMPP_STANZA);
 
 
   signals[CLOSED] =
@@ -394,10 +394,10 @@ salut_im_channel_finalize (GObject *object)
 
 static void
 _sendout_message(SalutImChannel * self, guint timestamp,
-                 guint type,  const gchar *text, SalutXmppStanza *stanza) {
+                 guint type,  const gchar *text, GibberXmppStanza *stanza) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   
-  if (salut_xmpp_connection_send(priv->xmpp_connection, stanza, NULL)) {
+  if (gibber_xmpp_connection_send(priv->xmpp_connection, stanza, NULL)) {
     text_mixin_emit_sent(G_OBJECT(self), timestamp, type, text);
   } else  {
     text_mixin_emit_send_error(G_OBJECT(self), 
@@ -413,7 +413,7 @@ _flush_queue(SalutImChannel *self) {
   /*Connected!, flusch the queue ! */
   while ((msg = g_queue_pop_head(priv->out_queue)) != NULL) {
     if (msg->text == NULL) {
-      if (!salut_xmpp_connection_send(priv->xmpp_connection, 
+      if (!gibber_xmpp_connection_send(priv->xmpp_connection, 
                                       msg->stanza, NULL)) {
         g_warning("Sending message failed");
       }
@@ -442,7 +442,7 @@ _error_flush_queue(SalutImChannel *self) {
 
 void
 salut_im_channel_received_stanza(SalutImChannel *self, 
-                                     SalutXmppStanza *stanza) {
+                                     GibberXmppStanza *stanza) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   gboolean handled = FALSE;
   const gchar *from;
@@ -476,15 +476,15 @@ salut_im_channel_received_stanza(SalutImChannel *self,
 }
 
 static void
-_connection_got_stanza_cb(SalutXmppConnection *conn, 
-                          SalutXmppStanza *stanza, gpointer userdata) {
+_connection_got_stanza_cb(GibberXmppConnection *conn, 
+                          GibberXmppStanza *stanza, gpointer userdata) {
   /* TODO verify the sender */
   SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
   salut_im_channel_received_stanza(self, stanza);
 }
 
 static void
-_connect_to_next(SalutImChannel *self, SalutLLTransport *transport) {
+_connect_to_next(SalutImChannel *self, GibberLLTransport *transport) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   if (priv->addresses->len <= priv->address_index) {
@@ -500,52 +500,52 @@ _connect_to_next(SalutImChannel *self, SalutLLTransport *transport) {
     salut_contact_address_t *addr;
     addr = &g_array_index(priv->addresses, salut_contact_address_t, 
                           priv->address_index);
-    if (!salut_ll_transport_open_sockaddr(transport, &(addr->address), NULL)) {
+    if (!gibber_ll_transport_open_sockaddr(transport, &(addr->address), NULL)) {
       priv->address_index += 1;
       _connect_to_next(self, transport);
     } else {
       g_array_free(priv->addresses, TRUE);
       priv->addresses = NULL;
-      salut_xmpp_connection_open(priv->xmpp_connection, NULL, NULL, NULL);
+      gibber_xmpp_connection_open(priv->xmpp_connection, NULL, NULL, NULL);
     }
   }
 }
 
 static void
-_connection_stream_opened_cb(SalutXmppConnection *conn, 
+_connection_stream_opened_cb(GibberXmppConnection *conn, 
                              const gchar *to, const gchar *from,
                              const gchar *version,
                              gpointer userdata) {
   SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
-  if (salut_ll_transport_is_incoming(SALUT_LL_TRANSPORT(conn->transport))) {
-    salut_xmpp_connection_open(conn, NULL, NULL, NULL);
+  if (gibber_ll_transport_is_incoming(GIBBER_LL_TRANSPORT(conn->transport))) {
+    gibber_xmpp_connection_open(conn, NULL, NULL, NULL);
   }
   priv->state = CHANNEL_CONNECTED;
   _flush_queue(self);
 }
 
 static void
-_connection_stream_closed_cb(SalutXmppConnection *conn, gpointer userdata) {
+_connection_stream_closed_cb(GibberXmppConnection *conn, gpointer userdata) {
   SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   if (priv->state == CHANNEL_CONNECTED) {
     /* Other side closed the stream, do the same */
-    salut_xmpp_connection_close(conn);
+    gibber_xmpp_connection_close(conn);
   }
-  salut_transport_disconnect(conn->transport);
+  gibber_transport_disconnect(conn->transport);
   priv->state = CHANNEL_NOT_CONNECTED;
 }
 
 static void
-_connection_parse_error_cb(SalutXmppConnection *conn, gpointer userdata) {
+_connection_parse_error_cb(GibberXmppConnection *conn, gpointer userdata) {
   DEBUG("Parse error, closing connection");
-  salut_transport_disconnect(conn->transport);
+  gibber_transport_disconnect(conn->transport);
 }
 
 static void
-_trans_disconnected_cb(SalutLLTransport *transport, gpointer userdata) {
+_trans_disconnected_cb(GibberLLTransport *transport, gpointer userdata) {
   SalutImChannel *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
@@ -589,18 +589,18 @@ _setup_connection(SalutImChannel *self) {
   /* FIXME do a non-blocking connect */
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GArray *addrs;
-  SalutLLTransport *transport;
+  GibberLLTransport *transport;
 
   DEBUG("Setting up the xmpp connection...");
   if (priv->xmpp_connection == NULL) {
-    transport = salut_ll_transport_new();
+    transport = gibber_ll_transport_new();
     priv->xmpp_connection = 
-      salut_xmpp_connection_new(SALUT_TRANSPORT(transport));
+      gibber_xmpp_connection_new(GIBBER_TRANSPORT(transport));
     /* Let the xmpp connection own the transport */
     g_object_unref(transport);
     _initialise_connection(self);
   } else {
-    transport = SALUT_LL_TRANSPORT(priv->xmpp_connection->transport);
+    transport = GIBBER_LL_TRANSPORT(priv->xmpp_connection->transport);
   }
 
   priv->state = CHANNEL_CONNECTING;
@@ -633,7 +633,7 @@ _send_channel_message(SalutImChannel *self, SalutImChannelMessage *msg) {
 
 static gboolean
 _send_message(GObject *object, guint type, const gchar *text, 
-              SalutXmppStanza *stanza, GError **error) {
+              GibberXmppStanza *stanza, GError **error) {
   SalutImChannel *self = SALUT_IM_CHANNEL(object);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutImChannelMessage *msg;
@@ -654,7 +654,7 @@ _send_message(GObject *object, guint type, const gchar *text,
 }
 
 void
-salut_im_channel_send_stanza(SalutImChannel * self, SalutXmppStanza *stanza) {
+salut_im_channel_send_stanza(SalutImChannel * self, GibberXmppStanza *stanza) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutImChannelMessage *msg;
 
@@ -665,7 +665,7 @@ salut_im_channel_send_stanza(SalutImChannel * self, SalutXmppStanza *stanza) {
       _send_channel_message(self, msg);
       break;
     case CHANNEL_CONNECTED:
-      if (!salut_xmpp_connection_send(priv->xmpp_connection, stanza, NULL)) {
+      if (!gibber_xmpp_connection_send(priv->xmpp_connection, stanza, NULL)) {
         g_warning("Sending failed");
       }
       g_object_unref(stanza);
@@ -674,7 +674,7 @@ salut_im_channel_send_stanza(SalutImChannel * self, SalutXmppStanza *stanza) {
 
 void
 salut_im_channel_add_connection(SalutImChannel *chan, 
-                                SalutXmppConnection *conn) {
+                                GibberXmppConnection *conn) {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan); 
   /* FIXME if we already have a connection, we throw this one out..
    * Which can be not quite what the other side expects.. And strange things
@@ -735,7 +735,7 @@ salut_im_channel_close (SalutImChannel *self, GError **error) {
     case CHANNEL_CONNECTING:
     case CHANNEL_CONNECTED:
       /* FIXME decent connection closing? */
-      salut_xmpp_connection_close(priv->xmpp_connection);
+      gibber_xmpp_connection_close(priv->xmpp_connection);
       break;
   }
 
