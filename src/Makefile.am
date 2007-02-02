@@ -21,12 +21,8 @@ BUILT_SOURCES = \
     salut-connection-glue.h \
     salut-connection-signals-marshal.h \
     salut-connection-signals-marshal.c \
-    salut-transport-signals-marshal.h \
-    salut-transport-signals-marshal.c \
-    salut-xmpp-reader-signals-marshal.h \
-    salut-xmpp-reader-signals-marshal.c \
-    salut-xmpp-connection-signals-marshal.h \
-    salut-xmpp-connection-signals-marshal.c \
+    salut-muc-connection-signals-marshal.h \
+    salut-muc-connection-signals-marshal.c \
     salut-presence-enumtypes.h \
     salut-presence-enumtypes.c  \
     telepathy-errors-enumtypes.h \
@@ -63,23 +59,24 @@ dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
 EXTRA_DIST = \
-   group-mixin-signals-marshal.list                     \
-   text-mixin-signals-marshal.list                      \
-   salut-avahi-client-signals-marshal.list              \
-   salut-avahi-entry-group-signals-marshal.list         \
-   salut-avahi-service-browser-signals-marshal.list     \
-   salut-avahi-service-resolver-signals-marshal.list    \
-   salut-connection-manager-signals-marshal.list        \
-   salut-connection-signals-marshal.list                \
-   salut-contact-channel-signals-marshal.list           \
-   salut-contact-manager-signals-marshal.list           \
-   salut-contact-signals-marshal.list                   \
-   salut-im-channel-signals-marshal.list                \
-   salut-im-manager-signals-marshal.list                \
-   salut-lm-connection-signals-marshal.list             \
-   salut-self-signals-marshal.list                      \
-   tp-channel-factory-iface-signals-marshal.list        \
-   salut-xmpp-connection-signals-marshal.list 
+  group-mixin-signals-marshal.list                        \
+  salut-avahi-client-signals-marshal.list                 \
+  salut-avahi-entry-group-signals-marshal.list            \
+  salut-avahi-service-browser-signals-marshal.list        \
+  salut-avahi-service-resolver-signals-marshal.list       \
+  salut-connection-manager-signals-marshal.list           \
+  salut-connection-signals-marshal.list                   \
+  salut-contact-channel-signals-marshal.list              \
+  salut-contact-manager-signals-marshal.list              \
+  salut-contact-signals-marshal.list                      \
+  salut-im-channel-signals-marshal.list                   \
+  salut-im-manager-signals-marshal.list                   \
+  salut-muc-channel-signals-marshal.list                  \
+  salut-muc-manager-signals-marshal.list                  \
+  salut-self-signals-marshal.list                         \
+  salut-muc-connection-signals-marshal.list               \
+  text-mixin-signals-marshal.list                         \
+  tp-channel-factory-iface-signals-marshal.list
 
 bin_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
@@ -121,20 +118,8 @@ CORE_SOURCES =                                          \
     salut-connection.c                                  \
     salut-connection.h                                  \
     salut-presence.h                                    \
-    salut-xmpp-connection.c                             \
-    salut-xmpp-connection.h                             \
-    salut-xmpp-reader.c                                 \
-    salut-xmpp-reader.h                                 \
-    salut-xmpp-writer.c                                 \
-    salut-xmpp-writer.h                                 \
-    salut-xmpp-stanza.c                                 \
-    salut-xmpp-stanza.h                                 \
-    salut-xmpp-node.c                                   \
-    salut-xmpp-node.h                                   \
-    salut-linklocal-transport.c                         \
-    salut-linklocal-transport.h                         \
-    salut-transport.c                                   \
-    salut-transport.h                                   \
+    salut-muc-connection.c                              \
+    salut-muc-connection.h                              \
     telepathy-errors.c                                  \
     telepathy-errors.h                                  \
     telepathy-constants.h                               \
