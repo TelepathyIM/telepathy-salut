@@ -46,18 +46,18 @@
 #define PORT_KEY "port"
 
 static gboolean 
-salut_multicast_muc_transport_send (SalutTransport *transport, 
+salut_multicast_muc_transport_send (GibberTransport *transport, 
                                     const guint8 *data, gsize size,
                                     GError **error);
 
 static void 
-salut_multicast_muc_transport_disconnect(SalutTransport *transport);
+salut_multicast_muc_transport_disconnect(GibberTransport *transport);
 
 static void salut_multicast_muc_transport_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data);
 G_DEFINE_TYPE_WITH_CODE(SalutMulticastMucTransport, 
                         salut_multicast_muc_transport, 
-                        SALUT_TYPE_TRANSPORT,
+                        GIBBER_TYPE_TRANSPORT,
                         G_IMPLEMENT_INTERFACE(SALUT_TYPE_MUC_TRANSPORT_IFACE,
                                      salut_multicast_muc_transport_iface_init));
 
@@ -150,8 +150,8 @@ static void
 salut_multicast_muc_transport_class_init(SalutMulticastMucTransportClass *salut_multicast_muc_transport_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_multicast_muc_transport_class);
-  SalutTransportClass *transport_class =
-      SALUT_TRANSPORT_CLASS(salut_multicast_muc_transport_class);
+  GibberTransportClass *transport_class =
+      GIBBER_TRANSPORT_CLASS(salut_multicast_muc_transport_class);
 
 
   g_type_class_add_private (salut_multicast_muc_transport_class, sizeof (SalutMulticastMucTransportPrivate));
@@ -184,7 +184,7 @@ salut_multicast_muc_transport_dispose (GObject *object)
   }
 
   if (priv->channel) {
-    salut_multicast_muc_transport_disconnect(SALUT_TRANSPORT(self));
+    salut_multicast_muc_transport_disconnect(GIBBER_TRANSPORT(self));
   }
 
   /* release any references held by the object here */
@@ -231,7 +231,7 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   buf[ret]  = '\0';
   DEBUG("Received message: %s", buf);
 
-  salut_transport_received_data(SALUT_TRANSPORT(self), buf, ret);
+  gibber_transport_received_data(GIBBER_TRANSPORT(self), buf, ret);
 
   return TRUE;
 }
@@ -339,11 +339,11 @@ salut_multicast_muc_transport_connect (SalutMucTransportIface *iface,
     SALUT_MULTICAST_MUC_TRANSPORT_GET_PRIVATE(self);
   int fd = -1;
   
-  salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_CONNECTING);
+  gibber_transport_set_state(GIBBER_TRANSPORT(self), GIBBER_TRANSPORT_CONNECTING);
   fd = _open_multicast(self);
 
   if (fd < 0 ) {
-    salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_DISCONNECTED);
+    gibber_transport_set_state(GIBBER_TRANSPORT(self), GIBBER_TRANSPORT_DISCONNECTED);
     return FALSE;
   }
 
@@ -362,13 +362,13 @@ salut_multicast_muc_transport_connect (SalutMucTransportIface *iface,
   priv->watch_err = 
     g_io_add_watch(priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, iface);
 
-  salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_CONNECTED);
+  gibber_transport_set_state(GIBBER_TRANSPORT(self), GIBBER_TRANSPORT_CONNECTED);
 
   return TRUE;
 }
 
 void 
-salut_multicast_muc_transport_disconnect (SalutTransport *transport) {
+salut_multicast_muc_transport_disconnect (GibberTransport *transport) {
   SalutMulticastMucTransport *self = 
     SALUT_MULTICAST_MUC_TRANSPORT(transport);
   SalutMulticastMucTransportPrivate *priv = 
@@ -395,11 +395,11 @@ salut_multicast_muc_transport_disconnect (SalutTransport *transport) {
 
   priv->fd = -1;
 
-  salut_transport_set_state(SALUT_TRANSPORT(self), SALUT_TRANSPORT_DISCONNECTED);
+  gibber_transport_set_state(GIBBER_TRANSPORT(self), GIBBER_TRANSPORT_DISCONNECTED);
 }
 
 static gboolean 
-salut_multicast_muc_transport_send (SalutTransport *transport, 
+salut_multicast_muc_transport_send (GibberTransport *transport, 
                                     const guint8 *data, gsize size,
                                     GError **error) {
   SalutMulticastMucTransport *self = 

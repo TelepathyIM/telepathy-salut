@@ -23,8 +23,8 @@
 
 #include <glib-object.h>
 
-#include "salut-transport.h"
-#include "salut-xmpp-stanza.h"
+#include <gibber/gibber-transport.h>
+#include <gibber/gibber-xmpp-stanza.h>
 
 G_BEGIN_DECLS
 
@@ -37,7 +37,7 @@ struct _SalutMucConnectionClass {
 
 struct _SalutMucConnection {
     GObject parent;
-    SalutTransport *transport;
+    GibberTransport *transport;
     gboolean stream_open;
 };
 
@@ -59,9 +59,9 @@ GType salut_muc_connection_get_type(void);
 
 
 
-SalutMucConnection *salut_muc_connection_new(SalutTransport *transport); 
+SalutMucConnection *salut_muc_connection_new(GibberTransport *transport); 
 gboolean salut_muc_connection_send(SalutMucConnection *connection, 
-                                    SalutXmppStanza *stanza, 
+                                    GibberXmppStanza *stanza, 
                                     GError **error);
 
 G_END_DECLS

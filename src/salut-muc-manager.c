@@ -322,13 +322,13 @@ static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
 
 static gboolean
 _received_stanza(SalutImChannel *imchannel, 
-                  SalutXmppStanza *message, gpointer data) {
+                  GibberXmppStanza *message, gpointer data) {
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(data);
-  SalutXmppNode *node;
-  SalutXmppNode *invite;
-  SalutXmppNode *room_node;
-  SalutXmppNode *reason_node;
+  GibberXmppNode *node;
+  GibberXmppNode *invite;
+  GibberXmppNode *room_node;
+  GibberXmppNode *reason_node;
   SalutMucChannel *chan;
   const gchar *room = NULL;
   const gchar *reason = NULL;
@@ -340,19 +340,19 @@ _received_stanza(SalutImChannel *imchannel,
   GHashTable *params_hash;
   GObject *transport = NULL;
 
-  node = salut_xmpp_node_get_child_ns(message->node, "x", NS_LLMUC);
+  node = gibber_xmpp_node_get_child_ns(message->node, "x", NS_LLMUC);
   if (node == NULL) 
     return FALSE;
 
   DEBUG("Got an invitation");
 
-  invite = salut_xmpp_node_get_child(node, "invite");
+  invite = gibber_xmpp_node_get_child(node, "invite");
   if (invite == NULL) {
     DEBUG("Got invitation, but no invite block!?");
     return FALSE;
   }
 
-  room_node = salut_xmpp_node_get_child(invite, "roomname");
+  room_node = gibber_xmpp_node_get_child(invite, "roomname");
 
   if (room_node == NULL) {
     DEBUG("Invalid invitation, discarding");
@@ -360,7 +360,7 @@ _received_stanza(SalutImChannel *imchannel,
   }
 
   room = room_node->content;
-  reason_node = salut_xmpp_node_get_child(invite, "reason");
+  reason_node = gibber_xmpp_node_get_child(invite, "reason");
   if (reason_node != NULL) {
     reason = reason_node->content;
   }
@@ -368,7 +368,7 @@ _received_stanza(SalutImChannel *imchannel,
     reason = "";
   }
   
-  protocol = salut_xmpp_node_get_attribute(invite, "protocol");
+  protocol = gibber_xmpp_node_get_attribute(invite, "protocol");
   if (protocol == NULL) { 
     DEBUG("Invalid invitation, (missing protocol) discarding");
     return TRUE;
@@ -382,8 +382,8 @@ _received_stanza(SalutImChannel *imchannel,
 
   params_hash = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
   for (p = params ; *p != NULL; p++) {
-    SalutXmppNode *param;
-    param = salut_xmpp_node_get_child(invite, *p);
+    GibberXmppNode *param;
+    param = gibber_xmpp_node_get_child(invite, *p);
     if (param == NULL) {
       DEBUG("Invalid invitation, (missing parameter) discarding");
       goto discard;

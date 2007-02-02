@@ -22,7 +22,7 @@
 #define __SALUT_MUC_TRANSPORT_IFACE_H__
 
 #include <glib-object.h>
-#include "salut-xmpp-node.h"
+#include <gibber/gibber-xmpp-node.h>
 
 G_BEGIN_DECLS
 

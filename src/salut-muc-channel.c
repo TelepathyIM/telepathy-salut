@@ -30,8 +30,9 @@
 #include "salut-muc-channel-signals-marshal.h"
 #include "salut-muc-channel-glue.h"
 
+#include <gibber/gibber-transport.h>
+
 #include "salut-muc-transport-iface.h"
-#include "salut-transport.h"
 #include "salut-muc-connection.h"
 
 #include "salut-connection.h"
@@ -78,7 +79,7 @@ struct _SalutMucChannelPrivate
   Handle handle;
   SalutConnection *connection;
   SalutImManager *im_manager;
-  SalutTransport *transport;
+  GibberTransport *transport;
   SalutMucConnection *muc_connection;
   gchar *muc_name;
   guint presence_timeout_id;
@@ -91,14 +92,14 @@ static void
 salut_muc_channel_send_presence(SalutMucChannel *self, gboolean joining);
 static gboolean salut_muc_channel_send_stanza(GObject *object, guint type, 
                                                const gchar *text,
-                                               SalutXmppStanza *stanza,
+                                               GibberXmppStanza *stanza,
                                                GError **error);
-static void salut_muc_channel_received_stanza(SalutXmppConnection *conn,
-                                              SalutXmppStanza *stanza,
+static void salut_muc_channel_received_stanza(GibberXmppConnection *conn,
+                                              GibberXmppStanza *stanza,
                                               gpointer user_data);
 static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
-                                                SalutXmppStanza *stanza);
-static void salut_muc_channel_connected(SalutTransport *transport,
+                                                GibberXmppStanza *stanza);
+static void salut_muc_channel_connected(GibberTransport *transport,
                                              gpointer user_data);
 static void salut_muc_channel_disconnected(SalutMucTransportIface *iface,
                                              gpointer user_data);
@@ -248,35 +249,35 @@ static void salut_muc_channel_finalize (GObject *object);
 
 static void 
 invitation_append_parameter(gpointer key, gpointer value, gpointer data) {
-  SalutXmppNode *node = (SalutXmppNode *)data;
- salut_xmpp_node_add_child_with_content(node, (gchar *)key, (gchar *)value);
+  GibberXmppNode *node = (GibberXmppNode *)data;
+ gibber_xmpp_node_add_child_with_content(node, (gchar *)key, (gchar *)value);
 }
 
-static SalutXmppStanza *
+static GibberXmppStanza *
 create_invitation(SalutMucChannel *self, Handle handle, const gchar *message) { 
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  SalutXmppStanza *msg;
-  SalutXmppNode *x_node, *invite_node;
+  GibberXmppStanza *msg;
+  GibberXmppNode *x_node, *invite_node;
   const gchar *name = handle_inspect(priv->connection->handle_repo,
                                      TP_HANDLE_TYPE_CONTACT, handle);
 
-  msg = salut_xmpp_stanza_new("message");
+  msg = gibber_xmpp_stanza_new("message");
   
-  salut_xmpp_node_set_attribute(msg->node, "from", priv->connection->name); 
-  salut_xmpp_node_set_attribute(msg->node, "to", name); 
+  gibber_xmpp_node_set_attribute(msg->node, "from", priv->connection->name); 
+  gibber_xmpp_node_set_attribute(msg->node, "to", name); 
 
-  salut_xmpp_node_add_child_with_content(msg->node, "body", 
+  gibber_xmpp_node_add_child_with_content(msg->node, "body", 
                                          "You got an chatroom invitation");
-  x_node = salut_xmpp_node_add_child_ns(msg->node, "x", NS_LLMUC);
+  x_node = gibber_xmpp_node_add_child_ns(msg->node, "x", NS_LLMUC);
 
-  invite_node = salut_xmpp_node_add_child(x_node, "invite");
-  salut_xmpp_node_set_attribute(invite_node, "protocol", 
+  invite_node = gibber_xmpp_node_add_child(x_node, "invite");
+  gibber_xmpp_node_set_attribute(invite_node, "protocol", 
         salut_muc_transport_get_protocol(
           SALUT_MUC_TRANSPORT_IFACE(priv->transport)));
   if (message != NULL && *message != '\0') {
-    salut_xmpp_node_add_child_with_content(invite_node, "reason", message);
+    gibber_xmpp_node_add_child_with_content(invite_node, "reason", message);
   }
-  salut_xmpp_node_add_child_with_content(invite_node, "roomname", 
+  gibber_xmpp_node_add_child_with_content(invite_node, "roomname", 
                        handle_inspect(priv->connection->handle_repo,
                                       TP_HANDLE_TYPE_ROOM, priv->handle));
   g_hash_table_foreach(
@@ -293,7 +294,7 @@ muc_channel_add_member(GObject *obj, Handle handle,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(obj);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   SalutImChannel *im_channel;
-  SalutXmppStanza *stanza;
+  GibberXmppStanza *stanza;
 
   if (handle == priv->connection->self_handle) {
     GIntSet *empty;
@@ -551,7 +552,7 @@ salut_muc_channel_close (SalutMucChannel *self,
   }
 
   salut_muc_channel_send_presence(self, FALSE);
-  salut_transport_disconnect(priv->transport);
+  gibber_transport_disconnect(priv->transport);
 
   return TRUE;
 }
@@ -865,7 +866,7 @@ salut_muc_channel_send (SalutMucChannel *self,
 /* Private functions */
 static gboolean salut_muc_channel_send_stanza(GObject *object, guint type, 
                                                const gchar *text,
-                                               SalutXmppStanza *stanza,
+                                               GibberXmppStanza *stanza,
                                                GError **error) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(object);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(object);
@@ -883,14 +884,14 @@ static void
 salut_muc_channel_send_presence(SalutMucChannel *self, 
                                 gboolean joining) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  SalutXmppStanza *stanza;
+  GibberXmppStanza *stanza;
 
-  stanza = salut_xmpp_stanza_new("presence");
+  stanza = gibber_xmpp_stanza_new("presence");
   if (!joining) {
-    salut_xmpp_node_set_attribute(stanza->node, "type", "unavailable");
+    gibber_xmpp_node_set_attribute(stanza->node, "type", "unavailable");
   }
-  salut_xmpp_node_set_attribute(stanza->node, "from", priv->connection->name);
-  salut_xmpp_node_set_attribute(stanza->node, "to", priv->muc_name);
+  gibber_xmpp_node_set_attribute(stanza->node, "from", priv->connection->name);
+  gibber_xmpp_node_set_attribute(stanza->node, "to", priv->muc_name);
 
   /* FIXME should disconnect if we couldn't sent */
   salut_muc_connection_send(priv->muc_connection, stanza, NULL);
@@ -943,8 +944,8 @@ salut_muc_channel_change_members(SalutMucChannel *self,
 }
 
 static void 
-salut_muc_channel_received_stanza(SalutXmppConnection *conn,
-                                  SalutXmppStanza *stanza,
+salut_muc_channel_received_stanza(GibberXmppConnection *conn,
+                                  GibberXmppStanza *stanza,
                                   gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
@@ -983,19 +984,19 @@ salut_muc_channel_received_stanza(SalutXmppConnection *conn,
 }
 
 static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
-                                                SalutXmppStanza *stanza) {
+                                                GibberXmppStanza *stanza) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
   gboolean joining = TRUE;
   const gchar *type;
   const gchar *from;
   Handle from_handle;
 
-  type = salut_xmpp_node_get_attribute(stanza->node, "type");
+  type = gibber_xmpp_node_get_attribute(stanza->node, "type");
   if (type != NULL && strcmp(type, "unavailable") == 0) {
     joining = FALSE;
   }
 
-  from = salut_xmpp_node_get_attribute(stanza->node, "from");
+  from = gibber_xmpp_node_get_attribute(stanza->node, "from");
   if (from == NULL) {
     DEBUG("Presence without a from");
     return;
@@ -1019,7 +1020,7 @@ salut_muc_channel_dummy_timeout(gpointer data) {
   return FALSE;
 }
 
-static void salut_muc_channel_connected(SalutTransport *transport,
+static void salut_muc_channel_connected(GibberTransport *transport,
                                         gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
