@@ -852,19 +852,10 @@ destroy_value(GValue *value) {
   g_free(value);
 }
 
-/**
- * emit_presence_update:
- * @self: A #SalutConnection
- * @contact_handles: A zero-terminated array of #Handle for
- *                    the contacts to emit presence for
- *
- * Emits the Telepathy PresenceUpdate signal with the current
- * stored presence information for the given contact.
- */
+
 static void
-emit_presence_update (SalutConnection *self,
-                      const GArray *contact_handles)
-{
+get_presence_info(SalutConnection *self, const GArray *contact_handles,
+                  GHashTable **info) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GHashTable *presence_hash;
   GValueArray *vals;
@@ -935,8 +926,28 @@ emit_presence_update (SalutConnection *self,
 
       g_hash_table_insert (presence_hash, GINT_TO_POINTER (handle),
                            vals);
-    }
+  }
+  *info = presence_hash;
+}
 
+
+/**
+ * emit_presence_update:
+ * @self: A #SalutConnection
+ * @contact_handles: A zero-terminated array of #Handle for
+ *                    the contacts to emit presence for
+ *
+ * Emits the Telepathy PresenceUpdate signal with the current
+ * stored presence information for the given contact.
+ */
+static void
+emit_presence_update (SalutConnection *self,
+                      const GArray *contact_handles)
+{
+  GHashTable *presence_hash;
+  
+  get_presence_info(self, contact_handles, &presence_hash);
+  
   g_signal_emit (self, signals[PRESENCE_UPDATE], 0, presence_hash);
   g_hash_table_destroy (presence_hash);
 }
@@ -1069,6 +1080,31 @@ gboolean salut_connection_get_interfaces (SalutConnection *obj, gchar *** ret, G
   *ret = g_strdupv((gchar **)interfaces);
   return TRUE;
 }
+
+/**
+ * salut_connection_get_presence
+ *
+ * Implements D-Bus method GetPresence
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_get_presence (SalutConnection *self,
+                               const GArray *contacts,
+                               GHashTable **ret,
+                               GError **error) {
+
+  get_presence_info(self, contacts, ret);
+  return TRUE;
+}
+
+
+
 
 
 /**
