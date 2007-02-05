@@ -118,6 +118,11 @@ salut_muc_channel_get_local_pending_members (SalutMucChannel *self,
                                              GError **error);
 
 gboolean
+salut_muc_channel_get_local_pending_members_with_info (SalutMucChannel *self,
+                                                       GPtrArray **ret,
+                                                       GError **error);
+
+gboolean
 salut_muc_channel_get_members (SalutMucChannel *self,
                                GArray **ret,
                                GError **error);
