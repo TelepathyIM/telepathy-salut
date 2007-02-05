@@ -54,9 +54,38 @@ static const char *group_change_reason_str(guint reason)
     }
 }
 
+typedef struct {
+  Handle actor;
+  guint reason;
+  const gchar *message;
+  HandleRepo *repo;
+} LocalPendingInfo;
+
+LocalPendingInfo *
+new_local_pending_info(HandleRepo *repo, Handle actor, 
+                       guint reason, const gchar *message) {
+  LocalPendingInfo *info = g_slice_new0(LocalPendingInfo);
+  info->actor = actor;
+  info->reason = reason;
+  info->message = g_strdup(message);
+  info->repo = repo;
+  handle_ref(repo, TP_HANDLE_TYPE_CONTACT, actor);
+
+  return info;
+}
+
+void
+free_local_pending_info(LocalPendingInfo *info) {
+  g_free((gchar *)info->message);
+  handle_unref(info->repo, TP_HANDLE_TYPE_CONTACT, info->actor);
+  g_slice_free(LocalPendingInfo, info);
+}
+
+
 struct _GroupMixinPrivate {
     HandleSet *actors;
     GHashTable *handle_owners;
+    GHashTable *local_pending_info;
 };
 
 /**
@@ -150,6 +179,12 @@ void group_mixin_init (GObject *obj,
 
   mixin->priv = g_new0 (GroupMixinPrivate, 1);
   mixin->priv->handle_owners = g_hash_table_new (g_direct_hash, g_direct_equal);
+  mixin->priv->local_pending_info = g_hash_table_new_full (
+                                                     g_direct_hash, 
+                                                     g_direct_equal,
+                                                     NULL,
+                                                     (GDestroyNotify)
+                                                       free_local_pending_info);
   mixin->priv->actors = handle_set_new (handle_repo, TP_HANDLE_TYPE_CONTACT);
 }
 
@@ -177,6 +212,7 @@ void group_mixin_finalize (GObject *obj)
                         mixin);
 
   g_hash_table_destroy (mixin->priv->handle_owners);
+  g_hash_table_destroy (mixin->priv->local_pending_info);
 
   g_free (mixin->priv);
 
@@ -366,6 +402,52 @@ group_mixin_get_local_pending_members (GObject *obj, GArray **ret, GError **erro
   return TRUE;
 }
 
+static void
+local_pending_members_with_info_foreach(HandleSet *set, 
+                                        Handle i, gpointer userdata) {
+  gpointer *data = (gpointer *)userdata;
+  GroupMixin *mixin = (GroupMixin *) data[0];
+  GroupMixinPrivate *priv = mixin->priv;
+  GPtrArray *array = (GPtrArray *)data[1];
+  GValueArray *varray = g_value_array_new(4);
+  LocalPendingInfo *info = g_hash_table_lookup(priv->local_pending_info, 
+                                               GUINT_TO_POINTER(i));
+  g_assert(info != NULL);
+
+  g_value_array_append(varray, NULL);
+  g_value_init(g_value_array_get_nth(varray, 0), G_TYPE_UINT);
+  g_value_set_uint(g_value_array_get_nth(varray, 0), i);
+
+  g_value_array_append(varray, NULL);
+  g_value_init(g_value_array_get_nth(varray, 1), G_TYPE_UINT);
+  g_value_set_uint(g_value_array_get_nth(varray, 1), info->actor);
+
+  g_value_array_append(varray, NULL);
+  g_value_init(g_value_array_get_nth(varray, 2), G_TYPE_UINT);
+  g_value_set_uint(g_value_array_get_nth(varray, 2), info->reason);
+
+  g_value_array_append(varray, NULL);
+  g_value_init(g_value_array_get_nth(varray, 3), G_TYPE_STRING);
+  g_value_set_string(g_value_array_get_nth(varray, 3), info->message);
+
+  g_ptr_array_add(array, varray);
+}
+
+gboolean 
+group_mixin_get_local_pending_members_with_info (GObject *obj, GPtrArray **ret, GError **error) 
+{
+  GroupMixin *mixin = GROUP_MIXIN (obj);
+  gpointer data[2] = { mixin, NULL };
+
+  *ret = g_ptr_array_new();
+  data[1] = *ret;
+
+  handle_set_foreach(mixin->local_pending, 
+                      local_pending_members_with_info_foreach , data);
+
+  return TRUE;
+}
+
 gboolean
 group_mixin_get_remote_pending_members (GObject *obj, GArray **ret, GError **error)
 {
@@ -548,6 +630,44 @@ member_array_to_string (HandleRepo *repo, const GArray *array)
 
 static void remove_handle_owners_if_exist (GObject *obj, GArray *array);
 
+void 
+local_pending_added_foreach(guint i, gpointer userdata) {
+  gpointer *data = (gpointer *)userdata;
+  GroupMixin *mixin = (GroupMixin *) data[0]; 
+  GroupMixinPrivate *priv = mixin->priv;
+  LocalPendingInfo *info = (LocalPendingInfo *)data[1];
+
+  g_hash_table_insert(priv->local_pending_info, 
+                      GUINT_TO_POINTER(i), 
+                      new_local_pending_info(mixin->handle_repo,
+                        info->actor, info->reason, info->message));
+}
+
+static void
+local_pending_added(GroupMixin *mixin, GIntSet *added, 
+                    Handle actor, guint reason, const gchar *message) {
+  LocalPendingInfo info;
+  gpointer data[2] = { mixin, &info };
+  info.actor = actor;
+  info.reason = reason;
+  info.message = message;
+
+  g_intset_foreach(added, local_pending_added_foreach, data);
+}
+
+void 
+local_pending_remove_foreach(guint i, gpointer userdata) {
+  GroupMixin *mixin = (GroupMixin *) userdata;
+  GroupMixinPrivate *priv = mixin->priv;
+
+  g_hash_table_remove(priv->local_pending_info, GUINT_TO_POINTER(i));
+}
+
+static void
+local_pending_remove(GroupMixin *mixin, GIntSet *removed) { 
+  g_intset_foreach(removed, local_pending_remove_foreach, mixin);
+}
+
 /**
  * group_mixin_change_members:
  *
@@ -592,13 +712,17 @@ group_mixin_change_members (GObject *obj,
 
   /* local pending + local_pending */
   new_local_pending = handle_set_update (mixin->local_pending, local_pending);
+  local_pending_added(mixin, tmp, actor, reason, message);
 
   /* local pending - add */
   tmp = handle_set_difference_update (mixin->local_pending, add);
+  local_pending_remove(mixin, tmp);
   g_intset_destroy (tmp);
 
   /* local pending - remove */
   tmp = handle_set_difference_update (mixin->local_pending, remove);
+  local_pending_remove(mixin, tmp);
+
   tmp2 = g_intset_union (new_remove, tmp);
   g_intset_destroy (new_remove);
   g_intset_destroy (tmp);
@@ -606,6 +730,7 @@ group_mixin_change_members (GObject *obj,
 
   /* local pending - remote_pending */
   tmp = handle_set_difference_update (mixin->local_pending, remote_pending);
+  local_pending_remove(mixin, tmp);
   g_intset_destroy (tmp);
 
 

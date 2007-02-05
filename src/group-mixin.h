@@ -81,6 +81,7 @@ gboolean group_mixin_remove_members (GObject *obj, const GArray *contacts, const
 
 gboolean group_mixin_get_members (GObject *obj, GArray **ret, GError **error);
 gboolean group_mixin_get_local_pending_members (GObject *obj, GArray **ret, GError **error);
+gboolean group_mixin_get_local_pending_members_with_info (GObject *obj, GPtrArray **ret, GError **error);
 gboolean group_mixin_get_remote_pending_members (GObject *obj, GArray **ret, GError **error);
 gboolean group_mixin_get_all_members (GObject *obj, GArray **ret, GArray **ret1, GArray **ret2, GError **error);
 
