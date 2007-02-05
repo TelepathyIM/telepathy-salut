@@ -270,6 +270,28 @@ salut_connection_get_interfaces (SalutConnection *self,
 
 
 /**
+ * salut_connection_get_presence
+ *
+ * Implements D-Bus method GetPresence
+ * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_connection_get_presence (SalutConnection *self,
+                               const GArray *contacts,
+                               GHashTable **ret,
+                               GError **error)
+{
+  return TRUE;
+}
+
+
+/**
  * salut_connection_get_protocol
  *
  * Implements D-Bus method GetProtocol

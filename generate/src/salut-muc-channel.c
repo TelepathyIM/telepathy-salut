@@ -390,6 +390,27 @@ salut_muc_channel_get_local_pending_members (SalutMucChannel *self,
 
 
 /**
+ * salut_muc_channel_get_local_pending_members_with_info
+ *
+ * Implements D-Bus method GetLocalPendingMembersWithInfo
+ * on interface org.freedesktop.Telepathy.Channel.Interface.Group
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+gboolean
+salut_muc_channel_get_local_pending_members_with_info (SalutMucChannel *self,
+                                                       GPtrArray **ret,
+                                                       GError **error)
+{
+  return TRUE;
+}
+
+
+/**
  * salut_muc_channel_get_members
  *
  * Implements D-Bus method GetMembers

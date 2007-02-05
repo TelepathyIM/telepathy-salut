@@ -105,6 +105,11 @@ salut_contact_channel_get_local_pending_members (SalutContactChannel *self,
                                                  GError **error);
 
 gboolean
+salut_contact_channel_get_local_pending_members_with_info (SalutContactChannel *self,
+                                                           GPtrArray **ret,
+                                                           GError **error);
+
+gboolean
 salut_contact_channel_get_members (SalutContactChannel *self,
                                    GArray **ret,
                                    GError **error);

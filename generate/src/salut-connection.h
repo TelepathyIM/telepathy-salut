@@ -84,6 +84,12 @@ salut_connection_get_interfaces (SalutConnection *self,
                                  GError **error);
 
 gboolean
+salut_connection_get_presence (SalutConnection *self,
+                               const GArray *contacts,
+                               GHashTable **ret,
+                               GError **error);
+
+gboolean
 salut_connection_get_protocol (SalutConnection *self,
                                gchar **ret,
                                GError **error);

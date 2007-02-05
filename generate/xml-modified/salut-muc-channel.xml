@@ -34,6 +34,9 @@
     <method name="GetLocalPendingMembers">
       <arg direction="out" type="au"/>
     </method>
+    <method name="GetLocalPendingMembersWithInfo">
+      <arg direction="out" type="a(uuus)"/>
+    </method>
     <method name="GetMembers">
       <arg direction="out" type="au"/>
     </method>
