@@ -31,7 +31,7 @@ typedef enum
                       */
   ChannelFull,       /** The channel is full.
                       */
-  ChannelInviteOnly, /** The requested channel is invite only.
+  ChannelInviteOnly, /** The requested channel is invite-only.
                       */
   Disconnected,      /** The connection is not currently connected and cannot
                       *  be used.
@@ -53,7 +53,7 @@ typedef enum
   PermissionDenied,  /** The user is not permitted to perform the requested
                       *  operation.
                       */
-} TelepathyErrors;
+} TelepathyErrors; 
 
 GQuark telepathy_errors_quark (void);
 #define TELEPATHY_ERRORS telepathy_errors_quark ()
