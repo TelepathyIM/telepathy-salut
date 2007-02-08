@@ -712,7 +712,7 @@ group_mixin_change_members (GObject *obj,
 
   /* local pending + local_pending */
   new_local_pending = handle_set_update (mixin->local_pending, local_pending);
-  local_pending_added(mixin, tmp, actor, reason, message);
+  local_pending_added(mixin, local_pending, actor, reason, message);
 
   /* local pending - add */
   tmp = handle_set_difference_update (mixin->local_pending, add);
