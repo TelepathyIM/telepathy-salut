@@ -218,7 +218,7 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   switch (status) {
     case G_IO_STATUS_NORMAL:
       buf[read] = '\0';
-      DEBUG("IN: %s", buf);
+      DEBUG("Recieved %d bytes", read);
       gibber_transport_received_data(GIBBER_TRANSPORT(self), buf, read);
       break;
     case G_IO_STATUS_ERROR:
