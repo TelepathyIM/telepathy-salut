@@ -32,6 +32,9 @@
 
 #define XMPP_STREAM_NAMESPACE "http://etherx.jabber.org/streams"
 
+#define DEBUG_FLAG DEBUG_XMPP_READER
+#include "gibber-debug.h"
+
 G_DEFINE_TYPE(GibberXmppReader, gibber_xmpp_reader, G_TYPE_OBJECT)
 
 /* signal enum */
@@ -204,6 +207,12 @@ static void _start_element_ns(void *user_data,
   GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (self);
   int i;
 
+  if (prefix) {
+    DEBUG("Element %s:%s started, depth %d", prefix, localname, priv->depth);
+  } else {
+    DEBUG("Element %s started, depth %d", localname, priv->depth);
+  }
+
   if (priv->stream_mode && G_UNLIKELY(priv->depth == 0)) {
     gchar *to = NULL;
     gchar *from = NULL;
@@ -280,6 +289,12 @@ _end_element_ns(void *user_data, const xmlChar *localname,
 
   priv->depth--;
 
+  if (prefix) {
+    DEBUG("Element %s:%s ended, depth %d", prefix, localname, priv->depth);
+  } else {
+    DEBUG("Element %s ended, depth %d", localname, priv->depth);
+  }
+
   if (priv->node && priv->node->content) {
     /* Remove content if it's purely whitespace */
     const char *c;
@@ -307,6 +322,8 @@ _error(void *user_data, xmlErrorPtr error) {
   GibberXmppReader *self = GIBBER_XMPP_READER (user_data);
   GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (self);
   priv->error = TRUE;
+
+  DEBUG("Parsing failed %s", error->message);
 }
 
 gboolean 
