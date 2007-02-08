@@ -229,7 +229,7 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   }
 
   buf[ret]  = '\0';
-  DEBUG("Received message: %s", buf);
+  DEBUG("Received %d bytes", ret);
 
   gibber_transport_received_data(GIBBER_TRANSPORT(self), buf, ret);
 
