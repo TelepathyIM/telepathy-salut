@@ -10,19 +10,20 @@
 static DebugFlags flags = 0;
 
 GDebugKey keys[] = {
-  { "presence",      DEBUG_PRESENCE },
-  { "groups",        DEBUG_GROUPS },
-  { "contacts",      DEBUG_CONTACTS },
-  { "disco",         DEBUG_DISCO },
-  { "properties",    DEBUG_PROPERTIES },
-  { "roomlist",      DEBUG_ROOMLIST },
-  { "media-channel", DEBUG_MEDIA },
-  { "muc",           DEBUG_MUC },
-  { "net",           DEBUG_NET },
-  { "connection",    DEBUG_CONNECTION },
-  { "persist",       DEBUG_PERSIST },
-  { "self",          DEBUG_SELF },
-  { "all",           ~0 },
+  { "presence",       DEBUG_PRESENCE },
+  { "groups",         DEBUG_GROUPS },
+  { "contacts",       DEBUG_CONTACTS },
+  { "disco",          DEBUG_DISCO },
+  { "properties",     DEBUG_PROPERTIES },
+  { "roomlist",       DEBUG_ROOMLIST },
+  { "media-channel",  DEBUG_MEDIA },
+  { "muc",            DEBUG_MUC },
+  { "muc-connection", DEBUG_MUC },
+  { "net",            DEBUG_NET },
+  { "connection",     DEBUG_CONNECTION },
+  { "persist",        DEBUG_PERSIST },
+  { "self",           DEBUG_SELF },
+  { "all",            ~0 },
   { 0, },
 };
 

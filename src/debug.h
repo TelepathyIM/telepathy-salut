@@ -12,19 +12,20 @@ G_BEGIN_DECLS
 
 typedef enum
 {
-  DEBUG_PRESENCE      = 1 << 0,
-  DEBUG_GROUPS        = 1 << 1,
-  DEBUG_CONTACTS      = 1 << 2,
-  DEBUG_DISCO         = 1 << 3,
-  DEBUG_PROPERTIES    = 1 << 4,
-  DEBUG_ROOMLIST      = 1 << 5,
-  DEBUG_MEDIA         = 1 << 6,
-  DEBUG_MUC           = 1 << 7,
-  DEBUG_CONNECTION    = 1 << 8,
-  DEBUG_IM            = 1 << 9,
-  DEBUG_PERSIST       = 1 << 10,
-  DEBUG_NET           = 1 << 11,
-  DEBUG_SELF          = 1 << 12
+  DEBUG_PRESENCE       = 1 << 0,
+  DEBUG_GROUPS         = 1 << 1,
+  DEBUG_CONTACTS       = 1 << 2,
+  DEBUG_DISCO          = 1 << 3,
+  DEBUG_PROPERTIES     = 1 << 4,
+  DEBUG_ROOMLIST       = 1 << 5,
+  DEBUG_MEDIA          = 1 << 6,
+  DEBUG_MUC            = 1 << 7,
+  DEBUG_MUC_CONNECTION = 1 << 8,
+  DEBUG_CONNECTION     = 1 << 9,
+  DEBUG_IM             = 1 << 10,
+  DEBUG_PERSIST        = 1 << 11,
+  DEBUG_NET            = 1 << 12,
+  DEBUG_SELF           = 1 << 13
 } DebugFlags;
 
 void debug_set_flags_from_env ();
