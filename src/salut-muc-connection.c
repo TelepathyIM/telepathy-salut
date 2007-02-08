@@ -24,6 +24,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG_FLAG DEBUG_MUC_CONNECTION
+#include "debug.h"
+
 #include "salut-muc-connection.h"
 #include "salut-muc-connection-signals-marshal.h"
 
@@ -197,5 +200,6 @@ static void
 _reader_received_stanza_cb(GibberXmppReader *reader, GibberXmppStanza *stanza,
                  gpointer user_data) {
   SalutMucConnection *self = SALUT_MUC_CONNECTION (user_data);
+  DEBUG("Received stanza");
   g_signal_emit(self, signals[RECEIVED_STANZA], 0, stanza);
 }
