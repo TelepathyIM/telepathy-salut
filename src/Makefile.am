@@ -155,15 +155,16 @@ CORE_SOURCES =                                          \
 
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) 
-libsalut_convenience_la_LIDADD = $(top_builddir)/lib/libgibber.la
 
 write_mgr_file_SOURCES = write-mgr-file.c
-write_mgr_file_LDADD = libsalut-convenience.la
+write_mgr_file_LDADD = libsalut-convenience.la \
+                       $(top_builddir)/lib/gibber/libgibber.la
 
 telepathy_salut_SOURCES = \
     salut.c 
 
-telepathy_salut_LDADD = libsalut-convenience.la
+telepathy_salut_LDADD = libsalut-convenience.la \
+                        $(top_builddir)/lib/gibber/libgibber.la
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
@@ -173,8 +174,7 @@ AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ \
   @AVAHI_CFLAGS@ \
   -I $(top_srcdir)/lib -I $(top_builddir)/lib
 
-AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@ \
-  $(top_builddir)/lib/gibber/libgibber.la
+AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
 
 # rule to generate the binding headers
 %-glue.h: ../generate/xml-modified/%.xml
