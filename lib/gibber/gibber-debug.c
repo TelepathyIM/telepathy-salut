@@ -9,6 +9,7 @@ static DebugFlags flags = 0;
 static gboolean initialized = FALSE;
 
 static GDebugKey keys[] = {
+  { "transport",      DEBUG_TRANSPORT },
   { "net",            DEBUG_NET },
   { "xmpp",           DEBUG_XMPP },
   { "xmpp-reader",    DEBUG_XMPP_READER },

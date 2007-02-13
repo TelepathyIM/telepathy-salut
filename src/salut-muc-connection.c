@@ -36,9 +36,8 @@
 #include <gibber/gibber-xmpp-stanza.h>
 
 static void _muc_connection_received_data(GibberTransport *transport,
-                                           const guint8 *data,
-                                           gsize length,
-                                           gpointer user_data);
+                                          GibberBuffer *buffer,
+                                          gpointer user_data);
 
 G_DEFINE_TYPE(SalutMucConnection, salut_muc_connection, G_TYPE_OBJECT);
 
@@ -155,8 +154,9 @@ salut_muc_connection_new(GibberTransport *transport)  {
   result = g_object_new(SALUT_TYPE_MUC_CONNECTION, NULL);
   result->transport = g_object_ref(transport);
 
-  g_signal_connect(transport, "received",
-                    G_CALLBACK(_muc_connection_received_data), result);
+  gibber_transport_set_handler(transport, _muc_connection_received_data, 
+      result);
+
   return result;
 }
 
@@ -178,18 +178,19 @@ salut_muc_connection_send(SalutMucConnection *connection,
 
 static void 
 _muc_connection_received_data(GibberTransport *transport,
-                               const guint8 *data, gsize length,
-                               gpointer user_data) {
+                              GibberBuffer *buffer,
+                              gpointer user_data) {
   SalutMucConnection *self = SALUT_MUC_CONNECTION (user_data);
   SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (self);
   gboolean ret;
   GError *error = NULL;
 
-  g_assert(length > 0);
+  g_assert(buffer->length > 0);
 
   /* Ensure we're not disposed inside while running the reader is busy */
   g_object_ref(self);
-  ret = gibber_xmpp_reader_push(priv->reader, data, length, &error);
+  ret = gibber_xmpp_reader_push(priv->reader, buffer->data, 
+                                buffer->length, &error);
   if (!ret) {
     g_signal_emit(self, signals[PARSE_ERROR], 0); 
   }

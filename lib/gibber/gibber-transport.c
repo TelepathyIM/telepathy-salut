@@ -25,6 +25,9 @@
 #include "gibber-transport.h"
 #include "gibber-transport-signals-marshal.h"
 
+#define DEBUG_FLAG DEBUG_TRANSPORT
+#include "gibber-debug.h"
+
 G_DEFINE_TYPE(GibberTransport, gibber_transport, G_TYPE_OBJECT)
 
 /* signal enum */
@@ -54,6 +57,7 @@ static void
 gibber_transport_init (GibberTransport *obj)
 {
   obj->state = GIBBER_TRANSPORT_DISCONNECTED;
+  obj->handler = NULL;
 }
 
 static void gibber_transport_dispose (GObject *object);
@@ -95,15 +99,6 @@ gibber_transport_class_init (GibberTransportClass *gibber_transport_class)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  signals[RECEIVED] = 
-    g_signal_new ("received",
-                  G_OBJECT_CLASS_TYPE (gibber_transport_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  gibber_transport_marshal_VOID__POINTER_ULONG,
-                  G_TYPE_NONE, 2, G_TYPE_POINTER, G_TYPE_ULONG);
-
   signals[ERROR] = 
     g_signal_new ("error",
                   G_OBJECT_CLASS_TYPE (gibber_transport_class),
@@ -140,7 +135,15 @@ gibber_transport_finalize (GObject *object)
 void
 gibber_transport_received_data(GibberTransport *transport, 
                                     const guint8 *data, gsize length) {
-  g_signal_emit(transport, signals[RECEIVED], 0, data, length);
+  GibberBuffer buffer;
+  buffer.length = length;
+  buffer.data = data;
+
+  if (G_UNLIKELY(transport->handler == NULL)) {
+    DEBUG("No handler for transport, dropping data!");
+  } else {
+    transport->handler(transport, &buffer, transport->user_data);
+  }
 }
 
 void 
@@ -185,3 +188,14 @@ gibber_transport_disconnect(GibberTransport *transport) {
   GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS(transport);
   return cls->disconnect(transport);
 }
+
+void gibber_transport_set_handler(GibberTransport *transport,
+                                  GibberHandlerFunc func,
+                                  gpointer user_data) {
+  g_assert(transport->handler == NULL || func == NULL);
+
+  transport->handler = func;
+  transport->user_data = user_data;
+}
+
+

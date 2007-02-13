@@ -34,6 +34,15 @@ typedef enum {
 
 typedef struct _GibberTransport GibberTransport;
 typedef struct _GibberTransportClass GibberTransportClass;
+typedef struct _GibberBuffer GibberBuffer;
+typedef void (*GibberHandlerFunc)(GibberTransport *transport, 
+                                   GibberBuffer *buffer,
+                                   gpointer user_data);
+
+struct _GibberBuffer {
+  const guint8 *data;
+  gsize length;
+};
 
 struct _GibberTransportClass {
     GObjectClass parent_class;
@@ -45,6 +54,8 @@ struct _GibberTransportClass {
 struct _GibberTransport {
     GObject parent;
     GibberTransportState state;
+    GibberHandlerFunc handler;
+    gpointer user_data;
 };
 
 GType gibber_transport_get_type(void);
@@ -80,6 +91,10 @@ gboolean gibber_transport_send(GibberTransport *transport,
                               gsize size, 
                               GError **error); 
 void gibber_transport_disconnect(GibberTransport *transport);
+
+void gibber_transport_set_handler(GibberTransport *transport,
+                                  GibberHandlerFunc func,
+                                  gpointer user_data);
 
 G_END_DECLS
 

@@ -12,9 +12,10 @@ G_BEGIN_DECLS
 
 typedef enum
 {
-  DEBUG_NET           = 1 << 0,
-  DEBUG_XMPP_READER   = 1 << 1,
-  DEBUG_XMPP_WRITER   = 1 << 2,
+  DEBUG_TRANSPORT     = 1 << 0,
+  DEBUG_NET           = 1 << 1,
+  DEBUG_XMPP_READER   = 1 << 2,
+  DEBUG_XMPP_WRITER   = 1 << 3,
 } DebugFlags;
 
 #define DEBUG_XMPP (DEBUG_XMPP_READER | DEBUG_XMPP_WRITER)
