@@ -106,13 +106,14 @@ dnl signal functions
 AC_CHECK_FUNCS(signal)
 AC_CHECK_HEADERS(signal.h)
 
-AC_OUTPUT( Makefile              \
-           lib/Makefile          \
-           lib/gibber/Makefile   \
-           src/Makefile          \
-           m4/Makefile           \
-           data/Makefile         \
-           generate/Makefile     \
-           tests/Makefile        \
+AC_OUTPUT( Makefile                       \
+           lib/Makefile                   \
+           lib/gibber/Makefile            \
+           lib/gibber/examples/Makefile   \
+           src/Makefile                   \
+           m4/Makefile                    \
+           data/Makefile                  \
+           generate/Makefile              \
+           tests/Makefile                 \
            tests/inputs/Makefile
 )

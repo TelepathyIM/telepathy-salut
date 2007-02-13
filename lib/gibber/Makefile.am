@@ -1,3 +1,5 @@
+SUBDIRS=examples
+
 noinst_LTLIBRARIES = libgibber.la
 
 BUILT_SOURCES = \
@@ -27,6 +29,8 @@ libgibber_la_SOURCES =            \
   gibber-transport.h              \
   gibber-fd-transport.c           \
   gibber-fd-transport.h           \
+  gibber-tcp-transport.c          \
+  gibber-tcp-transport.h          \
   gibber-linklocal-transport.c    \
   gibber-linklocal-transport.h    \
   $(BUILT_SOURCES)
