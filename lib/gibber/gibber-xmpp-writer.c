@@ -165,6 +165,8 @@ gibber_xmpp_writer_stream_open(GibberXmppWriter *writer,
   /* Set the magic known namespaces */
   priv->current_ns = g_quark_from_string("jabber:client");
   priv->stream_ns = g_quark_from_string("http://etherx.jabber.org/streams");
+
+  DEBUG("Writing xml: %.*s", *length, *data);
 }
 
 void gibber_xmpp_writer_stream_close(GibberXmppWriter *writer,
@@ -172,6 +174,7 @@ void gibber_xmpp_writer_stream_close(GibberXmppWriter *writer,
   static const guint8 *close = (const guint8 *)"</stream:stream>\n";
   *data = close;
   *length = strlen((gchar *)close);
+  DEBUG("Writing xml: %.*s", *length, *data);
 }
 
 static void
