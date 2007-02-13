@@ -181,7 +181,7 @@ _writeout(GibberLLTransport *self, const guint8 *data, gsize len) {
   GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (self);
   gsize written = 0;
 
-  DEBUG("OUT: %s", data);
+  DEBUG("Writing out %d bytes", len);
   if (priv->output_buffer == NULL || priv->output_buffer->len == 0) {
     /* We've got nothing buffer yet so try to write out directly */
     if (!_try_write(self, data, len, &written)) {
