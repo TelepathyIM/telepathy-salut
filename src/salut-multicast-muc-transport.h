@@ -25,6 +25,18 @@
 
 G_BEGIN_DECLS
 
+GQuark salut_multicast_muc_transport_error_quark (void);
+#define SALUT_MULTICAST_MUC_TRANSPORT_ERROR \
+  salut_multicast_muc_transport_error_quark()
+
+typedef enum
+{
+  SALUT_MULTICAST_MUC_TRANSPORT_ERROR_JOIN_FAILED,
+  SALUT_MULTICAST_MUC_TRANSPORT_ERROR_INVALID_ADDRESS,
+  SALUT_MULTICAST_MUC_TRANSPORT_ERROR_INVALID_PARAMETERS,
+} SalutMulticastMucTransportError;
+
+
 typedef struct _SalutMulticastMucTransport SalutMulticastMucTransport;
 typedef struct _SalutMulticastMucTransportClass SalutMulticastMucTransportClass;
 
