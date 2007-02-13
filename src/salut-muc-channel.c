@@ -66,6 +66,7 @@ enum
   PROP_TRANSPORT,
   PROP_CONNECTION,
   PROP_IM_MANAGER,
+  PROP_NAME,
   LAST_PROPERTY
 };
 
@@ -99,6 +100,7 @@ static void salut_muc_channel_received_stanza(GibberXmppConnection *conn,
                                               gpointer user_data);
 static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
                                                 GibberXmppStanza *stanza);
+static void salut_muc_channel_connect(SalutMucChannel *channel);
 static void salut_muc_channel_connected(GibberTransport *transport,
                                              gpointer user_data);
 static void salut_muc_channel_disconnected(SalutMucTransportIface *iface,
@@ -116,6 +118,9 @@ salut_muc_channel_get_property (GObject    *object,
   switch (property_id) {
     case PROP_OBJECT_PATH:
       g_value_set_string (value, priv->object_path);
+      break;
+    case PROP_NAME:
+      g_value_set_string(value, priv->muc_name);
       break;
     case PROP_CHANNEL_TYPE:
       g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TEXT);
@@ -154,6 +159,10 @@ salut_muc_channel_set_property (GObject     *object,
     case PROP_OBJECT_PATH:
       g_free (priv->object_path);
       priv->object_path = g_value_dup_string (value);
+      break;
+    case PROP_NAME:
+      g_free (priv->muc_name);
+      priv->muc_name = g_value_dup_string (value);
       break;
     case PROP_HANDLE:
       priv->handle = g_value_get_uint (value);
@@ -195,22 +204,6 @@ salut_muc_channel_constructor (GType type, guint n_props,
                      priv->handle);
   g_assert(valid);
   
-  priv->muc_connection = salut_muc_connection_new(priv->transport);
-  /* Transport is now owned by the xmpp connection */
-  g_object_unref(priv->transport);
-
-  g_signal_connect(priv->muc_connection, "received-stanza",
-                   G_CALLBACK(salut_muc_channel_received_stanza), obj);
-
-  g_signal_connect(priv->transport, "connected", 
-                   G_CALLBACK(salut_muc_channel_connected), obj);
-  g_signal_connect(priv->transport, "disconnected", 
-                   G_CALLBACK(salut_muc_channel_disconnected), obj);
-
-  /* FIXME catch errors */
-  salut_muc_transport_iface_connect(SALUT_MUC_TRANSPORT_IFACE(priv->transport),
-                                    NULL);
-
   /* Text mixin initialisation */
   text_mixin_init(obj, G_STRUCT_OFFSET(SalutMucChannel, text),
                   priv->connection->handle_repo);
@@ -240,7 +233,7 @@ salut_muc_channel_init (SalutMucChannel *self)
   /* allocate any data required by the object here */
   priv->object_path = NULL;
   priv->connection = NULL;
-  priv->muc_name = "blaat";
+  priv->muc_name = NULL;
   priv->presence_timeout_id = 0;
 }
 
@@ -307,6 +300,7 @@ muc_channel_add_member(GObject *obj, Handle handle,
                              add, empty, empty, empty, 
                              priv->connection->self_handle,
                              TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
+    salut_muc_channel_connect(self);
     g_intset_destroy(empty);
     g_intset_destroy(add);
     return TRUE;
@@ -350,6 +344,17 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE, 
                                     "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+
+  param_spec = g_param_spec_string ("name",
+                                    "Name of the muc group",
+                                    "The name of the muc group",
+                                    NULL,
+                                    G_PARAM_CONSTRUCT_ONLY |
+                                    G_PARAM_READWRITE |
+                                    G_PARAM_STATIC_NICK |
+                                    G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, 
+                                   PROP_NAME, param_spec);
 
   param_spec = g_param_spec_object ("transport", 
                                     "Object implementing a SalutMucTransport",
@@ -1043,7 +1048,29 @@ salut_muc_channel_dummy_timeout(gpointer data) {
   return FALSE;
 }
 
-static void salut_muc_channel_connected(GibberTransport *transport,
+static void
+salut_muc_channel_connect(SalutMucChannel *channel) {
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
+
+  priv->muc_connection = salut_muc_connection_new(priv->transport);
+  /* Transport is now owned by the xmpp connection */
+  g_object_unref(priv->transport);
+
+  g_signal_connect(priv->muc_connection, "received-stanza",
+                   G_CALLBACK(salut_muc_channel_received_stanza), channel);
+
+  g_signal_connect(priv->transport, "connected", 
+                   G_CALLBACK(salut_muc_channel_connected), channel);
+  g_signal_connect(priv->transport, "disconnected", 
+                   G_CALLBACK(salut_muc_channel_disconnected), channel);
+
+  /* FIXME catch errors */
+  salut_muc_transport_iface_connect(SALUT_MUC_TRANSPORT_IFACE(priv->transport),
+                                    NULL);
+}
+
+static void 
+salut_muc_channel_connected(GibberTransport *transport,
                                         gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);

@@ -238,6 +238,8 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
              == NULL);
   DEBUG("Requested channel for handle: %d", handle);
 
+  /* FIXME The name of the muc and the handel might need to be different at
+   * some point.. E.g. if two rooms are called the same */
   name = handle_inspect(priv->connection->handle_repo, 
                         TP_HANDLE_TYPE_ROOM, handle);
   path = g_strdup_printf("%s/MucChannel/%u", 
@@ -248,6 +250,7 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
                       "object-path", path,
                       "transport", transport,
                       "handle", handle,
+                      "name", name,
                       NULL);
   g_free(path);
 
