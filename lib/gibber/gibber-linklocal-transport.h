@@ -23,10 +23,7 @@
 
 #include <glib-object.h>
 
-#include <sys/socket.h>
-#include <netdb.h>
-
-#include "gibber-transport.h"
+#include "gibber-fd-transport.h"
 
 G_BEGIN_DECLS
 
@@ -35,11 +32,11 @@ typedef struct _GibberLLTransportClass GibberLLTransportClass;
 
 
 struct _GibberLLTransportClass {
-    GibberTransportClass parent_class;
+    GibberFdTransportClass parent_class;
 };
 
 struct _GibberLLTransport {
-    GibberTransport parent;
+    GibberFdTransport parent;
 };
 
 GType gibber_ll_transport_get_type(void);

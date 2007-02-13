@@ -23,10 +23,12 @@ libgibber_la_SOURCES =            \
   gibber-xmpp-stanza.h            \
   gibber-xmpp-writer.c            \
   gibber-xmpp-writer.h            \
-  gibber-linklocal-transport.c    \
-  gibber-linklocal-transport.h    \
   gibber-transport.c              \
   gibber-transport.h              \
+  gibber-fd-transport.c           \
+  gibber-fd-transport.h           \
+  gibber-linklocal-transport.c    \
+  gibber-linklocal-transport.h    \
   $(BUILT_SOURCES)
 
 
