@@ -100,7 +100,8 @@ static void salut_muc_channel_received_stanza(GibberXmppConnection *conn,
                                               gpointer user_data);
 static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
                                                 GibberXmppStanza *stanza);
-static void salut_muc_channel_connect(SalutMucChannel *channel);
+static gboolean 
+salut_muc_channel_connect(SalutMucChannel *channel, GError **error);
 static void salut_muc_channel_connected(GibberTransport *transport,
                                              gpointer user_data);
 static void salut_muc_channel_disconnected(SalutMucTransportIface *iface,
@@ -292,18 +293,25 @@ muc_channel_add_member(GObject *obj, Handle handle,
   if (handle == priv->connection->self_handle) {
     GIntSet *empty;
     GIntSet *add;
+    gboolean ret = TRUE;
     empty = g_intset_new();
     add = g_intset_new();
     g_intset_add(add, handle);
     /* Add to members */
-    group_mixin_change_members(G_OBJECT(self), message,
-                             add, empty, empty, empty, 
-                             priv->connection->self_handle,
-                             TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
-    salut_muc_channel_connect(self);
+    if (salut_muc_channel_connect(self, NULL)) {
+      group_mixin_change_members(G_OBJECT(self), message,
+          add, empty, empty, empty, 
+          priv->connection->self_handle,
+          TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
+    } else {
+      g_set_error(error, 
+                  TELEPATHY_ERRORS, NetworkError, 
+                  "Failed to connect to the group");
+      ret = FALSE;
+    }
     g_intset_destroy(empty);
     g_intset_destroy(add);
-    return TRUE;
+    return ret;
   }
 
   im_channel = salut_im_manager_get_channel_for_handle(priv->im_manager,
@@ -475,7 +483,6 @@ salut_muc_channel_invited(SalutMucChannel *self, Handle invitor,
     GArray *members =  g_array_sized_new (FALSE, FALSE, sizeof (Handle), 1);
     g_array_append_val(members, priv->connection->self_handle);
     group_mixin_add_members(G_OBJECT(self), members, "", &error);
-    g_assert(error == NULL);
     g_array_free(members, TRUE);
   } else {
     GIntSet *empty = g_intset_new();
@@ -1048,8 +1055,8 @@ salut_muc_channel_dummy_timeout(gpointer data) {
   return FALSE;
 }
 
-static void
-salut_muc_channel_connect(SalutMucChannel *channel) {
+static gboolean
+salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
 
   priv->muc_connection = salut_muc_connection_new(priv->transport);
@@ -1065,8 +1072,9 @@ salut_muc_channel_connect(SalutMucChannel *channel) {
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
 
   /* FIXME catch errors */
-  salut_muc_transport_iface_connect(SALUT_MUC_TRANSPORT_IFACE(priv->transport),
-                                    NULL);
+  return salut_muc_transport_iface_connect(
+             SALUT_MUC_TRANSPORT_IFACE(priv->transport),
+             error);
 }
 
 static void 
@@ -1082,7 +1090,8 @@ salut_muc_channel_connected(GibberTransport *transport,
   salut_muc_channel_send_presence(self, TRUE);
 }
 
-static void salut_muc_channel_disconnected(SalutMucTransportIface *iface,
+static void
+salut_muc_channel_disconnected(SalutMucTransportIface *iface,
                                              gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   g_signal_emit(self, signals[CLOSED], 0);
