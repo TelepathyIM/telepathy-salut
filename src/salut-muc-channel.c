@@ -984,9 +984,15 @@ salut_muc_channel_received_stanza(GibberXmppConnection *conn,
                                   gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  const gchar *from, *body, *body_offset;
+  const gchar *from, *to, *body, *body_offset;
   TpChannelTextMessageType msgtype;
   Handle from_handle;
+
+  to = gibber_xmpp_node_get_attribute(stanza->node, "to");
+  if (strcmp(to, priv->muc_name)) {
+    DEBUG("Stanza to another muc group, discarding");
+    return;
+  }
 
   if (!strcmp(stanza->node->name, "presence")) {
     salut_muc_channel_received_presence(self, stanza);
