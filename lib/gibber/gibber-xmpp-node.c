@@ -130,6 +130,7 @@ gibber_xmpp_node_get_attribute(GibberXmppNode *node, const gchar *key) {
 void  
 gibber_xmpp_node_set_attribute(GibberXmppNode *node, 
                               const gchar *key, const gchar *value) {
+  g_assert(value != NULL);
   gibber_xmpp_node_set_attribute_n_ns(node, key, value, strlen(value), NULL);
 }
 
