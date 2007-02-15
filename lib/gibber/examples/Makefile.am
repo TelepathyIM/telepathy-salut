@@ -1,3 +1,9 @@
+# Teach it how to make libgibber.la
+$(top_builddir)/lib/gibber/libgibber.la:
+	make -C $(top_builddir)/lib/gibber libgibber.la
+
+.PHONY: $(top_builddir)/lib/gibber/libgibber.la
+
 noinst_PROGRAMS = \
 	test_tcp
 
@@ -17,5 +23,4 @@ AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ \
 	-I $(top_srcdir)/src -I $(top_builddir)/src
 
 AM_LDFLAGS = @GLIB_LIBS@
-
 

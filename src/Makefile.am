@@ -176,6 +176,12 @@ AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ \
 
 AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
 
+# Teach it how to make libgibber.la
+$(top_builddir)/lib/gibber/libgibber.la:
+	make -C $(top_builddir)/lib/gibber libgibber.la
+
+.PHONY: $(top_builddir)/lib/gibber/libgibber.la
+
 # rule to generate the binding headers
 %-glue.h: ../generate/xml-modified/%.xml
 	dbus-binding-tool --mode=glib-server --output=$@ --prefix=$(subst -,_,$*) $<
