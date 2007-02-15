@@ -5,12 +5,19 @@ $(top_builddir)/lib/gibber/libgibber.la:
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
 noinst_PROGRAMS = \
-	test_tcp
+	test_tcp test_ssl
 
 test_tcp_SOURCES = \
 	test-tcp.c
 
 test_tcp_LDADD = \
+	$(top_builddir)/lib/gibber/libgibber.la \
+	$(AM_LDFLAGS)
+
+test_ssl_SOURCES = \
+	test-ssl.c
+
+test_ssl_LDADD = \
 	$(top_builddir)/lib/gibber/libgibber.la \
 	$(AM_LDFLAGS)
 

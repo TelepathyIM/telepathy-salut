@@ -34,11 +34,11 @@ static gboolean
 _channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data);
 
 
-gboolean
+static gboolean
 gibber_fd_transport_send(GibberTransport *transport, 
                         const guint8 *data, gsize size,
                         GError **error);
-void
+static void
 gibber_fd_transport_disconnect(GibberTransport *transport);
 
 static void _do_disconnect(GibberFdTransport *self);

@@ -12,7 +12,9 @@ BUILT_SOURCES = \
   gibber-xmpp-stanza-signals-marshal.c        \
   gibber-xmpp-stanza-signals-marshal.h        \
   gibber-sasl-auth-signals-marshal.c          \
-  gibber-sasl-auth-signals-marshal.h    
+  gibber-sasl-auth-signals-marshal.h          \
+  gibber-ssl-transport-signals-marshal.c      \
+  gibber-ssl-transport-signals-marshal.h    
 
 libgibber_la_SOURCES =            \
   gibber-xmpp-connection.c        \
@@ -33,6 +35,8 @@ libgibber_la_SOURCES =            \
   gibber-fd-transport.h           \
   gibber-tcp-transport.c          \
   gibber-tcp-transport.h          \
+  gibber-ssl-transport.c          \
+  gibber-ssl-transport.h          \
   gibber-sasl-auth.c              \
   gibber-sasl-auth.h              \
   gibber-linklocal-transport.c    \
@@ -55,5 +59,5 @@ dist-hook:
 	glib-genmarshal --body --prefix=$(subst -,_,$*)_marshal $< > $*-signals-marshal.c
 
 
-AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@
-AM_LDFLAGS = @GLIB_LIBS@ @LIBXML2_LIBS@
+AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @LIBSSL_CFLAGS@
+AM_LDFLAGS = @GLIB_LIBS@ @LIBXML2_LIBS@ @LIBSSL_LIBS@

@@ -15,6 +15,7 @@ static GDebugKey keys[] = {
   { "xmpp-reader",    DEBUG_XMPP_READER },
   { "xmpp-writer",    DEBUG_XMPP_WRITER },
   { "sasl",           DEBUG_SASL        },
+  { "ssl",            DEBUG_SSL         },
   { "all",            ~0 },
   { 0, },
 };
