@@ -71,7 +71,7 @@ return_str(GibberSaslAuth *auth, gpointer user_data) {
 
 void
 auth_success(GibberSaslAuth *sasl, gpointer user_data) {
-  printf("Authentication successfull!!");
+  printf("Authentication successfull!!\n");
   /* Reopen the connection */
   gibber_xmpp_connection_open(conn, server, NULL, "1.0");
 }
@@ -79,7 +79,7 @@ auth_success(GibberSaslAuth *sasl, gpointer user_data) {
 void
 auth_failed(GibberSaslAuth *sasl, GQuark domain, 
     int code, gchar *message, gpointer user_data) {
-  printf("Authentication failed: %s", message);
+  printf("Authentication failed: %s\n", message);
   g_main_loop_quit(mainloop);
 }
 
