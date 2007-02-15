@@ -10,7 +10,9 @@ BUILT_SOURCES = \
   gibber-xmpp-reader-signals-marshal.c        \
   gibber-xmpp-reader-signals-marshal.h        \
   gibber-xmpp-stanza-signals-marshal.c        \
-  gibber-xmpp-stanza-signals-marshal.h          
+  gibber-xmpp-stanza-signals-marshal.h        \
+  gibber-sasl-auth-signals-marshal.c          \
+  gibber-sasl-auth-signals-marshal.h    
 
 libgibber_la_SOURCES =            \
   gibber-xmpp-connection.c        \
@@ -31,8 +33,13 @@ libgibber_la_SOURCES =            \
   gibber-fd-transport.h           \
   gibber-tcp-transport.c          \
   gibber-tcp-transport.h          \
+  gibber-sasl-auth.c              \
+  gibber-sasl-auth.h              \
   gibber-linklocal-transport.c    \
   gibber-linklocal-transport.h    \
+  gibber-namespaces.h             \
+  libmd5-rfc/md5.c                \
+  libmd5-rfc/md5.h                \
   $(BUILT_SOURCES)
 
 
