@@ -55,6 +55,7 @@ GType gibber_xmpp_reader_get_type(void);
 
 GibberXmppReader * gibber_xmpp_reader_new(void);
 GibberXmppReader * gibber_xmpp_reader_new_no_stream(void);
+void gibber_xmpp_reader_reset(GibberXmppReader *reader);
 
 gboolean gibber_xmpp_reader_push(GibberXmppReader *reader, 
                                 const guint8 *data, gsize length,

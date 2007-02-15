@@ -86,6 +86,7 @@ struct _GibberXmppReaderPrivate
   gboolean dispose_has_run;
   gboolean error;
   gboolean stream_mode;
+  gboolean parsing;
 };
 
 #define GIBBER_XMPP_READER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_READER, GibberXmppReaderPrivate))
@@ -95,9 +96,13 @@ static void
 gibber_init_xml_parser(GibberXmppReader *obj) {
   GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (obj);
 
-  xmlFreeParserCtxt(priv->parser);
+  if (!priv->parsing) {
+    xmlFreeParserCtxt(priv->parser);
+  }
   priv->parser = xmlCreatePushParserCtxt(&parser_handler, obj, NULL, 0, NULL);
   xmlCtxtUseOptions(priv->parser, XML_PARSE_NOENT);
+  priv->depth = 0;
+  priv->parsing = FALSE;
 }
 
 static void
@@ -108,7 +113,6 @@ gibber_xmpp_reader_init (GibberXmppReader *obj)
   /* allocate any data required by the object here */
   gibber_init_xml_parser(obj);
 
-  priv->depth = 0;
   priv->stanza = NULL;
   priv->nodes = g_queue_new();
   priv->node = NULL;
@@ -340,14 +344,30 @@ gibber_xmpp_reader_push(GibberXmppReader *reader,
                        const guint8 *data, gsize length,
                        GError **error) {
   GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (reader);
+  xmlParserCtxtPtr parser;
 
   g_assert(!priv->error);
   DEBUG("Parsing chunk: %.*s", length, data);
 
-  xmlParseChunk(priv->parser, (const char*)data, length, FALSE);
+  priv->parsing = TRUE;
+  parser = priv->parser;
+  xmlParseChunk(parser, (const char*)data, length, FALSE);
+  priv->parsing = FALSE;
+
+  if (parser != priv->parser) {
+    xmlFreeParserCtxt(parser);
+  }
 
  if (!priv->stream_mode) {
     gibber_init_xml_parser(reader);
   }
   return !priv->error;
 }
+
+void
+gibber_xmpp_reader_reset(GibberXmppReader *reader) {
+  GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (reader);
+  gibber_init_xml_parser(reader);
+  DEBUG("Resetting xmpp reader, --> %d", priv->parser->instate);
+}
+
