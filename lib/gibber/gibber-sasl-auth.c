@@ -49,10 +49,17 @@ static guint signals[LAST_SIGNAL] = {0};
 
 typedef enum {
   GIBBER_SASL_AUTH_STATE_NO_MECH = 0,
+  GIBBER_SASL_AUTH_STATE_PLAIN_STARTED,
   GIBBER_SASL_AUTH_STATE_DIGEST_MD5_STARTED,
   GIBBER_SASL_AUTH_STATE_DIGEST_MD5_SENT_AUTH_RESPONSE,
   GIBBER_SASL_AUTH_STATE_DIGEST_MD5_SENT_FINAL_RESPONSE,
 } GibberSaslAuthState;
+
+typedef enum {
+  GIBBER_SASL_AUTH_PLAIN = 0, 
+  GIBBER_SASL_AUTH_DIGEST_MD5,
+  GIBBER_SASL_AUTH_NR_MECHANISMS,
+} GibberSaslAuthMechanism;
 
 /* private structure */
 typedef struct _GibberSaslAuthPrivate GibberSaslAuthPrivate;
@@ -65,6 +72,7 @@ struct _GibberSaslAuthPrivate
   gchar *digest_md5_rspauth;
   gulong stanza_signal_id; 
   GibberSaslAuthState state;
+  GibberSaslAuthMechanism mech;
 };
 
 #define GIBBER_SASL_AUTH_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_SASL_AUTH, GibberSaslAuthPrivate))
@@ -574,24 +582,63 @@ digest_md5_handle_success(GibberSaslAuth *sasl, GibberXmppStanza *stanza)
   auth_succeeded(sasl);
 }
 
+
 static void
-digest_md5_stanza_received(GibberXmppConnection *connection, 
+plain_handle_challenge(GibberSaslAuth *sasl, GibberXmppStanza *stanza) 
+{
+  auth_failed(sasl, GIBBER_SASL_AUTH_ERROR_INVALID_REPLY, 
+      "Server send an unexpected challenge"); 
+}
+
+static void
+plain_handle_success(GibberSaslAuth *sasl, GibberXmppStanza *stanza) 
+{
+  GibberSaslAuthPrivate *priv = GIBBER_SASL_AUTH_GET_PRIVATE(sasl);
+  if (priv->state != GIBBER_SASL_AUTH_STATE_PLAIN_STARTED) {
+      auth_failed(sasl, GIBBER_SASL_AUTH_ERROR_INVALID_REPLY, 
+          "Server send success before finishing authentication"); 
+      return;
+  }
+  auth_succeeded(sasl);
+}
+
+static void
+plain_handle_failure(GibberSaslAuth *sasl, GibberXmppStanza *stanza) 
+{
+  GibberXmppNode *reason = NULL;
+  if (stanza->node->children != NULL) {
+    /* TODO add a gibber xmpp node utility to either get the first child or
+     * iterate the children list */
+    reason = (GibberXmppNode *)stanza->node->children->data;
+  }
+  /* TODO Handle the different error cases in a different way. i.e.
+   * make it clear for the user if it's credentials were wrong, if the server
+   * just has a temporary error or if the authentication procedure itself was
+   * at fault (too weak, invalid mech etc) */
+  auth_failed(sasl, GIBBER_SASL_AUTH_ERROR_FAILURE,
+      "Authentication failed: %s", 
+      reason == NULL ? "Unknown reason" : reason->name);
+}
+
+
+#define HANDLE(x, y) { #x, y##_handle_##x }          
+#define HANDLERS(x) { HANDLE(challenge, x),  \
+                      HANDLE(failure, x),     \
+                      HANDLE(success, x),    \
+                      { NULL, NULL }         \
+                    }        
+static void
+sasl_auth_stanza_received(GibberXmppConnection *connection, 
     GibberXmppStanza *stanza,
     GibberSaslAuth *sasl) 
 {
   int i;
-#define HANDLE(x) { #x, digest_md5_handle_##x }
+  GibberSaslAuthPrivate *priv = GIBBER_SASL_AUTH_GET_PRIVATE (sasl);
   struct { 
     const gchar *name; 
     void (*func)(GibberSaslAuth *sasl, GibberXmppStanza *stanza);
-  } handlers[] = { HANDLE(challenge),
-                   HANDLE(failure),
-                   HANDLE(success),
-                   { NULL, } 
-                 };
-#undef HANDLE
-                 
-
+  } handlers[GIBBER_SASL_AUTH_NR_MECHANISMS][4] = { HANDLERS(plain), 
+                                                   HANDLERS(digest_md5) };
   if (strcmp(gibber_xmpp_node_get_ns(stanza->node), GIBBER_XMPP_NS_SASL_AUTH)) {
     auth_failed(sasl, GIBBER_SASL_AUTH_ERROR_INVALID_REPLY, 
         "Server send a reply not in the %s namespace", 
@@ -599,9 +646,9 @@ digest_md5_stanza_received(GibberXmppConnection *connection,
     return;
   }
 
-  for (i = 0 ; handlers[i].name != NULL; i++) {
-    if (!strcmp(stanza->node->name, handlers[i].name)) {
-      handlers[i].func(sasl, stanza);
+  for (i = 0 ; handlers[priv->mech][i].name != NULL; i++) {
+    if (!strcmp(stanza->node->name, handlers[priv->mech][i].name)) {
+      handlers[priv->mech][i].func(sasl, stanza);
       return;
     }
   }
@@ -612,20 +659,60 @@ digest_md5_stanza_received(GibberXmppConnection *connection,
 }
 
 static gboolean
-gibber_sasl_auth_start_digest_md5(GibberSaslAuth *sasl, GError **error) {
+gibber_sasl_auth_start_mechanism(GibberSaslAuth *sasl, 
+    GibberSaslAuthMechanism mech,
+    GError **error) 
+{
   GibberXmppStanza *stanza;
   GibberSaslAuthPrivate *priv = GIBBER_SASL_AUTH_GET_PRIVATE(sasl);
   GError *send_error = NULL;
   gboolean ret = TRUE;
 
+  priv->mech = mech;
+
   priv->stanza_signal_id =
       g_signal_connect(priv->connection, "received-stanza", 
-          G_CALLBACK(digest_md5_stanza_received), sasl);
+          G_CALLBACK(sasl_auth_stanza_received), sasl);
 
-  priv->state = GIBBER_SASL_AUTH_STATE_DIGEST_MD5_STARTED;
   stanza = gibber_xmpp_stanza_new("auth");
   gibber_xmpp_node_set_ns(stanza->node, GIBBER_XMPP_NS_SASL_AUTH);
-  gibber_xmpp_node_set_attribute(stanza->node, "mechanism", "DIGEST-MD5");
+  switch (mech) {
+    case GIBBER_SASL_AUTH_PLAIN: {
+      GString *str = g_string_new("");
+      gchar *username = NULL, *password = NULL;
+
+      g_signal_emit(sasl, signals[USERNAME_REQUESTED], 0, &username);
+      g_signal_emit(sasl, signals[PASSWORD_REQUESTED], 0, &password);
+
+      if (username == NULL || password == NULL) {
+        auth_failed(sasl, GIBBER_SASL_AUTH_ERROR_NO_CREDENTIALS,
+                   "No username or password provided");
+        goto out;
+      }
+      DEBUG("Got username and password");
+      gchar *cstr;
+      g_string_append_c(str, '\0');
+      g_string_append(str, username);
+      g_string_append_c(str, '\0');
+      g_string_append(str, password);
+      cstr = g_base64_encode((guchar *)str->str, str->len);
+
+      gibber_xmpp_node_set_attribute(stanza->node, "mechanism", "PLAIN");
+      gibber_xmpp_node_set_content(stanza->node, cstr);
+
+      g_string_free(str, TRUE);
+      g_free(cstr);
+
+      priv->state = GIBBER_SASL_AUTH_STATE_PLAIN_STARTED;
+      break;
+    }
+    case GIBBER_SASL_AUTH_DIGEST_MD5:
+      gibber_xmpp_node_set_attribute(stanza->node, "mechanism", "DIGEST-MD5");
+      priv->state = GIBBER_SASL_AUTH_STATE_DIGEST_MD5_STARTED;
+      break;
+    default:
+      g_assert_not_reached();
+  }
 
   if (!gibber_xmpp_connection_send(priv->connection, stanza, &send_error)) {
     g_set_error(error, 
@@ -635,6 +722,8 @@ gibber_sasl_auth_start_digest_md5(GibberSaslAuth *sasl, GError **error) {
     g_error_free(send_error);
     ret = FALSE;
   }
+
+out:
   g_object_unref(stanza);
 
   return ret;
@@ -676,7 +765,12 @@ gibber_sasl_auth_authenticate(GibberSaslAuth *sasl,
 
   if (gibber_sasl_auth_has_mechanism(mechanisms, "DIGEST-MD5")) {
     DEBUG("Choosing DIGEST-MD5 as auth mechanism");
-    ret = gibber_sasl_auth_start_digest_md5(sasl, error);
+    ret = gibber_sasl_auth_start_mechanism(sasl, 
+              GIBBER_SASL_AUTH_DIGEST_MD5, error);
+  } else if (allow_plain && 
+      gibber_sasl_auth_has_mechanism(mechanisms, "PLAIN")) {
+    DEBUG("Choosing PLAIN as auth mechanism");
+    ret = gibber_sasl_auth_start_mechanism(sasl, GIBBER_SASL_AUTH_PLAIN, error);
   } else {
     g_set_error(error, 
         GIBBER_SASL_AUTH_ERROR,
