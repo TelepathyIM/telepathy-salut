@@ -73,6 +73,7 @@ struct _GibberXmppConnectionPrivate
   GibberXmppReader *reader;
   GibberXmppWriter *writer;
   gboolean dispose_has_run;
+  gboolean stream_opened;
 };
 
 #define GIBBER_XMPP_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_CONNECTION, GibberXmppConnectionPrivate))
@@ -85,6 +86,7 @@ gibber_xmpp_connection_init (GibberXmppConnection *obj) {
   priv->writer = gibber_xmpp_writer_new();
 
   priv->reader = gibber_xmpp_reader_new();
+  priv->stream_opened = FALSE;
   g_signal_connect(priv->reader, "stream-opened", 
                     G_CALLBACK(_reader_stream_opened_cb), obj);
   g_signal_connect(priv->reader, "received-stanza", 
@@ -202,6 +204,10 @@ gibber_xmpp_connection_open(GibberXmppConnection *connection,
 
   gibber_xmpp_writer_stream_open(priv->writer, to, from, 
                                   version, &data, &length);
+  if (priv->stream_opened) {
+    /* Stream was already opened, ropening it */
+    gibber_xmpp_reader_reset(priv->reader);
+  }
   gibber_transport_send(connection->transport, data, length, NULL);
 }
 
@@ -258,6 +264,8 @@ _reader_stream_opened_cb(GibberXmppReader *reader,
                          const gchar *version,
                          gpointer user_data) {
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
+  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
+  priv->stream_opened = TRUE;
   g_signal_emit(self, signals[STREAM_OPENED], 0, to, from, version);
 }
 
@@ -265,6 +273,8 @@ static void
 _reader_stream_closed_cb(GibberXmppReader *reader, 
                          gpointer user_data) {
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
+  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
+  priv->stream_opened = FALSE;
   g_signal_emit(self, signals[STREAM_CLOSED], 0);
 }
 
