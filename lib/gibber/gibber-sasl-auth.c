@@ -358,12 +358,24 @@ md5_hex_hash(gchar *value, gsize len) {
 }
 
 static gchar *
+digest_md5_generate_cnonce(void) {
+  /* RFC 2831 recommends the the nonce to be either hexadecimal or base64 with
+   * at least 64 bits of entropy */
+#define NR 8
+  guint32 n[NR]; 
+  int i;
+  for (i = 0; i < NR; i++)
+    n[i] = g_random_int();
+  return g_base64_encode((guchar *)n, sizeof(n));
+}
+
+static gchar *
 md5_prepare_response(GibberSaslAuth *sasl, GHashTable *challenge) {
   GibberSaslAuthPrivate *priv = GIBBER_SASL_AUTH_GET_PRIVATE(sasl);
   GString *response = g_string_new("");
   const gchar *realm, *nonce;
   gchar *a1, *a1h, *a2, *a2h, *kd, *kdh;
-  gchar *cnonce = "OA6MHXh6VqTrRkadfaDFasfSADfdsa";
+  gchar *cnonce = NULL;
   gchar *username = NULL;
   gchar *password = NULL;
   gchar *tmp;
@@ -388,6 +400,7 @@ md5_prepare_response(GibberSaslAuth *sasl, GHashTable *challenge) {
     goto error;
   }
 
+  cnonce = digest_md5_generate_cnonce();
 
   /* FIXME challenge can contain multiple realms */
   realm = g_hash_table_lookup(challenge, "realm");
@@ -442,6 +455,7 @@ md5_prepare_response(GibberSaslAuth *sasl, GHashTable *challenge) {
   g_free(kd);
 
 out:
+  g_free(cnonce);
   g_free(username);
   g_free(password);
   
