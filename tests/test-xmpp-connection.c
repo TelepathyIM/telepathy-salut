@@ -10,6 +10,7 @@
 
 FILE *treefile = NULL;
 FILE *xmlfile = NULL;
+gboolean parsing_failed = FALSE;
 
 gboolean
 send_hook(GibberTransport *transport, const guint8 *data, 
@@ -22,6 +23,8 @@ send_hook(GibberTransport *transport, const guint8 *data,
 void
 parse_error(GibberXmppConnection *connection, gpointer user_data) {
   fprintf(treefile, "PARSE ERROR\n");
+  fprintf(stderr, "PARSING FAILED\n");
+  parsing_failed = TRUE;
 }
 
 void
@@ -84,7 +87,7 @@ main(int argc, char **argv) {
   GibberXmppConnection *connection;
   TestTransport *transport;
   FILE *file;
-  int ret;
+  int ret = 0;
   guint8 buf[BUFSIZE];
 
   
@@ -121,11 +124,11 @@ main(int argc, char **argv) {
   }
   g_assert(xmlfile != NULL);
 
-  while ((ret = fread(buf, 1, BUFSIZE, file)) > 0) {
+  while (!parsing_failed && (ret = fread(buf, 1, BUFSIZE, file)) > 0) {
     test_transport_write(transport, buf, ret);
   }
-  g_assert(ret == 0);
+  g_assert(parsing_failed || ret == 0);
   fclose(file);
 
-  return 0;
+  return parsing_failed ? 1 : 0;
 }
