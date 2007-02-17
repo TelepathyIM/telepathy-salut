@@ -552,8 +552,7 @@ digest_md5_handle_challenge(GibberSaslAuth *sasl, GibberXmppStanza *stanza)
 
   if (h == NULL) {
     auth_failed(sasl, GIBBER_SASL_AUTH_ERROR_INVALID_REPLY, 
-        "Server send an invalid challenge", 
-        stanza->node->name);
+        "Server send an invalid challenge");
     return;
   }
 
