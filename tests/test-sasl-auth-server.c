@@ -73,6 +73,7 @@ struct _TestSaslAuthServerPrivate
   gchar *password;
   gchar *mech;
   AuthState state;
+  ServerProblem problem;
 };
 
 #define TEST_SASL_AUTH_SERVER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), TEST_TYPE_SASL_AUTH_SERVER, TestSaslAuthServerPrivate))
@@ -149,35 +150,38 @@ stream_opened(GibberXmppConnection *connection,
   TestSaslAuthServer *self = TEST_SASL_AUTH_SERVER(user_data);
   TestSaslAuthServerPrivate * priv = TEST_SASL_AUTH_SERVER_GET_PRIVATE(self);
   GibberXmppStanza *stanza;
-  GibberXmppNode *mechnode;
+  GibberXmppNode *mechnode = NULL;
 
-  fprintf(stderr, "STREAM OPENED to=%s from=%s version=%s\n",
-           to, from, version);
   gibber_xmpp_connection_open(connection, NULL, "testserver", "1.0");
   /* Send stream features */
   stanza = gibber_xmpp_stanza_new("features");
   gibber_xmpp_node_set_ns(stanza->node, GIBBER_XMPP_NS_STREAM);
-  mechnode = gibber_xmpp_node_add_child_ns(stanza->node, 
-                                           "mechanisms", 
-                                           GIBBER_XMPP_NS_SASL_AUTH);
 
-  if (priv->mech != NULL) {
-    gibber_xmpp_node_add_child_with_content(mechnode, "mechanism", priv->mech);
-  } else {
-    const gchar *mechs;
-    gchar **mechlist;
-    gchar **tmp;
-    int ret;
-    ret = sasl_listmech(priv->sasl_conn, NULL, 
-            "","\n","", 
-            &mechs, 
-            NULL,NULL); 
-    CHECK_SASL_RETURN(ret);
-    mechlist = g_strsplit(mechs, "\n", -1);
-    for (tmp = mechlist; *tmp != NULL; tmp++) {
+  if (priv->problem != SERVER_PROBLEM_NO_SASL) { 
+    mechnode = gibber_xmpp_node_add_child_ns(stanza->node, 
+                                             "mechanisms", 
+                                             GIBBER_XMPP_NS_SASL_AUTH);
+    if (priv->problem == SERVER_PROBLEM_NO_MECHANISMS) {
+      /* lalala */
+    } else if (priv->mech != NULL) {
+      gibber_xmpp_node_add_child_with_content(mechnode, 
+          "mechanism", priv->mech);
+    } else {
+      const gchar *mechs;
+      gchar **mechlist;
+      gchar **tmp;
+      int ret;
+      ret = sasl_listmech(priv->sasl_conn, NULL, 
+              "","\n","", 
+              &mechs, 
+              NULL,NULL); 
+      CHECK_SASL_RETURN(ret);
+      mechlist = g_strsplit(mechs, "\n", -1);
+      for (tmp = mechlist; *tmp != NULL; tmp++) {
       gibber_xmpp_node_add_child_with_content(mechnode, "mechanism", *tmp);
+      }
+      g_strfreev(mechlist);
     }
-    g_strfreev(mechlist);
   }
   g_assert(gibber_xmpp_connection_send(connection, stanza, NULL));
 }
@@ -185,46 +189,6 @@ stream_opened(GibberXmppConnection *connection,
 static void
 stream_closed(GibberXmppConnection *connection, gpointer user_data) {
   gibber_xmpp_connection_close(connection);
-}
-
-static void
-handle_auth(TestSaslAuthServer *self, GibberXmppStanza *stanza) {
-  TestSaslAuthServerPrivate *priv = TEST_SASL_AUTH_SERVER_GET_PRIVATE(self);
-  const gchar *mech = gibber_xmpp_node_get_attribute(stanza->node, "mechanism");
-  guchar *response = NULL;
-  const gchar *challenge; 
-  gchar *challenge64;
-  unsigned challenge_len;
-  gsize response_len = 0;
-  GibberXmppStanza *c;
-  int ret;
-
-  if (stanza->node->content != NULL) {
-    response = g_base64_decode(stanza->node->content, &response_len);
-  }
-
-  g_assert(priv->state == AUTH_STATE_STARTED);
-
-  priv->state = AUTH_STATE_CHALLENGE;
-
-  ret = sasl_server_start(priv->sasl_conn, 
-            mech,
-            (gchar *)response,
-            (unsigned) response_len,
-            &challenge,
-            &challenge_len);
-
-  CHECK_SASL_RETURN(ret);
-  challenge64 = g_base64_encode((guchar *)challenge, challenge_len);
-
-  c = gibber_xmpp_stanza_new("challenge");
-  gibber_xmpp_node_set_ns(c->node, GIBBER_XMPP_NS_SASL_AUTH);
-  gibber_xmpp_node_set_content(c->node, challenge64);
-  g_assert(gibber_xmpp_connection_send(priv->conn, c, NULL));
-  g_object_unref(c);
-
-  g_free(response);
-  g_free(challenge64);
 }
 
 static void
@@ -244,8 +208,57 @@ auth_succeeded(TestSaslAuthServer *self) {
 
   g_assert(gibber_xmpp_connection_send(priv->conn, s, NULL));
 
-
   g_object_unref(s);
+}
+
+static void
+handle_auth(TestSaslAuthServer *self, GibberXmppStanza *stanza) {
+  TestSaslAuthServerPrivate *priv = TEST_SASL_AUTH_SERVER_GET_PRIVATE(self);
+  const gchar *mech = gibber_xmpp_node_get_attribute(stanza->node, "mechanism");
+  guchar *response = NULL;
+  const gchar *challenge; 
+  unsigned challenge_len;
+  gsize response_len = 0;
+  int ret;
+
+  if (stanza->node->content != NULL) {
+    response = g_base64_decode(stanza->node->content, &response_len);
+  }
+
+  g_assert(priv->state == AUTH_STATE_STARTED);
+  priv->state = AUTH_STATE_CHALLENGE;
+
+
+  ret = sasl_server_start(priv->sasl_conn, 
+            mech,
+            (gchar *)response,
+            (unsigned) response_len,
+            &challenge,
+            &challenge_len);
+
+  CHECK_SASL_RETURN(ret);
+  if (challenge_len > 0)  {
+    GibberXmppStanza *c;
+    gchar *challenge64;
+
+    if (ret == SASL_OK) {
+      priv->state = AUTH_STATE_FINAL_CHALLENGE;
+    }
+
+    challenge64 = g_base64_encode((guchar *)challenge, challenge_len);
+
+    c = gibber_xmpp_stanza_new("challenge");
+    gibber_xmpp_node_set_ns(c->node, GIBBER_XMPP_NS_SASL_AUTH);
+    gibber_xmpp_node_set_content(c->node, challenge64);
+    g_assert(gibber_xmpp_connection_send(priv->conn, c, NULL));
+    g_object_unref(c);
+
+    g_free(challenge64);
+  } else if (ret == SASL_OK) {
+    auth_succeeded(self);
+  } else {
+    g_assert_not_reached();
+  }
 }
 
 static void
@@ -263,6 +276,7 @@ handle_response(TestSaslAuthServer *self, GibberXmppStanza *stanza) {
     auth_succeeded(self);
     return;
   }
+
   g_assert(priv->state == AUTH_STATE_CHALLENGE); 
 
   if (stanza->node->content != NULL) {
@@ -328,7 +342,7 @@ received_stanza(GibberXmppConnection *connection,
 
 static int
 test_sasl_server_auth_log(void *context, int level, const gchar *message) {
-  printf("LOG-> %s\n", message);
+  //printf("LOG-> %s\n", message);
   return SASL_OK;
 }
 
@@ -360,7 +374,8 @@ test_sasl_server_auth_getopt(void *context,
 
 TestSaslAuthServer *
 test_sasl_auth_server_new(GibberTransport *transport, gchar *mech,
-                          const gchar *user, const gchar *password) {
+                          const gchar *user, const gchar *password,
+                          ServerProblem problem) {
   TestSaslAuthServer *server;
   TestSaslAuthServerPrivate *priv;
   static gboolean sasl_initialized = FALSE;
@@ -395,6 +410,7 @@ test_sasl_auth_server_new(GibberTransport *transport, gchar *mech,
   priv->username = g_strdup(user);
   priv->password = g_strdup(password);
   priv->mech = g_strdup(mech);
+  priv->problem = problem;
 
   priv->conn = gibber_xmpp_connection_new(transport);
   g_signal_connect(priv->conn, "parse-error",

@@ -27,6 +27,12 @@
 
 G_BEGIN_DECLS
 
+typedef enum {
+  SERVER_PROBLEM_NO_PROBLEM,
+  SERVER_PROBLEM_NO_SASL,
+  SERVER_PROBLEM_NO_MECHANISMS,
+} ServerProblem;
+
 typedef struct _TestSaslAuthServer TestSaslAuthServer;
 typedef struct _TestSaslAuthServerClass TestSaslAuthServerClass;
 
@@ -57,7 +63,8 @@ GType test_sasl_auth_server_get_type(void);
 
 TestSaslAuthServer *
 test_sasl_auth_server_new(GibberTransport *transport, gchar *mech,
-                          const gchar *user, const gchar *password);
+                          const gchar *user, const gchar *password,
+                          ServerProblem problem);
 
 G_END_DECLS
 
