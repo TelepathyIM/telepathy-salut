@@ -219,6 +219,7 @@ gibber_xmpp_connection_restart(GibberXmppConnection *connection) {
 
   g_assert(priv->stream_opened);
   gibber_xmpp_reader_reset(priv->reader);
+  priv->stream_opened = FALSE;
 }
 
 void 
