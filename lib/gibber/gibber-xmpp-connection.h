@@ -63,7 +63,13 @@ GibberXmppConnection *gibber_xmpp_connection_new(GibberTransport *transport);
 void gibber_xmpp_connection_open(GibberXmppConnection *connection,
                                 const gchar *to, const gchar *from,
                                 const gchar *version);
+
+/* Prepare the connection for a reopen from the other side, for example after
+ * successfull SASL authentication */
+void gibber_xmpp_connection_restart(GibberXmppConnection *connection);
+
 void gibber_xmpp_connection_close(GibberXmppConnection *connection);
+
 gboolean gibber_xmpp_connection_send(GibberXmppConnection *connection, 
                                     GibberXmppStanza *stanza, 
                                     GError **error);

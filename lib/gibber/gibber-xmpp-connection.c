@@ -212,6 +212,15 @@ gibber_xmpp_connection_open(GibberXmppConnection *connection,
   gibber_transport_send(connection->transport, data, length, NULL);
 }
 
+void
+gibber_xmpp_connection_restart(GibberXmppConnection *connection) {
+  GibberXmppConnectionPrivate *priv = 
+    GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
+
+  g_assert(priv->stream_opened);
+  gibber_xmpp_reader_reset(priv->reader);
+}
+
 void 
 gibber_xmpp_connection_close(GibberXmppConnection *connection) {
   GibberXmppConnectionPrivate *priv = 
