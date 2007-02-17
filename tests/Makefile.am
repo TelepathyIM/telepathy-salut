@@ -41,7 +41,7 @@ AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ \
 
 AM_LDFLAGS = @GLIB_LIBS@
 
-TESTS = run-test.sh
+TESTS = test-sasl-auth run-test.sh
 
 EXTRA_DIST = \
   run-test.sh
