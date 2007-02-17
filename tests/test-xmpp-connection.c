@@ -127,6 +127,11 @@ main(int argc, char **argv) {
   while (!parsing_failed && (ret = fread(buf, 1, BUFSIZE, file)) > 0) {
     test_transport_write(transport, buf, ret);
   }
+
+  while (g_main_context_iteration(NULL, FALSE))
+    ;
+
+
   g_assert(parsing_failed || ret == 0);
   fclose(file);
 
