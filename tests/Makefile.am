@@ -5,7 +5,7 @@ $(top_builddir)/lib/gibber/libgibber.la:
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
 noinst_PROGRAMS = \
-	test-xmpp-connection
+	test-xmpp-connection test-sasl-auth
 
 test_xmpp_connection_SOURCES = \
     test-xmpp-connection.c     \
@@ -17,6 +17,21 @@ test_xmpp_connection_LDADD = \
     $(AM_LDFLAGS)
 
 test_xmpp_connection_CFLAGS = \
+    @LIBXML2_CFLAGS@          \
+    $(AM_CFLAGS)
+
+test_sasl_auth_SOURCES = \
+    test-sasl-auth.c           \
+    test-sasl-auth-server.c    \
+    test-sasl-auth-server.h    \
+    test-transport.c           \
+    test-transport.h
+
+test_sasl_auth_LDADD = \
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(AM_LDFLAGS)
+
+test_sasl_auth_CFLAGS = \
     @LIBXML2_CFLAGS@          \
     $(AM_CFLAGS)
 
