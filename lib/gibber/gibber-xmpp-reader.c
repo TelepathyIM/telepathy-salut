@@ -73,6 +73,13 @@ static xmlSAXHandler parser_handler = {
   .serror         = _error,
 };
 
+typedef enum {
+  STATE_STREAM_CLOSE,
+  STATE_STREAM_OPENED,
+  STATE_STREAM_OPEN,
+  STATE_STREAM_CLOSED,
+} StreamState;
+
 /* private structure */
 typedef struct _GibberXmppReaderPrivate GibberXmppReaderPrivate;
 
@@ -83,10 +90,14 @@ struct _GibberXmppReaderPrivate
   GibberXmppStanza *stanza;
   GibberXmppNode *node;
   GQueue *nodes;
+  gchar *to;
+  gchar *from;
+  gchar *version;
   gboolean dispose_has_run;
   gboolean error;
   gboolean stream_mode;
-  gboolean parsing;
+  GQueue *stanzas;
+  StreamState state;
 };
 
 #define GIBBER_XMPP_READER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_READER, GibberXmppReaderPrivate))
@@ -96,13 +107,10 @@ static void
 gibber_init_xml_parser(GibberXmppReader *obj) {
   GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (obj);
 
-  if (!priv->parsing) {
-    xmlFreeParserCtxt(priv->parser);
-  }
   priv->parser = xmlCreatePushParserCtxt(&parser_handler, obj, NULL, 0, NULL);
   xmlCtxtUseOptions(priv->parser, XML_PARSE_NOENT);
   priv->depth = 0;
-  priv->parsing = FALSE;
+  priv->state = STATE_STREAM_CLOSE;
 }
 
 static void
@@ -118,6 +126,8 @@ gibber_xmpp_reader_init (GibberXmppReader *obj)
   priv->node = NULL;
   priv->error = FALSE;
   priv->stream_mode = TRUE;
+  priv->stanzas = g_queue_new();
+  priv->state = STATE_STREAM_CLOSE;
 }
 
 static void gibber_xmpp_reader_dispose (GObject *object);
@@ -171,6 +181,11 @@ gibber_xmpp_reader_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
   /* release any references held by the object here */
+  while (!g_queue_is_empty(priv->stanzas)) {
+    gpointer stanza;
+    stanza = g_queue_pop_head(priv->stanzas);
+    g_object_unref(stanza);
+  }
 
   if (G_OBJECT_CLASS (gibber_xmpp_reader_parent_class)->dispose)
     G_OBJECT_CLASS (gibber_xmpp_reader_parent_class)->dispose (object);
@@ -187,6 +202,10 @@ gibber_xmpp_reader_finalize (GObject *object)
     xmlFreeParserCtxt(priv->parser);
     priv->parser = NULL;
   }
+  g_queue_free(priv->stanzas);
+  g_free(priv->to);
+  g_free(priv->from);
+  g_free(priv->version);
 
   G_OBJECT_CLASS (gibber_xmpp_reader_parent_class)->finalize (object);
 }
@@ -227,31 +246,29 @@ static void _start_element_ns(void *user_data,
   }
 
   if (priv->stream_mode && G_UNLIKELY(priv->depth == 0)) {
-    gchar *to = NULL;
-    gchar *from = NULL;
-    gchar *version = NULL;
-
     if (strcmp("stream", (gchar *)localname)
          || strcmp(XMPP_STREAM_NAMESPACE, (gchar *)uri)) {
       priv->error = TRUE;
-      g_assert_not_reached();
       return;
     }
+    priv->state = STATE_STREAM_OPENED;
     for (i = 0; i < nb_attributes * 5; i+=5) {
       if (!strcmp((gchar *)attributes[i], "to")) {
-        to = g_strndup((gchar *)attributes[i+3],
+        g_free(priv->to);
+        priv->to = g_strndup((gchar *)attributes[i+3],
                          (gsize) (attributes[i+4] - attributes[i+3]));
       }
       if (!strcmp((gchar *)attributes[i], "from")) {
-        from = g_strndup((gchar *)attributes[i+3],
+        g_free(priv->from);
+        priv->from = g_strndup((gchar *)attributes[i+3],
                          (gsize) (attributes[i+4] - attributes[i+3]));
       }
       if (!strcmp((gchar *)attributes[i], "version")) {
-        version = g_strndup((gchar *)attributes[i+3],
+        g_free(priv->version);
+        priv->version = g_strndup((gchar *)attributes[i+3],
                          (gsize) (attributes[i+4] - attributes[i+3]));
       }
     }
-    g_signal_emit(self, signals[STREAM_OPENED], 0, to, from, version);
     priv->depth++;
     return;
   } 
@@ -318,11 +335,11 @@ _end_element_ns(void *user_data, const xmlChar *localname,
   }
 
   if (priv->stream_mode && priv->depth == 0) {
-    g_signal_emit(self, signals[STREAM_CLOSED], 0);
+    priv->state = STATE_STREAM_CLOSED;
   } else if (priv->depth == (priv->stream_mode ? 1 : 0) ) {
     g_assert(g_queue_get_length(priv->nodes) == 0);
-    g_signal_emit(self, signals[RECEIVED_STANZA], 0, priv->stanza);
-    g_object_unref(priv->stanza);
+    DEBUG("Received stanza");
+    g_queue_push_head(priv->stanzas, priv->stanza); 
     priv->stanza = NULL;
     priv->node = NULL;
   } else {
@@ -349,13 +366,25 @@ gibber_xmpp_reader_push(GibberXmppReader *reader,
   g_assert(!priv->error);
   DEBUG("Parsing chunk: %.*s", length, data);
 
-  priv->parsing = TRUE;
   parser = priv->parser;
   xmlParseChunk(parser, (const char*)data, length, FALSE);
-  priv->parsing = FALSE;
 
-  if (parser != priv->parser) {
-    xmlFreeParserCtxt(parser);
+  if (priv->state == STATE_STREAM_OPENED) {
+    priv->state = STATE_STREAM_OPEN;
+    g_signal_emit(reader, signals[STREAM_OPENED], 0, 
+                  priv->to, priv->from, priv->version);
+  }
+
+  while (!g_queue_is_empty(priv->stanzas)) {
+    gpointer stanza;
+    stanza = g_queue_pop_head(priv->stanzas);
+    g_signal_emit(reader, signals[RECEIVED_STANZA], 0, stanza);
+    g_object_unref(stanza);
+  }
+
+  if (priv->state == STATE_STREAM_CLOSED) {
+    priv->state = STATE_STREAM_CLOSE;
+    g_signal_emit(reader, signals[STREAM_CLOSED], 0);
   }
 
  if (!priv->stream_mode) {
@@ -366,8 +395,7 @@ gibber_xmpp_reader_push(GibberXmppReader *reader,
 
 void
 gibber_xmpp_reader_reset(GibberXmppReader *reader) {
-  GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (reader);
+  DEBUG("Resetting xmpp reader");
   gibber_init_xml_parser(reader);
-  DEBUG("Resetting xmpp reader, --> %d", priv->parser->instate);
 }
 
