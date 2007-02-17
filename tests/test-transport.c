@@ -24,7 +24,7 @@
 
 #include "test-transport.h"
 
-gboolean
+static gboolean
 test_transport_send(GibberTransport *transport, const guint8 *data, gsize size,
                                                 GError **error);
 void
@@ -40,6 +40,8 @@ struct _TestTransportPrivate
 {
   gboolean dispose_has_run;
   test_transport_send_hook send;
+  GString *buffer;
+  guint send_id;
 };
 
 #define TEST_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), TEST_TYPE_TRANSPORT, TestTransportPrivate))
@@ -51,6 +53,8 @@ test_transport_init (TestTransport *obj)
 
   /* allocate any data required by the object here */
   priv->send = NULL;
+  priv->buffer = g_string_new("");
+  priv->send_id = 0;
 }
 
 static void test_transport_dispose (GObject *object);
@@ -81,6 +85,9 @@ test_transport_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
+  if (priv->send_id != 0) 
+    g_source_remove(priv->send_id);
+
   priv->dispose_has_run = TRUE;
 
   /* release any references held by the object here */
@@ -92,22 +99,41 @@ test_transport_dispose (GObject *object)
 void
 test_transport_finalize (GObject *object)
 {
-  /*
   TestTransport *self = TEST_TRANSPORT (object);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
-  */
 
   /* free any data held directly by the object here */
+  g_string_free(priv->buffer, TRUE);
   G_OBJECT_CLASS (test_transport_parent_class)->finalize (object);
 }
 
+static gboolean
+send_data(gpointer data) {
+  TestTransport *self = TEST_TRANSPORT (data);
+  TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
 
-gboolean
+  priv->send_id = 0;
+  priv->send(GIBBER_TRANSPORT(self), 
+             (guint8 *)priv->buffer->str, priv->buffer->len, NULL);
+
+  g_string_truncate(priv->buffer, 0);
+
+  return FALSE;
+}
+
+static gboolean
 test_transport_send(GibberTransport *transport, 
                     const guint8 *data, gsize size, GError **error) {
   TestTransport *self = TEST_TRANSPORT (transport);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
-  return priv->send(transport, data, size, error);
+
+  g_string_append_len(priv->buffer, (gchar *)data, size);
+
+  if (priv->send_id == 0) {
+    priv->send_id = g_idle_add(send_data, transport);
+  }
+
+  return TRUE;
 }
 
 void
