@@ -536,14 +536,19 @@ static void
 digest_md5_handle_challenge(GibberSaslAuth *sasl, GibberXmppStanza *stanza) 
 {
   GibberSaslAuthPrivate *priv = GIBBER_SASL_AUTH_GET_PRIVATE(sasl);
-  gchar *challenge;
+  gchar *challenge = NULL;
   gsize len;
-  GHashTable *h;
+  GHashTable *h = NULL;
 
-  challenge = (gchar *)g_base64_decode(stanza->node->content, &len);
-  DEBUG("Got digest-md5 challenge: %s", challenge);
-  h = digest_md5_challenge_to_hash(challenge);
-  g_free(challenge);
+  if (stanza->node->content != NULL) {
+    challenge = (gchar *)g_base64_decode(stanza->node->content, &len);
+    DEBUG("Got digest-md5 challenge: %s", challenge);
+    h = digest_md5_challenge_to_hash(challenge);
+    g_free(challenge);
+  } else {
+    DEBUG("Got empty challenge!");
+  }
+
 
   if (h == NULL) {
     auth_failed(sasl, GIBBER_SASL_AUTH_ERROR_INVALID_REPLY, 
