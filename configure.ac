@@ -109,6 +109,9 @@ dnl glibc backtrace functions
 AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
 AC_CHECK_HEADERS(execinfo.h)
 
+dnl check for libsasl2 (for sasl test)
+AC_CHECK_LIB(sasl2, sasl_server_new, [], [ AC_MSG_ERROR(libsasl2 not found) ] )
+
 dnl signal functions
 AC_CHECK_FUNCS(signal)
 AC_CHECK_HEADERS(signal.h)
