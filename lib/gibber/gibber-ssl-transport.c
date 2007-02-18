@@ -258,9 +258,11 @@ ssl_read_input(GibberSSLTransport *ssl)
   guint8 buffer[1024];
   gint len;
 
-  len = SSL_read(priv->ssl, buffer, BUFSIZE); 
-  g_assert(len > 0);
-  gibber_transport_received_data(GIBBER_TRANSPORT(ssl), buffer, len);
+  while (BIO_ctrl_pending(priv->rbio) > 0) {
+    len = SSL_read(priv->ssl, buffer, BUFSIZE); 
+    g_assert(len > 0);
+    gibber_transport_received_data(GIBBER_TRANSPORT(ssl), buffer, len);
+  }
 }
 
 static void
