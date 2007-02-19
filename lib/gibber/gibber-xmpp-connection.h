@@ -70,6 +70,11 @@ void gibber_xmpp_connection_restart(GibberXmppConnection *connection);
 
 void gibber_xmpp_connection_close(GibberXmppConnection *connection);
 
+void gibber_xmpp_connection_engage(GibberXmppConnection *connection,
+                                   GibberTransport *transport);
+
+void gibber_xmpp_connection_disengage(GibberXmppConnection *connection);
+
 gboolean gibber_xmpp_connection_send(GibberXmppConnection *connection, 
                                     GibberXmppStanza *stanza, 
                                     GError **error);

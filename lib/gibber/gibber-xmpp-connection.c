@@ -184,11 +184,7 @@ gibber_xmpp_connection_new(GibberTransport *transport)  {
   GibberXmppConnection * result;
 
   result = g_object_new(GIBBER_TYPE_XMPP_CONNECTION, NULL);
-  result->transport = g_object_ref(transport);
-
-  gibber_transport_set_handler(transport,
-                               _xmpp_connection_received_data,
-                               result);
+  gibber_xmpp_connection_engage(result, transport);
 
   return result;
 }
@@ -231,6 +227,27 @@ gibber_xmpp_connection_close(GibberXmppConnection *connection) {
 
   gibber_xmpp_writer_stream_close(priv->writer, &data, &length);
   gibber_transport_send(connection->transport, data, length, NULL);
+}
+
+void 
+gibber_xmpp_connection_engage(GibberXmppConnection *connection, 
+    GibberTransport *transport) {
+  g_assert(connection->transport == NULL);
+
+  connection->transport = g_object_ref(transport);
+  gibber_transport_set_handler(transport,
+                               _xmpp_connection_received_data,
+                               connection);
+}
+
+void 
+gibber_xmpp_connection_disengage(GibberXmppConnection *connection) {
+  g_assert(connection->transport != NULL);
+
+  gibber_transport_set_handler(connection->transport, NULL, NULL);
+
+  g_object_unref(connection->transport);
+  connection->transport = NULL;
 }
 
 gboolean
