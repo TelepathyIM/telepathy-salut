@@ -35,6 +35,8 @@ libgibber_la_SOURCES =            \
   gibber-fd-transport.h           \
   gibber-tcp-transport.c          \
   gibber-tcp-transport.h          \
+  gibber-multicast-transport.c    \
+  gibber-multicast-transport.h    \
   gibber-ssl-transport.c          \
   gibber-ssl-transport.h          \
   gibber-sasl-auth.c              \
