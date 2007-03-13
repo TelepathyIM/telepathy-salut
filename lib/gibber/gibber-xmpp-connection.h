@@ -60,6 +60,10 @@ GType gibber_xmpp_connection_get_type(void);
 
 
 GibberXmppConnection *gibber_xmpp_connection_new(GibberTransport *transport); 
+GibberXmppConnection *
+gibber_xmpp_connection_new_no_stream(GibberTransport *transport); 
+
+
 void gibber_xmpp_connection_open(GibberXmppConnection *connection,
                                 const gchar *to, const gchar *from,
                                 const gchar *version);
