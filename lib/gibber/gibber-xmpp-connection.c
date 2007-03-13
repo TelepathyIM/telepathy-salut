@@ -184,7 +184,9 @@ gibber_xmpp_connection_new(GibberTransport *transport)  {
   GibberXmppConnection * result;
 
   result = g_object_new(GIBBER_TYPE_XMPP_CONNECTION, NULL);
-  gibber_xmpp_connection_engage(result, transport);
+  if (transport != NULL) {
+    gibber_xmpp_connection_engage(result, transport);
+  }
 
   return result;
 }
