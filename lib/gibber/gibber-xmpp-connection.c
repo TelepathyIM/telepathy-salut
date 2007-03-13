@@ -55,7 +55,7 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum 
 { 
-  PROP_STREAMING,
+  PROP_STREAMING = 1,
   LAST_PROPERTY
 };
 
@@ -88,10 +88,11 @@ struct _GibberXmppConnectionPrivate
 
 static GObject *
 gibber_xmpp_connection_constructor(GType type,
-                                   guint n_construct_properties,
-                                   GObjectConstructparam *construct_properties)
+                                   guint n_props,
+                                   GObjectConstructParam *props)
 {
   GObject *obj;
+  GibberXmppConnectionPrivate *priv;
   
   obj = G_OBJECT_CLASS(gibber_xmpp_connection_parent_class)->
         constructor(type, n_props, props);
@@ -141,8 +142,11 @@ gibber_xmpp_connection_set_property (GObject     *object,
 static void
 gibber_xmpp_connection_get_property (GObject     *object,
                                      guint        property_id,
-                                     const GValue *value,
+                                     GValue *value,
                                      GParamSpec   *pspec) {
+  GibberXmppConnection *conn = GIBBER_XMPP_CONNECTION(object);
+  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE(conn);
+
   switch (property_id) {
     case PROP_STREAMING:
       g_value_set_boolean(value, priv->streaming);
@@ -155,7 +159,6 @@ gibber_xmpp_connection_get_property (GObject     *object,
 
 static void
 gibber_xmpp_connection_init (GibberXmppConnection *obj) {
-  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (obj);
   obj->transport = NULL;
 }
 
