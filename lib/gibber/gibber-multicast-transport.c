@@ -172,7 +172,7 @@ _channel_io_err(GIOChannel *source, GIOCondition condition, gpointer data) {
   return TRUE;
 }
 
-int
+static int
 _open_multicast(GibberMulticastTransport *self, GError **error) {
   GibberMulticastTransportPrivate *priv = 
     GIBBER_MULTICAST_TRANSPORT_GET_PRIVATE(self);
