@@ -22,7 +22,7 @@
 #define __GIBBER_MULTICAST_TRANSPORT_H__
 
 #include <glib-object.h>
-#include <gibber-transport.h>
+#include "gibber-transport.h"
 
 G_BEGIN_DECLS
 
