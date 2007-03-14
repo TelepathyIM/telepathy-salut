@@ -95,8 +95,6 @@ CORE_SOURCES =                                          \
     salut-muc-channel.c                                 \
     salut-muc-transport-iface.h                         \
     salut-muc-transport-iface.c                         \
-    salut-multicast-muc-transport.h                     \
-    salut-multicast-muc-transport.c                     \
     salut-muc-channel.h                                 \
     salut-contact.h                                     \
     salut-contact.c                                     \

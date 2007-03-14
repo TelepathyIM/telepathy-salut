@@ -63,7 +63,7 @@ enum
   PROP_CHANNEL_TYPE,
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
-  PROP_TRANSPORT,
+  PROP_MUCCONNECTION,
   PROP_CONNECTION,
   PROP_IM_MANAGER,
   PROP_NAME,
@@ -80,7 +80,6 @@ struct _SalutMucChannelPrivate
   Handle handle;
   SalutConnection *connection;
   SalutImManager *im_manager;
-  GibberTransport *transport;
   SalutMucConnection *muc_connection;
   gchar *muc_name;
   guint presence_timeout_id;
@@ -104,7 +103,7 @@ static gboolean
 salut_muc_channel_connect(SalutMucChannel *channel, GError **error);
 static void salut_muc_channel_connected(GibberTransport *transport,
                                              gpointer user_data);
-static void salut_muc_channel_disconnected(SalutMucTransportIface *iface,
+static void salut_muc_channel_disconnected(GibberTransport *transport,
                                              gpointer user_data);
 
 static void
@@ -138,8 +137,8 @@ salut_muc_channel_get_property (GObject    *object,
     case PROP_IM_MANAGER:
       g_value_set_object (value, priv->im_manager);
       break;
-    case PROP_TRANSPORT:
-      g_value_set_object (value, priv->transport);
+    case PROP_MUCCONNECTION:
+      g_value_set_object (value, priv->muc_connection);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -175,8 +174,8 @@ salut_muc_channel_set_property (GObject     *object,
     case PROP_IM_MANAGER:
       priv->im_manager = g_value_get_object (value);
       break;
-    case PROP_TRANSPORT:
-      priv->transport = g_value_get_object (value);
+    case PROP_MUCCONNECTION:
+      priv->muc_connection = g_value_get_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -266,17 +265,17 @@ create_invitation(SalutMucChannel *self, Handle handle, const gchar *message) {
 
   invite_node = gibber_xmpp_node_add_child(x_node, "invite");
   gibber_xmpp_node_set_attribute(invite_node, "protocol", 
-        salut_muc_transport_get_protocol(
-          SALUT_MUC_TRANSPORT_IFACE(priv->transport)));
+        salut_muc_connection_get_protocol(priv->muc_connection));
+
   if (message != NULL && *message != '\0') {
     gibber_xmpp_node_add_child_with_content(invite_node, "reason", message);
   }
+
   gibber_xmpp_node_add_child_with_content(invite_node, "roomname", 
                        handle_inspect(priv->connection->handle_repo,
                                       TP_HANDLE_TYPE_ROOM, priv->handle));
   g_hash_table_foreach(
-    (GHashTable *)salut_muc_transport_get_parameters(
-                                   SALUT_MUC_TRANSPORT_IFACE(priv->transport)), 
+    (GHashTable *)salut_muc_connection_get_parameters(priv->muc_connection), 
     invitation_append_parameter, invite_node);
 
   return msg;
@@ -364,16 +363,16 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_install_property (object_class, 
                                    PROP_NAME, param_spec);
 
-  param_spec = g_param_spec_object ("transport", 
-                                    "Object implementing a SalutMucTransport",
-                                    "transport object",
+  param_spec = g_param_spec_object ("muc connection", 
+                                    "The SalutMucConnection",
+                                    "muc connection  object",
                                     G_TYPE_OBJECT,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, 
-                                   PROP_TRANSPORT, param_spec);
+                                   PROP_MUCCONNECTION, param_spec);
   param_spec = g_param_spec_object ("connection", 
                                     "SalutConnection object",
                                     "Salut Connection that owns the"
@@ -564,7 +563,8 @@ salut_muc_channel_close (SalutMucChannel *self,
   }
 
   salut_muc_channel_send_presence(self, FALSE);
-  gibber_transport_disconnect(priv->transport);
+  gibber_transport_disconnect(
+    GIBBER_XMPP_CONNECTION(priv->muc_connection)->transport);
 
   return TRUE;
 }
@@ -906,7 +906,8 @@ static gboolean salut_muc_channel_send_stanza(GObject *object, guint type,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(object);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(object);
 
-  if (!salut_muc_connection_send(priv->muc_connection, stanza, error)) {
+  if (!gibber_xmpp_connection_send(GIBBER_XMPP_CONNECTION(priv->muc_connection),
+          stanza, error)) {
     text_mixin_emit_send_error(G_OBJECT(self), CHANNEL_TEXT_SEND_ERROR_UNKNOWN,
                                time(NULL), type, text);
     return FALSE;
@@ -929,7 +930,8 @@ salut_muc_channel_send_presence(SalutMucChannel *self,
   gibber_xmpp_node_set_attribute(stanza->node, "to", priv->muc_name);
 
   /* FIXME should disconnect if we couldn't sent */
-  salut_muc_connection_send(priv->muc_connection, stanza, NULL);
+  gibber_xmpp_connection_send(GIBBER_XMPP_CONNECTION(priv->muc_connection), 
+                              stanza, NULL);
   g_object_unref(stanza);
 }
 
@@ -1064,23 +1066,23 @@ salut_muc_channel_dummy_timeout(gpointer data) {
 static gboolean
 salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
+  GibberXmppConnection *conn;
 
-  priv->muc_connection = salut_muc_connection_new(priv->transport);
+  conn = GIBBER_XMPP_CONNECTION(priv->muc_connection);
+
   /* Transport is now owned by the xmpp connection */
-  g_object_unref(priv->transport);
-
-  g_signal_connect(priv->muc_connection, "received-stanza",
+  g_signal_connect(conn, "received-stanza",
                    G_CALLBACK(salut_muc_channel_received_stanza), channel);
 
-  g_signal_connect(priv->transport, "connected", 
+  g_signal_connect(conn->transport, "connected", 
                    G_CALLBACK(salut_muc_channel_connected), channel);
-  g_signal_connect(priv->transport, "disconnected", 
+  g_signal_connect(conn->transport, "disconnected", 
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
 
-  /* FIXME catch errors */
-  return salut_muc_transport_iface_connect(
-             SALUT_MUC_TRANSPORT_IFACE(priv->transport),
-             error);
+  /* FIXM catch errors */
+  g_signal_connect(conn->transport, "connected", 
+                   G_CALLBACK(salut_muc_channel_connected), channel);
+  return salut_muc_connection_connect(priv->muc_connection, error);
 }
 
 static void 
@@ -1088,6 +1090,9 @@ salut_muc_channel_connected(GibberTransport *transport,
                                         gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
+
+  g_signal_connect(transport, "disconnected", 
+                   G_CALLBACK(salut_muc_channel_disconnected), self);
 
   /* FIXME race */
   priv->presence_timeout_id = g_timeout_add(4000,
@@ -1097,7 +1102,7 @@ salut_muc_channel_connected(GibberTransport *transport,
 }
 
 static void
-salut_muc_channel_disconnected(SalutMucTransportIface *iface,
+salut_muc_channel_disconnected(GibberTransport *transport,
                                              gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   g_signal_emit(self, signals[CLOSED], 0);

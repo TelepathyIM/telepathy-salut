@@ -20,63 +20,73 @@
 
 
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
 
-#define DEBUG_FLAG DEBUG_MUC_CONNECTION
-#include "debug.h"
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "salut-muc-connection.h"
 #include "salut-muc-connection-signals-marshal.h"
 
-#include <gibber/gibber-xmpp-reader.h>
-#include <gibber/gibber-xmpp-writer.h>
-#include <gibber/gibber-transport.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-multicast-transport.h>
 
-static void _muc_connection_received_data(GibberTransport *transport,
-                                          GibberBuffer *buffer,
-                                          gpointer user_data);
+#define PROTO_MULTICAST "multicast"
+#define PROTO_SRM       "srm"
 
-G_DEFINE_TYPE(SalutMucConnection, salut_muc_connection, G_TYPE_OBJECT);
+#define ADDRESS_KEY "address"
+#define PORT_KEY "port"
+
+#define DEBUG_FLAG DEBUG_MUC_CONNECTION
+#include "debug.h"
+
+G_DEFINE_TYPE(SalutMucConnection, salut_muc_connection, 
+              GIBBER_TYPE_XMPP_CONNECTION)
 
 /* signal enum */
+/*
 enum
 {
-  PARSE_ERROR,
-  RECEIVED_STANZA,
-  LAST_SIGNAL
+    LAST_SIGNAL
 };
 
 static guint signals[LAST_SIGNAL] = {0};
-
-static void _reader_received_stanza_cb(GibberXmppReader *reader, 
-                                       GibberXmppStanza *stanza,
-                                       gpointer user_data);
+*/
 
 /* private structure */
 typedef struct _SalutMucConnectionPrivate SalutMucConnectionPrivate;
 
 struct _SalutMucConnectionPrivate
 {
-  GibberXmppReader *reader;
-  GibberXmppWriter *writer;
   gboolean dispose_has_run;
+  gchar *name;
+  gchar *protocol;
+  gchar *address;
+  gchar *port;
+  GHashTable *parameters;
+  GibberMulticastTransport *mtransport;
 };
 
 #define SALUT_MUC_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CONNECTION, SalutMucConnectionPrivate))
 
+GQuark
+salut_muc_connection_error_quark (void) {
+  static GQuark quark = 0;
+
+  if (!quark)
+    quark = g_quark_from_static_string ("salut_muc_connection_error");
+
+    return quark;
+}
+
+
 static void
-salut_muc_connection_init (SalutMucConnection *obj) {
-  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (obj);
-  obj->transport = NULL;
+salut_muc_connection_init (SalutMucConnection *obj)
+{
 
-  priv->writer = gibber_xmpp_writer_new_no_stream();
-  priv->reader = gibber_xmpp_reader_new_no_stream();
-
-  g_signal_connect(priv->reader, "received-stanza", 
-                    G_CALLBACK(_reader_received_stanza_cb), obj);
+  /* allocate any data required by the object here */
 }
 
 static void salut_muc_connection_dispose (GObject *object);
@@ -92,22 +102,6 @@ salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_c
   object_class->dispose = salut_muc_connection_dispose;
   object_class->finalize = salut_muc_connection_finalize;
 
-  signals[RECEIVED_STANZA] = 
-    g_signal_new("received-stanza", 
-                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
-                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__OBJECT,
-                 G_TYPE_NONE, 1, GIBBER_TYPE_XMPP_STANZA);
-  signals[PARSE_ERROR] = 
-    g_signal_new("parse-error", 
-                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
-                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__VOID,
-                 G_TYPE_NONE, 0);
 }
 
 void
@@ -120,20 +114,6 @@ salut_muc_connection_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
-  if (self->transport != NULL) {
-    g_object_unref(self->transport);
-    self->transport = NULL;
-  }
-
-  if (priv->reader != NULL) {
-    g_object_unref(priv->reader);
-    priv->reader = NULL;
-  }
-
-  if (priv->writer != NULL) {
-    g_object_unref(priv->writer);
-    priv->writer = NULL;
-  }
 
   /* release any references held by the object here */
 
@@ -142,65 +122,240 @@ salut_muc_connection_dispose (GObject *object)
 }
 
 void
-salut_muc_connection_finalize (GObject *object) {
+salut_muc_connection_finalize (GObject *object)
+{
+  SalutMucConnection *self = SALUT_MUC_CONNECTION (object);
+  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (self);
+
+  /* free any data held directly by the object here */
+  g_free(priv->name);
+  priv->name = NULL;
+
+  g_free(priv->protocol);
+  priv->protocol = NULL;
+
+  g_free(priv->address);
+  priv->address = NULL;
+
+  g_free(priv->port);
+  priv->port = NULL;
+
+  if (priv->parameters != NULL) {
+    g_hash_table_destroy(priv->parameters);
+    priv->parameters = NULL;
+  }
+
   G_OBJECT_CLASS (salut_muc_connection_parent_class)->finalize (object);
 }
 
+const gchar **
+salut_muc_connection_get_protocols(void) {
+  static const gchar *protocols[] = { PROTO_MULTICAST, PROTO_SRM, NULL };
+  return protocols;
+} 
+
+const gchar **
+salut_muc_connection_get_required_parameters(const gchar *protocol) {
+  int i;
+  static const gchar *parameters[] = { ADDRESS_KEY, PORT_KEY, NULL };
+  struct {
+    const gchar *protocol; 
+    const gchar **parameters;
+  } protocols[] = { { PROTO_MULTICAST, parameters },
+                    { PROTO_SRM, parameters },
+                    { NULL, NULL }
+                  };
+
+  for (i = 0; protocols[i].protocol != NULL; i++) {
+    if (!strcmp(protocols[i].protocol, protocol)) {
+      return protocols[i].parameters;
+    }
+  }
+  return NULL;
+}
+
+static gboolean
+salut_muc_connection_validate_address(const gchar *address,
+    const gchar *port,
+    GError **error) {
+  int ret;
+
+  struct addrinfo hints;
+  struct addrinfo *ans;
+
+  hints.ai_flags = AI_PASSIVE;
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol = IPPROTO_UDP;
+
+  ret = getaddrinfo(address, port, &hints, &ans);
+  if (ret < 0) {
+    DEBUG("Getaddrinfo failed: %s", gai_strerror(ret));
+    g_set_error(error,
+                SALUT_MUC_CONNECTION_ERROR,
+                SALUT_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
+                "Getaddrinfo failed: %s", gai_strerror(ret));
+
+    goto err;
+  }
+
+  if (ans == NULL) {
+    DEBUG("Couldn't find address");
+    g_set_error(error,
+                SALUT_MUC_CONNECTION_ERROR,
+                SALUT_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
+                "Couldn't find address");
+    goto err;
+  }
+
+  if (ans->ai_next != NULL) {
+    g_set_error(error,
+                SALUT_MUC_CONNECTION_ERROR,
+                SALUT_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
+                "Address isn't unique");
+    goto err;
+  }
+
+  freeaddrinfo(ans);
+
+  return TRUE;
+err:
+  if (ans != NULL) {
+    freeaddrinfo(ans);
+  }
+  g_assert(error == NULL || *error != NULL);
+  return FALSE;
+}
+
+static void
+salut_muc_connection_create_random_address(SalutMucConnection *self) {
+  SalutMucConnectionPrivate *priv =
+    SALUT_MUC_CONNECTION_GET_PRIVATE(self);
+  gboolean ret;
+  int p;
+
+  g_free(priv->address);
+  g_free(priv->port);
+
+  /* Just pick any port above 1024 */
+  p = g_random_int_range(1024, G_MAXUINT16);
+  /* Ensure that we never mess with mdns */
+  if (p == 5353)
+    p++;
+  priv->port = g_strdup_printf("%d", p);
+  /* For now just pick ipv4 in the link-local scope... */
+  priv->address = g_strdup_printf("224.0.0.%d", g_random_int_range(1, 254));
+
+  /* Just to be sure */
+  ret = salut_muc_connection_validate_address(priv->address, priv->port, NULL);
+
+  DEBUG("Generated random address: %s:%s", priv->address, priv->port);
+
+  g_assert(ret);
+}
 
 SalutMucConnection *
-salut_muc_connection_new(GibberTransport *transport)  {
-  SalutMucConnection * result;
+salut_muc_connection_new(const gchar *name, 
+                         const gchar *protocol,
+                         GHashTable *parameters,
+                         GError **error) {
+  const gchar *address = NULL;
+  const gchar *port = NULL;
+  SalutMucConnection *result;
+  SalutMucConnectionPrivate *priv;
 
-  result = g_object_new(SALUT_TYPE_MUC_CONNECTION, NULL);
-  result->transport = g_object_ref(transport);
 
-  gibber_transport_set_handler(transport, _muc_connection_received_data, 
-      result);
+  if (parameters != NULL) {
+    address = g_hash_table_lookup(parameters, ADDRESS_KEY);
+    port = g_hash_table_lookup(parameters, PORT_KEY);
+    if (address == NULL || port == NULL) {
+      g_set_error(error, 
+                  SALUT_MUC_CONNECTION_ERROR,
+                  SALUT_MUC_CONNECTION_ERROR_INVALID_PARAMETERS,
+                  "Missing address or port parameter");
+      goto err;
+    }
+    if (!salut_muc_connection_validate_address(address, port, error)) {
+      goto err;
+    }
+  }
+
+  /* Got an address, so we can init the transport */
+  result = g_object_new(SALUT_TYPE_MUC_CONNECTION, 
+                        "streaming", FALSE, NULL);
+  priv = SALUT_MUC_CONNECTION_GET_PRIVATE (result);
+
+  priv->mtransport = gibber_multicast_transport_new();
+  gibber_xmpp_connection_engage(GIBBER_XMPP_CONNECTION(result),
+                                GIBBER_TRANSPORT(priv->mtransport));
+
+  priv = SALUT_MUC_CONNECTION_GET_PRIVATE (result);
+  priv->name = g_strdup(name);
+  priv->protocol = g_strdup(protocol);
+  priv->address = g_strdup(address);
+  priv->port = g_strdup(port);
 
   return result;
+err:
+  g_assert(error == NULL || *error != NULL);
+  return NULL;
+
 }
 
-gboolean
-salut_muc_connection_send(SalutMucConnection *connection, 
-                                GibberXmppStanza *stanza, GError **error) {
+gboolean 
+salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
   SalutMucConnectionPrivate *priv = 
-    SALUT_MUC_CONNECTION_GET_PRIVATE (connection);
-  const guint8 *data;
-  gsize length;
+      SALUT_MUC_CONNECTION_GET_PRIVATE(connection); 
+  int ret = FALSE;
 
-  if (!gibber_xmpp_writer_write_stanza(priv->writer, stanza,
-                                      &data, &length, error)) {
-    return FALSE;
+  if (priv->address == NULL) {
+    int attempts = 10;
+    do {
+      salut_muc_connection_create_random_address(connection);
+      g_free(priv->protocol);
+      priv->protocol = g_strdup(PROTO_MULTICAST);
+      if (gibber_multicast_transport_connect(priv->mtransport, 
+                                             priv->address, priv->port)) {
+        ret = TRUE;
+        break;
+      }
+    } while (--attempts);
+  } else {
+    if (gibber_multicast_transport_connect(priv->mtransport, 
+                                             priv->address, priv->port)) {
+      ret = TRUE;
+    }
   }
-
-  return gibber_transport_send(connection->transport, data, length, error);
-}
-
-static void 
-_muc_connection_received_data(GibberTransport *transport,
-                              GibberBuffer *buffer,
-                              gpointer user_data) {
-  SalutMucConnection *self = SALUT_MUC_CONNECTION (user_data);
-  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (self);
-  gboolean ret;
-  GError *error = NULL;
-
-  g_assert(buffer->length > 0);
-
-  /* Ensure we're not disposed inside while running the reader is busy */
-  g_object_ref(self);
-  ret = gibber_xmpp_reader_push(priv->reader, buffer->data, 
-                                buffer->length, &error);
   if (!ret) {
-    g_signal_emit(self, signals[PARSE_ERROR], 0); 
+    g_set_error(error, SALUT_MUC_CONNECTION_ERROR,
+        SALUT_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
+        "Failed to connect to multicast group");
   }
-  g_object_unref(self);
+  return ret;
 }
 
-static void 
-_reader_received_stanza_cb(GibberXmppReader *reader, GibberXmppStanza *stanza,
-                 gpointer user_data) {
-  SalutMucConnection *self = SALUT_MUC_CONNECTION (user_data);
-  DEBUG("Received stanza");
-  g_signal_emit(self, signals[RECEIVED_STANZA], 0, stanza);
+const gchar *
+salut_muc_connection_get_protocol(SalutMucConnection *connection) {
+  SalutMucConnectionPrivate *priv = 
+      SALUT_MUC_CONNECTION_GET_PRIVATE(connection); 
+  return priv->protocol;
+}
+
+/* Current parameters of the transport. str -> str */
+const GHashTable *
+salut_muc_connection_get_parameters(SalutMucConnection *connection) {
+  SalutMucConnectionPrivate *priv = 
+    SALUT_MUC_CONNECTION_GET_PRIVATE(connection);
+
+  g_assert(GIBBER_XMPP_CONNECTION(connection)->transport != NULL && 
+      gibber_transport_get_state(
+          GIBBER_TRANSPORT(GIBBER_XMPP_CONNECTION(connection)->transport)) == 
+              GIBBER_TRANSPORT_CONNECTED);
+
+  if (priv->parameters == NULL) {
+    priv->parameters = g_hash_table_new(g_str_hash, g_str_equal); 
+    g_hash_table_insert(priv->parameters, ADDRESS_KEY, priv->address);
+    g_hash_table_insert(priv->parameters, PORT_KEY, priv->port);
+  }
+  return priv->parameters;
 }

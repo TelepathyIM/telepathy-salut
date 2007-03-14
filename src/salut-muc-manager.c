@@ -27,7 +27,7 @@
 #include "salut-muc-manager.h"
 #include "salut-muc-manager-signals-marshal.h"
 
-#include "salut-multicast-muc-transport.h"
+#include "salut-muc-connection.h"
 
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
@@ -212,23 +212,22 @@ muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
 }
 
 GObject *
-_get_transport(SalutMucManager *mgr, const gchar *name, 
+_get_connection(SalutMucManager *mgr, const gchar *name, 
                const gchar *protocol, GHashTable *parameters, GError **error) {
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
-  SalutMulticastMucTransport *mcast;
-  mcast = salut_multicast_muc_transport_new(priv->connection, name, 
-                                            parameters, NULL);
-  return mcast == NULL ? NULL : G_OBJECT(mcast);
+  SalutMucConnection *connection;
+
+  connection = salut_muc_connection_new(name, protocol, parameters, error);
+  return connection == NULL ? NULL : G_OBJECT(connection);
 }
 
 const gchar **
-_get_transport_parameters(SalutMucManager *mgr, const gchar *protocol) {
-  return salut_multicast_muc_transport_get_required_parameters(); 
+_get_connection_parameters(SalutMucManager *mgr, const gchar *protocol) {
+  return salut_muc_connection_get_required_parameters(protocol); 
 }
 
 static SalutMucChannel *
 salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
-                              GObject *transport) {
+                              GObject *connection) {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   SalutMucChannel *chan;
   const gchar *name;
@@ -248,7 +247,7 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
                       "connection", priv->connection,
                       "im-manager", priv->im_manager,
                       "object-path", path,
-                      "transport", transport,
+                      "muc_connection", connection,
                       "handle", handle,
                       "name", name,
                       NULL);
@@ -291,15 +290,15 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   if (chan != NULL) { 
     *ret = TP_CHANNEL_IFACE(chan);
   } else {
-    GObject *transport = _get_transport(mgr,
+    GObject *connection = _get_connection(mgr,
                                         handle_inspect(
                                           priv->connection->handle_repo,
                                           TP_HANDLE_TYPE_ROOM, handle), 
                                           NULL, NULL, NULL);
-    if (transport == NULL) {
+    if (connection == NULL) {
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
     }
-    chan = salut_muc_manager_new_channel(mgr, handle, transport);
+    chan = salut_muc_manager_new_channel(mgr, handle, connection);
     /* We requested the channel, so invite ourselves to it */
     if (chan)  {
       salut_muc_channel_invited(chan, priv->connection->self_handle, "");
@@ -377,7 +376,7 @@ _received_stanza(SalutImChannel *imchannel,
     return TRUE;
   }
 
-  params = _get_transport_parameters(self, protocol);
+  params = _get_connection_parameters(self, protocol);
   if (params == NULL) {
     DEBUG("Invalid invitation, (unknown protocol) discarding");
     return TRUE;
@@ -405,7 +404,7 @@ _received_stanza(SalutImChannel *imchannel,
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(room_handle));
 
   if (chan == NULL) {
-    transport = _get_transport(self, room, protocol, params_hash, NULL);
+    transport = _get_connection(self, room, protocol, params_hash, NULL);
     if (transport == NULL) {
       DEBUG("Invalid invitation, (wrong protocol parameters) discarding");
       goto discard;

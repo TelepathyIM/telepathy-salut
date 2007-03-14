@@ -1,5 +1,5 @@
 /*
- * salut-xmpp-connection.h - Header for SalutMucConnection
+ * salut-muc-connection.h - Header for SalutMucConnection
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -23,25 +23,32 @@
 
 #include <glib-object.h>
 
-#include <gibber/gibber-transport.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-xmpp-connection.h>
 
 G_BEGIN_DECLS
+
+GQuark salut_muc_connection_error_quark (void);
+#define SALUT_MUC_CONNECTION_ERROR \
+  salut_muc_connection_error_quark()
+
+typedef enum
+{
+  SALUT_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
+  SALUT_MUC_CONNECTION_ERROR_INVALID_PARAMETERS,
+  SALUT_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
+} SalutMucConnectionError;
+
 
 typedef struct _SalutMucConnection SalutMucConnection;
 typedef struct _SalutMucConnectionClass SalutMucConnectionClass;
 
 struct _SalutMucConnectionClass {
-    GObjectClass parent_class;
+    GibberXmppConnectionClass parent_class;
 };
 
 struct _SalutMucConnection {
-    GObject parent;
-    GibberTransport *transport;
-    gboolean stream_open;
+    GibberXmppConnection parent;
 };
-
-GType salut_muc_connection_get_type(void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_MUC_CONNECTION \
@@ -57,12 +64,29 @@ GType salut_muc_connection_get_type(void);
 #define SALUT_MUC_CONNECTION_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_CONNECTION, SalutMucConnectionClass))
 
+const gchar **
+salut_muc_connection_get_protocols(void);
 
+const gchar **
+salut_muc_connection_get_required_parameters(const gchar *protocol);
 
-SalutMucConnection *salut_muc_connection_new(GibberTransport *transport); 
-gboolean salut_muc_connection_send(SalutMucConnection *connection, 
-                                    GibberXmppStanza *stanza, 
-                                    GError **error);
+SalutMucConnection *
+salut_muc_connection_new(const gchar *name, 
+                         const gchar *protocol,
+                         GHashTable *parameters,
+                         GError **error);
+
+gboolean 
+salut_muc_connection_connect(SalutMucConnection *connection, GError **error);
+
+const gchar *
+salut_muc_connection_get_protocol(SalutMucConnection *connection);
+
+/* Current parameters of the transport. str -> str */
+const GHashTable *
+salut_muc_connection_get_parameters(SalutMucConnection *connection);
+
+GType salut_muc_connection_get_type(void);
 
 G_END_DECLS
 
