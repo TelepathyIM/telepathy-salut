@@ -56,6 +56,7 @@ typedef struct _SalutSelfPrivate SalutSelfPrivate;
 
 struct _SalutSelfPrivate
 {
+  gchar *nickname;
   gchar *first_name;
   gchar *last_name;
   gchar *jid;
@@ -215,7 +216,7 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
 
 SalutSelf *
 salut_self_new(SalutAvahiClient *client,
-               gchar *first_name, gchar *last_name, 
+               gchar *nickname, gchar *first_name, gchar *last_name, 
                gchar *jid, gchar *email) {
   SalutSelfPrivate *priv;
   GString *alias = NULL;
@@ -225,30 +226,37 @@ salut_self_new(SalutAvahiClient *client,
 
   priv->client = client;
   g_object_ref(client);
+
+  priv->nickname = g_strdup(nickname);
   priv->first_name = g_strdup(first_name);
   priv->last_name = g_strdup(last_name);
   priv->jid  = g_strdup(jid);
   priv->email = g_strdup(email);
   priv->alias = NULL;
 
-  if (first_name != NULL) {
-    alias = g_string_new(first_name);
-  }
-
-  if (last_name != NULL) {
-    if (alias != NULL) {
-      alias = g_string_append_c(alias, ' ');
-      alias = g_string_append(alias, last_name);
-    } else {
+  /* Prefer using the nickname as alias */
+  if (nickname != NULL) {
+    priv->alias = g_strdup(nickname);
+  } else { 
+    if (first_name != NULL) {
       alias = g_string_new(first_name);
-    } 
-  }
+    }
 
-  if (alias != NULL && *(alias->str) != '\0') {
-    priv->alias = alias->str;
-    g_string_free(alias, FALSE);
-  } else {
-    g_string_free(alias, TRUE);
+    if (last_name != NULL) {
+      if (alias != NULL) {
+        alias = g_string_append_c(alias, ' ');
+        alias = g_string_append(alias, last_name);
+      } else {
+        alias = g_string_new(first_name);
+      } 
+    }
+
+    if (alias != NULL && *(alias->str) != '\0') {
+      priv->alias = alias->str;
+      g_string_free(alias, FALSE);
+    } else {
+      g_string_free(alias, TRUE);
+    }
   }
   return ret;
 }
@@ -329,10 +337,10 @@ AvahiStringList *create_txt_record(SalutSelf *self) {
   AvahiStringList *ret;
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
-   ret = avahi_string_list_new("txtvers=1",
-                               "port.p2pj=5298",
-                               "vc=!",
+   ret = avahi_string_list_new("txtvers=2",
                                NULL);
+   if (priv->nickname) 
+     ret = avahi_string_list_add_printf(ret, "nick=%s", priv->nickname);
    if (priv->first_name)
      ret = avahi_string_list_add_printf(ret, "1st=%s", priv->first_name);
    if (priv->last_name)

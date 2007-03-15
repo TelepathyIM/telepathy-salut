@@ -154,6 +154,7 @@ salut_connection_manager_finalize (GObject *object)
 typedef struct { 
   guint set_mask;
 
+  gchar *nickname;
   gchar *first_name;
   gchar *last_name;
   gchar *email;
@@ -161,7 +162,8 @@ typedef struct {
 } SalutParams;
 
 enum {
-  LOCAL_JABBER_PARAM_FIRST_NAME = 0,
+  LOCAL_JABBER_PARAM_NICKNAME = 0,
+  LOCAL_JABBER_PARAM_FIRST_NAME,
   LOCAL_JABBER_PARAM_LAST_NAME,
   LOCAL_JABBER_PARAM_JID,
   LOCAL_JABBER_PARAM_EMAIL,
@@ -169,6 +171,9 @@ enum {
 };
 
 static const SalutParamSpec local_jabber_params[] = {
+  { "nickname", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
+     0, NULL, 
+     G_STRUCT_OFFSET(SalutParams, nickname)},
   { "first-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
      TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 
      G_STRUCT_OFFSET(SalutParams, first_name)},
@@ -493,6 +498,8 @@ salut_connection_manager_request_connection (SalutConnectionManager *self,
     return FALSE;
   }
   conn = g_object_new(SALUT_TYPE_CONNECTION, NULL);
+  SET_PROPERTY_IF_PARAM_SET("nickname", LOCAL_JABBER_PARAM_NICKNAME, 
+                              params.nickname);
   SET_PROPERTY_IF_PARAM_SET("first-name", LOCAL_JABBER_PARAM_FIRST_NAME, 
                               params.first_name);
   SET_PROPERTY_IF_PARAM_SET("last-name", LOCAL_JABBER_PARAM_LAST_NAME, 

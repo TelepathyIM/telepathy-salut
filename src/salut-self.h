@@ -59,6 +59,7 @@ GType salut_self_get_type(void);
 
 SalutSelf *
 salut_self_new(SalutAvahiClient *client,
+               gchar *nickname, 
                gchar *first_name, gchar *last_name, 
                gchar *jid, gchar *email);
 

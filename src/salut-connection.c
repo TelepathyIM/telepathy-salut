@@ -110,7 +110,8 @@ static guint signals[LAST_SIGNAL] = {0};
 
 /* properties */
 enum {
-  PROP_FIRST_NAME = 1,
+  PROP_NICKNAME = 1,
+  PROP_FIRST_NAME,
   PROP_LAST_NAME,
   PROP_JID,
   PROP_EMAIL,
@@ -125,6 +126,7 @@ struct _SalutConnectionPrivate
 
   /* Connection information */
   gchar *published_name;
+  gchar *nickname;
   gchar *first_name;
   gchar *last_name;
   gchar *jid;
@@ -182,6 +184,7 @@ salut_connection_init (SalutConnection *obj)
 
   /* allocate any data required by the object here */
   priv->published_name = g_strdup(g_get_user_name());
+  priv->nickname = NULL;
   priv->first_name = NULL;
   priv->last_name = NULL;
   priv->jid = NULL;
@@ -202,6 +205,9 @@ salut_connection_get_property(GObject *object,
   SalutConnection *self = SALUT_CONNECTION(object);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   switch (property_id) {
+    case PROP_NICKNAME:
+      g_value_set_string(value, priv->nickname);
+      break;
     case PROP_FIRST_NAME:
       g_value_set_string(value, priv->first_name);
       break;
@@ -229,6 +235,10 @@ salut_connection_set_property (GObject      *object,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
   switch (property_id) {
+    case PROP_NICKNAME:
+      g_free(priv->nickname);
+      priv->nickname = g_value_dup_string(value);
+      break;
     case PROP_FIRST_NAME:
       g_free(priv->first_name);
       priv->first_name = g_value_dup_string(value);
@@ -268,6 +278,14 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   object_class->dispose = salut_connection_dispose;
   object_class->finalize = salut_connection_finalize;
+
+  param_spec = g_param_spec_string("nickname", "nickname",
+                                   "Nickname used in the published data",
+                                   NULL,
+                                   G_PARAM_READWRITE |
+                                   G_PARAM_STATIC_NAME |
+                                   G_PARAM_STATIC_BLURB);
+  g_object_class_install_property(object_class, PROP_NICKNAME, param_spec);
 
   param_spec = g_param_spec_string("first-name", "First name",
                                    "First name used in the published data",
@@ -698,6 +716,7 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   priv->self = salut_self_new(priv->avahi_client, 
+                              priv->nickname,
                               priv->first_name,
                               priv->last_name,
                               priv->jid,
