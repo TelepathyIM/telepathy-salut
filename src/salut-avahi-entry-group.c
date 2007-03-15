@@ -443,6 +443,20 @@ salut_avahi_entry_group_service_set(SalutAvahiEntryGroupService *service,
     return TRUE;
 }
 
+gboolean
+salut_avahi_entry_group_service_remove_key(SalutAvahiEntryGroupService *service,
+                                           const gchar *key, GError **error) {
+  SalutAvahiEntryGroupServicePrivate *priv = 
+    (SalutAvahiEntryGroupServicePrivate *) service;
+
+  g_hash_table_remove(priv->entries, key);
+
+  if (!priv->frozen) 
+    return salut_avahi_entry_group_service_thaw(service, error);
+  else 
+    return TRUE;
+}
+
 
 gboolean
 salut_avahi_entry_group_attach(SalutAvahiEntryGroup *group, 

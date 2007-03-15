@@ -132,6 +132,11 @@ salut_avahi_entry_group_service_set(SalutAvahiEntryGroupService *service,
                                         const gchar *key, const gchar *value,
                                         GError **error);
 
+/* Remove one key from the service record */
+gboolean
+salut_avahi_entry_group_service_remove_key(SalutAvahiEntryGroupService *service,
+                                           const gchar *key, GError **error);
+
 /* Update the txt record of the frozen service */ 
 gboolean
 salut_avahi_entry_group_service_thaw(SalutAvahiEntryGroupService *service,
