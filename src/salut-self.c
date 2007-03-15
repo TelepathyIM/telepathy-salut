@@ -433,17 +433,19 @@ salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
   g_assert(status >= 0 && status < SALUT_PRESENCE_NR_PRESENCES);
 
   self->status = status;
-  if (message) {
-    g_free(self->status_message);
-    self->status_message = g_strdup(message);
-  }
+  g_free(self->status_message);
+  self->status_message = g_strdup(message);
 
   salut_avahi_entry_group_service_freeze(priv->presence);
   salut_avahi_entry_group_service_set(priv->presence, "status",
                                salut_presence_statuses[self->status].txt_name,
                                NULL);
-  salut_avahi_entry_group_service_set(priv->presence, "msg",
-                                      self->status_message, NULL);
+  if (self->status_message) {
+    salut_avahi_entry_group_service_set(priv->presence, "msg",
+                                        self->status_message, NULL);
+  } else {
+    salut_avahi_entry_group_service_remove_key(priv->presence, "msg", NULL);
+  }
   return salut_avahi_entry_group_service_thaw(priv->presence, error);
 }
 
