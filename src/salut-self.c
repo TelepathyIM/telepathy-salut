@@ -82,7 +82,7 @@ salut_self_init (SalutSelf *obj)
 
   /* allocate any data required by the object here */
   obj->status = SALUT_PRESENCE_AVAILABLE;
-  obj->status_message = g_strdup("Available");
+  obj->status_message = NULL;
 
   priv->first_name = NULL;
   priv->last_name = NULL;
