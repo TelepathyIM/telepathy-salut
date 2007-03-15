@@ -90,7 +90,7 @@ AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for OpenSSL
 PKG_CHECK_MODULES(LIBSSL, [openssl], 
-            [ HAVE_LIBSS="yes" ],
+            [ HAVE_LIBSSL="yes" ],
             [ AC_WARN(openssl not found: not building gibber ssl transport) ] )
 
 AC_SUBST(LIBSSL_CFLAGS)
