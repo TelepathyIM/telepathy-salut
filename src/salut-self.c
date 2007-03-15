@@ -344,7 +344,8 @@ AvahiStringList *create_txt_record(SalutSelf *self) {
 
    ret = avahi_string_list_add_printf(ret, "status=%s", 
                                 salut_presence_statuses[self->status].txt_name);
-   ret = avahi_string_list_add_printf(ret, "msg=%s", self->status_message);
+   if (self->status_message)
+     ret = avahi_string_list_add_printf(ret, "msg=%s", self->status_message);
    
    return ret;
 }
