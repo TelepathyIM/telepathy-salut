@@ -283,6 +283,10 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     }
     avahi_free(key);
     avahi_free(value);
+  } else if (self->status_message != NULL) {
+    status_changed = TRUE;
+    g_free(self->status_message);
+    self->status_message = NULL;
   }
 
   if ((t = avahi_string_list_find(txt, "1st")) != NULL) { 
