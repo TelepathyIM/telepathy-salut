@@ -250,6 +250,9 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
 
   if (!priv->found) {
     g_signal_emit(self, signals[FOUND], 0);
+    /* Initially everything is changed */
+    status_changed = TRUE;
+    alias_changed = TRUE;
     priv->found = TRUE;
   }
 
