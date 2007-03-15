@@ -888,14 +888,8 @@ get_presence_info(SalutConnection *self, const GArray *contact_handles,
         } else {
           status = SALUT_PRESENCE_OFFLINE;
         }
-        if (status_message == NULL) {
-          status_message = "unknown";
-        }
       }
 
-      message = g_new0 (GValue, 1);
-      g_value_init (message, G_TYPE_STRING);
-      g_value_set_string (message, status_message);
       if (contact) 
         g_object_unref(contact);
 
@@ -903,7 +897,12 @@ get_presence_info(SalutConnection *self, const GArray *contact_handles,
         g_hash_table_new_full (g_str_hash, g_str_equal,
                                NULL, (GDestroyNotify) destroy_value);
 
-      g_hash_table_insert (parameters, "message", message);
+      if (status_message != NULL) {
+        message = g_new0 (GValue, 1);
+        g_value_init (message, G_TYPE_STRING);
+        g_value_set_string (message, status_message);
+        g_hash_table_insert (parameters, "message", message);
+      }
 
       contact_status =
         g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -1007,7 +1006,7 @@ gboolean salut_connection_clear_status (SalutConnection *self, GError **error)
   ERROR_IF_NOT_CONNECTED(self, *error);
   
   ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE, 
-                                "Available", error);
+                                NULL, error);
   /* FIXME turn into a TP ERROR */
   if (ret) {
     emit_one_presence_update(self, self->self_handle);
