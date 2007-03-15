@@ -1,3 +1,6 @@
+# All examples use SSL, so don't build anything if it's unavailable
+if HAVE_LIBSSL
+
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:
 	make -C $(top_builddir)/lib/gibber libgibber.la
@@ -31,3 +34,4 @@ AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ \
 
 AM_LDFLAGS = @GLIB_LIBS@
 
+endif

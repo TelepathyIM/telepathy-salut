@@ -89,10 +89,13 @@ AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for OpenSSL
-PKG_CHECK_MODULES(LIBSSL, [openssl])
+PKG_CHECK_MODULES(LIBSSL, [openssl], 
+            [ HAVE_LIBSS="yes" ],
+            [ AC_WARN(openssl not found: not building gibber ssl transport) ] )
 
 AC_SUBST(LIBSSL_CFLAGS)
 AC_SUBST(LIBSSL_LIBS)
+AM_CONDITIONAL(HAVE_LIBSSL, test "x$HAVE_LIBSSL" = "xyes")
 
 
 AS_AC_EXPAND(DATADIR, $datadir)
@@ -110,7 +113,18 @@ AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
 AC_CHECK_HEADERS(execinfo.h)
 
 dnl check for libsasl2 (for sasl test)
-AC_CHECK_LIB(sasl2, sasl_server_new, [], [ AC_MSG_ERROR(libsasl2 not found) ] )
+AC_CHECK_LIB(sasl2, sasl_server_new, 
+             [LIBSASL2_LIBS="-lsasl2" 
+              LIBSASL2_CFLAGS="" 
+              HAVE_LIBSASL2=yes
+              AC_DEFINE(HAVE_LIBSASL2, 1, 
+                        [Define if libsasl2 support is available]) 
+             ], 
+             [ AC_MSG_WARN(libsasl2 not found: not building sasl tests) ] )
+
+AC_SUBST(LIBSASL2_LIBS)
+AC_SUBST(LIBSASL2_CFLAGS)
+AM_CONDITIONAL(HAVE_LIBSASL2, test "x$HAVE_LIBSASL2" = "xyes")
 
 dnl signal functions
 AC_CHECK_FUNCS(signal)

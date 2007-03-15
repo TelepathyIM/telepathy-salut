@@ -5,7 +5,8 @@ $(top_builddir)/lib/gibber/libgibber.la:
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
 noinst_PROGRAMS = \
-	test-xmpp-connection test-sasl-auth
+	test-xmpp-connection 
+
 
 test_xmpp_connection_SOURCES = \
     test-xmpp-connection.c     \
@@ -17,8 +18,10 @@ test_xmpp_connection_LDADD = \
     $(AM_LDFLAGS)
 
 test_xmpp_connection_CFLAGS = \
-    @LIBXML2_CFLAGS@          \
     $(AM_CFLAGS)
+
+if HAVE_LIBSASL2
+noinst_PROGRAMS += test-sasl-auth
 
 test_sasl_auth_SOURCES = \
     test-sasl-auth.c           \
@@ -29,19 +32,26 @@ test_sasl_auth_SOURCES = \
 
 test_sasl_auth_LDADD = \
     $(top_builddir)/lib/gibber/libgibber.la \
+    @LIBSASL2_LIBS@ \
     $(AM_LDFLAGS)
 
 test_sasl_auth_CFLAGS = \
-    @LIBXML2_CFLAGS@          \
+    @LIBSASL2_CFLAGS@     \
     $(AM_CFLAGS)
 
-AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ \
+endif
+
+AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib \
     -I $(top_srcdir)/src -I $(top_builddir)/src
 
 AM_LDFLAGS = @GLIB_LIBS@
 
-TESTS = test-sasl-auth run-test.sh
+TESTS = run-xmpp-connection-test.sh
+
+if HAVE_LIBSASL2
+  TESTS +=  test-sasl-auth
+endif
 
 EXTRA_DIST = \
   run-test.sh
