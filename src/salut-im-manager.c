@@ -458,8 +458,8 @@ error:
 
 static void
 pending_connection_stream_opened_cb(GibberXmppConnection *conn,
-                                    gchar *to, gchar *from,
-                                    gpointer user_data) {
+                                    const gchar *to, const gchar *from,
+                                    const gchar *version, gpointer user_data) {
   SalutImManager *mgr = SALUT_IM_MANAGER(user_data);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   GibberXmppStanza *stanza;
@@ -530,7 +530,7 @@ salut_im_manager_handle_connection(SalutImManager *mgr,
     g_object_unref(G_OBJECT(connection));
   } else {
     g_hash_table_insert(priv->pending_connections, connection, contacts); 
-    g_signal_connect(connection, "stream-openened",
+    g_signal_connect(connection, "stream-opened",
                      G_CALLBACK(pending_connection_stream_opened_cb), mgr);
     g_signal_connect(connection, "received-stanza",
                      G_CALLBACK(pending_connection_stanza_received_cb), mgr);
