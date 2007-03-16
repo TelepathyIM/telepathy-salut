@@ -28,6 +28,8 @@
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-namespaces.h>
 
 #include "telepathy-errors.h"
 #include "telepathy-interfaces.h"
@@ -408,31 +410,19 @@ connection_parse_error_cb(GibberXmppConnection *conn, gpointer userdata) {
 }
 
 static void
-pending_connection_stream_opened_cb(GibberXmppConnection *conn,
-                                    gchar *to, gchar *from,
-                                    gpointer user_data) {
-  /* Just open the stream, according to the xep there should be no to and from
-   * */
-  gibber_xmpp_connection_open(conn, NULL, NULL, NULL);
-}
-
-static void
-pending_connection_stanza_received_cb(GibberXmppConnection *conn, 
-                                      GibberXmppStanza *stanza,
-                                      gpointer userdata) {
-  SalutImManager *mgr = SALUT_IM_MANAGER(userdata);
+pending_connection_got_from(SalutImManager *mgr, 
+                            GibberXmppConnection *conn,
+                            GibberXmppStanza *stanza,
+                            const gchar *from) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
-
-  const char *from;
   GList *t;
-  from = gibber_xmpp_node_get_attribute(stanza->node, "from");
 
   if (from == NULL) {
-    DEBUG("No from in message from pending connection");
+    DEBUG("No valid ``from'' pending connection");
     goto error;
   }
 
-  DEBUG("Got message from %s on pending connection", from);
+  DEBUG("Got stream from %s on pending connection", from);
   t = g_hash_table_lookup(priv->pending_connections, conn);
 
   while (t != NULL) {
@@ -444,7 +434,7 @@ pending_connection_stanza_received_cb(GibberXmppConnection *conn,
                                        0, 0, NULL, NULL, mgr);
       g_signal_handlers_disconnect_matched(conn->transport, G_SIGNAL_MATCH_DATA,
                                        0, 0, NULL, NULL, mgr);
-      if (!gibber_ll_transport_get_address(GIBBER_LL_TRANSPORT(conn->transport), 
+      if (!gibber_ll_transport_get_address(GIBBER_LL_TRANSPORT(conn->transport),
                                            &addr, &size)) {
         DEBUG("Contact no longer alive");
         goto error;
@@ -464,6 +454,43 @@ error:
   gibber_xmpp_connection_close(conn);
   gibber_transport_disconnect(conn->transport);
   g_hash_table_remove(priv->pending_connections, conn);
+}
+
+static void
+pending_connection_stream_opened_cb(GibberXmppConnection *conn,
+                                    gchar *to, gchar *from,
+                                    gpointer user_data) {
+  SalutImManager *mgr = SALUT_IM_MANAGER(user_data);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  GibberXmppStanza *stanza;
+
+  /* According to the xep-0174 revision >= there should 
+   * be a to and from.. But clients implementing older revision might not
+   * support that yet. 
+   * */
+  if (from != NULL) {
+    pending_connection_got_from(mgr, conn, NULL, from);
+  }
+
+  gibber_xmpp_connection_open(conn, from, priv->connection->name, NULL);
+  /* Send empty stream features */
+  stanza = gibber_xmpp_stanza_new("features");
+  gibber_xmpp_node_set_ns(stanza->node, GIBBER_XMPP_NS_STREAM);
+  gibber_xmpp_connection_send(conn, stanza, NULL);
+  g_object_unref(stanza);
+}
+
+static void
+pending_connection_stanza_received_cb(GibberXmppConnection *conn, 
+                                      GibberXmppStanza *stanza,
+                                      gpointer userdata) {
+  /* If the identity wasn't clear from the stream opening we only wait to the
+   * very first message */ 
+  pending_connection_got_from(SALUT_IM_MANAGER(userdata), 
+                              conn, 
+                              stanza,
+                              gibber_xmpp_node_get_attribute(stanza->node, 
+                                  "from"));
 }
 
 void

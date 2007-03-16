@@ -36,6 +36,7 @@
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-namespaces.h>
 
 #include "salut-connection.h"
 #include "salut-contact.h"
@@ -506,7 +507,9 @@ _connect_to_next(SalutImChannel *self, GibberLLTransport *transport) {
     } else {
       g_array_free(priv->addresses, TRUE);
       priv->addresses = NULL;
-      gibber_xmpp_connection_open(priv->xmpp_connection, NULL, NULL, NULL);
+      gibber_xmpp_connection_open(priv->xmpp_connection, 
+                                  priv->contact->name, 
+                                  priv->connection->name, NULL);
     }
   }
 }
@@ -519,8 +522,15 @@ _connection_stream_opened_cb(GibberXmppConnection *conn,
   SalutImChannel  *self = SALUT_IM_CHANNEL(userdata);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
+  /* TODO validate to field ? */
   if (gibber_ll_transport_is_incoming(GIBBER_LL_TRANSPORT(conn->transport))) {
-    gibber_xmpp_connection_open(conn, NULL, NULL, NULL);
+    GibberXmppStanza *stanza;
+    gibber_xmpp_connection_open(conn, from, priv->connection->name, NULL);
+    /* Send empty stream features */
+    stanza = gibber_xmpp_stanza_new("features");
+    gibber_xmpp_node_set_ns(stanza->node, GIBBER_XMPP_NS_STREAM);
+    gibber_xmpp_connection_send(conn, stanza, NULL);
+    g_object_unref(stanza);
   }
   priv->state = CHANNEL_CONNECTED;
   _flush_queue(self);
