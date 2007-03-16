@@ -337,7 +337,8 @@ AvahiStringList *create_txt_record(SalutSelf *self) {
   AvahiStringList *ret;
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
-   ret = avahi_string_list_new("txtvers=2",
+   ret = avahi_string_list_new("txtvers=1",
+                               "port.p2pj=5298",
                                NULL);
    if (priv->nickname) 
      ret = avahi_string_list_add_printf(ret, "nick=%s", priv->nickname);
