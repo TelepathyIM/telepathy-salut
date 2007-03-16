@@ -30,6 +30,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <gibber/gibber-namespaces.h>
+
 #include "telepathy-constants.h"
 #include "telepathy-errors.h"
 
@@ -494,6 +496,19 @@ gboolean text_mixin_list_pending_messages (GObject *obj, gboolean clear, GPtrArr
   return TRUE;
 }
 
+static void
+add_text(GibberXmppStanza *stanza, const gchar *text) {
+  GibberXmppNode *htmlnode;
+
+  gibber_xmpp_node_add_child_with_content(stanza->node, "body", text);
+
+  /* Add plain xhtml-im node */
+  htmlnode = gibber_xmpp_node_add_child_ns(stanza->node, "html", 
+                 GIBBER_XMPP_NS_XHTML_IM);
+  gibber_xmpp_node_add_child_with_content_ns(htmlnode, 
+      "body", text, GIBBER_W3C_NS_XHTML);
+}
+
 /**
  * text_mixin_send
  *
@@ -543,12 +558,12 @@ gboolean text_mixin_send (GObject *obj, guint type,
     {
       gchar *tmp;
       tmp = g_strconcat ("/me ", text, NULL);
-      gibber_xmpp_node_add_child_with_content(stanza->node, "body", tmp);
+      add_text(stanza, tmp);
       g_free (tmp);
     }
   else
     {
-      gibber_xmpp_node_add_child_with_content(stanza->node, "body", text);
+      add_text(stanza, text);
     }
 
   result = mixin_cls->send(obj, type, text, stanza, error);
