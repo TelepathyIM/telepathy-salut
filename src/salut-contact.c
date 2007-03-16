@@ -233,6 +233,28 @@ salut_contact_new(SalutAvahiClient *client, const gchar *name) {
   return ret;
 }
 
+/* valid is true if this was a valid alias 
+ * changed is true if the contacts alias actually changed */
+static void
+update_alias(SalutContact *self, const gchar *new, 
+            gboolean *valid, gboolean *changed) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  if (new == NULL || *new == '\0') {
+    *valid = *changed = FALSE;
+  }
+
+  if (priv->alias == NULL || strcmp(priv->alias, new) != 0)  {
+    g_free(priv->alias);
+    priv->alias = g_strdup(new);
+    *valid = *changed = TRUE;
+  }
+
+  *valid = TRUE;
+  *changed = FALSE;
+}
+
+
+
 static void
 contact_resolved_cb(SalutAvahiServiceResolver *resolver, 
                     AvahiIfIndex interface, AvahiProtocol protocol,
@@ -244,17 +266,10 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   AvahiStringList *t;
   gboolean status_changed = FALSE;
+  gboolean alias_seen = FALSE;
   gboolean alias_changed = FALSE;
   gchar *first = NULL;
   gchar *last = NULL;
-
-  if (!priv->found) {
-    g_signal_emit(self, signals[FOUND], 0);
-    /* Initially everything is changed */
-    status_changed = TRUE;
-    alias_changed = TRUE;
-    priv->found = TRUE;
-  }
 
   if ((t = avahi_string_list_find(txt, "status")) != NULL) { 
     int i;
@@ -292,54 +307,63 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     self->status_message = NULL;
   }
 
-  if ((t = avahi_string_list_find(txt, "1st")) != NULL) { 
+  if ((t = avahi_string_list_find(txt, "nick")) != NULL) { 
     gchar *key;
-    avahi_string_list_get_pair(t, &key, &first, NULL);
+    gchar *value;
+    avahi_string_list_get_pair(t, &key, &value, NULL);
+    update_alias(self, value, &alias_seen, &alias_changed);
     avahi_free(key);
-  }
+    avahi_free(value);
+  } 
   
-  if ((t = avahi_string_list_find(txt, "last")) != NULL) { 
-    gchar *key;
-    avahi_string_list_get_pair(t, &key, &last, NULL);
-    avahi_free(key);
-  }
-
-
-  if (first != NULL || last != NULL) {
-    GString *new_alias = NULL;
-
-    if (first != NULL) {
-      new_alias = g_string_new(first);
-    } 
-
-    if (new_alias != NULL && last != NULL) {
-      new_alias = g_string_append_c(new_alias, ' ');
-      new_alias = g_string_append(new_alias, last);
-    } else if (last != NULL) {
-      new_alias = g_string_new(last);
+  if (!alias_seen) { 
+    /* Fallback to trying 1st + last as alias */
+    if ((t = avahi_string_list_find(txt, "1st")) != NULL) { 
+      gchar *key;
+      avahi_string_list_get_pair(t, &key, &first, NULL);
+      avahi_free(key);
+    }
+  
+    if ((t = avahi_string_list_find(txt, "last")) != NULL) { 
+      gchar *key;
+      avahi_string_list_get_pair(t, &key, &last, NULL);
+      avahi_free(key);
     }
 
-    if (*(new_alias->str) == '\0') {
-      DEBUG("Ignoring empty alias");
-      g_string_free(new_alias, TRUE);
-    } else if (priv->alias == NULL 
-               || strcmp(priv->alias, new_alias->str) != 0) {
-      g_free(priv->alias);
-      priv->alias = new_alias->str;
-      g_string_free(new_alias, FALSE);
-      alias_changed = TRUE;
-    } else {
-      g_string_free(new_alias, TRUE);
+    if (first != NULL && last != NULL) {
+      gchar *alias = NULL;
+
+      alias = g_strdup_printf("%s %s", first, last);
+
+      update_alias(self, alias, &alias_seen, &alias_changed);
+      g_free(alias);
+    } else if (first != NULL) {
+      update_alias(self, first, &alias_seen, &alias_changed);
+    } else if (last != NULL) {
+      update_alias(self, last, &alias_seen, &alias_changed);
     }
     avahi_free(first);
     avahi_free(last);
-  } else if (priv->alias != NULL) {
+  }
+
+  if (!alias_seen && priv->alias != NULL) {
+    /* No alias anymore ? */
     g_free(priv->alias);
+    priv->alias = NULL;
     alias_changed = TRUE;
   }
 
+  if (!priv->found) {
+    g_signal_emit(self, signals[FOUND], 0);
+    /* Initially force updates of everything */
+    status_changed = TRUE;
+    alias_changed = TRUE;
+    priv->found = TRUE;
+  }
+
   if (alias_changed) {
-    g_signal_emit(self, signals[ALIAS_CHANGED], 0, priv->alias); 
+    g_signal_emit(self, signals[ALIAS_CHANGED], 0, 
+                  salut_contact_get_alias(self));
   }
 
   if (status_changed) {
