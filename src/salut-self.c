@@ -333,13 +333,15 @@ self_start_listening(SalutSelf *self) {
 }
 
 static 
-AvahiStringList *create_txt_record(SalutSelf *self) {
+AvahiStringList *create_txt_record(SalutSelf *self, int port) {
   AvahiStringList *ret;
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
-   ret = avahi_string_list_new("txtvers=1",
-                               "port.p2pj=5298",
-                               NULL);
+   ret = avahi_string_list_new("txtvers=1", NULL);
+   
+   /* Some silly clients still use this */
+   ret = avahi_string_list_add_printf(ret, "port.p2pj=%d", port);
+
    if (priv->nickname) 
      ret = avahi_string_list_add_printf(ret, "nick=%s", priv->nickname);
    if (priv->first_name)
@@ -410,7 +412,7 @@ salut_self_announce(SalutSelf *self, GError **error) {
 
   self->name = g_strdup_printf("%s@%s", g_get_user_name(),
                        avahi_client_get_host_name(priv->client->avahi_client));
-  txt_record = create_txt_record(self);
+  txt_record = create_txt_record(self, port);
 
   if ((priv->presence = 
           salut_avahi_entry_group_add_service_strlist(priv->presence_group,
