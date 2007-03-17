@@ -89,6 +89,9 @@ salut_contact_has_address(SalutContact *contact,
 const gchar *
 salut_contact_get_alias(SalutContact *contact);
 
+gboolean
+salut_contact_has_services(SalutContact *contact);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_CONTACT_H__*/

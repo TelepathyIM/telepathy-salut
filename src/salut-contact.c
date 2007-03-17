@@ -134,6 +134,8 @@ salut_contact_dispose (GObject *object)
   SalutContact *self = SALUT_CONTACT (object);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
 
+  DEBUG("Disposing contact");
+
   if (priv->dispose_has_run)
     return;
 
@@ -556,3 +558,8 @@ salut_contact_get_alias(SalutContact *contact) {
   return priv->alias;
 }
 
+gboolean
+salut_contact_has_services(SalutContact *contact) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+  return priv->resolvers != NULL;
+}
