@@ -358,7 +358,7 @@ test_sasl_server_auth_getopt(void *context,
     const gchar *value;
   } options[] = { 
     { "auxprop_plugin", "sasldb"},
-    { "sasldb_path", "./db"},
+    { "sasldb_path", "./sasl-test.db"},
     { NULL, NULL },
   };
   for (i = 0; options[i].name != NULL; i++) {
