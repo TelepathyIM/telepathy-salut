@@ -58,5 +58,6 @@ EXTRA_DIST = \
 
 clean-local:
 	-rm -rf outputs
+	-rm -f sasl-test.db
 
 SUBDIRS = inputs
