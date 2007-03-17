@@ -54,7 +54,7 @@ if HAVE_LIBSASL2
 endif
 
 EXTRA_DIST = \
-  run-test.sh
+  run-xmpp-connection-test.sh
 
 clean-local:
 	-rm -rf outputs
