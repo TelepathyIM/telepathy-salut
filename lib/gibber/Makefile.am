@@ -61,6 +61,13 @@ CLEANFILES=$(BUILT_SOURCES)
 dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
+EXTRA_DIST = \
+  gibber-sasl-auth-signals-marshal.list       \
+  gibber-ssl-transport-signals-marshal.list   \
+  gibber-transport-signals-marshal.list       \
+  gibber-xmpp-connection-signals-marshal.list \
+  gibber-xmpp-reader-signals-marshal.list     \
+  gibber-xmpp-stanza-signals-marshal.list
 
 %-signals-marshal.h: %-signals-marshal.list
 	glib-genmarshal --header --prefix=$(subst -,_,$*)_marshal $< > $*-signals-marshal.h
