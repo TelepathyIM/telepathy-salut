@@ -41,6 +41,8 @@ libgibber_la_SOURCES =            \
   gibber-tcp-transport.h          \
   gibber-multicast-transport.c    \
   gibber-multicast-transport.h    \
+  gibber-r-multicast-transport.c    \
+  gibber-r-multicast-transport.h    \
   gibber-sasl-auth.c              \
   gibber-sasl-auth.h              \
   gibber-linklocal-transport.c    \
