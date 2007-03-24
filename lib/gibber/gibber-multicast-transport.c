@@ -35,6 +35,7 @@
 #include <gibber-debug.h>
 
 #define BUFSIZE 1500
+#define MAX_PACKET_SIZE 1440
 
 static gboolean 
 gibber_multicast_transport_send (GibberTransport *transport, 
@@ -149,7 +150,8 @@ _channel_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   int ret;
   socklen_t len = sizeof(struct sockaddr_storage);
 
-  ret = recvfrom(priv->fd, buf, BUFSIZE, 0, (struct sockaddr *)&from, &len);
+  ret = recvfrom(priv->fd, buf, BUFSIZE, 
+                 0, (struct sockaddr *)&from, &len);
   if (ret < 0) {
     DEBUG("recv failed: %s", strerror(errno)); 
     /* FIXME should throw error */
@@ -430,7 +432,7 @@ gibber_multicast_transport_send (GibberTransport *transport,
   GibberMulticastTransportPrivate *priv = 
     GIBBER_MULTICAST_TRANSPORT_GET_PRIVATE(self);
 
-  if (size > BUFSIZE) {
+  if (size > MAX_PACKET_SIZE) {
     DEBUG("Message too big");
     *error = g_error_new(GIBBER_MULTICAST_TRANSPORT_ERROR,
         GIBBER_MULTICAST_TRANSPORT_ERROR_MESSAGE_TOO_BIG, 
@@ -451,6 +453,14 @@ gibber_multicast_transport_send (GibberTransport *transport,
 
   return TRUE;
 }
+
+gsize
+gibber_multicast_transport_get_max_packet_size(
+    GibberMulticastTransport *mtransport) 
+{
+  return MAX_PACKET_SIZE;
+}
+
 
 GibberMulticastTransport *
 gibber_multicast_transport_new(void) { 

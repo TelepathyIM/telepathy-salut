@@ -57,6 +57,10 @@ gboolean
 gibber_multicast_transport_connect(GibberMulticastTransport *mtransport,
                                    const gchar *address, const gchar *port);
 
+gsize
+gibber_multicast_transport_get_max_packet_size(
+    GibberMulticastTransport *mtransport);
+
 GType gibber_multicast_transport_get_type(void);
 
 /* TYPE MACROS */
