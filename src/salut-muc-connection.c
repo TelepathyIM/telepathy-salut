@@ -32,9 +32,10 @@
 
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-multicast-transport.h>
+#include <gibber/gibber-r-multicast-transport.h>
 
-#define PROTO_MULTICAST "multicast"
-#define PROTO_SRM       "srm"
+#define PROTO_MULTICAST   "multicast"
+#define PROTO_RMULTICAST  "rmulticast"
 
 #define ADDRESS_KEY "address"
 #define PORT_KEY "port"
@@ -65,8 +66,10 @@ struct _SalutMucConnectionPrivate
   gchar *protocol;
   gchar *address;
   gchar *port;
+  gboolean rmulticast;
   GHashTable *parameters;
   GibberMulticastTransport *mtransport;
+  GibberRMulticastTransport *rmtransport;
 };
 
 #define SALUT_MUC_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CONNECTION, SalutMucConnectionPrivate))
@@ -150,7 +153,7 @@ salut_muc_connection_finalize (GObject *object)
 
 const gchar **
 salut_muc_connection_get_protocols(void) {
-  static const gchar *protocols[] = { PROTO_MULTICAST, PROTO_SRM, NULL };
+  static const gchar *protocols[] = { PROTO_MULTICAST, PROTO_RMULTICAST, NULL };
   return protocols;
 } 
 
@@ -162,7 +165,7 @@ salut_muc_connection_get_required_parameters(const gchar *protocol) {
     const gchar *protocol; 
     const gchar **parameters;
   } protocols[] = { { PROTO_MULTICAST, parameters },
-                    { PROTO_SRM, parameters },
+                    { PROTO_RMULTICAST, parameters },
                     { NULL, NULL }
                   };
 
@@ -264,6 +267,15 @@ salut_muc_connection_new(const gchar *name,
   SalutMucConnection *result;
   SalutMucConnectionPrivate *priv;
 
+  if (protocol != NULL &&
+      strcmp(protocol, PROTO_MULTICAST) != 0 &&
+      strcmp(protocol, PROTO_RMULTICAST) != 0) {
+    g_set_error(error, 
+                SALUT_MUC_CONNECTION_ERROR,
+                SALUT_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
+                "Invalid protocol: %s", protocol);
+  }
+
 
   if (parameters != NULL) {
     address = g_hash_table_lookup(parameters, ADDRESS_KEY);
@@ -285,15 +297,28 @@ salut_muc_connection_new(const gchar *name,
                         "streaming", FALSE, NULL);
   priv = SALUT_MUC_CONNECTION_GET_PRIVATE (result);
 
-  priv->mtransport = gibber_multicast_transport_new();
-  gibber_xmpp_connection_engage(GIBBER_XMPP_CONNECTION(result),
-                                GIBBER_TRANSPORT(priv->mtransport));
-
   priv = SALUT_MUC_CONNECTION_GET_PRIVATE (result);
   priv->name = g_strdup(name);
-  priv->protocol = g_strdup(protocol);
+  if (protocol != NULL) { 
+    priv->protocol = g_strdup(protocol);
+  } else {
+    priv->protocol = g_strdup(PROTO_RMULTICAST);
+  }
   priv->address = g_strdup(address);
   priv->port = g_strdup(port);
+  priv->rmulticast = (strcmp(protocol, PROTO_RMULTICAST) == 0);
+
+  priv->mtransport = gibber_multicast_transport_new();
+  if (priv->rmulticast) {
+    priv->rmtransport = gibber_r_multicast_transport_new(priv->mtransport,
+                                                         priv->name);
+    gibber_xmpp_connection_engage(GIBBER_XMPP_CONNECTION(result),
+                                  GIBBER_TRANSPORT(priv->rmtransport));
+  } else {
+    gibber_xmpp_connection_engage(GIBBER_XMPP_CONNECTION(result),
+                                  GIBBER_TRANSPORT(priv->mtransport));
+  }
+
 
   return result;
 err:
@@ -316,14 +341,28 @@ salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
       priv->protocol = g_strdup(PROTO_MULTICAST);
       if (gibber_multicast_transport_connect(priv->mtransport, 
                                              priv->address, priv->port)) {
-        ret = TRUE;
+        if (priv->rmulticast) { 
+          if (gibber_r_multicast_transport_connect(priv->rmtransport, 
+                                                   TRUE, NULL)) {
+            ret = TRUE;
+          }
+        } else {
+          ret = TRUE;
+        }
         break;
       }
     } while (--attempts);
   } else {
     if (gibber_multicast_transport_connect(priv->mtransport, 
                                              priv->address, priv->port)) {
-      ret = TRUE;
+      if (priv->rmulticast) { 
+        if (gibber_r_multicast_transport_connect(priv->rmtransport, 
+                                                   TRUE, NULL)) {
+          ret = TRUE;
+        }
+      } else {
+        ret = TRUE;
+      }
     }
   }
   if (!ret) {
