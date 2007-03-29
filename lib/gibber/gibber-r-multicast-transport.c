@@ -157,7 +157,7 @@ gibber_r_multicast_transport_class_init (GibberRMulticastTransportClass *gibber_
                                    G_PARAM_READWRITE      |
                                    G_PARAM_STATIC_NAME    |
                                    G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_MULTICAST_TRANSPORT, 
+  g_object_class_install_property(object_class, PROP_NAME, 
                                   param_spec);
   transport_class->send = gibber_r_multicast_transport_send;
   transport_class->disconnect = gibber_r_multicast_transport_disconnect;
