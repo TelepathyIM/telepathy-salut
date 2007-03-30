@@ -31,9 +31,9 @@
 #include "salut-self-signals-marshal.h"
 
 #include <gibber/gibber-linklocal-transport.h>
+#include <telepathy-glib/errors.h>
 
 #include "salut-avahi-entry-group.h"
-#include "telepathy-errors.h"
 
 #define DEBUG_FLAG DEBUG_SELF
 #include <debug.h>
@@ -221,6 +221,8 @@ salut_self_new(SalutAvahiClient *client,
   SalutSelfPrivate *priv;
   GString *alias = NULL;
 
+  g_assert(client != NULL);
+
   SalutSelf *ret = g_object_new(SALUT_TYPE_SELF, NULL);
   priv = SALUT_SELF_GET_PRIVATE (ret);
 
@@ -387,7 +389,7 @@ salut_self_announce(SalutSelf *self, GError **error) {
   port = self_start_listening(self);
   if (port < 0) {
     if (error != NULL) {
-      *error = g_error_new(TELEPATHY_ERRORS, NetworkError, 
+      *error = g_error_new(TP_ERRORS, TP_ERROR_NETWORK_ERROR, 
                            "Failed to start listening");
     }
     return FALSE;

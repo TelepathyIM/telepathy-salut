@@ -22,29 +22,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "salut-contact-channel.h"
-#include "salut-contact-channel-signals-marshal.h"
-
-#include "salut-contact-channel-glue.h"
-
-#include "handle-types.h"
-#include "tp-channel-iface.h"
 #include "salut-connection.h"
-#include "telepathy-helpers.h"
-#include "telepathy-interfaces.h"
-#include "telepathy-errors.h"
+#include "salut-contact-channel.h"
+
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/util.h>
+
+static void 
+channel_iface_init(gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel, 
-  G_TYPE_OBJECT, G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL));
-
-/* signal enum */
-enum
-{
-    CLOSED,
-    LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
+  G_TYPE_OBJECT, 
+  G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
+  G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
+  G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
+      tp_group_mixin_iface_init);
+  G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_CONTACT_LIST, NULL);
+)
 
 /* properties */
 enum
@@ -64,7 +60,7 @@ struct _SalutContactChannelPrivate
 {
   SalutConnection *conn;
   gchar *object_path;
-  Handle handle;
+  TpHandle handle;
   gboolean dispose_has_run;
 };
 
@@ -85,8 +81,10 @@ salut_contact_channel_constructor (GType type, guint n_props,
 {
   GObject *obj;
   DBusGConnection *bus;
-  gboolean valid;
   SalutContactChannelPrivate *priv;
+  TpHandleRepoIface *handle_repo;
+  TpHandleRepoIface *contact_repo;
+  TpBaseConnection *base_conn;
 
   /* Parent constructor chain */
   obj = G_OBJECT_CLASS(salut_contact_channel_parent_class)->
@@ -99,13 +97,20 @@ salut_contact_channel_constructor (GType type, guint n_props,
   dbus_g_connection_register_g_object(bus, priv->object_path, obj);
 
   /* Ref our handle */
-  valid = handle_ref(priv->conn->handle_repo, TP_HANDLE_TYPE_LIST, priv->handle);
-  g_assert(valid);
+  base_conn = TP_BASE_CONNECTION(priv->conn);
+
+  handle_repo = tp_base_connection_get_handles(base_conn, TP_HANDLE_TYPE_LIST);
+  contact_repo = tp_base_connection_get_handles(base_conn, 
+      TP_HANDLE_TYPE_CONTACT);
+
+  tp_handle_ref(handle_repo, priv->handle);
 
   /* Impossible to add/remove/rescind on any of our lists */
-  group_mixin_init(obj, G_STRUCT_OFFSET(SalutContactChannel, group),
-                     priv->conn->handle_repo, priv->conn->self_handle);
-  group_mixin_change_flags(obj, 0, 0);
+  tp_group_mixin_init(TP_SVC_CHANNEL_INTERFACE_GROUP(obj),
+      G_STRUCT_OFFSET(SalutContactChannel, group),
+      contact_repo, base_conn->self_handle);
+
+  tp_group_mixin_change_flags(TP_SVC_CHANNEL_INTERFACE_GROUP(obj), 0, 0);
   return obj;
 }
 
@@ -152,6 +157,7 @@ salut_contact_channel_set_property (GObject     *object,
 {
   SalutContactChannel *chan = SALUT_CONTACT_CHANNEL (object);
   SalutContactChannelPrivate *priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE (chan);
+  const gchar *tmp;
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
@@ -163,6 +169,16 @@ salut_contact_channel_set_property (GObject     *object,
       break;
     case PROP_CONNECTION:
       priv->conn = g_value_get_object (value);
+      break;
+    case PROP_HANDLE_TYPE:
+      g_assert(g_value_get_uint(value) == 0 
+               || g_value_get_uint(value) == TP_HANDLE_TYPE_LIST);
+      break;
+    case PROP_CHANNEL_TYPE:
+      tmp = g_value_get_string(value);
+      g_assert(tmp == NULL 
+               || !tp_strdiff(g_value_get_string(value),
+                       TP_IFACE_CHANNEL_TYPE_CONTACT_LIST));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -201,19 +217,9 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE, "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
-  signals[CLOSED] =
-    g_signal_new ("closed",
-                  G_OBJECT_CLASS_TYPE (salut_contact_channel_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_contact_channel_marshal_VOID__VOID,
-                  G_TYPE_NONE, 0);
-  group_mixin_class_init(object_class, 
+  tp_group_mixin_class_init((TpSvcChannelInterfaceGroupClass *)object_class, 
     G_STRUCT_OFFSET(SalutContactChannelClass, group_class),
     NULL, NULL);
-
-  dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_contact_channel_class), &dbus_glib_salut_contact_channel_object_info);
 }
 
 void
@@ -221,13 +227,19 @@ salut_contact_channel_dispose (GObject *object)
 {
   SalutContactChannel *self = SALUT_CONTACT_CHANNEL (object);
   SalutContactChannelPrivate *priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE (self);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION(priv->conn);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
+        TP_HANDLE_TYPE_LIST);
 
   if (priv->dispose_has_run)
     return;
 
   priv->dispose_has_run = TRUE;
 
-  g_signal_emit(self, signals[CLOSED], 0);
+  tp_svc_channel_emit_closed(TP_SVC_CHANNEL(object));
+
+  tp_handle_unref(handle_repo, priv->handle);
+
 
   /* release any references held by the object here */
 
@@ -243,77 +255,11 @@ salut_contact_channel_finalize (GObject *object)
 
   /* free any data held directly by the object here */
   g_free(priv->object_path);
-  handle_unref(priv->conn->handle_repo, TP_HANDLE_TYPE_LIST, priv->handle);
-  group_mixin_finalize(object);
+
+  tp_group_mixin_finalize(TP_SVC_CHANNEL_INTERFACE_GROUP(object));
 
   G_OBJECT_CLASS (salut_contact_channel_parent_class)->finalize (object);
 }
-
-
-
-/**
- * salut_contact_channel_add_members
- *
- * Implements DBus method AddMembers
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_contact_channel_add_members (SalutContactChannel *self, 
-                                            const GArray * contacts, 
-                                            const gchar * message, 
-                                            GError **error)
-{
-  return group_mixin_add_members (G_OBJECT (self), contacts, message, 
-                                         error);
-}
-
-
-/**
- * salut_contact_channel_close
- *
- * Implements DBus method Close
- * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_contact_channel_close (SalutContactChannel *obj, GError **error)
-{
-  *error = g_error_new (TELEPATHY_ERRORS, NotImplemented,
-                        "you may not close contact list channels");
-  return FALSE;
-}
-
-
-/**
- * salut_contact_channel_get_all_members
- *
- * Implements DBus method GetAllMembers
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_contact_channel_get_all_members (SalutContactChannel *self, 
-                                                GArray ** ret, 
-                                                GArray ** ret1, 
-                                                GArray ** ret2, 
-                                                GError **error)
-{
-  return group_mixin_get_all_members (G_OBJECT (self), ret, ret1, ret2, error);
-}
-
 
 /**
  * salut_contact_channel_get_channel_type
@@ -327,29 +273,12 @@ gboolean salut_contact_channel_get_all_members (SalutContactChannel *self,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_channel_type (SalutContactChannel *obj, gchar ** ret, GError **error)
+static void 
+salut_contact_channel_get_channel_type (TpSvcChannel *iface,
+                                        DBusGMethodInvocation *context)
 {
-  *ret = g_strdup (TP_IFACE_CHANNEL_TYPE_CONTACT_LIST);
-  return TRUE;
-}
-
-
-/**
- * salut_contact_channel_get_group_flags
- *
- * Implements DBus method GetGroupFlags
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_contact_channel_get_group_flags (SalutContactChannel *self, 
-                                                guint* ret, GError **error)
-{
-  return group_mixin_get_group_flags (G_OBJECT (self), ret, error);
+  tp_svc_channel_return_from_get_channel_type(context, 
+      TP_IFACE_CHANNEL_TYPE_CONTACT_LIST);
 }
 
 
@@ -365,37 +294,15 @@ gboolean salut_contact_channel_get_group_flags (SalutContactChannel *self,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_handle (SalutContactChannel *self, 
-                                           guint* ret, 
-                                           guint* ret1, GError **error)
+static void
+salut_contact_channel_get_handle (TpSvcChannel *iface,
+                                  DBusGMethodInvocation *context)
 {
+  SalutContactChannel *self = SALUT_CONTACT_CHANNEL(iface);
   SalutContactChannelPrivate *priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE(self);
-  *ret = TP_HANDLE_TYPE_LIST;
-  *ret1 = priv->handle;
-  return TRUE;
-}
 
-
-/**
- * salut_contact_channel_get_handle_owners
- *
- * Implements DBus method GetHandleOwners
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_contact_channel_get_handle_owners (SalutContactChannel *self, 
-                                                  const GArray * handles, 
-                                                  GArray ** ret, 
-                                                  GError **error)
-{
-  return group_mixin_get_handle_owners (G_OBJECT (self), handles, ret,
-                                               error);
-  return TRUE;
+  tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_LIST,  
+                                         priv->handle);
 }
 
 
@@ -411,135 +318,24 @@ gboolean salut_contact_channel_get_handle_owners (SalutContactChannel *self,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_contact_channel_get_interfaces (SalutContactChannel *obj, 
-                                               gchar *** ret, 
-                                               GError **error)
-{
+static void
+salut_contact_channel_get_interfaces (TpSvcChannel *iface,
+                                       DBusGMethodInvocation *context) {
   const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP, NULL };
   
-  *ret = g_strdupv ((gchar **) interfaces);
-  return TRUE;
+  tp_svc_channel_return_from_get_interfaces (context, interfaces);
 }
 
 
-/**
- * salut_contact_channel_get_local_pending_members
- *
- * Implements DBus method GetLocalPendingMembers
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean 
-salut_contact_channel_get_local_pending_members (SalutContactChannel *self, 
-                                                 GArray ** ret, GError **error)
+static void
+channel_iface_init(gpointer g_iface, gpointer iface_data)
 {
-  return group_mixin_get_local_pending_members (G_OBJECT (self), ret, 
-                                                       error);
+  TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
+
+#define IMPLEMENT(x) tp_svc_channel_implement_##x (\
+    klass, salut_contact_channel_##x)
+  IMPLEMENT(get_channel_type);
+  IMPLEMENT(get_handle);
+  IMPLEMENT(get_interfaces);
+#undef IMPLEMENT
 }
-
-/**
- * salut_contact_channel_get_local_pending_members_with_info
- *
- * Implements D-Bus method GetLocalPendingMembersWithInfo
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred, D-Bus will throw the error only if this
- *         function returns FALSE.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean
-salut_contact_channel_get_local_pending_members_with_info (
-                                                  SalutContactChannel *self,
-                                                  GPtrArray **ret,
-                                                  GError **error)
-{
-  return group_mixin_get_local_pending_members_with_info(G_OBJECT (self), ret, 
-                                                         error);
-}
-
-
-/**
- * salut_contact_channel_get_members
- *
- * Implements DBus method GetMembers
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_contact_channel_get_members (SalutContactChannel *self, 
-                                            GArray ** ret, GError **error)
-{
-  return group_mixin_get_members (G_OBJECT (self), ret, error);
-}
-
-
-/**
- * salut_contact_channel_get_remote_pending_members
- *
- * Implements DBus method GetRemotePendingMembers
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean 
-salut_contact_channel_get_remote_pending_members (SalutContactChannel *self, 
-                                                  GArray ** ret, GError **error)
-{
-  return group_mixin_get_remote_pending_members (G_OBJECT (self), ret, error);
-}
-
-
-/**
- * salut_contact_channel_get_self_handle
- *
- * Implements DBus method GetSelfHandle
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_contact_channel_get_self_handle (SalutContactChannel *self, 
-                                                guint* ret, GError **error)
-{
-  return group_mixin_get_self_handle (G_OBJECT (self), ret, error);
-}
-
-
-/**
- * salut_contact_channel_remove_members
- *
- * Implements DBus method RemoveMembers
- * on interface org.freedesktop.Telepathy.Channel.Interface.Group
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean 
-salut_contact_channel_remove_members (SalutContactChannel *self, 
-                                      const GArray * contacts, 
-                                      const gchar * message, GError **error)
-{
-   return group_mixin_remove_members(G_OBJECT (self), contacts, message, error);
-}
-

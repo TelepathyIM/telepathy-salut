@@ -306,7 +306,7 @@ salut_muc_connection_new(const gchar *name,
   }
   priv->address = g_strdup(address);
   priv->port = g_strdup(port);
-  priv->rmulticast = (strcmp(protocol, PROTO_RMULTICAST) == 0);
+  priv->rmulticast = (strcmp(priv->protocol, PROTO_RMULTICAST) == 0);
 
   priv->mtransport = gibber_multicast_transport_new();
   if (priv->rmulticast) {

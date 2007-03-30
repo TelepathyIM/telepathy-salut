@@ -21,7 +21,7 @@
 #define __SALUT_PRESENCE_H__
 
 #include <glib-object.h>
-#include "telepathy-constants.h"
+#include <telepathy-glib/enums.h>
 
 G_BEGIN_DECLS
 
@@ -43,10 +43,10 @@ typedef enum {
 } SalutPresenceId;  
 
 static const SalutPresenceStatusInfo salut_presence_statuses[] = {
-  { "available", "avail",   TP_CONN_PRESENCE_TYPE_AVAILABLE },
-  { "away",      "away",    TP_CONN_PRESENCE_TYPE_AWAY  },
-  { "dnd",       "dnd",     TP_CONN_PRESENCE_TYPE_AWAY  },
-  { "offline",   "offline", TP_CONN_PRESENCE_TYPE_OFFLINE  },
+  { "available", "avail",   TP_CONNECTION_PRESENCE_TYPE_AVAILABLE },
+  { "away",      "away",    TP_CONNECTION_PRESENCE_TYPE_AWAY  },
+  { "dnd",       "dnd",     TP_CONNECTION_PRESENCE_TYPE_AWAY  },
+  { "offline",   "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE  },
   { NULL, NULL, 0}
 };
 

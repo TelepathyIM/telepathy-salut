@@ -1,5 +1,0 @@
-SalutConnection org.freedesktop.Telepathy.Connection HoldHandles
-SalutConnection org.freedesktop.Telepathy.Connection InspectHandles
-SalutConnection org.freedesktop.Telepathy.Connection ReleaseHandles
-SalutConnection org.freedesktop.Telepathy.Connection RequestChannel
-SalutConnection org.freedesktop.Telepathy.Connection RequestHandles

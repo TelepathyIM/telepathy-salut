@@ -31,13 +31,8 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 
-#include "telepathy-errors.h"
-#include "telepathy-interfaces.h"
-#include "telepathy-constants.h"
-#include "tp-channel-factory-iface.h"
-#include "handle-types.h"
-#include "handle-repository.h"
-#include "gintset.h"
+#include <telepathy-glib/channel-factory-iface.h>
+#include <telepathy-glib/interfaces.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -46,7 +41,7 @@ static void salut_im_manager_factory_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data);
 
 static SalutImChannel *
-salut_im_manager_new_channel(SalutImManager *mgr, Handle handle);
+salut_im_manager_new_channel(SalutImManager *mgr, TpHandle handle);
 
 G_DEFINE_TYPE_WITH_CODE(SalutImManager, salut_im_manager, 
                         G_TYPE_OBJECT,
@@ -124,11 +119,6 @@ salut_im_manager_dispose (GObject *object)
     priv->contact_manager = NULL;
   }
   
-  if (priv->connection) {
-    g_object_unref(priv->connection);
-    priv->connection = NULL;
-  }
-
   if (priv->channels) {
     t = priv->channels;
     priv->channels = NULL;
@@ -219,13 +209,19 @@ salut_im_manager_factory_iface_request(TpChannelFactoryIface *iface,
                                              const gchar *chan_type, 
                                              TpHandleType handle_type,
                                              guint handle, 
-                                             TpChannelIface **ret) {
+                                             gpointer request,
+                                             TpChannelIface **ret,
+                                             GError **error) {
   SalutImManager *mgr = SALUT_IM_MANAGER(iface);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   SalutImChannel *chan;
+  gboolean created = FALSE;
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      base_connection, TP_HANDLE_TYPE_CONTACT);
 
   /* We only support text channels */
-  if (strcmp(chan_type, TP_IFACE_CHANNEL_TYPE_TEXT)) {
+  if (tp_strdiff(chan_type, TP_IFACE_CHANNEL_TYPE_TEXT)) {
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
   }
 
@@ -235,13 +231,12 @@ salut_im_manager_factory_iface_request(TpChannelFactoryIface *iface,
   }
 
   /* Most be a valid contact handle */
-  if (!handle_is_valid(priv->connection->handle_repo, TP_HANDLE_TYPE_CONTACT,
-                       handle, NULL)) {
+  if (!tp_handle_is_valid(handle_repo, TP_HANDLE_TYPE_CONTACT, NULL)) {
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
   }
 
   /* Don't support opening a channel to our self handle */
-  if (handle == priv->connection->self_handle) {
+  if (handle == base_connection->self_handle) {
      return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
   }
 
@@ -250,10 +245,11 @@ salut_im_manager_factory_iface_request(TpChannelFactoryIface *iface,
     *ret = TP_CHANNEL_IFACE(chan);
   } else {
     *ret = TP_CHANNEL_IFACE(salut_im_manager_new_channel(mgr, handle));
+    created = TRUE;
   }
 
-  return *ret != NULL ? TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE
-                      : TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+  return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED 
+                 : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
 }
 
 static void salut_im_manager_factory_iface_init(gpointer *g_iface, 
@@ -273,7 +269,7 @@ static void
 im_channel_closed_cb(SalutImChannel *chan, gpointer user_data) {
   SalutImManager *self = SALUT_IM_MANAGER(user_data);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(self);
-  Handle handle;
+  TpHandle handle;
 
   if (priv->channels) { 
     g_object_get(chan, "handle", &handle, NULL);
@@ -283,8 +279,11 @@ im_channel_closed_cb(SalutImChannel *chan, gpointer user_data) {
 }
 
 static SalutImChannel *
-salut_im_manager_new_channel(SalutImManager *mgr, Handle handle) {
+salut_im_manager_new_channel(SalutImManager *mgr, TpHandle handle) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *handle_repo = 
+      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
   SalutImChannel *chan;
   SalutContact *contact;
   const gchar *name;
@@ -298,10 +297,10 @@ salut_im_manager_new_channel(SalutImManager *mgr, Handle handle) {
   if (contact == NULL) {
     return NULL;
   }
-  name = handle_inspect(priv->connection->handle_repo, 
-                        TP_HANDLE_TYPE_CONTACT, handle);
+
+  name = tp_handle_inspect(handle_repo, handle);
   path = g_strdup_printf("%s/IMChannel/%u", 
-                         priv->connection->object_path, handle);
+                         base_connection->object_path, handle);
   chan = g_object_new(SALUT_TYPE_IM_CHANNEL,
                       "connection", priv->connection,
                       "contact", contact,
@@ -311,7 +310,7 @@ salut_im_manager_new_channel(SalutImManager *mgr, Handle handle) {
   g_object_unref(contact);
   g_free(path);
   g_hash_table_insert(priv->channels, GINT_TO_POINTER(handle), chan);
-  g_signal_emit_by_name(mgr, "new-channel", chan);
+  tp_channel_factory_iface_emit_new_channel(mgr, TP_CHANNEL_IFACE(chan), NULL);
   g_signal_connect(chan, "closed", G_CALLBACK(im_channel_closed_cb), mgr);
 
   return chan;
@@ -332,14 +331,13 @@ salut_im_manager_new(SalutConnection *connection,
   g_object_ref(contact_manager);
 
   priv->connection = connection;
-  g_object_ref(connection);
 
   return ret;
 }
 
 SalutImChannel *
 salut_im_manager_get_channel_for_handle(SalutImManager *mgr, 
-                                        Handle handle) {
+                                        TpHandle handle) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
   SalutImChannel *chan;
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
@@ -358,10 +356,15 @@ found_contact_for_connection(SalutImManager *mgr,
                              SalutContact *contact,
                              GibberXmppStanza *stanza) {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE(mgr);
-  Handle handle;
+  TpHandle handle;
   SalutImChannel *chan;
 
-  handle = handle_for_contact(priv->connection->handle_repo, contact->name);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(base_conn, 
+       TP_HANDLE_TYPE_CONTACT);
+
+  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
+  g_assert(handle != 0);
 
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
   if (chan == NULL) {

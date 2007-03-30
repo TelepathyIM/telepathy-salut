@@ -21,9 +21,10 @@
 #define __SALUT_IM_CHANNEL_H__
 
 #include <glib-object.h>
-#include "text-mixin.h"
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-xmpp-connection.h>
+
+#include <telepathy-glib/text-mixin.h>
 
 G_BEGIN_DECLS
 
@@ -32,12 +33,12 @@ typedef struct _SalutImChannelClass SalutImChannelClass;
 
 struct _SalutImChannelClass {
     GObjectClass parent_class;
-    TextMixinClass text_class;
+    TpTextMixinClass text_class;
 };
 
 struct _SalutImChannel {
     GObject parent;
-    TextMixin text;
+    TpTextMixin text;
 };
 
 GType salut_im_channel_get_type(void);
@@ -63,16 +64,6 @@ void salut_im_channel_send_stanza(SalutImChannel * self,
                                   GibberXmppStanza *stanza);
 void salut_im_channel_received_stanza(SalutImChannel *chan, 
                                       GibberXmppStanza *stanza);
-
-gboolean salut_im_channel_acknowledge_pending_messages (SalutImChannel *self, const GArray * ids, GError **error);
-gboolean salut_im_channel_close (SalutImChannel *self, GError **error);
-gboolean salut_im_channel_get_channel_type (SalutImChannel *self, gchar ** ret, GError **error);
-gboolean salut_im_channel_get_handle (SalutImChannel *self, guint* ret, guint* ret1, GError **error);
-gboolean salut_im_channel_get_interfaces (SalutImChannel *self, gchar *** ret, GError **error);
-gboolean salut_im_channel_get_message_types (SalutImChannel *self, GArray ** ret, GError **error);
-gboolean salut_im_channel_list_pending_messages (SalutImChannel *self, gboolean clear, GPtrArray ** ret, GError **error);
-gboolean salut_im_channel_send (SalutImChannel *self, guint type, const gchar * text, GError **error);
-
 
 G_END_DECLS
 

@@ -30,9 +30,6 @@
 
 
 #include "salut-connection.h"
-#include "salut-connection-signals-marshal.h"
-
-#include "salut-connection-glue.h"
 
 #include "salut-avahi-client.h"
 #include "salut-avahi-entry-group.h"
@@ -45,23 +42,20 @@
 
 #include "salut-presence.h"
 
-#include "handle-repository.h"
-
-#include "telepathy-helpers.h"
-#include "telepathy-errors.h"
-#include "telepathy-interfaces.h"
-#include "tp-channel-factory-iface.h"
-
 #include <avahi-client/client.h>
 #include <avahi-client/lookup.h>
 #include <avahi-common/error.h>
 #include <avahi-glib/glib-watch.h>
 
+#include <telepathy-glib/util.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/handle-repo-dynamic.h>
+#include <telepathy-glib/handle-repo-static.h>
+#include <telepathy-glib/handle-repo.h>
+#include <telepathy-glib/interfaces.h>
+
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
-
-#define BUS_NAME        "org.freedesktop.Telepathy.Connection.salut"
-#define OBJECT_PATH     "/org/freedesktop/Telepathy/Connection/salut"
 
 #define TP_CHANNEL_LIST_ENTRY_TYPE (dbus_g_type_get_struct ("GValueArray", \
       DBUS_TYPE_G_OBJECT_PATH, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_UINT, \
@@ -70,43 +64,40 @@
 #define TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
       G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
 
-/* Protocol as know to telepathy */
-#define PROTOCOL "salut"
-
-#define ERROR_IF_NOT_CONNECTED(CONN, ERROR) \
-  if ((CONN)->status != TP_CONN_STATUS_CONNECTED) \
-        { \
-           DEBUG ("rejected request as disconnected"); \
-           (ERROR) = g_error_new(TELEPATHY_ERRORS, NotAvailable, \
-                                  "Connection is disconnected"); \
-           return FALSE; \
-        }
-
-#define ERROR_IF_NOT_CONNECTED_ASYNC(CONN, ERROR, CONTEXT) \
-  if ((CONN)->status != TP_CONN_STATUS_CONNECTED) \
+#define ERROR_IF_NOT_CONNECTED_ASYNC(BASE, ERROR, CONTEXT) \
+  if ((BASE)->status != TP_CONNECTION_STATUS_CONNECTED) \
     { \
       DEBUG ("rejected request as disconnected"); \
-      (ERROR) = g_error_new(TELEPATHY_ERRORS, NotAvailable, \
+      (ERROR) = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, \
                             "Connection is disconnected"); \
       dbus_g_method_return_error ((CONTEXT), (ERROR)); \
       g_error_free ((ERROR)); \
       return; \
     }
 
-G_DEFINE_TYPE(SalutConnection, salut_connection, G_TYPE_OBJECT)
 
-/* signal enum */
-enum
-{
-    ALIASES_CHANGED,
-    NEW_CHANNEL,
-    PRESENCE_UPDATE,
-    STATUS_CHANGED,
-    DISCONNECTED,
-    LAST_SIGNAL
-};
+static void
+salut_connection_connection_service_iface_init(gpointer g_iface, 
+    gpointer iface_data);
 
-static guint signals[LAST_SIGNAL] = {0};
+static void
+salut_connection_aliasing_service_iface_init(gpointer g_iface, 
+    gpointer iface_data);
+
+static void
+salut_connection_presence_service_iface_init(gpointer g_iface, 
+    gpointer iface_data);
+
+G_DEFINE_TYPE_WITH_CODE(SalutConnection, 
+    salut_connection, 
+    TP_TYPE_BASE_CONNECTION,
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION,
+        salut_connection_connection_service_iface_init);
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
+        salut_connection_aliasing_service_iface_init);
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
+       salut_connection_presence_service_iface_init);
+    )
 
 /* properties */
 enum {
@@ -135,7 +126,7 @@ struct _SalutConnectionPrivate
   /* Avahi client for browsing and resolving */
   SalutAvahiClient *avahi_client; 
 
-  /* Handler for our presence on the lan */
+  /* TpHandler for our presence on the lan */
   SalutSelf *self;
 
   /* Contact manager */
@@ -147,16 +138,10 @@ struct _SalutConnectionPrivate
   /* MUC channel manager */
   SalutMucManager *muc_manager;
 
-  /* Channel requests */
-  GPtrArray *channel_requests; 
-  /* Whether the channel was created during a request met supress handler is
-   * true */ 
-  gboolean suppress_current;
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
-  (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONNECTION, \
-   SalutConnectionPrivate))
+  ((SalutConnectionPrivate *)((SalutConnection *)o)->priv);
 
 typedef struct _ChannelRequest ChannelRequest;
 
@@ -169,17 +154,33 @@ struct _ChannelRequest
   gboolean suppress_handler;
 };
 
-static gboolean _salut_connection_disconnect(SalutConnection *self);
-static void emit_one_presence_update (SalutConnection *self, Handle handle);
+static void _salut_connection_disconnect(SalutConnection *self);
+static void emit_one_presence_update (SalutConnection *self, TpHandle handle);
+
+static void 
+salut_connection_create_handle_repos(TpBaseConnection *self,
+    TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES]);
+
+static GPtrArray*  
+salut_connection_create_channel_factories(TpBaseConnection *self);
+
+static gchar *
+salut_connection_get_unique_connection_name(TpBaseConnection *self);
+
+static void
+salut_connection_shut_down(TpBaseConnection *self);
+
+static gboolean
+salut_connection_start_connecting(TpBaseConnection *self, GError **error);
 
 static void
 salut_connection_init (SalutConnection *obj)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (obj);
+  SalutConnectionPrivate *priv = 
+    G_TYPE_INSTANCE_GET_PRIVATE(obj, SALUT_TYPE_CONNECTION, 
+                                SalutConnectionPrivate);
 
-  obj->status = TP_CONN_STATUS_DISCONNECTED;
-  obj->self_handle = 0;
-  obj->handle_repo = NULL;
+  obj->priv = priv;
   obj->name = NULL;
 
   /* allocate any data required by the object here */
@@ -194,7 +195,6 @@ salut_connection_init (SalutConnection *obj)
   priv->self = NULL;
 
   priv->contact_manager = NULL;
-  priv->channel_requests = g_ptr_array_new();
 }
 
 static void
@@ -269,15 +269,29 @@ static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_connection_class);
+  TpBaseConnectionClass *tp_connection_class = 
+      TP_BASE_CONNECTION_CLASS(salut_connection_class);
   GParamSpec *param_spec;
 
   object_class->get_property = salut_connection_get_property;
   object_class->set_property = salut_connection_set_property;
 
-  g_type_class_add_private (salut_connection_class, sizeof (SalutConnectionPrivate));
+  g_type_class_add_private (salut_connection_class, 
+      sizeof (SalutConnectionPrivate));
 
   object_class->dispose = salut_connection_dispose;
   object_class->finalize = salut_connection_finalize;
+
+  tp_connection_class->create_handle_repos = 
+      salut_connection_create_handle_repos;
+  tp_connection_class->create_channel_factories = 
+      salut_connection_create_channel_factories;
+  tp_connection_class->get_unique_connection_name = 
+      salut_connection_get_unique_connection_name;
+  tp_connection_class->shut_down = 
+      salut_connection_shut_down;
+  tp_connection_class->start_connecting = 
+      salut_connection_start_connecting;
 
   param_spec = g_param_spec_string("nickname", "nickname",
                                    "Nickname used in the published data",
@@ -312,59 +326,13 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   g_object_class_install_property(object_class, PROP_EMAIL, param_spec);
 
   param_spec = g_param_spec_string("jid", "Jabber id",
-                                   "Jabber idused in the published data",
+                                   "Jabber id used in the published data",
                                    NULL,
                                    G_PARAM_READWRITE |
                                    G_PARAM_STATIC_NAME |
                                    G_PARAM_STATIC_BLURB);
   g_object_class_install_property(object_class, PROP_JID, param_spec);
 
-  signals[ALIASES_CHANGED] =
-    g_signal_new ("aliases-changed",
-                  G_OBJECT_CLASS_TYPE (salut_connection_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__BOXED,
-                  G_TYPE_NONE, 1, (dbus_g_type_get_collection ("GPtrArray", (dbus_g_type_get_struct ("GValueArray", G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID)))));
-
-  signals[NEW_CHANNEL] =
-    g_signal_new ("new-channel",
-                  G_OBJECT_CLASS_TYPE (salut_connection_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_connection_marshal_VOID__STRING_STRING_UINT_UINT_BOOLEAN,
-                  G_TYPE_NONE, 5, DBUS_TYPE_G_OBJECT_PATH, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_BOOLEAN);
-
-  signals[PRESENCE_UPDATE] =
-    g_signal_new ("presence-update",
-                  G_OBJECT_CLASS_TYPE (salut_connection_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__BOXED,
-                  G_TYPE_NONE, 1, (dbus_g_type_get_map ("GHashTable", G_TYPE_UINT, (dbus_g_type_get_struct ("GValueArray", G_TYPE_UINT, (dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, (dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE)))), G_TYPE_INVALID)))));
-
-  signals[STATUS_CHANGED] =
-    g_signal_new ("status-changed",
-                  G_OBJECT_CLASS_TYPE (salut_connection_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_connection_marshal_VOID__UINT_UINT,
-                  G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_UINT);
-
-  signals[DISCONNECTED] =
-    g_signal_new ("disconnected",
-                  G_OBJECT_CLASS_TYPE (salut_connection_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__VOID,
-                  G_TYPE_NONE, 0);
-
-  dbus_g_object_type_install_info (G_TYPE_FROM_CLASS (salut_connection_class), &dbus_glib_salut_connection_object_info);
 }
 
 void
@@ -377,21 +345,9 @@ salut_connection_dispose (GObject *object)
 
   if (priv->dispose_has_run)
     return;
-  DEBUG("Disposing connection");
   bus_proxy = tp_get_bus_proxy();;
 
   priv->dispose_has_run = TRUE;
-
-  if (priv->contact_manager) {
-    g_object_unref(priv->contact_manager);
-    priv->contact_manager = NULL;
-  }
-
-  if (priv->channel_requests) {
-    g_assert(priv->channel_requests->len == 0);
-    g_ptr_array_free(priv->channel_requests, TRUE);
-    priv->channel_requests = NULL;
-  }
 
   if (priv->self) {
     g_object_unref(priv->self);
@@ -403,101 +359,10 @@ salut_connection_dispose (GObject *object)
     priv->avahi_client = NULL;
   }
 
-  if (NULL != self->bus_name) {
-      dbus_g_proxy_call_no_reply (bus_proxy, "ReleaseName",
-                                  G_TYPE_STRING, self->bus_name,
-                                  G_TYPE_INVALID);
-  }
-
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_connection_parent_class)->dispose)
     G_OBJECT_CLASS (salut_connection_parent_class)->dispose (object);
 }
-
-static ChannelRequest *
-channel_request_new (DBusGMethodInvocation *context,
-                     const char *channel_type,
-                     guint handle_type,
-                     guint handle,
-                     gboolean suppress_handler)
-{
-  ChannelRequest *ret;
-
-  g_assert (NULL != context);
-  g_assert (NULL != channel_type);
-
-  ret = g_new0 (ChannelRequest, 1);
-  ret->context = context;
-  ret->channel_type = g_strdup (channel_type);
-  ret->handle_type = handle_type;
-  ret->handle = handle;
-  ret->suppress_handler = suppress_handler;
-
-  return ret;
-}
-
-static void
-channel_request_free (ChannelRequest *request)
-{
-  g_assert (NULL == request->context);
-  g_free (request->channel_type);
-  g_free (request);
-}
-
-static void
-channel_request_cancel (gpointer data, gpointer user_data)
-{
-  ChannelRequest *request = (ChannelRequest *) data;
-  GError *error;
-
-  DEBUG ("cancelling request for %s/%d/%d", request->channel_type, request->handle_type, request->handle);
-
-  error = g_error_new (TELEPATHY_ERRORS, Disconnected, "unable to "
-      "service this channel request, we're disconnecting!");
-
-  dbus_g_method_return_error (request->context, error);
-  request->context = NULL;
-
-  g_error_free (error);
-  channel_request_free (request);
-}
-
-static GPtrArray *
-find_matching_channel_requests (SalutConnection *conn,
-                                const gchar *channel_type,
-                                guint handle_type,
-                                guint handle,
-                                gboolean *suppress_handler) {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (conn);
-  GPtrArray *requests;
-  guint i;
-
-  requests = g_ptr_array_sized_new (1);
-
-  for (i = 0; i < priv->channel_requests->len; i++)
-    {
-      ChannelRequest *request = g_ptr_array_index (priv->channel_requests, i);
-
-      if (0 != strcmp (request->channel_type, channel_type))
-        continue;
-
-      if (handle_type != request->handle_type)
-        continue;
-
-      if (handle != request->handle)
-        continue;
-
-      /* As soon as one requests wants to suppress, send out a signal
-       * with suppress_handler TRUE */
-      if (request->suppress_handler && suppress_handler)
-        *suppress_handler = TRUE;
-
-      g_ptr_array_add (requests, request);
-    }
-
-  return requests;
-}
-
 
 void
 salut_connection_finalize (GObject *object)
@@ -515,11 +380,6 @@ salut_connection_finalize (GObject *object)
 
   DEBUG("Finalizing connection");
 
-  if (self->handle_repo) {
-    handle_repo_destroy(self->handle_repo);
-    self->handle_repo = NULL;
-  }
-
   G_OBJECT_CLASS (salut_connection_parent_class)->finalize (object);
 }
 
@@ -535,67 +395,6 @@ get_statuses_arguments(void) {
   return arguments;
 }
 
-static void
-connection_status_change(SalutConnection *self, 
-                         TpConnectionStatus status,
-                         TpConnectionStatusReason reason)  {
-  if (self->status == status) 
-    return;
-  self->status = status;
-  g_signal_emit (self, signals[STATUS_CHANGED], 0, status, reason);
-  DEBUG("State changed to %d", status);
-  if (status == TP_CONN_STATUS_DISCONNECTED) {
-    g_signal_emit(self, signals[DISCONNECTED], 0);
-  }
-}
-
-void
-_channel_iface_new_channel_cb(TpChannelFactoryIface *channel_iface, 
-                              TpChannelIface *channel,
-                              gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  gchar *object_path = NULL;
-  gchar *channel_type = NULL;
-  guint handle_type = 0;
-  Handle handle = 0;
-  gboolean surpress_handler = priv->suppress_current;
-  GPtrArray *requests;
-  int i;
-
-  g_object_get(channel,
-               "object-path", &object_path,
-               "channel-type", &channel_type,
-               "handle-type", &handle_type,
-               "handle", &handle,
-               NULL);
-  requests = find_matching_channel_requests(self, channel_type, handle_type,
-                                            handle, &surpress_handler);
-  
-  g_signal_emit(self, signals[NEW_CHANNEL], 0, 
-               object_path, channel_type, 
-               handle_type, handle, surpress_handler);
-
-  for (i = 0; i < requests->len; i++) {
-    ChannelRequest *request = g_ptr_array_index(requests, i);
-
-    DEBUG ("completing queued request, channel_type=%s, handle_type=%u, "
-          "handle=%u, suppress_handler=%u", request->channel_type,
-          request->handle_type, request->handle, request->suppress_handler);
-
-      dbus_g_method_return (request->context, object_path);
-      request->context = NULL;
-
-      g_ptr_array_remove (priv->channel_requests, request);
-
-      channel_request_free (request);
-  }
-
-  g_ptr_array_free(requests, TRUE);
-  g_free(object_path);
-  g_free(channel_type);
-}
-
 void
 _contact_manager_contact_status_cb(SalutContactManager *mgr, 
                                    SalutContact *contact,
@@ -603,83 +402,53 @@ _contact_manager_contact_status_cb(SalutContactManager *mgr,
                                    gchar *message,
                                    gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
   /* TODO, this can be shortcutted as we have all info needed right here */
+
   emit_one_presence_update(self, 
-                          handle_for_contact(self->handle_repo, contact->name));
-}
-
-void
-_contact_manager_contact_alias_cb(SalutContactManager *mgr, 
-                                  SalutContact *contact,
-                                  gchar *alias,
-                                  gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
-  GPtrArray *aliases;
-  GValue entry = {0, };
-  guint handle = handle_for_contact(self->handle_repo, contact->name);
-
-  g_value_init(&entry, TP_ALIAS_PAIR_TYPE);
-  g_value_take_boxed(&entry, 
-                     dbus_g_type_specialized_construct(TP_ALIAS_PAIR_TYPE));
-
-  dbus_g_type_struct_set(&entry, 
-                         0, handle,
-                         1, alias,
-                         G_MAXUINT);
-  aliases = g_ptr_array_sized_new(1);
-  g_ptr_array_add(aliases, g_value_get_boxed(&entry));
-
-  DEBUG("Emitting AliasesChanged");
-
-  g_signal_emit(self, signals[ALIASES_CHANGED], 0, aliases);
+      tp_handle_lookup(handle_repo, contact->name, NULL, NULL));
 }
 
 static void
 _self_established_cb(SalutSelf *s, gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
 
-  self->self_handle = handle_for_contact(self->handle_repo, s->name);
-  handle_ref(self->handle_repo, TP_HANDLE_TYPE_CONTACT, self->self_handle);
+
   g_free(self->name);
   self->name = g_strdup(s->name);
 
-  priv->contact_manager = salut_contact_manager_new(self, priv->avahi_client);
-  g_signal_connect(priv->contact_manager, "new-channel",
-                   G_CALLBACK(_channel_iface_new_channel_cb), self);
-  g_signal_connect(priv->contact_manager, "contact-status-changed",
-                   G_CALLBACK(_contact_manager_contact_status_cb), self);
-  g_signal_connect(priv->contact_manager, "contact-alias-changed",
-                   G_CALLBACK(_contact_manager_contact_alias_cb), self);
+  base->self_handle = tp_handle_ensure(handle_repo, self->name, NULL, NULL);
 
-  priv->im_manager = salut_im_manager_new(self, priv->contact_manager);
-  g_signal_connect(priv->im_manager, "new-channel",
-                   G_CALLBACK(_channel_iface_new_channel_cb), self);
-
-  priv->muc_manager = salut_muc_manager_new(self, priv->im_manager);
-  g_signal_connect(priv->muc_manager, "new-channel",
-                   G_CALLBACK(_channel_iface_new_channel_cb), self);
-
-
-  if (!salut_contact_manager_start(priv->contact_manager, NULL)) {
+  if (!salut_contact_manager_start(priv->contact_manager, 
+           priv->avahi_client, NULL)) {
     /* FIXME handle error */
-    _salut_connection_disconnect(self);
+    tp_base_connection_change_status(
+        TP_BASE_CONNECTION(base), 
+        TP_CONNECTION_STATUS_CONNECTING,
+        TP_CONNECTION_STATUS_REASON_REQUESTED);
     return;
   }
 
-  connection_status_change(self, 
-                           TP_CONN_STATUS_CONNECTED, 
-                           TP_CONN_STATUS_REASON_NONE_SPECIFIED);
+  tp_base_connection_change_status(base,
+      TP_CONNECTION_STATUS_CONNECTED, 
+      TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 
 static void
 _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+
   /* FIXME better error handling */
-  connection_status_change(self, 
-                               TP_CONN_STATUS_DISCONNECTED, 
-                               TP_CONN_STATUS_REASON_NONE_SPECIFIED);
+  tp_base_connection_change_status(base,
+     TP_CONNECTION_STATUS_DISCONNECTED, 
+     TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 static void
@@ -703,10 +472,12 @@ static void
 _salut_avahi_client_failure_cb(SalutAvahiClient *c, 
                               SalutAvahiClientState state,
                               gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
   /* FIXME better error messages */
   /* FIXME instead of full disconnect we could handle the avahi restart */
-  _salut_connection_disconnect(self);
+  tp_base_connection_change_status(
+        TP_BASE_CONNECTION(data), 
+        TP_CONNECTION_STATUS_DISCONNECTED,
+        TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
 }
 
 static void
@@ -715,6 +486,9 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+
+  g_assert(c == priv->avahi_client);
+
   priv->self = salut_self_new(priv->avahi_client, 
                               priv->nickname,
                               priv->first_name,
@@ -728,154 +502,44 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
   g_signal_connect(priv->self, "new-connection", 
                    G_CALLBACK(_self_new_connection_cb), self);
   if (!salut_self_announce(priv->self, NULL)) {
-    _salut_connection_disconnect(self);
+    tp_base_connection_change_status(
+          TP_BASE_CONNECTION(self), 
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
   }
 }
 
 /* public functions */
-gboolean _salut_connection_register(SalutConnection *conn, char **bus_name,
-                                     char **object_path, GError **error) {
-  SalutConnectionPrivate *priv;
-  GError *request_error;
-  guint request_name_result;
-  DBusGConnection *bus;
-  DBusGProxy *bus_proxy;
-
-  bus = tp_get_bus ();
-  bus_proxy = tp_get_bus_proxy ();
-  priv = SALUT_CONNECTION_GET_PRIVATE (conn);
-
-
-  conn->bus_name = 
-    g_strdup_printf(BUS_NAME ".%s.%s", PROTOCOL, priv->published_name);
-  conn->object_path = 
-    g_strdup_printf(OBJECT_PATH "/%s/%s", PROTOCOL, priv->published_name);
-
-  if (!org_freedesktop_DBus_request_name(bus_proxy,
-                                         conn->bus_name,
-                                         DBUS_NAME_FLAG_DO_NOT_QUEUE,
-                                         &request_name_result,
-                                         &request_error)) {
-    *error = g_error_new (TELEPATHY_ERRORS, NotAvailable, "Error acquiring "
-          "bus name %s: %s", conn->bus_name, request_error->message);
-    g_error_free (request_error);
-  }
-  if (request_name_result != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-    gchar *msg;
-    switch (request_name_result) {
-      case DBUS_REQUEST_NAME_REPLY_IN_QUEUE:
-        msg = "Request has been queued, though we request non-queueing.";
-        break;
-      case DBUS_REQUEST_NAME_REPLY_EXISTS:
-        msg = "A connection manger already has this busname.";
-        break;
-      case DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER:
-        msg = "Connection manager already has a connection.";
-        break;
-      default:
-        msg = "Unknown error return from RequestName";
-    }
-    DEBUG("Registering connection failed: %s", msg);
-    *error = g_error_new (TELEPATHY_ERRORS, NotAvailable, "Error acquiring "
-      "bus name %s: %s", conn->bus_name, msg);
-
-    g_free (conn->bus_name);
-    conn->bus_name = NULL;
-    g_free (conn->object_path);
-    conn->object_path = NULL;
-    return FALSE;
-  }
-
-  dbus_g_connection_register_g_object(bus, conn->object_path, G_OBJECT(conn));
-  *bus_name = g_strdup(conn->bus_name);
-  *object_path = g_strdup(conn->object_path);
-  return TRUE;
-}
-
-
-gboolean
+static void
 _salut_connection_disconnect(SalutConnection *self) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  if (priv->contact_manager) {
-    g_object_unref(priv->contact_manager);
-    priv->contact_manager = NULL;
-  }
 
-  if (priv->im_manager) {
-    g_object_unref(priv->im_manager);
-    priv->im_manager = NULL;
-  }
-
-  if (priv->muc_manager) {
-    g_object_unref(priv->muc_manager);
-    priv->muc_manager = NULL;
-  }
-
-  if (self->handle_repo) {
-    handle_repo_destroy(self->handle_repo);
-    self->handle_repo = NULL;
-  }
   if (priv->self) {
     g_object_unref(priv->self);
     priv->self = NULL;
   }
+
   if (priv->avahi_client) {
     g_object_unref(priv->avahi_client);
     priv->avahi_client = NULL;
   }
-  self->self_handle = 0;
-
-  g_ptr_array_foreach(priv->channel_requests, 
-                      (GFunc) channel_request_cancel, NULL);
-
-  connection_status_change(self, TP_CONN_STATUS_DISCONNECTED,
-                            TP_CONN_STATUS_REASON_REQUESTED);
-  return TRUE;
 }
 
-gboolean
-_salut_connection_connect(SalutConnection *self, GError **error) {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  GError *client_error = NULL;
 
-  connection_status_change(self, TP_CONN_STATUS_CONNECTING,
-                            TP_CONN_STATUS_REASON_REQUESTED);
 
-  self->handle_repo = handle_repo_new();
 
-  priv->avahi_client = salut_avahi_client_new(SALUT_AVAHI_CLIENT_FLAG_NO_FAIL);
-
-  g_signal_connect(priv->avahi_client, "state-changed::running", 
-                   G_CALLBACK(_salut_avahi_client_running_cb), self);
-  g_signal_connect(priv->avahi_client, "state-changed::failure", 
-                   G_CALLBACK(_salut_avahi_client_failure_cb), self);
-
-  if (!salut_avahi_client_start(priv->avahi_client, &client_error)) {
-    *error = g_error_new(TELEPATHY_ERRORS, NotAvailable, 
-                         "Unstable to initialize the avahi client: %s",
-                         client_error->message);
-    g_error_free(client_error);
-    goto error;
-  }
-
-  return TRUE;
-
-error:
-  _salut_connection_disconnect(self);
-  return FALSE;
-}
-
+/* Presence interface */
 static void
 destroy_value(GValue *value) {
   g_value_unset(value);
   g_free(value);
 }
 
-
 static void
 get_presence_info(SalutConnection *self, const GArray *contact_handles,
                   GHashTable **info) {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
   GHashTable *presence_hash;
   GValueArray *vals;
   GHashTable *contact_status, *parameters;
@@ -886,16 +550,13 @@ get_presence_info(SalutConnection *self, const GArray *contact_handles,
                                     (GDestroyNotify) g_value_array_free);
 
   for (i = 0; i < contact_handles->len; i++) {
-      Handle handle = g_array_index (contact_handles, Handle, i);
+      TpHandle handle = g_array_index (contact_handles, TpHandle, i);
       GValue *message;
       SalutPresenceId status;
       gchar *status_message = NULL;
       SalutContact *contact = NULL;
 
-      g_assert(handle_is_valid(self->handle_repo, 
-                               TP_HANDLE_TYPE_CONTACT, handle, NULL));
-
-      if (handle == self->self_handle) { 
+      if (handle == base->self_handle) {
         status = priv->self->status;
         status_message = priv->self->status_message;
       } else {
@@ -966,7 +627,9 @@ emit_presence_update (SalutConnection *self,
   
   get_presence_info(self, contact_handles, &presence_hash);
   
-  g_signal_emit (self, signals[PRESENCE_UPDATE], 0, presence_hash);
+  tp_svc_connection_interface_presence_emit_presence_update (self,
+        presence_hash);
+
   g_hash_table_destroy (presence_hash);
 }
 
@@ -975,35 +638,14 @@ emit_presence_update (SalutConnection *self,
  * Convenience function for calling emit_presence_update with one handle.
  */
 static void
-emit_one_presence_update (SalutConnection *self, Handle handle)
+emit_one_presence_update (SalutConnection *self, TpHandle handle)
 {
-  GArray *handles = g_array_sized_new (FALSE, FALSE, sizeof (Handle), 1);
+  GArray *handles = g_array_sized_new (FALSE, FALSE, sizeof (TpHandle), 1);
 
   g_array_insert_val (handles, 0, handle);
   emit_presence_update (self, handles);
   g_array_free (handles, TRUE);
 }
-
-/* Dbus functions */
-/**
- * salut_connection_add_status
- *
- * Implements DBus method AddStatus
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_connection_add_status (SalutConnection *obj, const gchar * status, GHashTable * parms, GError **error)
-{
-   *error = g_error_new (TELEPATHY_ERRORS, NotImplemented, 
-        "Only one status is possible at a time with this protocol");
-  return FALSE;
-}
-
 
 /**
  * salut_connection_clear_status
@@ -1017,86 +659,25 @@ gboolean salut_connection_add_status (SalutConnection *obj, const gchar * status
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_clear_status (SalutConnection *self, GError **error)
-{
+static void
+salut_connection_clear_status (TpSvcConnectionInterfacePresence *iface,
+                               DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
   gboolean ret;
+  GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED(self, *error);
+  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
   
   ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE, 
-                                NULL, error);
+                                NULL, NULL);
   /* FIXME turn into a TP ERROR */
   if (ret) {
-    emit_one_presence_update(self, self->self_handle);
+    emit_one_presence_update(self, base->self_handle);
   }
 
-  return TRUE;
-}
-
-
-/**
- * salut_connection_connect
- *
- * Implements DBus method Connect
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_connection_connect (SalutConnection *self, GError **error)
-{
-  if (self->status == TP_CONN_STATUS_DISCONNECTED)
-    return _salut_connection_connect(self, error);
-  return TRUE;
-}
-
-
-/**
- * salut_connection_disconnect
- *
- * Implements DBus method Disconnect
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_connection_disconnect (SalutConnection *self, GError **error)
-{
-  DEBUG("Disconnect request");
-  if (self->status != TP_CONN_STATUS_DISCONNECTED)
-    return _salut_connection_disconnect(self);
-  return TRUE;
-}
-
-
-/**
- * salut_connection_get_interfaces
- *
- * Implements DBus method GetInterfaces
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_connection_get_interfaces (SalutConnection *obj, gchar *** ret, GError **error)
-{
-  const gchar *interfaces [] = {
-    TP_IFACE_CONN_INTERFACE_ALIASING,
-    TP_IFACE_CONN_INTERFACE_PRESENCE,
-    NULL };
-  
-  *ret = g_strdupv((gchar **)interfaces);
-  return TRUE;
+  tp_svc_connection_interface_presence_return_from_clear_status(context);
 }
 
 /**
@@ -1111,80 +692,28 @@ gboolean salut_connection_get_interfaces (SalutConnection *obj, gchar *** ret, G
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean
-salut_connection_get_presence (SalutConnection *self,
+
+static void 
+salut_connection_get_presence (TpSvcConnectionInterfacePresence *iface,
                                const GArray *contacts,
-                               GHashTable **ret,
-                               GError **error) {
-
-  get_presence_info(self, contacts, ret);
-  return TRUE;
-}
-
-
-
-
-
-/**
- * salut_connection_get_protocol
- *
- * Implements DBus method GetProtocol
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_connection_get_protocol (SalutConnection *obj, gchar ** ret, GError **error)
+                               DBusGMethodInvocation *context) 
 {
-  g_assert(SALUT_IS_CONNECTION(obj));
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      base,TP_HANDLE_TYPE_CONTACT);
+  GError *error = NULL;
+  GHashTable *ret;
 
-  *ret = g_strdup(PROTOCOL);
+  if (!tp_handles_are_valid(handle_repo, contacts, FALSE, &error)) {
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
+  }
 
-  return TRUE;
-}
-
-
-/**
- * salut_connection_get_self_handle
- *
- * Implements DBus method GetSelfHandle
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean 
-salut_connection_get_self_handle (SalutConnection *self, guint* ret, 
-                                  GError **error) {
-  ERROR_IF_NOT_CONNECTED(self, *error);
-  *ret = self->self_handle;
-  return TRUE;
-}
-
-
-/**
- * salut_connection_get_status
- *
- * Implements DBus method GetStatus
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean 
-salut_connection_get_status (SalutConnection *obj, guint* ret, GError **error)
-{
-  *ret = obj->status;
-  return TRUE;
+  get_presence_info(self, contacts, &ret);
+  tp_svc_connection_interface_presence_return_from_get_presence(context, ret);
+  g_hash_table_destroy(ret);
 }
 
 
@@ -1200,11 +729,14 @@ salut_connection_get_status (SalutConnection *obj, guint* ret, GError **error)
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean salut_connection_get_statuses (SalutConnection *obj, GHashTable ** ret, GError **error)
-{
+static void 
+salut_connection_get_statuses (TpSvcConnectionInterfacePresence *iface,
+                               DBusGMethodInvocation *context) {
   GValueArray *status;
   int i;
-  *ret = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, 
+  GHashTable *ret;
+
+  ret = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, 
                                  (GDestroyNotify) g_value_array_free);
   for (i = 0; salut_presence_statuses[i].name ; i++) {
     status = g_value_array_new(5);
@@ -1228,214 +760,13 @@ gboolean salut_connection_get_statuses (SalutConnection *obj, GHashTable ** ret,
     g_value_set_static_boxed(g_value_array_get_nth(status, 3),
        get_statuses_arguments());
 
-    g_hash_table_insert(*ret, (gchar*)salut_presence_statuses[i].name, status);
+    g_hash_table_insert(ret, (gchar*)salut_presence_statuses[i].name, status);
   }
 
-  return TRUE;
+  tp_svc_connection_interface_presence_return_from_get_statuses(context,
+                                                                ret);
+  g_hash_table_destroy(ret);
 }
-
-
-/**
- * salut_connection_hold_handles
- *
- * Implements DBus method HoldHandles
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @context: The DBUS invocation context to use to return values
- *           or throw an error.
- */
-void salut_connection_hold_handles (SalutConnection *self, 
-                                        guint handle_type, 
-                                        const GArray * handles, 
-                                        DBusGMethodInvocation *context)
-{
-  GError *error = NULL;
-  gchar *sender;
-  int i;
-
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
-
-  if (!handles_are_valid(self->handle_repo, handle_type, 
-                         handles, FALSE, &error)) {
-    dbus_g_method_return_error (context, error);
-    g_error_free(error);
-    return;
-  }
-  sender = dbus_g_method_get_sender(context);
-  for (i = 0; i < handles->len; i++) {
-    Handle handle = g_array_index(handles, Handle, i);
-    if (!handle_client_hold(self->handle_repo, sender, handle, 
-                            handle_type, &error)) {
-      dbus_g_method_return_error(context, error);
-      g_error_free(error);
-      return;
-    }
-  }
-
-  dbus_g_method_return(context);
-}
-
-
-/**
- * salut_connection_inspect_handles
- *
- * Implements DBus method InspectHandles
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @context: The DBUS invocation context to use to return values
- *           or throw an error.
- */
-void
-salut_connection_inspect_handles (SalutConnection *self, guint handle_type, 
-                                  const GArray * handles, 
-                                  DBusGMethodInvocation *context)
-{
-  GError *error = NULL;
-  const gchar **ret;
-  int i;
-
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
-
-  if (!handles_are_valid(self->handle_repo,
-                                handle_type,
-                                handles,
-                                FALSE,
-                                &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-
-  ret = g_new(const gchar *, handles->len + 1);
-  for (i = 0 ; i < handles->len ; i++ ) {
-    Handle handle;
-    const gchar *n;
-    handle = g_array_index(handles, Handle, i);
-    n = handle_inspect(self->handle_repo, handle_type, handle);
-    g_assert(n != NULL);
-
-    ret[i] = n;
-  } 
-
-  ret[i] = NULL;
-  
-  dbus_g_method_return(context, ret);
-  g_free(ret);
-}
-
-static void
-list_channel_factory_foreach_one(TpChannelIface *chan, gpointer data) {
-  GObject *channel = G_OBJECT(chan);
-  GPtrArray *channels = (GPtrArray *)data;
-  gchar *path, *type;
-  guint handle_type, handle;
-
-  GValue entry = {0, };
-  g_value_init(&entry, TP_CHANNEL_LIST_ENTRY_TYPE);
-  g_value_take_boxed(&entry, 
-               dbus_g_type_specialized_construct((TP_CHANNEL_LIST_ENTRY_TYPE)));
-
-  g_object_get(channel, 
-               "object-path", &path,
-               "channel-type", &type,
-               "handle-type", &handle_type,
-               "handle", &handle,
-               NULL);
-  dbus_g_type_struct_set(&entry,
-    0, path, 
-    1, type, 
-    2, handle_type, 
-    3, handle, G_MAXUINT);
-  g_ptr_array_add(channels, g_value_get_boxed(&entry));
-
-  g_free(path);
-  g_free(type);
-}
-
-/**
- * salut_connection_list_channels
- *
- * Implements DBus method ListChannels
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean 
-salut_connection_list_channels (SalutConnection *self, 
-                                GPtrArray ** ret, 
-                                GError **error) {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  GPtrArray *channels = NULL;
-  int i;
-  TpChannelFactoryIface *factories[] = 
-    { TP_CHANNEL_FACTORY_IFACE(priv->contact_manager),
-      TP_CHANNEL_FACTORY_IFACE(priv->im_manager),
-      TP_CHANNEL_FACTORY_IFACE(priv->muc_manager),
-      NULL
-    };
-
-
-  ERROR_IF_NOT_CONNECTED(self, *error);
-
-  channels = g_ptr_array_sized_new(3);
-
-  for (i = 0; factories[i] != NULL; i++) {
-    tp_channel_factory_iface_foreach(factories[i],
-        list_channel_factory_foreach_one, channels);
-  }
-
-  *ret = channels;
-  return TRUE;
-}
-
-
-/**
- * salut_connection_release_handles
- *
- * Implements DBus method ReleaseHandles
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @context: The DBUS invocation context to use to return values
- *           or throw an error.
- */
-void 
-salut_connection_release_handles (SalutConnection *self, 
-                                  guint handle_type, 
-                                  const GArray * handles, 
-                                  DBusGMethodInvocation *context) {
-  gchar *sender;
-  GError *error = NULL;
-  int i;
-
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
-  if (!handles_are_valid(self->handle_repo,
-                                handle_type,
-                                handles,
-                                FALSE,
-                                &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-  sender = dbus_g_method_get_sender(context);
-  for (i = 0; i < handles->len; i++) {
-    Handle handle = g_array_index(handles, Handle, i);
-    if (!handle_client_release (self->handle_repo, sender, handle,
-                                      handle_type, &error)) {
-      dbus_g_method_return_error(context, error);
-      g_error_free(error);
-      return;
-    }
-  }
-
-  dbus_g_method_return (context);
-  return;
-}
-
 
 /**
  * salut_connection_remove_status
@@ -1449,233 +780,34 @@ salut_connection_release_handles (SalutConnection *self,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean 
-salut_connection_remove_status (SalutConnection *self, 
-                                const gchar * status, GError **error) {
+static void 
+salut_connection_remove_status (TpSvcConnectionInterfacePresence *iface,
+                                const gchar *status,
+                                DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
   gboolean ret = TRUE;
+  GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED(self, *error);
+  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
 
-  if (strcmp(status, salut_presence_statuses[priv->self->status].name) == 0) {
+  if (!tp_strdiff(status, salut_presence_statuses[priv->self->status].name)) {
     ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE, 
-                                "Available", error);
+                                "Available", NULL);
     /* FIXME turn into a TP ERROR */
     if (ret) {
-      emit_one_presence_update(self, self->self_handle);
+      emit_one_presence_update(self, base->self_handle);
     }
   } else {
-   *error = g_error_new (TELEPATHY_ERRORS, InvalidArgument, 
+    error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, 
                          "Attempting to remove non-existing presence.");
-    ret = FALSE;
-  }
-
-  return ret;
-}
-
-
-/**
- * salut_connection_request_channel
- *
- * Implements DBus method RequestChannel
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @context: The DBUS invocation context to use to return values
- *           or throw an error.
- */
-void 
-salut_connection_request_channel (SalutConnection *self, const gchar * type, 
-                                  guint handle_type, guint handle, 
-                                  gboolean suppress_handler, 
-                                  DBusGMethodInvocation *context) {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpChannelFactoryRequestStatus status = 
-    TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED ;
-  TpChannelIface *chan = NULL;
-  gchar *object_path = NULL;
-  GError *error = NULL; 
-  TpChannelFactoryIface *factories[] = 
-    { TP_CHANNEL_FACTORY_IFACE(priv->contact_manager),
-      TP_CHANNEL_FACTORY_IFACE(priv->im_manager),
-      TP_CHANNEL_FACTORY_IFACE(priv->muc_manager),
-      NULL
-    };
-  int i;
-
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
-
-  DEBUG("Requested channel of type %s for handle %d of type %d", 
-        type, handle, handle_type);
-
-  priv->suppress_current = suppress_handler;
-  for (i = 0; factories[i] != NULL; i++) {
-    TpChannelFactoryRequestStatus prev_status = status;
-    status = tp_channel_factory_iface_request (
-      factories[i], type, (TpHandleType) handle_type, handle, &chan);
-    if (status == TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE ||
-        status == TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED) {
-      break;
-    }
-    status = MAX(prev_status, status);
-  }
-
-  priv->suppress_current = FALSE;
-
-
-  switch (status) {
-    case TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE:
-      g_object_get (chan, "object-path", &object_path, NULL);
-      goto got_channel;
-    case TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED: {
-      ChannelRequest *request;
-      DEBUG ("queueing request, channel_type=%s, handle_type=%u, "
-              "handle=%u, suppress_handler=%u", type, handle_type,
-              handle, suppress_handler);
-      request = channel_request_new (context, type, handle_type, handle,
-                                    suppress_handler);
-      g_ptr_array_add (priv->channel_requests, request);
-      goto out;
-    }
-    case TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE:
-      error = g_error_new (TELEPATHY_ERRORS, InvalidHandle,
-                             "invalid handle %u", handle);
-      break;
-    case TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE:
-      error = g_error_new (TELEPATHY_ERRORS, NotAvailable,
-                             "requested channel is not available with "
-                             "handle type %u", handle_type);
-      break;
-    case TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED:
-      error = g_error_new (TELEPATHY_ERRORS, NotImplemented,
-                             "unsupported channel type %s", type);
-      break;
-    default:
-      g_assert_not_reached();
-  }
-
-  if (error != NULL) {
-    g_assert (object_path == NULL);
-    DEBUG("Returned error: %s", error->message);
     dbus_g_method_return_error(context, error);
     g_error_free(error);
     return;
   }
-
-got_channel:  
- DEBUG ("got channel for request, channel_type=%s, handle_type=%u, "
-              "handle=%u, suppress_handler=%u", type, handle_type,
-              handle, suppress_handler);
-  g_assert(object_path != NULL);
-  dbus_g_method_return(context, object_path);
-  g_free(object_path);
-out:
-  ;
-}
-
-static void
-hold_and_return_handles (DBusGMethodInvocation *context,
-                         SalutConnection *conn,
-                         GArray *handles,
-                         guint handle_type) {
-  GError *error;
-  gchar *sender = dbus_g_method_get_sender(context);
-  guint i;
-
-  for (i = 0; i < handles->len; i++)
-    {
-      Handle handle = (Handle) g_array_index (handles, guint, i);
-      if (!handle_client_hold (conn->handle_repo, sender, 
-                                 handle, handle_type, &error)) {
-          dbus_g_method_return_error (context, error);
-          g_error_free (error);
-          return;
-        }
-    }
-  dbus_g_method_return (context, handles);
-}
-
-
-/**
- * salut_connection_request_handles
- *
- * Implements DBus method RequestHandles
- * on interface org.freedesktop.Telepathy.Connection
- *
- * @context: The DBUS invocation context to use to return values
- *           or throw an error.
- */
-void 
-salut_connection_request_handles (SalutConnection *self, 
-                                  guint handle_type, 
-                                  const gchar ** names, 
-                                  DBusGMethodInvocation *context) {
-  GError *error = NULL;
-  const gchar **n;
-  int count = 0;
-  int i;
-  GArray *handles = NULL;
-
-  ERROR_IF_NOT_CONNECTED_ASYNC(self, error, context);
-
-  if (!handle_type_is_valid(handle_type, &error)) {
-    DEBUG("Invalid handle type: %d", handle_type);
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-
-  for (n = names; *n != NULL; n++)  {
-    if (*n == '\0') {
-      DEBUG("Request for empty name?!");
-      error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
-                           "Empty handle name");
-      dbus_g_method_return_error(context, error);
-      g_error_free(error);
-      return;
-    }
-    DEBUG("Requested handle of type %d for %s", handle_type, *n);
-    count++;
-  }
-
-  switch (handle_type)  {
-    case TP_HANDLE_TYPE_CONTACT:
-    case TP_HANDLE_TYPE_LIST:
-    case TP_HANDLE_TYPE_ROOM:
-      handles = g_array_sized_new(FALSE, FALSE, sizeof(Handle), count);
-      for (i = 0; i < count ; i++) {
-        Handle handle;
-        const gchar *name = names[i];
-        if (!handle_name_is_valid(handle_type, name, &error)) {
-          dbus_g_method_return_error(context, error);
-          g_error_free(error);
-          g_array_free(handles, TRUE);
-          return;
-        }
-
-        handle = handle_for_type (self->handle_repo, handle_type, name);
-
-        if (handle == 0) {
-          error = g_error_new (TELEPATHY_ERRORS, NotAvailable,
-                               "requested handle %s wasn't available", name);
-          dbus_g_method_return_error(context, error);
-          g_error_free(error);
-          g_array_free(handles, TRUE);
-          return;
-        }
-        g_array_append_val(handles, handle);
-      }
-      hold_and_return_handles (context, self, handles, handle_type);
-      g_array_free(handles, TRUE);
-      break;
-    default:
-      DEBUG("Unimplemented handle type");
-      error = g_error_new(TELEPATHY_ERRORS, NotAvailable, 
-                          "unimplemented handle type %u", handle_type);
-      dbus_g_method_return_error(context, error);
-      g_error_free(error);
-  }
-
-  return;
+  
+  tp_svc_connection_interface_presence_return_from_remove_status(context);
 }
 
 /**
@@ -1690,39 +822,29 @@ salut_connection_request_handles (SalutConnection *self,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean 
-salut_connection_request_presence (SalutConnection *self, 
-                                   const GArray * contacts, GError **error) {
+static void 
+salut_connection_request_presence (TpSvcConnectionInterfacePresence *iface,
+                                   const GArray * contacts, 
+                                   DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
+  GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED(self, *error);
-  if (!handles_are_valid(self->handle_repo, TP_HANDLE_TYPE_CONTACT,
-                         contacts, FALSE, error)) 
-    return FALSE;
+  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+
+  if (!tp_handles_are_valid(handle_repo, contacts, FALSE, &error)) {
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
+  }
 
   if (contacts->len) 
     emit_presence_update(self, contacts);
-
-  return TRUE;
-}
-
-
-/**
- * salut_connection_set_last_activity_time
- *
- * Implements DBus method SetLastActivityTime
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean salut_connection_set_last_activity_time (SalutConnection *obj, guint time, GError **error)
-{
-  *error = g_error_new (TELEPATHY_ERRORS, NotImplemented, 
-                         "NotImplemented (%d)", __LINE__);
-  return FALSE;
+  
+  tp_svc_connection_interface_presence_return_from_request_presence(context);
+  return;
 }
 
 
@@ -1738,24 +860,32 @@ gboolean salut_connection_set_last_activity_time (SalutConnection *obj, guint ti
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean 
-salut_connection_set_status (SalutConnection *self, 
-                             GHashTable * statuses, GError **error) {
+static void 
+salut_connection_set_status (TpSvcConnectionInterfacePresence *iface,
+                             GHashTable * statuses, 
+                              DBusGMethodInvocation *context) 
+{
+  SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
   SalutPresenceId id = 0;
   GHashTable *parameters = NULL;
   const gchar *status_message = NULL;
   GValue *message;
   gboolean ret = TRUE;
+  GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED(self, *error);
+  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
 
   if (g_hash_table_size(statuses) != 1) {
     DEBUG("Got more then one status");
-    *error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
+    error = g_error_new(TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
                        "Only one status may be set at a time in this protocol");
-    return FALSE;
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
   }
+
   /* Don't feel like jumping through hoops with a foreach */
   for ( ; id < SALUT_PRESENCE_NR_PRESENCES; id++) {
     parameters = g_hash_table_lookup(statuses, 
@@ -1766,51 +896,69 @@ salut_connection_set_status (SalutConnection *self,
   }
 
   if (id == SALUT_PRESENCE_NR_PRESENCES)  {
-    *error = g_error_new (TELEPATHY_ERRORS, InvalidArgument, 
+    error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, 
                          "Unknown status");
-    return FALSE;
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
   }
 
   message = g_hash_table_lookup(parameters, "message");
   if (message) {
     if (!G_VALUE_HOLDS_STRING(message)) {
-      *error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
+      error = g_error_new(TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
                             "Status argument 'message' requeires a string");
-      return FALSE;
+      dbus_g_method_return_error(context, error);
+      g_error_free(error);
+      return;
     }
     status_message = g_value_get_string(message);
   }
 
-  ret = salut_self_set_presence(priv->self, id, status_message, error);
+  ret = salut_self_set_presence(priv->self, id, status_message, NULL);
   /* FIXME turn into a TP ERROR */
   if (ret) {
-    emit_one_presence_update(self, self->self_handle);
+    emit_one_presence_update(self, base->self_handle);
   }
 
-  return ret;
+  tp_svc_connection_interface_presence_return_from_set_status(context);
 }
 
+
+static void
+salut_connection_presence_service_iface_init(gpointer g_iface, 
+                                             gpointer iface_data) 
+{
+  TpSvcConnectionInterfacePresenceClass *klass =
+    (TpSvcConnectionInterfacePresenceClass *) g_iface;
+#define IMPLEMENT(x) tp_svc_connection_interface_presence_implement_##x (klass, \
+    salut_connection_##x)
+  IMPLEMENT(set_status);
+  IMPLEMENT(remove_status);
+  IMPLEMENT(request_presence);
+  IMPLEMENT(get_presence);
+  IMPLEMENT(get_statuses);
+  IMPLEMENT(clear_status);
+  
+#undef IMPLEMENT
+}
+
+/* Aliasing interface */
 /**
  * salut_connection_get_alias_flags
  *
  * Implements D-Bus method GetAliasFlags
  * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
  *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred, D-Bus will throw the error only if this
- *         function returns FALSE.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean
-salut_connection_get_alias_flags (SalutConnection *self,
-                                  guint *ret,
-                                  GError **error)
+void
+salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
+                                  DBusGMethodInvocation *context)
 {
   /* Aliases are set by the contacts 
    * Actually we concat the first and lastname property */
-  *ret = 0;
-  return TRUE;
+
+  tp_svc_connection_interface_aliasing_return_from_get_alias_flags (context, 0);
 }
 
 /**
@@ -1819,62 +967,360 @@ salut_connection_get_alias_flags (SalutConnection *self,
  * Implements D-Bus method RequestAliases
  * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
  *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred, D-Bus will throw the error only if this
- *         function returns FALSE.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-gboolean
-salut_connection_request_aliases (SalutConnection *self,
+void
+salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
                                   const GArray *contacts,
-                                  gchar ***ret,
-                                  GError **error) {
+                                  DBusGMethodInvocation *context) 
+{
+  SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
   int i;
-  gchar **aliases;
+  const gchar **aliases;
+  GError *error = NULL;
+  TpHandleRepoIface *contact_handles = 
+      tp_base_connection_get_handles(base, TP_HANDLE_TYPE_CONTACT);
 
   DEBUG("Alias requested");
 
-  ERROR_IF_NOT_CONNECTED(self, *error);
-  if (!handles_are_valid(self->handle_repo, TP_HANDLE_TYPE_CONTACT,
-                                            contacts, FALSE, error)) {
-    return FALSE;
+  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+
+  if (!tp_handles_are_valid(contact_handles, contacts, FALSE, &error)) {
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
   }
 
-  aliases = g_new0(gchar *, contacts->len + 1);
+  aliases = g_new0(const gchar *, contacts->len + 1);
   for (i = 0; i < contacts->len; i++) {
-    Handle handle = g_array_index (contacts, Handle, i);
+    TpHandle handle = g_array_index (contacts, TpHandle, i);
     SalutContact *contact;
-    if (handle == self->self_handle) {
-      aliases[i] = g_strdup(salut_self_get_alias(priv->self));
+    if (handle == TP_BASE_CONNECTION(self)->self_handle) {
+      aliases[i] = salut_self_get_alias(priv->self);
     } else {
       contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
-      aliases[i] = g_strdup(salut_contact_get_alias(contact));
+      aliases[i] = salut_contact_get_alias(contact);
       g_object_unref(contact);
     }
   }
-  *ret = aliases;
-  return TRUE;
+
+  tp_svc_connection_interface_aliasing_return_from_request_aliases(
+    context, aliases);
+
+  g_free(aliases);
+  return;
 }
 
-/**
- * salut_connection_set_aliases
- *
- * Implements D-Bus method SetAliases
- * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred, D-Bus will throw the error only if this
- *         function returns FALSE.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean
-salut_connection_set_aliases (SalutConnection *self,
-                              GHashTable *aliases,
-                              GError **error) {
-  *error = g_error_new(TELEPATHY_ERRORS, InvalidArgument,
-                       "Aliases can't be set on salut");
+void
+_contact_manager_contact_alias_cb(SalutContactManager *mgr, 
+                                  SalutContact *contact,
+                                  gchar *alias,
+                                  gpointer data) {
+  SalutConnection *self = SALUT_CONNECTION(data);
+  GPtrArray *aliases;
+  GValue entry = {0, };
+  TpHandle handle ;
+
+  /* FIXME. The contact should probably know it's own handle */
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
+
+  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
+  if (handle == 0) {
+    DEBUG("Invalid handle updated");
+  }
+
+  g_value_init(&entry, TP_ALIAS_PAIR_TYPE);
+  g_value_take_boxed(&entry, 
+                     dbus_g_type_specialized_construct(TP_ALIAS_PAIR_TYPE));
+
+  dbus_g_type_struct_set(&entry, 
+                         0, handle,
+                         1, alias,
+                         G_MAXUINT);
+  aliases = g_ptr_array_sized_new(1);
+  g_ptr_array_add(aliases, g_value_get_boxed(&entry));
+
+  DEBUG("Emitting AliasesChanged");
+
+  tp_svc_connection_interface_aliasing_emit_aliases_changed(self,
+      aliases);
+
+  g_value_unset(&entry);
+  g_ptr_array_free(aliases, TRUE);
+}
+
+static void
+salut_connection_aliasing_service_iface_init(gpointer g_iface, 
+    gpointer iface_data)
+{
+  TpSvcConnectionInterfaceAliasingClass *klass =
+    (TpSvcConnectionInterfaceAliasingClass *) g_iface;
+
+#define IMPLEMENT(x) tp_svc_connection_interface_aliasing_implement_##x \
+    (klass, salut_connection_##x)
+  IMPLEMENT(get_alias_flags);
+  IMPLEMENT(request_aliases);
+#undef IMPLEMENT
+}
+
+/* Connection baseclass function implementations */
+static void 
+salut_connection_create_handle_repos(TpBaseConnection *self,
+    TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES]) {
+  static const char *list_handle_strings[] = {
+    "publish",
+    "subscribe",
+    "known",
+    NULL
+  };
+
+  repos[TP_HANDLE_TYPE_CONTACT] = 
+    TP_HANDLE_REPO_IFACE(
+        g_object_new(TP_TYPE_DYNAMIC_HANDLE_REPO,
+            "handle-type", TP_HANDLE_TYPE_CONTACT,
+            NULL));
+
+  repos[TP_HANDLE_TYPE_ROOM] = 
+    TP_HANDLE_REPO_IFACE(
+        g_object_new(TP_TYPE_DYNAMIC_HANDLE_REPO,
+            "handle-type", TP_HANDLE_TYPE_ROOM,
+            NULL));
+
+  repos[TP_HANDLE_TYPE_LIST] = 
+    TP_HANDLE_REPO_IFACE(
+        g_object_new(TP_TYPE_STATIC_HANDLE_REPO,
+            "handle-type", TP_HANDLE_TYPE_LIST,
+            "handle-names", list_handle_strings,
+            NULL));
+}
+
+static GPtrArray*  
+salut_connection_create_channel_factories(TpBaseConnection *base) {
+  SalutConnection *self = SALUT_CONNECTION(base);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  GPtrArray *factories = g_ptr_array_sized_new(3);
+
+  priv->contact_manager = salut_contact_manager_new(self);
+  g_signal_connect(priv->contact_manager, "contact-status-changed",
+                   G_CALLBACK(_contact_manager_contact_status_cb), self);
+  g_signal_connect(priv->contact_manager, "contact-alias-changed",
+                   G_CALLBACK(_contact_manager_contact_alias_cb), self);
+
+  priv->im_manager = salut_im_manager_new(self, priv->contact_manager);
+
+  priv->muc_manager = salut_muc_manager_new(self, priv->im_manager);
+
+  g_ptr_array_add(factories, priv->contact_manager);
+  g_ptr_array_add(factories, priv->im_manager);
+  g_ptr_array_add(factories, priv->muc_manager);
+
+  return factories;
+}
+
+static gchar *
+salut_connection_get_unique_connection_name(TpBaseConnection *base) {
+  SalutConnection *self = SALUT_CONNECTION(base);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  
+  return g_strdup(priv->published_name);
+}
+
+static void
+salut_connection_shut_down(TpBaseConnection *self) {
+  _salut_connection_disconnect(SALUT_CONNECTION(self)); 
+  tp_base_connection_finish_shutdown(self);
+}
+
+static gboolean
+salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
+  SalutConnection *self = SALUT_CONNECTION(base);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  GError *client_error = NULL;
+
+/*
+  tp_base_connection_change_status(
+      TP_BASE_CONNECTION(base), 
+      TP_CONNECTION_STATUS_CONNECTING,
+      TP_CONNECTION_STATUS_REASON_REQUESTED);
+  */
+
+  priv->avahi_client = salut_avahi_client_new(SALUT_AVAHI_CLIENT_FLAG_NO_FAIL);
+
+  g_signal_connect(priv->avahi_client, "state-changed::running", 
+                   G_CALLBACK(_salut_avahi_client_running_cb), self);
+  g_signal_connect(priv->avahi_client, "state-changed::failure", 
+                   G_CALLBACK(_salut_avahi_client_failure_cb), self);
+
+  if (!salut_avahi_client_start(priv->avahi_client, &client_error)) {
+    *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+                         "Unstable to initialize the avahi client: %s",
+                         client_error->message);
+    g_error_free(client_error);
+    goto error;
+  }
+
+  return TRUE;
+
+error:
+  tp_base_connection_change_status(
+        TP_BASE_CONNECTION(base), 
+        TP_CONNECTION_STATUS_DISCONNECTED,
+        TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
   return FALSE;
+}
+
+/* Connection interface implementations */ 
+static void 
+salut_connection_get_interfaces (TpSvcConnection *self, 
+                                 DBusGMethodInvocation  *context)
+{
+  const gchar *interfaces [] = {
+    TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+    TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+    NULL };
+  
+  tp_svc_connection_return_from_get_interfaces(context, interfaces);
+}
+
+static void
+hold_unref_and_return_handles (DBusGMethodInvocation *context,
+                               TpHandleRepoIface *repo, 
+                               GArray *handles) {
+  GError *error;
+  gchar *sender = dbus_g_method_get_sender(context);
+  int i,j = 0;
+
+  for (i = 0; i < handles->len; i++)
+    {
+      TpHandle handle = (TpHandle) g_array_index (handles, guint, i);
+      if (!tp_handle_client_hold (repo, sender, handle,  &error)) {
+          goto error;
+        }
+      tp_handle_unref(repo, handle);
+    }
+  dbus_g_method_return (context, handles);
+  return;
+
+error:
+  dbus_g_method_return_error (context, error);
+  g_error_free (error);
+  for (j = 0; j < i; j++) {
+    TpHandle handle = (TpHandle) g_array_index (handles, guint, j);
+    tp_handle_client_release(repo, sender, handle, NULL);
+  }
+  /* j == i */
+  for (; j < handles->len; j++) {
+    TpHandle handle = (TpHandle) g_array_index (handles, guint, j);
+    tp_handle_unref(repo, handle);
+  }
+}
+
+
+/**
+ * salut_connection_request_handles
+ *
+ * Implements DBus method RequestHandles
+ * on interface org.freedesktop.Telepathy.Connection
+ *
+ * @context: The DBUS invocation context to use to return values
+ *           or throw an error.
+ */
+void 
+salut_connection_request_handles (TpSvcConnection *iface, 
+                                  guint handle_type, 
+                                  const gchar ** names, 
+                                  DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+  GError *error = NULL;
+  const gchar **n;
+  int count = 0;
+  int i, j;
+  GArray *handles = NULL;
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION(self), handle_type);
+  
+
+  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+
+  if (!tp_handle_type_is_valid(handle_type, &error)) {
+    DEBUG("Invalid handle type: %d", handle_type);
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
+  }
+
+  for (n = names; *n != NULL; n++)  {
+    if (*n == '\0') {
+      DEBUG("Request for empty name?!");
+      error = g_error_new(TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                           "Empty handle name");
+      dbus_g_method_return_error(context, error);
+      g_error_free(error);
+      return;
+    }
+    DEBUG("Requested handle of type %d for %s", handle_type, *n);
+    count++;
+  }
+
+  switch (handle_type)  {
+    case TP_HANDLE_TYPE_CONTACT:
+    case TP_HANDLE_TYPE_LIST:
+    case TP_HANDLE_TYPE_ROOM:
+      handles = g_array_sized_new(FALSE, FALSE, sizeof(TpHandle), count);
+      for (i = 0; i < count ; i++) {
+        TpHandle handle;
+        const gchar *name = names[i];
+        /*
+        if (!tp_handle_name_is_valid(handle_type, name, &error)) {
+          dbus_g_method_return_error(context, error);
+          g_error_free(error);
+          g_array_free(handles, TRUE);
+          return;
+        }
+        */
+
+        handle = tp_handle_ensure(handle_repo, name, NULL, &error);
+
+        if (handle == 0) {
+          error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                               "requested handle %s wasn't available", name);
+          dbus_g_method_return_error(context, error);
+          g_error_free(error);
+          for (j = 0; j < i; j++) {
+            tp_handle_unref(handle_repo,
+                (TpHandle) g_array_index (handles, TpHandle, j));
+          }
+          g_array_free(handles, TRUE);
+          return;
+        }
+        g_array_append_val(handles, handle);
+      }
+      hold_unref_and_return_handles (context, handle_repo, handles);
+      g_array_free(handles, TRUE);
+      break;
+    default:
+      DEBUG("Unimplemented handle type");
+      error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+                          "unimplemented handle type %u", handle_type);
+      dbus_g_method_return_error(context, error);
+      g_error_free(error);
+  }
+
+  return;
+}
+
+static  void
+salut_connection_connection_service_iface_init(gpointer g_iface, 
+    gpointer iface_data)
+{
+  TpSvcConnectionClass *klass =
+    (TpSvcConnectionClass *) g_iface;
+#define IMPLEMENT(x) tp_svc_connection_implement_##x (klass, \
+    salut_connection_##x)
+  IMPLEMENT(get_interfaces);
+  IMPLEMENT(request_handles);
+#undef IMPLEMENT
 }

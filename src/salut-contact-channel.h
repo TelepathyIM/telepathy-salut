@@ -22,7 +22,7 @@
 #define __SALUT_CONTACT_CHANNEL_H__
 
 #include <glib-object.h>
-#include "group-mixin.h"
+#include <telepathy-glib/group-mixin.h>
 
 G_BEGIN_DECLS
 
@@ -31,12 +31,12 @@ typedef struct _SalutContactChannelClass SalutContactChannelClass;
 
 struct _SalutContactChannelClass {
     GObjectClass parent_class;
-    GroupMixinClass group_class;
+    TpGroupMixinClass group_class;
 };
 
 struct _SalutContactChannel {
     GObject parent;
-    GroupMixin group;
+    TpGroupMixin group;
 };
 
 GType salut_contact_channel_get_type(void);
@@ -54,84 +54,6 @@ GType salut_contact_channel_get_type(void);
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_CONTACT_CHANNEL))
 #define SALUT_CONTACT_CHANNEL_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT_CHANNEL, SalutContactChannelClass))
-
-
-gboolean
-salut_contact_channel_add_members (SalutContactChannel *self,
-                                   const GArray *contacts,
-                                   const gchar *message,
-                                   GError **error);
-
-gboolean
-salut_contact_channel_close (SalutContactChannel *self,
-                             GError **error);
-
-gboolean
-salut_contact_channel_get_all_members (SalutContactChannel *self,
-                                       GArray **ret,
-                                       GArray **ret1,
-                                       GArray **ret2,
-                                       GError **error);
-
-gboolean
-salut_contact_channel_get_channel_type (SalutContactChannel *self,
-                                        gchar **ret,
-                                        GError **error);
-
-gboolean
-salut_contact_channel_get_group_flags (SalutContactChannel *self,
-                                       guint *ret,
-                                       GError **error);
-
-gboolean
-salut_contact_channel_get_handle (SalutContactChannel *self,
-                                  guint *ret,
-                                  guint *ret1,
-                                  GError **error);
-
-gboolean
-salut_contact_channel_get_handle_owners (SalutContactChannel *self,
-                                         const GArray *handles,
-                                         GArray **ret,
-                                         GError **error);
-
-gboolean
-salut_contact_channel_get_interfaces (SalutContactChannel *self,
-                                      gchar ***ret,
-                                      GError **error);
-
-gboolean
-salut_contact_channel_get_local_pending_members (SalutContactChannel *self,
-                                                 GArray **ret,
-                                                 GError **error);
-
-gboolean
-salut_contact_channel_get_local_pending_members_with_info (SalutContactChannel *self,
-                                                           GPtrArray **ret,
-                                                           GError **error);
-
-gboolean
-salut_contact_channel_get_members (SalutContactChannel *self,
-                                   GArray **ret,
-                                   GError **error);
-
-gboolean
-salut_contact_channel_get_remote_pending_members (SalutContactChannel *self,
-                                                  GArray **ret,
-                                                  GError **error);
-
-gboolean
-salut_contact_channel_get_self_handle (SalutContactChannel *self,
-                                       guint *ret,
-                                       GError **error);
-
-gboolean
-salut_contact_channel_remove_members (SalutContactChannel *self,
-                                      const GArray *contacts,
-                                      const gchar *message,
-                                      GError **error);
-
-
 
 G_END_DECLS
 

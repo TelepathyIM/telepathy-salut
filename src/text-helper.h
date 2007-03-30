@@ -1,8 +1,7 @@
 /*
- * util.c - Source for Gabble utility functions
+ * text-helper.h - Header for TextHelper
  * Copyright (C) 2006 Collabora Ltd.
  * Copyright (C) 2006 Nokia Corporation
- *   @author Robert McQueen <robert.mcqueen@collabora.co.uk>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,16 +18,24 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <glib.h>
-#include <string.h>
+#ifndef __TEXT_HELPER_H__
+#define __TEXT_HELPER_H__
 
-#include "util.h"
+#include <telepathy-glib/enums.h>
+#include <gibber/gibber-xmpp-stanza.h>
 
-/* extend a pointer by an offset, provided the offset is not 0 */
-gpointer
-mixin_offset_cast (gpointer instance, guint offset)
-{
-  g_return_val_if_fail (offset != 0, NULL);
 
-  return ((guchar *) instance + offset);
-}
+/* Utility functions for the helper user */
+gboolean 
+text_helper_parse_incoming_message (GibberXmppStanza *stanza, 
+    const gchar **from, TpChannelTextMessageType *msgtype, 
+    const gchar **body, const gchar **body_offset);
+
+GibberXmppStanza * 
+text_helper_create_message (const gchar *from,
+    const gchar *to, TpChannelTextMessageType type, 
+    const gchar *text, GError **error);
+
+G_END_DECLS
+
+#endif /* #ifndef __TEXT_HELPER_H__ */

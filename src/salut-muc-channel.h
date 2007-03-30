@@ -22,8 +22,9 @@
 #define __SALUT_MUC_CHANNEL_H__
 
 #include <glib-object.h>
-#include "group-mixin.h"
-#include "text-mixin.h"
+
+#include <telepathy-glib/text-mixin.h>
+#include <telepathy-glib/group-mixin.h>
 
 G_BEGIN_DECLS
 
@@ -32,14 +33,14 @@ typedef struct _SalutMucChannelClass SalutMucChannelClass;
 
 struct _SalutMucChannelClass {
   GObjectClass parent_class;
-  GroupMixinClass group_class;
-  TextMixinClass text_class; 
+  TpGroupMixinClass group_class;
+  TpTextMixinClass text_class; 
 };
 
 struct _SalutMucChannel {
     GObject parent;
-    GroupMixin group;
-    TextMixin text;
+    TpGroupMixin group;
+    TpTextMixin text;
 };
 
 GType salut_muc_channel_get_type(void);
@@ -60,107 +61,7 @@ GType salut_muc_channel_get_type(void);
 
 void
 salut_muc_channel_invited(SalutMucChannel *self, 
-                          Handle invitor, const gchar *message);
-
-/* Binding function */
-gboolean
-salut_muc_channel_acknowledge_pending_messages (SalutMucChannel *self,
-                                                const GArray *ids,
-                                                GError **error);
-
-gboolean
-salut_muc_channel_add_members (SalutMucChannel *self,
-                               const GArray *contacts,
-                               const gchar *message,
-                               GError **error);
-
-gboolean
-salut_muc_channel_close (SalutMucChannel *self,
-                         GError **error);
-
-gboolean
-salut_muc_channel_get_all_members (SalutMucChannel *self,
-                                   GArray **ret,
-                                   GArray **ret1,
-                                   GArray **ret2,
-                                   GError **error);
-
-gboolean
-salut_muc_channel_get_channel_type (SalutMucChannel *self,
-                                    gchar **ret,
-                                    GError **error);
-
-gboolean
-salut_muc_channel_get_group_flags (SalutMucChannel *self,
-                                   guint *ret,
-                                   GError **error);
-
-gboolean
-salut_muc_channel_get_handle (SalutMucChannel *self,
-                              guint *ret,
-                              guint *ret1,
-                              GError **error);
-
-gboolean
-salut_muc_channel_get_handle_owners (SalutMucChannel *self,
-                                     const GArray *handles,
-                                     GArray **ret,
-                                     GError **error);
-
-gboolean
-salut_muc_channel_get_interfaces (SalutMucChannel *self,
-                                  gchar ***ret,
-                                  GError **error);
-
-gboolean
-salut_muc_channel_get_local_pending_members (SalutMucChannel *self,
-                                             GArray **ret,
-                                             GError **error);
-
-gboolean
-salut_muc_channel_get_local_pending_members_with_info (SalutMucChannel *self,
-                                                       GPtrArray **ret,
-                                                       GError **error);
-
-gboolean
-salut_muc_channel_get_members (SalutMucChannel *self,
-                               GArray **ret,
-                               GError **error);
-
-gboolean
-salut_muc_channel_get_message_types (SalutMucChannel *self,
-                                     GArray **ret,
-                                     GError **error);
-
-gboolean
-salut_muc_channel_get_remote_pending_members (SalutMucChannel *self,
-                                              GArray **ret,
-                                              GError **error);
-
-gboolean
-salut_muc_channel_get_self_handle (SalutMucChannel *self,
-                                   guint *ret,
-                                   GError **error);
-
-gboolean
-salut_muc_channel_list_pending_messages (SalutMucChannel *self,
-                                         gboolean clear,
-                                         GPtrArray **ret,
-                                         GError **error);
-
-gboolean
-salut_muc_channel_remove_members (SalutMucChannel *self,
-                                  const GArray *contacts,
-                                  const gchar *message,
-                                  GError **error);
-
-gboolean
-salut_muc_channel_send (SalutMucChannel *self,
-                        guint type,
-                        const gchar *text,
-                        GError **error);
-
-
+                          TpHandle invitor, const gchar *message);
 
 G_END_DECLS
 

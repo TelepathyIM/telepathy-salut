@@ -22,8 +22,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
-
 #include "salut-muc-manager.h"
 #include "salut-muc-manager-signals-marshal.h"
 
@@ -32,12 +30,9 @@
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
 
-#include "telepathy-errors.h"
-#include "telepathy-constants.h"
-#include "telepathy-interfaces.h"
-#include "tp-channel-factory-iface.h"
+#include <telepathy-glib/channel-factory-iface.h>
+#include <telepathy-glib/interfaces.h>
 
-#include "handle-repository.h"
 #include "namespaces.h"
 
 #define DEBUG_FLAG DEBUG_MUC
@@ -113,10 +108,6 @@ salut_muc_manager_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
   if (priv->im_manager != NULL) {
     g_object_unref(priv->im_manager);
-    priv->im_manager = NULL;
-  }
-  if (priv->connection != NULL) {
-    g_object_unref(priv->connection);
     priv->im_manager = NULL;
   }
 
@@ -202,7 +193,7 @@ static void
 muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
   SalutMucManager *self = SALUT_MUC_MANAGER(user_data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(self);
-  Handle handle;
+  TpHandle handle;
 
   if (priv->channels) { 
     g_object_get(chan, "handle", &handle, NULL);
@@ -226,9 +217,12 @@ _get_connection_parameters(SalutMucManager *mgr, const gchar *protocol) {
 }
 
 static SalutMucChannel *
-salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
+salut_muc_manager_new_channel(SalutMucManager *mgr, TpHandle handle,
                               GObject *connection) {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *room_repo = 
+      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   SalutMucChannel *chan;
   const gchar *name;
   gchar *path = NULL;
@@ -239,10 +233,9 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
 
   /* FIXME The name of the muc and the handel might need to be different at
    * some point.. E.g. if two rooms are called the same */
-  name = handle_inspect(priv->connection->handle_repo, 
-                        TP_HANDLE_TYPE_ROOM, handle);
+  name = tp_handle_inspect(room_repo, handle);
   path = g_strdup_printf("%s/MucChannel/%u", 
-                         priv->connection->object_path, handle);
+                         base_connection->object_path, handle);
   chan = g_object_new(SALUT_TYPE_MUC_CHANNEL,
                       "connection", priv->connection,
                       "im-manager", priv->im_manager,
@@ -255,7 +248,7 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, Handle handle,
 
   g_hash_table_insert(priv->channels, GINT_TO_POINTER(handle), chan);
   g_signal_connect(chan, "closed", G_CALLBACK(muc_channel_closed_cb), mgr);
-  g_signal_emit_by_name(mgr, "new-channel", chan);
+  tp_channel_factory_iface_emit_new_channel(mgr, TP_CHANNEL_IFACE(chan), NULL);
 
   return chan;
 }
@@ -265,13 +258,21 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
                                              const gchar *chan_type, 
                                              TpHandleType handle_type,
                                              guint handle, 
-                                             TpChannelIface **ret) {
+                                             gpointer request,
+                                             TpChannelIface **ret,
+                                             GError **error) {
   SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *room_repo = 
+      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   SalutMucChannel *chan;
+  gboolean created = FALSE;
+
+  DEBUG("Muc request");
 
   /* We only support text channels */
-  if (strcmp(chan_type, TP_IFACE_CHANNEL_TYPE_TEXT)) {
+  if (tp_strdiff(chan_type, TP_IFACE_CHANNEL_TYPE_TEXT)) {
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
   }
 
@@ -281,33 +282,34 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   }
 
   /* Most be a valid room handle */
-  if (!handle_is_valid(priv->connection->handle_repo, TP_HANDLE_TYPE_ROOM,
-                       handle, NULL)) {
+  if (!tp_handle_is_valid(room_repo, handle, NULL)) {
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
   }
 
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
   if (chan != NULL) { 
     *ret = TP_CHANNEL_IFACE(chan);
+    created = FALSE;
   } else {
     GObject *connection = _get_connection(mgr,
-                                        handle_inspect(
-                                          priv->connection->handle_repo,
-                                          TP_HANDLE_TYPE_ROOM, handle), 
+                                        tp_handle_inspect(
+                                          room_repo, handle), 
                                           NULL, NULL, NULL);
+    created = TRUE;
     if (connection == NULL) {
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
     }
     chan = salut_muc_manager_new_channel(mgr, handle, connection);
     /* We requested the channel, so invite ourselves to it */
     if (chan)  {
-      salut_muc_channel_invited(chan, priv->connection->self_handle, "");
+      salut_muc_channel_invited(chan, base_connection->self_handle, "");
       *ret = TP_CHANNEL_IFACE(chan);
     }
+    g_assert(chan != NULL);
   }
 
-  return *ret != NULL ? TP_CHANNEL_FACTORY_REQUEST_STATUS_DONE
-                      : TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+  return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED 
+                 : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
 }
 
 static void salut_muc_manager_factory_iface_init(gpointer *g_iface, 
@@ -326,7 +328,10 @@ static gboolean
 _received_stanza(SalutImChannel *imchannel, 
                   GibberXmppStanza *message, gpointer data) {
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(data);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *room_repo = 
+      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   GibberXmppNode *node;
   GibberXmppNode *invite;
   GibberXmppNode *room_node;
@@ -336,8 +341,8 @@ _received_stanza(SalutImChannel *imchannel,
   const gchar *reason = NULL;
   const gchar *protocol = NULL;
   const gchar **params;
-  Handle room_handle;
-  Handle invitor_handle;
+  TpHandle room_handle;
+  TpHandle invitor_handle;
   const gchar **p;
   GHashTable *params_hash;
   GObject *transport = NULL;
@@ -396,7 +401,7 @@ _received_stanza(SalutImChannel *imchannel,
 
   /* FIXME proper serialisation of handle name */
   /* Create the group if it doesn't exist and myself to local_pending */
-  room_handle = handle_for_room(priv->connection->handle_repo, room);
+  room_handle = tp_handle_ensure(room_repo, room, NULL, NULL);
 
   /* FIXME handle properly */
   g_assert(room_handle != 0);
@@ -411,8 +416,7 @@ _received_stanza(SalutImChannel *imchannel,
     }
 
     if (transport == NULL) {
-      handle_unref(priv->connection->handle_repo, 
-                   TP_HANDLE_TYPE_ROOM, room_handle);
+      tp_handle_unref(room_repo, room_handle);
       /* FIXME some kinda error to the user maybe ? Ignore for now */
       goto discard;
     }
@@ -437,7 +441,7 @@ discard:
 
 static void
 _new_im_channel(TpChannelFactoryIface *channel_iface, 
-                TpChannelIface *channel,
+                TpChannelIface *channel, gpointer request, 
                 gpointer data) {
   SalutImChannel *imchannel = SALUT_IM_CHANNEL(channel);
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
@@ -465,7 +469,6 @@ salut_muc_manager_new(SalutConnection *connection,
                    G_CALLBACK(_new_im_channel), ret);
 
   priv->connection = connection;
-  g_object_ref(connection);
 
   return ret;
 }

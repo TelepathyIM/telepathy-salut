@@ -3,6 +3,8 @@
 
 #include <glib.h>
 
+#include <telepathy-glib/debug.h>
+
 #include "debug.h"
 
 #ifdef ENABLE_DEBUG
@@ -36,8 +38,10 @@ void debug_set_flags_from_env ()
 
   flags_string = g_getenv ("SALUT_DEBUG");
 
-  if (flags_string)
+  if (flags_string) {
+    tp_debug_set_flags_from_env("SALUT_DEBUG");
     debug_set_flags (g_parse_debug_string (flags_string, keys, nkeys));
+  }
 }
 
 void debug_set_flags (DebugFlags new_flags)

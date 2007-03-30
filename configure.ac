@@ -88,6 +88,12 @@ PKG_CHECK_MODULES(LIBXML2, [libxml-2.0])
 AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
+dnl Check for telepathy-glib
+PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib])
+
+AC_SUBST(TELEPATHY_GLIB_CFLAGS)
+AC_SUBST(TELEPATHY_GLIB_LIBS)
+
 dnl Check for OpenSSL
 PKG_CHECK_MODULES(LIBSSL, [openssl], 
             [ HAVE_LIBSSL="yes" ],
@@ -137,7 +143,6 @@ AC_OUTPUT( Makefile                       \
            src/Makefile                   \
            m4/Makefile                    \
            data/Makefile                  \
-           generate/Makefile              \
            tests/Makefile                 \
            tests/inputs/Makefile
 )

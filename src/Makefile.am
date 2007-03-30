@@ -1,39 +1,22 @@
 BUILT_SOURCES = \
-    salut-connection-manager-glue.h \
-    salut-connection-manager-signals-marshal.h \
-    salut-connection-manager-signals-marshal.c \
-    salut-contact-manager-signals-marshal.h \
-    salut-contact-manager-signals-marshal.c \
     salut-im-manager-signals-marshal.h \
     salut-im-manager-signals-marshal.c \
     salut-muc-manager-signals-marshal.h \
     salut-muc-manager-signals-marshal.c \
-    salut-im-channel-glue.h \
     salut-im-channel-signals-marshal.h \
     salut-im-channel-signals-marshal.c \
-    salut-muc-channel-glue.h \
     salut-muc-channel-signals-marshal.h \
     salut-muc-channel-signals-marshal.c \
     salut-self-signals-marshal.h \
     salut-self-signals-marshal.c \
     salut-contact-signals-marshal.h \
     salut-contact-signals-marshal.c \
-    salut-connection-glue.h \
-    salut-connection-signals-marshal.h \
-    salut-connection-signals-marshal.c \
+    salut-contact-manager-signals-marshal.h \
+    salut-contact-manager-signals-marshal.c \
     salut-muc-connection-signals-marshal.h \
     salut-muc-connection-signals-marshal.c \
     salut-presence-enumtypes.h \
     salut-presence-enumtypes.c  \
-    telepathy-errors-enumtypes.h \
-    telepathy-errors-enumtypes.c  \
-    tp-channel-factory-iface-signals-marshal.h \
-    tp-channel-factory-iface-signals-marshal.c \
-    group-mixin-signals-marshal.h \
-    group-mixin-signals-marshal.c \
-    text-mixin-signals-marshal.h \
-    text-mixin-signals-marshal.c \
-    salut-contact-channel-glue.h \
     salut-contact-channel-signals-marshal.h \
     salut-contact-channel-signals-marshal.c  \
     salut-avahi-client-signals-marshal.h \
@@ -59,13 +42,10 @@ dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
 EXTRA_DIST = \
-  group-mixin-signals-marshal.list                        \
   salut-avahi-client-signals-marshal.list                 \
   salut-avahi-entry-group-signals-marshal.list            \
   salut-avahi-service-browser-signals-marshal.list        \
   salut-avahi-service-resolver-signals-marshal.list       \
-  salut-connection-manager-signals-marshal.list           \
-  salut-connection-signals-marshal.list                   \
   salut-contact-channel-signals-marshal.list              \
   salut-contact-manager-signals-marshal.list              \
   salut-contact-signals-marshal.list                      \
@@ -74,9 +54,7 @@ EXTRA_DIST = \
   salut-muc-channel-signals-marshal.list                  \
   salut-muc-manager-signals-marshal.list                  \
   salut-self-signals-marshal.list                         \
-  salut-muc-connection-signals-marshal.list               \
-  text-mixin-signals-marshal.list                         \
-  tp-channel-factory-iface-signals-marshal.list
+  salut-muc-connection-signals-marshal.list
 
 bin_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
@@ -118,33 +96,10 @@ CORE_SOURCES =                                          \
     salut-presence.h                                    \
     salut-muc-connection.c                              \
     salut-muc-connection.h                              \
-    telepathy-errors.c                                  \
-    telepathy-errors.h                                  \
-    telepathy-constants.h                               \
-    telepathy-helpers.c                                 \
-    telepathy-helpers.h                                 \
-    telepathy-interfaces.h                              \
-    gintset.c                                           \
-    gintset.h                                           \
-    gheap.c                                             \
-    gheap.h                                             \
-    util.c                                              \
-    util.h                                              \
-    handle-set.c                                        \
-    handle-set.h                                        \
-    handle-types.h                                      \
-    handle-repository.c                                 \
-    handle-repository.h                                 \
-    tp-channel-iface.h                                  \
-    tp-channel-iface.c                                  \
-    tp-channel-factory-iface.h                          \
-    tp-channel-factory-iface.c                          \
     salut-contact-channel.h                             \
     salut-contact-channel.c                             \
-    group-mixin.c                                       \
-    group-mixin.h                                       \
-    text-mixin.c                                        \
-    text-mixin.h                                        \
+    text-helper.c                                       \
+    text-helper.h                                       \
     debug.c                                             \
     debug.h                                             \
     ansi.h                                              \
@@ -156,33 +111,35 @@ libsalut_convenience_la_SOURCES = $(CORE_SOURCES)
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
-                       $(top_builddir)/lib/gibber/libgibber.la
+                       $(top_builddir)/lib/gibber/libgibber.la \
+                       -ltelepathy-glib
 
 telepathy_salut_SOURCES = \
     salut.c 
 
+# TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
 telepathy_salut_LDADD = libsalut-convenience.la \
-                        $(top_builddir)/lib/gibber/libgibber.la
+                        $(top_builddir)/lib/gibber/libgibber.la \
+                        -ltelepathy-glib
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
 AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ \
   @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
   @HANDLE_LEAK_DEBUG_CFLAGS@ \
+  @TELEPATHY_GLIB_CFLAGS@ \
   @AVAHI_CFLAGS@ \
   -I $(top_srcdir)/lib -I $(top_builddir)/lib
 
-AM_LDFLAGS = @DBUS_LIBS@ @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
+AM_LDFLAGS = @DBUS_LIBS@ \
+             @TELEPATHY_GLIB_LIBS@ \
+             @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
 
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:
 	make -C $(top_builddir)/lib/gibber libgibber.la
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
-
-# rule to generate the binding headers
-%-glue.h: ../generate/xml-modified/%.xml
-	dbus-binding-tool --mode=glib-server --output=$@ --prefix=$(subst -,_,$*) $<
 
 %-signals-marshal.h: %-signals-marshal.list
 	glib-genmarshal --header --prefix=$(subst -,_,$*)_marshal $< > $*-signals-marshal.h

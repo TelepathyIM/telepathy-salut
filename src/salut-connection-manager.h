@@ -22,10 +22,7 @@
 #define __SALUT_CONNECTION_MANAGER_H__
 
 #include <glib-object.h>
-
-#define SALUT_CONN_MGR_BUS_NAME        "org.freedesktop.Telepathy.ConnectionManager.salut"
-#define SALUT_CONN_MGR_OBJECT_PATH     "/org/freedesktop/Telepathy/ConnectionManager/salut"
-
+#include <telepathy-glib/base-connection-manager.h>
 
 G_BEGIN_DECLS
 
@@ -33,29 +30,14 @@ typedef struct _SalutConnectionManager SalutConnectionManager;
 typedef struct _SalutConnectionManagerClass SalutConnectionManagerClass;
 
 struct _SalutConnectionManagerClass {
-    GObjectClass parent_class;
+  TpBaseConnectionManagerClass parent_class;
 };
 
 struct _SalutConnectionManager {
-    GObject parent;
+  TpBaseConnectionManager parent;
 };
 
-
-typedef struct {
-    const gchar *name;          /* name as passed over dbus */
-    const gchar *dtype;         /* D-Bus type string */
-    const GType gtype;          /* glib type string */
-    guint flags;                /* combination of TP_CONN_MGR_PARAM_FLAG_foo */
-    const gpointer def;         /* default - gchar * or GINT_TO_POINTER */
-    const gsize offset;         /* internal use only */
-} SalutParamSpec;
-
-typedef struct {
-    const gchar *name;
-    const SalutParamSpec *parameters;       /* terminated by a NULL name */
-} SalutProtocolSpec;
-
-const SalutProtocolSpec *salut_protocols; /* terminated by a NULL name */
+extern const TpCMProtocolSpec salut_protocols[];
 
 GType salut_connection_manager_get_type(void);
 
@@ -72,26 +54,6 @@ GType salut_connection_manager_get_type(void);
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_CONNECTION_MANAGER))
 #define SALUT_CONNECTION_MANAGER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONNECTION_MANAGER, SalutConnectionManagerClass))
-
-void _salut_connection_manager_register(SalutConnectionManager *self);
-
-gboolean 
-salut_connection_manager_get_parameters (SalutConnectionManager *self, 
-                                          const gchar * proto, 
-                                          GPtrArray ** ret, 
-                                          GError **error);
-gboolean 
-salut_connection_manager_list_protocols (SalutConnectionManager *self, 
-                                          gchar *** ret, 
-                                          GError **error);
-gboolean 
-salut_connection_manager_request_connection (SalutConnectionManager *self, 
-                                              const gchar * proto, 
-                                              GHashTable * parameters, 
-                                              gchar ** ret, 
-                                              gchar ** ret1, 
-                                              GError **error);
-
 
 G_END_DECLS
 

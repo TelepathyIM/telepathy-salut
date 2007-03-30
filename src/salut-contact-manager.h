@@ -20,10 +20,10 @@
 #define __SALUT_CONTACT_MANAGER_H__
 
 #include <glib-object.h>
+
 #include "salut-connection.h"
 #include "salut-avahi-client.h"
 #include "salut-contact.h"
-#include "handle-types.h"
 
 G_BEGIN_DECLS
 
@@ -56,14 +56,15 @@ GType salut_contact_manager_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerClass))
 
 SalutContactManager *
-salut_contact_manager_new(SalutConnection *connection, 
-                          SalutAvahiClient *client);
+salut_contact_manager_new(SalutConnection *connection); 
 
-gboolean salut_contact_manager_start(SalutContactManager *mgr, GError **error);
+gboolean salut_contact_manager_start(SalutContactManager *mgr, 
+                                     SalutAvahiClient *client,
+                                     GError **error);
 
 
 SalutContact *
-salut_contact_manager_get_contact(SalutContactManager *mgr, Handle handle);
+salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle);
 
 GList *
 salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr, 

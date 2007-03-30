@@ -24,8 +24,9 @@
 #include <glib-object.h>
 #include <dbus/dbus-glib.h>
 
-#include "telepathy-constants.h"
-#include "handle-types.h"
+#include <telepathy-glib/enums.h>
+#include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/svc-connection.h>
 
 G_BEGIN_DECLS
 
@@ -33,22 +34,16 @@ typedef struct _SalutConnection SalutConnection;
 typedef struct _SalutConnectionClass SalutConnectionClass;
 
 struct _SalutConnectionClass {
-    GObjectClass parent_class;
+  TpBaseConnectionClass  parent_class;
 };
 
 struct _SalutConnection {
-    GObject parent;
-    gchar *bus_name;
-    gchar *object_path;
+  TpBaseConnection parent; 
 
-    /* Connection status */
-    TpConnectionStatus status;
-
-    /* handles handles handles */
-    HandleRepo *handle_repo;
-    Handle self_handle;
     /* Our name on the network */
-    gchar *name;
+    gchar*name;
+
+    gpointer priv;
 };
 
 GType salut_connection_get_type(void);
@@ -67,132 +62,14 @@ GType salut_connection_get_type(void);
 #define SALUT_CONNECTION_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONNECTION, SalutConnectionClass))
 
-gboolean _salut_connection_register(SalutConnection *cn, char **bus_name,
-                                     char **object_path, GError **error);
+typedef enum {
+  LIST_HANDLE_PUBLISH = 1,
+  LIST_HANDLE_SUBSCRIBE,
+  LIST_HANDLE_KNOWN,
 
-gboolean
-salut_connection_add_status (SalutConnection *self,
-                             const gchar *status,
-                             GHashTable *parms,
-                             GError **error);
-
-gboolean
-salut_connection_clear_status (SalutConnection *self,
-                               GError **error);
-
-gboolean
-salut_connection_connect (SalutConnection *self,
-                          GError **error);
-
-gboolean
-salut_connection_disconnect (SalutConnection *self,
-                             GError **error);
-
-gboolean
-salut_connection_get_alias_flags (SalutConnection *self,
-                                  guint *ret,
-                                  GError **error);
-
-gboolean
-salut_connection_get_interfaces (SalutConnection *self,
-                                 gchar ***ret,
-                                 GError **error);
-
-gboolean
-salut_connection_get_presence (SalutConnection *self,
-                               const GArray *contacts,
-                               GHashTable **ret,
-                               GError **error);
-
-gboolean
-salut_connection_get_protocol (SalutConnection *self,
-                               gchar **ret,
-                               GError **error);
-
-gboolean
-salut_connection_get_self_handle (SalutConnection *self,
-                                  guint *ret,
-                                  GError **error);
-
-gboolean
-salut_connection_get_status (SalutConnection *self,
-                             guint *ret,
-                             GError **error);
-
-gboolean
-salut_connection_get_statuses (SalutConnection *self,
-                               GHashTable **ret,
-                               GError **error);
-
-void
-salut_connection_hold_handles (SalutConnection *self,
-                               guint handle_type,
-                               const GArray *handles,
-                               DBusGMethodInvocation *context);
-
-void
-salut_connection_inspect_handles (SalutConnection *self,
-                                  guint handle_type,
-                                  const GArray *handles,
-                                  DBusGMethodInvocation *context);
-
-gboolean
-salut_connection_list_channels (SalutConnection *self,
-                                GPtrArray **ret,
-                                GError **error);
-
-void
-salut_connection_release_handles (SalutConnection *self,
-                                  guint handle_type,
-                                  const GArray *handles,
-                                  DBusGMethodInvocation *context);
-
-gboolean
-salut_connection_remove_status (SalutConnection *self,
-                                const gchar *status,
-                                GError **error);
-
-gboolean
-salut_connection_request_aliases (SalutConnection *self,
-                                  const GArray *contacts,
-                                  gchar ***ret,
-                                  GError **error);
-
-void
-salut_connection_request_channel (SalutConnection *self,
-                                  const gchar *type,
-                                  guint handle_type,
-                                  guint handle,
-                                  gboolean suppress_handler,
-                                  DBusGMethodInvocation *context);
-
-void
-salut_connection_request_handles (SalutConnection *self,
-                                  guint handle_type,
-                                  const gchar **names,
-                                  DBusGMethodInvocation *context);
-
-gboolean
-salut_connection_request_presence (SalutConnection *self,
-                                   const GArray *contacts,
-                                   GError **error);
-
-gboolean
-salut_connection_set_aliases (SalutConnection *self,
-                              GHashTable *aliases,
-                              GError **error);
-
-gboolean
-salut_connection_set_last_activity_time (SalutConnection *self,
-                                         guint time,
-                                         GError **error);
-
-gboolean
-salut_connection_set_status (SalutConnection *self,
-                             GHashTable *statuses,
-                             GError **error);
-
-
+  LIST_HANDLE_FIRST = LIST_HANDLE_PUBLISH,
+  LIST_HANDLE_LAST = LIST_HANDLE_KNOWN
+} SalutConnectionListHandle;
 
 G_END_DECLS
 

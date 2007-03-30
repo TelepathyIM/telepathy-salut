@@ -20,21 +20,17 @@
 
 #include <stdio.h>
 
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-protocol.h>
-
-#include "telepathy-constants.h"
 #include "salut-connection-manager.h"
 
 static gchar *
 mgr_file_contents (const char *busname,
                    const char *objpath,
-                   const SalutProtocolSpec *protocols,
+                   const TpCMProtocolSpec *protocols,
                    GError **error)
 {
   GKeyFile *f = g_key_file_new();
-  const SalutProtocolSpec *protocol;
-  const SalutParamSpec *row;
+  const TpCMProtocolSpec *protocol;
+  const TpCMParamSpec *row;
 
   g_key_file_set_string(f, "ConnectionManager", "Name", "Salut");
   g_key_file_set_string(f, "ConnectionManager", "BusName", busname);
@@ -89,8 +85,8 @@ main (void)
 {
   GError *error = NULL;
 
-  gchar *s = mgr_file_contents(SALUT_CONN_MGR_BUS_NAME,
-                               SALUT_CONN_MGR_OBJECT_PATH,
+  gchar *s = mgr_file_contents(TP_CM_BUS_NAME_BASE "salut",
+                               TP_CM_OBJECT_PATH_BASE "salut",
                                salut_protocols, &error);
   if (!s)
     {
