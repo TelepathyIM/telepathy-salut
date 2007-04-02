@@ -131,6 +131,7 @@ salut_im_channel_do_close(SalutImChannel *self) {
     case CHANNEL_CONNECTED:
       /* FIXME decent connection closing? */
       gibber_xmpp_connection_close(priv->xmpp_connection);
+      gibber_transport_disconnect(priv->xmpp_connection->transport);
       break;
   }
 
