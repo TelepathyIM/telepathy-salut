@@ -155,8 +155,9 @@ salut_im_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     SALUT_IM_MANAGER_GET_PRIVATE(mgr);
 
   if (priv->channels) {
-    g_hash_table_destroy(priv->channels);
+    GHashTable *t = priv->channels;
     priv->channels = NULL;
+    g_hash_table_destroy(t);
   }
 
 }
