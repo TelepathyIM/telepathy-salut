@@ -388,9 +388,9 @@ salut_im_channel_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
-  tp_handle_unref(handle_repo, priv->handle);
-
   priv->dispose_has_run = TRUE;
+
+  tp_handle_unref(handle_repo, priv->handle);
 
   if (priv->state != CHANNEL_NOT_CONNECTED) {
     salut_im_channel_do_close(self);
