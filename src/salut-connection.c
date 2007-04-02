@@ -68,7 +68,7 @@
   if ((BASE)->status != TP_CONNECTION_STATUS_CONNECTED) \
     { \
       DEBUG ("rejected request as disconnected"); \
-      (ERROR) = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, \
+      (ERROR) = g_error_new(TP_ERRORS, TP_ERROR_DISCONNECTED, \
                             "Connection is disconnected"); \
       dbus_g_method_return_error ((CONTEXT), (ERROR)); \
       g_error_free ((ERROR)); \
