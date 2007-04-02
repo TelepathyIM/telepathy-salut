@@ -704,9 +704,6 @@ salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   g_signal_connect(conn->transport, "disconnected", 
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
 
-  /* FIXM catch errors */
-  g_signal_connect(conn->transport, "connected", 
-                   G_CALLBACK(salut_muc_channel_connected), channel);
   return salut_muc_connection_connect(priv->muc_connection, error);
 }
 
@@ -720,6 +717,7 @@ salut_muc_channel_connected(GibberTransport *transport,
                    G_CALLBACK(salut_muc_channel_disconnected), self);
 
   /* FIXME race */
+  g_assert(priv->presence_timeout_id  == 0);
   priv->presence_timeout_id = g_timeout_add(4000,
                                            salut_muc_channel_dummy_timeout, 
                                            self);
