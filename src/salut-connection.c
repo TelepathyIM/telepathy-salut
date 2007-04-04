@@ -88,6 +88,10 @@ static void
 salut_connection_presence_service_iface_init(gpointer g_iface, 
     gpointer iface_data);
 
+static void
+salut_connection_avatar_service_iface_init(gpointer g_iface, 
+    gpointer iface_data);
+
 G_DEFINE_TYPE_WITH_CODE(SalutConnection, 
     salut_connection, 
     TP_TYPE_BASE_CONNECTION,
@@ -97,6 +101,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
        salut_connection_presence_service_iface_init);
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
+       salut_connection_avatar_service_iface_init);
     )
 
 /* properties */
@@ -1065,6 +1071,200 @@ salut_connection_aliasing_service_iface_init(gpointer g_iface,
 #undef IMPLEMENT
 }
 
+/* Avatar service implementation */
+void
+_contact_manager_contact_avatar_cb(SalutContactManager *mgr, 
+                                  SalutContact *contact,
+                                  gchar *token,
+                                  gpointer data) {
+  SalutConnection *self = SALUT_CONNECTION(data);
+  TpHandle handle ;
+
+  /* FIXME. The contact should probably know it's own handle */
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
+
+  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
+  if (handle == 0) {
+    DEBUG("Invalid handle updated");
+  }
+
+  tp_svc_connection_interface_avatars_emit_avatar_updated(self, 
+                                                          (guint)handle, token);
+}
+
+static void
+salut_connection_clear_avatar(TpSvcConnectionInterfaceAvatars *iface,
+                              DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  GError *error = NULL;
+
+  if (!salut_self_set_avatar(priv->self, NULL, 0, &error)) {
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
+  }
+  tp_svc_connection_interface_avatars_return_from_clear_avatar(context);
+}
+
+static void
+salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
+                            const GArray *avatar,
+                            const gchar *mime_type,
+                            DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  GError *error = NULL;
+  
+  if (!salut_self_set_avatar(priv->self, (guint8 *)avatar->data, 
+                             avatar->len, &error)) {
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
+  }
+
+  tp_svc_connection_interface_avatars_return_from_set_avatar(
+     context, priv->self->avatar_token); 
+}
+
+static void
+salut_connection_get_avatar_tokens(TpSvcConnectionInterfaceAvatars *iface,
+                                   const GArray *contacts,
+                                   DBusGMethodInvocation *context) {
+  int i;
+  gchar **ret;
+  GError *err = NULL;
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      base, TP_HANDLE_TYPE_CONTACT);
+
+  if (!tp_handles_are_valid(handle_repo, contacts, FALSE, &err)) {
+    dbus_g_method_return_error(context, err);
+    g_error_free(err);
+    return;
+  }
+
+  ret = g_new0(gchar *, contacts->len + 1);
+
+  for (i = 0; i < contacts->len ; i++) {
+    TpHandle handle = g_array_index(contacts, TpHandle, i);
+    if (base->self_handle == handle) {
+      ret[i] = priv->self->avatar_token;
+    } else {
+      SalutContact *contact;
+      contact = 
+         salut_contact_manager_get_contact(priv->contact_manager, handle);
+      if (contact != NULL) {
+        ret[i] = contact->avatar_token;
+        g_object_unref(contact);
+      }
+    }
+    if (ret[i] == NULL)
+      ret[i] = "";
+  }
+
+  tp_svc_connection_interface_avatars_return_from_get_avatar_tokens(context,
+    (const gchar **)ret);
+
+  g_free(ret);
+}
+
+static void
+_request_avatar_cb(SalutContact *contact, guint8 *avatar, gsize size,
+                   gpointer user_data) {
+  DBusGMethodInvocation *context = (DBusGMethodInvocation *) user_data;
+
+  GError *err = NULL;
+  GArray *arr;
+
+  if (size == 0) {
+    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+                      "Unable to get avatar");
+    dbus_g_method_return_error(context, err);
+    g_error_free(err);
+    return;
+  }
+
+  arr = g_array_sized_new(FALSE, FALSE, sizeof(guint8), size);
+  arr = g_array_append_vals(arr, avatar, size);
+  tp_svc_connection_interface_avatars_return_from_request_avatar(
+    context, arr, "");
+  g_array_free(arr, TRUE);
+}
+
+static void
+salut_connection_request_avatar(TpSvcConnectionInterfaceAvatars *iface,
+                                guint handle,
+                                DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+  SalutContact *contact;
+  GError *err = NULL;
+
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      base, TP_HANDLE_TYPE_CONTACT);
+
+  if (!tp_handle_is_valid(handle_repo, handle, &err)) {
+    dbus_g_method_return_error(context, err);
+    g_error_free(err);
+    return;
+  }
+
+  if (handle == base->self_handle) {
+    _request_avatar_cb(NULL, priv->self->avatar, 
+        priv->self->avatar_size, context); 
+    return;
+  }
+
+  contact = salut_contact_manager_get_contact(priv->contact_manager, handle); 
+  if (contact == NULL || contact->avatar_token == NULL) {
+    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+                      "No known avatar");
+    dbus_g_method_return_error(context, err);
+    g_error_free(err);
+    if (contact != NULL) {
+      g_object_unref(contact);
+    }
+    return;
+  }
+  salut_contact_get_avatar(contact, _request_avatar_cb, context);
+  g_object_unref(contact);
+}
+
+static void
+salut_connection_get_avatar_requirements(TpSvcConnectionInterfaceAvatars *iface,
+                                         DBusGMethodInvocation *context) {
+  const gchar *mimetypes [] = {
+    "image/png",
+    "image/jpeg",
+    NULL };
+
+  tp_svc_connection_interface_avatars_return_from_get_avatar_requirements(
+      context, mimetypes, 0, 0, 0, 0, 0xffff);
+}
+
+static void
+salut_connection_avatar_service_iface_init(gpointer g_iface, 
+    gpointer iface_data)
+{
+TpSvcConnectionInterfaceAvatarsClass *klass =
+   (TpSvcConnectionInterfaceAvatarsClass *) g_iface;
+
+#define IMPLEMENT(x) tp_svc_connection_interface_avatars_implement_##x \
+    (klass, salut_connection_##x)
+  IMPLEMENT(get_avatar_requirements);
+  IMPLEMENT(get_avatar_tokens);
+  IMPLEMENT(request_avatar);
+  IMPLEMENT(set_avatar);
+  IMPLEMENT(clear_avatar);
+#undef IMPLEMENT
+}
+
 /* Connection baseclass function implementations */
 static void 
 salut_connection_create_handle_repos(TpBaseConnection *self,
@@ -1107,6 +1307,8 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
                    G_CALLBACK(_contact_manager_contact_status_cb), self);
   g_signal_connect(priv->contact_manager, "contact-alias-changed",
                    G_CALLBACK(_contact_manager_contact_alias_cb), self);
+  g_signal_connect(priv->contact_manager, "contact-avatar-changed",
+                   G_CALLBACK(_contact_manager_contact_avatar_cb), self);
 
   priv->im_manager = salut_im_manager_new(self, priv->contact_manager);
 
@@ -1179,6 +1381,7 @@ salut_connection_get_interfaces (TpSvcConnection *self,
   const gchar *interfaces [] = {
     TP_IFACE_CONNECTION_INTERFACE_ALIASING,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
     NULL };
   
   tp_svc_connection_return_from_get_interfaces(context, interfaces);
