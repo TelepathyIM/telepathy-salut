@@ -29,6 +29,8 @@ BUILT_SOURCES = \
     salut-avahi-enums-enumtypes.c  \
     salut-avahi-entry-group-signals-marshal.h \
     salut-avahi-entry-group-signals-marshal.c  \
+    salut-avahi-record-browser-signals-marshal.h \
+    salut-avahi-record-browser-signals-marshal.c  \
     salut-avahi-service-browser-signals-marshal.h \
     salut-avahi-service-browser-signals-marshal.c  \
     salut-avahi-service-resolver-signals-marshal.h \
@@ -86,6 +88,8 @@ CORE_SOURCES =                                          \
     salut-avahi-client.h                                \
     salut-avahi-entry-group.c                           \
     salut-avahi-entry-group.h                           \
+    salut-avahi-record-browser.c                        \
+    salut-avahi-record-browser.h                        \
     salut-avahi-service-browser.c                       \
     salut-avahi-service-browser.h                       \
     salut-avahi-service-resolver.c                      \
