@@ -38,6 +38,8 @@
 #define DEBUG_FLAG DEBUG_SELF
 #include <debug.h>
 
+#include "sha1/sha1-util.h"
+
 G_DEFINE_TYPE(SalutSelf, salut_self, G_TYPE_OBJECT)
 
 /* signal enum */
@@ -70,6 +72,8 @@ struct _SalutSelfPrivate
   SalutAvahiClient *client;
   SalutAvahiEntryGroup *presence_group;
   SalutAvahiEntryGroupService *presence;
+
+  SalutAvahiEntryGroup *avatar_group;
 
   gboolean dispose_has_run;
 };
@@ -152,12 +156,21 @@ salut_self_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
   /* release any references held by the object here */
-  g_object_unref(priv->client); 
+  if (priv->client != NULL)
+    g_object_unref(priv->client); 
   priv->client = NULL;
 
-  g_object_unref(priv->presence_group); 
+  if (priv->presence_group != NULL)
+    g_object_unref(priv->presence_group); 
+
   priv->presence_group = NULL;
   priv->presence = NULL;
+
+  if (priv->avatar_group != NULL)
+    g_object_unref(priv->avatar_group); 
+
+  priv->avatar_group = NULL;
+
   if (priv->listener) {
     g_io_channel_unref(priv->listener);
     g_source_remove(priv->io_watch_in);
@@ -470,4 +483,85 @@ salut_self_get_alias(SalutSelf *self) {
     return self->name;
   }
   return priv->alias;
+}
+
+static gboolean
+salut_self_publish_avatar(SalutSelf *self, guint8 *data,
+                          gsize size, GError **error) {
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  gchar *name;
+  gboolean ret;
+  gboolean is_new = FALSE;
+  name = g_strdup_printf("%s._presence._tcp.local", self->name);
+
+  if (priv->avatar_group == NULL) {
+    priv->avatar_group = salut_avahi_entry_group_new();
+    salut_avahi_entry_group_attach(priv->avatar_group, priv->client, NULL);
+    is_new = TRUE;
+  }
+
+  ret = salut_avahi_entry_group_add_record(priv->avatar_group,
+                                           is_new ? 0 : AVAHI_PUBLISH_UPDATE,
+                                           name, 0xA, 120, data, size, error);
+  g_free(name);
+
+  if (is_new) {
+    salut_avahi_entry_group_commit(priv->avatar_group, error);
+  }
+
+
+  return ret;
+}
+
+static void
+salut_self_remove_avatar(SalutSelf *self) {
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+
+  DEBUG("Removing avatar");
+  salut_avahi_entry_group_service_remove_key(priv->presence, "phsh", NULL);
+  if (priv->avatar_group) {
+    g_object_unref(priv->avatar_group);
+    priv->avatar_group = NULL;
+  }
+}
+
+gboolean
+salut_self_set_avatar(SalutSelf *self, guint8 *data,
+                      gsize size, GError **error) {
+  gboolean ret = TRUE;
+  GError *err = NULL;
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+
+  if (size == 0) {
+    salut_self_remove_avatar(self);
+    return TRUE;
+  }
+
+
+  g_free(self->avatar_token);
+  self->avatar_token = NULL;
+
+  g_free(self->avatar);
+  self->avatar = NULL;
+
+  ret = salut_self_publish_avatar(self, data, size, &err);
+
+  if (ret) {
+    self->avatar = g_memdup(data, size);
+    self->avatar_size = size;
+    if (size > 0) {
+      self->avatar_token = sha1_hex(data, size);
+    }
+    ret = salut_avahi_entry_group_service_set(priv->presence, "phsh",
+                                              self->avatar_token,
+                                              &err);
+  }
+
+  if (!ret) {
+    salut_self_remove_avatar(self);
+    g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+    g_error_free(err);
+  }
+
+  return ret;
 }

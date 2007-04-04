@@ -39,6 +39,9 @@ struct _SalutSelf {
     gchar *name;
     SalutPresenceId status;
     gchar *status_message;
+    gchar *avatar_token;
+    guint8 *avatar;
+    gsize avatar_size;
 };
 
 GType salut_self_get_type(void);
@@ -70,6 +73,10 @@ gboolean salut_self_set_presence(SalutSelf *self,
                                  SalutPresenceId status,
                                  const gchar *message,
                                  GError **error);
+
+gboolean salut_self_set_avatar(SalutSelf *self, guint8 *data, 
+                               gsize size, GError **error);
+
 const gchar 
 *salut_self_get_alias(SalutSelf *self);
 
