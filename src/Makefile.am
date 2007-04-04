@@ -104,6 +104,10 @@ CORE_SOURCES =                                          \
     salut-contact-channel.c                             \
     text-helper.c                                       \
     text-helper.h                                       \
+    sha1/sha1-util.h                                    \
+    sha1/sha1-util.c                                    \
+    sha1/sha1.h                                         \
+    sha1/sha1.c                                         \
     debug.c                                             \
     debug.h                                             \
     ansi.h                                              \
