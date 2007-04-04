@@ -29,9 +29,12 @@
 
 #include "salut-avahi-enums.h"
 #include "salut-avahi-service-resolver.h"
+#include "salut-avahi-record-browser.h"
 #include <avahi-common/address.h>
 #include <avahi-common/defs.h>
 #include <avahi-common/malloc.h>
+
+#include <telepathy-glib/util.h>
 
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include <debug.h>
@@ -44,12 +47,22 @@ enum
     FOUND,
     STATUS_CHANGED,
     ALIAS_CHANGED,
+    AVATAR_CHANGED,
     LOST,
     LAST_SIGNAL
 };
 
 static guint signals[LAST_SIGNAL] = {0};
 
+
+typedef struct {
+  salut_contact_get_avatar_callback callback;
+  gpointer user_data;
+} AvatarRequest;
+
+static void
+salut_contact_avatar_request_flush(SalutContact *contact, 
+    guint8 *data, gsize size);
 
 /* private structure */
 typedef struct _SalutContactPrivate SalutContactPrivate;
@@ -61,6 +74,8 @@ struct _SalutContactPrivate
   SalutAvahiClient *client;
   GList *resolvers;
   gboolean found;
+  SalutAvahiRecordBrowser *record_browser;
+  GList *avatar_requests;
 };
 
 #define SALUT_CONTACT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT, SalutContactPrivate))
@@ -74,6 +89,7 @@ salut_contact_init (SalutContact *obj)
   obj->name = NULL;
   obj->status = SALUT_PRESENCE_AVAILABLE;
   obj->status_message = NULL;
+  obj->avatar_token = NULL;
   priv->client = NULL;
   priv->resolvers = NULL;
   priv->found = FALSE;
@@ -109,6 +125,16 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
                                 salut_contact_marshal_VOID__STRING,
                                 G_TYPE_NONE, 1,
                                 G_TYPE_STRING);
+
+  signals[AVATAR_CHANGED] = g_signal_new("avatar-changed",
+                                G_OBJECT_CLASS_TYPE(salut_contact_class),
+                                G_SIGNAL_RUN_LAST,
+                                0,
+                                NULL, NULL,
+                                salut_contact_marshal_VOID__STRING,
+                                G_TYPE_NONE, 1,
+                                G_TYPE_STRING);
+
   signals[STATUS_CHANGED] = g_signal_new("status-changed",
                                 G_OBJECT_CLASS_TYPE(salut_contact_class),
                                 G_SIGNAL_RUN_LAST,
@@ -141,6 +167,8 @@ salut_contact_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  salut_contact_avatar_request_flush(self, NULL, 0);
+
   /* release any references held by the object here */
   if (priv->client) 
     g_object_unref(priv->client);
@@ -163,6 +191,7 @@ salut_contact_finalize (GObject *object) {
   g_free(self->name);
   g_free(self->status_message);
   g_free(priv->alias);
+  g_free(self->avatar_token);
 
   G_OBJECT_CLASS (salut_contact_parent_class)->finalize (object);
 }
@@ -255,7 +284,11 @@ update_alias(SalutContact *self, const gchar *new,
   *changed = FALSE;
 }
 
-
+static void
+purge_cached_avatar(SalutContact *self, const gchar *token) {
+  g_free(self->avatar_token);
+  self->avatar_token = g_strdup(token);
+}
 
 static void
 contact_resolved_cb(SalutAvahiServiceResolver *resolver, 
@@ -270,6 +303,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   gboolean status_changed = FALSE;
   gboolean alias_seen = FALSE;
   gboolean alias_changed = FALSE;
+  gboolean avatar_changed = FALSE;
   gchar *first = NULL;
   gchar *last = NULL;
 
@@ -361,6 +395,29 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     status_changed = TRUE;
     alias_changed = TRUE;
     priv->found = TRUE;
+  }
+
+  if ((t = avahi_string_list_find(txt, "phsh")) != NULL) { 
+    gchar *key;
+    gchar *value;
+    avahi_string_list_get_pair(t, &key, &value, NULL);
+
+    if (tp_strdiff(self->avatar_token, value)) {
+      /* Purge the cache */
+      purge_cached_avatar(self, value);
+      avatar_changed = TRUE;
+    }
+
+    avahi_free(key);
+    avahi_free(value);
+  } else if (self->avatar_token != NULL) {
+    purge_cached_avatar(self, NULL);
+    avatar_changed = TRUE;
+  }
+
+  if (avatar_changed) {
+    g_signal_emit(self, signals[AVATAR_CHANGED], 0, 
+                  self->avatar_token);
   }
 
   if (alias_changed) {
@@ -563,3 +620,110 @@ salut_contact_has_services(SalutContact *contact) {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
   return priv->resolvers != NULL;
 }
+
+static void
+salut_contact_avatar_request_flush(SalutContact *contact,
+                                   guint8 *data, gsize size) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE(contact);
+  GList *list, *liststart;
+  AvatarRequest *request;
+
+  
+  if (priv->record_browser != NULL) 
+    g_object_unref(priv->record_browser);
+  priv->record_browser = NULL;
+
+  liststart = priv->avatar_requests;
+  priv->avatar_requests = NULL;
+
+  for (list = liststart; list != NULL; list = g_list_next(list)) {
+    request = (AvatarRequest *)list->data;
+    request->callback(contact, data, size, request->user_data);
+    g_slice_free(AvatarRequest, request);
+  }
+  g_list_free(liststart);
+}
+
+static void 
+salut_contact_avatar_all_for_now(SalutAvahiRecordBrowser *browser,
+                                 gpointer user_data) {
+  SalutContact *contact = SALUT_CONTACT(user_data);
+
+  DEBUG("All for now for resolving %s's record", contact->name);
+  salut_contact_avatar_request_flush(contact, NULL, 0);
+}
+
+static void 
+salut_contact_avatar_failure(SalutAvahiRecordBrowser *browser, GError *error,
+                             gpointer user_data) {
+  SalutContact *contact = SALUT_CONTACT(user_data);
+  
+  DEBUG("Resolving record for %s failed: %s", contact->name, error->message);
+
+  salut_contact_avatar_request_flush(contact, NULL, 0);
+}
+
+static void
+salut_contact_avatar_found(SalutAvahiRecordBrowser *browser,
+                           AvahiIfIndex interface, AvahiProtocol protocol,
+                           gchar *name, guint16 clazz, guint16 type,
+                           guint8 *rdata, gsize rdata_size, 
+                           AvahiLookupFlags flags, gpointer user_data) {
+  SalutContact *contact = SALUT_CONTACT(user_data);
+
+  DEBUG("Found avatar for %s for size %d", contact->name, rdata_size);
+
+  if (rdata_size <= 0)
+    salut_contact_avatar_request_flush(contact, NULL, 0);
+
+  salut_contact_avatar_request_flush(contact, rdata, rdata_size);
+}
+
+static void
+salut_contact_retrieve_avatar(SalutContact *contact) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+  gchar *name;
+  GError *error = NULL;
+  
+  if (priv->record_browser != NULL) {
+    return;
+  }
+
+  name = g_strdup_printf("%s._presence._tcp.local", contact->name);  
+  priv->record_browser = salut_avahi_record_browser_new(name, 0xA);  
+  g_free(name);
+
+  g_signal_connect(priv->record_browser, "new-record",
+                   G_CALLBACK(salut_contact_avatar_found), contact);
+  g_signal_connect(priv->record_browser, "all-for-now",
+                   G_CALLBACK(salut_contact_avatar_all_for_now), contact);
+  g_signal_connect(priv->record_browser, "failure",
+                   G_CALLBACK(salut_contact_avatar_failure), contact);
+
+  salut_avahi_record_browser_attach(priv->record_browser, 
+                                    priv->client, &error);
+}
+
+void
+salut_contact_get_avatar(SalutContact *contact,
+                         salut_contact_get_avatar_callback callback,
+                         gpointer user_data) {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+  AvatarRequest *request;
+
+  g_assert(contact != NULL);
+  DEBUG("Requesting avatar for: %s", contact->name);
+
+  if (contact->avatar_token == NULL) {
+    callback(contact, NULL, 0, user_data);
+    return;
+  }
+
+  request = g_slice_new0(AvatarRequest);
+  request->callback = callback;
+  request->user_data = user_data;
+  priv->avatar_requests = g_list_append(priv->avatar_requests, request);  
+
+  salut_contact_retrieve_avatar(contact);
+}
+

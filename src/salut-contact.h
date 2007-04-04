@@ -41,6 +41,7 @@ struct _SalutContact {
     GObject parent;
     gchar *name;
     SalutPresenceId status;
+    gchar *avatar_token;
     gchar *status_message;
 };
 
@@ -91,6 +92,16 @@ salut_contact_get_alias(SalutContact *contact);
 
 gboolean
 salut_contact_has_services(SalutContact *contact);
+
+typedef void (*salut_contact_get_avatar_callback)(SalutContact *contact,
+                                                  guint8 *avatar,
+                                                  gsize size,
+                                                  gpointer user_data);
+
+void
+salut_contact_get_avatar(SalutContact *contact,
+                         salut_contact_get_avatar_callback callback,
+                         gpointer user_data1);
 
 G_END_DECLS
 
