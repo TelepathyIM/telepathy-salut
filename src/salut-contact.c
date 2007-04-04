@@ -416,6 +416,8 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   }
 
   if (avatar_changed) {
+    DEBUG("Emitting avatar changed for %s with token %s",
+          self->name, self->avatar_token);
     g_signal_emit(self, signals[AVATAR_CHANGED], 0, 
                   self->avatar_token);
   }
@@ -712,17 +714,18 @@ salut_contact_get_avatar(SalutContact *contact,
   AvatarRequest *request;
 
   g_assert(contact != NULL);
-  DEBUG("Requesting avatar for: %s", contact->name);
 
   if (contact->avatar_token == NULL) {
+    DEBUG("Avatar requestes for a contact without one (%s)", contact->name);
     callback(contact, NULL, 0, user_data);
     return;
   }
 
+  DEBUG("Requesting avatar for: %s", contact->name);
   request = g_slice_new0(AvatarRequest);
   request->callback = callback;
   request->user_data = user_data;
-  priv->avatar_requests = g_list_append(priv->avatar_requests, request);  
+  priv->avatar_requests = g_list_append(priv->avatar_requests, request);
 
   salut_contact_retrieve_avatar(contact);
 }
