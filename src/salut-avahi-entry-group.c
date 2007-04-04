@@ -389,6 +389,52 @@ salut_avahi_entry_group_add_service_full(SalutAvahiEntryGroup *group,
   return ret;
 }
 
+gboolean
+salut_avahi_entry_group_add_record(SalutAvahiEntryGroup *group,
+                                   AvahiPublishFlags flags,
+                                   const gchar *name, 
+                                   guint16 type,
+                                   guint32 ttl,
+                                   const void *rdata,
+                                   gsize size,
+                                   GError **error) {
+ return salut_avahi_entry_group_add_record_full(group, 
+     AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, flags,
+     name, AVAHI_DNS_CLASS_IN, type, ttl, rdata, size, error); 
+}
+
+gboolean
+salut_avahi_entry_group_add_record_full(SalutAvahiEntryGroup *group,
+                                        AvahiIfIndex interface,
+                                        AvahiProtocol protocol,
+                                        AvahiPublishFlags flags,
+                                        const gchar *name, 
+                                        guint16 clazz,
+                                        guint16 type,
+                                        guint32 ttl,
+                                        const void *rdata,
+                                        gsize size,
+                                        GError **error) {
+  int ret;
+  SalutAvahiEntryGroupPrivate *priv = 
+      SALUT_AVAHI_ENTRY_GROUP_GET_PRIVATE(group);
+  g_assert(group != NULL && priv->group != NULL);
+
+  ret = avahi_entry_group_add_record( priv->group, interface, protocol, 
+            flags, name, clazz, type, ttl, rdata, size);
+  if (ret) {
+    if (error != NULL ) {
+      *error = g_error_new(SALUT_AVAHI_ERRORS, ret,
+                           "Setting raw record failed: %s", 
+                           avahi_strerror(ret));
+    }
+    printf("--> %s\n", avahi_strerror(ret));
+    return FALSE;
+  }
+  return TRUE;
+}
+
+
 void 
 salut_avahi_entry_group_service_freeze(SalutAvahiEntryGroupService *service) {
   SalutAvahiEntryGroupServicePrivate *p = 
