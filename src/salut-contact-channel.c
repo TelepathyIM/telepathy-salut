@@ -18,6 +18,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#define _TP_CM_UPDATED_FOR_0_5_7
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,11 +108,11 @@ salut_contact_channel_constructor (GType type, guint n_props,
   tp_handle_ref(handle_repo, priv->handle);
 
   /* Impossible to add/remove/rescind on any of our lists */
-  tp_group_mixin_init(TP_SVC_CHANNEL_INTERFACE_GROUP(obj),
+  tp_group_mixin_init(obj,
       G_STRUCT_OFFSET(SalutContactChannel, group),
       contact_repo, base_conn->self_handle);
 
-  tp_group_mixin_change_flags(TP_SVC_CHANNEL_INTERFACE_GROUP(obj), 0, 0);
+  tp_group_mixin_change_flags(obj, 0, 0);
   return obj;
 }
 
@@ -217,7 +219,7 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE, "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
-  tp_group_mixin_class_init((TpSvcChannelInterfaceGroupClass *)object_class, 
+  tp_group_mixin_class_init(object_class, 
     G_STRUCT_OFFSET(SalutContactChannelClass, group_class),
     NULL, NULL);
 }
@@ -256,7 +258,7 @@ salut_contact_channel_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free(priv->object_path);
 
-  tp_group_mixin_finalize(TP_SVC_CHANNEL_INTERFACE_GROUP(object));
+  tp_group_mixin_finalize(object);
 
   G_OBJECT_CLASS (salut_contact_channel_parent_class)->finalize (object);
 }

@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+/* FIXME: take this out after 0.5.7 is released */
+#define _TP_CM_UPDATED_FOR_0_5_7
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -239,11 +242,11 @@ salut_muc_channel_constructor (GType type, guint n_props,
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object(bus, priv->object_path, obj);
 
-  tp_group_mixin_init(TP_SVC_CHANNEL_INTERFACE_GROUP(obj), 
+  tp_group_mixin_init(obj, 
       G_STRUCT_OFFSET(SalutMucChannel, group), 
       contact_repo, base_conn->self_handle);
 
-  tp_group_mixin_change_flags(TP_SVC_CHANNEL_INTERFACE_GROUP(obj), 
+  tp_group_mixin_change_flags(obj, 
        TP_CHANNEL_GROUP_FLAG_CAN_ADD|TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD, 0);
 
   return obj;
@@ -309,7 +312,7 @@ create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) 
 }
 
 static gboolean 
-muc_channel_add_member(TpSvcChannelInterfaceGroup *iface, TpHandle handle, 
+muc_channel_add_member(GObject *iface, TpHandle handle, 
                        const gchar *message, GError **error) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
@@ -326,7 +329,7 @@ muc_channel_add_member(TpSvcChannelInterfaceGroup *iface, TpHandle handle,
     tp_intset_add(add, handle);
     /* Add to members */
     if (salut_muc_channel_connect(self, NULL)) {
-      tp_group_mixin_change_members(TP_SVC_CHANNEL_INTERFACE_GROUP(self), 
+      tp_group_mixin_change_members(G_OBJECT(self),
           message, add, empty, empty, empty, base_connection->self_handle,
           TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
     } else {
@@ -426,7 +429,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   tp_text_mixin_class_init(object_class,
                            G_STRUCT_OFFSET(SalutMucChannelClass, text_class));
 
-  tp_group_mixin_class_init((TpSvcChannelInterfaceGroupClass *)object_class, 
+  tp_group_mixin_class_init(object_class, 
     G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
     muc_channel_add_member, NULL);
 }
@@ -466,7 +469,7 @@ salut_muc_channel_finalize (GObject *object)
   g_free(priv->object_path);
 
   tp_text_mixin_finalize(object);
-  tp_group_mixin_finalize(TP_SVC_CHANNEL_INTERFACE_GROUP(object));
+  tp_group_mixin_finalize(object);
 
   G_OBJECT_CLASS (salut_muc_channel_parent_class)->finalize (object);
 }
@@ -498,14 +501,14 @@ salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor,
     GError *error = NULL;
     GArray *members =  g_array_sized_new (FALSE, FALSE, sizeof(TpHandle), 1);
     g_array_append_val(members, base_connection->self_handle);
-    tp_group_mixin_add_members(TP_SVC_CHANNEL_INTERFACE_GROUP(self), 
+    tp_group_mixin_add_members(G_OBJECT(self),
         members, "", &error);
     g_array_free(members, TRUE);
   } else {
     TpIntSet *empty = tp_intset_new();
     TpIntSet *local_pending = tp_intset_new();
     tp_intset_add(local_pending, base_connection->self_handle);
-    tp_group_mixin_change_members(TP_SVC_CHANNEL_INTERFACE_GROUP(self), stanza, 
+    tp_group_mixin_change_members(G_OBJECT(self), stanza,
                                   empty, empty,
                                   local_pending, empty,
                                   invitor,
@@ -588,9 +591,9 @@ salut_muc_channel_change_members(SalutMucChannel *self,
   empty = tp_intset_new();
   changes = tp_intset_new();
   tp_intset_add(changes, from_handle);
-  tp_group_mixin_change_members(TP_SVC_CHANNEL_INTERFACE_GROUP(self),
-                                "", 
-                                joining ? changes : empty, 
+  tp_group_mixin_change_members(G_OBJECT(self),
+                                "",
+                                joining ? changes : empty,
                                 joining ? empty : changes,
                                 empty, empty,
                                 from_handle,
