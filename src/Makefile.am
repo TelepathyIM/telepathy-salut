@@ -121,7 +121,6 @@ write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        -ltelepathy-glib
-
 telepathy_salut_SOURCES = \
     salut.c 
 
@@ -129,12 +128,15 @@ telepathy_salut_SOURCES = \
 telepathy_salut_LDADD = libsalut-convenience.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         -ltelepathy-glib
+if ENABLE_OLPC
+  telepathy_salut_LDADD += $(top_builddir)/extensions/libsalut-extensions.la
+  write_mgr_file_LDADD += $(top_builddir)/extensions/libsalut-extensions.la
+endif
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
 AM_CFLAGS = $(ERROR_CFLAGS) @DBUS_CFLAGS@ \
   @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
-  @HANDLE_LEAK_DEBUG_CFLAGS@ \
   @TELEPATHY_GLIB_CFLAGS@ \
   @AVAHI_CFLAGS@ \
   -I $(top_srcdir)/lib -I $(top_builddir)/lib

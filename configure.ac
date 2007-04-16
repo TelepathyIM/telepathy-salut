@@ -46,20 +46,40 @@ AC_ARG_ENABLE(debug,
   AC_HELP_STRING([--disable-debug],[compile without debug code]),
     enable_debug=$enableval, enable_debug=yes )
 
-AC_ARG_ENABLE(handle-leak-debug,
-  AC_HELP_STRING([--enable-handle-leak-debug],[compile with handle leak debugging code]),
-    enable_handle_leak_debug=$enableval, enable_handle_leak_debug=no )
-
 if test x$enable_debug = xyes; then
   AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
 fi
 
-if test x$enable_handle_leak_debug = xyes; then
-  AC_DEFINE(ENABLE_HANDLE_LEAK_DEBUG, [], [Enable handle leak debug code])
-  HANDLE_LEAK_DEBUG_CFLAGS="-rdynamic"
+dnl Check for code generation tools
+XSLTPROC=
+AC_CHECK_PROGS([XSLTPROC], [xsltproc])
+if test -z "$XSLTPROC"; then
+  AC_MSG_ERROR([xsltproc (from the libxslt source package) is required])
+fi
+DBUS_BINDING_TOOL=
+AC_CHECK_PROGS([DBUS_BINDING_TOOL], [dbus-binding-tool])
+if test -z "$DBUS_BINDING_TOOL"; then
+  AC_MSG_ERROR([dbus-binding-tool (from dbus-glib) is required])
+fi
+PYTHON=
+AC_CHECK_PROGS([PYTHON], [python2.3 python2.4 python2.5 python])
+if test -z "$PYTHON"; then
+  AC_MSG_ERROR([Python is required to compile this package])
 fi
 
-AC_SUBST(HANDLE_LEAK_DEBUG_CFLAGS)
+dnl olpc specific code switch
+AC_ARG_ENABLE(olpc,
+  AC_HELP_STRING([--enable-olpc],[compile with olpc specific code]),
+    enable_olpc=$enableval, enable_olpc=no )
+
+if test x$enable_olpc = xyes; then
+  AC_DEFINE(ENABLE_OLPC, [], [Enable olpc code])
+fi
+
+AM_CONDITIONAL(ENABLE_OLPC, test "x$enable_olpc" = "xyes")
+
+AC_SUBST(ENABLE_OLPC)
+
 
 AC_HEADER_STDC([])
 AC_C_INLINE
@@ -143,9 +163,11 @@ AC_OUTPUT( Makefile                       \
            lib/Makefile                   \
            lib/gibber/Makefile            \
            lib/gibber/examples/Makefile   \
+           lib/tools/Makefile             \
            src/Makefile                   \
            m4/Makefile                    \
            data/Makefile                  \
+           extensions/Makefile            \
            tests/Makefile                 \
            tests/inputs/Makefile
 )

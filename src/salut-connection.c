@@ -75,6 +75,18 @@
       return; \
     }
 
+#ifdef ENABLE_OLPC
+
+/* XXX: this should be generated */
+#define TP_IFACE_OLPC_BUDDY_INFO \
+    "org.laptop.Telepathy.BuddyInfo"
+
+#include <extensions/_gen/svc-OLPC_Buddy_Info.h>
+
+static void salut_connection_olpc_buddy_info_iface_init(gpointer g_iface,
+                                                        gpointer iface_data);
+
+#endif
 
 static void
 salut_connection_connection_service_iface_init(gpointer g_iface, 
@@ -103,6 +115,10 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        salut_connection_presence_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
+#ifdef ENABLE_OLPC
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_OLPC_BUDDY_INFO,
+       salut_connection_olpc_buddy_info_iface_init);
+#endif
     )
 
 /* properties */
@@ -1382,6 +1398,9 @@ salut_connection_get_interfaces (TpSvcConnection *self,
     TP_IFACE_CONNECTION_INTERFACE_ALIASING,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+#ifdef ENABLE_OLPC
+    TP_IFACE_OLPC_BUDDY_INFO,
+#endif
     NULL };
   
   tp_svc_connection_return_from_get_interfaces(context, interfaces);
@@ -1527,3 +1546,15 @@ salut_connection_connection_service_iface_init(gpointer g_iface,
   IMPLEMENT(request_handles);
 #undef IMPLEMENT
 }
+
+#ifdef ENABLE_OLPC
+static void 
+salut_connection_olpc_buddy_info_iface_init(gpointer g_iface,
+    gpointer iface_data) {
+  //TpSvcConnectionClass *klass =
+  //  (TpSvcConnectionClass *) g_iface;
+#define IMPLEMENT(x) tp_svc_olpc_buddy_info_implement_##x (klass, \
+    salut_connection_##x)
+}
+#endif
+
