@@ -292,8 +292,7 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
     created = FALSE;
   } else {
     GObject *connection = _get_connection(mgr,
-                                        tp_handle_inspect(
-                                          room_repo, handle), 
+                                          priv->connection->name,
                                           NULL, NULL, NULL);
     created = TRUE;
     if (connection == NULL) {
