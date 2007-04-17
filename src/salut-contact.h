@@ -20,6 +20,8 @@
 #ifndef __SALUT_CONTACT_H__
 #define __SALUT_CONTACT_H__
 
+#include "config.h"
+
 #include <netinet/in.h>
 #include <glib-object.h>
 
@@ -29,6 +31,14 @@
 #include "salut-presence.h"
 
 G_BEGIN_DECLS
+
+
+#define  SALUT_CONTACT_ALIAS_CHANGED  0x1
+#define  SALUT_CONTACT_STATUS_CHANGED 0x2
+#define  SALUT_CONTACT_AVATAR_CHANGED 0x4
+#ifdef ENABLE_OLPC
+#define  SALUT_CONTACT_OLPC_PROPERTIES 0x8
+#endif /* ENABLE_OLPC */
 
 typedef struct _SalutContact SalutContact;
 typedef struct _SalutContactClass SalutContactClass;
@@ -43,6 +53,10 @@ struct _SalutContact {
     SalutPresenceId status;
     gchar *avatar_token;
     gchar *status_message;
+#ifdef ENABLE_OLPC
+    gchar *key;
+    gchar *color;
+#endif /* ENABLE_OLPC */
 };
 
 GType salut_contact_get_type(void);

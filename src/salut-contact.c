@@ -45,10 +45,8 @@ G_DEFINE_TYPE(SalutContact, salut_contact, G_TYPE_OBJECT)
 enum
 {
     FOUND,
-    STATUS_CHANGED,
-    ALIAS_CHANGED,
-    AVATAR_CHANGED,
     LOST,
+    CONTACT_CHANGE,
     LAST_SIGNAL
 };
 
@@ -117,33 +115,14 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
                                 g_cclosure_marshal_VOID__VOID,
                                 G_TYPE_NONE, 0);
 
-  signals[ALIAS_CHANGED] = g_signal_new("alias-changed",
+  signals[CONTACT_CHANGE] = g_signal_new("contact-change",
                                 G_OBJECT_CLASS_TYPE(salut_contact_class),
                                 G_SIGNAL_RUN_LAST,
                                 0,
                                 NULL, NULL,
-                                salut_contact_marshal_VOID__STRING,
+                                g_cclosure_marshal_VOID__INT,
                                 G_TYPE_NONE, 1,
-                                G_TYPE_STRING);
-
-  signals[AVATAR_CHANGED] = g_signal_new("avatar-changed",
-                                G_OBJECT_CLASS_TYPE(salut_contact_class),
-                                G_SIGNAL_RUN_LAST,
-                                0,
-                                NULL, NULL,
-                                salut_contact_marshal_VOID__STRING,
-                                G_TYPE_NONE, 1,
-                                G_TYPE_STRING);
-
-  signals[STATUS_CHANGED] = g_signal_new("status-changed",
-                                G_OBJECT_CLASS_TYPE(salut_contact_class),
-                                G_SIGNAL_RUN_LAST,
-                                0,
-                                NULL, NULL,
-                                salut_contact_marshal_VOID__INT_STRING,
-                                G_TYPE_NONE, 2,
-                                SALUT_TYPE_PRESENCE_ID,
-                                G_TYPE_STRING);
+                                G_TYPE_INT);
 
   signals[LOST] = g_signal_new("lost",
                                 G_OBJECT_CLASS_TYPE(salut_contact_class),
@@ -266,22 +245,23 @@ salut_contact_new(SalutAvahiClient *client, const gchar *name) {
 
 /* valid is true if this was a valid alias 
  * changed is true if the contacts alias actually changed */
-static void
-update_alias(SalutContact *self, const gchar *new, 
-            gboolean *valid, gboolean *changed) {
+static gboolean
+update_alias(SalutContact *self, const gchar *new, gboolean *valid) {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   if (new == NULL || *new == '\0') {
-    *valid = *changed = FALSE;
+    *valid = FALSE;
+    return FALSE;
   }
 
   if (priv->alias == NULL || strcmp(priv->alias, new) != 0)  {
     g_free(priv->alias);
     priv->alias = g_strdup(new);
-    *valid = *changed = TRUE;
+    *valid = TRUE;
+    return TRUE;
   }
 
   *valid = TRUE;
-  *changed = FALSE;
+  return FALSE;
 }
 
 static void
@@ -300,12 +280,12 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   SalutContact *self = SALUT_CONTACT (userdata);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   AvahiStringList *t;
-  gboolean status_changed = FALSE;
-  gboolean alias_seen = FALSE;
-  gboolean alias_changed = FALSE;
-  gboolean avatar_changed = FALSE;
+  gint changes = 0;
   gchar *first = NULL;
   gchar *last = NULL;
+  gboolean alias_seen = FALSE;
+
+#define SET_CHANGE(x) changes |= x
 
   if ((t = avahi_string_list_find(txt, "status")) != NULL) { 
     int i;
@@ -319,7 +299,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     }
 
     if (i != self->status && i < SALUT_PRESENCE_NR_PRESENCES) {
-      status_changed = TRUE;
+      SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
       self->status = i;
     }
 
@@ -331,14 +311,14 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     gchar *key, *value;
     avahi_string_list_get_pair(t, &key, &value, NULL);
     if (self->status_message == NULL || strcmp(self->status_message, value)) {
-      status_changed = TRUE;
+      SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
       g_free(self->status_message);
       self->status_message = g_strdup(value);
     }
     avahi_free(key);
     avahi_free(value);
   } else if (self->status_message != NULL) {
-    status_changed = TRUE;
+    SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
     g_free(self->status_message);
     self->status_message = NULL;
   }
@@ -347,7 +327,9 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     gchar *key;
     gchar *value;
     avahi_string_list_get_pair(t, &key, &value, NULL);
-    update_alias(self, value, &alias_seen, &alias_changed);
+    if (update_alias(self, value, &alias_seen)) { 
+      SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
+    }
     avahi_free(key);
     avahi_free(value);
   } 
@@ -371,12 +353,18 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
 
       alias = g_strdup_printf("%s %s", first, last);
 
-      update_alias(self, alias, &alias_seen, &alias_changed);
+      if (update_alias(self, alias, &alias_seen)) {
+        SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
+      }
       g_free(alias);
     } else if (first != NULL) {
-      update_alias(self, first, &alias_seen, &alias_changed);
+      if (update_alias(self, first, &alias_seen)) {
+        SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
+      }
     } else if (last != NULL) {
-      update_alias(self, last, &alias_seen, &alias_changed);
+      if (update_alias(self, last, &alias_seen)) {
+        SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
+      }
     }
     avahi_free(first);
     avahi_free(last);
@@ -386,14 +374,13 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     /* No alias anymore ? */
     g_free(priv->alias);
     priv->alias = NULL;
-    alias_changed = TRUE;
+    SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
   }
 
   if (!priv->found) {
     g_signal_emit(self, signals[FOUND], 0);
     /* Initially force updates of everything */
-    status_changed = TRUE;
-    alias_changed = TRUE;
+    SET_CHANGE(0xff);
     priv->found = TRUE;
   }
 
@@ -405,31 +392,48 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     if (tp_strdiff(self->avatar_token, value)) {
       /* Purge the cache */
       purge_cached_avatar(self, value);
-      avatar_changed = TRUE;
+      SET_CHANGE(SALUT_CONTACT_AVATAR_CHANGED);
     }
 
     avahi_free(key);
     avahi_free(value);
   } else if (self->avatar_token != NULL) {
     purge_cached_avatar(self, NULL);
-    avatar_changed = TRUE;
+    SET_CHANGE(SALUT_CONTACT_AVATAR_CHANGED);
   }
 
-  if (avatar_changed) {
-    DEBUG("Emitting avatar changed for %s with token %s",
-          self->name, self->avatar_token);
-    g_signal_emit(self, signals[AVATAR_CHANGED], 0, 
-                  self->avatar_token);
-  }
+#ifdef ENABLE_OLPC
+  if ((t = avahi_string_list_find(txt, "olpc-color")) != NULL) { 
+    gchar *key;
+    gchar *value;
+    avahi_string_list_get_pair(t, &key, &value, NULL);
 
-  if (alias_changed) {
-    g_signal_emit(self, signals[ALIAS_CHANGED], 0, 
-                  salut_contact_get_alias(self));
-  }
+    if (tp_strdiff(self->color, value)) {
+      g_free(self->color);
+      self->color = g_strdup(value);
+      SET_CHANGE(SALUT_CONTACT_OLPC_PROPERTIES);
+    }
+    avahi_free(key);
+    avahi_free(value);
+  } 
 
-  if (status_changed) {
-    g_signal_emit(self, signals[STATUS_CHANGED], 0, self->status, 
-                                                    self->status_message);
+  if ((t = avahi_string_list_find(txt, "olpc-key")) != NULL) { 
+    gchar *key;
+    gchar *value;
+    avahi_string_list_get_pair(t, &key, &value, NULL);
+
+    if (tp_strdiff(self->key, value)) {
+      g_free(self->key);
+      self->key = g_strdup(value);
+      SET_CHANGE(SALUT_CONTACT_OLPC_PROPERTIES);
+    }
+    avahi_free(key);
+    avahi_free(value);
+  }
+#endif
+
+  if (changes != 0) {
+    g_signal_emit(self, signals[CONTACT_CHANGE], 0, changes); 
   }
 }
 
@@ -442,8 +446,8 @@ contact_lost(SalutContact *contact) {
   contact->status_message = NULL;
 
   priv->found = FALSE;
-  g_signal_emit(contact, signals[STATUS_CHANGED], 0, 
-                contact->status, contact->status_message);
+  g_signal_emit(contact, signals[CONTACT_CHANGE], 0, 
+      SALUT_CONTACT_STATUS_CHANGED);
   g_signal_emit(contact, signals[LOST], 0);
 }
 

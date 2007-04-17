@@ -565,3 +565,35 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 
   return ret;
 }
+
+#ifdef ENABLE_OLPC
+gboolean salut_self_set_olpc_properties(SalutSelf *self, 
+    const gchar *key, const gchar *color, GError **error) {
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  GError *err = NULL;
+
+  salut_avahi_entry_group_service_freeze(priv->presence);
+  if (key != NULL) {
+    g_free(self->key);
+    self->key = g_strdup(key);
+
+    salut_avahi_entry_group_service_set(priv->presence, "olpc-key", 
+        key, NULL);
+  }
+  if (color != NULL) {
+    g_free(self->color);
+    self->color = g_strdup(color);
+
+    salut_avahi_entry_group_service_set(priv->presence, "olpc-color", 
+        color, NULL);
+  }
+
+  if (!salut_avahi_entry_group_service_thaw(priv->presence, &err)) {
+    g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+    g_error_free(err);
+    return FALSE;
+  }
+  return TRUE;
+}
+
+#endif /* ENABLE_OLPC */

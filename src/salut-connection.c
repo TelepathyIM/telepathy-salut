@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ctype.h>
+
 #include <dbus/dbus-protocol.h>
 #include <dbus/dbus-glib-bindings.h>
 #include <dbus/dbus-glib.h>
@@ -418,18 +420,10 @@ get_statuses_arguments(void) {
 }
 
 void
-_contact_manager_contact_status_cb(SalutContactManager *mgr, 
-                                   SalutContact *contact,
-                                   SalutPresenceId status,
-                                   gchar *message,
-                                   gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
-  /* TODO, this can be shortcutted as we have all info needed right here */
-
-  emit_one_presence_update(self, 
-      tp_handle_lookup(handle_repo, contact->name, NULL, NULL));
+_contact_manager_contact_status_changed(SalutConnection *self,
+                                        SalutContact *contact,
+                                        TpHandle handle) {
+  emit_one_presence_update(self, handle);
 }
 
 static void
@@ -953,8 +947,8 @@ salut_connection_presence_service_iface_init(gpointer g_iface,
 {
   TpSvcConnectionInterfacePresenceClass *klass =
     (TpSvcConnectionInterfacePresenceClass *) g_iface;
-#define IMPLEMENT(x) tp_svc_connection_interface_presence_implement_##x (klass, \
-    salut_connection_##x)
+#define IMPLEMENT(x) tp_svc_connection_interface_presence_implement_##x \
+    (klass, salut_connection_##x)
   IMPLEMENT(set_status);
   IMPLEMENT(remove_status);
   IMPLEMENT(request_presence);
@@ -1035,23 +1029,11 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
 }
 
 void
-_contact_manager_contact_alias_cb(SalutContactManager *mgr, 
-                                  SalutContact *contact,
-                                  gchar *alias,
-                                  gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
+_contact_manager_contact_alias_changed(SalutConnection *self,
+                                       SalutContact *contact,
+                                       TpHandle handle) {
   GPtrArray *aliases;
   GValue entry = {0, };
-  TpHandle handle ;
-
-  /* FIXME. The contact should probably know it's own handle */
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
-
-  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
-  if (handle == 0) {
-    DEBUG("Invalid handle updated");
-  }
 
   g_value_init(&entry, TP_ALIAS_PAIR_TYPE);
   g_value_take_boxed(&entry, 
@@ -1059,7 +1041,7 @@ _contact_manager_contact_alias_cb(SalutContactManager *mgr,
 
   dbus_g_type_struct_set(&entry, 
                          0, handle,
-                         1, alias,
+                         1, salut_contact_get_alias(contact),
                          G_MAXUINT);
   aliases = g_ptr_array_sized_new(1);
   g_ptr_array_add(aliases, g_value_get_boxed(&entry));
@@ -1089,24 +1071,12 @@ salut_connection_aliasing_service_iface_init(gpointer g_iface,
 
 /* Avatar service implementation */
 void
-_contact_manager_contact_avatar_cb(SalutContactManager *mgr, 
-                                  SalutContact *contact,
-                                  gchar *token,
-                                  gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
-  TpHandle handle ;
-
-  /* FIXME. The contact should probably know it's own handle */
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
-
-  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
-  if (handle == 0) {
-    DEBUG("Invalid handle updated");
-  }
+_contact_manager_contact_avatar_changed(SalutConnection *self,
+                                        SalutContact *contact,
+                                        TpHandle handle) {
 
   tp_svc_connection_interface_avatars_emit_avatar_updated(self, 
-                                                          (guint)handle, token);
+      (guint)handle, contact->avatar_token);
 }
 
 static void
@@ -1281,6 +1251,227 @@ TpSvcConnectionInterfaceAvatarsClass *klass =
 #undef IMPLEMENT
 }
 
+#ifdef ENABLE_OLPC
+static GArray *
+key_to_garray(const gchar *key) {
+  GArray *arr;
+  gsize len;
+  guchar *output;
+
+  output = g_base64_decode(key, &len);
+
+  arr = g_array_sized_new(FALSE, FALSE, sizeof(guchar), len);
+  g_array_append_vals(arr, output, len);
+  g_free(output);
+  return arr;
+}
+
+static GValue *
+new_gvalue(GType type) {
+  GValue *result = g_slice_new0(GValue);
+  g_value_init(result, type);
+  return result;
+}
+
+static void
+free_gvalue (GValue *value)
+{
+    g_value_unset (value);
+    g_slice_free (GValue, value);
+}
+
+static GHashTable *
+get_properties_hash(const gchar *key, const gchar *color) {
+  GHashTable *properties;
+  GValue *gvalue;
+
+  properties = g_hash_table_new_full(g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) free_gvalue);
+  if (key != NULL) {
+    GArray *arr = key_to_garray(key);
+    gvalue = new_gvalue(DBUS_TYPE_G_UCHAR_ARRAY);
+    g_value_take_boxed(gvalue, arr);
+    g_hash_table_insert(properties, "key", gvalue);
+  }
+
+  if (color != NULL) {
+    gvalue = new_gvalue(G_TYPE_STRING);
+    g_value_set_string(gvalue, color);
+    g_hash_table_insert(properties, "color", gvalue);
+  }
+
+  return properties;
+}
+
+static void
+emit_properties_changed(SalutConnection *connection,
+    TpHandle handle, const gchar *key, const gchar *color) {
+
+  GHashTable *properties;
+  properties = get_properties_hash(key, color);
+
+  tp_svc_olpc_buddy_info_emit_properties_changed(connection, 
+      handle, properties);
+
+  g_hash_table_destroy(properties);
+}
+
+static void
+_contact_manager_contact_olpc_properties_changed(SalutConnection *self, 
+                                                 SalutContact *contact, 
+                                                 TpHandle handle) {
+  emit_properties_changed(self, handle, contact->key,  contact->color);
+}
+
+static void
+salut_connection_olpc_get_properties(TpSvcOLPCBuddyInfo *iface,
+    TpHandle handle,
+    DBusGMethodInvocation *context) {
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+
+  GHashTable *properties = NULL;
+
+  if (handle == base->self_handle) {
+    properties = get_properties_hash(priv->self->key, priv->self->color);
+  } else {
+    SalutContact *contact;
+    contact = salut_contact_manager_get_contact(priv->contact_manager,
+                                                handle);
+    if (contact == NULL) {
+      GError *error;
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, 
+                         "Unknown contact");
+      dbus_g_method_return_error(context, error);
+      g_error_free(error);
+    }
+    properties = get_properties_hash(contact->key, contact->color);
+  }
+
+  tp_svc_olpc_buddy_info_return_from_get_properties(context, properties);
+  g_hash_table_destroy(properties);
+}
+
+
+static gboolean
+find_unknown_properties(gpointer key, gpointer value, gpointer user_data) {
+  gchar **valid_props = (gchar **)user_data;
+  int i;
+  for (i = 0; valid_props[i] != NULL; i++) {
+    if (!tp_strdiff(key, valid_props[i])) 
+      return FALSE;
+  }
+  return TRUE;
+}
+
+static void
+salut_connection_olpc_set_properties(TpSvcOLPCBuddyInfo *iface,
+    GHashTable *properties,
+    DBusGMethodInvocation *context) {
+
+  SalutConnection *self = SALUT_CONNECTION(iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+
+  GError *error = NULL;
+  /* Only two know properties, so handle it quite naievely */
+  const gchar *known_properties[] = { "color", "key", NULL };
+  gchar *color = NULL;
+  gchar *key = NULL;
+  GValue *val;
+
+  if (g_hash_table_find(properties, find_unknown_properties, known_properties)
+          != NULL) {
+    error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                         "Unknown property given");
+    goto error;
+  }
+
+  if ((val = (GValue *)g_hash_table_lookup(properties, "color")) != NULL) {
+    if (G_VALUE_TYPE(val) != G_TYPE_STRING) {
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                           "Color value should be of type s");
+      goto error;
+    } else {
+      int len;
+      gboolean correct = TRUE;
+
+      color = (gchar *)g_value_get_string(val);
+
+      /* be very anal about the color format */
+      len = strlen(color);
+      if (len != 15) {
+        correct = FALSE;
+      } else {
+        int i;
+        for (i = 0 ; i < len ; i++) {
+          switch (i) {
+            case 0:
+            case 8:
+              correct = (color[i] == '#');
+              break;
+            case 7:
+              correct = (color[i] == ',');
+              break;
+            default:
+              correct = isxdigit(color[i]);
+              break;
+          }
+        }
+      }
+      if (!correct) {
+        error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                               "Color value has an incorrect format");
+        goto error;
+      }
+    }
+  }
+
+  if ((val = (GValue *)g_hash_table_lookup(properties, "key")) != NULL) {
+    if (G_VALUE_TYPE(val) != DBUS_TYPE_G_UCHAR_ARRAY) {
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                           "Key value should be of type ay");
+      goto error;
+    } else {
+      GArray *arr = g_value_get_boxed(val);
+      if (arr->len == 0) {
+        error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                             "Key value of lenght 0 not allowed");
+        goto error;
+      }
+      key = g_base64_encode((guchar *)arr->data, arr->len);
+    }
+  }
+
+  if (!salut_self_set_olpc_properties(priv->self, key, color, &error)) {
+    goto error;
+  }
+
+  g_free(key);
+
+  tp_svc_olpc_buddy_info_return_from_set_properties(context);
+  return;
+
+error:
+  g_free(key);
+
+  dbus_g_method_return_error(context, error);
+  g_error_free(error);
+}
+
+static void 
+salut_connection_olpc_buddy_info_iface_init(gpointer g_iface,
+    gpointer iface_data) {
+  TpSvcOLPCBuddyInfoClass *klass =
+    (TpSvcOLPCBuddyInfoClass *) g_iface;
+#define IMPLEMENT(x) tp_svc_olpc_buddy_info_implement_##x (klass, \
+    salut_connection_olpc_##x)
+  IMPLEMENT(set_properties);
+  IMPLEMENT(get_properties);
+#undef IMPLEMENT
+}
+#endif
+
 /* Connection baseclass function implementations */
 static void 
 salut_connection_create_handle_repos(TpBaseConnection *self,
@@ -1312,6 +1503,37 @@ salut_connection_create_handle_repos(TpBaseConnection *self,
             NULL));
 }
 
+void
+_contact_manager_contact_change_cb(SalutContactManager *mgr, 
+                                   SalutContact *contact,
+                                   int changes, gpointer data) {
+  SalutConnection *self = SALUT_CONNECTION(data);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+
+  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
+
+  if (changes & SALUT_CONTACT_ALIAS_CHANGED) {
+    _contact_manager_contact_alias_changed(self, contact, handle);
+  }
+
+  if (changes & SALUT_CONTACT_STATUS_CHANGED) {
+    _contact_manager_contact_status_changed(self, contact, handle);
+  }
+
+  if (changes & SALUT_CONTACT_AVATAR_CHANGED) {
+    _contact_manager_contact_avatar_changed(self, contact, handle);
+  }
+
+#ifdef ENABLE_OLPC
+  if (changes & SALUT_CONTACT_OLPC_PROPERTIES) {
+    _contact_manager_contact_olpc_properties_changed(self, contact, handle);
+  }
+#endif
+}
+
+
 static GPtrArray*  
 salut_connection_create_channel_factories(TpBaseConnection *base) {
   SalutConnection *self = SALUT_CONNECTION(base);
@@ -1319,12 +1541,8 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   GPtrArray *factories = g_ptr_array_sized_new(3);
 
   priv->contact_manager = salut_contact_manager_new(self);
-  g_signal_connect(priv->contact_manager, "contact-status-changed",
-                   G_CALLBACK(_contact_manager_contact_status_cb), self);
-  g_signal_connect(priv->contact_manager, "contact-alias-changed",
-                   G_CALLBACK(_contact_manager_contact_alias_cb), self);
-  g_signal_connect(priv->contact_manager, "contact-avatar-changed",
-                   G_CALLBACK(_contact_manager_contact_avatar_cb), self);
+  g_signal_connect(priv->contact_manager, "contact-change",
+                   G_CALLBACK(_contact_manager_contact_change_cb), self);
 
   priv->im_manager = salut_im_manager_new(self, priv->contact_manager);
 
@@ -1547,14 +1765,4 @@ salut_connection_connection_service_iface_init(gpointer g_iface,
 #undef IMPLEMENT
 }
 
-#ifdef ENABLE_OLPC
-static void 
-salut_connection_olpc_buddy_info_iface_init(gpointer g_iface,
-    gpointer iface_data) {
-  //TpSvcConnectionClass *klass =
-  //  (TpSvcConnectionClass *) g_iface;
-#define IMPLEMENT(x) tp_svc_olpc_buddy_info_implement_##x (klass, \
-    salut_connection_##x)
-}
-#endif
 

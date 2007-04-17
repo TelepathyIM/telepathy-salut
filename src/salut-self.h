@@ -20,6 +20,8 @@
 #ifndef __SALUT_SELF_H__
 #define __SALUT_SELF_H__
 
+#include "config.h"
+
 #include <glib-object.h>
 
 #include "salut-avahi-client.h"
@@ -42,6 +44,10 @@ struct _SalutSelf {
     gchar *avatar_token;
     guint8 *avatar;
     gsize avatar_size;
+#ifdef ENABLE_OLPC
+    gchar *key;
+    gchar *color;
+#endif
 };
 
 GType salut_self_get_type(void);
@@ -79,6 +85,11 @@ gboolean salut_self_set_avatar(SalutSelf *self, guint8 *data,
 
 const gchar 
 *salut_self_get_alias(SalutSelf *self);
+
+#ifdef ENABLE_OLPC
+gboolean salut_self_set_olpc_properties(SalutSelf *self, 
+    const gchar *key, const gchar *color, GError **error);
+#endif
 
 G_END_DECLS
 

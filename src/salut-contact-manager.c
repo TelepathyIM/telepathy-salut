@@ -55,9 +55,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
 /* signal enum */
 enum
 {
-  CONTACT_STATUS_CHANGED,
-  CONTACT_ALIAS_CHANGED,
-  CONTACT_AVATAR_CHANGED,
+  CONTACT_CHANGE,
   LAST_SIGNAL
 };
 
@@ -103,36 +101,15 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
   object_class->dispose = salut_contact_manager_dispose;
   object_class->finalize = salut_contact_manager_finalize;
 
-  signals[CONTACT_STATUS_CHANGED] = g_signal_new("contact-status-changed",
+  signals[CONTACT_CHANGE] = g_signal_new("contact-change",
       G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
       G_SIGNAL_RUN_LAST,
       0,
       NULL, NULL,
-      salut_contact_manager_marshal_VOID__OBJECT_INT_STRING,
-      G_TYPE_NONE, 3,
+      salut_contact_manager_marshal_VOID__OBJECT_INT,
+      G_TYPE_NONE, 2,
       SALUT_TYPE_CONTACT,
-      SALUT_TYPE_PRESENCE_ID,
-      G_TYPE_STRING);
-
-  signals[CONTACT_ALIAS_CHANGED] = g_signal_new("contact-alias-changed",
-     G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
-     G_SIGNAL_RUN_LAST,
-     0,
-     NULL, NULL,
-     salut_contact_manager_marshal_VOID__OBJECT_STRING,
-     G_TYPE_NONE, 2,
-     SALUT_TYPE_CONTACT,
-     G_TYPE_STRING);
-
-  signals[CONTACT_AVATAR_CHANGED] = g_signal_new("contact-avatar-changed",
-     G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
-     G_SIGNAL_RUN_LAST,
-     0,
-     NULL, NULL,
-     salut_contact_manager_marshal_VOID__OBJECT_STRING,
-     G_TYPE_NONE, 2,
-     SALUT_TYPE_CONTACT,
-     G_TYPE_STRING);
+      G_TYPE_INT);
 }
 
 static gboolean
@@ -215,28 +192,12 @@ contact_found_cb(SalutContact *contact, gpointer userdata) {
 }
 
 static void
-contact_state_changed_cb(SalutContact *contact, SalutPresenceId status, 
-                      gchar *message, gpointer userdata) {
+contact_change_cb(SalutContact *contact, gint changes, gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
 
-  g_signal_emit(mgr, signals[CONTACT_STATUS_CHANGED], 0,
-                contact, status, message);
-}
+  DEBUG("Emitting contact changes for %s: %d", contact->name, changes);
 
-static void
-contact_alias_changed_cb(SalutContact *contact, 
-                         gchar *alias, gpointer userdata) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
-
-  g_signal_emit(mgr, signals[CONTACT_ALIAS_CHANGED], 0, contact, alias);
-}
-
-static void
-contact_avatar_changed_cb(SalutContact *contact, 
-                          gchar *token, gpointer userdata) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
-
-  g_signal_emit(mgr, signals[CONTACT_AVATAR_CHANGED], 0, contact, token);
+  g_signal_emit(mgr, signals[CONTACT_CHANGE], 0, contact, changes);
 }
 
 static void
@@ -298,12 +259,8 @@ browser_found(SalutAvahiServiceBrowser *browser,
     DEBUG("Adding %s to contacts", name);
     g_signal_connect(contact, "found", 
                      G_CALLBACK(contact_found_cb), mgr);
-    g_signal_connect(contact, "status-changed", 
-                     G_CALLBACK(contact_state_changed_cb), mgr);
-    g_signal_connect(contact, "alias-changed", 
-                     G_CALLBACK(contact_alias_changed_cb), mgr);
-    g_signal_connect(contact, "avatar-changed", 
-                     G_CALLBACK(contact_avatar_changed_cb), mgr);
+    g_signal_connect(contact, "contact-change", 
+                     G_CALLBACK(contact_change_cb), mgr);
     g_signal_connect(contact, "lost", 
                      G_CALLBACK(contact_lost_cb), mgr);
     g_object_weak_ref(G_OBJECT(contact), _contact_finalized_cb , mgr);
