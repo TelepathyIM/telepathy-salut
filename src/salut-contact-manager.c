@@ -165,7 +165,7 @@ change_all_groups(SalutContactManager *mgr, TpIntSet *add, TpIntSet *rem) {
   TpIntSet *empty = tp_intset_new();
   for (i = LIST_HANDLE_FIRST; i <= LIST_HANDLE_LAST; i++) {
     c = salut_contact_manager_get_channel(mgr, i, NULL);
-    tp_group_mixin_change_members(TP_SVC_CHANNEL_INTERFACE_GROUP(c), 
+    tp_group_mixin_change_members(G_OBJECT(c), 
                                   "", add, rem, 
                                   empty, empty, 0, 0);
   }
