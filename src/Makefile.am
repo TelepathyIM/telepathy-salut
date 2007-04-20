@@ -46,6 +46,7 @@ dist-hook:
 EXTRA_DIST = \
   salut-avahi-client-signals-marshal.list                 \
   salut-avahi-entry-group-signals-marshal.list            \
+  salut-avahi-record-browser-signals-marshal.list        \
   salut-avahi-service-browser-signals-marshal.list        \
   salut-avahi-service-resolver-signals-marshal.list       \
   salut-contact-channel-signals-marshal.list              \
