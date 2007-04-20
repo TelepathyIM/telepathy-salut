@@ -17,9 +17,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-/* FIXME: take this out after 0.5.7 is released */
-#define _TP_CM_UPDATED_FOR_0_5_7
-
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
