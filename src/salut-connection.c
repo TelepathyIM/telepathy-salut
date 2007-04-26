@@ -59,23 +59,8 @@
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
 
-#define TP_CHANNEL_LIST_ENTRY_TYPE (dbus_g_type_get_struct ("GValueArray", \
-      DBUS_TYPE_G_OBJECT_PATH, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_UINT, \
-            G_TYPE_INVALID))
-
-#define TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
+#define SALUT_TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
       G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
-
-#define ERROR_IF_NOT_CONNECTED_ASYNC(BASE, ERROR, CONTEXT) \
-  if ((BASE)->status != TP_CONNECTION_STATUS_CONNECTED) \
-    { \
-      DEBUG ("rejected request as disconnected"); \
-      (ERROR) = g_error_new(TP_ERRORS, TP_ERROR_DISCONNECTED, \
-                            "Connection is disconnected"); \
-      dbus_g_method_return_error ((CONTEXT), (ERROR)); \
-      g_error_free ((ERROR)); \
-      return; \
-    }
 
 #ifdef ENABLE_OLPC
 
@@ -682,11 +667,10 @@ salut_connection_clear_status (TpSvcConnectionInterfacePresence *iface,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION(self);
   gboolean ret;
-  GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
-  
-  ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE, 
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
+
+  ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE,
                                 NULL, NULL);
   /* FIXME turn into a TP ERROR */
   if (ret) {
@@ -806,7 +790,7 @@ salut_connection_remove_status (TpSvcConnectionInterfacePresence *iface,
   gboolean ret = TRUE;
   GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
 
   if (!tp_strdiff(status, salut_presence_statuses[priv->self->status].name)) {
     ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE, 
@@ -848,7 +832,7 @@ salut_connection_request_presence (TpSvcConnectionInterfacePresence *iface,
       TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
   GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
 
   if (!tp_handles_are_valid(handle_repo, contacts, FALSE, &error)) {
     dbus_g_method_return_error(context, error);
@@ -891,7 +875,7 @@ salut_connection_set_status (TpSvcConnectionInterfacePresence *iface,
   gboolean ret = TRUE;
   GError *error = NULL;
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
 
   if (g_hash_table_size(statuses) != 1) {
     DEBUG("Got more then one status");
@@ -1000,7 +984,7 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
 
   DEBUG("Alias requested");
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
 
   if (!tp_handles_are_valid(contact_handles, contacts, FALSE, &error)) {
     dbus_g_method_return_error(context, error);
@@ -1035,9 +1019,9 @@ _contact_manager_contact_alias_changed(SalutConnection *self,
   GPtrArray *aliases;
   GValue entry = {0, };
 
-  g_value_init(&entry, TP_ALIAS_PAIR_TYPE);
+  g_value_init(&entry, SALUT_TP_ALIAS_PAIR_TYPE);
   g_value_take_boxed(&entry, 
-                     dbus_g_type_specialized_construct(TP_ALIAS_PAIR_TYPE));
+                 dbus_g_type_specialized_construct(SALUT_TP_ALIAS_PAIR_TYPE));
 
   dbus_g_type_struct_set(&entry, 
                          0, handle,
@@ -1683,7 +1667,7 @@ salut_connection_request_handles (TpSvcConnection *iface,
       TP_BASE_CONNECTION(self), handle_type);
   
 
-  ERROR_IF_NOT_CONNECTED_ASYNC(base, error, context);
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
 
   if (!tp_handle_type_is_valid(handle_type, &error)) {
     DEBUG("Invalid handle type: %d", handle_type);
