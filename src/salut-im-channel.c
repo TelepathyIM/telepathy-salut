@@ -542,7 +542,7 @@ _connect_to_next(SalutImChannel *self, GibberLLTransport *transport) {
       priv->addresses = NULL;
       gibber_xmpp_connection_open(priv->xmpp_connection, 
                                   priv->contact->name, 
-                                  priv->connection->name, NULL);
+                                  priv->connection->name, "1.0");
     }
   }
 }
@@ -558,7 +558,7 @@ _connection_stream_opened_cb(GibberXmppConnection *conn,
   /* TODO validate to field ? */
   if (gibber_ll_transport_is_incoming(GIBBER_LL_TRANSPORT(conn->transport))) {
     GibberXmppStanza *stanza;
-    gibber_xmpp_connection_open(conn, from, priv->connection->name, NULL);
+    gibber_xmpp_connection_open(conn, from, priv->connection->name, "1.0");
     /* Send empty stream features */
     stanza = gibber_xmpp_stanza_new("features");
     gibber_xmpp_node_set_ns(stanza->node, GIBBER_XMPP_NS_STREAM);

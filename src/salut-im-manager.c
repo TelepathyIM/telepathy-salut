@@ -476,7 +476,7 @@ pending_connection_stream_opened_cb(GibberXmppConnection *conn,
     pending_connection_got_from(mgr, conn, NULL, from);
   }
 
-  gibber_xmpp_connection_open(conn, from, priv->connection->name, NULL);
+  gibber_xmpp_connection_open(conn, from, priv->connection->name, "1.0");
   /* Send empty stream features */
   stanza = gibber_xmpp_stanza_new("features");
   gibber_xmpp_node_set_ns(stanza->node, GIBBER_XMPP_NS_STREAM);
