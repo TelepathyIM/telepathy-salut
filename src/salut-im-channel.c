@@ -594,6 +594,11 @@ _trans_disconnected_cb(GibberLLTransport *transport, gpointer userdata) {
 
   /* FIXME cleanup better (should we flush the queue?) */
   DEBUG("Transport disconnected");
+  if (priv->state == CHANNEL_CONNECTING) {
+    DEBUG("Disconnected, while still connecting, ignoring");
+    return;
+  }
+
   /* Take care not to unref the connection if disposing */
   if (priv->xmpp_connection && !priv->dispose_has_run) {
     g_object_unref(priv->xmpp_connection);
