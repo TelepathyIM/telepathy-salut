@@ -1,0 +1,6 @@
+SPEC_INTERFACES = $(SPEC_INTERFACES_OLPC) Channel_Type_File_Transfer
+SPEC_INTERFACE_XMLS = $(SPEC_INTERFACE_XMLS_OLPC) ./Channel_Type_File_Transfer.xml
+SPEC_GENERATED_CS = $(SPEC_GENERATED_CS_OLPC) _gen/svc-Channel_Type_File_Transfer.c
+SPEC_GENERATED_HS = $(SPEC_GENERATED_HS_OLPC) _gen/svc-Channel_Type_File_Transfer.h
+SPEC_GLUE_HS = $(SPEC_GLUE_HS_OLPC) _gen/svc-Channel_Type_File_Transfer-glue.h
+SPEC_GENERATED_LISTS = $(SPEC_GENERATED_LISTS_OLPC) _gen/svc-Channel_Type_File_Transfer-signals-marshal.list
