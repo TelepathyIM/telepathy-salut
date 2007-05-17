@@ -10,6 +10,8 @@ G_BEGIN_DECLS
 
 void debug_set_log_file_from_env (void);
 
+G_END_DECLS
+
 #ifdef ENABLE_DEBUG
 
 typedef enum
@@ -35,11 +37,16 @@ void debug_set_flags (DebugFlags flags);
 gboolean debug_flag_is_set (DebugFlags flag);
 void debug (DebugFlags flag, const gchar *format, ...)
     G_GNUC_PRINTF (2, 3);
+void debug_stanza (DebugFlags flag, GibberXmppStanza *stanza, const gchar *format, ...)
+    G_GNUC_PRINTF (3, 4);
 
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...) \
   debug(DEBUG_FLAG, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
+
+#define DEBUG_STANZA(stanza, format, ...) \
+  debug_stanza(DEBUG_FLAG, stanza, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
 
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)
 
@@ -50,6 +57,8 @@ void debug (DebugFlags flag, const gchar *format, ...)
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...)
+
+#define DEBUG_STANZA(stamza, format, ...)
 
 #define DEBUGGING 0
 

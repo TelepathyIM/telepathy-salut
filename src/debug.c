@@ -106,5 +106,79 @@ void debug (DebugFlags flag,
     }
 }
 
+typedef struct {
+  GString *string;
+  gchar *indent;
+} PrintStanzaData;
+
+static gboolean
+attribute_to_string (const gchar *key,
+                     const gchar *value,
+                     const gchar *ns,
+                     gpointer user_data) {
+  PrintStanzaData *data = user_data;
+
+  g_string_append_c (data->string, ' ');
+  if (ns != NULL) {
+    g_string_append (data->string, ns);
+    g_string_append_c (data->string, ':');
+  }
+  g_string_append_printf (data->string, "%s='%s'", key, value);
+
+  return TRUE;
+}
+
+static gboolean
+node_to_string (GibberXmppNode *node,
+                gpointer user_data) {
+  PrintStanzaData *data = user_data;
+  gchar *old_indent;
+
+  g_string_append_printf (data->string, "%s<%s", data->indent, node->name);
+  gibber_xmpp_node_each_attribute (node, attribute_to_string, data);
+  g_string_append_printf (data->string, ">\n");
+
+  old_indent = data->indent;
+  data->indent = g_strconcat (data->indent, "  ", NULL);
+  if (node->content != NULL)
+    g_string_append_printf (data->string, "%s%s\n", data->indent, node->content);
+  gibber_xmpp_node_each_child (node, node_to_string, data);
+  g_free (data->indent);
+  data->indent = old_indent;
+
+  g_string_append_printf (data->string, "%s</%s>", data->indent, node->name);
+  if (data->indent[0] != '\0')
+    g_string_append_c (data->string, '\n');
+
+  return TRUE;
+}
+
+void debug_stanza (DebugFlags flag,
+                   GibberXmppStanza *stanza,
+                   const gchar *format,
+                   ...)
+{
+  if (flag & flags)
+    {
+      PrintStanzaData *data;
+      va_list args;
+
+      data = g_new0 (PrintStanzaData, 1);
+      data->string = g_string_new ("");
+      data->indent = "";
+
+      va_start (args, format);
+      g_string_append (data->string, g_strdup_vprintf (format, args));
+      va_end (args);
+      g_string_append_c (data->string, '\n');
+      node_to_string (stanza->node, data);
+
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s", data->string->str);
+
+      g_string_free (data->string, TRUE);
+      g_free (data);
+    }
+}
+
 #endif /* ENABLE_DEBUG */
 
