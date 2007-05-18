@@ -121,6 +121,7 @@ libsalut_convenience_la_SOURCES = $(CORE_SOURCES)
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
+                       $(top_builddir)/extensions/libsalut-extensions.la \
                        -ltelepathy-glib
 telepathy_salut_SOURCES = \
     salut.c 
@@ -128,11 +129,8 @@ telepathy_salut_SOURCES = \
 # TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
 telepathy_salut_LDADD = libsalut-convenience.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
+                        $(top_builddir)/extensions/libsalut-extensions.la \
                         -ltelepathy-glib
-if ENABLE_OLPC
-  telepathy_salut_LDADD += $(top_builddir)/extensions/libsalut-extensions.la
-  write_mgr_file_LDADD += $(top_builddir)/extensions/libsalut-extensions.la
-endif
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
