@@ -9,14 +9,15 @@ static DebugFlags flags = 0;
 static gboolean initialized = FALSE;
 
 static GDebugKey keys[] = {
-  { "transport",      DEBUG_TRANSPORT },
-  { "net",            DEBUG_NET },
-  { "xmpp",           DEBUG_XMPP },
-  { "xmpp-reader",    DEBUG_XMPP_READER },
-  { "xmpp-writer",    DEBUG_XMPP_WRITER },
-  { "sasl",           DEBUG_SASL        },
-  { "ssl",            DEBUG_SSL         },
-  { "all",            ~0 },
+  { "transport",         DEBUG_TRANSPORT         },
+  { "net",               DEBUG_NET               },
+  { "xmpp",              DEBUG_XMPP              },
+  { "xmpp-reader",       DEBUG_XMPP_READER       },
+  { "xmpp-writer",       DEBUG_XMPP_WRITER       },
+  { "sasl",              DEBUG_SASL              },
+  { "ssl",               DEBUG_SSL               },
+  { "rmulticast-sender", DEBUG_RMULTICAST_SENDER },
+  { "all",               ~0                      },
   { 0, },
 };
 
