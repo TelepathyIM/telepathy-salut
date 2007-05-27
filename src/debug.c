@@ -133,8 +133,12 @@ node_to_string (GibberXmppNode *node,
                 gpointer user_data) {
   PrintStanzaData *data = user_data;
   gchar *old_indent;
+  const gchar *ns;
 
   g_string_append_printf (data->string, "%s<%s", data->indent, node->name);
+  ns = gibber_xmpp_node_get_ns (node);
+  if (ns != NULL)
+    g_string_append_printf (data->string, " xmlns='%s'", ns);
   gibber_xmpp_node_each_attribute (node, attribute_to_string, data);
   g_string_append_printf (data->string, ">\n");
 
