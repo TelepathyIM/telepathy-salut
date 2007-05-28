@@ -54,6 +54,9 @@ struct _GibberRMulticastPacket {
     guint8 packet_part;
     guint8 packet_total;
 
+    /* payload size */
+    gsize payload_size;
+
     /* packet identifier */
     guint32 packet_id;
 

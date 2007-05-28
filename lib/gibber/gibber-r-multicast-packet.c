@@ -307,6 +307,7 @@ gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
 
   g_assert(priv->data == NULL);
   gibber_r_multicast_packet_build(packet, data, size);
+  packet->payload_size = size;
 
   return priv->size - (priv->payload - priv->data);
 }
@@ -344,6 +345,7 @@ gibber_r_multicast_packet_parse(guint8 *data, gsize size, GError **error) {
 
   priv->payload = priv->data + priv->size;
   priv->size = priv->max_data;
+  result->payload_size = priv->size - (priv->payload - priv->data);
   return result;
 }
 
@@ -355,7 +357,7 @@ gibber_r_multicast_packet_get_payload(GibberRMulticastPacket *packet,
      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
   g_assert(priv->data != NULL);
 
-  *size = priv->size - (priv->payload - priv->data);
+  *size = packet->payload_size;
 
   return priv->payload;
 }
