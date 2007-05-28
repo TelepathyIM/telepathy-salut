@@ -5,8 +5,9 @@ $(top_builddir)/lib/gibber/libgibber.la:
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
 noinst_PROGRAMS = \
-	test-xmpp-connection  \
-	test-r-multicast-packet
+	test-xmpp-connection    \
+	test-r-multicast-packet \
+	test-r-multicast-sender
 
 
 test_xmpp_connection_SOURCES = \
@@ -29,6 +30,17 @@ test_r_multicast_packet_LDADD = \
     $(AM_LDFLAGS)
 
 test_r_multicast_packet_CFLAGS = \
+    $(AM_CFLAGS)
+
+
+test_r_multicast_sender_SOURCES = \
+    test-r-multicast-sender.c
+
+test_r_multicast_sender_LDADD = \
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(AM_LDFLAGS)
+
+test_r_multicast_sender_CFLAGS = \
     $(AM_CFLAGS)
 
 if HAVE_LIBSASL2

@@ -12,7 +12,9 @@ BUILT_SOURCES = \
   gibber-xmpp-stanza-signals-marshal.c        \
   gibber-xmpp-stanza-signals-marshal.h        \
   gibber-sasl-auth-signals-marshal.c          \
-  gibber-sasl-auth-signals-marshal.h
+  gibber-sasl-auth-signals-marshal.h          \
+  gibber-r-multicast-sender-signals-marshal.c \
+  gibber-r-multicast-sender-signals-marshal.h
 
 if HAVE_LIBSSL
   BUILT_SOURCES += \
@@ -43,8 +45,10 @@ libgibber_la_SOURCES =            \
   gibber-multicast-transport.h    \
   gibber-r-multicast-transport.c  \
   gibber-r-multicast-transport.h  \
-	gibber-r-multicast-packet.c     \
-	gibber-r-multicast-packet.h     \
+  gibber-r-multicast-packet.c     \
+  gibber-r-multicast-packet.h     \
+  gibber-r-multicast-sender.c     \
+  gibber-r-multicast-sender.h     \
   gibber-sasl-auth.c              \
   gibber-sasl-auth.h              \
   gibber-linklocal-transport.c    \
