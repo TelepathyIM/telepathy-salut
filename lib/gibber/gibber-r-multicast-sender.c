@@ -38,6 +38,7 @@
 #define MAX_REPAIR_TIMEOUT 150
 
 static void schedule_repair(GibberRMulticastSender *sender, guint32 id);
+static void schedule_do_repair(GibberRMulticastSender *sender, guint32 id);
 
 G_DEFINE_TYPE(GibberRMulticastSender, gibber_r_multicast_sender, G_TYPE_OBJECT)
 
@@ -45,6 +46,7 @@ G_DEFINE_TYPE(GibberRMulticastSender, gibber_r_multicast_sender, G_TYPE_OBJECT)
 enum
 {
     REPAIR_REQUEST,
+    REPAIR_MESSAGE,
     DATA_RECEIVED,
     LAST_SIGNAL
 };
@@ -131,6 +133,15 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    NULL, NULL,
                    g_cclosure_marshal_VOID__UINT,
                    G_TYPE_NONE, 1, G_TYPE_UINT);
+
+  signals[REPAIR_MESSAGE] =
+      g_signal_new("repair-message",
+                   G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
+                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                   0,
+                   NULL, NULL,
+                   g_cclosure_marshal_VOID__OBJECT,
+                   G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_PACKET);
 
   signals[DATA_RECEIVED] =
       g_signal_new("data-received",
@@ -229,7 +240,7 @@ schedule_repair(GibberRMulticastSender *sender, guint32 id) {
 
   info = g_hash_table_lookup(priv->packet_cache, &id);
 
-  if (info != NULL && info->packet != NULL) {
+  if (info != NULL && (info->packet != NULL || info->timeout != 0)) {
     return;
   } else if (info == NULL) {
     info = packet_info_new(sender, id);
@@ -240,6 +251,43 @@ schedule_repair(GibberRMulticastSender *sender, guint32 id) {
   info->timeout = g_timeout_add(timeout, request_repair, info);
   DEBUG_SENDER(sender, 
     "Scheduled repair request for 0x%x in %d ms", id, timeout);
+}
+
+static gboolean
+do_repair(gpointer data) {
+  PacketInfo *info = (PacketInfo *)data;
+
+  g_assert(info != NULL && info->packet != NULL);
+
+  DEBUG_SENDER(info->sender, "Sending Repair message for 0x%x",
+    info->packet_id);
+
+  info->timeout = 0;
+  g_signal_emit(info->sender, signals[REPAIR_MESSAGE], 0, info->packet);
+
+  return FALSE;
+}
+
+static void
+schedule_do_repair(GibberRMulticastSender *sender, guint32 id) {
+  GibberRMulticastSenderPrivate *priv = 
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+  PacketInfo *info;
+  guint timeout;
+
+  info = g_hash_table_lookup(priv->packet_cache, &id);
+
+  g_assert(info != NULL && info->packet != NULL);
+  if (info->timeout != 0) {
+    /* Repair already scheduled, ignore */
+    return;
+  }
+
+
+  timeout = g_random_int_range(MIN_REPAIR_TIMEOUT, MAX_REPAIR_TIMEOUT);
+  info->timeout = g_timeout_add(timeout, do_repair, info);
+  DEBUG_SENDER(sender, 
+    "Scheduled repair for 0x%x in %d ms", id, timeout);
 }
 
 static gboolean
@@ -431,6 +479,8 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
 
   diff = packet_diff(sender->next_packet_id, packet->packet_id);
 
+  printf("-> %d\n", diff);
+
   if (diff >= 0 && diff < PACKET_CACHE_SIZE) {
     insert_packet(sender, packet);
     return;
@@ -442,4 +492,64 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
     return;
   }
   DEBUG_SENDER(sender, "Packet 0x%x out of range, dropping", packet->packet_id);
+}
+
+void
+gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender, 
+                                         guint32 id) {
+  GibberRMulticastSenderPrivate *priv = 
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+  gint diff;
+
+  diff = packet_diff(sender->next_packet_id, id);
+
+  if (diff >= 0 && diff < PACKET_CACHE_SIZE) {
+    PacketInfo *info = g_hash_table_lookup(priv->packet_cache, &id);
+    if (info == NULL) {
+      guint32 i;
+
+      g_assert(packet_diff(priv->last_packet, id) > 0);
+
+      for (i = priv->last_packet + 1; i != id + 1; i++ ){
+        schedule_repair(sender, i);
+      }
+    } else if (info->packet != NULL) {
+      schedule_do_repair(sender, id);
+    } else { 
+      /* else we already knew about the packets existance, but didn't see
+       the packet just yet. Which means we already have a repair timeout 
+       running */
+       g_assert(info->timeout != 0);
+    }
+    return;
+  }
+
+  if (diff < 0 && packet_diff(priv->first_packet, id) > 0) {
+    schedule_do_repair(sender, id);
+    return;
+  }
+
+  DEBUG_SENDER(sender, "Seen packet 0x%x out of range, ignoring", id);
+}
+
+void
+gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
+  GibberRMulticastSenderPrivate *priv = 
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+  gint diff;
+  guint32 i, last;
+
+  diff = packet_diff(priv->last_packet, id);
+  if (diff <= 0) {
+    /* We're up to date */
+    return;
+  }
+
+  last = sender->next_packet_id + PACKET_CACHE_SIZE;
+  /* Ensure that we don't overfill the CACHE */
+  last = packet_diff(last, id) > 0 ? last : id;
+
+  for (i = priv->last_packet + 1; i != last +1; i ++) {
+    schedule_repair(sender, i);
+  }
 }

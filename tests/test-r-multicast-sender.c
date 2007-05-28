@@ -5,6 +5,10 @@
 #include <gibber/gibber-r-multicast-sender.h>
 
 #define SENDER "testsender"
+
+#define REPAIR_PACKET 15
+
+#define EXTRA_SEEN 11
 #define NR_PACKETS 40
 #define SERIAL_OFFSET 255
 
@@ -14,7 +18,6 @@ typedef struct {
 } recv_t;
 
 GMainLoop *loop;
-
 
 GibberRMulticastPacket *
 generate_packet(int serial) {
@@ -64,7 +67,8 @@ data_received_cb(GibberRMulticastSender *sender, guint8 *data,
    * So expected can't be  % 3 == 2 here */
   g_assert(expected % 3 != 2);
 
-  if (expected == SERIAL_OFFSET + NR_PACKETS) {
+  if (expected == SERIAL_OFFSET + NR_PACKETS
+      || expected == SERIAL_OFFSET + NR_PACKETS + EXTRA_SEEN) {
     g_main_loop_quit((GMainLoop *)user_data);
   }
 
@@ -80,6 +84,15 @@ repair_request_cb(GibberRMulticastSender *sender, guint id, gpointer data) {
   p = generate_packet(id);
   gibber_r_multicast_sender_push(sender, p);
   g_object_unref(p);
+}
+
+void
+repair_message_cb(GibberRMulticastSender *sender,
+                  GibberRMulticastPacket *packet,
+                  gpointer user_data) {
+  g_assert(packet->packet_id == REPAIR_PACKET + SERIAL_OFFSET);
+
+  g_main_loop_quit((GMainLoop *)user_data);
 }
 
 static gboolean
@@ -118,11 +131,21 @@ main(int argc, char **argv) {
 
   s = gibber_r_multicast_sender_new(SENDER);
   g_signal_connect(s, "data-received", G_CALLBACK(data_received_cb), loop);
-  g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), s);
+  g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
   g_timeout_add(100, add_packet, s);
   g_timeout_add(20000, timeout, loop);
 
+  g_main_loop_run(loop);
+
+  /* tell the sender we've seen some extra pakcets */
+  gibber_r_multicast_sender_seen(s, 
+      SERIAL_OFFSET + NR_PACKETS + EXTRA_SEEN - 1);
+  g_main_loop_run(loop);
+
+  /* Ask for a repair */
+  g_signal_connect(s, "repair-message", G_CALLBACK(repair_message_cb), loop);
+  gibber_r_multicast_sender_repair_request(s, SERIAL_OFFSET + REPAIR_PACKET);
   g_main_loop_run(loop);
 
   return 0;

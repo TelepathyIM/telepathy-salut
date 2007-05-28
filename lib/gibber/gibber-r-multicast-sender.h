@@ -69,8 +69,15 @@ GibberRMulticastSender *
 gibber_r_multicast_sender_new(const gchar *name);
 
 void
-gibber_r_multicast_sender_push(GibberRMulticastSender *sender, 
+gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
                                GibberRMulticastPacket *packet);
+
+void
+gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id);
+
+void
+gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender, 
+                                         guint32 id);
 
 G_END_DECLS
 
