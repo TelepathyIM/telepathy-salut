@@ -116,6 +116,7 @@ enum {
   PROP_LAST_NAME,
   PROP_JID,
   PROP_EMAIL,
+  PROP_PUBLISHED_NAME,
   LAST_PROP
 };
 
@@ -230,6 +231,9 @@ salut_connection_get_property(GObject *object,
     case PROP_EMAIL:
       g_value_set_string(value, priv->email);
       break;
+    case PROP_PUBLISHED_NAME:
+      g_value_set_string(value, priv->published_name);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
   }
@@ -264,6 +268,10 @@ salut_connection_set_property (GObject      *object,
     case PROP_EMAIL:
       g_free(priv->email);
       priv->email = g_value_dup_string(value);
+      break;
+    case PROP_PUBLISHED_NAME:
+      g_free(priv->published_name);
+      priv->published_name = g_value_dup_string(value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -343,6 +351,13 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
                                    G_PARAM_STATIC_BLURB);
   g_object_class_install_property(object_class, PROP_JID, param_spec);
 
+  param_spec = g_param_spec_string("published-name", "Published name",
+                                   "Username used in the published data",
+                                   NULL,
+                                   G_PARAM_READWRITE |
+                                   G_PARAM_STATIC_NAME |
+                                   G_PARAM_STATIC_BLURB);
+  g_object_class_install_property(object_class, PROP_PUBLISHED_NAME, param_spec);
 }
 
 void
@@ -496,7 +511,8 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               priv->first_name,
                               priv->last_name,
                               priv->jid,
-                              priv->email);
+                              priv->email,
+                              priv->published_name);
   g_signal_connect(priv->self, "established", 
                    G_CALLBACK(_self_established_cb), self);
   g_signal_connect(priv->self, "failure", 

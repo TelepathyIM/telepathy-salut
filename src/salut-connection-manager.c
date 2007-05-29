@@ -36,6 +36,7 @@ typedef struct {
   gchar *last_name;
   gchar *email;
   gchar *jid;
+  gchar *published_name;
 } SalutParams;
 
 enum {
@@ -44,6 +45,7 @@ enum {
   SALUT_PARAM_LAST_NAME,
   SALUT_PARAM_JID,
   SALUT_PARAM_EMAIL,
+  SALUT_PARAM_PUBLISHED_NAME,
   SALUT_NR_PARAMS
 };
 
@@ -61,6 +63,8 @@ static const TpCMParamSpec salut_params[] = {
      G_STRUCT_OFFSET(SalutParams, jid)},
   { "email", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
      G_STRUCT_OFFSET(SalutParams, email)},
+  { "published-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
+     G_STRUCT_OFFSET(SalutParams, published_name)},
   {NULL, NULL, 0, 0, NULL, 0}
 };
 
@@ -145,6 +149,8 @@ salut_connection_manager_new_connection(TpBaseConnectionManager *self,
                               params->last_name);
   SET_PROPERTY_IF_PARAM_SET("jid", SALUT_PARAM_EMAIL, params->jid);
   SET_PROPERTY_IF_PARAM_SET("email", SALUT_PARAM_JID, params->email);
+  SET_PROPERTY_IF_PARAM_SET("published-name", SALUT_PARAM_PUBLISHED_NAME,
+                            params->published_name);
 
   return TP_BASE_CONNECTION(conn);
 }

@@ -62,6 +62,7 @@ struct _SalutSelfPrivate
   gchar *first_name;
   gchar *last_name;
   gchar *email;
+  gchar *published_name;
 
   gchar *alias;
 
@@ -92,6 +93,7 @@ salut_self_init (SalutSelf *obj)
   priv->first_name = NULL;
   priv->last_name = NULL;
   priv->email = NULL;
+  priv->published_name = NULL;
 
   priv->client = NULL;
   priv->presence_group = NULL;
@@ -193,6 +195,7 @@ salut_self_finalize (GObject *object)
   g_free(priv->first_name);
   g_free(priv->last_name);
   g_free(priv->email);
+  g_free(priv->published_name);
 
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
@@ -230,7 +233,7 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
 SalutSelf *
 salut_self_new(SalutAvahiClient *client,
                gchar *nickname, gchar *first_name, gchar *last_name, 
-               gchar *jid, gchar *email) {
+               gchar *jid, gchar *email, gchar *published_name) {
   SalutSelfPrivate *priv;
   GString *alias = NULL;
 
@@ -248,6 +251,7 @@ salut_self_new(SalutAvahiClient *client,
   priv->first_name = g_strdup(first_name);
   priv->last_name = g_strdup(last_name);
   priv->email = g_strdup(email);
+  priv->published_name = g_strdup(published_name);
   priv->alias = NULL;
 
   /* Prefer using the nickname as alias */
@@ -274,6 +278,11 @@ salut_self_new(SalutAvahiClient *client,
       g_string_free(alias, TRUE);
     }
   }
+
+  if (published_name == NULL) {
+    priv->published_name = g_strdup(g_get_user_name());
+  }
+
   return ret;
 }
 
@@ -426,7 +435,7 @@ salut_self_announce(SalutSelf *self, GError **error) {
     goto error;
   };
 
-  self->name = g_strdup_printf("%s@%s", g_get_user_name(),
+  self->name = g_strdup_printf("%s@%s", priv->published_name,
                        avahi_client_get_host_name(priv->client->avahi_client));
   txt_record = create_txt_record(self, port);
 
