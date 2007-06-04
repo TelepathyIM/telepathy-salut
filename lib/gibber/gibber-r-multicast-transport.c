@@ -216,6 +216,13 @@ gibber_r_multicast_transport_finalize (GObject *object)
   G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->finalize (object);
 }
 
+static void
+r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
+                    gpointer user_data) {
+  gibber_transport_received_data(GIBBER_TRANSPORT(user_data), 
+      buffer->data, buffer->length);
+  return;
+}
 
 GibberRMulticastTransport *
 gibber_r_multicast_transport_new(GibberTransport *transport,
