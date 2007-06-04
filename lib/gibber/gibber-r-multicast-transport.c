@@ -42,7 +42,7 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum {
   PROP_NAME = 1,
-  PROP_MULTICAST_TRANSPORT,
+  PROP_TRANSPORT,
   LAST_PROPERTY
 };
 
@@ -53,7 +53,7 @@ struct _GibberRMulticastTransportPrivate
 {
   gboolean dispose_has_run;
   gchar *name;
-  GibberMulticastTransport *mtransport;
+  GibberTransport *transport;
 };
 
 #define GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportPrivate))
@@ -71,8 +71,8 @@ gibber_r_multicast_transport_set_property (GObject *object,
       g_free(priv->name);
       priv->name = g_strdup(g_value_get_string(value));
       break;
-    case PROP_MULTICAST_TRANSPORT:
-      priv->mtransport = g_object_ref(g_value_get_object(value));
+    case PROP_TRANSPORT:
+      priv->transport = g_object_ref(g_value_get_object(value));
       break; 
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -92,8 +92,8 @@ gibber_r_multicast_transport_get_property (GObject *object,
     case PROP_NAME:
       g_value_set_string(value, priv->name);
       break;
-    case PROP_MULTICAST_TRANSPORT:
-      g_value_set_object(value, priv->mtransport);
+    case PROP_TRANSPORT:
+      g_value_set_object(value, priv->transport);
       break; 
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -109,7 +109,7 @@ gibber_r_multicast_transport_init (GibberRMulticastTransport *obj)
 
   /* allocate any data required by the object here */
   priv->name = NULL;
-  priv->mtransport = NULL;
+  priv->transport = NULL;
 }
 
 static void gibber_r_multicast_transport_dispose (GObject *object);
@@ -146,7 +146,7 @@ gibber_r_multicast_transport_class_init (GibberRMulticastTransportClass *gibber_
                                    G_PARAM_READWRITE      |
                                    G_PARAM_STATIC_NAME    |
                                    G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_MULTICAST_TRANSPORT, 
+  g_object_class_install_property(object_class, PROP_TRANSPORT,
                                   param_spec);
 
   param_spec = g_param_spec_string("name",
@@ -173,9 +173,9 @@ gibber_r_multicast_transport_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
-  if (priv->mtransport != NULL) {
-    g_object_unref(priv->mtransport);
-    priv->mtransport = NULL;
+  if (priv->transport != NULL) {
+    g_object_unref(priv->transport);
+    priv->transport = NULL;
   }
 
   /* release any references held by the object here */
@@ -198,14 +198,20 @@ gibber_r_multicast_transport_finalize (GObject *object)
 
 
 GibberRMulticastTransport *
-gibber_r_multicast_transport_new(GibberMulticastTransport *mtransport,
+gibber_r_multicast_transport_new(GibberTransport *transport,
                                  const gchar *name) {
+  GibberRMulticastTransport *result;
   g_assert(name != NULL && *name != '\0');
 
-  return g_object_new(GIBBER_TYPE_R_MULTICAST_TRANSPORT,
+  result =  g_object_new(GIBBER_TYPE_R_MULTICAST_TRANSPORT,
                       "name", name,
-                      "multicasttransport", mtransport,
+                      "transport", transport,
                       NULL);
+
+  gibber_transport_set_handler(GIBBER_TRANSPORT(transport), 
+      r_multicast_receive, result);
+
+  return result;
 }
 
 gboolean
@@ -226,8 +232,8 @@ gibber_r_multicast_transport_send(GibberTransport *transport,
   GibberRMulticastTransportPrivate *priv = 
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  return gibber_transport_send(GIBBER_TRANSPORT(priv->mtransport), 
-                               data, size, error); 
+  return gibber_transport_send(GIBBER_TRANSPORT(priv->transport),
+                               data, size, error);
 }
 
 static void
@@ -238,5 +244,5 @@ gibber_r_multicast_transport_disconnect(GibberTransport *transport) {
 
   gibber_transport_set_state(GIBBER_TRANSPORT(self), 
                              GIBBER_TRANSPORT_DISCONNECTED);
-  gibber_transport_disconnect(GIBBER_TRANSPORT(priv->mtransport));
+  gibber_transport_disconnect(GIBBER_TRANSPORT(priv->transport));
 }

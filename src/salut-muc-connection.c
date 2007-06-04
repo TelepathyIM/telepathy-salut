@@ -310,8 +310,9 @@ salut_muc_connection_new(const gchar *name,
 
   priv->mtransport = gibber_multicast_transport_new();
   if (priv->rmulticast) {
-    priv->rmtransport = gibber_r_multicast_transport_new(priv->mtransport,
-                                                         priv->name);
+    priv->rmtransport = gibber_r_multicast_transport_new(
+        GIBBER_TRANSPORT(priv->mtransport),
+        priv->name);
     gibber_xmpp_connection_engage(GIBBER_XMPP_CONNECTION(result),
                                   GIBBER_TRANSPORT(priv->rmtransport));
   } else {

@@ -22,7 +22,7 @@
 #define __GIBBER_R_MULTICAST_TRANSPORT_H__
 
 #include <glib-object.h>
-#include "gibber-multicast-transport.h"
+#include "gibber-transport.h"
 
 G_BEGIN_DECLS
 
@@ -54,7 +54,7 @@ GType gibber_r_multicast_transport_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportClass))
 
 GibberRMulticastTransport *
-gibber_r_multicast_transport_new(GibberMulticastTransport *mtransport,
+gibber_r_multicast_transport_new(GibberTransport *transport,
                                  const gchar *name);
 
 gboolean
