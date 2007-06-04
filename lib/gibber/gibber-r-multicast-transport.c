@@ -155,11 +155,11 @@ gibber_r_multicast_transport_class_init (GibberRMulticastTransportClass *gibber_
   object_class->set_property = gibber_r_multicast_transport_set_property;
   object_class->get_property = gibber_r_multicast_transport_get_property;
 
-  param_spec = g_param_spec_object("multicasttransport",
-                                   "multicasttransport",
-                                   "The underlying MulticastTransport",
-                                   GIBBER_TYPE_MULTICAST_TRANSPORT,
-                                   G_PARAM_CONSTRUCT_ONLY | 
+  param_spec = g_param_spec_object("transport",
+                                   "transport",
+                                   "The underlying Transport",
+                                   GIBBER_TYPE_TRANSPORT,
+                                   G_PARAM_CONSTRUCT_ONLY |
                                    G_PARAM_READWRITE      |
                                    G_PARAM_STATIC_NAME    |
                                    G_PARAM_STATIC_BLURB);
