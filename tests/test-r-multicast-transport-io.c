@@ -8,10 +8,8 @@
 
 GMainLoop *loop;
 
-typedef struct {
-  TestTransport *t;
-  GibberRMulticastTransport *m;
-} Info;
+TestTransport *t;
+GibberRMulticastTransport *m;
 
 void
 received_data(GibberTransport *transport, GibberBuffer *buffer,
@@ -19,7 +17,8 @@ received_data(GibberTransport *transport, GibberBuffer *buffer,
   gchar *b64;
 
   b64 = g_base64_encode((guchar *)buffer->data, buffer->length);
-  printf("%s:%s\n", (gchar *)user_data, b64);
+  printf("OUTPUT:%s\n", b64);
+  fflush(stdout);
   g_free(b64);
 }
 
@@ -29,7 +28,8 @@ send_hook(GibberTransport *transport, const guint8 *data,
   gchar *b64;
 
   b64 = g_base64_encode((guchar *)data, length);
-  printf("%s>%s\n", (gchar *)user_data, b64);
+  printf("SEND:%s\n", b64);
+  fflush(stdout);
   g_free(b64);
 
   return TRUE;
@@ -42,34 +42,28 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   gsize len;
   gchar *p;
   gboolean packet = FALSE;
-  Info *info;
-  GHashTable *infohash = (GHashTable *)user_data;
   guchar *b64;
   gsize size;
 
   s = g_io_channel_read_line(source, &buffer, &len, NULL, NULL);
   g_assert( s == G_IO_STATUS_NORMAL);
 
-  for (p = buffer ;  *p != '\0'; p++) {
-    if (*p == ':' || *p == '<') {
-      packet = (*p == '<');
-      *p = '\0';
-      p++;
-      break;
-    }
+  if (g_str_has_prefix(buffer, "INPUT:")) {
+    packet = FALSE;
+    p = buffer + strlen("INPUT:");
+  } else if (g_str_has_prefix(buffer, "RECV:")) {
+    packet = TRUE;
+    p = buffer + strlen("RECV:");
+  } else {
+    g_assert_not_reached();
   }
-
-  info = g_hash_table_lookup(infohash, buffer);
-
-  g_assert(info != NULL);
 
   b64 = g_base64_decode(p, &size);
 
   if (packet)  {
-    test_transport_write(info->t, b64, size);
+    test_transport_write(t, b64, size);
   } else {
-    g_assert(gibber_transport_send(GIBBER_TRANSPORT(info->m), 
-        b64, size, NULL));
+    g_assert(gibber_transport_send(GIBBER_TRANSPORT(m), b64, size, NULL));
   }
 
   g_free(b64);
@@ -78,35 +72,32 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   return TRUE;
 }
 
+gboolean
+got_error(GIOChannel *source, GIOCondition condition, gpointer user_data) {
+  g_main_loop_quit(loop);
+  return TRUE;
+}
+
+
 int
 main(int argc, char **argv){ 
-  GHashTable *senders;
-  int i;
   GIOChannel *io;
 
-  g_assert(argc > 1);
+  g_assert(argc == 2);
 
   g_type_init();
 
   loop = g_main_loop_new(NULL, FALSE);
 
-  senders = g_hash_table_new(g_str_hash, g_str_equal);
+  t = test_transport_new(send_hook, argv[1]);
+  GIBBER_TRANSPORT(t)->max_packet_size = 1500;
 
-  for (i = 1 ; i < argc ; i++) {
-    Info *info = g_slice_new0(Info);
-
-    info->t = test_transport_new(send_hook, argv[i]);
-    GIBBER_TRANSPORT(info->t)->max_packet_size = 1500;
-
-    info->m = gibber_r_multicast_transport_new(GIBBER_TRANSPORT(info->t),
-                                               argv[i]);
-    gibber_transport_set_handler(GIBBER_TRANSPORT(info->m),
-        received_data, argv[i]);
-    g_hash_table_insert(senders, argv[i], info);
-  }
+  m = gibber_r_multicast_transport_new(GIBBER_TRANSPORT(t), argv[1]);
+  gibber_transport_set_handler(GIBBER_TRANSPORT(m), received_data, argv[1]);
 
   io = g_io_channel_unix_new(STDIN_FILENO);
-  g_io_add_watch (io,  G_IO_IN, got_input, senders);
+  g_io_add_watch (io,  G_IO_IN, got_input, NULL);
+  g_io_add_watch (io,  G_IO_HUP|G_IO_ERR, got_error, NULL);
 
   g_main_loop_run(loop);
 
