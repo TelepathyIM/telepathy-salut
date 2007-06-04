@@ -173,12 +173,13 @@ gibber_r_multicast_transport_class_init (GibberRMulticastTransportClass *gibber_
                                    "name",
                                    "The name to use on the protocol",
                                    NULL,
-                                   G_PARAM_CONSTRUCT_ONLY | 
+                                   G_PARAM_CONSTRUCT_ONLY |
                                    G_PARAM_READWRITE      |
                                    G_PARAM_STATIC_NAME    |
                                    G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_NAME, 
+  g_object_class_install_property(object_class, PROP_NAME,
                                   param_spec);
+
   transport_class->send = gibber_r_multicast_transport_send;
   transport_class->disconnect = gibber_r_multicast_transport_disconnect;
 }
@@ -256,7 +257,7 @@ gibber_r_multicast_transport_send(GibberTransport *transport,
                                   const guint8 *data, gsize size,
                                   GError **error) {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (transport);
-  GibberRMulticastTransportPrivate *priv = 
+  GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   return gibber_transport_send(GIBBER_TRANSPORT(priv->transport),
