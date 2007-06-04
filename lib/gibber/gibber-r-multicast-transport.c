@@ -22,6 +22,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DEBUG_FLAG DEBUG_R_MULTICAST
+#include "gibber-debug.h"
+
 #include "gibber-r-multicast-transport.h"
 /* #include "gibber-r-multicast-transport-signals-marshal.h" */
 
