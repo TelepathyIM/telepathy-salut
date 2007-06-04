@@ -54,6 +54,12 @@ struct _GibberTransportClass {
 struct _GibberTransport {
     GObject parent;
     GibberTransportState state;
+
+    /* Maximum packet size for transports where it matters, 0 otherwise */
+    gsize max_packet_size;
+
+
+    /* FIXME Should be private... */
     GibberHandlerFunc handler;
     gpointer user_data;
 };
