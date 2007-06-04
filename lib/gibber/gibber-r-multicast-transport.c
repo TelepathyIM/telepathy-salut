@@ -28,16 +28,15 @@
 G_DEFINE_TYPE(GibberRMulticastTransport, gibber_r_multicast_transport, 
               GIBBER_TYPE_TRANSPORT)
 
-#if 0
 /* signal enum */
 enum
 {
-    NEW_SOURCE,
+    NEW_SENDER,
+    LOST_SENDER,
     LAST_SIGNAL
 };
 
 static guint signals[LAST_SIGNAL] = {0};
-#endif
 
 /* properties */
 enum {
@@ -134,6 +133,24 @@ gibber_r_multicast_transport_class_init (GibberRMulticastTransportClass *gibber_
 
   object_class->dispose = gibber_r_multicast_transport_dispose;
   object_class->finalize = gibber_r_multicast_transport_finalize;
+
+  signals[NEW_SENDER] =
+    g_signal_new("new-sender",
+                 G_OBJECT_CLASS_TYPE(gibber_r_multicast_transport_class),
+                 G_SIGNAL_RUN_LAST,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__STRING,
+                 G_TYPE_NONE, 1, G_TYPE_STRING);
+
+  signals[LOST_SENDER] =
+    g_signal_new("lost-sender",
+                 G_OBJECT_CLASS_TYPE(gibber_r_multicast_transport_class),
+                 G_SIGNAL_RUN_LAST,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__STRING,
+                 G_TYPE_NONE, 1, G_TYPE_STRING);
 
   object_class->set_property = gibber_r_multicast_transport_set_property;
   object_class->get_property = gibber_r_multicast_transport_get_property;
