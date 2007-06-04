@@ -42,6 +42,7 @@ struct _TestTransportPrivate
   test_transport_send_hook send;
   GString *buffer;
   guint send_id;
+  gpointer user_data;
 };
 
 #define TEST_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), TEST_TYPE_TRANSPORT, TestTransportPrivate))
@@ -114,7 +115,8 @@ send_data(gpointer data) {
 
   priv->send_id = 0;
   priv->send(GIBBER_TRANSPORT(self), 
-             (guint8 *)priv->buffer->str, priv->buffer->len, NULL);
+             (guint8 *)priv->buffer->str, priv->buffer->len, 
+             NULL, priv->user_data);
 
   g_string_truncate(priv->buffer, 0);
 
@@ -144,13 +146,14 @@ test_transport_disconnect(GibberTransport *transport) {
 
 
 TestTransport *
-test_transport_new(test_transport_send_hook send) {
+test_transport_new(test_transport_send_hook send, gpointer user_data) {
   TestTransport *self;
   TestTransportPrivate *priv;
 
   self = g_object_new(TEST_TYPE_TRANSPORT, NULL);
   priv  = TEST_TRANSPORT_GET_PRIVATE (self);
   priv->send = send;
+  priv->user_data = user_data;
 
   return self;
 }

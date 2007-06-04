@@ -14,7 +14,7 @@ gboolean parsing_failed = FALSE;
 
 gboolean
 send_hook(GibberTransport *transport, const guint8 *data, 
-          gsize length, GError **error) {
+          gsize length, GError **error, gpointer user_data) {
   /* Nothing for now */
   fwrite(data, 1, length, xmlfile);
   return TRUE;
@@ -93,7 +93,7 @@ main(int argc, char **argv) {
   
   g_type_init();
 
-  transport = test_transport_new(send_hook);
+  transport = test_transport_new(send_hook, NULL);
   connection = gibber_xmpp_connection_new(GIBBER_TRANSPORT(transport));
 
   g_signal_connect(connection, "parse-error",

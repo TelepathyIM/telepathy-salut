@@ -39,7 +39,7 @@ got_error(GQuark domain, int code, gchar *message) {
 
 gboolean
 send_hook(GibberTransport *transport, const guint8 *data, 
-   gsize length, GError **error) {
+   gsize length, GError **error, gpointer user_data) {
   GibberTransport *target = 
      (servertransport == transport) ? clienttransport : servertransport;
 
@@ -113,7 +113,7 @@ run_rest(test_t *test) {
   int ret = 0;
   TestSaslAuthServer *server;
 
-  servertransport = GIBBER_TRANSPORT(test_transport_new(send_hook));
+  servertransport = GIBBER_TRANSPORT(test_transport_new(send_hook, NULL));
 
   server = test_sasl_auth_server_new(servertransport, 
                                      test->mech, username, password,
@@ -123,7 +123,7 @@ run_rest(test_t *test) {
   run_done = FALSE;
   current_test = test;
 
-  clienttransport = GIBBER_TRANSPORT(test_transport_new(send_hook));
+  clienttransport = GIBBER_TRANSPORT(test_transport_new(send_hook, NULL));
   conn = gibber_xmpp_connection_new(clienttransport); 
 
   g_signal_connect(conn, "parse-error",

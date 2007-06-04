@@ -57,8 +57,10 @@ GType test_transport_get_type(void);
 typedef gboolean (*test_transport_send_hook)(GibberTransport *transport,
                                              const guint8 *data,
                                              gsize length,
-                                             GError **error);
-TestTransport *test_transport_new(test_transport_send_hook send);
+                                             GError **error,
+                                             gpointer user_data);
+TestTransport *test_transport_new(test_transport_send_hook send, 
+    gpointer user_data);
 
 void test_transport_write(TestTransport *transport,
                           const guint8 *buf, gsize size);
