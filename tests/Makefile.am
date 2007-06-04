@@ -7,7 +7,8 @@ $(top_builddir)/lib/gibber/libgibber.la:
 noinst_PROGRAMS = \
 	test-xmpp-connection    \
 	test-r-multicast-packet \
-	test-r-multicast-sender
+	test-r-multicast-sender \
+	test-r-multicast-transport-io
 
 
 test_xmpp_connection_SOURCES = \
@@ -42,6 +43,19 @@ test_r_multicast_sender_LDADD = \
 
 test_r_multicast_sender_CFLAGS = \
     $(AM_CFLAGS)
+
+test_r_multicast_transport_io_SOURCES = \
+    test-r-multicast-transport-io.c     \
+    test-transport.c           \
+    test-transport.h
+
+test_r_multicast_transport_io_LDADD = \
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(AM_LDFLAGS)
+
+test_r_multicast_transport_io_CFLAGS = \
+    $(AM_CFLAGS)
+
 
 if HAVE_LIBSASL2
 noinst_PROGRAMS += test-sasl-auth
