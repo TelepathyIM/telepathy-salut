@@ -16,6 +16,7 @@ static GDebugKey keys[] = {
   { "xmpp-writer",       DEBUG_XMPP_WRITER       },
   { "sasl",              DEBUG_SASL              },
   { "ssl",               DEBUG_SSL               },
+  { "rmulticast",        DEBUG_RMULTICAST        },
   { "rmulticast-sender", DEBUG_RMULTICAST_SENDER },
   { "all",               ~0                      },
   { 0, },
