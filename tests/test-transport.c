@@ -40,7 +40,7 @@ struct _TestTransportPrivate
 {
   gboolean dispose_has_run;
   test_transport_send_hook send;
-  GString *buffer;
+  GQueue *buffers;
   guint send_id;
   gpointer user_data;
 };
@@ -54,7 +54,7 @@ test_transport_init (TestTransport *obj)
 
   /* allocate any data required by the object here */
   priv->send = NULL;
-  priv->buffer = g_string_new("");
+  priv->buffers = g_queue_new();
   priv->send_id = 0;
 }
 
@@ -97,6 +97,11 @@ test_transport_dispose (GObject *object)
     G_OBJECT_CLASS (test_transport_parent_class)->dispose (object);
 }
 
+static void
+free_array(gpointer data, gpointer user_data) {
+  g_array_free((GArray *)data, TRUE);
+}
+
 void
 test_transport_finalize (GObject *object)
 {
@@ -104,7 +109,8 @@ test_transport_finalize (GObject *object)
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
-  g_string_free(priv->buffer, TRUE);
+  g_queue_foreach(priv->buffers, free_array, NULL);
+  g_queue_free(priv->buffers);
   G_OBJECT_CLASS (test_transport_parent_class)->finalize (object);
 }
 
@@ -112,15 +118,20 @@ static gboolean
 send_data(gpointer data) {
   TestTransport *self = TEST_TRANSPORT (data);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
+  GArray *arr;
 
-  priv->send_id = 0;
+  arr = (GArray *)g_queue_pop_head(priv->buffers);
+
   priv->send(GIBBER_TRANSPORT(self), 
-             (guint8 *)priv->buffer->str, priv->buffer->len, 
+             (guint8 *)arr->data, arr->len,
              NULL, priv->user_data);
 
-  g_string_truncate(priv->buffer, 0);
+  if (g_queue_is_empty(priv->buffers)) {
+    priv->send_id = 0;
+    return FALSE;
+  }
 
-  return FALSE;
+  return TRUE;
 }
 
 static gboolean
@@ -129,7 +140,12 @@ test_transport_send(GibberTransport *transport,
   TestTransport *self = TEST_TRANSPORT (transport);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
 
-  g_string_append_len(priv->buffer, (gchar *)data, size);
+  GArray *arr;
+
+  arr = g_array_sized_new(FALSE, TRUE, sizeof(guint8), size);
+  g_array_append_vals(arr, data, size);
+
+  g_queue_push_tail(priv->buffers, arr);
 
   if (priv->send_id == 0) {
     priv->send_id = g_idle_add(send_data, transport);
