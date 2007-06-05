@@ -69,6 +69,7 @@ typedef enum {
 /* signal enum */
 enum {
     RECEIVED_STANZA,
+    CONNECTED,
     LAST_SIGNAL
 };
 
@@ -371,6 +372,14 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
                   salut_im_channel_marshal_BOOLEAN__OBJECT,
                   G_TYPE_BOOLEAN, 1, GIBBER_TYPE_XMPP_STANZA);
 
+  signals[CONNECTED] =
+    g_signal_new ("connected",
+                  G_OBJECT_CLASS_TYPE (salut_im_channel_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
 
   tp_text_mixin_class_init(object_class, 
                            G_STRUCT_OFFSET(SalutImChannelClass, text_class));
@@ -566,6 +575,7 @@ _connection_stream_opened_cb(GibberXmppConnection *conn,
     g_object_unref(stanza);
   }
   priv->state = CHANNEL_CONNECTED;
+  g_signal_emit(self, signals[CONNECTED], 0);
   _flush_queue(self);
 }
 
@@ -626,6 +636,7 @@ _initialise_connection(SalutImChannel *self) {
   /* Sync state with the connection */
   if (priv->xmpp_connection->stream_open) { 
     priv->state = CHANNEL_CONNECTED;
+    g_signal_emit(self, signals[CONNECTED], 0);
     _flush_queue(self);
   } else {
     priv->state = CHANNEL_CONNECTING;
