@@ -2,6 +2,7 @@
 
 from twisted.internet import reactor, protocol
 from base64 import b64encode, b64decode
+import random
 
 class BaseMeshNode(protocol.ProcessProtocol):
   delimiter = '\n'
@@ -59,16 +60,39 @@ class MeshNode(BaseMeshNode):
   def gotOutput(self, data):
     self.mesh.gotOutput(self, data)
 
+class Link:
+  def __init__(self, target, bandwidth, latency, dropchance):
+    self.target = target
+    self.bandwidth = bandwidth
+    self.latency = latency
+    self.dropchance = dropchance
+
+  def send(self, data):
+    if random.random() > self.dropchance:
+      self.target.recvPacket(data)
+
 class Mesh:
   nodes = []
+  connections = {};
 
   def gotOutput(self, node, data):
     print "Got " + data + " from " + node.name
 
-  def sendPacket(self, node, data):
+  def connect(self, node0, node1, bandwidth, latency, dropchance):
+    self.connections.setdefault(node0, []).append(
+       Link(node1, bandwidth, latency, dropchance))
+
+  def connect_full(self, bandwidth, latency, dropchance):
+    self.connections = {}
     for x in self.nodes:
-      if x != node:
-        x.recvPacket(data)
+      for y in self.nodes:
+        if x != y:
+          self.connect(x, y, bandwidth, latency, dropchance)
+
+  def sendPacket(self, node, data):
+    conn = self.connections.get(node, [])
+    for link in conn:
+      link.send(data)
 
   def addNode(self, name):
     node = MeshNode(name, self)
