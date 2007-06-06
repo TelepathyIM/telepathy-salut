@@ -100,6 +100,6 @@ clean-local:
 SUBDIRS = inputs
 
 $(dist_check_SCRIPTS): always-run
-	chmod +x $@
+	chmod +x $(srcdir)/$@
 
 .PHONY: always-run
