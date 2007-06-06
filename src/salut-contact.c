@@ -411,11 +411,13 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
       gchar *value;
       avahi_string_list_get_pair (t, &key, &value, NULL);
 
-      if (tp_strdiff (self->color, value))
+      if (tp_strdiff (self->jid, value))
         {
           g_free (self->jid);
           self->jid = g_strdup (value);
+#ifdef ENABLE_OLPC
           SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+#endif
         }
       avahi_free (key);
       avahi_free (value);
