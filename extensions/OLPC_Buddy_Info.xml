@@ -22,14 +22,19 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
     <method name="SetProperties">
       <arg direction="in" name="properties" type="a{sv}">
         <tp:docstring>
-          A dictionary mapping information names to the desired values
+          A dictionary mapping information names to the desired values.
+          This replaces any existing buddy properties completely: any keys
+          which were previously present, but are not present in this dictionary,
+          are deleted.
         </tp:docstring>
       </arg>
-      <tp:docstring>
-        Set the information of the local user for this connection.
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>Set the information of the local user for this connection.</p>
+        <p>This method may be called before Connect(), in which case the given
+        properties will be advertised as soon as possible after connection
+        (possibly immediately).</p>
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="org.freedesktop.Telepathy.Error.Disconnected"/>
         <tp:error name="org.freedesktop.Telepathy.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
@@ -66,7 +71,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
         </tp:docstring>
       </arg>
       <tp:docstring>
-        Signal emitted when the properties of a contact from your 'subscribed'
+        Signal emitted when the properties of a contact from your 'subscribe'
         contact list are changed.
       </tp:docstring>
     </signal>
@@ -77,7 +82,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
           An array of structs containing:
           <ul>
             <li>the identifier of the activity</li>
-            <li>the handle of the activity channel</li>
+            <li>the room handle of the activity channel</li>
           </ul>
         </tp:docstring>
       </arg>
@@ -93,7 +98,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
     <method name="GetActivities">
       <arg direction="in" name="contact" type="u">
         <tp:docstring>
-          An integer handle for the contact to request his activities for
+          An integer handle for the contact whose activities are to be returned
         </tp:docstring>
       </arg>
       <arg direction="out" name="activities" type="a(su)">
@@ -101,7 +106,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
           An array of structs containing:
           <ul>
             <li>the identifier of the activity</li>
-            <li>the handle of the activity channel</li>
+            <li>the room handle of the activity channel</li>
           </ul>
         </tp:docstring>
       </arg>
@@ -130,7 +135,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
         </tp:docstring>
       </arg>
       <tp:docstring>
-        Signal emitted when the activities of a contact from your 'subscribed'
+        Signal emitted when the activities of a contact from your 'subscribe'
         contact list are changed.
       </tp:docstring>
     </signal>
@@ -138,12 +143,14 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
     <method name="SetCurrentActivity">
       <arg direction="in" name="activity" type="s">
         <tp:docstring>
-          The identifier of the activity
+          The identifier of the activity, or the empty string if there is no
+          current activity
         </tp:docstring>
       </arg>
       <arg direction="in" name="channel" type="u">
         <tp:docstring>
-          The handle of the activity channel
+          The room handle of the activity channel, or 0 if there is no current
+          activity
         </tp:docstring>
       </arg>
       <tp:docstring>
@@ -158,17 +165,18 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
     <method name="GetCurrentActivity">
       <arg direction="in" name="contact" type="u">
         <tp:docstring>
-          An integer handle for the contact to request his activities for
+          An integer handle for the contact whose current activity is to be
+          returned
         </tp:docstring>
       </arg>
       <arg direction="out" name="activity" type="s">
         <tp:docstring>
-          The identifier of the activity
+          The identifier of the activity, or "" if there is no current activity
         </tp:docstring>
       </arg>
       <arg direction="out" name="channel" type="u">
         <tp:docstring>
-          The handle of the activity channel
+          The room handle of the activity, or 0 if there is no current activity
         </tp:docstring>
       </arg>
       <tp:docstring>
@@ -188,35 +196,41 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
       </arg>
       <arg name="activity" type="s">
         <tp:docstring>
-          The identifier of the activity
+          The identifier of the activity, or "" if there is no current activity
         </tp:docstring>
       </arg>
       <arg name="channel" type="u">
         <tp:docstring>
-          The handle of the activity channel
+          The room handle of the activity channel, or 0 if there is no current
+          activity
         </tp:docstring>
       </arg>
       <tp:docstring>
-        Signal emitted when the current activity of a contact from your 'subscribed'
+        Signal emitted when the current activity of a contact from your 'subscribe'
         contact list is changed.
       </tp:docstring>
     </signal>
 
     <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
       <p>An interface on connections to associate OLPC buddy information
-    with contacts. Provides methods for the user to set their own information and
-    retrieve information of contacts.
-    User is automatically notified when information of contacts that are in his 'subscribe'
-    contact list change.</p>
+        with contacts, providing methods for the user to set their own
+        information and retrieve information of contacts.
+        The user is automatically notified when information of contacts that
+        are in his 'subscribe' contact list change.</p>
 
-      <p>The following types and names are used to request and set information (except
-    for activities):</p>
+      <p>The following types and names are used to request and set information
+        (except for activities):</p>
       <dl>
         <dt>s:color</dt>
-        <dd>The color name of the buddy. Format used is #RRGGBB,#RRGGBB (stroke,fill).</dd>
+        <dd>The color name of the buddy. Format used is #RRGGBB,#RRGGBB
+          (stroke,fill).
+        </dd>
 
         <dt>ay:key</dt>
         <dd>The public key of the buddy.</dd>
+
+        <dt>s:jid</dt>
+        <dd>For link-local connections, the JID of the buddy's server account.</dd>
       </dl>
 
       <p>Activities are represented by a struct containing:</p>
@@ -224,8 +238,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA</p>
         <li>the identifier of the activity</li>
         <li>the handle of the activity channel</li>
       </ul>
-
-      <p>If the activity identifier is empty (""), the handle is ignored and there is no current activity.</p>
     </tp:docstring>
   </interface>
 </node>
