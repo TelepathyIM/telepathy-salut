@@ -10,11 +10,7 @@ G_BEGIN_DECLS
 
 void debug_set_log_file_from_env (void);
 
-G_END_DECLS
-
 #ifdef ENABLE_DEBUG
-
-G_BEGIN_DECLS
 
 typedef enum
 {
@@ -66,4 +62,3 @@ void debug (DebugFlags flag, const gchar *format, ...)
 G_END_DECLS
 
 #endif
-
