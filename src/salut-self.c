@@ -61,7 +61,6 @@ struct _SalutSelfPrivate
   gchar *nickname;
   gchar *first_name;
   gchar *last_name;
-  gchar *jid;
   gchar *email;
 
   gchar *alias;
@@ -88,10 +87,10 @@ salut_self_init (SalutSelf *obj)
   /* allocate any data required by the object here */
   obj->status = SALUT_PRESENCE_AVAILABLE;
   obj->status_message = NULL;
+  obj->jid = NULL;
 
   priv->first_name = NULL;
   priv->last_name = NULL;
-  priv->jid = NULL;
   priv->email = NULL;
 
   priv->client = NULL;
@@ -189,9 +188,10 @@ salut_self_finalize (GObject *object)
 
   /* free any data held directly by the object here */
 
+  g_free (self->jid);
+
   g_free(priv->first_name);
   g_free(priv->last_name);
-  g_free(priv->jid);
   g_free(priv->email);
 
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
@@ -242,10 +242,11 @@ salut_self_new(SalutAvahiClient *client,
   priv->client = client;
   g_object_ref(client);
 
+  ret->jid  = g_strdup(jid);
+
   priv->nickname = g_strdup(nickname);
   priv->first_name = g_strdup(first_name);
   priv->last_name = g_strdup(last_name);
-  priv->jid  = g_strdup(jid);
   priv->email = g_strdup(email);
   priv->alias = NULL;
 
@@ -365,8 +366,8 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
      ret = avahi_string_list_add_printf(ret, "last=%s", priv->last_name);
    if (priv->email)
      ret = avahi_string_list_add_printf(ret, "email=%s", priv->email);
-   if (priv->jid)
-     ret = avahi_string_list_add_printf(ret, "jid=%s", priv->jid);
+   if (self->jid)
+     ret = avahi_string_list_add_printf(ret, "jid=%s", self->jid);
 
    ret = avahi_string_list_add_printf(ret, "status=%s", 
                                 salut_presence_statuses[self->status].txt_name);
@@ -594,8 +595,8 @@ salut_self_set_olpc_properties(SalutSelf *self,
   }
   if (jid != NULL)
     {
-      g_free (priv->jid);
-      priv->jid = g_strdup (jid);
+      g_free (self->jid);
+      self->jid = g_strdup (jid);
 
       salut_avahi_entry_group_service_set (priv->presence, "jid",
           jid, NULL);
