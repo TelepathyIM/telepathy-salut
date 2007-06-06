@@ -53,6 +53,7 @@ struct _SalutContact {
     SalutPresenceId status;
     gchar *avatar_token;
     gchar *status_message;
+    gchar *jid;
 #ifdef ENABLE_OLPC
     gchar *key;
     gchar *color;

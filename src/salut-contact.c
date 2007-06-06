@@ -88,6 +88,7 @@ salut_contact_init (SalutContact *obj)
   obj->status = SALUT_PRESENCE_AVAILABLE;
   obj->status_message = NULL;
   obj->avatar_token = NULL;
+  obj->jid = NULL;
   priv->client = NULL;
   priv->resolvers = NULL;
   priv->found = FALSE;
@@ -171,6 +172,7 @@ salut_contact_finalize (GObject *object) {
   g_free(self->status_message);
   g_free(priv->alias);
   g_free(self->avatar_token);
+  g_free (self->jid);
 
   G_OBJECT_CLASS (salut_contact_parent_class)->finalize (object);
 }
@@ -401,6 +403,23 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     purge_cached_avatar(self, NULL);
     SET_CHANGE(SALUT_CONTACT_AVATAR_CHANGED);
   }
+
+  t = avahi_string_list_find(txt, "jid");
+  if (t != NULL)
+    {
+      gchar *key;
+      gchar *value;
+      avahi_string_list_get_pair (t, &key, &value, NULL);
+
+      if (tp_strdiff (self->color, value))
+        {
+          g_free (self->jid);
+          self->jid = g_strdup (value);
+          SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+        }
+      avahi_free (key);
+      avahi_free (value);
+    }
 
 #ifdef ENABLE_OLPC
   if ((t = avahi_string_list_find(txt, "olpc-color")) != NULL) { 
