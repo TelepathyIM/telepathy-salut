@@ -70,8 +70,9 @@
 
 #include <extensions/_gen/svc-OLPC_Buddy_Info.h>
 
-static void salut_connection_olpc_buddy_info_iface_init(gpointer g_iface,
-                                                        gpointer iface_data);
+static void
+salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
+    gpointer iface_data);
 
 #endif
 
@@ -103,7 +104,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
 #ifdef ENABLE_OLPC
-    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_OLPC_BUDDY_INFO,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
 #endif
     )
@@ -1237,23 +1238,25 @@ TpSvcConnectionInterfaceAvatarsClass *klass =
 
 #ifdef ENABLE_OLPC
 static GArray *
-key_to_garray(const gchar *key) {
+key_to_garray (const gchar *key)
+{
   GArray *arr;
   gsize len;
   guchar *output;
 
-  output = g_base64_decode(key, &len);
+  output = g_base64_decode (key, &len);
 
-  arr = g_array_sized_new(FALSE, FALSE, sizeof(guchar), len);
-  g_array_append_vals(arr, output, len);
-  g_free(output);
+  arr = g_array_sized_new (FALSE, FALSE, sizeof (guchar), len);
+  g_array_append_vals (arr, output, len);
+  g_free (output);
   return arr;
 }
 
 static GValue *
-new_gvalue(GType type) {
-  GValue *result = g_slice_new0(GValue);
-  g_value_init(result, type);
+new_gvalue (GType type)
+{
+  GValue *result = g_slice_new0 (GValue);
+  g_value_init (result, type);
   return result;
 }
 
@@ -1272,20 +1275,22 @@ get_properties_hash (const gchar *key,
   GHashTable *properties;
   GValue *gvalue;
 
-  properties = g_hash_table_new_full(g_str_hash, g_str_equal,
+  properties = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) free_gvalue);
-  if (key != NULL) {
-    GArray *arr = key_to_garray(key);
-    gvalue = new_gvalue(DBUS_TYPE_G_UCHAR_ARRAY);
-    g_value_take_boxed(gvalue, arr);
-    g_hash_table_insert(properties, "key", gvalue);
-  }
+  if (key != NULL)
+    {
+      GArray *arr = key_to_garray (key);
+      gvalue = new_gvalue (DBUS_TYPE_G_UCHAR_ARRAY);
+      g_value_take_boxed (gvalue, arr);
+      g_hash_table_insert (properties, "key", gvalue);
+    }
 
-  if (color != NULL) {
-    gvalue = new_gvalue(G_TYPE_STRING);
-    g_value_set_string(gvalue, color);
-    g_hash_table_insert(properties, "color", gvalue);
-  }
+  if (color != NULL)
+    {
+      gvalue = new_gvalue (G_TYPE_STRING);
+      g_value_set_string (gvalue, color);
+      g_hash_table_insert (properties, "color", gvalue);
+    }
 
   if (jid != NULL)
     {
@@ -1307,10 +1312,10 @@ emit_properties_changed (SalutConnection *connection,
   GHashTable *properties;
   properties = get_properties_hash (key, color, jid);
 
-  tp_svc_olpc_buddy_info_emit_properties_changed(connection, 
+  tp_svc_olpc_buddy_info_emit_properties_changed (connection,
       handle, properties);
 
-  g_hash_table_destroy(properties);
+  g_hash_table_destroy (properties);
 }
 
 static void
@@ -1323,56 +1328,64 @@ _contact_manager_contact_olpc_properties_changed (SalutConnection *self,
 }
 
 static void
-salut_connection_olpc_get_properties(TpSvcOLPCBuddyInfo *iface,
-    TpHandle handle,
-    DBusGMethodInvocation *context) {
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-
+salut_connection_olpc_get_properties (TpSvcOLPCBuddyInfo *iface,
+                                      TpHandle handle,
+                                      DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
   GHashTable *properties = NULL;
 
-  if (handle == base->self_handle) {
-    properties = get_properties_hash (priv->self->key, priv->self->color,
-        priv->self->jid);
-  } else {
-    SalutContact *contact;
-    contact = salut_contact_manager_get_contact(priv->contact_manager,
-                                                handle);
-    if (contact == NULL) {
-      GError *error;
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, 
-                         "Unknown contact");
-      dbus_g_method_return_error(context, error);
-      g_error_free(error);
+  if (handle == base->self_handle)
+    {
+      properties = get_properties_hash (priv->self->key, priv->self->color,
+          priv->self->jid);
     }
+  else
+    {
+      SalutContact *contact;
+      contact = salut_contact_manager_get_contact (priv->contact_manager,
+          handle);
+      if (contact == NULL)
+        {
+          GError *error;
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                             "Unknown contact");
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+        }
     properties = get_properties_hash (contact->key, contact->color,
         contact->jid);
   }
 
-  tp_svc_olpc_buddy_info_return_from_get_properties(context, properties);
-  g_hash_table_destroy(properties);
+  tp_svc_olpc_buddy_info_return_from_get_properties (context, properties);
+  g_hash_table_destroy (properties);
 }
 
 
 static gboolean
-find_unknown_properties(gpointer key, gpointer value, gpointer user_data) {
-  gchar **valid_props = (gchar **)user_data;
+find_unknown_properties (gpointer key,
+                         gpointer value,
+                         gpointer user_data)
+{
+  gchar **valid_props = (gchar **) user_data;
   int i;
-  for (i = 0; valid_props[i] != NULL; i++) {
-    if (!tp_strdiff(key, valid_props[i])) 
-      return FALSE;
-  }
+  for (i = 0; valid_props[i] != NULL; i++)
+    {
+      if (!tp_strdiff (key, valid_props[i]))
+        return FALSE;
+    }
   return TRUE;
 }
 
 static void
-salut_connection_olpc_set_properties(TpSvcOLPCBuddyInfo *iface,
-    GHashTable *properties,
-    DBusGMethodInvocation *context) {
-
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+salut_connection_olpc_set_properties (TpSvcOLPCBuddyInfo *iface,
+                                      GHashTable *properties,
+                                      DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
   GError *error = NULL;
   /* Only three know properties, so handle it quite naievely */
@@ -1382,68 +1395,85 @@ salut_connection_olpc_set_properties(TpSvcOLPCBuddyInfo *iface,
   const gchar *jid = NULL;
   GValue *val;
 
-  if (g_hash_table_find(properties, find_unknown_properties, known_properties)
-          != NULL) {
-    error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                         "Unknown property given");
-    goto error;
-  }
-
-  if ((val = (GValue *)g_hash_table_lookup(properties, "color")) != NULL) {
-    if (G_VALUE_TYPE(val) != G_TYPE_STRING) {
+  if (g_hash_table_find (properties, find_unknown_properties, known_properties)
+      != NULL)
+    {
       error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                           "Color value should be of type s");
+          "Unknown property given");
       goto error;
-    } else {
-      int len;
-      gboolean correct = TRUE;
+    }
 
-      color = (gchar *)g_value_get_string(val);
-
-      /* be very anal about the color format */
-      len = strlen(color);
-      if (len != 15) {
-        correct = FALSE;
-      } else {
-        int i;
-        for (i = 0 ; i < len ; i++) {
-          switch (i) {
-            case 0:
-            case 8:
-              correct = (color[i] == '#');
-              break;
-            case 7:
-              correct = (color[i] == ',');
-              break;
-            default:
-              correct = isxdigit(color[i]);
-              break;
-          }
+  if ((val = (GValue *) g_hash_table_lookup (properties, "color")) != NULL)
+    {
+      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "Color value should be of type s");
+          goto error;
         }
-      }
-      if (!correct) {
-        error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                               "Color value has an incorrect format");
-        goto error;
-      }
-    }
-  }
+      else
+        {
+          int len;
+          gboolean correct = TRUE;
 
-  if ((val = (GValue *)g_hash_table_lookup(properties, "key")) != NULL) {
-    if (G_VALUE_TYPE(val) != DBUS_TYPE_G_UCHAR_ARRAY) {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                           "Key value should be of type ay");
-      goto error;
-    } else {
-      GArray *arr = g_value_get_boxed(val);
-      if (arr->len == 0) {
-        error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                             "Key value of lenght 0 not allowed");
-        goto error;
-      }
-      key = g_base64_encode((guchar *)arr->data, arr->len);
+          color = (gchar *) g_value_get_string (val);
+
+          /* be very anal about the color format */
+          len = strlen (color);
+          if (len != 15)
+            {
+              correct = FALSE;
+            }
+          else
+            {
+              int i;
+              for (i = 0 ; i < len ; i++)
+                {
+                  switch (i)
+                    {
+                      case 0:
+                      case 8:
+                        correct = (color[i] == '#');
+                        break;
+                      case 7:
+                        correct = (color[i] == ',');
+                        break;
+                      default:
+                        correct = isxdigit (color[i]);
+                        break;
+                    }
+                }
+            }
+
+          if (!correct)
+            {
+              error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                  "Color value has an incorrect format");
+              goto error;
+            }
+        }
     }
-  }
+
+  if ((val = (GValue *) g_hash_table_lookup (properties, "key")) != NULL)
+    {
+      if (G_VALUE_TYPE (val) != DBUS_TYPE_G_UCHAR_ARRAY)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "Key value should be of type ay");
+          goto error;
+        }
+      else
+        {
+          GArray *arr = g_value_get_boxed (val);
+          if (arr->len == 0)
+            {
+              error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                  "Key value of lenght 0 not allowed");
+              goto error;
+            }
+          key = g_base64_encode ((guchar *) arr->data, arr->len);
+        }
+    }
 
   val = g_hash_table_lookup (properties, "jid");
   if (val != NULL)
@@ -1465,25 +1495,25 @@ salut_connection_olpc_set_properties(TpSvcOLPCBuddyInfo *iface,
         }
     }
 
-  if (!salut_self_set_olpc_properties (priv->self, key, color, jid, &error)) {
+  if (!salut_self_set_olpc_properties (priv->self, key, color, jid, &error))
     goto error;
-  }
 
-  g_free(key);
+  g_free (key);
 
-  tp_svc_olpc_buddy_info_return_from_set_properties(context);
+  tp_svc_olpc_buddy_info_return_from_set_properties (context);
   return;
 
 error:
-  g_free(key);
+  g_free (key);
 
-  dbus_g_method_return_error(context, error);
-  g_error_free(error);
+  dbus_g_method_return_error (context, error);
+  g_error_free (error);
 }
 
 static void 
-salut_connection_olpc_buddy_info_iface_init(gpointer g_iface,
-    gpointer iface_data) {
+salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
+                                             gpointer iface_data)
+{
   TpSvcOLPCBuddyInfoClass *klass =
     (TpSvcOLPCBuddyInfoClass *) g_iface;
 #define IMPLEMENT(x) tp_svc_olpc_buddy_info_implement_##x (klass, \
@@ -1549,9 +1579,8 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
   }
 
 #ifdef ENABLE_OLPC
-  if (changes & SALUT_CONTACT_OLPC_PROPERTIES) {
-    _contact_manager_contact_olpc_properties_changed(self, contact, handle);
-  }
+  if (changes & SALUT_CONTACT_OLPC_PROPERTIES)
+    _contact_manager_contact_olpc_properties_changed (self, contact, handle);
 #endif
 }
 
@@ -1642,7 +1671,7 @@ salut_connection_get_interfaces (TpSvcConnection *self,
     TP_IFACE_OLPC_BUDDY_INFO,
 #endif
     NULL };
-  
+
   tp_svc_connection_return_from_get_interfaces(context, interfaces);
 }
 
