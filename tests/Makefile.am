@@ -84,13 +84,13 @@ AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
 
 AM_LDFLAGS = @GLIB_LIBS@
 
-TESTS = run-xmpp-connection-test.sh
+TESTS = $(dist_check_SCRIPTS)
 
 if HAVE_LIBSASL2
   TESTS +=  test-sasl-auth
 endif
 
-EXTRA_DIST = \
+dist_check_SCRIPTS = \
   run-xmpp-connection-test.sh
 
 clean-local:
@@ -98,3 +98,8 @@ clean-local:
 	-rm -f sasl-test.db
 
 SUBDIRS = inputs
+
+$(dist_check_SCRIPTS): always-run
+	chmod +x $@
+
+.PHONY: always-run
