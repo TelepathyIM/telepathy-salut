@@ -70,6 +70,7 @@ dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
 EXTRA_DIST = \
+  gibber-r-multicast-sender-signals-marshal.list \
   gibber-sasl-auth-signals-marshal.list       \
   gibber-ssl-transport-signals-marshal.list   \
   gibber-transport-signals-marshal.list       \
