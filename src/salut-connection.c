@@ -1265,7 +1265,10 @@ free_gvalue (GValue *value)
 }
 
 static GHashTable *
-get_properties_hash(const gchar *key, const gchar *color) {
+get_properties_hash (const gchar *key,
+                     const gchar *color,
+                     const gchar *jid)
+{
   GHashTable *properties;
   GValue *gvalue;
 
@@ -1284,15 +1287,25 @@ get_properties_hash(const gchar *key, const gchar *color) {
     g_hash_table_insert(properties, "color", gvalue);
   }
 
+  if (jid != NULL)
+    {
+      gvalue = new_gvalue (G_TYPE_STRING);
+      g_value_set_string (gvalue, jid);
+      g_hash_table_insert (properties, "jid", gvalue);
+    }
+
   return properties;
 }
 
 static void
-emit_properties_changed(SalutConnection *connection,
-    TpHandle handle, const gchar *key, const gchar *color) {
-
+emit_properties_changed (SalutConnection *connection,
+                         TpHandle handle,
+                         const gchar *key,
+                         const gchar *color,
+                         const gchar *jid)
+{
   GHashTable *properties;
-  properties = get_properties_hash(key, color);
+  properties = get_properties_hash (key, color, jid);
 
   tp_svc_olpc_buddy_info_emit_properties_changed(connection, 
       handle, properties);
@@ -1301,10 +1314,12 @@ emit_properties_changed(SalutConnection *connection,
 }
 
 static void
-_contact_manager_contact_olpc_properties_changed(SalutConnection *self, 
-                                                 SalutContact *contact, 
-                                                 TpHandle handle) {
-  emit_properties_changed(self, handle, contact->key,  contact->color);
+_contact_manager_contact_olpc_properties_changed (SalutConnection *self,
+                                                  SalutContact *contact,
+                                                  TpHandle handle)
+{
+  emit_properties_changed (self, handle, contact->key, contact->color,
+      contact->jid);
 }
 
 static void
@@ -1318,7 +1333,8 @@ salut_connection_olpc_get_properties(TpSvcOLPCBuddyInfo *iface,
   GHashTable *properties = NULL;
 
   if (handle == base->self_handle) {
-    properties = get_properties_hash(priv->self->key, priv->self->color);
+    properties = get_properties_hash (priv->self->key, priv->self->color,
+        priv->self->jid);
   } else {
     SalutContact *contact;
     contact = salut_contact_manager_get_contact(priv->contact_manager,
@@ -1330,7 +1346,8 @@ salut_connection_olpc_get_properties(TpSvcOLPCBuddyInfo *iface,
       dbus_g_method_return_error(context, error);
       g_error_free(error);
     }
-    properties = get_properties_hash(contact->key, contact->color);
+    properties = get_properties_hash (contact->key, contact->color,
+        contact->jid);
   }
 
   tp_svc_olpc_buddy_info_return_from_get_properties(context, properties);
