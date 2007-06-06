@@ -18,6 +18,7 @@ main(int argc, char **argv) {
   g_type_init();
   g_set_prgname("telepathy-salut");
 
+  debug_set_log_file_from_env ();
   debug_set_flags_from_env();
 
   return tp_run_connection_manager("telepathy-salut", VERSION,
