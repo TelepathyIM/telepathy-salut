@@ -65,10 +65,10 @@
 #ifdef ENABLE_OLPC
 
 /* XXX: this should be generated */
-#define TP_IFACE_OLPC_BUDDY_INFO \
+#define SALUT_IFACE_OLPC_BUDDY_INFO \
     "org.laptop.Telepathy.BuddyInfo"
 
-#include <extensions/_gen/svc-OLPC_Buddy_Info.h>
+#include <extensions/extensions.h>
 
 static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
@@ -104,7 +104,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
 #ifdef ENABLE_OLPC
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_OLPC_BUDDY_INFO,
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
 #endif
     )
@@ -1305,7 +1305,7 @@ emit_properties_changed (SalutConnection *connection,
   GHashTable *properties;
   properties = get_properties_hash (key, color, jid);
 
-  tp_svc_olpc_buddy_info_emit_properties_changed (connection,
+  salut_svc_olpc_buddy_info_emit_properties_changed (connection,
       handle, properties);
 
   g_hash_table_destroy (properties);
@@ -1321,7 +1321,7 @@ _contact_manager_contact_olpc_properties_changed (SalutConnection *self,
 }
 
 static void
-salut_connection_olpc_get_properties (TpSvcOLPCBuddyInfo *iface,
+salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
                                       TpHandle handle,
                                       DBusGMethodInvocation *context)
 {
@@ -1352,7 +1352,7 @@ salut_connection_olpc_get_properties (TpSvcOLPCBuddyInfo *iface,
         contact->jid);
   }
 
-  tp_svc_olpc_buddy_info_return_from_get_properties (context, properties);
+  salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
   g_hash_table_destroy (properties);
 }
 
@@ -1373,7 +1373,7 @@ find_unknown_properties (gpointer key,
 }
 
 static void
-salut_connection_olpc_set_properties (TpSvcOLPCBuddyInfo *iface,
+salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
                                       GHashTable *properties,
                                       DBusGMethodInvocation *context)
 {
@@ -1493,7 +1493,7 @@ salut_connection_olpc_set_properties (TpSvcOLPCBuddyInfo *iface,
 
   g_free (key);
 
-  tp_svc_olpc_buddy_info_return_from_set_properties (context);
+  salut_svc_olpc_buddy_info_return_from_set_properties (context);
   return;
 
 error:
@@ -1507,9 +1507,9 @@ static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
                                              gpointer iface_data)
 {
-  TpSvcOLPCBuddyInfoClass *klass =
-    (TpSvcOLPCBuddyInfoClass *) g_iface;
-#define IMPLEMENT(x) tp_svc_olpc_buddy_info_implement_##x (klass, \
+  SalutSvcOLPCBuddyInfoClass *klass =
+    (SalutSvcOLPCBuddyInfoClass *) g_iface;
+#define IMPLEMENT(x) salut_svc_olpc_buddy_info_implement_##x (klass, \
     salut_connection_olpc_##x)
   IMPLEMENT(set_properties);
   IMPLEMENT(get_properties);
@@ -1661,7 +1661,7 @@ salut_connection_get_interfaces (TpSvcConnection *self,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
 #ifdef ENABLE_OLPC
-    TP_IFACE_OLPC_BUDDY_INFO,
+    SALUT_IFACE_OLPC_BUDDY_INFO,
 #endif
     NULL };
 

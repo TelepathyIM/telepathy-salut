@@ -163,11 +163,11 @@ AC_OUTPUT( Makefile                       \
            lib/Makefile                   \
            lib/gibber/Makefile            \
            lib/gibber/examples/Makefile   \
-           lib/tools/Makefile             \
            src/Makefile                   \
            m4/Makefile                    \
            data/Makefile                  \
            extensions/Makefile            \
+           extensions/tools/Makefile      \
            tests/Makefile                 \
            tests/inputs/Makefile
 )

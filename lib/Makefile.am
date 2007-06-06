@@ -1,1 +1,1 @@
-SUBDIRS=gibber tools
+SUBDIRS=gibber
