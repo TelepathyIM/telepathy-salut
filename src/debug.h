@@ -6,11 +6,11 @@
 
 #include <glib.h>
 
+#include <gibber/gibber-xmpp-stanza.h>
+
 G_BEGIN_DECLS
 
 void debug_set_log_file_from_env (void);
-
-G_END_DECLS
 
 #ifdef ENABLE_DEBUG
 
@@ -40,6 +40,8 @@ void debug (DebugFlags flag, const gchar *format, ...)
 void debug_stanza (DebugFlags flag, GibberXmppStanza *stanza, const gchar *format, ...)
     G_GNUC_PRINTF (3, 4);
 
+G_END_DECLS
+
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...) \
@@ -67,7 +69,5 @@ void debug_stanza (DebugFlags flag, GibberXmppStanza *stanza, const gchar *forma
 #endif /* DEBUG_FLAG */
 
 #endif /* ENABLE_DEBUG */
-
-G_END_DECLS
 
 #endif
