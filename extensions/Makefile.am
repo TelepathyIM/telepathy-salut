@@ -1,31 +1,16 @@
-if ENABLE_OLPC
+SUBDIRS = tools
 
-tools_dir = $(srcdir)/../lib/tools
+tools_dir = $(srcdir)/tools
 
-# This is a derived file but must be checked-in to Darcs anyway,
-# for bootstrapping.
-spec-gen.am: Makefile.am all.xml $(SPEC_INTERFACE_XMLS) \
-	$(tools_dir)/ls-interfaces.xsl
-	$(XSLTPROC) $(XSLTPROCFLAGS) --xinclude \
-		$(tools_dir)/ls-interfaces.xsl \
-		$(srcdir)/all.xml > spec-gen.tmp
-	@echo Interfaces to be generated are:
-	@cat spec-gen.tmp ; echo
-	@echo end of interfaces list
-	(\
-	echo SPEC_INTERFACES = `cat spec-gen.tmp` && \
-	echo SPEC_INTERFACE_XMLS = `sed -e 's,[A-Za-z_][A-Za-z_]*,./&.xml,g' spec-gen.tmp` && \
-	echo SPEC_GENERATED_CS = `sed -e 's,[A-Za-z_][A-Za-z_]*,_gen/svc-&.c,g' spec-gen.tmp` && \
-	echo SPEC_GENERATED_HS = `sed -e 's,[A-Za-z_][A-Za-z_]*,_gen/svc-&.h,g' spec-gen.tmp` && \
-	echo SPEC_GLUE_HS = `sed -e 's,[A-Za-z_][A-Za-z_]*,_gen/svc-&-glue.h,g' spec-gen.tmp` && \
-	echo SPEC_GENERATED_LISTS = `sed -e 's,[A-Za-z_][A-Za-z_]*,_gen/svc-&-signals-marshal.list,g' spec-gen.tmp` \
-	) > spec-gen.am
-	rm -f spec-gen.tmp
+include _gen/spec-gen.am
 
 EXTRA_DIST = $(SPEC_INTERFACE_XMLS) all.xml
 
-SPEC_GENERATED_SOURCES = $(SPEC_GENERATED_CS) $(SPEC_GENERATED_HS) \
-			 $(SPEC_GENERATED_LISTS) $(SPEC_GLUE_HS)
+SPEC_GENERATED_SOURCES = \
+    $(SPEC_GENERATED_CS) \
+    $(SPEC_GENERATED_HS) \
+    $(SPEC_GENERATED_LISTS) \
+    $(SPEC_GLUE_HS)
 
 noinst_LTLIBRARIES = libsalut-extensions.la
 
@@ -91,4 +76,18 @@ _gen/signals-marshal.h: _gen/signals-marshal.list
 _gen/signals-marshal.c: _gen/signals-marshal.list
 	$(GLIB_GENMARSHAL) --body --prefix=_salut_ext_marshal $< > $@
 
-endif
+_gen/svc.h: Makefile.in _gen/.exists
+	for i in $(SPEC_INTERFACES); \
+	do \
+		echo "#include \"extensions/_gen/svc-$$i.h\""; \
+	done > $@
+
+_gen/enums.h: all.xml tools/c-constants-generator.xsl _gen/.exists
+	$(XSLTPROC) --xinclude $(XSLTPROCFLAGS) \
+		$(srcdir)/tools/c-constants-generator.xsl \
+		$(srcdir)/all.xml > $@
+
+_gen/interfaces.h: all.xml tools/c-interfaces-generator.xsl _gen/.exists
+	$(XSLTPROC) --xinclude $(XSLTPROCFLAGS) \
+		$(srcdir)/tools/c-interfaces-generator.xsl \
+		$(srcdir)/all.xml > $@
