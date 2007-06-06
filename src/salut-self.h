@@ -87,8 +87,8 @@ const gchar
 *salut_self_get_alias(SalutSelf *self);
 
 #ifdef ENABLE_OLPC
-gboolean salut_self_set_olpc_properties(SalutSelf *self, 
-    const gchar *key, const gchar *color, GError **error);
+gboolean salut_self_set_olpc_properties(SalutSelf *self,
+    const gchar *key, const gchar *color, const gchar *jid, GError **error);
 #endif
 
 G_END_DECLS

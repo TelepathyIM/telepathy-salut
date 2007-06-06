@@ -567,8 +567,13 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 }
 
 #ifdef ENABLE_OLPC
-gboolean salut_self_set_olpc_properties(SalutSelf *self, 
-    const gchar *key, const gchar *color, GError **error) {
+gboolean
+salut_self_set_olpc_properties(SalutSelf *self,
+                               const gchar *key,
+                               const gchar *color,
+                               const gchar *jid,
+                               GError **error)
+{
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GError *err = NULL;
 
@@ -587,6 +592,14 @@ gboolean salut_self_set_olpc_properties(SalutSelf *self,
     salut_avahi_entry_group_service_set(priv->presence, "olpc-color", 
         color, NULL);
   }
+  if (jid != NULL)
+    {
+      g_free (priv->jid);
+      priv->jid = g_strdup (jid);
+
+      salut_avahi_entry_group_service_set (priv->presence, "jid",
+          jid, NULL);
+    }
 
   if (!salut_avahi_entry_group_service_thaw(priv->presence, &err)) {
     g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);

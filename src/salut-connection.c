@@ -1358,10 +1358,11 @@ salut_connection_olpc_set_properties(TpSvcOLPCBuddyInfo *iface,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
 
   GError *error = NULL;
-  /* Only two know properties, so handle it quite naievely */
-  const gchar *known_properties[] = { "color", "key", NULL };
+  /* Only three know properties, so handle it quite naievely */
+  const gchar *known_properties[] = { "color", "key", "jid", NULL };
   gchar *color = NULL;
   gchar *key = NULL;
+  const gchar *jid = NULL;
   GValue *val;
 
   if (g_hash_table_find(properties, find_unknown_properties, known_properties)
@@ -1427,7 +1428,27 @@ salut_connection_olpc_set_properties(TpSvcOLPCBuddyInfo *iface,
     }
   }
 
-  if (!salut_self_set_olpc_properties(priv->self, key, color, &error)) {
+  val = g_hash_table_lookup (properties, "jid");
+  if (val != NULL)
+    {
+      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "JID value should be of type s");
+          goto error;
+        }
+
+      jid = g_value_get_string (val);
+
+      if (g_strrstr (jid, "@") == NULL)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "JID value has an incorrect format");
+          goto error;
+        }
+    }
+
+  if (!salut_self_set_olpc_properties(priv->self, key, color, jid, &error)) {
     goto error;
   }
 
