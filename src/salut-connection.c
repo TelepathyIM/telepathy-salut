@@ -1260,13 +1260,6 @@ new_gvalue (GType type)
   return result;
 }
 
-static void
-free_gvalue (GValue *value)
-{
-    g_value_unset (value);
-    g_slice_free (GValue, value);
-}
-
 static GHashTable *
 get_properties_hash (const gchar *key,
                      const gchar *color,
@@ -1276,7 +1269,7 @@ get_properties_hash (const gchar *key,
   GValue *gvalue;
 
   properties = g_hash_table_new_full (g_str_hash, g_str_equal,
-      NULL, (GDestroyNotify) free_gvalue);
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
   if (key != NULL)
     {
       GArray *arr = key_to_garray (key);
