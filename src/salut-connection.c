@@ -1465,7 +1465,7 @@ salut_connection_olpc_set_properties(TpSvcOLPCBuddyInfo *iface,
         }
     }
 
-  if (!salut_self_set_olpc_properties(priv->self, key, color, jid, &error)) {
+  if (!salut_self_set_olpc_properties (priv->self, key, color, jid, &error)) {
     goto error;
   }
 

@@ -242,7 +242,7 @@ salut_self_new(SalutAvahiClient *client,
   priv->client = client;
   g_object_ref(client);
 
-  ret->jid  = g_strdup(jid);
+  ret->jid = g_strdup(jid);
 
   priv->nickname = g_strdup(nickname);
   priv->first_name = g_strdup(first_name);
@@ -367,7 +367,7 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
    if (priv->email)
      ret = avahi_string_list_add_printf(ret, "email=%s", priv->email);
    if (self->jid)
-     ret = avahi_string_list_add_printf(ret, "jid=%s", self->jid);
+     ret = avahi_string_list_add_printf (ret, "jid=%s", self->jid);
 
    ret = avahi_string_list_add_printf(ret, "status=%s", 
                                 salut_presence_statuses[self->status].txt_name);
@@ -569,11 +569,11 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 
 #ifdef ENABLE_OLPC
 gboolean
-salut_self_set_olpc_properties(SalutSelf *self,
-                               const gchar *key,
-                               const gchar *color,
-                               const gchar *jid,
-                               GError **error)
+salut_self_set_olpc_properties (SalutSelf *self,
+                                const gchar *key,
+                                const gchar *color,
+                                const gchar *jid,
+                                GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GError *err = NULL;
