@@ -8,9 +8,9 @@
 
 #define REPAIR_PACKET 15
 
-#define EXTRA_SEEN 11
-#define NR_PACKETS 40
-#define SERIAL_OFFSET (~0 - NR_PACKETS/2)
+#define EXTRA_SEEN ((guint32)11)
+#define NR_PACKETS ((guint32)40)
+#define SERIAL_OFFSET ((guint32)(~0 - NR_PACKETS/2))
 
 typedef struct {
   const gchar *id;
