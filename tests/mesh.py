@@ -37,7 +37,10 @@ class BaseMeshNode(protocol.ProcessProtocol):
     parts = line.rstrip().split(":", 1)
     command = parts[0]
     rawdata = parts[1]
-    commands[command](b64decode(rawdata))
+    if command in commands:
+      commands[command](b64decode(rawdata))
+    else:
+      print "Unknown output: " + line.rstrip()
 
   def outReceived(self, data):
     lines = (self.__buffer + data).split(self.delimiter)
@@ -73,6 +76,8 @@ class Link:
   def send(self, data):
     if random.random() > self.dropchance:
       self.target.recvPacket(data)
+    #else:
+      #print "packet dropped"
 
 class Mesh:
   nodes = []
