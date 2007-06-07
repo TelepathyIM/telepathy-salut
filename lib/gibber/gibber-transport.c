@@ -179,6 +179,9 @@ gboolean
 gibber_transport_send(GibberTransport *transport, const guint8 *data, gsize size, 
                      GError **error) {
   GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS(transport);
+
+  g_assert(transport->state == GIBBER_TRANSPORT_CONNECTED);
+
   return cls->send(transport, data, size, error);
 }
 
