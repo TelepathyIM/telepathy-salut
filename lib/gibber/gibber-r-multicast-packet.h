@@ -34,8 +34,8 @@ typedef enum {
 } GibberRMulticastPacketType;
 
 typedef struct {
-  gchar *id;
-  guint32 expected_packet;
+  gchar *name;
+  guint32 packet_id;
 } GibberRMulticastReceiver;
 
 typedef struct _GibberRMulticastPacket GibberRMulticastPacket;
@@ -91,8 +91,8 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
 
 gboolean
 gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
-                                       const gchar *receiver, 
-                                       guint32 next_packet, 
+                                       const gchar *name,
+                                       guint32 packet_id,
                                        GError **error);
 
 void
@@ -103,11 +103,11 @@ gibber_r_multicast_packet_set_part(GibberRMulticastPacket *packet,
  * afterwards */
 gsize
 gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
-                                      guint8 *data, gsize size);
+                                      const guint8 *data, gsize size);
 
 /* Create a packet by parsing raw data, packet is immutable */
 GibberRMulticastPacket *
-gibber_r_multicast_packet_parse(guint8 *data, gsize size, GError **error);
+gibber_r_multicast_packet_parse(const guint8 *data, gsize size, GError **error);
 
 /* Get the packets payload */
 guint8 *
@@ -118,6 +118,10 @@ gibber_r_multicast_packet_get_payload(GibberRMulticastPacket *packet,
 guint8 *
 gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
                                        gsize *size);
+
+/* Utility function to calculate the difference between two packet */
+gint32
+gibber_r_multicast_packet_diff(guint32 from, guint32 to);
 
 G_END_DECLS
 

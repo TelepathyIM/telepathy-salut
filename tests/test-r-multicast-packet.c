@@ -8,8 +8,8 @@
 } G_STMT_END
 
 typedef struct {
-  const gchar *id;
-  guint32 expected_packet;
+  const gchar *name;
+  guint32 packet_id;
 } recv_t;
 
 int
@@ -34,9 +34,9 @@ main(int argc, char **argv) {
   a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id, 1500);
   gibber_r_multicast_packet_set_part(a, part, total);
 
-  for (i = 0 ; receivers[i].id != NULL; i++) {
+  for (i = 0 ; receivers[i].name != NULL; i++) {
     gibber_r_multicast_packet_add_receiver(a, 
-        receivers[i].id, receivers[i].expected_packet, NULL);
+        receivers[i].name, receivers[i].packet_id, NULL);
   }
   gibber_r_multicast_packet_add_payload(a, (guint8 *)payload, strlen(payload));
 
@@ -54,13 +54,13 @@ main(int argc, char **argv) {
 
   l = b->receivers;
   for (i = 0;
-       receivers[i].id != NULL && l != NULL; i++, l = g_list_next(l)) {
+       receivers[i].name != NULL && l != NULL; i++, l = g_list_next(l)) {
     GibberRMulticastReceiver *r = (GibberRMulticastReceiver *)l->data;
 
-    g_assert(receivers[i].expected_packet == r->expected_packet);
-    g_assert(strcmp(receivers[i].id, r->id) == 0);
+    g_assert(receivers[i].packet_id == r->packet_id);
+    g_assert(strcmp(receivers[i].name, r->name) == 0);
   }
-  g_assert(receivers[i].id == NULL && l == NULL);
+  g_assert(receivers[i].name == NULL && l == NULL);
 
   pdata = gibber_r_multicast_packet_get_payload(b, &plen);
   g_assert(plen == strlen(payload));

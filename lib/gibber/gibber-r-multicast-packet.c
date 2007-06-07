@@ -108,17 +108,17 @@ gibber_r_multicast_packet_finalize (GObject *object)
 }
 
 static GibberRMulticastReceiver *
-gibber_r_multicast_receiver_new(gchar *id, guint32 expected_packet) {
+gibber_r_multicast_receiver_new(const gchar *name, guint32 expected_packet) {
   GibberRMulticastReceiver *result = g_slice_new(GibberRMulticastReceiver);
-  result->id = id;
-  result->expected_packet = expected_packet;
+  result->name = g_strdup(name);
+  result->packet_id = expected_packet;
 
   return result;
 }
 
 static void
 gibber_r_multicast_receiver_free(GibberRMulticastReceiver *receiver) {
-  g_free(receiver->id);
+  g_free(receiver->name);
   g_slice_free(GibberRMulticastReceiver, receiver);
 }
 
@@ -144,11 +144,11 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
 
 gboolean
 gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
-                                       const gchar *receiver, 
-                                       guint32 next_packet, 
+                                       const gchar *name,
+                                       guint32 packet_id,
                                        GError **error) {
-  GibberRMulticastReceiver *r = 
-      gibber_r_multicast_receiver_new(g_strdup(receiver), next_packet);
+  GibberRMulticastReceiver *r =
+      gibber_r_multicast_receiver_new(g_strdup(name), packet_id);
 
   packet->receivers = g_list_append(packet->receivers, r);
   return TRUE;
@@ -174,7 +174,7 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet,
   for (l = packet->receivers; l != NULL; l = g_list_next(l)) {
     GibberRMulticastReceiver *r;
     r = (GibberRMulticastReceiver *)l->data;
-    result += 5 + strlen(r->id); /* 32 bit expect packet, 8 bit length */
+    result += 5 + strlen(r->name); /* 32 bit packet id, 8 bit length */
   }
 
   g_assert(result < max_size);
@@ -247,7 +247,7 @@ get_string(GibberRMulticastPacketPrivate *p) {
 
 static void
 gibber_r_multicast_packet_build(GibberRMulticastPacket *packet,
-                                guint8 *payload, gsize payload_size) {
+                                const guint8 *payload, gsize payload_size) {
   /* FIXME build nicer packets when the payload fit in anymore */
   GibberRMulticastPacketPrivate *priv =
      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
@@ -279,8 +279,8 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet,
     GibberRMulticastReceiver *r;
     r = (GibberRMulticastReceiver *)l->data;
 
-    add_string(priv, r->id);
-    add_guint32(priv, r->expected_packet);
+    add_string(priv, r->name);
+    add_guint32(priv, r->packet_id);
   }
 
   priv->payload = priv->data + priv->size;
@@ -301,7 +301,7 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet,
  * afterwards */
 gsize
 gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
-                                      guint8 *data, gsize size) {
+                                      const guint8 *data, gsize size) {
   GibberRMulticastPacketPrivate *priv =
      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
 
@@ -314,7 +314,8 @@ gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
 
 /* Create a packet by parsing raw data, packet is immutable afterwards */
 GibberRMulticastPacket *
-gibber_r_multicast_packet_parse(guint8 *data, gsize size, GError **error) {
+gibber_r_multicast_packet_parse(const guint8 *data, gsize size, 
+    GError **error) {
   GibberRMulticastPacket *result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET,
                                                 NULL);
   GibberRMulticastPacketPrivate *priv = 
@@ -375,4 +376,16 @@ gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
  *size = priv->size;
 
  return priv->data; 
+}
+
+gint32
+gibber_r_multicast_packet_diff(guint32 from, guint32 to) {
+  if (from > 0xff00 && to < 0xff) {
+    return 0xffff - from + to;
+  }
+  if (from > to) {
+    return -MIN(from - to, G_MAXINT);
+  }
+
+  return MIN(to - from, G_MAXINT);
 }

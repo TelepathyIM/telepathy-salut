@@ -47,6 +47,9 @@ struct _GibberRMulticastSender {
 
     /* Next packet that we expect for the sender */
     guint32 next_packet_id;
+
+    /* Last packet nr. we've seen of a sender */
+    guint32 last_packet;
 };
 
 GType gibber_r_multicast_sender_get_type(void);
@@ -72,7 +75,8 @@ void
 gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
                                GibberRMulticastPacket *packet);
 
-void
+/* Returns TRUE if we were up to dated */
+gboolean
 gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id);
 
 void
