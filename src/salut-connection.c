@@ -1678,7 +1678,7 @@ salut_connection_get_interfaces (TpSvcConnection *self,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
 #ifdef ENABLE_OLPC
-    TP_IFACE_OLPC_BUDDY_INFO,
+    SALUT_IFACE_OLPC_BUDDY_INFO,
 #endif
     NULL };
 
