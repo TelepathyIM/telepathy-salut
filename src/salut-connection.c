@@ -64,10 +64,6 @@
 
 #ifdef ENABLE_OLPC
 
-/* XXX: this should be generated */
-#define SALUT_IFACE_OLPC_BUDDY_INFO \
-    "org.laptop.Telepathy.BuddyInfo"
-
 #include <extensions/extensions.h>
 
 static void
