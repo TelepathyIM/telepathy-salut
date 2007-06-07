@@ -64,10 +64,6 @@
 
 #ifdef ENABLE_OLPC
 
-/* XXX: this should be generated */
-#define SALUT_IFACE_OLPC_BUDDY_INFO \
-    "org.laptop.Telepathy.BuddyInfo"
-
 #include <extensions/extensions.h>
 
 static void
@@ -1677,7 +1673,7 @@ salut_connection_get_interfaces (TpSvcConnection *self,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
 #ifdef ENABLE_OLPC
-    SALUT_IFACE_OLPC_BUDDY_INFO,
+    TP_IFACE_OLPC_BUDDY_INFO,
 #endif
     NULL };
 
