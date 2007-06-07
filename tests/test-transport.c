@@ -171,6 +171,9 @@ test_transport_new(test_transport_send_hook send, gpointer user_data) {
   priv->send = send;
   priv->user_data = user_data;
 
+  gibber_transport_set_state(GIBBER_TRANSPORT(self),
+                            GIBBER_TRANSPORT_CONNECTED);
+
   return self;
 }
 
