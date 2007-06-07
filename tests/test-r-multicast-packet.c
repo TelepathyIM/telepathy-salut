@@ -27,12 +27,16 @@ test_r_multicast_packet_diff(void) {
       {                10,                 5,           -5 },
       {  G_MAXUINT32 - 10,                10,           21 },
       {       G_MAXUINT32,                 0,            1 },
-      {                10,       G_MAXUINT32,   G_MAXINT32 },
-      {                0 ,       G_MAXUINT32,   G_MAXINT32 },
+      {                0 ,       G_MAXUINT32,           -1 },
+      {       G_MAXUINT32,                10,           11 },
+      {                10,       G_MAXUINT32,          -11 },
       {     G_MAXUINT32/2,       G_MAXUINT32,   G_MAXINT32 },
       {       G_MAXUINT32,     G_MAXUINT32/2,  -G_MAXINT32 },
       { G_MAXUINT32/2 - 1,       G_MAXUINT32,   G_MAXINT32 },
-      {       G_MAXUINT32, G_MAXUINT32/2 - 1,  -G_MAXINT32 }
+      {       G_MAXUINT32, G_MAXUINT32/2 - 1,  -G_MAXINT32 },
+      {   G_MAXUINT32 - 5,                 5,           11 },
+      {                 5,   G_MAXUINT32 - 5,          -11 },
+
     };
   int i;
   gboolean ret = TRUE;
@@ -41,8 +45,8 @@ test_r_multicast_packet_diff(void) {
     diff_testcase *c = cases + i;
     gint32 result = gibber_r_multicast_packet_diff(c->a, c->b);
     if (c->result != result) {
-      fprintf(stderr, "Failed: %u %u = %d instead of %d\n",
-              c->a, c->b, result, c->result);
+      fprintf(stderr, "Case %d failed: %u %u = %d instead of %d\n",
+              i + 1, c->a, c->b, result, c->result);
       ret = FALSE;
     }
   }
