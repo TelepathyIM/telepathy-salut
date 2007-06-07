@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <glib.h>
 
 #include <gibber/gibber-r-multicast-transport.h>
+#include <gibber/gibber-debug.h>
 #include "test-transport.h"
 
 GMainLoop *loop;
@@ -75,9 +77,10 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
 gboolean
 got_error(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   g_main_loop_quit(loop);
+  fprintf(stderr, "error");
+  fflush(stderr);
   return TRUE;
 }
-
 
 int
 main(int argc, char **argv){ 
@@ -94,6 +97,9 @@ main(int argc, char **argv){
 
   m = gibber_r_multicast_transport_new(GIBBER_TRANSPORT(t), argv[1]);
   gibber_transport_set_handler(GIBBER_TRANSPORT(m), received_data, argv[1]);
+
+  /* test transport starts out connected */
+  g_assert(gibber_r_multicast_transport_connect(m, FALSE, NULL));
 
   io = g_io_channel_unix_new(STDIN_FILENO);
   g_io_add_watch (io,  G_IO_IN, got_input, NULL);
