@@ -12,6 +12,43 @@ typedef struct {
   guint32 packet_id;
 } recv_t;
 
+typedef struct {
+  guint32 a;
+  guint32 b;
+  gint32 result;
+} diff_testcase;
+
+gboolean
+test_r_multicast_packet_diff(void) {
+  diff_testcase cases[] =
+    { {                 0,                 0,            0 },
+      {                10,                10,            0 },
+      {                 5,                10,            5 },
+      {                10,                 5,           -5 },
+      {  G_MAXUINT32 - 10,                10,           21 },
+      {       G_MAXUINT32,                 0,            1 },
+      {                10,       G_MAXUINT32,   G_MAXINT32 },
+      {                0 ,       G_MAXUINT32,   G_MAXINT32 },
+      {     G_MAXUINT32/2,       G_MAXUINT32,   G_MAXINT32 },
+      {       G_MAXUINT32,     G_MAXUINT32/2,  -G_MAXINT32 },
+      { G_MAXUINT32/2 - 1,       G_MAXUINT32,   G_MAXINT32 },
+      {       G_MAXUINT32, G_MAXUINT32/2 - 1,  -G_MAXINT32 }
+    };
+  int i;
+  gboolean ret = TRUE;
+
+  for (i = 0; i < sizeof(cases)/sizeof(diff_testcase); i++) {
+    diff_testcase *c = cases + i;
+    gint32 result = gibber_r_multicast_packet_diff(c->a, c->b);
+    if (c->result != result) {
+      fprintf(stderr, "Failed: %u %u = %d instead of %d\n",
+              c->a, c->b, result, c->result);
+      ret = FALSE;
+    }
+  }
+  return ret;
+}
+
 int
 main(int argc, char **argv) {
   GibberRMulticastPacket *a;
@@ -30,6 +67,8 @@ main(int argc, char **argv) {
   gchar *payload = "1234567890";
 
   g_type_init();
+
+  g_assert(test_r_multicast_packet_diff());
 
   a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id, 1500);
   gibber_r_multicast_packet_set_part(a, part, total);
