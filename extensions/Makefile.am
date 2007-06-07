@@ -76,4 +76,20 @@ _gen/signals-marshal.h: _gen/signals-marshal.list
 _gen/signals-marshal.c: _gen/signals-marshal.list
 	$(GLIB_GENMARSHAL) --body --prefix=_salut_ext_marshal $< > $@
 
-endif
+_gen/svc.h: Makefile.in _gen/.exists
+	for i in $(SPEC_INTERFACES); \
+	do \
+		echo "#include \"extensions/_gen/svc-$$i.h\""; \
+	done > $@
+
+_gen/enums.h: all.xml tools/c-constants-generator.xsl _gen/.exists
+	$(XSLTPROC) --xinclude $(XSLTPROCFLAGS) \
+		--stringparam mixed-case-prefix Salut \
+		$(srcdir)/tools/c-constants-generator.xsl \
+		$(srcdir)/all.xml > $@
+
+_gen/interfaces.h: all.xml tools/c-interfaces-generator.xsl _gen/.exists
+	$(XSLTPROC) --xinclude $(XSLTPROCFLAGS) \
+		--stringparam mixed-case-prefix Salut \
+		$(srcdir)/tools/c-interfaces-generator.xsl \
+		$(srcdir)/all.xml > $@
