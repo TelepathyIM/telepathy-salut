@@ -64,6 +64,7 @@ GDebugKey keys[] = {
   { "connection",     DEBUG_CONNECTION },
   { "persist",        DEBUG_PERSIST },
   { "self",           DEBUG_SELF },
+  { "tubes",          DEBUG_TUBES },
   { "all",            ~0 },
   { 0, },
 };
