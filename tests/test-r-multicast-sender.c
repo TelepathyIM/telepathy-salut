@@ -20,7 +20,7 @@ typedef struct {
 GMainLoop *loop;
 
 GibberRMulticastPacket *
-generate_packet(int serial) {
+generate_packet(guint32 serial) {
   GibberRMulticastPacket *p;
   guint8 part = 0, total = 1;
   gchar *payload;
@@ -97,7 +97,7 @@ repair_message_cb(GibberRMulticastSender *sender,
 
 static gboolean
 add_packet(gpointer data) {
-  static int i = 0;
+  static guint32 i = 0;
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(data);
   GibberRMulticastPacket *p;
 
