@@ -49,21 +49,24 @@ GType salut_im_channel_get_type(void);
 #define SALUT_IM_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_IM_CHANNEL, SalutImChannel))
 #define SALUT_IM_CHANNEL_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_IM_CHANNEL, SalutImChannelClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_IM_CHANNEL, \
+                           SalutImChannelClass))
 #define SALUT_IS_IM_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_IM_CHANNEL))
 #define SALUT_IS_IM_CHANNEL_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_IM_CHANNEL))
 #define SALUT_IM_CHANNEL_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, SalutImChannelClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, \
+                              SalutImChannelClass))
 
-void salut_im_channel_add_connection(SalutImChannel *chan, 
-                                     GibberXmppConnection *conn);
+void salut_im_channel_add_connection(SalutImChannel *chan,
+    GibberXmppConnection *conn);
 
-void salut_im_channel_send_stanza(SalutImChannel * self, 
-                                  GibberXmppStanza *stanza);
-void salut_im_channel_received_stanza(SalutImChannel *chan, 
-                                      GibberXmppStanza *stanza);
+void salut_im_channel_send_stanza(SalutImChannel * self,
+    GibberXmppStanza *stanza);
+
+void salut_im_channel_received_stanza(SalutImChannel *chan,
+    GibberXmppStanza *stanza);
 
 G_END_DECLS
 
