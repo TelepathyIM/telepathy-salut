@@ -35,7 +35,11 @@ struct _GibberRMulticastSenderClass {
 };
 
 typedef enum {
+  /* We have no info about this sender whatsoever */
   GIBBER_R_MULTICAST_SENDER_STATE_NEW = 0,
+  /* We know the sequence numbering, but no data has been output just yet */
+  GIBBER_R_MULTICAST_SENDER_STATE_PREPARING = 0,
+  /* Data is flowing */
   GIBBER_R_MULTICAST_SENDER_STATE_RUNNING,
 } GibberRMulticastSenderState;
 
@@ -45,11 +49,11 @@ struct _GibberRMulticastSender {
 
     GibberRMulticastSenderState state;
 
-    /* Next packet that we expect for the sender */
-    guint32 next_packet_id;
+    /* Next packet that we expect in the output stream*/
+    guint32 next_output_packet;
 
-    /* Last packet nr. we've seen of a sender */
-    guint32 last_packet;
+    /* Next packet we expect from the sender */
+    guint32 next_input_packet;
 };
 
 GType gibber_r_multicast_sender_get_type(void);

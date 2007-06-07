@@ -320,7 +320,9 @@ handle_session_message(GibberRMulticastTransport *self,
     if (sender == NULL) {
       sender = add_sender(self, receiver->name);
     } else if (gibber_r_multicast_packet_diff(receiver->packet_id,
-                   sender->last_packet) > 0) {
+                   sender->next_input_packet) > 0) {
+
+      g_assert(sender->state > GIBBER_R_MULTICAST_SENDER_STATE_NEW);
       outdated = TRUE;
     }
     gibber_r_multicast_sender_seen(sender, receiver->packet_id);
@@ -409,7 +411,7 @@ add_receiver(gpointer key, gpointer value, gpointer user_data) {
   GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET(user_data);
 
   g_assert(gibber_r_multicast_packet_add_receiver(packet, sender->name,
-               sender->last_packet, NULL));
+               sender->next_input_packet, NULL));
 }
 
 static gboolean
