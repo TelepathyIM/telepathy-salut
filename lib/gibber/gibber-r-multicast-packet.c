@@ -380,8 +380,11 @@ gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
 
 gint32
 gibber_r_multicast_packet_diff(guint32 from, guint32 to) {
-  if (from > (G_MAXUINT32 - 0xff) && to < 0xff) {
+  if (from > (G_MAXUINT32 - 0xffff) && to < 0xffff) {
     return G_MAXUINT32 - from + to + 1;
+  }
+  if (to > (G_MAXUINT32 - 0xffff) && from < 0xffff) {
+    return - from - (G_MAXUINT32 - to) - 1;
   }
   if (from > to) {
     return -MIN(from - to, G_MAXINT);
