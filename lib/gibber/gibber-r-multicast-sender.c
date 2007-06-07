@@ -473,20 +473,21 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
   }
 
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_PREPARING
-      && (gibber_r_multicast_packet_diff(sender->next_input_packet,
-              packet->packet_id) > -PACKET_CACHE_SIZE)) {
+      && diff < 0 && (gibber_r_multicast_packet_diff(sender->next_input_packet,
+                        packet->packet_id) > -PACKET_CACHE_SIZE)) {
     sender->next_output_packet = packet->packet_id;
     insert_packet(sender, packet);
     return;
   }
 
-  if (gibber_r_multicast_packet_diff(priv->first_packet,
+  if (diff < 0 && gibber_r_multicast_packet_diff(priv->first_packet,
              packet->packet_id) > 0) {
     /* We already had this one, silently ignore */
     DEBUG_SENDER(sender, "Detect resent of packet 0x%x", packet->packet_id);
     return;
   }
   DEBUG_SENDER(sender, "Packet 0x%x out of range, dropping", packet->packet_id);
+
 }
 
 void
