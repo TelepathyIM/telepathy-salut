@@ -11,8 +11,9 @@ class BaseMeshNode(protocol.ProcessProtocol):
   def __init__(self, name):
     self.name = name
     self.process = reactor.spawnProcess(self,
-                    "test-r-multicast-transport-io",
-                    ("test-r-multicast-transport-io", name))
+                    "./test-r-multicast-transport-io",
+                    ("test-r-multicast-transport-io", name), 
+                    None)
 
   def sendPacket(self, data):
     "Should be overridden"
