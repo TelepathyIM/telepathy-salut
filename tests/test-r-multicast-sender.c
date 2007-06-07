@@ -10,7 +10,7 @@
 
 #define EXTRA_SEEN 11
 #define NR_PACKETS 40
-#define SERIAL_OFFSET 255
+#define SERIAL_OFFSET (~0 - NR_PACKETS/2)
 
 typedef struct {
   const gchar *id;
