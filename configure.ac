@@ -117,6 +117,13 @@ PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.5.10])
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
+dnl Check for telepathy-glib-unstable
+PKG_CHECK_MODULES(TELEPATHY_GLIB_UNSTABLE, [telepathy-glib-unstable >= 0.5.10],
+                  have_tp_glib_unstable=yes, have_tp_glib_unstable=no)
+
+AC_SUBST(TELEPATHY_GLIB_UNSTABLE_CFLAGS)
+AC_SUBST(TELEPATHY_GLIB_UNSTABLE_LIBS)
+
 dnl Check for OpenSSL
 PKG_CHECK_MODULES(LIBSSL, [openssl], 
             [ HAVE_LIBSSL="yes" ],
