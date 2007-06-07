@@ -47,22 +47,26 @@ GType salut_im_manager_get_type(void);
 #define SALUT_IM_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_IM_MANAGER, SalutImManager))
 #define SALUT_IM_MANAGER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_IM_MANAGER, SalutImManagerClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_IM_MANAGER, \
+                           SalutImManagerClass))
 #define SALUT_IS_IM_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_IM_MANAGER))
 #define SALUT_IS_IM_MANAGER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_IM_MANAGER))
 #define SALUT_IM_MANAGER_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_MANAGER, SalutImManagerClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_MANAGER, \
+                              SalutImManagerClass))
 
 SalutImManager *
-salut_im_manager_new(SalutConnection *connection,
-                     SalutContactManager *contact_manager);
+salut_im_manager_new (SalutConnection *connection,
+    SalutContactManager *contact_manager);
 
 SalutImChannel *
-salut_im_manager_get_channel_for_handle(SalutImManager *mgr, 
-                                        TpHandle handle);
+salut_im_manager_get_channel_for_handle (SalutImManager *mgr,
+    TpHandle handle);
+
 void
-salut_im_manager_handle_connection(SalutImManager *mgr,
-                                   GibberLLTransport *transport);
+salut_im_manager_handle_connection (SalutImManager *mgr,
+    GibberLLTransport *transport);
+
 #endif /* #ifndef __SALUT_IM_MANAGER_H__*/
