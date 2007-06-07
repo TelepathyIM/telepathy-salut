@@ -41,7 +41,7 @@ struct _SalutImChannel {
     TpTextMixin text;
 };
 
-GType salut_im_channel_get_type(void);
+GType salut_im_channel_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_IM_CHANNEL \
@@ -59,13 +59,13 @@ GType salut_im_channel_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, \
                               SalutImChannelClass))
 
-void salut_im_channel_add_connection(SalutImChannel *chan,
+void salut_im_channel_add_connection (SalutImChannel *chan,
     GibberXmppConnection *conn);
 
-void salut_im_channel_send_stanza(SalutImChannel * self,
+void salut_im_channel_send_stanza (SalutImChannel * self,
     GibberXmppStanza *stanza);
 
-void salut_im_channel_received_stanza(SalutImChannel *chan,
+void salut_im_channel_received_stanza (SalutImChannel *chan,
     GibberXmppStanza *stanza);
 
 G_END_DECLS
