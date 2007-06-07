@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from twisted.internet import reactor, protocol
+from twisted.internet.error import ProcessDone
 from base64 import b64encode, b64decode
 import random
 
@@ -48,7 +49,8 @@ class BaseMeshNode(protocol.ProcessProtocol):
     print "Error: " + data
 
   def processEnded(self, reason):
-    print "process ended"
+    if reason.__class__ != ProcessDone:
+      print "Unexpected process end: " + str(reason)
 
 class MeshNode(BaseMeshNode):
   def __init__(self, name, mesh):
