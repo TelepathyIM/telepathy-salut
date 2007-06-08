@@ -38,7 +38,7 @@ typedef enum {
   /* We have no info about this sender whatsoever */
   GIBBER_R_MULTICAST_SENDER_STATE_NEW = 0,
   /* We know the sequence numbering, but no data has been output just yet */
-  GIBBER_R_MULTICAST_SENDER_STATE_PREPARING = 0,
+  GIBBER_R_MULTICAST_SENDER_STATE_PREPARING,
   /* Data is flowing */
   GIBBER_R_MULTICAST_SENDER_STATE_RUNNING,
 } GibberRMulticastSenderState;
