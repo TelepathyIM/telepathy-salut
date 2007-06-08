@@ -7,6 +7,7 @@ import random
 class BaseMeshNode(protocol.ProcessProtocol):
   delimiter = '\n'
   __buffer = ''
+  peers = []
 
   def __init__(self, name):
     self.name = name
@@ -19,9 +20,22 @@ class BaseMeshNode(protocol.ProcessProtocol):
     "Should be overridden"
     print "Should send: " + data
 
-  def gotOutput(self, data):
+  def __sendPacket(self, data):
+    return self.sendPacket(b64decode(data))
+
+
+  def gotOutput(self, sender, data):
     "Should be overridden"
     print "Output: " + data
+
+  def __gotOutput(self, data):
+    (sender, rawdata) = data.split(":", 1)
+    self.gotOutput(sender, b64decode(rawdata))
+
+  def newNode(self, data):
+    print "New node: " + data
+    if not data in self.peers:
+      self.peers.append(data)
 
   def recvPacket(self, data):
     self.process.write("RECV:" + b64encode(data) + "\n")
@@ -30,15 +44,16 @@ class BaseMeshNode(protocol.ProcessProtocol):
     self.process.write("INPUT:" + b64encode(data) + "\n")
 
   def lineReceived(self, line):
-    commands = { "SEND"  :  self.sendPacket,
-                 "OUTPUT":  self.gotOutput }
+    commands = { "SEND"   :  self.__sendPacket,
+                 "OUTPUT" :  self.__gotOutput,
+                 "NEWNODE":  self.newNode }
 
     parts = line.rstrip().split(":", 1)
     if len(parts) == 2:
       command = parts[0]
       rawdata = parts[1]
       if command in commands:
-        commands[command](b64decode(rawdata))
+        commands[command](rawdata)
         return
 
     print "Unknown output: " + line.rstrip()
@@ -63,8 +78,8 @@ class MeshNode(BaseMeshNode):
   def sendPacket(self, data):
     self.mesh.sendPacket(self, data)
 
-  def gotOutput(self, data):
-    self.mesh.gotOutput(self, data)
+  def gotOutput(self, sender, data):
+    self.mesh.gotOutput(self, sender, data)
 
 class Link:
   def __init__(self, target, bandwidth, latency, dropchance):
@@ -83,8 +98,8 @@ class Mesh:
   nodes = []
   connections = {};
 
-  def gotOutput(self, node, data):
-    print "Got " + data + " from " + node.name
+  def gotOutput(self, node, sender, data):
+    print "Got " + data + " from " + node.name + " send by " + sender
 
   def connect(self, node0, node1, bandwidth, latency, dropchance):
     self.connections.setdefault(node0, []).append(

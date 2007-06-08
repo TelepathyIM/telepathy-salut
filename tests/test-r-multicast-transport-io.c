@@ -16,10 +16,11 @@ GibberRMulticastTransport *m;
 void
 received_data(GibberTransport *transport, GibberBuffer *buffer,
               gpointer user_data) {
+  GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *)buffer;
   gchar *b64;
 
   b64 = g_base64_encode((guchar *)buffer->data, buffer->length);
-  printf("OUTPUT:%s\n", b64);
+  printf("OUTPUT:%s:%s\n", rmbuffer->sender, b64);
   fflush(stdout);
   g_free(b64);
 }
@@ -82,6 +83,13 @@ got_error(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   return TRUE;
 }
 
+static void
+new_sender_cb(GibberRMulticastTransport *transport,
+              const char *name, gpointer user_data) {
+  printf("NEWNODE:%s\n", name);
+  fflush(stdout);
+}
+
 int
 main(int argc, char **argv){ 
   GIOChannel *io;
@@ -99,6 +107,10 @@ main(int argc, char **argv){
 
   m = gibber_r_multicast_transport_new(GIBBER_TRANSPORT(t), argv[1]);
   gibber_transport_set_handler(GIBBER_TRANSPORT(m), received_data, argv[1]);
+
+  g_signal_connect(m, "new-sender", 
+      G_CALLBACK(new_sender_cb), NULL);
+ 
 
   /* test transport starts out connected */
   g_assert(gibber_r_multicast_transport_connect(m, FALSE, NULL));

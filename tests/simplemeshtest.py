@@ -16,7 +16,7 @@ class TestMesh(Mesh):
   expected = {}
   done = 0
 
-  def gotOutput(self, node, data):
+  def gotOutput(self, node, sender, data):
     print node.name + " - " + data.rstrip()
     if self.expected.get(node) == None:
       self.expected[node] = int(data)
@@ -26,6 +26,12 @@ class TestMesh(Mesh):
       print "Got " + data.rstrip() + " instead of " + \
              str(self.expected[node]) + " from "  + node.name
 
+      success = False
+      reactor.crash()
+
+    if not sender in node.peers:
+      global success
+      print "Sender " + sender + " not in node peers"
       success = False
       reactor.crash()
 
