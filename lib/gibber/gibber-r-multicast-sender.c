@@ -303,7 +303,7 @@ pop_packet(GibberRMulticastSender *sender) {
   num = p->packet->packet_total;
   payload_size = p->packet->payload_size;
   /* Need to be at least num behind last_packet */
-  if (gibber_r_multicast_packet_diff(p->packet->packet_id, 
+  if (gibber_r_multicast_packet_diff(p->packet->packet_id,
         sender->next_input_packet) < num) {
     DEBUG_SENDER(sender, "Not enough packets for defragmentation");
     return FALSE;
@@ -371,6 +371,9 @@ start_repairs(GibberRMulticastSender *sender) {
     return;
   }
 
+  DEBUG_SENDER(sender, "state: %x %x", 
+                 priv->first_packet, sender->next_input_packet);
+
   for (i = priv->first_packet ; i != sender->next_input_packet; i++) {
     schedule_repair(sender, i);
   }
@@ -420,7 +423,7 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
           packet->packet_id) < 0) {
     priv->first_packet = packet->packet_id;
   } else if (gibber_r_multicast_packet_diff(sender->next_input_packet,
-                 packet->packet_id) > 0) {
+                 packet->packet_id) >= 0) {
     /* Potentially needs some repairs */
     guint32 i;
     for (i = sender->next_input_packet; i != packet->packet_id; i++) {
@@ -521,10 +524,7 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
     if (info == NULL) {
       guint32 i;
 
-      g_assert(
-          gibber_r_multicast_packet_diff(sender->next_input_packet, id) >= 0);
-
-      for (i = sender->next_input_packet ; i != id + 1; i++ ){
+      for (i = sender->next_output_packet ; i != id + 1; i++ ){
         schedule_repair(sender, i);
       }
     } else if (info->packet != NULL) {
@@ -534,6 +534,10 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
        the packet just yet. Which means we already have a repair timeout 
        running */
        g_assert(info->timeout != 0);
+       /* Reschedule the repair */
+       g_source_remove(info->timeout);
+       info->timeout = 0;
+       schedule_repair(sender, id);
     }
     return;
   }
@@ -565,8 +569,13 @@ gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
   }
 
   diff = gibber_r_multicast_packet_diff(sender->next_input_packet, id);
-  if (diff < 0 || sender->state != GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
+  if (diff < 0) {
+    return TRUE;
+  }
+
+  if (sender->state != GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
     /* We're up to date */
+    sender->next_input_packet = id;
     return TRUE;
   }
 
@@ -574,8 +583,10 @@ gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
   /* Ensure that we don't overfill the CACHE */
   last = gibber_r_multicast_packet_diff(last, id) > 0 ? last : id;
 
-  for (i = sender->next_input_packet; i != last + 1; i ++) {
+  for (i = sender->next_input_packet; i != last; i ++) {
     schedule_repair(sender, i);
   }
+  sender->next_input_packet = id;
   return FALSE;
 }
+
