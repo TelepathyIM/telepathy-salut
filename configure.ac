@@ -159,6 +159,9 @@ dnl signal functions
 AC_CHECK_FUNCS(signal)
 AC_CHECK_HEADERS(signal.h)
 
+# Checks for the 'check' unit testing library
+PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
+
 AC_OUTPUT( Makefile                       \
            lib/Makefile                   \
            lib/gibber/Makefile            \

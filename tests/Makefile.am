@@ -89,6 +89,15 @@ test_sasl_auth_CFLAGS = \
 
 endif
 
+check_PROGRAMS = check-main
+check_main_SOURCES = check-main.c
+check_main_LDADD = \
+    @CHECK_LIBS@ \
+    $(AM_LDFLAGS)
+check_main_CFLAGS = \
+    @CHECK_CFLAGS@ \
+    $(AM_CFLAGS)
+
 AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib \
     -I $(top_srcdir)/src -I $(top_builddir)/src
@@ -100,6 +109,7 @@ TESTS = $(dist_check_SCRIPTS)
 if HAVE_LIBSASL2
   TESTS +=  test-sasl-auth
 endif
+TESTS += check-main
 
 dist_check_SCRIPTS = \
   run-xmpp-connection-test.sh
