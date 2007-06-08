@@ -6,11 +6,13 @@
 
 #define SENDER "testsender"
 
-#define REPAIR_PACKET 15
+#define REPAIR_PACKET ((guint32)15)
 
 #define EXTRA_SEEN ((guint32)11)
 #define NR_PACKETS ((guint32)40)
-#define SERIAL_OFFSET ((guint32)(~0 - NR_PACKETS/2))
+
+guint32 serial_offset;
+int expected;
 
 typedef struct {
   const gchar *id;
@@ -50,7 +52,6 @@ generate_packet(guint32 serial) {
 void
 data_received_cb(GibberRMulticastSender *sender, guint8 *data, 
     gsize size, gpointer user_data) {
-  static int expected = SERIAL_OFFSET;
   gchar *str;
   gchar **lines;
   int i;
@@ -67,8 +68,8 @@ data_received_cb(GibberRMulticastSender *sender, guint8 *data,
    * So expected can't be  % 3 == 2 here */
   g_assert(expected % 3 != 2);
 
-  if (expected == SERIAL_OFFSET + NR_PACKETS
-      || expected == SERIAL_OFFSET + NR_PACKETS + EXTRA_SEEN) {
+  if (expected == serial_offset + NR_PACKETS
+      || expected == serial_offset + NR_PACKETS + EXTRA_SEEN) {
     g_main_loop_quit((GMainLoop *)user_data);
   }
 
@@ -81,6 +82,10 @@ void
 repair_request_cb(GibberRMulticastSender *sender, guint id, gpointer data) {
   GibberRMulticastPacket *p;
 
+  g_assert(gibber_r_multicast_packet_diff(serial_offset, id) >= 0 
+           || gibber_r_multicast_packet_diff(id, 
+                  serial_offset + NR_PACKETS + EXTRA_SEEN) < 0);
+
   p = generate_packet(id);
   gibber_r_multicast_sender_push(sender, p);
   g_object_unref(p);
@@ -90,7 +95,7 @@ void
 repair_message_cb(GibberRMulticastSender *sender,
                   GibberRMulticastPacket *packet,
                   gpointer user_data) {
-  g_assert(packet->packet_id == REPAIR_PACKET + SERIAL_OFFSET);
+  g_assert(packet->packet_id == REPAIR_PACKET + serial_offset);
 
   g_main_loop_quit((GMainLoop *)user_data);
 }
@@ -101,11 +106,13 @@ add_packet(gpointer data) {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(data);
   GibberRMulticastPacket *p;
 
-  if (i == NR_PACKETS)
+  if (i == NR_PACKETS) {
+    i = 0;
     return FALSE;
+  }
 
   if (i % 5 != 3) {
-    p = generate_packet(i + SERIAL_OFFSET);
+    p = generate_packet(i + serial_offset);
     gibber_r_multicast_sender_push(sender, p);
     g_object_unref(p);
   }
@@ -115,38 +122,69 @@ add_packet(gpointer data) {
 }
 
 static gboolean
-timeout(gpointer data) {
+timeout_cb(gpointer data) {
   printf("Test timeout\n");
   g_assert_not_reached();
 
   return FALSE;
 }
 
-int
-main(int argc, char **argv) {
+
+void
+do_test(gboolean test_seen) {
+  guint timeout;
   GibberRMulticastSender *s;
 
-  g_type_init();
-  loop = g_main_loop_new(NULL, FALSE);
+  fprintf(stderr, "Starting test with offset %x %d\n", 
+      serial_offset, test_seen);
 
   s = gibber_r_multicast_sender_new(SENDER);
   g_signal_connect(s, "data-received", G_CALLBACK(data_received_cb), loop);
   g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
+  if (test_seen) {
+    gibber_r_multicast_sender_seen(s, serial_offset);
+  } else {
+   gibber_r_multicast_sender_repair_request(s, serial_offset);
+  }
+
   g_timeout_add(100, add_packet, s);
-  g_timeout_add(20000, timeout, loop);
+  timeout = g_timeout_add(20000, timeout_cb, loop);
 
   g_main_loop_run(loop);
 
   /* tell the sender we've seen some extra pakcets */
-  gibber_r_multicast_sender_seen(s, 
-      SERIAL_OFFSET + NR_PACKETS + EXTRA_SEEN - 1);
+  gibber_r_multicast_sender_seen(s, serial_offset + NR_PACKETS + EXTRA_SEEN);
   g_main_loop_run(loop);
 
   /* Ask for a repair */
   g_signal_connect(s, "repair-message", G_CALLBACK(repair_message_cb), loop);
-  gibber_r_multicast_sender_repair_request(s, SERIAL_OFFSET + REPAIR_PACKET);
+
+  gibber_r_multicast_sender_repair_request(s, serial_offset + REPAIR_PACKET);
+
   g_main_loop_run(loop);
+
+  g_source_remove(timeout);
+  g_object_unref(s);
+}
+
+
+int
+main(int argc, char **argv) {
+  g_type_init();
+  loop = g_main_loop_new(NULL, FALSE);
+
+  serial_offset = ((guint32)(~0 - NR_PACKETS/2));
+  expected = serial_offset;
+  do_test(TRUE);
+
+  serial_offset = 0xff;
+  expected = serial_offset;
+  do_test(TRUE);
+
+  serial_offset = 0xff;
+  expected = serial_offset;
+  do_test(FALSE);
 
   return 0;
 }
