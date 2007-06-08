@@ -23,7 +23,8 @@
 
 #include <glib-object.h>
 
-#include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-r-multicast-transport.h>
+#include <gibber/gibber-xmpp-stanza.h>
 
 G_BEGIN_DECLS
 
@@ -44,11 +45,12 @@ typedef struct _SalutMucConnection SalutMucConnection;
 typedef struct _SalutMucConnectionClass SalutMucConnectionClass;
 
 struct _SalutMucConnectionClass {
-    GibberXmppConnectionClass parent_class;
+    GObjectClass parent_class;
 };
 
 struct _SalutMucConnection {
-    GibberXmppConnection parent;
+    GObject parent;
+    GibberRMulticastTransport *transport;
 };
 
 /* TYPE MACROS */
@@ -88,6 +90,10 @@ const GHashTable *
 salut_muc_connection_get_parameters(SalutMucConnection *connection);
 
 GType salut_muc_connection_get_type(void);
+
+gboolean
+salut_muc_connection_send(SalutMucConnection *connection,
+                          GibberXmppStanza *stanza, GError **error);
 
 G_END_DECLS
 

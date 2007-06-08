@@ -85,14 +85,11 @@ struct _SalutMucChannelPrivate
   SalutImManager *im_manager;
   SalutMucConnection *muc_connection;
   gchar *muc_name;
-  guint presence_timeout_id;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
 
 /* Callback functions */
-static void
-salut_muc_channel_send_presence(SalutMucChannel *self, gboolean joining);
 static gboolean salut_muc_channel_send_stanza(SalutMucChannel *self, 
                                               guint type, 
                                               const gchar *text,
@@ -101,9 +98,7 @@ static gboolean salut_muc_channel_send_stanza(SalutMucChannel *self,
 static void salut_muc_channel_received_stanza(GibberXmppConnection *conn,
                                               GibberXmppStanza *stanza,
                                               gpointer user_data);
-static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
-                                                GibberXmppStanza *stanza);
-static gboolean 
+static gboolean
 salut_muc_channel_connect(SalutMucChannel *channel, GError **error);
 static void salut_muc_channel_connected(GibberTransport *transport,
                                              gpointer user_data);
@@ -257,7 +252,6 @@ salut_muc_channel_init (SalutMucChannel *self)
   priv->object_path = NULL;
   priv->connection = NULL;
   priv->muc_name = NULL;
-  priv->presence_timeout_id = 0;
 }
 
 static void salut_muc_channel_dispose (GObject *object);
@@ -441,10 +435,6 @@ salut_muc_channel_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
-  if (priv->presence_timeout_id != 0) {
-    g_source_remove(priv->presence_timeout_id);
-    priv->presence_timeout_id = 0;
-  }
 
   if (priv->muc_connection != NULL) {
     g_object_unref(priv->muc_connection);
@@ -524,8 +514,7 @@ salut_muc_channel_send_stanza(SalutMucChannel *self, guint type,
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
 
-  if (!gibber_xmpp_connection_send(GIBBER_XMPP_CONNECTION(priv->muc_connection),
-          stanza, error)) {
+  if (!salut_muc_connection_send(priv->muc_connection, stanza, error)) {
     tp_svc_channel_type_text_emit_send_error(self, 
        TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, time(NULL), type, text);
     return FALSE;
@@ -536,54 +525,10 @@ salut_muc_channel_send_stanza(SalutMucChannel *self, guint type,
 }
 
 static void
-salut_muc_channel_send_presence(SalutMucChannel *self, 
-                                gboolean joining) {
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  GibberXmppStanza *stanza;
-
-  stanza = gibber_xmpp_stanza_new("presence");
-  if (!joining) {
-    gibber_xmpp_node_set_attribute(stanza->node, "type", "unavailable");
-  }
-  gibber_xmpp_node_set_attribute(stanza->node, "from", priv->connection->name);
-  gibber_xmpp_node_set_attribute(stanza->node, "to", priv->muc_name);
-
-  /* FIXME should disconnect if we couldn't sent */
-  gibber_xmpp_connection_send(GIBBER_XMPP_CONNECTION(priv->muc_connection), 
-                              stanza, NULL);
-  g_object_unref(stanza);
-}
-
-static gboolean
-salut_muc_channel_presence_timeout(gpointer data) {
-  SalutMucChannel *self = SALUT_MUC_CHANNEL(data);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-
-  salut_muc_channel_send_presence(self, TRUE);
-
-  priv->presence_timeout_id = 0;
-  return FALSE;
-}
-
-static void
 salut_muc_channel_change_members(SalutMucChannel *self, 
                                  TpHandle from_handle, 
                                  gboolean joining) {
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  gboolean is_member;
   TpIntSet *empty, *changes;
-
-  is_member = tp_handle_set_is_member(self->group.members, from_handle);
-  if (is_member == joining) {
-    return;
-  }
-
-  if (joining && priv->presence_timeout_id != 0) {
-    /* New member joined start a timeout for our presence */
-    priv->presence_timeout_id = 
-      g_timeout_add(g_random_int_range(200, 2000),
-                    salut_muc_channel_presence_timeout, self);
-  }
 
   empty = tp_intset_new();
   changes = tp_intset_new();
@@ -618,10 +563,6 @@ salut_muc_channel_received_stanza(GibberXmppConnection *conn,
     return;
   }
 
-  if (!strcmp(stanza->node->name, "presence")) {
-    salut_muc_channel_received_presence(self, stanza);
-  }
-
   if (!text_helper_parse_incoming_message(stanza, &from, &msgtype,
                                           &body, &body_offset)) {
     DEBUG("Couldn't parse stanza");
@@ -648,60 +589,17 @@ salut_muc_channel_received_stanza(GibberXmppConnection *conn,
       time(NULL), body_offset);
 }
 
-static void salut_muc_channel_received_presence(SalutMucChannel *channel, 
-                                                GibberXmppStanza *stanza) {
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *contact_repo = 
-      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
-  gboolean joining = TRUE;
-  const gchar *type;
-  const gchar *from;
-  TpHandle from_handle;
-
-  type = gibber_xmpp_node_get_attribute(stanza->node, "type");
-  if (type != NULL && strcmp(type, "unavailable") == 0) {
-    joining = FALSE;
-  }
-
-  from = gibber_xmpp_node_get_attribute(stanza->node, "from");
-  if (from == NULL) {
-    DEBUG("Presence without a from");
-    return;
-  }
-
-  DEBUG("Presence from: %s (joining: %d)", from, joining); 
-
-  from_handle = tp_handle_lookup(contact_repo, from, NULL, NULL);
-  if (from_handle == 0) {
-    DEBUG("Unknown contact");
-    return;
-  }
-
-  salut_muc_channel_change_members(channel, from_handle, joining);
-}
-
-static gboolean
-salut_muc_channel_dummy_timeout(gpointer data) {
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(data);
-  priv->presence_timeout_id =  0;
-  return FALSE;
-}
-
 static gboolean
 salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
-  GibberXmppConnection *conn;
-
-  conn = GIBBER_XMPP_CONNECTION(priv->muc_connection);
 
   /* Transport is now owned by the xmpp connection */
-  g_signal_connect(conn, "received-stanza",
+  g_signal_connect(priv->muc_connection, "received-stanza",
                    G_CALLBACK(salut_muc_channel_received_stanza), channel);
 
-  g_signal_connect(conn->transport, "connected", 
+  g_signal_connect(priv->muc_connection->transport, "connected", 
                    G_CALLBACK(salut_muc_channel_connected), channel);
-  g_signal_connect(conn->transport, "disconnected", 
+  g_signal_connect(priv->muc_connection->transport, "disconnected", 
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
 
   return salut_muc_connection_connect(priv->muc_connection, error);
@@ -711,18 +609,9 @@ static void
 salut_muc_channel_connected(GibberTransport *transport,
                                         gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
 
   g_signal_connect(transport, "disconnected", 
                    G_CALLBACK(salut_muc_channel_disconnected), self);
-
-  /* FIXME race */
-  g_assert(priv->presence_timeout_id  == 0);
-  priv->presence_timeout_id = g_timeout_add(4000,
-                                           salut_muc_channel_dummy_timeout, 
-                                           self);
-  g_assert(priv->presence_timeout_id != 0);
-  salut_muc_channel_send_presence(self, TRUE);
 }
 
 static void
@@ -809,19 +698,7 @@ salut_muc_channel_get_channel_type (TpSvcChannel *iface,
  */
 static void 
 salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context) {
-  SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-
-  DEBUG("Disposing muc channel: %d", priv->presence_timeout_id);
-
-  if (priv->presence_timeout_id != 0) {
-    g_source_remove(priv->presence_timeout_id);
-    priv->presence_timeout_id = 0;
-  }
-
-  salut_muc_channel_send_presence(self, FALSE);
-  gibber_transport_disconnect(
-    GIBBER_XMPP_CONNECTION(priv->muc_connection)->transport);
+  /* FIXME disconnect */
 
   tp_svc_channel_return_from_close(context);
 }
