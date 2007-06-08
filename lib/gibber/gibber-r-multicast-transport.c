@@ -245,7 +245,12 @@ gibber_r_multicast_transport_finalize (GObject *object)
 static void
 data_received_cb(GibberRMulticastSender *sender, guint8 *data,
                  gsize size, gpointer user_data) {
-  gibber_transport_received_data(GIBBER_TRANSPORT(user_data), data, size);
+  GibberRMulticastBuffer rmbuffer;
+  rmbuffer.buffer.data = data;
+  rmbuffer.buffer.length = size;
+  rmbuffer.sender = sender->name;
+  gibber_transport_received_data_custom(GIBBER_TRANSPORT(user_data), 
+                                        (GibberBuffer *)&rmbuffer);
 }
 
 static gboolean

@@ -37,6 +37,11 @@ struct _GibberRMulticastTransport {
     GibberTransport parent;
 };
 
+typedef struct {
+  GibberBuffer buffer;
+  const gchar *sender;
+} GibberRMulticastBuffer;
+
 GType gibber_r_multicast_transport_get_type(void);
 
 /* TYPE MACROS */
