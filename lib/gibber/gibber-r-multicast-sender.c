@@ -454,9 +454,19 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
 
     g_hash_table_insert(priv->packet_cache, &info->packet_id, info);
 
+    if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
+      diff = gibber_r_multicast_packet_diff(sender->next_input_packet, 
+                                            packet->packet_id);
+      if (diff <= 0) {
+        sender->next_input_packet = packet->packet_id + 1;
+      }
+    } else {
+      g_assert(sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW);
+      sender->next_input_packet = packet->packet_id + 1;
+    }
+
     priv->first_packet = packet->packet_id;
-    sender->next_input_packet = packet->packet_id + 1;
-    sender->next_output_packet = packet->packet_id;
+    sender->next_output_packet = priv->first_packet;
 
     sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
     /* Wait 200 ms for extra packets */
@@ -486,7 +496,9 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
     DEBUG_SENDER(sender, "Detect resent of packet 0x%x", packet->packet_id);
     return;
   }
-  DEBUG_SENDER(sender, "Packet 0x%x out of range, dropping", packet->packet_id);
+  DEBUG_SENDER(sender, "Packet 0x%x out of range, dropping (%x %x %x)", 
+    packet->packet_id, priv->first_packet, 
+    sender->next_output_packet, sender->next_input_packet);
 
 }
 
@@ -496,6 +508,11 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv = 
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   gint diff;
+
+  if (sender->state != GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
+    DEBUG_SENDER(sender, "ignore repair request");
+    return;
+  }
 
   diff = gibber_r_multicast_packet_diff(sender->next_output_packet, id);
 
@@ -512,7 +529,7 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
       }
     } else if (info->packet != NULL) {
       schedule_do_repair(sender, id);
-    } else { 
+    } else {
       /* else we already knew about the packets existance, but didn't see
        the packet just yet. Which means we already have a repair timeout 
        running */
@@ -526,16 +543,29 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
     return;
   }
 
-  DEBUG_SENDER(sender, "Seen packet 0x%x out of range, ignoring", id);
+  DEBUG_SENDER(sender, "Repair request packet 0x%x out of range, ignoring", 
+      id);
 }
 
 gboolean
 gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
   gint diff;
   guint32 i, last;
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  DEBUG_SENDER(sender, "Seen next packet 0x%x", id);
+
+  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
+    sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
+    sender->next_input_packet = id;
+    sender->next_output_packet = id;
+    priv->first_packet = id;
+    return FALSE;
+  }
 
   diff = gibber_r_multicast_packet_diff(sender->next_input_packet, id);
-  if (diff < 0) {
+  if (diff < 0 || sender->state != GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
     /* We're up to date */
     return TRUE;
   }
