@@ -90,6 +90,8 @@ main(int argc, char **argv){
 
   g_type_init();
 
+  printf("Starting process %d for %s\n", getpid(), argv[1]);
+
   loop = g_main_loop_new(NULL, FALSE);
 
   t = test_transport_new(send_hook, argv[1]);
