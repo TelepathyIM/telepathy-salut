@@ -301,6 +301,7 @@ add_sender(GibberRMulticastTransport *self, const gchar *name) {
 
   g_signal_connect(sender, "repair-request",
       G_CALLBACK(repair_request_cb), self);
+  g_signal_emit(self, signals[NEW_SENDER], 0, name);
 
   return sender;
 }
