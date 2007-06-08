@@ -410,6 +410,10 @@ add_receiver(gpointer key, gpointer value, gpointer user_data) {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
   GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET(user_data);
 
+  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
+    return;
+  }
+
   g_assert(gibber_r_multicast_packet_add_receiver(packet, sender->name,
                sender->next_input_packet, NULL));
 }
