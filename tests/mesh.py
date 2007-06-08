@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from twisted.internet import reactor, protocol
-from twisted.internet.error import ProcessDone
 from base64 import b64encode, b64decode
 import random
 
@@ -35,12 +34,14 @@ class BaseMeshNode(protocol.ProcessProtocol):
                  "OUTPUT":  self.gotOutput }
 
     parts = line.rstrip().split(":", 1)
-    command = parts[0]
-    rawdata = parts[1]
-    if command in commands:
-      commands[command](b64decode(rawdata))
-    else:
-      print "Unknown output: " + line.rstrip()
+    if len(parts) == 2:
+      command = parts[0]
+      rawdata = parts[1]
+      if command in commands:
+        commands[command](b64decode(rawdata))
+        return
+
+    print "Unknown output: " + line.rstrip()
 
   def outReceived(self, data):
     lines = (self.__buffer + data).split(self.delimiter)
@@ -52,8 +53,7 @@ class BaseMeshNode(protocol.ProcessProtocol):
     print "Error: " + data
 
   def processEnded(self, reason):
-    if reason.__class__ != ProcessDone:
-      print "Unexpected process end: " + str(reason)
+    print "process ended: " + str(reason)
 
 class MeshNode(BaseMeshNode):
   def __init__(self, name, mesh):
