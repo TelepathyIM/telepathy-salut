@@ -4,13 +4,14 @@
 
 #include <check.h>
 
+#include "check-gibber.h"
+
 Suite *
 make_gibber_suite (void)
 {
     Suite *s = suite_create ("Gibber");
 
-    TCase *tc_empty = tcase_create ("Empty");
-    suite_add_tcase (s, tc_empty);
+    suite_add_tcase (s, make_gibber_xmpp_node_tcase());
 
     return s;
 }

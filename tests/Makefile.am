@@ -90,9 +90,13 @@ test_sasl_auth_CFLAGS = \
 endif
 
 check_PROGRAMS = check-main
-check_main_SOURCES = check-main.c
+check_main_SOURCES = \
+    check-main.c             \
+    check-gibber.h           \
+    check-gibber-xmpp-node.c
 check_main_LDADD = \
     @CHECK_LIBS@ \
+    $(top_builddir)/lib/gibber/libgibber.la \
     $(AM_LDFLAGS)
 check_main_CFLAGS = \
     @CHECK_CFLAGS@ \
