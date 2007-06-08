@@ -228,10 +228,10 @@ salut_im_manager_factory_iface_request (TpChannelFactoryIface *iface,
   SalutImManager *mgr = SALUT_IM_MANAGER (iface);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
   SalutImChannel *chan;
-  gboolean created = FALSE;
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
       base_connection, TP_HANDLE_TYPE_CONTACT);
+  TpChannelFactoryRequestStatus status;
 
   /* We only support text channels */
   if (tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
@@ -252,16 +252,19 @@ salut_im_manager_factory_iface_request (TpChannelFactoryIface *iface,
   chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
   if (chan != NULL)
     {
-      *ret = TP_CHANNEL_IFACE (chan);
+      status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
     }
   else
     {
-      *ret = TP_CHANNEL_IFACE (salut_im_manager_new_channel (mgr, handle));
-      created = TRUE;
+      chan = salut_im_manager_new_channel (mgr, handle);
+      if (chan == NULL)
+        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+
+      status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
     }
 
-  return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED
-    : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+  *ret = TP_CHANNEL_IFACE (chan);
+  return status;
 }
 
 static void salut_im_manager_factory_iface_init (gpointer *g_iface,
