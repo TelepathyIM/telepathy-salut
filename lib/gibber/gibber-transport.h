@@ -84,6 +84,10 @@ GType gibber_transport_get_type(void);
 void gibber_transport_received_data(GibberTransport *transport,  
                                    const guint8 *data, 
                                    gsize length);
+
+void gibber_transport_received_data_custom(GibberTransport *transport,
+                                           GibberBuffer *buffer);
+
 void gibber_transport_set_state(GibberTransport *transport, 
                                GibberTransportState state);
 

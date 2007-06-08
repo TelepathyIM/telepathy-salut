@@ -138,10 +138,16 @@ gibber_transport_received_data(GibberTransport *transport,
   buffer.length = length;
   buffer.data = data;
 
+  gibber_transport_received_data_custom(transport, &buffer);
+}
+
+void
+gibber_transport_received_data_custom(GibberTransport *transport, 
+                                      GibberBuffer *buffer) {
   if (G_UNLIKELY(transport->handler == NULL)) {
     DEBUG("No handler for transport, dropping data!");
   } else {
-    transport->handler(transport, &buffer, transport->user_data);
+    transport->handler(transport, buffer, transport->user_data);
   }
 }
 
