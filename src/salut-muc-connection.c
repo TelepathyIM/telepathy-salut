@@ -386,9 +386,13 @@ salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
     }
   }
   if (!ret) {
+    if (gibber_transport_get_state(GIBBER_TRANSPORT(priv->mtransport)) !=
+        GIBBER_TRANSPORT_DISCONNECTED) {
+      gibber_transport_disconnect(GIBBER_TRANSPORT(priv->mtransport));
+    }
     g_set_error(error, SALUT_MUC_CONNECTION_ERROR,
-        SALUT_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
-        "Failed to connect to multicast group");
+      SALUT_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
+      "Failed to connect to multicast group");
   }
   return ret;
 }
