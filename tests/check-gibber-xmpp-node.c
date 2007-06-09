@@ -47,11 +47,72 @@ START_TEST (test_language)
 }
 END_TEST
 
+START_TEST (test_namespace)
+{
+  GibberXmppNode *node;
+  const gchar *ns;
+
+  node = gibber_xmpp_node_new ("test");
+
+  ns = gibber_xmpp_node_get_ns (node);
+  fail_unless (ns == NULL);
+
+  gibber_xmpp_node_set_ns (node, "foo");
+  ns = gibber_xmpp_node_get_ns (node);
+  fail_unless (strcmp(ns, "foo") == 0);
+
+  gibber_xmpp_node_set_ns (node, NULL);
+  ns = gibber_xmpp_node_get_ns (node);
+  fail_unless (ns == NULL);
+}
+END_TEST
+
+
+START_TEST (test_attribute)
+{
+  GibberXmppNode *node;
+  const gchar *attribute;
+
+  node = gibber_xmpp_node_new ("test");
+
+  attribute = gibber_xmpp_node_get_attribute (node, "foo");
+  fail_unless (attribute == NULL);
+
+  attribute = gibber_xmpp_node_get_attribute (node, NULL);
+  fail_unless (attribute == NULL);
+
+  attribute = gibber_xmpp_node_get_attribute_ns (node, "foo", "bar");
+  fail_unless (attribute == NULL);
+
+  gibber_xmpp_node_set_attribute(node, "foo", "baz");
+
+  attribute = gibber_xmpp_node_get_attribute (node, "foo");
+  fail_unless (strcmp(attribute, "baz") == 0);
+
+  attribute = gibber_xmpp_node_get_attribute_ns (node, "foo", "bar");
+  fail_unless (attribute == NULL);
+
+  gibber_xmpp_node_set_attribute_ns(node, "foobar", "barbaz", "bar");
+
+  attribute = gibber_xmpp_node_get_attribute (node, "foobar");
+  fail_unless (strcmp(attribute, "barbaz") == 0);
+
+  attribute = gibber_xmpp_node_get_attribute_ns (node, "foobar", "bar");
+  fail_unless (strcmp(attribute, "barbaz") == 0);
+
+  attribute = gibber_xmpp_node_get_attribute_ns (node, "barfoo", "bar");
+  fail_unless (attribute == NULL);
+}
+END_TEST
+
+
 TCase *
 make_gibber_xmpp_node_tcase (void)
 {
     TCase *tc = tcase_create ("XMPP Node");
     tcase_add_test (tc, test_instantiation);
     tcase_add_test (tc, test_language);
+    tcase_add_test (tc, test_namespace);
+    tcase_add_test (tc, test_attribute);
     return tc;
 }
