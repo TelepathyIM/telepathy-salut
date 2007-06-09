@@ -224,6 +224,10 @@ gibber_r_multicast_transport_dispose (GObject *object)
     priv->transport = NULL;
   }
 
+  if (priv->session_timeout != 0) {
+    g_source_remove(priv->session_timeout);
+  }
+
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose)
@@ -496,6 +500,10 @@ gibber_r_multicast_transport_disconnect(GibberTransport *transport) {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (transport);
   GibberRMulticastTransportPrivate *priv = 
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+
+  if (priv->session_timeout != 0) {
+    g_source_remove(priv->session_timeout);
+  }
 
   gibber_transport_set_state(GIBBER_TRANSPORT(self), 
                              GIBBER_TRANSPORT_DISCONNECTED);
