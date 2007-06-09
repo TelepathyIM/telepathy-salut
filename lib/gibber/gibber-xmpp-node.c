@@ -247,7 +247,7 @@ gibber_xmpp_node_get_ns(GibberXmppNode *node) {
 
 const gchar *
 gibber_xmpp_node_get_language(GibberXmppNode *node) {
-  return node->language;
+  return (node == NULL) ? NULL : node->language;
 }
 
 void 
