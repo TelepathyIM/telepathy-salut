@@ -29,9 +29,21 @@ START_TEST (test_language)
   lang = gibber_xmpp_node_get_language (node);
   fail_unless (lang == NULL);
 
-  gibber_xmpp_node_set_language (node, "us");
+  gibber_xmpp_node_set_language (node, "en");
   lang = gibber_xmpp_node_get_language (node);
-  fail_unless (strcmp(lang, "us") == 0);
+  fail_unless (strcmp(lang, "en") == 0);
+
+  gibber_xmpp_node_set_language (node, NULL);
+  lang = gibber_xmpp_node_get_language (node);
+  fail_unless (lang == NULL);
+
+  gibber_xmpp_node_set_language_n (node, "en-US", 2);
+  lang = gibber_xmpp_node_get_language (node);
+  fail_unless (strcmp(lang, "en") == 0);
+
+  gibber_xmpp_node_set_language_n (node, NULL, 2);
+  lang = gibber_xmpp_node_get_language (node);
+  fail_unless (lang == NULL);
 }
 END_TEST
 
