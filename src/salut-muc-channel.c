@@ -698,7 +698,10 @@ salut_muc_channel_get_channel_type (TpSvcChannel *iface,
  */
 static void 
 salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context) {
-  /* FIXME disconnect */
+  SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+
+  salut_muc_connection_disconnect(priv->muc_connection);
 
   tp_svc_channel_return_from_close(context);
 }
