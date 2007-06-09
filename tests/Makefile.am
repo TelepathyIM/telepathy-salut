@@ -93,7 +93,8 @@ check_PROGRAMS = check-main
 check_main_SOURCES = \
     check-main.c             \
     check-gibber.h           \
-    check-gibber-xmpp-node.c
+    check-gibber-xmpp-node.c \
+    check-gibber-xmpp-reader.c
 check_main_LDADD = \
     @CHECK_LIBS@ \
     $(top_builddir)/lib/gibber/libgibber.la \
