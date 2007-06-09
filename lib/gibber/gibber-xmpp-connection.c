@@ -201,7 +201,7 @@ static GibberXmppConnection *
 new_connection(GibberTransport *transport, gboolean stream)  {
   GibberXmppConnection * result;
 
-  result = g_object_new(GIBBER_TYPE_XMPP_CONNECTION, "streaming", stream, NULL);
+  result = g_object_new(GIBBER_TYPE_XMPP_CONNECTION, NULL);
 
   if (transport != NULL) {
     gibber_xmpp_connection_engage(result, transport);
