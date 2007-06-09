@@ -105,6 +105,37 @@ START_TEST (test_attribute)
 }
 END_TEST
 
+START_TEST (test_child)
+{
+  GibberXmppNode *node, *child;
+
+  node = gibber_xmpp_node_new ("test");
+
+  child = gibber_xmpp_node_get_child (node, "foo");
+  fail_unless (child == NULL);
+
+  gibber_xmpp_node_add_child (node, "foo");
+  child = gibber_xmpp_node_get_child (node, "foo");
+  fail_if (child == NULL);
+  fail_unless (strcmp(child->name, "foo") == 0);
+
+  child = gibber_xmpp_node_get_child_ns (node, "foo", "bar");
+  fail_unless (child == NULL);
+
+  gibber_xmpp_node_add_child_ns (node, "foobar", "bar");
+  child = gibber_xmpp_node_get_child_ns (node, "foobar", "foo");
+  fail_unless (child == NULL);
+  child = gibber_xmpp_node_get_child_ns (node, "foobar", "bar");
+  fail_if (child == NULL);
+  fail_unless (strcmp(child->name, "foobar") == 0);
+
+  gibber_xmpp_node_add_child_with_content (node, "foo2", "blah");
+  child = gibber_xmpp_node_get_child (node, "foo2");
+  fail_if (child->content == NULL);
+  fail_unless (strcmp(child->content, "blah") == 0);
+}
+END_TEST
+
 
 TCase *
 make_gibber_xmpp_node_tcase (void)
@@ -114,5 +145,6 @@ make_gibber_xmpp_node_tcase (void)
     tcase_add_test (tc, test_language);
     tcase_add_test (tc, test_namespace);
     tcase_add_test (tc, test_attribute);
+    tcase_add_test (tc, test_child);
     return tc;
 }
