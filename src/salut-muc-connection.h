@@ -82,6 +82,9 @@ salut_muc_connection_new(const gchar *name,
 gboolean 
 salut_muc_connection_connect(SalutMucConnection *connection, GError **error);
 
+void
+salut_muc_connection_disconnect(SalutMucConnection *connection);
+
 const gchar *
 salut_muc_connection_get_protocol(SalutMucConnection *connection);
 

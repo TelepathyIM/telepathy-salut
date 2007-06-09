@@ -393,6 +393,11 @@ salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
   return ret;
 }
 
+void
+salut_muc_connection_disconnect(SalutMucConnection *connection) {
+  gibber_transport_disconnect(GIBBER_TRANSPORT(connection->transport));
+}
+
 const gchar *
 salut_muc_connection_get_protocol(SalutMucConnection *connection) {
   SalutMucConnectionPrivate *priv = 
