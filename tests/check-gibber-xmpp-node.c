@@ -11,6 +11,24 @@ START_TEST (test_instantiation)
   GibberXmppNode *node;
   node = gibber_xmpp_node_new ("test");
   fail_unless (node != NULL);
+
+  node = gibber_xmpp_node_new (NULL);
+  fail_unless (node != NULL);
+}
+END_TEST
+
+START_TEST (test_language)
+{
+  GibberXmppNode *node;
+  const gchar *lang;
+
+  node = gibber_xmpp_node_new ("test");
+  lang = gibber_xmpp_node_get_language (node);
+  fail_unless (lang == NULL);
+
+  gibber_xmpp_node_set_language (node, "us");
+  lang = gibber_xmpp_node_get_language (node);
+  fail_unless (strcmp(lang, "us") == 0);
 }
 END_TEST
 
@@ -19,5 +37,6 @@ make_gibber_xmpp_node_tcase (void)
 {
     TCase *tc = tcase_create ("XMPP Node");
     tcase_add_test (tc, test_instantiation);
+    tcase_add_test (tc, test_language);
     return tc;
 }
