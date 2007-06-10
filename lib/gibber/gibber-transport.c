@@ -177,6 +177,7 @@ gibber_transport_get_state(GibberTransport *transport) {
 
 void 
 gibber_transport_emit_error(GibberTransport *transport, GError *error) {
+  DEBUG("Transport error: %s", error->message);
   g_signal_emit(transport, signals[ERROR], 0, 
                 error->domain, error->code, error->message);
 }
