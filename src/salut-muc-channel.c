@@ -100,8 +100,6 @@ static void salut_muc_channel_received_stanza(GibberXmppConnection *conn,
                                               gpointer user_data);
 static gboolean
 salut_muc_channel_connect(SalutMucChannel *channel, GError **error);
-static void salut_muc_channel_connected(GibberTransport *transport,
-                                             gpointer user_data);
 static void salut_muc_channel_disconnected(GibberTransport *transport,
                                              gpointer user_data);
 
@@ -387,7 +385,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   param_spec = g_param_spec_object ("muc connection", 
                                     "The SalutMucConnection",
                                     "muc connection  object",
-                                    G_TYPE_OBJECT,
+                                    SALUT_TYPE_MUC_CONNECTION,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_NICK |
@@ -461,15 +459,16 @@ salut_muc_channel_finalize (GObject *object)
   G_OBJECT_CLASS (salut_muc_channel_parent_class)->finalize (object);
 }
 
-void
+gboolean
 salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor, 
-                          const gchar *stanza) {
+                          const gchar *stanza, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
   TpHandleRepoIface *contact_repo = 
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo = 
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
+  gboolean ret = TRUE;
 
   /* Got invited to this muc channel */
   DEBUG("Got an invitation to %s from %s", 
@@ -480,20 +479,21 @@ salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor,
   /* If we are already a member, no further actions are needed */
   if (tp_handle_set_is_member(self->group.members, 
                               base_connection->self_handle)) {
-    return;
+    return TRUE;
   }
-  
+
   if (invitor == base_connection->self_handle) {
     /* Invited ourselves, go straight to members */
-    GError *error = NULL;
     GArray *members =  g_array_sized_new (FALSE, FALSE, sizeof(TpHandle), 1);
     g_array_append_val(members, base_connection->self_handle);
-    tp_group_mixin_add_members(G_OBJECT(self),
-        members, "", &error);
+    g_assert(tp_group_mixin_add_members(G_OBJECT(self), members, "", error));
     g_array_free(members, TRUE);
   } else {
     TpIntSet *empty = tp_intset_new();
     TpIntSet *local_pending = tp_intset_new();
+
+    g_assert(stanza != NULL);
+
     tp_intset_add(local_pending, base_connection->self_handle);
     tp_group_mixin_change_members(G_OBJECT(self), stanza,
                                   empty, empty,
@@ -503,6 +503,7 @@ salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor,
     tp_intset_destroy(local_pending);
     tp_intset_destroy(empty);
   }
+  return ret;
 }
 
 /* Private functions */
@@ -597,21 +598,10 @@ salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   g_signal_connect(priv->muc_connection, "received-stanza",
                    G_CALLBACK(salut_muc_channel_received_stanza), channel);
 
-  g_signal_connect(priv->muc_connection->transport, "connected", 
-                   G_CALLBACK(salut_muc_channel_connected), channel);
-  g_signal_connect(priv->muc_connection->transport, "disconnected", 
+  g_signal_connect(priv->muc_connection, "disconnected",
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
 
   return salut_muc_connection_connect(priv->muc_connection, error);
-}
-
-static void 
-salut_muc_channel_connected(GibberTransport *transport,
-                                        gpointer user_data) {
-  SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
-
-  g_signal_connect(transport, "disconnected", 
-                   G_CALLBACK(salut_muc_channel_disconnected), self);
 }
 
 static void

@@ -202,13 +202,13 @@ muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
   }
 }
 
-GObject *
+SalutMucConnection *
 _get_connection(SalutMucManager *mgr, const gchar *name, 
                const gchar *protocol, GHashTable *parameters, GError **error) {
   SalutMucConnection *connection;
 
   connection = salut_muc_connection_new(name, protocol, parameters, error);
-  return connection == NULL ? NULL : G_OBJECT(connection);
+  return connection == NULL ? NULL : connection;
 }
 
 const gchar **
@@ -218,7 +218,7 @@ _get_connection_parameters(SalutMucManager *mgr, const gchar *protocol) {
 
 static SalutMucChannel *
 salut_muc_manager_new_channel(SalutMucManager *mgr, TpHandle handle,
-                              GObject *connection) {
+                              SalutMucConnection *connection) {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
   TpHandleRepoIface *room_repo = 
@@ -231,7 +231,7 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, TpHandle handle,
              == NULL);
   DEBUG("Requested channel for handle: %d", handle);
 
-  /* FIXME The name of the muc and the handel might need to be different at
+  /* FIXME The name of the muc and the handle might need to be different at
    * some point.. E.g. if two rooms are called the same */
   name = tp_handle_inspect(room_repo, handle);
   path = g_strdup_printf("%s/MucChannel/%u", 
@@ -267,7 +267,7 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   TpHandleRepoIface *room_repo = 
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   SalutMucChannel *chan;
-  gboolean created = FALSE;
+  TpChannelFactoryRequestStatus status;
 
   DEBUG("Muc request");
 
@@ -287,28 +287,44 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   }
 
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
+
   if (chan != NULL) { 
     *ret = TP_CHANNEL_IFACE(chan);
-    created = FALSE;
+    status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
   } else {
-    GObject *connection = _get_connection(mgr,
+    SalutMucConnection *connection = _get_connection(mgr,
                                           priv->connection->name,
                                           NULL, NULL, NULL);
-    created = TRUE;
+    status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
     if (connection == NULL) {
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
     }
-    chan = salut_muc_manager_new_channel(mgr, handle, connection);
+
     /* We requested the channel, so invite ourselves to it */
-    if (chan)  {
-      salut_muc_channel_invited(chan, base_connection->self_handle, "");
+    {
+      GError *cerror = NULL;
+      if (!salut_muc_connection_connect(connection, &cerror)) {
+        DEBUG("Connect failed: %s", cerror->message);
+        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
+        g_set_error(error, TP_ERRORS,
+                    TP_ERROR_NETWORK_ERROR, cerror->message);
+        g_error_free(cerror);
+        g_object_unref(connection);
+        goto out;
+      }
+      DEBUG("Connect succeeded");
+
+      chan = salut_muc_manager_new_channel(mgr, handle, connection);
+      /* Inviting ourselves to a connected channel should always succeed */
+      g_assert(salut_muc_channel_invited(chan, base_connection->self_handle,
+                                     NULL, NULL));
       *ret = TP_CHANNEL_IFACE(chan);
     }
-    g_assert(chan != NULL);
   }
+  g_assert(chan != NULL);
 
-  return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED 
-                 : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+out:
+  return status;
 }
 
 static void salut_muc_manager_factory_iface_init(gpointer *g_iface, 
@@ -344,7 +360,7 @@ _received_stanza(SalutImChannel *imchannel,
   TpHandle invitor_handle;
   const gchar **p;
   GHashTable *params_hash;
-  GObject *transport = NULL;
+  SalutMucConnection *connection = NULL;
 
   node = gibber_xmpp_node_get_child_ns(message->node, "x", NS_LLMUC);
   if (node == NULL) 
@@ -373,7 +389,7 @@ _received_stanza(SalutImChannel *imchannel,
   if (reason == NULL) {
     reason = "";
   }
-  
+
   protocol = gibber_xmpp_node_get_attribute(invite, "protocol");
   if (protocol == NULL) { 
     DEBUG("Invalid invitation, (missing protocol) discarding");
@@ -408,25 +424,25 @@ _received_stanza(SalutImChannel *imchannel,
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(room_handle));
 
   if (chan == NULL) {
-    transport = _get_connection(self, room, protocol, params_hash, NULL);
-    if (transport == NULL) {
+    connection = _get_connection(self, room, protocol, params_hash, NULL);
+    if (connection == NULL) {
       DEBUG("Invalid invitation, (wrong protocol parameters) discarding");
       goto discard;
     }
 
-    if (transport == NULL) {
+    if (connection == NULL) {
       tp_handle_unref(room_repo, room_handle);
       /* FIXME some kinda error to the user maybe ? Ignore for now */
       goto discard;
     }
     /* Need to create a new one */
-    chan = salut_muc_manager_new_channel(self, room_handle, transport);
+    chan = salut_muc_manager_new_channel(self, room_handle, connection);
   }
   /* FIXME handle properly */
   g_assert(chan != NULL);
 
   g_object_get(G_OBJECT(imchannel), "handle", &invitor_handle, NULL);
-  salut_muc_channel_invited(chan, invitor_handle, reason);
+  salut_muc_channel_invited(chan, invitor_handle, reason, NULL);
 
   g_hash_table_destroy(params_hash);
 

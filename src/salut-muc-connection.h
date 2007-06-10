@@ -40,6 +40,13 @@ typedef enum
   SALUT_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
 } SalutMucConnectionError;
 
+typedef enum
+{
+  SALUT_MUC_CONNECTION_DISCONNECTED = 0,
+  SALUT_MUC_CONNECTION_CONNECTING,
+  SALUT_MUC_CONNECTION_CONNECTED
+} SalutMucConnectionState;
+
 
 typedef struct _SalutMucConnection SalutMucConnection;
 typedef struct _SalutMucConnectionClass SalutMucConnectionClass;
@@ -50,7 +57,7 @@ struct _SalutMucConnectionClass {
 
 struct _SalutMucConnection {
     GObject parent;
-    GibberRMulticastTransport *transport;
+    SalutMucConnectionState state;
 };
 
 /* TYPE MACROS */

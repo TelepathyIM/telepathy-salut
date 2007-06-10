@@ -59,10 +59,10 @@ GType salut_muc_channel_get_type(void);
 #define SALUT_MUC_CHANNEL_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelClass))
 
-void
-salut_muc_channel_invited(SalutMucChannel *self, 
-                          TpHandle invitor, const gchar *message);
-
+gboolean
+salut_muc_channel_invited(SalutMucChannel *self,
+                          TpHandle invitor, const gchar *message,
+                          GError **error);
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_MUC_CHANNEL_H__*/

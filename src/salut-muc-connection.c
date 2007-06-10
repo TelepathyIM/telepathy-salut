@@ -61,6 +61,9 @@ enum
 {
     RECEIVED_STANZA,
     PARSE_ERROR,
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
     LAST_SIGNAL
 };
 
@@ -83,6 +86,7 @@ struct _SalutMucConnectionPrivate
   GHashTable *parameters;
 
   GibberMulticastTransport *mtransport;
+  GibberRMulticastTransport *rmtransport;
 
   const gchar *current_sender;
 };
@@ -141,6 +145,33 @@ salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_c
                  NULL, NULL,
                  g_cclosure_marshal_VOID__STRING,
                  G_TYPE_NONE, 1, G_TYPE_STRING);
+
+  signals[DISCONNECTED] = 
+    g_signal_new("disconnected", 
+                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__VOID,
+                 G_TYPE_NONE, 0);
+
+  signals[CONNECTING] = 
+    g_signal_new("connecting", 
+                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__VOID,
+                 G_TYPE_NONE, 0);
+
+  signals[CONNECTED] = 
+    g_signal_new("connected", 
+                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__VOID,
+                 G_TYPE_NONE, 0);
 
 }
 
@@ -343,10 +374,10 @@ salut_muc_connection_new(const gchar *name,
   priv->port = g_strdup(port);
 
   priv->mtransport = gibber_multicast_transport_new();
-  result->transport = gibber_r_multicast_transport_new(
+  priv->rmtransport = gibber_r_multicast_transport_new(
         GIBBER_TRANSPORT(priv->mtransport),
         priv->name);
-  gibber_transport_set_handler(GIBBER_TRANSPORT(result->transport),
+  gibber_transport_set_handler(GIBBER_TRANSPORT(priv->rmtransport),
                                _connection_received_data,
                                result);
   return result;
@@ -363,13 +394,21 @@ salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
       SALUT_MUC_CONNECTION_GET_PRIVATE(connection); 
   int ret = FALSE;
 
+  if (connection->state > SALUT_MUC_CONNECTION_DISCONNECTED) {
+    return TRUE;
+  }
+
+  /* FIXME don't abuse the knowledge we connect syn */
+  connection->state = SALUT_MUC_CONNECTION_CONNECTING;
+  g_signal_emit(connection, signals[CONNECTING], 0);
+
   if (priv->address == NULL) {
     int attempts = 10;
     do {
       salut_muc_connection_create_random_address(connection);
       if (gibber_multicast_transport_connect(priv->mtransport,
                                              priv->address, priv->port)) {
-        if (gibber_r_multicast_transport_connect(connection->transport,
+        if (gibber_r_multicast_transport_connect(priv->rmtransport,
                                                    TRUE, NULL)) {
           ret = TRUE;
         }
@@ -379,13 +418,16 @@ salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
   } else {
     if (gibber_multicast_transport_connect(priv->mtransport,
                                              priv->address, priv->port)) {
-      if (gibber_r_multicast_transport_connect(connection->transport,
+      if (gibber_r_multicast_transport_connect(priv->rmtransport,
                                                 TRUE, NULL)) {
         ret = TRUE;
       }
     }
   }
   if (!ret) {
+    connection->state = SALUT_MUC_CONNECTION_DISCONNECTED;
+    g_signal_emit(connection, signals[DISCONNECTED], 0);
+
     if (gibber_transport_get_state(GIBBER_TRANSPORT(priv->mtransport)) !=
         GIBBER_TRANSPORT_DISCONNECTED) {
       gibber_transport_disconnect(GIBBER_TRANSPORT(priv->mtransport));
@@ -393,13 +435,22 @@ salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
     g_set_error(error, SALUT_MUC_CONNECTION_ERROR,
       SALUT_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
       "Failed to connect to multicast group");
+  } else {
+    connection->state = SALUT_MUC_CONNECTION_CONNECTED;
+    g_signal_emit(connection, signals[CONNECTED], 0);
   }
   return ret;
 }
 
 void
 salut_muc_connection_disconnect(SalutMucConnection *connection) {
-  gibber_transport_disconnect(GIBBER_TRANSPORT(connection->transport));
+  SalutMucConnectionPrivate *priv = 
+      SALUT_MUC_CONNECTION_GET_PRIVATE(connection); 
+
+  connection->state = SALUT_MUC_CONNECTION_DISCONNECTED;
+  g_signal_emit(connection, signals[DISCONNECTED], 0);
+
+  gibber_transport_disconnect(GIBBER_TRANSPORT(priv->rmtransport));
 }
 
 const gchar *
@@ -477,7 +528,7 @@ salut_muc_connection_send(SalutMucConnection *connection,
     return FALSE;
   }
 
-  return gibber_transport_send(GIBBER_TRANSPORT(connection->transport), 
+  return gibber_transport_send(GIBBER_TRANSPORT(priv->rmtransport),
       data, length, error);
 }
 
