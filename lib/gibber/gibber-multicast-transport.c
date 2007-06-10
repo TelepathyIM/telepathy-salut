@@ -176,17 +176,29 @@ _channel_io_err(GIOChannel *source, GIOCondition condition, gpointer data) {
 
 static int
 _open_multicast(GibberMulticastTransport *self, GError **error) {
-  GibberMulticastTransportPrivate *priv = 
+  GibberMulticastTransportPrivate *priv =
     GIBBER_MULTICAST_TRANSPORT_GET_PRIVATE(self);
-  unsigned char yes = 1;
+  int yes = 1;
   unsigned char one = 1;
   unsigned char no = 0;
   int fd = -1;
+
+  g_assert(self != NULL);
+#define SETSOCKOPT(s, level, optname, optval, len) G_STMT_START { \
+  if (setsockopt(s, level, optname, optval, len) != 0) {          \
+    g_set_error(error, GIBBER_MULTICAST_TRANSPORT_ERROR,          \
+                GIBBER_MULTICAST_TRANSPORT_ERROR_JOIN_FAILED,     \
+                #optname " failed: %s", strerror(errno));         \
+    goto err;                                                     \
+  }                                                               \
+} G_STMT_END
+
 
   /* Only try the first! */
   switch (priv->address.ss_family) {
     case AF_INET: {
       struct ip_mreq mreq;
+      struct sockaddr_in baddr;
       fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
       if (fd < 0) {
@@ -197,25 +209,25 @@ _open_multicast(GibberMulticastTransport *self, GError **error) {
         goto err;
       }
 
-      setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+      SETSOCKOPT(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 #ifdef SO_REUSEPORT
-      setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes));
+      SETSOCKOPT(fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes));
 #endif
-      setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &no, sizeof(no));
-      setsockopt(fd, IPPROTO_IP, IP_MULTICAST_TTL, &one, sizeof(one));
+      SETSOCKOPT(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &no, sizeof(yes));
+      SETSOCKOPT(fd, IPPROTO_IP, IP_MULTICAST_TTL, &one, sizeof(one));
 
       mreq.imr_multiaddr = ((struct sockaddr_in *)&(priv->address))->sin_addr;
       mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-      if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, 
-           sizeof(mreq)) < 0) {
-        DEBUG("Failed to join multicast group: %s", strerror(errno));
-        g_set_error(error, GIBBER_MULTICAST_TRANSPORT_ERROR, 
-                  GIBBER_MULTICAST_TRANSPORT_ERROR_JOIN_FAILED,
-                  "Failed to join group: %s", strerror(errno));
-        goto err;
-      }
 
-      if (bind(fd, (struct sockaddr *)&(priv->address), priv->addrlen ) != 0) {
+      SETSOCKOPT(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+
+      memset(&baddr, 0, sizeof(baddr));
+      baddr.sin_family      = AF_INET;
+      baddr.sin_addr.s_addr = htonl (INADDR_ANY);
+      baddr.sin_port        =
+          ((struct sockaddr_in *)&(priv->address))->sin_port;
+
+      if (bind(fd, (struct sockaddr *)&baddr, sizeof(baddr)) != 0) {
         DEBUG("Failed to bind to socket: %s", strerror(errno));
         g_set_error(error, GIBBER_MULTICAST_TRANSPORT_ERROR, 
                   GIBBER_MULTICAST_TRANSPORT_ERROR_JOIN_FAILED,
@@ -236,20 +248,9 @@ _open_multicast(GibberMulticastTransport *self, GError **error) {
         goto err;
       }
 
-      setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-      setsockopt(fd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, &one, sizeof(one));
-      setsockopt(fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &no, sizeof(no));
-
       mreq6.ipv6mr_multiaddr = ((struct sockaddr_in6 *)&priv->address)->sin6_addr;
       mreq6.ipv6mr_interface = 0;
-      if (setsockopt(fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6, 
-           sizeof(mreq6)) < 0) {
-        DEBUG("Failed to join multicast group: %s", strerror(errno));
-        g_set_error(error, GIBBER_MULTICAST_TRANSPORT_ERROR, 
-                  GIBBER_MULTICAST_TRANSPORT_ERROR_JOIN_FAILED,
-                  "Failed to join group: %s", strerror(errno));
-        goto err;
-      }
+      SETSOCKOPT(fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6, sizeof(mreq6));
 
       if (bind(fd, (struct sockaddr *)&(priv->address), priv->addrlen ) != 0) {
         DEBUG("Failed to bind to socket: %s", strerror(errno));
@@ -275,6 +276,7 @@ err:
     close(fd);
   }
   return -1;
+#undef SETSOCKOPT
 }
 
 static gboolean
