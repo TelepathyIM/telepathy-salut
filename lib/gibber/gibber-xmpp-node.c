@@ -54,10 +54,12 @@ gibber_xmpp_node_free(GibberXmppNode *node) {
 
   g_free(node->name);
   g_free(node->content);
+  g_free(node->language);
 
   for (l = node->children; l != NULL ; l = l->next) {
     gibber_xmpp_node_free((GibberXmppNode *)l->data);
   }
+  g_slist_free(node->children);
 
   for (l = node->attributes; l != NULL ; l = l->next) {
     Attribute *a = (Attribute *)l->data;
@@ -65,6 +67,8 @@ gibber_xmpp_node_free(GibberXmppNode *node) {
     g_free(a->value);
     g_slice_free(Attribute, a);
   }
+  g_slist_free(node->attributes);
+
   g_slice_free(GibberXmppNode, node);
 }
 
