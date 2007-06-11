@@ -278,7 +278,7 @@ repair_request_cb(GibberRMulticastSender *sender, guint id,
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet =
     gibber_r_multicast_packet_new(PACKET_TYPE_REPAIR_REQUEST,
-        priv->name, priv->packet_id, 1500);
+        priv->name, priv->packet_id, priv->transport->max_packet_size);
 
   g_assert(gibber_r_multicast_packet_add_receiver(packet, sender->name, 
                id, NULL));
@@ -451,7 +451,8 @@ sendout_session_cb(gpointer data) {
 
   GibberRMulticastPacket *packet =
       gibber_r_multicast_packet_new(PACKET_TYPE_SESSION, priv->name,
-                                    priv->packet_id, 1500);
+                                    priv->packet_id, 
+                                    priv->transport->max_packet_size);
 
   g_hash_table_foreach(priv->senders, add_receiver, packet);
   DEBUG("Sending out session message");
@@ -483,6 +484,11 @@ schedule_session_message(GibberRMulticastTransport *transport) {
 gboolean
 gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
                                      gboolean initial, GError **error) {
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
+
+  g_assert(priv->transport->max_packet_size > 128);
+
   gibber_transport_set_state(GIBBER_TRANSPORT(transport),
          GIBBER_TRANSPORT_CONNECTING);
   gibber_transport_set_state(GIBBER_TRANSPORT(transport),
@@ -501,7 +507,8 @@ gibber_r_multicast_transport_send(GibberTransport *transport,
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet = 
     gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->name,
-                                  priv->packet_id++, 1500);
+                                  priv->packet_id++, 
+                                  priv->transport->max_packet_size);
   gibber_r_multicast_packet_set_part(packet, 0, 1);
   gibber_r_multicast_packet_add_payload(packet, data, size);
 
