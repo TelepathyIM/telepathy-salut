@@ -1013,8 +1013,13 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
       aliases[i] = salut_self_get_alias(priv->self);
     } else {
       contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
-      aliases[i] = salut_contact_get_alias(contact);
-      g_object_unref(contact);
+      if (contact == NULL) {
+        DEBUG("RequestAliases called for offline contact");
+        aliases[i] = "";
+      } else {
+        aliases[i] = salut_contact_get_alias(contact);
+        g_object_unref(contact);
+      }
     }
   }
 
