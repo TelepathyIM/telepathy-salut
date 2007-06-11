@@ -6,6 +6,8 @@
 
 #include <glib.h>
 
+#include "gibber-xmpp-stanza.h"
+
 #ifdef ENABLE_DEBUG
 
 G_BEGIN_DECLS
@@ -30,11 +32,18 @@ void gibber_debug_set_flags (DebugFlags flags);
 gboolean gibber_debug_flag_is_set (DebugFlags flag);
 void gibber_debug (DebugFlags flag, const gchar *format, ...)
     G_GNUC_PRINTF (2, 3);
+void gibber_debug_stanza (DebugFlags flag, GibberXmppStanza *stanza,
+    const gchar *format, ...)
+    G_GNUC_PRINTF (3, 4);
 
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...) \
   gibber_debug(DEBUG_FLAG, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
+
+#define DEBUG_STANZA(stanza, format, ...) \
+  gibber_debug_stanza(DEBUG_FLAG, stanza, "%s: " format, G_STRFUNC,\
+      ##__VA_ARGS__)
 
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)
 
@@ -45,6 +54,8 @@ void gibber_debug (DebugFlags flag, const gchar *format, ...)
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...)
+
+#define DEBUG_STANZA(stanza, format, ...)
 
 #define DEBUGGING 0
 
