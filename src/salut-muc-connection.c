@@ -189,6 +189,8 @@ salut_muc_connection_dispose (GObject *object)
   /* release any references held by the object here */
   g_object_unref(priv->reader);
   g_object_unref(priv->writer);
+  g_object_unref(priv->mtransport);
+  g_object_unref(priv->rmtransport);
 
   if (G_OBJECT_CLASS (salut_muc_connection_parent_class)->dispose)
     G_OBJECT_CLASS (salut_muc_connection_parent_class)->dispose (object);
