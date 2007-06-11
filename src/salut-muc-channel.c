@@ -95,7 +95,8 @@ static gboolean salut_muc_channel_send_stanza(SalutMucChannel *self,
                                               const gchar *text,
                                               GibberXmppStanza *stanza,
                                               GError **error);
-static void salut_muc_channel_received_stanza(GibberXmppConnection *conn,
+static void salut_muc_channel_received_stanza(SalutMucConnection *conn,
+                                              const gchar *sender,
                                               GibberXmppStanza *stanza,
                                               gpointer user_data);
 static gboolean
@@ -546,7 +547,8 @@ salut_muc_channel_change_members(SalutMucChannel *self,
 }
 
 static void 
-salut_muc_channel_received_stanza(GibberXmppConnection *conn,
+salut_muc_channel_received_stanza(SalutMucConnection *conn,
+                                  const gchar *sender,
                                   GibberXmppStanza *stanza,
                                   gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
@@ -554,6 +556,7 @@ salut_muc_channel_received_stanza(GibberXmppConnection *conn,
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
   TpHandleRepoIface *contact_repo = 
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
+
   const gchar *from, *to, *body, *body_offset;
   TpChannelTextMessageType msgtype;
   TpHandle from_handle;
@@ -575,7 +578,7 @@ salut_muc_channel_received_stanza(GibberXmppConnection *conn,
     return;
   }
 
-  from_handle = tp_handle_lookup(contact_repo, from, NULL, NULL);
+  from_handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
   if (from_handle == 0) {
     /* FIXME, unknown contact.. Need some way to handle this safely,
      * just adding the contact is somewhat scary */
