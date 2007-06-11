@@ -168,7 +168,6 @@ salut_muc_channel_set_property (GObject     *object,
       break;
     case PROP_CONNECTION:
       priv->connection = g_value_get_object (value);
-      g_object_ref(priv->connection);
       break;
     case PROP_IM_MANAGER:
       priv->im_manager = g_value_get_object (value);
