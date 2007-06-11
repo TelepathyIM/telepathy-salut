@@ -18,7 +18,6 @@ static GDebugKey keys[] = {
   { "ssl",               DEBUG_SSL               },
   { "rmulticast",        DEBUG_RMULTICAST        },
   { "rmulticast-sender", DEBUG_RMULTICAST_SENDER },
-  { "muc-connection",    DEBUG_MUC_CONNECTION    },
   { "all",               ~0                      },
   { 0, },
 };
