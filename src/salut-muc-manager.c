@@ -203,12 +203,12 @@ muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
 }
 
 SalutMucConnection *
-_get_connection(SalutMucManager *mgr, const gchar *name, 
-               const gchar *protocol, GHashTable *parameters, GError **error) {
-  SalutMucConnection *connection;
+_get_connection(SalutMucManager *mgr, const gchar *protocol, 
+    GHashTable *parameters, GError **error) {
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
 
-  connection = salut_muc_connection_new(name, protocol, parameters, error);
-  return connection == NULL ? NULL : connection;
+  return salut_muc_connection_new(priv->connection->name, 
+      protocol, parameters, error);
 }
 
 const gchar **
@@ -293,7 +293,6 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
   } else {
     SalutMucConnection *connection = _get_connection(mgr,
-                                          priv->connection->name,
                                           NULL, NULL, NULL);
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
     if (connection == NULL) {
@@ -424,7 +423,7 @@ _received_stanza(SalutImChannel *imchannel,
   chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(room_handle));
 
   if (chan == NULL) {
-    connection = _get_connection(self, room, protocol, params_hash, NULL);
+    connection = _get_connection(self, protocol, params_hash, NULL);
     if (connection == NULL) {
       DEBUG("Invalid invitation, (wrong protocol parameters) discarding");
       goto discard;
