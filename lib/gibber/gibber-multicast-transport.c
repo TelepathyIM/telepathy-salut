@@ -180,7 +180,6 @@ _open_multicast(GibberMulticastTransport *self, GError **error) {
     GIBBER_MULTICAST_TRANSPORT_GET_PRIVATE(self);
   int yes = 1;
   unsigned char one = 1;
-  unsigned char no = 0;
   int fd = -1;
 
   g_assert(self != NULL);
@@ -213,7 +212,7 @@ _open_multicast(GibberMulticastTransport *self, GError **error) {
 #ifdef SO_REUSEPORT
       SETSOCKOPT(fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes));
 #endif
-      SETSOCKOPT(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &no, sizeof(yes));
+      SETSOCKOPT(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &yes, sizeof(yes));
       SETSOCKOPT(fd, IPPROTO_IP, IP_MULTICAST_TTL, &one, sizeof(one));
 
       mreq.imr_multiaddr = ((struct sockaddr_in *)&(priv->address))->sin_addr;
