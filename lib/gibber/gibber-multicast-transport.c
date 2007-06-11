@@ -84,6 +84,7 @@ gibber_multicast_transport_init (GibberMulticastTransport *obj)
   priv->watch_in = 0;
   priv->watch_err = 0;
   priv->channel = NULL;
+  GIBBER_TRANSPORT(obj)->max_packet_size = MAX_PACKET_SIZE;
 }
 
 static void gibber_multicast_transport_dispose (GObject *object);
@@ -454,14 +455,6 @@ gibber_multicast_transport_send (GibberTransport *transport,
 
   return TRUE;
 }
-
-gsize
-gibber_multicast_transport_get_max_packet_size(
-    GibberMulticastTransport *mtransport) 
-{
-  return MAX_PACKET_SIZE;
-}
-
 
 GibberMulticastTransport *
 gibber_multicast_transport_new(void) { 
