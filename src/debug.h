@@ -30,7 +30,8 @@ typedef enum
   DEBUG_PERSIST        = 1 << 11,
   DEBUG_NET            = 1 << 12,
   DEBUG_SELF           = 1 << 13,
-  DEBUG_TUBES          = 1 << 14
+  DEBUG_TUBES          = 1 << 14,
+  DEBUG_BYTESTREAM     = 1 << 15
 } DebugFlags;
 
 void debug_set_flags_from_env ();

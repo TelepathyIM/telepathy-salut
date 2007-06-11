@@ -65,6 +65,7 @@ GDebugKey keys[] = {
   { "persist",        DEBUG_PERSIST },
   { "self",           DEBUG_SELF },
   { "tubes",          DEBUG_TUBES },
+  { "bytestream",     DEBUG_BYTESTREAM },
   { "all",            ~0 },
   { 0, },
 };
