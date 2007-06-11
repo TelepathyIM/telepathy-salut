@@ -40,8 +40,6 @@ void debug (DebugFlags flag, const gchar *format, ...)
 void debug_stanza (DebugFlags flag, GibberXmppStanza *stanza, const gchar *format, ...)
     G_GNUC_PRINTF (3, 4);
 
-G_END_DECLS
-
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...) \
@@ -69,5 +67,7 @@ G_END_DECLS
 #endif /* DEBUG_FLAG */
 
 #endif /* ENABLE_DEBUG */
+
+G_END_DECLS
 
 #endif
