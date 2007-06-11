@@ -135,7 +135,7 @@ salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_c
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 g_cclosure_marshal_VOID__OBJECT,
+                 salut_muc_connection_marshal_VOID__STRING_OBJECT,
                  G_TYPE_NONE, 2, G_TYPE_STRING, GIBBER_TYPE_XMPP_STANZA);
   signals[PARSE_ERROR] = 
     g_signal_new("parse-error", 
