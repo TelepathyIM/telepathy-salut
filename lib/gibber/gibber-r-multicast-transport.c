@@ -274,9 +274,14 @@ static void
 repair_request_cb(GibberRMulticastSender *sender, guint id,
     gpointer user_data) {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet =
     gibber_r_multicast_packet_new(PACKET_TYPE_REPAIR_REQUEST,
-        sender->name, id, 1500);
+        priv->name, priv->packet_id, 1500);
+
+  g_assert(gibber_r_multicast_packet_add_receiver(packet, sender->name, 
+               id, NULL));
 
   sendout_packet(self, packet, NULL);
   g_object_unref(packet);
@@ -368,21 +373,31 @@ r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
     sender = add_sender(self, packet->sender);
   }
 
-  DEBUG("Got packet type: 0x%x id: 0x%x", packet->type, packet->packet_id);
-
-  if (packet->type != PACKET_TYPE_REPAIR_REQUEST &&
-      sender == priv->self) {
-     DEBUG("Received one of our own packets!!, dropping");
+  if (sender == priv->self) {
      goto out;
   }
+
+  DEBUG("Got packet type: 0x%x id: 0x%x", packet->type, packet->packet_id);
 
   switch (packet->type) {
     case PACKET_TYPE_DATA:
       gibber_r_multicast_sender_push(sender, packet);
       break;
-    case PACKET_TYPE_REPAIR_REQUEST:
-      gibber_r_multicast_sender_repair_request(sender, packet->packet_id);
+    case PACKET_TYPE_REPAIR_REQUEST: {
+      GibberRMulticastReceiver *receiver;
+      GibberRMulticastSender *rsender;
+      if (packet->receivers == NULL) {
+        DEBUG("Invalid repair request packet (no receivers), dropping");
+        break;
+      }
+      receiver = (GibberRMulticastReceiver *)packet->receivers->data;
+      rsender = g_hash_table_lookup(priv->senders, receiver->name);
+      if (rsender == NULL) {
+        rsender = add_sender(self, receiver->name);
+      }
+      gibber_r_multicast_sender_repair_request(rsender, receiver->packet_id);
       break;
+    }
     case PACKET_TYPE_SESSION:
       handle_session_message(self, packet);
       break;
