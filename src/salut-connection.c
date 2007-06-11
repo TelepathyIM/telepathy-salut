@@ -1360,7 +1360,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
       if (contact == NULL)
         {
           GError *error;
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                              "Unknown contact");
           dbus_g_method_return_error (context, error);
           g_error_free (error);
