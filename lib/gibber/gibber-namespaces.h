@@ -1,4 +1,7 @@
 
+#ifndef __GIBBER_NAMESPACES_H__
+#define __GIBBER_NAMESPACES_H__
+
 #define GIBBER_XMPP_NS_STREAM \
   (const gchar *)"http://etherx.jabber.org/streams"
 
@@ -13,3 +16,5 @@
 
 #define GIBBER_W3C_NS_XHTML \
   (const gchar *)"http://www.w3.org/1999/xhtml"
+
+#endif /* #ifndef __GIBBER_NAMESPACES_H__ */
