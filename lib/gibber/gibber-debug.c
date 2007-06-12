@@ -130,19 +130,22 @@ gibber_debug_stanza (DebugFlags flag,
     {
       PrintStanzaData *data;
       va_list args;
+      gchar *tmp;
 
       data = g_new0 (PrintStanzaData, 1);
       data->string = g_string_new ("");
       data->indent = "";
 
       va_start (args, format);
-      g_string_append (data->string, g_strdup_vprintf (format, args));
+      tmp = g_strdup_vprintf (format, args);
+      g_string_append (data->string, tmp);
       va_end (args);
       g_string_append_c (data->string, '\n');
       node_to_string (stanza->node, data);
 
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s", data->string->str);
 
+      g_free (tmp);
       g_string_free (data->string, TRUE);
       g_free (data);
     }
