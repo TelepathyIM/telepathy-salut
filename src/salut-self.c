@@ -267,7 +267,7 @@ salut_self_new(SalutAvahiClient *client,
         alias = g_string_append_c(alias, ' ');
         alias = g_string_append(alias, last_name);
       } else {
-        alias = g_string_new(first_name);
+        alias = g_string_new (last_name);
       } 
     }
 
