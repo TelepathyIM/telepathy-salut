@@ -451,6 +451,50 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     avahi_free(key);
     avahi_free(value);
   }
+  else if ((t = avahi_string_list_find (txt, "olpc-key-part0")) != NULL)
+    {
+      guint i = 0;
+      guint last_len;
+      gchar *name = NULL;
+      GString *accumulator = g_string_new("");
+
+      while (t)
+        {
+          gchar *k, *v;
+
+          avahi_string_list_get_pair (t, &k, &v, NULL);
+          last_len = strlen(v);
+          g_string_append (accumulator, v);
+          avahi_free (k);
+          avahi_free (v);
+
+          i++;
+          g_free(name);
+          name = g_strdup_printf ("olpc-key-part%u", i);
+          t = avahi_string_list_find (txt, name);
+        }
+      g_free (name);
+
+      if (last_len == 0)
+        {
+          if (tp_strdiff (self->key, accumulator->str))
+            {
+              g_free (self->key);
+              self->key = g_string_free (accumulator, FALSE);
+              SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+            }
+          else
+            {
+              g_string_free (accumulator, TRUE);
+            }
+        }
+      else
+        {
+          DEBUG ("Malformed segmented key for %s@%s: not terminated with "
+                 "an empty segment", name, host_name);
+          g_string_free (accumulator, TRUE);
+        }
+    }
 #endif
 
   if (changes != 0) {

@@ -599,6 +599,47 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 }
 
 #ifdef ENABLE_OLPC
+
+#define KEY_SEGMENT_SIZE 200
+
+gboolean
+split_and_set_key (SalutAvahiEntryGroupService *service,
+                   const gchar *key,
+                   size_t key_length,
+                   GError **error)
+{
+  gchar segment[KEY_SEGMENT_SIZE+1] = { 0 };
+  size_t segments = ((key_length + KEY_SEGMENT_SIZE - 1) / KEY_SEGMENT_SIZE);
+  guint i;
+  gchar *name;
+  gboolean ret;
+
+  for (i = 0; i < segments; i++)
+    {
+      memcpy (segment, key,
+          (key_length < KEY_SEGMENT_SIZE ? key_length : KEY_SEGMENT_SIZE));
+      key += KEY_SEGMENT_SIZE;
+      key_length -= KEY_SEGMENT_SIZE;
+      name = g_strdup_printf ("olpc-key-part%u", i);
+
+      ret = salut_avahi_entry_group_service_set (service, name, segment, error);
+      g_free (name);
+      if (!ret)
+        {
+          return FALSE;
+        }
+    }
+
+    name = g_strdup_printf ("olpc-key-part%u", segments);
+    ret = salut_avahi_entry_group_service_set (service, name, "", error);
+    g_free (name);
+    if (!ret)
+      {
+        return FALSE;
+      }
+    return TRUE;
+}
+
 gboolean
 salut_self_set_olpc_properties (SalutSelf *self,
                                 const gchar *key,
@@ -614,8 +655,7 @@ salut_self_set_olpc_properties (SalutSelf *self,
     g_free(self->key);
     self->key = g_strdup(key);
 
-    salut_avahi_entry_group_service_set(priv->presence, "olpc-key", 
-        key, NULL);
+    split_and_set_key (priv->presence, key, strlen (key), NULL);
   }
   if (color != NULL) {
     g_free(self->color);
