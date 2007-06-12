@@ -41,22 +41,23 @@ typedef struct
 {
     GibberStanzaType type;
     const gchar *name;
+    const gchar *ns;
 } StanzaTypeName;
 
 static const StanzaTypeName type_names[LAST_GIBBER_STANZA_TYPE] =
 {
-    { GIBBER_STANZA_TYPE_NONE,               NULL },
-    { GIBBER_STANZA_TYPE_MESSAGE,            "message" },
-    { GIBBER_STANZA_TYPE_PRESENCE,           "presence" },
-    { GIBBER_STANZA_TYPE_IQ,                 "iq" },
-    { GIBBER_STANZA_TYPE_STREAM,             "stream" },
-    { GIBBER_STANZA_TYPE_STREAM_FEATURES,    "features" },
-    { GIBBER_STANZA_TYPE_AUTH,               "auth" },
-    { GIBBER_STANZA_TYPE_CHALLENGE,          "challenge" },
-    { GIBBER_STANZA_TYPE_RESPONSE,           "response" },
-    { GIBBER_STANZA_TYPE_SUCCESS,            "success" },
-    { GIBBER_STANZA_TYPE_FAILURE,            "failure" },
-    { GIBBER_STANZA_TYPE_STREAM_ERROR,       "error" },
+    { GIBBER_STANZA_TYPE_NONE,            NULL,        NULL },
+    { GIBBER_STANZA_TYPE_MESSAGE,         "message",   NULL },
+    { GIBBER_STANZA_TYPE_PRESENCE,        "presence",  NULL },
+    { GIBBER_STANZA_TYPE_IQ,              "iq",        NULL },
+    { GIBBER_STANZA_TYPE_STREAM,          "stream",    GIBBER_XMPP_NS_STREAM },
+    { GIBBER_STANZA_TYPE_STREAM_FEATURES, "features",  GIBBER_XMPP_NS_STREAM },
+    { GIBBER_STANZA_TYPE_AUTH,            "auth",      NULL },
+    { GIBBER_STANZA_TYPE_CHALLENGE,       "challenge", NULL },
+    { GIBBER_STANZA_TYPE_RESPONSE,        "response",  NULL },
+    { GIBBER_STANZA_TYPE_SUCCESS,         "success",   NULL },
+    { GIBBER_STANZA_TYPE_FAILURE,         "failure",   NULL },
+    { GIBBER_STANZA_TYPE_STREAM_ERROR,    "error",     GIBBER_XMPP_NS_STREAM },
 };
 
 typedef struct
@@ -245,6 +246,17 @@ get_type_name (GibberStanzaType type)
 }
 
 static const gchar *
+get_type_ns (GibberStanzaType type)
+{
+  if (type < GIBBER_STANZA_TYPE_NONE ||
+      type >= LAST_GIBBER_STANZA_TYPE)
+    return NULL;
+
+  g_assert (type_names[type].type == type);
+  return type_names[type].ns;
+}
+
+static const gchar *
 get_sub_type_name (GibberStanzaSubType sub_type)
 {
   if (sub_type < GIBBER_STANZA_SUB_TYPE_NONE ||
@@ -283,11 +295,7 @@ gibber_xmpp_stanza_new_with_sub_type (GibberStanzaType type,
     return NULL;
 
   stanza = gibber_xmpp_stanza_new (get_type_name (type));
-
-  if (type == GIBBER_STANZA_TYPE_STREAM_FEATURES ||
-      type == GIBBER_STANZA_TYPE_STREAM ||
-      type == GIBBER_STANZA_TYPE_STREAM_ERROR)
-    gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
+  gibber_xmpp_node_set_ns (stanza->node, get_type_ns (type));
 
   sub_type_name = get_sub_type_name (sub_type);
   if (sub_type_name != NULL)
