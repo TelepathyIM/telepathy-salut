@@ -37,8 +37,7 @@
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
-#include "salut-muc-transport-iface.h"
-#include "salut-muc-connection.h"
+#include <gibber/gibber-muc-connection.h>
 
 #include "salut-connection.h"
 #include "salut-im-manager.h"
@@ -83,7 +82,7 @@ struct _SalutMucChannelPrivate
   TpHandle handle;
   SalutConnection *connection;
   SalutImManager *im_manager;
-  SalutMucConnection *muc_connection;
+  GibberMucConnection *muc_connection;
   gchar *muc_name;
 };
 
@@ -95,7 +94,7 @@ static gboolean salut_muc_channel_send_stanza(SalutMucChannel *self,
                                               const gchar *text,
                                               GibberXmppStanza *stanza,
                                               GError **error);
-static void salut_muc_channel_received_stanza(SalutMucConnection *conn,
+static void salut_muc_channel_received_stanza(GibberMucConnection *conn,
                                               const gchar *sender,
                                               GibberXmppStanza *stanza,
                                               gpointer user_data);
@@ -285,7 +284,7 @@ create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) 
 
   invite_node = gibber_xmpp_node_add_child(x_node, "invite");
   gibber_xmpp_node_set_attribute(invite_node, "protocol", 
-        salut_muc_connection_get_protocol(priv->muc_connection));
+        gibber_muc_connection_get_protocol(priv->muc_connection));
 
   if (message != NULL && *message != '\0') {
     gibber_xmpp_node_add_child_with_content(invite_node, "reason", message);
@@ -294,7 +293,7 @@ create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) 
   gibber_xmpp_node_add_child_with_content(invite_node, "roomname", 
                        tp_handle_inspect(room_repo, priv->handle));
   g_hash_table_foreach(
-    (GHashTable *)salut_muc_connection_get_parameters(priv->muc_connection), 
+    (GHashTable *)gibber_muc_connection_get_parameters(priv->muc_connection), 
     invitation_append_parameter, invite_node);
 
   return msg;
@@ -383,9 +382,9 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                    PROP_NAME, param_spec);
 
   param_spec = g_param_spec_object ("muc connection", 
-                                    "The SalutMucConnection",
+                                    "The GibberMucConnection",
                                     "muc connection  object",
-                                    SALUT_TYPE_MUC_CONNECTION,
+                                    GIBBER_TYPE_MUC_CONNECTION,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_NICK |
@@ -515,7 +514,7 @@ salut_muc_channel_send_stanza(SalutMucChannel *self, guint type,
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
 
-  if (!salut_muc_connection_send(priv->muc_connection, stanza, error)) {
+  if (!gibber_muc_connection_send(priv->muc_connection, stanza, error)) {
     tp_svc_channel_type_text_emit_send_error(self, 
        TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, time(NULL), type, text);
     return FALSE;
@@ -546,7 +545,7 @@ salut_muc_channel_change_members(SalutMucChannel *self,
 }
 
 static void 
-salut_muc_channel_received_stanza(SalutMucConnection *conn,
+salut_muc_channel_received_stanza(GibberMucConnection *conn,
                                   const gchar *sender,
                                   GibberXmppStanza *stanza,
                                   gpointer user_data) {
@@ -603,7 +602,7 @@ salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   g_signal_connect(priv->muc_connection, "disconnected",
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
 
-  return salut_muc_connection_connect(priv->muc_connection, error);
+  return gibber_muc_connection_connect(priv->muc_connection, error);
 }
 
 static void
@@ -693,7 +692,7 @@ salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
-  salut_muc_connection_disconnect(priv->muc_connection);
+  gibber_muc_connection_disconnect(priv->muc_connection);
 
   tp_svc_channel_return_from_close(context);
 }

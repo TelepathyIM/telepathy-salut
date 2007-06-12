@@ -13,8 +13,6 @@ BUILT_SOURCES = \
     salut-contact-signals-marshal.c \
     salut-contact-manager-signals-marshal.h \
     salut-contact-manager-signals-marshal.c \
-    salut-muc-connection-signals-marshal.h \
-    salut-muc-connection-signals-marshal.c \
     salut-presence-enumtypes.h \
     salut-presence-enumtypes.c  \
     salut-contact-channel-signals-marshal.h \
@@ -56,8 +54,7 @@ EXTRA_DIST = \
   salut-im-manager-signals-marshal.list                   \
   salut-muc-channel-signals-marshal.list                  \
   salut-muc-manager-signals-marshal.list                  \
-  salut-self-signals-marshal.list                         \
-  salut-muc-connection-signals-marshal.list
+  salut-self-signals-marshal.list
 
 bin_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
@@ -99,8 +96,6 @@ CORE_SOURCES =                                          \
     salut-connection.c                                  \
     salut-connection.h                                  \
     salut-presence.h                                    \
-    salut-muc-connection.c                              \
-    salut-muc-connection.h                              \
     salut-contact-channel.h                             \
     salut-contact-channel.c                             \
     text-helper.c                                       \

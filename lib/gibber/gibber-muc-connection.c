@@ -1,5 +1,5 @@
 /*
- * salut-muc-connection.c - Source for SalutMucConnection
+ * gibber-muc-connection.c - Source for GibberMucConnection
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -27,13 +27,13 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#include "salut-muc-connection.h"
-#include "salut-muc-connection-signals-marshal.h"
+#include "gibber-muc-connection.h"
+#include "gibber-muc-connection-signals-marshal.h"
 
-#include <gibber/gibber-xmpp-reader.h>
-#include <gibber/gibber-xmpp-writer.h>
-#include <gibber/gibber-multicast-transport.h>
-#include <gibber/gibber-r-multicast-transport.h>
+#include "gibber-xmpp-reader.h"
+#include "gibber-xmpp-writer.h"
+#include "gibber-multicast-transport.h"
+#include "gibber-r-multicast-transport.h"
 
 #define PROTO_RMULTICAST  "rmulticast"
 
@@ -41,7 +41,7 @@
 #define PORT_KEY "port"
 
 #define DEBUG_FLAG DEBUG_MUC_CONNECTION
-#include "debug.h"
+#include "gibber-debug.h"
 
 static void _reader_received_stanza_cb(GibberXmppReader *reader,
                                        GibberXmppStanza *stanza,
@@ -52,7 +52,7 @@ static void _connection_received_data(GibberTransport *transport,
                                       gpointer user_data);
 
 
-G_DEFINE_TYPE(SalutMucConnection, salut_muc_connection, 
+G_DEFINE_TYPE(GibberMucConnection, gibber_muc_connection, 
               G_TYPE_OBJECT)
 
 /* signal enum */
@@ -70,9 +70,9 @@ enum
 static guint signals[LAST_SIGNAL] = {0};
 
 /* private structure */
-typedef struct _SalutMucConnectionPrivate SalutMucConnectionPrivate;
+typedef struct _GibberMucConnectionPrivate GibberMucConnectionPrivate;
 
-struct _SalutMucConnectionPrivate
+struct _GibberMucConnectionPrivate
 {
   gboolean dispose_has_run;
   gchar *name;
@@ -91,23 +91,23 @@ struct _SalutMucConnectionPrivate
   const gchar *current_sender;
 };
 
-#define SALUT_MUC_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CONNECTION, SalutMucConnectionPrivate))
+#define GIBBER_MUC_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_MUC_CONNECTION, GibberMucConnectionPrivate))
 
 GQuark
-salut_muc_connection_error_quark (void) {
+gibber_muc_connection_error_quark (void) {
   static GQuark quark = 0;
 
   if (!quark)
-    quark = g_quark_from_static_string ("salut_muc_connection_error");
+    quark = g_quark_from_static_string ("gibber_muc_connection_error");
 
     return quark;
 }
 
 
 static void
-salut_muc_connection_init (SalutMucConnection *obj)
+gibber_muc_connection_init (GibberMucConnection *obj)
 {
-  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (obj);
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
   priv->reader = gibber_xmpp_reader_new_no_stream();
@@ -116,30 +116,30 @@ salut_muc_connection_init (SalutMucConnection *obj)
                    G_CALLBACK(_reader_received_stanza_cb), obj);
 }
 
-static void salut_muc_connection_dispose (GObject *object);
-static void salut_muc_connection_finalize (GObject *object);
+static void gibber_muc_connection_dispose (GObject *object);
+static void gibber_muc_connection_finalize (GObject *object);
 
 static void
-salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_class)
+gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connection_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_muc_connection_class);
+  GObjectClass *object_class = G_OBJECT_CLASS (gibber_muc_connection_class);
 
-  g_type_class_add_private (salut_muc_connection_class, sizeof (SalutMucConnectionPrivate));
+  g_type_class_add_private (gibber_muc_connection_class, sizeof (GibberMucConnectionPrivate));
 
-  object_class->dispose = salut_muc_connection_dispose;
-  object_class->finalize = salut_muc_connection_finalize;
+  object_class->dispose = gibber_muc_connection_dispose;
+  object_class->finalize = gibber_muc_connection_finalize;
   
   signals[RECEIVED_STANZA] = 
     g_signal_new("received-stanza", 
-                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 salut_muc_connection_marshal_VOID__STRING_OBJECT,
+                 gibber_muc_connection_marshal_VOID__STRING_OBJECT,
                  G_TYPE_NONE, 2, G_TYPE_STRING, GIBBER_TYPE_XMPP_STANZA);
   signals[PARSE_ERROR] = 
     g_signal_new("parse-error", 
-                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
@@ -148,7 +148,7 @@ salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_c
 
   signals[DISCONNECTED] = 
     g_signal_new("disconnected", 
-                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
@@ -157,7 +157,7 @@ salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_c
 
   signals[CONNECTING] = 
     g_signal_new("connecting", 
-                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
@@ -166,7 +166,7 @@ salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_c
 
   signals[CONNECTED] = 
     g_signal_new("connected", 
-                 G_OBJECT_CLASS_TYPE(salut_muc_connection_class),
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
@@ -176,10 +176,10 @@ salut_muc_connection_class_init (SalutMucConnectionClass *salut_muc_connection_c
 }
 
 void
-salut_muc_connection_dispose (GObject *object)
+gibber_muc_connection_dispose (GObject *object)
 {
-  SalutMucConnection *self = SALUT_MUC_CONNECTION (object);
-  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (self);
+  GibberMucConnection *self = GIBBER_MUC_CONNECTION (object);
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
@@ -192,15 +192,15 @@ salut_muc_connection_dispose (GObject *object)
   g_object_unref(priv->mtransport);
   g_object_unref(priv->rmtransport);
 
-  if (G_OBJECT_CLASS (salut_muc_connection_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_muc_connection_parent_class)->dispose (object);
+  if (G_OBJECT_CLASS (gibber_muc_connection_parent_class)->dispose)
+    G_OBJECT_CLASS (gibber_muc_connection_parent_class)->dispose (object);
 }
 
 void
-salut_muc_connection_finalize (GObject *object)
+gibber_muc_connection_finalize (GObject *object)
 {
-  SalutMucConnection *self = SALUT_MUC_CONNECTION (object);
-  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (self);
+  GibberMucConnection *self = GIBBER_MUC_CONNECTION (object);
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
   g_free(priv->name);
@@ -220,17 +220,17 @@ salut_muc_connection_finalize (GObject *object)
     priv->parameters = NULL;
   }
 
-  G_OBJECT_CLASS (salut_muc_connection_parent_class)->finalize (object);
+  G_OBJECT_CLASS (gibber_muc_connection_parent_class)->finalize (object);
 }
 
 const gchar **
-salut_muc_connection_get_protocols(void) {
+gibber_muc_connection_get_protocols(void) {
   static const gchar *protocols[] = { PROTO_RMULTICAST, NULL };
   return protocols;
 } 
 
 const gchar **
-salut_muc_connection_get_required_parameters(const gchar *protocol) {
+gibber_muc_connection_get_required_parameters(const gchar *protocol) {
   int i;
   static const gchar *parameters[] = { ADDRESS_KEY, PORT_KEY, NULL };
   struct {
@@ -249,7 +249,7 @@ salut_muc_connection_get_required_parameters(const gchar *protocol) {
 }
 
 static gboolean
-salut_muc_connection_validate_address(const gchar *address,
+gibber_muc_connection_validate_address(const gchar *address,
     const gchar *port,
     GError **error) {
   int ret;
@@ -266,8 +266,8 @@ salut_muc_connection_validate_address(const gchar *address,
   if (ret < 0) {
     DEBUG("Getaddrinfo failed: %s", gai_strerror(ret));
     g_set_error(error,
-                SALUT_MUC_CONNECTION_ERROR,
-                SALUT_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
+                GIBBER_MUC_CONNECTION_ERROR,
+                GIBBER_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
                 "Getaddrinfo failed: %s", gai_strerror(ret));
 
     goto err;
@@ -276,16 +276,16 @@ salut_muc_connection_validate_address(const gchar *address,
   if (ans == NULL) {
     DEBUG("Couldn't find address");
     g_set_error(error,
-                SALUT_MUC_CONNECTION_ERROR,
-                SALUT_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
+                GIBBER_MUC_CONNECTION_ERROR,
+                GIBBER_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
                 "Couldn't find address");
     goto err;
   }
 
   if (ans->ai_next != NULL) {
     g_set_error(error,
-                SALUT_MUC_CONNECTION_ERROR,
-                SALUT_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
+                GIBBER_MUC_CONNECTION_ERROR,
+                GIBBER_MUC_CONNECTION_ERROR_INVALID_ADDRESS,
                 "Address isn't unique");
     goto err;
   }
@@ -302,9 +302,9 @@ err:
 }
 
 static void
-salut_muc_connection_create_random_address(SalutMucConnection *self) {
-  SalutMucConnectionPrivate *priv =
-    SALUT_MUC_CONNECTION_GET_PRIVATE(self);
+gibber_muc_connection_create_random_address(GibberMucConnection *self) {
+  GibberMucConnectionPrivate *priv =
+    GIBBER_MUC_CONNECTION_GET_PRIVATE(self);
   gboolean ret;
   int p;
 
@@ -321,27 +321,27 @@ salut_muc_connection_create_random_address(SalutMucConnection *self) {
   priv->address = g_strdup_printf("224.0.0.%d", g_random_int_range(1, 254));
 
   /* Just to be sure */
-  ret = salut_muc_connection_validate_address(priv->address, priv->port, NULL);
+  ret = gibber_muc_connection_validate_address(priv->address, priv->port, NULL);
 
   DEBUG("Generated random address: %s:%s", priv->address, priv->port);
 
   g_assert(ret);
 }
 
-SalutMucConnection *
-salut_muc_connection_new(const gchar *name, 
+GibberMucConnection *
+gibber_muc_connection_new(const gchar *name, 
                          const gchar *protocol,
                          GHashTable *parameters,
                          GError **error) {
   const gchar *address = NULL;
   const gchar *port = NULL;
-  SalutMucConnection *result;
-  SalutMucConnectionPrivate *priv;
+  GibberMucConnection *result;
+  GibberMucConnectionPrivate *priv;
 
   if (protocol != NULL && strcmp(protocol, PROTO_RMULTICAST) != 0) {
     g_set_error(error, 
-                SALUT_MUC_CONNECTION_ERROR,
-                SALUT_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
+                GIBBER_MUC_CONNECTION_ERROR,
+                GIBBER_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
                 "Invalid protocol: %s", protocol);
   }
 
@@ -350,21 +350,21 @@ salut_muc_connection_new(const gchar *name,
     port = g_hash_table_lookup(parameters, PORT_KEY);
     if (address == NULL || port == NULL) {
       g_set_error(error, 
-                  SALUT_MUC_CONNECTION_ERROR,
-                  SALUT_MUC_CONNECTION_ERROR_INVALID_PARAMETERS,
+                  GIBBER_MUC_CONNECTION_ERROR,
+                  GIBBER_MUC_CONNECTION_ERROR_INVALID_PARAMETERS,
                   "Missing address or port parameter");
       goto err;
     }
-    if (!salut_muc_connection_validate_address(address, port, error)) {
+    if (!gibber_muc_connection_validate_address(address, port, error)) {
       goto err;
     }
   }
 
   /* Got an address, so we can init the transport */
-  result = g_object_new(SALUT_TYPE_MUC_CONNECTION, NULL);
-  priv = SALUT_MUC_CONNECTION_GET_PRIVATE (result);
+  result = g_object_new(GIBBER_TYPE_MUC_CONNECTION, NULL);
+  priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (result);
 
-  priv = SALUT_MUC_CONNECTION_GET_PRIVATE (result);
+  priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (result);
   priv->name = g_strdup(name);
   if (protocol != NULL) { 
     priv->protocol = g_strdup(protocol);
@@ -391,23 +391,23 @@ err:
 }
 
 gboolean 
-salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
-  SalutMucConnectionPrivate *priv = 
-      SALUT_MUC_CONNECTION_GET_PRIVATE(connection); 
+gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
+  GibberMucConnectionPrivate *priv = 
+      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
   int ret = FALSE;
 
-  if (connection->state > SALUT_MUC_CONNECTION_DISCONNECTED) {
+  if (connection->state > GIBBER_MUC_CONNECTION_DISCONNECTED) {
     return TRUE;
   }
 
   /* FIXME don't abuse the knowledge we connect syn */
-  connection->state = SALUT_MUC_CONNECTION_CONNECTING;
+  connection->state = GIBBER_MUC_CONNECTION_CONNECTING;
   g_signal_emit(connection, signals[CONNECTING], 0);
 
   if (priv->address == NULL) {
     int attempts = 10;
     do {
-      salut_muc_connection_create_random_address(connection);
+      gibber_muc_connection_create_random_address(connection);
       if (gibber_multicast_transport_connect(priv->mtransport,
                                              priv->address, priv->port)) {
         if (gibber_r_multicast_transport_connect(priv->rmtransport,
@@ -427,46 +427,46 @@ salut_muc_connection_connect(SalutMucConnection *connection, GError **error) {
     }
   }
   if (!ret) {
-    connection->state = SALUT_MUC_CONNECTION_DISCONNECTED;
+    connection->state = GIBBER_MUC_CONNECTION_DISCONNECTED;
     g_signal_emit(connection, signals[DISCONNECTED], 0);
 
     if (gibber_transport_get_state(GIBBER_TRANSPORT(priv->mtransport)) !=
         GIBBER_TRANSPORT_DISCONNECTED) {
       gibber_transport_disconnect(GIBBER_TRANSPORT(priv->mtransport));
     }
-    g_set_error(error, SALUT_MUC_CONNECTION_ERROR,
-      SALUT_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
+    g_set_error(error, GIBBER_MUC_CONNECTION_ERROR,
+      GIBBER_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
       "Failed to connect to multicast group");
   } else {
-    connection->state = SALUT_MUC_CONNECTION_CONNECTED;
+    connection->state = GIBBER_MUC_CONNECTION_CONNECTED;
     g_signal_emit(connection, signals[CONNECTED], 0);
   }
   return ret;
 }
 
 void
-salut_muc_connection_disconnect(SalutMucConnection *connection) {
-  SalutMucConnectionPrivate *priv = 
-      SALUT_MUC_CONNECTION_GET_PRIVATE(connection); 
+gibber_muc_connection_disconnect(GibberMucConnection *connection) {
+  GibberMucConnectionPrivate *priv = 
+      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
 
-  connection->state = SALUT_MUC_CONNECTION_DISCONNECTED;
+  connection->state = GIBBER_MUC_CONNECTION_DISCONNECTED;
   g_signal_emit(connection, signals[DISCONNECTED], 0);
 
   gibber_transport_disconnect(GIBBER_TRANSPORT(priv->rmtransport));
 }
 
 const gchar *
-salut_muc_connection_get_protocol(SalutMucConnection *connection) {
-  SalutMucConnectionPrivate *priv = 
-      SALUT_MUC_CONNECTION_GET_PRIVATE(connection); 
+gibber_muc_connection_get_protocol(GibberMucConnection *connection) {
+  GibberMucConnectionPrivate *priv = 
+      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
   return priv->protocol;
 }
 
 /* Current parameters of the transport. str -> str */
 const GHashTable *
-salut_muc_connection_get_parameters(SalutMucConnection *connection) {
-  SalutMucConnectionPrivate *priv = 
-    SALUT_MUC_CONNECTION_GET_PRIVATE(connection);
+gibber_muc_connection_get_parameters(GibberMucConnection *connection) {
+  GibberMucConnectionPrivate *priv = 
+    GIBBER_MUC_CONNECTION_GET_PRIVATE(connection);
 
   g_assert(priv->mtransport != NULL && 
       gibber_transport_get_state(
@@ -484,8 +484,8 @@ salut_muc_connection_get_parameters(SalutMucConnection *connection) {
 static void 
 _reader_received_stanza_cb(GibberXmppReader *reader, GibberXmppStanza *stanza,
                  gpointer user_data) {
-  SalutMucConnection *self = SALUT_MUC_CONNECTION(user_data);
-  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (self);
+  GibberMucConnection *self = GIBBER_MUC_CONNECTION(user_data);
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
 
   g_assert(priv->current_sender != NULL);
   g_signal_emit(self, signals[RECEIVED_STANZA], 0, 
@@ -496,8 +496,8 @@ _reader_received_stanza_cb(GibberXmppReader *reader, GibberXmppStanza *stanza,
 static void _connection_received_data(GibberTransport *transport,
                                       GibberBuffer *buffer,
                                       gpointer user_data) {
-  SalutMucConnection *self = SALUT_MUC_CONNECTION (user_data);
-  SalutMucConnectionPrivate *priv = SALUT_MUC_CONNECTION_GET_PRIVATE (self);
+  GibberMucConnection *self = GIBBER_MUC_CONNECTION (user_data);
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
   GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *)buffer;
   gboolean ret;
   GError *error = NULL;
@@ -517,11 +517,11 @@ static void _connection_received_data(GibberTransport *transport,
 }
 
 gboolean
-salut_muc_connection_send(SalutMucConnection *connection,
+gibber_muc_connection_send(GibberMucConnection *connection,
                           GibberXmppStanza *stanza,
                           GError **error) {
-  SalutMucConnectionPrivate *priv = 
-    SALUT_MUC_CONNECTION_GET_PRIVATE (connection);
+  GibberMucConnectionPrivate *priv = 
+    GIBBER_MUC_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
 

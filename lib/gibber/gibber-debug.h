@@ -20,6 +20,7 @@ typedef enum
   DEBUG_SSL               = 1 << 5,
   DEBUG_RMULTICAST        = 1 << 6,
   DEBUG_RMULTICAST_SENDER = 1 << 7,
+  DEBUG_MUC_CONNECTION    = 1 << 8,
 } DebugFlags;
 
 #define DEBUG_XMPP (DEBUG_XMPP_READER | DEBUG_XMPP_WRITER)

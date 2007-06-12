@@ -25,7 +25,7 @@
 #include "salut-muc-manager.h"
 #include "salut-muc-manager-signals-marshal.h"
 
-#include "salut-muc-connection.h"
+#include <gibber/gibber-muc-connection.h>
 
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
@@ -202,23 +202,23 @@ muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
   }
 }
 
-SalutMucConnection *
+GibberMucConnection *
 _get_connection(SalutMucManager *mgr, const gchar *protocol, 
     GHashTable *parameters, GError **error) {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
 
-  return salut_muc_connection_new(priv->connection->name, 
+  return gibber_muc_connection_new(priv->connection->name, 
       protocol, parameters, error);
 }
 
 const gchar **
 _get_connection_parameters(SalutMucManager *mgr, const gchar *protocol) {
-  return salut_muc_connection_get_required_parameters(protocol); 
+  return gibber_muc_connection_get_required_parameters(protocol); 
 }
 
 static SalutMucChannel *
 salut_muc_manager_new_channel(SalutMucManager *mgr, TpHandle handle,
-                              SalutMucConnection *connection) {
+                              GibberMucConnection *connection) {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
   TpHandleRepoIface *room_repo = 
@@ -292,7 +292,7 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
     *ret = TP_CHANNEL_IFACE(chan);
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
   } else {
-    SalutMucConnection *connection = _get_connection(mgr,
+    GibberMucConnection *connection = _get_connection(mgr,
                                           NULL, NULL, NULL);
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
     if (connection == NULL) {
@@ -302,7 +302,7 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
     /* We requested the channel, so invite ourselves to it */
     {
       GError *cerror = NULL;
-      if (!salut_muc_connection_connect(connection, &cerror)) {
+      if (!gibber_muc_connection_connect(connection, &cerror)) {
         DEBUG("Connect failed: %s", cerror->message);
         status = TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
         g_set_error(error, TP_ERRORS,
@@ -359,7 +359,7 @@ _received_stanza(SalutImChannel *imchannel,
   TpHandle invitor_handle;
   const gchar **p;
   GHashTable *params_hash;
-  SalutMucConnection *connection = NULL;
+  GibberMucConnection *connection = NULL;
 
   node = gibber_xmpp_node_get_child_ns(message->node, "x", NS_LLMUC);
   if (node == NULL) 
