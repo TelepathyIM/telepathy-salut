@@ -1030,6 +1030,35 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
   return;
 }
 
+static void
+salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
+                              GHashTable *aliases,
+                              DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  GError *error = NULL;
+  const gchar *alias = g_hash_table_lookup (aliases,
+      GUINT_TO_POINTER (base->self_handle));
+
+  if (alias == NULL || g_hash_table_size (aliases) != 1)
+    {
+      GError e = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+                   "In Salut you can only set your own alias" };
+
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
+  if (!salut_self_set_alias (priv->self, alias, &error)) {
+    dbus_g_method_return_error(context, error);
+    g_error_free(error);
+    return;
+  }
+  tp_svc_connection_interface_aliasing_return_from_set_aliases (context);
+}
+
 void
 _contact_manager_contact_alias_changed(SalutConnection *self,
                                        SalutContact *contact,
@@ -1068,6 +1097,7 @@ salut_connection_aliasing_service_iface_init(gpointer g_iface,
     (klass, salut_connection_##x)
   IMPLEMENT(get_alias_flags);
   IMPLEMENT(request_aliases);
+  IMPLEMENT(set_aliases);
 #undef IMPLEMENT
 }
 

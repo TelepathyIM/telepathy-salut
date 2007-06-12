@@ -85,6 +85,9 @@ gboolean salut_self_set_presence(SalutSelf *self,
 gboolean salut_self_set_avatar(SalutSelf *self, guint8 *data, 
                                gsize size, GError **error);
 
+gboolean salut_self_set_alias (SalutSelf *self, const gchar *alias,
+    GError **error);
+
 const gchar 
 *salut_self_get_alias(SalutSelf *self);
 

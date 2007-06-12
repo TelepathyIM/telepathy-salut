@@ -495,6 +495,28 @@ salut_self_get_alias(SalutSelf *self) {
   return priv->alias;
 }
 
+gboolean
+salut_self_set_alias (SalutSelf *self, const gchar *alias, GError **error)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  gboolean ret;
+  GError *err = NULL;
+
+  g_free (priv->alias);
+  g_free (priv->nickname);
+  priv->alias = g_strdup (alias);
+  priv->nickname = g_strdup (alias);
+
+  ret = salut_avahi_entry_group_service_set (priv->presence, "nick",
+      priv->alias, &err);
+  if (!ret)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free (err);
+    }
+  return ret;
+}
+
 static gboolean
 salut_self_publish_avatar(SalutSelf *self, guint8 *data,
                           gsize size, GError **error) {
