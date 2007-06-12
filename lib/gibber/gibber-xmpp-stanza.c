@@ -36,7 +36,8 @@ struct _GibberXmppStanzaPrivate
 
 #define GIBBER_XMPP_STANZA_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_STANZA, GibberXmppStanzaPrivate))
 
-typedef struct {
+typedef struct
+{
     GibberStanzaType type;
     const gchar *name;
 } StanzaTypeName;
@@ -55,6 +56,32 @@ static const StanzaTypeName type_names[LAST_GIBBER_STANZA_TYPE] =
     { GIBBER_STANZA_TYPE_SUCCESS,            "success" },
     { GIBBER_STANZA_TYPE_FAILURE,            "failure" },
     { GIBBER_STANZA_TYPE_STREAM_ERROR,       "stream:error" },
+};
+
+typedef struct
+{
+  GibberStanzaSubType sub_type;
+  const gchar *name;
+} StanzaSubTypeName;
+
+static const StanzaSubTypeName sub_type_names[LAST_GIBBER_STANZA_SUB_TYPE] =
+{
+    { GIBBER_STANZA_SUB_TYPE_NONE,           NULL },
+    { GIBBER_STANZA_SUB_TYPE_AVAILABLE,      NULL },
+    { GIBBER_STANZA_SUB_TYPE_NORMAL,         "normal" },
+    { GIBBER_STANZA_SUB_TYPE_CHAT,           "chat" },
+    { GIBBER_STANZA_SUB_TYPE_GROUPCHAT,      "groupchat" },
+    { GIBBER_STANZA_SUB_TYPE_HEADLINE,       "headline" },
+    { GIBBER_STANZA_SUB_TYPE_UNAVAILABLE,    "unavailable" },
+    { GIBBER_STANZA_SUB_TYPE_PROBE,          "probe" },
+    { GIBBER_STANZA_SUB_TYPE_SUBSCRIBE,      "subscribe" },
+    { GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBE,    "unsubscribe" },
+    { GIBBER_STANZA_SUB_TYPE_SUBSCRIBED,     "subscribed" },
+    { GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBED,   "unsubscribed" },
+    { GIBBER_STANZA_SUB_TYPE_GET,            "get" },
+    { GIBBER_STANZA_SUB_TYPE_SET,            "set" },
+    { GIBBER_STANZA_SUB_TYPE_RESULT,         "result" },
+    { GIBBER_STANZA_SUB_TYPE_ERROR,          "error" },
 };
 
 static void
@@ -202,59 +229,12 @@ get_type_name (GibberStanzaType type)
 const gchar *
 get_sub_type_name (GibberStanzaSubType sub_type)
 {
-  switch (sub_type)
-    {
-      case GIBBER_STANZA_SUB_TYPE_NOT_SET:
-        return NULL;
-        break;
-      case GIBBER_STANZA_SUB_TYPE_AVAILABLE:
-        return NULL;
-        break;
-      case GIBBER_STANZA_SUB_TYPE_NORMAL:
-        return "normal";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_CHAT:
-        return "chat";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_GROUPCHAT:
-        return "groupchat";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_HEADLINE:
-        return "headline";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_UNAVAILABLE:
-        return "unavailable";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_PROBE:
-        return "probe";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_SUBSCRIBE:
-        return "subscribe";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBE:
-        return "unsubscribe";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_SUBSCRIBED:
-        return "subscribed";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBED:
-        return "unsubscribed";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_GET:
-        return "get";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_SET:
-        return "set";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_RESULT:
-        return "result";
-        break;
-      case GIBBER_STANZA_SUB_TYPE_ERROR:
-        return "error";
-        break;
-      default:
-        return NULL;
-    }
+  if (sub_type < GIBBER_STANZA_SUB_TYPE_NONE ||
+      sub_type >= LAST_GIBBER_STANZA_SUB_TYPE)
+    return NULL;
+
+  g_assert (sub_type_names[sub_type].sub_type == sub_type);
+  return sub_type_names[sub_type].name;
 }
 
 static GibberXmppStanza *
@@ -266,7 +246,7 @@ gibber_xmpp_stanza_new_with_sub_type (GibberStanzaType type,
 
   switch (sub_type)
     {
-      case GIBBER_STANZA_SUB_TYPE_NOT_SET:
+      case GIBBER_STANZA_SUB_TYPE_NONE:
         break;
       case GIBBER_STANZA_SUB_TYPE_AVAILABLE:
         g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
@@ -331,7 +311,7 @@ gibber_xmpp_stanza_new_with_sub_type (GibberStanzaType type,
  * Example:
  *
  * gibber_xmpp_stanza_build (
- *    GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NOT_SET,
+ *    GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
  *    "alice@collabora.co.uk", "bob@collabora.co.uk",
  *    GIBBER_NODE, "html", "http://www.w3.org/1999/xhtml",
  *      GIBBER_NODE_XMLNS, 
