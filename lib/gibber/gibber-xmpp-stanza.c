@@ -36,6 +36,27 @@ struct _GibberXmppStanzaPrivate
 
 #define GIBBER_XMPP_STANZA_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_STANZA, GibberXmppStanzaPrivate))
 
+typedef struct {
+    GibberStanzaType type;
+    const gchar *name;
+} StanzaTypeName;
+
+static const StanzaTypeName type_names[LAST_GIBBER_STANZA_TYPE] =
+{
+    { GIBBER_STANZA_TYPE_NONE,               NULL },
+    { GIBBER_STANZA_TYPE_MESSAGE,            "message" },
+    { GIBBER_STANZA_TYPE_PRESENCE,           "presence" },
+    { GIBBER_STANZA_TYPE_IQ,                 "iq" },
+    { GIBBER_STANZA_TYPE_STREAM,             "stream" },
+    { GIBBER_STANZA_TYPE_STREAM_FEATURES,    "stream:features" },
+    { GIBBER_STANZA_TYPE_AUTH,               "auth" },
+    { GIBBER_STANZA_TYPE_CHALLENGE,          "challenge" },
+    { GIBBER_STANZA_TYPE_RESPONSE,           "response" },
+    { GIBBER_STANZA_TYPE_SUCCESS,            "success" },
+    { GIBBER_STANZA_TYPE_FAILURE,            "failure" },
+    { GIBBER_STANZA_TYPE_STREAM_ERROR,       "stream:error" },
+};
+
 static void
 gibber_xmpp_stanza_init (GibberXmppStanza *obj)
 {
@@ -170,44 +191,12 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node, guint spec, va_list ap)
 const gchar *
 get_type_name (GibberStanzaType type)
 {
-  switch (type)
-    {
-      case GIBBER_STANZA_TYPE_MESSAGE:
-        return "message";
-        break;
-      case GIBBER_STANZA_TYPE_PRESENCE:
-        return "presence";
-        break;
-      case GIBBER_STANZA_TYPE_IQ:
-        return "iq";
-        break;
-      case GIBBER_STANZA_TYPE_STREAM:
-        return "stream:stream";
-        break;
-      case GIBBER_STANZA_TYPE_STREAM_FEATURES:
-        return "stream:features";
-        break;
-      case GIBBER_STANZA_TYPE_AUTH:
-        return "auth";
-        break;
-      case GIBBER_STANZA_TYPE_CHALLENGE:
-        return "challenge";
-        break;
-      case GIBBER_STANZA_TYPE_RESPONSE:
-        return "response";
-        break;
-      case GIBBER_STANZA_TYPE_SUCCESS:
-        return "success";
-        break;
-      case GIBBER_STANZA_TYPE_FAILURE:
-        return "failure";
-        break;
-      case GIBBER_STANZA_TYPE_STREAM_ERROR:
-        return "stream:error";
-        break;
-      default:
-        return NULL;
-    }
+  if (type < GIBBER_STANZA_TYPE_NONE ||
+      type >= LAST_GIBBER_STANZA_TYPE)
+    return NULL;
+
+  g_assert (type_names[type].type == type);
+  return type_names[type].name;
 }
 
 const gchar *
