@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "gibber-xmpp-stanza.h"
+#include "gibber-namespaces.h"
 
 G_DEFINE_TYPE(GibberXmppStanza, gibber_xmpp_stanza, G_TYPE_OBJECT)
 
@@ -49,13 +50,13 @@ static const StanzaTypeName type_names[LAST_GIBBER_STANZA_TYPE] =
     { GIBBER_STANZA_TYPE_PRESENCE,           "presence" },
     { GIBBER_STANZA_TYPE_IQ,                 "iq" },
     { GIBBER_STANZA_TYPE_STREAM,             "stream" },
-    { GIBBER_STANZA_TYPE_STREAM_FEATURES,    "stream:features" },
+    { GIBBER_STANZA_TYPE_STREAM_FEATURES,    "features" },
     { GIBBER_STANZA_TYPE_AUTH,               "auth" },
     { GIBBER_STANZA_TYPE_CHALLENGE,          "challenge" },
     { GIBBER_STANZA_TYPE_RESPONSE,           "response" },
     { GIBBER_STANZA_TYPE_SUCCESS,            "success" },
     { GIBBER_STANZA_TYPE_FAILURE,            "failure" },
-    { GIBBER_STANZA_TYPE_STREAM_ERROR,       "stream:error" },
+    { GIBBER_STANZA_TYPE_STREAM_ERROR,       "error" },
 };
 
 typedef struct
@@ -296,6 +297,11 @@ gibber_xmpp_stanza_new_with_sub_type (GibberStanzaType type,
     }
 
   stanza = gibber_xmpp_stanza_new (get_type_name (type));
+
+  if (type == GIBBER_STANZA_TYPE_STREAM_FEATURES ||
+      type == GIBBER_STANZA_TYPE_STREAM ||
+      type == GIBBER_STANZA_TYPE_STREAM_ERROR)
+    gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
 
   sub_type_name = get_sub_type_name (sub_type);
   if (sub_type_name != NULL)
