@@ -71,8 +71,6 @@ CORE_SOURCES =                                          \
     salut-muc-manager.c                                 \
     salut-muc-manager.h                                 \
     salut-muc-channel.c                                 \
-    salut-muc-transport-iface.h                         \
-    salut-muc-transport-iface.c                         \
     salut-muc-channel.h                                 \
     salut-contact.h                                     \
     salut-contact.c                                     \
