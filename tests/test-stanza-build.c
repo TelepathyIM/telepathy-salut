@@ -54,6 +54,7 @@ check_html_message (void)
 
   DEBUG_STANZA (stanza, "check");
 
+  g_assert (stanza != NULL);
   /* <message> */
   node = stanza->node;
   g_assert (node != NULL);
