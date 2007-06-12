@@ -8,7 +8,8 @@ noinst_PROGRAMS = \
 	test-xmpp-connection    \
 	test-r-multicast-packet \
 	test-r-multicast-sender \
-	test-r-multicast-transport-io
+	test-r-multicast-transport-io \
+	test-stanza-build
 
 
 test_xmpp_connection_SOURCES = \
@@ -56,6 +57,16 @@ test_r_multicast_transport_io_LDADD = \
 test_r_multicast_transport_io_CFLAGS = \
     $(AM_CFLAGS)
 
+
+test_stanza_build_SOURCES = \
+    test-stanza-build.c
+
+test_stanza_build_LDADD = \
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(AM_LDFLAGS)
+
+test_stanza_build_CFLAGS = \
+    $(AM_CFLAGS)
 
 if HAVE_LIBSASL2
 noinst_PROGRAMS += test-sasl-auth
