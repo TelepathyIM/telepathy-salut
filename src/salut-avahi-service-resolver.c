@@ -189,7 +189,7 @@ salut_avahi_service_resolver_class_init (SalutAvahiServiceResolverClass *salut_a
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
-                 salut_avahi_service_resolver_marshal_VOID__INT_INT_STRING_STRING_STRING_STRING_POINTER_INT_POINTER_INT,
+                 salut_avahi_service_resolver_marshal_VOID__INT_ENUM_STRING_STRING_STRING_STRING_POINTER_INT_POINTER_INT,
                  G_TYPE_NONE, 10, 
                  G_TYPE_INT,
                  SALUT_TYPE_AVAHI_PROTOCOL,
