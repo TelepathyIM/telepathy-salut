@@ -88,7 +88,8 @@ gibber_xmpp_stanza_finalize (GObject *object)
 
 
 GibberXmppStanza *
-gibber_xmpp_stanza_new(gchar *name) {
+gibber_xmpp_stanza_new (const gchar *name)
+{
   GibberXmppStanza *result;
 
   result = GIBBER_XMPP_STANZA(g_object_new(GIBBER_TYPE_XMPP_STANZA, NULL));
@@ -97,3 +98,307 @@ gibber_xmpp_stanza_new(gchar *name) {
   return result;
 }
 
+static void
+gibber_xmpp_stanza_add_build_va (GibberXmppNode *node, guint spec, va_list ap)
+{
+  GSList *stack = NULL;
+  guint arg = spec;
+
+  stack = g_slist_prepend (stack, node);
+
+  while (arg != GIBBER_STANZA_END)
+    {
+      switch (arg)
+        {
+        case GIBBER_STANZA_END:
+          goto END;
+
+        case GIBBER_NODE_ATTRIBUTE:
+          {
+            gchar *key = va_arg (ap, gchar *);
+            gchar *value = va_arg (ap, gchar *);
+
+            g_return_if_fail (key != NULL);
+            g_return_if_fail (value != NULL);
+            gibber_xmpp_node_set_attribute (stack->data, key, value);
+          }
+          break;
+
+        case GIBBER_NODE:
+          {
+            gchar *name = va_arg (ap, gchar *);
+            GibberXmppNode *child;
+
+            g_return_if_fail (name != NULL);
+            child = gibber_xmpp_node_add_child (stack->data, name);
+            stack = g_slist_prepend (stack, child);
+          }
+          break;
+
+        case GIBBER_NODE_TEXT:
+          {
+            gchar *txt = va_arg (ap, gchar *);
+
+            g_return_if_fail (txt != NULL);
+            gibber_xmpp_node_set_content (stack->data, txt);
+          }
+          break;
+
+        case GIBBER_NODE_XMLNS:
+          {
+            gchar *ns = va_arg (ap, gchar *);
+
+            g_return_if_fail (ns != NULL);
+            gibber_xmpp_node_set_ns (stack->data, ns);
+          }
+          break;
+
+        case GIBBER_NODE_END:
+          {
+            GSList *tmp;
+
+            tmp = stack;
+            stack = stack->next;
+            tmp->next = NULL;
+            g_slist_free (tmp);
+          }
+          break;
+
+        default:
+          g_assert_not_reached ();
+        }
+
+      arg = va_arg (ap, guint);
+    }
+
+END:
+  g_slist_free (stack);
+}
+
+const gchar *
+get_type_name (GibberStanzaType type)
+{
+  switch (type)
+    {
+      case GIBBER_STANZA_TYPE_MESSAGE:
+        return "message";
+        break;
+      case GIBBER_STANZA_TYPE_PRESENCE:
+        return "presence";
+        break;
+      case GIBBER_STANZA_TYPE_IQ:
+        return "iq";
+        break;
+      case GIBBER_STANZA_TYPE_STREAM:
+        return "stream:stream";
+        break;
+      case GIBBER_STANZA_TYPE_STREAM_FEATURES:
+        return "stream:features";
+        break;
+      case GIBBER_STANZA_TYPE_AUTH:
+        return "auth";
+        break;
+      case GIBBER_STANZA_TYPE_CHALLENGE:
+        return "challenge";
+        break;
+      case GIBBER_STANZA_TYPE_RESPONSE:
+        return "response";
+        break;
+      case GIBBER_STANZA_TYPE_SUCCESS:
+        return "success";
+        break;
+      case GIBBER_STANZA_TYPE_FAILURE:
+        return "failure";
+        break;
+      case GIBBER_STANZA_TYPE_STREAM_ERROR:
+        return "stream:error";
+        break;
+      default:
+        return NULL;
+    }
+}
+
+const gchar *
+get_sub_type_name (GibberStanzaSubType sub_type)
+{
+  switch (sub_type)
+    {
+      case GIBBER_STANZA_SUB_TYPE_NOT_SET:
+        return NULL;
+        break;
+      case GIBBER_STANZA_SUB_TYPE_AVAILABLE:
+        return NULL;
+        break;
+      case GIBBER_STANZA_SUB_TYPE_NORMAL:
+        return "normal";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_CHAT:
+        return "chat";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_GROUPCHAT:
+        return "groupchat";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_HEADLINE:
+        return "headline";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_UNAVAILABLE:
+        return "unavailable";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_PROBE:
+        return "probe";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_SUBSCRIBE:
+        return "subscribe";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBE:
+        return "unsubscribe";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_SUBSCRIBED:
+        return "subscribed";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBED:
+        return "unsubscribed";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_GET:
+        return "get";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_SET:
+        return "set";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_RESULT:
+        return "result";
+        break;
+      case GIBBER_STANZA_SUB_TYPE_ERROR:
+        return "error";
+        break;
+      default:
+        return NULL;
+    }
+}
+
+static GibberXmppStanza *
+gibber_xmpp_stanza_new_with_sub_type (GibberStanzaType type,
+                                      GibberStanzaSubType sub_type)
+{
+  GibberXmppStanza *stanza = NULL;
+  const gchar *sub_type_name;
+
+  switch (sub_type)
+    {
+      case GIBBER_STANZA_SUB_TYPE_NOT_SET:
+        break;
+      case GIBBER_STANZA_SUB_TYPE_AVAILABLE:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_NORMAL:
+        break;
+      case GIBBER_STANZA_SUB_TYPE_CHAT:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_MESSAGE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_GROUPCHAT:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_MESSAGE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_HEADLINE:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_UNAVAILABLE:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_PROBE:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_SUBSCRIBE:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBE:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_SUBSCRIBED:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_UNSUBSCRIBED:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_PRESENCE, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_GET:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_IQ, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_SET:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_IQ, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_RESULT:
+        g_return_val_if_fail (type == GIBBER_STANZA_TYPE_IQ, NULL);
+        break;
+      case GIBBER_STANZA_SUB_TYPE_ERROR:
+        break;
+      default:
+        return NULL;
+    }
+
+  stanza = gibber_xmpp_stanza_new (get_type_name (type));
+
+  sub_type_name = get_sub_type_name (sub_type);
+  if (sub_type_name != NULL)
+    gibber_xmpp_node_set_attribute (stanza->node, "type", sub_type_name);
+
+  return stanza;
+}
+
+/**
+ * gibber_xmpp_stanza_build
+ *
+ * Build a XMPP stanza from a list of arguments.
+ * Example:
+ *
+ * gibber_xmpp_stanza_build (
+ *    GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NOT_SET,
+ *    "alice@collabora.co.uk", "bob@collabora.co.uk",
+ *    GIBBER_NODE, "html", "http://www.w3.org/1999/xhtml",
+ *      GIBBER_NODE_XMLNS, 
+ *      GIBBER_NODE, "body",
+ *        GIBBER_NODE_ATTRIBUTE, "textcolor", "red",
+ *        GIBBER_NODE_TEXT, "Telepathy rocks!",
+ *      GIBBER_NODE_END,
+ *    GIBBER_NODE_END,
+ *   GIBBER_STANZA_END);
+ *
+ * -->
+ *
+ * <message from='alice@collabora.co.uk' to='bob@collabora.co.uk'>
+ *   <html xmlns='http://www.w3.org/1999/xhtml'>
+ *     <body textcolor='red'>
+ *       Telepathy rocks!
+ *     </body>
+ *   </html>
+ * </message>
+ **/
+GibberXmppStanza *
+gibber_xmpp_stanza_build (GibberStanzaType type,
+                          GibberStanzaSubType sub_type,
+                          const gchar *from,
+                          const gchar *to,
+                          guint spec,
+                          ...)
+
+{
+  GibberXmppStanza *stanza;
+  va_list ap;
+
+  g_return_val_if_fail (type < LAST_GIBBER_STANZA_TYPE, NULL);
+  g_return_val_if_fail (sub_type < LAST_GIBBER_STANZA_SUB_TYPE, NULL);
+
+  stanza = gibber_xmpp_stanza_new_with_sub_type (type, sub_type);
+  if (stanza == NULL)
+    return NULL;
+
+  if (from != NULL)
+    gibber_xmpp_node_set_attribute (stanza->node, "from", from);
+
+  if (to != NULL)
+    gibber_xmpp_node_set_attribute (stanza->node, "to", to);
+
+  va_start (ap, spec);
+  gibber_xmpp_stanza_add_build_va (stanza->node, spec, ap);
+  va_end (ap);
+
+  return stanza;
+}
