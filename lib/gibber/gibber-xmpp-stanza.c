@@ -110,9 +110,6 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node, guint spec, va_list ap)
     {
       switch (arg)
         {
-        case GIBBER_STANZA_END:
-          goto END;
-
         case GIBBER_NODE_ATTRIBUTE:
           {
             gchar *key = va_arg (ap, gchar *);
@@ -171,7 +168,6 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node, guint spec, va_list ap)
       arg = va_arg (ap, guint);
     }
 
-END:
   g_slist_free (stack);
 }
 
