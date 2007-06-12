@@ -76,7 +76,7 @@ check_html_message (void)
   g_assert (strcmp (value, "red") == 0);
   g_assert (strcmp (node->content, body) == 0);
 
-  gibber_xmpp_node_free (stanza->node);
+  g_object_unref (stanza);
 }
 
 int main (void)
