@@ -226,7 +226,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           break;
 
         default:
-          g_assert_not_reached ();
+          g_return_if_reached ();
         }
 
       arg = va_arg (ap, GibberBuildTag);
