@@ -16,8 +16,6 @@ make_gibber_suite (void)
 
     suite_add_tcase (s, make_gibber_xmpp_node_tcase());
     suite_add_tcase (s, make_gibber_xmpp_reader_tcase());
-    suite_add_tcase (s, make_gibber_r_multicast_transport_tcase());
-    suite_add_tcase (s, make_gibber_iq_helper_tcase ());
 
     return s;
 }
