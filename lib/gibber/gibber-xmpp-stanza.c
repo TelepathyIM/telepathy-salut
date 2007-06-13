@@ -24,6 +24,7 @@
 
 #include "gibber-xmpp-stanza.h"
 #include "gibber-namespaces.h"
+#include "gibber-debug.h"
 
 G_DEFINE_TYPE(GibberXmppStanza, gibber_xmpp_stanza, G_TYPE_OBJECT)
 
@@ -183,8 +184,8 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
             gchar *key = va_arg (ap, gchar *);
             gchar *value = va_arg (ap, gchar *);
 
-            g_return_if_fail (key != NULL);
-            g_return_if_fail (value != NULL);
+            gibber_goto_if_fail (key != NULL, END);
+            gibber_goto_if_fail (value != NULL, END);
             gibber_xmpp_node_set_attribute (stack->data, key, value);
           }
           break;
@@ -194,7 +195,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
             gchar *name = va_arg (ap, gchar *);
             GibberXmppNode *child;
 
-            g_return_if_fail (name != NULL);
+            gibber_goto_if_fail (name != NULL, END);
             child = gibber_xmpp_node_add_child (stack->data, name);
             stack = g_slist_prepend (stack, child);
           }
@@ -204,7 +205,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           {
             gchar *txt = va_arg (ap, gchar *);
 
-            g_return_if_fail (txt != NULL);
+            gibber_goto_if_fail (txt != NULL, END);
             gibber_xmpp_node_set_content (stack->data, txt);
           }
           break;
@@ -213,7 +214,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           {
             gchar *ns = va_arg (ap, gchar *);
 
-            g_return_if_fail (ns != NULL);
+            gibber_goto_if_fail (ns != NULL, END);
             gibber_xmpp_node_set_ns (stack->data, ns);
           }
           break;
@@ -226,12 +227,13 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           break;
 
         default:
-          g_return_if_reached ();
+          gibber_goto_if_reached (END);
         }
 
       arg = va_arg (ap, GibberBuildTag);
     }
 
+END:
   g_slist_free (stack);
 }
 
