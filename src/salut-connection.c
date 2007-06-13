@@ -129,6 +129,8 @@ struct _SalutConnectionPrivate
   gchar *last_name;
   gchar *jid;
   gchar *email;
+  gchar *olpc_color;
+  gchar *olpc_key;
 
   /* Avahi client for browsing and resolving */
   SalutAvahiClient *avahi_client;
@@ -197,6 +199,8 @@ salut_connection_init (SalutConnection *obj)
   priv->last_name = NULL;
   priv->jid = NULL;
   priv->email = NULL;
+  priv->olpc_color = NULL;
+  priv->olpc_key = NULL;
 
   priv->avahi_client = NULL;
   priv->self = NULL;
@@ -385,6 +389,8 @@ salut_connection_finalize (GObject *object)
   g_free(priv->last_name);
   g_free(priv->email);
   g_free(priv->jid);
+  g_free(priv->olpc_key);
+  g_free(priv->olpc_color);
 
   DEBUG("Finalizing connection");
 
@@ -495,7 +501,9 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               priv->last_name,
                               priv->jid,
                               priv->email,
-                              priv->published_name);
+                              priv->published_name,
+                              priv->olpc_key,
+                              priv->olpc_color);
   g_signal_connect(priv->self, "established", 
                    G_CALLBACK(_self_established_cb), self);
   g_signal_connect(priv->self, "failure", 

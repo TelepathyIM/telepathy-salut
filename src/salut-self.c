@@ -63,6 +63,8 @@ struct _SalutSelfPrivate
   gchar *last_name;
   gchar *email;
   gchar *published_name;
+  gchar *olpc_key;
+  gchar *olpc_color;
 
   gchar *alias;
 
@@ -94,6 +96,8 @@ salut_self_init (SalutSelf *obj)
   priv->last_name = NULL;
   priv->email = NULL;
   priv->published_name = NULL;
+  priv->olpc_key = NULL;
+  priv->olpc_color = NULL;
 
   priv->client = NULL;
   priv->presence_group = NULL;
@@ -196,6 +200,8 @@ salut_self_finalize (GObject *object)
   g_free(priv->last_name);
   g_free(priv->email);
   g_free(priv->published_name);
+  g_free(priv->olpc_key);
+  g_free(priv->olpc_color);
 
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
@@ -233,7 +239,8 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
 SalutSelf *
 salut_self_new(SalutAvahiClient *client,
                gchar *nickname, gchar *first_name, gchar *last_name, 
-               gchar *jid, gchar *email, gchar *published_name) {
+               gchar *jid, gchar *email, gchar *published_name,
+               gchar *olpc_key, gchar *olpc_color) {
   SalutSelfPrivate *priv;
   GString *alias = NULL;
 
@@ -252,6 +259,8 @@ salut_self_new(SalutAvahiClient *client,
   priv->last_name = g_strdup(last_name);
   priv->email = g_strdup(email);
   priv->published_name = g_strdup(published_name);
+  priv->olpc_key = g_strdup(olpc_key);
+  priv->olpc_color = g_strdup(olpc_color);
   priv->alias = NULL;
 
   /* Prefer using the nickname as alias */
@@ -377,6 +386,27 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
      ret = avahi_string_list_add_printf(ret, "email=%s", priv->email);
    if (self->jid)
      ret = avahi_string_list_add_printf (ret, "jid=%s", self->jid);
+
+  if (priv->olpc_color)
+    ret = avahi_string_list_add_printf (ret, "olpc-color=%s",
+         priv->olpc_color);
+  if (priv->olpc_key)
+    {
+      gchar *key = priv->olpc_key;
+      size_t key_len = strlen (key);
+      guint i = 0;
+
+      while (key_len > 0)
+        {
+          size_t step = MIN (key_len, 200);
+
+          ret = avahi_string_list_add_printf (ret, "olpc-key-part%u=%*s", i,
+              step, key);
+          key += step;
+          key_len -= step;
+          i++;
+        }
+    }
 
    ret = avahi_string_list_add_printf(ret, "status=%s", 
                                 salut_presence_statuses[self->status].txt_name);
@@ -603,44 +633,6 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 #define KEY_SEGMENT_SIZE 200
 
 gboolean
-split_and_set_key (SalutAvahiEntryGroupService *service,
-                   const gchar *key,
-                   size_t key_length,
-                   GError **error)
-{
-  gchar segment[KEY_SEGMENT_SIZE+1] = { 0 };
-  size_t segments = ((key_length + KEY_SEGMENT_SIZE - 1) / KEY_SEGMENT_SIZE);
-  guint i;
-  gchar *name;
-  gboolean ret;
-
-  for (i = 0; i < segments; i++)
-    {
-      memcpy (segment, key,
-          (key_length < KEY_SEGMENT_SIZE ? key_length : KEY_SEGMENT_SIZE));
-      key += KEY_SEGMENT_SIZE;
-      key_length -= KEY_SEGMENT_SIZE;
-      name = g_strdup_printf ("olpc-key-part%u", i);
-
-      ret = salut_avahi_entry_group_service_set (service, name, segment, error);
-      g_free (name);
-      if (!ret)
-        {
-          return FALSE;
-        }
-    }
-
-    name = g_strdup_printf ("olpc-key-part%u", segments);
-    ret = salut_avahi_entry_group_service_set (service, name, "", error);
-    g_free (name);
-    if (!ret)
-      {
-        return FALSE;
-      }
-    return TRUE;
-}
-
-gboolean
 salut_self_set_olpc_properties (SalutSelf *self,
                                 const gchar *key,
                                 const gchar *color,
@@ -651,19 +643,38 @@ salut_self_set_olpc_properties (SalutSelf *self,
   GError *err = NULL;
 
   salut_avahi_entry_group_service_freeze(priv->presence);
-  if (key != NULL) {
-    g_free(self->key);
-    self->key = g_strdup(key);
+  if (key != NULL)
+    {
+      size_t key_len = strlen (key);
+      guint i = 0;
 
-    split_and_set_key (priv->presence, key, strlen (key), NULL);
-  }
-  if (color != NULL) {
-    g_free(self->color);
-    self->color = g_strdup(color);
+      g_free (self->key);
+      self->key = g_strdup (key);
 
-    salut_avahi_entry_group_service_set(priv->presence, "olpc-color", 
-        color, NULL);
-  }
+      while (key_len > 0)
+        {
+          size_t step = MIN (key_len, 200);
+          gchar *name = g_strdup_printf ("olpc-key-part%u-b64", i);
+          gchar *value = g_strdup_printf ("%*s", step, key);
+
+          salut_avahi_entry_group_service_set (priv->presence, name, value,
+            NULL);
+          g_free (name);
+          g_free (value);
+
+          key += step;
+          key_len -= step;
+          i++;
+        }
+    }
+  if (color != NULL)
+    {
+      g_free (self->color);
+      self->color = g_strdup (color);
+
+      salut_avahi_entry_group_service_set (priv->presence, "olpc-color",
+          color, NULL);
+    }
   if (jid != NULL)
     {
       g_free (self->jid);
@@ -673,11 +684,12 @@ salut_self_set_olpc_properties (SalutSelf *self,
           jid, NULL);
     }
 
-  if (!salut_avahi_entry_group_service_thaw(priv->presence, &err)) {
-    g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-    g_error_free(err);
-    return FALSE;
-  }
+  if (!salut_avahi_entry_group_service_thaw(priv->presence, &err))
+    {
+      g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free(err);
+      return FALSE;
+    }
   return TRUE;
 }
 

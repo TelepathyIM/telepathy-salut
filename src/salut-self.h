@@ -72,7 +72,8 @@ salut_self_new(SalutAvahiClient *client,
                gchar *nickname, 
                gchar *first_name, gchar *last_name, 
                gchar *jid, gchar *email,
-               gchar *published_name);
+               gchar *published_name, gchar *olpc_key,
+               gchar *olpc_color);
 
 /* Start announcing our presence on the network */
 gboolean salut_self_announce(SalutSelf *self, GError **error);
