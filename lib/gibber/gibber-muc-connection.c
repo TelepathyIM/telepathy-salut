@@ -64,6 +64,8 @@ enum
     DISCONNECTED,
     CONNECTING,
     CONNECTED,
+    NEW_SENDER,
+    LOST_SENDER,
     LAST_SIGNAL
 };
 
@@ -173,6 +175,23 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  g_cclosure_marshal_VOID__VOID,
                  G_TYPE_NONE, 0);
 
+  signals[NEW_SENDER] =
+    g_signal_new("new-sender",
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
+                 G_SIGNAL_RUN_LAST,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__STRING,
+                 G_TYPE_NONE, 1, G_TYPE_STRING);
+
+  signals[LOST_SENDER] =
+    g_signal_new("lost-sender",
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
+                 G_SIGNAL_RUN_LAST,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__STRING,
+                 G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
 void
@@ -390,6 +409,21 @@ err:
 
 }
 
+static void
+_rmtransport_new_sender_cb(GibberRMulticastTransport *transport,
+                           gchar *sender, gpointer user_data) {
+   g_signal_emit(GIBBER_MUC_CONNECTION(user_data), signals[NEW_SENDER],
+       0, sender);
+}
+
+static void
+_rmtransport_lost_sender_cb(GibberRMulticastTransport *transport,
+                           gchar *sender, gpointer user_data) {
+   g_signal_emit(GIBBER_MUC_CONNECTION(user_data), signals[LOST_SENDER],
+       0, sender);
+}
+
+
 gboolean 
 gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
   GibberMucConnectionPrivate *priv = 
@@ -438,6 +472,11 @@ gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
       GIBBER_MUC_CONNECTION_ERROR_CONNECTION_FAILED,
       "Failed to connect to multicast group");
   } else {
+    g_signal_connect(priv->rmtransport, "new-sender", 
+                     G_CALLBACK(_rmtransport_new_sender_cb), connection);
+    g_signal_connect(priv->rmtransport, "lost-sender", 
+                     G_CALLBACK(_rmtransport_lost_sender_cb), connection);
+
     connection->state = GIBBER_MUC_CONNECTION_CONNECTED;
     g_signal_emit(connection, signals[CONNECTED], 0);
   }
