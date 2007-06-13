@@ -166,7 +166,7 @@ gibber_xmpp_stanza_new (const gchar *name)
   return result;
 }
 
-static void
+static gboolean
 gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
                                  GibberBuildTag arg,
                                  va_list ap)
@@ -184,8 +184,8 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
             gchar *key = va_arg (ap, gchar *);
             gchar *value = va_arg (ap, gchar *);
 
-            gibber_goto_if_fail (key != NULL, END);
-            gibber_goto_if_fail (value != NULL, END);
+            gibber_goto_if_fail (key != NULL, error_build_parsing);
+            gibber_goto_if_fail (value != NULL, error_build_parsing);
             gibber_xmpp_node_set_attribute (stack->data, key, value);
           }
           break;
@@ -195,7 +195,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
             gchar *name = va_arg (ap, gchar *);
             GibberXmppNode *child;
 
-            gibber_goto_if_fail (name != NULL, END);
+            gibber_goto_if_fail (name != NULL, error_build_parsing);
             child = gibber_xmpp_node_add_child (stack->data, name);
             stack = g_slist_prepend (stack, child);
           }
@@ -205,7 +205,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           {
             gchar *txt = va_arg (ap, gchar *);
 
-            gibber_goto_if_fail (txt != NULL, END);
+            gibber_goto_if_fail (txt != NULL, error_build_parsing);
             gibber_xmpp_node_set_content (stack->data, txt);
           }
           break;
@@ -214,7 +214,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           {
             gchar *ns = va_arg (ap, gchar *);
 
-            gibber_goto_if_fail (ns != NULL, END);
+            gibber_goto_if_fail (ns != NULL, error_build_parsing);
             gibber_xmpp_node_set_ns (stack->data, ns);
           }
           break;
@@ -227,14 +227,18 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           break;
 
         default:
-          gibber_goto_if_reached (END);
+          gibber_goto_if_reached (error_build_parsing);
         }
 
       arg = va_arg (ap, GibberBuildTag);
     }
 
-END:
   g_slist_free (stack);
+  return TRUE;
+
+error_build_parsing:
+  g_slist_free (stack);
+  return FALSE;
 }
 
 static const gchar *
@@ -361,7 +365,11 @@ gibber_xmpp_stanza_build (GibberStanzaType type,
     gibber_xmpp_node_set_attribute (stanza->node, "to", to);
 
   va_start (ap, spec);
-  gibber_xmpp_stanza_add_build_va (stanza->node, spec, ap);
+  if (!gibber_xmpp_stanza_add_build_va (stanza->node, spec, ap))
+    {
+      g_object_unref (stanza);
+      stanza = NULL;
+    }
   va_end (ap);
 
   return stanza;
