@@ -52,7 +52,8 @@ enum {
 static const TpCMParamSpec salut_params[] = {
   { "nickname", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
      0, NULL, 
-     G_STRUCT_OFFSET(SalutParams, nickname)},
+     G_STRUCT_OFFSET(SalutParams, nickname),
+     tp_cm_param_filter_string_nonempty, NULL },
   { "first-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
      TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 
      G_STRUCT_OFFSET(SalutParams, first_name)},
@@ -64,7 +65,8 @@ static const TpCMParamSpec salut_params[] = {
   { "email", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
      G_STRUCT_OFFSET(SalutParams, email)},
   { "published-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
-     G_STRUCT_OFFSET(SalutParams, published_name)},
+     G_STRUCT_OFFSET(SalutParams, published_name),
+     tp_cm_param_filter_string_nonempty, NULL },
   {NULL, NULL, 0, 0, NULL, 0}
 };
 
