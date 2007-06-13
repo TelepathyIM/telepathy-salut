@@ -36,6 +36,28 @@ void gibber_debug_stanza (DebugFlags flag, GibberXmppStanza *stanza,
     const gchar *format, ...)
     G_GNUC_PRINTF (3, 4);
 
+#define gibber_goto_if_reached(label) G_STMT_START{ \
+    g_log (G_LOG_DOMAIN, \
+        G_LOG_LEVEL_CRITICAL, \
+        "file %s: line %d: should not be reached", \
+        __FILE__, \
+        __LINE__); \
+    goto label; }G_STMT_END;
+
+#define gibber_goto_if_fail(expr, label)  G_STMT_START{ \
+    if (expr) {} \
+    else \
+      { \
+        g_log (G_LOG_DOMAIN, \
+            G_LOG_LEVEL_CRITICAL, \
+            "file %s: line %d: assertion `%s' failed", \
+            __FILE__, \
+            __LINE__, \
+            #expr); \
+        goto label; \
+      }; }G_STMT_END
+
+
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...) \
