@@ -8,6 +8,41 @@
 
 #include <check.h>
 
+struct _FileChunker {
+  gchar *contents;
+  gsize length;
+  gsize size;
+  gsize offset;
+};
+typedef struct _FileChunker FileChunker;
+
+FileChunker *
+file_chunker_new (const gchar *filename, gsize chunk_size) {
+  FileChunker *fc;
+  fc = g_new0 (FileChunker, 1);
+
+  fc->size = chunk_size;
+  if (!g_file_get_contents (filename, &fc->contents, &fc->length, NULL)) {
+    g_free (fc);
+    return NULL;
+  }
+  return fc;
+}
+
+gboolean
+file_chunker_get_chunk (FileChunker *fc,
+                        gchar **chunk,
+                        gsize *chunk_size) {
+  if (fc->offset < fc->length) {
+    *chunk_size = MIN (fc->length - fc->offset, fc->size);
+    *chunk = fc->contents + fc->offset;
+    fc->offset += *chunk_size;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+
 START_TEST (test_instantiation)
 {
   GibberXmppConnection *connection;
@@ -36,12 +71,15 @@ START_TEST (test_simple_message) {
   GibberXmppConnection *connection;
   TestTransport *transport;
   const gchar *xml_input = "inputs/simple-message.input";
-  gchar *buffer;
-  gsize buffer_length, chunk_length, chunk_offset;
+  gchar *chunk;
+  gsize chunk_length;
   const gsize chunk_size = 10;
   gboolean parse_error_found = FALSE;
 
   g_type_init ();
+
+  FileChunker *fc = file_chunker_new (xml_input, chunk_size);
+  fail_if (fc == NULL);
 
   transport = test_transport_new (NULL, NULL);
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT(transport));
@@ -49,13 +87,8 @@ START_TEST (test_simple_message) {
   g_signal_connect (connection, "parse-error",
                     G_CALLBACK(parse_error_cb), &parse_error_found);
 
-  fail_unless (g_file_get_contents (xml_input, &buffer, &buffer_length, NULL));
-
-  chunk_offset = 0;
-  while (!parse_error_found && chunk_offset < buffer_length) {
-    chunk_length = MIN (buffer_length - chunk_offset, chunk_size);
-    test_transport_write (transport, (guint8*)(buffer + chunk_offset), chunk_length);
-    chunk_offset += chunk_length;
+  while (!parse_error_found && file_chunker_get_chunk (fc, &chunk, &chunk_length)) {
+    test_transport_write (transport, (guint8*)chunk, chunk_length);
   }
 
   fail_if (parse_error_found);
