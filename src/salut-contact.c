@@ -475,23 +475,14 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
         }
       g_free (name);
 
-      if (last_len == 0)
+      if (tp_strdiff (self->key, accumulator->str))
         {
-          if (tp_strdiff (self->key, accumulator->str))
-            {
-              g_free (self->key);
-              self->key = g_string_free (accumulator, FALSE);
-              SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
-            }
-          else
-            {
-              g_string_free (accumulator, TRUE);
-            }
+          g_free (self->key);
+          self->key = g_string_free (accumulator, FALSE);
+          SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
         }
       else
         {
-          DEBUG ("Malformed segmented key for %s@%s: not terminated with "
-                 "an empty segment", name, host_name);
           g_string_free (accumulator, TRUE);
         }
     }
