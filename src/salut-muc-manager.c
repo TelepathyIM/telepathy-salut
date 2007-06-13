@@ -30,10 +30,10 @@
 
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
-#include "salut-avahi-service-browser.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-unstable.h>
 
 #include "namespaces.h"
 
@@ -62,7 +62,6 @@ typedef struct _SalutMucManagerPrivate SalutMucManagerPrivate;
 
 struct _SalutMucManagerPrivate
 {
-  gboolean dispose_has_run;
   SalutConnection *connection;
   SalutImManager *im_manager;
   GHashTable *channels;
@@ -82,9 +81,6 @@ salut_muc_manager_init (SalutMucManager *obj)
   /* allocate any data required by the object here */
   priv->text_channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                          NULL, g_object_unref);
-
-  priv->room_info = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, g_object_unref);
 }
 
 static void salut_muc_manager_dispose (GObject *object);
@@ -107,7 +103,6 @@ salut_muc_manager_dispose (GObject *object)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (object);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-  GHashTable *t;
 
   if (priv->dispose_has_run)
     return;
@@ -118,11 +113,9 @@ salut_muc_manager_dispose (GObject *object)
     priv->im_manager = NULL;
   }
 
-  if (priv->text_channels) {
-    t = priv->text_channels;
-    priv->text_channels = NULL;
-    g_hash_table_destroy(t);
-  }
+  tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
+  g_assert (priv->text_channels == NULL);
+  g_assert (priv->tubes_channels == NULL);
 
   if (priv->room_info)
     {
@@ -153,21 +146,15 @@ salut_muc_manager_finalize (GObject *object)
 
 static void
 salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
-  GHashTable *t;
   SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
 
-  if (priv->text_channels) {
-    t = priv->text_channels;
-    priv->text_channels = NULL;
-    g_hash_table_destroy(t);
-  }
-
-  if (priv->client != NULL)
+  if (priv->text_channels)
     {
-      g_object_unref (priv->client);
-      priv->client = NULL;
-    }
+      GHashTable *tmp = priv->text_channels;
+      priv->text_channels = NULL;
+      g_hash_table_destroy(tmp);
+  }
 }
 
 static void
@@ -219,9 +206,53 @@ muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
   if (priv->text_channels) { 
     g_object_get(chan, "handle", &handle, NULL);
     DEBUG("Removing channel with handle %d", handle);
+
+    if (priv->tubes_channels != NULL)
+      {
+        SalutTubesChannel *tubes;
+
+        tubes = g_hash_table_lookup (priv->tubes_channels,
+            GUINT_TO_POINTER (handle));
+        if (tubes != NULL)
+          salut_tubes_channel_close (tubes);
+      }
+
     g_hash_table_remove(priv->text_channels, GINT_TO_POINTER(handle));
   }
 }
+
+/**
+ * tubes_channel_closed_cb:
+ *
+ * Signal callback for when a tubes channel is closed. Removes the references
+ * that MucManager holds to them.
+ */
+static void
+tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
+{
+  SalutMucManager *fac = SALUT_MUC_MANAGER (user_data);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (fac);
+  TpHandle room_handle;
+
+  if (priv->tubes_channels != NULL)
+    {
+      g_object_get (chan, "handle", &room_handle, NULL);
+
+      DEBUG ("removing MUC tubes channel with handle %d", room_handle);
+
+      g_hash_table_remove (priv->tubes_channels,
+          GINT_TO_POINTER (room_handle));
+
+      if (priv->text_channels != NULL)
+        {
+          /* FIXME: close the corresponding text channel? */
+        }
+
+      g_hash_table_remove (priv->tubes_channels,
+          GINT_TO_POINTER (room_handle));
+    }
+}
+
 
 GibberMucConnection *
 _get_connection(SalutMucManager *mgr, const gchar *protocol, 
@@ -277,32 +308,6 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   return chan;
 }
 
-static gchar *
-_avahi_address_to_string_address (AvahiAddress *address)
-{
-  gchar *str = NULL;
-
-  switch (address->proto)
-    {
-      case AVAHI_PROTO_INET:
-        {
-          str = g_new0 (gchar, INET_ADDRSTRLEN);
-          inet_ntop (AF_INET, &(address->data.ipv4.address), str,
-              INET_ADDRSTRLEN);
-          break;
-        }
-      case AVAHI_PROTO_INET6:
-        {
-          /* XXX TODO */
-          break;
-        }
-      default:
-        g_assert_not_reached ();
-    }
-
-  return str;
-}
-
 static TpChannelFactoryRequestStatus
 salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
                                              const gchar *chan_type, 
@@ -316,16 +321,11 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
   TpHandleRepoIface *room_repo = 
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
-  SalutMucChannel *chan;
+  SalutMucChannel *text_chan;
   TpChannelFactoryRequestStatus status;
   gchar *address = NULL, *port = NULL;
 
   DEBUG("Muc request");
-
-  /* We only support text channels */
-  if (tp_strdiff(chan_type, TP_IFACE_CHANNEL_TYPE_TEXT)) {
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
-  }
 
   /* And only room handles */
   if (handle_type != TP_HANDLE_TYPE_ROOM) {
@@ -337,60 +337,31 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
   }
 
-  chan = g_hash_table_lookup(priv->text_channels, GINT_TO_POINTER(handle));
+  if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
+    {
+      text_chan = g_hash_table_lookup (priv->text_channels,
+          GINT_TO_POINTER (handle));
 
   if (chan != NULL) { 
     *ret = TP_CHANNEL_IFACE(chan);
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
   } else {
-    GibberMucConnection *connection;
-    const gchar *room_name;
-    GHashTable *params = NULL;
-    SalutAvahiServiceResolver *resolver;
-
-    room_name = tp_handle_inspect (room_repo, handle);
-    resolver = g_hash_table_lookup (priv->room_info, room_name);
-    if (resolver != NULL)
-      {
-        /* This muc already exists on the network so we reuse its
-         * address */
-        AvahiAddress avahi_address;
-        uint16_t p;
-
-        if (!salut_avahi_service_resolver_get_address (resolver,
-              &avahi_address, &p))
-          {
-            DEBUG ("get address failed");
-          }
-        else
-          {
-            address = _avahi_address_to_string_address (&avahi_address);
-            port = g_strdup_printf ("%u", p);
-
-            params = g_hash_table_new (g_str_hash, g_str_equal);
-            g_hash_table_insert (params, "address", address);
-            g_hash_table_insert (params, "port", port);
-            DEBUG ("found %s:%s for room %s", address, port, room_name);
-          }
-      }
-    else
-      {
-        DEBUG ("didn't find address for room %s. Let's generate one",
-            room_name);
-      }
-
-    connection = _get_connection (mgr, NULL, params, NULL);
+    GibberMucConnection *connection = _get_connection(mgr,
+                                          NULL, NULL, NULL);
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-    if (connection == NULL)
-      {
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-        goto out;
-      }
+    if (connection == NULL) {
+      return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+    }
 
-    /* We requested the channel, so invite ourselves to it */
+          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+        }
+
+      g_assert (text_chan != NULL);
+      *ret = TP_CHANNEL_IFACE (text_chan);
+  }
+  else if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
       GError *cerror = NULL;
-      gboolean r;
       if (!gibber_muc_connection_connect(connection, &cerror)) {
         DEBUG("Connect failed: %s", cerror->message);
         status = TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
@@ -404,20 +375,12 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
 
       chan = salut_muc_manager_new_muc_channel (mgr, handle, connection);
       /* Inviting ourselves to a connected channel should always succeed */
-      r = salut_muc_channel_invited(chan, base_connection->self_handle,
-                                     NULL, NULL);
-      g_assert(r);
+      g_assert(salut_muc_channel_invited(chan, base_connection->self_handle,
+                                     NULL, NULL));
       *ret = TP_CHANNEL_IFACE(chan);
     }
-  }
-  g_assert(chan != NULL);
 
 out:
-  if (address != NULL)
-    g_free (address);
-  if (port != NULL)
-    g_free (port);
-
   return status;
 }
 
