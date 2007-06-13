@@ -359,22 +359,12 @@ _avahi_service_resolver_cb(AvahiServiceResolver *resolver,
 
 
 SalutAvahiServiceResolver *
-salut_avahi_service_resolver_new(const gchar *name, const gchar *type, 
+salut_avahi_service_resolver_new(AvahiIfIndex interface, 
+                                 AvahiProtocol protocol,
+                                 const gchar *name, const gchar *type, 
                                  const gchar *domain, 
                                  AvahiProtocol address_protocol,
                                  SalutAvahiLookupFlags flags) {
-  return salut_avahi_service_resolver_new_full(AVAHI_IF_UNSPEC,
-                                               AVAHI_PROTO_UNSPEC,
-                                               name, type, domain,
-                                               address_protocol, flags);
-}
-SalutAvahiServiceResolver *
-salut_avahi_service_resolver_new_full(AvahiIfIndex interface, 
-                                      AvahiProtocol protocol,
-                                      const gchar *name, const gchar *type, 
-                                      const gchar *domain, 
-                                      AvahiProtocol address_protocol,
-                                      SalutAvahiLookupFlags flags) {
   return g_object_new(SALUT_TYPE_AVAHI_SERVICE_RESOLVER,
                       "interface", interface,
                       "protocol", protocol,

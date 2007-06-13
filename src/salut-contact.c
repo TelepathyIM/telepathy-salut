@@ -497,10 +497,10 @@ salut_contact_add_service(SalutContact *contact,
   if (resolver) 
     return;
 
-  resolver = salut_avahi_service_resolver_new_full(interface,
-                                                   protocol,
-                                                   name, type, domain, 
-                                                   protocol, 0);
+  resolver = salut_avahi_service_resolver_new(interface,
+                                              protocol,
+                                              name, type, domain,
+                                              protocol, 0);
   g_signal_connect(resolver, "found", G_CALLBACK(contact_resolved_cb), contact);
   g_signal_connect(resolver, "failure", G_CALLBACK(contact_failed_cb), contact);
   if (!salut_avahi_service_resolver_attach(resolver, priv->client, NULL)) {
