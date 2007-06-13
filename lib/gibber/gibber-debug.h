@@ -22,6 +22,8 @@ typedef enum
   DEBUG_SSL               = 1 << 5,
   DEBUG_RMULTICAST        = 1 << 6,
   DEBUG_RMULTICAST_SENDER = 1 << 7,
+  DEBUG_MUC_CONNECTION    = 1 << 8,
+  DEBUG_BYTESTREAM        = 1 << 9,
 } DebugFlags;
 
 #define DEBUG_XMPP (DEBUG_XMPP_READER | DEBUG_XMPP_WRITER)
@@ -89,3 +91,4 @@ void gibber_debug_stanza (DebugFlags flag, GibberXmppStanza *stanza,
 G_END_DECLS
 
 #endif
+
