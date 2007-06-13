@@ -70,15 +70,13 @@ parse_error_cb (GibberXmppConnection *connection, gpointer user_data) {
 START_TEST (test_simple_message) {
   GibberXmppConnection *connection;
   TestTransport *transport;
-  const gchar *xml_input = "inputs/simple-message.input";
   gchar *chunk;
   gsize chunk_length;
-  const gsize chunk_size = 10;
   gboolean parse_error_found = FALSE;
 
   g_type_init ();
 
-  FileChunker *fc = file_chunker_new (xml_input, chunk_size);
+  FileChunker *fc = file_chunker_new ("inputs/simple-message.input", 10);
   fail_if (fc == NULL);
 
   transport = test_transport_new (NULL, NULL);
