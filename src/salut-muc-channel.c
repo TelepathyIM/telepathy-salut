@@ -274,7 +274,7 @@ create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) 
   const gchar *name = tp_handle_inspect(contact_repo, handle);
 
   msg = gibber_xmpp_stanza_new("message");
-  
+
   gibber_xmpp_node_set_attribute(msg->node, "from", priv->connection->name); 
   gibber_xmpp_node_set_attribute(msg->node, "to", name); 
 
@@ -584,23 +584,66 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
     return;
   }
 
-  salut_muc_channel_change_members(self, from_handle, TRUE);
   /* FIXME validate the from and the to */
-  /* FIXME fix the text-mixin to actually get a to */
-  tp_text_mixin_receive(G_OBJECT(self), msgtype, from_handle, 
+  tp_text_mixin_receive(G_OBJECT(self), msgtype, from_handle,
       time(NULL), body_offset);
+}
+
+static void
+salut_muc_channel_new_sender(GibberMucConnection *connection, gchar *sender,
+                             gpointer user_data) {
+  SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *contact_repo =
+      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+
+  handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
+  /* FIXME what to do with invalid handles */
+  if (handle == 0) {
+    DEBUG("New sender, but unknown contact");
+    return;
+  }
+
+  salut_muc_channel_change_members(self, handle, TRUE);
+}
+
+static void
+salut_muc_channel_lost_sender(GibberMucConnection *connection, gchar *sender,
+                             gpointer user_data) {
+  SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *contact_repo =
+      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+
+  handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
+  /* FIXME what to do with invalid handles */
+  if (handle == 0) {
+    DEBUG("Lost sender, but unknown contact");
+    return;
+  }
+
+  salut_muc_channel_change_members(self, handle, FALSE);
 }
 
 static gboolean
 salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(channel);
 
-  /* Transport is now owned by the xmpp connection */
   g_signal_connect(priv->muc_connection, "received-stanza",
                    G_CALLBACK(salut_muc_channel_received_stanza), channel);
 
   g_signal_connect(priv->muc_connection, "disconnected",
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
+
+  g_signal_connect(priv->muc_connection, "new-sender",
+                   G_CALLBACK(salut_muc_channel_new_sender), channel);
+
+  g_signal_connect(priv->muc_connection, "lost-sender",
+                   G_CALLBACK(salut_muc_channel_lost_sender), channel);
 
   return gibber_muc_connection_connect(priv->muc_connection, error);
 }
