@@ -92,7 +92,7 @@ typedef enum
   LAST_GIBBER_STANZA_SUB_TYPE
 } GibberStanzaSubType;
 
-enum
+typedef enum
 {
   GIBBER_NODE,
   GIBBER_NODE_TEXT,
@@ -100,7 +100,7 @@ enum
   GIBBER_NODE_ATTRIBUTE,
   GIBBER_NODE_XMLNS,
   GIBBER_STANZA_END
-};
+} GibberBuildTag;
 
 GibberXmppStanza *
 gibber_xmpp_stanza_new(const gchar *name);
