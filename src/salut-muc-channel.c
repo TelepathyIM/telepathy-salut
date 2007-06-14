@@ -777,7 +777,7 @@ salut_muc_channel_send (TpSvcChannelTypeText *channel,
   GError *error = NULL;
 
   GibberXmppStanza *stanza = 
-      text_helper_create_message(priv->connection->name,
+      text_helper_create_message_groupchat (priv->connection->name,
           priv->muc_name, type, text, &error);
 
   if (stanza == NULL) {
