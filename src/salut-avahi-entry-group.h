@@ -152,10 +152,16 @@ salut_avahi_entry_group_service_freeze(SalutAvahiEntryGroupService *service);
 
 /* Set a key in the service record. If the service isn't frozen it's committed
  * immediately */
-gboolean 
+gboolean
 salut_avahi_entry_group_service_set(SalutAvahiEntryGroupService *service,
                                         const gchar *key, const gchar *value,
                                         GError **error);
+
+gboolean
+salut_avahi_entry_group_service_set_arbitrary(
+    SalutAvahiEntryGroupService *service,
+    const gchar *key, const guint8 *value, gsize size,
+    GError **error);
 
 /* Remove one key from the service record */
 gboolean

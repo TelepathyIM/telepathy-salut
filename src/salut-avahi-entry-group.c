@@ -21,6 +21,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "salut-avahi-errors.h"
 #include "salut-avahi-entry-group.h"
@@ -66,6 +67,15 @@ struct _SalutAvahiEntryGroupServicePrivate {
   gboolean frozen;
   GHashTable *entries;
 };
+
+typedef struct _SalutAvahiEntryGroupServiceEntry 
+                SalutAvahiEntryGroupServiceEntry;
+
+struct _SalutAvahiEntryGroupServiceEntry {
+  guint8 *value;
+  gsize size;
+};
+
 
 #define SALUT_AVAHI_ENTRY_GROUP_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_AVAHI_ENTRY_GROUP, SalutAvahiEntryGroupPrivate))
 
@@ -232,24 +242,93 @@ salut_avahi_entry_group_new(void) {
   return g_object_new(SALUT_TYPE_AVAHI_ENTRY_GROUP, NULL);
 }
 
+static guint
+_entry_hash(gconstpointer v) {
+  const SalutAvahiEntryGroupServiceEntry *entry =
+      (const SalutAvahiEntryGroupServiceEntry *)v;
+  guint32 h = 0;
+  gint i;
+
+  for (i = 0; i < entry->size; i++) {
+    h = (h << 5) - h + entry->value[i];
+  }
+
+  return h;
+}
+
+static gboolean
+_entry_equal(gconstpointer a, gconstpointer b) {
+  const SalutAvahiEntryGroupServiceEntry *aentry =
+      (const SalutAvahiEntryGroupServiceEntry *)a;
+  const SalutAvahiEntryGroupServiceEntry *bentry =
+      (const SalutAvahiEntryGroupServiceEntry *)b;
+
+  if (aentry->size != bentry->size) {
+    return FALSE;
+  }
+
+  return memcmp(aentry->value, bentry->value, aentry->size) == 0;
+}
+
+static SalutAvahiEntryGroupServiceEntry *
+_new_entry(const guint8 *value, gsize size) {
+  SalutAvahiEntryGroupServiceEntry *entry;
+
+  if (value == NULL) {
+    return NULL;
+  }
+
+  entry = g_slice_new(SalutAvahiEntryGroupServiceEntry);
+  entry->value = g_memdup(value, size);
+  entry->size = size;
+
+  return entry;
+}
+
+static void
+_set_entry(GHashTable *table, const guint8 *key, gsize ksize,
+    const guint8 *value, gsize vsize) {
+
+  g_hash_table_insert(table, _new_entry(key, ksize), _new_entry(value, vsize));
+}
+
+static void
+_free_entry(gpointer data) {
+  SalutAvahiEntryGroupServiceEntry *entry =
+      (SalutAvahiEntryGroupServiceEntry *)data;
+
+  if (entry == NULL) {
+    return;
+  }
+
+  g_free(entry->value);
+  g_slice_free(SalutAvahiEntryGroupServiceEntry, entry);
+}
+
 static GHashTable *
 _string_list_to_hash(AvahiStringList *list) {
   GHashTable *ret;
-  ret = g_hash_table_new_full(g_str_hash,
-                              g_str_equal,
-                              g_free,
-                              g_free);
+  ret = g_hash_table_new_full(_entry_hash,
+                              _entry_equal,
+                              _free_entry,
+                              _free_entry);
   AvahiStringList *t;
-  for (t = list ; t != NULL; t = t->next) {
+  for (t = list ; t != NULL; t = avahi_string_list_get_next(t)) {
+    gchar *key;
     gchar *value;
-    value = g_strstr_len((gchar *)t->text, t->size, "=");
-    if (value == NULL) {
-      g_hash_table_insert(ret, g_strndup((gchar *)t->text, t->size), NULL);
-    } else {
-      int offset = value - (gchar *)t->text;
-      g_hash_table_insert(ret, g_strndup((gchar *)t->text, offset),
-                               g_strndup(value + 1, t->size - offset - 1));
-    }
+    gsize size;
+
+    /* list_get_pair only fails if if memory allocation fails. Normal glib
+     * behaviour is to assert/abort when that happens */
+    g_assert((avahi_string_list_get_pair(t, &key, &value, &size) == 0));
+      if (value == NULL) {
+        _set_entry(ret, t->text, t->size, NULL, 0);
+      } else {
+        _set_entry(ret, (const guint8 *)key, strlen(key), 
+            (const guint8 *)value, size);
+      }
+      avahi_free(key);
+      avahi_free(value);
   }
   return ret;
 }
@@ -257,7 +336,18 @@ _string_list_to_hash(AvahiStringList *list) {
 static void
 _hash_to_string_list_foreach(gpointer key, gpointer value, gpointer data) {
   AvahiStringList **list = (AvahiStringList **)data;
-  *list = avahi_string_list_add_pair(*list, key, value);
+  SalutAvahiEntryGroupServiceEntry *kentry =
+      (SalutAvahiEntryGroupServiceEntry *)key;
+  SalutAvahiEntryGroupServiceEntry *ventry =
+      (SalutAvahiEntryGroupServiceEntry *)value;
+
+  if (value != NULL) {
+    *list = avahi_string_list_add_pair_arbitrary(*list, (gchar *)kentry->value,
+         ventry->value, ventry->size);
+  } else {
+    *list = avahi_string_list_add_arbitrary(*list, 
+        kentry->value, kentry->size);
+  }
 }
 
 static AvahiStringList *
@@ -316,7 +406,7 @@ salut_avahi_entry_group_add_service_full_strlist(SalutAvahiEntryGroup *group,
                            avahi_strerror(ret));
     }
     goto out;
-  } 
+  }
 
   service = g_new0(SalutAvahiEntryGroupServicePrivate, 1);
   service->public.interface  = interface;
@@ -428,7 +518,6 @@ salut_avahi_entry_group_add_record_full(SalutAvahiEntryGroup *group,
                            "Setting raw record failed: %s", 
                            avahi_strerror(ret));
     }
-    printf("--> %s\n", avahi_strerror(ret));
     return FALSE;
   }
   return TRUE;
@@ -478,14 +567,24 @@ gboolean
 salut_avahi_entry_group_service_set(SalutAvahiEntryGroupService *service,
                                      const gchar *key, const gchar *value, 
                                      GError **error) {
+  return salut_avahi_entry_group_service_set_arbitrary(service, key,
+             (const guint8 *)value, strlen(value), error);
+
+}
+
+gboolean
+salut_avahi_entry_group_service_set_arbitrary(
+    SalutAvahiEntryGroupService *service,
+    const gchar *key, const guint8 *value, gsize size,
+    GError **error) {
   SalutAvahiEntryGroupServicePrivate *priv = 
     (SalutAvahiEntryGroupServicePrivate *) service;
 
-  g_hash_table_insert(priv->entries, g_strdup(key), g_strdup(value));
+  _set_entry(priv->entries, (const guint8 *)key, strlen(key), value, size);
 
-  if (!priv->frozen) 
+  if (!priv->frozen)
     return salut_avahi_entry_group_service_thaw(service, error);
-  else 
+  else
     return TRUE;
 }
 
@@ -497,9 +596,9 @@ salut_avahi_entry_group_service_remove_key(SalutAvahiEntryGroupService *service,
 
   g_hash_table_remove(priv->entries, key);
 
-  if (!priv->frozen) 
+  if (!priv->frozen)
     return salut_avahi_entry_group_service_thaw(service, error);
-  else 
+  else
     return TRUE;
 }
 
