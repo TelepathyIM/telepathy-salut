@@ -13,13 +13,7 @@ TESTS = \
 check_PROGRAMS = \
 	test-xmpp-connection    \
 	test-r-multicast-transport-io \
-	test-stanza-build \
-	test-r-multicast-packet \
-	test-r-multicast-sender
-
-check_SCRIPTS = run-xmpp-connection-test.sh
-
-EXTRA_DIST = simplemeshtest.py mesh.py
+	test-stanza-build
 
 
 test_xmpp_connection_SOURCES = \
@@ -77,6 +71,20 @@ test_stanza_build_LDADD = \
 
 test_stanza_build_CFLAGS = \
     $(AM_CFLAGS)
+
+test_xmpp_node_properties_SOURCES = \
+    test-xmpp-node-properties.c
+
+test_xmpp_node_properties_LDADD = \
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(top_builddir)/src/libsalut-convenience.la \
+    @DBUS_LIBS@ \
+    $(AM_LDFLAGS)
+
+test_xmpp_node_properties_CFLAGS = \
+    @DBUS_CFLAGS@ \
+    $(AM_CFLAGS)
+
 
 if HAVE_LIBSASL2
 check_PROGRAMS += test-sasl-auth
