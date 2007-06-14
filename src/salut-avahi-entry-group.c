@@ -318,18 +318,21 @@ _string_list_to_hash(AvahiStringList *list) {
     gchar *key;
     gchar *value;
     gsize size;
+    int r;
 
     /* list_get_pair only fails if if memory allocation fails. Normal glib
      * behaviour is to assert/abort when that happens */
-    g_assert((avahi_string_list_get_pair(t, &key, &value, &size) == 0));
-      if (value == NULL) {
-        _set_entry(ret, t->text, t->size, NULL, 0);
-      } else {
-        _set_entry(ret, (const guint8 *)key, strlen(key), 
+    r = avahi_string_list_get_pair(t, &key, &value, &size);
+    g_assert(r == 0);
+
+    if (value == NULL) {
+      _set_entry(ret, t->text, t->size, NULL, 0);
+    } else {
+      _set_entry(ret, (const guint8 *)key, strlen(key), 
             (const guint8 *)value, size);
-      }
-      avahi_free(key);
-      avahi_free(value);
+    }
+    avahi_free(key);
+    avahi_free(value);
   }
   return ret;
 }
