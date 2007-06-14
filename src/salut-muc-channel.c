@@ -483,9 +483,11 @@ salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor,
 
   if (invitor == base_connection->self_handle) {
     /* Invited ourselves, go straight to members */
+    gboolean r;
     GArray *members =  g_array_sized_new (FALSE, FALSE, sizeof(TpHandle), 1);
     g_array_append_val(members, base_connection->self_handle);
-    g_assert(tp_group_mixin_add_members(G_OBJECT(self), members, "", error));
+    r = tp_group_mixin_add_members(G_OBJECT(self), members, "", error);
+    g_assert(r);
     g_array_free(members, TRUE);
   } else {
     TpIntSet *empty = tp_intset_new();

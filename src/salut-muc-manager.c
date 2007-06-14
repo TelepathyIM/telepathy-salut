@@ -302,6 +302,7 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
     /* We requested the channel, so invite ourselves to it */
     {
       GError *cerror = NULL;
+      gboolean r;
       if (!gibber_muc_connection_connect(connection, &cerror)) {
         DEBUG("Connect failed: %s", cerror->message);
         status = TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
@@ -315,8 +316,9 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
 
       chan = salut_muc_manager_new_channel(mgr, handle, connection);
       /* Inviting ourselves to a connected channel should always succeed */
-      g_assert(salut_muc_channel_invited(chan, base_connection->self_handle,
-                                     NULL, NULL));
+      r = salut_muc_channel_invited(chan, base_connection->self_handle,
+                                     NULL, NULL);
+      g_assert(r);
       *ret = TP_CHANNEL_IFACE(chan);
     }
   }

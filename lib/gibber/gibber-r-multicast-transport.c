@@ -279,9 +279,10 @@ repair_request_cb(GibberRMulticastSender *sender, guint id,
   GibberRMulticastPacket *packet =
     gibber_r_multicast_packet_new(PACKET_TYPE_REPAIR_REQUEST,
         priv->name, priv->packet_id, priv->transport->max_packet_size);
+  gboolean r;
 
-  g_assert(gibber_r_multicast_packet_add_receiver(packet, sender->name, 
-               id, NULL));
+  r = gibber_r_multicast_packet_add_receiver(packet, sender->name, id, NULL);
+  g_assert(r);
 
   sendout_packet(self, packet, NULL);
   g_object_unref(packet);
@@ -434,13 +435,15 @@ static void
 add_receiver(gpointer key, gpointer value, gpointer user_data) {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
   GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET(user_data);
+  gboolean r;
 
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
     return;
   }
 
-  g_assert(gibber_r_multicast_packet_add_receiver(packet, sender->name,
-               sender->next_input_packet, NULL));
+  r = gibber_r_multicast_packet_add_receiver(packet, sender->name,
+               sender->next_input_packet, NULL);
+  g_assert(r);
 }
 
 static gboolean
