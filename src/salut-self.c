@@ -400,7 +400,7 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
         {
           size_t step = MIN (key_len, 200);
 
-          ret = avahi_string_list_add_printf (ret, "olpc-key-part%u=%*s", i,
+          ret = avahi_string_list_add_printf (ret, "olpc-key-part%u=%*.s", i,
               step, key);
           key += step;
           key_len -= step;
