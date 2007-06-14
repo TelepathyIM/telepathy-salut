@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <avahi-common/malloc.h>
 
 #include "salut-avahi-errors.h"
 #include "salut-avahi-entry-group.h"
