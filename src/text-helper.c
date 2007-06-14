@@ -52,48 +52,95 @@ add_text(GibberXmppStanza *stanza, const gchar *text) {
       "body", text, GIBBER_W3C_NS_XHTML);
 }
 
-GibberXmppStanza * 
-text_helper_create_message(const gchar *from, const gchar *to, 
-    TpChannelTextMessageType type,
-    const gchar *text,
-    GError **error)
+GibberXmppStanza *
+create_message_stanza (const gchar *from,
+                       const gchar *to,
+                       TpChannelTextMessageType type,
+                       const gchar *text,
+                       GError **error)
 {
   GibberXmppStanza *stanza;
 
-  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE) {
-    DEBUG ("invalid message type %u", type);
+  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
+    {
+      DEBUG ("invalid message type %u", type);
 
-    g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-        "invalid message type: %u", type);
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "invalid message type: %u", type);
 
-    return NULL;
-  }
-  stanza = gibber_xmpp_stanza_new("message");
+      return NULL;
+    }
+  stanza = gibber_xmpp_stanza_new ("message");
 
-  switch (type) {
-    case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
-    case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-      gibber_xmpp_node_set_attribute(stanza->node, "type", "chat");
-      break;
-    case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-    case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
-      gibber_xmpp_node_set_attribute(stanza->node, "type", "normal");
-      break;
-  }
-
-  gibber_xmpp_node_set_attribute(stanza->node, "from", from);
-  gibber_xmpp_node_set_attribute(stanza->node, "to", to);
+  gibber_xmpp_node_set_attribute (stanza->node, "from", from);
+  gibber_xmpp_node_set_attribute (stanza->node, "to", to);
 
   if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION)
     {
       gchar *tmp;
       tmp = g_strconcat ("/me ", text, NULL);
-      add_text(stanza, tmp);
+      add_text (stanza, tmp);
       g_free (tmp);
     }
   else
     {
-      add_text(stanza, text);
+      add_text (stanza, text);
+    }
+
+  return stanza;
+}
+
+GibberXmppStanza *
+text_helper_create_message (const gchar *from,
+                            const gchar *to,
+                            TpChannelTextMessageType type,
+                            const gchar *text,
+                            GError **error)
+{
+  GibberXmppStanza *stanza;
+
+  stanza = create_message_stanza (from, to, type, text, error);
+  if (stanza == NULL)
+    return NULL;
+
+  switch (type)
+    {
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
+        gibber_xmpp_node_set_attribute (stanza->node, "type", "chat");
+        break;
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
+        gibber_xmpp_node_set_attribute (stanza->node, "type", "normal");
+        break;
+    }
+
+  return stanza;
+}
+
+GibberXmppStanza *
+text_helper_create_message_groupchat (const gchar *from,
+                                      const gchar *to,
+                                      TpChannelTextMessageType type,
+                                      const gchar *text,
+                                      GError **error)
+{
+  GibberXmppStanza *stanza;
+
+  stanza = create_message_stanza (from, to, type, text, error);
+  if (stanza == NULL)
+    return NULL;
+
+  switch (type)
+    {
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
+        gibber_xmpp_node_set_attribute (stanza->node, "type", "groupchat");
+        break;
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
+      case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
+        gibber_xmpp_node_set_attribute (stanza->node, "type", "normal");
+        break;
     }
 
   return stanza;

@@ -36,6 +36,10 @@ text_helper_create_message (const gchar *from,
     const gchar *to, TpChannelTextMessageType type, 
     const gchar *text, GError **error);
 
+GibberXmppStanza * 
+text_helper_create_message_groupchat (const gchar *from, const gchar *to,
+    TpChannelTextMessageType type, const gchar *text, GError **error);
+
 G_END_DECLS
 
 #endif /* #ifndef __TEXT_HELPER_H__ */
