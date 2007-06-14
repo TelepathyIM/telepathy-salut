@@ -37,9 +37,6 @@ check_html_message (void)
   GibberXmppNode *node;
   const gchar *value;
 
-  g_type_init();
-  gibber_debug_set_flags_from_env ();
-
   stanza = gibber_xmpp_stanza_build (
       GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
       "alice@collabora.co.uk", "bob@collabora.co.uk",
@@ -82,6 +79,9 @@ check_html_message (void)
 
 int main (void)
 {
+  g_type_init();
+  gibber_debug_set_flags_from_env ();
+
   check_html_message ();
 
   return 0;
