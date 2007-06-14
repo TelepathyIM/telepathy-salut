@@ -655,7 +655,7 @@ salut_self_set_olpc_properties (SalutSelf *self,
         {
           size_t step = MIN (key_len, 200);
           gchar *name = g_strdup_printf ("olpc-key-part%u-b64", i);
-          gchar *value = g_strdup_printf ("%*s", step, key);
+          gchar *value = g_strdup_printf ("%.*s", step, key);
 
           salut_avahi_entry_group_service_set (priv->presence, name, value,
             NULL);
