@@ -171,12 +171,12 @@ salut_contact_channel_set_property (GObject     *object,
       priv->conn = g_value_get_object (value);
       break;
     case PROP_HANDLE_TYPE:
-      g_assert(g_value_get_uint(value) == 0 
+      g_assert(g_value_get_uint(value) == 0
                || g_value_get_uint(value) == TP_HANDLE_TYPE_LIST);
       break;
     case PROP_CHANNEL_TYPE:
       tmp = g_value_get_string(value);
-      g_assert(tmp == NULL 
+      g_assert(tmp == NULL
                || !tp_strdiff(g_value_get_string(value),
                        TP_IFACE_CHANNEL_TYPE_CONTACT_LIST));
       break;
