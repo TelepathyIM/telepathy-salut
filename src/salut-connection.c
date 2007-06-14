@@ -1530,8 +1530,31 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
         }
     }
 
-  if (!salut_self_set_olpc_properties (priv->self, key, color, jid, &error))
-    goto error;
+  if (priv->self)
+    {
+      if (!salut_self_set_olpc_properties (priv->self, key, color, jid,
+            &error))
+        goto error;
+    }
+  else
+    {
+      /* queue it up for later */
+      if (key)
+        {
+          g_free (priv->olpc_key);
+          priv->olpc_key = g_strdup (key);
+        }
+      if (color)
+        {
+          g_free (priv->olpc_color);
+          priv->olpc_color = g_strdup (color);
+        }
+      if (jid)
+        {
+          g_free (priv->jid);
+          priv->jid = g_strdup (jid);
+        }
+    }
 
   g_free (key);
 
