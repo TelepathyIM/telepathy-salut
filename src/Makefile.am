@@ -102,6 +102,8 @@ CORE_SOURCES =                                          \
     sha1/sha1-util.c                                    \
     sha1/sha1.h                                         \
     sha1/sha1.c                                         \
+    salut-util.h                                        \
+    salut-util.c                                        \
     debug.c                                             \
     debug.h                                             \
     ansi.h                                              \
