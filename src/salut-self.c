@@ -93,15 +93,15 @@ salut_self_init (SalutSelf *obj)
   obj->status = SALUT_PRESENCE_AVAILABLE;
   obj->status_message = NULL;
   obj->jid = NULL;
+#ifdef ENABLE_OLPC
+  obj->olpc_key = NULL;
+  obj->olpc_color = NULL;
+#endif
 
   priv->first_name = NULL;
   priv->last_name = NULL;
   priv->email = NULL;
   priv->published_name = NULL;
-#ifdef ENABLE_OLPC
-  self->olpc_key = NULL;
-  self->olpc_color = NULL;
-#endif
 
   priv->client = NULL;
   priv->presence_group = NULL;
@@ -274,11 +274,11 @@ salut_self_new (SalutAvahiClient *client,
 #ifdef ENABLE_OLPC
   if (olpc_key != NULL)
     {
-      self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+      ret->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
           olpc_key->len);
-      g_array_append_vals (self->olpc_key, olpc_key->data, olpc_key->len);
+      g_array_append_vals (ret->olpc_key, olpc_key->data, olpc_key->len);
     }
-  priv->olpc_color = g_strdup(olpc_color);
+  ret->olpc_color = g_strdup (olpc_color);
   priv->alias = NULL;
 #endif
 
@@ -407,9 +407,9 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
      ret = avahi_string_list_add_printf (ret, "jid=%s", self->jid);
 
 #ifdef ENABLE_OLPC
-  if (priv->olpc_color)
+  if (self->olpc_color)
     ret = avahi_string_list_add_printf (ret, "olpc-color=%s",
-         priv->olpc_color);
+         self->olpc_color);
   if (self->olpc_key)
     {
       uint8_t *key = (uint8_t *) self->olpc_key->data;
@@ -695,8 +695,8 @@ salut_self_set_olpc_properties (SalutSelf *self,
     }
   if (color != NULL)
     {
-      g_free (self->color);
-      self->color = g_strdup (color);
+      g_free (self->olpc_color);
+      self->olpc_color = g_strdup (color);
 
       salut_avahi_entry_group_service_set (priv->presence, "olpc-color",
           color, NULL);

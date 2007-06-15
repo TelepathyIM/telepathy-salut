@@ -1386,7 +1386,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
           dbus_g_method_return_error (context, error);
           g_error_free (error);
         }
-    properties = get_properties_hash (contact->key, contact->color,
+    properties = get_properties_hash (contact->olpc_key, contact->olpc_color,
         contact->jid);
   }
 
