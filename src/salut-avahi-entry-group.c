@@ -280,7 +280,10 @@ _new_entry(const guint8 *value, gsize size) {
   }
 
   entry = g_slice_new(SalutAvahiEntryGroupServiceEntry);
-  entry->value = g_memdup(value, size);
+  entry->value = g_malloc (size + 1);
+  memcpy (entry->value, value, size);
+  /* for string keys, make sure it's NUL-terminated too */
+  entry->value[size] = 0;
   entry->size = size;
 
   return entry;
