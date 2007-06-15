@@ -31,7 +31,7 @@ expect_critical (gboolean expected);
 gboolean
 got_critical (void);
 
-#define fail_unless_critical (expr, ...)                          \
+#define fail_unless_critical(expr, ...)                          \
 G_STMT_START {                                                    \
   expect_critical (TRUE);                                         \
   expr;                                                           \
