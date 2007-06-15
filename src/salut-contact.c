@@ -89,6 +89,10 @@ salut_contact_init (SalutContact *obj)
   obj->status_message = NULL;
   obj->avatar_token = NULL;
   obj->jid = NULL;
+#ifdef ENABLE_OLPC
+  obj->olpc_key = NULL;
+  obj->olpc_color = NULL;
+#endif
   priv->client = NULL;
   priv->resolvers = NULL;
   priv->found = FALSE;
@@ -173,6 +177,14 @@ salut_contact_finalize (GObject *object) {
   g_free(priv->alias);
   g_free(self->avatar_token);
   g_free (self->jid);
+
+#ifdef ENABLE_OLPC
+  if (self->olpc_key != NULL)
+    {
+      g_array_free (self->olpc_key, TRUE);
+    }
+  g_free (self->olpc_color);
+#endif
 
   G_OBJECT_CLASS (salut_contact_parent_class)->finalize (object);
 }
