@@ -289,3 +289,75 @@ void gibber_xmpp_node_append_content_n(GibberXmppNode *node,
   node->content = g_realloc(node->content, csize + size + 1);
   g_strlcpy(node->content + csize, content, size + 1);
 }
+
+typedef struct
+{
+  GString *string;
+  gchar *indent;
+} _NodeToStringData;
+
+static gboolean
+attribute_to_string (const gchar *key,
+                     const gchar *value,
+                     const gchar *ns,
+                     gpointer user_data)
+{
+  _NodeToStringData *data = user_data;
+
+  g_string_append_c (data->string, ' ');
+  if (ns != NULL)
+    {
+      g_string_append (data->string, ns);
+      g_string_append_c (data->string, ':');
+    }
+  g_string_append_printf (data->string, "%s='%s'", key, value);
+
+  return TRUE;
+}
+
+static gboolean
+node_to_string (GibberXmppNode *node,
+                gpointer user_data)
+{
+  _NodeToStringData *data = user_data;
+  gchar *old_indent;
+  const gchar *ns;
+
+  g_string_append_printf (data->string, "%s<%s", data->indent, node->name);
+  ns = gibber_xmpp_node_get_ns (node);
+  if (ns != NULL)
+    g_string_append_printf (data->string, " xmlns='%s'", ns);
+  gibber_xmpp_node_each_attribute (node, attribute_to_string, data);
+  g_string_append_printf (data->string, ">\n");
+
+  old_indent = data->indent;
+  data->indent = g_strconcat (data->indent, "  ", NULL);
+  if (node->content != NULL)
+    g_string_append_printf (data->string, "%s%s\n", data->indent,
+        node->content);
+  gibber_xmpp_node_each_child (node, node_to_string, data);
+  g_free (data->indent);
+  data->indent = old_indent;
+
+  g_string_append_printf (data->string, "%s</%s>", data->indent, node->name);
+  if (data->indent[0] != '\0')
+    g_string_append_c (data->string, '\n');
+
+  return TRUE;
+}
+
+gchar *
+gibber_xmpp_node_to_string (GibberXmppNode *node)
+{
+  _NodeToStringData data;
+  gchar *result;
+
+  data.string = g_string_new ("");
+  data.indent = "";
+  node_to_string (node, &data);
+  g_string_append_c (data.string, '\n');
+
+  result = data.string->str;
+  g_string_free (data.string, FALSE);
+  return result;
+}

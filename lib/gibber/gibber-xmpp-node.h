@@ -120,6 +120,10 @@ void gibber_xmpp_node_append_content_n(GibberXmppNode *node,
                                       const gchar *content,
                                        gsize size);
 
+/* Return a reading friendly representation of a node and its children.
+ * Should be use for debugging purpose only. */
+gchar *gibber_xmpp_node_to_string (GibberXmppNode *node);
+
 /* Create a new standalone node, usually only used by the stanza object */
 GibberXmppNode *gibber_xmpp_node_new(const char *name);
 
