@@ -23,6 +23,9 @@ START_TEST (test_language)
   GibberXmppNode *node;
   const gchar *lang;
 
+  /* Unit test are not examples of how to use an API! Don't rely on the
+   * following in your applications! (or better yet, don't give invalid input)
+   * */
   fail_unless_critical(lang = gibber_xmpp_node_get_language (NULL));
   fail_unless (lang == NULL);
 
