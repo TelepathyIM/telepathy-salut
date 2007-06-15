@@ -120,13 +120,13 @@ check_main_CFLAGS = \
     @CHECK_CFLAGS@ \
     $(AM_CFLAGS)
 
+endif
+
 AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib \
     -I $(top_srcdir)/src -I $(top_builddir)/src
 
 AM_LDFLAGS = @GLIB_LIBS@
-
-endif
 
 clean-local:
 	-rm -rf outputs
