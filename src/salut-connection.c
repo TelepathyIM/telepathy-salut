@@ -129,8 +129,10 @@ struct _SalutConnectionPrivate
   gchar *last_name;
   gchar *jid;
   gchar *email;
+#ifdef ENABLE_OLPC
   gchar *olpc_color;
-  gchar *olpc_key;
+  GArray *olpc_key;
+#endif
 
   /* Avahi client for browsing and resolving */
   SalutAvahiClient *avahi_client;
@@ -199,8 +201,10 @@ salut_connection_init (SalutConnection *obj)
   priv->last_name = NULL;
   priv->jid = NULL;
   priv->email = NULL;
+#ifdef ENABLE_OLPC
   priv->olpc_color = NULL;
   priv->olpc_key = NULL;
+#endif
 
   priv->avahi_client = NULL;
   priv->self = NULL;
@@ -383,14 +387,16 @@ salut_connection_finalize (GObject *object)
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
-  g_free(self->name);
-  g_free(priv->published_name);
-  g_free(priv->first_name);
-  g_free(priv->last_name);
-  g_free(priv->email);
-  g_free(priv->jid);
-  g_free(priv->olpc_key);
-  g_free(priv->olpc_color);
+  g_free (self->name);
+  g_free (priv->published_name);
+  g_free (priv->first_name);
+  g_free (priv->last_name);
+  g_free (priv->email);
+  g_free (priv->jid);
+#ifdef ENABLE_OLPC
+  g_free (priv->olpc_key);
+  g_free (priv->olpc_color);
+#endif
 
   DEBUG("Finalizing connection");
 
@@ -502,8 +508,13 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               priv->jid,
                               priv->email,
                               priv->published_name,
+#ifdef ENABLE_OLPC
                               priv->olpc_key,
-                              priv->olpc_color);
+                              priv->olpc_color
+#else
+                              NULL, NULL
+#endif
+                              );
   g_signal_connect(priv->self, "established", 
                    G_CALLBACK(_self_established_cb), self);
   g_signal_connect(priv->self, "failure", 
@@ -1425,10 +1436,10 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
   GError *error = NULL;
   /* Only three know properties, so handle it quite naively */
   const gchar *known_properties[] = { "color", "key", "jid", NULL };
-  gchar *color = NULL;
-  gchar *key = NULL;
+  const gchar *color = NULL;
+  const GArray *key = NULL;
   const gchar *jid = NULL;
-  GValue *val;
+  const GValue *val;
 
   if (g_hash_table_find (properties, find_unknown_properties, known_properties)
       != NULL)
@@ -1438,7 +1449,8 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
       goto error;
     }
 
-  if ((val = (GValue *) g_hash_table_lookup (properties, "color")) != NULL)
+  val = (const GValue *) g_hash_table_lookup (properties, "color");
+  if (val != NULL)
     {
       if (G_VALUE_TYPE (val) != G_TYPE_STRING)
         {
@@ -1451,7 +1463,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
           int len;
           gboolean correct = TRUE;
 
-          color = (gchar *) g_value_get_string (val);
+          color = g_value_get_string (val);
 
           /* be very anal about the color format */
           len = strlen (color);
@@ -1489,7 +1501,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
         }
     }
 
-  if ((val = (GValue *) g_hash_table_lookup (properties, "key")) != NULL)
+  if ((val = (const GValue *) g_hash_table_lookup (properties, "key")) != NULL)
     {
       if (G_VALUE_TYPE (val) != DBUS_TYPE_G_UCHAR_ARRAY)
         {
@@ -1499,14 +1511,13 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
         }
       else
         {
-          GArray *arr = g_value_get_boxed (val);
-          if (arr->len == 0)
+          key = g_value_get_boxed (val);
+          if (key->len == 0)
             {
               error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                  "Key value of lenght 0 not allowed");
+                  "Key value of length 0 not allowed");
               goto error;
             }
-          key = g_base64_encode ((guchar *) arr->data, arr->len);
         }
     }
 
@@ -1522,7 +1533,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
 
       jid = g_value_get_string (val);
 
-      if (g_strrstr (jid, "@") == NULL)
+      if (strchr (jid, '@') == NULL)
         {
           error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "JID value has an incorrect format");
@@ -1541,8 +1552,16 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
       /* queue it up for later */
       if (key)
         {
-          g_free (priv->olpc_key);
-          priv->olpc_key = g_strdup (key);
+          if (priv->olpc_key == NULL)
+            {
+              priv->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+                  key->len);
+            }
+          else
+            {
+              g_array_remove_range (priv->olpc_key, 0, priv->olpc_key->len);
+            }
+          g_array_append_vals (priv->olpc_key, key->data, key->len);
         }
       if (color)
         {
@@ -1556,14 +1575,10 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
         }
     }
 
-  g_free (key);
-
   salut_svc_olpc_buddy_info_return_from_set_properties (context);
   return;
 
 error:
-  g_free (key);
-
   dbus_g_method_return_error (context, error);
   g_error_free (error);
 }

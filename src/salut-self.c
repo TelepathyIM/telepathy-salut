@@ -63,8 +63,12 @@ struct _SalutSelfPrivate
   gchar *last_name;
   gchar *email;
   gchar *published_name;
-  gchar *olpc_key;
+
+#ifdef ENABLE_OLPC
+#define KEY_SEGMENT_SIZE 200
+  GArray *olpc_key;
   gchar *olpc_color;
+#endif
 
   gchar *alias;
 
@@ -96,8 +100,10 @@ salut_self_init (SalutSelf *obj)
   priv->last_name = NULL;
   priv->email = NULL;
   priv->published_name = NULL;
+#ifdef ENABLE_OLPC
   priv->olpc_key = NULL;
   priv->olpc_color = NULL;
+#endif
 
   priv->client = NULL;
   priv->presence_group = NULL;
@@ -200,8 +206,11 @@ salut_self_finalize (GObject *object)
   g_free(priv->last_name);
   g_free(priv->email);
   g_free(priv->published_name);
-  g_free(priv->olpc_key);
+#ifdef ENABLE_OLPC
+  if (priv->olpc_key != NULL)
+    g_array_free (priv->olpc_key, TRUE);
   g_free(priv->olpc_color);
+#endif
 
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
@@ -237,10 +246,15 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
 }
 
 SalutSelf *
-salut_self_new(SalutAvahiClient *client,
-               gchar *nickname, gchar *first_name, gchar *last_name, 
-               gchar *jid, gchar *email, gchar *published_name,
-               gchar *olpc_key, gchar *olpc_color) {
+salut_self_new (SalutAvahiClient *client,
+                const gchar *nickname,
+                const gchar *first_name,
+                const gchar *last_name,
+                const gchar *jid,
+                const gchar *email,
+                const gchar *published_name,
+                const GArray *olpc_key,
+                const gchar *olpc_color) {
   SalutSelfPrivate *priv;
   GString *alias = NULL;
 
@@ -259,9 +273,16 @@ salut_self_new(SalutAvahiClient *client,
   priv->last_name = g_strdup(last_name);
   priv->email = g_strdup(email);
   priv->published_name = g_strdup(published_name);
-  priv->olpc_key = g_strdup(olpc_key);
+#ifdef ENABLE_OLPC
+  if (olpc_key != NULL)
+    {
+      priv->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+          olpc_key->len);
+      g_array_append_vals (priv->olpc_key, olpc_key->data, olpc_key->len);
+    }
   priv->olpc_color = g_strdup(olpc_color);
   priv->alias = NULL;
+#endif
 
   /* Prefer using the nickname as alias */
   if (nickname != NULL) {
@@ -387,26 +408,28 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
    if (self->jid)
      ret = avahi_string_list_add_printf (ret, "jid=%s", self->jid);
 
+#ifdef ENABLE_OLPC
   if (priv->olpc_color)
     ret = avahi_string_list_add_printf (ret, "olpc-color=%s",
          priv->olpc_color);
   if (priv->olpc_key)
     {
-      gchar *key = priv->olpc_key;
-      size_t key_len = strlen (key);
+      uint8_t *key = (uint8_t *) priv->olpc_key->data;
+      size_t key_len = priv->olpc_key->len;
       guint i = 0;
 
       while (key_len > 0)
         {
-          size_t step = MIN (key_len, 200);
+          size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
+          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
 
-          ret = avahi_string_list_add_printf (ret, "olpc-key-part%u=%*.s", i,
-              step, key);
+          ret = avahi_string_list_add_pair_arbitrary (ret, name, key, step);
           key += step;
           key_len -= step;
           i++;
         }
     }
+#endif
 
    ret = avahi_string_list_add_printf(ret, "status=%s", 
                                 salut_presence_statuses[self->status].txt_name);
@@ -630,11 +653,9 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 
 #ifdef ENABLE_OLPC
 
-#define KEY_SEGMENT_SIZE 200
-
 gboolean
 salut_self_set_olpc_properties (SalutSelf *self,
-                                const gchar *key,
+                                const GArray *key,
                                 const gchar *color,
                                 const gchar *jid,
                                 GError **error)
@@ -645,24 +666,31 @@ salut_self_set_olpc_properties (SalutSelf *self,
   salut_avahi_entry_group_service_freeze(priv->presence);
   if (key != NULL)
     {
-      size_t key_len = strlen (key);
+      size_t key_len = key->len;
+      const guint8 *key_data = (const guint8 *) key->data;
       guint i = 0;
 
-      g_free (self->key);
-      self->key = g_strdup (key);
+      if (priv->olpc_key == NULL)
+        {
+          priv->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+              key->len);
+        }
+      else
+        {
+          g_array_remove_range (priv->olpc_key, 0, priv->olpc_key->len);
+        }
+      g_array_append_vals (priv->olpc_key, key->data, key->len);
 
       while (key_len > 0)
         {
-          size_t step = MIN (key_len, 200);
-          gchar *name = g_strdup_printf ("olpc-key-part%u-b64", i);
-          gchar *value = g_strdup_printf ("%.*s", step, key);
+          size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
+          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
 
-          salut_avahi_entry_group_service_set (priv->presence, name, value,
-            NULL);
+          salut_avahi_entry_group_service_set_arbitrary (priv->presence, name,
+              key_data, step, NULL);
           g_free (name);
-          g_free (value);
 
-          key += step;
+          key_data += step;
           key_len -= step;
           i++;
         }

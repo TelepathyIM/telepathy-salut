@@ -67,13 +67,11 @@ GType salut_self_get_type(void);
 #define SALUT_SELF_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_SELF, SalutSelfClass))
 
-SalutSelf *
-salut_self_new(SalutAvahiClient *client,
-               gchar *nickname, 
-               gchar *first_name, gchar *last_name, 
-               gchar *jid, gchar *email,
-               gchar *published_name, gchar *olpc_key,
-               gchar *olpc_color);
+SalutSelf *salut_self_new (SalutAvahiClient *client, const gchar *nickname,
+    const gchar *first_name, const gchar *last_name, const gchar *jid,
+    const gchar *email, const gchar *published_name,
+    const GArray *olpc_key,
+    const gchar *olpc_color);
 
 /* Start announcing our presence on the network */
 gboolean salut_self_announce(SalutSelf *self, GError **error);
