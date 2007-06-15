@@ -23,15 +23,15 @@
 #include <check.h>
 
 void
-check_helpers_init(void);
+check_helpers_init (void);
 
 void
-expect_critical(gboolean expected);
+expect_critical (gboolean expected);
 
 gboolean
-got_critical(void);
+got_critical (void);
 
-#define fail_unless_critical(expr, ...)                           \
+#define fail_unless_critical (expr, ...)                          \
 G_STMT_START {                                                    \
   expect_critical (TRUE);                                         \
   expr;                                                           \
