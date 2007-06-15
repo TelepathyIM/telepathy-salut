@@ -239,11 +239,11 @@ salut_connection_get_property (GObject *object,
 }
 
 static void
-salut_connection_set_property (GObject      *object,
-                                guint         property_id,
-                                const GValue *value,
-                                GParamSpec   *pspec)
-{   
+salut_connection_set_property (GObject *object,
+                               guint property_id,
+                               const GValue *value,
+                               GParamSpec *pspec)
+{
   SalutConnection *self = SALUT_CONNECTION(object);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
