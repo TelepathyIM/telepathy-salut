@@ -52,6 +52,8 @@ START_TEST (test_simple_message)
   gboolean valid;
   GQueue *received_stanzas;
   ReceivedStanzaEvent *event;
+  const gchar *srcdir;
+  gchar *file;
 
   g_type_init();
 
@@ -61,8 +63,14 @@ START_TEST (test_simple_message)
   g_signal_connect(reader, "received-stanza",
                    G_CALLBACK(received_stanza_cb), received_stanzas);
 
-  fail_unless (g_file_get_contents ("inputs/simple-message.input",
-                                    &data, &length, NULL));
+  srcdir = g_getenv("srcdir");
+  if (srcdir == NULL) {
+    file = g_strdup("inputs/simple-message.input");
+  } else {
+    file = g_strdup_printf("%s/inputs/simple-message.input", srcdir);
+  }
+
+  fail_unless (g_file_get_contents (file, &data, &length, NULL));
 
   valid = gibber_xmpp_reader_push (reader, (guint8 *)data, length, NULL);
   fail_unless (valid);
