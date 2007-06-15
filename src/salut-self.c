@@ -666,19 +666,24 @@ salut_self_set_olpc_properties (SalutSelf *self,
     {
       size_t key_len = key->len;
       const guint8 *key_data = (const guint8 *) key->data;
-      guint i = 0;
+      guint i;
+      guint to_remove;
 
       if (self->olpc_key == NULL)
         {
+          to_remove = 0;
           self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
               key->len);
         }
       else
         {
+          to_remove = (self->olpc_key->len + KEY_SEGMENT_SIZE - 1) /
+                      KEY_SEGMENT_SIZE;
           g_array_remove_range (self->olpc_key, 0, self->olpc_key->len);
         }
       g_array_append_vals (self->olpc_key, key->data, key->len);
 
+      i = 0;
       while (key_len > 0)
         {
           size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
@@ -690,6 +695,18 @@ salut_self_set_olpc_properties (SalutSelf *self,
 
           key_data += step;
           key_len -= step;
+          i++;
+        }
+
+      /* if the new key is shorter than the old, clean up any stray segments */
+      while (i < to_remove)
+        {
+          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
+
+          salut_avahi_entry_group_service_remove_key (priv->presence, name,
+              NULL);
+          g_free (name);
+
           i++;
         }
     }
