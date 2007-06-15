@@ -251,14 +251,14 @@ gibber_xmpp_node_get_language(GibberXmppNode *node) {
   return node->language;
 }
 
-void 
+void
 gibber_xmpp_node_set_language_n(GibberXmppNode *node, 
                                const gchar *lang, gsize lang_size) {
   g_free(node->language);
   node->language = g_strndup(lang, lang_size);
 }
 
-void 
+void
 gibber_xmpp_node_set_language(GibberXmppNode *node, const gchar *lang) {
   gsize lang_size = 0;
   if (lang != NULL) {
