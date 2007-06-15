@@ -17,7 +17,9 @@ check_PROGRAMS = \
 	test-r-multicast-packet \
 	test-r-multicast-sender
 
-EXTRA_DIST = simplemeshtest.py mesh.py run-xmpp-connection-test.sh
+check_SCRIPTS = run-xmpp-connection-test.sh
+
+EXTRA_DIST = simplemeshtest.py mesh.py
 
 
 test_xmpp_connection_SOURCES = \
