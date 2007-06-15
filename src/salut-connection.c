@@ -73,23 +73,23 @@ salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
 #endif
 
 static void
-salut_connection_connection_service_iface_init(gpointer g_iface, 
+salut_connection_connection_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 static void
-salut_connection_aliasing_service_iface_init(gpointer g_iface, 
+salut_connection_aliasing_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 static void
-salut_connection_presence_service_iface_init(gpointer g_iface, 
+salut_connection_presence_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 static void
-salut_connection_avatar_service_iface_init(gpointer g_iface, 
+salut_connection_avatar_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
-G_DEFINE_TYPE_WITH_CODE(SalutConnection, 
-    salut_connection, 
+G_DEFINE_TYPE_WITH_CODE(SalutConnection,
+    salut_connection,
     TP_TYPE_BASE_CONNECTION,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION,
         salut_connection_connection_service_iface_init);
@@ -131,7 +131,7 @@ struct _SalutConnectionPrivate
   gchar *email;
 
   /* Avahi client for browsing and resolving */
-  SalutAvahiClient *avahi_client; 
+  SalutAvahiClient *avahi_client;
 
   /* TpHandler for our presence on the lan */
   SalutSelf *self;
@@ -161,37 +161,37 @@ struct _ChannelRequest
   gboolean suppress_handler;
 };
 
-static void _salut_connection_disconnect(SalutConnection *self);
+static void _salut_connection_disconnect (SalutConnection *self);
 static void emit_one_presence_update (SalutConnection *self, TpHandle handle);
 
-static void 
-salut_connection_create_handle_repos(TpBaseConnection *self,
+static void
+salut_connection_create_handle_repos (TpBaseConnection *self,
     TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES]);
 
-static GPtrArray*  
-salut_connection_create_channel_factories(TpBaseConnection *self);
+static GPtrArray *
+salut_connection_create_channel_factories (TpBaseConnection *self);
 
 static gchar *
-salut_connection_get_unique_connection_name(TpBaseConnection *self);
+salut_connection_get_unique_connection_name (TpBaseConnection *self);
 
 static void
-salut_connection_shut_down(TpBaseConnection *self);
+salut_connection_shut_down (TpBaseConnection *self);
 
 static gboolean
-salut_connection_start_connecting(TpBaseConnection *self, GError **error);
+salut_connection_start_connecting (TpBaseConnection *self, GError **error);
 
 static void
 salut_connection_init (SalutConnection *obj)
 {
-  SalutConnectionPrivate *priv = 
-    G_TYPE_INSTANCE_GET_PRIVATE(obj, SALUT_TYPE_CONNECTION, 
+  SalutConnectionPrivate *priv =
+    G_TYPE_INSTANCE_GET_PRIVATE(obj, SALUT_TYPE_CONNECTION,
                                 SalutConnectionPrivate);
 
   obj->priv = priv;
   obj->name = NULL;
 
   /* allocate any data required by the object here */
-  priv->published_name = g_strdup(g_get_user_name());
+  priv->published_name = g_strdup (g_get_user_name ());
   priv->nickname = NULL;
   priv->first_name = NULL;
   priv->last_name = NULL;
@@ -205,34 +205,37 @@ salut_connection_init (SalutConnection *obj)
 }
 
 static void
-salut_connection_get_property(GObject *object,
+salut_connection_get_property (GObject *object,
                                guint property_id,
                                GValue *value,
-                               GParamSpec *pspec) {
+                               GParamSpec *pspec)
+{
   SalutConnection *self = SALUT_CONNECTION(object);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  switch (property_id) {
+
+  switch (property_id)
+    {
     case PROP_NICKNAME:
-      g_value_set_string(value, priv->nickname);
+      g_value_set_string (value, priv->nickname);
       break;
     case PROP_FIRST_NAME:
-      g_value_set_string(value, priv->first_name);
+      g_value_set_string (value, priv->first_name);
       break;
     case PROP_LAST_NAME:
-      g_value_set_string(value, priv->last_name);
+      g_value_set_string (value, priv->last_name);
       break;
     case PROP_JID:
-      g_value_set_string(value, priv->jid);
+      g_value_set_string (value, priv->jid);
       break;
     case PROP_EMAIL:
-      g_value_set_string(value, priv->email);
+      g_value_set_string (value, priv->email);
       break;
     case PROP_PUBLISHED_NAME:
-      g_value_set_string(value, priv->published_name);
+      g_value_set_string (value, priv->published_name);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-  }
+    }
 }
 
 static void
@@ -244,35 +247,36 @@ salut_connection_set_property (GObject      *object,
   SalutConnection *self = SALUT_CONNECTION(object);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
-  switch (property_id) {
+  switch (property_id)
+    {
     case PROP_NICKNAME:
-      g_free(priv->nickname);
-      priv->nickname = g_value_dup_string(value);
+      g_free (priv->nickname);
+      priv->nickname = g_value_dup_string (value);
       break;
     case PROP_FIRST_NAME:
-      g_free(priv->first_name);
-      priv->first_name = g_value_dup_string(value);
+      g_free (priv->first_name);
+      priv->first_name = g_value_dup_string (value);
       break;
     case PROP_LAST_NAME:
-      g_free(priv->last_name);
-      priv->last_name = g_value_dup_string(value);
+      g_free (priv->last_name);
+      priv->last_name = g_value_dup_string (value);
       break;
     case PROP_JID:
-      g_free(priv->jid);
-      priv->jid = g_value_dup_string(value);
+      g_free (priv->jid);
+      priv->jid = g_value_dup_string (value);
       break;
     case PROP_EMAIL:
-      g_free(priv->email);
-      priv->email = g_value_dup_string(value);
+      g_free (priv->email);
+      priv->email = g_value_dup_string (value);
       break;
     case PROP_PUBLISHED_NAME:
-      g_free(priv->published_name);
-      priv->published_name = g_value_dup_string(value);
+      g_free (priv->published_name);
+      priv->published_name = g_value_dup_string (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
-  }
+    }
 }
 
 
@@ -283,77 +287,60 @@ static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_connection_class);
-  TpBaseConnectionClass *tp_connection_class = 
+  TpBaseConnectionClass *tp_connection_class =
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
   GParamSpec *param_spec;
 
   object_class->get_property = salut_connection_get_property;
   object_class->set_property = salut_connection_set_property;
 
-  g_type_class_add_private (salut_connection_class, 
+  g_type_class_add_private (salut_connection_class,
       sizeof (SalutConnectionPrivate));
 
   object_class->dispose = salut_connection_dispose;
   object_class->finalize = salut_connection_finalize;
 
-  tp_connection_class->create_handle_repos = 
+  tp_connection_class->create_handle_repos =
       salut_connection_create_handle_repos;
-  tp_connection_class->create_channel_factories = 
+  tp_connection_class->create_channel_factories =
       salut_connection_create_channel_factories;
-  tp_connection_class->get_unique_connection_name = 
+  tp_connection_class->get_unique_connection_name =
       salut_connection_get_unique_connection_name;
-  tp_connection_class->shut_down = 
+  tp_connection_class->shut_down =
       salut_connection_shut_down;
-  tp_connection_class->start_connecting = 
+  tp_connection_class->start_connecting =
       salut_connection_start_connecting;
 
-  param_spec = g_param_spec_string("nickname", "nickname",
-                                   "Nickname used in the published data",
-                                   NULL,
-                                   G_PARAM_READWRITE |
-                                   G_PARAM_STATIC_NAME |
-                                   G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_NICKNAME, param_spec);
+  param_spec = g_param_spec_string ("nickname", "nickname",
+      "Nickname used in the published data", NULL,
+      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_NICKNAME, param_spec);
 
-  param_spec = g_param_spec_string("first-name", "First name",
-                                   "First name used in the published data",
-                                   NULL,
-                                   G_PARAM_READWRITE |
-                                   G_PARAM_STATIC_NAME |
-                                   G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_FIRST_NAME, param_spec);
+  param_spec = g_param_spec_string ("first-name", "First name",
+      "First name used in the published data", NULL,
+      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_FIRST_NAME, param_spec);
 
-  param_spec = g_param_spec_string("last-name", "Last name",
-                                   "Last name used in the published data",
-                                   NULL,
-                                   G_PARAM_READWRITE |
-                                   G_PARAM_STATIC_NAME |
-                                   G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_LAST_NAME, param_spec);
+  param_spec = g_param_spec_string ("last-name", "Last name",
+      "Last name used in the published data", NULL,
+      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_LAST_NAME, param_spec);
 
-  param_spec = g_param_spec_string("email", "E-mail address",
-                                   "E-mail address used in the published data",
-                                   NULL,
-                                   G_PARAM_READWRITE |
-                                   G_PARAM_STATIC_NAME |
-                                   G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_EMAIL, param_spec);
+  param_spec = g_param_spec_string ("email", "E-mail address",
+      "E-mail address used in the published data", NULL,
+      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_EMAIL, param_spec);
 
-  param_spec = g_param_spec_string("jid", "Jabber id",
-                                   "Jabber id used in the published data",
-                                   NULL,
-                                   G_PARAM_READWRITE |
-                                   G_PARAM_STATIC_NAME |
-                                   G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_JID, param_spec);
+  param_spec = g_param_spec_string ("jid", "Jabber id",
+      "Jabber id used in the published data", NULL,
+      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_JID, param_spec);
 
-  param_spec = g_param_spec_string("published-name", "Published name",
-                                   "Username used in the published data",
-                                   NULL,
-                                   G_PARAM_READWRITE |
-                                   G_PARAM_STATIC_NAME |
-                                   G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_PUBLISHED_NAME, param_spec);
+  param_spec = g_param_spec_string ("published-name", "Published name",
+      "Username used in the published data", NULL,
+      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_PUBLISHED_NAME,
+      param_spec);
 }
 
 void
@@ -361,22 +348,22 @@ salut_connection_dispose (GObject *object)
 {
   SalutConnection *self = SALUT_CONNECTION (object);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  DBusGProxy *bus_proxy;  
+  DBusGProxy *bus_proxy;
 
 
   if (priv->dispose_has_run)
     return;
-  bus_proxy = tp_get_bus_proxy();;
+  bus_proxy = tp_get_bus_proxy ();
 
   priv->dispose_has_run = TRUE;
 
   if (priv->self) {
-    g_object_unref(priv->self);
+    g_object_unref (priv->self);
     priv->self = NULL;
   }
 
   if (priv->avahi_client) {
-    g_object_unref(priv->avahi_client);
+    g_object_unref (priv->avahi_client);
     priv->avahi_client = NULL;
   }
 
@@ -1428,7 +1415,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
   GError *error = NULL;
-  /* Only three know properties, so handle it quite naievely */
+  /* Only three know properties, so handle it quite naively */
   const gchar *known_properties[] = { "color", "key", "jid", NULL };
   gchar *color = NULL;
   gchar *key = NULL;
@@ -1550,7 +1537,7 @@ error:
   g_error_free (error);
 }
 
-static void 
+static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
                                              gpointer iface_data)
 {

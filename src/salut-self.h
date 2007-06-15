@@ -77,23 +77,20 @@ salut_self_new(SalutAvahiClient *client,
 /* Start announcing our presence on the network */
 gboolean salut_self_announce(SalutSelf *self, GError **error);
 
-gboolean salut_self_set_presence(SalutSelf *self, 
-                                 SalutPresenceId status,
-                                 const gchar *message,
-                                 GError **error);
+gboolean salut_self_set_presence (SalutSelf *self,
+    SalutPresenceId status, const gchar *message, GError **error);
 
-gboolean salut_self_set_avatar(SalutSelf *self, guint8 *data, 
-                               gsize size, GError **error);
+gboolean salut_self_set_avatar (SalutSelf *self, guint8 *data,
+    gsize size, GError **error);
 
 gboolean salut_self_set_alias (SalutSelf *self, const gchar *alias,
     GError **error);
 
-const gchar 
-*salut_self_get_alias(SalutSelf *self);
+const gchar *salut_self_get_alias (SalutSelf *self);
 
 #ifdef ENABLE_OLPC
 gboolean salut_self_set_olpc_properties(SalutSelf *self,
-    const gchar *key, const gchar *color, const gchar *jid, GError **error);
+    const GArray *key, const gchar *color, const gchar *jid, GError **error);
 #endif
 
 G_END_DECLS
