@@ -23,4 +23,7 @@
 #define GIBBER_W3C_NS_XHTML \
   (const gchar *)"http://www.w3.org/1999/xhtml"
 
+#define GIBBER_TELEPATHY_NS_TUBES \
+  (const gchar *)"http://telepathy.freedesktop.org/xmpp/tubes"
+
 #endif /* #ifndef __GIBBER_NAMESPACES_H__ */
