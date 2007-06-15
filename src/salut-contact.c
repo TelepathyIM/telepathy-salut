@@ -436,66 +436,63 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     }
 
 #ifdef ENABLE_OLPC
-  if ((t = avahi_string_list_find(txt, "olpc-color")) != NULL) { 
-    gchar *key;
-    gchar *value;
-    avahi_string_list_get_pair(t, &key, &value, NULL);
+  if ((t = avahi_string_list_find (txt, "olpc-color")) != NULL)
+    {
+      char *key;
+      char *value;
 
-    if (tp_strdiff(self->color, value)) {
-      g_free(self->color);
-      self->color = g_strdup(value);
-      SET_CHANGE(SALUT_CONTACT_OLPC_PROPERTIES);
-    }
-    avahi_free(key);
-    avahi_free(value);
-  } 
+      avahi_string_list_get_pair (t, &key, &value, NULL);
+      if (tp_strdiff (self->olpc_color, value))
+        {
+          g_free (self->olpc_color);
+          self->olpc_color = g_strdup (value);
+          SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+        }
 
-  if ((t = avahi_string_list_find(txt, "olpc-key")) != NULL) { 
-    gchar *key;
-    gchar *value;
-    avahi_string_list_get_pair(t, &key, &value, NULL);
-
-    if (tp_strdiff(self->key, value)) {
-      g_free(self->key);
-      self->key = g_strdup(value);
-      SET_CHANGE(SALUT_CONTACT_OLPC_PROPERTIES);
-    }
-    avahi_free(key);
-    avahi_free(value);
+      avahi_free (key);
+      avahi_free (value);
   }
-  else if ((t = avahi_string_list_find (txt, "olpc-key-part0")) != NULL)
+
+  if ((t = avahi_string_list_find (txt, "olpc-key-part0")) != NULL)
     {
       guint i = 0;
-      guint last_len;
       gchar *name = NULL;
-      GString *accumulator = g_string_new("");
+      /* FIXME: how big are OLPC keys anyway? */
+      GArray *new_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+          512);
 
       while (t)
         {
-          gchar *k, *v;
+          char *k;
+          char *v;
+          size_t v_size;
 
-          avahi_string_list_get_pair (t, &k, &v, NULL);
-          last_len = strlen(v);
-          g_string_append (accumulator, v);
+          avahi_string_list_get_pair (t, &k, &v, &v_size);
+          g_array_append_vals (new_key, v, v_size);
           avahi_free (k);
           avahi_free (v);
 
           i++;
-          g_free(name);
+          g_free (name);
           name = g_strdup_printf ("olpc-key-part%u", i);
           t = avahi_string_list_find (txt, name);
         }
       g_free (name);
 
-      if (tp_strdiff (self->key, accumulator->str))
+      if (self->olpc_key == NULL ||
+          self->olpc_key->len != new_key->len ||
+          memcmp (self->olpc_key->data, new_key->data, new_key->len) != 0)
         {
-          g_free (self->key);
-          self->key = g_string_free (accumulator, FALSE);
+          if (self->olpc_key != NULL)
+            {
+              g_array_free (self->olpc_key, TRUE);
+            }
+          self->olpc_key = new_key;
           SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
         }
       else
         {
-          g_string_free (accumulator, TRUE);
+          g_array_free (new_key, TRUE);
         }
     }
 #endif
@@ -801,4 +798,3 @@ salut_contact_get_avatar(SalutContact *contact,
 
   salut_contact_retrieve_avatar(contact);
 }
-

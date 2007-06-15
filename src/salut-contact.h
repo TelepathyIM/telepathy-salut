@@ -55,8 +55,8 @@ struct _SalutContact {
     gchar *status_message;
     gchar *jid;
 #ifdef ENABLE_OLPC
-    gchar *key;
-    gchar *color;
+    GArray *olpc_key;
+    gchar *olpc_color;
 #endif /* ENABLE_OLPC */
 };
 
