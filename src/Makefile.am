@@ -117,7 +117,8 @@ write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
-                       -ltelepathy-glib
+                       -ltelepathy-glib \
+                       -ltelepathy-glib-unstable
 telepathy_salut_SOURCES = \
     salut.c 
 
@@ -125,7 +126,8 @@ telepathy_salut_SOURCES = \
 telepathy_salut_LDADD = libsalut-convenience.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         $(top_builddir)/extensions/libsalut-extensions.la \
-                        -ltelepathy-glib
+                        -ltelepathy-glib \
+                        -ltelepathy-glib-unstable
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
