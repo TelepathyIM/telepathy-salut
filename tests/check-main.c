@@ -5,6 +5,7 @@
 #include <check.h>
 
 #include "check-gibber.h"
+#include "check-helpers.h"
 
 Suite *
 make_gibber_suite (void)
@@ -21,6 +22,8 @@ int
 main (void)
 {
     int number_failed;
+
+    check_helpers_init ();
 
     Suite *s = make_gibber_suite ();
     SRunner *sr = srunner_create (s);

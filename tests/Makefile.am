@@ -103,6 +103,8 @@ check_PROGRAMS += check-main
 TESTS += check-main
 check_main_SOURCES = \
     check-main.c             \
+    check-helpers.c          \
+    check-helpers.h          \
     check-gibber.h           \
     check-gibber-xmpp-node.c \
     check-gibber-xmpp-reader.c
