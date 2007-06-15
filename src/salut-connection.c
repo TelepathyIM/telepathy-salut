@@ -1291,21 +1291,6 @@ TpSvcConnectionInterfaceAvatarsClass *klass =
 }
 
 #ifdef ENABLE_OLPC
-static GArray *
-key_to_garray (const gchar *key)
-{
-  GArray *arr;
-  gsize len;
-  guchar *output;
-
-  output = g_base64_decode (key, &len);
-
-  arr = g_array_sized_new (FALSE, FALSE, sizeof (guchar), len);
-  g_array_append_vals (arr, output, len);
-  g_free (output);
-  return arr;
-}
-
 static GValue *
 new_gvalue (GType type)
 {
@@ -1315,7 +1300,7 @@ new_gvalue (GType type)
 }
 
 static GHashTable *
-get_properties_hash (const gchar *key,
+get_properties_hash (const GArray *key,
                      const gchar *color,
                      const gchar *jid)
 {
@@ -1326,9 +1311,8 @@ get_properties_hash (const gchar *key,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
   if (key != NULL)
     {
-      GArray *arr = key_to_garray (key);
       gvalue = new_gvalue (DBUS_TYPE_G_UCHAR_ARRAY);
-      g_value_take_boxed (gvalue, arr);
+      g_value_set_boxed (gvalue, key);
       g_hash_table_insert (properties, "key", gvalue);
     }
 
@@ -1352,7 +1336,7 @@ get_properties_hash (const gchar *key,
 static void
 emit_properties_changed (SalutConnection *connection,
                          TpHandle handle,
-                         const gchar *key,
+                         const GArray *key,
                          const gchar *color,
                          const gchar *jid)
 {
@@ -1370,8 +1354,8 @@ _contact_manager_contact_olpc_properties_changed (SalutConnection *self,
                                                   SalutContact *contact,
                                                   TpHandle handle)
 {
-  emit_properties_changed (self, handle, contact->key, contact->color,
-      contact->jid);
+  emit_properties_changed (self, handle, contact->olpc_key,
+      contact->olpc_color, contact->jid);
 }
 
 static void
@@ -1386,8 +1370,8 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
 
   if (handle == base->self_handle)
     {
-      properties = get_properties_hash (priv->self->key, priv->self->color,
-          priv->self->jid);
+      properties = get_properties_hash (priv->self->olpc_key,
+          priv->self->olpc_color, priv->self->jid);
     }
   else
     {

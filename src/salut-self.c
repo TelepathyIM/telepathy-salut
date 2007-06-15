@@ -40,6 +40,10 @@
 
 #include "sha1/sha1-util.h"
 
+#ifdef ENABLE_OLPC
+#define KEY_SEGMENT_SIZE 200
+#endif
+
 G_DEFINE_TYPE(SalutSelf, salut_self, G_TYPE_OBJECT)
 
 /* signal enum */
@@ -63,12 +67,6 @@ struct _SalutSelfPrivate
   gchar *last_name;
   gchar *email;
   gchar *published_name;
-
-#ifdef ENABLE_OLPC
-#define KEY_SEGMENT_SIZE 200
-  GArray *olpc_key;
-  gchar *olpc_color;
-#endif
 
   gchar *alias;
 
@@ -101,8 +99,8 @@ salut_self_init (SalutSelf *obj)
   priv->email = NULL;
   priv->published_name = NULL;
 #ifdef ENABLE_OLPC
-  priv->olpc_key = NULL;
-  priv->olpc_color = NULL;
+  self->olpc_key = NULL;
+  self->olpc_color = NULL;
 #endif
 
   priv->client = NULL;
@@ -207,9 +205,9 @@ salut_self_finalize (GObject *object)
   g_free(priv->email);
   g_free(priv->published_name);
 #ifdef ENABLE_OLPC
-  if (priv->olpc_key != NULL)
-    g_array_free (priv->olpc_key, TRUE);
-  g_free(priv->olpc_color);
+  if (self->olpc_key != NULL)
+    g_array_free (self->olpc_key, TRUE);
+  g_free (self->olpc_color);
 #endif
 
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
@@ -276,9 +274,9 @@ salut_self_new (SalutAvahiClient *client,
 #ifdef ENABLE_OLPC
   if (olpc_key != NULL)
     {
-      priv->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+      self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
           olpc_key->len);
-      g_array_append_vals (priv->olpc_key, olpc_key->data, olpc_key->len);
+      g_array_append_vals (self->olpc_key, olpc_key->data, olpc_key->len);
     }
   priv->olpc_color = g_strdup(olpc_color);
   priv->alias = NULL;
@@ -412,10 +410,10 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
   if (priv->olpc_color)
     ret = avahi_string_list_add_printf (ret, "olpc-color=%s",
          priv->olpc_color);
-  if (priv->olpc_key)
+  if (self->olpc_key)
     {
-      uint8_t *key = (uint8_t *) priv->olpc_key->data;
-      size_t key_len = priv->olpc_key->len;
+      uint8_t *key = (uint8_t *) self->olpc_key->data;
+      size_t key_len = self->olpc_key->len;
       guint i = 0;
 
       while (key_len > 0)
@@ -670,16 +668,16 @@ salut_self_set_olpc_properties (SalutSelf *self,
       const guint8 *key_data = (const guint8 *) key->data;
       guint i = 0;
 
-      if (priv->olpc_key == NULL)
+      if (self->olpc_key == NULL)
         {
-          priv->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+          self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
               key->len);
         }
       else
         {
-          g_array_remove_range (priv->olpc_key, 0, priv->olpc_key->len);
+          g_array_remove_range (self->olpc_key, 0, self->olpc_key->len);
         }
-      g_array_append_vals (priv->olpc_key, key->data, key->len);
+      g_array_append_vals (self->olpc_key, key->data, key->len);
 
       while (key_len > 0)
         {

@@ -46,8 +46,8 @@ struct _SalutSelf {
     gsize avatar_size;
     gchar *jid;
 #ifdef ENABLE_OLPC
-    gchar *key;
-    gchar *color;
+    gchar *olpc_key;
+    gchar *olpc_color;
 #endif
 };
 
