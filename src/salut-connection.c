@@ -394,7 +394,8 @@ salut_connection_finalize (GObject *object)
   g_free (priv->email);
   g_free (priv->jid);
 #ifdef ENABLE_OLPC
-  g_array_free (priv->olpc_key, TRUE);
+  if (priv->olpc_key != NULL)
+    g_array_free (priv->olpc_key, TRUE);
   g_free (priv->olpc_color);
 #endif
 
