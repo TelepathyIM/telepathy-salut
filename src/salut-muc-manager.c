@@ -361,23 +361,39 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   }
   else if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
-      GError *cerror = NULL;
-      if (!gibber_muc_connection_connect(connection, &cerror)) {
-        DEBUG("Connect failed: %s", cerror->message);
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
-        g_set_error(error, TP_ERRORS,
-                    TP_ERROR_NETWORK_ERROR, cerror->message);
-        g_error_free(cerror);
-        g_object_unref(connection);
-        goto out;
-      }
-      DEBUG("Connect succeeded");
+      SalutTubesChannel *tubes_chan;
 
-      chan = salut_muc_manager_new_muc_channel (mgr, handle, connection);
-      /* Inviting ourselves to a connected channel should always succeed */
-      g_assert(salut_muc_channel_invited(chan, base_connection->self_handle,
-                                     NULL, NULL));
-      *ret = TP_CHANNEL_IFACE(chan);
+      tubes_chan = g_hash_table_lookup (priv->tubes_channels,
+          GINT_TO_POINTER (handle));
+
+      if (tubes_chan != NULL)
+        {
+          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+        }
+      else
+        {
+          text_chan = g_hash_table_lookup (priv->text_channels,
+              GUINT_TO_POINTER (handle));
+
+          if (text_chan == NULL)
+            {
+              DEBUG ("have to create the text channel before the tubes one");
+              text_chan = salut_muc_manager_request_new_muc_channel (mgr,
+                  handle, error);
+              if (text_chan == NULL)
+                return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
+            }
+
+          tubes_chan = new_tubes_channel (mgr, handle, text_chan);
+          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+        }
+
+      g_assert (tubes_chan != NULL);
+      *ret = TP_CHANNEL_IFACE (tubes_chan);
+    }
+  else
+    {
+      return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
     }
 
 out:
