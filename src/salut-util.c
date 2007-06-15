@@ -177,7 +177,7 @@ set_child_from_property (gpointer key,
   else
     {
       /* a type we don't know how to handle: ignore it */
-      g_debug ("property with unknown type \"%s\"",
+      g_critical ("property with unknown type \"%s\"",
           g_type_name (G_VALUE_TYPE (gvalue)));
       return;
     }
