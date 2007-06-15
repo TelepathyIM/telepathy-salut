@@ -1,5 +1,7 @@
 /*
- * test-stanza-build.c - Test for gibber_xmpp_stanza_build
+ * test-xmpp-node-properties.c - Test for
+ * salut_gibber_xmpp_node_extract_properties and
+ * salut_gibber_xmpp_node_add_children_from_properties
  * Copyright (C) 2007 Collabora Ltd.
  * @author Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
  *
