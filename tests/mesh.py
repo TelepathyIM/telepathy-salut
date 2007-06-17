@@ -105,6 +105,10 @@ class Mesh:
     self.connections.setdefault(node0, []).append(
        Link(node1, bandwidth, latency, dropchance))
 
+  def connect_duplex(self, node0, node1, bandwidth, latency, dropchance):
+    self.connect(node0, node1, bandwidth, latency, dropchance)
+    self.connect(node1, node0, bandwidth, latency, dropchance)
+
   def connect_full(self, bandwidth, latency, dropchance):
     self.connections = {}
     for x in self.nodes:
