@@ -501,6 +501,23 @@ gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
   return TRUE;
 }
 
+static void
+add_depend(gpointer key, gpointer value, gpointer user_data) {
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
+  GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET(user_data);
+  gboolean r;
+
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
+    return;
+  }
+
+  r = gibber_r_multicast_packet_add_receiver(packet, sender->name,
+               sender->last_output_packet, NULL);
+  g_assert(r);
+
+}
+
+
 static gboolean
 gibber_r_multicast_transport_send(GibberTransport *transport,
                                   const guint8 *data, gsize size,
@@ -508,16 +525,44 @@ gibber_r_multicast_transport_send(GibberTransport *transport,
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (transport);
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
-  GibberRMulticastPacket *packet = 
-    gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->name,
-                                  priv->packet_id++, 
-                                  priv->transport->max_packet_size);
-  gibber_r_multicast_packet_set_part(packet, 0, 1);
-  gibber_r_multicast_packet_add_payload(packet, data, size);
+  GibberRMulticastPacket *packet;
+  gsize payloaded;
 
-  gibber_r_multicast_sender_push(priv->self, packet);
+  packet = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->name,
+      priv->packet_id++, priv->transport->max_packet_size);
 
-  return sendout_packet(self, packet, error);
+  /* Add dependency information */
+  g_hash_table_foreach(priv->senders, add_depend, packet);
+
+  payloaded = gibber_r_multicast_packet_add_payload(packet, data, size);
+
+  if (payloaded < size) {
+    GPtrArray *packets = g_ptr_array_sized_new(2);
+    g_ptr_array_add(packets, packet);
+    int i;
+    gboolean ret = TRUE;
+    while (payloaded < size) {
+      packet = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->name,
+          priv->packet_id++, priv->transport->max_packet_size);
+      payloaded += gibber_r_multicast_packet_add_payload(packet,
+          data + payloaded, size - payloaded);
+      g_ptr_array_add(packets, packet);
+    }
+    for (i = 0; i < packets->len && ret; i++) {
+      packet = g_ptr_array_index(packets, i);
+      gibber_r_multicast_packet_set_part(packet, i, packets->len);
+      gibber_r_multicast_sender_push(priv->self, packet);
+      ret = sendout_packet(self, packet, error);
+    }
+    for (; i < packets->len; i++) {
+      g_object_unref(g_ptr_array_index(packets, i));
+    }
+    return ret;
+  } else {
+     gibber_r_multicast_packet_set_part(packet, 0, 1);
+     gibber_r_multicast_sender_push(priv->self, packet);
+     return sendout_packet(self, packet, error);
+  }
 }
 
 static void
