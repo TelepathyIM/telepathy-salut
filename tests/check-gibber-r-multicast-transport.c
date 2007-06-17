@@ -9,8 +9,28 @@
 #define TEST_DATA_SIZE 300
 GMainLoop *loop;
 
+GibberRMulticastTransport *
+create_rmulticast_transport (TestTransport **testtransport, const gchar *name,
+    test_transport_send_hook test_send_hook) {
+  TestTransport *t;
+  GibberRMulticastTransport *rmtransport;
+
+  t = test_transport_new (test_send_hook, NULL);
+  fail_unless (t != NULL);
+  GIBBER_TRANSPORT (t)->max_packet_size = 150;
+
+  rmtransport = gibber_r_multicast_transport_new (
+      GIBBER_TRANSPORT(t), "test123");
+
+  if (testtransport != NULL) {
+    *testtransport = t;
+  }
+
+  return rmtransport;
+}
+
 gboolean
-send_hook(GibberTransport *transport, const guint8 *data,
+fragmentation_send_hook(GibberTransport *transport, const guint8 *data,
           gsize length, GError **error, gpointer user_data)
 {
   GibberRMulticastPacket *packet;
@@ -49,9 +69,9 @@ out:
   return TRUE;
 }
 
+
 START_TEST (test_fragmentation)
 {
-  TestTransport *testtransport;
   GibberRMulticastTransport *rmtransport;
   guint8 testdata[TEST_DATA_SIZE];
   int i;
@@ -64,12 +84,8 @@ START_TEST (test_fragmentation)
 
   loop = g_main_loop_new (NULL, FALSE);
 
-  testtransport = test_transport_new (send_hook, NULL);
-  fail_unless (testtransport != NULL);
-  GIBBER_TRANSPORT (testtransport)->max_packet_size = 150;
-
-  rmtransport = gibber_r_multicast_transport_new (
-      GIBBER_TRANSPORT(testtransport), "test123");
+  rmtransport = create_rmulticast_transport(NULL, "test123", 
+       fragmentation_send_hook);
 
   fail_unless(gibber_r_multicast_transport_connect(rmtransport, FALSE, NULL));
 
