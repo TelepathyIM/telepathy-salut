@@ -120,6 +120,8 @@ send_data(gpointer data) {
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
   GArray *arr;
 
+  g_assert(priv->send != NULL);
+
   arr = (GArray *)g_queue_pop_head(priv->buffers);
 
   priv->send(GIBBER_TRANSPORT(self), 
