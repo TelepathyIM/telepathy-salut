@@ -109,8 +109,7 @@ check_main_SOURCES = \
     check-helpers.h          \
     check-gibber.h           \
     check-gibber-xmpp-node.c \
-    check-gibber-xmpp-reader.c \
-    check-node-properties.c
+    check-gibber-xmpp-reader.c
 
 check_main_LDADD = \
     @CHECK_LIBS@ \
