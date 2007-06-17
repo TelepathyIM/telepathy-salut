@@ -49,8 +49,8 @@ struct _GibberRMulticastSender {
 
     GibberRMulticastSenderState state;
 
-    /* Next packet that we expect in the output stream*/
-    guint32 next_output_packet;
+    /* Last packet that we send in the output stream*/
+    guint32 last_output_packet;
 
     /* Next packet we expect from the sender */
     guint32 next_input_packet;
