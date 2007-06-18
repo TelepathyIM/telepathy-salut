@@ -1,5 +1,5 @@
 /*
- * test-xmpp-node-properties.c - Test for
+ * check-xmpp-node-properties.c - Test for
  * salut_gibber_xmpp_node_extract_properties and
  * salut_gibber_xmpp_node_add_children_from_properties
  * Copyright (C) 2007 Collabora Ltd.
@@ -29,8 +29,8 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include "salut-util.h"
 
-#define DEBUG_FLAG DEBUG_XMPP
-#include <gibber/gibber-debug.h>
+#include <check.h>
+#include <check-helpers.h>
 
 static GibberXmppStanza*
 create_sample_stanza (void)
@@ -67,8 +67,7 @@ create_sample_stanza (void)
   return stanza;
 }
 
-static void
-test_extract_properties (void)
+START_TEST (test_extract_properties)
 {
   GibberXmppStanza *stanza;
   GibberXmppNode *node;
@@ -82,49 +81,49 @@ test_extract_properties (void)
   stanza = create_sample_stanza ();
   node = gibber_xmpp_node_get_child (stanza->node, "properties");
 
-  DEBUG_STANZA (stanza, "used for test");
-  g_assert (node != NULL);
+  fail_unless (node != NULL);
   properties = salut_gibber_xmpp_node_extract_properties (node, "prop");
 
-  g_assert (properties != NULL);
-  g_assert (g_hash_table_size (properties) == 4);
+  fail_unless (properties != NULL);
+  fail_unless (g_hash_table_size (properties) == 4);
 
   /* prop1 */
   value = g_hash_table_lookup (properties, "prop1");
-  g_assert (value != NULL);
-  g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
+  fail_unless (value != NULL);
+  fail_unless (G_VALUE_TYPE (value) == G_TYPE_STRING);
   prop1_value = g_value_get_string (value);
-  g_assert (prop1_value != NULL);
-  g_assert (strcmp (prop1_value, "prop1_value") == 0);
+  fail_unless (prop1_value != NULL);
+  fail_unless (strcmp (prop1_value, "prop1_value") == 0);
 
   /* prop2 */
   value = g_hash_table_lookup (properties, "prop2");
-  g_assert (value != NULL);
-  g_assert (G_VALUE_TYPE (value) == G_TYPE_INT);
+  fail_unless (value != NULL);
+  fail_unless (G_VALUE_TYPE (value) == G_TYPE_INT);
   prop2_value = g_value_get_int (value);
-  g_assert (prop2_value == -7);
+  fail_unless (prop2_value == -7);
 
   /* prop3 */
   value = g_hash_table_lookup (properties, "prop3");
-  g_assert (value != NULL);
-  g_assert (G_VALUE_TYPE (value) == G_TYPE_UINT);
+  fail_unless (value != NULL);
+  fail_unless (G_VALUE_TYPE (value) == G_TYPE_UINT);
   prop3_value = g_value_get_uint (value);
-  g_assert (prop3_value == 10);
+  fail_unless (prop3_value == 10);
 
   /* prop4 */
   value = g_hash_table_lookup (properties, "prop4");
-  g_assert (value != NULL);
-  g_assert (G_VALUE_TYPE (value) == DBUS_TYPE_G_UCHAR_ARRAY);
+  fail_unless (value != NULL);
+  fail_unless (G_VALUE_TYPE (value) == DBUS_TYPE_G_UCHAR_ARRAY);
   prop4_value = g_value_get_boxed (value);
-  g_assert (g_array_index (prop4_value, gchar, 0) == 'a');
-  g_assert (g_array_index (prop4_value, gchar, 1) == 'b');
-  g_assert (g_array_index (prop4_value, gchar, 2) == 'c');
-  g_assert (g_array_index (prop4_value, gchar, 3) == 'd');
-  g_assert (g_array_index (prop4_value, gchar, 4) == 'e');
+  fail_unless (g_array_index (prop4_value, gchar, 0) == 'a');
+  fail_unless (g_array_index (prop4_value, gchar, 1) == 'b');
+  fail_unless (g_array_index (prop4_value, gchar, 2) == 'c');
+  fail_unless (g_array_index (prop4_value, gchar, 3) == 'd');
+  fail_unless (g_array_index (prop4_value, gchar, 4) == 'e');
 
   g_object_unref (stanza);
   g_hash_table_destroy (properties);
 }
+END_TEST
 
 static void
 test_g_value_slice_free (GValue *value)
@@ -168,8 +167,8 @@ create_sample_properties (void)
   return properties;
 }
 
-static void
-test_add_children_from_properties (void)
+
+START_TEST (test_add_children_from_properties)
 {
   GHashTable *properties;
   GibberXmppStanza *stanza;
@@ -181,9 +180,7 @@ test_add_children_from_properties (void)
   salut_gibber_xmpp_node_add_children_from_properties (stanza->node,
       properties, "prop");
 
-  DEBUG_STANZA (stanza, "node generated");
-
-  g_assert (g_slist_length (stanza->node->children) == 4);
+  fail_unless (g_slist_length (stanza->node->children) == 4);
   for (l = stanza->node->children; l != NULL; l = l->next)
     {
       GibberXmppNode *node = (GibberXmppNode *) l->data;
@@ -194,23 +191,23 @@ test_add_children_from_properties (void)
 
       if (strcmp (name, "prop1") == 0)
         {
-          g_assert (strcmp (type, "str") == 0);
-          g_assert (strcmp (node->content, "prop1_value") == 0);
+          fail_unless (strcmp (type, "str") == 0);
+          fail_unless (strcmp (node->content, "prop1_value") == 0);
         }
       else if (strcmp (name, "prop2") == 0)
         {
-          g_assert (strcmp (type, "int") == 0);
-          g_assert (strcmp (node->content, "-7") == 0);
+          fail_unless (strcmp (type, "int") == 0);
+          fail_unless (strcmp (node->content, "-7") == 0);
         }
       else if (strcmp (name, "prop3") == 0)
         {
-          g_assert (strcmp (type, "uint") == 0);
-          g_assert (strcmp (node->content, "10") == 0);
+          fail_unless (strcmp (type, "uint") == 0);
+          fail_unless (strcmp (node->content, "10") == 0);
         }
       else if (strcmp (name, "prop4") == 0)
         {
-          g_assert (strcmp (type, "bytes") == 0);
-          g_assert (strcmp (node->content, "YWJjZGU=") == 0);
+          fail_unless (strcmp (type, "bytes") == 0);
+          fail_unless (strcmp (node->content, "YWJjZGU=") == 0);
         }
       else
         g_assert_not_reached ();
@@ -219,16 +216,17 @@ test_add_children_from_properties (void)
   g_hash_table_destroy (properties);
   g_object_unref (stanza);
 }
+END_TEST
 
-int main (void)
+TCase *
+make_salut_gibber_xmpp_node_properties_tcase (void)
 {
   g_type_init ();
   /* to initiate D-Bus types */
   dbus_g_bus_get (DBUS_BUS_STARTER, NULL);
-  gibber_debug_set_flags_from_env ();
 
-  test_extract_properties ();
-  test_add_children_from_properties ();
-
-  return 0;
+  TCase *tc = tcase_create ("XMPP Node");
+  tcase_add_test (tc, test_extract_properties);
+  tcase_add_test (tc, test_add_children_from_properties);
+  return tc;
 }

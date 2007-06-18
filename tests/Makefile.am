@@ -13,7 +13,13 @@ TESTS = \
 check_PROGRAMS = \
 	test-xmpp-connection    \
 	test-r-multicast-transport-io \
-	test-stanza-build
+	test-stanza-build \
+	test-r-multicast-packet \
+	test-r-multicast-sender
+
+check_SCRIPTS = run-xmpp-connection-test.sh
+
+EXTRA_DIST = simplemeshtest.py mesh.py
 
 
 test_xmpp_connection_SOURCES = \
@@ -72,20 +78,6 @@ test_stanza_build_LDADD = \
 test_stanza_build_CFLAGS = \
     $(AM_CFLAGS)
 
-test_xmpp_node_properties_SOURCES = \
-    test-xmpp-node-properties.c
-
-test_xmpp_node_properties_LDADD = \
-    $(top_builddir)/lib/gibber/libgibber.la \
-    $(top_builddir)/src/libsalut-convenience.la \
-    @DBUS_LIBS@ \
-    $(AM_LDFLAGS)
-
-test_xmpp_node_properties_CFLAGS = \
-    @DBUS_CFLAGS@ \
-    $(AM_CFLAGS)
-
-
 if HAVE_LIBSASL2
 check_PROGRAMS += test-sasl-auth
 TESTS +=  test-sasl-auth
@@ -117,11 +109,13 @@ check_main_SOURCES = \
     check-helpers.h          \
     check-gibber.h           \
     check-gibber-xmpp-node.c \
-    check-gibber-xmpp-reader.c
+    check-gibber-xmpp-reader.c \
+    check-node-properties.c
 
 check_main_LDADD = \
     @CHECK_LIBS@ \
     $(top_builddir)/lib/gibber/libgibber.la \
+    $(top_builddir)/src/libsalut-convenience.la \
     $(AM_LDFLAGS)
 
 check_main_CFLAGS = \
@@ -130,7 +124,7 @@ check_main_CFLAGS = \
 
 endif
 
-AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
+AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @DBUS_CFLAGS@ \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib \
     -I $(top_srcdir)/src -I $(top_builddir)/src
 
