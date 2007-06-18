@@ -30,7 +30,7 @@
 GMainLoop *loop;
 
 GibberRMulticastTransport *
-create_rmulticast_transport (TestTransport **testtransport, 
+create_rmulticast_transport (TestTransport **testtransport,
                              const gchar *name,
                              test_transport_send_hook test_send_hook)
 {
@@ -67,8 +67,11 @@ struct {
 };
 
 gboolean
-depends_send_hook (GibberTransport *transport, const guint8 *data,
-                   gsize length, GError **error, gpointer user_data)
+depends_send_hook (GibberTransport *transport,
+                   const guint8 *data,
+                   gsize length,
+                   GError **error,
+                   gpointer user_data)
 {
   GibberRMulticastPacket *packet;
   int i;
@@ -173,8 +176,11 @@ END_TEST
 
 /* test fragmentation testing */
 gboolean
-fragmentation_send_hook (GibberTransport *transport, const guint8 *data,
-                         gsize length, GError **error, gpointer user_data)
+fragmentation_send_hook (GibberTransport *transport,
+                         const guint8 *data,
+                         gsize length,
+                         GError **error,
+                         gpointer user_data)
 {
   GibberRMulticastPacket *packet;
   static gsize bytes = 0;
