@@ -30,8 +30,9 @@
 GMainLoop *loop;
 
 GibberRMulticastTransport *
-create_rmulticast_transport (TestTransport **testtransport, const gchar *name,
-    test_transport_send_hook test_send_hook)
+create_rmulticast_transport (TestTransport **testtransport, 
+                             const gchar *name,
+                             test_transport_send_hook test_send_hook)
 {
   TestTransport *t;
   GibberRMulticastTransport *rmtransport;
@@ -66,8 +67,8 @@ struct {
 };
 
 gboolean
-depends_send_hook(GibberTransport *transport, const guint8 *data,
-          gsize length, GError **error, gpointer user_data) 
+depends_send_hook (GibberTransport *transport, const guint8 *data,
+                   gsize length, GError **error, gpointer user_data)
 {
   GibberRMulticastPacket *packet;
   int i;
@@ -111,7 +112,7 @@ out:
 }
 
 static gboolean
-depends_send_test_data(gpointer data)
+depends_send_test_data (gpointer data)
 {
   GibberRMulticastTransport *t = GIBBER_R_MULTICAST_TRANSPORT (data);
   guint8 testdata[] = { 1, 2, 3 };
@@ -129,7 +130,7 @@ START_TEST (test_depends)
   TestTransport *testtransport;
   int i;
 
-  g_type_init();
+  g_type_init ();
 
   loop = g_main_loop_new (NULL, FALSE);
 
@@ -172,8 +173,8 @@ END_TEST
 
 /* test fragmentation testing */
 gboolean
-fragmentation_send_hook(GibberTransport *transport, const guint8 *data,
-   gsize length, GError **error, gpointer user_data)
+fragmentation_send_hook (GibberTransport *transport, const guint8 *data,
+                         gsize length, GError **error, gpointer user_data)
 {
   GibberRMulticastPacket *packet;
   static gsize bytes = 0;
@@ -221,7 +222,7 @@ START_TEST (test_fragmentation)
   guint8 testdata[TEST_DATA_SIZE];
   int i;
 
-  g_type_init();
+  g_type_init ();
 
   for (i = 0; i < TEST_DATA_SIZE; i++)
     {
