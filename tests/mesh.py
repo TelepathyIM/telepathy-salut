@@ -33,7 +33,7 @@ class BaseMeshNode(protocol.ProcessProtocol):
     self.gotOutput(sender, b64decode(rawdata))
 
   def newNode(self, data):
-    print "New node: " + data
+    #print "New node: " + data
     if not data in self.peers:
       self.peers.append(data)
 
