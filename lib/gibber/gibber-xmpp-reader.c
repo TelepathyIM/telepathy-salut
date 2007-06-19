@@ -364,7 +364,7 @@ gibber_xmpp_reader_push(GibberXmppReader *reader,
   xmlParserCtxtPtr parser;
 
   g_assert(!priv->error);
-  DEBUG("Parsing chunk: %.*s", length, data);
+  DEBUG("Parsing chunk: %.*s", (int)length, data);
 
   parser = priv->parser;
   xmlParseChunk(parser, (const char*)data, length, FALSE);

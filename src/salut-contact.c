@@ -742,7 +742,7 @@ salut_contact_avatar_found(SalutAvahiRecordBrowser *browser,
                            AvahiLookupFlags flags, gpointer user_data) {
   SalutContact *contact = SALUT_CONTACT(user_data);
 
-  DEBUG("Found avatar for %s for size %d", contact->name, rdata_size);
+  DEBUG("Found avatar for %s for size %zd", contact->name, rdata_size);
 
   if (rdata_size <= 0)
     salut_contact_avatar_request_flush(contact, NULL, 0);

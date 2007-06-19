@@ -283,7 +283,7 @@ static gboolean
 gibber_multicast_transport_validate_address(const gchar *address,
     const gchar *port,
     struct sockaddr_storage *sock_addr,
-    size_t *socklen,
+    socklen_t *socklen,
     GError **error) {
   int ret;
 
