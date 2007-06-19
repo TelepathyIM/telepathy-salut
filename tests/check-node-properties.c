@@ -30,7 +30,7 @@
 #include "salut-util.h"
 
 #include <check.h>
-#include <check-helpers.h>
+#include "check-helpers.h"
 
 static GibberXmppStanza*
 create_sample_stanza (void)

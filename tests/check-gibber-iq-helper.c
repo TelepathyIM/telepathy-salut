@@ -28,7 +28,7 @@
 #include <gibber/gibber-iq-helper.h>
 
 #include <check.h>
-#include <check-helpers.h>
+#include "check-helpers.h"
 
 #include "test-transport.h"
 

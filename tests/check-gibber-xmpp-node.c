@@ -5,7 +5,7 @@
 #include <gibber/gibber-xmpp-node.h>
 
 #include <check.h>
-#include <check-helpers.h>
+#include "check-helpers.h"
 
 START_TEST (test_instantiation)
 {
