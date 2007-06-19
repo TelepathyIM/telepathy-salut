@@ -68,7 +68,8 @@ class BaseMeshNode(protocol.ProcessProtocol):
     print "Error: " + data
 
   def processEnded(self, reason):
-    print "process ended: " + str(reason)
+    if self.process.status != 0:
+      print "process ended: " + str(reason)
 
 class MeshNode(BaseMeshNode):
   def __init__(self, name, mesh):
