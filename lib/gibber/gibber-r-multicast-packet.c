@@ -162,6 +162,13 @@ void
 gibber_r_multicast_packet_set_part(GibberRMulticastPacket *packet,
                                    guint8 part, guint8 total) {
   g_assert(part < total);
+  GibberRMulticastPacketPrivate *priv =
+      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
+
+  if (priv->data != NULL) {
+    priv->data[2] = part;
+    priv->data[3] = total;
+  }
 
   packet->packet_part = part;
   packet->packet_total = total;
