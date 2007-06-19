@@ -58,6 +58,8 @@ libgibber_la_SOURCES =            \
   gibber-linklocal-transport.c    \
   gibber-linklocal-transport.h    \
   gibber-namespaces.h             \
+  gibber-iq-helper.c              \
+  gibber-iq-helper.h              \
   libmd5-rfc/md5.c                \
   libmd5-rfc/md5.h                \
   $(BUILT_SOURCES)
