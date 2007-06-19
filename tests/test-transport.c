@@ -128,6 +128,8 @@ send_data(gpointer data) {
              (guint8 *)arr->data, arr->len,
              NULL, priv->user_data);
 
+  g_array_free (arr, TRUE);
+
   if (g_queue_is_empty(priv->buffers)) {
     priv->send_id = 0;
     return FALSE;
