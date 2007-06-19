@@ -37,7 +37,6 @@ static void received_stanza_cb (GibberXmppReader *reader,
 START_TEST (test_instantiation)
 {
   GibberXmppReader *reader;
-  g_type_init();
   reader = gibber_xmpp_reader_new_no_stream ();
   fail_if (reader == NULL);
 }
@@ -54,8 +53,6 @@ START_TEST (test_simple_message)
   ReceivedStanzaEvent *event;
   const gchar *srcdir;
   gchar *file;
-
-  g_type_init();
 
   received_stanzas = g_queue_new ();
 

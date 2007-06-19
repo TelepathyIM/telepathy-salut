@@ -133,8 +133,6 @@ START_TEST (test_depends)
   TestTransport *testtransport;
   int i;
 
-  g_type_init ();
-
   loop = g_main_loop_new (NULL, FALSE);
 
   rmtransport = create_rmulticast_transport (&testtransport, "test123",
@@ -227,8 +225,6 @@ START_TEST (test_fragmentation)
   GibberRMulticastTransport *rmtransport;
   guint8 testdata[TEST_DATA_SIZE];
   int i;
-
-  g_type_init ();
 
   for (i = 0; i < TEST_DATA_SIZE; i++)
     {

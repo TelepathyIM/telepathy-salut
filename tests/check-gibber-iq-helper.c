@@ -352,9 +352,6 @@ END_TEST
 TCase *
 make_gibber_iq_helper_tcase (void)
 {
-
-  g_type_init ();
-
   TCase *tc = tcase_create ("IQ helper");
   tcase_add_test (tc, test_iq_helper_new);
   tcase_add_test (tc, test_send_with_reply);

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <glib-object.h>
 
 #include <check.h>
 
@@ -39,6 +40,7 @@ main (void)
     SRunner *sr;
 
     check_helpers_init ();
+    g_type_init ();
 
     s = make_gibber_suite ();
     sr = srunner_create (s);

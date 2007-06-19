@@ -221,7 +221,6 @@ END_TEST
 TCase *
 make_salut_gibber_xmpp_node_properties_tcase (void)
 {
-  g_type_init ();
   /* to initiate D-Bus types */
   dbus_g_bus_get (DBUS_BUS_STARTER, NULL);
 
