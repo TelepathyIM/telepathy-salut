@@ -149,6 +149,10 @@ gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
                                        GError **error) {
   GibberRMulticastReceiver *r =
       gibber_r_multicast_receiver_new(g_strdup(name), packet_id);
+  GibberRMulticastPacketPrivate *priv =
+      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
+
+  g_assert(priv->data == NULL);
 
   packet->receivers = g_list_append(packet->receivers, r);
   return TRUE;
