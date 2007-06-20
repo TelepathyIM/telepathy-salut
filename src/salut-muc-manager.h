@@ -24,6 +24,7 @@
 
 #include <salut-connection.h>
 #include <salut-im-manager.h>
+#include "salut-avahi-client.h"
 
 G_BEGIN_DECLS
 
@@ -57,6 +58,10 @@ GType salut_muc_manager_get_type(void);
 SalutMucManager *
 salut_muc_manager_new(SalutConnection *connection, 
                       SalutImManager *im_manager);
+
+gboolean
+salut_muc_manager_start (SalutMucManager *muc_manager,
+    SalutAvahiClient *client, GError **error);
 
 G_END_DECLS
 

@@ -63,6 +63,7 @@ struct _SalutMucManagerPrivate
   gboolean dispose_has_run;
   SalutConnection *connection;
   SalutImManager *im_manager;
+  SalutAvahiClient *client;
   GHashTable *channels;
 };
 
@@ -74,6 +75,7 @@ salut_muc_manager_init (SalutMucManager *obj)
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
   priv->im_manager = NULL;
   priv->connection = NULL;
+  priv->client = NULL;
 
   /* allocate any data required by the object here */
   priv->channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
@@ -147,6 +149,12 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     priv->channels = NULL;
     g_hash_table_destroy(t);
   }
+
+  if (priv->client != NULL)
+    {
+      g_object_unref (priv->client);
+      priv->client = NULL;
+    }
 }
 
 static void
@@ -488,4 +496,19 @@ salut_muc_manager_new(SalutConnection *connection,
   priv->connection = connection;
 
   return ret;
+}
+
+gboolean
+salut_muc_manager_start (SalutMucManager *self,
+                         SalutAvahiClient *client,
+                         GError **error)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  g_assert (priv->client == NULL);
+
+  priv->client = client;
+  g_object_ref (priv->client);
+
+  return TRUE;
 }
