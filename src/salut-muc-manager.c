@@ -247,9 +247,6 @@ tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
         {
           /* FIXME: close the corresponding text channel? */
         }
-
-      g_hash_table_remove (priv->tubes_channels,
-          GINT_TO_POINTER (room_handle));
     }
 }
 
