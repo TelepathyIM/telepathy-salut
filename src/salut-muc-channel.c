@@ -279,7 +279,7 @@ create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) 
   gibber_xmpp_node_set_attribute(msg->node, "to", name); 
 
   gibber_xmpp_node_add_child_with_content(msg->node, "body", 
-                                         "You got an chatroom invitation");
+                                         "You got a chatroom invitation");
   x_node = gibber_xmpp_node_add_child_ns(msg->node, "x", NS_LLMUC);
 
   invite_node = gibber_xmpp_node_add_child(x_node, "invite");
