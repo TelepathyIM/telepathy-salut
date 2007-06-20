@@ -41,6 +41,7 @@
 
 #include "salut-connection.h"
 #include "salut-im-manager.h"
+#include "salut-avahi-entry-group.h"
 
 #include "namespaces.h"
 #include "text-helper.h"
@@ -69,6 +70,7 @@ enum
   PROP_CONNECTION,
   PROP_IM_MANAGER,
   PROP_NAME,
+  PROP_CLIENT,
   LAST_PROPERTY
 };
 
@@ -84,6 +86,7 @@ struct _SalutMucChannelPrivate
   SalutImManager *im_manager;
   GibberMucConnection *muc_connection;
   gchar *muc_name;
+  SalutAvahiClient *client;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -137,6 +140,9 @@ salut_muc_channel_get_property (GObject    *object,
     case PROP_MUCCONNECTION:
       g_value_set_object (value, priv->muc_connection);
       break;
+    case PROP_CLIENT:
+      g_value_set_object (value, priv->client);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -183,6 +189,9 @@ salut_muc_channel_set_property (GObject     *object,
       g_assert(tmp == NULL 
                || !tp_strdiff(g_value_get_string(value),
                        TP_IFACE_CHANNEL_TYPE_TEXT));
+      break;
+    case PROP_CLIENT:
+      priv->client = g_value_get_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -249,6 +258,7 @@ salut_muc_channel_init (SalutMucChannel *self)
   priv->object_path = NULL;
   priv->connection = NULL;
   priv->muc_name = NULL;
+  priv->client = NULL;
 }
 
 static void salut_muc_channel_dispose (GObject *object);
@@ -413,6 +423,19 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, 
                                    PROP_IM_MANAGER, param_spec);
+
+  param_spec = g_param_spec_object (
+      "client",
+      "SalutAvahiClient object",
+      "Salut Avahi client used with the"
+      " connection that owns this MUC channel",
+      SALUT_TYPE_AVAHI_CLIENT,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class,
+      PROP_CLIENT, param_spec);
 
   tp_text_mixin_class_init(object_class,
                            G_STRUCT_OFFSET(SalutMucChannelClass, text_class));

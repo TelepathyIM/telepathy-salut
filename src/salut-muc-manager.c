@@ -243,6 +243,7 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, TpHandle handle,
                       "muc_connection", connection,
                       "handle", handle,
                       "name", name,
+                      "client", priv->client,
                       NULL);
   g_free(path);
 
