@@ -3,6 +3,8 @@ SUBDIRS=examples
 noinst_LTLIBRARIES = libgibber.la
 
 BUILT_SOURCES = \
+  gibber-bytestream-ibb-signals-marshal.c     \
+  gibber-bytestream-ibb-signals-marshal.h     \
   gibber-transport-signals-marshal.c          \
   gibber-transport-signals-marshal.h          \
   gibber-muc-connection-signals-marshal.c     \
@@ -29,6 +31,8 @@ libgibber_la_SOURCES =            \
   gibber-xmpp-connection.h        \
   gibber-muc-connection.c         \
   gibber-muc-connection.h         \
+  gibber-bytestream-ibb.h         \
+  gibber-bytestream-ibb.c         \
   gibber-debug.c                  \
   gibber-debug.h                  \
   gibber-xmpp-node.c              \
@@ -76,6 +80,7 @@ dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
 EXTRA_DIST = \
+  gibber-bytestream-ibb-signals-marshal.list \
   gibber-r-multicast-sender-signals-marshal.list  \
   gibber-sasl-auth-signals-marshal.list           \
   gibber-ssl-transport-signals-marshal.list       \
