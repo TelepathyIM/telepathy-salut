@@ -557,6 +557,12 @@ salut_muc_channel_dispose (GObject *object)
     priv->muc_connection = NULL;
   }
 
+  if (priv->muc_group != NULL)
+    {
+      g_object_unref (priv->muc_group);
+      priv->muc_group = NULL;
+    }
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
     G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose (object);
