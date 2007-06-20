@@ -447,6 +447,12 @@ _self_established_cb(SalutSelf *s, gpointer data) {
     return;
   }
 
+  if (!salut_muc_manager_start (priv->muc_manager, priv->avahi_client, NULL))
+    {
+      /* XXX handle error */
+      return;
+    }
+
   tp_base_connection_change_status(base,
       TP_CONNECTION_STATUS_CONNECTED, 
       TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
