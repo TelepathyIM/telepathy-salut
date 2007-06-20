@@ -32,7 +32,9 @@ BUILT_SOURCES = \
     salut-avahi-service-browser-signals-marshal.h \
     salut-avahi-service-browser-signals-marshal.c  \
     salut-avahi-service-resolver-signals-marshal.h \
-    salut-avahi-service-resolver-signals-marshal.c 
+    salut-avahi-service-resolver-signals-marshal.c \
+    tube-dbus-signals-marshal.h \
+    tube-dbus-signals-marshal.c
 
 
 # correctly clean the generated source files
@@ -54,7 +56,9 @@ EXTRA_DIST = \
   salut-im-manager-signals-marshal.list                   \
   salut-muc-channel-signals-marshal.list                  \
   salut-muc-manager-signals-marshal.list                  \
-  salut-self-signals-marshal.list
+  salut-self-signals-marshal.list                         \
+  salut-muc-connection-signals-marshal.list               \
+  tube-dbus-signals-marshal.list
 
 bin_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
@@ -98,6 +102,14 @@ CORE_SOURCES =                                          \
     salut-contact-channel.c                             \
     text-helper.c                                       \
     text-helper.h                                       \
+    tube-dbus.h                                         \
+    tube-dbus.c                                         \
+    salut-tubes-channel.h                               \
+    salut-tubes-channel.c                               \
+    salut-tubes-manager.h                               \
+    salut-tubes-manager.c                               \
+    tube-iface.h                                        \
+    tube-iface.c                                        \
     sha1/sha1-util.h                                    \
     sha1/sha1-util.c                                    \
     sha1/sha1.h                                         \
