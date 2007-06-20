@@ -20,6 +20,7 @@
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 
 #include <string.h>
 
@@ -87,6 +88,8 @@ struct _SalutMucChannelPrivate
   GibberMucConnection *muc_connection;
   gchar *muc_name;
   SalutAvahiClient *client;
+  SalutAvahiEntryGroup *muc_group;
+  SalutAvahiEntryGroupService *service;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -259,6 +262,7 @@ salut_muc_channel_init (SalutMucChannel *self)
   priv->connection = NULL;
   priv->muc_name = NULL;
   priv->client = NULL;
+  priv->service = NULL;
 }
 
 static void salut_muc_channel_dispose (GObject *object);
@@ -309,6 +313,94 @@ create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) 
   return msg;
 }
 
+static gboolean
+muc_channel_publish_service (SalutMucChannel *self)
+{
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+  AvahiStringList *txt_record = NULL;
+  GError *error = NULL;
+  const GHashTable *params;
+  const gchar *address, *port_str;
+  gchar *host;
+  guint16 port;
+  struct in_addr addr;
+
+  g_assert (priv->service == NULL);
+  g_assert (priv->muc_group == NULL);
+
+  priv->muc_group = salut_avahi_entry_group_new (); // should be shared ?
+
+  if (!salut_avahi_entry_group_attach (priv->muc_group, priv->client, &error))
+    {
+      DEBUG ("entry group attach failed: %s", error->message);
+      g_error_free (error);
+      return FALSE;
+    }
+
+  params = gibber_muc_connection_get_parameters (priv->muc_connection);
+  address = g_hash_table_lookup ((GHashTable *) params, "address");
+  if (address == NULL)
+    {
+      DEBUG ("can't find connection address");
+      return FALSE;
+    }
+  port_str = g_hash_table_lookup ((GHashTable *) params, "port");
+  if (port_str == NULL)
+    {
+      DEBUG ("can't find connection port");
+      return FALSE;
+    }
+
+  memset (&addr, 0, sizeof (addr));
+  /* XXX that won't work with IPV6 for sure */
+  if (inet_pton (AF_INET, address, &addr) <= 0)
+    {
+      DEBUG ("can't convert address %s", address);
+      return FALSE;
+    }
+
+  host = g_strdup_printf ("%s._salut-room._udp.local", priv->muc_name);
+
+  if (!salut_avahi_entry_group_add_record (priv->muc_group, 0, host,
+        AVAHI_DNS_TYPE_A, AVAHI_DEFAULT_TTL_HOST_NAME,
+        (const void *) &(addr.s_addr), sizeof (addr.s_addr), &error))
+    {
+      DEBUG ("add record failed: %s", error->message);
+      g_free (host);
+      return FALSE;
+    }
+
+  port = atoi (port_str);
+
+  txt_record = avahi_string_list_new ("txtvers=1", NULL);
+
+  priv->service = salut_avahi_entry_group_add_service_full_strlist (
+      priv->muc_group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, priv->muc_name,
+      "_salut-room._udp", NULL, host, port, &error, txt_record);
+  if (priv->service == NULL)
+    {
+      DEBUG ("add service failed: %s", error->message);
+      avahi_string_list_free (txt_record);
+      g_free (host);
+      g_error_free (error);
+      return FALSE;
+    }
+
+  if (!salut_avahi_entry_group_commit (priv->muc_group, &error))
+    {
+      DEBUG ("entry group commit failed: %s", error->message);
+      avahi_string_list_free (txt_record);
+      g_free (host);
+      g_error_free (error);
+      return FALSE;
+    }
+
+  DEBUG ("service created");
+  avahi_string_list_free (txt_record);
+  g_free (host);
+  return TRUE;
+}
+
 static gboolean 
 muc_channel_add_member(GObject *iface, TpHandle handle, 
                        const gchar *message, GError **error) {
@@ -338,6 +430,7 @@ muc_channel_add_member(GObject *iface, TpHandle handle,
     }
     tp_intset_destroy(empty);
     tp_intset_destroy(add);
+    muc_channel_publish_service (self);
     return ret;
   }
 
