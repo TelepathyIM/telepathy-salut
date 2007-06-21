@@ -278,19 +278,6 @@ gibber_iq_helper_new (GibberXmppConnection *xmpp_connection)
       NULL);
 }
 
-static gchar *
-generate_id (void)
-{
-  static guint last_id = 0;
-  GTimeVal tv;
-  glong val;
-
-  g_get_current_time (&tv);
-  val = (tv.tv_sec & tv.tv_usec) + last_id++;
-
-  return g_strdup_printf ("%ld%ld", val, tv.tv_usec);
-}
-
 static void
 reply_handler_object_destroy_notify_cb (gpointer _data,
                                         GObject *object)
@@ -336,7 +323,7 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
   tmp = gibber_xmpp_node_get_attribute (iq->node, "id");
   if (tmp == NULL)
     {
-      id = generate_id ();
+      id = gibber_xmpp_connection_new_id (priv->xmpp_connection);
       gibber_xmpp_node_set_attribute (iq->node, "id", id);
     }
   else
