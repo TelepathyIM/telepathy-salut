@@ -6,14 +6,12 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 TESTS = \
 	test-stanza-build \
-	test-r-multicast-sender  \
 	run-xmpp-connection-test.sh
 
 check_PROGRAMS = \
 	test-xmpp-connection    \
 	test-r-multicast-transport-io \
-	test-stanza-build \
-	test-r-multicast-sender
+	test-stanza-build
 
 check_SCRIPTS = run-xmpp-connection-test.sh
 
@@ -30,16 +28,6 @@ test_xmpp_connection_LDADD = \
     $(AM_LDFLAGS)
 
 test_xmpp_connection_CFLAGS = \
-    $(AM_CFLAGS)
-
-test_r_multicast_sender_SOURCES = \
-    test-r-multicast-sender.c
-
-test_r_multicast_sender_LDADD = \
-    $(top_builddir)/lib/gibber/libgibber.la \
-    $(AM_LDFLAGS)
-
-test_r_multicast_sender_CFLAGS = \
     $(AM_CFLAGS)
 
 test_r_multicast_transport_io_SOURCES = \
