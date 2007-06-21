@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "salut-muc-manager.h"
 #include "salut-muc-manager-signals-marshal.h"
@@ -29,6 +30,7 @@
 
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
+#include "salut-avahi-service-browser.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -64,7 +66,9 @@ struct _SalutMucManagerPrivate
   SalutConnection *connection;
   SalutImManager *im_manager;
   SalutAvahiClient *client;
+  SalutAvahiServiceBrowser *browser;
   GHashTable *channels;
+  GHashTable *room_info;
 };
 
 #define SALUT_MUC_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate))
@@ -76,10 +80,14 @@ salut_muc_manager_init (SalutMucManager *obj)
   priv->im_manager = NULL;
   priv->connection = NULL;
   priv->client = NULL;
+  priv->browser = salut_avahi_service_browser_new ("_salut-room._udp");
 
   /* allocate any data required by the object here */
   priv->channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                          NULL, g_object_unref);
+
+  priv->room_info = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, g_object_unref);
 }
 
 static void salut_muc_manager_dispose (GObject *object);
@@ -118,6 +126,14 @@ salut_muc_manager_dispose (GObject *object)
     priv->channels = NULL;
     g_hash_table_destroy(t);
   }
+
+  if (priv->room_info)
+    {
+      g_hash_table_destroy (priv->room_info);
+      priv->room_info = NULL;
+    }
+
+  g_object_unref (priv->browser);
 
   /* release any references held by the object here */
 
@@ -262,6 +278,32 @@ salut_muc_manager_new_channel(SalutMucManager *mgr, TpHandle handle,
   return chan;
 }
 
+static gchar *
+_avahi_address_to_string_address (AvahiAddress *address)
+{
+  gchar *str = NULL;
+
+  switch (address->proto)
+    {
+      case AVAHI_PROTO_INET:
+        {
+          str = g_new0 (gchar, INET_ADDRSTRLEN);
+          inet_ntop (AF_INET, &(address->data.ipv4.address), str,
+              INET_ADDRSTRLEN);
+          break;
+        }
+      case AVAHI_PROTO_INET6:
+        {
+          /* XXX TODO */
+          break;
+        }
+      default:
+        g_assert_not_reached ();
+    }
+
+  return str;
+}
+
 static TpChannelFactoryRequestStatus
 salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
                                              const gchar *chan_type, 
@@ -277,6 +319,7 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   SalutMucChannel *chan;
   TpChannelFactoryRequestStatus status;
+  gchar *address = NULL, *port = NULL;
 
   DEBUG("Muc request");
 
@@ -301,12 +344,49 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
     *ret = TP_CHANNEL_IFACE(chan);
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
   } else {
-    GibberMucConnection *connection = _get_connection(mgr,
-                                          NULL, NULL, NULL);
+    GibberMucConnection *connection;
+    const gchar *room_name;
+    GHashTable *params = NULL;
+    SalutAvahiServiceResolver *resolver;
+
+    room_name = tp_handle_inspect (room_repo, handle);
+    resolver = g_hash_table_lookup (priv->room_info, room_name);
+    if (resolver != NULL)
+      {
+        /* This muc already exists on the network so we reuse its
+         * address */
+        AvahiAddress avahi_address;
+        uint16_t p;
+
+        if (!salut_avahi_service_resolver_get_address (resolver,
+              &avahi_address, &p))
+          {
+            DEBUG ("get address failed");
+          }
+        else
+          {
+            address = _avahi_address_to_string_address (&avahi_address);
+            port = g_strdup_printf ("%u", p);
+
+            params = g_hash_table_new (g_str_hash, g_str_equal);
+            g_hash_table_insert (params, "address", address);
+            g_hash_table_insert (params, "port", port);
+            DEBUG ("found %s:%s for room %s", address, port, room_name);
+          }
+      }
+    else
+      {
+        DEBUG ("didn't find address for room %s. Let's generate one",
+            room_name);
+      }
+
+    connection = _get_connection (mgr, NULL, params, NULL);
     status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-    if (connection == NULL) {
-      return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-    }
+    if (connection == NULL)
+      {
+        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+        goto out;
+      }
 
     /* We requested the channel, so invite ourselves to it */
     {
@@ -334,6 +414,11 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
   g_assert(chan != NULL);
 
 out:
+  if (address != NULL)
+    g_free (address);
+  if (port != NULL)
+    g_free (port);
+
   return status;
 }
 
@@ -498,6 +583,67 @@ salut_muc_manager_new(SalutConnection *connection,
   return ret;
 }
 
+static void
+browser_found (SalutAvahiServiceBrowser *browser,
+               AvahiIfIndex interface,
+               AvahiProtocol protocol,
+               const char *name,
+               const char *type,
+               const char *domain,
+               SalutAvahiLookupResultFlags flags,
+               gpointer userdata)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  SalutAvahiServiceResolver *resolver;
+  GError *error = NULL;
+
+  resolver = g_hash_table_lookup (priv->room_info, name);
+  if (resolver != NULL)
+    return;
+
+  DEBUG ("found room: %s.%s.%s", name, type, domain);
+  resolver = salut_avahi_service_resolver_new (interface, protocol,
+      name, type, domain, protocol, 0);
+
+  if (!salut_avahi_service_resolver_attach (resolver, priv->client,
+        &error))
+    {
+      DEBUG ("resolver attach failed: %s", error->message);
+      g_object_unref (resolver);
+      g_error_free (error);
+      return;
+    }
+
+  g_hash_table_insert (priv->room_info, g_strdup (name), resolver);
+}
+
+static void
+browser_removed (SalutAvahiServiceBrowser *browser,
+                 AvahiIfIndex interface,
+                 AvahiProtocol protocol,
+                 const char *name,
+                 const char *type,
+                 const char *domain,
+                 SalutAvahiLookupResultFlags flags,
+                 gpointer userdata)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  DEBUG ("remove room: %s.%s.%s", name, type, domain);
+  g_hash_table_remove (priv->room_info, name);
+}
+
+static void
+browser_failed (SalutAvahiServiceBrowser *browser,
+                GError *error,
+                gpointer userdata)
+{
+  /* FIXME proper error handling */
+  DEBUG ("browser failed -> %s", error->message);
+}
+
 gboolean
 salut_muc_manager_start (SalutMucManager *self,
                          SalutAvahiClient *client,
@@ -505,10 +651,25 @@ salut_muc_manager_start (SalutMucManager *self,
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
 
-  g_assert (priv->client == NULL);
+  if (priv->client != NULL)
+    g_object_unref (priv->client);
 
   priv->client = client;
   g_object_ref (priv->client);
+
+  g_signal_connect (priv->browser, "new-service",
+                   G_CALLBACK (browser_found), self);
+  g_signal_connect (priv->browser, "removed-service",
+                   G_CALLBACK (browser_removed), self);
+  g_signal_connect (priv->browser, "failure",
+                   G_CALLBACK (browser_failed), self);
+
+  if (!salut_avahi_service_browser_attach (priv->browser, priv->client,
+        error))
+    {
+      DEBUG ("browser attach failed");
+      return FALSE;
+   }
 
   return TRUE;
 }
