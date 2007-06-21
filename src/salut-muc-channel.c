@@ -321,20 +321,19 @@ muc_channel_publish_service (SalutMucChannel *self)
   GError *error = NULL;
   const GHashTable *params;
   const gchar *address, *port_str;
-  gchar *host;
+  gchar *host = NULL;
   guint16 port;
   struct in_addr addr;
 
-  g_assert (priv->service == NULL);
   g_assert (priv->muc_group == NULL);
+  g_assert (priv->service == NULL);
 
-  priv->muc_group = salut_avahi_entry_group_new (); // should be shared ?
+  priv->muc_group = salut_avahi_entry_group_new ();
 
   if (!salut_avahi_entry_group_attach (priv->muc_group, priv->client, &error))
     {
       DEBUG ("entry group attach failed: %s", error->message);
-      g_error_free (error);
-      return FALSE;
+      goto publish_service_error;
     }
 
   params = gibber_muc_connection_get_parameters (priv->muc_connection);
@@ -342,13 +341,13 @@ muc_channel_publish_service (SalutMucChannel *self)
   if (address == NULL)
     {
       DEBUG ("can't find connection address");
-      return FALSE;
+      goto publish_service_error;
     }
   port_str = g_hash_table_lookup ((GHashTable *) params, "port");
   if (port_str == NULL)
     {
       DEBUG ("can't find connection port");
-      return FALSE;
+      goto publish_service_error;
     }
 
   memset (&addr, 0, sizeof (addr));
@@ -356,7 +355,7 @@ muc_channel_publish_service (SalutMucChannel *self)
   if (inet_pton (AF_INET, address, &addr) <= 0)
     {
       DEBUG ("can't convert address %s", address);
-      return FALSE;
+      goto publish_service_error;
     }
 
   host = g_strdup_printf ("%s._salut-room._udp.local", priv->muc_name);
@@ -366,8 +365,7 @@ muc_channel_publish_service (SalutMucChannel *self)
         (const void *) &(addr.s_addr), sizeof (addr.s_addr), &error))
     {
       DEBUG ("add record failed: %s", error->message);
-      g_free (host);
-      return FALSE;
+      goto publish_service_error;
     }
 
   port = atoi (port_str);
@@ -380,25 +378,38 @@ muc_channel_publish_service (SalutMucChannel *self)
   if (priv->service == NULL)
     {
       DEBUG ("add service failed: %s", error->message);
-      avahi_string_list_free (txt_record);
-      g_free (host);
-      g_error_free (error);
-      return FALSE;
+      goto publish_service_error;
     }
 
   if (!salut_avahi_entry_group_commit (priv->muc_group, &error))
     {
       DEBUG ("entry group commit failed: %s", error->message);
-      avahi_string_list_free (txt_record);
-      g_free (host);
-      g_error_free (error);
-      return FALSE;
+      goto publish_service_error;
     }
 
   DEBUG ("service created");
   avahi_string_list_free (txt_record);
   g_free (host);
   return TRUE;
+
+publish_service_error:
+  if (priv->muc_group != NULL)
+    {
+      g_object_unref (priv->muc_group);
+      priv->muc_group = NULL;
+    }
+
+  priv->service = NULL;
+
+  if (txt_record != NULL)
+    avahi_string_list_free (txt_record);
+
+  if (host != NULL)
+    g_free (host);
+
+  if (error != NULL)
+    g_error_free (error);
+  return FALSE;
 }
 
 static gboolean 
