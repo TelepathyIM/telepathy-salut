@@ -86,7 +86,7 @@ gibber_iq_helper_init (GibberIqHelper *self)
 
   self->priv = priv;
 
-  priv->id_handlers = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+  priv->id_handlers = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
       (GDestroyNotify) free_reply_handler_data);
 
   priv->dispose_has_run = FALSE;
@@ -330,7 +330,7 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
   data->sent_stanza = g_object_ref (iq);
   data->user_data = user_data;
   data->object = object;
-  data->id = g_strdup (id);
+  data->id = id;
   data->self = self;
 
   if (object != NULL)
