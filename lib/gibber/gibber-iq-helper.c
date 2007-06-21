@@ -322,7 +322,7 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
                                   GError **error)
 {
   GibberIqHelperPrivate *priv;
-  const gchar *_id;
+  const gchar *tmp;
   gchar *id;
   ReplyHandlerData *data;
 
@@ -333,15 +333,15 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
 
   priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);
 
-  _id = gibber_xmpp_node_get_attribute (iq->node, "id");
-  if (_id == NULL)
+  tmp = gibber_xmpp_node_get_attribute (iq->node, "id");
+  if (tmp == NULL)
     {
       id = generate_id ();
       gibber_xmpp_node_set_attribute (iq->node, "id", id);
     }
   else
     {
-      id = g_strdup (_id);
+      id = g_strdup (tmp);
     }
 
   if (!gibber_xmpp_connection_send (priv->xmpp_connection, iq, error))
