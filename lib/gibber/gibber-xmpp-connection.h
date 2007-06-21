@@ -80,6 +80,9 @@ gboolean gibber_xmpp_connection_send(GibberXmppConnection *connection,
                                     GibberXmppStanza *stanza, 
                                     GError **error);
 
+gchar *
+gibber_xmpp_connection_new_id (GibberXmppConnection *connection);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_XMPP_CONNECTION_H__*/
