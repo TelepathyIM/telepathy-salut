@@ -3,8 +3,10 @@
 
 #include <gibber/gibber-r-multicast-packet.h>
 
+#include <check.h>
+
 #define COMPARE(x) G_STMT_START { \
-  g_assert(a->x == b->x); \
+  fail_unless(a->x == b->x); \
 } G_STMT_END
 
 typedef struct {
@@ -18,9 +20,10 @@ typedef struct {
   gint32 result;
 } diff_testcase;
 
-gboolean
-test_r_multicast_packet_diff(void) {
-  diff_testcase cases[] =
+#define NUMBER_OF_DIFF_TESTS 15
+
+START_TEST (test_r_multicast_packet_diff) {
+  diff_testcase cases[NUMBER_OF_DIFF_TESTS] =
     { {                 0,                 0,            0 },
       {                10,                10,            0 },
       {                 5,                10,            5 },
@@ -38,23 +41,13 @@ test_r_multicast_packet_diff(void) {
       {                 5,   G_MAXUINT32 - 5,          -11 },
 
     };
-  int i;
-  gboolean ret = TRUE;
 
-  for (i = 0; i < sizeof(cases)/sizeof(diff_testcase); i++) {
-    diff_testcase *c = cases + i;
-    gint32 result = gibber_r_multicast_packet_diff(c->a, c->b);
-    if (c->result != result) {
-      fprintf(stderr, "Case %d failed: %u %u = %d instead of %d\n",
-              i + 1, c->a, c->b, result, c->result);
-      ret = FALSE;
-    }
-  }
-  return ret;
-}
+  diff_testcase *c = cases + _i;
+  gint32 result = gibber_r_multicast_packet_diff(c->a, c->b);
+  fail_unless (c->result == result);
+} END_TEST
 
-int
-main(int argc, char **argv) {
+START_TEST (test_packet) {
   GibberRMulticastPacket *a;
   GibberRMulticastPacket *b;
   gchar *sender = "testsender";
@@ -66,19 +59,17 @@ main(int argc, char **argv) {
   gsize plen;
   GList *l;
   int i;
-  recv_t receivers[] =  
+  recv_t receivers[] =
     { { "receiver1", 500 }, { "receiver2", 600 }, { NULL, 0 } };
   gchar *payload = "1234567890";
 
   g_type_init();
 
-  g_assert(test_r_multicast_packet_diff());
-
   a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id, 1500);
   gibber_r_multicast_packet_set_part(a, part, total);
 
   for (i = 0 ; receivers[i].name != NULL; i++) {
-    gibber_r_multicast_packet_add_receiver(a, 
+    gibber_r_multicast_packet_add_receiver(a,
         receivers[i].name, receivers[i].packet_id, NULL);
   }
   gibber_r_multicast_packet_add_payload(a, (guint8 *)payload, strlen(payload));
@@ -93,22 +84,29 @@ main(int argc, char **argv) {
   COMPARE(packet_total);
   COMPARE(packet_id);
 
-  g_assert(strcmp(a->sender, b->sender) == 0);
+  fail_unless(strcmp(a->sender, b->sender) == 0);
 
   l = b->receivers;
   for (i = 0;
        receivers[i].name != NULL && l != NULL; i++, l = g_list_next(l)) {
     GibberRMulticastReceiver *r = (GibberRMulticastReceiver *)l->data;
 
-    g_assert(receivers[i].packet_id == r->packet_id);
-    g_assert(strcmp(receivers[i].name, r->name) == 0);
+    fail_unless(receivers[i].packet_id == r->packet_id);
+    fail_unless(strcmp(receivers[i].name, r->name) == 0);
   }
-  g_assert(receivers[i].name == NULL && l == NULL);
+  fail_unless(receivers[i].name == NULL && l == NULL);
 
   pdata = gibber_r_multicast_packet_get_payload(b, &plen);
-  g_assert(plen == strlen(payload));
+  fail_unless(plen == strlen(payload));
 
-  g_assert(memcmp(payload, pdata, plen) == 0);
+  fail_unless(memcmp(payload, pdata, plen) == 0);
+} END_TEST
 
-  return 0;
+TCase *
+make_gibber_r_multicast_packet_tcase (void)
+{
+    TCase *tc = tcase_create ("RMulticast Packet");
+    tcase_add_test (tc, test_packet);
+    tcase_add_loop_test (tc, test_r_multicast_packet_diff, 0, NUMBER_OF_DIFF_TESTS);
+    return tc;
 }
