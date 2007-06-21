@@ -427,6 +427,7 @@ salut_avahi_entry_group_add_service_full_strlist(SalutAvahiEntryGroup *group,
   service->group               = group;
   service->frozen             = FALSE;
   service->entries            = _string_list_to_hash(txt); 
+  g_hash_table_insert (priv->services, group, service);
 out:
   return (SalutAvahiEntryGroupService *)service;
 }
