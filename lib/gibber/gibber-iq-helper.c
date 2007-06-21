@@ -57,14 +57,9 @@ typedef struct
 {
   GibberIqHelper *self;
   gchar *id;
-  GObject *object;
-} ObjectDestroyNotifyData;
-
-typedef struct
-{
   GibberIqHelperStanzaReplyFunc reply_func;
   GibberXmppStanza *sent_stanza;
-  ObjectDestroyNotifyData *destroy_notify_data;
+  GObject *object;
   gpointer user_data;
 } ReplyHandlerData;
 
@@ -72,15 +67,12 @@ static void
 free_reply_handler_data (ReplyHandlerData *data)
 {
   g_object_unref (data->sent_stanza);
+  g_free (data->id);
 
-  if (data->destroy_notify_data != NULL)
+  if (data->object != NULL)
     {
-      if (data->destroy_notify_data->object != NULL)
-        g_object_weak_unref (data->destroy_notify_data->object,
-            reply_handler_object_destroy_notify_cb, data->destroy_notify_data);
-
-      g_free (data->destroy_notify_data->id);
-      g_slice_free (ObjectDestroyNotifyData, data->destroy_notify_data);
+      g_object_weak_unref (data->object,
+          reply_handler_object_destroy_notify_cb, data);
     }
 
   g_slice_free (ReplyHandlerData, data);
@@ -108,15 +100,14 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
   GibberIqHelper *self = GIBBER_IQ_HELPER (user_data);
   GibberIqHelperPrivate *priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);
   const gchar *id;
-  ReplyHandlerData *handler_data;
-  GObject *object = NULL;
+  ReplyHandlerData *data;
 
   id = gibber_xmpp_node_get_attribute (stanza->node, "id");
   if (id == NULL)
     return;
 
-  handler_data = g_hash_table_lookup (priv->id_handlers, id);
-  if (handler_data == NULL)
+  data = g_hash_table_lookup (priv->id_handlers, id);
+  if (data == NULL)
     return;
 
   /* Reply have to be an iq stanza */
@@ -130,11 +121,8 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
       != 0)
     return;
 
-  if (handler_data->destroy_notify_data != NULL)
-    object = handler_data->destroy_notify_data->object;
-
-  handler_data->reply_func (self, handler_data->sent_stanza,
-      stanza, object, handler_data->user_data);
+  data->reply_func (self, data->sent_stanza,
+      stanza, data->object, data->user_data);
 
   g_hash_table_remove (priv->id_handlers, id);
 }
@@ -284,7 +272,7 @@ reply_handler_object_destroy_notify_cb (gpointer _data,
 {
   /* The object was destroyed so we don't care about the
    * reply anymore */
-  ObjectDestroyNotifyData *data = _data;
+  ReplyHandlerData *data = _data;
   GibberIqHelperPrivate *priv = GIBBER_IQ_HELPER_GET_PRIVATE (data->self);
 
   data->object = NULL;
@@ -341,20 +329,14 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
   data->reply_func = reply_func;
   data->sent_stanza = g_object_ref (iq);
   data->user_data = user_data;
+  data->object = object;
+  data->id = g_strdup (id);
+  data->self = self;
 
   if (object != NULL)
     {
-      data->destroy_notify_data = g_slice_new (ObjectDestroyNotifyData);
-      data->destroy_notify_data->object = object;
-      data->destroy_notify_data->id = g_strdup (id);
-      data->destroy_notify_data->self = self;
-
       g_object_weak_ref (object, reply_handler_object_destroy_notify_cb,
-          data->destroy_notify_data);
-    }
-  else
-    {
-      data->destroy_notify_data = NULL;
+          data);
     }
 
   /* XXX set a timout if we don't receive the reply ? */
