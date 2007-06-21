@@ -32,8 +32,6 @@
 
 #include "test-transport.h"
 
-GibberXmppConnection *xmpp_connection = NULL;
-GibberIqHelper *iq_helper = NULL;
 gboolean received_reply = FALSE;
 
 static gboolean
@@ -47,16 +45,36 @@ send_hook (GibberTransport *transport,
   return TRUE;
 }
 
-START_TEST (test_iq_helper_new)
+static GibberXmppConnection *
+create_xmpp_connection (void)
 {
+  GibberXmppConnection *xmpp_connection;
   TestTransport *transport;
 
   transport = test_transport_new (send_hook, NULL);
   xmpp_connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
-  iq_helper = gibber_iq_helper_new (xmpp_connection);
   gibber_xmpp_connection_open (xmpp_connection, "to", "from", "1.0");
 
+  return xmpp_connection;
+}
+
+static GibberIqHelper *
+create_iq_helper (GibberXmppConnection *xmpp_connection)
+{
+  GibberIqHelper *iq_helper = NULL;
+
+  iq_helper = gibber_iq_helper_new (xmpp_connection);
+
+  return iq_helper;
+}
+
+START_TEST (test_iq_helper_new)
+{
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   fail_unless (iq_helper != NULL);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
@@ -71,7 +89,9 @@ reply_func (GibberIqHelper *helper,
 }
 
 static void
-send_stanza_and_reply (GibberXmppStanza *stanza,
+send_stanza_and_reply (GibberXmppConnection *xmpp_connection,
+                       GibberIqHelper *iq_helper,
+                       GibberXmppStanza *stanza,
                        GibberXmppStanza *reply)
 {
   gboolean result;
@@ -96,6 +116,8 @@ send_stanza_and_reply (GibberXmppStanza *stanza,
 
 START_TEST (test_send_with_reply)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
 
   received_reply = FALSE;
@@ -113,16 +135,20 @@ START_TEST (test_send_with_reply)
       GIBBER_NODE_ATTRIBUTE, "id", "69",
       GIBBER_STANZA_END);
 
-  send_stanza_and_reply (stanza, reply);
+  send_stanza_and_reply (xmpp_connection, iq_helper, stanza, reply);
   fail_unless (received_reply);
 
   g_object_unref (stanza);
   g_object_unref (reply);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
 START_TEST (test_send_without_reply)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza;
 
   received_reply = FALSE;
@@ -133,15 +159,19 @@ START_TEST (test_send_without_reply)
       GIBBER_NODE_ATTRIBUTE, "id", "69",
       GIBBER_STANZA_END);
 
-  send_stanza_and_reply (stanza, NULL);
+  send_stanza_and_reply (xmpp_connection, iq_helper, stanza, NULL);
   fail_unless (!received_reply);
 
   g_object_unref (stanza);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
 START_TEST (test_send_with_bad_reply_type)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
 
   received_reply = FALSE;
@@ -159,16 +189,20 @@ START_TEST (test_send_with_bad_reply_type)
       GIBBER_NODE_ATTRIBUTE, "id", "69",
       GIBBER_STANZA_END);
 
-  send_stanza_and_reply (stanza, reply);
+  send_stanza_and_reply (xmpp_connection, iq_helper, stanza, reply);
   fail_unless (!received_reply);
 
   g_object_unref (stanza);
   g_object_unref (reply);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
 START_TEST (test_send_without_id)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
   gboolean result;
   const gchar *id;
@@ -181,7 +215,7 @@ START_TEST (test_send_without_id)
       GIBBER_STANZA_END);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
-          NULL, NULL, NULL);
+      NULL, NULL, NULL);
   fail_unless (result);
 
   /* gibber_iq_helper_send_with_reply generated an id */
@@ -203,11 +237,15 @@ START_TEST (test_send_without_id)
 
   g_object_unref (stanza);
   g_object_unref (reply);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
 START_TEST (test_new_result_reply)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
   gboolean result;
 
@@ -219,7 +257,7 @@ START_TEST (test_new_result_reply)
       GIBBER_STANZA_END);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
-          NULL, NULL, NULL);
+      NULL, NULL, NULL);
   fail_unless (result);
 
   reply = gibber_iq_helper_new_result_reply (stanza);
@@ -237,11 +275,15 @@ START_TEST (test_new_result_reply)
 
   g_object_unref (stanza);
   g_object_unref (reply);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
 START_TEST (test_new_error_reply)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
   gboolean result;
 
@@ -253,7 +295,7 @@ START_TEST (test_new_error_reply)
       GIBBER_STANZA_END);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
-          NULL, NULL, NULL);
+      NULL, NULL, NULL);
   fail_unless (result);
 
   reply = gibber_iq_helper_new_error_reply (stanza);
@@ -271,11 +313,15 @@ START_TEST (test_new_error_reply)
 
   g_object_unref (stanza);
   g_object_unref (reply);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
 START_TEST (test_send_with_object_living)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
   gboolean result;
   GObject *object;
@@ -291,7 +337,7 @@ START_TEST (test_send_with_object_living)
       GIBBER_STANZA_END);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
-          object, NULL, NULL);
+      object, NULL, NULL);
   fail_unless (result);
 
   reply = gibber_iq_helper_new_result_reply (stanza);
@@ -307,11 +353,15 @@ START_TEST (test_send_with_object_living)
   g_object_unref (stanza);
   g_object_unref (reply);
   g_object_unref (object);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
 START_TEST (test_send_with_object_destroyed)
 {
+  GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
+  GibberIqHelper *iq_helper = create_iq_helper (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
   gboolean result;
   GObject *object;
@@ -327,7 +377,7 @@ START_TEST (test_send_with_object_destroyed)
       GIBBER_STANZA_END);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
-          object, NULL, NULL);
+      object, NULL, NULL);
   fail_unless (result);
 
   g_object_unref (object);
@@ -346,6 +396,8 @@ START_TEST (test_send_with_object_destroyed)
 
   g_object_unref (stanza);
   g_object_unref (reply);
+  g_object_unref (xmpp_connection);
+  g_object_unref (iq_helper);
 }
 END_TEST
 
