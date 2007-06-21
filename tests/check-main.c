@@ -9,6 +9,8 @@
 #include "check-salut.h"
 #include "check-helpers.h"
 
+#include "config.h"
+
 Suite *
 make_gibber_suite (void)
 {

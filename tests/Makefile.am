@@ -78,28 +78,6 @@ test_stanza_build_LDADD = \
 test_stanza_build_CFLAGS = \
     $(AM_CFLAGS)
 
-if HAVE_LIBSASL2
-check_PROGRAMS += test-sasl-auth
-TESTS +=  test-sasl-auth
-
-test_sasl_auth_SOURCES = \
-    test-sasl-auth.c           \
-    test-sasl-auth-server.c    \
-    test-sasl-auth-server.h    \
-    test-transport.c           \
-    test-transport.h
-
-test_sasl_auth_LDADD = \
-    $(top_builddir)/lib/gibber/libgibber.la \
-    @LIBSASL2_LIBS@ \
-    $(AM_LDFLAGS)
-
-test_sasl_auth_CFLAGS = \
-    @LIBSASL2_CFLAGS@     \
-    $(AM_CFLAGS)
-
-endif
-
 if HAVE_CHECK
 check_PROGRAMS += check-main
 TESTS += check-main
@@ -119,6 +97,16 @@ check_main_LDADD = \
 check_main_CFLAGS = \
     @CHECK_CFLAGS@ \
     $(AM_CFLAGS)
+
+if HAVE_LIBSASL2
+  check_main_SOURCES += \
+      check-gibber-sasl-auth.c   \
+      test-sasl-auth-server.c    \
+      test-sasl-auth-server.h
+
+  check_main_LDADD += @LIBSASL2_LIBS@
+  check_main_CFLAGS += @LIBSASL2_CFLAGS@
+endif
 
 endif
 
