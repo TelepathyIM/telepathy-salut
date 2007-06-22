@@ -37,11 +37,12 @@ generate_packet(guint32 serial) {
   recv_t receivers[] =
     { { "receiver1", 500 }, { "receiver2", 600 }, { NULL, 0 } };
 
-  p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, serial, 0, 1500);
   if (serial % 3 > 0) {
     part = serial % 3 - 1;
     total = 2;
   }
+  p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, serial,
+      (serial % G_MAXUINT8) - part, 1500);
 
   gibber_r_multicast_packet_set_part(p, part, total);
 
@@ -69,9 +70,10 @@ data_received_cb(GibberRMulticastSender *sender,
 
   lines = g_strsplit(str, "\n", 0);
   for (i = 0 ; lines[i] != NULL && *lines[i] != '\0'; i++) {
-    int v = atoi(lines[i]);
+    guint32 v = atoi(lines[i]);
 
     fail_unless (v == expected);
+    fail_unless ((v % G_MAXUINT8) - i == stream_id);
     expected++;
   }
   /* serial % 3 is send out in a single packet the other two together.
