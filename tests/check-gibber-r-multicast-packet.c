@@ -53,6 +53,7 @@ START_TEST (test_packet) {
   gchar *sender = "testsender";
   guint32 packet_id = 1200;
   guint8 part = 2, total = 3;
+  guint8 stream_id = 56;
   guint8 *data;
   gsize len;
   guint8 *pdata;
@@ -65,8 +66,8 @@ START_TEST (test_packet) {
 
   g_type_init();
 
-  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id, 0,
-     1500);
+  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id,
+       stream_id, 1500);
   gibber_r_multicast_packet_set_part(a, part, total);
 
   for (i = 0 ; receivers[i].name != NULL; i++) {
@@ -84,6 +85,7 @@ START_TEST (test_packet) {
   COMPARE(packet_part);
   COMPARE(packet_total);
   COMPARE(packet_id);
+  COMPARE(stream_id);
 
   fail_unless(strcmp(a->sender, b->sender) == 0);
 
