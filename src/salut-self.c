@@ -199,6 +199,7 @@ salut_self_finalize (GObject *object)
   /* free any data held directly by the object here */
 
   g_free (self->jid);
+  g_free (self->name);
 
   g_free(priv->first_name);
   g_free(priv->last_name);
