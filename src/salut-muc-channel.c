@@ -451,6 +451,7 @@ salut_muc_channel_finalize (GObject *object)
 
   /* free any data held directly by the object here */
   g_free(priv->object_path);
+  g_free (priv->muc_name);
 
   tp_text_mixin_finalize(object);
   tp_group_mixin_finalize(object);
