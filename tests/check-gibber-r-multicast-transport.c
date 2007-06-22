@@ -148,8 +148,8 @@ START_TEST (test_depends)
       GibberRMulticastPacket *packet;
       guint8 *data;
       gsize size;
-      packet = gibber_r_multicast_packet_new (PACKET_TYPE_DATA, 
-         senders[i].name, senders[i].packet_id,
+      packet = gibber_r_multicast_packet_new (PACKET_TYPE_DATA,
+         senders[i].name, senders[i].packet_id, 0,
          GIBBER_TRANSPORT (testtransport)->max_packet_size);
 
       gibber_r_multicast_packet_set_part (packet, 0, 1);

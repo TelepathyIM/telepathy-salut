@@ -60,6 +60,9 @@ struct _GibberRMulticastPacket {
     /* packet identifier */
     guint32 packet_id;
 
+    /* substream id */
+    guint8 stream_id;
+
     /* sender */
     gchar *sender;
 
@@ -87,6 +90,7 @@ GType gibber_r_multicast_packet_get_type(void);
 GibberRMulticastPacket *
 gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
                               const gchar *sender, guint32 packet_id,
+                              guint8 stream_id,
                               gsize max_size);
 
 gboolean

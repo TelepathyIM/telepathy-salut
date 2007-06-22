@@ -125,7 +125,9 @@ gibber_r_multicast_receiver_free(GibberRMulticastReceiver *receiver) {
 /* Start a new packet */
 GibberRMulticastPacket *
 gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
-                              const gchar *sender, guint32 packet_id,
+                              const gchar *sender,
+                              guint32 packet_id,
+                              guint8 stream_id,
                               gsize max_size) {
   GibberRMulticastPacket *result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET,
                                                 NULL);
@@ -136,6 +138,7 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
   result->type = type;
   result->sender = g_strdup(sender);
   result->packet_id = packet_id;
+  result->stream_id = stream_id;
 
   priv->max_data = max_size;
 
@@ -178,9 +181,9 @@ static gsize
 gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet,
                                          gsize payload_size, gsize max_size) {
   GList *l;
-  gsize result = 10; /* 8 bit type, 8 bit version, 8 bit part, 8 bit total, 
-                       32 bit identifier, 8 bit sender length, 
-                       8 bit nr receivers */
+  gsize result = 11; /* 8 bit type, 8 bit version, 8 bit part, 8 bit total, 
+                       32 bit identifier, 8 bit stream id, 
+                       8 bit sender length, 8 bit nr receivers */
   result += strlen(packet->sender);
   for (l = packet->receivers; l != NULL; l = g_list_next(l)) {
     GibberRMulticastReceiver *r;
@@ -283,6 +286,7 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet,
   add_guint8(priv, packet->packet_part);
   add_guint8(priv, packet->packet_total);
   add_guint32(priv, packet->packet_id);
+  add_guint8(priv, packet->stream_id);
   add_string(priv, packet->sender);
   add_guint8(priv, g_list_length(packet->receivers));
 
@@ -342,6 +346,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   result->packet_part  = get_guint8(priv);
   result->packet_total = get_guint8(priv);
   result->packet_id    = get_guint32(priv);
+  result->stream_id    = get_guint8(priv);
   result->sender       = get_string(priv);
 
 

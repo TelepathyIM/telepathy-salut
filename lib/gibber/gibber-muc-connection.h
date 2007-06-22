@@ -105,6 +105,11 @@ gboolean
 gibber_muc_connection_send(GibberMucConnection *connection,
                           GibberXmppStanza *stanza, GError **error);
 
+gboolean
+gibber_muc_connection_send_raw(GibberMucConnection *connection, 
+                               guint8 stream_id, const guint8 *data, 
+                               gsize size, GError **error);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_MUC_CONNECTION_H__*/

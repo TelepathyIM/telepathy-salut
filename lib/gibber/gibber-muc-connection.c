@@ -60,6 +60,7 @@ G_DEFINE_TYPE(GibberMucConnection, gibber_muc_connection,
 enum
 {
     RECEIVED_STANZA,
+    RECEIVED_DATA,
     PARSE_ERROR,
     DISCONNECTED,
     CONNECTING,
@@ -139,6 +140,15 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  NULL, NULL,
                  gibber_muc_connection_marshal_VOID__STRING_OBJECT,
                  G_TYPE_NONE, 2, G_TYPE_STRING, GIBBER_TYPE_XMPP_STANZA);
+  signals[RECEIVED_DATA] = 
+    g_signal_new("received-data", 
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
+                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                 0,
+                 NULL, NULL,
+                 gibber_muc_connection_marshal_VOID__STRING_UCHAR_POINTER_ULONG,
+                 G_TYPE_NONE, 4, G_TYPE_STRING,
+                 G_TYPE_UCHAR, G_TYPE_POINTER, G_TYPE_ULONG);
   signals[PARSE_ERROR] = 
     g_signal_new("parse-error", 
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
@@ -543,6 +553,12 @@ static void _connection_received_data(GibberTransport *transport,
 
   g_assert(buffer->length > 0);
 
+  if (rmbuffer->stream_id != 0) {
+    g_signal_emit(self, signals[RECEIVED_DATA], 0,
+        rmbuffer->sender, buffer->data, buffer->length);
+    return;
+  }
+
   /* Ensure we're not disposed inside while running the reader is busy */
   g_object_ref(self);
   priv->current_sender = rmbuffer->sender;
@@ -569,7 +585,22 @@ gibber_muc_connection_send(GibberMucConnection *connection,
     return FALSE;
   }
 
-  return gibber_transport_send(GIBBER_TRANSPORT(priv->rmtransport),
-      data, length, error);
+  return gibber_r_multicast_transport_send(priv->rmtransport, 0, data,
+      length, error);
 }
+
+gboolean
+gibber_muc_connection_send_raw(GibberMucConnection *connection,
+                               guint8 stream_id,
+                               const guint8 *data,
+                               gsize size ,
+                               GError **error) {
+  GibberMucConnectionPrivate *priv =
+    GIBBER_MUC_CONNECTION_GET_PRIVATE (connection);
+
+  return gibber_r_multicast_transport_send(priv->rmtransport,
+      stream_id, data, size, error);
+}
+
+
 

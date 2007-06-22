@@ -78,7 +78,7 @@ packet_info_free(gpointer data) {
 
 static PacketInfo *
 packet_info_new(GibberRMulticastSender*sender, guint32 packet_id) {
-  PacketInfo *result; 
+  PacketInfo *result;
   result = g_slice_new0(PacketInfo);
   result->packet_id = packet_id;
   result->sender = sender;
@@ -203,8 +203,9 @@ gibber_r_multicast_sender_new(const gchar *name) {
 }
 
 static void
-signal_data(GibberRMulticastSender *sender, guint8 *data, gsize size) {
-  g_signal_emit(sender, signals[DATA_RECEIVED], 0, data, size);
+signal_data(GibberRMulticastSender *sender, guint8 stream_id,
+            guint8 *data, gsize size) {
+  g_signal_emit(sender, signals[DATA_RECEIVED], 0, stream_id, data, size);
 }
 
 static gboolean
@@ -333,7 +334,7 @@ pop_packet(GibberRMulticastSender *sender) {
   if (num == 1) {
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
     g_assert(size == payload_size);
-    signal_data(sender, data, size);
+    signal_data(sender, p->packet->stream_id, data, size);
   } else {
     data = g_malloc(payload_size);
     gsize off = 0;
@@ -349,7 +350,7 @@ pop_packet(GibberRMulticastSender *sender) {
     }
     g_assert(off == payload_size);
 
-    signal_data(sender, data, payload_size);
+    signal_data(sender, p->packet->stream_id, data, payload_size);
     g_free(data);
   }
 

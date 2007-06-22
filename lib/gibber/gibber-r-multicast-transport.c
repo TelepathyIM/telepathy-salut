@@ -143,9 +143,9 @@ static void gibber_r_multicast_transport_dispose (GObject *object);
 static void gibber_r_multicast_transport_finalize (GObject *object);
 
 static gboolean
-gibber_r_multicast_transport_send(GibberTransport *transport,
-                                  const guint8 *data, gsize size,
-                                  GError **error);
+gibber_r_multicast_transport_do_send(GibberTransport *transport,
+                                     const guint8 *data, gsize size,
+                                     GError **error);
 static void
 gibber_r_multicast_transport_disconnect(GibberTransport *transport);
 
@@ -205,7 +205,7 @@ gibber_r_multicast_transport_class_init (GibberRMulticastTransportClass *gibber_
   g_object_class_install_property(object_class, PROP_NAME,
                                   param_spec);
 
-  transport_class->send = gibber_r_multicast_transport_send;
+  transport_class->send = gibber_r_multicast_transport_do_send;
   transport_class->disconnect = gibber_r_multicast_transport_disconnect;
 }
 
@@ -248,12 +248,14 @@ gibber_r_multicast_transport_finalize (GObject *object)
 }
 
 static void
-data_received_cb(GibberRMulticastSender *sender, guint8 *data,
-                 gsize size, gpointer user_data) {
+data_received_cb(GibberRMulticastSender *sender, guint8 stream_id, 
+                 guint8 *data, gsize size, gpointer user_data) {
   GibberRMulticastBuffer rmbuffer;
   rmbuffer.buffer.data = data;
   rmbuffer.buffer.length = size;
   rmbuffer.sender = sender->name;
+  rmbuffer.stream_id = stream_id;
+
   gibber_transport_received_data_custom(GIBBER_TRANSPORT(user_data), 
                                         (GibberBuffer *)&rmbuffer);
 }
@@ -279,7 +281,7 @@ repair_request_cb(GibberRMulticastSender *sender, guint id,
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet =
     gibber_r_multicast_packet_new(PACKET_TYPE_REPAIR_REQUEST,
-        priv->name, priv->packet_id, priv->transport->max_packet_size);
+        priv->name, priv->packet_id, 0, priv->transport->max_packet_size);
   gboolean r;
 
   r = gibber_r_multicast_packet_add_receiver(packet, sender->name, id, NULL);
@@ -455,7 +457,7 @@ sendout_session_cb(gpointer data) {
 
   GibberRMulticastPacket *packet =
       gibber_r_multicast_packet_new(PACKET_TYPE_SESSION, priv->name,
-                                    priv->packet_id, 
+                                    priv->packet_id, 0,
                                     priv->transport->max_packet_size);
 
   g_hash_table_foreach(priv->senders, add_receiver, packet);
@@ -519,9 +521,12 @@ add_depend(gpointer key, gpointer value, gpointer user_data) {
 }
 
 
-static gboolean
-gibber_r_multicast_transport_send(GibberTransport *transport,
-                                  const guint8 *data, gsize size,
+
+gboolean
+gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
+                                  guint8 stream_id,
+                                  const guint8 *data,
+                                  gsize size,
                                   GError **error) {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (transport);
   GibberRMulticastTransportPrivate *priv =
@@ -530,7 +535,7 @@ gibber_r_multicast_transport_send(GibberTransport *transport,
   gsize payloaded;
 
   packet = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->name,
-      priv->packet_id++, priv->transport->max_packet_size);
+      priv->packet_id++, stream_id, priv->transport->max_packet_size);
 
   /* Add dependency information */
   g_hash_table_foreach(priv->senders, add_depend, packet);
@@ -544,7 +549,7 @@ gibber_r_multicast_transport_send(GibberTransport *transport,
     gboolean ret = TRUE;
     while (payloaded < size) {
       packet = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->name,
-          priv->packet_id++, priv->transport->max_packet_size);
+          priv->packet_id++, stream_id, priv->transport->max_packet_size);
       payloaded += gibber_r_multicast_packet_add_payload(packet,
           data + payloaded, size - payloaded);
       g_ptr_array_add(packets, packet);
@@ -564,6 +569,15 @@ gibber_r_multicast_transport_send(GibberTransport *transport,
      gibber_r_multicast_sender_push(priv->self, packet);
      return sendout_packet(self, packet, error);
   }
+}
+
+static gboolean
+gibber_r_multicast_transport_do_send(GibberTransport *transport,
+                                     const guint8 *data,
+                                     gsize size,
+                                     GError **error) {
+  return gibber_r_multicast_transport_send(
+     GIBBER_R_MULTICAST_TRANSPORT(transport), 0, data, size, error);
 }
 
 static void
