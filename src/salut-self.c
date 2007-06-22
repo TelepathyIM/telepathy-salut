@@ -318,7 +318,7 @@ salut_self_new (SalutAvahiClient *client,
 static int
 self_try_listening_on_port(SalutSelf *self, int port) {
   int fd = -1, ret, yes = 1;
-  struct addrinfo req, *ans;
+  struct addrinfo req, *ans = NULL;
   #define BACKLOG 5
 
   memset(&req, 0, sizeof(req));
@@ -338,7 +338,6 @@ self_try_listening_on_port(SalutSelf *self, int port) {
 
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
     DEBUG( "%s", strerror(errno));
-    freeaddrinfo(ans);
     goto error;
   }
 
@@ -352,12 +351,15 @@ self_try_listening_on_port(SalutSelf *self, int port) {
     DEBUG( "listen: %s", strerror(errno));
     goto error;
   }
-  
+
+  freeaddrinfo (ans);
   return fd;
 error:
   if (fd > 0) {
     close(fd);
   }
+  if (ans != NULL)
+    freeaddrinfo (ans);
   return -1;
 }
 
