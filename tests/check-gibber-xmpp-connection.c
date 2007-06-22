@@ -55,8 +55,6 @@ START_TEST (test_instantiation)
   GibberXmppConnection *connection;
   TestTransport *transport;
 
-  g_type_init();
-
   transport = test_transport_new(NULL, NULL);
   connection = gibber_xmpp_connection_new(GIBBER_TRANSPORT(transport));
 
@@ -80,8 +78,6 @@ START_TEST (test_simple_message) {
   gchar *chunk;
   gsize chunk_length;
   gboolean parse_error_found = FALSE;
-
-  g_type_init ();
 
   FileChunker *fc = file_chunker_new ("inputs/simple-message.input", 10);
   fail_if (fc == NULL);
