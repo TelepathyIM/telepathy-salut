@@ -4,7 +4,7 @@
        to='example.com'
        version='1.0'>
 
- <stream:features>
+ <stream:features id="0">
    <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'>
        <required/>
    </starttls>
@@ -14,5 +14,5 @@
    </mechanisms>
  </stream:features>
 
- <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
+ <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls' id="1"/>
 </stream:stream>

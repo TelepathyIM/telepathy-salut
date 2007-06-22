@@ -4,7 +4,7 @@
 
 <message
     from='crone1@shakespeare.lit/desktop'
-    to='darkcave@macbeth.shakespeare.lit'>
+    to='darkcave@macbeth.shakespeare.lit' id="0">
   <x xmlns='http://jabber.org/protocol/muc#user'>
     <invite to='hecate@shakespeare.lit'>
       <reason>
@@ -16,7 +16,7 @@
     
 <message
     from='darkcave@macbeth.shakespeare.lit'
-    to='hecate@shakespeare.lit'>
+    to='hecate@shakespeare.lit' id="1">
   <body>You have been invited to darkcave@macbeth by crone1@shakespeare.lit.</body>
   <x xmlns='http://jabber.org/protocol/muc#user'>
     <invite from='crone1@shakespeare.lit'>
