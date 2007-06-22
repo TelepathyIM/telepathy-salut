@@ -5,13 +5,11 @@ $(top_builddir)/lib/gibber/libgibber.la:
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
 TESTS = \
-	test-stanza-build \
 	run-xmpp-connection-test.sh
 
 check_PROGRAMS = \
 	test-xmpp-connection    \
-	test-r-multicast-transport-io \
-	test-stanza-build
+	test-r-multicast-transport-io
 
 check_SCRIPTS = run-xmpp-connection-test.sh
 
@@ -43,16 +41,6 @@ test_r_multicast_transport_io_CFLAGS = \
     $(AM_CFLAGS)
 
 
-test_stanza_build_SOURCES = \
-    test-stanza-build.c
-
-test_stanza_build_LDADD = \
-    $(top_builddir)/lib/gibber/libgibber.la \
-    $(AM_LDFLAGS)
-
-test_stanza_build_CFLAGS = \
-    $(AM_CFLAGS)
-
 if HAVE_CHECK
 check_PROGRAMS += check-main
 TESTS += check-main
@@ -71,6 +59,7 @@ check_main_SOURCES =                     \
     check-gibber-xmpp-connection.c       \
     check-gibber-r-multicast-packet.c    \
     check-gibber-r-multicast-sender.c    \
+    check-gibber-stanza-build.c          \
     check-gibber-iq-helper.c
 
 check_main_LDADD = \

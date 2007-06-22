@@ -1,5 +1,5 @@
 /*
- * test-stanza-build.c - Test for gibber_xmpp_stanza_build
+ * check-gibber-stanza-build.c - Test for gibber_xmpp_stanza_build
  * Copyright (C) 2007 Collabora Ltd.
  * @author Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
  *
@@ -28,14 +28,18 @@
 #define DEBUG_FLAG DEBUG_XMPP
 #include <gibber/gibber-debug.h>
 
-static void
-check_html_message (void)
+#include <check.h>
+
+START_TEST (test_html_message)
 {
   GibberXmppStanza *stanza;
   const gchar *body = "Telepathy rocks!",
         *xhtml_ns = "http://www.w3.org/1999/xhtml";
   GibberXmppNode *node;
   const gchar *value;
+
+  g_type_init();
+  gibber_debug_set_flags_from_env ();
 
   stanza = gibber_xmpp_stanza_build (
       GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
@@ -51,38 +55,36 @@ check_html_message (void)
 
   DEBUG_STANZA (stanza, "check");
 
-  g_assert (stanza != NULL);
+  fail_if (stanza == NULL);
   /* <message> */
   node = stanza->node;
-  g_assert (node != NULL);
-  g_assert (strcmp (node->name, "message") == 0);
+  fail_if (node == NULL);
+  fail_unless (strcmp (node->name, "message") == 0);
   value = gibber_xmpp_node_get_attribute (node, "type");
-  g_assert (value == NULL);
+  fail_unless (value == NULL);
   value = gibber_xmpp_node_get_attribute (node, "from");
-  g_assert (strcmp (value, "alice@collabora.co.uk") == 0);
+  fail_unless (strcmp (value, "alice@collabora.co.uk") == 0);
   value = gibber_xmpp_node_get_attribute (node, "to");
-  g_assert (strcmp (value, "bob@collabora.co.uk") == 0);
+  fail_unless (strcmp (value, "bob@collabora.co.uk") == 0);
 
   /* <html> */
   node = gibber_xmpp_node_get_child_ns (node, "html", xhtml_ns);
-  g_assert (node != NULL);
+  fail_if (node == NULL);
 
   /* <body> */
   node = gibber_xmpp_node_get_child (node, "body");
-  g_assert (node != NULL);
+  fail_if (node == NULL);
   value = gibber_xmpp_node_get_attribute (node, "textcolor");
-  g_assert (strcmp (value, "red") == 0);
-  g_assert (strcmp (node->content, body) == 0);
+  fail_unless (strcmp (value, "red") == 0);
+  fail_unless (strcmp (node->content, body) == 0);
 
   g_object_unref (stanza);
-}
+} END_TEST
 
-int main (void)
+TCase *
+make_gibber_stanza_build_tcase (void)
 {
-  g_type_init();
-  gibber_debug_set_flags_from_env ();
-
-  check_html_message ();
-
-  return 0;
+  TCase *tc = tcase_create ("Stanza Build");
+  tcase_add_test (tc, test_html_message);
+  return tc;
 }
