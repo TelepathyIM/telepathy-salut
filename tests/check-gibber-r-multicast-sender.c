@@ -37,7 +37,7 @@ generate_packet(guint32 serial) {
   recv_t receivers[] =
     { { "receiver1", 500 }, { "receiver2", 600 }, { NULL, 0 } };
 
-  p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, serial, 1500);
+  p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, serial, 0, 1500);
   if (serial % 3 > 0) {
     part = serial % 3 - 1;
     total = 2;
@@ -57,8 +57,11 @@ generate_packet(guint32 serial) {
 }
 
 void
-data_received_cb(GibberRMulticastSender *sender, guint8 *data,
-    gsize size, gpointer user_data) {
+data_received_cb(GibberRMulticastSender *sender,
+                 guint8 stream_id,
+                 guint8 *data,
+                 gsize size,
+                 gpointer user_data) {
   gchar *str;
   gchar **lines;
   int i;

@@ -65,7 +65,8 @@ START_TEST (test_packet) {
 
   g_type_init();
 
-  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id, 1500);
+  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id, 0,
+     1500);
   gibber_r_multicast_packet_set_part(a, part, total);
 
   for (i = 0 ; receivers[i].name != NULL; i++) {
