@@ -563,6 +563,7 @@ gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
     for (; i < packets->len; i++) {
       g_object_unref(g_ptr_array_index(packets, i));
     }
+    g_ptr_array_free(packets, TRUE);
     return ret;
   } else {
      gibber_r_multicast_packet_set_part(packet, 0, 1);
