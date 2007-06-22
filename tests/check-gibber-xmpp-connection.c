@@ -16,6 +16,13 @@ struct _FileChunker {
 };
 typedef struct _FileChunker FileChunker;
 
+void
+file_chunker_destroy (FileChunker *fc) {
+  g_free (fc->contents);
+  g_free (fc);
+}
+
+
 FileChunker *
 file_chunker_new (const gchar *filename, gsize chunk_size) {
   FileChunker *fc;
@@ -23,7 +30,7 @@ file_chunker_new (const gchar *filename, gsize chunk_size) {
 
   fc->size = chunk_size;
   if (!g_file_get_contents (filename, &fc->contents, &fc->length, NULL)) {
-    g_free (fc);
+    file_chunker_destroy (fc);
     return NULL;
   }
   return fc;
@@ -90,6 +97,8 @@ START_TEST (test_simple_message) {
   }
 
   fail_if (parse_error_found);
+
+  file_chunker_destroy (fc);
 } END_TEST
 
 TCase *
