@@ -242,6 +242,7 @@ gibber_r_multicast_transport_finalize (GObject *object)
 
   /* free any data held directly by the object here */
   g_free(priv->name);
+  g_hash_table_destroy (priv->senders);
 
   G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->finalize (object);
 }
