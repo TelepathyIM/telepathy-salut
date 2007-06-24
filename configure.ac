@@ -32,6 +32,12 @@ AC_PROG_CC
 AC_PROG_CC_STDC
 AM_PROG_AS
 
+dnl add common command line switches
+#SALUT_ARG_DEBUG
+SALUT_ARG_PROFILING
+SALUT_ARG_VALGRIND
+SALUT_ARG_GCOV
+
 dnl decide error flags
 AS_COMPILER_FLAG(-Wall, ERROR_CFLAGS="-Wall", ERROR_CFLAGS="")
 
