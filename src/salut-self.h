@@ -24,6 +24,8 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/handle-repo.h>
+
 #include "salut-avahi-client.h"
 #include "salut-presence.h"
 
@@ -47,6 +49,8 @@ struct _SalutSelf {
     gchar *jid;
 #ifdef ENABLE_OLPC
     GArray *olpc_key;
+    gchar *olpc_cur_act;
+    TpHandle olpc_cur_act_room;
     gchar *olpc_color;
 #endif
 };
@@ -67,7 +71,8 @@ GType salut_self_get_type(void);
 #define SALUT_SELF_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_SELF, SalutSelfClass))
 
-SalutSelf *salut_self_new (SalutAvahiClient *client, const gchar *nickname,
+SalutSelf *salut_self_new (SalutAvahiClient *client,
+    TpHandleRepoIface *room_repo, const gchar *nickname,
     const gchar *first_name, const gchar *last_name, const gchar *jid,
     const gchar *email, const gchar *published_name,
     const GArray *olpc_key,
@@ -88,8 +93,19 @@ gboolean salut_self_set_alias (SalutSelf *self, const gchar *alias,
 const gchar *salut_self_get_alias (SalutSelf *self);
 
 #ifdef ENABLE_OLPC
-gboolean salut_self_set_olpc_properties(SalutSelf *self,
+gboolean salut_self_set_olpc_properties (SalutSelf *self,
     const GArray *key, const gchar *color, const gchar *jid, GError **error);
+
+gboolean salut_self_set_olpc_activities (SalutSelf *self,
+    GHashTable *act_id_to_room, GError **error);
+
+gboolean salut_self_set_olpc_current_activity (SalutSelf *self,
+    const gchar *id, TpHandle room, GError **error);
+
+/* no "get" accessors are needed for the OLPC props/cur-act because they're
+ * public */
+
+/* FIXME: "get" accessor for activities list */
 #endif
 
 G_END_DECLS

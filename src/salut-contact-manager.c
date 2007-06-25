@@ -246,6 +246,8 @@ browser_found(SalutAvahiServiceBrowser *browser,
               gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
   SalutContact *contact;
 
   if (flags & AVAHI_LOOKUP_RESULT_OUR_OWN) 
@@ -254,7 +256,7 @@ browser_found(SalutAvahiServiceBrowser *browser,
   /* FIXME: For now we assume name is unique on the lan */
   contact = g_hash_table_lookup(priv->contacts, name);
   if (contact == NULL) {
-    contact = salut_contact_new(priv->client, name);
+    contact = salut_contact_new(priv->client, room_repo, name);
     g_hash_table_insert(priv->contacts, g_strdup(contact->name), contact);
     DEBUG("Adding %s to contacts", name);
     g_signal_connect(contact, "found", 

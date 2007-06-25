@@ -74,6 +74,7 @@ struct _SalutContactPrivate
   gboolean found;
   SalutAvahiRecordBrowser *record_browser;
   GList *avatar_requests;
+  TpHandleRepoIface *room_repo;
 };
 
 #define SALUT_CONTACT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT, SalutContactPrivate))
@@ -92,6 +93,8 @@ salut_contact_init (SalutContact *obj)
 #ifdef ENABLE_OLPC
   obj->olpc_key = NULL;
   obj->olpc_color = NULL;
+  obj->olpc_cur_act = NULL;
+  obj->olpc_cur_act_room = 0;
 #endif
   priv->client = NULL;
   priv->resolvers = NULL;
@@ -151,6 +154,15 @@ salut_contact_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+#ifdef ENABLE_OLPC
+  if (self->olpc_cur_act_room != 0)
+    {
+      tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
+      self->olpc_cur_act_room = 0;
+    }
+#endif
+  priv->room_repo = NULL;
+
   salut_contact_avatar_request_flush(self, NULL, 0);
 
   /* release any references held by the object here */
@@ -184,6 +196,7 @@ salut_contact_finalize (GObject *object) {
       g_array_free (self->olpc_key, TRUE);
     }
   g_free (self->olpc_color);
+  g_free (self->olpc_cur_act);
 #endif
 
   G_OBJECT_CLASS (salut_contact_parent_class)->finalize (object);
@@ -240,9 +253,11 @@ find_resolver(SalutContact *contact,
   return ret ? SALUT_AVAHI_SERVICE_RESOLVER(ret->data) : NULL;
 }
 
-
 SalutContact *
-salut_contact_new(SalutAvahiClient *client, const gchar *name) {
+salut_contact_new(SalutAvahiClient *client,
+                  TpHandleRepoIface *room_repo,
+                  const gchar *name)
+{
   SalutContact *ret;
   SalutContactPrivate *priv;
 
@@ -253,6 +268,7 @@ salut_contact_new(SalutAvahiClient *client, const gchar *name) {
 
   g_object_ref(client);
   priv->client = client;
+  priv->room_repo = room_repo;
 
   return ret;
 }
@@ -452,6 +468,91 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
       avahi_free (key);
       avahi_free (value);
   }
+
+  do
+    {
+      AvahiStringList *act_link = avahi_string_list_find (txt,
+          "olpc-current-activity");
+      AvahiStringList *room_link = avahi_string_list_find (txt,
+          "olpc-current-activity-room");
+      char *act_value = NULL;
+      TpHandle room_handle = 0;
+
+      if (act_link != NULL)
+        {
+          char *tmp_key;
+
+          avahi_string_list_get_pair (act_link, &tmp_key, &act_value, NULL);
+          avahi_free (tmp_key);
+          if (!tp_strdiff (act_value, ""))
+            {
+              DEBUG ("No current activity; ignoring current activity room, if "
+                  "any");
+              avahi_free (act_value);
+              act_value = NULL;
+            }
+        }
+
+      if (act_value != NULL && room_link != NULL)
+        {
+          char *tmp_key, *room_value;
+
+          avahi_string_list_get_pair (room_link, &tmp_key, &room_value, NULL);
+          avahi_free (tmp_key);
+          if (!tp_strdiff (room_value, ""))
+            {
+              room_handle = 0;
+            }
+          else
+            {
+              room_handle = tp_handle_ensure (priv->room_repo, room_value,
+                  NULL, NULL);
+            }
+          avahi_free (room_value);
+
+          if (room_handle == 0)
+            {
+              DEBUG ("Invalid room \"%s\" for current activity \"%s\": "
+                  "ignoring", room_value, act_value);
+              avahi_free (act_value);
+              act_value = NULL;
+            }
+        }
+
+      if (act_value == NULL || room_handle == 0)
+        {
+          DEBUG ("Unsetting current activity");
+          if (self->olpc_cur_act != NULL || self->olpc_cur_act_room != 0)
+            {
+              g_free (self->olpc_cur_act);
+              if (self->olpc_cur_act_room != 0)
+                tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
+              self->olpc_cur_act = NULL;
+              self->olpc_cur_act_room = 0;
+              SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
+            }
+        }
+      else
+        {
+          DEBUG ("Current activity %s, room handle %d", act_value,
+              room_handle);
+          if (tp_strdiff (self->olpc_cur_act, act_value) ||
+              self->olpc_cur_act_room != room_handle)
+            {
+              g_free (self->olpc_cur_act);
+              if (self->olpc_cur_act_room != 0)
+                tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
+              self->olpc_cur_act_room = room_handle;
+              self->olpc_cur_act = g_strdup (act_value);
+            }
+          else
+            {
+              tp_handle_unref (priv->room_repo, room_handle);
+            }
+          avahi_free (act_value);
+        }
+    }
+  while (0);
 
   if ((t = avahi_string_list_find (txt, "olpc-key-part0")) != NULL)
     {

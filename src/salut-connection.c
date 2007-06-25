@@ -64,6 +64,10 @@
 
 #ifdef ENABLE_OLPC
 
+#define ACTIVITY_PAIR_TYPE \
+  (dbus_g_type_get_struct ("GValueArray", G_TYPE_STRING, G_TYPE_UINT, \
+      G_TYPE_INVALID))
+
 #include <extensions/extensions.h>
 
 static void
@@ -505,10 +509,13 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
+      (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
 
   g_assert(c == priv->avahi_client);
 
-  priv->self = salut_self_new(priv->avahi_client, 
+  priv->self = salut_self_new(priv->avahi_client,
+                              room_repo,
                               priv->nickname,
                               priv->first_name,
                               priv->last_name,
@@ -1574,6 +1581,185 @@ error:
 }
 
 static void
+salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
+                                            TpHandle handle,
+                                            DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+
+  DEBUG ("called for %u", handle);
+
+  if (handle == base->self_handle)
+    {
+      /* self's current activity is always non-NULL */
+      DEBUG ("Returning my own cur.act.: %s -> %u",
+          priv->self->olpc_cur_act ? priv->self->olpc_cur_act : "",
+          priv->self->olpc_cur_act_room);
+      salut_svc_olpc_buddy_info_return_from_get_current_activity (context,
+          priv->self->olpc_cur_act ? priv->self->olpc_cur_act : "",
+          priv->self->olpc_cur_act_room);
+    }
+  else
+    {
+      SalutContact *contact = salut_contact_manager_get_contact
+        (priv->contact_manager, handle);
+
+      if (contact == NULL)
+        {
+          /* FIXME: should this be InvalidHandle? */
+          GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
+          DEBUG ("Returning error: unknown contact");
+          dbus_g_method_return_error (context, &e);
+          return;
+        }
+
+      DEBUG ("Returning buddy %u cur.act.: %s -> %u", handle,
+          contact->olpc_cur_act ? contact->olpc_cur_act : "",
+          contact->olpc_cur_act_room);
+      salut_svc_olpc_buddy_info_return_from_get_current_activity (context,
+          contact->olpc_cur_act ? contact->olpc_cur_act : "",
+          contact->olpc_cur_act_room);
+    }
+}
+
+static void
+salut_connection_olpc_set_current_activity (SalutSvcOLPCBuddyInfo *iface,
+                                            const gchar *activity_id,
+                                            TpHandle room_handle,
+                                            DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_ROOM);
+  GError *error = NULL;
+
+  DEBUG ("called");
+
+  if (activity_id[0] == '\0')
+    {
+      if (room_handle != 0)
+        {
+          GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "If activity ID is empty, room handle must be 0" };
+
+          dbus_g_method_return_error (context, &e);
+          return;
+        }
+    }
+  else
+    {
+      if (!tp_handle_is_valid (room_repo, room_handle, &error))
+        {
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+          return;
+        }
+    }
+
+  if (!salut_self_set_olpc_current_activity (priv->self, activity_id,
+        room_handle, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  salut_svc_olpc_buddy_info_return_from_set_current_activity (context);
+}
+
+static void
+salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
+                                      guint contact,
+                                      DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+
+  DEBUG ("called");
+
+  if (0)
+    {
+      (void) priv;
+    }
+  else
+    {
+      GError error = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Getting activities not implemented" };
+
+      dbus_g_method_return_error (context, &error);
+    }
+}
+
+static void
+salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
+                                      const GPtrArray *activities,
+                                      DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_ROOM);
+  GHashTable *act_id_to_room = g_hash_table_new_full (g_str_hash,
+      g_str_equal, (GDestroyNotify) g_free, NULL);
+  GError *error = NULL;
+  guint i;
+
+  for (i = 0; i < activities->len; i++)
+    {
+      GValue pair = {0};
+      gchar *activity;
+      guint room_handle;
+
+      g_value_init (&pair, ACTIVITY_PAIR_TYPE);
+      g_value_set_static_boxed (&pair, g_ptr_array_index (activities, i));
+      dbus_g_type_struct_get (&pair,
+          0, &activity,
+          1, &room_handle,
+          G_MAXUINT);
+
+      if (activity[0] == '\0')
+        {
+          GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "Invalid empty activity ID" };
+
+          DEBUG (e.message);
+          dbus_g_return_error (context, &e);
+          g_free (activity);
+          goto finally;
+        }
+
+      if (!tp_handle_is_valid (room_repo, room_handle, &error))
+        {
+          DEBUG ("Invalid room handle %u: %s", room_handle, error->message);
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+          g_free (activity);
+          goto finally;
+        }
+
+      g_hash_table_insert (act_id_to_room, activity,
+          GUINT_TO_POINTER (room_handle));
+    }
+
+  if (!salut_self_set_olpc_activities (priv->self, act_id_to_room, &error))
+    {
+      dbus_g_method_return_error (context, error);
+    }
+  else
+    {
+      salut_svc_olpc_buddy_info_return_from_set_activities (context);
+    }
+
+finally:
+  g_hash_table_destroy (act_id_to_room);
+}
+
+static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
                                              gpointer iface_data)
 {
@@ -1583,6 +1769,10 @@ salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
     salut_connection_olpc_##x)
   IMPLEMENT(set_properties);
   IMPLEMENT(get_properties);
+  IMPLEMENT(set_activities);
+  IMPLEMENT(get_activities);
+  IMPLEMENT(set_current_activity);
+  IMPLEMENT(get_current_activity);
 #undef IMPLEMENT
 }
 #endif
@@ -1644,6 +1834,10 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
 #ifdef ENABLE_OLPC
   if (changes & SALUT_CONTACT_OLPC_PROPERTIES)
     _contact_manager_contact_olpc_properties_changed (self, contact, handle);
+
+  if (changes & SALUT_CONTACT_OLPC_CURRENT_ACTIVITY)
+    salut_svc_olpc_buddy_info_emit_current_activity_changed (self,
+        handle, contact->olpc_cur_act, contact->olpc_cur_act_room);
 #endif
 }
 

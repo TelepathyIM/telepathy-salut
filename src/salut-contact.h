@@ -25,6 +25,8 @@
 #include <netinet/in.h>
 #include <glib-object.h>
 
+#include <telepathy-glib/handle-repo.h>
+
 #include "salut-avahi-service-resolver.h"
 #include "salut-avahi-enums.h"
 
@@ -38,6 +40,7 @@ G_BEGIN_DECLS
 #define  SALUT_CONTACT_AVATAR_CHANGED 0x4
 #ifdef ENABLE_OLPC
 #define  SALUT_CONTACT_OLPC_PROPERTIES 0x8
+#define  SALUT_CONTACT_OLPC_CURRENT_ACTIVITY 0x8
 #endif /* ENABLE_OLPC */
 
 typedef struct _SalutContact SalutContact;
@@ -57,6 +60,8 @@ struct _SalutContact {
 #ifdef ENABLE_OLPC
     GArray *olpc_key;
     gchar *olpc_color;
+    gchar *olpc_cur_act;
+    TpHandle olpc_cur_act_room;
 #endif /* ENABLE_OLPC */
 };
 
@@ -76,8 +81,8 @@ GType salut_contact_get_type(void);
 #define SALUT_CONTACT_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT, SalutContactClass))
 
-SalutContact *
-salut_contact_new(SalutAvahiClient *client, const gchar *name);
+SalutContact *salut_contact_new(SalutAvahiClient *client,
+    TpHandleRepoIface *room_repo, const gchar *name);
 
 void
 salut_contact_add_service(SalutContact *contact, 
