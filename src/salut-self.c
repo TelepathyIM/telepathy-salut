@@ -854,7 +854,7 @@ salut_self_set_olpc_activities (SalutSelf *self,
   /* add any which aren't in olpc_activities */
   g_hash_table_foreach (act_id_to_room, _set_olpc_activities_add, &data);
 
-  return (*error != NULL);
+  return (*error == NULL);
 }
 
 gboolean
