@@ -830,16 +830,17 @@ extract_tube_information (SalutTubesChannel *self,
 
       _type = gibber_xmpp_node_get_attribute (tube_node, "type");
 
+
+      /*
       if (!tp_strdiff (_type, "stream"))
         {
           *type = TP_TUBE_TYPE_STREAM_UNIX;
         }
-#ifdef HAVE_DBUS_TUBE
-      else if (!tp_strdiff (_type, "dbus"))
+        */
+      if (!tp_strdiff (_type, "dbus"))
         {
           *type = TP_TUBE_TYPE_DBUS;
         }
-#endif
       else
         {
           DEBUG ("Unknow tube type: %s", _type);
@@ -950,9 +951,11 @@ publish_tube_in_node (GibberXmppNode *node,
       case TP_TUBE_TYPE_DBUS:
         gibber_xmpp_node_set_attribute (node, "type", "dbus");
         break;
+        /*
       case TP_TUBE_TYPE_STREAM_UNIX:
         gibber_xmpp_node_set_attribute (node, "type", "stream");
         break;
+        */
       default:
         g_assert_not_reached ();
     }
@@ -1186,10 +1189,11 @@ generate_stream_id (void)
  * on org.freedesktop.Telepathy.Channel.Type.Tubes
  */
 static void
-salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
-                                      const gchar *service,
-                                      GHashTable *parameters,
-                                      DBusGMethodInvocation *context)
+salut_tubes_channel_offer_tube (TpSvcChannelTypeTubes *iface,
+                                guint type,
+                                const gchar *service,
+                                GHashTable *parameters,
+                                DBusGMethodInvocation *context)
 {
 #ifdef HAVE_DBUS_TUBE
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
@@ -1204,6 +1208,17 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   base = (TpBaseConnection*) priv->conn;
+
+   if (type != TP_TUBE_TYPE_DBUS)
+    {
+      GError *error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "invalid type: %d", type);
+
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+
+      return;
+    }
 
   parameters_copied = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
       (GDestroyNotify) tp_g_value_slice_free);
@@ -1234,7 +1249,8 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
         }
     }
 
-  tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
+  //tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
+  tp_svc_channel_type_tubes_return_from_offer_tube (context, tube_id);
 
   g_free (stream_id);
 #else
@@ -1252,6 +1268,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
  * Implements D-Bus method OfferStreamUnixTube
  * on org.freedesktop.Telepathy.Channel.Type.Tubes
  */
+#if 0
 static void
 salut_tubes_channel_offer_stream_unix_tube (TpSvcChannelTypeTubes *iface,
                                              const gchar *service,
@@ -1264,7 +1281,6 @@ salut_tubes_channel_offer_stream_unix_tube (TpSvcChannelTypeTubes *iface,
 
   dbus_g_method_return_error (context, &error);
   return;
-#if 0
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
   TpBaseConnection *base;
@@ -1346,8 +1362,8 @@ salut_tubes_channel_offer_stream_unix_tube (TpSvcChannelTypeTubes *iface,
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 
   g_free (stream_id);
-#endif
 }
+#endif
 
 /**
  * salut_tubes_channel_accept_tube
@@ -1611,6 +1627,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
  * Implements D-Bus method GetStreamSocketAddress
  * on org.freedesktop.Telepathy.Channel.Type.Tubes
  */
+#if 0
 static void
 salut_tubes_channel_get_stream_unix_socket_address (TpSvcChannelTypeTubes *iface,
                                                     guint id,
@@ -1664,6 +1681,7 @@ salut_tubes_channel_get_stream_unix_socket_address (TpSvcChannelTypeTubes *iface
 
   g_free (socket);
 }
+#endif
 
 static void salut_tubes_channel_dispose (GObject *object);
 static void salut_tubes_channel_finalize (GObject *object);
@@ -1886,13 +1904,14 @@ tubes_iface_init (gpointer g_iface,
     klass, salut_tubes_channel_##x)
   IMPLEMENT(get_available_tube_types);
   IMPLEMENT(list_tubes);
-  IMPLEMENT(offer_d_bus_tube);
-  IMPLEMENT(offer_stream_unix_tube);
+  IMPLEMENT(offer_tube);
+  //IMPLEMENT(offer_d_bus_tube);
+  //IMPLEMENT(offer_stream_unix_tube);
   IMPLEMENT(accept_tube);
   IMPLEMENT(close_tube);
   IMPLEMENT(get_d_bus_server_address);
   IMPLEMENT(get_d_bus_names);
-  IMPLEMENT(get_stream_unix_socket_address);
+  //IMPLEMENT(get_stream_unix_socket_address);
 #undef IMPLEMENT
 }
 
