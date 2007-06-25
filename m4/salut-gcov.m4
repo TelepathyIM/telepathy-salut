@@ -26,7 +26,8 @@ AC_DEFUN([SALUT_GCOV],
 
   AC_SUBST([MOSTLYCLEANFILES], "*.bb *.bbg *.da *.gcov *.gcda *.gcno")
 
-  GCOV_ENABLED=yes
+  HAVE_GCOV=yes
+
   AC_DEFINE_UNQUOTED(HAVE_GCOV, 1,
     [Defined if gcov is enabled to force a rebuild due to config.h changing])
 
