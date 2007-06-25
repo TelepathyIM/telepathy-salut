@@ -309,7 +309,7 @@ add_sender(GibberRMulticastTransport *self, const gchar *name) {
   sender = gibber_r_multicast_sender_new(name);
 
   g_hash_table_insert(priv->senders, sender->name, sender);
-  g_signal_connect(sender, "data-received",
+  g_signal_connect(sender, "received-data",
       G_CALLBACK(data_received_cb), self);
 
   g_signal_connect(sender, "repair-request",

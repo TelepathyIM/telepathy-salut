@@ -151,7 +151,7 @@ START_TEST (test_sender) {
   expected = serial_offset;
 
   s = gibber_r_multicast_sender_new(SENDER);
-  g_signal_connect(s, "data-received", G_CALLBACK(data_received_cb), loop);
+  g_signal_connect(s, "received-data", G_CALLBACK(data_received_cb), loop);
   g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
   if (tests[_i].test_seen) {

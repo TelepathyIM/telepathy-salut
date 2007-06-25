@@ -50,7 +50,7 @@ enum
 {
     REPAIR_REQUEST,
     REPAIR_MESSAGE,
-    DATA_RECEIVED,
+    RECEIVED_DATA,
     LAST_SIGNAL
 };
 
@@ -146,8 +146,8 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    g_cclosure_marshal_VOID__OBJECT,
                    G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_PACKET);
 
-  signals[DATA_RECEIVED] =
-      g_signal_new("data-received",
+  signals[RECEIVED_DATA] =
+      g_signal_new("received-data",
                    G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
                    G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                    0,
@@ -205,7 +205,7 @@ gibber_r_multicast_sender_new(const gchar *name) {
 static void
 signal_data(GibberRMulticastSender *sender, guint8 stream_id,
             guint8 *data, gsize size) {
-  g_signal_emit(sender, signals[DATA_RECEIVED], 0, stream_id, data, size);
+  g_signal_emit(sender, signals[RECEIVED_DATA], 0, stream_id, data, size);
 }
 
 static gboolean
