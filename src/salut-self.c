@@ -746,12 +746,12 @@ salut_self_add_olpc_activity (SalutSelf *self,
   gchar *name;
   const gchar *room_name;
 
-  g_return_val_if_fail (activity_id == NULL, FALSE);
-  g_return_val_if_fail (room == 0, FALSE);
+  g_return_val_if_fail (activity_id != NULL, FALSE);
+  g_return_val_if_fail (room != 0, FALSE);
 
   room_name = tp_handle_inspect (priv->room_repo, room);
   /* caller should already have validated this */
-  g_return_val_if_fail (room_name == NULL, FALSE);
+  g_return_val_if_fail (room_name != NULL, FALSE);
 
   activity = activity_new (priv->room_repo, room, priv->client, error);
   if (activity == NULL)
