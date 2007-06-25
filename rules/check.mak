@@ -55,7 +55,7 @@ LOOPS = 10
 	
 # valgrind any given test until failure by running make test.valgrind-forever
 %.valgrind-forever: %
-	@while make $*.valgrind; do				\
+	@while $(MAKE) $*.valgrind; do				\
 	  true; done
 
 # gdb any given test by running make test.gdb
@@ -70,7 +70,7 @@ torture: $(TESTS)
 	-rm test-registry.xml
 	@echo "Torturing tests ..."
 	for i in `seq 1 $(LOOPS)`; do				\
-		make check ||					\
+		$(MAKE) check ||				\
 		(echo "Failure after $$i runs"; exit 1) ||	\
 		exit 1;						\
 	done
@@ -83,7 +83,7 @@ forever: $(TESTS)
 	-rm test-registry.xml
 	@echo "Forever tests ..."
 	while true; do						\
-		make check ||					\
+		$(MAKE) check ||				\
 		(echo "Failure"; exit 1) ||			\
 		exit 1;						\
 	done
@@ -93,7 +93,7 @@ valgrind: $(TESTS)
 	@echo "Valgrinding tests ..."
 	@failed=0;							\
 	for t in $(filter-out $(VALGRIND_TESTS_DISABLE),$(TESTS)); do	\
-		make $$t.valgrind;					\
+		$(MAKE) $$t.valgrind;					\
 		if test "$$?" -ne 0; then                               \
                         echo "Valgrind error for test $$t";		\
 			failed=`expr $$failed + 1`;			\

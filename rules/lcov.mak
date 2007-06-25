@@ -2,18 +2,18 @@ COVERAGE_DIR=coverage
 
 # run lcov from scratch, always
 lcov-reset:
-	make lcov-run
-	make lcov-report
+	$(MAKE) lcov-run
+	$(MAKE) lcov-report
 
 # run lcov from scratch if the dir is not there
 lcov:
-	make lcov-reset
+	$(MAKE) lcov-reset
 
 # reset run coverage tests
 lcov-run:
 	@-rm -rf $(COVERAGE_DIR)
 	@-find . -name "*.gcda" -exec rm {} \;
-	-make check
+	-$(MAKE) check
 
 # generate report based on current coverage data
 lcov-report:

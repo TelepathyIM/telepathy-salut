@@ -7,13 +7,13 @@ dist-hook:
 	if test -d _darcs; then darcs changes >${distdir}/ChangeLog; fi
 
 valgrind:
-	cd tests && make valgrind
+	cd tests && $(MAKE) valgrind
 
 torture:
-	cd tests && make torture
+	cd tests && $(MAKE) torture
 
 forever:
-	cd tests && make forever
+	cd tests && $(MAKE) forever
 
 .PHONY: lcov
 
