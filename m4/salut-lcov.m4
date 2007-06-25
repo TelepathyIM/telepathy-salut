@@ -9,6 +9,7 @@ AC_DEFUN([SALUT_LCOV],
     if $LCOV_PATH --compat-libtool --help > /dev/null 2>&1 ; then
       AC_MSG_RESULT(ok)
     else
+      AC_MSG_RESULT(no)
       AC_MSG_WARN([lcov option --compat-libtool is not supported])
       AC_MSG_WARN([update lcov to version > 1.5])
       LCOV_PATH=no
