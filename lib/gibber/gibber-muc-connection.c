@@ -585,8 +585,9 @@ gibber_muc_connection_send(GibberMucConnection *connection,
     return FALSE;
   }
 
-  return gibber_r_multicast_transport_send(priv->rmtransport, 0, data,
-      length, error);
+  return gibber_r_multicast_transport_send(priv->rmtransport,
+      GIBBER_R_MULTICAST_DEFAULT_STREAM,
+      data, length, error);
 }
 
 gboolean

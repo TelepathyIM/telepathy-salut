@@ -26,6 +26,8 @@
 
 G_BEGIN_DECLS
 
+#define GIBBER_R_MULTICAST_DEFAULT_STREAM 0
+
 typedef struct _GibberRMulticastTransport GibberRMulticastTransport;
 typedef struct _GibberRMulticastTransportClass GibberRMulticastTransportClass;
 

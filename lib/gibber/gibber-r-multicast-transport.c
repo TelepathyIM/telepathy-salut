@@ -578,7 +578,9 @@ gibber_r_multicast_transport_do_send(GibberTransport *transport,
                                      gsize size,
                                      GError **error) {
   return gibber_r_multicast_transport_send(
-     GIBBER_R_MULTICAST_TRANSPORT(transport), 0, data, size, error);
+     GIBBER_R_MULTICAST_TRANSPORT(transport),
+     GIBBER_R_MULTICAST_DEFAULT_STREAM,
+     data, size, error);
 }
 
 static void
