@@ -553,7 +553,7 @@ static void _connection_received_data(GibberTransport *transport,
 
   g_assert(buffer->length > 0);
 
-  if (rmbuffer->stream_id != 0) {
+  if (rmbuffer->stream_id != GIBBER_R_MULTICAST_DEFAULT_STREAM) {
     g_signal_emit(self, signals[RECEIVED_DATA], 0,
         rmbuffer->sender, buffer->data, buffer->length);
     return;
