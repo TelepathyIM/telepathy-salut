@@ -1727,7 +1727,7 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
           GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "Invalid empty activity ID" };
 
-          DEBUG (e.message);
+          DEBUG ("%s", e.message);
           dbus_g_return_error (context, &e);
           g_free (activity);
           goto finally;
