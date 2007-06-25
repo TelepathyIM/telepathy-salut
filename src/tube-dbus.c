@@ -546,16 +546,16 @@ salut_tube_dbus_constructor (GType type,
        * It will be when we'll receive the answer of the SI request
        */
       GibberBytestreamIBB *bytestream;
+      const gchar *peer_id;
 
       g_assert (priv->muc_connection != NULL);
       g_assert (priv->stream_id != NULL);
 
+      peer_id = tp_handle_inspect (handles_repo, priv->handle);
       if (priv->initiator == priv->self_handle)
         {
           /* We create this tube, bytestream is open */
-          const gchar *peer_id;
 
-          peer_id = tp_handle_inspect (handles_repo, priv->handle);
           bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
               "muc-connection", priv->muc_connection,
               "stream-id", priv->stream_id,
@@ -572,6 +572,8 @@ salut_tube_dbus_constructor (GType type,
                 "muc-connection", priv->muc_connection,
                 "stream-id", priv->stream_id,
                 "state", GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING,
+                "self-id", priv->conn->name,
+                "peer-id", peer_id,
                 "stream-init-id", NULL,
                 NULL);
         }
