@@ -34,9 +34,20 @@ AM_PROG_AS
 
 dnl add common command line switches
 #SALUT_ARG_DEBUG
-SALUT_ARG_PROFILING
+#SALUT_ARG_PROFILING
 SALUT_ARG_VALGRIND
-SALUT_ARG_GCOV
+SALUT_ARG_COVERAGE
+
+if test x$ENABLE_VALGRIND = xyes; then
+  SALUT_VALGRIND
+fi
+
+if test x$ENABLE_COVERAGE = xyes; then
+  SALUT_GCOV
+  if test x$HAVE_GCOV = xyes; then
+    SALUT_LCOV
+  fi
+fi
 
 dnl decide error flags
 AS_COMPILER_FLAG(-Wall, ERROR_CFLAGS="-Wall", ERROR_CFLAGS="")
