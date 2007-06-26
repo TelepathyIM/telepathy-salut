@@ -41,7 +41,9 @@
 #include "salut-muc-manager.h"
 #include "salut-contact.h"
 #include "salut-self.h"
+/*
 #include "salut-tubes-manager.h"
+*/
 
 #include "salut-presence.h"
 
