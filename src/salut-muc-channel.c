@@ -433,6 +433,9 @@ salut_muc_channel_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  g_signal_handlers_disconnect_matched (priv->muc_connection,
+      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
   if (priv->muc_connection != NULL) {
     g_object_unref(priv->muc_connection);
     priv->muc_connection = NULL;
