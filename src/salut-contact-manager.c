@@ -94,6 +94,7 @@ struct _SalutContactManagerPrivate
 
 #define SALUT_CONTACT_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerPrivate))
 
+#ifdef ENABLE_OLPC
 static SalutContactManagerActivity *
 activity_new (SalutContactManager *mgr,
               TpHandle room_handle)
@@ -139,6 +140,7 @@ activity_unref (SalutContactManagerActivity *activity)
   g_free (activity->type);
   g_slice_free (SalutContactManagerActivity, activity);
 }
+#endif
 
 static void
 salut_contact_manager_init (SalutContactManager *obj)
