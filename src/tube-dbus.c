@@ -358,6 +358,7 @@ salut_tube_dbus_dispose (GObject *object)
   if (priv->muc_connection != NULL)
     {
       g_object_unref (priv->muc_connection);
+      priv->muc_connection = NULL;
     }
 
   tp_handle_unref (contact_repo, priv->initiator);
