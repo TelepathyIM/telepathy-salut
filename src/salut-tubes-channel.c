@@ -1749,6 +1749,15 @@ salut_tubes_channel_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
+  if (priv->muc_connection != NULL)
+    {
+      g_signal_handlers_disconnect_matched (priv->muc_connection,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
+      g_object_unref (priv->muc_connection);
+      priv->muc_connection = NULL;
+    }
+
   priv->dispose_has_run = TRUE;
 
   tp_handle_unref (handle_repo, priv->handle);
