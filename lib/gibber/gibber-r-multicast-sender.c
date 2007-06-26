@@ -212,7 +212,7 @@ gibber_r_multicast_sender_dispose (GObject *object)
 
   /* release any references held by the object here */
   if (priv->senders != NULL) {
-    g_hash_table_ref(priv->senders);
+    g_hash_table_unref(priv->senders);
   }
 
   if (G_OBJECT_CLASS (gibber_r_multicast_sender_parent_class)->dispose)
