@@ -65,6 +65,7 @@ static void
 salut_contact_avatar_request_flush(SalutContact *contact, 
     guint8 *data, gsize size);
 
+#ifdef ENABLE_OLPC
 typedef struct {
   char *activity_id;
   TpHandle room;
@@ -90,6 +91,7 @@ activity_new (TpHandleRepoIface *room_repo)
   activity->room_repo = room_repo;
   return activity;
 }
+#endif
 
 /* private structure */
 typedef struct _SalutContactPrivate SalutContactPrivate;
