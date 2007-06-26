@@ -161,7 +161,8 @@ struct _SalutConnectionPrivate
   SalutMucManager *muc_manager;
 
   /* Tubes channel manager */
-  SalutTubesManager *tubes_manager;
+  /* XXX disabled while private tubes aren't implemented */
+  /* SalutTubesManager *tubes_manager; */
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
@@ -2137,12 +2138,12 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
 
   priv->muc_manager = salut_muc_manager_new(self, priv->im_manager);
 
-  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
+  //priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
 
   g_ptr_array_add(factories, priv->contact_manager);
   g_ptr_array_add(factories, priv->im_manager);
   g_ptr_array_add(factories, priv->muc_manager);
-  g_ptr_array_add (factories, priv->tubes_manager);
+  //g_ptr_array_add (factories, priv->tubes_manager);
 
   return factories;
 }
