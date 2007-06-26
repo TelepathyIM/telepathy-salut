@@ -9,15 +9,18 @@ AC_DEFUN([SALUT_ARG_DEBUG],
 [
   dnl debugging stuff
   AC_ARG_ENABLE(debug,
-    AC_HELP_STRING([--disable-debug],[disable addition of -g debugging info]),
+    AC_HELP_STRING([--disable-debug],[compile without debug code]),
     [
       case "${enableval}" in
-        yes) ENABLE_DEBUG=yes ;;
-        no)  ENABLE_DEBUG=no ;;
+        yes|no) enable="${enableval}" ;;
         *)   AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
       esac
     ],
-    [ENABLE_DEBUG=yes]) dnl Default value
+    [enable=yes])
+
+  if test "$enable" = yes; then
+    AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
+  fi
 ])
 
 AC_DEFUN([SALUT_ARG_PROFILING],

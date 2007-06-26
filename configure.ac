@@ -33,7 +33,7 @@ AC_PROG_CC_STDC
 AM_PROG_AS
 
 dnl add common command line switches
-#SALUT_ARG_DEBUG
+SALUT_ARG_DEBUG
 #SALUT_ARG_PROFILING
 SALUT_ARG_VALGRIND
 SALUT_ARG_COVERAGE
@@ -46,14 +46,6 @@ ifelse(salut_nano_version, 0,
     [AS_COMPILER_FLAG(-Werror,ERROR_CFLAGS="$ERROR_CFLAGS -Werror",ERROR_CFLAGS="$ERROR_CFLAGS")
     ])
 AC_SUBST(ERROR_CFLAGS)
-
-AC_ARG_ENABLE(debug,
-  AC_HELP_STRING([--disable-debug],[compile without debug code]),
-    enable_debug=$enableval, enable_debug=yes )
-
-if test x$enable_debug = xyes; then
-  AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
-fi
 
 dnl Check for code generation tools
 XSLTPROC=
