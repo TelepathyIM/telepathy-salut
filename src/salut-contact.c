@@ -507,16 +507,14 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   AvahiStringList *t;
   gint changes = 0;
-  gchar *first = NULL;
-  gchar *last = NULL;
   gboolean alias_seen = FALSE;
 
 #define SET_CHANGE(x) changes |= x
 
   if ((t = avahi_string_list_find(txt, "status")) != NULL) { 
     int i;
-    gchar *key, *value;
-    avahi_string_list_get_pair(t, &key, &value, NULL);
+    char *value;
+    avahi_string_list_get_pair(t, NULL, &value, NULL);
 
     for (i = 0; i < SALUT_PRESENCE_NR_PRESENCES ; i++) {
       if (!strcmp(value, salut_presence_statuses[i].txt_name)) {
@@ -529,19 +527,17 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
       self->status = i;
     }
 
-    avahi_free(key);
     avahi_free(value);
   }
 
   if ((t = avahi_string_list_find(txt, "msg")) != NULL) { 
-    gchar *key, *value;
-    avahi_string_list_get_pair(t, &key, &value, NULL);
+    char *value;
+    avahi_string_list_get_pair(t, NULL, &value, NULL);
     if (self->status_message == NULL || strcmp(self->status_message, value)) {
       SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
       g_free(self->status_message);
       self->status_message = g_strdup(value);
     }
-    avahi_free(key);
     avahi_free(value);
   } else if (self->status_message != NULL) {
     SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
@@ -550,28 +546,25 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   }
 
   if ((t = avahi_string_list_find(txt, "nick")) != NULL) { 
-    gchar *key;
-    gchar *value;
-    avahi_string_list_get_pair(t, &key, &value, NULL);
+    char *value;
+    avahi_string_list_get_pair(t, NULL, &value, NULL);
     if (update_alias(self, value, &alias_seen)) { 
       SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
     }
-    avahi_free(key);
     avahi_free(value);
   } 
   
   if (!alias_seen) { 
+    char *first = NULL;
+    char *last = NULL;
+
     /* Fallback to trying 1st + last as alias */
     if ((t = avahi_string_list_find(txt, "1st")) != NULL) { 
-      gchar *key;
-      avahi_string_list_get_pair(t, &key, &first, NULL);
-      avahi_free(key);
+      avahi_string_list_get_pair(t, NULL, &first, NULL);
     }
   
     if ((t = avahi_string_list_find(txt, "last")) != NULL) { 
-      gchar *key;
-      avahi_string_list_get_pair(t, &key, &last, NULL);
-      avahi_free(key);
+      avahi_string_list_get_pair(t, NULL, &last, NULL);
     }
 
     if (first != NULL && last != NULL) {
@@ -611,9 +604,8 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   }
 
   if ((t = avahi_string_list_find(txt, "phsh")) != NULL) { 
-    gchar *key;
-    gchar *value;
-    avahi_string_list_get_pair(t, &key, &value, NULL);
+    char *value;
+    avahi_string_list_get_pair(t, NULL, &value, NULL);
 
     if (tp_strdiff(self->avatar_token, value)) {
       /* Purge the cache */
@@ -621,7 +613,6 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
       SET_CHANGE(SALUT_CONTACT_AVATAR_CHANGED);
     }
 
-    avahi_free(key);
     avahi_free(value);
   } else if (self->avatar_token != NULL) {
     purge_cached_avatar(self, NULL);
@@ -631,9 +622,8 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   t = avahi_string_list_find(txt, "jid");
   if (t != NULL)
     {
-      gchar *key;
-      gchar *value;
-      avahi_string_list_get_pair (t, &key, &value, NULL);
+      char *value;
+      avahi_string_list_get_pair (t, NULL, &value, NULL);
 
       if (tp_strdiff (self->jid, value))
         {
@@ -643,17 +633,15 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
           SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
 #endif
         }
-      avahi_free (key);
       avahi_free (value);
     }
 
 #ifdef ENABLE_OLPC
   if ((t = avahi_string_list_find (txt, "olpc-color")) != NULL)
     {
-      char *key;
       char *value;
 
-      avahi_string_list_get_pair (t, &key, &value, NULL);
+      avahi_string_list_get_pair (t, NULL, &value, NULL);
       if (tp_strdiff (self->olpc_color, value))
         {
           g_free (self->olpc_color);
@@ -661,7 +649,6 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
           SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
         }
 
-      avahi_free (key);
       avahi_free (value);
   }
 
@@ -676,10 +663,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
 
       if (act_link != NULL)
         {
-          char *tmp_key;
-
-          avahi_string_list_get_pair (act_link, &tmp_key, &act_value, NULL);
-          avahi_free (tmp_key);
+          avahi_string_list_get_pair (act_link, NULL, &act_value, NULL);
           if (!tp_strdiff (act_value, ""))
             {
               DEBUG ("No current activity; ignoring current activity room, if "
@@ -691,10 +675,9 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
 
       if (act_value != NULL && room_link != NULL)
         {
-          char *tmp_key, *room_value;
+          char *room_value;
 
-          avahi_string_list_get_pair (room_link, &tmp_key, &room_value, NULL);
-          avahi_free (tmp_key);
+          avahi_string_list_get_pair (room_link, NULL, &room_value, NULL);
           if (!tp_strdiff (room_value, ""))
             {
               room_handle = 0;
@@ -760,13 +743,11 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
 
       while (t)
         {
-          char *k;
           char *v;
           size_t v_size;
 
-          avahi_string_list_get_pair (t, &k, &v, &v_size);
+          avahi_string_list_get_pair (t, NULL, &v, &v_size);
           g_array_append_vals (new_key, v, v_size);
-          avahi_free (k);
           avahi_free (v);
 
           i++;
