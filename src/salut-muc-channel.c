@@ -838,8 +838,8 @@ salut_muc_channel_get_handle (TpSvcChannel *iface,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
-  tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_CONTACT,
-                                           priv->handle);
+  tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_ROOM,
+                                         priv->handle);
 }
 /**
  * salut_muc_channel_get_channel_type
