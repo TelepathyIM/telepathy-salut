@@ -57,7 +57,6 @@ EXTRA_DIST = \
   salut-muc-channel-signals-marshal.list                  \
   salut-muc-manager-signals-marshal.list                  \
   salut-self-signals-marshal.list                         \
-  salut-muc-connection-signals-marshal.list               \
   tube-dbus-signals-marshal.list
 
 bin_PROGRAMS=telepathy-salut
