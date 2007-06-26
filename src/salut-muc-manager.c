@@ -507,7 +507,7 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
 
   DEBUG("Muc request");
 
-  /* And only room handles */
+  /* We only support room handles */
   if (handle_type != TP_HANDLE_TYPE_ROOM) {
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
   }
