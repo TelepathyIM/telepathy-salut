@@ -1647,7 +1647,6 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
 
   if (handle == base->self_handle)
     {
-      /* self's current activity is always non-NULL */
       DEBUG ("Returning my own cur.act.: %s -> %u",
           priv->self->olpc_cur_act ? priv->self->olpc_cur_act : "",
           priv->self->olpc_cur_act_room);
