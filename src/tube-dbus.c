@@ -355,6 +355,11 @@ salut_tube_dbus_dispose (GObject *object)
       g_hash_table_destroy (priv->dbus_names);
     }
 
+  if (priv->muc_connection != NULL)
+    {
+      g_object_unref (priv->muc_connection);
+    }
+
   tp_handle_unref (contact_repo, priv->initiator);
 
   priv->dispose_has_run = TRUE;
@@ -466,6 +471,7 @@ salut_tube_dbus_set_property (GObject *object,
         break;
       case PROP_MUC_CONNECTION:
         priv->muc_connection = g_value_get_object (value);
+        g_object_ref (priv->muc_connection);
         break;
       case PROP_ID:
         priv->id = g_value_get_uint (value);

@@ -757,12 +757,10 @@ create_new_tube (SalutTubesChannel *self,
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
   TpTubeState state;
-  GibberMucConnection *muc_connection;
+  GibberMucConnection *muc_connection = NULL;
 
   if (self->muc != NULL)
     g_object_get (self->muc, "muc connection", &muc_connection, NULL);
-  else
-    muc_connection = NULL;
 
   switch (type)
     {
@@ -808,6 +806,9 @@ create_new_tube (SalutTubesChannel *self,
 
   g_signal_connect (tube, "opened", G_CALLBACK (tube_opened_cb), self);
   g_signal_connect (tube, "closed", G_CALLBACK (tube_closed_cb), self);
+
+  if (muc_connection != NULL)
+    g_object_unref (muc_connection);
 }
 
 static gboolean
