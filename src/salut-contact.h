@@ -40,7 +40,8 @@ G_BEGIN_DECLS
 #define  SALUT_CONTACT_AVATAR_CHANGED 0x4
 #ifdef ENABLE_OLPC
 #define  SALUT_CONTACT_OLPC_PROPERTIES 0x8
-#define  SALUT_CONTACT_OLPC_CURRENT_ACTIVITY 0x8
+#define  SALUT_CONTACT_OLPC_CURRENT_ACTIVITY 0x10
+#define  SALUT_CONTACT_OLPC_ACTIVITIES 0x20
 #endif /* ENABLE_OLPC */
 
 typedef struct _SalutContact SalutContact;
@@ -122,6 +123,14 @@ void
 salut_contact_get_avatar(SalutContact *contact,
                          salut_contact_get_avatar_callback callback,
                          gpointer user_data1);
+
+#ifdef ENABLE_OLPC
+typedef void (*SalutContactOLPCActivityFunc)
+    (const gchar *id, TpHandle handle, gpointer user_data);
+
+void salut_contact_foreach_olpc_activity (SalutContact *self,
+    SalutContactOLPCActivityFunc foreach, gpointer user_data);
+#endif
 
 G_END_DECLS
 

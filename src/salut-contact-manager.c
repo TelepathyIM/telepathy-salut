@@ -17,6 +17,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,12 +63,28 @@ enum
 
 static guint signals[LAST_SIGNAL] = {0};
 
+typedef struct
+{
+  SalutContactManager *mgr;
+  TpHandle room;
+  gchar *activity_id;
+  gchar *color;
+  gchar *name;
+  gchar *type;
+  size_t refcount;
+} SalutContactManagerActivity;
+
 /* private structure */
 typedef struct _SalutContactManagerPrivate SalutContactManagerPrivate;
 
 struct _SalutContactManagerPrivate
 {
-  SalutAvahiServiceBrowser *browser;
+  SalutAvahiServiceBrowser *presence_browser;
+#ifdef ENABLE_OLPC
+  SalutAvahiServiceBrowser *activity_browser;
+  GHashTable *olpc_activities_by_mdns;
+  GHashTable *olpc_activities_by_room;
+#endif
   SalutConnection *connection;
   SalutAvahiClient *client;
   GHashTable *channels;
@@ -75,6 +93,52 @@ struct _SalutContactManagerPrivate
 };
 
 #define SALUT_CONTACT_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerPrivate))
+
+static SalutContactManagerActivity *
+activity_new (SalutContactManager *mgr,
+              TpHandle room_handle)
+{
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+    (TP_BASE_CONNECTION (priv->connection), TP_HANDLE_TYPE_ROOM);
+  SalutContactManagerActivity *activity = g_slice_new0
+    (SalutContactManagerActivity);
+
+  activity->refcount = 1;
+  tp_handle_ref (room_repo, room_handle);
+  activity->room = room_handle;
+
+  DEBUG ("Creating SalutContactManagerActivity: handle %u", room_handle);
+  g_hash_table_insert (priv->olpc_activities_by_room,
+      GUINT_TO_POINTER (room_handle), activity);
+
+  return activity;
+}
+
+static void
+activity_unref (SalutContactManagerActivity *activity)
+{
+  SalutContactManagerPrivate *priv;
+  TpHandleRepoIface *room_repo;
+
+  if (--activity->refcount != 0)
+    return;
+
+  priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (activity->mgr);
+  room_repo = tp_base_connection_get_handles
+    ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+
+  DEBUG ("Dropping SalutContactManagerActivity: handle %u", activity->room);
+  g_hash_table_remove (priv->olpc_activities_by_room,
+      GUINT_TO_POINTER (activity->room));
+  tp_handle_unref (room_repo, activity->room);
+
+  g_free (activity->activity_id);
+  g_free (activity->color);
+  g_free (activity->name);
+  g_free (activity->type);
+  g_slice_free (SalutContactManagerActivity, activity);
+}
 
 static void
 salut_contact_manager_init (SalutContactManager *obj)
@@ -86,6 +150,13 @@ salut_contact_manager_init (SalutContactManager *obj)
                                          NULL, g_object_unref);
   priv->contacts = g_hash_table_new_full(g_str_hash, g_str_equal,
                                          g_free, NULL);
+
+#ifdef ENABLE_OLPC
+  priv->olpc_activities_by_mdns = g_hash_table_new_full (g_str_hash,
+      g_str_equal, g_free, (GDestroyNotify) activity_unref);
+  priv->olpc_activities_by_room = g_hash_table_new (g_direct_hash,
+      g_direct_equal);
+#endif
 }
 
 static void salut_contact_manager_dispose (GObject *object);
@@ -191,6 +262,76 @@ contact_found_cb(SalutContact *contact, gpointer userdata) {
   tp_intset_destroy(to_rem);
 }
 
+#ifdef ENABLE_OLPC
+static void
+activity_change_cb(SalutContact *contact,
+                   const gchar *service_name,
+                   TpHandle room_handle,
+                   const gchar *activity_id,
+                   const gchar *color,
+                   const gchar *name,
+                   const gchar *type,
+                   gpointer userdata)
+{
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (userdata);
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
+  gboolean changed = FALSE;
+  SalutContactManagerActivity *activity;
+
+  DEBUG ("enter: sn=%s, h=%u, aid=%s, c=%s, n=%s, t=%s",
+      service_name, room_handle,
+      activity_id ? activity_id : "<NULL>",
+      color ? color : "<NULL>",
+      name ? name : "<NULL>",
+      type ? type : "<NULL>");
+
+  activity = g_hash_table_lookup (priv->olpc_activities_by_mdns, service_name);
+  if (activity == NULL)
+    {
+      activity = g_hash_table_lookup (priv->olpc_activities_by_room,
+          GUINT_TO_POINTER (room_handle));
+      if (activity == NULL)
+        {
+          activity = activity_new (mgr, room_handle);
+          changed = TRUE;
+        }
+      else
+        {
+          activity->refcount++;
+        }
+      DEBUG ("Activity %u now advertised as %s", room_handle, service_name);
+      g_hash_table_insert (priv->olpc_activities_by_mdns,
+          g_strdup (service_name), activity);
+    }
+  else
+    {
+      DEBUG ("Activity %u already known to be advertised as %s", room_handle,
+          service_name);
+    }
+
+  if (name != NULL && tp_strdiff (activity->name, name))
+    {
+      g_free (activity->name);
+      activity->name = g_strdup (name);
+      changed = TRUE;
+    }
+
+  if (type != NULL && tp_strdiff (activity->type, type))
+    {
+      g_free (activity->type);
+      activity->type = g_strdup (type);
+      changed = TRUE;
+    }
+
+  if (color != NULL && tp_strdiff (activity->color, color))
+    {
+      g_free (activity->color);
+      activity->color = g_strdup (color);
+      changed = TRUE;
+    }
+}
+#endif
+
 static void
 contact_change_cb(SalutContact *contact, gint changes, gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
@@ -238,6 +379,47 @@ _contact_finalized_cb(gpointer data, GObject *old_object) {
                               old_object);
 }
 
+#ifdef ENABLE_OLPC
+gboolean
+salut_contact_manager_get_olpc_activity_properties (SalutContactManager *self,
+                                                    TpHandle handle,
+                                                    const gchar **color,
+                                                    const gchar **name,
+                                                    const gchar **type)
+{
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+  SalutContactManagerActivity *activity = g_hash_table_lookup (
+      priv->olpc_activities_by_room, GUINT_TO_POINTER (handle));
+
+  if (activity == NULL)
+    return FALSE;
+
+  if (activity->color != NULL && color != NULL)
+    *color = activity->color;
+  if (activity->name != NULL && name != NULL)
+    *name = activity->name;
+  if (activity->type != NULL && type != NULL)
+    *type = activity->type;
+  return TRUE;
+}
+
+static gboolean
+split_activity_name (const gchar **contact_name)
+{
+  const gchar *orig = *contact_name;
+
+  *contact_name = strchr (*contact_name, ':');
+  if (*contact_name == NULL)
+    {
+      *contact_name = orig;
+      DEBUG ("Ignoring invalid _olpc-activity with no ':': %s", orig);
+      return FALSE;
+    }
+  (*contact_name)++;
+  return TRUE;
+}
+#endif
+
 static void
 browser_found(SalutAvahiServiceBrowser *browser,
               AvahiIfIndex interface, AvahiProtocol protocol, 
@@ -249,20 +431,33 @@ browser_found(SalutAvahiServiceBrowser *browser,
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles
       ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
   SalutContact *contact;
+  const char *contact_name = name;
 
   if (flags & AVAHI_LOOKUP_RESULT_OUR_OWN) 
     return;
 
+#ifdef ENABLE_OLPC
+  if (browser == priv->activity_browser)
+    {
+      if (!split_activity_name (&contact_name))
+        return;
+    }
+#endif
+
   /* FIXME: For now we assume name is unique on the lan */
-  contact = g_hash_table_lookup(priv->contacts, name);
+  contact = g_hash_table_lookup (priv->contacts, contact_name);
   if (contact == NULL) {
-    contact = salut_contact_new(priv->client, room_repo, name);
+    contact = salut_contact_new(priv->client, room_repo, contact_name);
     g_hash_table_insert(priv->contacts, g_strdup(contact->name), contact);
-    DEBUG("Adding %s to contacts", name);
+    DEBUG("Adding %s to contacts", contact_name);
     g_signal_connect(contact, "found", 
                      G_CALLBACK(contact_found_cb), mgr);
     g_signal_connect(contact, "contact-change", 
                      G_CALLBACK(contact_change_cb), mgr);
+#ifdef ENABLE_OLPC
+    g_signal_connect(contact, "activity-change",
+        G_CALLBACK(activity_change_cb), mgr);
+#endif
     g_signal_connect(contact, "lost", 
                      G_CALLBACK(contact_lost_cb), mgr);
     g_object_weak_ref(G_OBJECT(contact), _contact_finalized_cb , mgr);
@@ -274,15 +469,31 @@ browser_found(SalutAvahiServiceBrowser *browser,
 
 static void
 browser_removed(SalutAvahiServiceBrowser *browser,
-              AvahiIfIndex interface, AvahiProtocol protocol, 
+              AvahiIfIndex interface, AvahiProtocol protocol,
               const char *name, const char *type, const char *domain,
               SalutAvahiLookupResultFlags flags,
               gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  SalutContact *contact = g_hash_table_lookup(priv->contacts, name);
+  SalutContact *contact;
+  const char *contact_name = name;
 
   DEBUG("Browser removed for %s", name);
+
+#ifdef ENABLE_OLPC
+  if (browser == priv->activity_browser)
+    {
+      if (!split_activity_name (&contact_name))
+        return;
+    }
+
+  /* stop caring about this activity advertisement, and also the activity
+   * if nobody is advertising it any more */
+  DEBUG ("Activity %s no longer advertised", name);
+  g_hash_table_remove (priv->olpc_activities_by_mdns, name);
+#endif
+
+  contact = g_hash_table_lookup (priv->contacts, contact_name);
   if (contact != NULL) {
     salut_contact_remove_service(contact, interface, protocol, 
                                  name, type, domain);
@@ -314,10 +525,19 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     priv->client = NULL;
   }
 
-  if (priv->browser) {
-    g_object_unref(priv->browser);
-    priv->browser = NULL;
-  }
+  if (priv->presence_browser)
+    {
+      g_object_unref (priv->presence_browser);
+      priv->presence_browser = NULL;
+    }
+
+#ifdef ENABLE_OLPC
+  if (priv->activity_browser)
+    {
+      g_object_unref (priv->activity_browser);
+      priv->activity_browser = NULL;
+    }
+#endif
 
   if (priv->contacts) {
     g_hash_table_foreach_remove(priv->contacts, dispose_contact, mgr); 
@@ -476,8 +696,13 @@ salut_contact_manager_new(SalutConnection *connection) {
   priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (ret);
 
   priv->connection = connection;
-  priv->browser = salut_avahi_service_browser_new("_presence._tcp");
-  
+
+  priv->presence_browser = salut_avahi_service_browser_new ("_presence._tcp");
+#ifdef ENABLE_OLPC
+  priv->activity_browser = salut_avahi_service_browser_new
+    ("_olpc-activity._udp");
+#endif
+
   return ret;
 }
 
@@ -491,16 +716,34 @@ salut_contact_manager_start(SalutContactManager *mgr,
   priv->client = client;
   g_object_ref(client);
 
-  g_signal_connect(priv->browser, "new-service",
+  g_signal_connect(priv->presence_browser, "new-service",
                    G_CALLBACK(browser_found), mgr);
-  g_signal_connect(priv->browser, "removed-service",
+  g_signal_connect(priv->presence_browser, "removed-service",
                    G_CALLBACK(browser_removed), mgr);
-  g_signal_connect(priv->browser, "failure",
+  g_signal_connect(priv->presence_browser, "failure",
                    G_CALLBACK(browser_failed), mgr);
 
-  if (!salut_avahi_service_browser_attach(priv->browser, priv->client, error)) {
-    return FALSE;
-  }
+  if (!salut_avahi_service_browser_attach(priv->presence_browser,
+        priv->client, error))
+    {
+      return FALSE;
+    }
+
+#ifdef ENABLE_OLPC
+  g_signal_connect (priv->activity_browser, "new-service",
+      G_CALLBACK (browser_found), mgr);
+  g_signal_connect (priv->activity_browser, "removed-service",
+      G_CALLBACK (browser_removed), mgr);
+  g_signal_connect (priv->activity_browser, "failure",
+      G_CALLBACK (browser_failed), mgr);
+
+  if (!salut_avahi_service_browser_attach(priv->activity_browser,
+        priv->client, error))
+    {
+      return FALSE;
+    }
+#endif
+
   return TRUE;
 }
 

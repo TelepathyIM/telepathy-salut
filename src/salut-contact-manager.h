@@ -16,6 +16,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+
 #ifndef __SALUT_CONTACT_MANAGER_H__
 #define __SALUT_CONTACT_MANAGER_H__
 
@@ -69,5 +71,11 @@ salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle);
 GList *
 salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr, 
                                               struct sockaddr_storage *address);
+
+#ifdef ENABLE_OLPC
+gboolean salut_contact_manager_get_olpc_activity_properties
+  (SalutContactManager *self, TpHandle handle, const gchar **color,
+   const gchar **name, const gchar **type);
+#endif
 
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/

@@ -74,6 +74,10 @@ static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
     gpointer iface_data);
 
+static void
+salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
+    gpointer iface_data);
+
 #endif
 
 static void
@@ -106,6 +110,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
 #ifdef ENABLE_OLPC
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_ACTIVITY_PROPERTIES,
+       salut_connection_olpc_activity_properties_iface_init);
 #endif
     )
 
@@ -1363,6 +1369,51 @@ emit_properties_changed (SalutConnection *connection,
 }
 
 static void
+append_activity (const char *activity_id, TpHandle handle, gpointer user_data)
+{
+  GPtrArray *arr = user_data;
+  GType type = ACTIVITY_PAIR_TYPE;
+  GValue gvalue = {0};
+
+  g_value_init (&gvalue, type);
+  g_value_take_boxed (&gvalue,
+      dbus_g_type_specialized_construct (type));
+
+  dbus_g_type_struct_set (&gvalue,
+      0, activity_id,
+      1, handle,
+      G_MAXUINT);
+  g_ptr_array_add (arr, g_value_get_boxed (&gvalue));
+}
+
+static void
+free_olpc_activities (GPtrArray *arr)
+{
+  GType type = ACTIVITY_PAIR_TYPE;
+  guint i;
+
+  for (i = 0; i < arr->len; i++)
+    g_boxed_free (type, arr->pdata[i]);
+
+  g_ptr_array_free (arr, TRUE);
+}
+
+static void
+_contact_manager_contact_olpc_activities_changed (SalutConnection *self,
+                                                  SalutContact *contact,
+                                                  TpHandle handle)
+{
+  GPtrArray *activities = g_ptr_array_new ();
+
+  DEBUG ("called for %u", handle);
+
+  salut_contact_foreach_olpc_activity (contact, append_activity, activities);
+  salut_svc_olpc_buddy_info_emit_activities_changed (self,
+      handle, activities);
+  free_olpc_activities (activities);
+}
+
+static void
 _contact_manager_contact_olpc_properties_changed (SalutConnection *self,
                                                   SalutContact *contact,
                                                   TpHandle handle)
@@ -1673,25 +1724,41 @@ salut_connection_olpc_set_current_activity (SalutSvcOLPCBuddyInfo *iface,
 
 static void
 salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
-                                      guint contact,
+                                      TpHandle handle,
                                       DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  GPtrArray *arr;
 
-  DEBUG ("called");
+  DEBUG ("called for %u", handle);
 
-  if (0)
+  if (handle == base->self_handle)
     {
-      (void) priv;
+      arr = g_ptr_array_new ();
+      salut_self_foreach_olpc_activity (priv->self, append_activity, arr);
     }
   else
     {
-      GError error = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-          "Getting activities not implemented" };
+      SalutContact *contact = salut_contact_manager_get_contact
+        (priv->contact_manager, handle);
 
-      dbus_g_method_return_error (context, &error);
+      if (contact == NULL)
+        {
+          /* FIXME: should this be InvalidHandle? */
+          GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
+          DEBUG ("Returning error: unknown contact");
+          dbus_g_method_return_error (context, &e);
+          return;
+        }
+
+      arr = g_ptr_array_new ();
+      salut_contact_foreach_olpc_activity (contact, append_activity, arr);
     }
+
+  salut_svc_olpc_buddy_info_return_from_get_activities (context, arr);
+  free_olpc_activities (arr);
 }
 
 static void
@@ -1704,8 +1771,8 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_ROOM);
-  GHashTable *act_id_to_room = g_hash_table_new_full (g_str_hash,
-      g_str_equal, (GDestroyNotify) g_free, NULL);
+  GHashTable *room_to_act_id = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, NULL, (GDestroyNotify) g_free);
   GError *error = NULL;
   guint i;
 
@@ -1742,11 +1809,11 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
           goto finally;
         }
 
-      g_hash_table_insert (act_id_to_room, activity,
-          GUINT_TO_POINTER (room_handle));
+      g_hash_table_insert (room_to_act_id, GUINT_TO_POINTER (room_handle),
+          activity);
     }
 
-  if (!salut_self_set_olpc_activities (priv->self, act_id_to_room, &error))
+  if (!salut_self_set_olpc_activities (priv->self, room_to_act_id, &error))
     {
       dbus_g_method_return_error (context, error);
     }
@@ -1756,7 +1823,7 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
     }
 
 finally:
-  g_hash_table_destroy (act_id_to_room);
+  g_hash_table_destroy (room_to_act_id);
 }
 
 static void
@@ -1773,6 +1840,212 @@ salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
   IMPLEMENT(get_activities);
   IMPLEMENT(set_current_activity);
   IMPLEMENT(get_current_activity);
+#undef IMPLEMENT
+}
+
+
+static void
+salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
+                                     TpHandle handle,
+                                     DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
+      (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
+  GHashTable *properties = NULL;
+  const gchar *color = NULL, *name = NULL, *type = NULL;
+  GError *error = NULL;
+  gboolean known = FALSE;
+  GValue color_val = {0,};
+  GValue name_val = {0,};
+  GValue type_val = {0,};
+
+  if (!tp_handle_is_valid(room_repo, handle, &error))
+    goto error;
+
+  if (salut_contact_manager_get_olpc_activity_properties
+      (priv->contact_manager, handle, &color, &name, &type))
+    known = TRUE;
+
+  /* Call this one second so it overwrites values from the first */
+  if (salut_self_get_olpc_activity_properties (priv->self, handle, &color,
+        &name, &type))
+    known = TRUE;
+
+  if (!known)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Activity unknown: %u", handle);
+      goto error;
+    }
+
+  properties = g_hash_table_new (g_str_hash, g_str_equal);
+
+  if (color != NULL)
+    {
+      g_value_init (&color_val, G_TYPE_STRING);
+      g_value_set_static_string (&color_val, color);
+      g_hash_table_insert (properties, "color", &color_val);
+    }
+  if (name != NULL)
+    {
+      g_value_init (&name_val, G_TYPE_STRING);
+      g_value_set_static_string (&name_val, name);
+      g_hash_table_insert (properties, "name", &name_val);
+    }
+  if (type != NULL)
+    {
+      g_value_init (&type_val, G_TYPE_STRING);
+      g_value_set_static_string (&type_val, type);
+      g_hash_table_insert (properties, "type", &type_val);
+    }
+
+  salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
+  g_hash_table_destroy (properties);
+
+  return;
+
+error:
+  dbus_g_method_return_error (context, error);
+  g_error_free (error);
+}
+
+static void
+salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
+                                     TpHandle handle,
+                                     GHashTable *properties,
+                                     DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
+      (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
+  GError *error = NULL;
+  const gchar *known_properties[] = { "color", "name", "type", NULL };
+  const gchar *color = NULL;
+  const gchar *name = NULL;
+  const gchar *type = NULL;
+  const GValue *val;
+
+  if (!tp_handle_is_valid(room_repo, handle, &error))
+    goto error;
+
+  if (g_hash_table_find (properties, find_unknown_properties, known_properties)
+      != NULL)
+    {
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Unknown property given");
+      goto error;
+    }
+
+  val = (const GValue *) g_hash_table_lookup (properties, "color");
+  if (val != NULL)
+    {
+      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "Color value should be of type s");
+          goto error;
+        }
+      else
+        {
+          int len;
+          gboolean correct = TRUE;
+
+          color = g_value_get_string (val);
+
+          /* be very anal about the color format */
+          len = strlen (color);
+          if (len != 15)
+            {
+              correct = FALSE;
+            }
+          else
+            {
+              int i;
+              for (i = 0 ; i < len ; i++)
+                {
+                  switch (i)
+                    {
+                      case 0:
+                      case 8:
+                        correct = (color[i] == '#');
+                        break;
+                      case 7:
+                        correct = (color[i] == ',');
+                        break;
+                      default:
+                        correct = isxdigit (color[i]);
+                        break;
+                    }
+                }
+            }
+
+          if (!correct)
+            {
+              error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                  "Color value has an incorrect format");
+              goto error;
+            }
+        }
+    }
+
+  val = g_hash_table_lookup (properties, "type");
+  if (val != NULL)
+    {
+      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "name value should be of type s");
+          goto error;
+        }
+
+      type = g_value_get_string (val);
+
+      if (type[0] == '\0')
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "type value must be non-empty");
+          goto error;
+        }
+    }
+
+  val = g_hash_table_lookup (properties, "name");
+  if (val != NULL)
+    {
+      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "name value should be of type s");
+          goto error;
+        }
+
+      name = g_value_get_string (val);
+    }
+
+  if (!salut_self_set_olpc_activity_properties (priv->self, handle, color,
+        name, type, &error))
+    goto error;
+
+  salut_svc_olpc_activity_properties_return_from_set_properties (context);
+  return;
+
+error:
+  dbus_g_method_return_error (context, error);
+  g_error_free (error);
+}
+
+static void
+salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
+                                                      gpointer iface_data)
+{
+  SalutSvcOLPCActivityPropertiesClass *klass =
+    (SalutSvcOLPCActivityPropertiesClass *) g_iface;
+#define IMPLEMENT(x) salut_svc_olpc_activity_properties_implement_##x \
+  (klass, salut_connection_act_##x)
+  IMPLEMENT(set_properties);
+  IMPLEMENT(get_properties);
 #undef IMPLEMENT
 }
 #endif
@@ -1838,6 +2111,9 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
   if (changes & SALUT_CONTACT_OLPC_CURRENT_ACTIVITY)
     salut_svc_olpc_buddy_info_emit_current_activity_changed (self,
         handle, contact->olpc_cur_act, contact->olpc_cur_act_room);
+
+  if (changes & SALUT_CONTACT_OLPC_ACTIVITIES)
+    _contact_manager_contact_olpc_activities_changed (self, contact, handle);
 #endif
 }
 

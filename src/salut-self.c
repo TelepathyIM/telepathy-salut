@@ -32,6 +32,7 @@
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <telepathy-glib/errors.h>
+#include <telepathy-glib/util.h>
 
 #include "salut-avahi-entry-group.h"
 
@@ -68,6 +69,10 @@ typedef struct
   TpHandle room;
   SalutAvahiEntryGroup *group;
   SalutAvahiEntryGroupService *service;
+  gchar *activity_id;
+  gchar *color;
+  gchar *name;
+  gchar *type;
 } SalutOLPCActivity;
 
 static void
@@ -75,13 +80,21 @@ activity_free (SalutOLPCActivity *activity)
 {
   if (activity == NULL)
     return;
+
   if (activity->room != 0)
     tp_handle_unref (activity->room_repo, activity->room);
   activity->room = 0;
   activity->room_repo = NULL;
+
   if (activity->group != NULL)
     g_object_unref (activity->group);
   activity->group = NULL;
+
+  g_free (activity->activity_id);
+  g_free (activity->color);
+  g_free (activity->name);
+  g_free (activity->type);
+
   g_slice_free (SalutOLPCActivity, activity);
 }
 
@@ -129,7 +142,7 @@ struct _SalutSelfPrivate
   SalutAvahiEntryGroup *presence_group;
   SalutAvahiEntryGroupService *presence;
 #ifdef ENABLE_OLPC
-  /* dup'd activity ID -> SalutOLPCActivity */
+  /* handle owned by the SalutOLPCActivity -> SalutOLPCActivity */
   GHashTable *olpc_activities;
 #endif
 
@@ -165,8 +178,8 @@ salut_self_init (SalutSelf *obj)
   priv->presence_group = NULL;
   priv->presence = NULL;
 #ifdef ENABLE_OLPC
-  priv->olpc_activities = g_hash_table_new_full (g_str_hash, g_str_equal,
-      (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
+  priv->olpc_activities = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) activity_free);
 #endif
   priv->listener = NULL;
 }
@@ -734,10 +747,11 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 
 #ifdef ENABLE_OLPC
 
-static gboolean
+static SalutOLPCActivity *
 salut_self_add_olpc_activity (SalutSelf *self,
                               const gchar *activity_id,
                               TpHandle room,
+                              gboolean commit,
                               GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
@@ -746,29 +760,36 @@ salut_self_add_olpc_activity (SalutSelf *self,
   gchar *name;
   const gchar *room_name;
 
-  g_return_val_if_fail (activity_id != NULL, FALSE);
-  g_return_val_if_fail (room != 0, FALSE);
+  g_return_val_if_fail (activity_id != NULL, NULL);
+  g_return_val_if_fail (room != 0, NULL);
 
   room_name = tp_handle_inspect (priv->room_repo, room);
   /* caller should already have validated this */
-  g_return_val_if_fail (room_name != NULL, FALSE);
+  g_return_val_if_fail (room_name != NULL, NULL);
+
+  if (strchr (activity_id, ':') != NULL)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Activity IDs may not contain ':'");
+      return NULL;
+    }
 
   activity = activity_new (priv->room_repo, room, priv->client, error);
   if (activity == NULL)
-    return FALSE;
+    return NULL;
 
-  /* FIXME: require that the room name does not contain ':'? That would
-   * make sure we avoid collisions, unless someone is deliberately
-   * interfering with us (not that there's much you can do about that
-   * on-link) */
+  activity->activity_id = g_strdup (activity_id);
 
   name = g_strdup_printf ("%s:%s@%s", room_name, priv->published_name,
       avahi_client_get_host_name (priv->client->avahi_client));
 
   txt_record = avahi_string_list_new ("txtvers=1", NULL);
   txt_record = avahi_string_list_add_printf (txt_record, "room=%s", room_name);
-  txt_record = avahi_string_list_add_printf (txt_record, "activity-id=%s",
-      activity_id);
+  if (activity_id != NULL)
+    {
+      txt_record = avahi_string_list_add_printf (txt_record, "activity-id=%s",
+          activity_id);
+    }
 
   activity->service = salut_avahi_entry_group_add_service_strlist
       (activity->group, name, "_olpc-activity._udp", 0, error, txt_record);
@@ -779,22 +800,24 @@ salut_self_add_olpc_activity (SalutSelf *self,
   if (activity->service == NULL)
     {
       activity_free (activity);
-      return FALSE;
+      return NULL;
     }
 
-  if (!salut_avahi_entry_group_commit (activity->group, error))
+  if (commit)
     {
-      activity_free (activity);
-      return FALSE;
+      if (!salut_avahi_entry_group_commit (activity->group, error))
+        {
+          activity_free (activity);
+          return NULL;
+        }
     }
 
   tp_handle_ref (priv->room_repo, room);
+  activity->room = room;
 
-  /* if there was an old activity with the same ID and a different room
-   * (shouldn't happen anyway), this deletes it */
-  g_hash_table_replace (priv->olpc_activities, g_strdup (activity_id),
+  g_hash_table_insert (priv->olpc_activities, GUINT_TO_POINTER (room),
       activity);
-  return TRUE;
+  return activity;
 }
 
 struct _set_olpc_activities_ctx
@@ -802,7 +825,7 @@ struct _set_olpc_activities_ctx
   SalutSelf *self;
   TpHandleRepoIface *room_repo;
   GHashTable *olpc_activities;
-  GHashTable *act_id_to_room;
+  GHashTable *room_to_act_id;
   GError **error;
 };
 
@@ -818,14 +841,29 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
       return;
     }
 
-  /* add the activity service if it's not in data->olpc_activities, or if
-   * the room corresponding to the activity-ID has changed (shouldn't happen
-   * in practice) */
   activity = g_hash_table_lookup (data->olpc_activities, key);
-  if (activity == NULL || GPOINTER_TO_UINT (value) != activity->room)
+  if (activity == NULL)
     {
-      salut_self_add_olpc_activity (data->self, key, GPOINTER_TO_UINT (value),
-          data->error);
+      /* add the activity service if it's not in data->olpc_activities */
+      salut_self_add_olpc_activity (data->self, value, GPOINTER_TO_UINT (key),
+          TRUE, data->error);
+    }
+  else if (tp_strdiff (value, activity->activity_id))
+    {
+      /* if the user is claiming that the activity ID of a room has changed,
+       * believe them... */
+      GError *e;
+
+      g_free (activity->activity_id);
+      activity->activity_id = g_strdup (value);
+
+      if (!salut_avahi_entry_group_service_set (activity->service,
+            "activity-id", value, &e))
+        {
+          g_set_error (data->error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+              e->message);
+          g_error_free (e);
+        }
     }
 }
 
@@ -834,27 +872,30 @@ _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 {
   struct _set_olpc_activities_ctx *data = user_data;
 
-  /* delete the activity service if it's not in data->act_id_to_room */
-  return (g_hash_table_lookup (data->act_id_to_room, key) == NULL);
+  /* delete the activity service if it's not in data->room_to_act_id */
+  return (g_hash_table_lookup (data->room_to_act_id, key) == NULL);
 }
 
 gboolean
 salut_self_set_olpc_activities (SalutSelf *self,
-                                GHashTable *act_id_to_room,
+                                GHashTable *room_to_act_id,
                                 GError **error)
 {
+  GError *e = NULL;
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   struct _set_olpc_activities_ctx data = { self, priv->room_repo,
-      priv->olpc_activities, act_id_to_room, error };
+      priv->olpc_activities, room_to_act_id, &e };
 
   /* delete any which aren't in room_to_act_id. Can't fail */
   g_hash_table_foreach_remove (priv->olpc_activities,
       _set_olpc_activities_delete, &data);
 
   /* add any which aren't in olpc_activities */
-  g_hash_table_foreach (act_id_to_room, _set_olpc_activities_add, &data);
+  g_hash_table_foreach (room_to_act_id, _set_olpc_activities_add, &data);
 
-  return (*error == NULL);
+  if (error != NULL)
+    *error = e;
+  return (e == NULL);
 }
 
 gboolean
@@ -920,6 +961,82 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
       g_error_free (err);
     }
   return ret;
+}
+
+gboolean
+salut_self_get_olpc_activity_properties (SalutSelf *self,
+                                         TpHandle handle,
+                                         const gchar **color,
+                                         const gchar **name,
+                                         const gchar **type)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
+      GUINT_TO_POINTER (handle));
+
+  if (activity == NULL)
+    return FALSE;
+
+  if (activity->color != NULL && color != NULL)
+    *color = activity->color;
+  if (activity->name != NULL && name != NULL)
+    *name = activity->name;
+  if (activity->type != NULL && type != NULL)
+    *type = activity->type;
+  return TRUE;
+}
+
+gboolean
+salut_self_set_olpc_activity_properties (SalutSelf *self,
+                                         TpHandle handle,
+                                         const gchar *color,
+                                         const gchar *name,
+                                         const gchar *type,
+                                         GError **error)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  GError *err = NULL;
+  SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
+      GUINT_TO_POINTER (handle));
+
+  if (activity == NULL)
+    {
+      activity = salut_self_add_olpc_activity (self, NULL, handle, TRUE,
+          error);
+      if (activity == NULL)
+        return FALSE;
+    }
+
+  salut_avahi_entry_group_service_freeze (activity->service);
+  if (name != NULL)
+    {
+      g_free (activity->name);
+      activity->color = g_strdup (name);
+      salut_avahi_entry_group_service_set (activity->service, "name",
+          name, NULL);
+    }
+  if (color != NULL)
+    {
+      g_free (activity->color);
+      activity->color = g_strdup (color);
+      salut_avahi_entry_group_service_set (activity->service, "color",
+          color, NULL);
+    }
+  if (type != NULL)
+    {
+      g_free (activity->type);
+      activity->type = g_strdup (type);
+      salut_avahi_entry_group_service_set (activity->service, "type",
+          type, NULL);
+    }
+
+  if (!salut_avahi_entry_group_service_thaw (activity->service, &err))
+    {
+      g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free(err);
+      return FALSE;
+    }
+  return TRUE;
 }
 
 gboolean
@@ -1005,6 +1122,39 @@ salut_self_set_olpc_properties (SalutSelf *self,
       return FALSE;
     }
   return TRUE;
+}
+
+typedef struct
+{
+  SalutSelfOLPCActivityFunc foreach;
+  gpointer user_data;
+} foreach_olpc_activity_ctx;
+
+static void
+foreach_olpc_activity (gpointer key, gpointer value, gpointer user_data)
+{
+  foreach_olpc_activity_ctx *ctx = user_data;
+  SalutOLPCActivity *activity = value;
+
+  DEBUG ("%s -> %u", activity->activity_id, GPOINTER_TO_UINT (key));
+  (ctx->foreach) (activity->activity_id, GPOINTER_TO_UINT (key),
+      ctx->user_data);
+}
+
+void
+salut_self_foreach_olpc_activity (SalutSelf *self,
+                                  SalutSelfOLPCActivityFunc foreach,
+                                  gpointer user_data)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  foreach_olpc_activity_ctx ctx = { foreach, user_data };
+
+  DEBUG ("called");
+
+  g_hash_table_foreach (priv->olpc_activities, foreach_olpc_activity,
+      &ctx);
+
+  DEBUG ("end");
 }
 
 #endif /* ENABLE_OLPC */
