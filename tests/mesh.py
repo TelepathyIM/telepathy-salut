@@ -55,8 +55,10 @@ class BaseMeshNode(protocol.ProcessProtocol):
       if command in commands:
         commands[command](rawdata)
         return
+    self.unknownOutput(line)
 
-    print "Unknown output: " + line.rstrip()
+  def unknownOutput(self, line):
+    print self.name + " - unknown output: " + line.rstrip()
 
   def outReceived(self, data):
     lines = (self.__buffer + data).split(self.delimiter)
