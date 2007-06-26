@@ -1452,9 +1452,10 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
           dbus_g_method_return_error (context, &e);
           return;
         }
-    properties = get_properties_hash (contact->olpc_key, contact->olpc_color,
+      properties = get_properties_hash (contact->olpc_key, contact->olpc_color,
         contact->jid);
-  }
+      g_object_unref (contact);
+    }
 
   salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
   g_hash_table_destroy (properties);
@@ -1674,6 +1675,7 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
       salut_svc_olpc_buddy_info_return_from_get_current_activity (context,
           contact->olpc_cur_act ? contact->olpc_cur_act : "",
           contact->olpc_cur_act_room);
+      g_object_unref (contact);
     }
 }
 
@@ -1757,6 +1759,7 @@ salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
 
       arr = g_ptr_array_new ();
       salut_contact_foreach_olpc_activity (contact, append_activity, arr);
+      g_object_unref (contact);
     }
 
   salut_svc_olpc_buddy_info_return_from_get_activities (context, arr);
