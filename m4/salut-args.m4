@@ -39,15 +39,16 @@ AC_DEFUN([SALUT_ARG_VALGRIND],
 [
   dnl valgrind inclusion
   AC_ARG_ENABLE(valgrind,
-    AC_HELP_STRING([--disable-valgrind],[disable run-time valgrind detection]),
+    AC_HELP_STRING([--enable-valgrind],[enable valgrind checking and run-time detection]),
     [
       case "${enableval}" in
-        yes) ENABLE_VALGRIND=yes ;;
-        no)  ENABLE_VALGRIND=no ;;
+        yes|no) enable="${enableval}" ;;
         *)   AC_MSG_ERROR(bad value ${enableval} for --enable-valgrind) ;;
       esac
     ],
-    [ENABLE_VALGRIND=no])
+    [enable=no])
+
+  SALUT_VALGRIND($enable)
 ])
 
 AC_DEFUN([SALUT_ARG_COVERAGE],
@@ -57,10 +58,12 @@ AC_DEFUN([SALUT_ARG_COVERAGE],
       [compile with coverage profiling instrumentation (gcc only)]),
     [
       case "${enableval}" in
-        yes) ENABLE_COVERAGE=yes ;;
-        no)  ENABLE_COVERAGE=no ;;
+        yes|no) enable="${enableval}" ;;
         *)   AC_MSG_ERROR(bad value ${enableval} for --enable-coverage) ;;
       esac
     ],
-    [ENABLE_COVERAGE=no])
+    [enable=no])
+
+  SALUT_GCOV($enable)
+  SALUT_LCOV($enable)
 ])
