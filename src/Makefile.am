@@ -106,8 +106,6 @@ CORE_SOURCES =                                          \
     tube-dbus.c                                         \
     salut-tubes-channel.h                               \
     salut-tubes-channel.c                               \
-    salut-tubes-manager.h                               \
-    salut-tubes-manager.c                               \
     tube-iface.h                                        \
     tube-iface.c                                        \
     sha1/sha1-util.h                                    \
