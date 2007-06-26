@@ -15,7 +15,7 @@ check_PROGRAMS = \
 
 check_SCRIPTS = run-xmpp-connection-test.sh
 
-EXTRA_DIST = simplemeshtest.py mesh.py
+EXTRA_DIST = simplemeshtest.py mesh.py $(check_SCRIPTS)
 
 
 test_xmpp_connection_SOURCES = \
