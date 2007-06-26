@@ -224,6 +224,8 @@ salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
   f.data = data;
 
   g_hash_table_foreach(priv->text_channels, salut_muc_manager_iface_foreach_one, &f);
+  g_hash_table_foreach (priv->tubes_channels,
+      salut_muc_manager_iface_foreach_one, &f);
 }
 
 static void
