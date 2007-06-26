@@ -249,7 +249,7 @@ static void
 signal_data(GibberRMulticastSender *sender, guint8 stream_id,
             guint8 *data, gsize size) {
   sender->state = GIBBER_R_MULTICAST_SENDER_STATE_RUNNING;
-  g_signal_emit(sender, signals[DATA_RECEIVED], 0, stream_id, data, size);
+  g_signal_emit(sender, signals[RECEIVED_DATA], 0, stream_id, data, size);
 }
 
 static gboolean
