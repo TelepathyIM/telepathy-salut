@@ -61,6 +61,7 @@ check_main_SOURCES =                     \
     check-helpers.c                      \
     check-helpers.h                      \
     check-gibber.h                       \
+    check-salut.h                        \
     check-gibber-xmpp-node.c             \
     check-gibber-xmpp-reader.c           \
     check-node-properties.c              \
