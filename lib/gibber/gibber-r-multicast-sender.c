@@ -99,7 +99,9 @@ struct _GibberRMulticastSenderPrivate
   gboolean dispose_has_run;
   /* hash table with packets */
   GHashTable *packet_cache;
-  /* Other senders on the network */
+  /* Other senders on the network 
+   * (sender name -> GibberRMulticastSender object)
+   */
   GHashTable *senders;
   /* Very first packet number in the current window */
   guint32 first_packet;
