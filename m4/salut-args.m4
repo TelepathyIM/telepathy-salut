@@ -1,7 +1,6 @@
 dnl configure-time options for Telepathy Salut
 
 dnl SALUT_ARG_DEBUG
-dnl SALUT_ARG_PROFILING
 dnl SALUT_ARG_VALGRIND
 dnl SALUT_ARG_COVERAGE
 
@@ -21,21 +20,6 @@ AC_DEFUN([SALUT_ARG_DEBUG],
   if test "$enable" = yes; then
     AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
   fi
-])
-
-AC_DEFUN([SALUT_ARG_PROFILING],
-[
-  AC_ARG_ENABLE(profiling,
-    AC_HELP_STRING([--enable-profiling],
-      [adds -pg to compiler commandline, for profiling]),
-    [
-      case "${enableval}" in
-        yes) ENABLE_PROFILING=yes ;;
-        no)  ENABLE_PROFILING=no ;;
-        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-profiling) ;;
-      esac
-    ], 
-    [ENABLE_PROFILING=no]) dnl Default value
 ])
 
 AC_DEFUN([SALUT_ARG_VALGRIND],
