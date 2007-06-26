@@ -868,6 +868,7 @@ salut_contact_add_service(SalutContact *contact,
                                               name, type, domain,
                                               protocol, 0);
 
+#ifdef ENABLE_OLPC
   /* FIXME: better way to do this? */
   if (!tp_strdiff (type, "_olpc-activity._udp"))
     {
@@ -875,6 +876,7 @@ salut_contact_add_service(SalutContact *contact,
           contact);
     }
   else
+#endif
     {
       g_signal_connect(resolver, "found", G_CALLBACK(contact_resolved_cb),
           contact);
