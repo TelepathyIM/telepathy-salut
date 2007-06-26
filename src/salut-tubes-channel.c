@@ -1250,7 +1250,6 @@ salut_tubes_channel_offer_tube (TpSvcChannelTypeTubes *iface,
         }
     }
 
-  //tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
   tp_svc_channel_type_tubes_return_from_offer_tube (context, tube_id);
 
   g_free (stream_id);
@@ -1915,13 +1914,17 @@ tubes_iface_init (gpointer g_iface,
   IMPLEMENT(get_available_tube_types);
   IMPLEMENT(list_tubes);
   IMPLEMENT(offer_tube);
-  //IMPLEMENT(offer_d_bus_tube);
-  //IMPLEMENT(offer_stream_unix_tube);
+  /*
+  IMPLEMENT(offer_d_bus_tube);
+  IMPLEMENT(offer_stream_unix_tube);
+  */
   IMPLEMENT(accept_tube);
   IMPLEMENT(close_tube);
   IMPLEMENT(get_d_bus_server_address);
   IMPLEMENT(get_d_bus_names);
-  //IMPLEMENT(get_stream_unix_socket_address);
+  /*
+  IMPLEMENT(get_stream_unix_socket_address);
+  */
 #undef IMPLEMENT
 }
 
