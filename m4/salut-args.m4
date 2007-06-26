@@ -48,7 +48,7 @@ AC_DEFUN([SALUT_ARG_VALGRIND],
     ],
     [enable=no])
 
-  SALUT_VALGRIND($enable)
+  SALUT_VALGRIND($enable, [2.1])
 ])
 
 AC_DEFUN([SALUT_ARG_COVERAGE],

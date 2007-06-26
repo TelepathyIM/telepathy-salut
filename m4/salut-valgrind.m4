@@ -3,9 +3,13 @@ dnl Detect Valgrind location and flags
 AC_DEFUN([SALUT_VALGRIND],
 [
   enable=$1
+  if test -n "$2"; then
+    valgrind_req=$2
+  else
+    valgrind_req="2.1"
+  fi
 
-  VALGRIND_REQ="2.1"
-  PKG_CHECK_MODULES(VALGRIND, valgrind > $VALGRIND_REQ,
+  PKG_CHECK_MODULES(VALGRIND, valgrind > "$valgrind_req",
     have_valgrind_runtime="yes", have_valgrind_runtime="no")
 
   AC_PATH_PROG(VALGRIND_PATH, valgrind)
