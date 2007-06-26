@@ -129,3 +129,6 @@ class Mesh:
     self.nodes.append(node)
     return node
 
+  def addMeshNode(self, node):
+    self.nodes.append(node)
+    return node
