@@ -143,7 +143,7 @@ START_TEST (test_depends)
 
   /* First input some data packets, so the transport is forced to generate
    * dependency info */
-  for (i = 0 ; senders[i].name != NULL; i++) 
+  for (i = 0 ; senders[i].name != NULL; i++)
     {
       GibberRMulticastPacket *packet;
       guint8 *data;

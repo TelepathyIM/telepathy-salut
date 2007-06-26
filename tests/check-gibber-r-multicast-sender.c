@@ -23,10 +23,15 @@ typedef struct {
 
 typedef struct {
   const gchar *id;
-  guint32 expected_packet;
+  guint32 packet_id;
 } recv_t;
 
 GMainLoop *loop;
+recv_t receivers[] = {
+    { "receiver1", 500 },
+    { "receiver2", 600 },
+    { NULL, 0 }
+};
 
 GibberRMulticastPacket *
 generate_packet(guint32 serial) {
@@ -34,8 +39,6 @@ generate_packet(guint32 serial) {
   guint8 part = 0, total = 1;
   gchar *payload;
   int i;
-  recv_t receivers[] =
-    { { "receiver1", 500 }, { "receiver2", 600 }, { NULL, 0 } };
 
   if (serial % 3 > 0) {
     part = serial % 3 - 1;
@@ -48,7 +51,7 @@ generate_packet(guint32 serial) {
 
   for (i = 0 ; receivers[i].id != NULL; i++) {
     gibber_r_multicast_packet_add_receiver(p,
-        receivers[i].id, receivers[i].expected_packet, NULL);
+        receivers[i].id, receivers[i].packet_id, NULL);
   }
 
   payload = g_strdup_printf("%010d\n", serial);
@@ -143,14 +146,22 @@ START_TEST (test_sender) {
     { 0xff, TRUE },
     { 0xff, FALSE },
   };
+  int i;
 
   g_type_init();
+  GHashTable *senders = g_hash_table_new_full(g_str_hash, g_str_equal,
+                                              NULL, g_object_unref);
   loop = g_main_loop_new(NULL, FALSE);
 
   serial_offset = tests[_i].serial_offset;
   expected = serial_offset;
 
-  s = gibber_r_multicast_sender_new(SENDER);
+  for (i = 0 ; receivers[i].id != NULL; i++) {
+    s = gibber_r_multicast_sender_new(receivers[i].id, senders);
+    gibber_r_multicast_sender_seen(s, receivers[i].packet_id + 1);
+    g_hash_table_insert(senders, s->name, s);
+  }
+  s = gibber_r_multicast_sender_new(SENDER, senders);
   g_signal_connect(s, "received-data", G_CALLBACK(data_received_cb), loop);
   g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
@@ -175,7 +186,7 @@ START_TEST (test_sender) {
 
   g_main_loop_run(loop);
 
-  g_object_unref(s);
+  g_hash_table_unref(senders);
 } END_TEST
 
 TCase *

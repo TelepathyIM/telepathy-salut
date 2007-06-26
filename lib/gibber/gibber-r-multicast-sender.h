@@ -49,6 +49,9 @@ struct _GibberRMulticastSender {
 
     GibberRMulticastSenderState state;
 
+    /* Next packet we want to send out */
+    guint32 next_output_packet;
+
     /* Last packet that we send in the output stream*/
     guint32 last_output_packet;
 
@@ -73,11 +76,15 @@ GType gibber_r_multicast_sender_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderClass))
 
 GibberRMulticastSender *
-gibber_r_multicast_sender_new(const gchar *name);
+gibber_r_multicast_sender_new(const gchar *name,
+                              GHashTable *senders);
 
 void
 gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
                                GibberRMulticastPacket *packet);
+
+void
+gibber_r_multicast_senders_updated(GibberRMulticastSender *sender);
 
 /* Returns TRUE if we were up to dated */
 gboolean
