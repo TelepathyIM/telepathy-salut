@@ -664,7 +664,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
       if (act_link != NULL)
         {
           avahi_string_list_get_pair (act_link, NULL, &act_value, NULL);
-          if (!tp_strdiff (act_value, ""))
+          if (act_value == NULL || *act_value == '\0')
             {
               DEBUG ("No current activity; ignoring current activity room, if "
                   "any");
@@ -678,7 +678,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
           char *room_value;
 
           avahi_string_list_get_pair (room_link, NULL, &room_value, NULL);
-          if (!tp_strdiff (room_value, ""))
+          if (room_value == NULL || *room_value == '\0')
             {
               room_handle = 0;
             }
