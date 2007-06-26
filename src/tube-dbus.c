@@ -258,7 +258,7 @@ unref_handle_foreach (gpointer key,
                       gpointer user_data)
 {
   TpHandle handle = GPOINTER_TO_UINT (key);
-  TpHandleRepoIface *contact_repo =  (TpHandleRepoIface *) user_data;
+  TpHandleRepoIface *contact_repo = (TpHandleRepoIface *) user_data;
 
   tp_handle_unref (contact_repo, handle);
 }
