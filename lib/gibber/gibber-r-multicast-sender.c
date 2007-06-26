@@ -180,8 +180,18 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                    0,
                    NULL, NULL,
-                   gibber_r_multicast_sender_marshal_VOID__POINTER_ULONG,
-                   G_TYPE_NONE, 2, G_TYPE_POINTER, G_TYPE_ULONG);
+                   gibber_r_multicast_sender_marshal_VOID__UCHAR_POINTER_ULONG,
+                   G_TYPE_NONE, 3, G_TYPE_UCHAR, G_TYPE_POINTER, G_TYPE_ULONG);
+
+  param_spec = g_param_spec_pointer ("senderhash",
+                                     "Sender Hash",
+                                     "Hash of other senders",
+                                     G_PARAM_CONSTRUCT_ONLY |
+                                     G_PARAM_WRITABLE       |
+                                     G_PARAM_STATIC_NAME    |
+                                     G_PARAM_STATIC_BLURB);
+  g_object_class_install_property(object_class, PROP_SENDERS_HASH,
+      param_spec);
 }
 
 void
@@ -236,6 +246,7 @@ gibber_r_multicast_sender_new(const gchar *name, GHashTable *senders) {
 static void
 signal_data(GibberRMulticastSender *sender, guint8 stream_id,
             guint8 *data, gsize size) {
+  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_RUNNING;
   g_signal_emit(sender, signals[DATA_RECEIVED], 0, stream_id, data, size);
 }
 
