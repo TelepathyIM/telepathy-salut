@@ -111,6 +111,8 @@ struct _SalutTubesChannelPrivate
 static void update_tubes_info (SalutTubesChannel *self, gboolean request);
 static void muc_connection_received_stanza_cb (GibberMucConnection *conn,
     const gchar *sender, GibberXmppStanza *stanza, gpointer user_data);
+static void muc_connection_lost_sender_cb (GibberMucConnection *conn,
+    const gchar *sender, gpointer user_data);
 static gboolean extract_tube_information (SalutTubesChannel *self,
     GibberXmppNode *tube_node, TpTubeType *type, TpHandle *initiator_handle,
     const gchar **service, GHashTable **parameters, gboolean *offering,
@@ -176,6 +178,8 @@ salut_tubes_channel_constructor (GType type,
 
       g_signal_connect (priv->muc_connection, "received-stanza",
           G_CALLBACK (muc_connection_received_stanza_cb), self);
+      g_signal_connect (priv->muc_connection, "lost-sender",
+          G_CALLBACK (muc_connection_lost_sender_cb), self);
 
       /* request tubes infos */
       update_tubes_info (self, TRUE);
@@ -621,6 +625,41 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
   if (request)
     /* Contact requested tubes information */
     update_tubes_info (self, FALSE);
+}
+
+static void
+muc_connection_lost_sender_cb (GibberMucConnection *conn,
+                               const gchar *sender,
+                               gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  TpHandle contact;
+  GHashTable *old_dbus_tubes;
+  struct _add_in_old_dbus_tubes_data add_data;
+  struct _emit_d_bus_names_changed_foreach_data emit_data;
+
+  contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
+  if (contact == 0)
+    {
+      DEBUG ("unknown sender: %s", sender);
+      return;
+    }
+
+  old_dbus_tubes = g_hash_table_new (g_direct_hash, g_direct_equal);
+  add_data.old_dbus_tubes = old_dbus_tubes;
+  add_data.contact = contact;
+  g_hash_table_foreach (priv->tubes, add_in_old_dbus_tubes, &add_data);
+
+  /* contact left the muc so he left all its tubes */
+  emit_data.contact = contact;
+  emit_data.self = self;
+  g_hash_table_foreach (old_dbus_tubes, emit_d_bus_names_changed_foreach,
+      &emit_data);
+
+  g_hash_table_destroy (old_dbus_tubes);
 }
 
 static void
