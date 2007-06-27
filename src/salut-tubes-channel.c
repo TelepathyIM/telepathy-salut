@@ -108,7 +108,7 @@ struct _SalutTubesChannelPrivate
 #define SALUT_TUBES_CHANNEL_GET_PRIVATE(obj) \
   ((SalutTubesChannelPrivate *) obj->priv)
 
-static void update_tubes_info (SalutTubesChannel *self, gboolean request);
+static gboolean update_tubes_info (SalutTubesChannel *self, gboolean request);
 static void muc_connection_received_stanza_cb (GibberMucConnection *conn,
     const gchar *sender, GibberXmppStanza *stanza, gpointer user_data);
 static void muc_connection_lost_sender_cb (GibberMucConnection *conn,
@@ -1072,7 +1072,7 @@ publish_tubes_in_node (gpointer key,
   publish_tube_in_node (data->self, tube_node, tube);
 }
 
-static void
+static gboolean
 update_tubes_info (SalutTubesChannel *self,
                    gboolean request)
 {
@@ -1087,7 +1087,7 @@ update_tubes_info (SalutTubesChannel *self,
   GError *error = NULL;
 
   if (priv->handle_type != TP_HANDLE_TYPE_ROOM)
-    return;
+    return FALSE;
 
   /* build the message */
   jid = tp_handle_inspect (room_repo, priv->handle);
@@ -1116,9 +1116,12 @@ update_tubes_info (SalutTubesChannel *self,
       g_warning ("%s: sending tubes info failed: %s", G_STRFUNC,
           error->message);
       g_error_free (error);
+      g_object_unref (msg);
+      return FALSE;
     }
 
   g_object_unref (msg);
+  return TRUE;
 }
 
 static gboolean
