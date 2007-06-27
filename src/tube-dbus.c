@@ -44,7 +44,6 @@
 /*
 #include "bytestream-factory.h"
 */
-#include "tube-dbus-signals-marshal.h"
 
 static void
 tube_iface_init (gpointer g_iface, gpointer iface_data);
@@ -807,7 +806,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  tube_dbus_marshal_VOID__VOID,
+                  g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
   signals[CLOSED] =
@@ -816,7 +815,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  tube_dbus_marshal_VOID__VOID,
+                  g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 }
 
