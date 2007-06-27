@@ -553,6 +553,7 @@ salut_tube_dbus_constructor (GType type,
        * It will be when we'll receive the answer of the SI request
        */
       GibberBytestreamIBB *bytestream;
+      GibberBytestreamIBBState state;
       const gchar *peer_id;
 
       g_assert (priv->muc_connection != NULL);
@@ -562,28 +563,22 @@ salut_tube_dbus_constructor (GType type,
       if (priv->initiator == priv->self_handle)
         {
           /* We create this tube, bytestream is open */
-
-          bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
-              "muc-connection", priv->muc_connection,
-              "stream-id", priv->stream_id,
-              "state", GIBBER_BYTESTREAM_IBB_STATE_OPEN,
-              "self-id", priv->conn->name,
-              "peer-id", peer_id,
-              "stream-init-id", NULL,
-              NULL);
+          state = GIBBER_BYTESTREAM_IBB_STATE_OPEN;
         }
       else
         {
           /* We don't create this tube, bytestream is local pending */
-          bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
-                "muc-connection", priv->muc_connection,
-                "stream-id", priv->stream_id,
-                "state", GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING,
-                "self-id", priv->conn->name,
-                "peer-id", peer_id,
-                "stream-init-id", NULL,
-                NULL);
+          state = GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING;
         }
+
+      bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
+            "muc-connection", priv->muc_connection,
+            "stream-id", priv->stream_id,
+            "state", state,
+            "self-id", priv->conn->name,
+            "peer-id", peer_id,
+            "stream-init-id", NULL,
+            NULL);
 
       g_object_set (self, "bytestream", bytestream, NULL);
     }
