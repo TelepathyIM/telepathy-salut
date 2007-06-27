@@ -387,7 +387,7 @@ muc_channel_publish_service (SalutMucChannel *self)
 
   port = atoi (port_str);
 
-  txt_record = avahi_string_list_new ("txtvers=1", NULL);
+  txt_record = avahi_string_list_new ("txtvers=0", NULL);
 
   /* We shouldn't add the service but manually create the SRV record so
    * we'll be able to allow multiple announcers */
