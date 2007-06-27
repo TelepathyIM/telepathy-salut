@@ -1192,25 +1192,6 @@ salut_tubes_channel_offer_tube (TpSvcChannelTypeTubes *iface,
 
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
 
-#if 0
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      /* Stream initiation */
-      GError *error = NULL;
-
-      if (!start_stream_initiation (self, tube, stream_id, &error))
-        {
-          salut_tube_iface_close (tube);
-
-          dbus_g_method_return_error (context, error);
-
-          g_error_free (error);
-          g_free (stream_id);
-          return;
-        }
-    }
-#endif
-
   tp_svc_channel_type_tubes_return_from_offer_tube (context, tube_id);
 
   g_free (stream_id);
