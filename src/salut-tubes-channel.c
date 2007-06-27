@@ -521,7 +521,7 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
       guint tube_id;
       TpTubeType type;
 
-      stream_id = gibber_xmpp_node_get_attribute (tube_node, "stream_id");
+      stream_id = gibber_xmpp_node_get_attribute (tube_node, "stream-id");
       if (stream_id == NULL)
         {
           DEBUG ("no stream id attribute");
@@ -1018,7 +1018,7 @@ publish_tube_in_node (GibberXmppNode *node,
           NULL);
 
       gibber_xmpp_node_set_attribute (node, "dbus-name", name);
-      gibber_xmpp_node_set_attribute (node, "stream_id", stream_id);
+      gibber_xmpp_node_set_attribute (node, "stream-id", stream_id);
 
       g_free (name);
       g_free (stream_id);
