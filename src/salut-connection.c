@@ -314,6 +314,14 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   TpBaseConnectionClass *tp_connection_class =
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
   GParamSpec *param_spec;
+  const gchar *interfaces [] = {
+    TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+    TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+#ifdef ENABLE_OLPC
+    SALUT_IFACE_OLPC_BUDDY_INFO,
+#endif
+    NULL };
 
   object_class->get_property = salut_connection_get_property;
   object_class->set_property = salut_connection_set_property;
@@ -334,6 +342,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_shut_down;
   tp_connection_class->start_connecting =
       salut_connection_start_connecting;
+  tp_connection_class->interfaces_always_present = interfaces;
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
@@ -2206,23 +2215,6 @@ error:
   return FALSE;
 }
 
-/* Connection interface implementations */ 
-static void 
-salut_connection_get_interfaces (TpSvcConnection *self, 
-                                 DBusGMethodInvocation  *context)
-{
-  const gchar *interfaces [] = {
-    TP_IFACE_CONNECTION_INTERFACE_ALIASING,
-    TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
-    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
-#ifdef ENABLE_OLPC
-    SALUT_IFACE_OLPC_BUDDY_INFO,
-#endif
-    NULL };
-
-  tp_svc_connection_return_from_get_interfaces(context, interfaces);
-}
-
 static void
 hold_unref_and_return_handles (DBusGMethodInvocation *context,
                                TpHandleRepoIface *repo, 
@@ -2361,7 +2353,6 @@ salut_connection_connection_service_iface_init(gpointer g_iface,
     (TpSvcConnectionClass *) g_iface;
 #define IMPLEMENT(x) tp_svc_connection_implement_##x (klass, \
     salut_connection_##x)
-  IMPLEMENT(get_interfaces);
   IMPLEMENT(request_handles);
 #undef IMPLEMENT
 }
