@@ -497,37 +497,41 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
 }
 
 static TpChannelFactoryRequestStatus
-salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
-                                             const gchar *chan_type, 
-                                             TpHandleType handle_type,
-                                             guint handle, 
-                                             gpointer request,
-                                             TpChannelIface **ret,
-                                             GError **error) {
-  SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *room_repo = 
-      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
+salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
+                                         const gchar *chan_type,
+                                         TpHandleType handle_type,
+                                         guint handle,
+                                         gpointer request,
+                                         TpChannelIface **ret,
+                                         GError **error)
+{
+  SalutMucManager *mgr = SALUT_MUC_MANAGER (iface);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
+  TpBaseConnection *base_connection = (TpBaseConnection *) (priv->connection);
+  TpHandleRepoIface *room_repo =
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   SalutMucChannel *text_chan;
   TpChannelFactoryRequestStatus status;
 
-  DEBUG("Muc request");
+  DEBUG ("MUC request: ctype=%s htype=%u handle=%u", chan_type, handle_type,
+      handle);
 
   /* We only support room handles */
-  if (handle_type != TP_HANDLE_TYPE_ROOM) {
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-  }
+  if (handle_type != TP_HANDLE_TYPE_ROOM)
+    {
+      return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+    }
 
   /* Most be a valid room handle */
-  if (!tp_handle_is_valid(room_repo, handle, NULL)) {
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
-  }
+  if (!tp_handle_is_valid (room_repo, handle, NULL))
+    {
+      return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+    }
 
   if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
     {
       text_chan = g_hash_table_lookup (priv->text_channels,
-          GINT_TO_POINTER (handle));
+          GUINT_TO_POINTER (handle));
 
       if (text_chan != NULL)
         {
@@ -545,13 +549,13 @@ salut_muc_manager_factory_iface_request(TpChannelFactoryIface *iface,
 
       g_assert (text_chan != NULL);
       *ret = TP_CHANNEL_IFACE (text_chan);
-  }
+    }
   else if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
       SalutTubesChannel *tubes_chan;
 
       tubes_chan = g_hash_table_lookup (priv->tubes_channels,
-          GINT_TO_POINTER (handle));
+          GUINT_TO_POINTER (handle));
 
       if (tubes_chan != NULL)
         {
