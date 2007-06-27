@@ -1124,87 +1124,6 @@ update_tubes_info (SalutTubesChannel *self,
   return TRUE;
 }
 
-static gboolean
-start_stream_initiation (SalutTubesChannel *self,
-                         SalutTubeIface *tube,
-                         const gchar *stream_id,
-                         GError **error)
-{
-  /*
-  SalutTubesChannelPrivate *priv;
-  GibberXmppNode *node;
-  GibberXmppStanza *msg;
-  TpHandleRepoIface *contact_repo;
-  SalutPresence *presence;
-  const gchar *jid, *resource;
-  gchar *full_jid;
-  gboolean result;
-  struct _bytestream_negotiate_cb_data *data;
-
-  priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-
-  contact_repo = tp_base_connection_get_handles (
-     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
-
-  jid = tp_handle_inspect (contact_repo, priv->handle);
-
-  presence = salut_presence_cache_get (priv->conn->presence_cache,
-      priv->handle);
-  if (presence == NULL)
-    {
-      DEBUG ("can't find contacts's presence");
-      if (error != NULL)
-        g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-            "can't find contact's presence");
-
-      return FALSE;
-    }
-
-  resource = salut_presence_pick_resource_by_caps (presence,
-      PRESENCE_CAP_SI_TUBES);
-  if (resource == NULL)
-    {
-      DEBUG ("contact doesn't have tubes capabilities");
-      if (error != NULL)
-        g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-            "contact doesn't have tubes capabilities");
-
-      return FALSE;
-    }
-
-  full_jid = g_strdup_printf ("%s/%s", jid, resource);
-
-  msg = salut_bytestream_factory_make_stream_init_iq (full_jid,
-      stream_id, NS_SI_TUBES_OLD);
-
-  node = lm_message_node_add_child (msg->node, "tube", NULL);
-  lm_message_node_set_attribute (node, "xmlns", NS_SI_TUBES_OLD);
-  publish_tube_in_node (self, node, tube);
-  lm_message_node_set_attribute (node, "offering", "true");
-
-  data = g_slice_new (struct _bytestream_negotiate_cb_data);
-  data->self = self;
-  data->tube = tube;
-
-  result = salut_bytestream_factory_negotiate_stream (
-    priv->conn->bytestream_factory,
-    msg,
-    stream_id,
-    bytestream_negotiate_cb,
-    data,
-    error);
-
-  if (!result)
-    g_slice_free (struct _bytestream_negotiate_cb_data, data);
-
-  lm_message_unref (msg);
-  g_free (full_jid);
-
-  return result;
-  */
-  return TRUE;
-}
-
 static gint
 generate_tube_id (void)
 {
@@ -1278,6 +1197,7 @@ salut_tubes_channel_offer_tube (TpSvcChannelTypeTubes *iface,
 
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
 
+#if 0
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       /* Stream initiation */
@@ -1294,6 +1214,7 @@ salut_tubes_channel_offer_tube (TpSvcChannelTypeTubes *iface,
           return;
         }
     }
+#endif
 
   tp_svc_channel_type_tubes_return_from_offer_tube (context, tube_id);
 
