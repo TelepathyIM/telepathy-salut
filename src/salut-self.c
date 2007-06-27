@@ -347,7 +347,6 @@ salut_self_new (SalutAvahiClient *client,
                 const GArray *olpc_key,
                 const gchar *olpc_color) {
   SalutSelfPrivate *priv;
-  GString *alias = NULL;
 
   g_assert(client != NULL);
 
@@ -366,6 +365,7 @@ salut_self_new (SalutAvahiClient *client,
   priv->last_name = g_strdup(last_name);
   priv->email = g_strdup(email);
   priv->published_name = g_strdup(published_name);
+  priv->alias = NULL;
 #ifdef ENABLE_OLPC
   if (olpc_key != NULL)
     {
@@ -374,33 +374,27 @@ salut_self_new (SalutAvahiClient *client,
       g_array_append_vals (ret->olpc_key, olpc_key->data, olpc_key->len);
     }
   ret->olpc_color = g_strdup (olpc_color);
-  priv->alias = NULL;
 #endif
 
   /* Prefer using the nickname as alias */
-  if (nickname != NULL) {
-    priv->alias = g_strdup(nickname);
-  } else { 
-    if (first_name != NULL) {
-      alias = g_string_new(first_name);
+  if (nickname != NULL)
+    {
+      priv->alias = g_strdup (nickname);
     }
-
-    if (last_name != NULL) {
-      if (alias != NULL) {
-        alias = g_string_append_c(alias, ' ');
-        alias = g_string_append(alias, last_name);
-      } else {
-        alias = g_string_new (last_name);
-      } 
+  else
+    {
+      if (first_name != NULL)
+        {
+          if (last_name != NULL)
+            priv->alias = g_strdup_printf ("%s %s", first_name, last_name);
+          else
+            priv->alias = g_strdup (first_name);
+        }
+      else if (last_name != NULL)
+        {
+          priv->alias = g_strdup (last_name);
+        }
     }
-
-    if (alias != NULL && *(alias->str) != '\0') {
-      priv->alias = alias->str;
-      g_string_free(alias, FALSE);
-    } else {
-      g_string_free(alias, TRUE);
-    }
-  }
 
   if (published_name == NULL) {
     priv->published_name = g_strdup(g_get_user_name());
