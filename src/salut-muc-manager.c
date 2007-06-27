@@ -283,12 +283,15 @@ tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
 }
 
 
-GibberMucConnection *
-_get_connection(SalutMucManager *mgr, const gchar *protocol, 
-    GHashTable *parameters, GError **error) {
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
+static GibberMucConnection *
+_get_connection (SalutMucManager *mgr,
+                 const gchar *protocol,
+                 GHashTable *parameters,
+                 GError **error)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
 
-  return gibber_muc_connection_new(priv->connection->name, 
+  return gibber_muc_connection_new (priv->connection->name,
       protocol, parameters, error);
 }
 
