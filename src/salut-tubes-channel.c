@@ -883,7 +883,7 @@ extract_tube_information (SalutTubesChannel *self,
         }
       else
         {
-          DEBUG ("Unknow tube type: %s", _type);
+          DEBUG ("Unknown tube type: %s", _type);
           return FALSE;
         }
     }
