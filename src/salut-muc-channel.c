@@ -324,7 +324,6 @@ muc_channel_publish_service (SalutMucChannel *self)
   gchar *host = NULL;
   guint16 port;
   uint16_t dns_type;
-  const void *dns_payload;
   size_t dns_payload_length;
   AvahiAddress addr;
 
@@ -363,12 +362,10 @@ muc_channel_publish_service (SalutMucChannel *self)
     {
     case AVAHI_PROTO_INET:
       dns_type = AVAHI_DNS_TYPE_A;
-      dns_payload = &(addr.data.ipv4);
       dns_payload_length = sizeof (AvahiIPv4Address);
       break;
     case AVAHI_PROTO_INET6:
       dns_type = AVAHI_DNS_TYPE_AAAA;
-      dns_payload = &(addr.data.ipv6);
       dns_payload_length = sizeof (AvahiIPv6Address);
       break;
     default:
@@ -382,7 +379,7 @@ muc_channel_publish_service (SalutMucChannel *self)
   /* Add the record */
   if (!salut_avahi_entry_group_add_record (priv->muc_group, 0, host,
         dns_type, AVAHI_DEFAULT_TTL_HOST_NAME,
-        dns_payload, dns_payload_length, &error))
+        &(addr.data.data), dns_payload_length, &error))
     {
       DEBUG ("add A/AAAA record failed: %s", error->message);
       goto publish_service_error;
