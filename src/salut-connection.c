@@ -2239,6 +2239,7 @@ hold_unref_and_return_handles (DBusGMethodInvocation *context,
         }
       tp_handle_unref(repo, handle);
     }
+  g_free (sender);
   dbus_g_method_return (context, handles);
   return;
 
@@ -2254,6 +2255,7 @@ error:
     TpHandle handle = (TpHandle) g_array_index (handles, guint, j);
     tp_handle_unref(repo, handle);
   }
+  g_free (sender);
 }
 
 
