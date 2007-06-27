@@ -971,26 +971,35 @@ copy_parameter (gpointer key,
 }
 
 static void
-publish_tube_in_node (GibberXmppNode *node,
+publish_tube_in_node (SalutTubesChannel *self,
+                      GibberXmppNode *node,
                       SalutTubeIface *tube)
 {
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   GibberXmppNode *parameters_node;
   GHashTable *parameters;
   TpTubeType type;
   gchar *service, *id_str;
   guint tube_id;
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+    (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  TpHandle initiator_handle;
+  const gchar *initiator;
 
   g_object_get (G_OBJECT (tube),
       "service", &service,
       "parameters", &parameters,
       "type", &type,
       "id", &tube_id,
+      "initiator", &initiator_handle,
       NULL);
 
   id_str = g_strdup_printf ("%u", tube_id);
 
   gibber_xmpp_node_set_attribute (node, "service", service);
   gibber_xmpp_node_set_attribute (node, "id", id_str);
+  initiator = tp_handle_inspect (contact_repo, initiator_handle);
+  gibber_xmpp_node_set_attribute (node, "initiator", initiator);
 
   g_free (id_str);
 
@@ -1047,14 +1056,7 @@ publish_tubes_in_node (gpointer key,
   struct _i_hate_g_hash_table_foreach *data =
     (struct _i_hate_g_hash_table_foreach *) user_data;
   TpTubeState state;
-  SalutTubesChannelPrivate *priv =
-      SALUT_TUBES_CHANNEL_GET_PRIVATE (data->self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-    (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
-  TpHandle initiator_handle;
   GibberXmppNode *tube_node;
-  const gchar *initiator;
-  TpTubeType type;
 
   if (tube == NULL)
     return;
@@ -1067,14 +1069,7 @@ publish_tubes_in_node (gpointer key,
     return;
 
   tube_node = gibber_xmpp_node_add_child (data->tubes_node, "tube");
-  publish_tube_in_node (tube_node, tube);
-
-  g_object_get (tube,
-        "type", &type,
-        "initiator", &initiator_handle,
-        NULL);
-  initiator = tp_handle_inspect (contact_repo, initiator_handle);
-  gibber_xmpp_node_set_attribute (tube_node, "initiator", initiator);
+  publish_tube_in_node (data->self, tube_node, tube);
 }
 
 static void
@@ -1181,7 +1176,7 @@ start_stream_initiation (SalutTubesChannel *self,
 
   node = lm_message_node_add_child (msg->node, "tube", NULL);
   lm_message_node_set_attribute (node, "xmlns", NS_SI_TUBES_OLD);
-  publish_tube_in_node (node, tube);
+  publish_tube_in_node (self, node, tube);
   lm_message_node_set_attribute (node, "offering", "true");
 
   data = g_slice_new (struct _bytestream_negotiate_cb_data);
