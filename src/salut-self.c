@@ -783,7 +783,7 @@ salut_self_add_olpc_activity (SalutSelf *self,
   name = g_strdup_printf ("%s:%s@%s", room_name, priv->published_name,
       avahi_client_get_host_name (priv->client->avahi_client));
 
-  txt_record = avahi_string_list_new ("txtvers=1", NULL);
+  txt_record = avahi_string_list_new ("txtvers=0", NULL);
   txt_record = avahi_string_list_add_printf (txt_record, "room=%s", room_name);
   if (activity_id != NULL)
     {

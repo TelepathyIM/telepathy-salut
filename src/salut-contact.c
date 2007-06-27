@@ -408,6 +408,21 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
 
   DEBUG ("called: \"%s\".%s. on %s port %u", name, domain, host_name, port);
 
+  if ((t = avahi_string_list_find (txt, "txtvers")) != NULL)
+    {
+      char *txtvers;
+
+      avahi_string_list_get_pair (t, NULL, &txtvers, NULL);
+      if (tp_strdiff (txtvers, "0"))
+        {
+          DEBUG ("Ignoring record with txtvers not 0: %s",
+              txtvers ? txtvers : "(no value)");
+          avahi_free (txtvers);
+          return;
+        }
+      avahi_free (txtvers);
+    }
+
   activity = g_hash_table_lookup (priv->olpc_activities, name);
   if (activity == NULL)
     {
