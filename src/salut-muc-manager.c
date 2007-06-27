@@ -272,15 +272,13 @@ tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
     {
       g_object_get (chan, "handle", &room_handle, NULL);
 
-      DEBUG ("removing MUC tubes channel with handle %d", room_handle);
+      DEBUG ("removing MUC tubes channel with handle %u", room_handle);
 
       g_hash_table_remove (priv->tubes_channels,
-          GINT_TO_POINTER (room_handle));
+          GUINT_TO_POINTER (room_handle));
 
-      if (priv->text_channels != NULL)
-        {
-          /* FIXME: close the corresponding text channel? */
-        }
+      /* The channel will probably reopen soon due to an incoming tube message,
+       * but closing the corresponding text channel would be too astonishing */
     }
 }
 
