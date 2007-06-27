@@ -75,7 +75,8 @@ struct _SalutMucManagerPrivate
   gboolean dispose_has_run;
   SalutAvahiClient *client;
   SalutAvahiServiceBrowser *browser;
-  GHashTable *room_info;
+  /* room name => (SalutAvahiServiceResolver *) */
+  GHashTable *room_resolvers;
 };
 
 #define SALUT_MUC_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate))
@@ -93,7 +94,7 @@ salut_muc_manager_init (SalutMucManager *obj)
   priv->text_channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                          NULL, g_object_unref);
 
-  priv->room_info = g_hash_table_new_full (g_str_hash, g_str_equal,
+  priv->room_resolvers = g_hash_table_new_full (g_str_hash, g_str_equal,
       g_free, g_object_unref);
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
@@ -133,10 +134,10 @@ salut_muc_manager_dispose (GObject *object)
   g_assert (priv->text_channels == NULL);
   g_assert (priv->tubes_channels == NULL);
 
-  if (priv->room_info)
+  if (priv->room_resolvers)
     {
-      g_hash_table_destroy (priv->room_info);
-      priv->room_info = NULL;
+      g_hash_table_destroy (priv->room_resolvers);
+      priv->room_resolvers = NULL;
     }
 
   g_object_unref (priv->browser);
@@ -416,7 +417,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   gboolean r;
 
   room_name = tp_handle_inspect (room_repo, handle);
-  resolver = g_hash_table_lookup (priv->room_info, room_name);
+  resolver = g_hash_table_lookup (priv->room_resolvers, room_name);
   if (resolver != NULL)
     {
       /* This MUC already exists on the network, so we reuse its
@@ -762,7 +763,7 @@ browser_found (SalutAvahiServiceBrowser *browser,
   SalutAvahiServiceResolver *resolver;
   GError *error = NULL;
 
-  resolver = g_hash_table_lookup (priv->room_info, name);
+  resolver = g_hash_table_lookup (priv->room_resolvers, name);
   if (resolver != NULL)
     return;
 
@@ -779,7 +780,7 @@ browser_found (SalutAvahiServiceBrowser *browser,
       return;
     }
 
-  g_hash_table_insert (priv->room_info, g_strdup (name), resolver);
+  g_hash_table_insert (priv->room_resolvers, g_strdup (name), resolver);
 }
 
 static void
@@ -796,7 +797,7 @@ browser_removed (SalutAvahiServiceBrowser *browser,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
 
   DEBUG ("remove room: %s.%s.%s", name, type, domain);
-  g_hash_table_remove (priv->room_info, name);
+  g_hash_table_remove (priv->room_resolvers, name);
 }
 
 static void
