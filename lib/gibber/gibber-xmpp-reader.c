@@ -107,6 +107,9 @@ static void
 gibber_init_xml_parser(GibberXmppReader *obj) {
   GibberXmppReaderPrivate *priv = GIBBER_XMPP_READER_GET_PRIVATE (obj);
 
+  if (priv->parser != NULL)
+    xmlFreeParserCtxt (priv->parser);
+
   priv->parser = xmlCreatePushParserCtxt(&parser_handler, obj, NULL, 0, NULL);
   xmlCtxtUseOptions(priv->parser, XML_PARSE_NOENT);
   priv->depth = 0;
