@@ -39,6 +39,7 @@ START_TEST (test_instantiation)
   GibberXmppReader *reader;
   reader = gibber_xmpp_reader_new_no_stream ();
   fail_if (reader == NULL);
+  g_object_unref (reader);
 }
 END_TEST
 
@@ -68,6 +69,7 @@ START_TEST (test_simple_message)
   }
 
   fail_unless (g_file_get_contents (file, &data, &length, NULL));
+  g_free (file);
 
   valid = gibber_xmpp_reader_push (reader, (guint8 *)data, length, NULL);
   fail_unless (valid);
@@ -85,6 +87,9 @@ START_TEST (test_simple_message)
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "to"),
                        "juliet@example.com") == 0);
 
+  g_object_unref (event->stanza);
+  g_free (event);
+
   event = g_queue_pop_head (received_stanzas);
 
   fail_unless (event->reader == reader);
@@ -94,6 +99,12 @@ START_TEST (test_simple_message)
   fail_unless (strcmp (gibber_xmpp_node_get_language (node), "en") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "to"),
                        "juliet@example.com") == 0);
+
+  g_free (data);
+  g_queue_free (received_stanzas);
+  g_object_unref (event->stanza);
+  g_free (event);
+  g_object_unref (reader);
 }
 END_TEST
 
