@@ -358,6 +358,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     expected_packet = get_guint32(priv);
     r = gibber_r_multicast_receiver_new(str, expected_packet);
     result->receivers = g_list_append(result->receivers, r);
+    g_free (str);
   }
 
   priv->payload = priv->data + priv->size;
