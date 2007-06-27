@@ -386,29 +386,16 @@ new_tubes_channel (SalutMucManager *self,
 }
 
 static gchar *
-_avahi_address_to_string_address (AvahiAddress *address)
+_avahi_address_to_string_address (const AvahiAddress *address)
 {
-  gchar *str = NULL;
+  gchar str[AVAHI_ADDRESS_STR_MAX];
 
-  switch (address->proto)
+  if (avahi_address_snprint (str, sizeof (str), address) == NULL)
     {
-      case AVAHI_PROTO_INET:
-        {
-          str = g_new0 (gchar, INET_ADDRSTRLEN);
-          inet_ntop (AF_INET, &(address->data.ipv4.address), str,
-              INET_ADDRSTRLEN);
-          break;
-        }
-      case AVAHI_PROTO_INET6:
-        {
-          /* XXX TODO */
-          break;
-        }
-      default:
-        g_assert_not_reached ();
+      DEBUG ("Failed to convert AvahiAddress to string");
+      return NULL;
     }
-
-  return str;
+  return g_strdup (str);
 }
 
 static SalutMucChannel *
@@ -440,18 +427,27 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
       if (!salut_avahi_service_resolver_get_address (resolver,
             &avahi_address, &p))
         {
-          DEBUG ("get address failed");
+          DEBUG ("..._get_address failed: creating a new MUC room instead");
         }
       else
         {
           gchar *address = _avahi_address_to_string_address (&avahi_address);
-          gchar *port = g_strdup_printf ("%u", p);
 
-          params = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-              g_free);
-          g_hash_table_insert (params, "address", address);
-          g_hash_table_insert (params, "port", port);
-          DEBUG ("found %s:%s for room %s", address, port, room_name);
+          if (address == NULL)
+            {
+              DEBUG ("stringifying AvahiAddress failed: creating a new MUC "
+                  "room instead");
+            }
+          else
+            {
+              gchar *port = g_strdup_printf ("%u", p);
+
+              params = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+                  g_free);
+              g_hash_table_insert (params, "address", address);
+              g_hash_table_insert (params, "port", port);
+              DEBUG ("found %s port %s for room %s", address, port, room_name);
+            }
         }
     }
   else

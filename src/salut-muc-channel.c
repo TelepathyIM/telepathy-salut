@@ -323,7 +323,10 @@ muc_channel_publish_service (SalutMucChannel *self)
   const gchar *address, *port_str;
   gchar *host = NULL;
   guint16 port;
-  struct in_addr addr;
+  uint16_t dns_type;
+  const void *dns_payload;
+  size_t dns_payload_length;
+  AvahiAddress addr;
 
   g_assert (priv->muc_group == NULL);
   g_assert (priv->service == NULL);
@@ -350,22 +353,38 @@ muc_channel_publish_service (SalutMucChannel *self)
       goto publish_service_error;
     }
 
-  memset (&addr, 0, sizeof (addr));
-  /* XXX that won't work with IPV6 for sure */
-  if (inet_pton (AF_INET, address, &addr) <= 0)
+  if (avahi_address_parse (address, AVAHI_PROTO_UNSPEC, &addr) == NULL)
     {
-      DEBUG ("can't convert address %s", address);
+      DEBUG ("Can't convert address \"%s\" to AvahiAddress", address);
+      goto publish_service_error;
+    }
+
+  switch (addr.proto)
+    {
+    case AVAHI_PROTO_INET:
+      dns_type = AVAHI_DNS_TYPE_A;
+      dns_payload = &(addr.data.ipv4);
+      dns_payload_length = sizeof (AvahiIPv4Address);
+      break;
+    case AVAHI_PROTO_INET6:
+      dns_type = AVAHI_DNS_TYPE_AAAA;
+      dns_payload = &(addr.data.ipv6);
+      dns_payload_length = sizeof (AvahiIPv6Address);
+      break;
+    default:
+      DEBUG ("Don't know how to convert AvahiProtocol 0x%x to DNS record",
+          addr.proto);
       goto publish_service_error;
     }
 
   host = g_strdup_printf ("%s._salut-room._udp.local", priv->muc_name);
 
-  /* Add the A record */
+  /* Add the record */
   if (!salut_avahi_entry_group_add_record (priv->muc_group, 0, host,
-        AVAHI_DNS_TYPE_A, AVAHI_DEFAULT_TTL_HOST_NAME,
-        (const void *) &(addr.s_addr), sizeof (addr.s_addr), &error))
+        dns_type, AVAHI_DEFAULT_TTL_HOST_NAME,
+        dns_payload, dns_payload_length, &error))
     {
-      DEBUG ("add A record failed: %s", error->message);
+      DEBUG ("add A/AAAA record failed: %s", error->message);
       goto publish_service_error;
     }
 
