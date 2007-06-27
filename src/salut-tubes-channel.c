@@ -172,7 +172,7 @@ salut_tubes_channel_constructor (GType type,
       priv->self_handle = self->muc->group.self_handle;
       tp_external_group_mixin_init (obj, (GObject *) self->muc);
       g_object_get (self->muc,
-          "muc connection", &(priv->muc_connection),
+          "muc-connection", &(priv->muc_connection),
           NULL);
       g_assert (priv->muc_connection != NULL);
 
@@ -799,7 +799,7 @@ create_new_tube (SalutTubesChannel *self,
   GibberMucConnection *muc_connection = NULL;
 
   if (self->muc != NULL)
-    g_object_get (self->muc, "muc connection", &muc_connection, NULL);
+    g_object_get (self->muc, "muc-connection", &muc_connection, NULL);
 
   switch (type)
     {

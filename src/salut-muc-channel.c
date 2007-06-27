@@ -67,7 +67,7 @@ enum
   PROP_CHANNEL_TYPE,
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
-  PROP_MUCCONNECTION,
+  PROP_MUC_CONNECTION,
   PROP_CONNECTION,
   PROP_IM_MANAGER,
   PROP_NAME,
@@ -140,7 +140,7 @@ salut_muc_channel_get_property (GObject    *object,
     case PROP_IM_MANAGER:
       g_value_set_object (value, priv->im_manager);
       break;
-    case PROP_MUCCONNECTION:
+    case PROP_MUC_CONNECTION:
       g_value_set_object (value, priv->muc_connection);
       break;
     case PROP_CLIENT:
@@ -180,7 +180,7 @@ salut_muc_channel_set_property (GObject     *object,
     case PROP_IM_MANAGER:
       priv->im_manager = g_value_get_object (value);
       break;
-    case PROP_MUCCONNECTION:
+    case PROP_MUC_CONNECTION:
       priv->muc_connection = g_value_get_object (value);
       break;
     case PROP_HANDLE_TYPE:
@@ -498,7 +498,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_install_property (object_class, 
                                    PROP_NAME, param_spec);
 
-  param_spec = g_param_spec_object ("muc connection", 
+  param_spec = g_param_spec_object ("muc-connection", 
                                     "The GibberMucConnection",
                                     "muc connection  object",
                                     GIBBER_TYPE_MUC_CONNECTION,
@@ -507,7 +507,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, 
-                                   PROP_MUCCONNECTION, param_spec);
+                                   PROP_MUC_CONNECTION, param_spec);
   param_spec = g_param_spec_object ("connection", 
                                     "SalutConnection object",
                                     "Salut Connection that owns the"
