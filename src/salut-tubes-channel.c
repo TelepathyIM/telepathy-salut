@@ -931,6 +931,8 @@ extract_tube_information (SalutTubesChannel *self,
   if (tube_id != NULL)
     {
       const gchar *str;
+      gchar *endptr;
+      long int tmp;
 
       str = gibber_xmpp_node_get_attribute (tube_node, "id");
       if (str == NULL)
@@ -939,7 +941,13 @@ extract_tube_information (SalutTubesChannel *self,
           return FALSE;
         }
 
-      *tube_id = atoi (str);
+      tmp = strtol (str, &endptr, 10);
+      if (!endptr || *endptr)
+        {
+          DEBUG ("tube id is not numeric: %s", str);
+          return FALSE;
+        }
+      *tube_id = (int) tmp;
     }
 
   return TRUE;
