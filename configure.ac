@@ -18,9 +18,8 @@ m4_define([salut_base_version],
 m4_define([salut_version],
           [m4_if(salut_nano_version, 0, [salut_base_version], [salut_base_version].[salut_nano_version])])dnl
 
-#AC_INIT([Telepathy Salut], [salut_version], [https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy])
-
-AC_INIT([Telepathy Salut],[salut_version])
+AC_INIT([Telepathy Salut], [salut_version],
+[https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-salut])
 
 AC_CONFIG_MACRO_DIR([m4])
 
