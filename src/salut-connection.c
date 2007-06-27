@@ -2066,7 +2066,8 @@ salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
 #endif
 
 static gchar *
-handle_normalize_require_nonempty (const gchar *id,
+handle_normalize_require_nonempty (TpHandleRepoIface *repo,
+                                   const gchar *id,
                                    gpointer context,
                                    GError **error)
 {
