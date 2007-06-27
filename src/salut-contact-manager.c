@@ -642,31 +642,33 @@ static void salut_contact_manager_factory_iface_init(gpointer *g_iface,
 
 /* private functions */
 static SalutContactChannel *
-salut_contact_manager_new_channel(SalutContactManager *mgr, 
-                                         TpHandle handle) {
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(base_conn, 
+salut_contact_manager_new_channel (SalutContactManager *mgr,
+                                   TpHandle handle)
+{
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
+  TpBaseConnection *base_conn = (TpBaseConnection *) (priv->connection);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_LIST);
   SalutContactChannel *chan;
   const gchar *name;
   gchar *path;
 
-  g_assert(g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle)) 
+  g_assert (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle))
              == NULL);
 
-  name = tp_handle_inspect(handle_repo, handle);
-  path = g_strdup_printf("%s/ContactChannel/%s", 
-                         base_conn->object_path, name);
+  name = tp_handle_inspect (handle_repo, handle);
+  path = g_strdup_printf ("%s/ContactChannel/%s", base_conn->object_path,
+      name);
 
-  chan = g_object_new(SALUT_TYPE_CONTACT_CHANNEL,
-                      "connection", priv->connection,
-                      "object-path", path,
-                      "handle", handle,
-                      NULL);
-  g_free(path);
-  g_hash_table_insert(priv->channels, GINT_TO_POINTER(handle), chan);
-  tp_channel_factory_iface_emit_new_channel(mgr, TP_CHANNEL_IFACE(chan), NULL);
+  chan = g_object_new (SALUT_TYPE_CONTACT_CHANNEL,
+      "connection", priv->connection,
+      "object-path", path,
+      "handle", handle,
+      NULL);
+  g_free (path);
+  g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);
+  tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
+      NULL);
 
   return chan;
 }
