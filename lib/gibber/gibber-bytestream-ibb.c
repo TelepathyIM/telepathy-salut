@@ -345,7 +345,7 @@ gibber_bytestream_ibb_class_init (
   param_spec = g_param_spec_object (
       "xmpp-connection",
       "GibberXmppConnection object",
-      "Gibber XMPP connection object used to communicate trought this "
+      "Gibber XMPP connection object used for communication by this "
       "bytestream if it's a private one",
       GIBBER_TYPE_XMPP_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
@@ -359,7 +359,7 @@ gibber_bytestream_ibb_class_init (
   param_spec = g_param_spec_object (
       "muc-connection",
       "GibberMucConnection object",
-      "Gibber MUC connection object used to communicate trought this "
+      "Gibber MUC connection object used for communication by this "
       "bytestream if it's a muc one",
       GIBBER_TYPE_MUC_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
