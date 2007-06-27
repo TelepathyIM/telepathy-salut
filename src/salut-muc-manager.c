@@ -416,10 +416,10 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
                                            TpHandle handle,
                                            GError **error)
 {
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
+  TpBaseConnection *base_connection = (TpBaseConnection *) (priv->connection);
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   GibberMucConnection *connection;
   SalutMucChannel *text_chan;
   GError *connection_error = NULL;
