@@ -294,6 +294,7 @@ salut_self_finalize (GObject *object)
   g_free(priv->last_name);
   g_free(priv->email);
   g_free(priv->published_name);
+  g_free (priv->alias);
 #ifdef ENABLE_OLPC
   if (self->olpc_key != NULL)
     g_array_free (self->olpc_key, TRUE);
