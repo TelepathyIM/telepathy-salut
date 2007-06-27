@@ -359,7 +359,7 @@ new_tubes_channel (SalutMucManager *self,
   char *object_path;
 
   g_assert (g_hash_table_lookup (priv->tubes_channels,
-        GINT_TO_POINTER (room)) == NULL);
+        GUINT_TO_POINTER (room)) == NULL);
 
   object_path = g_strdup_printf ("%s/MucTubesChannel%u",
       conn->object_path, room);
@@ -367,18 +367,18 @@ new_tubes_channel (SalutMucManager *self,
   DEBUG ("creating new tubes chan, object path %s", object_path);
 
   chan = g_object_new (SALUT_TYPE_TUBES_CHANNEL,
-                       "connection", priv->connection,
-                       "object-path", object_path,
-                       "handle", room,
-                       "handle-type", TP_HANDLE_TYPE_ROOM,
-                       "muc", muc,
-                       NULL);
+      "connection", priv->connection,
+      "object-path", object_path,
+      "handle", room,
+      "handle-type", TP_HANDLE_TYPE_ROOM,
+      "muc", muc,
+      NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
   tp_channel_factory_iface_emit_new_channel (self, TP_CHANNEL_IFACE (chan),
       NULL);
 
-  g_hash_table_insert (priv->tubes_channels, GINT_TO_POINTER (room), chan);
+  g_hash_table_insert (priv->tubes_channels, GUINT_TO_POINTER (room), chan);
 
   g_free (object_path);
 
