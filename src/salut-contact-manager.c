@@ -39,20 +39,19 @@
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include "debug.h"
 
-static void salut_contact_manager_factory_iface_init(gpointer *g_iface, 
-                                                     gpointer *iface_data);
-static SalutContactChannel *
-salut_contact_manager_get_channel(SalutContactManager *mgr, 
-                                  TpHandle handle,
-                                  gboolean *created); 
+static void salut_contact_manager_factory_iface_init(gpointer *g_iface,
+    gpointer *iface_data);
+
+static SalutContactChannel *salut_contact_manager_get_channel
+    (SalutContactManager *mgr, TpHandle handle, gboolean *created);
 
 static void
 _contact_finalized_cb(gpointer data, GObject *old_object);
-                                                    
-G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager, 
-                        G_TYPE_OBJECT,
-              G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE, 
-                                     salut_contact_manager_factory_iface_init));
+
+G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
+    G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
+      salut_contact_manager_factory_iface_init));
 
 /* signal enum */
 enum
