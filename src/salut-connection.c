@@ -670,9 +670,9 @@ emit_presence_update (SalutConnection *self,
                       const GArray *contact_handles)
 {
   GHashTable *presence_hash;
-  
-  get_presence_info(self, contact_handles, &presence_hash);
-  
+
+  get_presence_info (self, contact_handles, &presence_hash);
+
   tp_svc_connection_interface_presence_emit_presence_update (self,
         presence_hash);
 
