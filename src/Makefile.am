@@ -32,9 +32,7 @@ BUILT_SOURCES = \
     salut-avahi-service-browser-signals-marshal.h \
     salut-avahi-service-browser-signals-marshal.c  \
     salut-avahi-service-resolver-signals-marshal.h \
-    salut-avahi-service-resolver-signals-marshal.c \
-    tube-dbus-signals-marshal.h \
-    tube-dbus-signals-marshal.c
+    salut-avahi-service-resolver-signals-marshal.c
 
 
 # correctly clean the generated source files
@@ -57,6 +55,7 @@ EXTRA_DIST = \
   salut-muc-channel-signals-marshal.list                  \
   salut-muc-manager-signals-marshal.list                  \
   salut-self-signals-marshal.list                         \
+  salut-muc-connection-signals-marshal.list               \
   tube-dbus-signals-marshal.list
 
 bin_PROGRAMS=telepathy-salut
