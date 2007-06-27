@@ -662,8 +662,8 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
   param_spec = g_param_spec_object (
       "muc-connection",
       "GibberMucConnection object",
-      "Gibber MUC connection object used to communicate trought this "
-      "tube if it's a muc one",
+      "Gibber MUC connection object used to carry messages for this "
+      "tube if it has a HANDLE_TYPE_ROOM handle",
       GIBBER_TYPE_MUC_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
