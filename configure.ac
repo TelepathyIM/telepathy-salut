@@ -111,13 +111,13 @@ AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for telepathy-glib
-PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.5.10])
+PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.5.13])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
 dnl Check for telepathy-glib-unstable
-PKG_CHECK_MODULES(TELEPATHY_GLIB_UNSTABLE, [telepathy-glib-unstable >= 0.5.10],
+PKG_CHECK_MODULES(TELEPATHY_GLIB_UNSTABLE, [telepathy-glib-unstable >= 0.5.13],
                   have_tp_glib_unstable=yes, have_tp_glib_unstable=no)
 
 AC_SUBST(TELEPATHY_GLIB_UNSTABLE_CFLAGS)
