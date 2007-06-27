@@ -1814,7 +1814,7 @@ salut_tubes_channel_get_handle (TpSvcChannel *iface,
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
-  tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_CONTACT,
+  tp_svc_channel_return_from_get_handle (context, priv->handle_type,
       priv->handle);
 }
 
