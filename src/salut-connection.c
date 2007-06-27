@@ -649,7 +649,7 @@ get_presence_info(SalutConnection *self, const GArray *contact_handles,
             dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE)));
       g_value_take_boxed (g_value_array_get_nth (vals, 1), contact_status);
 
-      g_hash_table_insert (presence_hash, GINT_TO_POINTER (handle),
+      g_hash_table_insert (presence_hash, GUINT_TO_POINTER (handle),
                            vals);
   }
   *info = presence_hash;
