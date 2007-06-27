@@ -308,7 +308,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   TpBaseConnectionClass *tp_connection_class =
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
   GParamSpec *param_spec;
-  const gchar *interfaces [] = {
+  static const gchar *interfaces [] = {
     TP_IFACE_CONNECTION_INTERFACE_ALIASING,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
