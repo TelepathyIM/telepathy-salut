@@ -229,27 +229,30 @@ salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
 }
 
 static void
-muc_channel_closed_cb(SalutMucChannel *chan, gpointer user_data) {
-  SalutMucManager *self = SALUT_MUC_MANAGER(user_data);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(self);
+muc_channel_closed_cb (SalutMucChannel *chan,
+                       gpointer user_data)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (user_data);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandle handle;
 
-  if (priv->text_channels) { 
-    g_object_get(chan, "handle", &handle, NULL);
-    DEBUG("Removing channel with handle %d", handle);
+  if (priv->text_channels)
+    {
+      g_object_get(chan, "handle", &handle, NULL);
+      DEBUG ("Removing channel with handle %u", handle);
 
-    if (priv->tubes_channels != NULL)
-      {
-        SalutTubesChannel *tubes;
+      if (priv->tubes_channels != NULL)
+        {
+          SalutTubesChannel *tubes;
 
-        tubes = g_hash_table_lookup (priv->tubes_channels,
-            GUINT_TO_POINTER (handle));
-        if (tubes != NULL)
-          salut_tubes_channel_close (tubes);
-      }
+          tubes = g_hash_table_lookup (priv->tubes_channels,
+              GUINT_TO_POINTER (handle));
+          if (tubes != NULL)
+            salut_tubes_channel_close (tubes);
+        }
 
-    g_hash_table_remove(priv->text_channels, GINT_TO_POINTER(handle));
-  }
+      g_hash_table_remove (priv->text_channels, GUINT_TO_POINTER (handle));
+    }
 }
 
 /**
