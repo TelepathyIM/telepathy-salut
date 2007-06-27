@@ -478,6 +478,7 @@ muc_channel_add_member(GObject *iface, TpHandle handle,
   salut_im_channel_send_stanza(im_channel, stanza);
 
   g_object_unref(im_channel);
+  g_object_unref (stanza);
   return TRUE;
 }
 
