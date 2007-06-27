@@ -964,11 +964,11 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
 }
 
 gboolean
-salut_self_get_olpc_activity_properties (SalutSelf *self,
-                                         TpHandle handle,
-                                         const gchar **color,
-                                         const gchar **name,
-                                         const gchar **type)
+salut_self_merge_olpc_activity_properties (SalutSelf *self,
+                                           TpHandle handle,
+                                           const gchar **color,
+                                           const gchar **name,
+                                           const gchar **type)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,

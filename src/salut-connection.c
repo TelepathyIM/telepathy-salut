@@ -1872,12 +1872,12 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
   if (!tp_handle_is_valid(room_repo, handle, &error))
     goto error;
 
-  if (salut_contact_manager_get_olpc_activity_properties
+  if (salut_contact_manager_merge_olpc_activity_properties
       (priv->contact_manager, handle, &color, &name, &type))
     known = TRUE;
 
   /* Call this one second so it overwrites values from the first */
-  if (salut_self_get_olpc_activity_properties (priv->self, handle, &color,
+  if (salut_self_merge_olpc_activity_properties (priv->self, handle, &color,
         &name, &type))
     known = TRUE;
 

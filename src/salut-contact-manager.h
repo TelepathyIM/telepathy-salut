@@ -73,7 +73,7 @@ salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
                                               struct sockaddr_storage *address);
 
 #ifdef ENABLE_OLPC
-gboolean salut_contact_manager_get_olpc_activity_properties
+gboolean salut_contact_manager_merge_olpc_activity_properties
   (SalutContactManager *self, TpHandle handle, const gchar **color,
    const gchar **name, const gchar **type);
 #endif

@@ -96,7 +96,7 @@ const gchar *salut_self_get_alias (SalutSelf *self);
 gboolean salut_self_set_olpc_properties (SalutSelf *self,
     const GArray *key, const gchar *color, const gchar *jid, GError **error);
 
-gboolean salut_self_get_olpc_activity_properties (SalutSelf *self,
+gboolean salut_self_merge_olpc_activity_properties (SalutSelf *self,
     TpHandle handle,
     const gchar **color, const gchar **name, const gchar **type);
 

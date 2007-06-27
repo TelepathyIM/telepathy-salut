@@ -383,11 +383,12 @@ _contact_finalized_cb(gpointer data, GObject *old_object) {
 
 #ifdef ENABLE_OLPC
 gboolean
-salut_contact_manager_get_olpc_activity_properties (SalutContactManager *self,
-                                                    TpHandle handle,
-                                                    const gchar **color,
-                                                    const gchar **name,
-                                                    const gchar **type)
+salut_contact_manager_merge_olpc_activity_properties
+                                        (SalutContactManager *self,
+                                         TpHandle handle,
+                                         const gchar **color,
+                                         const gchar **name,
+                                         const gchar **type)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContactManagerActivity *activity = g_hash_table_lookup (
