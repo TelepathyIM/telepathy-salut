@@ -78,8 +78,17 @@ START_TEST (test_simple_message) {
   gchar *chunk;
   gsize chunk_length;
   gboolean parse_error_found = FALSE;
+  const gchar *srcdir;
+  gchar *file;
 
-  FileChunker *fc = file_chunker_new ("inputs/simple-message.input", 10);
+  srcdir = g_getenv("srcdir");
+  if (srcdir == NULL) {
+    file = g_strdup("inputs/simple-message.input");
+  } else {
+    file = g_strdup_printf("%s/inputs/simple-message.input", srcdir);
+  }
+
+  FileChunker *fc = file_chunker_new (file, 10);
   fail_if (fc == NULL);
 
   transport = test_transport_new (NULL, NULL);
