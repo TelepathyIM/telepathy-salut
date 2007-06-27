@@ -295,9 +295,11 @@ _get_connection (SalutMucManager *mgr,
       protocol, parameters, error);
 }
 
-const gchar **
-_get_connection_parameters(SalutMucManager *mgr, const gchar *protocol) {
-  return gibber_muc_connection_get_required_parameters(protocol); 
+static const gchar **
+_get_connection_parameters (SalutMucManager *mgr,
+                            const gchar *protocol)
+{
+  return gibber_muc_connection_get_required_parameters (protocol);
 }
 
 static SalutMucChannel *
