@@ -102,8 +102,6 @@ salut_connection_avatar_service_iface_init (gpointer g_iface,
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
-    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION,
-        salut_connection_connection_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
@@ -2067,10 +2065,28 @@ salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
 }
 #endif
 
+static gchar *
+handle_normalize_require_nonempty (const gchar *id,
+                                   gpointer context,
+                                   GError **error)
+{
+  g_return_val_if_fail (id != NULL, NULL);
+
+  if (*id == '\0')
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_HANDLE,
+          "Salut handle names may not be the empty string");
+      return NULL;
+    }
+
+  return g_strdup (id);
+}
+
 /* Connection baseclass function implementations */
-static void 
+static void
 salut_connection_create_handle_repos(TpBaseConnection *self,
-    TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES]) {
+    TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES])
+{
   static const char *list_handle_strings[] = {
     "publish",
     "subscribe",
@@ -2078,24 +2094,14 @@ salut_connection_create_handle_repos(TpBaseConnection *self,
     NULL
   };
 
-  repos[TP_HANDLE_TYPE_CONTACT] = 
-    TP_HANDLE_REPO_IFACE(
-        g_object_new(TP_TYPE_DYNAMIC_HANDLE_REPO,
-            "handle-type", TP_HANDLE_TYPE_CONTACT,
-            NULL));
+  repos[TP_HANDLE_TYPE_CONTACT] = tp_dynamic_handle_repo_new
+      (TP_HANDLE_TYPE_CONTACT, handle_normalize_require_nonempty, NULL);
 
-  repos[TP_HANDLE_TYPE_ROOM] = 
-    TP_HANDLE_REPO_IFACE(
-        g_object_new(TP_TYPE_DYNAMIC_HANDLE_REPO,
-            "handle-type", TP_HANDLE_TYPE_ROOM,
-            NULL));
+  repos[TP_HANDLE_TYPE_ROOM] = tp_dynamic_handle_repo_new
+      (TP_HANDLE_TYPE_ROOM, handle_normalize_require_nonempty, NULL);
 
-  repos[TP_HANDLE_TYPE_LIST] = 
-    TP_HANDLE_REPO_IFACE(
-        g_object_new(TP_TYPE_STATIC_HANDLE_REPO,
-            "handle-type", TP_HANDLE_TYPE_LIST,
-            "handle-names", list_handle_strings,
-            NULL));
+  repos[TP_HANDLE_TYPE_LIST] = tp_static_handle_repo_new (TP_HANDLE_TYPE_LIST,
+      list_handle_strings);
 }
 
 void
@@ -2231,7 +2237,6 @@ hold_unref_and_return_handles (DBusGMethodInvocation *context,
         }
       tp_handle_unref(repo, handle);
     }
-  g_free (sender);
   dbus_g_method_return (context, handles);
   return;
 
@@ -2247,7 +2252,6 @@ error:
     TpHandle handle = (TpHandle) g_array_index (handles, guint, j);
     tp_handle_unref(repo, handle);
   }
-  g_free (sender);
 }
 
 
