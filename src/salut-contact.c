@@ -268,6 +268,7 @@ compare_resolver(gconstpointer a, gconstpointer b) {
   gchar *name; 
   gchar *type; 
   gchar *domain;
+  gint result;
 
   g_object_get((gpointer)a, 
                "interface", &interface,
@@ -281,9 +282,17 @@ compare_resolver(gconstpointer a, gconstpointer b) {
       && !strcmp(name, info->name)
       && !strcmp(type, info->type)
       && !strcmp(domain, info->domain)) {
-    return 0;
+      result = 0;
   }
-  return 1;
+  else
+    {
+      result = 1;
+    }
+
+  g_free (name);
+  g_free (type);
+  g_free (domain);
+  return result;
 }
 
 static SalutAvahiServiceResolver *
