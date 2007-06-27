@@ -672,19 +672,22 @@ salut_contact_manager_new_channel(SalutContactManager *mgr,
 }
 
 static SalutContactChannel *
-salut_contact_manager_get_channel(SalutContactManager *mgr, 
-    TpHandle handle, gboolean *created) 
+salut_contact_manager_get_channel (SalutContactManager *mgr,
+                                   TpHandle handle,
+                                   gboolean *created)
 {
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
   SalutContactChannel *chan;
 
-  chan = g_hash_table_lookup(priv->channels, GINT_TO_POINTER(handle));
-  if (created != NULL) {
-    *created = (chan == NULL);
-  }
-  if (chan == NULL) {
-    chan= salut_contact_manager_new_channel(mgr, handle);
-  }
+  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
+  if (created != NULL)
+    {
+      *created = (chan == NULL);
+    }
+  if (chan == NULL)
+    {
+      chan = salut_contact_manager_new_channel (mgr, handle);
+    }
 
   return chan;
 }
