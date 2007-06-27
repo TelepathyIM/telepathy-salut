@@ -13,8 +13,12 @@ START_TEST (test_instantiation)
   node = gibber_xmpp_node_new ("test");
   fail_unless (node != NULL);
 
+  gibber_xmpp_node_free (node);
+
   node = gibber_xmpp_node_new (NULL);
   fail_unless (node != NULL);
+
+  gibber_xmpp_node_free (node);
 }
 END_TEST
 
@@ -48,6 +52,8 @@ START_TEST (test_language)
   gibber_xmpp_node_set_language_n (node, NULL, 2);
   lang = gibber_xmpp_node_get_language (node);
   fail_unless (lang == NULL);
+
+  gibber_xmpp_node_free (node);
 }
 END_TEST
 
@@ -68,6 +74,8 @@ START_TEST (test_namespace)
   gibber_xmpp_node_set_ns (node, NULL);
   ns = gibber_xmpp_node_get_ns (node);
   fail_unless (ns == NULL);
+
+  gibber_xmpp_node_free (node);
 }
 END_TEST
 
@@ -106,6 +114,8 @@ START_TEST (test_attribute)
 
   attribute = gibber_xmpp_node_get_attribute_ns (node, "barfoo", "bar");
   fail_unless (attribute == NULL);
+
+  gibber_xmpp_node_free (node);
 }
 END_TEST
 
@@ -137,6 +147,8 @@ START_TEST (test_child)
   child = gibber_xmpp_node_get_child (node, "foo2");
   fail_if (child->content == NULL);
   fail_unless (strcmp(child->content, "blah") == 0);
+
+  gibber_xmpp_node_free (node);
 }
 END_TEST
 
