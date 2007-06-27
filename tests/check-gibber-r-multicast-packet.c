@@ -103,6 +103,9 @@ START_TEST (test_packet) {
   fail_unless(plen == strlen(payload));
 
   fail_unless(memcmp(payload, pdata, plen) == 0);
+
+  g_object_unref (a);
+  g_object_unref (b);
 } END_TEST
 
 TCase *
