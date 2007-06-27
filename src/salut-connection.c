@@ -84,10 +84,6 @@ salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
 #endif
 
 static void
-salut_connection_connection_service_iface_init (gpointer g_iface,
-    gpointer iface_data);
-
-static void
 salut_connection_aliasing_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
