@@ -309,35 +309,36 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *room_repo = 
-      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
+  TpHandleRepoIface *room_repo =
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   SalutMucChannel *chan;
   const gchar *name;
   gchar *path = NULL;
 
-  g_assert(g_hash_table_lookup(priv->text_channels, GINT_TO_POINTER(handle)) 
-             == NULL);
-  DEBUG("Requested channel for handle: %d", handle);
+  g_assert (g_hash_table_lookup (priv->text_channels,
+        GUINT_TO_POINTER (handle)) == NULL);
+  DEBUG ("Requested channel for handle: %u", handle);
 
   /* FIXME The name of the muc and the handle might need to be different at
    * some point.. E.g. if two rooms are called the same */
-  name = tp_handle_inspect(room_repo, handle);
-  path = g_strdup_printf("%s/MucChannel/%u", 
-                         base_connection->object_path, handle);
-  chan = g_object_new(SALUT_TYPE_MUC_CHANNEL,
-                      "connection", priv->connection,
-                      "im-manager", priv->im_manager,
-                      "object-path", path,
-                      "muc_connection", connection,
-                      "handle", handle,
-                      "name", name,
-                      "client", priv->client,
-                      NULL);
-  g_free(path);
+  name = tp_handle_inspect (room_repo, handle);
+  path = g_strdup_printf ("%s/MucChannel/%u", base_connection->object_path,
+      handle);
+  chan = g_object_new (SALUT_TYPE_MUC_CHANNEL,
+      "connection", priv->connection,
+      "im-manager", priv->im_manager,
+      "object-path", path,
+      "muc_connection", connection,
+      "handle", handle,
+      "name", name,
+      "client", priv->client,
+      NULL);
+  g_free (path);
 
-  g_hash_table_insert(priv->text_channels, GINT_TO_POINTER(handle), chan);
-  g_signal_connect(chan, "closed", G_CALLBACK(muc_channel_closed_cb), mgr);
-  tp_channel_factory_iface_emit_new_channel(mgr, TP_CHANNEL_IFACE(chan), NULL);
+  g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
+  g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
+  tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
+      NULL);
 
   return chan;
 }
