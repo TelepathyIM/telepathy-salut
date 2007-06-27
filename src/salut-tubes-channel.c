@@ -896,9 +896,9 @@ extract_tube_information (SalutTubesChannel *self,
       *initiator_handle = tp_handle_ensure (contact_repo, initiator, NULL,
           NULL);
 
-      if (initiator_handle == 0)
+      if (*initiator_handle == 0)
         {
-          DEBUG ("invalid initiator JID %s", initiator);
+          DEBUG ("invalid initiator ID %s", initiator);
           return FALSE;
         }
     }
