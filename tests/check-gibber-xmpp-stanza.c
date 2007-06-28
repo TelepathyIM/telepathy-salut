@@ -1,5 +1,5 @@
 /*
- * check-gibber-stanza-build.c - Test for gibber_xmpp_stanza_build
+ * check-gibber-xmpp-stanza.c - Test for gibber-xmpp-stanza functions
  * Copyright (C) 2007 Collabora Ltd.
  * @author Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
  *

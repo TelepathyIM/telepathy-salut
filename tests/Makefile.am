@@ -59,7 +59,7 @@ check_main_SOURCES =                     \
     check-gibber-xmpp-connection.c       \
     check-gibber-r-multicast-packet.c    \
     check-gibber-r-multicast-sender.c    \
-    check-gibber-stanza-build.c          \
+    check-gibber-xmpp-stanza.c           \
     check-gibber-iq-helper.c
 
 check_main_LDADD = \
