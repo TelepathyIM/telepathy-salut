@@ -34,7 +34,7 @@ typedef enum {
 } GibberRMulticastPacketType;
 
 typedef struct {
-  gchar *name;
+  guint32 receiver_id;
   guint32 packet_id;
 } GibberRMulticastReceiver;
 
@@ -64,7 +64,7 @@ struct _GibberRMulticastPacket {
     guint8 stream_id;
 
     /* sender */
-    gchar *sender;
+    guint32 sender;
 
     /* List of GibberRMulticastReceiver's receivers */ 
     GList *receivers;
@@ -89,13 +89,13 @@ GType gibber_r_multicast_packet_get_type(void);
 /* Start a new packet */
 GibberRMulticastPacket *
 gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
-                              const gchar *sender, guint32 packet_id,
+                              guint32 sender, guint32 packet_id,
                               guint8 stream_id,
                               gsize max_size);
 
 gboolean
 gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
-                                       const gchar *name,
+                                       guint32 receiver_id,
                                        guint32 packet_id,
                                        GError **error);
 

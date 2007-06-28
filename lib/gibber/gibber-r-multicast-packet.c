@@ -98,7 +98,6 @@ gibber_r_multicast_packet_finalize (GObject *object)
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
-  g_free(self->sender);
   g_list_foreach(self->receivers, (GFunc)gibber_r_multicast_receiver_free, 
      NULL);
   g_list_free(self->receivers);
@@ -108,9 +107,9 @@ gibber_r_multicast_packet_finalize (GObject *object)
 }
 
 static GibberRMulticastReceiver *
-gibber_r_multicast_receiver_new(const gchar *name, guint32 expected_packet) {
+gibber_r_multicast_receiver_new(guint32 receiver_id, guint32 expected_packet) {
   GibberRMulticastReceiver *result = g_slice_new(GibberRMulticastReceiver);
-  result->name = g_strdup(name);
+  result->receiver_id = receiver_id;
   result->packet_id = expected_packet;
 
   return result;
@@ -118,14 +117,13 @@ gibber_r_multicast_receiver_new(const gchar *name, guint32 expected_packet) {
 
 static void
 gibber_r_multicast_receiver_free(GibberRMulticastReceiver *receiver) {
-  g_free(receiver->name);
   g_slice_free(GibberRMulticastReceiver, receiver);
 }
 
 /* Start a new packet */
 GibberRMulticastPacket *
 gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
-                              const gchar *sender,
+                              guint32 sender,
                               guint32 packet_id,
                               guint8 stream_id,
                               gsize max_size) {
@@ -136,7 +134,7 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
 
   /* Fixme do this using properties */
   result->type = type;
-  result->sender = g_strdup(sender);
+  result->sender = sender;
   result->packet_id = packet_id;
   result->stream_id = stream_id;
 
@@ -147,11 +145,11 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
 
 gboolean
 gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
-                                       const gchar *name,
+                                       guint32 receiver_id,
                                        guint32 packet_id,
                                        GError **error) {
   GibberRMulticastReceiver *r =
-      gibber_r_multicast_receiver_new(name, packet_id);
+      gibber_r_multicast_receiver_new(receiver_id, packet_id);
   GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
 
@@ -180,16 +178,12 @@ gibber_r_multicast_packet_set_part(GibberRMulticastPacket *packet,
 static gsize
 gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet,
                                          gsize payload_size, gsize max_size) {
-  GList *l;
-  gsize result = 11; /* 8 bit type, 8 bit version, 8 bit part, 8 bit total, 
-                       32 bit identifier, 8 bit stream id, 
-                       8 bit sender length, 8 bit nr receivers */
-  result += strlen(packet->sender);
-  for (l = packet->receivers; l != NULL; l = g_list_next(l)) {
-    GibberRMulticastReceiver *r;
-    r = (GibberRMulticastReceiver *)l->data;
-    result += 5 + strlen(r->name); /* 32 bit packet id, 8 bit length */
-  }
+  gsize result = 14; /* 8 bit type, 8 bit version, 8 bit part, 8 bit total, 
+                       32 bit identifier, 8 bit stream id,
+                       32 bit sender, 8 bit nr receivers */
+
+  /* 32 bit sender id, 32 bit packet id */
+  result += 8 * g_list_length(packet->receivers);
 
   g_assert(result < max_size);
 
@@ -286,15 +280,15 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet,
   add_guint8(priv, packet->packet_part);
   add_guint8(priv, packet->packet_total);
   add_guint32(priv, packet->packet_id);
+  add_guint32(priv, packet->sender);
   add_guint8(priv, packet->stream_id);
-  add_string(priv, packet->sender);
   add_guint8(priv, g_list_length(packet->receivers));
 
   for (l = packet->receivers; l != NULL; l = g_list_next(l)) {
     GibberRMulticastReceiver *r;
     r = (GibberRMulticastReceiver *)l->data;
 
-    add_string(priv, r->name);
+    add_guint32(priv, r->receiver_id);
     add_guint32(priv, r->packet_id);
   }
 
@@ -346,19 +340,19 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   result->packet_part  = get_guint8(priv);
   result->packet_total = get_guint8(priv);
   result->packet_id    = get_guint32(priv);
+  result->sender       = get_guint32(priv);
   result->stream_id    = get_guint8(priv);
-  result->sender       = get_string(priv);
 
 
   for (receivers = get_guint8(priv); receivers > 0; receivers--) {
     GibberRMulticastReceiver *r;
-    gchar *str;
+    guint32 receiver_id;
     guint32 expected_packet;
-    str = get_string(priv);
+
+    receiver_id = get_guint32(priv);
     expected_packet = get_guint32(priv);
-    r = gibber_r_multicast_receiver_new(str, expected_packet);
+    r = gibber_r_multicast_receiver_new(receiver_id, expected_packet);
     result->receivers = g_list_append(result->receivers, r);
-    g_free (str);
   }
 
   priv->payload = priv->data + priv->size;
