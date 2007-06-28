@@ -191,65 +191,65 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet,
 }
 
 static void
-add_guint8(GibberRMulticastPacketPrivate *p, guint8 i) {
-  g_assert(p->size + 1 <= p->max_data);
-  *(p->data + p->size) = i;
-  p->size++;
+add_guint8(guint8 *data, gsize length, gsize *offset, guint8 i) {
+  g_assert(*offset + 1 <= length);
+  *(data + *offset) = i;
+  (*offset)++;
 }
 
 static guint8
-get_guint8(GibberRMulticastPacketPrivate *p) {
+get_guint8(guint8 *data, gsize length, gsize *offset) {
   guint8 i;
-  g_assert(p->size + 1 <= p->max_data);
-  i = *(p->data + p->size);
-  p->size++;
+  g_assert(*offset + 1 <= length);
+  i = *(data + *offset);
+  (*offset)++;
   return i;
 }
 
 static void
-add_guint32(GibberRMulticastPacketPrivate *p, guint32 i) {
+add_guint32(guint8 *data, gsize length, gsize *offset, guint32 i) {
   guint32 ni = htonl(i);
 
-  g_assert(p->size + 4 <= p->max_data);
+  g_assert(*offset + 4 <= length);
 
-  memcpy(p->data + p->size, &ni, 4);
-  p->size += 4;
+  memcpy(data + *offset, &ni, 4);
+  (*offset) += 4;
 }
 
 static guint32
-get_guint32(GibberRMulticastPacketPrivate *p) {
+get_guint32(guint8 *data, gsize length, gsize *offset) {
   guint32 ni;
 
-  g_assert(p->size + 4 <= p->max_data);
+  g_assert(*offset + 4 <= length);
 
-  memcpy(&ni, p->data + p->size, 4);
-  p->size += 4;
+  memcpy(&ni, data + *offset, 4);
+  (*offset) += 4;
   return ntohl(ni);
 }
 
 static void
-add_string(GibberRMulticastPacketPrivate *p, const gchar *str) {
+add_string(guint8 *data, gsize length, gsize *offset, const gchar *str) {
   gsize len = strlen(str);
 
   g_assert(len < G_MAXUINT8);
-  add_guint8(p, len);
+  add_guint8(data, length, offset, len);
 
-  g_assert(p->size + len <= p->max_data);
-  memcpy(p->data + p->size, str, len);
-  p->size += len;
+  g_assert(*offset + len <= length);
+  memcpy(data + *offset, str, len);
+  (*offset) += len;
 }
 
 static gchar *
-get_string(GibberRMulticastPacketPrivate *p) {
+get_string(guint8 *data, gsize length, gsize *offset) {
   gsize len;
   gchar *str;
 
-  len = get_guint8(p);
+  len = get_guint8(data, length, offset);
 
-  g_assert(p->size + len <= p->max_data);
+  g_assert(*offset + len <= length);
 
-  str = g_strndup((gchar *)p->data + p->size, len);
-  p->size += len;
+  str = g_strndup((gchar *)data + *offset, len);
+  (*offset) += len;
   return str;
 }
 
@@ -275,21 +275,22 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet,
   priv->data = g_malloc0(priv->max_data);
   priv->size = 0;
 
-  add_guint8(priv, packet->type);
-  add_guint8(priv, packet->version);
-  add_guint8(priv, packet->packet_part);
-  add_guint8(priv, packet->packet_total);
-  add_guint32(priv, packet->packet_id);
-  add_guint32(priv, packet->sender);
-  add_guint8(priv, packet->stream_id);
-  add_guint8(priv, g_list_length(packet->receivers));
+  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->type);
+  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->version);
+  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->packet_part);
+  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->packet_total);
+  add_guint32 (priv->data, priv->max_data, &(priv->size), packet->packet_id);
+  add_guint32 (priv->data, priv->max_data, &(priv->size), packet->sender);
+  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->stream_id);
+  add_guint8 (priv->data, priv->max_data, &(priv->size),
+      g_list_length (packet->receivers));
 
   for (l = packet->receivers; l != NULL; l = g_list_next(l)) {
     GibberRMulticastReceiver *r;
     r = (GibberRMulticastReceiver *)l->data;
 
-    add_guint32(priv, r->receiver_id);
-    add_guint32(priv, r->packet_id);
+    add_guint32(priv->data, priv->max_data, &(priv->size), r->receiver_id);
+    add_guint32(priv->data, priv->max_data, &(priv->size), r->packet_id);
   }
 
   priv->payload = priv->data + priv->size;
@@ -335,22 +336,30 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   priv->size = 0;
   priv->max_data = size;
 
-  result->type         = get_guint8(priv);
-  result->version      = get_guint8(priv);
-  result->packet_part  = get_guint8(priv);
-  result->packet_total = get_guint8(priv);
-  result->packet_id    = get_guint32(priv);
-  result->sender       = get_guint32(priv);
-  result->stream_id    = get_guint8(priv);
+  result->type         = get_guint8 (priv->data, priv->max_data,
+      &(priv->size));
+  result->version      = get_guint8 (priv->data, priv->max_data,
+      &(priv->size));
+  result->packet_part  = get_guint8 (priv->data, priv->max_data,
+      &(priv->size));
+  result->packet_total = get_guint8 (priv->data, priv->max_data,
+      &(priv->size));
+  result->packet_id    = get_guint32 (priv->data, priv->max_data,
+      &(priv->size));
+  result->sender       = get_guint32 (priv->data, priv->max_data,
+      &(priv->size));
+  result->stream_id    = get_guint8 (priv->data, priv->max_data,
+      &(priv->size));
 
 
-  for (receivers = get_guint8(priv); receivers > 0; receivers--) {
+  for (receivers = get_guint8(priv->data, priv->max_data, &(priv->size));
+      receivers > 0; receivers--) {
     GibberRMulticastReceiver *r;
     guint32 receiver_id;
     guint32 expected_packet;
 
-    receiver_id = get_guint32(priv);
-    expected_packet = get_guint32(priv);
+    receiver_id = get_guint32(priv->data, priv->max_data, &(priv->size));
+    expected_packet = get_guint32(priv->data, priv->max_data, &(priv->size));
     r = gibber_r_multicast_receiver_new(receiver_id, expected_packet);
     result->receivers = g_list_append(result->receivers, r);
   }
