@@ -111,6 +111,10 @@ GibberXmppStanza *
 gibber_xmpp_stanza_build (GibberStanzaType type, GibberStanzaSubType sub_type,
     const gchar *from, const gchar *to, guint spec, ...);
 
+void
+gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
+    GibberStanzaType *type, GibberStanzaSubType *sub_type);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_XMPP_STANZA_H__*/
