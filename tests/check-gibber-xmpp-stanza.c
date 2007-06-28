@@ -30,7 +30,7 @@
 
 #include <check.h>
 
-START_TEST (test_html_message)
+START_TEST (test_build_with_html_message)
 {
   GibberXmppStanza *stanza;
   const gchar *body = "Telepathy rocks!",
@@ -82,9 +82,9 @@ START_TEST (test_html_message)
 } END_TEST
 
 TCase *
-make_gibber_stanza_build_tcase (void)
+make_gibber_xmpp_stanza_tcase (void)
 {
-  TCase *tc = tcase_create ("Stanza Build");
-  tcase_add_test (tc, test_html_message);
+  TCase *tc = tcase_create ("XMPP Stanza");
+  tcase_add_test (tc, test_build_with_html_message);
   return tc;
 }
