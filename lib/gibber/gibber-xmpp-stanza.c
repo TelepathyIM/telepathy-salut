@@ -379,15 +379,56 @@ gibber_xmpp_stanza_build (GibberStanzaType type,
   return stanza;
 }
 
+static GibberStanzaType
+get_type_from_name (const gchar *name)
+{
+  guint i;
+
+  if (name == NULL)
+    return GIBBER_STANZA_TYPE_NONE;
+
+  /* We skip the first entry as it's NONE */
+  for (i = 1; i < GIBBER_STANZA_TYPE_UNKNOWN; i++)
+    {
+       if (type_names[i].name != NULL &&
+           strcmp (name, type_names[i].name) == 0)
+         {
+           return type_names[i].type;
+         }
+    }
+
+  return GIBBER_STANZA_TYPE_UNKNOWN;
+}
+
+static GibberStanzaSubType
+get_sub_type_from_name (const gchar *name)
+{
+  guint i;
+
+  if (name == NULL)
+    return GIBBER_STANZA_SUB_TYPE_NONE;
+
+  /* We skip the first entry as it's NONE */
+  for (i = 1; i < GIBBER_STANZA_SUB_TYPE_UNKNOWN; i++)
+    {
+      if (sub_type_names[i].name != NULL &&
+          strcmp (name, sub_type_names[i].name) == 0)
+        {
+          return sub_type_names[i].sub_type;
+        }
+    }
+
+  return GIBBER_STANZA_SUB_TYPE_UNKNOWN;
+}
+
 void
 gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
                                   GibberStanzaType *type,
                                   GibberStanzaSubType *sub_type)
 {
   g_return_if_fail (stanza != NULL);
-  GibberXmppNode *node = stanza->node;
 
-  if (node == NULL)
+  if (stanza->node == NULL)
     {
       *type = GIBBER_STANZA_SUB_TYPE_NONE;
       *sub_type = GIBBER_STANZA_SUB_TYPE_NONE;
@@ -395,48 +436,9 @@ gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
     }
 
   if (type != NULL)
-    {
-      guint i;
-
-      for (i = 0; i < NUM_GIBBER_STANZA_TYPE; i++)
-        {
-         if (type_names[i].name != NULL &&
-             strcmp (node->name, type_names[i].name) == 0)
-           {
-             *type = type_names[i].type;
-             break;
-           }
-        }
-
-      if (i == NUM_GIBBER_STANZA_TYPE)
-        /* We didn't find the type */
-        *type = GIBBER_STANZA_TYPE_UNKNOWN;
-    }
+    *type = get_type_from_name (stanza->node->name);
 
   if (sub_type != NULL)
-    {
-      guint i;
-      const gchar *sub_type_str;
-
-      sub_type_str = gibber_xmpp_node_get_attribute (node, "type");
-      if (sub_type_str == NULL)
-        {
-          *sub_type = GIBBER_STANZA_SUB_TYPE_NONE;
-          return;
-        }
-
-      for (i = 0; i < NUM_GIBBER_STANZA_SUB_TYPE; i++)
-        {
-          if (sub_type_names[i].name != NULL &&
-              strcmp (sub_type_str, sub_type_names[i].name) == 0)
-            {
-              *sub_type = sub_type_names[i].sub_type;
-              return;
-            }
-        }
-
-      if (i == NUM_GIBBER_STANZA_SUB_TYPE)
-        /* We didn't find the sub type */
-        *sub_type = GIBBER_STANZA_SUB_TYPE_UNKNOWN;
-    }
+    *sub_type = get_sub_type_from_name (gibber_xmpp_node_get_attribute (
+          stanza->node, "type"));
 }
