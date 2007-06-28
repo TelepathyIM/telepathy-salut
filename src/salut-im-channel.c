@@ -788,7 +788,6 @@ salut_im_channel_send_stanza (SalutImChannel * self,
       case CHANNEL_CONNECTED:
         if (!gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL))
           g_warning ("Sending failed");
-        g_object_unref (stanza);
     }
 }
 
