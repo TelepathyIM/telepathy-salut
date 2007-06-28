@@ -46,7 +46,7 @@ typedef struct
     const gchar *ns;
 } StanzaTypeName;
 
-static const StanzaTypeName type_names[LAST_GIBBER_STANZA_TYPE] =
+static const StanzaTypeName type_names[NUM_GIBBER_STANZA_TYPE] =
 {
     { GIBBER_STANZA_TYPE_NONE,            NULL,        NULL },
     { GIBBER_STANZA_TYPE_MESSAGE,         "message",   NULL },
@@ -70,7 +70,7 @@ typedef struct
   GibberStanzaType type;
 } StanzaSubTypeName;
 
-static const StanzaSubTypeName sub_type_names[LAST_GIBBER_STANZA_SUB_TYPE] =
+static const StanzaSubTypeName sub_type_names[NUM_GIBBER_STANZA_SUB_TYPE] =
 {
     { GIBBER_STANZA_SUB_TYPE_NONE,           NULL,
         GIBBER_STANZA_TYPE_NONE },
@@ -249,7 +249,7 @@ static const gchar *
 get_type_name (GibberStanzaType type)
 {
   if (type < GIBBER_STANZA_TYPE_NONE ||
-      type >= LAST_GIBBER_STANZA_TYPE)
+      type >= NUM_GIBBER_STANZA_TYPE)
     return NULL;
 
   g_assert (type_names[type].type == type);
@@ -260,7 +260,7 @@ static const gchar *
 get_type_ns (GibberStanzaType type)
 {
   if (type < GIBBER_STANZA_TYPE_NONE ||
-      type >= LAST_GIBBER_STANZA_TYPE)
+      type >= NUM_GIBBER_STANZA_TYPE)
     return NULL;
 
   g_assert (type_names[type].type == type);
@@ -271,7 +271,7 @@ static const gchar *
 get_sub_type_name (GibberStanzaSubType sub_type)
 {
   if (sub_type < GIBBER_STANZA_SUB_TYPE_NONE ||
-      sub_type >= LAST_GIBBER_STANZA_SUB_TYPE)
+      sub_type >= NUM_GIBBER_STANZA_SUB_TYPE)
     return NULL;
 
   g_assert (sub_type_names[sub_type].sub_type == sub_type);
@@ -283,9 +283,9 @@ check_sub_type (GibberStanzaType type,
                 GibberStanzaSubType sub_type)
 {
   g_return_val_if_fail (type >= GIBBER_STANZA_TYPE_NONE &&
-      type < LAST_GIBBER_STANZA_TYPE, FALSE);
+      type < NUM_GIBBER_STANZA_TYPE, FALSE);
   g_return_val_if_fail (sub_type >= GIBBER_STANZA_SUB_TYPE_NONE &&
-      sub_type < LAST_GIBBER_STANZA_SUB_TYPE, FALSE);
+      sub_type < NUM_GIBBER_STANZA_SUB_TYPE, FALSE);
 
   g_assert (sub_type_names[sub_type].sub_type == sub_type);
   g_return_val_if_fail (
@@ -355,8 +355,8 @@ gibber_xmpp_stanza_build (GibberStanzaType type,
   GibberXmppStanza *stanza;
   va_list ap;
 
-  g_return_val_if_fail (type < LAST_GIBBER_STANZA_TYPE, NULL);
-  g_return_val_if_fail (sub_type < LAST_GIBBER_STANZA_SUB_TYPE, NULL);
+  g_return_val_if_fail (type < NUM_GIBBER_STANZA_TYPE, NULL);
+  g_return_val_if_fail (sub_type < NUM_GIBBER_STANZA_SUB_TYPE, NULL);
 
   stanza = gibber_xmpp_stanza_new_with_sub_type (type, sub_type);
   if (stanza == NULL)
@@ -398,7 +398,7 @@ gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
     {
       guint i;
 
-      for (i = 0; i < LAST_GIBBER_STANZA_TYPE; i++)
+      for (i = 0; i < NUM_GIBBER_STANZA_TYPE; i++)
         {
          if (type_names[i].name != NULL &&
              strcmp (node->name, type_names[i].name) == 0)
@@ -408,7 +408,7 @@ gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
            }
         }
 
-      if (i == LAST_GIBBER_STANZA_TYPE)
+      if (i == NUM_GIBBER_STANZA_TYPE)
         /* We didn't find the type */
         *type = GIBBER_STANZA_TYPE_UNKNOWN;
     }
@@ -425,7 +425,7 @@ gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
           return;
         }
 
-      for (i = 0; i < LAST_GIBBER_STANZA_SUB_TYPE; i++)
+      for (i = 0; i < NUM_GIBBER_STANZA_SUB_TYPE; i++)
         {
           if (sub_type_names[i].name != NULL &&
               strcmp (sub_type_str, sub_type_names[i].name) == 0)
@@ -435,7 +435,7 @@ gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
             }
         }
 
-      if (i == LAST_GIBBER_STANZA_SUB_TYPE)
+      if (i == NUM_GIBBER_STANZA_SUB_TYPE)
         /* We didn't find the sub type */
         *sub_type = GIBBER_STANZA_SUB_TYPE_UNKNOWN;
     }
