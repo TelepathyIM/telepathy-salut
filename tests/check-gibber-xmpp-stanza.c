@@ -81,10 +81,82 @@ START_TEST (test_build_with_html_message)
   g_object_unref (stanza);
 } END_TEST
 
+START_TEST (test_get_type_info_with_simple_message)
+{
+  GibberXmppStanza *stanza;
+  GibberStanzaType type;
+  GibberStanzaSubType sub_type;
+
+  stanza = gibber_xmpp_stanza_build (
+      GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
+      "alice@collabora.co.uk", "bob@collabora.co.uk",
+     GIBBER_STANZA_END);
+  fail_if (stanza == NULL);
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
+  fail_if (type != GIBBER_STANZA_TYPE_MESSAGE);
+  fail_if (sub_type != GIBBER_STANZA_SUB_TYPE_NONE);
+
+  g_object_unref (stanza);
+} END_TEST
+
+START_TEST (test_get_type_info_with_iq_set)
+{
+  GibberXmppStanza *stanza;
+  GibberStanzaType type;
+  GibberStanzaSubType sub_type;
+
+  stanza = gibber_xmpp_stanza_build (
+      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_SET,
+      "alice@collabora.co.uk", "bob@collabora.co.uk",
+     GIBBER_STANZA_END);
+  fail_if (stanza == NULL);
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
+  fail_if (type != GIBBER_STANZA_TYPE_IQ);
+  fail_if (sub_type != GIBBER_STANZA_SUB_TYPE_SET);
+
+  g_object_unref (stanza);
+} END_TEST
+
+START_TEST (test_get_type_info_with_unknown_type)
+{
+  GibberXmppStanza *stanza;
+  GibberStanzaType type;
+
+  stanza = gibber_xmpp_stanza_new ("goat");
+  fail_if (stanza == NULL);
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
+  fail_if (type != GIBBER_STANZA_TYPE_UNKNOWN);
+
+  g_object_unref (stanza);
+} END_TEST
+
+START_TEST (test_get_type_info_with_unknown_sub_type)
+{
+  GibberXmppStanza *stanza;
+  GibberStanzaSubType sub_type;
+
+  stanza = gibber_xmpp_stanza_new ("iq");
+  fail_if (stanza == NULL);
+  gibber_xmpp_node_set_attribute (stanza->node, "type", "goat");
+
+  gibber_xmpp_stanza_get_type_info (stanza, NULL, &sub_type);
+  fail_if (sub_type != GIBBER_STANZA_SUB_TYPE_UNKNOWN);
+
+  g_object_unref (stanza);
+} END_TEST
+
+
 TCase *
 make_gibber_xmpp_stanza_tcase (void)
 {
   TCase *tc = tcase_create ("XMPP Stanza");
   tcase_add_test (tc, test_build_with_html_message);
+  tcase_add_test (tc, test_get_type_info_with_simple_message);
+  tcase_add_test (tc, test_get_type_info_with_iq_set);
+  tcase_add_test (tc, test_get_type_info_with_unknown_type);
+  tcase_add_test (tc, test_get_type_info_with_unknown_sub_type);
   return tc;
 }
