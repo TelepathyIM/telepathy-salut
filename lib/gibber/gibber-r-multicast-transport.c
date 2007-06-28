@@ -119,7 +119,7 @@ gibber_r_multicast_transport_get_property (GObject *object,
                                            GValue *value,
                                            GParamSpec *pspec) {
   GibberRMulticastTransport *transport = GIBBER_R_MULTICAST_TRANSPORT(object);
-  GibberRMulticastTransportPrivate *priv = 
+  GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(transport);
   switch (property_id) {
     case PROP_NAME:
@@ -127,7 +127,7 @@ gibber_r_multicast_transport_get_property (GObject *object,
       break;
     case PROP_TRANSPORT:
       g_value_set_object(value, priv->transport);
-      break; 
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;

@@ -26,7 +26,8 @@
 G_BEGIN_DECLS
 
 typedef enum {
-  PACKET_TYPE_HELLO = 0,
+  PACKET_TYPE_WHOIS_REQUEST = 0,
+  PACKET_TYPE_WHOIS_REPLY,
   PACKET_TYPE_DATA,
   PACKET_TYPE_REPAIR_REQUEST,
   PACKET_TYPE_SESSION,
@@ -126,6 +127,31 @@ gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
 /* Utility function to calculate the difference between two packet */
 gint32
 gibber_r_multicast_packet_diff(guint32 from, guint32 to);
+
+
+/* WHOIS packets are very simple and thus aren't GObjects. Maybe at some point
+ * gibber_r_multicast_packet should be renamed to 
+ * gibber_r_multicast_complex_packet */
+
+typedef struct  {
+  /* either PACKET_TYPE_WHOIS_REQUEST or PACKET_TYPE_WHOIS_REPLY */
+  GibberRMulticastPacketType type;
+  guint8 version;
+  /* Identifier of the sender that was answered/queried */
+  guint32 id;
+  /* Only set if type == PACKET_TYPE_WHOIS_REPLY */
+  gchar *name;
+} GibberRMulticastWhoisPacket;
+
+/* Generate a new raw whois packet, free with g_free */
+guint8 * gibber_r_multicast_whois_packet(GibberRMulticastPacketType type,
+    guint32 id, gchar *name, gsize *length);
+
+GibberRMulticastWhoisPacket * gibber_r_multicast_whois_new_from_packet(
+  guint8 *data, gsize length);
+
+void
+gibber_r_multicast_whois_free(GibberRMulticastWhoisPacket *packet);
 
 G_END_DECLS
 

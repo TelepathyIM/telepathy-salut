@@ -412,3 +412,59 @@ gibber_r_multicast_packet_diff(guint32 from, guint32 to) {
 
   return MIN(to - from, G_MAXINT);
 }
+
+/* Generate a new raw whois packet, free with g_free */
+guint8 *
+gibber_r_multicast_whois_packet (GibberRMulticastPacketType type,
+                                 guint32 id,
+                                 gchar *name,
+                                 gsize *length)
+{
+  guint8 *result;
+  gsize offset = 0;
+  g_assert (length != NULL);
+  g_assert (type == PACKET_TYPE_WHOIS_REPLY
+      || type == PACKET_TYPE_WHOIS_REQUEST);
+  g_assert ((type == PACKET_TYPE_WHOIS_REPLY && name != NULL) || name == NULL);
+
+  /* 8 bit type, 8 bit version, 32 bit id + optional string */
+  *length = 6 + (name == NULL ? 0 : strlen(name) + 1);
+  result = g_malloc(*length);
+
+  /* Type */
+  add_guint8 (result, *length, &offset, type);
+  /* Version */
+  add_guint8 (result, *length, &offset, 0);
+  /* Identifier */
+  add_guint32 (result, *length, &offset, id);
+
+  if (type == PACKET_TYPE_WHOIS_REPLY) {
+    add_string (result, *length, &offset, name);
+  }
+  return result;
+}
+
+GibberRMulticastWhoisPacket * 
+gibber_r_multicast_whois_new_from_packet (guint8 *data, gsize length) 
+{
+  GibberRMulticastWhoisPacket *result;
+  gsize offset = 0;
+
+  result = g_slice_new0 (GibberRMulticastWhoisPacket);
+  result->type = get_guint8 (data, length, &offset);
+  result->version = get_guint8 (data, length, &offset);
+  result->id = get_guint32 (data, length, &offset);
+
+  if (result->type == PACKET_TYPE_WHOIS_REPLY) {
+    result->name = get_string (data, length, &offset);
+  }
+
+  return result;
+}
+
+void
+gibber_r_multicast_whois_free (GibberRMulticastWhoisPacket *packet)
+{
+  g_free (packet->name);
+  g_slice_free (GibberRMulticastWhoisPacket, packet);
+}
