@@ -59,6 +59,7 @@ static const StanzaTypeName type_names[LAST_GIBBER_STANZA_TYPE] =
     { GIBBER_STANZA_TYPE_SUCCESS,         "success",   NULL },
     { GIBBER_STANZA_TYPE_FAILURE,         "failure",   NULL },
     { GIBBER_STANZA_TYPE_STREAM_ERROR,    "error",     GIBBER_XMPP_NS_STREAM },
+    { GIBBER_STANZA_TYPE_UNKNOWN,         NULL,        NULL },
 };
 
 typedef struct
@@ -102,6 +103,8 @@ static const StanzaSubTypeName sub_type_names[LAST_GIBBER_STANZA_SUB_TYPE] =
         GIBBER_STANZA_TYPE_IQ },
     { GIBBER_STANZA_SUB_TYPE_ERROR,          "error",
         GIBBER_STANZA_TYPE_NONE },
+    { GIBBER_STANZA_SUB_TYPE_UNKNOWN,        NULL,
+        GIBBER_STANZA_TYPE_UNKNOWN },
 };
 
 static void
