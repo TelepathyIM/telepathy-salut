@@ -36,6 +36,8 @@
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"
 
+#include "gibber-xmpp-connection-listener-signals-marshal.h"
+
 G_DEFINE_TYPE (GibberXmppConnectionListener, gibber_xmpp_connection_listener, \
     G_TYPE_OBJECT);
 
@@ -126,8 +128,8 @@ gibber_xmpp_connection_listener_class_init (
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
         NULL, NULL,
-        g_cclosure_marshal_VOID__OBJECT,
-        G_TYPE_NONE, 1, GIBBER_TYPE_XMPP_CONNECTION);
+        gibber_xmpp_connection_listener_marshal_VOID__OBJECT_POINTER,
+        G_TYPE_NONE, 2, GIBBER_TYPE_XMPP_CONNECTION, G_TYPE_POINTER);
 }
 
 GibberXmppConnectionListener *
@@ -251,7 +253,7 @@ listener_io_in_cb (GIOChannel *source,
   /* Unref the transport, the xmpp connection own it now */
   g_object_unref (transport);
 
-  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection);
+  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, &addr);
 
   return TRUE;
 }
