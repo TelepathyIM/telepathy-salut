@@ -83,8 +83,14 @@ START_TEST (test_listen)
 
   for (port = 5298; port < 5400; port++)
     {
-      if (gibber_xmpp_connection_listener_listen (listener, port, NULL))
+      GError *error = NULL;
+      if (gibber_xmpp_connection_listener_listen (listener, port, &error))
         break;
+
+      fail_if (error->code !=
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE);
+      g_error_free (error);
+      error = NULL;
     }
   fail_if (port >= 5400);
 
