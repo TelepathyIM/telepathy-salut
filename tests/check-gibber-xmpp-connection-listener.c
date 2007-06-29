@@ -83,8 +83,12 @@ START_TEST (test_listen)
   g_signal_connect (listener, "new-connection", G_CALLBACK (new_connection_cb),
       NULL);
 
-  port = gibber_xmpp_connection_listener_listen (listener);
-  fail_if (port <= 0);
+  for (port = 5298; port < 5400; port++)
+    {
+      if (gibber_xmpp_connection_listener_listen (listener, port, NULL))
+        break;
+    }
+  fail_if (port >= 5400);
 
   result = connect_to_port (port);
   fail_if (result == FALSE);

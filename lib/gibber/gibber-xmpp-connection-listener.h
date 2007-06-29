@@ -24,6 +24,20 @@
 
 G_BEGIN_DECLS
 
+GQuark gibber_xmpp_connection_listener_error_quark (void);
+#define GIBBER_XMPP_CONNECTION_LISTENER_ERROR \
+  gibber_xmpp_connection_listener_error_quark()
+
+typedef enum
+{
+  GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ALREADY_LISTENING,
+  GIBBER_XMPP_CONNECTION_LISTENER_ERROR_GETADDRINFO_FAILED,
+  GIBBER_XMPP_CONNECTION_LISTENER_ERROR_SOCKET_FAILED,
+  GIBBER_XMPP_CONNECTION_LISTENER_ERROR_SETSOCKOPT_FAILED,
+  GIBBER_XMPP_CONNECTION_LISTENER_ERROR_BIND_FAILED,
+  GIBBER_XMPP_CONNECTION_LISTENER_ERROR_LISTEN_FAILED,
+} GibberXmppConnectionListenerError;
+
 typedef struct _GibberXmppConnectionListener GibberXmppConnectionListener;
 typedef struct _GibberXmppConnectionListenerClass GibberXmppConnectionListenerClass;
 
@@ -59,9 +73,9 @@ GType gibber_xmpp_connection_listener_get_type (void);
 GibberXmppConnectionListener *
 gibber_xmpp_connection_listener_new (void);
 
-int
+gboolean
 gibber_xmpp_connection_listener_listen (
-    GibberXmppConnectionListener *listener);
+    GibberXmppConnectionListener *listener, int port, GError **error);
 
 G_END_DECLS
 

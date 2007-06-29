@@ -54,12 +54,25 @@ struct _GibberXmppConnectionListenerPrivate
 {
   GIOChannel *listener;
   guint io_watch_in;
+  int port;
 
   gboolean dispose_has_run;
 };
 
 #define GIBBER_XMPP_CONNECTION_LISTENER_GET_PRIVATE(obj) \
     ((GibberXmppConnectionListenerPrivate *) obj->priv)
+
+GQuark
+gibber_xmpp_connection_listener_error_quark (void)
+{
+  static GQuark quark = 0;
+
+  if (!quark)
+    quark = g_quark_from_static_string (
+        "gibber_xmpp_connection_listener_error");
+
+  return quark;
+}
 
 static void
 gibber_xmpp_connection_listener_init (GibberXmppConnectionListener *self)
@@ -126,7 +139,8 @@ gibber_xmpp_connection_listener_new (void)
 
 static int
 try_listening_on_port (GibberXmppConnectionListener *self,
-                       int port)
+                       int port,
+                       GError **error)
 {
   int fd = -1, ret, yes = 1;
   struct addrinfo req, *ans = NULL;
@@ -142,6 +156,9 @@ try_listening_on_port (GibberXmppConnectionListener *self,
   if (ret != 0)
     {
       DEBUG ("getaddrinfo failed: %s", gai_strerror (ret));
+      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_GETADDRINFO_FAILED,
+          "%s", gai_strerror (ret));
       goto error;
     }
 
@@ -151,6 +168,9 @@ try_listening_on_port (GibberXmppConnectionListener *self,
   if (fd == -1)
     {
       DEBUG ("socket failed: %s", g_strerror (errno));
+      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_SOCKET_FAILED,
+          "%s", g_strerror (errno));
       goto error;
     }
 
@@ -158,13 +178,19 @@ try_listening_on_port (GibberXmppConnectionListener *self,
   if (ret == -1)
     {
       DEBUG ("setsockopt failed: %s", g_strerror (errno));
+      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_SETSOCKOPT_FAILED,
+          "%s", g_strerror (errno));
       goto error;
     }
 
   ret = bind (fd, ans->ai_addr, ans->ai_addrlen);
   if (ret  < 0)
     {
-      DEBUG("bind failed: %s", g_strerror (errno));
+      DEBUG ("bind failed: %s", g_strerror (errno));
+      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_BIND_FAILED,
+          "%s", g_strerror (errno));
       goto error;
     }
 
@@ -172,6 +198,9 @@ try_listening_on_port (GibberXmppConnectionListener *self,
   if (ret == -1)
     {
       DEBUG ("listen failed: %s", g_strerror (errno));
+      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_LISTEN_FAILED,
+          "%s", g_strerror (errno));
       goto error;
     }
 
@@ -227,33 +256,34 @@ listener_io_in_cb (GIOChannel *source,
   return TRUE;
 }
 
-int
-gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self)
+gboolean
+gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self,
+                                        int port,
+                                        GError **error)
 {
   GibberXmppConnectionListenerPrivate *priv =
     GIBBER_XMPP_CONNECTION_LISTENER_GET_PRIVATE (self);
-  int port = 5298;
-  int fd = -1;
+  int fd;
 
   if (priv->listener != NULL)
-    return -1;
-
-  for (; port < 5400 ; port++)
     {
-      DEBUG("Trying to listen on port %d\n", port);
-      fd = try_listening_on_port (self, port);
-      if (fd > 0)
-        break;
+      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ALREADY_LISTENING,
+          "already listening to port %d", port);
+      return FALSE;
     }
 
+  DEBUG ("Trying to listen on port %d\n", port);
+  fd = try_listening_on_port (self, port, error);
   if (fd < 0)
     return FALSE;
 
-  DEBUG("Listening on port %d",port);
+  DEBUG ("Listening on port %d", port);
+  priv->port = port;
   priv->listener = g_io_channel_unix_new (fd);
   g_io_channel_set_close_on_unref (priv->listener, TRUE);
   priv->io_watch_in = g_io_add_watch (priv->listener, G_IO_IN,
       listener_io_in_cb, self);
 
-  return port;
+  return TRUE;
 }
