@@ -128,8 +128,9 @@ gibber_xmpp_connection_listener_class_init (
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
         NULL, NULL,
-        gibber_xmpp_connection_listener_marshal_VOID__OBJECT_POINTER,
-        G_TYPE_NONE, 2, GIBBER_TYPE_XMPP_CONNECTION, G_TYPE_POINTER);
+        gibber_xmpp_connection_listener_marshal_VOID__OBJECT_POINTER_UINT,
+        G_TYPE_NONE, 3, GIBBER_TYPE_XMPP_CONNECTION, G_TYPE_POINTER,
+        G_TYPE_UINT);
 }
 
 GibberXmppConnectionListener *
@@ -253,7 +254,7 @@ listener_io_in_cb (GIOChannel *source,
   /* Unref the transport, the xmpp connection own it now */
   g_object_unref (transport);
 
-  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, &addr);
+  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, &addr, addrlen);
 
   return TRUE;
 }
