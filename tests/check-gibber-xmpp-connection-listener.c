@@ -50,14 +50,10 @@ static gboolean
 connect_to_port (int port)
 {
   GibberLLTransport *transport;
-  GibberXmppConnection *connection;
   struct sockaddr_in addr;
   gboolean result;
 
   transport = gibber_ll_transport_new ();
-  connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
-  /* Let the xmpp connection own the transport */
-  g_object_unref (transport);
 
   memset (&addr, 0, sizeof (addr));
   addr.sin_family = AF_INET;
@@ -67,7 +63,7 @@ connect_to_port (int port)
   result = gibber_ll_transport_open_sockaddr (transport,
       (struct sockaddr_storage *) &addr, NULL);
 
-  g_object_unref (connection);
+  g_object_unref (transport);
   return result;
 }
 
