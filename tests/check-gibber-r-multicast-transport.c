@@ -49,6 +49,8 @@ create_rmulticast_transport (TestTransport **testtransport,
       *testtransport = t;
     }
 
+  g_object_unref (t);
+
   return rmtransport;
 }
 
@@ -168,6 +170,8 @@ START_TEST (test_depends)
     {
       fail_unless (senders[i].seen);
     }
+
+  g_object_unref (rmtransport);
 }
 END_TEST
 
@@ -244,6 +248,8 @@ START_TEST (test_fragmentation)
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
+
+  g_object_unref (rmtransport);
 }
 END_TEST
 
