@@ -55,6 +55,8 @@ create_xmpp_connection (void)
   xmpp_connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
   gibber_xmpp_connection_open (xmpp_connection, "to", "from", "1.0");
 
+  g_object_unref (transport);
+
   return xmpp_connection;
 }
 
