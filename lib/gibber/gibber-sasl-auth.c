@@ -720,6 +720,8 @@ gibber_sasl_auth_start_mechanism(GibberSaslAuth *sasl,
 
       g_string_free(str, TRUE);
       g_free(cstr);
+      g_free(username);
+      g_free(password);
 
       priv->state = GIBBER_SASL_AUTH_STATE_PLAIN_STARTED;
       break;
