@@ -186,7 +186,8 @@ START_TEST (test_sender) {
 
   g_main_loop_run(loop);
 
-  g_hash_table_unref(senders);
+  g_hash_table_destroy (senders);
+  g_object_unref (s);
 } END_TEST
 
 TCase *
