@@ -184,6 +184,7 @@ stream_opened(GibberXmppConnection *connection,
     }
   }
   g_assert(gibber_xmpp_connection_send(connection, stanza, NULL));
+  g_object_unref (stanza);
 }
 
 static void
@@ -259,6 +260,8 @@ handle_auth(TestSaslAuthServer *self, GibberXmppStanza *stanza) {
   } else {
     g_assert_not_reached();
   }
+
+  g_free (response);
 }
 
 static void
