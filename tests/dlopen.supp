@@ -1,0 +1,127 @@
+{
+   <dlopen>
+   Addrcheck,Memcheck:Cond
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlopen
+}
+{
+   <dlopen>
+   Addrcheck,Memcheck:Addr4
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlopen
+}
+{
+   <dlopen>
+   Addrcheck,Memcheck:Cond
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlopen
+}
+{
+   <dlsym>
+   Addrcheck,Memcheck:Addr4
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libc-2.5.so
+   fun:_dl_sym
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlsym
+}
+{
+   <dlsym>
+   Addrcheck,Memcheck:Cond
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libc-2.5.so
+   fun:_dl_sym
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlsym
+}
+{
+   <dlopen>
+   Addrcheck,Memcheck:Addr1
+   fun:malloc
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlopen
+}
+{
+   <dlopen>
+   Addrcheck,Memcheck:Addr1
+   fun:malloc
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlopen
+}
+{
+   <dlopen>
+   Addrcheck,Memcheck:Addr1
+   fun:malloc
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   fun:dlopen
+}
+{
+   <libdl>
+   Addrcheck,Memcheck:Addr4
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+   obj:/lib/ld-2.5.so
+   obj:/lib/i686/cmov/libdl-2.5.so
+}

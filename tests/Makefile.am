@@ -1,6 +1,6 @@
 include $(top_srcdir)/rules/check.mak
 
-SUPPRESSIONS=valgrind.supp
+SUPPRESSIONS=valgrind.supp dlopen.supp
 
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:
