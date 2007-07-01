@@ -106,6 +106,7 @@ received_stanza(GibberXmppConnection *connection, GibberXmppStanza *stanza,
                                          connection, stanza,
                                          current_test->allow_plain, &error)) {
       got_error(error->domain, error->code, error->message);
+      g_error_free (error);
     }
   }
 }
