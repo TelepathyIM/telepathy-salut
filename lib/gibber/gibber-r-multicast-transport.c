@@ -605,6 +605,7 @@ gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
       gibber_r_multicast_packet_set_part(packet, i, packets->len);
       gibber_r_multicast_sender_push(priv->self, packet);
       ret = sendout_packet(self, packet, error);
+      g_object_unref (packet);
     }
     for (; i < packets->len; i++) {
       g_object_unref(g_ptr_array_index(packets, i));
