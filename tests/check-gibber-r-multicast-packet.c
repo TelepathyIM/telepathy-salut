@@ -10,7 +10,7 @@
 } G_STMT_END
 
 typedef struct {
-  const gchar *name;
+  guint32 receiver_id;
   guint32 packet_id;
 } recv_t;
 
@@ -50,7 +50,7 @@ START_TEST (test_r_multicast_packet_diff) {
 START_TEST (test_packet) {
   GibberRMulticastPacket *a;
   GibberRMulticastPacket *b;
-  gchar *sender = "testsender";
+  guint32 sender_id = 1234;
   guint32 packet_id = 1200;
   guint8 part = 2, total = 3;
   guint8 stream_id = 56;
@@ -61,18 +61,18 @@ START_TEST (test_packet) {
   GList *l;
   int i;
   recv_t receivers[] =
-    { { "receiver1", 500 }, { "receiver2", 600 }, { NULL, 0 } };
+    { { 0x300, 500 }, { 0x400, 600 }, { 0, 0 } };
   gchar *payload = "1234567890";
 
   g_type_init();
 
-  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender, packet_id,
+  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender_id, packet_id,
        stream_id, 1500);
   gibber_r_multicast_packet_set_part(a, part, total);
 
-  for (i = 0 ; receivers[i].name != NULL; i++) {
+  for (i = 0 ; receivers[i].receiver_id != 0; i++) {
     gibber_r_multicast_packet_add_receiver(a,
-        receivers[i].name, receivers[i].packet_id, NULL);
+        receivers[i].receiver_id, receivers[i].packet_id, NULL);
   }
   gibber_r_multicast_packet_add_payload(a, (guint8 *)payload, strlen(payload));
 
@@ -87,17 +87,18 @@ START_TEST (test_packet) {
   COMPARE(packet_id);
   COMPARE(stream_id);
 
-  fail_unless(strcmp(a->sender, b->sender) == 0);
+  fail_unless(a->sender == b->sender);
 
   l = b->receivers;
   for (i = 0;
-       receivers[i].name != NULL && l != NULL; i++, l = g_list_next(l)) {
+       receivers[i].receiver_id != 0 && l != NULL; 
+       i++, l = g_list_next(l)) {
     GibberRMulticastReceiver *r = (GibberRMulticastReceiver *)l->data;
 
     fail_unless(receivers[i].packet_id == r->packet_id);
-    fail_unless(strcmp(receivers[i].name, r->name) == 0);
+    fail_unless(receivers[i].receiver_id ==  r->receiver_id);
   }
-  fail_unless(receivers[i].name == NULL && l == NULL);
+  fail_unless(receivers[i].receiver_id == 0 && l == NULL);
 
   pdata = gibber_r_multicast_packet_get_payload(b, &plen);
   fail_unless(plen == strlen(payload));

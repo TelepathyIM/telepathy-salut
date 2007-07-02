@@ -198,7 +198,7 @@ add_guint8(guint8 *data, gsize length, gsize *offset, guint8 i) {
 }
 
 static guint8
-get_guint8(guint8 *data, gsize length, gsize *offset) {
+get_guint8(const guint8 *data, gsize length, gsize *offset) {
   guint8 i;
   g_assert(*offset + 1 <= length);
   i = *(data + *offset);
@@ -217,7 +217,7 @@ add_guint32(guint8 *data, gsize length, gsize *offset, guint32 i) {
 }
 
 static guint32
-get_guint32(guint8 *data, gsize length, gsize *offset) {
+get_guint32(const guint8 *data, gsize length, gsize *offset) {
   guint32 ni;
 
   g_assert(*offset + 4 <= length);
@@ -240,7 +240,7 @@ add_string(guint8 *data, gsize length, gsize *offset, const gchar *str) {
 }
 
 static gchar *
-get_string(guint8 *data, gsize length, gsize *offset) {
+get_string(const guint8 *data, gsize length, gsize *offset) {
   gsize len;
   gchar *str;
 
@@ -444,8 +444,8 @@ gibber_r_multicast_whois_packet (GibberRMulticastPacketType type,
   return result;
 }
 
-GibberRMulticastWhoisPacket * 
-gibber_r_multicast_whois_new_from_packet (guint8 *data, gsize length) 
+GibberRMulticastWhoisPacket *
+gibber_r_multicast_whois_new_from_packet (const guint8 *data, gsize length) 
 {
   GibberRMulticastWhoisPacket *result;
   gsize offset = 0;
@@ -465,6 +465,17 @@ gibber_r_multicast_whois_new_from_packet (guint8 *data, gsize length)
 void
 gibber_r_multicast_whois_free (GibberRMulticastWhoisPacket *packet)
 {
+  if (packet == NULL)
+    return;
   g_free (packet->name);
   g_slice_free (GibberRMulticastWhoisPacket, packet);
+}
+
+GibberRMulticastPacketType gibber_r_multicast_packet_get_packet_type (
+    const guint8 *data, gsize length) 
+{
+  if (length < 1) 
+    return PACKET_TYPE_INVALID;
+
+  return  MIN(data[0], PACKET_TYPE_INVALID);
 }

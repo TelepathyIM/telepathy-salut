@@ -31,7 +31,8 @@ typedef enum {
   PACKET_TYPE_DATA,
   PACKET_TYPE_REPAIR_REQUEST,
   PACKET_TYPE_SESSION,
-  PACKET_TYPE_BYE
+  PACKET_TYPE_BYE,
+  PACKET_TYPE_INVALID
 } GibberRMulticastPacketType;
 
 typedef struct {
@@ -148,10 +149,14 @@ guint8 * gibber_r_multicast_whois_packet(GibberRMulticastPacketType type,
     guint32 id, gchar *name, gsize *length);
 
 GibberRMulticastWhoisPacket * gibber_r_multicast_whois_new_from_packet(
-  guint8 *data, gsize length);
+  const guint8 *data, gsize length);
 
-void
-gibber_r_multicast_whois_free(GibberRMulticastWhoisPacket *packet);
+void gibber_r_multicast_whois_free(GibberRMulticastWhoisPacket *packet);
+
+
+GibberRMulticastPacketType gibber_r_multicast_packet_get_packet_type(
+    const guint8 *data, const gsize length);
+
 
 G_END_DECLS
 
