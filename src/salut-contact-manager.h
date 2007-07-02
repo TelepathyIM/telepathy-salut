@@ -58,9 +58,9 @@ GType salut_contact_manager_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerClass))
 
 SalutContactManager *
-salut_contact_manager_new(SalutConnection *connection); 
+salut_contact_manager_new(SalutConnection *connection);
 
-gboolean salut_contact_manager_start(SalutContactManager *mgr, 
+gboolean salut_contact_manager_start(SalutContactManager *mgr,
                                      SalutAvahiClient *client,
                                      GError **error);
 
@@ -69,7 +69,7 @@ SalutContact *
 salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle);
 
 GList *
-salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr, 
+salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
                                               struct sockaddr_storage *address);
 
 #ifdef ENABLE_OLPC
