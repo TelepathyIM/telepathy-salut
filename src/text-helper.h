@@ -26,17 +26,17 @@
 
 
 /* Utility functions for the helper user */
-gboolean 
-text_helper_parse_incoming_message (GibberXmppStanza *stanza, 
-    const gchar **from, TpChannelTextMessageType *msgtype, 
+gboolean
+text_helper_parse_incoming_message (GibberXmppStanza *stanza,
+    const gchar **from, TpChannelTextMessageType *msgtype,
     const gchar **body, const gchar **body_offset);
 
-GibberXmppStanza * 
+GibberXmppStanza *
 text_helper_create_message (const gchar *from,
-    const gchar *to, TpChannelTextMessageType type, 
+    const gchar *to, TpChannelTextMessageType type,
     const gchar *text, GError **error);
 
-GibberXmppStanza * 
+GibberXmppStanza *
 text_helper_create_message_groupchat (const gchar *from, const gchar *to,
     TpChannelTextMessageType type, const gchar *text, GError **error);
 
