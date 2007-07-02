@@ -61,17 +61,6 @@ CLEANFILES=$(BUILT_SOURCES)
 dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
-EXTRA_DIST = \
-  gibber-bytestream-ibb-signals-marshal.list \
-  gibber-r-multicast-sender-signals-marshal.list  \
-  gibber-sasl-auth-signals-marshal.list           \
-  gibber-ssl-transport-signals-marshal.list       \
-  gibber-transport-signals-marshal.list           \
-  gibber-muc-connection-signals-marshal.list      \
-  gibber-xmpp-connection-signals-marshal.list     \
-  gibber-xmpp-reader-signals-marshal.list         \
-  gibber-xmpp-stanza-signals-marshal.list
-
 signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
 	sed -n -e 's/.*_gibber_signals_marshal_\([A-Z]*__[A-Z_]*\).*/\1/p' \
 		$(HANDWRITTEN_SOURCES) \
