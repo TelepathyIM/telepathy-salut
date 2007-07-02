@@ -99,7 +99,7 @@ salut_avahi_service_resolver_set_property (GObject *object,
                                            const GValue *value,
                                            GParamSpec *pspec) {
  SalutAvahiServiceResolver *resolver = SALUT_AVAHI_SERVICE_RESOLVER(object);
- SalutAvahiServiceResolverPrivate *priv = 
+ SalutAvahiServiceResolverPrivate *priv =
    SALUT_AVAHI_SERVICE_RESOLVER_GET_PRIVATE(resolver);
 
   g_assert(priv->resolver == NULL);
@@ -137,7 +137,7 @@ salut_avahi_service_resolver_get_property (GObject *object,
                                            GValue *value,
                                            GParamSpec *pspec) {
   SalutAvahiServiceResolver *resolver = SALUT_AVAHI_SERVICE_RESOLVER(object);
-  SalutAvahiServiceResolverPrivate *priv = 
+  SalutAvahiServiceResolverPrivate *priv =
     SALUT_AVAHI_SERVICE_RESOLVER_GET_PRIVATE(resolver);
 
   switch (property_id) {
@@ -190,7 +190,7 @@ salut_avahi_service_resolver_class_init (SalutAvahiServiceResolverClass *salut_a
                  0,
                  NULL, NULL,
                  salut_signals_marshal_VOID__INT_ENUM_STRING_STRING_STRING_STRING_POINTER_INT_POINTER_INT,
-                 G_TYPE_NONE, 10, 
+                 G_TYPE_NONE, 10,
                  G_TYPE_INT,
                  SALUT_TYPE_AVAHI_PROTOCOL,
                  G_TYPE_STRING,
@@ -284,11 +284,11 @@ salut_avahi_service_resolver_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  if (priv->client) 
+  if (priv->client)
     g_object_unref(priv->client);
   priv->client = NULL;
 
-  if (priv->resolver) 
+  if (priv->resolver)
     avahi_service_resolver_free(priv->resolver);
   priv->resolver = NULL;
 
@@ -318,7 +318,7 @@ salut_avahi_service_resolver_finalize (GObject *object)
 }
 
 static void
-_avahi_service_resolver_cb(AvahiServiceResolver *resolver, 
+_avahi_service_resolver_cb(AvahiServiceResolver *resolver,
                            AvahiIfIndex interface,
                            AvahiProtocol protocol,
                            AvahiResolverEvent event,
@@ -330,7 +330,7 @@ _avahi_service_resolver_cb(AvahiServiceResolver *resolver,
                            AvahiLookupResultFlags flags,
                            void *userdata) {
   SalutAvahiServiceResolver *self = SALUT_AVAHI_SERVICE_RESOLVER (userdata);
-  SalutAvahiServiceResolverPrivate *priv = 
+  SalutAvahiServiceResolverPrivate *priv =
     SALUT_AVAHI_SERVICE_RESOLVER_GET_PRIVATE (self);
 
   switch (event) {
@@ -339,7 +339,7 @@ _avahi_service_resolver_cb(AvahiServiceResolver *resolver,
       priv->address = *a;
       priv->port = port;
       g_signal_emit(self, signals[FOUND], 0,
-                    interface, protocol, 
+                    interface, protocol,
                     name, type,
                     domain, host_name,
                     a, port, txt, flags);
@@ -359,10 +359,10 @@ _avahi_service_resolver_cb(AvahiServiceResolver *resolver,
 
 
 SalutAvahiServiceResolver *
-salut_avahi_service_resolver_new(AvahiIfIndex interface, 
+salut_avahi_service_resolver_new(AvahiIfIndex interface,
                                  AvahiProtocol protocol,
-                                 const gchar *name, const gchar *type, 
-                                 const gchar *domain, 
+                                 const gchar *name, const gchar *type,
+                                 const gchar *domain,
                                  AvahiProtocol address_protocol,
                                  SalutAvahiLookupFlags flags) {
   return g_object_new(SALUT_TYPE_AVAHI_SERVICE_RESOLVER,
@@ -376,10 +376,10 @@ salut_avahi_service_resolver_new(AvahiIfIndex interface,
                       NULL);
 }
 
-gboolean 
+gboolean
 salut_avahi_service_resolver_attach(SalutAvahiServiceResolver *resolver,
                                    SalutAvahiClient *client, GError  **error) {
-  SalutAvahiServiceResolverPrivate *priv = 
+  SalutAvahiServiceResolverPrivate *priv =
                               SALUT_AVAHI_SERVICE_RESOLVER_GET_PRIVATE (resolver);
 
   g_assert(client != NULL);
@@ -387,20 +387,20 @@ salut_avahi_service_resolver_attach(SalutAvahiServiceResolver *resolver,
 
   priv->client = client;
 
-  priv->resolver = avahi_service_resolver_new(client->avahi_client, 
-                                            priv->interface, 
-                                            priv->protocol, 
-                                            priv->name, 
-                                            priv->type, priv->domain, 
+  priv->resolver = avahi_service_resolver_new(client->avahi_client,
+                                            priv->interface,
+                                            priv->protocol,
+                                            priv->name,
+                                            priv->type, priv->domain,
                                             priv->aprotocol,
-                                            priv->flags, 
-                                            _avahi_service_resolver_cb, 
+                                            priv->flags,
+                                            _avahi_service_resolver_cb,
                                             resolver);
   if (priv->resolver == NULL) {
     if (error != NULL ) {
       int aerrno = avahi_client_errno(client->avahi_client);
       *error = g_error_new(SALUT_AVAHI_ERRORS, aerrno,
-                           "Attaching group failed: %s", 
+                           "Attaching group failed: %s",
                            avahi_strerror(aerrno));
     }
     printf("Failed to add resolver\n");
@@ -413,13 +413,13 @@ gboolean
 salut_avahi_service_resolver_get_address(SalutAvahiServiceResolver *resolver,
                                          AvahiAddress *address,
                                          uint16_t *port) {
-  SalutAvahiServiceResolverPrivate *priv = 
+  SalutAvahiServiceResolverPrivate *priv =
                               SALUT_AVAHI_SERVICE_RESOLVER_GET_PRIVATE (resolver);
   if (priv->port == 0) {
     printf("PORT == 0\n");
     return FALSE;
   }
-  
+
   *address = priv->address;
   *port = priv->port;
   return TRUE;
