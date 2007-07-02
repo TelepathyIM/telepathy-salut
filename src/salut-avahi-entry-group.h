@@ -30,8 +30,8 @@ G_BEGIN_DECLS
 
 typedef enum {
   SALUT_AVAHI_ENTRY_GROUP_STATE_UNCOMMITED = AVAHI_ENTRY_GROUP_UNCOMMITED,
-  SALUT_AVAHI_ENTRY_GROUP_STATE_REGISTERING = AVAHI_ENTRY_GROUP_REGISTERING, 
-  SALUT_AVAHI_ENTRY_GROUP_STATE_ESTABLISHED =  AVAHI_ENTRY_GROUP_ESTABLISHED, 
+  SALUT_AVAHI_ENTRY_GROUP_STATE_REGISTERING = AVAHI_ENTRY_GROUP_REGISTERING,
+  SALUT_AVAHI_ENTRY_GROUP_STATE_ESTABLISHED =  AVAHI_ENTRY_GROUP_ESTABLISHED,
   SALUT_AVAHI_ENTRY_GROUP_STATE_COLLISTION =  AVAHI_ENTRY_GROUP_COLLISION,
   SALUT_AVAHI_ENTRY_GROUP_STATE_FAILURE =  AVAHI_ENTRY_GROUP_FAILURE
 } SalutAvahiEntryGroupState;
@@ -78,46 +78,46 @@ GType salut_avahi_entry_group_get_type(void);
 SalutAvahiEntryGroup * salut_avahi_entry_group_new(void);
 
 gboolean
-salut_avahi_entry_group_attach(SalutAvahiEntryGroup *group, 
+salut_avahi_entry_group_attach(SalutAvahiEntryGroup *group,
                                SalutAvahiClient *client, GError **error);
 
 SalutAvahiEntryGroupService *
-salut_avahi_entry_group_add_service_strlist(SalutAvahiEntryGroup *group, 
-                                            const gchar *name, 
-                                            const gchar *type, 
+salut_avahi_entry_group_add_service_strlist(SalutAvahiEntryGroup *group,
+                                            const gchar *name,
+                                            const gchar *type,
                                             guint16 port,
                                             GError **error,
                                             AvahiStringList *txt);
 
 SalutAvahiEntryGroupService *
-salut_avahi_entry_group_add_service_full_strlist(SalutAvahiEntryGroup *group, 
+salut_avahi_entry_group_add_service_full_strlist(SalutAvahiEntryGroup *group,
                                                  AvahiIfIndex interface,
                                                  AvahiProtocol protocol,
                                                  AvahiPublishFlags flags,
-                                                 const gchar *name, 
-                                                 const gchar *type, 
-                                                 const gchar *domain, 
-                                                 const gchar *host, 
+                                                 const gchar *name,
+                                                 const gchar *type,
+                                                 const gchar *domain,
+                                                 const gchar *host,
                                                  guint16 port,
                                                  GError **error,
                                                  AvahiStringList *txt);
 SalutAvahiEntryGroupService *
-salut_avahi_entry_group_add_service(SalutAvahiEntryGroup *group, 
-                                    const gchar *name, 
-                                    const gchar *type, 
+salut_avahi_entry_group_add_service(SalutAvahiEntryGroup *group,
+                                    const gchar *name,
+                                    const gchar *type,
                                     guint16 port,
                                     GError **error,
                                     ...);
 
 SalutAvahiEntryGroupService *
-salut_avahi_entry_group_add_service_full(SalutAvahiEntryGroup *group, 
+salut_avahi_entry_group_add_service_full(SalutAvahiEntryGroup *group,
                                          AvahiIfIndex interface,
                                          AvahiProtocol protocol,
                                          AvahiPublishFlags flags,
-                                         const gchar *name, 
-                                         const gchar *type, 
-                                         const gchar *domain, 
-                                         const gchar *host, 
+                                         const gchar *name,
+                                         const gchar *type,
+                                         const gchar *domain,
+                                         const gchar *host,
                                          guint16 port,
                                          GError **error,
                                          ...);
@@ -126,7 +126,7 @@ salut_avahi_entry_group_add_service_full(SalutAvahiEntryGroup *group,
 gboolean
 salut_avahi_entry_group_add_record(SalutAvahiEntryGroup *group,
                                    AvahiPublishFlags flags,
-                                   const gchar *name, 
+                                   const gchar *name,
                                    guint16 type,
                                    guint32 ttl,
                                    const void *rdata,
@@ -137,7 +137,7 @@ salut_avahi_entry_group_add_record_full(SalutAvahiEntryGroup *group,
                                         AvahiIfIndex interface,
                                         AvahiProtocol protocol,
                                         AvahiPublishFlags flags,
-                                        const gchar *name, 
+                                        const gchar *name,
                                         guint16 clazz,
                                         guint16 type,
                                         guint32 ttl,
@@ -168,7 +168,7 @@ gboolean
 salut_avahi_entry_group_service_remove_key(SalutAvahiEntryGroupService *service,
                                            const gchar *key, GError **error);
 
-/* Update the txt record of the frozen service */ 
+/* Update the txt record of the frozen service */
 gboolean
 salut_avahi_entry_group_service_thaw(SalutAvahiEntryGroupService *service,
                                      GError **error);
@@ -177,7 +177,7 @@ salut_avahi_entry_group_service_thaw(SalutAvahiEntryGroupService *service,
 gboolean
 salut_avahi_entry_group_commit(SalutAvahiEntryGroup *group, GError **error);
 
-/* Invalidated all SalutAvahiEntryGroupServices */ 
+/* Invalidated all SalutAvahiEntryGroupServices */
 gboolean
 salut_avahi_entry_group_reset(SalutAvahiEntryGroup *group, GError **error);
 
