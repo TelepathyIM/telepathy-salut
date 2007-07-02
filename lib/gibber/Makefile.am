@@ -53,7 +53,7 @@ libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES)
 if HAVE_LIBSSL
 libgibber_la_SOURCES +=     \
     gibber-ssl-transport.c  \
-    gibber-ssl-transport.h 
+    gibber-ssl-transport.h
 endif
 
 
@@ -84,7 +84,7 @@ signals-marshal.c: signals-marshal.list
 	glib-genmarshal --body --prefix=_gibber_signals_marshal $< > $@
 
 
-AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ 
+AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@
 
 if HAVE_LIBSSL
   AM_CFLAGS += @LIBSSL_CFLAGS@
