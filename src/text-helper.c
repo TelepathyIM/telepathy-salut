@@ -46,9 +46,9 @@ add_text(GibberXmppStanza *stanza, const gchar *text) {
   gibber_xmpp_node_add_child_with_content(stanza->node, "body", text);
 
   /* Add plain xhtml-im node */
-  htmlnode = gibber_xmpp_node_add_child_ns(stanza->node, "html", 
+  htmlnode = gibber_xmpp_node_add_child_ns(stanza->node, "html",
                  GIBBER_XMPP_NS_XHTML_IM);
-  gibber_xmpp_node_add_child_with_content_ns(htmlnode, 
+  gibber_xmpp_node_add_child_with_content_ns(htmlnode,
       "body", text, GIBBER_W3C_NS_XHTML);
 }
 
