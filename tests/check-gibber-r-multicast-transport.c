@@ -57,15 +57,16 @@ create_rmulticast_transport (TestTransport **testtransport,
 /* test depends test */
 struct {
   gchar *name;
+  guint32 sender_id;
   guint32 packet_id;
   gboolean seen;
 } senders[] = {
-                { "test0",     0xff, FALSE },
-                { "test1",   0xffff, FALSE },
-                { "test2", 0xffffff, FALSE },
-                { "test3", 0xaaaaaa, FALSE },
-                { "test4", 0xabcdab, FALSE },
-                { NULL, 0, FALSE }
+                { "test0", 0,    0xff, FALSE },
+                { "test1", 1,  0xffff, FALSE },
+                { "test2", 2, 0xffffff, FALSE },
+                { "test3", 3, 0xaaaaaa, FALSE },
+                { "test4", 4, 0xabcdab, FALSE },
+                { NULL,    0,        0, FALSE }
 };
 
 gboolean
@@ -78,6 +79,27 @@ depends_send_hook (GibberTransport *transport,
   GibberRMulticastPacket *packet;
   int i;
   GList *l;
+  GibberRMulticastPacketType type;
+
+  type = gibber_r_multicast_packet_get_packet_type(data, length);
+
+  if (type == PACKET_TYPE_WHOIS_REQUEST) {
+    GibberRMulticastWhoisPacket *whois =
+        gibber_r_multicast_whois_new_from_packet(data, length);
+    guint8 *pdata;
+    gsize psize;
+    for (i = 0; senders[i].name != NULL; i++) {
+      if (senders[i].sender_id == whois->id) {
+        break;
+      }
+    }
+    fail_unless(senders[i].name != NULL);
+    pdata = gibber_r_multicast_whois_packet(PACKET_TYPE_WHOIS_REPLY,
+      senders[i].sender_id, senders[i].name, &psize);
+    test_transport_write (TEST_TRANSPORT(transport), pdata, psize);
+    g_free(pdata);
+    goto out;
+  }
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
   fail_unless (packet != NULL);
@@ -94,7 +116,7 @@ depends_send_hook (GibberTransport *transport,
       for (i = 0; senders[i].name != NULL ; i++)
         {
           GibberRMulticastReceiver *r = (GibberRMulticastReceiver *)l->data;
-          if (strcmp (senders[i].name, r->name) == 0)
+          if (senders[i].sender_id == r->receiver_id)
             {
               fail_unless (senders[i].seen == FALSE);
               fail_unless (senders[i].packet_id == r->packet_id);
@@ -151,7 +173,7 @@ START_TEST (test_depends)
       guint8 *data;
       gsize size;
       packet = gibber_r_multicast_packet_new (PACKET_TYPE_DATA,
-         senders[i].name, senders[i].packet_id, 0,
+         senders[i].sender_id, senders[i].packet_id, 0,
          GIBBER_TRANSPORT (testtransport)->max_packet_size);
 
       gibber_r_multicast_packet_set_part (packet, 0, 1);

@@ -30,7 +30,7 @@
 #include "gibber-debug.h"
 
 #define DEBUG_SENDER(sender, format, ...) \
-  DEBUG("%s (%p): " format, sender->name, sender, ##__VA_ARGS__)
+  DEBUG("%s %x (%p): " format, sender->name, sender->id, sender, ##__VA_ARGS__)
 
 #define PACKET_CACHE_SIZE 256
 
@@ -40,8 +40,12 @@
 #define MIN_REPAIR_TIMEOUT 150
 #define MAX_REPAIR_TIMEOUT 250
 
+#define MIN_WHOIS_TIMEOUT 150
+#define MAX_WHOIS_TIMEOUT 250
+
 static void schedule_repair(GibberRMulticastSender *sender, guint32 id);
 static void schedule_do_repair(GibberRMulticastSender *sender, guint32 id);
+static void schedule_whois_request(GibberRMulticastSender *sender);
 
 G_DEFINE_TYPE(GibberRMulticastSender, gibber_r_multicast_sender, G_TYPE_OBJECT)
 
@@ -50,6 +54,9 @@ enum
 {
     REPAIR_REQUEST,
     REPAIR_MESSAGE,
+    WHOIS_REPLY,
+    WHOIS_REQUEST,
+    NAME_DISCOVERED,
     RECEIVED_DATA,
     LAST_SIGNAL
 };
@@ -100,11 +107,14 @@ struct _GibberRMulticastSenderPrivate
   /* hash table with packets */
   GHashTable *packet_cache;
   /* Other senders on the network 
-   * (sender name -> GibberRMulticastSender object)
+   * (sender id -> GibberRMulticastSender object)
    */
   GHashTable *senders;
   /* Very first packet number in the current window */
   guint32 first_packet;
+
+  /* whois reply/request timer */
+  guint whois_timer;
 };
 
 #define GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderPrivate))
@@ -185,6 +195,33 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    _gibber_signals_marshal_VOID__UCHAR_POINTER_ULONG,
                    G_TYPE_NONE, 3, G_TYPE_UCHAR, G_TYPE_POINTER, G_TYPE_ULONG);
 
+  signals[WHOIS_REPLY] =
+      g_signal_new("whois-reply",
+                   G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
+                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                   0,
+                   NULL, NULL,
+                   g_cclosure_marshal_VOID__VOID,
+                   G_TYPE_NONE, 0);
+
+  signals[WHOIS_REQUEST] =
+      g_signal_new("whois-request",
+                   G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
+                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                   0,
+                   NULL, NULL,
+                   g_cclosure_marshal_VOID__VOID,
+                   G_TYPE_NONE, 0);
+
+  signals[NAME_DISCOVERED] =
+      g_signal_new("name-discovered",
+                   G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
+                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                   0,
+                   NULL, NULL,
+                   g_cclosure_marshal_VOID__STRING,
+                   G_TYPE_NONE, 1, G_TYPE_STRING);
+
   param_spec = g_param_spec_pointer ("senderhash",
                                      "Sender Hash",
                                      "Hash of other senders",
@@ -203,16 +240,20 @@ gibber_r_multicast_sender_dispose (GObject *object)
   GibberRMulticastSenderPrivate *priv = 
      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (self);
 
-  g_hash_table_destroy(priv->packet_cache);
-
   if (priv->dispose_has_run)
     return;
 
   priv->dispose_has_run = TRUE;
 
+  g_hash_table_destroy(priv->packet_cache);
+
   /* release any references held by the object here */
   if (priv->senders != NULL) {
     g_hash_table_unref(priv->senders);
+  }
+  if (priv->whois_timer != 0) {
+    g_source_remove(priv->whois_timer);
+    priv->whois_timer = 0;
   }
 
   if (G_OBJECT_CLASS (gibber_r_multicast_sender_parent_class)->dispose)
@@ -235,13 +276,23 @@ gibber_r_multicast_sender_finalize (GObject *object)
 
 
 GibberRMulticastSender *
-gibber_r_multicast_sender_new(const gchar *name, GHashTable *senders) {
-  GibberRMulticastSender *sender = 
+gibber_r_multicast_sender_new(guint32 id,
+                              const gchar *name,
+                              GHashTable *senders) {
+  GibberRMulticastSender *sender =
     g_object_new(GIBBER_TYPE_R_MULTICAST_SENDER, "senderhash", senders,
         NULL);
 
-  g_assert(senders != NULL);
+  sender->id = id;
   sender->name = g_strdup(name);
+
+  if (sender->name == NULL) {
+    schedule_whois_request(sender);
+  } else {
+    printf("New node %s\n", sender->name);
+  }
+
+  g_assert(senders != NULL);
   return sender;
 }
 
@@ -327,6 +378,42 @@ schedule_do_repair(GibberRMulticastSender *sender, guint32 id) {
 }
 
 static gboolean
+do_whois_reply(gpointer data) {
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(data);
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
+
+  DEBUG_SENDER(sender, "Sending out whois reply");
+  g_signal_emit(sender, signals[WHOIS_REPLY], 0);
+  priv->whois_timer = 0;
+  return FALSE;
+}
+
+static gboolean
+do_whois_request(gpointer data) {
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(data);
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
+
+  DEBUG_SENDER(sender, "Sending out whois request");
+  g_signal_emit(sender, signals[WHOIS_REQUEST], 0);
+
+  priv->whois_timer = 0;
+  schedule_whois_request(sender);
+  return FALSE;
+}
+
+static void
+schedule_whois_request(GibberRMulticastSender *sender) {
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
+   gint timeout = g_random_int_range(MIN_WHOIS_TIMEOUT,
+                                     MAX_WHOIS_TIMEOUT);
+   DEBUG_SENDER(sender, "Scheduled whois request in %d ms", timeout);
+   priv->whois_timer = g_timeout_add(timeout, do_whois_request, sender);
+}
+
+static gboolean
 check_depends(GibberRMulticastSender *sender,
               GibberRMulticastPacket *packet) {
   GList *rlist;
@@ -336,8 +423,10 @@ check_depends(GibberRMulticastSender *sender,
   for (rlist = packet->receivers; rlist != NULL; rlist = g_list_next(rlist)) {
     GibberRMulticastSender *s;
     GibberRMulticastReceiver *recv;
+
     recv = (GibberRMulticastReceiver *)rlist->data;
-    s = g_hash_table_lookup(priv->senders, recv->name);
+    s = g_hash_table_lookup(priv->senders,
+        GUINT_TO_POINTER(recv->receiver_id));
 
     g_assert (s != NULL);
 
@@ -349,8 +438,8 @@ check_depends(GibberRMulticastSender *sender,
       if (gibber_r_multicast_packet_diff(recv->packet_id,
                                          s->next_output_packet) <= 0) {
         DEBUG_SENDER(sender,
-            "Waiting for packet %x of node %s (not yet running)",
-            recv->packet_id, recv->name);
+            "Waiting for packet %x of node %x (not yet running)",
+            recv->packet_id, recv->receiver_id);
         return FALSE;
       }
       break;
@@ -359,7 +448,8 @@ check_depends(GibberRMulticastSender *sender,
     if (gibber_r_multicast_packet_diff(recv->packet_id,
                                        s->last_output_packet) < 0) {
       DEBUG_SENDER(sender,
-          "Waiting for packet %x of node %s", recv->packet_id, recv->name);
+          "Waiting for packet %x of node %x", recv->packet_id, 
+          recv->receiver_id);
       return FALSE;
     }
   }
@@ -446,6 +536,14 @@ pop_packet(GibberRMulticastSender *sender) {
 
 static void
 pop_packets(GibberRMulticastSender *sender) {
+  if (sender->name == NULL 
+      || sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
+  {
+    /* No popping untill we know the senders real name and we at least have
+     * some packets */
+    return;
+  }
+
   while (pop_packet(sender)) 
     /* nothing */;
 }
@@ -504,7 +602,7 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   gint diff;
 
-  g_assert(strcmp(sender->name, packet->sender) == 0);
+  g_assert(sender->id == packet->sender);
 
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
     g_assert(g_hash_table_size(priv->packet_cache) == 0);
@@ -621,3 +719,39 @@ gibber_r_multicast_senders_updated(GibberRMulticastSender *sender) {
   }
 }
 
+void
+gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
+    const GibberRMulticastWhoisPacket *packet)
+{
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  g_assert(packet->id == sender->id);
+
+  switch (packet->type) {
+    case PACKET_TYPE_WHOIS_REQUEST:
+      if (sender->name != NULL && priv->whois_timer == 0) {
+        gint timeout = g_random_int_range(MIN_WHOIS_TIMEOUT,
+                                          MAX_WHOIS_TIMEOUT);
+        priv->whois_timer = g_timeout_add(timeout, do_whois_reply, sender);
+        DEBUG_SENDER(sender, "Scheduled whois reply in %d ms", timeout);
+      }
+      break;
+    case PACKET_TYPE_WHOIS_REPLY:
+      if (sender->name == NULL) {
+        sender->name = g_strdup(packet->name);
+        g_signal_emit(sender, signals[NAME_DISCOVERED], 0, sender->name);
+      } else {
+        /* FIXME: collision detection */
+      }
+      if (priv->whois_timer != 0) {
+        DEBUG_SENDER(sender, "Cancelled schedules whois packet");
+        g_source_remove(priv->whois_timer);
+        priv->whois_timer = 0;
+      }
+      pop_packets(sender); 
+      break;
+    default:
+      g_assert_not_reached();
+  }
+}

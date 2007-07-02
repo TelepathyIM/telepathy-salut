@@ -46,6 +46,7 @@ typedef enum {
 struct _GibberRMulticastSender {
     GObject parent;
     gchar *name;
+    guint32 id;
 
     GibberRMulticastSenderState state;
 
@@ -75,9 +76,8 @@ GType gibber_r_multicast_sender_get_type(void);
 #define GIBBER_R_MULTICAST_SENDER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderClass))
 
-GibberRMulticastSender *
-gibber_r_multicast_sender_new(const gchar *name,
-                              GHashTable *senders);
+GibberRMulticastSender *gibber_r_multicast_sender_new (guint32 id,
+    const gchar *name, GHashTable *senders);
 
 void
 gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
@@ -91,9 +91,11 @@ gboolean
 gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id);
 
 void
-gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender, 
+gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
                                          guint32 id);
 
+void gibber_r_multicast_sender_whois_push(GibberRMulticastSender *sender,
+    const GibberRMulticastWhoisPacket *packet);
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_R_MULTICAST_SENDER_H__*/

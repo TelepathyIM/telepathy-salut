@@ -6,7 +6,8 @@
 
 #include <check.h>
 
-#define SENDER "testsender"
+#define SENDER 4321
+#define SENDER_NAME "testsender"
 
 #define REPAIR_PACKET ((guint32)15)
 
@@ -22,15 +23,16 @@ typedef struct {
 } test_t;
 
 typedef struct {
-  const gchar *id;
+  guint32 receiver_id;
+  const gchar *name;
   guint32 packet_id;
 } recv_t;
 
 GMainLoop *loop;
 recv_t receivers[] = {
-    { "receiver1", 500 },
-    { "receiver2", 600 },
-    { NULL, 0 }
+    { 0x500, "sender1", 500 },
+    { 0x600, "sender2", 600 },
+    {     0,      NULL,   0 }
 };
 
 GibberRMulticastPacket *
@@ -49,9 +51,9 @@ generate_packet(guint32 serial) {
 
   gibber_r_multicast_packet_set_part(p, part, total);
 
-  for (i = 0 ; receivers[i].id != NULL; i++) {
+  for (i = 0 ; receivers[i].receiver_id != 0; i++) {
     gibber_r_multicast_packet_add_receiver(p,
-        receivers[i].id, receivers[i].packet_id, NULL);
+        receivers[i].receiver_id, receivers[i].packet_id, NULL);
   }
 
   payload = g_strdup_printf("%010d\n", serial);
@@ -149,19 +151,20 @@ START_TEST (test_sender) {
   int i;
 
   g_type_init();
-  GHashTable *senders = g_hash_table_new_full(g_str_hash, g_str_equal,
+  GHashTable *senders = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                               NULL, g_object_unref);
   loop = g_main_loop_new(NULL, FALSE);
 
   serial_offset = tests[_i].serial_offset;
   expected = serial_offset;
 
-  for (i = 0 ; receivers[i].id != NULL; i++) {
-    s = gibber_r_multicast_sender_new(receivers[i].id, senders);
+  for (i = 0 ; receivers[i].receiver_id != 0; i++) {
+    s = gibber_r_multicast_sender_new(receivers[i].receiver_id,
+        receivers[i].name, senders);
     gibber_r_multicast_sender_seen(s, receivers[i].packet_id + 1);
-    g_hash_table_insert(senders, s->name, s);
+    g_hash_table_insert(senders, GUINT_TO_POINTER(s->id), s);
   }
-  s = gibber_r_multicast_sender_new(SENDER, senders);
+  s = gibber_r_multicast_sender_new(SENDER, SENDER_NAME, senders);
   g_signal_connect(s, "received-data", G_CALLBACK(data_received_cb), loop);
   g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
