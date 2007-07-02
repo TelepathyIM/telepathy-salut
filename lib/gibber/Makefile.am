@@ -76,7 +76,7 @@ signals-marshal.c: signals-marshal.list
 	glib-genmarshal --body --prefix=_gibber_signals_marshal $< > $@
 
 
-AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ 
+AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@
 
 if HAVE_LIBSSL
   AM_CFLAGS += @LIBSSL_CFLAGS@
