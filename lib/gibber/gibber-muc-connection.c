@@ -28,7 +28,7 @@
 #include <netdb.h>
 
 #include "gibber-muc-connection.h"
-#include "gibber-muc-connection-signals-marshal.h"
+#include "signals-marshal.h"
 
 #include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"
@@ -138,7 +138,7 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 gibber_muc_connection_marshal_VOID__STRING_OBJECT,
+                 _gibber_signals_marshal_VOID__STRING_OBJECT,
                  G_TYPE_NONE, 2, G_TYPE_STRING, GIBBER_TYPE_XMPP_STANZA);
   signals[RECEIVED_DATA] = 
     g_signal_new("received-data", 
@@ -146,7 +146,7 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 gibber_muc_connection_marshal_VOID__STRING_UCHAR_POINTER_ULONG,
+                 _gibber_signals_marshal_VOID__STRING_UCHAR_POINTER_ULONG,
                  G_TYPE_NONE, 4, G_TYPE_STRING,
                  G_TYPE_UCHAR, G_TYPE_POINTER, G_TYPE_ULONG);
   signals[PARSE_ERROR] = 

@@ -30,7 +30,6 @@
 
 #include "gibber-fd-transport.h"
 #include "gibber-ssl-transport.h"
-#include "gibber-ssl-transport-signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_SSL
 #include "gibber-debug.h"

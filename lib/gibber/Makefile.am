@@ -3,30 +3,11 @@ SUBDIRS=examples
 noinst_LTLIBRARIES = libgibber.la
 
 BUILT_SOURCES = \
-  gibber-bytestream-ibb-signals-marshal.c     \
-  gibber-bytestream-ibb-signals-marshal.h     \
-  gibber-transport-signals-marshal.c          \
-  gibber-transport-signals-marshal.h          \
-  gibber-muc-connection-signals-marshal.c     \
-  gibber-muc-connection-signals-marshal.h     \
-  gibber-xmpp-connection-signals-marshal.c    \
-  gibber-xmpp-connection-signals-marshal.h    \
-  gibber-xmpp-reader-signals-marshal.c        \
-  gibber-xmpp-reader-signals-marshal.h        \
-  gibber-xmpp-stanza-signals-marshal.c        \
-  gibber-xmpp-stanza-signals-marshal.h        \
-  gibber-sasl-auth-signals-marshal.c          \
-  gibber-sasl-auth-signals-marshal.h          \
-  gibber-r-multicast-sender-signals-marshal.c \
-  gibber-r-multicast-sender-signals-marshal.h
+  signals-marshal.list \
+  signals-marshal.h \
+  signals-marshal.c
 
-if HAVE_LIBSSL
-  BUILT_SOURCES += \
-    gibber-ssl-transport-signals-marshal.c      \
-    gibber-ssl-transport-signals-marshal.h
-endif
-
-libgibber_la_SOURCES =            \
+HANDWRITTEN_SOURCES =             \
   gibber-xmpp-connection.c        \
   gibber-xmpp-connection.h        \
   gibber-muc-connection.c         \
@@ -65,8 +46,9 @@ libgibber_la_SOURCES =            \
   gibber-iq-helper.c              \
   gibber-iq-helper.h              \
   libmd5-rfc/md5.c                \
-  libmd5-rfc/md5.h                \
-  $(BUILT_SOURCES)
+  libmd5-rfc/md5.h
+
+libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES)
 
 if HAVE_LIBSSL
 libgibber_la_SOURCES +=     \
@@ -90,11 +72,16 @@ EXTRA_DIST = \
   gibber-xmpp-reader-signals-marshal.list         \
   gibber-xmpp-stanza-signals-marshal.list
 
-%-signals-marshal.h: %-signals-marshal.list
-	glib-genmarshal --header --prefix=$(subst -,_,$*)_marshal $< > $*-signals-marshal.h
+signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
+	sed -n -e 's/.*_gibber_signals_marshal_\([A-Z]*__[A-Z_]*\).*/\1/p' \
+		$(HANDWRITTEN_SOURCES) \
+		| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@
 
-%-signals-marshal.c: %-signals-marshal.list
-	glib-genmarshal --body --prefix=$(subst -,_,$*)_marshal $< > $*-signals-marshal.c
+signals-marshal.h: signals-marshal.list
+	glib-genmarshal --header --prefix=_gibber_signals_marshal $< > $@
+
+signals-marshal.c: signals-marshal.list
+	glib-genmarshal --body --prefix=_gibber_signals_marshal $< > $@
 
 
 AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ 

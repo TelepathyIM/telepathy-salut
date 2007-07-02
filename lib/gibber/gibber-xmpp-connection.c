@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "gibber-xmpp-connection.h"
-#include "gibber-xmpp-connection-signals-marshal.h"
+#include "signals-marshal.h"
 
 #include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"
@@ -135,7 +135,7 @@ gibber_xmpp_connection_class_init (GibberXmppConnectionClass *gibber_xmpp_connec
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 gibber_xmpp_connection_marshal_VOID__STRING_STRING_STRING,
+                 _gibber_signals_marshal_VOID__STRING_STRING_STRING,
                  G_TYPE_NONE, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
   signals[STREAM_CLOSED] = 
     g_signal_new("stream-closed", 

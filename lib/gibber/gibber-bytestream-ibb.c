@@ -33,7 +33,7 @@
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
 
-#include "gibber-bytestream-ibb-signals-marshal.h"
+#include "signals-marshal.h"
 //#include "bytestream-factory.h"
 
 G_DEFINE_TYPE (GibberBytestreamIBB, gibber_bytestream_ibb, G_TYPE_OBJECT);
@@ -438,7 +438,7 @@ gibber_bytestream_ibb_class_init (
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  gibber_bytestream_ibb_marshal_VOID__STRING_POINTER,
+                  _gibber_signals_marshal_VOID__STRING_POINTER,
                   G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
 
   signals[STATE_CHANGED] =

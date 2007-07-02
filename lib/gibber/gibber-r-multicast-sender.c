@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "gibber-r-multicast-sender.h"
-#include "gibber-r-multicast-sender-signals-marshal.h"
+#include "signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_RMULTICAST_SENDER
 #include "gibber-debug.h"
@@ -182,7 +182,7 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                    0,
                    NULL, NULL,
-                   gibber_r_multicast_sender_marshal_VOID__UCHAR_POINTER_ULONG,
+                   _gibber_signals_marshal_VOID__UCHAR_POINTER_ULONG,
                    G_TYPE_NONE, 3, G_TYPE_UCHAR, G_TYPE_POINTER, G_TYPE_ULONG);
 
   param_spec = g_param_spec_pointer ("senderhash",

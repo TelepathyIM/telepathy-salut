@@ -26,7 +26,7 @@
 #include <libxml/parser.h>
 
 #include "gibber-xmpp-reader.h"
-#include "gibber-xmpp-reader-signals-marshal.h"
+#include "signals-marshal.h"
 
 #include "gibber-xmpp-stanza.h"
 
@@ -160,7 +160,7 @@ gibber_xmpp_reader_class_init (GibberXmppReaderClass *gibber_xmpp_reader_class)
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 gibber_xmpp_reader_marshal_VOID__STRING_STRING_STRING,
+                 _gibber_signals_marshal_VOID__STRING_STRING_STRING,
                  G_TYPE_NONE, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
   signals[STREAM_CLOSED] = 
     g_signal_new("stream-closed", 
