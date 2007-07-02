@@ -28,7 +28,7 @@
 #include "salut-connection-manager.h"
 #include "salut-connection.h"
 
-typedef struct { 
+typedef struct {
   guint set_mask;
 
   gchar *nickname;
@@ -50,21 +50,21 @@ enum {
 };
 
 static const TpCMParamSpec salut_params[] = {
-  { "nickname", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
-     0, NULL, 
+  { "nickname", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+     0, NULL,
      G_STRUCT_OFFSET(SalutParams, nickname),
      tp_cm_param_filter_string_nonempty, NULL },
-  { "first-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
-     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 
+  { "first-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
      G_STRUCT_OFFSET(SalutParams, first_name)},
-  { "last-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 
-     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 
+  { "last-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
      G_STRUCT_OFFSET(SalutParams, last_name)},
-  { "jid", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
+  { "jid", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
      G_STRUCT_OFFSET(SalutParams, jid)},
-  { "email", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
+  { "email", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
      G_STRUCT_OFFSET(SalutParams, email)},
-  { "published-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL, 
+  { "published-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
      G_STRUCT_OFFSET(SalutParams, published_name),
      tp_cm_param_filter_string_nonempty, NULL },
   {NULL, NULL, 0, 0, NULL, 0}
@@ -97,7 +97,7 @@ salut_connection_manager_init (SalutConnectionManager *obj)
 static void
 salut_connection_manager_class_init (SalutConnectionManagerClass *salut_connection_manager_class)
 {
-  TpBaseConnectionManagerClass *base_cm_class = 
+  TpBaseConnectionManagerClass *base_cm_class =
     TP_BASE_CONNECTION_MANAGER_CLASS(salut_connection_manager_class);
 
   base_cm_class->cm_dbus_name = "salut";
@@ -106,11 +106,11 @@ salut_connection_manager_class_init (SalutConnectionManagerClass *salut_connecti
 
 }
 
-static void *salut_params_new(void) { 
+static void *salut_params_new(void) {
   return g_slice_new0(SalutParams);
 };
 
-static void salut_params_free(void *params) { 
+static void salut_params_free(void *params) {
   SalutParams *p = (SalutParams *)params;
 
   g_free(p->nickname);
@@ -139,15 +139,15 @@ salut_connection_manager_new_connection(TpBaseConnectionManager *self,
 
   g_assert(!tp_strdiff(proto, "salut"));
 
-  conn = g_object_new(SALUT_TYPE_CONNECTION, 
+  conn = g_object_new(SALUT_TYPE_CONNECTION,
                       "protocol", proto,
                       NULL);
 
-  SET_PROPERTY_IF_PARAM_SET("nickname", SALUT_PARAM_NICKNAME, 
+  SET_PROPERTY_IF_PARAM_SET("nickname", SALUT_PARAM_NICKNAME,
                               params->nickname);
-  SET_PROPERTY_IF_PARAM_SET("first-name", SALUT_PARAM_FIRST_NAME, 
+  SET_PROPERTY_IF_PARAM_SET("first-name", SALUT_PARAM_FIRST_NAME,
                               params->first_name);
-  SET_PROPERTY_IF_PARAM_SET("last-name", SALUT_PARAM_LAST_NAME, 
+  SET_PROPERTY_IF_PARAM_SET("last-name", SALUT_PARAM_LAST_NAME,
                               params->last_name);
   SET_PROPERTY_IF_PARAM_SET("jid", SALUT_PARAM_EMAIL, params->jid);
   SET_PROPERTY_IF_PARAM_SET("email", SALUT_PARAM_JID, params->email);
