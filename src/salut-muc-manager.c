@@ -24,7 +24,6 @@
 #include <arpa/inet.h>
 
 #include "salut-muc-manager.h"
-#include "salut-muc-manager-signals-marshal.h"
 
 #include <gibber/gibber-muc-connection.h>
 

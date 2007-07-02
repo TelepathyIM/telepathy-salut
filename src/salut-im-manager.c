@@ -23,7 +23,6 @@
 
 #include "salut-im-channel.h"
 #include "salut-im-manager.h"
-#include "salut-im-manager-signals-marshal.h"
 #include "salut-contact.h"
 
 #include <gibber/gibber-linklocal-transport.h>

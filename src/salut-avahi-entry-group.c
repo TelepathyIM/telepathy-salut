@@ -26,7 +26,6 @@
 
 #include "salut-avahi-errors.h"
 #include "salut-avahi-entry-group.h"
-#include "salut-avahi-entry-group-signals-marshal.h"
 #include "salut-avahi-entry-group-enumtypes.h"
 
 G_DEFINE_TYPE(SalutAvahiEntryGroup, salut_avahi_entry_group, G_TYPE_OBJECT)

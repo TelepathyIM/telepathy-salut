@@ -28,7 +28,6 @@
 #include "debug.h"
 
 #include "salut-muc-channel.h"
-#include "salut-muc-channel-signals-marshal.h"
 
 #include <gibber/gibber-transport.h>
 

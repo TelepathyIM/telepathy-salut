@@ -1,38 +1,15 @@
 BUILT_SOURCES = \
-    salut-im-manager-signals-marshal.h \
-    salut-im-manager-signals-marshal.c \
-    salut-muc-manager-signals-marshal.h \
-    salut-muc-manager-signals-marshal.c \
-    salut-im-channel-signals-marshal.h \
-    salut-im-channel-signals-marshal.c \
-    salut-muc-channel-signals-marshal.h \
-    salut-muc-channel-signals-marshal.c \
-    salut-self-signals-marshal.h \
-    salut-self-signals-marshal.c \
-    salut-contact-signals-marshal.h \
-    salut-contact-signals-marshal.c \
-    salut-contact-manager-signals-marshal.h \
-    salut-contact-manager-signals-marshal.c \
+    signals-marshal.list \
+    signals-marshal.h \
+    signals-marshal.c \
     salut-presence-enumtypes.h \
     salut-presence-enumtypes.c  \
-    salut-contact-channel-signals-marshal.h \
-    salut-contact-channel-signals-marshal.c  \
-    salut-avahi-client-signals-marshal.h \
-    salut-avahi-client-signals-marshal.c  \
     salut-avahi-client-enumtypes.h \
     salut-avahi-client-enumtypes.c  \
     salut-avahi-entry-group-enumtypes.h \
     salut-avahi-entry-group-enumtypes.c  \
     salut-avahi-enums-enumtypes.h \
-    salut-avahi-enums-enumtypes.c  \
-    salut-avahi-entry-group-signals-marshal.h \
-    salut-avahi-entry-group-signals-marshal.c  \
-    salut-avahi-record-browser-signals-marshal.h \
-    salut-avahi-record-browser-signals-marshal.c  \
-    salut-avahi-service-browser-signals-marshal.h \
-    salut-avahi-service-browser-signals-marshal.c  \
-    salut-avahi-service-resolver-signals-marshal.h \
-    salut-avahi-service-resolver-signals-marshal.c
+    salut-avahi-enums-enumtypes.c
 
 
 # correctly clean the generated source files
@@ -40,21 +17,6 @@ CLEANFILES = $(BUILT_SOURCES)
 
 dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
-
-EXTRA_DIST = \
-  salut-avahi-client-signals-marshal.list                 \
-  salut-avahi-entry-group-signals-marshal.list            \
-  salut-avahi-record-browser-signals-marshal.list        \
-  salut-avahi-service-browser-signals-marshal.list        \
-  salut-avahi-service-resolver-signals-marshal.list       \
-  salut-contact-channel-signals-marshal.list              \
-  salut-contact-manager-signals-marshal.list              \
-  salut-contact-signals-marshal.list                      \
-  salut-im-channel-signals-marshal.list                   \
-  salut-im-manager-signals-marshal.list                   \
-  salut-muc-channel-signals-marshal.list                  \
-  salut-muc-manager-signals-marshal.list                  \
-  salut-self-signals-marshal.list
 
 bin_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
@@ -113,11 +75,10 @@ CORE_SOURCES =                                          \
     debug.c                                             \
     debug.h                                             \
     ansi.h                                              \
-    namespaces.h                                        \
-    $(BUILT_SOURCES)
+    namespaces.h
 
 
-libsalut_convenience_la_SOURCES = $(CORE_SOURCES) 
+libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES)
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
@@ -155,17 +116,17 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
-%-signals-marshal.h: %-signals-marshal.list
-	glib-genmarshal --header --prefix=$(subst -,_,$*)_marshal $< > $*-signals-marshal.h
 
-%-signals-marshal.c: %-signals-marshal.list
-	glib-genmarshal --body --prefix=$(subst -,_,$*)_marshal $< > $*-signals-marshal.c
+signals-marshal.list: $(CORE_SOURCES) Makefile.am
+	sed -n -e 's/.*salut_signals_marshal_\([A-Z]*__[A-Z_]*\).*/\1/p' \
+		$(CORE_SOURCES) \
+		| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@
 
-%-marshal.h: %-marshal.list
-	glib-genmarshal --header --prefix=$(subst -,_,$*)_marshal $< > $*-marshal.h
+signals-marshal.h: signals-marshal.list
+	glib-genmarshal --header --prefix=salut_signals_marshal $< > $@
 
-%-marshal.c: %-marshal.list
-	glib-genmarshal --body --prefix=$(subst -,_,$*)_marshal $< > $*-marshal.c
+signals-marshal.c: signals-marshal.list
+	glib-genmarshal --body --prefix=salut_signals_marshal $< > $@
 
 
 # rules for making the glib enum objects

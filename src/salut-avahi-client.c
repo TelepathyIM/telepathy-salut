@@ -22,7 +22,6 @@
 #include <stdlib.h>
 
 #include "salut-avahi-client.h"
-#include "salut-avahi-client-signals-marshal.h"
 
 #include "salut-avahi-client-enumtypes.h"
 #include "salut-avahi-errors.h"

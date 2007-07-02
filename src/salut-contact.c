@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "salut-contact.h"
-#include "salut-contact-signals-marshal.h"
+#include "signals-marshal.h"
 #include "salut-presence.h"
 #include "salut-presence-enumtypes.h"
 
@@ -180,7 +180,7 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
   signals[ACTIVITY_CHANGE] = g_signal_new("activity-change",
       G_OBJECT_CLASS_TYPE (salut_contact_class),
       G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_contact_marshal_VOID__STRING_UINT_STRING_STRING_STRING_STRING,
+      salut_signals_marshal_VOID__STRING_UINT_STRING_STRING_STRING_STRING,
       G_TYPE_NONE,
       6, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING,
       G_TYPE_STRING, G_TYPE_STRING);

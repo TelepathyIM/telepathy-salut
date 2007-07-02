@@ -28,7 +28,6 @@
 #include <errno.h>
 
 #include "salut-self.h"
-#include "salut-self-signals-marshal.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <telepathy-glib/errors.h>

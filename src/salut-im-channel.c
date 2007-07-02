@@ -30,7 +30,7 @@
 #include "debug.h"
 
 #include "salut-im-channel.h"
-#include "salut-im-channel-signals-marshal.h"
+#include "signals-marshal.h"
 
 #include "salut-connection.h"
 #include "salut-contact.h"
@@ -379,7 +379,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
         g_signal_accumulator_true_handled, NULL,
-        salut_im_channel_marshal_BOOLEAN__OBJECT,
+        salut_signals_marshal_BOOLEAN__OBJECT,
         G_TYPE_BOOLEAN, 1, GIBBER_TYPE_XMPP_STANZA);
 
   signals[CONNECTED] =

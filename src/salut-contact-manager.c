@@ -26,7 +26,7 @@
 #include "salut-connection.h"
 #include "salut-contact-channel.h"
 #include "salut-contact-manager.h"
-#include "salut-contact-manager-signals-marshal.h"
+#include "signals-marshal.h"
 #include "salut-contact.h"
 #include "salut-presence-enumtypes.h"
 
@@ -178,7 +178,7 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
       G_SIGNAL_RUN_LAST,
       0,
       NULL, NULL,
-      salut_contact_manager_marshal_VOID__OBJECT_INT,
+      salut_signals_marshal_VOID__OBJECT_INT,
       G_TYPE_NONE, 2,
       SALUT_TYPE_CONTACT,
       G_TYPE_INT);

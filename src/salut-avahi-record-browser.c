@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 #include "salut-avahi-record-browser.h"
-#include "salut-avahi-record-browser-signals-marshal.h"
+#include "signals-marshal.h"
 #include "salut-avahi-errors.h"
 #include "salut-avahi-enums-enumtypes.h"
 
@@ -170,7 +170,7 @@ salut_avahi_record_browser_class_init (SalutAvahiRecordBrowserClass *salut_avahi
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
-                 salut_avahi_record_browser_marshal_VOID__INT_ENUM_STRING_UINT_UINT_POINTER_INT_INT,
+                 salut_signals_marshal_VOID__INT_ENUM_STRING_UINT_UINT_POINTER_INT_INT,
                  G_TYPE_NONE, 8,
                  G_TYPE_INT,
                  SALUT_TYPE_AVAHI_PROTOCOL,
@@ -187,7 +187,7 @@ salut_avahi_record_browser_class_init (SalutAvahiRecordBrowserClass *salut_avahi
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
-                 salut_avahi_record_browser_marshal_VOID__INT_ENUM_STRING_UINT_UINT_POINTER_INT_INT,
+                 salut_signals_marshal_VOID__INT_ENUM_STRING_UINT_UINT_POINTER_INT_INT,
                  G_TYPE_NONE, 8,
                  G_TYPE_INT,
                  SALUT_TYPE_AVAHI_PROTOCOL,
