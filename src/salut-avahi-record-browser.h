@@ -60,9 +60,9 @@ SalutAvahiRecordBrowser *
 salut_avahi_record_browser_new(const gchar *name, guint16 type);
 
 SalutAvahiRecordBrowser *
-salut_avahi_record_browser_new_full(AvahiIfIndex interface, 
-                                    AvahiProtocol protocol, 
-                                    const gchar *name, 
+salut_avahi_record_browser_new_full(AvahiIfIndex interface,
+                                    AvahiProtocol protocol,
+                                    const gchar *name,
                                     guint16 clazz,
                                     guint16 type,
                                     SalutAvahiLookupFlags flags);
