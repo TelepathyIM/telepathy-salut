@@ -85,7 +85,7 @@ salut_avahi_record_browser_set_property (GObject *object,
                                  const GValue *value,
                                  GParamSpec *pspec) {
  SalutAvahiRecordBrowser *browser = SALUT_AVAHI_RECORD_BROWSER(object);
- SalutAvahiRecordBrowserPrivate *priv = 
+ SalutAvahiRecordBrowserPrivate *priv =
    SALUT_AVAHI_RECORD_BROWSER_GET_PRIVATE(browser);
 
   g_assert(priv->browser == NULL);
@@ -121,7 +121,7 @@ salut_avahi_record_browser_get_property (GObject *object,
                                  GValue *value,
                                  GParamSpec *pspec) {
   SalutAvahiRecordBrowser *browser = SALUT_AVAHI_RECORD_BROWSER(object);
-  SalutAvahiRecordBrowserPrivate *priv = 
+  SalutAvahiRecordBrowserPrivate *priv =
     SALUT_AVAHI_RECORD_BROWSER_GET_PRIVATE(browser);
 
   switch (property_id) {
@@ -164,7 +164,7 @@ salut_avahi_record_browser_class_init (SalutAvahiRecordBrowserClass *salut_avahi
   object_class->set_property = salut_avahi_record_browser_set_property;
   object_class->get_property = salut_avahi_record_browser_get_property;
 
-  signals[NEW] = 
+  signals[NEW] =
     g_signal_new("new-record",
                  G_OBJECT_CLASS_TYPE(salut_avahi_record_browser_class),
                  G_SIGNAL_RUN_LAST,
@@ -181,7 +181,7 @@ salut_avahi_record_browser_class_init (SalutAvahiRecordBrowserClass *salut_avahi
                  G_TYPE_INT,
                  SALUT_TYPE_AVAHI_LOOKUP_RESULT_FLAGS);
 
-  signals[REMOVED] = 
+  signals[REMOVED] =
     g_signal_new("removed-record",
                  G_OBJECT_CLASS_TYPE(salut_avahi_record_browser_class),
                  G_SIGNAL_RUN_LAST,
@@ -254,7 +254,7 @@ salut_avahi_record_browser_class_init (SalutAvahiRecordBrowserClass *salut_avahi
 
   param_spec = g_param_spec_uint("type", "record type",
                                  "Record type to browse for",
-                                 0, G_MAXUINT16, 0, 
+                                 0, G_MAXUINT16, 0,
                                  G_PARAM_READWRITE  |
                                  G_PARAM_STATIC_NAME |
                                  G_PARAM_STATIC_BLURB);
@@ -262,7 +262,7 @@ salut_avahi_record_browser_class_init (SalutAvahiRecordBrowserClass *salut_avahi
 
   param_spec = g_param_spec_uint("class", "record class",
                                  "Record class to browse for",
-                                 0, G_MAXUINT16, 0, 
+                                 0, G_MAXUINT16, 0,
                                  G_PARAM_READWRITE  |
                                  G_PARAM_STATIC_NAME |
                                  G_PARAM_STATIC_BLURB);
@@ -323,9 +323,9 @@ salut_avahi_record_browser_new(const gchar *name, guint16 type) {
 }
 
 SalutAvahiRecordBrowser *
-salut_avahi_record_browser_new_full(AvahiIfIndex interface, 
-                                    AvahiProtocol protocol, 
-                                    const gchar *name, 
+salut_avahi_record_browser_new_full(AvahiIfIndex interface,
+                                    AvahiProtocol protocol,
+                                    const gchar *name,
                                     guint16 clazz,
                                     guint16 type,
                                     SalutAvahiLookupFlags flags) {
@@ -348,17 +348,17 @@ _avahi_record_browser_cb(AvahiRecordBrowser *r, AvahiIfIndex interface,
                          AvahiLookupResultFlags flags,
                          void *userdata) {
   SalutAvahiRecordBrowser *self = SALUT_AVAHI_RECORD_BROWSER(userdata);
-  SalutAvahiRecordBrowserPrivate *priv = 
+  SalutAvahiRecordBrowserPrivate *priv =
     SALUT_AVAHI_RECORD_BROWSER_GET_PRIVATE(userdata);
 
   switch (event) {
     case AVAHI_BROWSER_NEW:
     case AVAHI_BROWSER_REMOVE: {
       guint signalid = (event == AVAHI_BROWSER_NEW ? NEW : REMOVED);
-      g_signal_emit(self, signals[signalid], 0, 
+      g_signal_emit(self, signals[signalid], 0,
                     interface, protocol, name, clazz, type,
                     rdata, rdata_size, flags);
-      break; 
+      break;
     }
     case AVAHI_BROWSER_CACHE_EXHAUSTED:
       g_signal_emit(self, signals[CACHE_EXHAUSTED], 0);
@@ -377,13 +377,13 @@ _avahi_record_browser_cb(AvahiRecordBrowser *r, AvahiIfIndex interface,
     }
   }
 }
- 
+
 
 
 gboolean
 salut_avahi_record_browser_attach(SalutAvahiRecordBrowser *browser,
                                   SalutAvahiClient *client, GError **error) {
-  SalutAvahiRecordBrowserPrivate *priv = 
+  SalutAvahiRecordBrowserPrivate *priv =
       SALUT_AVAHI_RECORD_BROWSER_GET_PRIVATE(browser);
 
   priv->client = g_object_ref(client);
@@ -392,7 +392,7 @@ salut_avahi_record_browser_attach(SalutAvahiRecordBrowser *browser,
                                            priv->protocol,
                                            priv->name,
                                            priv->class,
-                                           priv->type, 
+                                           priv->type,
                                            priv->flags,
                                            _avahi_record_browser_cb,
                                            browser);
@@ -400,7 +400,7 @@ salut_avahi_record_browser_attach(SalutAvahiRecordBrowser *browser,
     if (error != NULL ) {
       int aerrno = avahi_client_errno(client->avahi_client);
       *error = g_error_new(SALUT_AVAHI_ERRORS, aerrno,
-                           "Attaching record browser failed: %s", 
+                           "Attaching record browser failed: %s",
                            avahi_strerror(aerrno));
     }
     return FALSE;
