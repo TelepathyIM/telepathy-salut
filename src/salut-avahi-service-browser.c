@@ -74,7 +74,7 @@ struct _SalutAvahiServiceBrowserPrivate
 static void
 salut_avahi_service_browser_init (SalutAvahiServiceBrowser *obj)
 {
-  SalutAvahiServiceBrowserPrivate *priv = 
+  SalutAvahiServiceBrowserPrivate *priv =
     SALUT_AVAHI_SERVICE_BROWSER_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
@@ -94,7 +94,7 @@ salut_avahi_service_browser_set_property (GObject *object,
                                  const GValue *value,
                                  GParamSpec *pspec) {
  SalutAvahiServiceBrowser *browser = SALUT_AVAHI_SERVICE_BROWSER(object);
- SalutAvahiServiceBrowserPrivate *priv = 
+ SalutAvahiServiceBrowserPrivate *priv =
    SALUT_AVAHI_SERVICE_BROWSER_GET_PRIVATE(browser);
 
   g_assert(priv->browser == NULL);
@@ -126,7 +126,7 @@ salut_avahi_service_browser_get_property (GObject *object,
                                  GValue *value,
                                  GParamSpec *pspec) {
   SalutAvahiServiceBrowser *browser = SALUT_AVAHI_SERVICE_BROWSER(object);
-  SalutAvahiServiceBrowserPrivate *priv = 
+  SalutAvahiServiceBrowserPrivate *priv =
     SALUT_AVAHI_SERVICE_BROWSER_GET_PRIVATE(browser);
 
   switch (property_id) {
@@ -166,7 +166,7 @@ salut_avahi_service_browser_class_init (SalutAvahiServiceBrowserClass *salut_ava
   object_class->set_property = salut_avahi_service_browser_set_property;
   object_class->get_property = salut_avahi_service_browser_get_property;
 
-  signals[NEW] = 
+  signals[NEW] =
     g_signal_new("new-service",
                  G_OBJECT_CLASS_TYPE(salut_avahi_service_browser_class),
                  G_SIGNAL_RUN_LAST,
@@ -181,14 +181,14 @@ salut_avahi_service_browser_class_init (SalutAvahiServiceBrowserClass *salut_ava
                  G_TYPE_STRING,
                  SALUT_TYPE_AVAHI_LOOKUP_RESULT_FLAGS);
 
-  signals[REMOVED] = 
+  signals[REMOVED] =
     g_signal_new("removed-service",
                  G_OBJECT_CLASS_TYPE(salut_avahi_service_browser_class),
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
                  salut_signals_marshal_VOID__INT_ENUM_STRING_STRING_STRING_UINT,
-                 G_TYPE_NONE, 6, 
+                 G_TYPE_NONE, 6,
                  G_TYPE_INT,
                  SALUT_TYPE_AVAHI_PROTOCOL,
                  G_TYPE_STRING,
@@ -280,10 +280,10 @@ salut_avahi_service_browser_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  if (priv->browser) 
+  if (priv->browser)
     avahi_service_browser_free(priv->browser);
   priv->browser = NULL;
-  if (priv->client) 
+  if (priv->client)
     g_object_unref(priv->client);
   priv->client = NULL;
 
@@ -311,11 +311,11 @@ salut_avahi_service_browser_finalize (GObject *object)
 static void
 _avahi_service_browser_cb(AvahiServiceBrowser *b, AvahiIfIndex interface,
                           AvahiProtocol protocol, AvahiBrowserEvent event,
-                          const char *name, const char *type, 
+                          const char *name, const char *type,
                           const char *domain, AvahiLookupResultFlags flags,
                           void *userdata) {
   SalutAvahiServiceBrowser *self = SALUT_AVAHI_SERVICE_BROWSER (userdata);
-  SalutAvahiServiceBrowserPrivate *priv = 
+  SalutAvahiServiceBrowserPrivate *priv =
                                 SALUT_AVAHI_SERVICE_BROWSER_GET_PRIVATE (self);
   if (priv->browser == NULL) {
     priv->browser = b;
@@ -332,10 +332,10 @@ _avahi_service_browser_cb(AvahiServiceBrowser *b, AvahiIfIndex interface,
       break;
     }
     case AVAHI_BROWSER_CACHE_EXHAUSTED:
-      g_signal_emit(self, signals[CACHE_EXHAUSTED], 0); 
+      g_signal_emit(self, signals[CACHE_EXHAUSTED], 0);
       break;
     case AVAHI_BROWSER_ALL_FOR_NOW:
-      g_signal_emit(self, signals[ALL_FOR_NOW], 0); 
+      g_signal_emit(self, signals[ALL_FOR_NOW], 0);
       break;
     case AVAHI_BROWSER_FAILURE: {
       GError *error;
@@ -357,9 +357,9 @@ salut_avahi_service_browser_new(gchar *type) {
 }
 
 SalutAvahiServiceBrowser *
-salut_avahi_service_browser_new_full(AvahiIfIndex interface, 
+salut_avahi_service_browser_new_full(AvahiIfIndex interface,
                                      AvahiProtocol protocol,
-                                     gchar *type, gchar *domain, 
+                                     gchar *type, gchar *domain,
                                      SalutAvahiLookupFlags flags) {
   return g_object_new(SALUT_TYPE_AVAHI_SERVICE_BROWSER,
                       "interface", interface,
@@ -370,31 +370,31 @@ salut_avahi_service_browser_new_full(AvahiIfIndex interface,
                       NULL);
 }
 
-gboolean 
+gboolean
 salut_avahi_service_browser_attach(SalutAvahiServiceBrowser *browser,
                                    SalutAvahiClient *client, GError **error) {
-  SalutAvahiServiceBrowserPrivate *priv = 
+  SalutAvahiServiceBrowserPrivate *priv =
                               SALUT_AVAHI_SERVICE_BROWSER_GET_PRIVATE (browser);
 
   g_object_ref(client);
   priv->client = client;
 
-  priv->browser = avahi_service_browser_new(client->avahi_client, 
-                                            priv->interface, 
-                                            priv->protocol, 
-                                            priv->type, priv->domain, 
-                                            priv->flags, 
-                                            _avahi_service_browser_cb, 
+  priv->browser = avahi_service_browser_new(client->avahi_client,
+                                            priv->interface,
+                                            priv->protocol,
+                                            priv->type, priv->domain,
+                                            priv->flags,
+                                            _avahi_service_browser_cb,
                                             browser);
   if (priv->browser == NULL) {
     if (error != NULL ) {
       int aerrno = avahi_client_errno(client->avahi_client);
       *error = g_error_new(SALUT_AVAHI_ERRORS, aerrno,
-                           "Attaching group failed: %s", 
+                           "Attaching group failed: %s",
                            avahi_strerror(aerrno));
     }
     return FALSE;
   }
   return TRUE;
 }
- 
+
