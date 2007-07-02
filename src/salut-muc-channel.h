@@ -34,7 +34,7 @@ typedef struct _SalutMucChannelClass SalutMucChannelClass;
 struct _SalutMucChannelClass {
   GObjectClass parent_class;
   TpGroupMixinClass group_class;
-  TpTextMixinClass text_class; 
+  TpTextMixinClass text_class;
 };
 
 struct _SalutMucChannel {
