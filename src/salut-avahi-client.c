@@ -147,7 +147,7 @@ salut_avahi_client_class_init (SalutAvahiClientClass *salut_avahi_client_class)
                                  G_PARAM_STATIC_BLURB);
   g_object_class_install_property(object_class, PROP_FLAGS, param_spec);
 
-  signals[STATE_CHANGED] = 
+  signals[STATE_CHANGED] =
     g_signal_new("state-changed",
                  G_OBJECT_CLASS_TYPE(salut_avahi_client_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
@@ -193,14 +193,14 @@ salut_avahi_client_finalize (GObject *object)
 
 SalutAvahiClient *
 salut_avahi_client_new(SalutAvahiClientFlags flags) {
-  return g_object_new(SALUT_TYPE_AVAHI_CLIENT, 
+  return g_object_new(SALUT_TYPE_AVAHI_CLIENT,
                       "flags", flags,
                       NULL);
 }
 
 static GQuark
 detail_for_state(AvahiClientState state) {
-  static struct { AvahiClientState state; gchar *name; GQuark quark; } 
+  static struct { AvahiClientState state; gchar *name; GQuark quark; }
     states[]  = { { AVAHI_CLIENT_S_REGISTERING, "registering", 0 },
                   { AVAHI_CLIENT_S_RUNNING,     "running", 0 },
                   { AVAHI_CLIENT_S_COLLISION,   "collistion", 0 },
@@ -235,7 +235,7 @@ _avahi_client_cb(AvahiClient *c, AvahiClientState state, void *data) {
 
   g_assert(c == self->avahi_client);
   priv->state = state;
-  g_signal_emit(self, signals[STATE_CHANGED], 
+  g_signal_emit(self, signals[STATE_CHANGED],
                 detail_for_state(state),  state);
 }
 
@@ -253,14 +253,14 @@ salut_avahi_client_start(SalutAvahiClient *client, GError **error) {
   priv->poll = avahi_glib_poll_new(NULL, G_PRIORITY_DEFAULT);
 
   aclient = avahi_client_new(avahi_glib_poll_get(priv->poll),
-                            priv->flags, 
+                            priv->flags,
                             _avahi_client_cb,
                             client,
                             &aerror);
   if (aclient == NULL) {
     if (error != NULL) {
-      *error = g_error_new(SALUT_AVAHI_ERRORS, aerror, 
-                           "Failed to create avahi client: %s", 
+      *error = g_error_new(SALUT_AVAHI_ERRORS, aerror,
+                           "Failed to create avahi client: %s",
                            avahi_strerror(aerror));
     }
     return FALSE;
