@@ -30,11 +30,11 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/util.h>
 
-static void 
+static void
 channel_iface_init(gpointer g_iface, gpointer iface_data);
 
-G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel, 
-  G_TYPE_OBJECT, 
+G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
+  G_TYPE_OBJECT,
   G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
@@ -100,7 +100,7 @@ salut_contact_channel_constructor (GType type, guint n_props,
   base_conn = TP_BASE_CONNECTION(priv->conn);
 
   handle_repo = tp_base_connection_get_handles(base_conn, TP_HANDLE_TYPE_LIST);
-  contact_repo = tp_base_connection_get_handles(base_conn, 
+  contact_repo = tp_base_connection_get_handles(base_conn,
       TP_HANDLE_TYPE_CONTACT);
 
   tp_handle_ref(handle_repo, priv->handle);
@@ -190,7 +190,7 @@ static void
 salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channel_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_contact_channel_class);
-  GParamSpec *param_spec; 
+  GParamSpec *param_spec;
 
   g_type_class_add_private (salut_contact_channel_class, sizeof (SalutContactChannelPrivate));
 
@@ -201,7 +201,7 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
 
   object_class->dispose = salut_contact_channel_dispose;
   object_class->finalize = salut_contact_channel_finalize;
-  
+
   param_spec = g_param_spec_object ("connection", "GabbleConnection object",
                                     "Gabble connection object that owns this "
                                     "Roster channel object.",
@@ -217,7 +217,7 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE, "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
-  tp_group_mixin_class_init(object_class, 
+  tp_group_mixin_class_init(object_class,
     G_STRUCT_OFFSET(SalutContactChannelClass, group_class),
     NULL, NULL);
 }
@@ -273,11 +273,11 @@ salut_contact_channel_finalize (GObject *object)
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-static void 
+static void
 salut_contact_channel_get_channel_type (TpSvcChannel *iface,
                                         DBusGMethodInvocation *context)
 {
-  tp_svc_channel_return_from_get_channel_type(context, 
+  tp_svc_channel_return_from_get_channel_type(context,
       TP_IFACE_CHANNEL_TYPE_CONTACT_LIST);
 }
 
@@ -301,7 +301,7 @@ salut_contact_channel_get_handle (TpSvcChannel *iface,
   SalutContactChannel *self = SALUT_CONTACT_CHANNEL(iface);
   SalutContactChannelPrivate *priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE(self);
 
-  tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_LIST,  
+  tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_LIST,
                                          priv->handle);
 }
 
@@ -322,7 +322,7 @@ static void
 salut_contact_channel_get_interfaces (TpSvcChannel *iface,
                                        DBusGMethodInvocation *context) {
   const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP, NULL };
-  
+
   tp_svc_channel_return_from_get_interfaces (context, interfaces);
 }
 
