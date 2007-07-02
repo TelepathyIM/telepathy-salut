@@ -58,6 +58,7 @@ void
 auth_success(GibberSaslAuth *sasl, gpointer user_data) {
   authenticated = TRUE;
   /* Reopen the connection */
+  gibber_xmpp_connection_restart(conn);
   gibber_xmpp_connection_open(conn, servername, NULL, "1.0");
 }
 
