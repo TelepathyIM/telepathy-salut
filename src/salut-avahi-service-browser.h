@@ -59,15 +59,15 @@ SalutAvahiServiceBrowser *
 salut_avahi_service_browser_new(gchar *type);
 
 SalutAvahiServiceBrowser *
-salut_avahi_service_browser_new_full(AvahiIfIndex interface, 
+salut_avahi_service_browser_new_full(AvahiIfIndex interface,
                                      AvahiProtocol protocol,
-                                     gchar *type, gchar *domain, 
+                                     gchar *type, gchar *domain,
                                      SalutAvahiLookupFlags flags);
 
-gboolean 
+gboolean
 salut_avahi_service_browser_attach(SalutAvahiServiceBrowser *browser,
                                    SalutAvahiClient *client, GError  **error);
- 
+
 
 G_END_DECLS
 
