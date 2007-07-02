@@ -337,9 +337,11 @@ make_presence_opt_args (SalutPresenceId presence, const gchar *message)
   GHashTable *ret;
   GValue *value;
 
-  if (presence == SALUT_PRESENCE_OFFLINE)
+  /* Omit missing or empty messages from the hash table.
+   * Also, offline has no message in Salut, it wouldn't make sense. */
+  if (presence == SALUT_PRESENCE_OFFLINE || message == NULL ||
+      *message == '\0')
     {
-      /* offline has no message in Salut, it wouldn't make sense */
       return NULL;
     }
 
