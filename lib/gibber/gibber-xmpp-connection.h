@@ -31,6 +31,13 @@ G_BEGIN_DECLS
 typedef struct _GibberXmppConnection GibberXmppConnection;
 typedef struct _GibberXmppConnectionClass GibberXmppConnectionClass;
 
+
+#define GIBBER_XMPP_CONNECTION_STREAM_SENT 0x1
+#define GIBBER_XMPP_CONNECTION_STREAM_RECEIVED 0x2
+
+#define GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN 0x3
+
+
 struct _GibberXmppConnectionClass {
     GObjectClass parent_class;
 };
@@ -38,7 +45,7 @@ struct _GibberXmppConnectionClass {
 struct _GibberXmppConnection {
     GObject parent;
     GibberTransport *transport;
-    gboolean stream_open;
+    guint8 stream_flags;
 };
 
 GType gibber_xmpp_connection_get_type(void);
