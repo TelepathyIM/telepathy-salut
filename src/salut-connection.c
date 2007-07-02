@@ -625,11 +625,11 @@ _self_established_cb(SalutSelf *s, gpointer data) {
 
   base->self_handle = tp_handle_ensure(handle_repo, self->name, NULL, NULL);
 
-  if (!salut_contact_manager_start(priv->contact_manager, 
+  if (!salut_contact_manager_start(priv->contact_manager,
            priv->avahi_client, NULL)) {
     /* FIXME handle error */
     tp_base_connection_change_status(
-        TP_BASE_CONNECTION(base), 
+        TP_BASE_CONNECTION(base),
         TP_CONNECTION_STATUS_CONNECTING,
         TP_CONNECTION_STATUS_REASON_REQUESTED);
     return;
@@ -642,7 +642,7 @@ _self_established_cb(SalutSelf *s, gpointer data) {
     }
 
   tp_base_connection_change_status(base,
-      TP_CONNECTION_STATUS_CONNECTED, 
+      TP_CONNECTION_STATUS_CONNECTED,
       TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
@@ -654,12 +654,12 @@ _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
 
   /* FIXME better error handling */
   tp_base_connection_change_status(base,
-     TP_CONNECTION_STATUS_DISCONNECTED, 
+     TP_CONNECTION_STATUS_DISCONNECTED,
      TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 static void
-_self_new_connection_cb(SalutSelf *s, GibberLLTransport *transport, 
+_self_new_connection_cb(SalutSelf *s, GibberLLTransport *transport,
                         gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
@@ -676,19 +676,19 @@ _self_new_connection_cb(SalutSelf *s, GibberLLTransport *transport,
 }
 
 static void
-_salut_avahi_client_failure_cb(SalutAvahiClient *c, 
+_salut_avahi_client_failure_cb(SalutAvahiClient *c,
                               SalutAvahiClientState state,
                               gpointer data) {
   /* FIXME better error messages */
   /* FIXME instead of full disconnect we could handle the avahi restart */
   tp_base_connection_change_status(
-        TP_BASE_CONNECTION(data), 
+        TP_BASE_CONNECTION(data),
         TP_CONNECTION_STATUS_DISCONNECTED,
         TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
 }
 
 static void
-_salut_avahi_client_running_cb(SalutAvahiClient *c, 
+_salut_avahi_client_running_cb(SalutAvahiClient *c,
                               SalutAvahiClientState state,
                               gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
@@ -713,15 +713,15 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               NULL, NULL
 #endif
                               );
-  g_signal_connect(priv->self, "established", 
+  g_signal_connect(priv->self, "established",
                    G_CALLBACK(_self_established_cb), self);
-  g_signal_connect(priv->self, "failure", 
+  g_signal_connect(priv->self, "failure",
                    G_CALLBACK(_self_failed_cb), self);
-  g_signal_connect(priv->self, "new-connection", 
+  g_signal_connect(priv->self, "new-connection",
                    G_CALLBACK(_self_new_connection_cb), self);
   if (!salut_self_announce(priv->self, NULL)) {
     tp_base_connection_change_status(
-          TP_BASE_CONNECTION(self), 
+          TP_BASE_CONNECTION(self),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
   }
@@ -756,7 +756,7 @@ void
 salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
                                   DBusGMethodInvocation *context)
 {
-  /* Aliases are set by the contacts 
+  /* Aliases are set by the contacts
    * Actually we concat the first and lastname property */
 
   tp_svc_connection_interface_aliasing_return_from_get_alias_flags (context, 0);
@@ -772,7 +772,7 @@ salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
 void
 salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
                                   const GArray *contacts,
-                                  DBusGMethodInvocation *context) 
+                                  DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
@@ -780,7 +780,7 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
   int i;
   const gchar **aliases;
   GError *error = NULL;
-  TpHandleRepoIface *contact_handles = 
+  TpHandleRepoIface *contact_handles =
       tp_base_connection_get_handles(base, TP_HANDLE_TYPE_CONTACT);
 
   DEBUG("Alias requested");
@@ -855,10 +855,10 @@ _contact_manager_contact_alias_changed(SalutConnection *self,
   GValue entry = {0, };
 
   g_value_init(&entry, SALUT_TP_ALIAS_PAIR_TYPE);
-  g_value_take_boxed(&entry, 
+  g_value_take_boxed(&entry,
                  dbus_g_type_specialized_construct(SALUT_TP_ALIAS_PAIR_TYPE));
 
-  dbus_g_type_struct_set(&entry, 
+  dbus_g_type_struct_set(&entry,
                          0, handle,
                          1, salut_contact_get_alias(contact),
                          G_MAXUINT);
@@ -875,7 +875,7 @@ _contact_manager_contact_alias_changed(SalutConnection *self,
 }
 
 static void
-salut_connection_aliasing_service_iface_init(gpointer g_iface, 
+salut_connection_aliasing_service_iface_init(gpointer g_iface,
     gpointer iface_data)
 {
   TpSvcConnectionInterfaceAliasingClass *klass =
@@ -895,7 +895,7 @@ _contact_manager_contact_avatar_changed(SalutConnection *self,
                                         SalutContact *contact,
                                         TpHandle handle) {
 
-  tp_svc_connection_interface_avatars_emit_avatar_updated(self, 
+  tp_svc_connection_interface_avatars_emit_avatar_updated(self,
       (guint)handle, contact->avatar_token);
 }
 
@@ -922,8 +922,8 @@ salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GError *error = NULL;
-  
-  if (!salut_self_set_avatar(priv->self, (guint8 *)avatar->data, 
+
+  if (!salut_self_set_avatar(priv->self, (guint8 *)avatar->data,
                              avatar->len, &error)) {
     dbus_g_method_return_error(context, error);
     g_error_free(error);
@@ -931,7 +931,7 @@ salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
   }
 
   tp_svc_connection_interface_avatars_return_from_set_avatar(
-     context, priv->self->avatar_token); 
+     context, priv->self->avatar_token);
 }
 
 static void
@@ -962,7 +962,7 @@ salut_connection_get_avatar_tokens(TpSvcConnectionInterfaceAvatars *iface,
       ret[i] = priv->self->avatar_token;
     } else {
       SalutContact *contact;
-      contact = 
+      contact =
          salut_contact_manager_get_contact(priv->contact_manager, handle);
       if (contact != NULL) {
         ret[i] = contact->avatar_token;
@@ -988,7 +988,7 @@ _request_avatar_cb(SalutContact *contact, guint8 *avatar, gsize size,
   GArray *arr;
 
   if (size == 0) {
-    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                       "Unable to get avatar");
     dbus_g_method_return_error(context, err);
     g_error_free(err);
@@ -1022,14 +1022,14 @@ salut_connection_request_avatar(TpSvcConnectionInterfaceAvatars *iface,
   }
 
   if (handle == base->self_handle) {
-    _request_avatar_cb(NULL, priv->self->avatar, 
-        priv->self->avatar_size, context); 
+    _request_avatar_cb(NULL, priv->self->avatar,
+        priv->self->avatar_size, context);
     return;
   }
 
-  contact = salut_contact_manager_get_contact(priv->contact_manager, handle); 
+  contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
   if (contact == NULL || contact->avatar_token == NULL) {
-    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                       "No known avatar");
     dbus_g_method_return_error(context, err);
     g_error_free(err);
@@ -1055,7 +1055,7 @@ salut_connection_get_avatar_requirements(TpSvcConnectionInterfaceAvatars *iface,
 }
 
 static void
-salut_connection_avatar_service_iface_init(gpointer g_iface, 
+salut_connection_avatar_service_iface_init(gpointer g_iface,
     gpointer iface_data)
 {
 TpSvcConnectionInterfaceAvatarsClass *klass =
@@ -1855,7 +1855,7 @@ salut_connection_create_handle_repos(TpBaseConnection *self,
 }
 
 void
-_contact_manager_contact_change_cb(SalutContactManager *mgr, 
+_contact_manager_contact_change_cb(SalutContactManager *mgr,
                                    SalutContact *contact,
                                    int changes, gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
@@ -1891,7 +1891,7 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
 }
 
 
-static GPtrArray*  
+static GPtrArray*
 salut_connection_create_channel_factories(TpBaseConnection *base) {
   SalutConnection *self = SALUT_CONNECTION(base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
@@ -1923,13 +1923,13 @@ static gchar *
 salut_connection_get_unique_connection_name(TpBaseConnection *base) {
   SalutConnection *self = SALUT_CONNECTION(base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  
+
   return g_strdup(priv->published_name);
 }
 
 static void
 salut_connection_shut_down(TpBaseConnection *self) {
-  _salut_connection_disconnect(SALUT_CONNECTION(self)); 
+  _salut_connection_disconnect(SALUT_CONNECTION(self));
   tp_base_connection_finish_shutdown(self);
 }
 
@@ -1941,20 +1941,20 @@ salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
 
 /*
   tp_base_connection_change_status(
-      TP_BASE_CONNECTION(base), 
+      TP_BASE_CONNECTION(base),
       TP_CONNECTION_STATUS_CONNECTING,
       TP_CONNECTION_STATUS_REASON_REQUESTED);
   */
 
   priv->avahi_client = salut_avahi_client_new(SALUT_AVAHI_CLIENT_FLAG_NO_FAIL);
 
-  g_signal_connect(priv->avahi_client, "state-changed::running", 
+  g_signal_connect(priv->avahi_client, "state-changed::running",
                    G_CALLBACK(_salut_avahi_client_running_cb), self);
-  g_signal_connect(priv->avahi_client, "state-changed::failure", 
+  g_signal_connect(priv->avahi_client, "state-changed::failure",
                    G_CALLBACK(_salut_avahi_client_failure_cb), self);
 
   if (!salut_avahi_client_start(priv->avahi_client, &client_error)) {
-    *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+    *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                          "Unstable to initialize the avahi client: %s",
                          client_error->message);
     g_error_free(client_error);
@@ -1965,7 +1965,7 @@ salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
 
 error:
   tp_base_connection_change_status(
-        TP_BASE_CONNECTION(base), 
+        TP_BASE_CONNECTION(base),
         TP_CONNECTION_STATUS_DISCONNECTED,
         TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
   return FALSE;
