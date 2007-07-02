@@ -1,5 +1,5 @@
 /*
- * salut-avahi-enums.h 
+ * salut-avahi-enums.h
  * Copyright (C) 2005 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
@@ -45,7 +45,7 @@ typedef enum {
 } SalutAvahiLookupResultFlags;
 
 typedef enum {
-   SALUT_AVAHI_LOOKUP_NO_FLAGS       = 0, 
+   SALUT_AVAHI_LOOKUP_NO_FLAGS       = 0,
    SALUT_AVAHI_LOOKUP_USE_WIDE_AREA  = AVAHI_LOOKUP_USE_WIDE_AREA,    /**< Force lookup via wide area DNS */
    SALUT_AVAHI_LOOKUP_USE_MULTICAST  = AVAHI_LOOKUP_USE_MULTICAST,    /**< Force lookup via multicast DNS */
    SALUT_AVAHI_LOOKUP_NO_TXT         = AVAHI_LOOKUP_NO_TXT,           /**< When doing service resolving, don't lookup TXT record */
