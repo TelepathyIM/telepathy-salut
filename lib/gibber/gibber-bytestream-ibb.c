@@ -447,7 +447,7 @@ gibber_bytestream_ibb_class_init (
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
                   NULL, NULL,
-                  gibber_bytestream_ibb_marshal_VOID__UINT,
+                  g_cclosure_marshal_VOID__UINT,
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
