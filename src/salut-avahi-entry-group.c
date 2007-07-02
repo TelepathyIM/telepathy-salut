@@ -142,7 +142,7 @@ salut_avahi_entry_group_class_init (SalutAvahiEntryGroupClass *salut_avahi_entry
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 salut_avahi_entry_group_marshal_VOID__ENUM,
+                 g_cclosure_marshal_VOID__ENUM,
                  G_TYPE_NONE, 1, SALUT_TYPE_AVAHI_ENTRY_GROUP_STATE);
 }
 

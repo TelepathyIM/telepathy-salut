@@ -154,7 +154,7 @@ salut_avahi_client_class_init (SalutAvahiClientClass *salut_avahi_client_class)
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 salut_avahi_client_marshal_VOID__ENUM,
+                 g_cclosure_marshal_VOID__ENUM,
                  G_TYPE_NONE, 1, SALUT_TYPE_AVAHI_CLIENT_STATE);
 
 }
