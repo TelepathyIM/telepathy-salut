@@ -830,6 +830,8 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
   const gchar *alias = g_hash_table_lookup (aliases,
       GUINT_TO_POINTER (base->self_handle));
 
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
   if (alias == NULL || g_hash_table_size (aliases) != 1)
     {
       GError e = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
@@ -906,6 +908,8 @@ salut_connection_clear_avatar(TpSvcConnectionInterfaceAvatars *iface,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GError *error = NULL;
 
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
   if (!salut_self_set_avatar(priv->self, NULL, 0, &error)) {
     dbus_g_method_return_error(context, error);
     g_error_free(error);
@@ -922,6 +926,8 @@ salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GError *error = NULL;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   if (!salut_self_set_avatar(priv->self, (guint8 *)avatar->data,
                              avatar->len, &error)) {
@@ -944,6 +950,8 @@ salut_connection_get_avatar_tokens(TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   TpBaseConnection *base = TP_BASE_CONNECTION(self);
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
       base, TP_HANDLE_TYPE_CONTACT);
@@ -1011,6 +1019,8 @@ salut_connection_request_avatar(TpSvcConnectionInterfaceAvatars *iface,
   TpBaseConnection *base = TP_BASE_CONNECTION(self);
   SalutContact *contact;
   GError *err = NULL;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
       base, TP_HANDLE_TYPE_CONTACT);
@@ -1194,6 +1204,8 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   GHashTable *properties = NULL;
 
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
   if (handle == base->self_handle)
     {
       properties = get_properties_hash (priv->self->olpc_key,
@@ -1251,6 +1263,9 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
   const GArray *key = NULL;
   const gchar *jid = NULL;
   const GValue *val;
+
+  /* this function explicitly supports being called when DISCONNECTED
+   * or CONNECTING */
 
   if (g_hash_table_find (properties, find_unknown_properties, known_properties)
       != NULL)
@@ -1403,6 +1418,8 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
   TpBaseConnection *base = (TpBaseConnection *) self;
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
   DEBUG ("called for %u", handle);
 
   if (handle == base->self_handle)
@@ -1451,6 +1468,8 @@ salut_connection_olpc_set_current_activity (SalutSvcOLPCBuddyInfo *iface,
       TP_HANDLE_TYPE_ROOM);
   GError *error = NULL;
 
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
   DEBUG ("called");
 
   if (activity_id[0] == '\0')
@@ -1494,6 +1513,8 @@ salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = (TpBaseConnection *) self;
   GPtrArray *arr;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   DEBUG ("called for %u", handle);
 
@@ -1539,6 +1560,8 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
       g_direct_equal, NULL, (GDestroyNotify) g_free);
   GError *error = NULL;
   guint i;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   for (i = 0; i < activities->len; i++)
     {
@@ -1625,6 +1648,8 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
   GValue name_val = {0,};
   GValue type_val = {0,};
 
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
   if (!tp_handle_is_valid(room_repo, handle, &error))
     goto error;
 
@@ -1691,6 +1716,8 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
   const gchar *name = NULL;
   const gchar *type = NULL;
   const GValue *val;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   if (!tp_handle_is_valid(room_repo, handle, &error))
     goto error;
