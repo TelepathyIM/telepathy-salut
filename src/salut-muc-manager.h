@@ -56,7 +56,7 @@ GType salut_muc_manager_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_MANAGER, SalutMucManagerClass))
 
 SalutMucManager *
-salut_muc_manager_new(SalutConnection *connection, 
+salut_muc_manager_new(SalutConnection *connection,
                       SalutImManager *im_manager);
 
 gboolean
