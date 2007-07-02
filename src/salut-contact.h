@@ -86,20 +86,20 @@ SalutContact *salut_contact_new(SalutAvahiClient *client,
     TpHandleRepoIface *room_repo, const gchar *name);
 
 void
-salut_contact_add_service(SalutContact *contact, 
+salut_contact_add_service(SalutContact *contact,
                           AvahiIfIndex interface, AvahiProtocol protocol,
-                          const char *name, const char *type, 
+                          const char *name, const char *type,
                           const char *domain);
 
 void
-salut_contact_remove_service(SalutContact *contact, 
+salut_contact_remove_service(SalutContact *contact,
                           AvahiIfIndex interface, AvahiProtocol protocol,
-                          const char *name, const char *type, 
+                          const char *name, const char *type,
                           const char *domain);
 
 typedef struct {
   struct sockaddr_storage address;
-} salut_contact_address_t; 
+} salut_contact_address_t;
 
 /* Returns an array of addresses on which the contact can be found */
 GArray *
