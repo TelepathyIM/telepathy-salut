@@ -221,7 +221,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
                   0,
                   NULL, NULL,
                   g_cclosure_marshal_VOID__OBJECT,
-                  G_TYPE_NONE, 
+                  G_TYPE_NONE,
                   1,
                   GIBBER_TYPE_LL_TRANSPORT);
 
@@ -254,17 +254,17 @@ salut_self_dispose (GObject *object)
   priv->room_repo = NULL;
 
   if (priv->client != NULL)
-    g_object_unref(priv->client); 
+    g_object_unref(priv->client);
   priv->client = NULL;
 
   if (priv->presence_group != NULL)
-    g_object_unref(priv->presence_group); 
+    g_object_unref(priv->presence_group);
 
   priv->presence_group = NULL;
   priv->presence = NULL;
 
   if (priv->avatar_group != NULL)
-    g_object_unref(priv->avatar_group); 
+    g_object_unref(priv->avatar_group);
 
   priv->avatar_group = NULL;
 
@@ -304,7 +304,7 @@ salut_self_finalize (GObject *object)
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
 
-static gboolean 
+static gboolean
 _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   SalutSelf *self = SALUT_SELF(data);
   int fd;
@@ -322,7 +322,7 @@ _listener_io_in(GIOChannel *source, GIOCondition condition, gpointer data) {
   transport = gibber_ll_transport_new();
   gibber_ll_transport_open_fd(transport, nfd);
   if (getnameinfo((struct sockaddr *)&addr, addrlen,
-      host, NI_MAXHOST, port, NI_MAXSERV, 
+      host, NI_MAXHOST, port, NI_MAXSERV,
       NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
     DEBUG("New connection from %s port %s", host, port);
   } else {
@@ -469,23 +469,23 @@ self_start_listening(SalutSelf *self) {
   DEBUG("Listening on port %d",port);
   priv->listener = g_io_channel_unix_new(fd);
   g_io_channel_set_close_on_unref(priv->listener, TRUE);
-  priv->io_watch_in = g_io_add_watch(priv->listener, G_IO_IN, 
+  priv->io_watch_in = g_io_add_watch(priv->listener, G_IO_IN,
                                      _listener_io_in, self);
 
   return port;
 }
 
-static 
+static
 AvahiStringList *create_txt_record(SalutSelf *self, int port) {
   AvahiStringList *ret;
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
    ret = avahi_string_list_new("txtvers=1", NULL);
-   
+
    /* Some silly clients still use this */
    ret = avahi_string_list_add_printf(ret, "port.p2pj=%d", port);
 
-   if (priv->nickname) 
+   if (priv->nickname)
      ret = avahi_string_list_add_printf(ret, "nick=%s", priv->nickname);
    if (priv->first_name)
      ret = avahi_string_list_add_printf(ret, "1st=%s", priv->first_name);
@@ -528,7 +528,7 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
 }
 
 static void
-_avahi_presence_group_established(SalutAvahiEntryGroup *group, 
+_avahi_presence_group_established(SalutAvahiEntryGroup *group,
                                   SalutAvahiEntryGroupState state,
                                   gpointer data) {
   SalutSelf *self = SALUT_SELF(data);
@@ -536,7 +536,7 @@ _avahi_presence_group_established(SalutAvahiEntryGroup *group,
 }
 
 static void
-_avahi_presence_group_failed(SalutAvahiEntryGroup *group, 
+_avahi_presence_group_failed(SalutAvahiEntryGroup *group,
                              SalutAvahiEntryGroupState state,
                              gpointer data) {
   printf("FAILED\n");
@@ -548,12 +548,12 @@ salut_self_announce(SalutSelf *self, GError **error) {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   AvahiStringList *txt_record = NULL;
   int port;
- 
+
 
   port = self_start_listening(self);
   if (port < 0) {
     if (error != NULL) {
-      *error = g_error_new(TP_ERRORS, TP_ERROR_NETWORK_ERROR, 
+      *error = g_error_new(TP_ERRORS, TP_ERROR_NETWORK_ERROR,
                            "Failed to start listening");
     }
     return FALSE;
@@ -561,17 +561,17 @@ salut_self_announce(SalutSelf *self, GError **error) {
 
   priv->presence_group = salut_avahi_entry_group_new();
 
-  g_signal_connect(priv->presence_group, 
+  g_signal_connect(priv->presence_group,
                    "state-changed::established",
                    G_CALLBACK(_avahi_presence_group_established), self);
-  g_signal_connect(priv->presence_group, 
+  g_signal_connect(priv->presence_group,
                    "state-changed::collision",
                    G_CALLBACK(_avahi_presence_group_failed), self);
-  g_signal_connect(priv->presence_group, 
+  g_signal_connect(priv->presence_group,
                    "state-changed::failure",
                    G_CALLBACK(_avahi_presence_group_failed), self);
 
-  if (!salut_avahi_entry_group_attach(priv->presence_group, 
+  if (!salut_avahi_entry_group_attach(priv->presence_group,
                                       priv->client, error)) {
     goto error;
   };
@@ -580,16 +580,16 @@ salut_self_announce(SalutSelf *self, GError **error) {
                        avahi_client_get_host_name(priv->client->avahi_client));
   txt_record = create_txt_record(self, port);
 
-  if ((priv->presence = 
+  if ((priv->presence =
           salut_avahi_entry_group_add_service_strlist(priv->presence_group,
-                                                      self->name, 
+                                                      self->name,
                                                       "_presence._tcp",
                                                       port,
                                                       error,
                                                       txt_record)) == NULL) {
     goto error;
   }
-  
+
   if (!salut_avahi_entry_group_commit(priv->presence_group, error)) {
     goto error;
   }
@@ -603,8 +603,8 @@ error:
 }
 
 
-gboolean 
-salut_self_set_presence(SalutSelf *self, SalutPresenceId status, 
+gboolean
+salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
                         const gchar *message, GError **error) {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
