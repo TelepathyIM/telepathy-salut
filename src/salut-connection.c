@@ -907,6 +907,7 @@ salut_connection_clear_avatar(TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GError *error = NULL;
+  TpBaseConnection *base = (TpBaseConnection *) self;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -926,6 +927,7 @@ salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION(iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GError *error = NULL;
+  TpBaseConnection *base = (TpBaseConnection *) self;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1638,8 +1640,9 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
-      (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_ROOM);
   GHashTable *properties = NULL;
   const gchar *color = NULL, *name = NULL, *type = NULL;
   GError *error = NULL;
@@ -1708,8 +1711,9 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
-      (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_ROOM);
   GError *error = NULL;
   const gchar *known_properties[] = { "color", "name", "type", NULL };
   const gchar *color = NULL;
