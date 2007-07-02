@@ -679,7 +679,8 @@ _initialise_connection (SalutImChannel *self)
       G_CALLBACK (_connection_parse_error_cb), self);
 
   /* Sync state with the connection */
-  if (priv->xmpp_connection->stream_open)
+  if (priv->xmpp_connection->stream_flags 
+      & GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN)
     {
       priv->state = CHANNEL_CONNECTED;
       g_signal_emit (self, signals[CONNECTED], 0);
