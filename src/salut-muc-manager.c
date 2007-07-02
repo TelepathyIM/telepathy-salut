@@ -41,11 +41,11 @@
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
 
-static void salut_muc_manager_factory_iface_init(gpointer *g_iface, 
+static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data);
-G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager, 
+G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
                         G_TYPE_OBJECT,
-                        G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE, 
+                        G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
                                         salut_muc_manager_factory_iface_init));
 
 /* signal enum */
@@ -107,7 +107,7 @@ salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_muc_manager_class);
 
-  g_type_class_add_private (salut_muc_manager_class, 
+  g_type_class_add_private (salut_muc_manager_class,
                               sizeof (SalutMucManagerPrivate));
 
   object_class->dispose = salut_muc_manager_dispose;
@@ -199,14 +199,14 @@ salut_muc_manager_factory_iface_disconnected(TpChannelFactoryIface *iface) {
   /* FIMXE close all channels ? */
 }
 
-struct foreach_data { 
+struct foreach_data {
   TpChannelFunc func;
   gpointer data;
 };
 
 static void
-salut_muc_manager_iface_foreach_one(gpointer key, 
-                                    gpointer value, 
+salut_muc_manager_iface_foreach_one(gpointer key,
+                                    gpointer value,
                                     gpointer data) {
   TpChannelIface *chan = TP_CHANNEL_IFACE(value);
   struct foreach_data *f = (struct foreach_data *) data;
@@ -586,7 +586,7 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
   return status;
 }
 
-static void salut_muc_manager_factory_iface_init(gpointer *g_iface, 
+static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data) {
    TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
 
@@ -599,12 +599,12 @@ static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
 }
 
 static gboolean
-_received_stanza(SalutImChannel *imchannel, 
+_received_stanza(SalutImChannel *imchannel,
                   GibberXmppStanza *message, gpointer data) {
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *room_repo = 
+  TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   GibberXmppNode *node;
   GibberXmppNode *invite;
@@ -622,7 +622,7 @@ _received_stanza(SalutImChannel *imchannel,
   GibberMucConnection *connection = NULL;
 
   node = gibber_xmpp_node_get_child_ns(message->node, "x", NS_LLMUC);
-  if (node == NULL) 
+  if (node == NULL)
     return FALSE;
 
   DEBUG("Got an invitation");
@@ -650,7 +650,7 @@ _received_stanza(SalutImChannel *imchannel,
   }
 
   protocol = gibber_xmpp_node_get_attribute(invite, "protocol");
-  if (protocol == NULL) { 
+  if (protocol == NULL) {
     DEBUG("Invalid invitation, (missing protocol) discarding");
     return TRUE;
   }
@@ -669,7 +669,7 @@ _received_stanza(SalutImChannel *imchannel,
       DEBUG("Invalid invitation, (missing parameter) discarding");
       goto discard;
     }
-    g_hash_table_insert(params_hash, (gchar *)*p, 
+    g_hash_table_insert(params_hash, (gchar *)*p,
                         g_strdup(param->content));
   }
 
@@ -714,12 +714,12 @@ discard:
 }
 
 static void
-_new_im_channel(TpChannelFactoryIface *channel_iface, 
-                TpChannelIface *channel, gpointer request, 
+_new_im_channel(TpChannelFactoryIface *channel_iface,
+                TpChannelIface *channel, gpointer request,
                 gpointer data) {
   SalutImChannel *imchannel = SALUT_IM_CHANNEL(channel);
   SalutMucManager *self = SALUT_MUC_MANAGER(data);
-  g_signal_connect(imchannel, "received-stanza", 
+  g_signal_connect(imchannel, "received-stanza",
                      G_CALLBACK(_received_stanza),
                      self);
 }
@@ -728,7 +728,7 @@ _new_im_channel(TpChannelFactoryIface *channel_iface,
 SalutMucManager *
 salut_muc_manager_new(SalutConnection *connection,
                       SalutImManager *im_manager) {
-  SalutMucManager *ret = NULL; 
+  SalutMucManager *ret = NULL;
   SalutMucManagerPrivate *priv;
 
   g_assert(connection != NULL);
