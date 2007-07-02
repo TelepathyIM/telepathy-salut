@@ -57,14 +57,14 @@ GType salut_avahi_service_resolver_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_AVAHI_SERVICE_RESOLVER, SalutAvahiServiceResolverClass))
 
 SalutAvahiServiceResolver *
-salut_avahi_service_resolver_new(AvahiIfIndex interface, 
+salut_avahi_service_resolver_new(AvahiIfIndex interface,
                                  AvahiProtocol protocol,
-                                 const gchar *name, const gchar *type, 
-                                 const gchar *domain, 
+                                 const gchar *name, const gchar *type,
+                                 const gchar *domain,
                                  AvahiProtocol address_protocol,
                                  SalutAvahiLookupFlags flags);
 
-gboolean 
+gboolean
 salut_avahi_service_resolver_attach(SalutAvahiServiceResolver *resolver,
                                    SalutAvahiClient *client, GError  **error);
 
