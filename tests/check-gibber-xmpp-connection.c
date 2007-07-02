@@ -103,6 +103,7 @@ START_TEST (test_simple_message) {
 
   fail_if (parse_error_found);
 
+  g_free (file);
   file_chunker_destroy (fc);
 } END_TEST
 
