@@ -40,15 +40,10 @@ typedef enum {
   SALUT_PRESENCE_DND,
   SALUT_PRESENCE_OFFLINE, /* offline is a dummy, FIXME, check handling */
   SALUT_PRESENCE_NR_PRESENCES
-} SalutPresenceId;  
+} SalutPresenceId;
 
-static const SalutPresenceStatusInfo salut_presence_statuses[] = {
-  { "available", "avail",   TP_CONNECTION_PRESENCE_TYPE_AVAILABLE },
-  { "away",      "away",    TP_CONNECTION_PRESENCE_TYPE_AWAY  },
-  { "dnd",       "dnd",     TP_CONNECTION_PRESENCE_TYPE_AWAY  },
-  { "offline",   "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE  },
-  { NULL, NULL, 0}
-};
+/* Must be in the same order as the enum SalutPresenceId */
+extern const char *salut_presence_status_txt_names[];
 
 G_END_DECLS
 

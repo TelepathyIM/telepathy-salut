@@ -541,7 +541,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
     avahi_string_list_get_pair(t, NULL, &value, NULL);
 
     for (i = 0; i < SALUT_PRESENCE_NR_PRESENCES ; i++) {
-      if (!strcmp(value, salut_presence_statuses[i].txt_name)) {
+      if (!strcmp(value, salut_presence_status_txt_names[i])) {
         break;
       }
     }

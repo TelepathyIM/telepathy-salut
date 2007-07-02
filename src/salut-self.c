@@ -519,11 +519,11 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
     }
 #endif
 
-   ret = avahi_string_list_add_printf(ret, "status=%s", 
-                                salut_presence_statuses[self->status].txt_name);
+   ret = avahi_string_list_add_printf(ret, "status=%s",
+       salut_presence_status_txt_names[self->status]);
    if (self->status_message)
      ret = avahi_string_list_add_printf(ret, "msg=%s", self->status_message);
-   
+
    return ret;
 }
 
@@ -616,7 +616,7 @@ salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
 
   salut_avahi_entry_group_service_freeze(priv->presence);
   salut_avahi_entry_group_service_set(priv->presence, "status",
-                               salut_presence_statuses[self->status].txt_name,
+                               salut_presence_status_txt_names[self->status],
                                NULL);
   if (self->status_message) {
     salut_avahi_entry_group_service_set(priv->presence, "msg",

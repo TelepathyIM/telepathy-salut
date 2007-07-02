@@ -88,10 +88,6 @@ salut_connection_aliasing_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 static void
-salut_connection_presence_service_iface_init (gpointer g_iface,
-    gpointer iface_data);
-
-static void
 salut_connection_avatar_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
@@ -101,7 +97,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
-       salut_connection_presence_service_iface_init);
+       tp_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
 #ifdef ENABLE_OLPC
@@ -176,7 +172,6 @@ struct _ChannelRequest
 };
 
 static void _salut_connection_disconnect (SalutConnection *self);
-static void emit_one_presence_update (SalutConnection *self, TpHandle handle);
 
 static void
 salut_connection_create_handle_repos (TpBaseConnection *self,
@@ -203,6 +198,9 @@ salut_connection_init (SalutConnection *obj)
 
   obj->priv = priv;
   obj->name = NULL;
+
+  tp_presence_mixin_init ((GObject *) obj,
+      G_STRUCT_OFFSET (SalutConnection, presence_mixin));
 
   /* allocate any data required by the object here */
   priv->published_name = g_strdup (g_get_user_name ());
@@ -301,6 +299,173 @@ salut_connection_set_property (GObject *object,
 static void salut_connection_dispose (GObject *object);
 static void salut_connection_finalize (GObject *object);
 
+/* presence bits and pieces */
+
+static const TpPresenceStatusOptionalArgumentSpec presence_args[] = {
+      { "message", "s" },
+      { NULL }
+};
+
+/* keep these in the same order as SalutPresenceId... */
+static const TpPresenceStatusSpec presence_statuses[] = {
+      { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
+        presence_args },
+      { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE, presence_args },
+      { "dnd", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE, presence_args },
+      { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL },
+      { NULL }
+};
+/* ... and these too (declared in salut-presence.h) */
+const char *salut_presence_status_txt_names[] = {
+  "avail",
+  "away",
+  "dnd",
+  "offline",
+  NULL
+};
+
+static gboolean
+is_presence_status_available (GObject *obj,
+                              guint index)
+{
+  return (index >= 0 && index < SALUT_PRESENCE_NR_PRESENCES);
+}
+
+static GHashTable *
+make_presence_opt_args (SalutPresenceId presence, const gchar *message)
+{
+  GHashTable *ret;
+  GValue *value;
+
+  if (presence == SALUT_PRESENCE_OFFLINE)
+    {
+      /* offline has no message in Salut, it wouldn't make sense */
+      return NULL;
+    }
+
+  ret = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  value = g_slice_new0 (GValue);
+  g_value_init (value, G_TYPE_STRING);
+  g_value_set_string (value, message);
+  g_hash_table_insert (ret, "message", value);
+
+  return ret;
+}
+
+static GHashTable *
+get_contact_statuses (GObject *obj,
+                      const GArray *handles,
+                      GError **error)
+{
+  SalutConnection *self = SALUT_CONNECTION (obj);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+    TP_HANDLE_TYPE_CONTACT);
+  GHashTable *ret;
+  guint i;
+
+  if (!tp_handles_are_valid (handle_repo, handles, FALSE, error))
+    {
+      return NULL;
+    }
+
+  ret = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) tp_presence_status_free);
+
+  for (i = 0; i < handles->len; i++)
+    {
+      TpHandle handle = g_array_index (handles, TpHandle, i);
+      TpPresenceStatus *ps = tp_presence_status_new
+          (SALUT_PRESENCE_OFFLINE, NULL);
+      const gchar *message = NULL;
+
+      if (handle == base->self_handle)
+        {
+          ps->index = priv->self->status;
+          message = priv->self->status_message;
+        }
+      else
+        {
+          SalutContact *contact = salut_contact_manager_get_contact
+              (priv->contact_manager, handle);
+
+          if (contact != NULL)
+            {
+              ps->index = contact->status;
+              message = contact->status_message;
+              g_object_unref (contact);
+            }
+        }
+
+      ps->optional_arguments = make_presence_opt_args (ps->index, message);
+
+      g_hash_table_insert (ret, GUINT_TO_POINTER (handle), ps);
+    }
+
+  return ret;
+}
+
+static gboolean
+set_own_status (GObject *obj,
+                const TpPresenceStatus *status,
+                GError **error)
+{
+  SalutConnection *self = SALUT_CONNECTION (obj);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  gboolean ret;
+  GError *err = NULL;
+  const GValue *value;
+  const gchar *message = NULL;
+  SalutPresenceId presence = SALUT_PRESENCE_AVAILABLE;
+
+  if (status != NULL)
+    {
+      /* mixin has already validated the index */
+      presence = status->index;
+
+      if (status->optional_arguments != NULL)
+        {
+          value = g_hash_table_lookup (status->optional_arguments, "message");
+          if (value)
+            {
+              /* TpPresenceMixin should validate this for us, but doesn't */
+              if (!G_VALUE_HOLDS_STRING (value))
+                {
+                  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                      "Status argument 'message' requires a string");
+                  return FALSE;
+                }
+              message = g_value_get_string (value);
+            }
+        }
+    }
+
+  ret = salut_self_set_presence (priv->self, presence, message, &err);
+
+  if (ret)
+    {
+      TpPresenceStatus ps = { priv->self->status,
+          make_presence_opt_args (priv->self->status,
+              priv->self->status_message) };
+
+      tp_presence_mixin_emit_one_presence_update ((GObject *) self,
+          base->self_handle, &ps);
+
+      if (ps.optional_arguments != NULL)
+        g_hash_table_destroy (ps.optional_arguments);
+    }
+  else
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+    }
+
+  return TRUE;
+}
+
 static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 {
@@ -337,6 +502,11 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   tp_connection_class->start_connecting =
       salut_connection_start_connecting;
   tp_connection_class->interfaces_always_present = interfaces;
+
+  tp_presence_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutConnectionClass, presence_mixin),
+      is_presence_status_available, get_contact_statuses, set_own_status,
+      presence_statuses);
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
@@ -406,6 +576,7 @@ salut_connection_finalize (GObject *object)
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
+  tp_presence_mixin_finalize (object);
   g_free (self->name);
   g_free (priv->published_name);
   g_free (priv->first_name);
@@ -423,23 +594,19 @@ salut_connection_finalize (GObject *object)
   G_OBJECT_CLASS (salut_connection_parent_class)->finalize (object);
 }
 
-static GHashTable *
-get_statuses_arguments(void) {
-  static GHashTable *arguments = NULL;
-
-  if (arguments == NULL) {
-    arguments = g_hash_table_new(g_str_hash, g_str_equal);
-    g_hash_table_insert(arguments, "message", "s");
-  }
-
-  return arguments;
-}
-
 void
 _contact_manager_contact_status_changed(SalutConnection *self,
                                         SalutContact *contact,
-                                        TpHandle handle) {
-  emit_one_presence_update(self, handle);
+                                        TpHandle handle)
+{
+  TpPresenceStatus ps = { contact->status,
+    make_presence_opt_args (contact->status, contact->status_message) };
+
+  tp_presence_mixin_emit_one_presence_update ((GObject *) self, handle,
+      &ps);
+
+  if (ps.optional_arguments != NULL)
+    g_hash_table_destroy (ps.optional_arguments);
 }
 
 static void
@@ -574,422 +741,6 @@ _salut_connection_disconnect(SalutConnection *self) {
   }
 }
 
-
-
-
-/* Presence interface */
-static void
-destroy_value(GValue *value) {
-  g_value_unset(value);
-  g_free(value);
-}
-
-static void
-get_presence_info(SalutConnection *self, const GArray *contact_handles,
-                  GHashTable **info) {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-  GHashTable *presence_hash;
-  GValueArray *vals;
-  GHashTable *contact_status, *parameters;
-  guint timestamp = 0; /* this is never set at the moment*/
-  guint i;
-
-  presence_hash = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
-                                    (GDestroyNotify) g_value_array_free);
-
-  for (i = 0; i < contact_handles->len; i++) {
-      TpHandle handle = g_array_index (contact_handles, TpHandle, i);
-      GValue *message;
-      SalutPresenceId status;
-      gchar *status_message = NULL;
-      SalutContact *contact = NULL;
-
-      if (handle == base->self_handle) {
-        status = priv->self->status;
-        status_message = priv->self->status_message;
-      } else {
-        contact = salut_contact_manager_get_contact(priv->contact_manager,
-                                                    handle);
-        if (contact) {
-          status = contact->status;
-          status_message = contact->status_message;
-        } else {
-          status = SALUT_PRESENCE_OFFLINE;
-        }
-      }
-
-      if (contact) 
-        g_object_unref(contact);
-
-      parameters =
-        g_hash_table_new_full (g_str_hash, g_str_equal,
-                               NULL, (GDestroyNotify) destroy_value);
-
-      if (status_message != NULL) {
-        message = g_new0 (GValue, 1);
-        g_value_init (message, G_TYPE_STRING);
-        g_value_set_string (message, status_message);
-        g_hash_table_insert (parameters, "message", message);
-      }
-
-      contact_status =
-        g_hash_table_new_full (g_str_hash, g_str_equal,
-                               NULL, (GDestroyNotify) g_hash_table_destroy);
-      g_hash_table_insert (
-        contact_status, (gchar *) salut_presence_statuses[status].name,
-        parameters);
-
-      vals = g_value_array_new (2);
-
-      g_value_array_append (vals, NULL);
-      g_value_init (g_value_array_get_nth (vals, 0), G_TYPE_UINT);
-      g_value_set_uint (g_value_array_get_nth (vals, 0), timestamp);
-
-      g_value_array_append (vals, NULL);
-      g_value_init (g_value_array_get_nth (vals, 1),
-          dbus_g_type_get_map ("GHashTable", G_TYPE_STRING,
-            dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE)));
-      g_value_take_boxed (g_value_array_get_nth (vals, 1), contact_status);
-
-      g_hash_table_insert (presence_hash, GUINT_TO_POINTER (handle),
-                           vals);
-  }
-  *info = presence_hash;
-}
-
-
-/**
- * emit_presence_update:
- * @self: A #SalutConnection
- * @contact_handles: A zero-terminated array of #Handle for
- *                    the contacts to emit presence for
- *
- * Emits the Telepathy PresenceUpdate signal with the current
- * stored presence information for the given contact.
- */
-static void
-emit_presence_update (SalutConnection *self,
-                      const GArray *contact_handles)
-{
-  GHashTable *presence_hash;
-
-  get_presence_info (self, contact_handles, &presence_hash);
-
-  tp_svc_connection_interface_presence_emit_presence_update (self,
-        presence_hash);
-
-  g_hash_table_destroy (presence_hash);
-}
-
-/**
- * emit_one_presence_update:
- * Convenience function for calling emit_presence_update with one handle.
- */
-static void
-emit_one_presence_update (SalutConnection *self, TpHandle handle)
-{
-  GArray *handles = g_array_sized_new (FALSE, FALSE, sizeof (TpHandle), 1);
-
-  g_array_insert_val (handles, 0, handle);
-  emit_presence_update (self, handles);
-  g_array_free (handles, TRUE);
-}
-
-/**
- * salut_connection_clear_status
- *
- * Implements DBus method ClearStatus
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-static void
-salut_connection_clear_status (TpSvcConnectionInterfacePresence *iface,
-                               DBusGMethodInvocation *context) {
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-  gboolean ret;
-
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
-
-  ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE,
-                                NULL, NULL);
-  /* FIXME turn into a TP ERROR */
-  if (ret) {
-    emit_one_presence_update(self, base->self_handle);
-  }
-
-  tp_svc_connection_interface_presence_return_from_clear_status(context);
-}
-
-/**
- * salut_connection_get_presence
- *
- * Implements D-Bus method GetPresence
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred, D-Bus will throw the error only if this
- *         function returns FALSE.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-
-static void 
-salut_connection_get_presence (TpSvcConnectionInterfacePresence *iface,
-                               const GArray *contacts,
-                               DBusGMethodInvocation *context) 
-{
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      base,TP_HANDLE_TYPE_CONTACT);
-  GError *error = NULL;
-  GHashTable *ret;
-
-  if (!tp_handles_are_valid(handle_repo, contacts, FALSE, &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-
-  get_presence_info(self, contacts, &ret);
-  tp_svc_connection_interface_presence_return_from_get_presence(context, ret);
-  g_hash_table_destroy(ret);
-}
-
-
-/**
- * salut_connection_get_statuses
- *
- * Implements DBus method GetStatuses
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-static void 
-salut_connection_get_statuses (TpSvcConnectionInterfacePresence *iface,
-                               DBusGMethodInvocation *context) {
-  GValueArray *status;
-  int i;
-  GHashTable *ret;
-
-  ret = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, 
-                                 (GDestroyNotify) g_value_array_free);
-  for (i = 0; salut_presence_statuses[i].name ; i++) {
-    status = g_value_array_new(5);
-
-    g_value_array_append(status, NULL);
-    g_value_init(g_value_array_get_nth(status, 0), G_TYPE_UINT);
-    g_value_set_uint(g_value_array_get_nth(status, 0), 
-      salut_presence_statuses[i].presence_type);
-
-    g_value_array_append(status, NULL);
-    g_value_init(g_value_array_get_nth(status, 1), G_TYPE_BOOLEAN);
-    g_value_set_boolean(g_value_array_get_nth(status, 1), TRUE);
-    
-    g_value_array_append(status, NULL);
-    g_value_init(g_value_array_get_nth(status, 2), G_TYPE_BOOLEAN);
-    g_value_set_boolean(g_value_array_get_nth(status, 2), TRUE);
-
-    g_value_array_append(status, NULL);
-    g_value_init(g_value_array_get_nth(status, 3), 
-        DBUS_TYPE_G_STRING_STRING_HASHTABLE);
-    g_value_set_static_boxed(g_value_array_get_nth(status, 3),
-       get_statuses_arguments());
-
-    g_hash_table_insert(ret, (gchar*)salut_presence_statuses[i].name, status);
-  }
-
-  tp_svc_connection_interface_presence_return_from_get_statuses(context,
-                                                                ret);
-  g_hash_table_destroy(ret);
-}
-
-/**
- * salut_connection_remove_status
- *
- * Implements DBus method RemoveStatus
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-static void 
-salut_connection_remove_status (TpSvcConnectionInterfacePresence *iface,
-                                const gchar *status,
-                                DBusGMethodInvocation *context) {
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-  gboolean ret = TRUE;
-  GError *error = NULL;
-
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
-
-  if (!tp_strdiff(status, salut_presence_statuses[priv->self->status].name)) {
-    ret = salut_self_set_presence(priv->self, SALUT_PRESENCE_AVAILABLE, 
-                                "Available", NULL);
-    /* FIXME turn into a TP ERROR */
-    if (ret) {
-      emit_one_presence_update(self, base->self_handle);
-    }
-  } else {
-    error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, 
-                         "Attempting to remove non-existing presence.");
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-  
-  tp_svc_connection_interface_presence_return_from_remove_status(context);
-}
-
-/**
- * salut_connection_request_presence
- *
- * Implements DBus method RequestPresence
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-static void 
-salut_connection_request_presence (TpSvcConnectionInterfacePresence *iface,
-                                   const GArray * contacts, 
-                                   DBusGMethodInvocation *context) {
-  SalutConnection *self = SALUT_CONNECTION (iface);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
-  GError *error = NULL;
-
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
-
-  if (!tp_handles_are_valid(handle_repo, contacts, FALSE, &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-
-  if (contacts->len) 
-    emit_presence_update(self, contacts);
-  
-  tp_svc_connection_interface_presence_return_from_request_presence(context);
-  return;
-}
-
-
-/**
- * salut_connection_set_status
- *
- * Implements DBus method SetStatus
- * on interface org.freedesktop.Telepathy.Connection.Interface.Presence
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-static void 
-salut_connection_set_status (TpSvcConnectionInterfacePresence *iface,
-                             GHashTable * statuses, 
-                              DBusGMethodInvocation *context) 
-{
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-  SalutPresenceId id = 0;
-  GHashTable *parameters = NULL;
-  const gchar *status_message = NULL;
-  GValue *message;
-  gboolean ret = TRUE;
-  GError *error = NULL;
-
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
-
-  if (g_hash_table_size(statuses) != 1) {
-    DEBUG("Got more then one status");
-    error = g_error_new(TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                       "Only one status may be set at a time in this protocol");
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-
-  /* Don't feel like jumping through hoops with a foreach */
-  for ( ; id < SALUT_PRESENCE_NR_PRESENCES; id++) {
-    parameters = g_hash_table_lookup(statuses, 
-                                      salut_presence_statuses[id].name);
-    if (parameters) {
-      break;
-    }
-  }
-
-  if (id == SALUT_PRESENCE_NR_PRESENCES)  {
-    error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, 
-                         "Unknown status");
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-
-  message = g_hash_table_lookup(parameters, "message");
-  if (message) {
-    if (!G_VALUE_HOLDS_STRING(message)) {
-      error = g_error_new(TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                            "Status argument 'message' requeires a string");
-      dbus_g_method_return_error(context, error);
-      g_error_free(error);
-      return;
-    }
-    status_message = g_value_get_string(message);
-  }
-
-  ret = salut_self_set_presence(priv->self, id, status_message, NULL);
-  /* FIXME turn into a TP ERROR */
-  if (ret) {
-    emit_one_presence_update(self, base->self_handle);
-  }
-
-  tp_svc_connection_interface_presence_return_from_set_status(context);
-}
-
-
-static void
-salut_connection_presence_service_iface_init(gpointer g_iface, 
-                                             gpointer iface_data) 
-{
-  TpSvcConnectionInterfacePresenceClass *klass =
-    (TpSvcConnectionInterfacePresenceClass *) g_iface;
-#define IMPLEMENT(x) tp_svc_connection_interface_presence_implement_##x \
-    (klass, salut_connection_##x)
-  IMPLEMENT(set_status);
-  IMPLEMENT(remove_status);
-  IMPLEMENT(request_presence);
-  IMPLEMENT(get_presence);
-  IMPLEMENT(get_statuses);
-  IMPLEMENT(clear_status);
-  
-#undef IMPLEMENT
-}
 
 /* Aliasing interface */
 /**

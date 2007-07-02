@@ -26,6 +26,7 @@
 
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/presence-mixin.h>
 #include <telepathy-glib/svc-connection.h>
 
 G_BEGIN_DECLS
@@ -34,16 +35,18 @@ typedef struct _SalutConnection SalutConnection;
 typedef struct _SalutConnectionClass SalutConnectionClass;
 
 struct _SalutConnectionClass {
-  TpBaseConnectionClass  parent_class;
+  TpBaseConnectionClass parent_class;
+  TpPresenceMixinClass *presence_mixin;
 };
 
 struct _SalutConnection {
-  TpBaseConnection parent; 
+  TpBaseConnection parent;
+  TpPresenceMixin *presence_mixin;
 
-    /* Our name on the network */
-    gchar*name;
+  /* Our name on the network */
+  gchar *name;
 
-    gpointer priv;
+  gpointer priv;
 };
 
 GType salut_connection_get_type(void);
