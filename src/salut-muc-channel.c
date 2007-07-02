@@ -94,8 +94,8 @@ struct _SalutMucChannelPrivate
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
 
 /* Callback functions */
-static gboolean salut_muc_channel_send_stanza(SalutMucChannel *self, 
-                                              guint type, 
+static gboolean salut_muc_channel_send_stanza(SalutMucChannel *self,
+                                              guint type,
                                               const gchar *text,
                                               GibberXmppStanza *stanza,
                                               GError **error);
@@ -183,12 +183,12 @@ salut_muc_channel_set_property (GObject     *object,
       priv->muc_connection = g_value_get_object (value);
       break;
     case PROP_HANDLE_TYPE:
-      g_assert(g_value_get_uint(value) == 0 
+      g_assert(g_value_get_uint(value) == 0
                || g_value_get_uint(value) == TP_HANDLE_TYPE_ROOM);
       break;
     case PROP_CHANNEL_TYPE:
       tmp = g_value_get_string(value);
-      g_assert(tmp == NULL 
+      g_assert(tmp == NULL
                || !tp_strdiff(g_value_get_string(value),
                        TP_IFACE_CHANNEL_TYPE_TEXT));
       break;
@@ -222,13 +222,13 @@ salut_muc_channel_constructor (GType type, guint n_props,
   /* Ref our handle */
   base_conn = TP_BASE_CONNECTION(priv->connection);
 
-  handle_repo = tp_base_connection_get_handles(base_conn, 
+  handle_repo = tp_base_connection_get_handles(base_conn,
       TP_HANDLE_TYPE_ROOM);
 
   tp_handle_ref(handle_repo, priv->handle);
 
   /* Text mixin initialisation */
-  contact_repo = tp_base_connection_get_handles(base_conn, 
+  contact_repo = tp_base_connection_get_handles(base_conn,
                                                 TP_HANDLE_TYPE_CONTACT);
   tp_text_mixin_init(obj, G_STRUCT_OFFSET(SalutMucChannel, text),
                      contact_repo);
@@ -242,11 +242,11 @@ salut_muc_channel_constructor (GType type, guint n_props,
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object(bus, priv->object_path, obj);
 
-  tp_group_mixin_init(obj, 
-      G_STRUCT_OFFSET(SalutMucChannel, group), 
+  tp_group_mixin_init(obj,
+      G_STRUCT_OFFSET(SalutMucChannel, group),
       contact_repo, base_conn->self_handle);
 
-  tp_group_mixin_change_flags(obj, 
+  tp_group_mixin_change_flags(obj,
        TP_CHANNEL_GROUP_FLAG_CAN_ADD|TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD, 0);
 
   return obj;
@@ -267,19 +267,19 @@ salut_muc_channel_init (SalutMucChannel *self)
 static void salut_muc_channel_dispose (GObject *object);
 static void salut_muc_channel_finalize (GObject *object);
 
-static void 
+static void
 invitation_append_parameter(gpointer key, gpointer value, gpointer data) {
   GibberXmppNode *node = (GibberXmppNode *)data;
  gibber_xmpp_node_add_child_with_content(node, (gchar *)key, (gchar *)value);
 }
 
 static GibberXmppStanza *
-create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) { 
+create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *contact_repo = 
+  TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
-  TpHandleRepoIface *room_repo = 
+  TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   GibberXmppStanza *msg;
   GibberXmppNode *x_node, *invite_node;
@@ -288,25 +288,25 @@ create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) 
 
   msg = gibber_xmpp_stanza_new("message");
 
-  gibber_xmpp_node_set_attribute(msg->node, "from", priv->connection->name); 
-  gibber_xmpp_node_set_attribute(msg->node, "to", name); 
+  gibber_xmpp_node_set_attribute(msg->node, "from", priv->connection->name);
+  gibber_xmpp_node_set_attribute(msg->node, "to", name);
 
-  gibber_xmpp_node_add_child_with_content(msg->node, "body", 
+  gibber_xmpp_node_add_child_with_content(msg->node, "body",
                                          "You got a chatroom invitation");
   x_node = gibber_xmpp_node_add_child_ns(msg->node, "x", NS_LLMUC);
 
   invite_node = gibber_xmpp_node_add_child(x_node, "invite");
-  gibber_xmpp_node_set_attribute(invite_node, "protocol", 
+  gibber_xmpp_node_set_attribute(invite_node, "protocol",
         gibber_muc_connection_get_protocol(priv->muc_connection));
 
   if (message != NULL && *message != '\0') {
     gibber_xmpp_node_add_child_with_content(invite_node, "reason", message);
   }
 
-  gibber_xmpp_node_add_child_with_content(invite_node, "roomname", 
+  gibber_xmpp_node_add_child_with_content(invite_node, "roomname",
                        tp_handle_inspect(room_repo, priv->handle));
   g_hash_table_foreach(
-    (GHashTable *)gibber_muc_connection_get_parameters(priv->muc_connection), 
+    (GHashTable *)gibber_muc_connection_get_parameters(priv->muc_connection),
     invitation_append_parameter, invite_node);
 
   return msg;
@@ -430,8 +430,8 @@ publish_service_error:
   return FALSE;
 }
 
-static gboolean 
-muc_channel_add_member(GObject *iface, TpHandle handle, 
+static gboolean
+muc_channel_add_member(GObject *iface, TpHandle handle,
                        const gchar *message, GError **error) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
@@ -452,8 +452,8 @@ muc_channel_add_member(GObject *iface, TpHandle handle,
           message, add, empty, empty, empty, base_connection->self_handle,
           TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
     } else {
-      g_set_error(error, 
-                  TP_ERRORS, TP_ERROR_NETWORK_ERROR, 
+      g_set_error(error,
+                  TP_ERRORS, TP_ERROR_NETWORK_ERROR,
                   "Failed to connect to the group");
       ret = FALSE;
     }
@@ -466,11 +466,11 @@ muc_channel_add_member(GObject *iface, TpHandle handle,
   im_channel = salut_im_manager_get_channel_for_handle(priv->im_manager,
                                                        handle);
   if (im_channel == NULL) {
-    *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE, 
+    *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                            "Couldn't contact the contact");
     return FALSE;
   }
-  DEBUG("Trying to add handle %u to %s over channel: %p\n", 
+  DEBUG("Trying to add handle %u to %s over channel: %p\n",
         handle ,priv->object_path, im_channel);
 
   stanza = create_invitation(self, handle, message);
@@ -495,11 +495,11 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   object_class->get_property = salut_muc_channel_get_property;
   object_class->set_property = salut_muc_channel_set_property;
 
-  g_object_class_override_property (object_class, PROP_OBJECT_PATH, 
+  g_object_class_override_property (object_class, PROP_OBJECT_PATH,
                                     "object-path");
-  g_object_class_override_property (object_class, PROP_CHANNEL_TYPE, 
+  g_object_class_override_property (object_class, PROP_CHANNEL_TYPE,
                                     "channel-type");
-  g_object_class_override_property (object_class, PROP_HANDLE_TYPE, 
+  g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
                                     "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
@@ -511,10 +511,10 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, 
+  g_object_class_install_property (object_class,
                                    PROP_NAME, param_spec);
 
-  param_spec = g_param_spec_object ("muc-connection", 
+  param_spec = g_param_spec_object ("muc-connection",
                                     "The GibberMucConnection",
                                     "muc connection  object",
                                     GIBBER_TYPE_MUC_CONNECTION,
@@ -522,9 +522,9 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, 
+  g_object_class_install_property (object_class,
                                    PROP_MUC_CONNECTION, param_spec);
-  param_spec = g_param_spec_object ("connection", 
+  param_spec = g_param_spec_object ("connection",
                                     "SalutConnection object",
                                     "Salut Connection that owns the"
                                     "connection for this IM channel",
@@ -533,9 +533,9 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, 
+  g_object_class_install_property (object_class,
                                    PROP_CONNECTION, param_spec);
-  param_spec = g_param_spec_object ("im-manager", 
+  param_spec = g_param_spec_object ("im-manager",
                                     "SalutIm manager",
                                     "Salut Im manager to use to "
                                     "contact the contacts",
@@ -544,7 +544,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, 
+  g_object_class_install_property (object_class,
                                    PROP_IM_MANAGER, param_spec);
 
   param_spec = g_param_spec_object (
@@ -563,7 +563,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   tp_text_mixin_class_init(object_class,
                            G_STRUCT_OFFSET(SalutMucChannelClass, text_class));
 
-  tp_group_mixin_class_init(object_class, 
+  tp_group_mixin_class_init(object_class,
     G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
     muc_channel_add_member, NULL);
 }
@@ -615,24 +615,24 @@ salut_muc_channel_finalize (GObject *object)
 }
 
 gboolean
-salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor, 
+salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor,
                           const gchar *stanza, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *contact_repo = 
+  TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
-  TpHandleRepoIface *room_repo = 
+  TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   gboolean ret = TRUE;
 
   /* Got invited to this muc channel */
-  DEBUG("Got an invitation to %s from %s", 
+  DEBUG("Got an invitation to %s from %s",
     tp_handle_inspect(room_repo, priv->handle),
     tp_handle_inspect(contact_repo, invitor)
     );
 
   /* If we are already a member, no further actions are needed */
-  if (tp_handle_set_is_member(self->group.members, 
+  if (tp_handle_set_is_member(self->group.members,
                               base_connection->self_handle)) {
     return TRUE;
   }
@@ -664,16 +664,16 @@ salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor,
 }
 
 /* Private functions */
-static gboolean 
-salut_muc_channel_send_stanza(SalutMucChannel *self, guint type, 
+static gboolean
+salut_muc_channel_send_stanza(SalutMucChannel *self, guint type,
                               const gchar *text,
                               GibberXmppStanza *stanza,
-                              GError **error) 
+                              GError **error)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
 
   if (!gibber_muc_connection_send(priv->muc_connection, stanza, error)) {
-    tp_svc_channel_type_text_emit_send_error(self, 
+    tp_svc_channel_type_text_emit_send_error(self,
        TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, time(NULL), type, text);
     return FALSE;
   }
@@ -683,8 +683,8 @@ salut_muc_channel_send_stanza(SalutMucChannel *self, guint type,
 }
 
 static void
-salut_muc_channel_change_members(SalutMucChannel *self, 
-                                 TpHandle from_handle, 
+salut_muc_channel_change_members(SalutMucChannel *self,
+                                 TpHandle from_handle,
                                  gboolean joining) {
   TpIntSet *empty, *changes;
 
@@ -702,7 +702,7 @@ salut_muc_channel_change_members(SalutMucChannel *self,
   tp_intset_destroy(empty);
 }
 
-static void 
+static void
 salut_muc_channel_received_stanza(GibberMucConnection *conn,
                                   const gchar *sender,
                                   GibberXmppStanza *stanza,
@@ -710,7 +710,7 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *contact_repo = 
+  TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
 
   const gchar *from, *to, *body, *body_offset;
@@ -827,10 +827,10 @@ salut_muc_channel_disconnected(GibberTransport *transport,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
-salut_muc_channel_get_interfaces (TpSvcChannel *iface, 
+salut_muc_channel_get_interfaces (TpSvcChannel *iface,
                                   DBusGMethodInvocation *context) {
   const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP,  NULL };
-  
+
   tp_svc_channel_return_from_get_interfaces (context, interfaces);
 }
 
@@ -847,8 +847,8 @@ salut_muc_channel_get_interfaces (TpSvcChannel *iface,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-static void 
-salut_muc_channel_get_handle (TpSvcChannel *iface, 
+static void
+salut_muc_channel_get_handle (TpSvcChannel *iface,
                               DBusGMethodInvocation *context)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
@@ -869,8 +869,8 @@ salut_muc_channel_get_handle (TpSvcChannel *iface,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-static void 
-salut_muc_channel_get_channel_type (TpSvcChannel *iface, 
+static void
+salut_muc_channel_get_channel_type (TpSvcChannel *iface,
                                    DBusGMethodInvocation *context) {
   tp_svc_channel_return_from_get_channel_type(context,
       TP_IFACE_CHANNEL_TYPE_TEXT);
@@ -888,7 +888,7 @@ salut_muc_channel_get_channel_type (TpSvcChannel *iface,
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-static void 
+static void
 salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
@@ -924,15 +924,15 @@ channel_iface_init(gpointer g_iface, gpointer iface_data) {
  *
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
-static void 
-salut_muc_channel_send (TpSvcChannelTypeText *channel, 
-                       guint type, const gchar * text, 
+static void
+salut_muc_channel_send (TpSvcChannelTypeText *channel,
+                       guint type, const gchar * text,
                        DBusGMethodInvocation *context) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(channel);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   GError *error = NULL;
 
-  GibberXmppStanza *stanza = 
+  GibberXmppStanza *stanza =
       text_helper_create_message_groupchat (priv->connection->name,
           priv->muc_name, type, text, &error);
 
