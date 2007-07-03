@@ -36,7 +36,7 @@
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"
 
-#include "gibber-xmpp-connection-listener-signals-marshal.h"
+#include "signals-marshal.h"
 
 G_DEFINE_TYPE (GibberXmppConnectionListener, gibber_xmpp_connection_listener, \
     G_TYPE_OBJECT);
@@ -128,7 +128,7 @@ gibber_xmpp_connection_listener_class_init (
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
         NULL, NULL,
-        gibber_xmpp_connection_listener_marshal_VOID__OBJECT_POINTER_UINT,
+        _gibber_signals_marshal_VOID__OBJECT_POINTER_UINT,
         G_TYPE_NONE, 3, GIBBER_TYPE_XMPP_CONNECTION, G_TYPE_POINTER,
         G_TYPE_UINT);
 }
