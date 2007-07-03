@@ -36,12 +36,12 @@ typedef struct _SalutConnectionClass SalutConnectionClass;
 
 struct _SalutConnectionClass {
   TpBaseConnectionClass parent_class;
-  TpPresenceMixinClass *presence_mixin;
+  TpPresenceMixinClass presence_mixin;
 };
 
 struct _SalutConnection {
   TpBaseConnection parent;
-  TpPresenceMixin *presence_mixin;
+  TpPresenceMixin presence_mixin;
 
   /* Our name on the network */
   gchar *name;
