@@ -302,7 +302,7 @@ gibber_fd_transport_read(GibberFdTransport *transport,
   switch (status) {
     case G_IO_STATUS_NORMAL:
       buf[read] = '\0';
-      DEBUG("Recieved %zd bytes", read);
+      DEBUG("Received %zd bytes", read);
       gibber_transport_received_data(GIBBER_TRANSPORT(transport), buf, read);
       return GIBBER_FD_IO_RESULT_SUCCESS;
     case G_IO_STATUS_ERROR:
