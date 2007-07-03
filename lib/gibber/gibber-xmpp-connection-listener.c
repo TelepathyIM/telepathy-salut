@@ -192,7 +192,9 @@ try_listening_on_port (GibberXmppConnectionListener *self,
     {
       DEBUG ("bind failed: %s", g_strerror (errno));
       g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE,
+          errno == EADDRINUSE ?
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE :
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_FAILED,
           "%s", g_strerror (errno));
       goto error;
     }
@@ -202,6 +204,8 @@ try_listening_on_port (GibberXmppConnectionListener *self,
     {
       DEBUG ("listen failed: %s", g_strerror (errno));
       g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
+          errno == EADDRINUSE ?
+          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE :
           GIBBER_XMPP_CONNECTION_LISTENER_ERROR_FAILED,
           "%s", g_strerror (errno));
       goto error;
