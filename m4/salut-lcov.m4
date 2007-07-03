@@ -4,7 +4,7 @@ AC_DEFUN([SALUT_LCOV],
 [
   enable=$1
 
-  AC_PATH_PROG(LCOV_PATH, lcov)
+  AC_CHECK_PROGS(LCOV_PATH, lcov)
 
   if test -n "$LCOV_PATH" ; then
     AC_MSG_CHECKING([whether lcov accepts --compat-libtool])
@@ -16,11 +16,6 @@ AC_DEFUN([SALUT_LCOV],
       AC_MSG_WARN([update lcov to version > 1.5])
       LCOV_PATH=""
     fi
-  fi
-
-  if test -z "$LCOV_PATH" ; then
-    AC_MSG_WARN([will use an internal lcov copy])
-    LCOV_PATH='$(top_srcdir)/scripts/lcov/lcov'
   fi
 
   AM_CONDITIONAL(HAVE_LCOV, test -n "$LCOV_PATH" && test "x$enable" = xyes)

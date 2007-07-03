@@ -17,6 +17,11 @@ lcov-run:
 
 # generate report based on current coverage data
 lcov-report:
+	@if test -z "$(LCOV_PATH)"; then				\
+	     echo "WARNING: the 'lcov' executable was not found";	\
+	     echo "Use the \$$LCOV_PATH variable to set its location";	\
+	     exit 1;							\
+	 fi
 	@mkdir -p $(COVERAGE_DIR)
 	@$(LCOV_PATH) --quiet --compat-libtool --directory . --capture --output-file $(COVERAGE_DIR)/lcov.info
 	@$(LCOV_PATH) --quiet --compat-libtool -l $(COVERAGE_DIR)/lcov.info | grep -v "`cd $(top_srcdir) && pwd`" | cut -d: -f1 > $(COVERAGE_DIR)/remove
