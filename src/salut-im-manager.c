@@ -508,19 +508,19 @@ pending_connection_stream_opened_cb (GibberXmppConnection *conn,
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
   GibberXmppStanza *stanza;
 
-  /* According to the xep-0174 revision >= there should
-   * be a to and from.. But clients implementing older revision might not
-   * support that yet.
-   * */
-  if (from != NULL)
-    pending_connection_got_from (mgr, conn, NULL, from);
-
   gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
   /* Send empty stream features */
   stanza = gibber_xmpp_stanza_new ("features");
   gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
   gibber_xmpp_connection_send (conn, stanza, NULL);
   g_object_unref (stanza);
+
+  /* According to the xep-0174 revision >= there should
+   * be a to and from.. But clients implementing older revision might not
+   * support that yet.
+   * */
+  if (from != NULL)
+    pending_connection_got_from (mgr, conn, NULL, from);
 }
 
 static void
