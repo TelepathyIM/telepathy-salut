@@ -36,27 +36,33 @@ typedef enum {
 } GibberRMulticastPacketType;
 
 typedef struct {
-  guint32 receiver_id;
+  guint32 sender_id;
   guint32 packet_id;
-} GibberRMulticastReceiver;
-
-typedef struct _GibberRMulticastPacket GibberRMulticastPacket;
-typedef struct _GibberRMulticastPacketClass GibberRMulticastPacketClass;
+} GibberRMulticastPacketSenderInfo;
 
 struct _GibberRMulticastPacketClass {
     GObjectClass parent_class;
 };
 
-struct _GibberRMulticastPacket {
-    GObject parent;
-    GibberRMulticastPacketType type;
-    guint8 version;
+typedef struct _GibberRMulticastWhoisRequestPacket
+    GibberRMulticastWhoisRequestPacket;
+struct _GibberRMulticastWhoisRequestPacket {
+};
 
-    /* Part of packet part/total*/
+typedef struct _GibberRMulticastWhoisReplyPacket
+    GibberRMulticastWhoisReplyPacket;
+
+struct _GibberRMulticastWhoisReplyPacket {
+    gchar *sender_name;
+};
+
+typedef struct _GibberRMulticastDataPacket GibberRMulticastDataPacket;
+struct _GibberRMulticastDataPacket {
     guint8 packet_part;
     guint8 packet_total;
 
-    /* payload size */
+    /* payload */
+    guint8 *payload;
     gsize payload_size;
 
     /* packet identifier */
@@ -64,12 +70,42 @@ struct _GibberRMulticastPacket {
 
     /* substream id */
     guint8 stream_id;
+    /* List of GibberRMulticastSenderInfo encoding dependency information */
+    GList *depends;
+};
 
+typedef struct _GibberRMulticastRepairRequestPacket
+    GibberRMulticastRepairRequestPacket;
+struct _GibberRMulticastRepairRequestPacket {
+    /* Sender identifier */
+    guint32 sender_id;
+    /* packet identifier */
+    guint32 packet_id;
+};
+
+typedef struct _GibberRMulticastSessionPacket GibberRMulticastSessionPacket;
+struct _GibberRMulticastSessionPacket {
+    /* List of GibberRMulticastSenderInfo encoding sender information */
+    GList *senders;
+};
+
+typedef struct _GibberRMulticastPacket GibberRMulticastPacket;
+typedef struct _GibberRMulticastPacketClass GibberRMulticastPacketClass;
+
+struct _GibberRMulticastPacket {
+    GObject parent;
+    GibberRMulticastPacketType type;
+    guint8 version;
     /* sender */
     guint32 sender;
 
-    /* List of GibberRMulticastReceiver's receivers */ 
-    GList *receivers;
+    union {
+      GibberRMulticastWhoisRequestPacket whois_request;
+      GibberRMulticastWhoisReplyPacket whois_reply;
+      GibberRMulticastDataPacket data;
+      GibberRMulticastRepairRequestPacket repair_request;
+      GibberRMulticastSessionPacket session;
+    } data;
 };
 
 GType gibber_r_multicast_packet_get_type(void);
@@ -89,26 +125,32 @@ GType gibber_r_multicast_packet_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_PACKET, GibberRMulticastPacketClass))
 
 /* Start a new packet */
-GibberRMulticastPacket *
-gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
-                              guint32 sender, guint32 packet_id,
-                              guint8 stream_id,
-                              gsize max_size);
+GibberRMulticastPacket * gibber_r_multicast_packet_new(
+    GibberRMulticastPacketType type, guint32 sender, gsize max_size);
 
-gboolean
-gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
-                                       guint32 receiver_id,
-                                       guint32 packet_id,
-                                       GError **error);
+/* Add depend if packet type is PACKET_TYPE_DATA otherwise add sender info if
+ * PACKET_TYPE_SESSION */
+gboolean gibber_r_multicast_packet_add_sender_info(
+    GibberRMulticastPacket *packet,
+    guint32 receiver_id,
+    guint32 packet_id,
+    GError **error);
 
-void
-gibber_r_multicast_packet_set_part(GibberRMulticastPacket *packet,
-                                   guint8 part, guint8 total);
+/* Set info for PACKET_TYPE_DATA packets */
+void gibber_r_multicast_packet_set_data_info(GibberRMulticastPacket *packet,
+    guint32 packet_id, guint8 stream_id, guint8 part, guint8 total);
 
-/* Add the actual payload. Should be done as the last step, packet is immutable
- * afterwards */
-gsize
-gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
+/* Set info for PACKET_TYPE_REPAIR_REQUEST packets */
+void gibber_r_multicast_packet_set_repair_request_info(
+    GibberRMulticastPacket *packet, guint32 sender_id, guint32 packet_id);
+
+/* Set the info for PACKET_TYPE_WHOIS_REPLY packets */
+void gibber_r_multicast_packet_set_whois_reply_info(
+    GibberRMulticastPacket *packet, const gchar *sender_name);
+
+/* Add the actual payload in PACKET_TYPE_DATA packets.
+ * No extra data might be set/added after this (extra depends or payload..) */
+gsize gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
                                       const guint8 *data, gsize size);
 
 /* Create a packet by parsing raw data, packet is immutable */
@@ -128,35 +170,6 @@ gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
 /* Utility function to calculate the difference between two packet */
 gint32
 gibber_r_multicast_packet_diff(guint32 from, guint32 to);
-
-
-/* WHOIS packets are very simple and thus aren't GObjects. Maybe at some point
- * gibber_r_multicast_packet should be renamed to 
- * gibber_r_multicast_complex_packet */
-
-typedef struct  {
-  /* either PACKET_TYPE_WHOIS_REQUEST or PACKET_TYPE_WHOIS_REPLY */
-  GibberRMulticastPacketType type;
-  guint8 version;
-  /* Identifier of the sender that was answered/queried */
-  guint32 id;
-  /* Only set if type == PACKET_TYPE_WHOIS_REPLY */
-  gchar *name;
-} GibberRMulticastWhoisPacket;
-
-/* Generate a new raw whois packet, free with g_free */
-guint8 * gibber_r_multicast_whois_packet(GibberRMulticastPacketType type,
-    guint32 id, gchar *name, gsize *length);
-
-GibberRMulticastWhoisPacket * gibber_r_multicast_whois_new_from_packet(
-  const guint8 *data, gsize length);
-
-void gibber_r_multicast_whois_free(GibberRMulticastWhoisPacket *packet);
-
-
-GibberRMulticastPacketType gibber_r_multicast_packet_get_packet_type(
-    const guint8 *data, const gsize length);
-
 
 G_END_DECLS
 

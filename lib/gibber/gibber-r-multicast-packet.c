@@ -27,8 +27,8 @@
 
 #include "gibber-r-multicast-packet.h"
 
-static void
-gibber_r_multicast_receiver_free(GibberRMulticastReceiver *receiver);
+static void gibber_r_multicast_packet_sender_info_free(
+    GibberRMulticastPacketSenderInfo *sender_info);
 
 G_DEFINE_TYPE(GibberRMulticastPacket, gibber_r_multicast_packet, G_TYPE_OBJECT)
 
@@ -44,8 +44,6 @@ struct _GibberRMulticastPacketPrivate
   guint8 *data;
   /* Maximum data size */
   gsize max_data;
-
-  guint8 *payload;
 };
 
 #define GIBBER_R_MULTICAST_PACKET_GET_PRIVATE(o) \
@@ -98,34 +96,51 @@ gibber_r_multicast_packet_finalize (GObject *object)
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
-  g_list_foreach(self->receivers, (GFunc)gibber_r_multicast_receiver_free, 
-     NULL);
-  g_list_free(self->receivers);
+  switch (self->type) {
+    case PACKET_TYPE_WHOIS_REPLY:
+      g_free(self->data.whois_reply.sender_name);
+      break;
+    case PACKET_TYPE_DATA:
+      g_list_foreach(self->data.data.depends,
+          (GFunc)gibber_r_multicast_packet_sender_info_free, NULL);
+      g_list_free(self->data.data.depends);
+      g_free(self->data.data.payload);
+      break;
+    case PACKET_TYPE_SESSION:
+      g_list_foreach(self->data.session.senders,
+          (GFunc)gibber_r_multicast_packet_sender_info_free, NULL);
+      g_list_free(self->data.session.senders);
+      break;
+    default:
+      /* Nothing specific to free */;
+  }
   g_free(priv->data);
 
   G_OBJECT_CLASS (gibber_r_multicast_packet_parent_class)->finalize (object);
 }
 
-static GibberRMulticastReceiver *
-gibber_r_multicast_receiver_new(guint32 receiver_id, guint32 expected_packet) {
-  GibberRMulticastReceiver *result = g_slice_new(GibberRMulticastReceiver);
-  result->receiver_id = receiver_id;
+static GibberRMulticastPacketSenderInfo *
+gibber_r_multicast_packet_sender_info_new(guint32 sender_id,
+   guint32 expected_packet)
+{
+  GibberRMulticastPacketSenderInfo *result
+      = g_slice_new(GibberRMulticastPacketSenderInfo);
+  result->sender_id = sender_id;
   result->packet_id = expected_packet;
 
   return result;
 }
 
 static void
-gibber_r_multicast_receiver_free(GibberRMulticastReceiver *receiver) {
-  g_slice_free(GibberRMulticastReceiver, receiver);
+gibber_r_multicast_packet_sender_info_free(
+    GibberRMulticastPacketSenderInfo *sender_info) {
+  g_slice_free(GibberRMulticastPacketSenderInfo, sender_info);
 }
 
 /* Start a new packet */
 GibberRMulticastPacket *
 gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
                               guint32 sender,
-                              guint32 packet_id,
-                              guint8 stream_id,
                               gsize max_size) {
   GibberRMulticastPacket *result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET,
                                                 NULL);
@@ -135,8 +150,6 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
   /* Fixme do this using properties */
   result->type = type;
   result->sender = sender;
-  result->packet_id = packet_id;
-  result->stream_id = stream_id;
 
   priv->max_data = max_size;
 
@@ -144,50 +157,99 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
 }
 
 gboolean
-gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
-                                       guint32 receiver_id,
-                                       guint32 packet_id,
-                                       GError **error) {
-  GibberRMulticastReceiver *r =
-      gibber_r_multicast_receiver_new(receiver_id, packet_id);
+gibber_r_multicast_packet_add_sender_info(GibberRMulticastPacket *packet,
+                                          guint32 sender_id,
+                                          guint32 packet_id,
+                                          GError **error) {
+  GibberRMulticastPacketSenderInfo *s =
+      gibber_r_multicast_packet_sender_info_new(sender_id, packet_id);
   GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
 
   g_assert(priv->data == NULL);
+  g_assert(packet->type == PACKET_TYPE_DATA
+      || packet->type == PACKET_TYPE_SESSION);
 
-  packet->receivers = g_list_append(packet->receivers, r);
+  if (packet->type == PACKET_TYPE_DATA) {
+    packet->data.data.depends = g_list_append(packet->data.data.depends, s);
+  } else {
+    packet->data.session.senders =
+        g_list_append(packet->data.session.senders, s);
+  }
+
   return TRUE;
 }
 
 void
-gibber_r_multicast_packet_set_part(GibberRMulticastPacket *packet,
-                                   guint8 part, guint8 total) {
+gibber_r_multicast_packet_set_data_info(GibberRMulticastPacket *packet,
+    guint32 packet_id, guint8 stream_id, guint8 part, guint8 total)
+{
   g_assert(part < total);
-  GibberRMulticastPacketPrivate *priv =
-      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
+  g_assert(packet->type == PACKET_TYPE_DATA);
 
-  if (priv->data != NULL) {
-    priv->data[2] = part;
-    priv->data[3] = total;
-  }
-
-  packet->packet_part = part;
-  packet->packet_total = total;
+  packet->data.data.packet_part = part;
+  packet->data.data.packet_total = total;
+  packet->data.data.packet_id = packet_id;
+  packet->data.data.stream_id = stream_id;
 }
 
+void
+gibber_r_multicast_packet_set_repair_request_info (
+     GibberRMulticastPacket *packet, guint32 sender_id, guint32 packet_id)
+{
+  g_assert (packet->type == PACKET_TYPE_REPAIR_REQUEST);
+
+  packet->data.repair_request.packet_id = packet_id;
+  packet->data.repair_request.sender_id = sender_id;
+}
+
+void
+gibber_r_multicast_packet_set_whois_reply_info(GibberRMulticastPacket *packet,
+   const gchar *name)
+{
+  g_assert (packet->type == PACKET_TYPE_WHOIS_REPLY);
+
+  packet->data.whois_reply.sender_name = g_strdup (name);
+}
+
+
 static gsize
-gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet,
-                                         gsize payload_size, gsize max_size) {
-  gsize result = 14; /* 8 bit type, 8 bit version, 8 bit part, 8 bit total, 
-                       32 bit identifier, 8 bit stream id,
-                       32 bit sender, 8 bit nr receivers */
+gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
+{
 
-  /* 32 bit sender id, 32 bit packet id */
-  result += 8 * g_list_length(packet->receivers);
+  gsize result = 6; /* 8 bit type, 8 bit version, 32 bit sender */
 
-  g_assert(result < max_size);
+  switch (packet->type) {
+    case PACKET_TYPE_WHOIS_REQUEST:
+      break;
+    case PACKET_TYPE_WHOIS_REPLY:
+      g_assert(packet->data.whois_reply.sender_name != NULL);
+      result += 1 + strlen(packet->data.whois_reply.sender_name);
+      break;
+    case PACKET_TYPE_DATA:
+      /* 8 bit part, 8 bit total,
+         32 bit packet id, 8 bit stream id,
+         8 bit nr sender info */
+      result += 8;
+      /* 32 bit sender id, 32 bit packet id */
+      result += 8 * g_list_length(packet->data.data.depends);
+      result += packet->data.data.payload_size;
+      break;
+    case PACKET_TYPE_REPAIR_REQUEST:
+      /* 32 bit packet id and 32 sender id*/
+      result += 8;
+      break;
+    case PACKET_TYPE_SESSION:
+         /* 8 bit nr sender info + N times 32 bit sender id, 32 bit packet id
+          */
+      result += 1 + 8 * g_list_length(packet->data.session.senders);
+      break;
+    case PACKET_TYPE_BYE:
+    case PACKET_TYPE_INVALID:
+      /* Nothing to add */;
+  }
 
-  return MIN(result + payload_size, max_size);
+  return result;
 }
 
 static void
@@ -254,119 +316,188 @@ get_string(const guint8 *data, gsize length, gsize *offset) {
 }
 
 static void
-gibber_r_multicast_packet_build(GibberRMulticastPacket *packet,
-                                const guint8 *payload, gsize payload_size) {
-  /* FIXME build nicer packets when the payload fit in anymore */
-  GibberRMulticastPacketPrivate *priv =
-     GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
+add_sender_info(guint8 *data, gsize length, gsize *offset, GList *senders)
+{
+  guint nr_items;
   GList *l;
 
-  g_assert(payload == NULL || priv->data == NULL);
+  nr_items = g_list_length(senders);
+  add_guint8(data, length, offset, nr_items);
+
+  for (l = senders; l != NULL; l = g_list_next(l))
+    {
+      GibberRMulticastPacketSenderInfo *info =
+          (GibberRMulticastPacketSenderInfo *)l->data;
+      add_guint32(data, length, offset, info->sender_id);
+      add_guint32(data, length, offset, info->packet_id);
+    }
+}
+
+static GList *
+get_sender_info(guint8 *data, gsize length, gsize *offset) {
+  GList *l = NULL;
+  guint8 nr_items;
+
+  for (nr_items = get_guint8(data, length, offset); nr_items > 0; nr_items--) {
+    GibberRMulticastPacketSenderInfo *sender_info;
+    guint32 sender_id;
+    guint32 packet_id;
+
+    sender_id = get_guint32(data, length, offset);
+    packet_id = get_guint32(data, length, offset);
+    sender_info =
+        gibber_r_multicast_packet_sender_info_new(sender_id, packet_id);
+    l = g_list_prepend(l, sender_info);
+  }
+
+  return l;
+}
+
+static void
+gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
+  GibberRMulticastPacketPrivate *priv =
+     GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
+  gsize needed_size;
 
   if (priv->data != NULL) {
     /* Already serialized return cached version */
     return;
   }
 
-  priv->max_data =
-      gibber_r_multicast_packet_calculate_size(packet, payload_size,
-          priv->max_data);
+  needed_size = gibber_r_multicast_packet_calculate_size(packet);
 
+  g_assert(needed_size <= priv->max_data);
+
+  /* Trim down the maximum data size to what we actually need */
+  priv->max_data = needed_size;
   priv->data = g_malloc0(priv->max_data);
   priv->size = 0;
 
   add_guint8 (priv->data, priv->max_data, &(priv->size), packet->type);
   add_guint8 (priv->data, priv->max_data, &(priv->size), packet->version);
-  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->packet_part);
-  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->packet_total);
-  add_guint32 (priv->data, priv->max_data, &(priv->size), packet->packet_id);
   add_guint32 (priv->data, priv->max_data, &(priv->size), packet->sender);
-  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->stream_id);
-  add_guint8 (priv->data, priv->max_data, &(priv->size),
-      g_list_length (packet->receivers));
 
-  for (l = packet->receivers; l != NULL; l = g_list_next(l)) {
-    GibberRMulticastReceiver *r;
-    r = (GibberRMulticastReceiver *)l->data;
+  switch (packet->type) {
+    case PACKET_TYPE_WHOIS_REQUEST:
+      break;
+    case PACKET_TYPE_WHOIS_REPLY:
+      add_string(priv->data, priv->max_data, &(priv->size),
+          packet->data.whois_reply.sender_name);
+      break;
+    case PACKET_TYPE_DATA:
+      add_guint32 (priv->data, priv->max_data, &(priv->size),
+            packet->data.data.packet_id);
+      add_guint8 (priv->data, priv->max_data, &(priv->size),
+          packet->data.data.packet_part);
+      add_guint8 (priv->data, priv->max_data, &(priv->size),
+          packet->data.data.packet_total);
+      add_guint8 (priv->data, priv->max_data, &(priv->size),
+          packet->data.data.stream_id);
+      add_sender_info (priv->data, priv->max_data, &(priv->size),
+          packet->data.data.depends);
 
-    add_guint32(priv->data, priv->max_data, &(priv->size), r->receiver_id);
-    add_guint32(priv->data, priv->max_data, &(priv->size), r->packet_id);
+      g_assert(priv->size + packet->data.data.payload_size == priv->max_data);
+
+      memcpy(priv->data + priv->size, packet->data.data.payload,
+          packet->data.data.payload_size);
+      priv->size += packet->data.data.payload_size;
+      break;
+    case PACKET_TYPE_REPAIR_REQUEST:
+      add_guint32 (priv->data, priv->max_data, &(priv->size),
+            packet->data.repair_request.sender_id);
+      add_guint32 (priv->data, priv->max_data, &(priv->size),
+            packet->data.repair_request.packet_id);
+      break;
+    case PACKET_TYPE_SESSION:
+      add_sender_info (priv->data, priv->max_data, &(priv->size),
+          packet->data.session.senders);
+      break;
+    case PACKET_TYPE_BYE:
+      /* Not implemented, fall through */
+    default:
+      g_assert_not_reached();
   }
 
-  priv->payload = priv->data + priv->size;
-
-  if (payload != NULL) {
-    gsize len;
-
-    len = priv->max_data - priv->size;
-
-    g_assert(len  <= payload_size);
-
-    memcpy(priv->data + priv->size, payload, len);
-    priv->size += len;
-  }
+  /* If this fails our size precalculation is buggy */
+  g_assert(priv->size == priv->max_data);
 }
 
-/* Add the actual payload. Should be done as the last step, packet is immutable
- * afterwards */
 gsize
 gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
                                       const guint8 *data, gsize size) {
   GibberRMulticastPacketPrivate *priv =
      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
+  gsize avail;
 
+  g_assert(packet->type == PACKET_TYPE_DATA);
+  g_assert(packet->data.data.payload == NULL);
   g_assert(priv->data == NULL);
-  gibber_r_multicast_packet_build(packet, data, size);
-  packet->payload_size = size;
 
-  return priv->size - (priv->payload - priv->data);
+  avail = MIN(size, priv->max_data -
+    gibber_r_multicast_packet_calculate_size(packet));
+
+  packet->data.data.payload = g_memdup(data, avail);
+  packet->data.data.payload_size = avail;
+
+  return avail;
 }
 
 /* Create a packet by parsing raw data, packet is immutable afterwards */
 GibberRMulticastPacket *
-gibber_r_multicast_packet_parse(const guint8 *data, gsize size, 
+gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     GError **error) {
   GibberRMulticastPacket *result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET,
                                                 NULL);
   GibberRMulticastPacketPrivate *priv = 
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE(result);
-  guint8 receivers;
 
   priv->data = g_memdup(data, size);
   priv->size = 0;
   priv->max_data = size;
 
-  result->type         = get_guint8 (priv->data, priv->max_data,
-      &(priv->size));
-  result->version      = get_guint8 (priv->data, priv->max_data,
-      &(priv->size));
-  result->packet_part  = get_guint8 (priv->data, priv->max_data,
-      &(priv->size));
-  result->packet_total = get_guint8 (priv->data, priv->max_data,
-      &(priv->size));
-  result->packet_id    = get_guint32 (priv->data, priv->max_data,
-      &(priv->size));
-  result->sender       = get_guint32 (priv->data, priv->max_data,
-      &(priv->size));
-  result->stream_id    = get_guint8 (priv->data, priv->max_data,
-      &(priv->size));
+  result->type = get_guint8 (priv->data, priv->max_data, &(priv->size));
+  result->version = get_guint8 (priv->data, priv->max_data, &(priv->size));
+  result->sender = get_guint32 (priv->data, priv->max_data, &(priv->size));
 
+  switch (result->type) {
+    case PACKET_TYPE_WHOIS_REQUEST:
+      break;
+    case PACKET_TYPE_WHOIS_REPLY:
+      result->data.whois_reply.sender_name = get_string(priv->data,
+          priv->max_data, &(priv->size));
+      break;
+    case PACKET_TYPE_DATA:
+      result->data.data.packet_id = get_guint32 (priv->data,
+           priv->max_data, &(priv->size));
+      result->data.data.packet_part =
+          get_guint8 (priv->data, priv->max_data, &(priv->size));
+      result->data.data.packet_total =
+          get_guint8 (priv->data, priv->max_data, &(priv->size));
+      result->data.data.stream_id =
+          get_guint8 (priv->data, priv->max_data, &(priv->size));
+      result->data.data.depends =
+          get_sender_info (priv->data, priv->max_data, &(priv->size));
 
-  for (receivers = get_guint8(priv->data, priv->max_data, &(priv->size));
-      receivers > 0; receivers--) {
-    GibberRMulticastReceiver *r;
-    guint32 receiver_id;
-    guint32 expected_packet;
-
-    receiver_id = get_guint32(priv->data, priv->max_data, &(priv->size));
-    expected_packet = get_guint32(priv->data, priv->max_data, &(priv->size));
-    r = gibber_r_multicast_receiver_new(receiver_id, expected_packet);
-    result->receivers = g_list_append(result->receivers, r);
+      result->data.data.payload_size = priv->max_data - priv->size;
+      result->data.data.payload = g_memdup(priv->data + priv->size,
+          result->data.data.payload_size);
+      break;
+    case PACKET_TYPE_REPAIR_REQUEST:
+      result->data.repair_request.sender_id =
+          get_guint32 (priv->data, priv->max_data, &(priv->size));
+      result->data.repair_request.packet_id =
+          get_guint32 (priv->data, priv->max_data, &(priv->size));
+      break;
+    case PACKET_TYPE_SESSION:
+      result->data.session.senders =
+          get_sender_info(priv->data, priv->max_data, &(priv->size));
+      break;
+    case PACKET_TYPE_BYE:
+      /* Not implemented, fall through */
+    default:
+      g_assert_not_reached();
   }
 
-  priv->payload = priv->data + priv->size;
-  priv->size = priv->max_data;
-  result->payload_size = priv->size - (priv->payload - priv->data);
   return result;
 }
 
@@ -374,28 +505,27 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
 guint8 *
 gibber_r_multicast_packet_get_payload(GibberRMulticastPacket *packet,
                                       gsize *size) {
-  GibberRMulticastPacketPrivate *priv =
-     GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
-  g_assert(priv->data != NULL);
+  g_assert (packet->type == PACKET_TYPE_DATA);
+  g_assert (size != NULL);
 
-  *size = packet->payload_size;
+  *size = packet->data.data.payload_size;
 
-  return priv->payload;
+  return packet->data.data.payload;
 }
 
 /* Get the packets raw data, packet is immutable after this call */
 guint8 *
 gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
                                        gsize *size) {
-  GibberRMulticastPacketPrivate *priv = 
+  GibberRMulticastPacketPrivate *priv =
      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
 
  /* Ensure the packet is serialized */
- gibber_r_multicast_packet_build(packet, NULL, 0);
+ gibber_r_multicast_packet_build(packet);
 
  *size = priv->size;
 
- return priv->data; 
+ return priv->data;
 }
 
 gint32
@@ -411,71 +541,4 @@ gibber_r_multicast_packet_diff(guint32 from, guint32 to) {
   }
 
   return MIN(to - from, G_MAXINT);
-}
-
-/* Generate a new raw whois packet, free with g_free */
-guint8 *
-gibber_r_multicast_whois_packet (GibberRMulticastPacketType type,
-                                 guint32 id,
-                                 gchar *name,
-                                 gsize *length)
-{
-  guint8 *result;
-  gsize offset = 0;
-  g_assert (length != NULL);
-  g_assert (type == PACKET_TYPE_WHOIS_REPLY
-      || type == PACKET_TYPE_WHOIS_REQUEST);
-  g_assert ((type == PACKET_TYPE_WHOIS_REPLY && name != NULL) || name == NULL);
-
-  /* 8 bit type, 8 bit version, 32 bit id + optional string */
-  *length = 6 + (name == NULL ? 0 : strlen(name) + 1);
-  result = g_malloc(*length);
-
-  /* Type */
-  add_guint8 (result, *length, &offset, type);
-  /* Version */
-  add_guint8 (result, *length, &offset, 0);
-  /* Identifier */
-  add_guint32 (result, *length, &offset, id);
-
-  if (type == PACKET_TYPE_WHOIS_REPLY) {
-    add_string (result, *length, &offset, name);
-  }
-  return result;
-}
-
-GibberRMulticastWhoisPacket *
-gibber_r_multicast_whois_new_from_packet (const guint8 *data, gsize length) 
-{
-  GibberRMulticastWhoisPacket *result;
-  gsize offset = 0;
-
-  result = g_slice_new0 (GibberRMulticastWhoisPacket);
-  result->type = get_guint8 (data, length, &offset);
-  result->version = get_guint8 (data, length, &offset);
-  result->id = get_guint32 (data, length, &offset);
-
-  if (result->type == PACKET_TYPE_WHOIS_REPLY) {
-    result->name = get_string (data, length, &offset);
-  }
-
-  return result;
-}
-
-void
-gibber_r_multicast_whois_free (GibberRMulticastWhoisPacket *packet)
-{
-  if (packet == NULL)
-    return;
-  g_free (packet->name);
-  g_slice_free (GibberRMulticastWhoisPacket, packet);
-}
-
-GibberRMulticastPacketType gibber_r_multicast_packet_get_packet_type (
-    const guint8 *data, gsize length) 
-{
-  if (length < 1) 
-    return PACKET_TYPE_INVALID;
-
-  return  MIN(data[0], PACKET_TYPE_INVALID);
 }
