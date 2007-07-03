@@ -58,6 +58,7 @@ GDebugKey keys[] = {
   { "properties",     DEBUG_PROPERTIES },
   { "roomlist",       DEBUG_ROOMLIST },
   { "media-channel",  DEBUG_MEDIA },
+  { "im",             DEBUG_IM },
   { "muc",            DEBUG_MUC },
   { "muc-connection", DEBUG_MUC },
   { "net",            DEBUG_NET },
