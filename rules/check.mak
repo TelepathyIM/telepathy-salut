@@ -67,7 +67,6 @@ LOOPS = 10
 
 # torture tests
 torture: $(TESTS)
-	-rm test-registry.xml
 	@echo "Torturing tests ..."
 	for i in `seq 1 $(LOOPS)`; do				\
 		$(MAKE) check ||				\
@@ -80,7 +79,6 @@ torture: $(TESTS)
 
 # forever tests
 forever: $(TESTS)
-	-rm test-registry.xml
 	@echo "Forever tests ..."
 	while true; do						\
 		$(MAKE) check ||				\
