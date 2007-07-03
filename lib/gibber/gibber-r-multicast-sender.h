@@ -95,7 +95,7 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
                                          guint32 id);
 
 void gibber_r_multicast_sender_whois_push(GibberRMulticastSender *sender,
-    const GibberRMulticastWhoisPacket *packet);
+    const GibberRMulticastPacket *packet);
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_R_MULTICAST_SENDER_H__*/

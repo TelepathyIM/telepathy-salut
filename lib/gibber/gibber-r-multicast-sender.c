@@ -288,8 +288,6 @@ gibber_r_multicast_sender_new(guint32 id,
 
   if (sender->name == NULL) {
     schedule_whois_request(sender);
-  } else {
-    printf("New node %s\n", sender->name);
   }
 
   g_assert(senders != NULL);
@@ -420,13 +418,16 @@ check_depends(GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  for (rlist = packet->receivers; rlist != NULL; rlist = g_list_next(rlist)) {
-    GibberRMulticastSender *s;
-    GibberRMulticastReceiver *recv;
+  g_assert(packet->type == PACKET_TYPE_DATA);
 
-    recv = (GibberRMulticastReceiver *)rlist->data;
+  for (rlist = packet->data.data.depends;
+      rlist != NULL; rlist = g_list_next(rlist)) {
+    GibberRMulticastSender *s;
+    GibberRMulticastPacketSenderInfo *sender_info;
+
+    sender_info = (GibberRMulticastPacketSenderInfo *)rlist->data;
     s = g_hash_table_lookup(priv->senders,
-        GUINT_TO_POINTER(recv->receiver_id));
+        GUINT_TO_POINTER(sender_info->sender_id));
 
     g_assert (s != NULL);
 
@@ -435,21 +436,20 @@ check_depends(GibberRMulticastSender *sender,
     }
 
     if (s->state == GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
-      if (gibber_r_multicast_packet_diff(recv->packet_id,
+      if (gibber_r_multicast_packet_diff(sender_info->packet_id,
                                          s->next_output_packet) <= 0) {
         DEBUG_SENDER(sender,
             "Waiting for packet %x of node %x (not yet running)",
-            recv->packet_id, recv->receiver_id);
+            sender_info->packet_id, sender_info->sender_id);
         return FALSE;
       }
       break;
     }
 
-    if (gibber_r_multicast_packet_diff(recv->packet_id,
+    if (gibber_r_multicast_packet_diff(sender_info->packet_id,
                                        s->last_output_packet) < 0) {
-      DEBUG_SENDER(sender,
-          "Waiting for packet %x of node %x", recv->packet_id, 
-          recv->receiver_id);
+      DEBUG_SENDER(sender, "Waiting for packet %x of node %x", 
+          sender_info->packet_id, sender_info->sender_id);
       return FALSE;
     }
   }
@@ -476,10 +476,12 @@ pop_packet(GibberRMulticastSender *sender) {
     return FALSE;
   }
 
-  num = p->packet->packet_total;
-  payload_size = p->packet->payload_size;
+  g_assert (p->packet->type == PACKET_TYPE_DATA);
+
+  num = p->packet->data.data.packet_total;
+  payload_size = p->packet->data.data.payload_size;
   /* Need to be at least num behind last_packet */
-  if (gibber_r_multicast_packet_diff(p->packet->packet_id,
+  if (gibber_r_multicast_packet_diff(p->packet->data.data.packet_id,
         sender->next_input_packet) < num) {
     DEBUG_SENDER(sender, "Not enough packets for defragmentation");
     return FALSE;
@@ -498,24 +500,24 @@ pop_packet(GibberRMulticastSender *sender) {
       /* Nope one missing */
       return FALSE;
     }
-    payload_size += tp->packet->payload_size;
+    payload_size += tp->packet->data.data.payload_size;
   }
 
   /* Complete packet we can send out */
   DEBUG_SENDER(sender, "Sending out 0x%x - 0x%x",
-      p->packet->packet_id, p->packet->packet_id + num - 1);
+      p->packet->data.data.packet_id, p->packet->data.data.packet_id + num - 1);
 
-  sender->last_output_packet = p->packet->packet_id + num - 1;
+  sender->last_output_packet = p->packet->data.data.packet_id + num - 1;
   sender->next_output_packet = sender->next_output_packet + num;
 
   if (num == 1) {
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
     g_assert(size == payload_size);
-    signal_data(sender, p->packet->stream_id, data, size);
+    signal_data(sender, p->packet->data.data.stream_id, data, size);
   } else {
     data = g_malloc(payload_size);
     gsize off = 0;
-    for (i = p->packet_id; i != p->packet_id + num ; i++) {
+    for (i = p->packet_id; i != p->packet->data.data.packet_id + num ; i++) {
       /* Check if we have everything */
       PacketInfo *tp  = g_hash_table_lookup(priv->packet_cache, &i);
       guint8 *d;
@@ -527,7 +529,7 @@ pop_packet(GibberRMulticastSender *sender) {
     }
     g_assert(off == payload_size);
 
-    signal_data(sender, p->packet->stream_id, data, payload_size);
+    signal_data(sender, p->packet->data.data.stream_id, data, payload_size);
     g_free(data);
   }
 
@@ -556,15 +558,16 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
 
   g_assert(sender->state > GIBBER_R_MULTICAST_SENDER_STATE_NEW);
 
-  info = g_hash_table_lookup(priv->packet_cache, &packet->packet_id);
+  info = g_hash_table_lookup(priv->packet_cache, &packet->data.data.packet_id);
   if (info != NULL && info->packet != NULL) {
     /* Already seen this packet */
-    DEBUG_SENDER(sender, "Detect resent of packet 0x%x", packet->packet_id);
+    DEBUG_SENDER(sender, "Detect resent of packet 0x%x", 
+        packet->data.data.packet_id);
     return;
   }
 
   if (info == NULL) {
-    info = packet_info_new(sender, packet->packet_id);
+    info = packet_info_new(sender, packet->data.data.packet_id);
     g_hash_table_insert(priv->packet_cache, &info->packet_id, info);
   }
 
@@ -573,20 +576,21 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
     info->timeout = 0;
   }
 
-  DEBUG_SENDER(sender, "Inserting packet 0x%x", packet->packet_id);
+  DEBUG_SENDER(sender, "Inserting packet 0x%x", packet->data.data.packet_id);
   info->packet = g_object_ref(packet);
 
   if (gibber_r_multicast_packet_diff(priv->first_packet,
-          packet->packet_id) < 0) {
-    priv->first_packet = packet->packet_id;
+          packet->data.data.packet_id) < 0) {
+    priv->first_packet = packet->data.data.packet_id;
   } else if (gibber_r_multicast_packet_diff(sender->next_input_packet,
-                 packet->packet_id) >= 0) {
+                 packet->data.data.packet_id) >= 0) {
     /* Potentially needs some repairs */
     guint32 i;
-    for (i = sender->next_input_packet; i != packet->packet_id; i++) {
+    for (i = sender->next_input_packet; 
+        i != packet->data.data.packet_id; i++) {
       schedule_repair(sender, i);
     }
-    sender->next_input_packet = packet->packet_id + 1;
+    sender->next_input_packet = packet->data.data.packet_id + 1;
   }
 
   /* pop out as many packets as we can */
@@ -596,9 +600,9 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
 }
 
 void
-gibber_r_multicast_sender_push(GibberRMulticastSender *sender, 
+gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
                                GibberRMulticastPacket *packet) {
-  GibberRMulticastSenderPrivate *priv = 
+  GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   gint diff;
 
@@ -608,13 +612,13 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
     g_assert(g_hash_table_size(priv->packet_cache) == 0);
 
     sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
-    sender->next_input_packet = packet->packet_id;
-    sender->next_output_packet = packet->packet_id;
-    priv->first_packet = packet->packet_id;
+    sender->next_input_packet = packet->data.data.packet_id;
+    sender->next_output_packet = packet->data.data.packet_id;
+    priv->first_packet = packet->data.data.packet_id;
   }
 
   diff = gibber_r_multicast_packet_diff(sender->next_output_packet,
-             packet->packet_id);
+             packet->data.data.packet_id);
 
   if (diff >= 0 && diff < PACKET_CACHE_SIZE) {
     insert_packet(sender, packet);
@@ -622,15 +626,15 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
   }
 
   if (diff < 0 && gibber_r_multicast_packet_diff(priv->first_packet,
-             packet->packet_id) > 0) {
+             packet->data.data.packet_id) > 0) {
     /* We already had this one, silently ignore */
-    DEBUG_SENDER(sender, "Detect resent of packet 0x%x", packet->packet_id);
+    DEBUG_SENDER(sender, "Detect resent of packet 0x%x",
+        packet->data.data.packet_id);
     return;
   }
-  DEBUG_SENDER(sender, "Packet 0x%x out of range, dropping (%x %x %x)", 
-    packet->packet_id, priv->first_packet,
+  DEBUG_SENDER(sender, "Packet 0x%x out of range, dropping (%x %x %x)",
+    packet->data.data.packet_id, priv->first_packet,
     sender->next_output_packet, sender->next_input_packet);
-
 }
 
 void
@@ -640,7 +644,7 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   gint diff;
 
-  if (sender->state != GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
     DEBUG_SENDER(sender, "ignore repair request");
     return;
   }
@@ -721,12 +725,12 @@ gibber_r_multicast_senders_updated(GibberRMulticastSender *sender) {
 
 void
 gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
-    const GibberRMulticastWhoisPacket *packet)
+    const GibberRMulticastPacket *packet)
 {
   GibberRMulticastSenderPrivate *priv =
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  g_assert(packet->id == sender->id);
+  g_assert(packet->sender == sender->id);
 
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
@@ -739,17 +743,18 @@ gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
       break;
     case PACKET_TYPE_WHOIS_REPLY:
       if (sender->name == NULL) {
-        sender->name = g_strdup(packet->name);
+        sender->name = g_strdup(packet->data.whois_reply.sender_name);
+        DEBUG_SENDER(sender, "Name discovered");
         g_signal_emit(sender, signals[NAME_DISCOVERED], 0, sender->name);
       } else {
         /* FIXME: collision detection */
       }
       if (priv->whois_timer != 0) {
-        DEBUG_SENDER(sender, "Cancelled schedules whois packet");
+        DEBUG_SENDER(sender, "Cancelled scheduled whois packet");
         g_source_remove(priv->whois_timer);
         priv->whois_timer = 0;
       }
-      pop_packets(sender); 
+      pop_packets(sender);
       break;
     default:
       g_assert_not_reached();
