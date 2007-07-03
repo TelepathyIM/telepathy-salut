@@ -287,6 +287,13 @@ activity_change_cb(SalutContact *contact,
       name ? name : "<NULL>",
       type ? type : "<NULL>");
 
+  if (room_handle == 0)
+    {
+      DEBUG ("Ignoring activity advertisement with zero room_handle");
+      g_hash_table_remove (priv->olpc_activities_by_mdns, name);
+      return;
+    }
+
   activity = g_hash_table_lookup (priv->olpc_activities_by_mdns, service_name);
   if (activity == NULL)
     {

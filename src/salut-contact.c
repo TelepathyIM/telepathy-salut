@@ -525,17 +525,10 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
           SALUT_CONTACT_OLPC_ACTIVITIES);
     }
 
-  if (activity->room != 0)
-    {
-      DEBUG ("Room handle is nonzero, emitting activity-change signal");
-      g_signal_emit (self, signals[ACTIVITY_CHANGE], 0,
-          name, activity->room, activity->activity_id,
-          color, activity_name, activity_type);
-    }
-  else
-    {
-      DEBUG ("Room handle is 0, not emitting activity-change signal");
-    }
+  DEBUG ("Room handle is nonzero, emitting activity-change signal");
+  g_signal_emit (self, signals[ACTIVITY_CHANGE], 0,
+      name, activity->room, activity->activity_id,
+      color, activity_name, activity_type);
 
   if (room_handle != 0)
     tp_handle_unref (priv->room_repo, room_handle);
