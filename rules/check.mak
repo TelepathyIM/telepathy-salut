@@ -6,7 +6,7 @@ LOOPS = 10
 	@$(TESTS_ENVIRONMENT)					\
 	$* ||							\
 	$(TESTS_ENVIRONMENT)					\
-	GIBBER_DEBUG=0xFF					\
+	GIBBER_DEBUG=all					\
 	$*
 
 # run any given test in a loop
