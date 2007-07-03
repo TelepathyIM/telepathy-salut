@@ -10,9 +10,10 @@
 } G_STMT_END
 
 typedef struct {
-  guint32 receiver_id;
+  guint32 sender_id;
   guint32 packet_id;
-} recv_t;
+  gboolean seen;
+} sender_t;
 
 typedef struct {
   guint32 a;
@@ -60,19 +61,19 @@ START_TEST (test_packet) {
   gsize plen;
   GList *l;
   int i;
-  recv_t receivers[] =
-    { { 0x300, 500 }, { 0x400, 600 }, { 0, 0 } };
+  sender_t senders[] =
+    { { 0x300, 500, FALSE }, { 0x400, 600, FALSE }, { 0, 0, FALSE } };
   gchar *payload = "1234567890";
 
   g_type_init();
 
-  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender_id, packet_id,
-       stream_id, 1500);
-  gibber_r_multicast_packet_set_part(a, part, total);
+  a = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, sender_id, 1500);
+  gibber_r_multicast_packet_set_data_info(a, packet_id,
+      stream_id, part, total);
 
-  for (i = 0 ; receivers[i].receiver_id != 0; i++) {
-    gibber_r_multicast_packet_add_receiver(a,
-        receivers[i].receiver_id, receivers[i].packet_id, NULL);
+  for (i = 0 ; senders[i].sender_id != 0; i++) {
+    gibber_r_multicast_packet_add_sender_info(a,
+        senders[i].sender_id, senders[i].packet_id, NULL);
   }
   gibber_r_multicast_packet_add_payload(a, (guint8 *)payload, strlen(payload));
 
@@ -82,23 +83,34 @@ START_TEST (test_packet) {
 
   COMPARE(type);
   COMPARE(version);
-  COMPARE(packet_part);
-  COMPARE(packet_total);
-  COMPARE(packet_id);
-  COMPARE(stream_id);
+  COMPARE(data.data.packet_part);
+  COMPARE(data.data.packet_total);
+  COMPARE(data.data.packet_id);
+  COMPARE(data.data.stream_id);
 
   fail_unless(a->sender == b->sender);
 
-  l = b->receivers;
-  for (i = 0;
-       receivers[i].receiver_id != 0 && l != NULL; 
-       i++, l = g_list_next(l)) {
-    GibberRMulticastReceiver *r = (GibberRMulticastReceiver *)l->data;
+  for (l = b->data.data.depends; l != NULL ; l = g_list_next(l)) 
+    {
+      for (i = 0; senders[i].sender_id != 0 ; i++)
+        {
+          GibberRMulticastPacketSenderInfo *s =
+              (GibberRMulticastPacketSenderInfo *)l->data;
+          if (senders[i].sender_id == s->sender_id) {
+            fail_unless(senders[i].packet_id == s->packet_id);
+            fail_unless(senders[i].seen == FALSE);
+            senders[i].seen = TRUE;
+            break;
+          }
+        }
+      fail_unless(senders[i].sender_id != 0);
+    }
 
-    fail_unless(receivers[i].packet_id == r->packet_id);
-    fail_unless(receivers[i].receiver_id ==  r->receiver_id);
-  }
-  fail_unless(receivers[i].receiver_id == 0 && l == NULL);
+  for (i = 0; senders[i].sender_id != 0 ; i++)
+    {
+      fail_unless(senders[i].seen == TRUE);
+    }
+
 
   pdata = gibber_r_multicast_packet_get_payload(b, &plen);
   fail_unless(plen == strlen(payload));

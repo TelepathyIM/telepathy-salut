@@ -46,13 +46,13 @@ generate_packet(guint32 serial) {
     part = serial % 3 - 1;
     total = 2;
   }
-  p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, serial,
-      (serial % G_MAXUINT8) - part, 1500);
+  p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, 1500);
 
-  gibber_r_multicast_packet_set_part(p, part, total);
+  gibber_r_multicast_packet_set_data_info(p, serial,
+      (serial % G_MAXUINT8) - part, part, total);
 
   for (i = 0 ; receivers[i].receiver_id != 0; i++) {
-    gibber_r_multicast_packet_add_receiver(p,
+    gibber_r_multicast_packet_add_sender_info(p,
         receivers[i].receiver_id, receivers[i].packet_id, NULL);
   }
 
@@ -112,7 +112,9 @@ void
 repair_message_cb(GibberRMulticastSender *sender,
                   GibberRMulticastPacket *packet,
                   gpointer user_data) {
-  fail_unless (packet->packet_id == REPAIR_PACKET + serial_offset);
+
+  fail_unless(packet->type == PACKET_TYPE_DATA);
+  fail_unless (packet->data.data.packet_id == REPAIR_PACKET + serial_offset);
 
   g_main_loop_quit((GMainLoop *)user_data);
 }

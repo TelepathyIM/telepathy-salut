@@ -79,47 +79,49 @@ depends_send_hook (GibberTransport *transport,
   GibberRMulticastPacket *packet;
   int i;
   GList *l;
-  GibberRMulticastPacketType type;
 
-  type = gibber_r_multicast_packet_get_packet_type(data, length);
+  packet = gibber_r_multicast_packet_parse (data, length, NULL);
+  fail_unless (packet != NULL);
 
-  if (type == PACKET_TYPE_WHOIS_REQUEST) {
-    GibberRMulticastWhoisPacket *whois =
-        gibber_r_multicast_whois_new_from_packet(data, length);
+  if (packet->type == PACKET_TYPE_WHOIS_REQUEST) {
+    GibberRMulticastPacket *reply;
     guint8 *pdata;
     gsize psize;
+
     for (i = 0; senders[i].name != NULL; i++) {
-      if (senders[i].sender_id == whois->id) {
+      if (senders[i].sender_id == packet->sender) {
         break;
       }
     }
     fail_unless(senders[i].name != NULL);
-    pdata = gibber_r_multicast_whois_packet(PACKET_TYPE_WHOIS_REPLY,
-      senders[i].sender_id, senders[i].name, &psize);
-    test_transport_write (TEST_TRANSPORT(transport), pdata, psize);
-    g_free(pdata);
-    goto out;
-  }
 
-  packet = gibber_r_multicast_packet_parse (data, length, NULL);
-  fail_unless (packet != NULL);
+    reply = gibber_r_multicast_packet_new(PACKET_TYPE_WHOIS_REPLY,
+      senders[i].sender_id, transport->max_packet_size);
+
+    gibber_r_multicast_packet_set_whois_reply_info (reply, senders[i].name);
+
+    pdata = gibber_r_multicast_packet_get_raw_data (reply, &psize);
+    test_transport_write (TEST_TRANSPORT(transport), pdata, psize);
+    g_object_unref(reply);
+  }
 
   if (packet->type != PACKET_TYPE_DATA)
     {
       goto out;
     }
 
-  fail_unless(g_list_length (packet->receivers) > 0);
+  fail_unless(g_list_length (packet->data.data.depends) > 0);
 
-  for (l = packet->receivers; l != NULL; l = g_list_next (l))
+  for (l = packet->data.data.depends; l != NULL; l = g_list_next (l))
     {
       for (i = 0; senders[i].name != NULL ; i++)
         {
-          GibberRMulticastReceiver *r = (GibberRMulticastReceiver *)l->data;
-          if (senders[i].sender_id == r->receiver_id)
+          GibberRMulticastPacketSenderInfo *sender_info =
+              (GibberRMulticastPacketSenderInfo *)l->data;
+          if (senders[i].sender_id == sender_info->sender_id)
             {
               fail_unless (senders[i].seen == FALSE);
-              fail_unless (senders[i].packet_id == r->packet_id);
+              fail_unless (senders[i].packet_id == sender_info->packet_id);
               senders[i].seen = TRUE;
               break;
             }
@@ -127,7 +129,7 @@ depends_send_hook (GibberTransport *transport,
         fail_unless (senders[i].name != NULL);
       }
 
-  for (i = 0; senders[i].name != NULL ; i++) 
+  for (i = 0; senders[i].name != NULL ; i++)
     {
       fail_unless (senders[i].seen, "Not all senders in depends");
     }
@@ -173,10 +175,11 @@ START_TEST (test_depends)
       guint8 *data;
       gsize size;
       packet = gibber_r_multicast_packet_new (PACKET_TYPE_DATA,
-         senders[i].sender_id, senders[i].packet_id, 0,
+         senders[i].sender_id,
          GIBBER_TRANSPORT (testtransport)->max_packet_size);
 
-      gibber_r_multicast_packet_set_part (packet, 0, 1);
+      gibber_r_multicast_packet_set_data_info (packet, senders[i].packet_id,
+          0, 0, 1);
       data = gibber_r_multicast_packet_get_raw_data (packet, &size);
       test_transport_write (testtransport, data, size);
       g_object_unref (packet);
