@@ -223,6 +223,20 @@ error:
   return -1;
 }
 
+static void
+normalize_to_ipv4 (struct sockaddr_storage *addr)
+{
+  struct sockaddr_in *s4 = (struct sockaddr_in *) addr;
+  struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) addr;
+
+  if (s6->sin6_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED (&(s6->sin6_addr)))
+    {
+      /* Normalize to ipv4 address */
+      s4->sin_family = AF_INET;
+      s4->sin_addr.s_addr = s6->sin6_addr.s6_addr32[3];
+    }
+}
+
 static gboolean
 listener_io_in_cb (GIOChannel *source,
                    GIOCondition condition,
@@ -241,6 +255,7 @@ listener_io_in_cb (GIOChannel *source,
 
   fd = g_io_channel_unix_get_fd (source);
   nfd = accept (fd, (struct sockaddr *) &addr, &addrlen);
+  normalize_to_ipv4 (&addr);
 
   transport = gibber_ll_transport_new ();
   gibber_ll_transport_open_fd (transport, nfd);
