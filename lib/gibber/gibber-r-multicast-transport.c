@@ -353,7 +353,9 @@ whois_request_cb(GibberRMulticastSender *sender, gpointer user_data) {
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet =
     gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REQUEST,
-        sender->id, priv->transport->max_packet_size);
+        priv->self->id, priv->transport->max_packet_size);
+
+  gibber_r_multicast_packet_set_whois_request_info (packet, sender->id);
 
   sendout_packet (self, packet, NULL);
   g_object_unref (packet);
@@ -464,7 +466,7 @@ r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet = NULL;
-  GibberRMulticastSender *sender;
+  GibberRMulticastSender *sender = NULL;
   GError *error = NULL;
 
 
@@ -478,14 +480,22 @@ r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
 
   DEBUG("Got packet type: 0x%x", packet->type);
 
-  sender = g_hash_table_lookup(priv->senders,
-      GUINT_TO_POINTER(packet->sender));
-  if (sender == NULL) {
-    if (packet->type == PACKET_TYPE_WHOIS_REQUEST)
+  if (packet->sender == 0) {
+    if (packet->type != PACKET_TYPE_WHOIS_REQUEST)
       {
+        DEBUG ("Invalid packet (sender is 0, which is not valid for type %x)",
+          packet->type);
         goto out;
       }
-    sender = add_sender(self, packet->sender, NULL);
+    DEBUG ("New sender polling for a unique id");
+  } else {
+    /* All packets with non-zero sender fall go through here to start detecting
+     * new sender as early as possible */
+    sender = g_hash_table_lookup (priv->senders,
+        GUINT_TO_POINTER (packet->sender));
+    if (sender == NULL) {
+      sender = add_sender (self, packet->sender, NULL);
+    }
   }
 
   if (sender == priv->self && packet->type != PACKET_TYPE_WHOIS_REQUEST)
@@ -493,9 +503,13 @@ r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
       goto out;
     }
 
-
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
+      sender = g_hash_table_lookup (priv->senders,
+          GUINT_TO_POINTER (packet->data.whois_request.sender_id));
+      if (sender == NULL)
+        goto out;
+      /* fallthrough */
     case PACKET_TYPE_WHOIS_REPLY:
      gibber_r_multicast_sender_whois_push(sender, packet);
      break;
