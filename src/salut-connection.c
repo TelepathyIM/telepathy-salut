@@ -41,6 +41,7 @@
 #include "salut-muc-manager.h"
 #include "salut-contact.h"
 #include "salut-self.h"
+#include "salut-xmpp-connection-manager.h"
 /*
 #include "salut-tubes-manager.h"
 */
@@ -143,6 +144,9 @@ struct _SalutConnectionPrivate
   /* TpHandler for our presence on the lan */
   SalutSelf *self;
 
+  /* XMPP connection manager */
+  SalutXmppConnectionManager *xmpp_connection_manager;
+
   /* Contact manager */
   SalutContactManager *contact_manager;
 
@@ -218,6 +222,7 @@ salut_connection_init (SalutConnection *obj)
   priv->self = NULL;
 
   priv->contact_manager = NULL;
+  priv->xmpp_connection_manager = NULL;
 }
 
 static void
@@ -562,6 +567,12 @@ salut_connection_dispose (GObject *object)
     priv->self = NULL;
   }
 
+  if (priv->xmpp_connection_manager)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
+
   if (priv->avahi_client) {
     g_object_unref (priv->avahi_client);
     priv->avahi_client = NULL;
@@ -660,23 +671,6 @@ _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
 }
 
 static void
-_self_new_connection_cb(SalutSelf *s, GibberLLTransport *transport,
-                        gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-
-  if (priv->im_manager == NULL) {
-    /* Got a connection before we had an im manager.. Ignore */
-    DEBUG("Connection but no IM manager yet!?");
-    return;
-  }
-  DEBUG("New connection, passing to the IM manager");
-  /* Get a ref and let the lower layers handle it */
-  g_object_ref(transport);
-  salut_im_manager_handle_connection(priv->im_manager, transport);
-}
-
-static void
 _salut_avahi_client_failure_cb(SalutAvahiClient *c,
                               SalutAvahiClientState state,
                               gpointer data) {
@@ -689,6 +683,28 @@ _salut_avahi_client_failure_cb(SalutAvahiClient *c,
 }
 
 static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+                                           GibberXmppConnection *connection,
+                                           struct sockaddr_storage *addr,
+                                           guint size,
+                                           gpointer user_data)
+{
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+
+  if (priv->im_manager == NULL)
+    {
+      /* Got a connection before we had an im manager.. Ignore */
+      DEBUG ("Connection but no IM manager yet!?");
+      return;
+    }
+
+  DEBUG ("New connection, passing to the IM manager");
+  salut_im_manager_handle_connection (priv->im_manager, connection, addr,
+      size);
+}
+
+static void
 _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               SalutAvahiClientState state,
                               gpointer data) {
@@ -696,6 +712,7 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
       (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
+  gint port;
 
   g_assert(c == priv->avahi_client);
 
@@ -714,18 +731,31 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               NULL, NULL
 #endif
                               );
+
+
   g_signal_connect(priv->self, "established",
                    G_CALLBACK(_self_established_cb), self);
   g_signal_connect(priv->self, "failure",
                    G_CALLBACK(_self_failed_cb), self);
-  g_signal_connect(priv->self, "new-connection",
-                   G_CALLBACK(_self_new_connection_cb), self);
-  if (!salut_self_announce(priv->self, NULL)) {
-    tp_base_connection_change_status(
-          TP_BASE_CONNECTION(self),
-          TP_CONNECTION_STATUS_DISCONNECTED,
-          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
-  }
+
+  g_assert (priv->xmpp_connection_manager == NULL);
+  priv->xmpp_connection_manager = salut_xmpp_connection_manager_new ();
+
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
+
+  port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager);
+
+  /* XXX manage that */
+  g_assert (port != -1);
+
+  if (!salut_self_announce (priv->self, port))
+    {
+      tp_base_connection_change_status(
+            TP_BASE_CONNECTION(self),
+            TP_CONNECTION_STATUS_DISCONNECTED,
+            TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
+    }
 }
 
 /* public functions */

@@ -67,6 +67,7 @@ salut_im_manager_get_channel_for_handle (SalutImManager *mgr,
 
 void
 salut_im_manager_handle_connection (SalutImManager *mgr,
-    GibberLLTransport *transport);
+    GibberXmppConnection *connection, struct sockaddr_storage *addr,
+    guint size);
 
 #endif /* #ifndef __SALUT_IM_MANAGER_H__*/

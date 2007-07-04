@@ -535,58 +535,49 @@ pending_connection_stanza_received_cb (GibberXmppConnection *conn,
 }
 
 void
-salut_im_manager_handle_connection (SalutImManager *mgr,
-                                    GibberLLTransport *transport)
+salut_im_manager_handle_connection (SalutImManager *self,
+                                    GibberXmppConnection *connection,
+                                    struct sockaddr_storage *addr,
+                                    guint size)
 {
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  GibberXmppConnection *connection = NULL;
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
   GList *contacts;
-  struct sockaddr_storage addr;
-  socklen_t size = sizeof (struct sockaddr_storage);
 
   DEBUG("Handling new connection");
-  if (!gibber_ll_transport_get_address (transport, &addr, &size))
-    goto notfound;
 
   contacts = salut_contact_manager_find_contacts_by_address (
-      priv->contact_manager, &addr);
+      priv->contact_manager, addr);
   if (contacts == NULL)
-    goto notfound;
-
-  /* Transport to somebody we know about, connect the xmpp connection */
-  connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
-
-  /* Unref the transport, the xmpp connection own it now */
-  g_object_unref (transport);
+    {
+      DEBUG ("Couldn't find a contact for the connection");
+      gibber_xmpp_connection_close (connection);
+      return;
+    }
 
   /* If it's a transport to just one contacts machine, hook it up right away.
-   * This is needed because iChat doesn't send message with to and from data...
+   * This is needed because iChat doesn't send message with to and
+   * from data...
    */
   if (g_list_length (contacts) == 1)
     {
-      found_contact_for_connection (mgr, connection,
+      found_contact_for_connection (self, connection,
           SALUT_CONTACT (contacts->data), NULL);
       contact_list_destroy (contacts);
-      g_object_unref (G_OBJECT (connection));
+      g_object_unref (connection);
+      return;
     }
-  else
-    {
-      g_hash_table_insert (priv->pending_connections, connection, contacts);
-      g_signal_connect (connection, "stream-opened",
-          G_CALLBACK (pending_connection_stream_opened_cb), mgr);
-      g_signal_connect (connection, "received-stanza",
-          G_CALLBACK (pending_connection_stanza_received_cb), mgr);
-      g_signal_connect (transport, "disconnected",
-          G_CALLBACK (pending_connection_transport_disconnected_cb), mgr);
-      g_signal_connect (connection, "stream-closed",
-          G_CALLBACK (pending_connection_stream_closed_cb), mgr);
-      g_signal_connect (connection, "parse-error",
-          G_CALLBACK (connection_parse_error_cb), mgr);
-    }
-  return ;
 
-notfound:
-  DEBUG ("Couldn't find a contact for the connection");
-  gibber_transport_disconnect (GIBBER_TRANSPORT (transport));
-  g_object_unref (transport);
+  g_hash_table_insert (priv->pending_connections, connection, contacts);
+  g_signal_connect (connection, "stream-opened",
+      G_CALLBACK (pending_connection_stream_opened_cb), self);
+  g_signal_connect (connection, "received-stanza",
+      G_CALLBACK (pending_connection_stanza_received_cb), self);
+  g_signal_connect (connection->transport, "disconnected",
+      G_CALLBACK (pending_connection_transport_disconnected_cb), self);
+  g_signal_connect (connection, "stream-closed",
+      G_CALLBACK (pending_connection_stream_closed_cb), self);
+  g_signal_connect (connection, "parse-error",
+      G_CALLBACK (connection_parse_error_cb), self);
+
+  return;
 }

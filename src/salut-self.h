@@ -79,7 +79,8 @@ SalutSelf *salut_self_new (SalutAvahiClient *client,
     const gchar *olpc_color);
 
 /* Start announcing our presence on the network */
-gboolean salut_self_announce(SalutSelf *self, GError **error);
+gboolean
+salut_self_announce (SalutSelf *self, gint port);
 
 gboolean salut_self_set_presence (SalutSelf *self,
     SalutPresenceId status, const gchar *message, GError **error);
