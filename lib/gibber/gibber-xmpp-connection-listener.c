@@ -224,7 +224,7 @@ error:
 }
 
 static void
-normalize_to_ipv4 (struct sockaddr_storage *addr)
+normalize_address (struct sockaddr_storage *addr)
 {
   struct sockaddr_in *s4 = (struct sockaddr_in *) addr;
   struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) addr;
@@ -255,7 +255,7 @@ listener_io_in_cb (GIOChannel *source,
 
   fd = g_io_channel_unix_get_fd (source);
   nfd = accept (fd, (struct sockaddr *) &addr, &addrlen);
-  normalize_to_ipv4 (&addr);
+  normalize_address (&addr);
 
   transport = gibber_ll_transport_new ();
   gibber_ll_transport_open_fd (transport, nfd);
