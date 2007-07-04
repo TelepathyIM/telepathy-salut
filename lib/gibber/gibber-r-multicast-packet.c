@@ -157,12 +157,12 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
 }
 
 gboolean
-gibber_r_multicast_packet_add_receiver(GibberRMulticastPacket *packet,
-                                       guint32 receiver_id,
-                                       guint32 packet_id,
-                                       GError **error) {
-  GibberRMulticastReceiver *r =
-      gibber_r_multicast_receiver_new(g_strdup(name), packet_id);
+gibber_r_multicast_packet_add_sender_info(GibberRMulticastPacket *packet,
+                                          guint32 sender_id,
+                                          guint32 packet_id,
+                                          GError **error) {
+  GibberRMulticastPacketSenderInfo *s =
+      gibber_r_multicast_packet_sender_info_new(sender_id, packet_id);
   GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
 
@@ -494,16 +494,24 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       result->data.data.depends =
           get_sender_info (priv->data, priv->max_data, &(priv->size));
 
-  for (receivers = get_guint8(priv->data, priv->max_data, &(priv->size));
-      receivers > 0; receivers--) {
-    GibberRMulticastReceiver *r;
-    guint32 receiver_id;
-    guint32 expected_packet;
-
-    receiver_id = get_guint32(priv->data, priv->max_data, &(priv->size));
-    expected_packet = get_guint32(priv->data, priv->max_data, &(priv->size));
-    r = gibber_r_multicast_receiver_new(receiver_id, expected_packet);
-    result->receivers = g_list_append(result->receivers, r);
+      result->data.data.payload_size = priv->max_data - priv->size;
+      result->data.data.payload = g_memdup(priv->data + priv->size,
+          result->data.data.payload_size);
+      break;
+    case PACKET_TYPE_REPAIR_REQUEST:
+      result->data.repair_request.sender_id =
+          get_guint32 (priv->data, priv->max_data, &(priv->size));
+      result->data.repair_request.packet_id =
+          get_guint32 (priv->data, priv->max_data, &(priv->size));
+      break;
+    case PACKET_TYPE_SESSION:
+      result->data.session.senders =
+          get_sender_info(priv->data, priv->max_data, &(priv->size));
+      break;
+    case PACKET_TYPE_BYE:
+      /* Not implemented, fall through */
+    default:
+      g_assert_not_reached();
   }
 
   return result;
