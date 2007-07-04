@@ -730,10 +730,10 @@ gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  g_assert(packet->sender == sender->id);
-
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
+      g_assert (packet->data.whois_request.sender_id == sender->id);
+
       if (sender->name != NULL && priv->whois_timer == 0) {
         gint timeout = g_random_int_range(MIN_WHOIS_TIMEOUT,
                                           MAX_WHOIS_TIMEOUT);
@@ -742,6 +742,8 @@ gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
       }
       break;
     case PACKET_TYPE_WHOIS_REPLY:
+      g_assert(packet->sender == sender->id);
+
       if (sender->name == NULL) {
         sender->name = g_strdup(packet->data.whois_reply.sender_name);
         DEBUG_SENDER(sender, "Name discovered");
