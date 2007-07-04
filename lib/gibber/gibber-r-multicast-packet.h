@@ -47,6 +47,7 @@ struct _GibberRMulticastPacketClass {
 typedef struct _GibberRMulticastWhoisRequestPacket
     GibberRMulticastWhoisRequestPacket;
 struct _GibberRMulticastWhoisRequestPacket {
+  guint32 sender_id;
 };
 
 typedef struct _GibberRMulticastWhoisReplyPacket
@@ -143,6 +144,10 @@ void gibber_r_multicast_packet_set_data_info(GibberRMulticastPacket *packet,
 /* Set info for PACKET_TYPE_REPAIR_REQUEST packets */
 void gibber_r_multicast_packet_set_repair_request_info(
     GibberRMulticastPacket *packet, guint32 sender_id, guint32 packet_id);
+
+/* Set the info for PACKET_TYPE_WHOIS_REQUEST packets */
+void gibber_r_multicast_packet_set_whois_request_info (
+    GibberRMulticastPacket *packet, const guint32 sender_id);
 
 /* Set the info for PACKET_TYPE_WHOIS_REPLY packets */
 void gibber_r_multicast_packet_set_whois_reply_info(

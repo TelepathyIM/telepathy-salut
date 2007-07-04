@@ -204,6 +204,16 @@ gibber_r_multicast_packet_set_repair_request_info (
 }
 
 void
+gibber_r_multicast_packet_set_whois_request_info (
+    GibberRMulticastPacket *packet,
+    guint32 sender_id)
+{
+  g_assert (packet->type == PACKET_TYPE_WHOIS_REQUEST);
+
+  packet->data.whois_request.sender_id = sender_id;
+}
+
+void
 gibber_r_multicast_packet_set_whois_reply_info(GibberRMulticastPacket *packet,
    const gchar *name)
 {
@@ -221,6 +231,8 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
 
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
+      /* 32 bit sender id */
+      result += 4;
       break;
     case PACKET_TYPE_WHOIS_REPLY:
       g_assert(packet->data.whois_reply.sender_name != NULL);
@@ -379,6 +391,8 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
 
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
+      add_guint32 (priv->data, priv->max_data, &(priv->size),
+          packet->data.whois_request.sender_id);
       break;
     case PACKET_TYPE_WHOIS_REPLY:
       add_string(priv->data, priv->max_data, &(priv->size),
@@ -461,6 +475,8 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
 
   switch (result->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
+      result->data.whois_request.sender_id = get_guint32 (priv->data,
+          priv->max_data, &(priv->size));
       break;
     case PACKET_TYPE_WHOIS_REPLY:
       result->data.whois_reply.sender_name = get_string(priv->data,
