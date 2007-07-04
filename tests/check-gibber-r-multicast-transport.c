@@ -61,11 +61,11 @@ struct {
   guint32 packet_id;
   gboolean seen;
 } senders[] = {
-                { "test0", 0,    0xff, FALSE },
-                { "test1", 1,  0xffff, FALSE },
-                { "test2", 2, 0xffffff, FALSE },
-                { "test3", 3, 0xaaaaaa, FALSE },
-                { "test4", 4, 0xabcdab, FALSE },
+                { "test0", 1,    0xff, FALSE },
+                { "test1", 2,  0xffff, FALSE },
+                { "test2", 3, 0xffffff, FALSE },
+                { "test3", 4, 0xaaaaaa, FALSE },
+                { "test4", 5, 0xabcdab, FALSE },
                 { NULL,    0,        0, FALSE }
 };
 
@@ -89,9 +89,13 @@ depends_send_hook (GibberTransport *transport,
     gsize psize;
 
     for (i = 0; senders[i].name != NULL; i++) {
-      if (senders[i].sender_id == packet->sender) {
+      if (senders[i].sender_id == packet->data.whois_request.sender_id) {
         break;
       }
+    }
+    if (senders[i].name == NULL && packet->sender == 0) {
+      /* unique id polling */
+      goto out;
     }
     fail_unless(senders[i].name != NULL);
 
