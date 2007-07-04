@@ -126,23 +126,23 @@ GType gibber_r_multicast_packet_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_PACKET, GibberRMulticastPacketClass))
 
 /* Start a new packet */
-GibberRMulticastPacket * gibber_r_multicast_packet_new(
+GibberRMulticastPacket * gibber_r_multicast_packet_new (
     GibberRMulticastPacketType type, guint32 sender, gsize max_size);
 
 /* Add depend if packet type is PACKET_TYPE_DATA otherwise add sender info if
  * PACKET_TYPE_SESSION */
-gboolean gibber_r_multicast_packet_add_sender_info(
+gboolean gibber_r_multicast_packet_add_sender_info (
     GibberRMulticastPacket *packet,
     guint32 receiver_id,
     guint32 packet_id,
     GError **error);
 
 /* Set info for PACKET_TYPE_DATA packets */
-void gibber_r_multicast_packet_set_data_info(GibberRMulticastPacket *packet,
+void gibber_r_multicast_packet_set_data_info (GibberRMulticastPacket *packet,
     guint32 packet_id, guint8 stream_id, guint8 part, guint8 total);
 
 /* Set info for PACKET_TYPE_REPAIR_REQUEST packets */
-void gibber_r_multicast_packet_set_repair_request_info(
+void gibber_r_multicast_packet_set_repair_request_info (
     GibberRMulticastPacket *packet, guint32 sender_id, guint32 packet_id);
 
 /* Set the info for PACKET_TYPE_WHOIS_REQUEST packets */
@@ -150,31 +150,29 @@ void gibber_r_multicast_packet_set_whois_request_info (
     GibberRMulticastPacket *packet, const guint32 sender_id);
 
 /* Set the info for PACKET_TYPE_WHOIS_REPLY packets */
-void gibber_r_multicast_packet_set_whois_reply_info(
+void gibber_r_multicast_packet_set_whois_reply_info (
     GibberRMulticastPacket *packet, const gchar *sender_name);
 
 /* Add the actual payload in PACKET_TYPE_DATA packets.
  * No extra data might be set/added after this (extra depends or payload..) */
-gsize gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
-                                      const guint8 *data, gsize size);
+gsize gibber_r_multicast_packet_add_payload (GibberRMulticastPacket *packet,
+    const guint8 *data, gsize size);
 
 /* Create a packet by parsing raw data, packet is immutable */
-GibberRMulticastPacket *
-gibber_r_multicast_packet_parse(const guint8 *data, gsize size, GError **error);
+GibberRMulticastPacket * gibber_r_multicast_packet_parse (const guint8 *data,
+    gsize size, GError **error);
 
 /* Get the packets payload */
-guint8 *
-gibber_r_multicast_packet_get_payload(GibberRMulticastPacket *packet,
-                                      gsize *size);
+guint8 * gibber_r_multicast_packet_get_payload (GibberRMulticastPacket *packet,
+    gsize *size);
 
 /* Get the packets raw data, packet is immutable after this call */
-guint8 *
-gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
-                                       gsize *size);
+guint8 * gibber_r_multicast_packet_get_raw_data (GibberRMulticastPacket *packet,
+    gsize *size);
 
 /* Utility function to calculate the difference between two packet */
 gint32
-gibber_r_multicast_packet_diff(guint32 from, guint32 to);
+gibber_r_multicast_packet_diff (guint32 from, guint32 to);
 
 G_END_DECLS
 
