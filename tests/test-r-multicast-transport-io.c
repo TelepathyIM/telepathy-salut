@@ -30,6 +30,10 @@ send_hook(GibberTransport *transport, const guint8 *data,
           gsize length, GError **error, gpointer user_data) {
   gchar *b64;
 
+  /* The multicast transports echo's to allow multiple clients on the same host
+   * simulate this */
+  test_transport_write(TEST_TRANSPORT(transport), data, length);
+
   b64 = g_base64_encode((guchar *)data, length);
   printf("SEND:%s\n", b64);
   fflush(stdout);
