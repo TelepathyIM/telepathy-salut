@@ -120,18 +120,6 @@ has_transport (gpointer key,
 }
 
 static void
-connection_transport_disconnected_cb (GibberLLTransport *transport,
-                                      gpointer userdata)
-{
-  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
-  SalutXmppConnectionManagerPrivate *priv =
-    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
-
-  DEBUG ("Connection disconnected");
-  g_hash_table_foreach_remove (priv->connections, has_transport, transport);
-}
-
-static void
 connection_stream_closed_cb (GibberXmppConnection *connection,
                              gpointer userdata)
 {
@@ -141,18 +129,14 @@ connection_stream_closed_cb (GibberXmppConnection *connection,
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
   DEBUG ("Connection stream closed");
-  gibber_xmpp_connection_close (connection);
-  gibber_transport_disconnect (connection->transport);
   g_hash_table_remove (priv->connections, connection);
 }
 
 static void
-connection_parse_error_cb (GibberXmppConnection *conn,
-                           gpointer userdata)
+connection_stanza_received_cb (GibberXmppConnection *conn,
+                               GibberXmppStanza *stanza,
+                               gpointer user_data)
 {
-  DEBUG ("Parse error on xml stream, closing connection");
-  /* Just close the transport, the disconnected callback will do the cleanup */
-  gibber_transport_disconnect (conn->transport);
 }
 
 static void
@@ -166,12 +150,10 @@ found_contact_for_connection (SalutXmppConnectionManager *self,
   g_hash_table_insert (priv->connections, g_object_ref (connection),
       g_object_ref (contact));
 
-  g_signal_connect (connection->transport, "disconnected",
-      G_CALLBACK (connection_transport_disconnected_cb), self);
   g_signal_connect (connection, "stream-closed",
       G_CALLBACK (connection_stream_closed_cb), self);
-  g_signal_connect (connection, "parse-error",
-      G_CALLBACK (connection_parse_error_cb), self);
+  g_signal_connect (connection, "received-stanza",
+      G_CALLBACK (connection_stanza_received_cb), self);
 
   g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, contact);
 }
@@ -302,6 +284,15 @@ pending_connection_stream_closed_cb (GibberXmppConnection *connection,
   gibber_xmpp_connection_close (connection);
   gibber_transport_disconnect (connection->transport);
   g_hash_table_remove (priv->pending_connections, connection);
+}
+
+static void
+connection_parse_error_cb (GibberXmppConnection *conn,
+                           gpointer userdata)
+{
+  DEBUG ("Parse error on xml stream, closing connection");
+  /* Just close the transport, the disconnected callback will do the cleanup */
+  gibber_transport_disconnect (conn->transport);
 }
 
 static void
@@ -572,4 +563,85 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self)
     return -1;
 
   return port;
+}
+
+struct find_connection_for_contact_data
+{
+  SalutContact *contact;
+  GibberXmppConnection *connection;
+};
+
+static gboolean
+find_connection_for_contact (gpointer key,
+                             gpointer value,
+                             gpointer user_data)
+{
+  SalutContact *contact = SALUT_CONTACT (value);
+  struct find_connection_for_contact_data *data =
+    (struct find_connection_for_contact_data *) user_data;
+
+  if (data->contact == contact)
+    {
+      data->connection = GIBBER_XMPP_CONNECTION (key);
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
+GibberXmppConnection *
+salut_xmpp_connection_get_connection (SalutXmppConnectionManager *self,
+                                      SalutContact *contact)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  GibberXmppConnection *connection;
+  GibberLLTransport *transport;
+  struct find_connection_for_contact_data data;
+  GArray *addrs;
+  gint i;
+
+  data.contact = contact;
+  data.connection = NULL;
+  g_hash_table_find (priv->connections, find_connection_for_contact, &data);
+
+  if (data.connection != NULL)
+    {
+      DEBUG ("found existing connection with %s", contact->name);
+      return data.connection;
+    }
+
+  /* XXX what should we do if there is an existing pending connection with
+   * the contact ? */
+  DEBUG ("create a new connection");
+  transport = gibber_ll_transport_new ();
+  connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
+  /* Let the xmpp connection own the transport */
+  g_object_unref (transport);
+
+  addrs = salut_contact_get_addresses (contact);
+
+  for (i = 0; i < addrs->len; i++)
+    {
+      salut_contact_address_t *addr;
+
+      addr = &(g_array_index (addrs, salut_contact_address_t, i));
+
+      if (gibber_ll_transport_open_sockaddr (transport, &(addr->address),
+            NULL))
+        {
+          g_array_free (addrs, TRUE);
+          /* XXX should we really open at this stage or
+           * let the caller do it? */
+          gibber_xmpp_connection_open (connection, contact->name,
+              priv->connection->name, "1.0");
+          return connection;
+        }
+    }
+
+  DEBUG ("All connection attempts failed");
+  g_array_free (addrs, TRUE);
+  g_object_unref (connection);
+
+  return NULL;
 }

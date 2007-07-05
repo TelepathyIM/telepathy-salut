@@ -333,6 +333,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
       "contact", contact,
       "object-path", path,
       "handle", handle,
+      "xmpp-connection-manager", priv->xmpp_connection_manager,
       NULL);
   g_object_unref (contact);
   g_free (path);

@@ -35,12 +35,12 @@
 #include "salut-connection.h"
 #include "salut-contact.h"
 #include "text-helper.h"
+#include "salut-xmpp-connection-manager.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
-
 
 #include <telepathy-glib/text-mixin.h>
 #include <telepathy-glib/channel-iface.h>
@@ -85,6 +85,7 @@ enum
   PROP_HANDLE,
   PROP_CONTACT,
   PROP_CONNECTION,
+  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -99,6 +100,7 @@ struct _SalutImChannelPrivate
   SalutContact *contact;
   SalutConnection *connection;
   GibberXmppConnection *xmpp_connection;
+  SalutXmppConnectionManager *xmpp_connection_manager;
   /* Outcoming and incoming message queues */
   GQueue *out_queue;
   ChannelState state;
@@ -204,6 +206,7 @@ salut_im_channel_init (SalutImChannel *obj)
   priv->state = CHANNEL_NOT_CONNECTED;
   priv->addresses = NULL;
   priv->address_index = -1;
+  priv->xmpp_connection_manager = NULL;
 }
 
 
@@ -235,6 +238,9 @@ salut_im_channel_get_property (GObject *object,
         break;
       case PROP_CONNECTION:
         g_value_set_object (value, priv->connection);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        g_value_set_object (value, priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -276,6 +282,10 @@ salut_im_channel_set_property (GObject *object,
         tmp = g_value_get_string (value);
         g_assert (tmp == NULL || !tp_strdiff (g_value_get_string (value),
               TP_IFACE_CHANNEL_TYPE_TEXT));
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -372,6 +382,18 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "Salut XMPP Connection manager used for this IM channel",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
+      param_spec);
+
   signals[RECEIVED_STANZA] =
     g_signal_new (
         "received-stanza",
@@ -423,6 +445,12 @@ salut_im_channel_dispose (GObject *object)
 
   g_object_unref (priv->contact);
   priv->contact = NULL;
+
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
 
   /* release any references held by the object here */
 
@@ -554,44 +582,6 @@ _connection_got_stanza_cb (GibberXmppConnection *conn,
 }
 
 static void
-_connect_to_next (SalutImChannel *self,
-                  GibberLLTransport *transport)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (priv->addresses->len <= priv->address_index)
-    {
-      /* Failure */
-      /* FIXME signal this up, probably sendError all queued outgoing stuff */
-      g_array_free (priv->addresses, TRUE);
-      g_object_unref (priv->xmpp_connection);
-      priv->xmpp_connection = NULL;
-      priv->state = CHANNEL_NOT_CONNECTED;
-      DEBUG ("All connection attempts failed");
-      _error_flush_queue (self);
-    }
-  else
-    {
-      salut_contact_address_t *addr;
-      addr = &g_array_index (priv->addresses, salut_contact_address_t,
-          priv->address_index);
-      if (!gibber_ll_transport_open_sockaddr (transport, &(addr->address),
-            NULL))
-        {
-          priv->address_index += 1;
-          _connect_to_next (self, transport);
-        }
-      else
-        {
-          g_array_free (priv->addresses, TRUE);
-          priv->addresses = NULL;
-          gibber_xmpp_connection_open (priv->xmpp_connection,
-              priv->contact->name, priv->connection->name, "1.0");
-        }
-  }
-}
-
-static void
 _connection_stream_opened_cb (GibberXmppConnection *conn,
                               const gchar *to,
                               const gchar *from,
@@ -695,34 +685,21 @@ _initialise_connection (SalutImChannel *self)
 static void
 _setup_connection (SalutImChannel *self)
 {
-  /* FIXME do a non-blocking connect */
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  GArray *addrs;
-  GibberLLTransport *transport;
 
-  DEBUG ("Setting up the xmpp connection...");
+  if (priv->xmpp_connection != NULL)
+    g_object_unref (priv->xmpp_connection);
+
+  priv->xmpp_connection = salut_xmpp_connection_get_connection (
+      priv->xmpp_connection_manager, priv->contact);
+
   if (priv->xmpp_connection == NULL)
     {
-      transport = gibber_ll_transport_new ();
-      priv->xmpp_connection =
-        gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
-      /* Let the xmpp connection own the transport */
-      g_object_unref (transport);
-      _initialise_connection (self);
-    }
-  else
-    {
-      transport = GIBBER_LL_TRANSPORT (priv->xmpp_connection->transport);
+      priv->state = CHANNEL_NOT_CONNECTED;
+      _error_flush_queue (self);
     }
 
-  priv->state = CHANNEL_CONNECTING;
-
-  addrs = salut_contact_get_addresses (priv->contact);
-
-  priv->addresses = addrs;
-  priv->address_index = 0;
-
-  _connect_to_next (self, transport);
+  _initialise_connection (self);
 }
 
 static void

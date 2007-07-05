@@ -22,7 +22,11 @@
 
 #include <glib-object.h>
 
+#include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-xmpp-connection.h>
+
 #include "salut-connection.h"
+#include "salut-contact.h"
 #include "salut-contact-manager.h"
 
 G_BEGIN_DECLS
@@ -69,5 +73,9 @@ salut_xmpp_connection_manager_new (SalutConnection *connection,
 
 int
 salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager);
+
+GibberXmppConnection *
+salut_xmpp_connection_get_connection (SalutXmppConnectionManager *manager,
+    SalutContact *contact);
 
 #endif /* #ifndef __SALUT_XMPP_CONNECTION_MANAGER_H__*/
