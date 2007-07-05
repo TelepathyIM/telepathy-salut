@@ -41,7 +41,6 @@
    fun:_dlerror_run
    fun:dlopen@@GLIBC_2.1
    fun:g_module_open
-   fun:gst_plugin_load_file
 }
 
 # glibc does not deallocate thread-local storage
@@ -113,16 +112,6 @@
    fun:_dlerror_run
    fun:dlopen@@GLIBC_2.1
    fun:g_module_open
-   fun:gst_plugin_load_file
-   fun:gst_registry_scan_path_level
-   fun:gst_registry_scan_path_level
-   fun:gst_registry_scan_path_level
-   fun:init_post
-   fun:g_option_context_parse
-   fun:gst_init_check
-   fun:gst_init
-   fun:gst_check_init
-   fun:main
 }
 
 {
@@ -138,16 +127,6 @@
    fun:_dlerror_run
    fun:dlopen@@GLIBC_2.1
    fun:g_module_open
-   fun:gst_plugin_load_file
-   fun:gst_registry_scan_path_level
-   fun:gst_registry_scan_path_level
-   fun:gst_registry_scan_path_level
-   fun:init_post
-   fun:g_option_context_parse
-   fun:gst_init_check
-   fun:gst_init
-   fun:gst_check_init
-   fun:main
 }
 
 {
@@ -164,7 +143,6 @@
    fun:dlsym
    fun:g_module_symbol
    fun:g_module_open
-   fun:gst_plugin_load_file
 }
 
 {
@@ -181,7 +159,6 @@
    fun:_dlerror_run
    fun:dlopen@@GLIBC_2.1
    fun:g_module_open
-   fun:gst_plugin_load_file
 }
 {
    <g_module_open on wim's debian>
@@ -195,9 +172,6 @@
    fun:_dlerror_run
    fun:dlopen@@GLIBC_2.1
    fun:g_module_open
-   fun:gst_plugin_load_file
-   fun:gst_plugin_load_by_name
-   fun:gst_plugin_feature_load
 }
 
 {
@@ -213,8 +187,6 @@
    fun:_dlerror_run
    fun:dlopen@@GLIBC_2.1
    fun:g_module_open
-   fun:gst_plugin_load_file
-   fun:gst_plugin_load_by_name
 }
 
 {
@@ -310,10 +282,6 @@
    fun:vsprintf
    fun:sprintf
    obj:/lib/libc-2.3.*.so
-   fun:tmpfile
-   fun:setup_pipe
-   fun:setup_messaging_with_key
-   fun:setup_messaging
 }
 
 # valgrind doesn't allow me to specify a suppression for Addr1, Addr2, Addr4
@@ -438,9 +406,6 @@
    obj:/lib/libdl-2.3.*.so
    fun:dlopen
    fun:g_module_open
-   fun:gst_plugin_load_file
-   fun:gst_plugin_load_by_name
-   fun:gst_plugin_feature_load
 }
 
 {
@@ -508,7 +473,6 @@
    obj:*
    fun:g_type_init_with_debug_flags
    fun:g_type_init
-   fun:init_pre
 }
 
 {
@@ -607,10 +571,6 @@
    fun:setlocale
    fun:init_pre
    fun:g_option_context_parse
-   fun:gst_init_check
-   fun:gst_init
-   fun:gst_check_init
-   fun:main
 }
 
 {
@@ -624,7 +584,6 @@
    obj:/lib/libdl-2.3.6.so
    fun:dlopen
    fun:g_module_open
-   fun:gst_plugin_load_file
 }
 # this exists in a bunch of different variations, hence the short tail/trace
 {
