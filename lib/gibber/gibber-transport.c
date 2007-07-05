@@ -192,15 +192,16 @@ gibber_transport_send(GibberTransport *transport, const guint8 *data, gsize size
   return cls->send(transport, data, size, error);
 }
 
-void 
+void
 gibber_transport_disconnect(GibberTransport *transport) {
   GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS(transport);
   return cls->disconnect(transport);
 }
 
-void gibber_transport_set_handler(GibberTransport *transport,
-                                  GibberHandlerFunc func,
-                                  gpointer user_data) {
+void
+gibber_transport_set_handler(GibberTransport *transport,
+                             GibberHandlerFunc func,
+                             gpointer user_data) {
   g_assert(transport->handler == NULL || func == NULL);
 
   transport->handler = func;
