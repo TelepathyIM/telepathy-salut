@@ -5,9 +5,15 @@ lcov-reset:
 	$(MAKE) lcov-run
 	$(MAKE) lcov-report
 
+if HAVE_LCOV
 # run lcov from scratch if the dir is not there
 lcov:
 	$(MAKE) lcov-reset
+else
+lcov:
+	@echo "lcov not found or lacking --compat-libtool support"
+	@exit 1
+endif
 
 # reset run coverage tests
 lcov-run:
@@ -17,16 +23,11 @@ lcov-run:
 
 # generate report based on current coverage data
 lcov-report:
-	@if test -z "$(LCOV_PATH)"; then				\
-	     echo "WARNING: the 'lcov' executable was not found";	\
-	     echo "Use the \$$LCOV_PATH variable to set its location";	\
-	     exit 1;							\
-	 fi
 	@mkdir -p $(COVERAGE_DIR)
-	@$(LCOV_PATH) --quiet --compat-libtool --directory . --capture --output-file $(COVERAGE_DIR)/lcov.info
-	@$(LCOV_PATH) --quiet --compat-libtool -l $(COVERAGE_DIR)/lcov.info | grep -v "`cd $(top_srcdir) && pwd`" | cut -d: -f1 > $(COVERAGE_DIR)/remove
-	@$(LCOV_PATH) --quiet --compat-libtool -l $(COVERAGE_DIR)/lcov.info | grep "tests/" | cut -d: -f1 >> $(COVERAGE_DIR)/remove
-	@$(LCOV_PATH) --quiet --compat-libtool -r $(COVERAGE_DIR)/lcov.info `cat $(COVERAGE_DIR)/remove` > $(COVERAGE_DIR)/lcov.cleaned.info
+	@lcov --quiet --compat-libtool --directory . --capture --output-file $(COVERAGE_DIR)/lcov.info
+	@lcov --quiet --compat-libtool -l $(COVERAGE_DIR)/lcov.info | grep -v "`cd $(top_srcdir) && pwd`" | cut -d: -f1 > $(COVERAGE_DIR)/remove
+	@lcov --quiet --compat-libtool -l $(COVERAGE_DIR)/lcov.info | grep "tests/" | cut -d: -f1 >> $(COVERAGE_DIR)/remove
+	@lcov --quiet --compat-libtool -r $(COVERAGE_DIR)/lcov.info `cat $(COVERAGE_DIR)/remove` > $(COVERAGE_DIR)/lcov.cleaned.info
 	@rm $(COVERAGE_DIR)/remove
 	@mv $(COVERAGE_DIR)/lcov.cleaned.info $(COVERAGE_DIR)/lcov.info
 	@echo =================================================
