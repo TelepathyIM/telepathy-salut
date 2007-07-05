@@ -275,6 +275,7 @@ listener_io_in_cb (GIOChannel *source,
 
   g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, &addr, addrlen);
 
+  g_object_unref (connection);
   return TRUE;
 }
 

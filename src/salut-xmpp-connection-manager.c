@@ -82,7 +82,7 @@ contact_list_destroy (gpointer data)
   while (t != NULL)
     {
       SalutContact *contact;
-      contact= SALUT_CONTACT (t->data);
+      contact = SALUT_CONTACT (t->data);
       g_object_unref (contact);
       t = g_list_next (t);
     }
@@ -325,7 +325,6 @@ new_connection_cb (GibberXmppConnectionListener *listener,
       DEBUG ("Couldn't find a contact for the connection");
       gibber_transport_disconnect (connection->transport);
       gibber_xmpp_connection_close (connection);
-      g_object_unref (connection);
       return;
     }
 
@@ -339,12 +338,12 @@ new_connection_cb (GibberXmppConnectionListener *listener,
           SALUT_CONTACT (contacts->data));
 
       contact_list_destroy (contacts);
-      g_object_unref (connection);
       return;
     }
 
   /* We have to wait to know the contact before announce the connection */
-  g_hash_table_insert (priv->pending_connections, connection, contacts);
+  g_hash_table_insert (priv->pending_connections, g_object_ref (connection),
+      contacts);
 
   g_signal_connect (connection, "stream-opened",
       G_CALLBACK (pending_connection_stream_opened_cb), self);
