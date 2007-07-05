@@ -635,6 +635,8 @@ salut_xmpp_connection_get_connection (SalutXmppConnectionManager *self,
            * let the caller do it? */
           gibber_xmpp_connection_open (connection, contact->name,
               priv->connection->name, "1.0");
+
+          found_contact_for_connection (self, connection, contact);
           return connection;
         }
     }
