@@ -172,14 +172,17 @@ static void
 gibber_r_multicast_transport_disconnect(GibberTransport *transport);
 
 static void
-gibber_r_multicast_transport_class_init (GibberRMulticastTransportClass *gibber_r_multicast_transport_class)
+gibber_r_multicast_transport_class_init (
+    GibberRMulticastTransportClass *gibber_r_multicast_transport_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (gibber_r_multicast_transport_class);
+  GObjectClass *object_class = G_OBJECT_CLASS (
+      gibber_r_multicast_transport_class);
   GibberTransportClass *transport_class =
           GIBBER_TRANSPORT_CLASS(gibber_r_multicast_transport_class);
   GParamSpec *param_spec;
 
-  g_type_class_add_private (gibber_r_multicast_transport_class, sizeof (GibberRMulticastTransportPrivate));
+  g_type_class_add_private (gibber_r_multicast_transport_class,
+      sizeof (GibberRMulticastTransportPrivate));
 
   object_class->dispose = gibber_r_multicast_transport_dispose;
   object_class->finalize = gibber_r_multicast_transport_finalize;
@@ -235,7 +238,8 @@ void
 gibber_r_multicast_transport_dispose (GObject *object)
 {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
-  GibberRMulticastTransportPrivate *priv = GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  GibberRMulticastTransportPrivate *priv = 
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
@@ -253,14 +257,16 @@ gibber_r_multicast_transport_dispose (GObject *object)
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose)
-    G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose (object);
+    G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose (
+        object);
 }
 
 void
 gibber_r_multicast_transport_finalize (GObject *object)
 {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
-  GibberRMulticastTransportPrivate *priv = GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
   g_hash_table_destroy (priv->senders);
@@ -275,7 +281,7 @@ senders_updated(gpointer key, gpointer value, gpointer user_data) {
 }
 
 static void
-data_received_cb(GibberRMulticastSender *sender, guint8 stream_id, 
+data_received_cb(GibberRMulticastSender *sender, guint8 stream_id,
                  guint8 *data, gsize size, gpointer user_data) {
   GibberRMulticastTransport *self =
     GIBBER_R_MULTICAST_TRANSPORT(user_data);
@@ -288,8 +294,8 @@ data_received_cb(GibberRMulticastSender *sender, guint8 stream_id,
   rmbuffer.sender = sender->name;
   rmbuffer.stream_id = stream_id;
 
-  gibber_transport_received_data_custom(GIBBER_TRANSPORT(user_data), 
-                                        (GibberBuffer *)&rmbuffer);
+  gibber_transport_received_data_custom(GIBBER_TRANSPORT(user_data),
+      (GibberBuffer *)&rmbuffer);
   g_hash_table_foreach(priv->senders, senders_updated, self);
 }
 
