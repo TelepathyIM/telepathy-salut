@@ -697,6 +697,7 @@ _setup_connection (SalutImChannel *self)
     {
       priv->state = CHANNEL_NOT_CONNECTED;
       _error_flush_queue (self);
+      return;
     }
 
   _initialise_connection (self);
