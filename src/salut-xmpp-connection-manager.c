@@ -24,9 +24,13 @@
 #include <string.h>
 
 #include "salut-tubes-channel.h"
+#include "salut-connection.h"
 #include "salut-contact.h"
+#include "salut-contact-manager.h"
 
 #include <gibber/gibber-xmpp-connection-listener.h>
+#include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-linklocal-transport.h>
 
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
@@ -45,6 +49,13 @@ enum
 
 static guint signals[LAST_SIGNAL] = {0};
 
+/* properties */
+enum
+{
+  PROP_CONNECTION = 1,
+  PROP_CONTACT_MANAGER,
+};
+
 /* private structure */
 typedef struct _SalutXmppConnectionManagerPrivate \
           SalutXmppConnectionManagerPrivate;
@@ -52,12 +63,31 @@ typedef struct _SalutXmppConnectionManagerPrivate \
 struct _SalutXmppConnectionManagerPrivate
 {
   GibberXmppConnectionListener *listener;
+  SalutConnection *connection;
+  SalutContactManager *contact_manager;
+  GHashTable *connections;
+  GHashTable *pending_connections;
 
   gboolean dispose_has_run;
 };
 
 #define SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE(obj) \
     ((SalutXmppConnectionManagerPrivate *) obj->priv)
+
+static void
+contact_list_destroy (gpointer data)
+{
+  GList *list = (GList *) data;
+  GList *t = list;
+  while (t != NULL)
+    {
+      SalutContact *contact;
+      contact= SALUT_CONTACT (t->data);
+      g_object_unref (contact);
+      t = g_list_next (t);
+    }
+  g_list_free (list);
+}
 
 static void
 salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
@@ -67,8 +97,211 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
 
   self->priv = priv;
 
+  priv->connection = NULL;
   priv->listener = NULL;
+  priv->contact_manager = NULL;
+
+  priv->connections = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      g_object_unref, g_object_unref);
+  priv->pending_connections = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, g_object_unref, contact_list_destroy);
+
   priv->dispose_has_run = FALSE;
+}
+
+static gboolean
+has_transport (gpointer key,
+               gpointer value,
+               gpointer user_data)
+{
+  GibberXmppConnection *conn = GIBBER_XMPP_CONNECTION (key);
+
+  return conn->transport == user_data;
+}
+
+static void
+connection_transport_disconnected_cb (GibberLLTransport *transport,
+                                      gpointer userdata)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  DEBUG ("Connection disconnected");
+  g_hash_table_foreach_remove (priv->connections, has_transport, transport);
+}
+
+static void
+connection_stream_closed_cb (GibberXmppConnection *connection,
+                             gpointer userdata)
+{
+  SalutXmppConnectionManager *self =
+    SALUT_XMPP_CONNECTION_MANAGER (userdata);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  DEBUG ("Connection stream closed");
+  gibber_xmpp_connection_close (connection);
+  gibber_transport_disconnect (connection->transport);
+  g_hash_table_remove (priv->connections, connection);
+}
+
+static void
+connection_parse_error_cb (GibberXmppConnection *conn,
+                           gpointer userdata)
+{
+  DEBUG ("Parse error on xml stream, closing connection");
+  /* Just close the transport, the disconnected callback will do the cleanup */
+  gibber_transport_disconnect (conn->transport);
+}
+
+static void
+found_contact_for_connection (SalutXmppConnectionManager *self,
+                              GibberXmppConnection *connection,
+                              SalutContact *contact)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  g_hash_table_insert (priv->connections, g_object_ref (connection),
+      g_object_ref (contact));
+
+  g_signal_connect (connection->transport, "disconnected",
+      G_CALLBACK (connection_transport_disconnected_cb), self);
+  g_signal_connect (connection, "stream-closed",
+      G_CALLBACK (connection_stream_closed_cb), self);
+  g_signal_connect (connection, "parse-error",
+      G_CALLBACK (connection_parse_error_cb), self);
+
+  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, contact);
+}
+
+static void
+pending_connection_got_from (SalutXmppConnectionManager *self,
+                             GibberXmppConnection *conn,
+                             GibberXmppStanza *stanza,
+                             const gchar *from)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  GList *t;
+
+  if (from == NULL)
+    {
+      DEBUG ("No valid ``from'' pending connection");
+      goto error;
+    }
+
+  DEBUG ("Got stream from %s on pending connection", from);
+  t = g_hash_table_lookup (priv->pending_connections, conn);
+
+  while (t != NULL)
+    {
+      SalutContact *contact = SALUT_CONTACT (t->data);
+      if (strcmp (contact->name, from) == 0)
+        {
+          struct sockaddr_storage addr;
+          socklen_t size = sizeof (struct sockaddr_storage);
+
+          g_signal_handlers_disconnect_matched (conn, G_SIGNAL_MATCH_DATA,
+              0, 0, NULL, NULL, self);
+          g_signal_handlers_disconnect_matched (conn->transport,
+              G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
+          if (!gibber_ll_transport_get_address (
+                GIBBER_LL_TRANSPORT (conn->transport), &addr, &size))
+            {
+              DEBUG ("Contact no longer alive");
+              goto error;
+            }
+
+          if (!salut_contact_has_address (contact, &addr))
+            {
+              DEBUG ("Contact doesn't have that address");
+              goto error;
+            }
+
+          found_contact_for_connection (self, conn, contact);
+          g_hash_table_remove (priv->pending_connections, conn);
+          return;
+        }
+    t = g_list_next (t);
+  }
+
+error:
+  gibber_xmpp_connection_close (conn);
+  gibber_transport_disconnect (conn->transport);
+  g_hash_table_remove (priv->pending_connections, conn);
+}
+
+static void
+pending_connection_stream_opened_cb (GibberXmppConnection *conn,
+                                     const gchar *to,
+                                     const gchar *from,
+                                     const gchar *version,
+                                     gpointer user_data)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  GibberXmppStanza *stanza;
+
+  gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
+  /* Send empty stream features */
+  stanza = gibber_xmpp_stanza_new ("features");
+  gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
+  gibber_xmpp_connection_send (conn, stanza, NULL);
+  g_object_unref (stanza);
+
+  /* According to the xep-0174 revision >= there should
+   * be a to and from.. But clients implementing older revision might not
+   * support that yet.
+   * */
+  if (from != NULL)
+    pending_connection_got_from (self, conn, NULL, from);
+}
+
+static void
+pending_connection_stanza_received_cb (GibberXmppConnection *conn,
+                                       GibberXmppStanza *stanza,
+                                       gpointer userdata)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (conn);
+  const gchar *from;
+
+  /* If the identity wasn't clear from the stream opening we only wait to the
+   * very first message */
+  from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  pending_connection_got_from (self, conn, stanza, from);
+  /* XXX queue the stanza */
+}
+
+static void
+pending_connection_transport_disconnected_cb (GibberLLTransport *transport,
+                                              gpointer userdata)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  DEBUG ("Pending connection disconnected");
+  g_hash_table_foreach_remove (priv->pending_connections,
+      has_transport, transport);
+}
+
+static void
+pending_connection_stream_closed_cb (GibberXmppConnection *connection,
+                                     gpointer userdata)
+{
+  SalutXmppConnectionManager *self =
+    SALUT_XMPP_CONNECTION_MANAGER (userdata);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  DEBUG ("Pending connection stream closed");
+  gibber_xmpp_connection_close (connection);
+  gibber_transport_disconnect (connection->transport);
+  g_hash_table_remove (priv->pending_connections, connection);
 }
 
 static void
@@ -79,7 +312,50 @@ new_connection_cb (GibberXmppConnectionListener *listener,
                    gpointer user_data)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
-  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, addr, size);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  GList *contacts;
+
+  DEBUG("Handling new connection");
+
+  contacts = salut_contact_manager_find_contacts_by_address (
+      priv->contact_manager, addr);
+  if (contacts == NULL)
+    {
+      DEBUG ("Couldn't find a contact for the connection");
+      gibber_transport_disconnect (connection->transport);
+      gibber_xmpp_connection_close (connection);
+      g_object_unref (connection);
+      return;
+    }
+
+  /* If it's a transport to just one contacts machine, hook it up right away.
+   * This is needed because iChat doesn't send message with to and
+   * from data...
+   */
+  if (g_list_length (contacts) == 1)
+    {
+      found_contact_for_connection (self, connection,
+          SALUT_CONTACT (contacts->data));
+
+      contact_list_destroy (contacts);
+      g_object_unref (connection);
+      return;
+    }
+
+  /* We have to wait to know the contact before announce the connection */
+  g_hash_table_insert (priv->pending_connections, connection, contacts);
+
+  g_signal_connect (connection, "stream-opened",
+      G_CALLBACK (pending_connection_stream_opened_cb), self);
+  g_signal_connect (connection, "received-stanza",
+      G_CALLBACK (pending_connection_stanza_received_cb), self);
+  g_signal_connect (connection->transport, "disconnected",
+      G_CALLBACK (pending_connection_transport_disconnected_cb), self);
+  g_signal_connect (connection, "stream-closed",
+      G_CALLBACK (pending_connection_stream_closed_cb), self);
+  g_signal_connect (connection, "parse-error",
+      G_CALLBACK (connection_parse_error_cb), self);
 }
 
 static GObject *
@@ -96,6 +372,9 @@ salut_xmpp_connection_manager_constructor (GType type,
 
   self = SALUT_XMPP_CONNECTION_MANAGER (obj);
   priv = SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  g_assert (priv->connection != NULL);
+  g_assert (priv->contact_manager != NULL);
 
   priv->listener = gibber_xmpp_connection_listener_new ();
   g_signal_connect (priv->listener, "new-connection",
@@ -114,10 +393,34 @@ salut_xmpp_connection_manager_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
+  if (priv->connection != NULL)
+    {
+      g_object_unref (priv->connection);
+      priv->connection = NULL;
+    }
+
+  if (priv->contact_manager != NULL)
+    {
+      g_object_unref (priv->contact_manager);
+      priv->contact_manager = NULL;
+    }
+
   if (priv->listener != NULL)
     {
       g_object_unref (priv->listener);
       priv->listener = NULL;
+    }
+
+  if (priv->connections != NULL)
+    {
+      g_hash_table_destroy (priv->connections);
+      priv->connections = NULL;
+    }
+
+  if (priv->pending_connections != NULL)
+    {
+      g_hash_table_destroy (priv->pending_connections);
+      priv->pending_connections = NULL;
     }
 
   priv->dispose_has_run = TRUE;
@@ -133,8 +436,18 @@ salut_xmpp_connection_manager_get_property (GObject *object,
                                             GValue *value,
                                             GParamSpec *pspec)
 {
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (object);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
   switch (property_id)
     {
+      case PROP_CONNECTION:
+        g_value_set_object (value, priv->connection);
+        break;
+      case PROP_CONTACT_MANAGER:
+        g_value_set_object (value, priv->contact_manager);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -147,8 +460,20 @@ salut_xmpp_connection_manager_set_property (GObject *object,
                                             const GValue *value,
                                             GParamSpec *pspec)
 {
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (object);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
   switch (property_id)
     {
+      case PROP_CONNECTION:
+        priv->connection = g_value_get_object (value);
+        g_object_ref (priv->connection);
+        break;
+      case PROP_CONTACT_MANAGER:
+        priv->contact_manager = g_value_get_object (value);
+        g_object_ref (priv->contact_manager);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -161,6 +486,7 @@ salut_xmpp_connection_manager_class_init (
 {
   GObjectClass *object_class =
     G_OBJECT_CLASS (salut_xmpp_connection_manager_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (salut_xmpp_connection_manager_class,
       sizeof (SalutXmppConnectionManagerPrivate));
@@ -172,6 +498,31 @@ salut_xmpp_connection_manager_class_init (
   object_class->get_property = salut_xmpp_connection_manager_get_property;
   object_class->set_property = salut_xmpp_connection_manager_set_property;
 
+  param_spec = g_param_spec_object (
+      "connection",
+      "SalutConnection object",
+      "Salut Connection associated with this manager ",
+      SALUT_TYPE_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "contact-manager",
+      "SalutContactManager object",
+      "Salut Contact Manager associated with the Salut Connection of this "
+      "manager",
+      SALUT_TYPE_CONTACT_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
+      param_spec);
+
   signals[NEW_CONNECTION] =
     g_signal_new (
         "new-connection",
@@ -179,16 +530,18 @@ salut_xmpp_connection_manager_class_init (
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
         NULL, NULL,
-        salut_signals_marshal_VOID__OBJECT_POINTER_UINT,
-        G_TYPE_NONE, 3, GIBBER_TYPE_XMPP_CONNECTION, G_TYPE_POINTER,
-        G_TYPE_UINT);
+        salut_signals_marshal_VOID__OBJECT_OBJECT,
+        G_TYPE_NONE, 2, GIBBER_TYPE_XMPP_CONNECTION, SALUT_TYPE_CONTACT);
 }
 
 SalutXmppConnectionManager *
-salut_xmpp_connection_manager_new (void)
+salut_xmpp_connection_manager_new (SalutConnection *connection,
+                                   SalutContactManager *contact_manager)
 {
   return g_object_new (
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      "connection", connection,
+      "contact-manager", contact_manager,
       NULL);
 }
 

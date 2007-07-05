@@ -683,28 +683,6 @@ _salut_avahi_client_failure_cb(SalutAvahiClient *c,
 }
 
 static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *connection,
-                                           struct sockaddr_storage *addr,
-                                           guint size,
-                                           gpointer user_data)
-{
-  SalutConnection *self = SALUT_CONNECTION (user_data);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-
-  if (priv->im_manager == NULL)
-    {
-      /* Got a connection before we had an im manager.. Ignore */
-      DEBUG ("Connection but no IM manager yet!?");
-      return;
-    }
-
-  DEBUG ("New connection, passing to the IM manager");
-  salut_im_manager_handle_connection (priv->im_manager, connection, addr,
-      size);
-}
-
-static void
 _salut_avahi_client_running_cb(SalutAvahiClient *c,
                               SalutAvahiClientState state,
                               gpointer data) {
@@ -737,12 +715,6 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
                    G_CALLBACK(_self_established_cb), self);
   g_signal_connect(priv->self, "failure",
                    G_CALLBACK(_self_failed_cb), self);
-
-  g_assert (priv->xmpp_connection_manager == NULL);
-  priv->xmpp_connection_manager = salut_xmpp_connection_manager_new ();
-
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
 
   port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager);
 
@@ -1952,18 +1924,23 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
 #endif
 }
 
-
 static GPtrArray*
 salut_connection_create_channel_factories(TpBaseConnection *base) {
   SalutConnection *self = SALUT_CONNECTION(base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   GPtrArray *factories = g_ptr_array_sized_new(3);
 
-  priv->contact_manager = salut_contact_manager_new(self);
-  g_signal_connect(priv->contact_manager, "contact-change",
-                   G_CALLBACK(_contact_manager_contact_change_cb), self);
+  /* Create the contact manager */
+  priv->contact_manager = salut_contact_manager_new (self);
+  g_signal_connect (priv->contact_manager, "contact-change",
+      G_CALLBACK (_contact_manager_contact_change_cb), self);
 
-  priv->im_manager = salut_im_manager_new(self, priv->contact_manager);
+  /* Create the XMPP connection manager */
+  priv->xmpp_connection_manager = salut_xmpp_connection_manager_new (self,
+      priv->contact_manager);
+
+  priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
 
   priv->muc_manager = salut_muc_manager_new(self, priv->im_manager);
 

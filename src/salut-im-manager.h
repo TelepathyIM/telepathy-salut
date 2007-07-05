@@ -22,6 +22,7 @@
 #include <glib-object.h>
 #include "salut-contact-manager.h"
 #include "salut-im-channel.h"
+#include "salut-xmpp-connection-manager.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 
@@ -59,15 +60,11 @@ GType salut_im_manager_get_type(void);
 
 SalutImManager *
 salut_im_manager_new (SalutConnection *connection,
-    SalutContactManager *contact_manager);
+    SalutContactManager *contact_manager,
+    SalutXmppConnectionManager *connection_manager);
 
 SalutImChannel *
 salut_im_manager_get_channel_for_handle (SalutImManager *mgr,
     TpHandle handle);
-
-void
-salut_im_manager_handle_connection (SalutImManager *mgr,
-    GibberXmppConnection *connection, struct sockaddr_storage *addr,
-    guint size);
 
 #endif /* #ifndef __SALUT_IM_MANAGER_H__*/

@@ -24,6 +24,7 @@
 #include "salut-im-channel.h"
 #include "salut-im-manager.h"
 #include "salut-contact.h"
+#include "salut-xmpp-connection-manager.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
@@ -53,6 +54,7 @@ struct _SalutImManagerPrivate
 {
   SalutContactManager *contact_manager;
   SalutConnection *connection;
+  SalutXmppConnectionManager *xmpp_connection_manager;
   GHashTable *channels;
   GHashTable *pending_connections;
   gboolean dispose_has_run;
@@ -119,6 +121,12 @@ salut_im_manager_dispose (GObject *object)
     {
       g_object_unref (priv->contact_manager);
       priv->contact_manager = NULL;
+    }
+
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
     }
 
   if (priv->channels)
@@ -336,11 +344,36 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   return chan;
 }
 
+static void
+new_connection_cb (SalutXmppConnectionManager *xmpp_connection_manager,
+                   GibberXmppConnection *connection,
+                   SalutContact *contact,
+                   gpointer user_data)
+{
+  SalutImManager *self = SALUT_IM_MANAGER (user_data);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
+  TpHandle handle;
+  SalutImChannel *chan;
+
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
+       TP_HANDLE_TYPE_CONTACT);
+
+  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
+  g_assert (handle != 0);
+
+  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
+  if (chan == NULL)
+    chan = salut_im_manager_new_channel (self, handle);
+
+  salut_im_channel_add_connection (chan, connection);
+}
 
 /* public functions */
 SalutImManager *
 salut_im_manager_new (SalutConnection *connection,
-                      SalutContactManager *contact_manager)
+                      SalutContactManager *contact_manager,
+                      SalutXmppConnectionManager *xmpp_connection_manager)
 {
   SalutImManager *ret = NULL;
   SalutImManagerPrivate *priv;
@@ -350,6 +383,11 @@ salut_im_manager_new (SalutConnection *connection,
 
   priv->contact_manager = contact_manager;
   g_object_ref (contact_manager);
+  priv->xmpp_connection_manager = xmpp_connection_manager;
+  g_object_ref (xmpp_connection_manager);
+
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (new_connection_cb), ret);
 
   priv->connection = connection;
 
@@ -370,214 +408,4 @@ salut_im_manager_get_channel_for_handle (SalutImManager *mgr,
     g_object_ref (chan);
 
   return chan;
-}
-
-static void
-found_contact_for_connection (SalutImManager *mgr,
-                              GibberXmppConnection *connection,
-                              SalutContact *contact,
-                              GibberXmppStanza *stanza)
-{
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  TpHandle handle;
-  SalutImChannel *chan;
-
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
-       TP_HANDLE_TYPE_CONTACT);
-
-  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
-  g_assert (handle != 0);
-
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
-  if (chan == NULL)
-    chan = salut_im_manager_new_channel (mgr, handle);
-
-  salut_im_channel_add_connection (chan, connection);
-  if (stanza)
-    salut_im_channel_received_stanza (chan, stanza);
-}
-
-
-static void
-pending_connection_stream_closed_cb (GibberXmppConnection *connection,
-                                     gpointer userdata)
-{
-  SalutImManager *mgr = SALUT_IM_MANAGER (userdata);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  DEBUG ("Pending connection stream closed");
-  gibber_xmpp_connection_close (connection);
-  gibber_transport_disconnect (connection->transport);
-  g_hash_table_remove (priv->pending_connections, connection);
-}
-
-static gboolean
-has_transport (gpointer key,
-               gpointer value,
-               gpointer user_data)
-{
-  GibberXmppConnection *conn = GIBBER_XMPP_CONNECTION (key);
-
-  return conn->transport == user_data;
-}
-
-static void
-pending_connection_transport_disconnected_cb (GibberLLTransport *transport,
-                                              gpointer userdata)
-{
-  SalutImManager *mgr = SALUT_IM_MANAGER (userdata);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  DEBUG ("Pending connection disconnected");
-  g_hash_table_foreach_remove (priv->pending_connections,
-      has_transport, transport);
-}
-
-static void
-connection_parse_error_cb (GibberXmppConnection *conn,
-                           gpointer userdata)
-{
-  DEBUG ("Parse error on xml stream, closing connection");
-  /* Just close the transport, the disconnected callback will do the cleanup */
-  gibber_transport_disconnect (conn->transport);
-}
-
-static void
-pending_connection_got_from (SalutImManager *mgr,
-                             GibberXmppConnection *conn,
-                             GibberXmppStanza *stanza,
-                             const gchar *from)
-{
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  GList *t;
-
-  if (from == NULL)
-    {
-      DEBUG ("No valid ``from'' pending connection");
-      goto error;
-    }
-
-  DEBUG ("Got stream from %s on pending connection", from);
-  t = g_hash_table_lookup (priv->pending_connections, conn);
-
-  while (t != NULL)
-    {
-      SalutContact *contact = SALUT_CONTACT (t->data);
-      if (strcmp (contact->name, from) == 0)
-        {
-          struct sockaddr_storage addr;
-          socklen_t size = sizeof (struct sockaddr_storage);
-
-          g_signal_handlers_disconnect_matched (conn, G_SIGNAL_MATCH_DATA,
-              0, 0, NULL, NULL, mgr);
-          g_signal_handlers_disconnect_matched (conn->transport,
-              G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, mgr);
-
-          if (!gibber_ll_transport_get_address (
-                GIBBER_LL_TRANSPORT (conn->transport), &addr, &size))
-            {
-              DEBUG ("Contact no longer alive");
-              goto error;
-            }
-
-          if (!salut_contact_has_address (contact, &addr))
-            {
-              DEBUG ("Contact doesn't have that address");
-              goto error;
-            }
-          found_contact_for_connection (mgr, conn, contact, stanza);
-          g_hash_table_remove (priv->pending_connections, conn);
-          return;
-        }
-    t = g_list_next (t);
-  }
-
-error:
-  gibber_xmpp_connection_close (conn);
-  gibber_transport_disconnect (conn->transport);
-  g_hash_table_remove (priv->pending_connections, conn);
-}
-
-static void
-pending_connection_stream_opened_cb (GibberXmppConnection *conn,
-                                     const gchar *to,
-                                     const gchar *from,
-                                     const gchar *version,
-                                     gpointer user_data)
-{
-  SalutImManager *mgr = SALUT_IM_MANAGER (user_data);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  GibberXmppStanza *stanza;
-
-  gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
-  /* Send empty stream features */
-  stanza = gibber_xmpp_stanza_new ("features");
-  gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
-  gibber_xmpp_connection_send (conn, stanza, NULL);
-  g_object_unref (stanza);
-
-  /* According to the xep-0174 revision >= there should
-   * be a to and from.. But clients implementing older revision might not
-   * support that yet.
-   * */
-  if (from != NULL)
-    pending_connection_got_from (mgr, conn, NULL, from);
-}
-
-static void
-pending_connection_stanza_received_cb (GibberXmppConnection *conn,
-                                       GibberXmppStanza *stanza,
-                                       gpointer userdata)
-{
-  /* If the identity wasn't clear from the stream opening we only wait to the
-   * very first message */
-  pending_connection_got_from (SALUT_IM_MANAGER (userdata), conn, stanza,
-      gibber_xmpp_node_get_attribute (stanza->node, "from"));
-}
-
-void
-salut_im_manager_handle_connection (SalutImManager *self,
-                                    GibberXmppConnection *connection,
-                                    struct sockaddr_storage *addr,
-                                    guint size)
-{
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
-  GList *contacts;
-
-  DEBUG("Handling new connection");
-
-  contacts = salut_contact_manager_find_contacts_by_address (
-      priv->contact_manager, addr);
-  if (contacts == NULL)
-    {
-      DEBUG ("Couldn't find a contact for the connection");
-      gibber_xmpp_connection_close (connection);
-      return;
-    }
-
-  /* If it's a transport to just one contacts machine, hook it up right away.
-   * This is needed because iChat doesn't send message with to and
-   * from data...
-   */
-  if (g_list_length (contacts) == 1)
-    {
-      found_contact_for_connection (self, connection,
-          SALUT_CONTACT (contacts->data), NULL);
-      contact_list_destroy (contacts);
-      g_object_unref (connection);
-      return;
-    }
-
-  g_hash_table_insert (priv->pending_connections, connection, contacts);
-  g_signal_connect (connection, "stream-opened",
-      G_CALLBACK (pending_connection_stream_opened_cb), self);
-  g_signal_connect (connection, "received-stanza",
-      G_CALLBACK (pending_connection_stanza_received_cb), self);
-  g_signal_connect (connection->transport, "disconnected",
-      G_CALLBACK (pending_connection_transport_disconnected_cb), self);
-  g_signal_connect (connection, "stream-closed",
-      G_CALLBACK (pending_connection_stream_closed_cb), self);
-  g_signal_connect (connection, "parse-error",
-      G_CALLBACK (connection_parse_error_cb), self);
-
-  return;
 }

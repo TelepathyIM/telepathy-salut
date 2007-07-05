@@ -23,6 +23,7 @@
 #include <glib-object.h>
 
 #include "salut-connection.h"
+#include "salut-contact-manager.h"
 
 G_BEGIN_DECLS
 
@@ -63,7 +64,8 @@ GType salut_xmpp_connection_manager_get_type(void);
                               SalutXmppConnectionManagerClass))
 
 SalutXmppConnectionManager *
-salut_xmpp_connection_manager_new (void);
+salut_xmpp_connection_manager_new (SalutConnection *connection,
+    SalutContactManager *contact_manager);
 
 int
 salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager);
