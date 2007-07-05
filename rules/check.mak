@@ -1,4 +1,5 @@
 LOOPS = 10
+CLEANFILES = $(CLEANFILES) valgrind.*.log
 
 # run any given test by running make test.check
 # if the test fails, run it again at at least debug level 2
@@ -32,12 +33,10 @@ LOOPS = 10
 	$(foreach s,$(SUPPRESSIONS),--suppressions=$(s))	\
 	--tool=memcheck --leak-check=full --trace-children=yes	\
 	--leak-resolution=high --num-callers=20			\
-	./$* 2>&1 | tee valgrind.log
-	@if grep "==" valgrind.log > /dev/null 2>&1; then	\
-	    rm valgrind.log;					\
+	./$* 2>&1 | tee "valgrind.$*.log"
+	@if grep "==" "valgrind.$*.log" > /dev/null 2>&1; then	\
 	    exit 1;						\
 	fi
-	@rm valgrind.log
 	
 # valgrind any given test and generate suppressions for it
 %.valgrind.gen-suppressions: %
