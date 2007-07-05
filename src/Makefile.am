@@ -118,8 +118,9 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 
 signals-marshal.list: $(CORE_SOURCES) Makefile.am
+	( cd $(srcdir) && \
 	sed -n -e 's/.*salut_signals_marshal_\([A-Z]*__[A-Z_]*\).*/\1/p' \
-		$(CORE_SOURCES) \
+		$(CORE_SOURCES) ) \
 		| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@
 
 signals-marshal.h: signals-marshal.list

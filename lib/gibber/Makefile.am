@@ -64,8 +64,9 @@ dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
 signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
+	( cd $(srcdir) && \
 	sed -n -e 's/.*_gibber_signals_marshal_\([A-Z]*__[A-Z_]*\).*/\1/p' \
-		$(HANDWRITTEN_SOURCES) \
+		$(HANDWRITTEN_SOURCES) ) \
 		| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@
 
 signals-marshal.h: signals-marshal.list
