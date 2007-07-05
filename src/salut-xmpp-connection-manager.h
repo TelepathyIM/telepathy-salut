@@ -67,6 +67,14 @@ GType salut_xmpp_connection_manager_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_XMPP_CONNECTION_MANAGER, \
                               SalutXmppConnectionManagerClass))
 
+typedef gboolean (* SalutXmppConnectionManagerStanzaFilterFunc) (
+    SalutXmppConnectionManager *manager, GibberXmppConnection *conn,
+    GibberXmppStanza *stanza, SalutContact *contact, gpointer user_data);
+
+typedef void (* SalutXmppConnectionManagerStanzaCallbackFunc) (
+    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
+    GibberXmppStanza *stanza, SalutContact *contact, gpointer user_data);
+
 SalutXmppConnectionManager *
 salut_xmpp_connection_manager_new (SalutConnection *connection,
     SalutContactManager *contact_manager);
@@ -77,5 +85,13 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager);
 GibberXmppConnection *
 salut_xmpp_connection_get_connection (SalutXmppConnectionManager *manager,
     SalutContact *contact);
+
+gboolean
+salut_xmpp_connection_manager_add_stanza_filter (
+    SalutXmppConnectionManager *manager,
+    GibberXmppConnection *conn,
+    SalutXmppConnectionManagerStanzaFilterFunc filter,
+    SalutXmppConnectionManagerStanzaCallbackFunc callback,
+    gpointer user_data);
 
 #endif /* #ifndef __SALUT_XMPP_CONNECTION_MANAGER_H__*/

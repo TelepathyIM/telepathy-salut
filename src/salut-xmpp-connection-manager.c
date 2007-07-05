@@ -67,12 +67,33 @@ struct _SalutXmppConnectionManagerPrivate
   SalutContactManager *contact_manager;
   GHashTable *connections;
   GHashTable *pending_connections;
+  /* GibberXmppConnection -> GSList of StanzaFilter */
+  GHashTable *stanza_filters;
+  GSList *all_connection_filters;
 
   gboolean dispose_has_run;
 };
 
 #define SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE(obj) \
     ((SalutXmppConnectionManagerPrivate *) obj->priv)
+
+typedef struct
+{
+  SalutXmppConnectionManagerStanzaFilterFunc filter_func;
+  SalutXmppConnectionManagerStanzaCallbackFunc callback;
+  gpointer user_data;
+} StanzaFilter;
+
+static void
+free_stanza_filters_list (GSList *list)
+{
+  GSList *l;
+
+  for (l = list; l != NULL; l++)
+    g_slice_free (StanzaFilter, l->data);
+
+  g_slist_free (list);
+}
 
 static void
 contact_list_destroy (gpointer data)
@@ -105,6 +126,10 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
       g_object_unref, g_object_unref);
   priv->pending_connections = g_hash_table_new_full (g_direct_hash,
       g_direct_equal, g_object_unref, contact_list_destroy);
+  priv->stanza_filters = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) free_stanza_filters_list);
+
+  priv->all_connection_filters = NULL;
 
   priv->dispose_has_run = FALSE;
 }
@@ -130,6 +155,25 @@ connection_stream_closed_cb (GibberXmppConnection *connection,
 
   DEBUG ("Connection stream closed");
   g_hash_table_remove (priv->connections, connection);
+  g_hash_table_remove (priv->stanza_filters, connection);
+}
+
+static void
+apply_filters (SalutXmppConnectionManager *self,
+               GibberXmppConnection *conn,
+               GSList *list,
+               GibberXmppStanza *stanza,
+               SalutContact *contact)
+{
+  GSList *l;
+
+  for (l = list; l != NULL; l = l->next)
+    {
+      StanzaFilter *filter = l->data;
+
+      if (filter->filter_func (self, conn, stanza, contact, filter->user_data))
+        filter->callback (self, conn, stanza, contact, filter->user_data);
+    }
 }
 
 static void
@@ -137,6 +181,25 @@ connection_stanza_received_cb (GibberXmppConnection *conn,
                                GibberXmppStanza *stanza,
                                gpointer user_data)
 {
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  SalutContact *contact;
+  GSList *list;
+
+  contact = g_hash_table_lookup (priv->connections, conn);
+  if (contact == NULL)
+    {
+      DEBUG ("unknown connection, stanza ignored");
+      return;
+    }
+
+  /* Connection specific filters */
+  list = g_hash_table_lookup (priv->stanza_filters, conn);
+  apply_filters (self, conn, list, stanza, contact);
+
+  /* Filters for all connections */
+  apply_filters (self, conn, priv->all_connection_filters, stanza, contact);
 }
 
 static void
@@ -413,6 +476,15 @@ salut_xmpp_connection_manager_dispose (GObject *object)
       priv->pending_connections = NULL;
     }
 
+  if (priv->stanza_filters != NULL)
+    {
+      g_hash_table_destroy (priv->stanza_filters);
+      priv->stanza_filters = NULL;
+    }
+
+  free_stanza_filters_list (priv->all_connection_filters);
+  priv->all_connection_filters = NULL;
+
   priv->dispose_has_run = TRUE;
 
   if (G_OBJECT_CLASS (salut_xmpp_connection_manager_parent_class)->dispose)
@@ -646,4 +718,46 @@ salut_xmpp_connection_get_connection (SalutXmppConnectionManager *self,
   g_object_unref (connection);
 
   return NULL;
+}
+
+gboolean
+salut_xmpp_connection_manager_add_stanza_filter (
+    SalutXmppConnectionManager *self,
+    GibberXmppConnection *conn,
+    SalutXmppConnectionManagerStanzaFilterFunc filter_func,
+    SalutXmppConnectionManagerStanzaCallbackFunc callback,
+    gpointer user_data)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  StanzaFilter *filter;
+
+  filter = g_slice_new (StanzaFilter);
+  filter->filter_func = filter_func;
+  filter->callback = callback;
+  filter->user_data = user_data;
+
+  if (conn == NULL)
+    {
+      priv->all_connection_filters = g_slist_prepend (
+          priv->all_connection_filters, filter);
+    }
+  else
+    {
+      GSList *list;
+
+      if (g_hash_table_lookup (priv->connections, conn) == NULL)
+        {
+          DEBUG ("unknown connection");
+          g_slice_free (StanzaFilter, filter);
+          return FALSE;
+        }
+
+      list = g_hash_table_lookup (priv->stanza_filters, conn);
+      g_hash_table_steal (priv->stanza_filters, conn);
+      list = g_slist_prepend (list, filter);
+      g_hash_table_insert (priv->stanza_filters, conn, list);
+    }
+
+  return TRUE;
 }
