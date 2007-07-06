@@ -90,7 +90,7 @@ free_stanza_filters_list (GSList *list)
 {
   GSList *l;
 
-  for (l = list; l != NULL; l = l->next)
+  for (l = list; l != NULL; l = g_slist_next (l))
     g_slice_free (StanzaFilter, l->data);
 
   g_slist_free (list);
@@ -175,7 +175,7 @@ apply_filters (SalutXmppConnectionManager *self,
 
       /* We iter on the list now because if the callback calls
        * remove_filter this list element will be freed */
-      l = l->next;
+      l = g_slist_next (l);
 
       if (filter->filter_func (self, conn, stanza, contact, filter->user_data))
         filter->callback (self, conn, stanza, contact, filter->user_data);
@@ -731,7 +731,7 @@ find_filter (GSList *list,
 {
   GSList *l;
 
-  for (l = list; l != NULL; l = l->next)
+  for (l = list; l != NULL; l = g_slist_next (l))
     {
       StanzaFilter *filter = l->data;
 
