@@ -273,6 +273,11 @@ pending_connection_got_from (SalutXmppConnectionManager *self,
 
           found_contact_for_connection (self, conn, contact);
           g_hash_table_remove (priv->pending_connections, conn);
+
+          if (stanza != NULL)
+            /* We can filter the stanza now */
+            connection_stanza_received_cb (conn, stanza, self);
+
           return;
         }
     t = g_list_next (t);
@@ -323,7 +328,6 @@ pending_connection_stanza_received_cb (GibberXmppConnection *conn,
    * very first message */
   from = gibber_xmpp_node_get_attribute (stanza->node, "from");
   pending_connection_got_from (self, conn, stanza, from);
-  /* XXX queue the stanza */
 }
 
 static void
