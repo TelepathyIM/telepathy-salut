@@ -80,7 +80,8 @@ salut_xmpp_connection_manager_new (SalutConnection *connection,
     SalutContactManager *contact_manager);
 
 int
-salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager);
+salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager,
+    GError **error);
 
 GibberXmppConnection *
 salut_xmpp_connection_get_connection (SalutXmppConnectionManager *manager,

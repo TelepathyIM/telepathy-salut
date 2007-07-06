@@ -595,7 +595,8 @@ salut_xmpp_connection_manager_new (SalutConnection *connection,
 }
 
 int
-salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self)
+salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
+                                      GError **error)
 {
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
@@ -603,19 +604,19 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self)
 
   for (port = 5298; port < 5400; port++)
     {
-      GError *error = NULL;
+      GError *e;
       if (gibber_xmpp_connection_listener_listen (priv->listener, port,
-            &error))
+            &e))
         break;
 
-      if (error->code != GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE)
+      if (e->code != GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE)
         {
-          g_error_free (error);
+          g_propagate_error (error, e);
           return -1;
         }
 
-      g_error_free (error);
-      error = NULL;
+      g_error_free (e);
+      e = NULL;
     }
 
   if (port >= 5400)

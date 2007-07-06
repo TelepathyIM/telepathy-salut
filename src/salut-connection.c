@@ -716,7 +716,8 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
   g_signal_connect(priv->self, "failure",
                    G_CALLBACK(_self_failed_cb), self);
 
-  port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager);
+  port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager,
+      NULL);
 
   if (port == -1 || !salut_self_announce (priv->self, port, NULL))
     {
