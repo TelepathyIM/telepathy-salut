@@ -75,7 +75,8 @@ struct _SalutXmppConnectionManagerPrivate
 };
 
 #define SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE(obj) \
-    ((SalutXmppConnectionManagerPrivate *) obj->priv)
+    ((SalutXmppConnectionManagerPrivate *) \
+      ((SalutXmppConnectionManager *)obj)->priv)
 
 typedef struct
 {
