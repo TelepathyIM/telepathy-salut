@@ -571,13 +571,36 @@ salut_im_channel_received_stanza (SalutImChannel *self,
       time (NULL), body_offset);
 }
 
-static void
-_connection_got_stanza_cb (GibberXmppConnection *conn,
-                           GibberXmppStanza *stanza,
-                           gpointer userdata)
+static gboolean
+message_stanza_filter (SalutXmppConnectionManager *mgr,
+                       GibberXmppConnection *conn,
+                       GibberXmppStanza *stanza,
+                       SalutContact *contact,
+                       gpointer user_data)
 {
-  /* TODO verify the sender */
-  SalutImChannel *self = SALUT_IM_CHANNEL (userdata);
+  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  GibberStanzaType type;
+
+  if (priv->contact != contact)
+    return FALSE;
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
+  if (type != GIBBER_STANZA_TYPE_MESSAGE)
+    return FALSE;
+
+  return TRUE;
+}
+
+static void
+message_stanza_callback (SalutXmppConnectionManager *mgr,
+                         GibberXmppConnection *conn,
+                         GibberXmppStanza *stanza,
+                         SalutContact *contact,
+                         gpointer user_data)
+{
+  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
+
   salut_im_channel_received_stanza (self, stanza);
 }
 
@@ -650,6 +673,10 @@ _trans_disconnected_cb (GibberLLTransport *transport,
   }
   priv->xmpp_connection = NULL;
   priv->state = CHANNEL_NOT_CONNECTED;
+
+  salut_xmpp_connection_manager_remove_stanza_filter (
+      priv->xmpp_connection_manager, priv->xmpp_connection,
+      message_stanza_filter, message_stanza_callback, self);
 }
 
 static void
@@ -661,12 +688,14 @@ _initialise_connection (SalutImChannel *self)
 
   g_signal_connect (priv->xmpp_connection, "stream-opened",
       G_CALLBACK (_connection_stream_opened_cb), self);
-  g_signal_connect (priv->xmpp_connection, "received-stanza",
-      G_CALLBACK (_connection_got_stanza_cb), self);
   g_signal_connect (priv->xmpp_connection, "stream-closed",
       G_CALLBACK (_connection_stream_closed_cb), self);
   g_signal_connect (priv->xmpp_connection, "parse-error",
       G_CALLBACK (_connection_parse_error_cb), self);
+
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, priv->xmpp_connection,
+      message_stanza_filter, message_stanza_callback, self);
 
   /* Sync state with the connection */
   if (priv->xmpp_connection->stream_flags
