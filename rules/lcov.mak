@@ -1,14 +1,11 @@
 COVERAGE_DIR=coverage
 
-# run lcov from scratch, always
-lcov-reset:
+if HAVE_LCOV
+# run lcov from scratch
+lcov:
 	$(MAKE) lcov-run
 	$(MAKE) lcov-report
 
-if HAVE_LCOV
-# run lcov from scratch if the dir is not there
-lcov:
-	$(MAKE) lcov-reset
 else
 lcov:
 	@echo "lcov not found or lacking --compat-libtool support"
