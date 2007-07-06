@@ -446,12 +446,6 @@ salut_xmpp_connection_manager_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
-  if (priv->connection != NULL)
-    {
-      g_object_unref (priv->connection);
-      priv->connection = NULL;
-    }
-
   if (priv->contact_manager != NULL)
     {
       g_object_unref (priv->contact_manager);
@@ -530,7 +524,6 @@ salut_xmpp_connection_manager_set_property (GObject *object,
     {
       case PROP_CONNECTION:
         priv->connection = g_value_get_object (value);
-        g_object_ref (priv->connection);
         break;
       case PROP_CONTACT_MANAGER:
         priv->contact_manager = g_value_get_object (value);
