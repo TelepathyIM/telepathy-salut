@@ -90,6 +90,57 @@ salut_im_manager_init (SalutImManager *obj)
       g_direct_equal, g_object_unref, contact_list_destroy);
 }
 
+static gboolean
+message_stanza_filter (SalutXmppConnectionManager *mgr,
+                       GibberXmppConnection *conn,
+                       GibberXmppStanza *stanza,
+                       SalutContact *contact,
+                       gpointer user_data)
+{
+  SalutImManager *self = SALUT_IM_MANAGER (user_data);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
+  TpHandle handle;
+  GibberStanzaType type;
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
+       TP_HANDLE_TYPE_CONTACT);
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
+  if (type != GIBBER_STANZA_TYPE_MESSAGE)
+    return FALSE;
+
+  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
+  g_assert (handle != 0);
+
+  /* We are interested by this stanza only if we need to create a new text
+   * channel to handle it */
+  return (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle))
+        == NULL);
+}
+
+static void
+message_stanza_callback (SalutXmppConnectionManager *mgr,
+                         GibberXmppConnection *conn,
+                         GibberXmppStanza *stanza,
+                         SalutContact *contact,
+                         gpointer user_data)
+{
+  SalutImManager *self = SALUT_IM_MANAGER (user_data);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
+  SalutImChannel *chan;
+  TpHandle handle;
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
+       TP_HANDLE_TYPE_CONTACT);
+
+  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
+  g_assert (handle != 0);
+
+  chan = salut_im_manager_new_channel (self, handle);
+  salut_im_channel_add_connection (chan, conn);
+  salut_im_channel_received_stanza (chan, stanza);
+}
+
 static void salut_im_manager_dispose (GObject *object);
 static void salut_im_manager_finalize (GObject *object);
 
@@ -116,6 +167,10 @@ salut_im_manager_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
+
+  salut_xmpp_connection_manager_remove_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      message_stanza_filter, message_stanza_callback, self);
 
   if (priv->contact_manager)
     {
@@ -345,31 +400,6 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   return chan;
 }
 
-static void
-new_connection_cb (SalutXmppConnectionManager *xmpp_connection_manager,
-                   GibberXmppConnection *connection,
-                   SalutContact *contact,
-                   gpointer user_data)
-{
-  SalutImManager *self = SALUT_IM_MANAGER (user_data);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
-  TpHandle handle;
-  SalutImChannel *chan;
-
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
-       TP_HANDLE_TYPE_CONTACT);
-
-  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
-  g_assert (handle != 0);
-
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
-  if (chan == NULL)
-    chan = salut_im_manager_new_channel (self, handle);
-
-  salut_im_channel_add_connection (chan, connection);
-}
-
 /* public functions */
 SalutImManager *
 salut_im_manager_new (SalutConnection *connection,
@@ -387,8 +417,9 @@ salut_im_manager_new (SalutConnection *connection,
   priv->xmpp_connection_manager = xmpp_connection_manager;
   g_object_ref (xmpp_connection_manager);
 
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (new_connection_cb), ret);
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      message_stanza_filter, message_stanza_callback, ret);
 
   priv->connection = connection;
 
