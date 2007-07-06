@@ -97,17 +97,17 @@ free_stanza_filters_list (GSList *list)
 }
 
 static void
-contact_list_destroy (gpointer data)
+contact_list_destroy (GList *list)
 {
-  GList *list = (GList *) data;
-  GList *t = list;
-  while (t != NULL)
+  GList *l;
+
+  for (l = list; l != NULL; l = g_list_next (l))
     {
       SalutContact *contact;
-      contact = SALUT_CONTACT (t->data);
+      contact = SALUT_CONTACT (l->data);
       g_object_unref (contact);
-      t = g_list_next (t);
     }
+
   g_list_free (list);
 }
 
@@ -126,7 +126,7 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
   priv->connections = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       g_object_unref, g_object_unref);
   priv->pending_connections = g_hash_table_new_full (g_direct_hash,
-      g_direct_equal, g_object_unref, contact_list_destroy);
+      g_direct_equal, g_object_unref, (GDestroyNotify) contact_list_destroy);
   priv->stanza_filters = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, (GDestroyNotify) free_stanza_filters_list);
 
