@@ -71,7 +71,8 @@ struct _SalutXmppConnectionManagerPrivate
   SalutConnection *connection;
   SalutContactManager *contact_manager;
   GHashTable *connections;
-  GHashTable *pending_connections;
+  /* GibberXmppConnection -> GList of SalutContact */
+  GHashTable *incoming_pending_connections;
   /* GibberXmppConnection -> GSList of StanzaFilter */
   GHashTable *stanza_filters;
   GSList *all_connection_filters;
@@ -130,7 +131,7 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
 
   priv->connections = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       g_object_unref, g_object_unref);
-  priv->pending_connections = g_hash_table_new_full (g_direct_hash,
+  priv->incoming_pending_connections = g_hash_table_new_full (g_direct_hash,
       g_direct_equal, g_object_unref, (GDestroyNotify) contact_list_destroy);
   priv->stanza_filters = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, (GDestroyNotify) free_stanza_filters_list);
@@ -254,7 +255,8 @@ pending_connection_got_from (SalutXmppConnectionManager *self,
 
   DEBUG ("Got stream from %s on pending connection", from);
 
-  for (t = g_hash_table_lookup (priv->pending_connections, conn); t != NULL;
+  for (t = g_hash_table_lookup (priv->incoming_pending_connections, conn);
+      t != NULL;
       t = g_list_next (t))
     {
       SalutContact *contact = SALUT_CONTACT (t->data);
@@ -282,7 +284,7 @@ pending_connection_got_from (SalutXmppConnectionManager *self,
             }
 
           found_contact_for_connection (self, conn, contact);
-          g_hash_table_remove (priv->pending_connections, conn);
+          g_hash_table_remove (priv->incoming_pending_connections, conn);
 
           if (stanza != NULL)
             /* We can filter the stanza now */
@@ -295,15 +297,15 @@ pending_connection_got_from (SalutXmppConnectionManager *self,
 error:
   gibber_xmpp_connection_close (conn);
   gibber_transport_disconnect (conn->transport);
-  g_hash_table_remove (priv->pending_connections, conn);
+  g_hash_table_remove (priv->incoming_pending_connections, conn);
 }
 
 static void
-pending_connection_stream_opened_cb (GibberXmppConnection *conn,
-                                     const gchar *to,
-                                     const gchar *from,
-                                     const gchar *version,
-                                     gpointer user_data)
+incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
+                                              const gchar *to,
+                                              const gchar *from,
+                                              const gchar *version,
+                                              gpointer user_data)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
   SalutXmppConnectionManagerPrivate *priv =
@@ -326,9 +328,9 @@ pending_connection_stream_opened_cb (GibberXmppConnection *conn,
 }
 
 static void
-pending_connection_stanza_received_cb (GibberXmppConnection *conn,
-                                       GibberXmppStanza *stanza,
-                                       gpointer userdata)
+incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
+                                                GibberXmppStanza *stanza,
+                                                gpointer userdata)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (conn);
   const gchar *from;
@@ -340,21 +342,22 @@ pending_connection_stanza_received_cb (GibberXmppConnection *conn,
 }
 
 static void
-pending_connection_transport_disconnected_cb (GibberLLTransport *transport,
-                                              gpointer userdata)
+incoming_pending_connection_transport_disconnected_cb (
+    GibberLLTransport *transport,
+    gpointer userdata)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
   DEBUG ("Pending connection disconnected");
-  g_hash_table_foreach_remove (priv->pending_connections,
+  g_hash_table_foreach_remove (priv->incoming_pending_connections,
       has_transport, transport);
 }
 
 static void
-pending_connection_stream_closed_cb (GibberXmppConnection *connection,
-                                     gpointer userdata)
+incoming_pending_connection_stream_closed_cb (GibberXmppConnection *connection,
+                                              gpointer userdata)
 {
   SalutXmppConnectionManager *self =
     SALUT_XMPP_CONNECTION_MANAGER (userdata);
@@ -364,12 +367,12 @@ pending_connection_stream_closed_cb (GibberXmppConnection *connection,
   DEBUG ("Pending connection stream closed");
   gibber_xmpp_connection_close (connection);
   gibber_transport_disconnect (connection->transport);
-  g_hash_table_remove (priv->pending_connections, connection);
+  g_hash_table_remove (priv->incoming_pending_connections, connection);
 }
 
 static void
-connection_parse_error_cb (GibberXmppConnection *conn,
-                           gpointer userdata)
+incoming_connection_parse_error_cb (GibberXmppConnection *conn,
+                                    gpointer userdata)
 {
   DEBUG ("Parse error on xml stream, closing connection");
   /* Just close the transport, the disconnected callback will do the cleanup */
@@ -414,19 +417,20 @@ new_connection_cb (GibberXmppConnectionListener *listener,
     }
 
   /* We have to wait to know the contact before announce the connection */
-  g_hash_table_insert (priv->pending_connections, g_object_ref (connection),
-      contacts);
+  g_hash_table_insert (priv->incoming_pending_connections,
+      g_object_ref (connection), contacts);
 
   g_signal_connect (connection, "stream-opened",
-      G_CALLBACK (pending_connection_stream_opened_cb), self);
+      G_CALLBACK (incoming_pending_connection_stream_opened_cb), self);
   g_signal_connect (connection, "received-stanza",
-      G_CALLBACK (pending_connection_stanza_received_cb), self);
+      G_CALLBACK (incoming_pending_connection_stanza_received_cb), self);
   g_signal_connect (connection->transport, "disconnected",
-      G_CALLBACK (pending_connection_transport_disconnected_cb), self);
+      G_CALLBACK (incoming_pending_connection_transport_disconnected_cb),
+      self);
   g_signal_connect (connection, "stream-closed",
-      G_CALLBACK (pending_connection_stream_closed_cb), self);
+      G_CALLBACK (incoming_pending_connection_stream_closed_cb), self);
   g_signal_connect (connection, "parse-error",
-      G_CALLBACK (connection_parse_error_cb), self);
+      G_CALLBACK (incoming_connection_parse_error_cb), self);
 }
 
 void
@@ -457,10 +461,10 @@ salut_xmpp_connection_manager_dispose (GObject *object)
       priv->connections = NULL;
     }
 
-  if (priv->pending_connections != NULL)
+  if (priv->incoming_pending_connections != NULL)
     {
-      g_hash_table_destroy (priv->pending_connections);
-      priv->pending_connections = NULL;
+      g_hash_table_destroy (priv->incoming_pending_connections);
+      priv->incoming_pending_connections = NULL;
     }
 
   if (priv->stanza_filters != NULL)
