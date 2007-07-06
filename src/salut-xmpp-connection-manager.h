@@ -94,4 +94,12 @@ salut_xmpp_connection_manager_add_stanza_filter (
     SalutXmppConnectionManagerStanzaCallbackFunc callback,
     gpointer user_data);
 
+void
+salut_xmpp_connection_manager_remove_stanza_filter (
+    SalutXmppConnectionManager *manager,
+    GibberXmppConnection *conn,
+    SalutXmppConnectionManagerStanzaFilterFunc filter,
+    SalutXmppConnectionManagerStanzaCallbackFunc callback,
+    gpointer user_data);
+
 #endif /* #ifndef __SALUT_XMPP_CONNECTION_MANAGER_H__*/
