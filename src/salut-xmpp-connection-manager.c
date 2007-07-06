@@ -40,6 +40,11 @@
 G_DEFINE_TYPE (SalutXmppConnectionManager, salut_xmpp_connection_manager, \
     G_TYPE_OBJECT)
 
+static void
+new_connection_cb (GibberXmppConnectionListener *listener,
+    GibberXmppConnection *connection, struct sockaddr_storage *addr,
+    guint size, gpointer user_data);
+
 /* signals */
 enum
 {
@@ -131,6 +136,10 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
       NULL, (GDestroyNotify) free_stanza_filters_list);
 
   priv->all_connection_filters = NULL;
+
+  priv->listener = gibber_xmpp_connection_listener_new ();
+  g_signal_connect (priv->listener, "new-connection",
+      G_CALLBACK (new_connection_cb), self);
 
   priv->dispose_has_run = FALSE;
 }
@@ -420,31 +429,6 @@ new_connection_cb (GibberXmppConnectionListener *listener,
       G_CALLBACK (connection_parse_error_cb), self);
 }
 
-static GObject *
-salut_xmpp_connection_manager_constructor (GType type,
-                                           guint n_props,
-                                           GObjectConstructParam *props)
-{
-  GObject *obj;
-  SalutXmppConnectionManager *self;
-  SalutXmppConnectionManagerPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_xmpp_connection_manager_parent_class)->
-    constructor (type, n_props, props);
-
-  self = SALUT_XMPP_CONNECTION_MANAGER (obj);
-  priv = SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
-
-  g_assert (priv->connection != NULL);
-  g_assert (priv->contact_manager != NULL);
-
-  priv->listener = gibber_xmpp_connection_listener_new ();
-  g_signal_connect (priv->listener, "new-connection",
-      G_CALLBACK (new_connection_cb), self);
-
-  return obj;
-}
-
 void
 salut_xmpp_connection_manager_dispose (GObject *object)
 {
@@ -554,8 +538,6 @@ salut_xmpp_connection_manager_class_init (
 
   g_type_class_add_private (salut_xmpp_connection_manager_class,
       sizeof (SalutXmppConnectionManagerPrivate));
-
-  object_class->constructor = salut_xmpp_connection_manager_constructor;
 
   object_class->dispose = salut_xmpp_connection_manager_dispose;
 
