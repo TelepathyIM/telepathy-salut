@@ -244,9 +244,9 @@ pending_connection_got_from (SalutXmppConnectionManager *self,
     }
 
   DEBUG ("Got stream from %s on pending connection", from);
-  t = g_hash_table_lookup (priv->pending_connections, conn);
 
-  while (t != NULL)
+  for (t = g_hash_table_lookup (priv->pending_connections, conn); t != NULL;
+      t = g_list_next (t))
     {
       SalutContact *contact = SALUT_CONTACT (t->data);
       if (strcmp (contact->name, from) == 0)
@@ -281,7 +281,6 @@ pending_connection_got_from (SalutXmppConnectionManager *self,
 
           return;
         }
-    t = g_list_next (t);
   }
 
 error:
