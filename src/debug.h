@@ -31,6 +31,7 @@ typedef enum
   DEBUG_NET            = 1 << 12,
   DEBUG_SELF           = 1 << 13,
   DEBUG_TUBES          = 1 << 14,
+  DEBUG_XCM            = 1 << 14,
 } DebugFlags;
 
 void debug_set_flags_from_env ();

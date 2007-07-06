@@ -32,7 +32,7 @@
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-linklocal-transport.h>
 
-#define DEBUG_FLAG DEBUG_CONNECTION
+#define DEBUG_FLAG DEBUG_XCM
 #include "debug.h"
 
 #include "signals-marshal.h"

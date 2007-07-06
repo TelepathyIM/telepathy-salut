@@ -66,6 +66,7 @@ GDebugKey keys[] = {
   { "persist",        DEBUG_PERSIST },
   { "self",           DEBUG_SELF },
   { "tubes",          DEBUG_TUBES },
+  { "xmpp-connection-manager",  DEBUG_XCM },
   { "all",            ~0 },
   { 0, },
 };
