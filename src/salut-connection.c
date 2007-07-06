@@ -718,7 +718,7 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
 
   port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager);
 
-  if (port == -1 || !salut_self_announce (priv->self, port))
+  if (port == -1 || !salut_self_announce (priv->self, port, NULL))
     {
       tp_base_connection_change_status(
             TP_BASE_CONNECTION(self),

@@ -80,7 +80,7 @@ SalutSelf *salut_self_new (SalutAvahiClient *client,
 
 /* Start announcing our presence on the network */
 gboolean
-salut_self_announce (SalutSelf *self, gint port);
+salut_self_announce (SalutSelf *self, gint port, GError **error);
 
 gboolean salut_self_set_presence (SalutSelf *self,
     SalutPresenceId status, const gchar *message, GError **error);

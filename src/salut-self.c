@@ -429,7 +429,8 @@ _avahi_presence_group_failed(SalutAvahiEntryGroup *group,
 /* Start announcing our presence on the network */
 gboolean
 salut_self_announce (SalutSelf *self,
-                     gint port)
+                     gint port,
+                     GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   AvahiStringList *txt_record = NULL;
@@ -447,7 +448,7 @@ salut_self_announce (SalutSelf *self,
                    G_CALLBACK(_avahi_presence_group_failed), self);
 
   if (!salut_avahi_entry_group_attach(priv->presence_group,
-                                      priv->client, NULL)) {
+                                      priv->client, error)) {
     goto error;
   };
 
@@ -460,12 +461,12 @@ salut_self_announce (SalutSelf *self,
                                                       self->name,
                                                       "_presence._tcp",
                                                       port,
-                                                      NULL,
+                                                      error,
                                                       txt_record)) == NULL) {
     goto error;
   }
 
-  if (!salut_avahi_entry_group_commit(priv->presence_group, NULL)) {
+  if (!salut_avahi_entry_group_commit(priv->presence_group, error)) {
     goto error;
   }
 

@@ -136,6 +136,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
+  g_print ("%s\n", gibber_xmpp_node_to_string (stanza->node));
   chan = salut_im_manager_new_channel (self, handle);
   salut_im_channel_add_connection (chan, conn);
   salut_im_channel_received_stanza (chan, stanza);
