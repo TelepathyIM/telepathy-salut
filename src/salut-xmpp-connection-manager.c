@@ -584,6 +584,9 @@ SalutXmppConnectionManager *
 salut_xmpp_connection_manager_new (SalutConnection *connection,
                                    SalutContactManager *contact_manager)
 {
+  g_assert (connection != NULL);
+  g_assert (contact_manager != NULL);
+
   return g_object_new (
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
       "connection", connection,
