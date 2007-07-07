@@ -376,8 +376,9 @@ muc_channel_publish_service (SalutMucChannel *self)
   host = g_strdup_printf ("%s._salut-room._udp.local", priv->muc_name);
 
   /* Add the record */
-  if (!salut_avahi_entry_group_add_record (priv->muc_group, 0, host,
-        dns_type, AVAHI_DEFAULT_TTL_HOST_NAME,
+  if (!salut_avahi_entry_group_add_record_full (priv->muc_group,
+        AVAHI_IF_UNSPEC, addr.proto, 0,
+        host, AVAHI_DNS_CLASS_IN, dns_type, AVAHI_DEFAULT_TTL_HOST_NAME,
         &(addr.data.data), dns_payload_length, &error))
     {
       DEBUG ("add A/AAAA record failed: %s", error->message);
@@ -391,7 +392,7 @@ muc_channel_publish_service (SalutMucChannel *self)
   /* We shouldn't add the service but manually create the SRV record so
    * we'll be able to allow multiple announcers */
   priv->service = salut_avahi_entry_group_add_service_full_strlist (
-      priv->muc_group, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC, 0, priv->muc_name,
+      priv->muc_group, AVAHI_IF_UNSPEC, addr.proto, 0, priv->muc_name,
       "_salut-room._udp", NULL, host, port, &error, txt_record);
   if (priv->service == NULL)
     {
