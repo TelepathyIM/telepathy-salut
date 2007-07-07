@@ -406,7 +406,7 @@ muc_channel_publish_service (SalutMucChannel *self)
       goto publish_service_error;
     }
 
-  DEBUG ("service created");
+  DEBUG ("service created: %s %s %d", priv->muc_name, host, port);
   avahi_string_list_free (txt_record);
   g_free (host);
   return TRUE;
