@@ -602,6 +602,31 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
 }
 
 static void
+connection_disconnected (SalutImChannel *self)
+{
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->xmpp_connection != NULL)
+    {
+      /* Take care not to unref the connection if disposing */
+      if (priv->xmpp_connection && !priv->dispose_has_run)
+        g_object_unref (priv->xmpp_connection);
+      priv->xmpp_connection = NULL;
+
+      salut_xmpp_connection_manager_remove_stanza_filter (
+          priv->xmpp_connection_manager, priv->xmpp_connection,
+          message_stanza_filter, message_stanza_callback, self);
+    }
+
+  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
+      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
+  priv->state = CHANNEL_NOT_CONNECTED;
+  _error_flush_queue (self);
+
+}
+
+static void
 xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
                                               GibberXmppConnection *conn,
                                               SalutContact *contact,
@@ -610,22 +635,11 @@ xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
   SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
-  if (priv->xmpp_connection != conn)
+  if (priv->contact != contact)
     return;
 
-  /* Take care not to unref the connection if disposing */
-  if (priv->xmpp_connection && !priv->dispose_has_run)
-    g_object_unref (priv->xmpp_connection);
-
-  priv->xmpp_connection = NULL;
-  priv->state = CHANNEL_NOT_CONNECTED;
-
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, priv->xmpp_connection,
-      message_stanza_filter, message_stanza_callback, self);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
-    0, 0, NULL, NULL, self);
+  g_assert (priv->xmpp_connection == conn);
+  connection_disconnected (self);
 }
 
 static void
@@ -643,23 +657,8 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
   if (contact != priv->contact)
     return;
 
-  if (priv->xmpp_connection != NULL)
-    {
-      g_assert (priv->xmpp_connection == conn);
-
-      g_object_unref (priv->xmpp_connection);
-      priv->xmpp_connection = NULL;
-
-      salut_xmpp_connection_manager_remove_stanza_filter (
-          priv->xmpp_connection_manager, priv->xmpp_connection,
-          message_stanza_filter, message_stanza_callback, self);
-    }
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
-    0, 0, NULL, NULL, self);
-
-  priv->state = CHANNEL_NOT_CONNECTED;
-  _error_flush_queue (self);
+  g_assert (priv->xmpp_connection == NULL || priv->xmpp_connection == conn);
+  connection_disconnected (self);
 }
 
 static void
