@@ -33,6 +33,10 @@
 #define SESSION_TIMEOUT_MIN 500
 #define SESSION_TIMEOUT_MAX 800
 
+#define NR_JOIN_REQUESTS_TO_SEND 3
+#define PASSIVE_JOIN_TIME  500
+#define ACTIVE_JOIN_INTERVAL 250
+
 #define DEBUG_TRANSPORT(transport, format, ...) \
   DEBUG("%s (%p): " format, sender->name, sender, ##__VA_ARGS__)
 
@@ -81,7 +85,12 @@ struct _GibberRMulticastTransportPrivate
   guint32 packet_id;
   GHashTable *senders;
   GibberRMulticastSender *self;
-  guint session_timeout;
+  guint timer;
+  gchar *name;
+  guint32 sender_id;
+
+  gint nr_join_requests;
+  gint nr_join_requests_seen;
 };
 
 #define GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportPrivate))
@@ -108,17 +117,7 @@ gibber_r_multicast_transport_set_property (GObject *object,
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(transport);
   switch (property_id) {
     case PROP_NAME:
-      g_assert(priv->self == NULL);
-      priv->self = gibber_r_multicast_sender_new (_random_nonzero_uint (),
-          g_value_get_string(value),
-          priv->senders);
-      g_hash_table_insert(priv->senders, GUINT_TO_POINTER(priv->self->id),
-          priv->self);
-      g_signal_connect(priv->self, "repair-message",
-         G_CALLBACK(repair_message_cb), transport);
-      g_signal_connect(priv->self, "whois-reply",
-         G_CALLBACK(whois_reply_cb), transport);
-
+      priv->name = g_value_dup_string (value);
       break;
     case PROP_TRANSPORT:
       priv->transport = g_object_ref(g_value_get_object(value));
@@ -250,8 +249,8 @@ gibber_r_multicast_transport_dispose (GObject *object)
     priv->transport = NULL;
   }
 
-  if (priv->session_timeout != 0) {
-    g_source_remove(priv->session_timeout);
+  if (priv->timer != 0) {
+    g_source_remove(priv->timer);
   }
 
   /* release any references held by the object here */
@@ -272,6 +271,161 @@ gibber_r_multicast_transport_finalize (GObject *object)
   g_hash_table_destroy (priv->senders);
 
   G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->finalize (object);
+}
+
+static gboolean
+sendout_packet(GibberRMulticastTransport *transport,
+               GibberRMulticastPacket *packet, GError **error) {
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
+  guint8 *rawdata;
+  gsize rawsize;
+
+  rawdata = gibber_r_multicast_packet_get_raw_data(packet, &rawsize);
+  return gibber_transport_send(GIBBER_TRANSPORT(priv->transport),
+                               rawdata, rawsize, error);
+}
+
+static void
+add_sender_info(gpointer key, gpointer value, gpointer user_data) {
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
+  GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET(user_data);
+  gboolean r;
+
+  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
+    return;
+  }
+
+  r = gibber_r_multicast_packet_add_sender_info(packet, sender->id,
+               sender->next_input_packet, NULL);
+  g_assert(r);
+}
+
+static gboolean
+sendout_session_cb(gpointer data) {
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (data);
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+
+  GibberRMulticastPacket *packet =
+      gibber_r_multicast_packet_new(PACKET_TYPE_SESSION, priv->self->id,
+                                    priv->transport->max_packet_size);
+
+  g_hash_table_foreach(priv->senders, add_sender_info, packet);
+  DEBUG("Sending out session message");
+  sendout_packet(self, packet, NULL);
+  g_object_unref(packet);
+
+  priv->timer = 0;
+  schedule_session_message(self);
+
+  return FALSE;
+}
+
+static void
+schedule_session_message(GibberRMulticastTransport *transport) {
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
+
+  if (priv->timer != 0) {
+    g_source_remove(priv->timer);
+  }
+
+  priv->timer =
+      g_timeout_add(
+          g_random_int_range(SESSION_TIMEOUT_MIN, SESSION_TIMEOUT_MAX),
+                    sendout_session_cb, transport);
+}
+
+
+static void
+connected (GibberRMulticastTransport *transport)
+{
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(transport);
+  GibberRMulticastPacket *packet;
+
+  DEBUG ("Connected to group");
+
+  priv->self = gibber_r_multicast_sender_new (priv->sender_id, priv->name,
+      priv->senders);
+
+  g_hash_table_insert(priv->senders, GUINT_TO_POINTER(priv->self->id),
+      priv->self);
+  g_signal_connect(priv->self, "repair-message",
+      G_CALLBACK(repair_message_cb), transport);
+  g_signal_connect(priv->self, "whois-reply",
+      G_CALLBACK(whois_reply_cb), transport);
+
+  gibber_transport_set_state(GIBBER_TRANSPORT(transport),
+         GIBBER_TRANSPORT_CONNECTED);
+
+  /* Send out an unsolicited whois reply */
+  packet = gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REPLY,
+        priv->sender_id, priv->transport->max_packet_size);
+
+  gibber_r_multicast_packet_set_whois_reply_info (packet, priv->name);
+
+  sendout_packet (transport, packet, NULL);
+  g_object_unref (packet);
+
+  schedule_session_message(transport);
+}
+
+static gboolean
+next_join_step (gpointer data)
+{
+  GibberRMulticastTransport *transport = GIBBER_R_MULTICAST_TRANSPORT(data);
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(transport);
+
+  DEBUG ("Next join step: %d", priv->nr_join_requests);
+
+  if (priv->nr_join_requests < NR_JOIN_REQUESTS_TO_SEND)
+    {
+      GibberRMulticastPacket *packet;
+
+      priv->nr_join_requests++;
+
+      /* Set sender to 0 as we don't have an official id yet */
+      packet = gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REQUEST,
+          0, priv->transport->max_packet_size);
+
+      gibber_r_multicast_packet_set_whois_request_info (packet,
+          priv->sender_id);
+
+      sendout_packet (transport, packet, NULL);
+      g_object_unref (packet);
+
+      priv->timer = g_timeout_add (ACTIVE_JOIN_INTERVAL,
+          next_join_step, transport);
+    }
+  else
+    {
+      connected (transport);
+    }
+  return FALSE;
+}
+
+
+
+static void
+start_joining (GibberRMulticastTransport *transport)
+{
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
+
+  priv->sender_id = _random_nonzero_uint ();
+  priv->nr_join_requests = 0;
+  priv->nr_join_requests_seen = 0;
+
+  if (priv->timer != 0)
+  {
+    g_source_remove (priv->timer);
+  }
+
+  priv->timer = g_timeout_add (PASSIVE_JOIN_TIME,
+    next_join_step, transport);
 }
 
 static void
@@ -297,19 +451,6 @@ data_received_cb(GibberRMulticastSender *sender, guint8 stream_id,
   gibber_transport_received_data_custom(GIBBER_TRANSPORT(user_data),
       (GibberBuffer *)&rmbuffer);
   g_hash_table_foreach(priv->senders, senders_updated, self);
-}
-
-static gboolean
-sendout_packet(GibberRMulticastTransport *transport,
-               GibberRMulticastPacket *packet, GError **error) {
-  GibberRMulticastTransportPrivate *priv =
-    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
-  guint8 *rawdata;
-  gsize rawsize;
-
-  rawdata = gibber_r_multicast_packet_get_raw_data(packet, &rawsize);
-  return gibber_transport_send(GIBBER_TRANSPORT(priv->transport),
-                               rawdata, rawsize, error);
 }
 
 static void
@@ -466,23 +607,51 @@ handle_data_depends(GibberRMulticastTransport *self,
 }
 
 static void
-r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
-                    gpointer user_data) {
-  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+joining_multicast_receive (GibberRMulticastTransport *self,
+  GibberRMulticastPacket *packet) 
+{
+
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
-  GibberRMulticastPacket *packet = NULL;
+
+  DEBUG ("Received packet type: %x", packet->type);
+
+  if (packet->sender == priv->sender_id)
+    {
+      DEBUG ("Detected collision with existing sender, "
+        "restaring join process");
+      start_joining (self);
+      return;
+    }
+
+  if (packet->type == PACKET_TYPE_WHOIS_REQUEST &&
+      packet->data.whois_request.sender_id == priv->sender_id)
+    {
+      if (packet->sender != 0)
+        {
+          DEBUG ("Detected existing node quering for the same id, restarting"
+              " join process");
+          start_joining (self);
+        }
+      else
+        {
+          priv->nr_join_requests_seen++;
+          if (priv->nr_join_requests < priv->nr_join_requests_seen)
+            {
+              DEBUG ("Detected another node probing for the same id,"
+                  " restarting join process");
+              start_joining (self);
+            }
+        }
+    }
+}
+
+static void
+joined_multicast_receive (GibberRMulticastTransport *self,
+    GibberRMulticastPacket *packet) {
   GibberRMulticastSender *sender = NULL;
-  GError *error = NULL;
-
-
-  packet = gibber_r_multicast_packet_parse(buffer->data,
-      buffer->length, &error);
-
-  if (packet == NULL) {
-    DEBUG("Failed to parse packet: %s", error->message);
-    goto out;
-  }
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   DEBUG("Got packet type: 0x%x", packet->type);
 
@@ -549,6 +718,35 @@ r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
   }
 
 out:
+  return;
+}
+
+static void
+r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
+                    gpointer user_data) {
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastPacket *packet = NULL;
+  GError *error = NULL;
+
+  packet = gibber_r_multicast_packet_parse(buffer->data,
+      buffer->length, &error);
+
+  if (packet == NULL) {
+    DEBUG("Failed to parse packet: %s", error->message);
+  } else {
+    switch (GIBBER_TRANSPORT(self)->state)
+      {
+        case GIBBER_TRANSPORT_CONNECTING:
+          joining_multicast_receive (self, packet);
+          break;
+        case GIBBER_TRANSPORT_CONNECTED:
+          joined_multicast_receive (self, packet);
+          break;
+        default:
+          g_assert_not_reached ();
+      }
+  }
+
   if (error != NULL)
     g_error_free(error);
 
@@ -573,58 +771,6 @@ gibber_r_multicast_transport_new(GibberTransport *transport,
   return result;
 }
 
-static void
-add_sender_info(gpointer key, gpointer value, gpointer user_data) {
-  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
-  GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET(user_data);
-  gboolean r;
-
-  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
-    return;
-  }
-
-  r = gibber_r_multicast_packet_add_sender_info(packet, sender->id,
-               sender->next_input_packet, NULL);
-  g_assert(r);
-}
-
-static gboolean
-sendout_session_cb(gpointer data) {
-  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (data);
-  GibberRMulticastTransportPrivate *priv =
-    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
-
-  GibberRMulticastPacket *packet =
-      gibber_r_multicast_packet_new(PACKET_TYPE_SESSION, priv->self->id,
-                                    priv->transport->max_packet_size);
-
-  g_hash_table_foreach(priv->senders, add_sender_info, packet);
-  DEBUG("Sending out session message");
-  sendout_packet(self, packet, NULL);
-  g_object_unref(packet);
-
-  priv->session_timeout = 0;
-  schedule_session_message(self);
-
-  return FALSE;
-}
-
-static void
-schedule_session_message(GibberRMulticastTransport *transport) {
-  GibberRMulticastTransportPrivate *priv =
-    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
-
-  if (priv->session_timeout != 0) {
-    g_source_remove(priv->session_timeout);
-  }
-
-  priv->session_timeout =
-      g_timeout_add(
-          g_random_int_range(SESSION_TIMEOUT_MIN, SESSION_TIMEOUT_MAX),
-                    sendout_session_cb, transport);
-}
-
-
 gboolean
 gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
                                      gboolean initial, GError **error) {
@@ -633,15 +779,15 @@ gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
 
   g_assert(priv->transport->max_packet_size > 128);
 
+  priv->sender_id = _random_nonzero_uint ();
+
   gibber_transport_set_state(GIBBER_TRANSPORT(transport),
          GIBBER_TRANSPORT_CONNECTING);
-  gibber_transport_set_state(GIBBER_TRANSPORT(transport),
-         GIBBER_TRANSPORT_CONNECTED);
 
-  schedule_session_message(transport);
+  start_joining (transport);
+
   return TRUE;
 }
-
 
 static void
 add_depend(gpointer key, gpointer value, gpointer user_data) {
@@ -739,8 +885,8 @@ gibber_r_multicast_transport_disconnect(GibberTransport *transport) {
   GibberRMulticastTransportPrivate *priv = 
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  if (priv->session_timeout != 0) {
-    g_source_remove(priv->session_timeout);
+  if (priv->timer != 0) {
+    g_source_remove(priv->timer);
   }
 
   gibber_transport_set_state(GIBBER_TRANSPORT(self), 
