@@ -469,7 +469,7 @@ incoming_pending_connection_transport_disconnected_cb (
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
-  DEBUG ("Pending connection disconnected");
+  DEBUG ("Pending incoming connection disconnected");
   g_hash_table_foreach_remove (priv->incoming_pending_connections,
       has_transport, transport);
 }
@@ -483,17 +483,17 @@ incoming_pending_connection_stream_closed_cb (GibberXmppConnection *connection,
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
-  DEBUG ("Pending connection stream closed");
+  DEBUG ("Pending incoming connection stream closed");
   gibber_xmpp_connection_close (connection);
   gibber_transport_disconnect (connection->transport);
   g_hash_table_remove (priv->incoming_pending_connections, connection);
 }
 
 static void
-incoming_connection_parse_error_cb (GibberXmppConnection *conn,
-                                    gpointer userdata)
+incoming_pending_connection_parse_error_cb (GibberXmppConnection *conn,
+                                            gpointer userdata)
 {
-  DEBUG ("Parse error on xml stream, closing connection");
+  DEBUG ("Parse error on xml stream, closing pending incoming connection");
   /* Just close the transport, the disconnected callback will do the cleanup */
   gibber_transport_disconnect (conn->transport);
 }
@@ -510,13 +510,13 @@ new_connection_cb (GibberXmppConnectionListener *listener,
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   GList *contacts;
 
-  DEBUG("Handling new connection");
+  DEBUG("Handling new incoming connection");
 
   contacts = salut_contact_manager_find_contacts_by_address (
       priv->contact_manager, addr);
   if (contacts == NULL)
     {
-      DEBUG ("Couldn't find a contact for the connection");
+      DEBUG ("Couldn't find a contact for the incoming connection");
       gibber_transport_disconnect (connection->transport);
       gibber_xmpp_connection_close (connection);
       return;
@@ -549,7 +549,7 @@ new_connection_cb (GibberXmppConnectionListener *listener,
   g_signal_connect (connection, "stream-closed",
       G_CALLBACK (incoming_pending_connection_stream_closed_cb), self);
   g_signal_connect (connection, "parse-error",
-      G_CALLBACK (incoming_connection_parse_error_cb), self);
+      G_CALLBACK (incoming_pending_connection_parse_error_cb), self);
 }
 
 void
@@ -850,7 +850,7 @@ outgoing_pending_connection_transport_disconnected_cb (
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
-  DEBUG ("Pending connection disconnected");
+  DEBUG ("Pending outgoing connection disconnected");
   g_hash_table_foreach_remove (priv->outgoing_pending_connections,
       has_transport, transport);
 }
@@ -864,17 +864,17 @@ outgoing_pending_connection_stream_closed_cb (GibberXmppConnection *connection,
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
-  DEBUG ("Pending connection stream closed");
+  DEBUG ("Pending outgoing connection stream closed");
   gibber_xmpp_connection_close (connection);
   gibber_transport_disconnect (connection->transport);
   g_hash_table_remove (priv->outgoing_pending_connections, connection);
 }
 
 static void
-outgoing_connection_parse_error_cb (GibberXmppConnection *conn,
-                                    gpointer userdata)
+outgoing_pending_connection_parse_error_cb (GibberXmppConnection *conn,
+                                            gpointer userdata)
 {
-  DEBUG ("Parse error on xml stream, closing connection");
+  DEBUG ("Parse error on xml stream, closing pending outgoing connection");
   /* Just close the transport, the disconnected callback will do the cleanup */
   gibber_transport_disconnect (conn->transport);
 }
@@ -959,7 +959,7 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
 
   /* XXX what should we do if there is an existing pending connection with
    * the contact ? */
-  DEBUG ("create a new connection");
+  DEBUG ("create a new outgoing connection");
   transport = gibber_ll_transport_new ();
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
   /* Let the xmpp connection own the transport */
@@ -1006,7 +1006,7 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
           g_signal_connect (connection, "stream-closed",
               G_CALLBACK (outgoing_pending_connection_stream_closed_cb), self);
           g_signal_connect (connection, "parse-error",
-              G_CALLBACK (outgoing_connection_parse_error_cb), self);
+              G_CALLBACK (outgoing_pending_connection_parse_error_cb), self);
 
           g_array_free (addrs, TRUE);
           return
