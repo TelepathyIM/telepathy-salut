@@ -16,6 +16,13 @@ class TestMesh(Mesh):
   expected = {}
   done = 0
 
+  def connected(self, node):
+    if node == self.nodes[0]:
+      for x in xrange(0, NUMPACKETS):
+        reactor.callLater(0.1 * x,
+          (lambda y: node.pushInput(str(y) + "\n")), x)
+
+
   def gotOutput(self, node, sender, data):
     global success
 
@@ -50,10 +57,6 @@ for x in xrange(0, NUMNODES):
 # Connect all nodes to all others. 1024 bytes/s bandwidth, 50ms delay and 50%
 # packet loss.. (bandwidth and delay aren't implemented just yet)
 m.connect_full(1024, 50, 0.30)
-
-firstnode = nodes[0]
-for x in xrange(0, NUMPACKETS):
-  reactor.callLater(0.1 * x, (lambda y: firstnode.pushInput(str(y) + "\n")), x)
 
 def timeout():
   global success

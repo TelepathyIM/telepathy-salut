@@ -18,6 +18,10 @@ class TestMesh(Mesh):
   done = 0
   expected = None
 
+  def connected(self, node):
+    if node == self.nodes[0]:
+      reactor.callLater(1.5, (lambda y: node.pushInput("0\n")), x)
+
   def gotOutput(self, node, sender, data):
     global success
     value = int(data.rstrip())
@@ -56,15 +60,13 @@ m.connect_duplex(nodes[0], nodes[3], 100, 0, 0.50)
 m.connect_duplex(nodes[1], nodes[3], 100, 0, 0.50)
 m.connect_duplex(nodes[2], nodes[3], 100, 0, 0.50)
 
-reactor.callLater(0.1, (lambda y: nodes[0].pushInput("0\n")), x)
+def timeout():
+  global success
+  print "TIMEOUT!"
+  success = False
+  reactor.crash()
 
-#def timeout():
-#  global success
-#  print "TIMEOUT!"
-#  success = False
-#  reactor.crash()
-
-#reactor.callLater(60, timeout)
+reactor.callLater(60, timeout)
 
 reactor.run()
 

@@ -28,9 +28,17 @@ class BaseMeshNode(protocol.ProcessProtocol):
     "Should be overridden"
     print "Output: " + data
 
+  def node_connected(self):
+    "Should be overridden"
+    print "Connected!!"
+
+  def __connected(self, data):
+    self.node_connected()
+
   def __gotOutput(self, data):
     (sender, rawdata) = data.split(":", 1)
     self.gotOutput(sender, b64decode(rawdata))
+
 
   def newNode(self, data):
     #print "New node: " + data
@@ -44,8 +52,9 @@ class BaseMeshNode(protocol.ProcessProtocol):
     self.process.write("INPUT:" + b64encode(data) + "\n")
 
   def lineReceived(self, line):
-    commands = { "SEND"   :  self.__sendPacket,
-                 "OUTPUT" :  self.__gotOutput,
+    commands = { "SEND"      :  self.__sendPacket,
+                 "OUTPUT"    :  self.__gotOutput,
+                 "CONNECTED" :  self.__connected,
                  "NEWNODE":  self.newNode }
 
     parts = line.rstrip().split(":", 1)
@@ -84,6 +93,9 @@ class MeshNode(BaseMeshNode):
   def gotOutput(self, sender, data):
     self.mesh.gotOutput(self, sender, data)
 
+  def node_connected(self):
+    self.mesh.connected(self)
+
 class Link:
   def __init__(self, target, bandwidth, latency, dropchance):
     self.target = target
@@ -100,6 +112,9 @@ class Link:
 class Mesh:
   nodes = []
   connections = {};
+
+  def connect(self, node):
+    print node.name + " got connected"
 
   def gotOutput(self, node, sender, data):
     print "Got " + data + " from " + node.name + " send by " + sender
