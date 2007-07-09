@@ -37,6 +37,8 @@
 
 #include "signals-marshal.h"
 
+#define OUTGOING_CONNECTION_TIMEOUT 10000
+
 G_DEFINE_TYPE (SalutXmppConnectionManager, salut_xmpp_connection_manager, \
     G_TYPE_OBJECT)
 
@@ -49,6 +51,7 @@ new_connection_cb (GibberXmppConnectionListener *listener,
 enum
 {
   NEW_CONNECTION,
+  CONNECTION_FAILED,
   LAST_SIGNAL
 };
 
@@ -78,6 +81,8 @@ struct _SalutXmppConnectionManagerPrivate
   /* GibberXmppConnection -> GSList of StanzaFilter */
   GHashTable *stanza_filters;
   GSList *all_connection_filters;
+  /* GibberXmppConnection -> guint (source id) */
+  GHashTable *connection_timers;
 
   gboolean dispose_has_run;
 };
@@ -119,6 +124,25 @@ contact_list_destroy (GList *list)
   g_list_free (list);
 }
 
+GQuark
+salut_xmpp_connection_error_quark (void)
+{
+  static GQuark quark = 0;
+
+  if (!quark)
+    quark = g_quark_from_static_string (
+        "salut_xmpp_connection_error");
+
+  return quark;
+}
+
+static void
+remove_timer (gpointer user_data)
+{
+  guint id = GPOINTER_TO_UINT (user_data);
+  g_source_remove (id);
+}
+
 static void
 salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
 {
@@ -139,6 +163,8 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
       NULL, (GDestroyNotify) free_stanza_filters_list);
   priv->outgoing_pending_connections = g_hash_table_new_full (g_direct_hash,
       g_direct_equal, g_object_unref, g_object_unref);
+  priv->connection_timers = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, g_object_unref, remove_timer);
 
   priv->all_connection_filters = NULL;
 
@@ -487,6 +513,12 @@ salut_xmpp_connection_manager_dispose (GObject *object)
       priv->stanza_filters = NULL;
     }
 
+  if (priv->connection_timers != NULL)
+    {
+      g_hash_table_destroy (priv->connection_timers);
+      priv->connection_timers = NULL;
+    }
+
   free_stanza_filters_list (priv->all_connection_filters);
   priv->all_connection_filters = NULL;
 
@@ -596,6 +628,17 @@ salut_xmpp_connection_manager_class_init (
         NULL, NULL,
         salut_signals_marshal_VOID__OBJECT_OBJECT,
         G_TYPE_NONE, 2, GIBBER_TYPE_XMPP_CONNECTION, SALUT_TYPE_CONTACT);
+
+  signals[CONNECTION_FAILED] =
+    g_signal_new (
+        "connection-failed",
+        G_OBJECT_CLASS_TYPE (salut_xmpp_connection_manager_class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+        0,
+        NULL, NULL,
+        salut_signals_marshal_VOID__OBJECT_OBJECT_UINT_UINT_STRING,
+        G_TYPE_NONE, 5, GIBBER_TYPE_XMPP_CONNECTION, SALUT_TYPE_CONTACT,
+        G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
 }
 
 SalutXmppConnectionManager *
@@ -622,7 +665,7 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
 
   for (port = 5298; port < 5400; port++)
     {
-      GError *e;
+      GError *e = NULL;
       if (gibber_xmpp_connection_listener_listen (priv->listener, port,
             &e))
         break;
@@ -741,6 +784,58 @@ outgoing_connection_parse_error_cb (GibberXmppConnection *conn,
   gibber_transport_disconnect (conn->transport);
 }
 
+static void
+outgoing_connection_failed (SalutXmppConnectionManager *self,
+                            GibberXmppConnection *connection,
+                            SalutContact *contact,
+                            guint code,
+                            const gchar *msg)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  g_hash_table_remove (priv->outgoing_pending_connections, connection);
+  g_signal_handlers_disconnect_matched (connection, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, self);
+
+  g_signal_emit (self, signals[CONNECTION_FAILED], 0,
+      connection, contact, SALUT_XMPP_CONNECTION_MANAGER_ERROR, code, msg);
+}
+
+struct outgoing_connection_timeout_data
+{
+  SalutXmppConnectionManager *self;
+  GibberXmppConnection *connection;
+  SalutContact *contact;
+};
+
+static void
+outgoing_connection_timeout_data_free (
+    struct outgoing_connection_timeout_data *data)
+{
+  g_slice_free (struct outgoing_connection_timeout_data, data);
+}
+
+static gboolean
+outgoing_pending_connection_timeout (
+    struct outgoing_connection_timeout_data *data)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
+
+  if (g_hash_table_remove (priv->outgoing_pending_connections,
+        data->connection))
+    {
+      /* Connection was still pending, let's raise an error */
+      outgoing_connection_failed (data->self, data->connection, data->contact,
+          SALUT_XMPP_CONNECTION_MANAGER_ERROR_TIMEOUT,
+          "Outgoing connection timeout: remote contact didn't open it");
+    }
+
+  g_hash_table_remove (priv->connection_timers, data->connection);
+  return FALSE;
+}
+
 SalutXmppConnectionManagerRequestConnectionResult
 salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
                                           SalutContact *contact,
@@ -786,6 +881,9 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
       if (gibber_ll_transport_open_sockaddr (transport, &(addr->address),
             NULL))
         {
+          struct outgoing_connection_timeout_data *data;
+          guint id;
+
           gibber_xmpp_connection_open (connection, contact->name,
               priv->connection->name, "1.0");
 
@@ -793,6 +891,17 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
            * open it */
           g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
+
+          data = g_slice_new (struct outgoing_connection_timeout_data);
+          data->self = self;
+          data->connection = connection;
+          data->contact = contact;
+          id = g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE,
+              OUTGOING_CONNECTION_TIMEOUT,
+              (GSourceFunc) outgoing_pending_connection_timeout, data,
+              (GDestroyNotify) outgoing_connection_timeout_data_free);
+          g_hash_table_insert (priv->connection_timers,
+              g_object_ref (connection), GUINT_TO_POINTER (id));
 
           g_signal_connect (connection, "stream-opened",
               G_CALLBACK (outgoing_pending_connection_stream_opened_cb), self);

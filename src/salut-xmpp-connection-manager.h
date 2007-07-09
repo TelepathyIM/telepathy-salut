@@ -31,6 +31,15 @@
 
 G_BEGIN_DECLS
 
+GQuark salut_xmpp_connection_error_quark (void);
+#define SALUT_XMPP_CONNECTION_MANAGER_ERROR \
+  salut_xmpp_connection_error_quark()
+
+typedef enum
+{
+  SALUT_XMPP_CONNECTION_MANAGER_ERROR_TIMEOUT,
+} SalutXmppConnectionManagerError;
+
 typedef struct _SalutXmppConnectionManager SalutXmppConnectionManager;
 typedef struct _SalutXmppConnectionManagerClass \
           SalutXmppConnectionManagerClass;

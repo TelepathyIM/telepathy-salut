@@ -729,6 +729,25 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 }
 
 static void
+xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
+                                              GibberXmppConnection *conn,
+                                              SalutContact *contact,
+                                              GQuark domain,
+                                              gint code,
+                                              gchar *message,
+                                              gpointer user_data)
+{
+  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
+    0, 0, NULL, NULL, self);
+
+  priv->state = CHANNEL_NOT_CONNECTED;
+  _error_flush_queue (self);
+}
+
+static void
 _setup_connection (SalutImChannel *self)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
@@ -748,10 +767,10 @@ _setup_connection (SalutImChannel *self)
       SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
     {
       DEBUG ("Requested connection pending");
-      /* XXX set a timer to avoid to be blocked if remote contact never open
-       * the connection ? */
       g_signal_connect (priv->xmpp_connection_manager, "new-connection",
           G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
+      g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
+          G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
       return;
     }
   else
