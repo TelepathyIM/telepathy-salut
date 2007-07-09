@@ -623,6 +623,9 @@ xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
   salut_xmpp_connection_manager_remove_stanza_filter (
       priv->xmpp_connection_manager, priv->xmpp_connection,
       message_stanza_filter, message_stanza_callback, self);
+
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
+    0, 0, NULL, NULL, self);
 }
 
 static void
