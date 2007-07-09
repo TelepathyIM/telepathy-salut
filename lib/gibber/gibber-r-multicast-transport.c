@@ -76,7 +76,8 @@ enum {
 };
 
 /* private structure */
-typedef struct _GibberRMulticastTransportPrivate GibberRMulticastTransportPrivate;
+typedef struct _GibberRMulticastTransportPrivate
+    GibberRMulticastTransportPrivate;
 
 struct _GibberRMulticastTransportPrivate
 {
@@ -93,7 +94,9 @@ struct _GibberRMulticastTransportPrivate
   gint nr_join_requests_seen;
 };
 
-#define GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportPrivate))
+#define GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(o) \
+  (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_TRANSPORT, \
+   GibberRMulticastTransportPrivate))
 
 static guint32
 _random_nonzero_uint(void)
@@ -153,7 +156,8 @@ gibber_r_multicast_transport_get_property (GObject *object,
 static void
 gibber_r_multicast_transport_init (GibberRMulticastTransport *obj)
 {
-  GibberRMulticastTransportPrivate *priv = GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (obj);
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
   priv->senders = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -270,7 +274,8 @@ gibber_r_multicast_transport_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_hash_table_destroy (priv->senders);
 
-  G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->finalize (object);
+  G_OBJECT_CLASS (
+      gibber_r_multicast_transport_parent_class)->finalize (object);
 }
 
 static gboolean
@@ -631,8 +636,8 @@ joining_multicast_receive (GibberRMulticastTransport *self,
     {
       if (packet->sender != 0)
         {
-          DEBUG_TRANSPORT ("Detected existing node quering for the same id, restarting"
-              " join process");
+          DEBUG_TRANSPORT ("Detected existing node quering for the same id,"
+              " restarting join process");
           start_joining (self);
         }
       else
@@ -660,7 +665,8 @@ joined_multicast_receive (GibberRMulticastTransport *self,
   if (packet->sender == 0) {
     if (packet->type != PACKET_TYPE_WHOIS_REQUEST)
       {
-        DEBUG_TRANSPORT ("Invalid packet (sender is 0, which is not valid for type %x)",
+        DEBUG_TRANSPORT ("Invalid packet (sender is 0, which is not valid for "
+             " type %x)",
           packet->type);
         goto out;
       }
