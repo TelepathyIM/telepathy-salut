@@ -435,7 +435,7 @@ id_generation_conflict_send_hook (GibberTransport *transport,
             reply = gibber_r_multicast_packet_new(PACKET_TYPE_WHOIS_REQUEST,
               0, transport->max_packet_size);
 
-            gibber_r_multicast_packet_set_whois_request_info(packet, test->id);
+            gibber_r_multicast_packet_set_whois_request_info(reply, test->id);
 
             pdata = gibber_r_multicast_packet_get_raw_data (reply, &psize);
             test_transport_write (TEST_TRANSPORT(transport), pdata, psize);
