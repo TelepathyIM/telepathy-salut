@@ -90,6 +90,12 @@ new_sender_cb(GibberRMulticastTransport *transport,
   fflush(stdout);
 }
 
+static void
+connected (GibberRMulticastTransport *transport, gpointer user_data) {
+  printf("CONNECTED:\n");
+  fflush(stdout);
+}
+
 int
 main(int argc, char **argv){ 
   GIOChannel *io;
@@ -111,7 +117,9 @@ main(int argc, char **argv){
 
   g_signal_connect(m, "new-sender", 
       G_CALLBACK(new_sender_cb), NULL);
- 
+
+  g_signal_connect(m, "connected",
+    G_CALLBACK(connected), NULL);
 
   /* test transport starts out connected */
   g_assert(gibber_r_multicast_transport_connect(m, FALSE, NULL));
