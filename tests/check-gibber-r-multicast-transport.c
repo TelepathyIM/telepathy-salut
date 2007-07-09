@@ -160,20 +160,13 @@ depends_send_test_data (gpointer data)
   return FALSE;
 }
 
-
-START_TEST (test_depends)
+static void
+depends_connected (GibberTransport *transport, gpointer user_data)
 {
-  GibberRMulticastTransport *rmtransport;
-  TestTransport *testtransport;
+  GibberRMulticastTransport *rmtransport
+    = GIBBER_R_MULTICAST_TRANSPORT(transport);
+  TestTransport *testtransport = TEST_TRANSPORT (user_data);
   int i;
-
-  loop = g_main_loop_new (NULL, FALSE);
-
-  rmtransport = create_rmulticast_transport (&testtransport, "test123",
-       depends_send_hook, NULL);
-
-  fail_unless (gibber_r_multicast_transport_connect (rmtransport,
-      FALSE, NULL));
 
   /* First input some data packets, so the transport is forced to generate
    * dependency info */
@@ -195,6 +188,24 @@ START_TEST (test_depends)
 
   /* Wait more then 200 ms, so all senders can get go to running */
   g_timeout_add (300, depends_send_test_data, rmtransport);
+}
+
+START_TEST (test_depends)
+{
+  GibberRMulticastTransport *rmtransport;
+  TestTransport *testtransport;
+  int i;
+
+  loop = g_main_loop_new (NULL, FALSE);
+
+  rmtransport = create_rmulticast_transport (&testtransport, "test123",
+       depends_send_hook, NULL);
+
+  g_signal_connect(rmtransport, "connected",
+      G_CALLBACK(depends_connected), testtransport);
+
+  fail_unless (gibber_r_multicast_transport_connect (rmtransport,
+      FALSE, NULL));
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
@@ -256,10 +267,10 @@ out:
   return TRUE;
 }
 
-
-START_TEST (test_fragmentation)
-{
-  GibberRMulticastTransport *rmtransport;
+static void
+fragmentation_connected (GibberTransport *transport, gpointer user_data) {
+  GibberRMulticastTransport *rmtransport
+    = GIBBER_R_MULTICAST_TRANSPORT(transport);
   guint8 testdata[TEST_DATA_SIZE];
   int i;
 
@@ -268,16 +279,24 @@ START_TEST (test_fragmentation)
       testdata[i] = (guint8) (i & 0xff);
     }
 
+  fail_unless (gibber_transport_send (GIBBER_TRANSPORT (rmtransport),
+      (guint8 *)testdata, TEST_DATA_SIZE, NULL));
+}
+
+START_TEST (test_fragmentation)
+{
+  GibberRMulticastTransport *rmtransport;
+
   loop = g_main_loop_new (NULL, FALSE);
 
   rmtransport = create_rmulticast_transport (NULL, "test123",
        fragmentation_send_hook, NULL);
 
+  g_signal_connect(rmtransport, "connected",
+      G_CALLBACK(fragmentation_connected), NULL);
+
   fail_unless (gibber_r_multicast_transport_connect (rmtransport,
      FALSE, NULL));
-
-  fail_unless (gibber_transport_send (GIBBER_TRANSPORT (rmtransport),
-      (guint8 *)testdata, TEST_DATA_SIZE, NULL));
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
