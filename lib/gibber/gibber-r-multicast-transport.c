@@ -779,8 +779,6 @@ gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
 
   g_assert(priv->transport->max_packet_size > 128);
 
-  priv->sender_id = _random_nonzero_uint ();
-
   gibber_transport_set_state(GIBBER_TRANSPORT(transport),
          GIBBER_TRANSPORT_CONNECTING);
 
