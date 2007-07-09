@@ -241,10 +241,9 @@ connection_fully_open (SalutXmppConnectionManager *self,
   g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, contact);
 }
 
-static void
+static gboolean
 pending_connection_got_from (SalutXmppConnectionManager *self,
                              GibberXmppConnection *conn,
-                             GibberXmppStanza *stanza,
                              const gchar *from)
 {
   SalutXmppConnectionManagerPrivate *priv =
@@ -290,11 +289,7 @@ pending_connection_got_from (SalutXmppConnectionManager *self,
           connection_fully_open (self, conn, contact);
           g_hash_table_remove (priv->incoming_pending_connections, conn);
 
-          if (stanza != NULL)
-            /* We can filter the stanza now */
-            connection_stanza_received_cb (conn, stanza, self);
-
-          return;
+          return TRUE;
         }
   }
 
@@ -302,6 +297,7 @@ error:
   gibber_xmpp_connection_close (conn);
   gibber_transport_disconnect (conn->transport);
   g_hash_table_remove (priv->incoming_pending_connections, conn);
+  return FALSE;
 }
 
 static void
@@ -328,7 +324,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
    * support that yet.
    * */
   if (from != NULL)
-    pending_connection_got_from (self, conn, NULL, from);
+    pending_connection_got_from (self, conn, from);
 }
 
 static void
@@ -342,7 +338,11 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
   /* If the identity wasn't clear from the stream opening we only wait to the
    * very first message */
   from = gibber_xmpp_node_get_attribute (stanza->node, "from");
-  pending_connection_got_from (self, conn, stanza, from);
+  if (pending_connection_got_from (self, conn, from))
+    {
+      /* We can filter the stanza now */
+      connection_stanza_received_cb (conn, stanza, self);
+    }
 }
 
 static void
