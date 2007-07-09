@@ -4,6 +4,9 @@ mkdir -p outputs
 
 RET=0
 
+
+srcdir=${srdir:=$(dirname $0)}
+
 for x in ${srcdir}/inputs/*.input ; do
   FILE=$(basename ${x%.input})
   XMLOUT="outputs/${FILE}.output"
