@@ -619,7 +619,7 @@ joining_multicast_receive (GibberRMulticastTransport *self,
   if (packet->sender == priv->sender_id)
     {
       DEBUG ("Detected collision with existing sender, "
-        "restaring join process");
+        "restarting join process");
       start_joining (self);
       return;
     }

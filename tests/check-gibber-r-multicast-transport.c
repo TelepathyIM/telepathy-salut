@@ -327,7 +327,7 @@ unique_id_send_hook (GibberTransport *transport,
     guint8 *pdata;
     gsize psize;
 
-    /* First packet most be a whois request to see if the id is taken */
+    /* First packet must be a whois request to see if the id is taken */
     fail_unless (packet->type == PACKET_TYPE_WHOIS_REQUEST);
     /* Sender must be 0 as it couldn't choose a id just yet */
     fail_unless (packet->sender == 0);
@@ -407,7 +407,7 @@ id_generation_conflict_send_hook (GibberTransport *transport,
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
 
   if (test->id == 0) {
-    /* First packet most be a whois request to see if the id is taken */
+    /* First packet must be a whois request to see if the id is taken */
     fail_unless (packet->type == PACKET_TYPE_WHOIS_REQUEST);
     /* Sender must be 0 as it couldn't choose a id just yet */
     fail_unless (packet->sender == 0);
