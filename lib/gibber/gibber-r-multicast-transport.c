@@ -37,8 +37,8 @@
 #define PASSIVE_JOIN_TIME  500
 #define ACTIVE_JOIN_INTERVAL 250
 
-#define DEBUG_TRANSPORT(transport, format, ...) \
-  DEBUG("%s (%p): " format, sender->name, sender, ##__VA_ARGS__)
+#define DEBUG_TRANSPORT(format,...) \
+  DEBUG("group %s (%p): " format, priv->name, priv, ##__VA_ARGS__)
 
 struct hash_data {
   GibberRMulticastSender *sender;
@@ -312,7 +312,7 @@ sendout_session_cb(gpointer data) {
                                     priv->transport->max_packet_size);
 
   g_hash_table_foreach(priv->senders, add_sender_info, packet);
-  DEBUG("Sending out session message");
+  DEBUG_TRANSPORT ("Sending out session message");
   sendout_packet(self, packet, NULL);
   g_object_unref(packet);
 
@@ -345,7 +345,7 @@ connected (GibberRMulticastTransport *transport)
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(transport);
   GibberRMulticastPacket *packet;
 
-  DEBUG ("Connected to group");
+  DEBUG_TRANSPORT ("Connected to group");
 
   priv->self = gibber_r_multicast_sender_new (priv->sender_id, priv->name,
       priv->senders);
@@ -379,7 +379,7 @@ next_join_step (gpointer data)
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(transport);
 
-  DEBUG ("Next join step: %d", priv->nr_join_requests);
+  DEBUG_TRANSPORT ("Next join step: %d", priv->nr_join_requests);
 
   if (priv->nr_join_requests < NR_JOIN_REQUESTS_TO_SEND)
     {
@@ -418,6 +418,8 @@ start_joining (GibberRMulticastTransport *transport)
   priv->sender_id = _random_nonzero_uint ();
   priv->nr_join_requests = 0;
   priv->nr_join_requests_seen = 0;
+
+  DEBUG_TRANSPORT ("Started joining, id: %x", priv->sender_id);
 
   if (priv->timer != 0)
   {
@@ -578,7 +580,7 @@ handle_session_message(GibberRMulticastTransport *self,
   /* Reschedule the sending out of a session message if the received session
    * message was at least as up to date as us */
   if (!outdated && g_hash_table_size(priv->senders) == num) {
-    DEBUG("Rescheduling session message");
+    DEBUG_TRANSPORT ("Rescheduling session message");
     schedule_session_message(self);
   }
 }
@@ -614,11 +616,11 @@ joining_multicast_receive (GibberRMulticastTransport *self,
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  DEBUG ("Received packet type: %x", packet->type);
+  DEBUG_TRANSPORT ("Received packet type: %x", packet->type);
 
   if (packet->sender == priv->sender_id)
     {
-      DEBUG ("Detected collision with existing sender, "
+      DEBUG_TRANSPORT ("Detected collision with existing sender, "
         "restarting join process");
       start_joining (self);
       return;
@@ -629,7 +631,7 @@ joining_multicast_receive (GibberRMulticastTransport *self,
     {
       if (packet->sender != 0)
         {
-          DEBUG ("Detected existing node quering for the same id, restarting"
+          DEBUG_TRANSPORT ("Detected existing node quering for the same id, restarting"
               " join process");
           start_joining (self);
         }
@@ -638,7 +640,7 @@ joining_multicast_receive (GibberRMulticastTransport *self,
           priv->nr_join_requests_seen++;
           if (priv->nr_join_requests < priv->nr_join_requests_seen)
             {
-              DEBUG ("Detected another node probing for the same id,"
+              DEBUG_TRANSPORT ("Detected another node probing for the same id,"
                   " restarting join process");
               start_joining (self);
             }
@@ -653,16 +655,16 @@ joined_multicast_receive (GibberRMulticastTransport *self,
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  DEBUG("Got packet type: 0x%x", packet->type);
+  DEBUG_TRANSPORT ("Got packet type: 0x%x", packet->type);
 
   if (packet->sender == 0) {
     if (packet->type != PACKET_TYPE_WHOIS_REQUEST)
       {
-        DEBUG ("Invalid packet (sender is 0, which is not valid for type %x)",
+        DEBUG_TRANSPORT ("Invalid packet (sender is 0, which is not valid for type %x)",
           packet->type);
         goto out;
       }
-    DEBUG ("New sender polling for a unique id");
+    DEBUG_TRANSPORT ("New sender polling for a unique id");
   } else {
     /* All packets with non-zero sender fall go through here to start detecting
      * new sender as early as possible */
@@ -714,7 +716,7 @@ joined_multicast_receive (GibberRMulticastTransport *self,
       handle_session_message(self, packet);
       break;
     default:
-        DEBUG("Received unhandled packet type!!, ignoring");
+        DEBUG_TRANSPORT ("Received unhandled packet type!!, ignoring");
   }
 
 out:
@@ -725,6 +727,8 @@ static void
 r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
                     gpointer user_data) {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet = NULL;
   GError *error = NULL;
 
@@ -732,7 +736,7 @@ r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
       buffer->length, &error);
 
   if (packet == NULL) {
-    DEBUG("Failed to parse packet: %s", error->message);
+    DEBUG_TRANSPORT ("Failed to parse packet: %s", error->message);
   } else {
     switch (GIBBER_TRANSPORT(self)->state)
       {
