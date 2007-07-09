@@ -425,11 +425,12 @@ id_generation_conflict_send_hook (GibberTransport *transport,
           }
         else if (test->count == test->wait)
           {
-            fail_unless (test->id == packet->data.whois_request.sender_id);
             /* force collision */
             GibberRMulticastPacket *reply;
             guint8 *pdata;
             gsize psize;
+
+            fail_unless (test->id == packet->data.whois_request.sender_id);
 
             reply = gibber_r_multicast_packet_new(PACKET_TYPE_WHOIS_REQUEST,
               0, transport->max_packet_size);
