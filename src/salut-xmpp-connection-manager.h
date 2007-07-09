@@ -67,6 +67,13 @@ GType salut_xmpp_connection_manager_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_XMPP_CONNECTION_MANAGER, \
                               SalutXmppConnectionManagerClass))
 
+typedef enum
+{
+  SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE,
+  SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING,
+  SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE,
+} SalutXmppConnectionManagerRequestConnectionResult;
+
 typedef gboolean (* SalutXmppConnectionManagerStanzaFilterFunc) (
     SalutXmppConnectionManager *manager, GibberXmppConnection *conn,
     GibberXmppStanza *stanza, SalutContact *contact, gpointer user_data);
@@ -83,9 +90,9 @@ int
 salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager,
     GError **error);
 
-GibberXmppConnection *
-salut_xmpp_connection_get_connection (SalutXmppConnectionManager *manager,
-    SalutContact *contact);
+SalutXmppConnectionManagerRequestConnectionResult
+salut_xmpp_connection_request_connection (SalutXmppConnectionManager *manager,
+    SalutContact *contact, GibberXmppConnection **conn);
 
 gboolean
 salut_xmpp_connection_manager_add_stanza_filter (

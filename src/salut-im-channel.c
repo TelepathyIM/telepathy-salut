@@ -712,24 +712,57 @@ _initialise_connection (SalutImChannel *self)
 }
 
 static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+                                           GibberXmppConnection *conn,
+                                           SalutContact *contact,
+                                           gpointer user_data)
+{
+  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
+  g_assert (contact == priv->contact);
+
+  DEBUG ("pending connection fully open");
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
+    0, 0, NULL, NULL, self);
+
+  priv->xmpp_connection = conn;
+  g_object_ref (priv->xmpp_connection);
+  _initialise_connection (self);
+}
+
+static void
 _setup_connection (SalutImChannel *self)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SalutXmppConnectionManagerRequestConnectionResult result;
+  GibberXmppConnection *conn = NULL;
 
-  if (priv->xmpp_connection != NULL)
-    g_object_unref (priv->xmpp_connection);
+  result = salut_xmpp_connection_request_connection (
+      priv->xmpp_connection_manager, priv->contact, &conn);
 
-  priv->xmpp_connection = salut_xmpp_connection_get_connection (
-      priv->xmpp_connection_manager, priv->contact);
-
-  if (priv->xmpp_connection == NULL)
+  if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+    {
+      priv->xmpp_connection = conn;
+      g_object_ref (priv->xmpp_connection);
+      _initialise_connection (self);
+    }
+  else if (result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
+    {
+      DEBUG ("Requested connection pending");
+      /* XXX set a timer to avoid to be blocked if remote contact never open
+       * the connection ? */
+      g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+          G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
+      return;
+    }
+  else
     {
       priv->state = CHANNEL_NOT_CONNECTED;
       _error_flush_queue (self);
       return;
     }
-
-  _initialise_connection (self);
 }
 
 static void
@@ -818,8 +851,8 @@ salut_im_channel_add_connection (SalutImChannel *chan,
       return;
     }
   DEBUG ("New connection for: %s", priv->contact->name);
-  g_object_ref (conn);
   priv->xmpp_connection = conn;
+  g_object_ref (priv->xmpp_connection);
   _initialise_connection (chan);
 }
 
