@@ -678,9 +678,9 @@ static void
 _initialise_connection (SalutImChannel *self)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
   g_signal_connect (priv->xmpp_connection->transport,
       "disconnected", G_CALLBACK (_trans_disconnected_cb), self);
-
   g_signal_connect (priv->xmpp_connection, "stream-opened",
       G_CALLBACK (_connection_stream_opened_cb), self);
   g_signal_connect (priv->xmpp_connection, "stream-closed",
@@ -715,7 +715,9 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
-  g_assert (contact == priv->contact);
+  if (contact != priv->contact)
+    /* This new connection is not for this channel */
+    return;
 
   DEBUG ("pending connection fully open");
   g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
