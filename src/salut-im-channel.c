@@ -104,9 +104,6 @@ struct _SalutImChannelPrivate
   /* Outcoming and incoming message queues */
   GQueue *out_queue;
   ChannelState state;
-  /* Hold the address array when connection */
-  GArray *addresses;
-  gint address_index;
 };
 
 #define SALUT_IM_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE \
@@ -204,8 +201,6 @@ salut_im_channel_init (SalutImChannel *obj)
   priv->xmpp_connection = NULL;
   priv->out_queue = g_queue_new ();
   priv->state = CHANNEL_NOT_CONNECTED;
-  priv->addresses = NULL;
-  priv->address_index = -1;
   priv->xmpp_connection_manager = NULL;
 }
 
