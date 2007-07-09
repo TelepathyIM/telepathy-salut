@@ -53,6 +53,7 @@ create_rmulticast_transport (TestTransport **testtransport,
       *testtransport = t;
     }
 
+  test_transport_set_echoing (t, TRUE);
   g_object_unref (t);
 
   return rmtransport;
