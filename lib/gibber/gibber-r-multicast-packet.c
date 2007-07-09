@@ -92,7 +92,7 @@ void
 gibber_r_multicast_packet_finalize (GObject *object)
 {
   GibberRMulticastPacket *self = GIBBER_R_MULTICAST_PACKET (object);
-  GibberRMulticastPacketPrivate *priv = 
+  GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
@@ -144,7 +144,7 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
                               gsize max_size) {
   GibberRMulticastPacket *result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET,
                                                 NULL);
-  GibberRMulticastPacketPrivate *priv = 
+  GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE(result);
 
   /* Fixme do this using properties */
@@ -462,7 +462,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     GError **error) {
   GibberRMulticastPacket *result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET,
                                                 NULL);
-  GibberRMulticastPacketPrivate *priv = 
+  GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE(result);
 
   priv->data = g_memdup(data, size);
