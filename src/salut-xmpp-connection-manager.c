@@ -704,18 +704,6 @@ outgoing_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
 }
 
 static void
-outgoing_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
-                                                GibberXmppStanza *stanza,
-                                                gpointer userdata)
-{
-  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (conn);
-
-  /* We received a stanza so let's assume this connection is now fully open */
-  outgoing_pending_connection_fully_open (self, conn);
-  connection_stanza_received_cb (conn, stanza, self);
-}
-
-static void
 outgoing_pending_connection_transport_disconnected_cb (
     GibberLLTransport *transport,
     gpointer userdata)
@@ -816,9 +804,6 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
 
           g_signal_connect (connection, "stream-opened",
               G_CALLBACK (outgoing_pending_connection_stream_opened_cb), self);
-          g_signal_connect (connection, "received-stanza",
-              G_CALLBACK (outgoing_pending_connection_stanza_received_cb),
-              self);
           g_signal_connect (connection->transport, "disconnected",
               G_CALLBACK (
                 outgoing_pending_connection_transport_disconnected_cb), self);
