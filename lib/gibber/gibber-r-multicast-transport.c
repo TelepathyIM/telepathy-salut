@@ -55,7 +55,7 @@ whois_reply_cb(GibberRMulticastSender *sender, gpointer user_data);
 static void
 schedule_session_message(GibberRMulticastTransport *transport);
 
-G_DEFINE_TYPE(GibberRMulticastTransport, gibber_r_multicast_transport, 
+G_DEFINE_TYPE(GibberRMulticastTransport, gibber_r_multicast_transport,
               GIBBER_TYPE_TRANSPORT)
 
 /* signal enum */
@@ -237,7 +237,7 @@ void
 gibber_r_multicast_transport_dispose (GObject *object)
 {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
-  GibberRMulticastTransportPrivate *priv = 
+  GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
@@ -556,7 +556,7 @@ handle_session_message(GibberRMulticastTransport *self,
 
   g_assert (packet->type == PACKET_TYPE_SESSION);
 
-  for (l = packet->data.session.senders ; l != NULL ; l = g_list_next(l)) 
+  for (l = packet->data.session.senders ; l != NULL ; l = g_list_next(l))
     {
       GibberRMulticastPacketSenderInfo *sender_info =
           (GibberRMulticastPacketSenderInfo *) l->data;
@@ -610,7 +610,7 @@ handle_data_depends(GibberRMulticastTransport *self,
 
 static void
 joining_multicast_receive (GibberRMulticastTransport *self,
-  GibberRMulticastPacket *packet) 
+  GibberRMulticastPacket *packet)
 {
 
   GibberRMulticastTransportPrivate *priv =
@@ -769,7 +769,7 @@ gibber_r_multicast_transport_new(GibberTransport *transport,
                       "transport", transport,
                       NULL);
 
-  gibber_transport_set_handler(GIBBER_TRANSPORT(transport), 
+  gibber_transport_set_handler(GIBBER_TRANSPORT(transport),
       r_multicast_receive, result);
 
   return result;
@@ -884,14 +884,14 @@ gibber_r_multicast_transport_do_send(GibberTransport *transport,
 static void
 gibber_r_multicast_transport_disconnect(GibberTransport *transport) {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (transport);
-  GibberRMulticastTransportPrivate *priv = 
+  GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   if (priv->timer != 0) {
     g_source_remove(priv->timer);
   }
 
-  gibber_transport_set_state(GIBBER_TRANSPORT(self), 
+  gibber_transport_set_state(GIBBER_TRANSPORT(self),
                              GIBBER_TRANSPORT_DISCONNECTED);
   gibber_transport_disconnect(GIBBER_TRANSPORT(priv->transport));
 }
