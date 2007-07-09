@@ -336,7 +336,7 @@ unique_id_send_hook (GibberTransport *transport,
     reply = gibber_r_multicast_packet_new(PACKET_TYPE_WHOIS_REPLY,
       *test_id, transport->max_packet_size);
 
-    gibber_r_multicast_packet_set_whois_reply_info(packet, "romeo");
+    gibber_r_multicast_packet_set_whois_reply_info(reply, "romeo");
 
     pdata = gibber_r_multicast_packet_get_raw_data (reply, &psize);
     test_transport_write (TEST_TRANSPORT(transport), pdata, psize);
