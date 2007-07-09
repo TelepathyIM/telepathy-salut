@@ -52,6 +52,7 @@ enum
 {
   NEW_CONNECTION,
   CONNECTION_FAILED,
+  CONNECTION_CLOSED,
   LAST_SIGNAL
 };
 
@@ -193,8 +194,15 @@ connection_stream_closed_cb (GibberXmppConnection *connection,
     SALUT_XMPP_CONNECTION_MANAGER (userdata);
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  SalutContact *contact;
 
   DEBUG ("Connection stream closed");
+  /* Other side closed the stream, do the same */
+  gibber_xmpp_connection_close (connection);
+
+  contact = g_hash_table_lookup (priv->connections, connection);
+  g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
+
   g_hash_table_remove (priv->connections, connection);
   g_hash_table_remove (priv->stanza_filters, connection);
 }
@@ -248,6 +256,79 @@ connection_stanza_received_cb (GibberXmppConnection *conn,
   apply_filters (self, conn, priv->all_connection_filters, stanza, contact);
 }
 
+struct remove_connection_having_transport_data
+{
+  SalutXmppConnectionManager *self;
+  GibberLLTransport *transport;
+};
+
+static gboolean
+remove_connection_having_transport (gpointer key,
+                                    gpointer value,
+                                    gpointer user_data)
+{
+  GibberXmppConnection *conn = GIBBER_XMPP_CONNECTION (key);
+  struct remove_connection_having_transport_data *data =
+    (struct remove_connection_having_transport_data *) user_data;
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
+
+  if (conn->transport == GIBBER_TRANSPORT (data->transport))
+    {
+      SalutContact *contact = SALUT_CONTACT (value);
+
+      g_signal_emit (data->self, signals[CONNECTION_FAILED], 0,
+          conn, contact, SALUT_XMPP_CONNECTION_MANAGER_ERROR,
+          SALUT_XMPP_CONNECTION_MANAGER_ERROR_TRANSPORT_DISCONNECTED,
+          "transport disconnected");
+
+      g_hash_table_remove (priv->stanza_filters, conn);
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
+static void
+connection_transport_disconnected_cb (GibberLLTransport *transport,
+                                      gpointer userdata)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  struct remove_connection_having_transport_data data;
+
+  DEBUG ("Connection transport disconnected");
+  data.self = self;
+  data.transport = transport;
+  g_hash_table_foreach_remove (priv->connections,
+      remove_connection_having_transport, &data);
+}
+
+static void
+connection_parse_error_cb (GibberXmppConnection *connection,
+                           gpointer userdata)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  SalutContact *contact;
+
+  DEBUG ("Parse error on xml stream, closing connection");
+
+  g_signal_handlers_disconnect_matched (connection, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, self);
+  gibber_transport_disconnect (connection->transport);
+
+  contact = g_hash_table_lookup (priv->connections, connection);
+  g_signal_emit (self, signals[CONNECTION_FAILED], 0,
+      connection, contact, SALUT_XMPP_CONNECTION_MANAGER_ERROR,
+      SALUT_XMPP_CONNECTION_MANAGER_ERROR_PARSE_ERROR, "parse error");
+
+  g_hash_table_remove (priv->connections, connection);
+  g_hash_table_remove (priv->stanza_filters, connection);
+}
+
 static void
 connection_fully_open (SalutXmppConnectionManager *self,
                        GibberXmppConnection *connection,
@@ -263,6 +344,10 @@ connection_fully_open (SalutXmppConnectionManager *self,
       G_CALLBACK (connection_stream_closed_cb), self);
   g_signal_connect (connection, "received-stanza",
       G_CALLBACK (connection_stanza_received_cb), self);
+  g_signal_connect (connection->transport, "disconnected",
+      G_CALLBACK (connection_transport_disconnected_cb), self);
+  g_signal_connect (connection, "parse-error",
+      G_CALLBACK (connection_parse_error_cb), self);
 
   g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, contact);
 }
@@ -639,6 +724,16 @@ salut_xmpp_connection_manager_class_init (
         salut_signals_marshal_VOID__OBJECT_OBJECT_UINT_UINT_STRING,
         G_TYPE_NONE, 5, GIBBER_TYPE_XMPP_CONNECTION, SALUT_TYPE_CONTACT,
         G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
+
+  signals[CONNECTION_CLOSED] =
+    g_signal_new (
+        "connection-closed",
+        G_OBJECT_CLASS_TYPE (salut_xmpp_connection_manager_class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+        0,
+        NULL, NULL,
+        salut_signals_marshal_VOID__OBJECT_OBJECT,
+        G_TYPE_NONE, 2, GIBBER_TYPE_XMPP_CONNECTION, SALUT_TYPE_CONTACT);
 }
 
 SalutXmppConnectionManager *

@@ -38,6 +38,8 @@ GQuark salut_xmpp_connection_error_quark (void);
 typedef enum
 {
   SALUT_XMPP_CONNECTION_MANAGER_ERROR_TIMEOUT,
+  SALUT_XMPP_CONNECTION_MANAGER_ERROR_PARSE_ERROR,
+  SALUT_XMPP_CONNECTION_MANAGER_ERROR_TRANSPORT_DISCONNECTED,
 } SalutXmppConnectionManagerError;
 
 typedef struct _SalutXmppConnectionManager SalutXmppConnectionManager;

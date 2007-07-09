@@ -602,52 +602,61 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
 }
 
 static void
-_connection_stream_closed_cb (GibberXmppConnection *conn,
-                              gpointer userdata)
+xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
+                                              GibberXmppConnection *conn,
+                                              SalutContact *contact,
+                                              gpointer user_data)
 {
-  SalutImChannel *self = SALUT_IM_CHANNEL (userdata);
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  if (priv->state == CHANNEL_CONNECTED)
-    /* Other side closed the stream, do the same */
-    gibber_xmpp_connection_close (conn);
-
-  gibber_transport_disconnect (conn->transport);
-  priv->state = CHANNEL_NOT_CONNECTED;
-}
-
-static void
-_connection_parse_error_cb (GibberXmppConnection *conn,
-                            gpointer userdata)
-{
-  DEBUG ("Parse error, closing connection");
-  gibber_transport_disconnect (conn->transport);
-}
-
-static void
-_trans_disconnected_cb (GibberLLTransport *transport,
-                        gpointer userdata)
-{
-  SalutImChannel *self = SALUT_IM_CHANNEL (userdata);
+  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
-  /* FIXME cleanup better (should we flush the queue?) */
-  DEBUG ("Transport disconnected");
-  if (priv->state == CHANNEL_CONNECTING)
-    {
-      DEBUG ("Disconnected, while still connecting, ignoring");
-      return;
-    }
+  if (priv->xmpp_connection != conn)
+    return;
 
   /* Take care not to unref the connection if disposing */
-  if (priv->xmpp_connection && !priv->dispose_has_run) {
+  if (priv->xmpp_connection && !priv->dispose_has_run)
     g_object_unref (priv->xmpp_connection);
-  }
+
   priv->xmpp_connection = NULL;
   priv->state = CHANNEL_NOT_CONNECTED;
 
   salut_xmpp_connection_manager_remove_stanza_filter (
       priv->xmpp_connection_manager, priv->xmpp_connection,
       message_stanza_filter, message_stanza_callback, self);
+}
+
+static void
+xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
+                                              GibberXmppConnection *conn,
+                                              SalutContact *contact,
+                                              GQuark domain,
+                                              gint code,
+                                              gchar *message,
+                                              gpointer user_data)
+{
+  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
+  if (contact != priv->contact)
+    return;
+
+  if (priv->xmpp_connection != NULL)
+    {
+      g_assert (priv->xmpp_connection == conn);
+
+      g_object_unref (priv->xmpp_connection);
+      priv->xmpp_connection = NULL;
+
+      salut_xmpp_connection_manager_remove_stanza_filter (
+          priv->xmpp_connection_manager, priv->xmpp_connection,
+          message_stanza_filter, message_stanza_callback, self);
+    }
+
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
+    0, 0, NULL, NULL, self);
+
+  priv->state = CHANNEL_NOT_CONNECTED;
+  _error_flush_queue (self);
 }
 
 static void
@@ -659,12 +668,10 @@ _initialise_connection (SalutImChannel *self)
   g_assert (priv->xmpp_connection->stream_flags
         == GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN);
 
-  g_signal_connect (priv->xmpp_connection->transport,
-      "disconnected", G_CALLBACK (_trans_disconnected_cb), self);
-  g_signal_connect (priv->xmpp_connection, "stream-closed",
-      G_CALLBACK (_connection_stream_closed_cb), self);
-  g_signal_connect (priv->xmpp_connection, "parse-error",
-      G_CALLBACK (_connection_parse_error_cb), self);
+  g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
+      G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
+  g_signal_connect (priv->xmpp_connection_manager, "connection-closed",
+      G_CALLBACK (xmpp_connection_manager_connection_closed_cb), self);
 
   salut_xmpp_connection_manager_add_stanza_filter (
       priv->xmpp_connection_manager, priv->xmpp_connection,
@@ -695,25 +702,6 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   priv->xmpp_connection = conn;
   g_object_ref (priv->xmpp_connection);
   _initialise_connection (self);
-}
-
-static void
-xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *conn,
-                                              SalutContact *contact,
-                                              GQuark domain,
-                                              gint code,
-                                              gchar *message,
-                                              gpointer user_data)
-{
-  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
-    0, 0, NULL, NULL, self);
-
-  priv->state = CHANNEL_NOT_CONNECTED;
-  _error_flush_queue (self);
 }
 
 static void
