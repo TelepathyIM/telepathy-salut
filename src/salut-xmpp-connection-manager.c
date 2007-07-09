@@ -310,14 +310,18 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
-  GibberXmppStanza *stanza;
 
   gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
-  /* Send empty stream features */
-  stanza = gibber_xmpp_stanza_new ("features");
-  gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
-  gibber_xmpp_connection_send (conn, stanza, NULL);
-  g_object_unref (stanza);
+
+  if (!tp_strdiff (version, "1.0"))
+    {
+      GibberXmppStanza *stanza;
+      /* Send empty stream features */
+      stanza = gibber_xmpp_stanza_new ("features");
+      gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
+      gibber_xmpp_connection_send (conn, stanza, NULL);
+      g_object_unref (stanza);
+    }
 
   /* According to the xep-0174 revision >= there should
    * be a to and from.. But clients implementing older revision might not
