@@ -1,5 +1,5 @@
 LOOPS = 10
-CLEANFILES = $(CLEANFILES) valgrind.*.log
+CLEANFILES += valgrind.*.log
 
 # run any given test by running make test.check
 # if the test fails, run it again at at least debug level 2

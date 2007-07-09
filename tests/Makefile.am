@@ -1,3 +1,5 @@
+CLEANFILES=
+
 include $(top_srcdir)/rules/check.mak
 
 SUPPRESSIONS=valgrind.supp dlopen.supp
