@@ -59,8 +59,11 @@ typedef gboolean (*test_transport_send_hook)(GibberTransport *transport,
                                              gsize length,
                                              GError **error,
                                              gpointer user_data);
-TestTransport *test_transport_new(test_transport_send_hook send, 
+TestTransport *test_transport_new(test_transport_send_hook send,
     gpointer user_data);
+
+void test_transport_set_echoing (TestTransport *transport,
+    gboolean echo);
 
 void test_transport_write(TestTransport *transport,
                           const guint8 *buf, gsize size);

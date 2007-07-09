@@ -43,6 +43,8 @@ struct _TestTransportPrivate
   GQueue *buffers;
   guint send_id;
   gpointer user_data;
+
+  gboolean echoing;
 };
 
 #define TEST_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), TEST_TYPE_TRANSPORT, TestTransportPrivate))
@@ -139,12 +141,17 @@ send_data(gpointer data) {
 }
 
 static gboolean
-test_transport_send(GibberTransport *transport, 
+test_transport_send(GibberTransport *transport,
                     const guint8 *data, gsize size, GError **error) {
   TestTransport *self = TEST_TRANSPORT (transport);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
 
   GArray *arr;
+
+  if (priv->echoing)
+    {
+      test_transport_write(self, data, size);
+    }
 
   arr = g_array_sized_new(FALSE, TRUE, sizeof(guint8), size);
   g_array_append_vals(arr, data, size);
@@ -180,6 +187,14 @@ test_transport_new(test_transport_send_hook send, gpointer user_data) {
 
   return self;
 }
+
+void
+test_transport_set_echoing (TestTransport *transport, gboolean echo)
+{
+  TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (transport);
+  priv->echoing = echo;
+}
+
 
 void 
 test_transport_write(TestTransport *transport, const guint8 *buf, gsize size) {

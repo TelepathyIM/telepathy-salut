@@ -30,10 +30,6 @@ send_hook(GibberTransport *transport, const guint8 *data,
           gsize length, GError **error, gpointer user_data) {
   gchar *b64;
 
-  /* The multicast transports echo's to allow multiple clients on the same host
-   * simulate this */
-  test_transport_write(TEST_TRANSPORT(transport), data, length);
-
   b64 = g_base64_encode((guchar *)data, length);
   printf("SEND:%s\n", b64);
   fflush(stdout);
@@ -108,6 +104,7 @@ main(int argc, char **argv){
 
   t = test_transport_new(send_hook, argv[1]);
   GIBBER_TRANSPORT(t)->max_packet_size = 1500;
+  test_transport_set_echoing (t, TRUE);
 
   m = gibber_r_multicast_transport_new(GIBBER_TRANSPORT(t), argv[1]);
   gibber_transport_set_handler(GIBBER_TRANSPORT(m), received_data, argv[1]);
