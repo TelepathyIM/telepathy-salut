@@ -786,16 +786,8 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
       if (gibber_ll_transport_open_sockaddr (transport, &(addr->address),
             NULL))
         {
-          GibberXmppStanza *stanza;
-
           gibber_xmpp_connection_open (connection, contact->name,
               priv->connection->name, "1.0");
-
-          /* Send empty stream features */
-          stanza = gibber_xmpp_stanza_new ("features");
-          gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
-          gibber_xmpp_connection_send (connection, stanza, NULL);
-          g_object_unref (stanza);
 
           /* The remote contact have now to open the connection to fully
            * open it */
