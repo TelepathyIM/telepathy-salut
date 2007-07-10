@@ -38,6 +38,7 @@
 #include "signals-marshal.h"
 
 #define OUTGOING_CONNECTION_TIMEOUT 10000
+#define REFCOUNT_CONNECTION_TIMEOUT 10000
 
 G_DEFINE_TYPE (SalutXmppConnectionManager, salut_xmpp_connection_manager, \
     G_TYPE_OBJECT)
@@ -1074,29 +1075,27 @@ outgoing_connection_failed (SalutXmppConnectionManager *self,
       connection, contact, domain, code, msg);
 }
 
-struct outgoing_connection_timeout_data
+struct connection_timeout_data
 {
   SalutXmppConnectionManager *self;
   GibberXmppConnection *connection;
   SalutContact *contact;
 };
 
-static struct outgoing_connection_timeout_data *
-outgoing_connection_timeout_data_new (void)
+static struct connection_timeout_data *
+connection_timeout_data_new (void)
 {
-  return g_slice_new (struct outgoing_connection_timeout_data);
+  return g_slice_new (struct connection_timeout_data);
 }
 
 static void
-outgoing_connection_timeout_data_free (
-    struct outgoing_connection_timeout_data *data)
+connection_timeout_data_free (struct connection_timeout_data *data)
 {
-  g_slice_free (struct outgoing_connection_timeout_data, data);
+  g_slice_free (struct connection_timeout_data, data);
 }
 
 static gboolean
-outgoing_pending_connection_timeout (
-    struct outgoing_connection_timeout_data *data)
+outgoing_pending_connection_timeout (struct connection_timeout_data *data)
 {
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
@@ -1167,7 +1166,7 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
       if (gibber_ll_transport_open_sockaddr (transport, &(addr->address),
             &e))
         {
-          struct outgoing_connection_timeout_data *data;
+          struct connection_timeout_data *data;
           guint id;
 
           gibber_xmpp_connection_open (connection, contact->name,
@@ -1178,14 +1177,14 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
           g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
 
-          data = outgoing_connection_timeout_data_new ();
+          data = connection_timeout_data_new ();
           data->self = self;
           data->connection = connection;
           data->contact = contact;
           id = g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE,
               OUTGOING_CONNECTION_TIMEOUT,
               (GSourceFunc) outgoing_pending_connection_timeout, data,
-              (GDestroyNotify) outgoing_connection_timeout_data_free);
+              (GDestroyNotify) connection_timeout_data_free);
           g_hash_table_insert (priv->connection_timers,
               g_object_ref (connection), GUINT_TO_POINTER (id));
 
@@ -1298,13 +1297,54 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
     return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE;
 }
 
+static gboolean
+refcount_connection_timeout (struct connection_timeout_data *data)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
+
+  DEBUG ("refcount timer of connection with %s expired. Connection closed",
+      data->contact->name);
+
+  close_connection (data->self, data->connection);
+
+  g_hash_table_remove (priv->connection_timers, data->connection);
+  return FALSE;
+}
+
 void
 salut_xmpp_connection_manager_release_connection (
     SalutXmppConnectionManager *self,
     GibberXmppConnection *connection)
 {
   if (decrement_connection_refcount (self, connection) <= 0)
-    close_connection (self, connection);
+    {
+      SalutXmppConnectionManagerPrivate *priv =
+        SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+      SalutContact *contact;
+      struct connection_timeout_data *data;
+      guint id;
+
+      contact = g_hash_table_lookup (priv->connections, connection);
+      if (contact == NULL)
+        return;
+
+      DEBUG ("refcount of connection with %s failed to 0. Start its timer",
+          contact->name);
+
+      data = connection_timeout_data_new ();
+      data->self = self;
+      data->connection = connection;
+      data->contact = contact;
+
+      id = g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE,
+          REFCOUNT_CONNECTION_TIMEOUT,
+          (GSourceFunc) refcount_connection_timeout, data,
+          (GDestroyNotify) connection_timeout_data_free);
+
+      g_hash_table_insert (priv->connection_timers,
+          g_object_ref (connection), GUINT_TO_POINTER (id));
+    }
 }
 
 void
