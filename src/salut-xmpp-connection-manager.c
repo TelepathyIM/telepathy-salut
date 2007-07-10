@@ -1138,6 +1138,19 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
 
   addrs = salut_contact_get_addresses (contact);
 
+  if (addrs->len == 0)
+    {
+      DEBUG ("can't find addresse for contact %s", contact->name);
+
+      g_set_error (error, SALUT_XMPP_CONNECTION_MANAGER_ERROR,
+          SALUT_XMPP_CONNECTION_MANAGER_ERROR_NO_ADDRESSE,
+          "can't find addresse for contact %s", contact->name);
+
+      g_array_free (addrs, TRUE);
+      g_object_unref (connection);
+      return FALSE;
+    }
+
   for (i = 0; i < addrs->len; i++)
     {
       salut_contact_address_t *addr;
