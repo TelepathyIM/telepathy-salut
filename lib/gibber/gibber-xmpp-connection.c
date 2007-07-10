@@ -258,6 +258,8 @@ gibber_xmpp_connection_close(GibberXmppConnection *connection) {
   const guint8 *data;
   gsize length;
 
+  connection->stream_flags |= GIBBER_XMPP_CONNECTION_CLOSE_SENT;
+
   gibber_xmpp_writer_stream_close(priv->writer, &data, &length);
   gibber_transport_send(connection->transport, data, length, NULL);
 }
@@ -344,6 +346,8 @@ static void
 _reader_stream_closed_cb(GibberXmppReader *reader, 
                          gpointer user_data) {
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
+
+  self->stream_flags |= GIBBER_XMPP_CONNECTION_CLOSE_RECEIVED;
 
   g_signal_emit(self, signals[STREAM_CLOSED], 0);
 }
