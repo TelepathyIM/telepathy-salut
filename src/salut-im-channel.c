@@ -149,7 +149,7 @@ salut_im_channel_do_close (SalutImChannel *self)
       case CHANNEL_CONNECTED:
         g_assert (priv->xmpp_connection != NULL);
         DEBUG ("release connection");
-        salut_xmpp_connection_release_connection (
+        salut_xmpp_connection_manager_release_connection (
             priv->xmpp_connection_manager, priv->xmpp_connection);
         break;
     }

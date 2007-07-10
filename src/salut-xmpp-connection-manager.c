@@ -1299,11 +1299,20 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
 }
 
 void
-salut_xmpp_connection_release_connection (SalutXmppConnectionManager *self,
-                                          GibberXmppConnection *connection)
+salut_xmpp_connection_manager_release_connection (
+    SalutXmppConnectionManager *self,
+    GibberXmppConnection *connection)
 {
   if (decrement_connection_refcount (self, connection) <= 0)
     close_connection (self, connection);
+}
+
+void
+salut_xmpp_connection_manager_take_connection (
+    SalutXmppConnectionManager *self,
+    GibberXmppConnection *connection)
+{
+  increment_connection_refcount (self, connection);
 }
 
 GSList *
