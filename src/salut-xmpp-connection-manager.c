@@ -1069,8 +1069,7 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
       DEBUG ("found existing connection with %s", contact->name);
       *conn = data.connection;
 
-      g_hash_table_insert (priv->connection_refcounts, data.connection,
-          GUINT_TO_POINTER (1));
+      increment_connection_refcount (self, data.connection);
       return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE;
     }
 
@@ -1125,7 +1124,8 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
           g_signal_connect (connection, "parse-error",
               G_CALLBACK (outgoing_pending_connection_parse_error_cb), self);
 
-          increment_connection_refcount (self, connection);
+          g_hash_table_insert (priv->connection_refcounts, connection,
+              GUINT_TO_POINTER (1));
 
           g_array_free (addrs, TRUE);
           return
