@@ -236,6 +236,18 @@ has_transport (gpointer key,
 }
 
 static void
+remove_connection (SalutXmppConnectionManager *self,
+                   GibberXmppConnection *connection)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  g_hash_table_remove (priv->connections, connection);
+  g_hash_table_remove (priv->stanza_filters, connection);
+  g_hash_table_remove (priv->connection_refcounts, connection);
+}
+
+static void
 close_connection (SalutXmppConnectionManager *self,
                   GibberXmppConnection *connection)
 {
@@ -248,23 +260,23 @@ close_connection (SalutXmppConnectionManager *self,
   if ((connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_SENT) == 0)
     {
       /* We didn't close the connection, let's do it now */
+      DEBUG ("send close");
       gibber_xmpp_connection_close (connection);
     }
 
   if (connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_FULLY_CLOSED)
     {
       /* Connection is fully closed, let's remove it */
+      DEBUG ("connection fully closed. Remove it");
       gibber_transport_disconnect (connection->transport);
 
       g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
-
-      g_hash_table_remove (priv->connections, connection);
-      g_hash_table_remove (priv->stanza_filters, connection);
-      g_hash_table_remove (priv->connection_refcounts, connection);
+      remove_connection (self, connection);
     }
   else
     {
       /* Wait the remote contact close the connection too */
+      DEBUG ("wait for remote contact closing");
       g_signal_emit (self, signals[CONNECTION_CLOSING], 0, connection,
           contact);
     }
@@ -345,11 +357,11 @@ remove_connection_having_transport (gpointer key,
   GibberXmppConnection *conn = GIBBER_XMPP_CONNECTION (key);
   struct remove_connection_having_transport_data *data =
     (struct remove_connection_having_transport_data *) user_data;
-  SalutXmppConnectionManagerPrivate *priv =
-    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
 
   if (conn->transport == GIBBER_TRANSPORT (data->transport))
     {
+      SalutXmppConnectionManagerPrivate *priv =
+        SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
       SalutContact *contact = SALUT_CONTACT (value);
 
       g_signal_emit (data->self, signals[CONNECTION_FAILED], 0,
@@ -358,6 +370,7 @@ remove_connection_having_transport (gpointer key,
           "transport disconnected");
 
       g_hash_table_remove (priv->stanza_filters, conn);
+      g_hash_table_remove (priv->connection_refcounts, conn);
       return TRUE;
     }
 
@@ -400,8 +413,7 @@ connection_parse_error_cb (GibberXmppConnection *connection,
       connection, contact, SALUT_XMPP_CONNECTION_MANAGER_ERROR,
       SALUT_XMPP_CONNECTION_MANAGER_ERROR_PARSE_ERROR, "parse error");
 
-  g_hash_table_remove (priv->connections, connection);
-  g_hash_table_remove (priv->stanza_filters, connection);
+  remove_connection (self, connection);
 }
 
 static void
