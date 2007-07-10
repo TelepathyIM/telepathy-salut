@@ -99,13 +99,25 @@ typedef struct
   gpointer user_data;
 } StanzaFilter;
 
+static StanzaFilter *
+stanza_filter_new (void)
+{
+  return g_slice_new (StanzaFilter);
+}
+
+static void
+stanza_filter_free (StanzaFilter *filter)
+{
+  g_slice_free (StanzaFilter, filter);
+}
+
 static void
 free_stanza_filters_list (GSList *list)
 {
   GSList *l;
 
   for (l = list; l != NULL; l = g_slist_next (l))
-    g_slice_free (StanzaFilter, l->data);
+    stanza_filter_free ((StanzaFilter *) l->data);
 
   g_slist_free (list);
 }
@@ -1061,7 +1073,7 @@ remove_filter (GSList *list,
   if (l == NULL)
     return list;
 
-  g_slice_free (StanzaFilter, l->data);
+  stanza_filter_free ((StanzaFilter *) l->data);
   return g_slist_delete_link (list, l);
 }
 
@@ -1077,7 +1089,7 @@ salut_xmpp_connection_manager_add_stanza_filter (
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   StanzaFilter *filter;
 
-  filter = g_slice_new (StanzaFilter);
+  filter = stanza_filter_new ();
   filter->filter_func = filter_func;
   filter->callback = callback;
   filter->user_data = user_data;
@@ -1088,7 +1100,7 @@ salut_xmpp_connection_manager_add_stanza_filter (
             user_data) != NULL)
         {
           /* No need to add twice the same filter */
-          g_slice_free (StanzaFilter, filter);
+          stanza_filter_free (filter);
           return FALSE;
         }
 
@@ -1102,7 +1114,7 @@ salut_xmpp_connection_manager_add_stanza_filter (
       if (g_hash_table_lookup (priv->connections, conn) == NULL)
         {
           DEBUG ("unknown connection");
-          g_slice_free (StanzaFilter, filter);
+          stanza_filter_free (filter);
           return FALSE;
         }
 
@@ -1110,7 +1122,7 @@ salut_xmpp_connection_manager_add_stanza_filter (
       if (find_filter (list, filter_func, callback, user_data) != NULL)
         {
           /* No need to add twice the same filter */
-          g_slice_free (StanzaFilter, filter);
+          stanza_filter_free (filter);
           return FALSE;
         }
 
