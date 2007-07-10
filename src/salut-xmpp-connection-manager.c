@@ -904,6 +904,12 @@ struct outgoing_connection_timeout_data
   SalutContact *contact;
 };
 
+static struct outgoing_connection_timeout_data *
+outgoing_connection_timeout_data_new (void)
+{
+  return g_slice_new (struct outgoing_connection_timeout_data);
+}
+
 static void
 outgoing_connection_timeout_data_free (
     struct outgoing_connection_timeout_data *data)
@@ -987,7 +993,7 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
           g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
 
-          data = g_slice_new (struct outgoing_connection_timeout_data);
+          data = outgoing_connection_timeout_data_new ();
           data->self = self;
           data->connection = connection;
           data->contact = contact;
