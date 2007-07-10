@@ -962,6 +962,25 @@ find_connection_for_contact (gpointer key,
   return FALSE;
 }
 
+static gboolean
+find_connection_for_contact_in_list (gpointer key,
+                                     gpointer value,
+                                     gpointer user_data)
+{
+  GList *l, *contacts = (GList *) value;
+  struct find_connection_for_contact_data *data =
+    (struct find_connection_for_contact_data *) user_data;
+
+  l = g_list_find (contacts, data->contact);
+  if (l != NULL)
+    {
+      data->connection = GIBBER_XMPP_CONNECTION (l->data);
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 static void
 outgoing_pending_connection_fully_open (SalutXmppConnectionManager *self,
                                         GibberXmppConnection *conn)
@@ -1093,6 +1112,7 @@ outgoing_pending_connection_timeout (
     }
 
   g_hash_table_remove (priv->connection_timers, data->connection);
+  g_hash_table_remove (priv->connection_refcounts, data->connection);
   return FALSE;
 }
 
@@ -1231,9 +1251,34 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
         }
     }
 
-  /* XXX what should we do if there is an existing pending connection with
-   * the contact ? */
+  /* check for outgoing pending connection */
+  g_hash_table_find (priv->outgoing_pending_connections,
+      find_connection_for_contact, &data);
+  if (data.connection != NULL)
+    {
+      DEBUG ("found existing outgoing pending connection with %s",
+          contact->name);
 
+      increment_connection_refcount (self, data.connection);
+      /* There is already a timer for this outgoing pending connection */
+      return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
+    }
+
+  /* check for incoming pending connection */
+  g_hash_table_find (priv->incoming_pending_connections,
+      find_connection_for_contact_in_list, &data);
+  if (data.connection != NULL)
+    {
+      DEBUG ("found existing incoming pending connection with %s",
+          contact->name);
+
+      increment_connection_refcount (self, data.connection);
+      /* XXX Here again, maybe we should set a timer to avoid incoming pending
+       * connections stay pending forever */
+      return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
+    }
+
+  DEBUG ("no existing connection with %s. create a new one", contact->name);
   if (create_new_outgoing_connection (self, contact, error))
     return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
   else
