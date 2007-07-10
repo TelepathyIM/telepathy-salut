@@ -58,12 +58,23 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 );
 
+static gboolean
+message_stanza_filter (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
+static void
+message_stanza_callback (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
 /* Channel state */
 typedef enum
 {
   CHANNEL_NOT_CONNECTED = 0,
   CHANNEL_CONNECTING,
-  CHANNEL_CONNECTED
+  CHANNEL_CONNECTED,
+  CHANNEL_CLOSING,
 } ChannelState;
 
 /* signal enum */
@@ -133,11 +144,13 @@ salut_im_channel_do_close (SalutImChannel *self)
         break;
       case CHANNEL_CONNECTING:
         break;
+      case CHANNEL_CLOSING:
+        break;
       case CHANNEL_CONNECTED:
-        /* FIXME decent connection closing? */
         g_assert (priv->xmpp_connection != NULL);
-        gibber_xmpp_connection_close (priv->xmpp_connection);
-        gibber_transport_disconnect (priv->xmpp_connection->transport);
+        DEBUG ("release connection");
+        salut_xmpp_connection_release_connection (
+            priv->xmpp_connection_manager, priv->xmpp_connection);
         break;
     }
 
@@ -429,6 +442,9 @@ salut_im_channel_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
+      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
   tp_handle_unref (handle_repo, priv->handle);
 
   if (priv->state != CHANNEL_NOT_CONNECTED)
@@ -436,6 +452,10 @@ salut_im_channel_dispose (GObject *object)
 
   if (priv->xmpp_connection)
     {
+      salut_xmpp_connection_manager_remove_stanza_filter (
+          priv->xmpp_connection_manager, priv->xmpp_connection,
+          message_stanza_filter, message_stanza_callback, self);
+
       g_object_unref (priv->xmpp_connection);
       priv->xmpp_connection = NULL;
     }
@@ -608,13 +628,13 @@ connection_disconnected (SalutImChannel *self)
 
   if (priv->xmpp_connection != NULL)
     {
-      if (priv->xmpp_connection)
-        g_object_unref (priv->xmpp_connection);
+      DEBUG ("connection closed. Remove filters");
 
       salut_xmpp_connection_manager_remove_stanza_filter (
           priv->xmpp_connection_manager, priv->xmpp_connection,
           message_stanza_filter, message_stanza_callback, self);
 
+      g_object_unref (priv->xmpp_connection);
       priv->xmpp_connection = NULL;
     }
 
@@ -623,7 +643,6 @@ connection_disconnected (SalutImChannel *self)
 
   priv->state = CHANNEL_NOT_CONNECTED;
   _error_flush_queue (self);
-
 }
 
 static void
@@ -662,6 +681,23 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
 }
 
 static void
+xmpp_connection_manager_connection_closing_cb (SalutXmppConnectionManager *mgr,
+                                               GibberXmppConnection *conn,
+                                               SalutContact *contact,
+                                               gpointer user_data)
+{
+  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->contact != contact)
+    return;
+
+  DEBUG ("connection closing");
+  g_assert (priv->xmpp_connection == conn);
+  priv->state = CHANNEL_CLOSING;
+}
+
+static void
 _initialise_connection (SalutImChannel *self)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
@@ -674,6 +710,8 @@ _initialise_connection (SalutImChannel *self)
       G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
   g_signal_connect (priv->xmpp_connection_manager, "connection-closed",
       G_CALLBACK (xmpp_connection_manager_connection_closed_cb), self);
+  g_signal_connect (priv->xmpp_connection_manager, "connection-closing",
+      G_CALLBACK (xmpp_connection_manager_connection_closing_cb), self);
 
   salut_xmpp_connection_manager_add_stanza_filter (
       priv->xmpp_connection_manager, priv->xmpp_connection,
@@ -789,6 +827,11 @@ _send_message (SalutImChannel *self,
         /* Connected and the queue is empty, so push it out directly */
         _sendout_message (self, time (NULL), type, text, stanza);
         break;
+      case CHANNEL_CLOSING:
+        g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            "connection is closing");
+        return FALSE;
+        break;
     }
   return TRUE;
 }
@@ -810,6 +853,10 @@ salut_im_channel_send_stanza (SalutImChannel * self,
       case CHANNEL_CONNECTED:
         if (!gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL))
           g_warning ("Sending failed");
+        break;
+      case CHANNEL_CLOSING:
+        g_warning ("Can't send stanza, channel is closing");
+        break;
     }
 }
 
