@@ -52,6 +52,7 @@ enum
 {
   NEW_CONNECTION,
   CONNECTION_FAILED,
+  CONNECTION_CLOSING,
   CONNECTION_CLOSED,
   LAST_SIGNAL
 };
@@ -84,6 +85,8 @@ struct _SalutXmppConnectionManagerPrivate
   GSList *all_connection_filters;
   /* GibberXmppConnection -> guint (source id) */
   GHashTable *connection_timers;
+  /* GibberXmppConnection -> guint */
+  GHashTable *connection_refcounts;
 
   gboolean dispose_has_run;
 };
@@ -156,6 +159,38 @@ remove_timer (gpointer user_data)
   g_source_remove (id);
 }
 
+static guint
+increment_connection_refcount (SalutXmppConnectionManager *self,
+                               GibberXmppConnection *conn)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  guint ref;
+
+  ref = GPOINTER_TO_UINT (g_hash_table_lookup (priv->connection_refcounts,
+        conn));
+  ref++;
+  g_hash_table_insert (priv->connection_refcounts, conn,
+      GUINT_TO_POINTER (ref));
+  return ref;
+}
+
+static guint
+decrement_connection_refcount (SalutXmppConnectionManager *self,
+                               GibberXmppConnection *conn)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  guint ref;
+
+  ref = GPOINTER_TO_UINT (g_hash_table_lookup (priv->connection_refcounts,
+        conn));
+  ref--;
+  g_hash_table_insert (priv->connection_refcounts, conn,
+      GUINT_TO_POINTER (ref));
+  return ref;
+}
+
 static void
 salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
 {
@@ -178,6 +213,8 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
       g_direct_equal, g_object_unref, g_object_unref);
   priv->connection_timers = g_hash_table_new_full (g_direct_hash,
       g_direct_equal, g_object_unref, remove_timer);
+  priv->connection_refcounts = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, NULL, NULL);
 
   priv->all_connection_filters = NULL;
 
@@ -199,24 +236,50 @@ has_transport (gpointer key,
 }
 
 static void
+close_connection (SalutXmppConnectionManager *self,
+                  GibberXmppConnection *connection)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  SalutContact *contact;
+
+  contact = g_hash_table_lookup (priv->connections, connection);
+
+  if ((connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_SENT) == 0)
+    {
+      /* We didn't close the connection, let's do it now */
+      gibber_xmpp_connection_close (connection);
+    }
+
+  if (connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_FULLY_CLOSED)
+    {
+      /* Connection is fully closed, let's remove it */
+      gibber_transport_disconnect (connection->transport);
+
+      g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
+
+      g_hash_table_remove (priv->connections, connection);
+      g_hash_table_remove (priv->stanza_filters, connection);
+      g_hash_table_remove (priv->connection_refcounts, connection);
+    }
+  else
+    {
+      /* Wait the remote contact close the connection too */
+      g_signal_emit (self, signals[CONNECTION_CLOSING], 0, connection,
+          contact);
+    }
+}
+
+static void
 connection_stream_closed_cb (GibberXmppConnection *connection,
                              gpointer userdata)
 {
   SalutXmppConnectionManager *self =
     SALUT_XMPP_CONNECTION_MANAGER (userdata);
-  SalutXmppConnectionManagerPrivate *priv =
-    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
-  SalutContact *contact;
 
-  DEBUG ("Connection stream closed");
+  DEBUG ("Received stream closed");
   /* Other side closed the stream, do the same */
-  gibber_xmpp_connection_close (connection);
-
-  contact = g_hash_table_lookup (priv->connections, connection);
-  g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
-
-  g_hash_table_remove (priv->connections, connection);
-  g_hash_table_remove (priv->stanza_filters, connection);
+  close_connection (self, connection);
 }
 
 static void
@@ -616,6 +679,12 @@ salut_xmpp_connection_manager_dispose (GObject *object)
       priv->connection_timers = NULL;
     }
 
+  if (priv->connection_refcounts != NULL)
+    {
+      g_hash_table_destroy (priv->connection_refcounts);
+      priv->connection_refcounts = NULL;
+    }
+
   free_stanza_filters_list (priv->all_connection_filters);
   priv->all_connection_filters = NULL;
 
@@ -740,6 +809,16 @@ salut_xmpp_connection_manager_class_init (
   signals[CONNECTION_CLOSED] =
     g_signal_new (
         "connection-closed",
+        G_OBJECT_CLASS_TYPE (salut_xmpp_connection_manager_class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+        0,
+        NULL, NULL,
+        salut_signals_marshal_VOID__OBJECT_OBJECT,
+        G_TYPE_NONE, 2, GIBBER_TYPE_XMPP_CONNECTION, SALUT_TYPE_CONTACT);
+
+  signals[CONNECTION_CLOSING] =
+    g_signal_new (
+        "connection-closing",
         G_OBJECT_CLASS_TYPE (salut_xmpp_connection_manager_class),
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
@@ -972,6 +1051,9 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
     {
       DEBUG ("found existing connection with %s", contact->name);
       *conn = data.connection;
+
+      g_hash_table_insert (priv->connection_refcounts, data.connection,
+          GUINT_TO_POINTER (1));
       return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE;
     }
 
@@ -1026,6 +1108,8 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
           g_signal_connect (connection, "parse-error",
               G_CALLBACK (outgoing_pending_connection_parse_error_cb), self);
 
+          increment_connection_refcount (self, connection);
+
           g_array_free (addrs, TRUE);
           return
             SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
@@ -1036,6 +1120,14 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
   g_array_free (addrs, TRUE);
   g_object_unref (connection);
   return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE;
+}
+
+void
+salut_xmpp_connection_release_connection (SalutXmppConnectionManager *self,
+                                          GibberXmppConnection *connection)
+{
+  if (decrement_connection_refcount (self, connection) <= 0)
+    close_connection (self, connection);
 }
 
 GSList *

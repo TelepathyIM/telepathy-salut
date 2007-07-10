@@ -105,6 +105,10 @@ SalutXmppConnectionManagerRequestConnectionResult
 salut_xmpp_connection_request_connection (SalutXmppConnectionManager *manager,
     SalutContact *contact, GibberXmppConnection **conn);
 
+void
+salut_xmpp_connection_release_connection (SalutXmppConnectionManager *manager,
+    GibberXmppConnection *connection);
+
 gboolean
 salut_xmpp_connection_manager_add_stanza_filter (
     SalutXmppConnectionManager *manager,
