@@ -103,7 +103,7 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager,
 
 SalutXmppConnectionManagerRequestConnectionResult
 salut_xmpp_connection_request_connection (SalutXmppConnectionManager *manager,
-    SalutContact *contact, GibberXmppConnection **conn);
+    SalutContact *contact, GibberXmppConnection **conn, GError **error);
 
 void
 salut_xmpp_connection_release_connection (SalutXmppConnectionManager *manager,

@@ -757,7 +757,7 @@ _setup_connection (SalutImChannel *self)
   g_assert (priv->xmpp_connection == NULL);
 
   result = salut_xmpp_connection_request_connection (
-      priv->xmpp_connection_manager, priv->contact, &conn);
+      priv->xmpp_connection_manager, priv->contact, &conn, NULL);
 
   if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {

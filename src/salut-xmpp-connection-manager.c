@@ -46,6 +46,13 @@ static void
 new_connection_cb (GibberXmppConnectionListener *listener,
     GibberXmppConnection *connection, struct sockaddr_storage *addr,
     guint size, gpointer user_data);
+static gboolean
+create_new_outgoing_connection (SalutXmppConnectionManager *self,
+    SalutContact *contact, GError **error);
+static void
+outgoing_connection_failed (SalutXmppConnectionManager *self,
+    GibberXmppConnection *connection, SalutContact *contact,
+    guint domain, gint code, const gchar *msg);
 
 /* signals */
 enum
@@ -87,6 +94,10 @@ struct _SalutXmppConnectionManagerPrivate
   GHashTable *connection_timers;
   /* GibberXmppConnection -> guint */
   GHashTable *connection_refcounts;
+  /* This hash table contains connections we are waiting they close before
+   * be allowed to request a new connection with the contact */
+  /* GibberXmppConnection * -> SalutContact */
+  GHashTable *connections_waiting_close;
 
   gboolean dispose_has_run;
 };
@@ -215,6 +226,8 @@ salut_xmpp_connection_manager_init (SalutXmppConnectionManager *self)
       g_direct_equal, g_object_unref, remove_timer);
   priv->connection_refcounts = g_hash_table_new_full (g_direct_hash,
       g_direct_equal, NULL, NULL);
+  priv->connections_waiting_close = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, g_object_unref, g_object_unref);
 
   priv->all_connection_filters = NULL;
 
@@ -245,6 +258,32 @@ remove_connection (SalutXmppConnectionManager *self,
   g_hash_table_remove (priv->connections, connection);
   g_hash_table_remove (priv->stanza_filters, connection);
   g_hash_table_remove (priv->connection_refcounts, connection);
+  g_hash_table_remove (priv->connections_waiting_close, connection);
+}
+
+static void
+check_if_waiting_for_connection_closed (SalutXmppConnectionManager *self,
+                                        GibberXmppConnection *connection)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  SalutContact *contact;
+
+  contact = g_hash_table_lookup (priv->connections_waiting_close, connection);
+  if (contact != NULL)
+    {
+      GError *error = NULL;
+
+      DEBUG ("connection closed. We can now request the new one");
+      if (!create_new_outgoing_connection (self, contact, &error))
+        {
+          outgoing_connection_failed (self, connection, contact,
+              error->domain, error->code, error->message);
+          g_error_free (error);
+        }
+    }
+
+  g_hash_table_remove (priv->connections_waiting_close, connection);
 }
 
 static void
@@ -267,8 +306,11 @@ close_connection (SalutXmppConnectionManager *self,
   if (connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_FULLY_CLOSED)
     {
       /* Connection is fully closed, let's remove it */
+
       DEBUG ("connection fully closed. Remove it");
       gibber_transport_disconnect (connection->transport);
+
+      check_if_waiting_for_connection_closed (self, connection);
 
       g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
       remove_connection (self, connection);
@@ -369,6 +411,7 @@ remove_connection_having_transport (gpointer key,
           SALUT_XMPP_CONNECTION_MANAGER_ERROR_TRANSPORT_DISCONNECTED,
           "transport disconnected");
 
+      check_if_waiting_for_connection_closed (data->self, conn);
       g_hash_table_remove (priv->stanza_filters, conn);
       g_hash_table_remove (priv->connection_refcounts, conn);
       return TRUE;
@@ -704,6 +747,12 @@ salut_xmpp_connection_manager_dispose (GObject *object)
       priv->connection_refcounts = NULL;
     }
 
+  if (priv->connections_waiting_close != NULL)
+    {
+      g_hash_table_destroy (priv->connections_waiting_close);
+      priv->connections_waiting_close = NULL;
+    }
+
   free_stanza_filters_list (priv->all_connection_filters);
   priv->all_connection_filters = NULL;
 
@@ -991,7 +1040,8 @@ static void
 outgoing_connection_failed (SalutXmppConnectionManager *self,
                             GibberXmppConnection *connection,
                             SalutContact *contact,
-                            guint code,
+                            guint domain,
+                            gint code,
                             const gchar *msg)
 {
   SalutXmppConnectionManagerPrivate *priv =
@@ -1002,7 +1052,7 @@ outgoing_connection_failed (SalutXmppConnectionManager *self,
       0, 0, NULL, NULL, self);
 
   g_signal_emit (self, signals[CONNECTION_FAILED], 0,
-      connection, contact, SALUT_XMPP_CONNECTION_MANAGER_ERROR, code, msg);
+      connection, contact, domain, code, msg);
 }
 
 struct outgoing_connection_timeout_data
@@ -1037,6 +1087,7 @@ outgoing_pending_connection_timeout (
     {
       /* Connection was still pending, let's raise an error */
       outgoing_connection_failed (data->self, data->connection, data->contact,
+          SALUT_XMPP_CONNECTION_MANAGER_ERROR,
           SALUT_XMPP_CONNECTION_MANAGER_ERROR_TIMEOUT,
           "Outgoing connection timeout: remote contact didn't open it");
     }
@@ -1045,37 +1096,21 @@ outgoing_pending_connection_timeout (
   return FALSE;
 }
 
-SalutXmppConnectionManagerRequestConnectionResult
-salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
-                                          SalutContact *contact,
-                                          GibberXmppConnection **conn)
+static gboolean
+create_new_outgoing_connection (SalutXmppConnectionManager *self,
+                                SalutContact *contact,
+                                GError **error)
 {
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   GibberXmppConnection *connection;
   GibberLLTransport *transport;
-  struct find_connection_for_contact_data data;
   GArray *addrs;
   gint i;
+  GError *e = NULL;
 
-  g_assert (conn != NULL);
-
-  data.contact = contact;
-  data.connection = NULL;
-  g_hash_table_find (priv->connections, find_connection_for_contact, &data);
-
-  if (data.connection != NULL)
-    {
-      DEBUG ("found existing connection with %s", contact->name);
-      *conn = data.connection;
-
-      increment_connection_refcount (self, data.connection);
-      return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE;
-    }
-
-  /* XXX what should we do if there is an existing pending connection with
-   * the contact ? */
   DEBUG ("create a new outgoing connection");
+
   transport = gibber_ll_transport_new ();
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
   /* Let the xmpp connection own the transport */
@@ -1089,8 +1124,15 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
 
       addr = &(g_array_index (addrs, salut_contact_address_t, i));
 
+      if (e != NULL)
+        {
+          /* We'll return the last GError */
+          g_error_free (e);
+          e = NULL;
+        }
+
       if (gibber_ll_transport_open_sockaddr (transport, &(addr->address),
-            NULL))
+            &e))
         {
           struct outgoing_connection_timeout_data *data;
           guint id;
@@ -1128,15 +1170,74 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
               GUINT_TO_POINTER (1));
 
           g_array_free (addrs, TRUE);
+          return TRUE;
+        }
+    }
+
+  DEBUG ("All connection attempts failed");
+  g_propagate_error (error, e);
+  g_array_free (addrs, TRUE);
+  g_object_unref (connection);
+  return FALSE;
+}
+
+SalutXmppConnectionManagerRequestConnectionResult
+salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
+                                          SalutContact *contact,
+                                          GibberXmppConnection **conn,
+                                          GError **error)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  struct find_connection_for_contact_data data;
+
+  g_assert (conn != NULL);
+
+  /* Check for existing fully opened connections */
+  data.contact = contact;
+  data.connection = NULL;
+  g_hash_table_find (priv->connections, find_connection_for_contact, &data);
+
+  if (data.connection != NULL)
+    {
+      if (data.connection->stream_flags ==
+          GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN)
+        {
+          /* Connection is not closing, we can reuse it */
+          DEBUG ("found existing connection with %s", contact->name);
+          *conn = data.connection;
+
+          increment_connection_refcount (self, data.connection);
+          return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE;
+        }
+      else
+        {
+          /* We have to wait this connection is fully closed before
+           * establish a new one as we can't have more than one connection
+           * to the same contact at the same time */
+
+          DEBUG ("found existing closing connection with %s. Wait this "
+              "connection is fully closed before requesting a new one",
+              contact->name);
+          g_hash_table_insert (priv->connections_waiting_close,
+              g_object_ref (data.connection), g_object_ref (contact));
+
+          /* XXX we should maybe set a timer here to avoid to be blocked
+           * if this connection is never closed.
+           * Or maybe we shouldn't allow a connection to stay in the closing
+           * state forever ? */
           return
             SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
         }
     }
 
-  DEBUG ("All connection attempts failed");
-  g_array_free (addrs, TRUE);
-  g_object_unref (connection);
-  return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE;
+  /* XXX what should we do if there is an existing pending connection with
+   * the contact ? */
+
+  if (create_new_outgoing_connection (self, contact, error))
+    return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
+  else
+    return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE;
 }
 
 void
