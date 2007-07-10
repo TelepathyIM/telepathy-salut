@@ -608,14 +608,14 @@ connection_disconnected (SalutImChannel *self)
 
   if (priv->xmpp_connection != NULL)
     {
-      /* Take care not to unref the connection if disposing */
-      if (priv->xmpp_connection && !priv->dispose_has_run)
+      if (priv->xmpp_connection)
         g_object_unref (priv->xmpp_connection);
-      priv->xmpp_connection = NULL;
 
       salut_xmpp_connection_manager_remove_stanza_filter (
           priv->xmpp_connection_manager, priv->xmpp_connection,
           message_stanza_filter, message_stanza_callback, self);
+
+      priv->xmpp_connection = NULL;
     }
 
   g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
