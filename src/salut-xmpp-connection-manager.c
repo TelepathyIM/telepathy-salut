@@ -386,6 +386,11 @@ connection_transport_disconnected_cb (GibberLLTransport *transport,
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   struct remove_connection_having_transport_data data;
 
+  if (priv->dispose_has_run)
+    /* We are disposing so we can't try to remove connections twice from
+     * the same hash table */
+    return;
+
   DEBUG ("Connection transport disconnected");
   data.self = self;
   data.transport = transport;
@@ -649,6 +654,8 @@ salut_xmpp_connection_manager_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
+  priv->dispose_has_run = TRUE;
+
   if (priv->contact_manager != NULL)
     {
       g_object_unref (priv->contact_manager);
@@ -699,8 +706,6 @@ salut_xmpp_connection_manager_dispose (GObject *object)
 
   free_stanza_filters_list (priv->all_connection_filters);
   priv->all_connection_filters = NULL;
-
-  priv->dispose_has_run = TRUE;
 
   if (G_OBJECT_CLASS (salut_xmpp_connection_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_xmpp_connection_manager_parent_class)->dispose (
