@@ -304,7 +304,7 @@ close_connection (SalutXmppConnectionManager *self,
       gibber_xmpp_connection_close (connection);
     }
 
-  if (connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_FULLY_CLOSED)
+  if (connection->stream_flags == GIBBER_XMPP_CONNECTION_CLOSE_FULLY_CLOSED)
     {
       /* Connection is fully closed, let's remove it */
 
