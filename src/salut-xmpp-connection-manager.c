@@ -1239,7 +1239,8 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
           DEBUG ("found existing connection with %s", contact->name);
           *conn = data.connection;
 
-          increment_connection_refcount (self, data.connection);
+          salut_xmpp_connection_manager_take_connection (self,
+              data.connection);
           return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE;
         }
       else
@@ -1271,7 +1272,7 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
       DEBUG ("found existing outgoing pending connection with %s",
           contact->name);
 
-      increment_connection_refcount (self, data.connection);
+      salut_xmpp_connection_manager_take_connection (self, data.connection);
       /* There is already a timer for this outgoing pending connection */
       return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
     }
@@ -1284,7 +1285,7 @@ salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
       DEBUG ("found existing incoming pending connection with %s",
           contact->name);
 
-      increment_connection_refcount (self, data.connection);
+      salut_xmpp_connection_manager_take_connection (self, data.connection);
       /* XXX Here again, maybe we should set a timer to avoid incoming pending
        * connections stay pending forever */
       return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING;
@@ -1352,7 +1353,17 @@ salut_xmpp_connection_manager_take_connection (
     SalutXmppConnectionManager *self,
     GibberXmppConnection *connection)
 {
-  increment_connection_refcount (self, connection);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  guint ref;
+
+  ref = increment_connection_refcount (self, connection);
+  if (ref == 1)
+    {
+      /* ref count was to 0, remove the ref count timer */
+      DEBUG ("connection ref count raised 1. Remove its timer");
+      g_hash_table_remove (priv->connection_timers, connection);
+    }
 }
 
 GSList *
