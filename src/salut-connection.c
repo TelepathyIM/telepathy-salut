@@ -117,6 +117,7 @@ enum {
   PROP_JID,
   PROP_EMAIL,
   PROP_PUBLISHED_NAME,
+  PROP_CONTACT_MANAGER,
   LAST_PROP
 };
 
@@ -253,6 +254,9 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_PUBLISHED_NAME:
       g_value_set_string (value, priv->published_name);
+      break;
+    case PROP_CONTACT_MANAGER:
+      g_value_set_object (value, priv->contact_manager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -545,6 +549,18 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "Username used in the published data", NULL,
       G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_PUBLISHED_NAME,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "contact-manager",
+      "SalutContactManager object",
+      "The Salut Contact Manager associated with this Salut Connection",
+      SALUT_TYPE_CONTACT_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
       param_spec);
 }
 
