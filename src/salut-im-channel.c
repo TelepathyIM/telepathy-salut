@@ -176,23 +176,6 @@ salut_im_channel_message_new (guint type,
   return msg;
 }
 
-static SalutImChannelMessage *
-salut_im_channel_message_new_from_stanza (GibberXmppStanza *stanza)
-{
-  SalutImChannelMessage *msg;
-  g_assert (stanza != NULL);
-
-  msg = g_new (SalutImChannelMessage, 1);
-  msg->type = 0;
-  msg->text = NULL;
-  msg->time = 0;
-
-  g_object_ref (stanza);
-  msg->stanza = stanza;
-
-  return msg;
-}
-
 static void
 salut_im_channel_message_free (SalutImChannelMessage *message)
 {
@@ -833,30 +816,6 @@ _send_message (SalutImChannel *self,
         break;
     }
   return TRUE;
-}
-
-void
-salut_im_channel_send_stanza (SalutImChannel * self,
-                              GibberXmppStanza *stanza)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutImChannelMessage *msg;
-
-  switch (priv->state)
-    {
-      case CHANNEL_NOT_CONNECTED:
-      case CHANNEL_CONNECTING:
-        msg = salut_im_channel_message_new_from_stanza (stanza);
-        _send_channel_message (self, msg);
-        break;
-      case CHANNEL_CONNECTED:
-        if (!gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL))
-          g_warning ("Sending failed");
-        break;
-      case CHANNEL_CLOSING:
-        g_warning ("Can't send stanza, channel is closing");
-        break;
-    }
 }
 
 void

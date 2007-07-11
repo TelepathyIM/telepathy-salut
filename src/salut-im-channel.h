@@ -62,9 +62,6 @@ GType salut_im_channel_get_type (void);
 void salut_im_channel_add_connection (SalutImChannel *chan,
     GibberXmppConnection *conn);
 
-void salut_im_channel_send_stanza (SalutImChannel * self,
-    GibberXmppStanza *stanza);
-
 void salut_im_channel_received_stanza (SalutImChannel *chan,
     GibberXmppStanza *stanza);
 
