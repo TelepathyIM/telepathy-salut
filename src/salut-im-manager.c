@@ -34,6 +34,8 @@
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 
+#include "namespaces.h"
+
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
 
@@ -107,6 +109,10 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
 
   gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
   if (type != GIBBER_STANZA_TYPE_MESSAGE)
+    return FALSE;
+
+  if (gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC) != NULL)
+    /* discard MUC invite */
     return FALSE;
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);

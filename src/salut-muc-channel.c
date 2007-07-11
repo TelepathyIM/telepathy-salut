@@ -40,7 +40,7 @@
 #include <gibber/gibber-muc-connection.h>
 
 #include "salut-connection.h"
-#include "salut-im-manager.h"
+#include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-entry-group.h"
 
 #include "namespaces.h"
@@ -68,9 +68,9 @@ enum
   PROP_HANDLE,
   PROP_MUC_CONNECTION,
   PROP_CONNECTION,
-  PROP_IM_MANAGER,
   PROP_NAME,
   PROP_CLIENT,
+  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -83,7 +83,7 @@ struct _SalutMucChannelPrivate
   gchar *object_path;
   TpHandle handle;
   SalutConnection *connection;
-  SalutImManager *im_manager;
+  SalutXmppConnectionManager *xmpp_connection_manager;
   GibberMucConnection *muc_connection;
   gchar *muc_name;
   SalutAvahiClient *client;
@@ -136,14 +136,14 @@ salut_muc_channel_get_property (GObject    *object,
     case PROP_CONNECTION:
       g_value_set_object (value, priv->connection);
       break;
-    case PROP_IM_MANAGER:
-      g_value_set_object (value, priv->im_manager);
-      break;
     case PROP_MUC_CONNECTION:
       g_value_set_object (value, priv->muc_connection);
       break;
     case PROP_CLIENT:
       g_value_set_object (value, priv->client);
+      break;
+    case PROP_XMPP_CONNECTION_MANAGER:
+      g_value_set_object (value, priv->xmpp_connection_manager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -176,9 +176,6 @@ salut_muc_channel_set_property (GObject     *object,
     case PROP_CONNECTION:
       priv->connection = g_value_get_object (value);
       break;
-    case PROP_IM_MANAGER:
-      priv->im_manager = g_value_get_object (value);
-      break;
     case PROP_MUC_CONNECTION:
       priv->muc_connection = g_value_get_object (value);
       break;
@@ -194,6 +191,10 @@ salut_muc_channel_set_property (GObject     *object,
       break;
     case PROP_CLIENT:
       priv->client = g_value_get_object (value);
+      break;
+   case PROP_XMPP_CONNECTION_MANAGER:
+      priv->xmpp_connection_manager = g_value_get_object (value);
+      g_object_ref (priv->xmpp_connection_manager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -259,6 +260,7 @@ salut_muc_channel_init (SalutMucChannel *self)
   /* allocate any data required by the object here */
   priv->object_path = NULL;
   priv->connection = NULL;
+  priv->xmpp_connection_manager = NULL;
   priv->muc_name = NULL;
   priv->client = NULL;
   priv->service = NULL;
@@ -268,13 +270,20 @@ static void salut_muc_channel_dispose (GObject *object);
 static void salut_muc_channel_finalize (GObject *object);
 
 static void
-invitation_append_parameter(gpointer key, gpointer value, gpointer data) {
-  GibberXmppNode *node = (GibberXmppNode *)data;
- gibber_xmpp_node_add_child_with_content(node, (gchar *)key, (gchar *)value);
+invitation_append_parameter (gpointer key,
+                             gpointer value,
+                             gpointer data)
+{
+  GibberXmppNode *node = (GibberXmppNode *) data;
+  gibber_xmpp_node_add_child_with_content (node, (gchar *) key,
+      (gchar *) value);
 }
 
 static GibberXmppStanza *
-create_invitation(SalutMucChannel *self, TpHandle handle, const gchar *message) {
+create_invitation (SalutMucChannel *self,
+                   TpHandle handle,
+                   const gchar *message)
+{
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
   TpHandleRepoIface *contact_repo =
@@ -431,14 +440,92 @@ publish_service_error:
   return FALSE;
 }
 
+struct
+pending_connection_for_invite_data
+{
+  SalutMucChannel *self;
+  SalutContact *contact;
+  GibberXmppStanza *invite;
+};
+
+static struct pending_connection_for_invite_data *
+pending_connection_for_invite_data_new (void)
+{
+  return g_slice_new (struct pending_connection_for_invite_data);
+}
+
+static void
+pending_connection_for_invite_data_free (
+    struct pending_connection_for_invite_data *data)
+{
+  g_object_unref (data->invite);
+  g_slice_free (struct pending_connection_for_invite_data, data);
+}
+
+static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+                                           GibberXmppConnection *connection,
+                                           SalutContact *contact,
+                                           gpointer user_data)
+{
+  struct pending_connection_for_invite_data *data =
+    (struct pending_connection_for_invite_data *) user_data;
+
+  if (data->contact != contact)
+    /* Not the connection we are waiting for */
+    return;
+
+  DEBUG ("got awaited connection with %s. Send invite", contact->name);
+
+  gibber_xmpp_connection_send (connection, data->invite, NULL);
+
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
+      NULL, data);
+
+  pending_connection_for_invite_data_free (data);
+}
+
+static void
+xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
+                                              GibberXmppConnection *connection,
+                                              SalutContact *contact,
+                                              GQuark domain,
+                                              gint code,
+                                              gchar *message,
+                                              gpointer user_data)
+{
+  struct pending_connection_for_invite_data *data =
+    (struct pending_connection_for_invite_data *) user_data;
+
+  if (data->contact != contact)
+    /* Not the connection we are waiting for */
+    return;
+
+  DEBUG ("awaited connection with %s failed: %s. Can't send invite",
+      contact->name, message);
+
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
+      NULL, data);
+
+  pending_connection_for_invite_data_free (data);
+}
+
 static gboolean
-muc_channel_add_member(GObject *iface, TpHandle handle,
-                       const gchar *message, GError **error) {
+muc_channel_add_member (GObject *iface,
+                        TpHandle handle,
+                        const gchar *message,
+                        GError **error)
+{
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  SalutImChannel *im_channel;
+  SalutContactManager *contact_manager = NULL;
+  SalutContact *contact;
   GibberXmppStanza *stanza;
+  GibberXmppConnection *connection = NULL;
+  SalutXmppConnectionManagerRequestConnectionResult request_result;
+  gboolean result;
+  struct pending_connection_for_invite_data *data;
 
   if (handle == base_connection->self_handle) {
     TpIntSet *empty;
@@ -464,21 +551,55 @@ muc_channel_add_member(GObject *iface, TpHandle handle,
     return ret;
   }
 
-  im_channel = salut_im_manager_get_channel_for_handle(priv->im_manager,
-                                                       handle);
-  if (im_channel == NULL) {
-    *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                           "Couldn't contact the contact");
-    return FALSE;
-  }
-  DEBUG("Trying to add handle %u to %s over channel: %p\n",
-        handle ,priv->object_path, im_channel);
+  g_object_get (G_OBJECT (priv->connection), "contact-manager",
+      &contact_manager, NULL);
+  g_assert (contact_manager != NULL);
 
-  stanza = create_invitation(self, handle, message);
-  salut_im_channel_send_stanza(im_channel, stanza);
+  contact = salut_contact_manager_get_contact (contact_manager, handle);
+  g_object_unref (contact_manager);
 
-  g_object_unref(im_channel);
-  g_object_unref (stanza);
+  if (contact == NULL)
+    {
+      *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                             "Couldn't contact the contact");
+      return FALSE;
+    }
+
+  DEBUG("Trying to add handle %u to %s", handle ,priv->object_path);
+
+  DEBUG ("request XMPP connection with contact %s", contact->name);
+  request_result = salut_xmpp_connection_manager_request_connection (
+      priv->xmpp_connection_manager, contact, &connection, error);
+
+  if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
+    {
+      DEBUG ("request connection failed");
+      return FALSE;
+    }
+
+  stanza = create_invitation (self, handle, message);
+
+  if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+    {
+      DEBUG ("got an existing connection. Send the invite");
+      result = gibber_xmpp_connection_send (connection, stanza, error);
+      g_object_unref (stanza);
+      return TRUE;
+    }
+
+  DEBUG ("requested connection pending. We have to wait to send the invite");
+  data = pending_connection_for_invite_data_new ();
+  data->self = self;
+  data->contact = contact;
+  data->invite = stanza;
+
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), data);
+  g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
+      G_CALLBACK (xmpp_connection_manager_connection_failed_cb), data);
+
   return TRUE;
 }
 
@@ -536,17 +657,6 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class,
                                    PROP_CONNECTION, param_spec);
-  param_spec = g_param_spec_object ("im-manager",
-                                    "SalutIm manager",
-                                    "Salut Im manager to use to "
-                                    "contact the contacts",
-                                    SALUT_TYPE_IM_MANAGER,
-                                    G_PARAM_CONSTRUCT_ONLY |
-                                    G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class,
-                                   PROP_IM_MANAGER, param_spec);
 
   param_spec = g_param_spec_object (
       "client",
@@ -560,6 +670,18 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class,
       PROP_CLIENT, param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "Salut XMPP Connection manager used for this MUC channel",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
+      param_spec);
 
   tp_text_mixin_class_init(object_class,
                            G_STRUCT_OFFSET(SalutMucChannelClass, text_class));
@@ -587,6 +709,12 @@ salut_muc_channel_dispose (GObject *object)
     g_object_unref(priv->muc_connection);
     priv->muc_connection = NULL;
   }
+
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
 
   if (priv->muc_group != NULL)
     {
@@ -616,7 +744,7 @@ salut_muc_channel_finalize (GObject *object)
 }
 
 gboolean
-salut_muc_channel_invited(SalutMucChannel *self, TpHandle invitor,
+salut_muc_channel_invited (SalutMucChannel *self, TpHandle invitor,
                           const gchar *stanza, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
