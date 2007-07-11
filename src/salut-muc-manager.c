@@ -31,6 +31,7 @@
 #include "salut-contact-manager.h"
 #include "salut-avahi-service-browser.h"
 #include "salut-tubes-channel.h"
+#include "salut-xmpp-connection-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -40,6 +41,17 @@
 
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
+
+static gboolean
+invite_stanza_filter (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
+static void
+invite_stanza_callback (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
 
 static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
                                                      gpointer *iface_data);
@@ -64,7 +76,7 @@ typedef struct _SalutMucManagerPrivate SalutMucManagerPrivate;
 struct _SalutMucManagerPrivate
 {
   SalutConnection *connection;
-  SalutImManager *im_manager;
+  SalutXmppConnectionManager *xmpp_connection_manager;
 
   /* GUINT_TO_POINTER (room_handle) => (SalutMucChannel *) */
   GHashTable *text_channels;
@@ -84,7 +96,6 @@ static void
 salut_muc_manager_init (SalutMucManager *obj)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
-  priv->im_manager = NULL;
   priv->connection = NULL;
   priv->client = NULL;
   priv->browser = salut_avahi_service_browser_new ("_salut-room._udp");
@@ -124,10 +135,10 @@ salut_muc_manager_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
-  if (priv->im_manager != NULL) {
-    g_object_unref(priv->im_manager);
-    priv->im_manager = NULL;
-  }
+
+  salut_xmpp_connection_manager_remove_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      invite_stanza_filter, invite_stanza_callback, self);
 
   tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
   g_assert (priv->text_channels == NULL);
@@ -137,6 +148,12 @@ salut_muc_manager_dispose (GObject *object)
     {
       g_hash_table_destroy (priv->room_resolvers);
       priv->room_resolvers = NULL;
+    }
+
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
     }
 
   g_object_unref (priv->browser);
@@ -326,12 +343,12 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
       handle);
   chan = g_object_new (SALUT_TYPE_MUC_CHANNEL,
       "connection", priv->connection,
-      "im-manager", priv->im_manager,
       "object-path", path,
       "muc_connection", connection,
       "handle", handle,
       "name", name,
       "client", priv->client,
+      "xmpp-connection-manager", priv->xmpp_connection_manager,
       NULL);
   g_free (path);
 
@@ -599,17 +616,31 @@ static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
 }
 
 static gboolean
-_received_stanza(SalutImChannel *imchannel,
-                  GibberXmppStanza *message, gpointer data) {
-  SalutMucManager *self = SALUT_MUC_MANAGER(data);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+invite_stanza_filter (SalutXmppConnectionManager *mgr,
+                      GibberXmppConnection *conn,
+                      GibberXmppStanza *stanza,
+                      SalutContact *contact,
+                      gpointer user_data)
+{
+
+  return (gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC) != NULL);
+}
+
+static void
+invite_stanza_callback (SalutXmppConnectionManager *mgr,
+                        GibberXmppConnection *conn,
+                        GibberXmppStanza *stanza,
+                        SalutContact *contact,
+                        gpointer user_data)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (user_data);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
-  GibberXmppNode *node;
-  GibberXmppNode *invite;
-  GibberXmppNode *room_node;
-  GibberXmppNode *reason_node;
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+  TpHandleRepoIface *contact_repo =
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
+  GibberXmppNode *node, *invite, *room_node, *reason_node;
   SalutMucChannel *chan;
   const gchar *room = NULL;
   const gchar *reason = NULL;
@@ -621,126 +652,123 @@ _received_stanza(SalutImChannel *imchannel,
   GHashTable *params_hash;
   GibberMucConnection *connection = NULL;
 
-  node = gibber_xmpp_node_get_child_ns(message->node, "x", NS_LLMUC);
-  if (node == NULL)
-    return FALSE;
+  node = gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC);
+  g_assert (node != NULL);
 
   DEBUG("Got an invitation");
 
-  invite = gibber_xmpp_node_get_child(node, "invite");
-  if (invite == NULL) {
-    DEBUG("Got invitation, but no invite block!?");
-    return FALSE;
-  }
-
-  room_node = gibber_xmpp_node_get_child(invite, "roomname");
-
-  if (room_node == NULL) {
-    DEBUG("Invalid invitation, discarding");
-    return TRUE;
-  }
-
-  room = room_node->content;
-  reason_node = gibber_xmpp_node_get_child(invite, "reason");
-  if (reason_node != NULL) {
-    reason = reason_node->content;
-  }
-  if (reason == NULL) {
-    reason = "";
-  }
-
-  protocol = gibber_xmpp_node_get_attribute(invite, "protocol");
-  if (protocol == NULL) {
-    DEBUG("Invalid invitation, (missing protocol) discarding");
-    return TRUE;
-  }
-
-  params = _get_connection_parameters(self, protocol);
-  if (params == NULL) {
-    DEBUG("Invalid invitation, (unknown protocol) discarding");
-    return TRUE;
-  }
-
-  params_hash = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
-  for (p = params ; *p != NULL; p++) {
-    GibberXmppNode *param;
-    param = gibber_xmpp_node_get_child(invite, *p);
-    if (param == NULL) {
-      DEBUG("Invalid invitation, (missing parameter) discarding");
-      goto discard;
+  invite = gibber_xmpp_node_get_child (node, "invite");
+  if (invite == NULL)
+    {
+      DEBUG ("Got invitation, but no invite block!?");
+      return;
     }
-    g_hash_table_insert(params_hash, (gchar *)*p,
-                        g_strdup(param->content));
-  }
+
+  room_node = gibber_xmpp_node_get_child (invite, "roomname");
+  if (room_node == NULL)
+    {
+      DEBUG ("Invalid invitation, discarding");
+      return;
+    }
+  room = room_node->content;
+
+  reason_node = gibber_xmpp_node_get_child (invite, "reason");
+  if (reason_node != NULL)
+    reason = reason_node->content;
+
+  if (reason == NULL)
+    reason = "";
+
+  protocol = gibber_xmpp_node_get_attribute (invite, "protocol");
+  if (protocol == NULL)
+    {
+      DEBUG ("Invalid invitation, (missing protocol) discarding");
+      return;
+    }
+
+  params = _get_connection_parameters (self, protocol);
+  if (params == NULL)
+    {
+      DEBUG ("Invalid invitation, (unknown protocol) discarding");
+      return;
+    }
+
+  params_hash = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, g_free);
+  for (p = params ; *p != NULL; p++)
+    {
+      GibberXmppNode *param;
+
+      param = gibber_xmpp_node_get_child (invite, *p);
+      if (param == NULL)
+        {
+          DEBUG("Invalid invitation, (missing parameter) discarding");
+          goto discard;
+        }
+
+      g_hash_table_insert (params_hash, (gchar *) *p,
+          g_strdup (param->content));
+    }
 
   /* FIXME proper serialisation of handle name */
   /* Create the group if it doesn't exist and myself to local_pending */
-  room_handle = tp_handle_ensure(room_repo, room, NULL, NULL);
+  room_handle = tp_handle_ensure (room_repo, room, NULL, NULL);
 
   /* FIXME handle properly */
-  g_assert(room_handle != 0);
+  g_assert (room_handle != 0);
 
-  chan = g_hash_table_lookup(priv->text_channels, GINT_TO_POINTER(room_handle));
+  chan = g_hash_table_lookup (priv->text_channels,
+      GINT_TO_POINTER (room_handle));
 
-  if (chan == NULL) {
-    connection = _get_connection(self, protocol, params_hash, NULL);
-    if (connection == NULL) {
-      DEBUG("Invalid invitation, (wrong protocol parameters) discarding");
-      goto discard;
+  if (chan == NULL)
+    {
+      connection = _get_connection (self, protocol, params_hash, NULL);
+      if (connection == NULL)
+        {
+          DEBUG ("Invalid invitation, (wrong protocol parameters) discarding");
+          goto discard;
+        }
+
+      if (connection == NULL)
+        {
+          tp_handle_unref (room_repo, room_handle);
+          /* FIXME some kinda error to the user maybe ? Ignore for now */
+          goto discard;
+        }
+      /* Need to create a new one */
+      chan = salut_muc_manager_new_muc_channel (self, room_handle, connection);
     }
 
-    if (connection == NULL) {
-      tp_handle_unref(room_repo, room_handle);
-      /* FIXME some kinda error to the user maybe ? Ignore for now */
-      goto discard;
-    }
-    /* Need to create a new one */
-    chan = salut_muc_manager_new_muc_channel (self, room_handle, connection);
-  }
   /* FIXME handle properly */
   g_assert(chan != NULL);
 
-  g_object_get(G_OBJECT(imchannel), "handle", &invitor_handle, NULL);
-  salut_muc_channel_invited(chan, invitor_handle, reason, NULL);
+  invitor_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
+  salut_muc_channel_invited (chan, invitor_handle, reason, NULL);
+  tp_handle_unref (contact_repo, invitor_handle);
 
-  g_hash_table_destroy(params_hash);
-
-  return TRUE;
 discard:
-  if (params_hash != NULL) {
-    g_hash_table_destroy(params_hash);
-  }
-  return TRUE;
-}
-
-static void
-_new_im_channel(TpChannelFactoryIface *channel_iface,
-                TpChannelIface *channel, gpointer request,
-                gpointer data) {
-  SalutImChannel *imchannel = SALUT_IM_CHANNEL(channel);
-  SalutMucManager *self = SALUT_MUC_MANAGER(data);
-  g_signal_connect(imchannel, "received-stanza",
-                     G_CALLBACK(_received_stanza),
-                     self);
+  if (params_hash != NULL)
+    g_hash_table_destroy (params_hash);
 }
 
 /* public functions */
 SalutMucManager *
-salut_muc_manager_new(SalutConnection *connection,
-                      SalutImManager *im_manager) {
+salut_muc_manager_new (SalutConnection *connection,
+                       SalutXmppConnectionManager *xmpp_connection_manager)
+{
   SalutMucManager *ret = NULL;
   SalutMucManagerPrivate *priv;
 
   g_assert(connection != NULL);
-  g_assert(im_manager != NULL);
 
   ret = g_object_new(SALUT_TYPE_MUC_MANAGER, NULL);
   priv = SALUT_MUC_MANAGER_GET_PRIVATE (ret);
 
-  priv->im_manager = im_manager;
-  g_object_ref(im_manager);
-  g_signal_connect(im_manager, "new-channel",
-                   G_CALLBACK(_new_im_channel), ret);
+  priv->xmpp_connection_manager = xmpp_connection_manager;
+  g_object_ref (xmpp_connection_manager);
+
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      invite_stanza_filter, invite_stanza_callback, ret);
 
   priv->connection = connection;
 

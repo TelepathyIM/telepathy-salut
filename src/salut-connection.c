@@ -1940,7 +1940,8 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
-  priv->muc_manager = salut_muc_manager_new(self, priv->im_manager);
+  priv->muc_manager = salut_muc_manager_new (self,
+      priv->xmpp_connection_manager);
 
   /*
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);

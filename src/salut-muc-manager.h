@@ -23,7 +23,7 @@
 #include <glib-object.h>
 
 #include <salut-connection.h>
-#include <salut-im-manager.h>
+#include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-client.h"
 
 G_BEGIN_DECLS
@@ -56,8 +56,8 @@ GType salut_muc_manager_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_MANAGER, SalutMucManagerClass))
 
 SalutMucManager *
-salut_muc_manager_new(SalutConnection *connection,
-                      SalutImManager *im_manager);
+salut_muc_manager_new (SalutConnection *connection,
+                       SalutXmppConnectionManager *xmpp_connection_manager);
 
 gboolean
 salut_muc_manager_start (SalutMucManager *muc_manager,
