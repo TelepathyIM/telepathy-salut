@@ -1200,8 +1200,11 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
           g_signal_connect (connection, "parse-error",
               G_CALLBACK (outgoing_pending_connection_parse_error_cb), self);
 
-          g_hash_table_insert (priv->connection_refcounts, connection,
-              GUINT_TO_POINTER (1));
+          /* init connection refcount to 1.
+           * The connection is not in the hash table yet but as
+           * GUINT_TO_POINTER (NULL) == 0 that does exactly what
+           * we want */
+          increment_connection_refcount (self, connection);
 
           g_array_free (addrs, TRUE);
           return TRUE;
