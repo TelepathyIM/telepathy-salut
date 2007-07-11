@@ -491,9 +491,9 @@ connection_fully_open (SalutXmppConnectionManager *self,
 }
 
 static gboolean
-pending_connection_got_from (SalutXmppConnectionManager *self,
-                             GibberXmppConnection *conn,
-                             const gchar *from)
+incoming_pending_connection_got_from (SalutXmppConnectionManager *self,
+                                      GibberXmppConnection *conn,
+                                      const gchar *from)
 {
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
@@ -577,7 +577,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
    * support that yet.
    * */
   if (from != NULL)
-    pending_connection_got_from (self, conn, from);
+    incoming_pending_connection_got_from (self, conn, from);
 }
 
 static void
@@ -591,7 +591,7 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
   /* If the identity wasn't clear from the stream opening we only wait to the
    * very first message */
   from = gibber_xmpp_node_get_attribute (stanza->node, "from");
-  if (pending_connection_got_from (self, conn, from))
+  if (incoming_pending_connection_got_from (self, conn, from))
     {
       /* We can filter the stanza now */
       connection_stanza_received_cb (conn, stanza, self);
