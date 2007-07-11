@@ -556,7 +556,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutContactManager object",
       "The Salut Contact Manager associated with this Salut Connection",
       SALUT_TYPE_CONTACT_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
