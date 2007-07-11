@@ -1219,10 +1219,11 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
 }
 
 SalutXmppConnectionManagerRequestConnectionResult
-salut_xmpp_connection_request_connection (SalutXmppConnectionManager *self,
-                                          SalutContact *contact,
-                                          GibberXmppConnection **conn,
-                                          GError **error)
+salut_xmpp_connection_manager_request_connection (
+    SalutXmppConnectionManager *self,
+    SalutContact *contact,
+    GibberXmppConnection **conn,
+    GError **error)
 {
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
