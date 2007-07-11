@@ -36,6 +36,7 @@
 #include "salut-contact.h"
 #include "text-helper.h"
 #include "salut-xmpp-connection-manager.h"
+#include "namespaces.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
@@ -597,16 +598,11 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
 {
   SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  GibberStanzaType type;
 
   if (priv->contact != contact)
     return FALSE;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
-  if (type != GIBBER_STANZA_TYPE_MESSAGE)
-    return FALSE;
-
-  return TRUE;
+  return salut_im_channel_is_text_message (stanza);
 }
 
 static void
@@ -890,6 +886,22 @@ salut_im_channel_add_connection (SalutImChannel *chan,
   priv->xmpp_connection = conn;
   g_object_ref (priv->xmpp_connection);
   _initialise_connection (chan);
+}
+
+gboolean
+salut_im_channel_is_text_message (GibberXmppStanza *stanza)
+{
+  GibberStanzaType type;
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
+  if (type != GIBBER_STANZA_TYPE_MESSAGE)
+    return FALSE;
+
+  if (gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC) != NULL)
+    /* discard MUC invite */
+    return FALSE;
+
+  return TRUE;
 }
 
 /**

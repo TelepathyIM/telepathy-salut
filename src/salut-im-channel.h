@@ -68,6 +68,9 @@ void salut_im_channel_send_stanza (SalutImChannel * self,
 void salut_im_channel_received_stanza (SalutImChannel *chan,
     GibberXmppStanza *stanza);
 
+gboolean
+salut_im_channel_is_text_message (GibberXmppStanza *stanza);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_IM_CHANNEL_H__*/

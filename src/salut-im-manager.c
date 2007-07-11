@@ -102,17 +102,11 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
   SalutImManager *self = SALUT_IM_MANAGER (user_data);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
   TpHandle handle;
-  GibberStanzaType type;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_CONTACT);
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
-  if (type != GIBBER_STANZA_TYPE_MESSAGE)
-    return FALSE;
-
-  if (gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC) != NULL)
-    /* discard MUC invite */
+  if (!salut_im_channel_is_text_message (stanza))
     return FALSE;
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
