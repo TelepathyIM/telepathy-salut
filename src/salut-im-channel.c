@@ -739,6 +739,9 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
     0, 0, NULL, NULL, self);
 
+  /* Tell to the XCM we are using this connection */
+  salut_xmpp_connection_manager_take_connection (mgr, conn);
+
   priv->xmpp_connection = conn;
   g_object_ref (priv->xmpp_connection);
   _initialise_connection (self);
@@ -879,6 +882,11 @@ salut_im_channel_add_connection (SalutImChannel *chan,
       return;
     }
   DEBUG ("New connection for: %s", priv->contact->name);
+
+  /* Tell to the XCM we are using this connection */
+  salut_xmpp_connection_manager_take_connection (priv->xmpp_connection_manager,
+      conn);
+
   priv->xmpp_connection = conn;
   g_object_ref (priv->xmpp_connection);
   _initialise_connection (chan);

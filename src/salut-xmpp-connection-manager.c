@@ -485,7 +485,9 @@ connection_fully_open (SalutXmppConnectionManager *self,
   g_signal_connect (connection, "parse-error",
       G_CALLBACK (connection_parse_error_cb), self);
 
+  salut_xmpp_connection_manager_take_connection (self, connection);
   g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, contact);
+  salut_xmpp_connection_manager_release_connection (self, connection);
 }
 
 static gboolean
