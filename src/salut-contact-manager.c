@@ -107,6 +107,7 @@ activity_new (SalutContactManager *mgr,
   activity->refcount = 1;
   tp_handle_ref (room_repo, room_handle);
   activity->room = room_handle;
+  activity->mgr = mgr;
 
   DEBUG ("Creating SalutContactManagerActivity: handle %u", room_handle);
   g_hash_table_insert (priv->olpc_activities_by_room,
