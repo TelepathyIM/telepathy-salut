@@ -481,6 +481,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
 #ifdef ENABLE_OLPC
     SALUT_IFACE_OLPC_BUDDY_INFO,
+    SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
 #endif
     NULL };
 
