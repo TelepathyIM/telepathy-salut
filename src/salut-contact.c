@@ -747,6 +747,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
                 tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
               self->olpc_cur_act_room = room_handle;
               self->olpc_cur_act = g_strdup (act_value);
+              SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
             }
           else
             {
