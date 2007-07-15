@@ -160,10 +160,8 @@ salut_contact_init (SalutContact *obj)
   obj->olpc_color = NULL;
   obj->olpc_cur_act = NULL;
   obj->olpc_cur_act_room = 0;
-  priv->olpc_announced_activities = g_hash_table_new_full (g_str_hash,
-      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
-  priv->olpc_private_activities = g_hash_table_new_full (g_str_hash,
-      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
+  priv->olpc_activities = g_hash_table_new_full (g_str_hash, g_str_equal,
+      (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
 #endif
   priv->client = NULL;
   priv->resolvers = NULL;
@@ -280,6 +278,8 @@ salut_contact_finalize (GObject *object) {
     }
   g_free (self->olpc_color);
   g_free (self->olpc_cur_act);
+  g_free (self->olpc_ip4);
+  g_free (self->olpc_ip6);
 #endif
 
   G_OBJECT_CLASS (salut_contact_parent_class)->finalize (object);
@@ -641,7 +641,7 @@ static void
 contact_resolved_cb(SalutAvahiServiceResolver *resolver,
                     AvahiIfIndex interface, AvahiProtocol protocol,
                     gchar *name, gchar *type, gchar *domain, gchar *host_name,
-                    AvahiAddress *a, gint port,
+                    AvahiAddress *address, gint port,
                     AvahiStringList *txt, AvahiLookupResultFlags flags,
                     gpointer userdata) {
   SalutContact *self = SALUT_CONTACT (userdata);
@@ -924,6 +924,34 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
           g_array_free (new_key, TRUE);
         }
     }
+
+  if (address != NULL)
+    {
+      gchar* saddr = g_malloc0 (AVAHI_ADDRESS_STR_MAX);
+
+      if (avahi_address_snprint (saddr, AVAHI_ADDRESS_STR_MAX, address))
+        {
+          switch (address->proto)
+            {
+              case AVAHI_PROTO_INET:
+                self->olpc_ip4 = saddr;
+                SET_CHANGE (SALUT_CONTACT_OLPC_IP4);
+                break;
+              case AVAHI_PROTO_INET6:
+                self->olpc_ip6 = saddr;
+                SET_CHANGE (SALUT_CONTACT_OLPC_IP6);
+                break;
+              default:
+                g_free (saddr);
+                break;
+            }
+        }
+      else
+        {
+          g_free (saddr);
+        }
+    }
+
 #endif
 
   if (changes != 0) {

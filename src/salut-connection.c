@@ -1223,7 +1223,9 @@ new_gvalue (GType type)
 static GHashTable *
 get_properties_hash (const GArray *key,
                      const gchar *color,
-                     const gchar *jid)
+                     const gchar *jid,
+                     const gchar *ip4,
+                     const gchar *ip6)
 {
   GHashTable *properties;
   GValue *gvalue;
@@ -1251,6 +1253,20 @@ get_properties_hash (const GArray *key,
       g_hash_table_insert (properties, "jid", gvalue);
     }
 
+  if (ip4 != NULL)
+    {
+      gvalue = new_gvalue (G_TYPE_STRING);
+      g_value_set_string (gvalue, ip4);
+      g_hash_table_insert (properties, "ip4-address", gvalue);
+    }
+
+  if (ip6 != NULL)
+    {
+      gvalue = new_gvalue (G_TYPE_STRING);
+      g_value_set_string (gvalue, ip6);
+      g_hash_table_insert (properties, "ip6-address", gvalue);
+    }
+
   return properties;
 }
 
@@ -1259,10 +1275,12 @@ emit_properties_changed (SalutConnection *connection,
                          TpHandle handle,
                          const GArray *key,
                          const gchar *color,
-                         const gchar *jid)
+                         const gchar *jid,
+                         const gchar *ip4,
+                         const gchar *ip6)
 {
   GHashTable *properties;
-  properties = get_properties_hash (key, color, jid);
+  properties = get_properties_hash (key, color, jid, ip4, ip6);
 
   salut_svc_olpc_buddy_info_emit_properties_changed (connection,
       handle, properties);
@@ -1321,7 +1339,7 @@ _contact_manager_contact_olpc_properties_changed (SalutConnection *self,
                                                   TpHandle handle)
 {
   emit_properties_changed (self, handle, contact->olpc_key,
-      contact->olpc_color, contact->jid);
+      contact->olpc_color, contact->jid, contact->olpc_ip4, contact->olpc_ip6);
 }
 
 static void
@@ -1339,7 +1357,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
   if (handle == base->self_handle)
     {
       properties = get_properties_hash (priv->self->olpc_key,
-          priv->self->olpc_color, priv->self->jid);
+          priv->self->olpc_color, priv->self->jid, NULL, NULL);
     }
   else
     {
@@ -1354,7 +1372,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
           return;
         }
       properties = get_properties_hash (contact->olpc_key, contact->olpc_color,
-        contact->jid);
+        contact->jid, contact->olpc_ip4, contact->olpc_ip6);
       g_object_unref (contact);
     }
 
@@ -2244,7 +2262,9 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
   }
 
 #ifdef ENABLE_OLPC
-  if (changes & SALUT_CONTACT_OLPC_PROPERTIES)
+  if ((changes & SALUT_CONTACT_OLPC_PROPERTIES) ||
+      (changes & SALUT_CONTACT_OLPC_IP4) ||
+      (changes & SALUT_CONTACT_OLPC_IP6))
     _contact_manager_contact_olpc_properties_changed (self, contact, handle);
 
   if (changes & SALUT_CONTACT_OLPC_CURRENT_ACTIVITY)

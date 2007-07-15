@@ -42,6 +42,8 @@ G_BEGIN_DECLS
 #define  SALUT_CONTACT_OLPC_PROPERTIES 0x8
 #define  SALUT_CONTACT_OLPC_CURRENT_ACTIVITY 0x10
 #define  SALUT_CONTACT_OLPC_ACTIVITIES 0x20
+#define  SALUT_CONTACT_OLPC_IP4 0x40
+#define  SALUT_CONTACT_OLPC_IP6 0x80
 #endif /* ENABLE_OLPC */
 
 typedef struct _SalutContact SalutContact;
@@ -63,6 +65,8 @@ struct _SalutContact {
     gchar *olpc_color;
     gchar *olpc_cur_act;
     TpHandle olpc_cur_act_room;
+    gchar *olpc_ip4;
+    gchar *olpc_ip6;
 #endif /* ENABLE_OLPC */
 };
 
