@@ -83,6 +83,9 @@ struct _SalutXmppConnectionManagerPrivate
   GibberXmppConnectionListener *listener;
   SalutConnection *connection;
   SalutContactManager *contact_manager;
+  /* TODO: we should probably be able to reduce the number of hash tables
+   * using a struct ConnectionInfo or something. Hopefully that should allow
+   * use to reduce the number of signal callbacks too. */
   GHashTable *connections;
   /* GibberXmppConnection -> GList of SalutContact */
   GHashTable *incoming_pending_connections;
@@ -450,6 +453,8 @@ connection_stanza_received_cb (GibberXmppConnection *conn,
   /* Connection specific filters */
   list = g_hash_table_lookup (priv->stanza_filters, conn);
   apply_filters (self, conn, list, stanza, contact);
+  /* FIXME: if a filter removes filter that are after it in the list we are
+   * fucked. */
 
   /* Filters for all connections */
   apply_filters (self, conn, priv->all_connection_filters, stanza, contact);
