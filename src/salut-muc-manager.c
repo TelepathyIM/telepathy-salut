@@ -622,6 +622,11 @@ invite_stanza_filter (SalutXmppConnectionManager *mgr,
                       SalutContact *contact,
                       gpointer user_data)
 {
+  GibberStanzaType type;
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
+  if (type != GIBBER_STANZA_TYPE_MESSAGE)
+    return FALSE;
 
   return (gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC) != NULL);
 }
