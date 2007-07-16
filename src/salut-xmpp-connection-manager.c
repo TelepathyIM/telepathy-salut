@@ -300,6 +300,7 @@ close_connection (SalutXmppConnectionManager *self,
   SalutContact *contact;
 
   contact = g_hash_table_lookup (priv->connections, connection);
+  g_assert (contact != NULL);
 
   if ((connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_SENT) == 0)
     {
@@ -527,6 +528,7 @@ connection_parse_error_cb (GibberXmppConnection *connection,
   SalutContact *contact;
 
   contact = g_hash_table_lookup (priv->connections, connection);
+  g_assert (contact != NULL);
 
   DEBUG ("Parse error on xml stream, closing connection with %s",
       contact->name);
@@ -1086,12 +1088,8 @@ outgoing_pending_connection_fully_open (SalutXmppConnectionManager *self,
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
   contact = g_hash_table_lookup (priv->outgoing_pending_connections, conn);
+  g_assert (contact != NULL);
   g_hash_table_remove (priv->outgoing_pending_connections, conn);
-  if (contact == NULL)
-    {
-      DEBUG ("can't find contact");
-      return;
-    }
 
   connection_fully_open (self, conn, contact);
 }
