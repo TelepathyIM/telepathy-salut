@@ -621,7 +621,6 @@ connection_disconnected (SalutImChannel *self)
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
   priv->state = CHANNEL_NOT_CONNECTED;
-  _error_flush_queue (self);
 }
 
 static void
@@ -657,6 +656,7 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
 
   g_assert (priv->xmpp_connection == NULL || priv->xmpp_connection == conn);
   connection_disconnected (self);
+  _error_flush_queue (self);
 }
 
 static void
