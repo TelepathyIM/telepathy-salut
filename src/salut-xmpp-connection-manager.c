@@ -666,8 +666,14 @@ new_connection_cb (GibberXmppConnectionListener *listener,
    */
   if (g_list_length (contacts) == 1)
     {
-      connection_fully_open (self, connection,
-          SALUT_CONTACT (contacts->data));
+      SalutContact *contact = contacts->data;
+
+      DEBUG ("incoming connection to just one contact machine. Open it and "
+          "consider it fully open");
+
+      gibber_xmpp_connection_open (connection, contact->name,
+          priv->connection->name, "1.0");
+      connection_fully_open (self, connection, contact);
 
       contact_list_destroy (contacts);
       return;
