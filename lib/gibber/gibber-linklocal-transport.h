@@ -27,6 +27,15 @@
 
 G_BEGIN_DECLS
 
+GQuark gibber_ll_transport_error_quark (void);
+#define GIBBER_LL_TRANSPORT_ERROR gibber_ll_transport_error_quark()
+
+typedef enum
+{
+  GIBBER_LL_TRANSPORT_ERROR_CONNECT_FAILED,
+  GIBBER_LL_TRANSPORT_ERROR_FAILED,
+} GibberLLTransportError;
+
 typedef struct _GibberLLTransport GibberLLTransport;
 typedef struct _GibberLLTransportClass GibberLLTransportClass;
 

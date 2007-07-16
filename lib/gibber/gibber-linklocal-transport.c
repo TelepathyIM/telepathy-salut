@@ -36,6 +36,17 @@
 
 G_DEFINE_TYPE(GibberLLTransport, gibber_ll_transport, GIBBER_TYPE_FD_TRANSPORT)
 
+GQuark
+gibber_ll_transport_error_quark (void)
+{
+  static GQuark quark = 0;
+
+  if (!quark)
+    quark = g_quark_from_static_string ("gibber_linklocal_transport_error");
+
+  return quark;
+}
+
 /* private structure */
 typedef struct _GibberLLTransportPrivate GibberLLTransportPrivate;
 
@@ -130,26 +141,18 @@ gibber_ll_transport_open_sockaddr(GibberLLTransport *transport,
 
   fd = socket(addr->ss_family, SOCK_STREAM, 0);
   if (fd < 0) {
-    if (error != NULL) {
-      /* FIXME, don't abuse TELEPATHY_ERRORS */
-      /* *error = g_error_new(TELEPATHY_ERRORS, 
-                           InvalidArgument,
-                           "Getting socket failed: %s", strerror(errno));
-      */
-    }
+    g_set_error (error, GIBBER_LL_TRANSPORT_ERROR,
+        GIBBER_LL_TRANSPORT_ERROR_FAILED,
+        "Getting socket failed: %s", g_strerror (errno));
     DEBUG("Getting socket failed: %s", strerror(errno));
     goto failed;
   } 
 
   ret = connect(fd, (struct sockaddr *)addr, sizeof(struct sockaddr_storage));
   if (ret < 0) {
-    if (error != NULL) {
-      /* FIXME, don't abuse TELEPATHY_ERRORS */
-      /* *error = g_error_new(TELEPATHY_ERRORS, 
-                           NotAvailable,
-                           "Connecting failed: %s", strerror(errno));
-      */
-    }
+    g_set_error (error, GIBBER_LL_TRANSPORT_ERROR,
+        GIBBER_LL_TRANSPORT_ERROR_CONNECT_FAILED,
+        "Connect failed: %s", g_strerror (errno));
     DEBUG("Connecting failed: %s", strerror(errno));
     goto failed;
   }
