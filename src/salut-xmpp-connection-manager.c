@@ -593,7 +593,7 @@ incoming_pending_connection_got_from (SalutXmppConnectionManager *self,
       t = g_list_next (t))
     {
       SalutContact *contact = SALUT_CONTACT (t->data);
-      if (strcmp (contact->name, from) == 0)
+      if (!tp_strdiff (contact->name, from))
         {
           struct sockaddr_storage addr;
           socklen_t size = sizeof (struct sockaddr_storage);
