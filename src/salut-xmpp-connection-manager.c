@@ -321,8 +321,8 @@ close_connection (SalutXmppConnectionManager *self,
     }
   else
     {
-      /* Wait the remote contact close the connection too */
-      DEBUG ("wait for remote contact closing");
+      /* Wait for the remote contact close the connection too */
+      DEBUG ("Wait for the remote contact closing");
       g_signal_emit (self, signals[CONNECTION_CLOSING], 0, connection,
           contact);
     }
@@ -1288,7 +1288,7 @@ salut_xmpp_connection_manager_request_connection (
            * establish a new one as we can't have more than one connection
            * to the same contact at the same time */
 
-          DEBUG ("found existing closing connection with %s. Wait this "
+          DEBUG ("found existing closing connection with %s. Wait for this "
               "connection is fully closed before requesting a new one",
               contact->name);
           g_hash_table_insert (priv->connections_waiting_close,
