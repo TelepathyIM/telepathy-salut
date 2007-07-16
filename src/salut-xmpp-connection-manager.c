@@ -535,6 +535,7 @@ incoming_pending_connection_got_from (SalutXmppConnectionManager *self,
               goto error;
             }
 
+          DEBUG ("identify incoming pending connection. It's now fully open");
           connection_fully_open (self, conn, contact);
           g_hash_table_remove (priv->incoming_pending_connections, conn);
 
@@ -560,6 +561,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
+  DEBUG ("incoming pending connection opened. Open it too");
   gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
 
   if (!tp_strdiff (version, "1.0"))
@@ -679,6 +681,8 @@ new_connection_cb (GibberXmppConnectionListener *listener,
       return;
     }
 
+  DEBUG ("Have to wait to know the contact before announce this incoming "
+      "connection");
   /* We have to wait to know the contact before announce the connection */
   g_hash_table_insert (priv->incoming_pending_connections,
       g_object_ref (connection), contacts);
@@ -1177,11 +1181,13 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
           struct connection_timeout_data *data;
           guint id;
 
+          DEBUG ("connected to contact. Open the XMPP connection now");
           gibber_xmpp_connection_open (connection, contact->name,
               priv->connection->name, "1.0");
 
           /* The remote contact have now to open the connection to fully
            * open it */
+          DEBUG ("waiting remote contact open the connection");
           g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
 
