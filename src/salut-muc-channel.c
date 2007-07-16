@@ -518,7 +518,7 @@ muc_channel_add_member (GObject *iface,
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   SalutContactManager *contact_manager = NULL;
   SalutContact *contact;
   GibberXmppStanza *stanza;
@@ -527,29 +527,35 @@ muc_channel_add_member (GObject *iface,
   gboolean result;
   struct pending_connection_for_invite_data *data;
 
-  if (handle == base_connection->self_handle) {
-    TpIntSet *empty;
-    TpIntSet *add;
-    gboolean ret = TRUE;
-    empty = tp_intset_new();
-    add = tp_intset_new();
-    tp_intset_add(add, handle);
-    /* Add to members */
-    if (salut_muc_channel_connect(self, NULL)) {
-      tp_group_mixin_change_members(G_OBJECT(self),
-          message, add, empty, empty, empty, base_connection->self_handle,
-          TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
-    } else {
-      g_set_error(error,
-                  TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-                  "Failed to connect to the group");
-      ret = FALSE;
+  if (handle == base_connection->self_handle)
+    {
+      TpIntSet *empty;
+      TpIntSet *add;
+      gboolean ret = TRUE;
+
+      empty = tp_intset_new ();
+      add = tp_intset_new ();
+      tp_intset_add (add, handle);
+      /* Add to members */
+
+      if (salut_muc_channel_connect(self, NULL))
+        {
+          tp_group_mixin_change_members (G_OBJECT (self),
+              message, add, empty, empty, empty, base_connection->self_handle,
+              TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
+        }
+      else
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+              "Failed to connect to the group");
+          ret = FALSE;
+        }
+
+      tp_intset_destroy (empty);
+      tp_intset_destroy (add);
+      muc_channel_publish_service (self);
+      return ret;
     }
-    tp_intset_destroy(empty);
-    tp_intset_destroy(add);
-    muc_channel_publish_service (self);
-    return ret;
-  }
 
   g_object_get (G_OBJECT (priv->connection), "contact-manager",
       &contact_manager, NULL);
@@ -560,12 +566,12 @@ muc_channel_add_member (GObject *iface,
 
   if (contact == NULL)
     {
-      *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                             "Couldn't contact the contact");
+      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Couldn't contact the contact");
       return FALSE;
     }
 
-  DEBUG("Trying to add handle %u to %s", handle ,priv->object_path);
+  DEBUG ("Trying to add handle %u to %s", handle ,priv->object_path);
 
   DEBUG ("request XMPP connection with contact %s", contact->name);
   request_result = salut_xmpp_connection_manager_request_connection (
