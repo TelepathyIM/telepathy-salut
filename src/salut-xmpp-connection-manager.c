@@ -278,7 +278,8 @@ check_if_waiting_for_connection_closed (SalutXmppConnectionManager *self,
     {
       GError *error = NULL;
 
-      DEBUG ("connection closed. We can now request the new one");
+      DEBUG ("connection with %s closed. We can now request the new one",
+          contact->name);
       if (!create_new_outgoing_connection (self, contact, &error))
         {
           outgoing_connection_failed (self, connection, contact,
@@ -303,7 +304,7 @@ close_connection (SalutXmppConnectionManager *self,
   if ((connection->stream_flags & GIBBER_XMPP_CONNECTION_CLOSE_SENT) == 0)
     {
       /* We didn't close the connection, let's do it now */
-      DEBUG ("send close");
+      DEBUG ("send close to connection with %s", contact->name);
       gibber_xmpp_connection_close (connection);
     }
 
@@ -311,7 +312,7 @@ close_connection (SalutXmppConnectionManager *self,
     {
       /* Connection is fully closed, let's remove it */
 
-      DEBUG ("connection fully closed. Remove it");
+      DEBUG ("connection with %s fully closed. Remove it", contact->name);
       gibber_transport_disconnect (connection->transport);
 
       check_if_waiting_for_connection_closed (self, connection);
@@ -322,7 +323,7 @@ close_connection (SalutXmppConnectionManager *self,
   else
     {
       /* Wait for the remote contact close the connection too */
-      DEBUG ("Wait for the remote contact closing");
+      DEBUG ("Wait for %s closing", contact->name);
       g_signal_emit (self, signals[CONNECTION_CLOSING], 0, connection,
           contact);
     }
@@ -525,13 +526,15 @@ connection_parse_error_cb (GibberXmppConnection *connection,
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   SalutContact *contact;
 
-  DEBUG ("Parse error on xml stream, closing connection");
+  contact = g_hash_table_lookup (priv->connections, connection);
+
+  DEBUG ("Parse error on xml stream, closing connection with %s",
+      contact->name);
 
   g_signal_handlers_disconnect_matched (connection, G_SIGNAL_MATCH_DATA,
       0, 0, NULL, NULL, self);
   gibber_transport_disconnect (connection->transport);
 
-  contact = g_hash_table_lookup (priv->connections, connection);
   g_signal_emit (self, signals[CONNECTION_FAILED], 0,
       connection, contact, SALUT_XMPP_CONNECTION_MANAGER_ERROR,
       SALUT_XMPP_CONNECTION_MANAGER_ERROR_PARSE_ERROR, "parse error");
@@ -599,17 +602,18 @@ incoming_pending_connection_got_from (SalutXmppConnectionManager *self,
           if (!gibber_ll_transport_get_address (
                 GIBBER_LL_TRANSPORT (conn->transport), &addr, &size))
             {
-              DEBUG ("Contact no longer alive");
+              DEBUG ("Contact %s no longer alive", contact->name);
               goto error;
             }
 
           if (!salut_contact_has_address (contact, &addr))
             {
-              DEBUG ("Contact doesn't have that address");
+              DEBUG ("Contact %s doesn't have that address", contact->name);
               goto error;
             }
 
-          DEBUG ("identify incoming pending connection. It's now fully open");
+          DEBUG ("identify incoming pending connection with %s. "
+              "It's now fully open", contact->name);
           connection_fully_open (self, conn, contact);
           g_hash_table_remove (priv->incoming_pending_connections, conn);
 
@@ -635,7 +639,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
-  DEBUG ("incoming pending connection opened. Open it too");
+  DEBUG ("incoming pending connection with %s opened. Open it too", from);
   gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
 
   if (!tp_strdiff (version, "1.0"))
@@ -744,8 +748,8 @@ new_connection_cb (GibberXmppConnectionListener *listener,
     {
       SalutContact *contact = contacts->data;
 
-      DEBUG ("incoming connection to just one contact machine. Open it and "
-          "consider it fully open");
+      DEBUG ("incoming connection to just one contact machine (%s). "
+          "Open it and consider it fully open", contact->name);
 
       gibber_xmpp_connection_open (connection, contact->name,
           priv->connection->name, "1.0");
@@ -1174,7 +1178,7 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
   gint i;
   GError *e = NULL;
 
-  DEBUG ("create a new outgoing connection");
+  DEBUG ("create a new outgoing connection to %s", contact->name);
 
   transport = gibber_ll_transport_new ();
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
@@ -1212,13 +1216,15 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
       if (gibber_ll_transport_open_sockaddr (transport, &(addr->address),
             &e))
         {
-          DEBUG ("connected to contact. Open the XMPP connection now");
+          DEBUG ("connected to %s. Open the XMPP connection now",
+              contact->name);
           gibber_xmpp_connection_open (connection, contact->name,
               priv->connection->name, "1.0");
 
           /* The remote contact have now to open the connection to fully
            * open it */
-          DEBUG ("waiting remote contact open the connection");
+          DEBUG ("waiting for remote contact (%s) open the connection",
+              contact->name);
           g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
 
@@ -1244,7 +1250,7 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
         }
     }
 
-  DEBUG ("All connection attempts failed");
+  DEBUG ("All connection attempts to %s failed", contact->name);
   g_propagate_error (error, e);
   g_array_free (addrs, TRUE);
   g_object_unref (connection);
