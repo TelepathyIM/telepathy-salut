@@ -775,6 +775,8 @@ _send_channel_message (SalutImChannel *self,
   switch (priv->state)
     {
       case CHANNEL_NOT_CONNECTED:
+      case CHANNEL_CLOSING:
+        /* request a fresh connection if we are closing this current one */
         g_queue_push_tail (priv->out_queue, msg);
         _setup_connection (self);
         break;
@@ -801,6 +803,7 @@ _send_message (SalutImChannel *self,
     {
       case CHANNEL_NOT_CONNECTED:
       case CHANNEL_CONNECTING:
+      case CHANNEL_CLOSING:
         g_object_ref (stanza);
         msg = salut_im_channel_message_new (type, text, stanza);
         _send_channel_message (self, msg);
@@ -809,9 +812,6 @@ _send_message (SalutImChannel *self,
         /* Connected and the queue is empty, so push it out directly */
         _sendout_message (self, time (NULL), type, text, stanza);
         break;
-      case CHANNEL_CLOSING:
-        g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-            "connection is closing");
         return FALSE;
         break;
     }
