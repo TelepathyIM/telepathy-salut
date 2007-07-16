@@ -827,15 +827,7 @@ salut_im_channel_add_connection (SalutImChannel *chan,
    * Which can be not quite what the other side expects.. And strange things
    * can happen when two * sides try to initiate at the same time */
 
-  if (priv->xmpp_connection == conn)
-    /* We requested this connection, no need to add it twice */
-    return;
-
-  if (priv->xmpp_connection != NULL)
-    {
-      DEBUG ("Already had a connection for: %s", priv->contact->name);
-      return;
-    }
+  g_assert (priv->xmpp_connection == NULL);
   DEBUG ("New connection for: %s", priv->contact->name);
 
   /* Tell to the XCM we are using this connection */
