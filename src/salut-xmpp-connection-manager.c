@@ -316,9 +316,9 @@ close_connection (SalutXmppConnectionManager *self,
       DEBUG ("connection with %s fully closed. Remove it", contact->name);
       gibber_transport_disconnect (connection->transport);
 
+      g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
       check_if_waiting_for_connection_closed (self, connection);
 
-      g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
       remove_connection (self, connection);
     }
   else
