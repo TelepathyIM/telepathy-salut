@@ -566,6 +566,8 @@ connection_fully_open (SalutXmppConnectionManager *self,
 
   salut_xmpp_connection_manager_take_connection (self, connection);
   g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, contact);
+  /* connection timer will be started if no component are interested
+   * by this connection */
   salut_xmpp_connection_manager_release_connection (self, connection);
 }
 
