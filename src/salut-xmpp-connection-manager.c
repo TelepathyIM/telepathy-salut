@@ -360,6 +360,69 @@ apply_filters (SalutXmppConnectionManager *self,
     }
 }
 
+struct connection_timeout_data
+{
+  SalutXmppConnectionManager *self;
+  GibberXmppConnection *connection;
+  SalutContact *contact;
+};
+
+static struct connection_timeout_data *
+connection_timeout_data_new (void)
+{
+  return g_slice_new (struct connection_timeout_data);
+}
+
+static void
+connection_timeout_data_free (struct connection_timeout_data *data)
+{
+  g_slice_free (struct connection_timeout_data, data);
+}
+
+static gboolean
+outgoing_pending_connection_timeout (struct connection_timeout_data *data)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
+
+  if (g_hash_table_remove (priv->outgoing_pending_connections,
+        data->connection))
+    {
+      /* Connection was still pending, let's raise an error */
+      outgoing_connection_failed (data->self, data->connection, data->contact,
+          SALUT_XMPP_CONNECTION_MANAGER_ERROR,
+          SALUT_XMPP_CONNECTION_MANAGER_ERROR_TIMEOUT,
+          "Outgoing connection timeout: remote contact didn't open it");
+    }
+
+  g_hash_table_remove (priv->connection_timers, data->connection);
+  g_hash_table_remove (priv->connection_refcounts, data->connection);
+  return FALSE;
+}
+
+static void
+add_timeout (SalutXmppConnectionManager *self,
+             GibberXmppConnection *connection,
+             SalutContact *contact)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  guint id;
+  struct connection_timeout_data *data;
+
+  data = connection_timeout_data_new ();
+  data->self = self;
+  data->connection = connection;
+  data->contact = contact;
+
+  id = g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE,
+      OUTGOING_CONNECTION_TIMEOUT,
+      (GSourceFunc) outgoing_pending_connection_timeout, data,
+      (GDestroyNotify) connection_timeout_data_free);
+  g_hash_table_insert (priv->connection_timers,
+      g_object_ref (connection), GUINT_TO_POINTER (id));
+}
+
 static void
 connection_stanza_received_cb (GibberXmppConnection *conn,
                                GibberXmppStanza *stanza,
@@ -376,6 +439,12 @@ connection_stanza_received_cb (GibberXmppConnection *conn,
     {
       DEBUG ("unknown connection, stanza ignored");
       return;
+    }
+
+  if (g_hash_table_remove (priv->connection_timers, conn))
+    {
+      /* reset the timer */
+      add_timeout (self, conn, contact);
     }
 
   /* Connection specific filters */
@@ -1087,46 +1156,6 @@ outgoing_connection_failed (SalutXmppConnectionManager *self,
       connection, contact, domain, code, msg);
 }
 
-struct connection_timeout_data
-{
-  SalutXmppConnectionManager *self;
-  GibberXmppConnection *connection;
-  SalutContact *contact;
-};
-
-static struct connection_timeout_data *
-connection_timeout_data_new (void)
-{
-  return g_slice_new (struct connection_timeout_data);
-}
-
-static void
-connection_timeout_data_free (struct connection_timeout_data *data)
-{
-  g_slice_free (struct connection_timeout_data, data);
-}
-
-static gboolean
-outgoing_pending_connection_timeout (struct connection_timeout_data *data)
-{
-  SalutXmppConnectionManagerPrivate *priv =
-    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
-
-  if (g_hash_table_remove (priv->outgoing_pending_connections,
-        data->connection))
-    {
-      /* Connection was still pending, let's raise an error */
-      outgoing_connection_failed (data->self, data->connection, data->contact,
-          SALUT_XMPP_CONNECTION_MANAGER_ERROR,
-          SALUT_XMPP_CONNECTION_MANAGER_ERROR_TIMEOUT,
-          "Outgoing connection timeout: remote contact didn't open it");
-    }
-
-  g_hash_table_remove (priv->connection_timers, data->connection);
-  g_hash_table_remove (priv->connection_refcounts, data->connection);
-  return FALSE;
-}
-
 static gboolean
 create_new_outgoing_connection (SalutXmppConnectionManager *self,
                                 SalutContact *contact,
@@ -1178,9 +1207,6 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
       if (gibber_ll_transport_open_sockaddr (transport, &(addr->address),
             &e))
         {
-          struct connection_timeout_data *data;
-          guint id;
-
           DEBUG ("connected to contact. Open the XMPP connection now");
           gibber_xmpp_connection_open (connection, contact->name,
               priv->connection->name, "1.0");
@@ -1191,17 +1217,7 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
           g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
 
-          data = connection_timeout_data_new ();
-          data->self = self;
-          data->connection = connection;
-          data->contact = contact;
-          id = g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE,
-              OUTGOING_CONNECTION_TIMEOUT,
-              (GSourceFunc) outgoing_pending_connection_timeout, data,
-              (GDestroyNotify) connection_timeout_data_free);
-          g_hash_table_insert (priv->connection_timers,
-              g_object_ref (connection), GUINT_TO_POINTER (id));
-
+          add_timeout (self, connection, contact);
           g_signal_connect (connection, "stream-opened",
               G_CALLBACK (outgoing_pending_connection_stream_opened_cb), self);
           g_signal_connect (connection->transport, "disconnected",
