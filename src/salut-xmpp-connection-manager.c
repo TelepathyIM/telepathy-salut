@@ -611,6 +611,8 @@ incoming_pending_connection_got_from (SalutXmppConnectionManager *self,
               goto error;
             }
 
+          /* FIXME: we should wait the first stanza before announce incoming
+           * connections to fit with our XEP proposal */
           DEBUG ("identify incoming pending connection with %s. "
               "It's now fully open", contact->name);
           connection_fully_open (self, conn, contact);
