@@ -494,8 +494,15 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
                                               gchar *message,
                                               gpointer user_data)
 {
+  SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpHandleRepoIface *contact_repo =
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
   struct pending_connection_for_invite_data *data =
     (struct pending_connection_for_invite_data *) user_data;
+  TpHandle handle;
+  TpIntSet *empty, *removed;
 
   if (data->contact != contact)
     /* Not the connection we are waiting for */
@@ -504,10 +511,23 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
   DEBUG ("awaited connection with %s failed: %s. Can't send invite",
       contact->name, message);
 
+
   g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
       NULL, data);
 
   pending_connection_for_invite_data_free (data);
+
+  handle = tp_handle_lookup (contact_repo, contact->name, NULL, NULL);
+  if (handle == 0)
+    return;
+
+  /* Can't invite the contact, remove it from remote pending */
+  empty = tp_intset_new ();
+  removed = tp_intset_new ();
+  tp_intset_add (removed, handle);
+  tp_group_mixin_change_members (G_OBJECT(self), "", empty, removed, empty,
+      empty, base_connection->self_handle,
+      TP_CHANNEL_GROUP_CHANGE_REASON_ERROR);
 }
 
 static gboolean
@@ -526,9 +546,11 @@ muc_channel_add_member (GObject *iface,
   SalutXmppConnectionManagerRequestConnectionResult request_result;
   gboolean result;
   struct pending_connection_for_invite_data *data;
+  TpIntSet *empty, *remote_pending;
 
   if (handle == base_connection->self_handle)
     {
+      /* adding yourself, let's join the muc */
       TpIntSet *empty;
       TpIntSet *add;
       gboolean ret = TRUE;
@@ -557,6 +579,7 @@ muc_channel_add_member (GObject *iface,
       return ret;
     }
 
+  /* Adding a contact, let's invite him */
   g_object_get (G_OBJECT (priv->connection), "contact-manager",
       &contact_manager, NULL);
   g_assert (contact_manager != NULL);
@@ -583,6 +606,14 @@ muc_channel_add_member (GObject *iface,
       DEBUG ("request connection failed");
       return FALSE;
     }
+
+  /* Set the contact as remote pending */
+  empty = tp_intset_new ();
+  remote_pending = tp_intset_new ();
+  tp_intset_add (remote_pending, handle);
+  tp_group_mixin_change_members (G_OBJECT(self), "", empty, empty, empty,
+      remote_pending, base_connection->self_handle,
+      TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
 
   stanza = create_invitation (self, handle, message);
 
