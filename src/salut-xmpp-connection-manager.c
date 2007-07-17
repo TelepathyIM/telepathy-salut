@@ -1245,7 +1245,8 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
         }
     }
 
-  DEBUG ("All connection attempts to %s failed", contact->name);
+  DEBUG ("All connection attempts to %s failed: %s", contact->name,
+      e->message);
   g_propagate_error (error, e);
   g_array_free (addrs, TRUE);
   g_object_unref (connection);

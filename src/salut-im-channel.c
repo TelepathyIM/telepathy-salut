@@ -654,6 +654,7 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
   if (contact != priv->contact)
     return;
 
+  DEBUG ("connection failed, flush messages queue");
   g_assert (priv->xmpp_connection == NULL || priv->xmpp_connection == conn);
   connection_disconnected (self);
   _error_flush_queue (self);
