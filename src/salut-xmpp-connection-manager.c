@@ -506,11 +506,6 @@ connection_transport_disconnected_cb (GibberLLTransport *transport,
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   struct remove_connection_having_transport_data data;
 
-  if (priv->dispose_has_run)
-    /* We are disposing so we can't try to remove connections twice from
-     * the same hash table */
-    return;
-
   DEBUG ("Connection transport disconnected");
   data.self = self;
   data.transport = transport;

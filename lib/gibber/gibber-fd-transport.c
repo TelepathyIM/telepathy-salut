@@ -153,8 +153,10 @@ _do_disconnect(GibberFdTransport *self) {
     priv->output_buffer = NULL;
   }
 
-  gibber_transport_set_state(GIBBER_TRANSPORT(self), 
-                            GIBBER_TRANSPORT_DISCONNECTED);
+  if (!priv->dispose_has_run)
+    /* If we are disposing we don't care about the state anymore */
+    gibber_transport_set_state (GIBBER_TRANSPORT (self),
+        GIBBER_TRANSPORT_DISCONNECTED);
 }
 
 static gboolean
