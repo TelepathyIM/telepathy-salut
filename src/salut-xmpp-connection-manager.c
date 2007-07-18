@@ -449,6 +449,8 @@ connection_stanza_received_cb (GibberXmppConnection *conn,
   if (g_hash_table_remove (priv->connection_timers, conn))
     {
       /* reset the timer */
+      DEBUG ("got a stanza on connection with %s. Reset its refcount timer",
+          contact->name);
       add_timeout (self, conn, contact);
     }
 
