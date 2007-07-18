@@ -446,13 +446,7 @@ connection_stanza_received_cb (GibberXmppConnection *conn,
       return;
     }
 
-  if (g_hash_table_remove (priv->connection_timers, conn))
-    {
-      /* reset the timer */
-      DEBUG ("got a stanza on connection with %s. Reset its refcount timer",
-          contact->name);
-      add_timeout (self, conn, contact);
-    }
+  salut_xmpp_connection_manager_reset_connection_timer (self, conn);
 
   /* Connection specific filters */
   list = g_hash_table_lookup (priv->stanza_filters, conn);
@@ -1408,6 +1402,30 @@ salut_xmpp_connection_manager_take_connection (
       /* ref count was to 0, remove the ref count timer */
       DEBUG ("connection ref count raised 1. Remove its timer");
       g_hash_table_remove (priv->connection_timers, connection);
+    }
+}
+
+void
+salut_xmpp_connection_manager_reset_connection_timer (
+    SalutXmppConnectionManager *self,
+    GibberXmppConnection *connection)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  SalutContact *contact;
+
+  contact = g_hash_table_lookup (priv->connections, connection);
+  if (contact == NULL)
+    {
+      DEBUG ("unknown connection");
+      return;
+    }
+
+  if (g_hash_table_remove (priv->connection_timers, connection))
+    {
+      DEBUG ("reset refcount timer of the connection with %s",
+          contact->name);
+      add_timeout (self, connection, contact);
     }
 }
 

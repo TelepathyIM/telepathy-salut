@@ -484,10 +484,16 @@ _sendout_message (SalutImChannel *self,
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   if (gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL))
-    tp_svc_channel_type_text_emit_sent (self, timestamp, type, text);
+    {
+      tp_svc_channel_type_text_emit_sent (self, timestamp, type, text);
+      salut_xmpp_connection_manager_reset_connection_timer (
+          priv->xmpp_connection_manager, priv->xmpp_connection);
+    }
   else
-    tp_svc_channel_type_text_emit_send_error (self,
-        TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, timestamp, type, text);
+    {
+      tp_svc_channel_type_text_emit_send_error (self,
+          TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, timestamp, type, text);
+    }
 }
 
 static void

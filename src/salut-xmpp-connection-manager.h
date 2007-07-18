@@ -115,6 +115,10 @@ void
 salut_xmpp_connection_manager_take_connection (
     SalutXmppConnectionManager *manager, GibberXmppConnection *connection);
 
+void
+salut_xmpp_connection_manager_reset_connection_timer (
+    SalutXmppConnectionManager *manager, GibberXmppConnection *connection);
+
 gboolean
 salut_xmpp_connection_manager_add_stanza_filter (
     SalutXmppConnectionManager *manager,
