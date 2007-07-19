@@ -39,6 +39,32 @@
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include <debug.h>
 
+#define DEBUG_CONTACT(contact, format, ...) G_STMT_START {      \
+  DEBUG ("Contact %s: " format, contact->name, ##__VA_ARGS__);  \
+} G_STMT_END
+
+#define DEBUG_RESOLVER(contact, resolver, format, ...) G_STMT_START {       \
+  gchar *_name;                                                             \
+  gchar *_type;                                                             \
+  gint _interface;                                                          \
+  gint _protocol;                                                           \
+                                                                            \
+  g_object_get (G_OBJECT(resolver),                                         \
+      "name", &_name,                                                       \
+      "type", &_type,                                                       \
+      "interface", &_interface,                                             \
+      "protocol", &_protocol,                                               \
+      NULL                                                                  \
+  );                                                                        \
+                                                                            \
+  DEBUG_CONTACT (contact, "Resolver (%s %s intf: %d proto: %d): " format,   \
+    _name, _type, _interface, _protocol, ##__VA_ARGS__);                    \
+                                                                            \
+  g_free (_name);                                                           \
+  g_free (_type);                                                           \
+} G_STMT_END
+
+
 G_DEFINE_TYPE(SalutContact, salut_contact, G_TYPE_OBJECT)
 
 /* signal enum */
@@ -193,7 +219,7 @@ salut_contact_dispose (GObject *object)
   SalutContact *self = SALUT_CONTACT (object);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
 
-  DEBUG("Disposing contact");
+  DEBUG_CONTACT (self, "Disposing contact");
 
   if (priv->dispose_has_run)
     return;
@@ -533,6 +559,8 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   gint changes = 0;
   gboolean alias_seen = FALSE;
 
+  DEBUG_RESOLVER (self, resolver, "contact %s resolved", self->name);
+
 #define SET_CHANGE(x) changes |= x
 
   if ((t = avahi_string_list_find(txt, "status")) != NULL) {
@@ -813,6 +841,8 @@ contact_lost(SalutContact *contact) {
   g_free(contact->status_message);
   contact->status_message = NULL;
 
+  DEBUG_CONTACT (contact, "disappeared from the local link");
+
   priv->found = FALSE;
   g_signal_emit(contact, signals[CONTACT_CHANGE], 0,
       SALUT_CONTACT_STATUS_CHANGED);
@@ -824,6 +854,7 @@ contact_drop_resolver (SalutContact *self,
                        SalutAvahiServiceResolver *resolver)
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  gint resolvers_left;
 #ifdef ENABLE_OLPC
   gchar *type;
   gchar *name;
@@ -845,16 +876,25 @@ contact_drop_resolver (SalutContact *self,
    * resolvers, ignoring the _olpc-activity ones. However, if someone's still
    * advertising activities, we can probably consider them to be online? */
   priv->resolvers = g_list_remove(priv->resolvers, resolver);
+
+  resolvers_left = g_list_length (priv->resolvers);
+
+  DEBUG_RESOLVER (self, resolver, "removed, %d left for %s", resolvers_left,
+     self->name);
+
   g_object_unref(resolver);
-  if (g_list_length(priv->resolvers) == 0 && priv->found) {
+
+  if (resolvers_left == 0 && priv->found) {
     contact_lost(self);
   }
 }
 
 static void
-contact_failed_cb(SalutAvahiServiceResolver  *resolver, GError *error,
+contact_failed_cb(SalutAvahiServiceResolver *resolver, GError *error,
                    gpointer userdata) {
   SalutContact *self = SALUT_CONTACT (userdata);
+
+  DEBUG_RESOLVER (self, resolver, "failed: %s", error->message);
 
   contact_drop_resolver (self, resolver);
 }
@@ -894,7 +934,8 @@ salut_contact_add_service(SalutContact *contact,
   if (!salut_avahi_service_resolver_attach(resolver, priv->client, NULL)) {
     g_warning("Failed to attach resolver");
   }
-  DEBUG("New resolver for %s", contact->name);
+
+  DEBUG_RESOLVER (contact, resolver, "added");
   priv->resolvers = g_list_prepend(priv->resolvers, resolver);
 }
 
@@ -908,6 +949,8 @@ salut_contact_remove_service(SalutContact *contact,
 
   if (!resolver)
     return;
+
+  DEBUG_RESOLVER (contact, resolver, "remove requested");
 
   contact_drop_resolver (contact, resolver);
 }
