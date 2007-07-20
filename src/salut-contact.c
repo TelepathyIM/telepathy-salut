@@ -894,9 +894,8 @@ contact_failed_cb(SalutAvahiServiceResolver *resolver, GError *error,
                    gpointer userdata) {
   SalutContact *self = SALUT_CONTACT (userdata);
 
-  DEBUG_RESOLVER (self, resolver, "failed: %s", error->message);
-
-  contact_drop_resolver (self, resolver);
+  DEBUG_RESOLVER (self, resolver, "failed: %s. Ignoring, "
+    "presence might become stale", error->message);
 }
 
 void
