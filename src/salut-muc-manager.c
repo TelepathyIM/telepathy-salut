@@ -31,7 +31,6 @@
 #include "salut-contact-manager.h"
 #include "salut-avahi-service-browser.h"
 #include "salut-tubes-channel.h"
-#include "salut-xmpp-connection-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -243,6 +242,11 @@ salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
   g_hash_table_foreach(priv->text_channels, salut_muc_manager_iface_foreach_one, &f);
   g_hash_table_foreach (priv->tubes_channels,
       salut_muc_manager_iface_foreach_one, &f);
+
+  if (priv->roomlist_channel)
+    {
+      func (TP_CHANNEL_IFACE (priv->roomlist_channel), data);
+    }
 }
 
 static void
@@ -525,6 +529,60 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   return text_chan;
 }
 
+static void
+roomlist_channel_closed_cb (SalutRoomlistChannel *chan,
+                            gpointer data)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (data);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  if (priv->roomlist_channel != NULL)
+    {
+      g_object_unref (priv->roomlist_channel);
+      priv->roomlist_channel = NULL;
+    }
+}
+
+static void
+add_room_to_roomlist_channel (gpointer key,
+                              gpointer value,
+                              gpointer user_data)
+{
+  const gchar *room_name = (const gchar *) key;
+  SalutMucManager *self = SALUT_MUC_MANAGER (user_data);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  salut_roomlist_channel_add_room (priv->roomlist_channel, room_name);
+}
+
+static void
+make_roomlist_channel (SalutMucManager *self,
+                       gpointer request)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *conn = (TpBaseConnection *) priv->connection;
+  gchar *object_path;
+
+  g_assert (priv->roomlist_channel == NULL);
+
+  object_path = g_strdup_printf ("%s/RoomlistChannel",
+      conn->object_path);
+
+  priv->roomlist_channel = salut_roomlist_channel_new (priv->connection,
+      object_path);
+
+  g_hash_table_foreach (priv->room_resolvers, add_room_to_roomlist_channel,
+      self);
+
+  g_signal_connect (priv->roomlist_channel, "closed",
+      (GCallback) roomlist_channel_closed_cb, self);
+
+  tp_channel_factory_iface_emit_new_channel (self,
+      (TpChannelIface *) priv->roomlist_channel, request);
+
+  g_free (object_path);
+}
+
 static TpChannelFactoryRequestStatus
 salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
                                          const gchar *chan_type,
@@ -545,7 +603,19 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
   DEBUG ("MUC request: ctype=%s htype=%u handle=%u", chan_type, handle_type,
       handle);
 
-  /* We only support room handles */
+  if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_ROOM_LIST))
+    {
+      if (priv->roomlist_channel != NULL)
+        {
+          *ret = TP_CHANNEL_IFACE (priv->roomlist_channel);
+          return TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+        }
+
+      make_roomlist_channel (mgr, request);
+      *ret = TP_CHANNEL_IFACE (priv->roomlist_channel);
+      return TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+    }
+
   if (handle_type != TP_HANDLE_TYPE_ROOM)
     {
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
@@ -852,6 +922,9 @@ browser_found (SalutAvahiServiceBrowser *browser,
     }
 
   g_hash_table_insert (priv->room_resolvers, g_strdup (name), resolver);
+
+  if (priv->roomlist_channel != NULL)
+    salut_roomlist_channel_add_room (priv->roomlist_channel, name);
 }
 
 static void
@@ -868,6 +941,9 @@ browser_removed (SalutAvahiServiceBrowser *browser,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
 
   DEBUG ("remove room: %s.%s.%s", name, type, domain);
+  if (priv->roomlist_channel != NULL)
+    salut_roomlist_channel_remove_room (priv->roomlist_channel, name);
+
   g_hash_table_remove (priv->room_resolvers, name);
 }
 

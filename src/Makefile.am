@@ -62,6 +62,8 @@ CORE_SOURCES =                                          \
     text-helper.h                                       \
     tube-dbus.h                                         \
     tube-dbus.c                                         \
+    salut-roomlist-channel.h                            \
+    salut-roomlist-channel.c                            \
     salut-tubes-channel.h                               \
     salut-tubes-channel.c                               \
     salut-xmpp-connection-manager.h                     \
