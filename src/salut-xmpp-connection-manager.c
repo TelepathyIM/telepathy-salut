@@ -733,7 +733,6 @@ new_connection_cb (GibberXmppConnectionListener *listener,
     {
       DEBUG ("Couldn't find a contact for the incoming connection");
       gibber_transport_disconnect (connection->transport);
-      gibber_xmpp_connection_close (connection);
       return;
     }
 
