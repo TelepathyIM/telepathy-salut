@@ -406,9 +406,9 @@ outgoing_pending_connection_timeout (struct connection_timeout_data *data)
 }
 
 static void
-add_timeout (SalutXmppConnectionManager *self,
-             GibberXmppConnection *connection,
-             SalutContact *contact)
+add_outgoing_timeout (SalutXmppConnectionManager *self,
+                      GibberXmppConnection *connection,
+                      SalutContact *contact)
 {
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
@@ -424,6 +424,46 @@ add_timeout (SalutXmppConnectionManager *self,
       OUTGOING_CONNECTION_TIMEOUT,
       (GSourceFunc) outgoing_pending_connection_timeout, data,
       (GDestroyNotify) connection_timeout_data_free);
+
+  g_hash_table_insert (priv->connection_timers,
+      g_object_ref (connection), GUINT_TO_POINTER (id));
+}
+
+static gboolean
+refcount_connection_timeout (struct connection_timeout_data *data)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
+
+  DEBUG ("refcount timer of connection with %s expired. Connection closed",
+      data->contact->name);
+
+  close_connection (data->self, data->connection);
+
+  g_hash_table_remove (priv->connection_timers, data->connection);
+  return FALSE;
+}
+
+static void
+add_refcount_timeout (SalutXmppConnectionManager *self,
+                      GibberXmppConnection *connection,
+                      SalutContact *contact)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  guint id;
+  struct connection_timeout_data *data;
+
+  data = connection_timeout_data_new ();
+  data->self = self;
+  data->connection = connection;
+  data->contact = contact;
+
+  id = g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE,
+      REFCOUNT_CONNECTION_TIMEOUT,
+      (GSourceFunc) refcount_connection_timeout, data,
+      (GDestroyNotify) connection_timeout_data_free);
+
   g_hash_table_insert (priv->connection_timers,
       g_object_ref (connection), GUINT_TO_POINTER (id));
 }
@@ -1220,7 +1260,7 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
           g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
 
-          add_timeout (self, connection, contact);
+          add_outgoing_timeout (self, connection, contact);
           g_signal_connect (connection, "stream-opened",
               G_CALLBACK (outgoing_pending_connection_stream_opened_cb), self);
           g_signal_connect (connection->transport, "disconnected",
@@ -1336,21 +1376,6 @@ salut_xmpp_connection_manager_request_connection (
     return SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE;
 }
 
-static gboolean
-refcount_connection_timeout (struct connection_timeout_data *data)
-{
-  SalutXmppConnectionManagerPrivate *priv =
-    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (data->self);
-
-  DEBUG ("refcount timer of connection with %s expired. Connection closed",
-      data->contact->name);
-
-  close_connection (data->self, data->connection);
-
-  g_hash_table_remove (priv->connection_timers, data->connection);
-  return FALSE;
-}
-
 void
 salut_xmpp_connection_manager_release_connection (
     SalutXmppConnectionManager *self,
@@ -1361,8 +1386,6 @@ salut_xmpp_connection_manager_release_connection (
       SalutXmppConnectionManagerPrivate *priv =
         SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
       SalutContact *contact;
-      struct connection_timeout_data *data;
-      guint id;
 
       contact = g_hash_table_lookup (priv->connections, connection);
       if (contact == NULL)
@@ -1371,18 +1394,7 @@ salut_xmpp_connection_manager_release_connection (
       DEBUG ("refcount of connection with %s failed to 0. Start its timer",
           contact->name);
 
-      data = connection_timeout_data_new ();
-      data->self = self;
-      data->connection = connection;
-      data->contact = contact;
-
-      id = g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE,
-          REFCOUNT_CONNECTION_TIMEOUT,
-          (GSourceFunc) refcount_connection_timeout, data,
-          (GDestroyNotify) connection_timeout_data_free);
-
-      g_hash_table_insert (priv->connection_timers,
-          g_object_ref (connection), GUINT_TO_POINTER (id));
+      add_refcount_timeout (self, connection, contact);
     }
 }
 
@@ -1424,7 +1436,7 @@ salut_xmpp_connection_manager_reset_connection_timer (
     {
       DEBUG ("reset refcount timer of the connection with %s",
           contact->name);
-      add_timeout (self, connection, contact);
+      add_refcount_timeout (self, connection, contact);
     }
 }
 
