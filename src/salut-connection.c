@@ -120,8 +120,9 @@ enum {
   PROP_JID,
   PROP_EMAIL,
   PROP_PUBLISHED_NAME,
+  PROP_IM_MANAGER,
+  PROP_MUC_MANAGER,
   PROP_CONTACT_MANAGER,
-  PROP_SELF,
   LAST_PROP
 };
 
@@ -259,11 +260,14 @@ salut_connection_get_property (GObject *object,
     case PROP_PUBLISHED_NAME:
       g_value_set_string (value, priv->published_name);
       break;
+    case PROP_IM_MANAGER:
+      g_value_set_object (value, priv->im_manager);
+      break;
+    case PROP_MUC_MANAGER:
+      g_value_set_object (value, priv->muc_manager);
+      break;
     case PROP_CONTACT_MANAGER:
       g_value_set_object (value, priv->contact_manager);
-      break;
-    case PROP_SELF:
-      g_value_set_object (value, priv->self);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -559,6 +563,28 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
+      "im-manager",
+      "SalutImManager object",
+      "The Salut IM Manager associated with this Salut Connection",
+      SALUT_TYPE_IM_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_IM_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "muc-manager",
+      "SalutMucManager object",
+      "The Salut MUC Manager associated with this Salut Connection",
+      SALUT_TYPE_MUC_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_MUC_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
       "contact-manager",
       "SalutContactManager object",
       "The Salut Contact Manager associated with this Salut Connection",
@@ -567,17 +593,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
-      param_spec);
-
-  param_spec = g_param_spec_object (
-      "self",
-      "SalutSelf object",
-      "The Salut Self object associated with this Salut Connection",
-      SALUT_TYPE_SELF,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_SELF,
       param_spec);
 }
 
