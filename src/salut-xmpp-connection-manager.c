@@ -263,6 +263,7 @@ remove_connection (SalutXmppConnectionManager *self,
   g_hash_table_remove (priv->stanza_filters, connection);
   g_hash_table_remove (priv->connection_refcounts, connection);
   g_hash_table_remove (priv->connections_waiting_close, connection);
+  g_hash_table_remove (priv->connection_timers, connection);
 }
 
 static void
