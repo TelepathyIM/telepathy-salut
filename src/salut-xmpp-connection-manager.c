@@ -528,6 +528,7 @@ remove_connection_having_transport (gpointer key,
       check_if_waiting_for_connection_closed (data->self, conn);
       g_hash_table_remove (priv->stanza_filters, conn);
       g_hash_table_remove (priv->connection_refcounts, conn);
+      g_hash_table_remove (priv->connection_timers, conn);
       return TRUE;
     }
 
