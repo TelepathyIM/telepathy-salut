@@ -585,6 +585,7 @@ connection_fully_open (SalutXmppConnectionManager *self,
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
 
+  g_hash_table_remove (priv->connection_timers, connection);
   g_hash_table_insert (priv->connections, g_object_ref (connection),
       g_object_ref (contact));
 
