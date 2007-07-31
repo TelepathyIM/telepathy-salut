@@ -817,6 +817,18 @@ new_connection_cb (GibberXmppConnectionListener *listener,
       G_CALLBACK (incoming_pending_connection_parse_error_cb), self);
 }
 
+static void
+disconnect_signals_foreach (gpointer key,
+                            gpointer value,
+                            gpointer user_data)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
+  GibberXmppConnection *connection = GIBBER_XMPP_CONNECTION (key);
+
+  g_signal_handlers_disconnect_matched (connection, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, self);
+}
+
 void
 salut_xmpp_connection_manager_dispose (GObject *object)
 {
@@ -828,6 +840,13 @@ salut_xmpp_connection_manager_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
+
+  /* Disconnect signals from all connections */
+  g_hash_table_foreach (priv->connections, disconnect_signals_foreach, self);
+  g_hash_table_foreach (priv->incoming_pending_connections,
+      disconnect_signals_foreach, self);
+  g_hash_table_foreach (priv->outgoing_pending_connections,
+      disconnect_signals_foreach, self);
 
   if (priv->contact_manager != NULL)
     {
