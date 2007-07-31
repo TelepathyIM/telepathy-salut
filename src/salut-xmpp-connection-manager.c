@@ -825,6 +825,8 @@ disconnect_signals_foreach (gpointer key,
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
   GibberXmppConnection *connection = GIBBER_XMPP_CONNECTION (key);
 
+  g_signal_handlers_disconnect_matched (connection->transport,
+      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
   g_signal_handlers_disconnect_matched (connection, G_SIGNAL_MATCH_DATA,
       0, 0, NULL, NULL, self);
 }
