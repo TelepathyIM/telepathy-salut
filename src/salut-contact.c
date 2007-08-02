@@ -525,7 +525,6 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
           SALUT_CONTACT_OLPC_ACTIVITIES);
     }
 
-  DEBUG ("Room handle is nonzero, emitting activity-change signal");
   g_signal_emit (self, signals[ACTIVITY_CHANGE], 0,
       name, activity->room, activity->activity_id,
       color, activity_name, activity_type);
