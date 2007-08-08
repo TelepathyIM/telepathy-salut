@@ -100,6 +100,7 @@ AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @DBUS_CFLAGS@ \
   @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
   @TELEPATHY_GLIB_CFLAGS@ \
   @AVAHI_CFLAGS@ \
+  -I $(top_srcdir) -I $(top_builddir) \
   -I $(top_srcdir)/lib -I $(top_builddir)/lib
 
 AM_LDFLAGS = $(GCOV_LIBS) @DBUS_LIBS@ \
