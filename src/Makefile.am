@@ -84,8 +84,7 @@ write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
-                       -ltelepathy-glib \
-                       -ltelepathy-glib-unstable
+                       -ltelepathy-glib
 telepathy_salut_SOURCES = \
     salut.c 
 
@@ -93,8 +92,7 @@ telepathy_salut_SOURCES = \
 telepathy_salut_LDADD = libsalut-convenience.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         $(top_builddir)/extensions/libsalut-extensions.la \
-                        -ltelepathy-glib \
-                        -ltelepathy-glib-unstable
+                        -ltelepathy-glib
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
@@ -102,12 +100,10 @@ AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @DBUS_CFLAGS@ \
   @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
   @TELEPATHY_GLIB_CFLAGS@ \
   @AVAHI_CFLAGS@ \
-  @TELEPATHY_GLIB_UNSTABLE_CFLAGS@ \
   -I $(top_srcdir)/lib -I $(top_builddir)/lib
 
 AM_LDFLAGS = $(GCOV_LIBS) @DBUS_LIBS@ \
              @TELEPATHY_GLIB_LIBS@ \
-             @TELEPATHY_GLIB_UNSTABLE_LIBS@ \
              @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
 
 # Teach it how to make libgibber.la

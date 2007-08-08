@@ -27,19 +27,17 @@
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
-
-#define DEBUG_FLAG DEBUG_TUBES
-#include "debug.h"
-
-#include "salut-connection.h"
-#include "namespaces.h"
-#include "tube-iface.h"
+#include <telepathy-glib/util.h>
 
 #include <gibber/gibber-bytestream-ibb.h>
 #include <gibber/gibber-muc-connection.h>
 
-#include <telepathy-glib/svc-unstable.h>
-#include <telepathy-glib/util.h>
+#define DEBUG_FLAG DEBUG_TUBES
+#include "debug.h"
+#include "extensions/extensions.h"
+#include "salut-connection.h"
+#include "namespaces.h"
+#include "tube-iface.h"
 
 /*
 #include "bytestream-factory.h"
@@ -262,7 +260,7 @@ unref_handle_foreach (gpointer key,
   tp_handle_unref (contact_repo, handle);
 }
 
-static TpTubeState
+static SalutTubeState
 get_tube_state (SalutTubeDBus *self)
 {
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
@@ -270,23 +268,23 @@ get_tube_state (SalutTubeDBus *self)
 
   if (priv->bytestream == NULL)
     /* bytestream not yet created as we're waiting for the SI reply */
-    return TP_TUBE_STATE_REMOTE_PENDING;
+    return SALUT_TUBE_STATE_REMOTE_PENDING;
 
   g_object_get (priv->bytestream, "state", &bytestream_state, NULL);
 
   if (bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_OPEN)
-    return TP_TUBE_STATE_OPEN;
+    return SALUT_TUBE_STATE_OPEN;
 
   else if (bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING ||
       bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_ACCEPTED)
-    return TP_TUBE_STATE_LOCAL_PENDING;
+    return SALUT_TUBE_STATE_LOCAL_PENDING;
 
   else if (bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_INITIATING)
-    return TP_TUBE_STATE_REMOTE_PENDING;
+    return SALUT_TUBE_STATE_REMOTE_PENDING;
 
   else
     g_assert_not_reached ();
-  return TP_TUBE_STATE_REMOTE_PENDING;
+  return SALUT_TUBE_STATE_REMOTE_PENDING;
 }
 
 static void
@@ -417,7 +415,7 @@ salut_tube_dbus_get_property (GObject *object,
         g_value_set_string (value, priv->stream_id);
         break;
       case PROP_TYPE:
-        g_value_set_uint (value, TP_TUBE_TYPE_DBUS);
+        g_value_set_uint (value, SALUT_TUBE_TYPE_DBUS);
         break;
       case PROP_INITIATOR:
         g_value_set_uint (value, priv->initiator);
@@ -712,7 +710,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "type",
       "Tube type",
       "The TpTubeType this D-Bus tube object.",
-      0, G_MAXUINT32, TP_TUBE_TYPE_DBUS,
+      0, G_MAXUINT32, SALUT_TUBE_TYPE_DBUS,
       G_PARAM_READABLE |
       G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
@@ -758,8 +756,8 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
   param_spec = g_param_spec_uint (
       "state",
       "Tube state",
-      "The TpTubeState of this DBUS tube object",
-      0, G_MAXUINT32, TP_TUBE_STATE_REMOTE_PENDING,
+      "The SalutTubeState of this DBUS tube object",
+      0, G_MAXUINT32, SALUT_TUBE_STATE_REMOTE_PENDING,
       G_PARAM_READABLE |
       G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
