@@ -606,6 +606,55 @@ connection_fully_open (SalutXmppConnectionManager *self,
 }
 
 static gboolean
+incoming_connection_found_contact (SalutXmppConnectionManager *self,
+                                   GibberXmppConnection *conn,
+                                   SalutContact *contact)
+{
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  gboolean ret = TRUE;
+  struct sockaddr_storage addr;
+  socklen_t size = sizeof (struct sockaddr_storage);
+
+  g_signal_handlers_disconnect_matched (conn, G_SIGNAL_MATCH_DATA,
+     0, 0, NULL, NULL, self);
+  g_signal_handlers_disconnect_matched (conn->transport,
+     G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
+  if (!gibber_ll_transport_get_address (
+        GIBBER_LL_TRANSPORT (conn->transport), &addr, &size))
+    {
+      DEBUG ("Failed to get address of connection from %s", contact->name);
+      ret = FALSE;
+      goto error;
+    }
+
+  if (!salut_contact_has_address (contact, &addr))
+    {
+      DEBUG ("Contact %s doesn't have that address", contact->name);
+      ret = FALSE;
+      goto error;
+    }
+
+  /* FIXME: we should wait the first stanza before announce incoming
+   * connections to fit with our XEP proposal */
+  DEBUG ("identify incoming pending connection with %s. "
+      "It's now fully open", contact->name);
+
+  connection_fully_open (self, conn, contact);
+  g_hash_table_remove (priv->incoming_pending_connections, conn);
+  return TRUE;
+
+error:
+  gibber_xmpp_connection_close (conn);
+  gibber_transport_disconnect (conn->transport);
+  g_hash_table_remove (priv->incoming_pending_connections, conn);
+
+  return FALSE;
+}
+
+
+static gboolean
 incoming_pending_connection_got_from (SalutXmppConnectionManager *self,
                                       GibberXmppConnection *conn,
                                       const gchar *from)
@@ -629,35 +678,7 @@ incoming_pending_connection_got_from (SalutXmppConnectionManager *self,
       SalutContact *contact = SALUT_CONTACT (t->data);
       if (!tp_strdiff (contact->name, from))
         {
-          struct sockaddr_storage addr;
-          socklen_t size = sizeof (struct sockaddr_storage);
-
-          g_signal_handlers_disconnect_matched (conn, G_SIGNAL_MATCH_DATA,
-              0, 0, NULL, NULL, self);
-          g_signal_handlers_disconnect_matched (conn->transport,
-              G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-
-          if (!gibber_ll_transport_get_address (
-                GIBBER_LL_TRANSPORT (conn->transport), &addr, &size))
-            {
-              DEBUG ("Contact %s no longer alive", contact->name);
-              goto error;
-            }
-
-          if (!salut_contact_has_address (contact, &addr))
-            {
-              DEBUG ("Contact %s doesn't have that address", contact->name);
-              goto error;
-            }
-
-          /* FIXME: we should wait the first stanza before announce incoming
-           * connections to fit with our XEP proposal */
-          DEBUG ("identify incoming pending connection with %s. "
-              "It's now fully open", contact->name);
-          connection_fully_open (self, conn, contact);
-          g_hash_table_remove (priv->incoming_pending_connections, conn);
-
-          return TRUE;
+          return incoming_connection_found_contact (self, conn, contact);
         }
   }
 
@@ -665,6 +686,7 @@ error:
   gibber_xmpp_connection_close (conn);
   gibber_transport_disconnect (conn->transport);
   g_hash_table_remove (priv->incoming_pending_connections, conn);
+
   return FALSE;
 }
 
@@ -678,6 +700,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  GList *contacts;
 
   DEBUG ("incoming pending connection with %s opened. Open it too", from);
   gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
@@ -698,6 +721,20 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
    * */
   if (from != NULL)
     incoming_pending_connection_got_from (self, conn, from);
+
+  /* If it's a transport to just one contacts machine, hook it up right away.
+   * This is needed because iChat doesn't send message with to and
+   * from data...
+   */
+  contacts = g_hash_table_lookup (priv->incoming_pending_connections, conn);
+  if (g_list_length (contacts) == 1)
+    {
+      SalutContact *contact = contacts->data;
+
+      DEBUG ("Incoming connection from a machine with just one contact (%s). "
+          "Assuming it's a connection from that contact", contact->name);
+      incoming_connection_found_contact (self, conn, contact);
+    }
 }
 
 static void
@@ -779,24 +816,6 @@ new_connection_cb (GibberXmppConnectionListener *listener,
       return;
     }
 
-  /* If it's a transport to just one contacts machine, hook it up right away.
-   * This is needed because iChat doesn't send message with to and
-   * from data...
-   */
-  if (g_list_length (contacts) == 1)
-    {
-      SalutContact *contact = contacts->data;
-
-      DEBUG ("incoming connection to just one contact machine (%s). "
-          "Open it and consider it fully open", contact->name);
-
-      gibber_xmpp_connection_open (connection, contact->name,
-          priv->connection->name, "1.0");
-      connection_fully_open (self, connection, contact);
-
-      contact_list_destroy (contacts);
-      return;
-    }
 
   DEBUG ("Have to wait to know the contact before announce this incoming "
       "connection");
