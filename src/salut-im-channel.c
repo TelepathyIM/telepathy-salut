@@ -59,6 +59,9 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
                                            SalutContact *contact,
                                            gpointer user_data);
 
+static void
+_setup_connection (SalutImChannel *self);
+
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
@@ -636,6 +639,10 @@ connection_disconnected (SalutImChannel *self)
 
   g_signal_connect (priv->xmpp_connection_manager, "new-connection",
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
+
+  if (g_queue_get_length(priv->out_queue) > 0) {
+    _setup_connection(self);
+  }
 }
 
 static void
@@ -671,8 +678,8 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
 
   DEBUG ("connection failed, flush messages queue");
   g_assert (priv->xmpp_connection == NULL || priv->xmpp_connection == conn);
-  connection_disconnected (self);
   _error_flush_queue (self);
+  connection_disconnected (self);
 }
 
 static void
@@ -698,8 +705,11 @@ _initialise_connection (SalutImChannel *self)
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   g_assert (priv->xmpp_connection != NULL);
-  g_assert (priv->xmpp_connection->stream_flags
-        == GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN);
+  g_assert (
+     (priv->xmpp_connection->stream_flags &
+       ~(GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN
+         |GIBBER_XMPP_CONNECTION_CLOSE_SENT)) == 0);
+
 
   g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
@@ -714,9 +724,14 @@ _initialise_connection (SalutImChannel *self)
       priv->xmpp_connection_manager, priv->xmpp_connection,
       message_stanza_filter, message_stanza_callback, self);
 
-  priv->state = CHANNEL_CONNECTED;
-  g_signal_emit (self, signals[CONNECTED], 0);
-  _flush_queue (self);
+  if (priv->xmpp_connection->stream_flags
+        & GIBBER_XMPP_CONNECTION_CLOSE_SENT) {
+    priv->state = CHANNEL_CLOSING;
+  } else {
+    priv->state = CHANNEL_CONNECTED;
+    g_signal_emit (self, signals[CONNECTED], 0);
+    _flush_queue (self);
+  }
 }
 
 static void
@@ -786,11 +801,10 @@ _send_channel_message (SalutImChannel *self,
   switch (priv->state)
     {
       case CHANNEL_NOT_CONNECTED:
-      case CHANNEL_CLOSING:
-        /* request a fresh connection if we are closing this current one */
         g_queue_push_tail (priv->out_queue, msg);
         _setup_connection (self);
         break;
+      case CHANNEL_CLOSING:
       case CHANNEL_CONNECTING:
         g_queue_push_tail (priv->out_queue, msg);
         break;
