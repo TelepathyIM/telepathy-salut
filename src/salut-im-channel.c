@@ -87,16 +87,6 @@ typedef enum
   CHANNEL_CLOSING,
 } ChannelState;
 
-/* signal enum */
-enum
-{
-  RECEIVED_STANZA,
-  CONNECTED,
-  LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
-
 /* properties */
 enum
 {
@@ -397,26 +387,6 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
-  signals[RECEIVED_STANZA] =
-    g_signal_new (
-        "received-stanza",
-        G_OBJECT_CLASS_TYPE (salut_im_channel_class),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-        0,
-        g_signal_accumulator_true_handled, NULL,
-        salut_signals_marshal_BOOLEAN__OBJECT,
-        G_TYPE_BOOLEAN, 1, GIBBER_TYPE_XMPP_STANZA);
-
-  signals[CONNECTED] =
-    g_signal_new (
-        "connected",
-        G_OBJECT_CLASS_TYPE (salut_im_channel_class),
-        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-        0,
-        NULL, NULL,
-        g_cclosure_marshal_VOID__VOID,
-        G_TYPE_NONE, 0);
-
   tp_text_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutImChannelClass, text_class));
 }
@@ -554,19 +524,10 @@ salut_im_channel_received_stanza (SalutImChannel *self,
                                   GibberXmppStanza *stanza)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  gboolean handled = FALSE;
   const gchar *from;
   TpChannelTextMessageType msgtype;
   const gchar *body;
   const gchar *body_offset;
-
-  DEBUG ("Got stanza!");
-
-  g_signal_emit (self, signals[RECEIVED_STANZA], 0, stanza, &handled);
-  if (handled)
-    /* Some other part handled this message, could be muc invite or voip call
-     * or whatever */
-    return;
 
   if (!text_helper_parse_incoming_message (stanza, &from, &msgtype,
         &body, &body_offset))
@@ -729,7 +690,6 @@ _initialise_connection (SalutImChannel *self)
     priv->state = CHANNEL_CLOSING;
   } else {
     priv->state = CHANNEL_CONNECTED;
-    g_signal_emit (self, signals[CONNECTED], 0);
     _flush_queue (self);
   }
 }
