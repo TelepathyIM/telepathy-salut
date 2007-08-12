@@ -327,6 +327,9 @@ salut_im_channel_constructor (GType type,
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object (bus, priv->object_path, obj);
 
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
+
   return obj;
 }
 
@@ -698,6 +701,8 @@ _initialise_connection (SalutImChannel *self)
   g_assert (priv->xmpp_connection->stream_flags
         == GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN);
 
+  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
+      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
   g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
       G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
   g_signal_connect (priv->xmpp_connection_manager, "connection-closed",
@@ -728,8 +733,6 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
     return;
 
   DEBUG ("pending connection fully open");
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA,
-    0, 0, NULL, NULL, self);
 
   priv->xmpp_connection = conn;
   g_object_ref (priv->xmpp_connection);
