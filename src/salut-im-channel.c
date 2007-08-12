@@ -1,6 +1,6 @@
 /*
  * salut-im-channel.c - Source for SalutImChannel
- * Copyright (C) 2005 Collabora Ltd.
+ * Copyright (C) 2005-2007 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -52,6 +52,12 @@ static void
 channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void
 text_iface_init (gpointer g_iface, gpointer iface_data);
+
+static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+                                           GibberXmppConnection *conn,
+                                           SalutContact *contact,
+                                           gpointer user_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
@@ -624,6 +630,9 @@ connection_disconnected (SalutImChannel *self)
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
   priv->state = CHANNEL_NOT_CONNECTED;
+
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
 }
 
 static void
@@ -753,8 +762,6 @@ _setup_connection (SalutImChannel *self)
     {
       DEBUG ("Requested connection pending");
       priv->state = CHANNEL_CONNECTING;
-      g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-          G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
       g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
           G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
       return;
