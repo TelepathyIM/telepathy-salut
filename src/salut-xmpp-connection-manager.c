@@ -315,12 +315,12 @@ close_connection (SalutXmppConnectionManager *self,
       /* Connection is fully closed, let's remove it */
 
       DEBUG ("connection with %s fully closed. Remove it", contact->name);
+      remove_connection (self, connection);
       gibber_transport_disconnect (connection->transport);
 
       g_signal_emit (self, signals[CONNECTION_CLOSED], 0, connection, contact);
       check_if_waiting_for_connection_closed (self, connection);
 
-      remove_connection (self, connection);
     }
   else
     {
