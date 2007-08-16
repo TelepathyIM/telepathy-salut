@@ -65,6 +65,7 @@ typedef struct
 {
   TpHandleRepoIface *room_repo;
   TpHandle room;
+  /* group and service can be NULL if the activity is not public */
   SalutAvahiEntryGroup *group;
   SalutAvahiEntryGroupService *service;
   gchar *activity_id;
@@ -97,25 +98,19 @@ activity_free (SalutOLPCActivity *activity)
 }
 
 static SalutOLPCActivity *
-activity_new (TpHandleRepoIface *room_repo, TpHandle room,
-              SalutAvahiClient *client, GError **error)
+activity_new (TpHandleRepoIface *room_repo,
+              TpHandle room,
+              GError **error)
 {
   SalutOLPCActivity *activity = g_slice_new0 (SalutOLPCActivity);
 
   g_return_val_if_fail (room_repo != NULL, NULL);
   g_return_val_if_fail (room != 0, NULL);
-  g_return_val_if_fail (client != NULL, NULL);
 
   activity->room_repo = room_repo;
-  activity->group = salut_avahi_entry_group_new ();
   tp_handle_ref (room_repo, room);
   activity->room = room;
 
-  if (!salut_avahi_entry_group_attach (activity->group, client, error))
-    {
-      activity_free (activity);
-      return NULL;
-    }
   return activity;
 }
 
@@ -617,49 +612,35 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 
 #ifdef ENABLE_OLPC
 
-static SalutOLPCActivity *
-salut_self_add_olpc_activity (SalutSelf *self,
-                              const gchar *activity_id,
-                              TpHandle room,
-                              gboolean commit,
-                              GError **error)
+static gboolean
+announce_activity (SalutSelf *self,
+                   SalutOLPCActivity *activity,
+                   GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  SalutOLPCActivity *activity;
-  AvahiStringList *txt_record;
-  gchar *name;
   const gchar *room_name;
+  gchar *name;
+  AvahiStringList *txt_record;
 
-  g_return_val_if_fail (activity_id != NULL, NULL);
-  g_return_val_if_fail (room != 0, NULL);
+  g_return_val_if_fail (activity->service == NULL, FALSE);
+  g_return_val_if_fail (activity->group == NULL, FALSE);
 
-  room_name = tp_handle_inspect (priv->room_repo, room);
+  room_name = tp_handle_inspect (priv->room_repo, activity->room);
   /* caller should already have validated this */
-  g_return_val_if_fail (room_name != NULL, NULL);
+  g_return_val_if_fail (room_name != NULL, FALSE);
 
-  if (strchr (activity_id, ':') != NULL)
-    {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-          "Activity IDs may not contain ':'");
-      return NULL;
-    }
-
-  activity = activity_new (priv->room_repo, room, priv->client, error);
-  if (activity == NULL)
-    return NULL;
-
-  activity->activity_id = g_strdup (activity_id);
+  activity->group = salut_avahi_entry_group_new ();
+  if (!salut_avahi_entry_group_attach (activity->group, priv->client, error))
+    return FALSE;
 
   name = g_strdup_printf ("%s:%s@%s", room_name, priv->published_name,
       avahi_client_get_host_name (priv->client->avahi_client));
 
   txt_record = avahi_string_list_new ("txtvers=0", NULL);
   txt_record = avahi_string_list_add_printf (txt_record, "room=%s", room_name);
-  if (activity_id != NULL)
-    {
-      txt_record = avahi_string_list_add_printf (txt_record, "activity-id=%s",
-          activity_id);
-    }
+  if (activity->activity_id != NULL)
+    txt_record = avahi_string_list_add_printf (txt_record, "activity-id=%s",
+        activity->activity_id);
 
   activity->service = salut_avahi_entry_group_add_service_strlist
       (activity->group, name, "_olpc-activity._udp", 0, error, txt_record);
@@ -668,22 +649,51 @@ salut_self_add_olpc_activity (SalutSelf *self,
   avahi_string_list_free (txt_record);
 
   if (activity->service == NULL)
+    return FALSE;
+
+  if (!salut_avahi_entry_group_commit (activity->group, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+static SalutOLPCActivity *
+salut_self_add_olpc_activity (SalutSelf *self,
+                              const gchar *activity_id,
+                              TpHandle room,
+                              gboolean announce,
+                              GError **error)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  SalutOLPCActivity *activity;
+
+  g_return_val_if_fail (activity_id != NULL, NULL);
+  g_return_val_if_fail (room != 0, NULL);
+
+  if (strchr (activity_id, ':') != NULL)
     {
-      activity_free (activity);
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Activity IDs may not contain ':'");
       return NULL;
     }
 
-  if (commit)
+  activity = activity_new (priv->room_repo, room, error);
+  if (activity == NULL)
+    return NULL;
+
+  activity->activity_id = g_strdup (activity_id);
+
+  tp_handle_ref (priv->room_repo, room);
+  activity->room = room;
+
+  if (announce)
     {
-      if (!salut_avahi_entry_group_commit (activity->group, error))
+      if (!announce_activity (self, activity, error))
         {
           activity_free (activity);
           return NULL;
         }
     }
-
-  tp_handle_ref (priv->room_repo, room);
-  activity->room = room;
 
   g_hash_table_insert (priv->olpc_activities, GUINT_TO_POINTER (room),
       activity);
