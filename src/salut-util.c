@@ -96,6 +96,29 @@ xmpp_node_extract_property (GibberXmppNode *node,
       g_value_set_uint (gvalue, atoi (value));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
+  else if (0 == strcmp (type, "b"))
+    {
+      gboolean val;
+
+      if (strcmp (value, "0") == 0)
+        {
+          val = FALSE;
+        }
+      else if (strcmp (value, "1") == 0)
+        {
+          val = TRUE;
+        }
+      else
+        {
+          g_debug ("invalid boolean value: %s", value);
+          return TRUE;
+        }
+
+      gvalue = g_slice_new0 (GValue);
+      g_value_init (gvalue, G_TYPE_BOOLEAN);
+      g_value_set_boolean (gvalue, val);
+      g_hash_table_insert (data->properties, g_strdup (name), gvalue);
+    }
 
   return TRUE;
 }
@@ -117,7 +140,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
  * --> { "prop1" : "prop1_value", "prop2" : 7 }
  *
  * Returns a hash table mapping names to GValue of the specified type.
- * Valid types are: str, int, uint, bytes.
+ * Valid types are: str, int, uint, bytes, b.
  *
  */
 GHashTable *
@@ -174,6 +197,10 @@ set_child_from_property (gpointer key,
     {
       type = "bytes";
     }
+  else if (G_VALUE_TYPE (gvalue) == G_TYPE_BOOLEAN)
+    {
+      type = "b";
+    }
   else
     {
       /* a type we don't know how to handle: ignore it */
@@ -218,6 +245,16 @@ set_child_from_property (gpointer key,
       gibber_xmpp_node_set_content (child, str);
 
       g_free (str);
+    }
+  else if (G_VALUE_TYPE (gvalue) == G_TYPE_BOOLEAN)
+    {
+      gboolean val;
+
+      val = g_value_get_boolean (gvalue);
+      if (val)
+        gibber_xmpp_node_set_content (child, "1");
+      else
+        gibber_xmpp_node_set_content (child, "0");
     }
   else
     {
