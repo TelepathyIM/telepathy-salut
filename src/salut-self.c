@@ -613,6 +613,13 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 #ifdef ENABLE_OLPC
 
 static gboolean
+activity_is_announced (SalutOLPCActivity *activity)
+{
+  g_return_val_if_fail (activity != NULL, FALSE);
+  return (activity->service != NULL && activity->group != NULL);
+}
+
+static gboolean
 announce_activity (SalutSelf *self,
                    SalutOLPCActivity *activity,
                    GError **error)
@@ -622,8 +629,7 @@ announce_activity (SalutSelf *self,
   gchar *name;
   AvahiStringList *txt_record;
 
-  g_return_val_if_fail (activity->service == NULL, FALSE);
-  g_return_val_if_fail (activity->group == NULL, FALSE);
+  g_return_val_if_fail (!activity_is_announced (activity), FALSE);
 
   room_name = tp_handle_inspect (priv->room_repo, activity->room);
   /* caller should already have validated this */
@@ -714,6 +720,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
 {
   struct _set_olpc_activities_ctx *data = user_data;
   SalutOLPCActivity *activity;
+  gboolean need_update = FALSE;
 
   if (*(data->error) != NULL)
     {
@@ -727,15 +734,33 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
       /* add the activity service if it's not in data->olpc_activities */
       salut_self_add_olpc_activity (data->self, value, GPOINTER_TO_UINT (key),
           TRUE, data->error);
+
+      return;
     }
-  else if (tp_strdiff (value, activity->activity_id))
+
+  /* activity was already known */
+  if (tp_strdiff (value, activity->activity_id))
     {
       /* if the user is claiming that the activity ID of a room has changed,
        * believe them... */
-      GError *e;
 
       g_free (activity->activity_id);
       activity->activity_id = g_strdup (value);
+      need_update = TRUE;
+    }
+
+  if (!activity_is_announced (activity))
+    {
+      if (!announce_activity (data->self, activity, data->error))
+        {
+          DEBUG ("can't announce activity");
+          g_hash_table_remove (data->olpc_activities, key);
+          return;
+        }
+    }
+  else if (need_update)
+    {
+      GError *e;
 
       if (!salut_avahi_entry_group_service_set (activity->service,
             "activity-id", value, &e))
@@ -743,6 +768,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
           g_set_error (data->error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
               e->message);
           g_error_free (e);
+          return;
         }
     }
 }
@@ -752,6 +778,7 @@ _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 {
   struct _set_olpc_activities_ctx *data = user_data;
 
+  /* FIXME: maybe we should just stop to announce this activity ? */
   /* delete the activity service if it's not in data->room_to_act_id */
   return (g_hash_table_lookup (data->room_to_act_id, key) == NULL);
 }
@@ -866,6 +893,37 @@ salut_self_merge_olpc_activity_properties (SalutSelf *self,
   return TRUE;
 }
 
+static gboolean
+update_activity_service (SalutOLPCActivity *activity,
+                         GError **error)
+{
+  GError *err = NULL;
+  g_return_val_if_fail (activity_is_announced (activity), FALSE);
+
+  salut_avahi_entry_group_service_freeze (activity->service);
+
+  if (activity->name != NULL)
+    salut_avahi_entry_group_service_set (activity->service, "name",
+        activity->name, NULL);
+
+  if (activity->color != NULL)
+    salut_avahi_entry_group_service_set (activity->service, "color",
+        activity->color, NULL);
+
+  if (activity->type != NULL)
+    salut_avahi_entry_group_service_set (activity->service, "type",
+        activity->type, NULL);
+
+  if (!salut_avahi_entry_group_service_thaw (activity->service, &err))
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free (err);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
 gboolean
 salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          TpHandle handle,
@@ -875,47 +933,40 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  GError *err = NULL;
   SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
       GUINT_TO_POINTER (handle));
 
   if (activity == NULL)
     {
-      activity = salut_self_add_olpc_activity (self, NULL, handle, TRUE,
+      /* FIXME: this is crack because we create a activity without ID */
+      /* We don't announce the activity for now */
+      activity = salut_self_add_olpc_activity (self, NULL, handle, FALSE,
           error);
       if (activity == NULL)
         return FALSE;
     }
 
-  salut_avahi_entry_group_service_freeze (activity->service);
   if (name != NULL)
     {
       g_free (activity->name);
-      activity->color = g_strdup (name);
-      salut_avahi_entry_group_service_set (activity->service, "name",
-          name, NULL);
+      activity->name = g_strdup (name);
     }
   if (color != NULL)
     {
       g_free (activity->color);
       activity->color = g_strdup (color);
-      salut_avahi_entry_group_service_set (activity->service, "color",
-          color, NULL);
     }
   if (type != NULL)
     {
       g_free (activity->type);
       activity->type = g_strdup (type);
-      salut_avahi_entry_group_service_set (activity->service, "type",
-          type, NULL);
     }
 
-  if (!salut_avahi_entry_group_service_thaw (activity->service, &err))
+  if (activity_is_announced (activity))
     {
-      g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-      g_error_free(err);
-      return FALSE;
+      return update_activity_service (activity, error);
     }
+
   return TRUE;
 }
 
