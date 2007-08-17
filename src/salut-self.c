@@ -957,9 +957,25 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
       g_free (activity->type);
       activity->type = g_strdup (type);
     }
-  activity->is_private = is_private;
 
-  if (activity_is_announced (activity))
+  if (activity->is_private != is_private)
+    {
+      activity->is_private = is_private;
+
+      if (!is_private)
+        {
+          /* activity becomes public */
+          if (!announce_activity (self, activity, error))
+            {
+              return FALSE;
+            }
+        }
+      else
+        {
+          /* TODO: stop to announce the activity */
+        }
+    }
+  else if (activity_is_announced (activity))
     {
       return update_activity_service (activity, error);
     }
