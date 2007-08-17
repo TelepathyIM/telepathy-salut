@@ -61,6 +61,11 @@ create_sample_stanza (void)
           GIBBER_NODE_ATTRIBUTE, "type", "bytes",
           GIBBER_NODE_TEXT, "YWJjZGU=",
         GIBBER_NODE_END,
+        GIBBER_NODE, "prop",
+          GIBBER_NODE_ATTRIBUTE, "name", "prop5",
+          GIBBER_NODE_ATTRIBUTE, "type", "b",
+          GIBBER_NODE_TEXT, "1",
+        GIBBER_NODE_END,
       GIBBER_NODE_END,
      GIBBER_STANZA_END);
 
@@ -77,6 +82,7 @@ START_TEST (test_extract_properties)
   gint prop2_value;
   guint prop3_value;
   GArray *prop4_value;
+  gboolean prop5_value;
 
   stanza = create_sample_stanza ();
   node = gibber_xmpp_node_get_child (stanza->node, "properties");
@@ -85,7 +91,7 @@ START_TEST (test_extract_properties)
   properties = salut_gibber_xmpp_node_extract_properties (node, "prop");
 
   fail_unless (properties != NULL);
-  fail_unless (g_hash_table_size (properties) == 4);
+  fail_unless (g_hash_table_size (properties) == 5);
 
   /* prop1 */
   value = g_hash_table_lookup (properties, "prop1");
@@ -120,6 +126,13 @@ START_TEST (test_extract_properties)
   fail_unless (g_array_index (prop4_value, gchar, 3) == 'd');
   fail_unless (g_array_index (prop4_value, gchar, 4) == 'e');
 
+  /* prop 5 */
+  value = g_hash_table_lookup (properties, "prop5");
+  fail_unless (value != NULL);
+  fail_unless (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN);
+  prop5_value = g_value_get_boolean (value);
+  fail_unless (prop5_value == TRUE);
+
   g_object_unref (stanza);
   g_hash_table_destroy (properties);
 }
@@ -136,7 +149,7 @@ static GHashTable *
 create_sample_properties (void)
 {
   GHashTable *properties;
-  GValue *prop1, *prop2, *prop3, *prop4;
+  GValue *prop1, *prop2, *prop3, *prop4, *prop5;
   GArray *arr;
 
   properties = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
@@ -164,6 +177,11 @@ create_sample_properties (void)
   g_value_take_boxed (prop4, arr);
   g_hash_table_insert (properties, "prop4", prop4);
 
+  prop5 = g_slice_new0 (GValue);
+  g_value_init (prop5, G_TYPE_BOOLEAN);
+  g_value_set_boolean (prop5, TRUE);
+  g_hash_table_insert (properties, "prop5", prop5);
+
   return properties;
 }
 
@@ -180,7 +198,7 @@ START_TEST (test_add_children_from_properties)
   salut_gibber_xmpp_node_add_children_from_properties (stanza->node,
       properties, "prop");
 
-  fail_unless (g_slist_length (stanza->node->children) == 4);
+  fail_unless (g_slist_length (stanza->node->children) == 5);
   for (l = stanza->node->children; l != NULL; l = l->next)
     {
       GibberXmppNode *node = (GibberXmppNode *) l->data;
@@ -208,6 +226,11 @@ START_TEST (test_add_children_from_properties)
         {
           fail_unless (strcmp (type, "bytes") == 0);
           fail_unless (strcmp (node->content, "YWJjZGU=") == 0);
+        }
+      else if (strcmp (name, "prop5") == 0)
+        {
+          fail_unless (strcmp (type, "b") == 0);
+          fail_unless (strcmp (node->content, "1") == 0);
         }
       else
         g_assert_not_reached ();
