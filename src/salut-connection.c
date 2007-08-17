@@ -1651,6 +1651,48 @@ salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
 }
 
 
+static GHashTable *
+create_properties_table (const gchar *color,
+                         const gchar *name,
+                         const gchar *type,
+                         gboolean is_private)
+{
+  GHashTable *properties;
+  GValue *color_val, *name_val, *type_val, *private_val;
+
+  properties = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+
+  if (color != NULL)
+    {
+      color_val = g_slice_new0 (GValue);
+      g_value_init (color_val, G_TYPE_STRING);
+      g_value_set_static_string (color_val, color);
+      g_hash_table_insert (properties, "color", color_val);
+    }
+  if (name != NULL)
+    {
+      name_val = g_slice_new0 (GValue);
+      g_value_init (name_val, G_TYPE_STRING);
+      g_value_set_static_string (name_val, name);
+      g_hash_table_insert (properties, "name", name_val);
+    }
+  if (type != NULL)
+    {
+      type_val = g_slice_new0 (GValue);
+      g_value_init (type_val, G_TYPE_STRING);
+      g_value_set_static_string (type_val, type);
+      g_hash_table_insert (properties, "type", type_val);
+    }
+
+  private_val = g_slice_new0 (GValue);
+  g_value_init (private_val, G_TYPE_BOOLEAN);
+  g_value_set_boolean (private_val, is_private);
+  g_hash_table_insert (properties, "private", private_val);
+
+  return properties;
+}
+
 static void
 salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
                                      TpHandle handle,
@@ -1666,10 +1708,6 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
   gboolean is_private;
   GError *error = NULL;
   gboolean known = FALSE;
-  GValue color_val = {0,};
-  GValue name_val = {0,};
-  GValue type_val = {0,};
-  GValue private_val = {0,};
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1692,30 +1730,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
       goto error;
     }
 
-  properties = g_hash_table_new (g_str_hash, g_str_equal);
-
-  if (color != NULL)
-    {
-      g_value_init (&color_val, G_TYPE_STRING);
-      g_value_set_static_string (&color_val, color);
-      g_hash_table_insert (properties, "color", &color_val);
-    }
-  if (name != NULL)
-    {
-      g_value_init (&name_val, G_TYPE_STRING);
-      g_value_set_static_string (&name_val, name);
-      g_hash_table_insert (properties, "name", &name_val);
-    }
-  if (type != NULL)
-    {
-      g_value_init (&type_val, G_TYPE_STRING);
-      g_value_set_static_string (&type_val, type);
-      g_hash_table_insert (properties, "type", &type_val);
-    }
-
-  g_value_init (&private_val, G_TYPE_BOOLEAN);
-  g_value_set_boolean (&private_val, is_private);
-  g_hash_table_insert (properties, "private", &private_val);
+  properties = create_properties_table (color, name, type, is_private);
 
   salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
   g_hash_table_destroy (properties);
