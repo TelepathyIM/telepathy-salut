@@ -938,12 +938,11 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
 
   if (activity == NULL)
     {
-      /* FIXME: this is crack because we create a activity without ID */
-      /* We don't announce the activity for now */
-      activity = salut_self_add_olpc_activity (self, NULL, handle, FALSE,
-          error);
-      if (activity == NULL)
-        return FALSE;
+      /* User have to call org.laptop.Telepathy.BuddyInfo.SetActivities
+       * to create the activity */
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "No activity associated with room having handle %d", handle);
+      return FALSE;
     }
 
   if (name != NULL)
