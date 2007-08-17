@@ -65,13 +65,14 @@ typedef struct
 {
   TpHandleRepoIface *room_repo;
   TpHandle room;
-  /* group and service can be NULL if the activity is not public */
+  /* group and service can be NULL if the activity is private */
   SalutAvahiEntryGroup *group;
   SalutAvahiEntryGroupService *service;
   gchar *activity_id;
   gchar *color;
   gchar *name;
   gchar *type;
+  gboolean is_private;
 } SalutOLPCActivity;
 
 static void
@@ -110,6 +111,8 @@ activity_new (TpHandleRepoIface *room_repo,
   activity->room_repo = room_repo;
   tp_handle_ref (room_repo, room);
   activity->room = room;
+
+  activity->is_private = TRUE;
 
   return activity;
 }
@@ -630,6 +633,7 @@ announce_activity (SalutSelf *self,
   AvahiStringList *txt_record;
 
   g_return_val_if_fail (!activity_is_announced (activity), FALSE);
+  g_return_val_if_fail (!activity->is_private, FALSE);
 
   room_name = tp_handle_inspect (priv->room_repo, activity->room);
   /* caller should already have validated this */
@@ -667,7 +671,6 @@ static SalutOLPCActivity *
 salut_self_add_olpc_activity (SalutSelf *self,
                               const gchar *activity_id,
                               TpHandle room,
-                              gboolean announce,
                               GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
@@ -691,15 +694,6 @@ salut_self_add_olpc_activity (SalutSelf *self,
 
   tp_handle_ref (priv->room_repo, room);
   activity->room = room;
-
-  if (announce)
-    {
-      if (!announce_activity (self, activity, error))
-        {
-          activity_free (activity);
-          return NULL;
-        }
-    }
 
   g_hash_table_insert (priv->olpc_activities, GUINT_TO_POINTER (room),
       activity);
@@ -733,7 +727,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
     {
       /* add the activity service if it's not in data->olpc_activities */
       salut_self_add_olpc_activity (data->self, value, GPOINTER_TO_UINT (key),
-          TRUE, data->error);
+          data->error);
 
       return;
     }
@@ -875,7 +869,8 @@ salut_self_merge_olpc_activity_properties (SalutSelf *self,
                                            TpHandle handle,
                                            const gchar **color,
                                            const gchar **name,
-                                           const gchar **type)
+                                           const gchar **type,
+                                           gboolean *is_private)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
@@ -890,6 +885,7 @@ salut_self_merge_olpc_activity_properties (SalutSelf *self,
     *name = activity->name;
   if (activity->type != NULL && type != NULL)
     *type = activity->type;
+  *is_private = activity->is_private;
   return TRUE;
 }
 
@@ -930,6 +926,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          const gchar *color,
                                          const gchar *name,
                                          const gchar *type,
+                                         gboolean is_private,
                                          GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
@@ -960,6 +957,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
       g_free (activity->type);
       activity->type = g_strdup (type);
     }
+  activity->is_private = is_private;
 
   if (activity_is_announced (activity))
     {

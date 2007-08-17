@@ -99,12 +99,13 @@ gboolean salut_self_set_olpc_properties (SalutSelf *self,
 
 gboolean salut_self_merge_olpc_activity_properties (SalutSelf *self,
     TpHandle handle,
-    const gchar **color, const gchar **name, const gchar **type);
+    const gchar **color, const gchar **name, const gchar **type,
+    gboolean *is_private);
 
 gboolean salut_self_set_olpc_activity_properties (SalutSelf *self,
     TpHandle handle,
     const gchar *color, const gchar *name, const gchar *type,
-    GError **error);
+    gboolean is_private, GError **error);
 
 gboolean salut_self_set_olpc_activities (SalutSelf *self,
     GHashTable *act_id_to_room, GError **error);

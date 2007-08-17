@@ -1663,11 +1663,13 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
       TP_HANDLE_TYPE_ROOM);
   GHashTable *properties = NULL;
   const gchar *color = NULL, *name = NULL, *type = NULL;
+  gboolean is_private;
   GError *error = NULL;
   gboolean known = FALSE;
   GValue color_val = {0,};
   GValue name_val = {0,};
   GValue type_val = {0,};
+  GValue private_val = {0,};
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1680,7 +1682,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
 
   /* Call this one second so it overwrites values from the first */
   if (salut_self_merge_olpc_activity_properties (priv->self, handle, &color,
-        &name, &type))
+        &name, &type, &is_private))
     known = TRUE;
 
   if (!known)
@@ -1711,6 +1713,10 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
       g_hash_table_insert (properties, "type", &type_val);
     }
 
+  g_value_init (&private_val, G_TYPE_BOOLEAN);
+  g_value_set_boolean (&private_val, is_private);
+  g_hash_table_insert (properties, "private", &private_val);
+
   salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
   g_hash_table_destroy (properties);
 
@@ -1733,10 +1739,12 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_ROOM);
   GError *error = NULL;
-  const gchar *known_properties[] = { "color", "name", "type", NULL };
+  const gchar *known_properties[] = { "color", "name", "type", "private",
+      NULL };
   const gchar *color = NULL;
   const gchar *name = NULL;
   const gchar *type = NULL;
+  gboolean is_private = TRUE;
   const GValue *val;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -1837,8 +1845,21 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
       name = g_value_get_string (val);
     }
 
+  val = g_hash_table_lookup (properties, "private");
+  if (val != NULL)
+    {
+      if (G_VALUE_TYPE (val) != G_TYPE_BOOLEAN)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "private value should be of type b");
+          goto error;
+        }
+
+      is_private = g_value_get_boolean (val);
+    }
+
   if (!salut_self_set_olpc_activity_properties (priv->self, handle, color,
-        name, type, &error))
+        name, type, is_private, &error))
     goto error;
 
   salut_svc_olpc_activity_properties_return_from_set_properties (context);
