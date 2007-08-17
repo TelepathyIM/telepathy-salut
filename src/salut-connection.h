@@ -29,6 +29,8 @@
 #include <telepathy-glib/presence-mixin.h>
 #include <telepathy-glib/svc-connection.h>
 
+#include <gibber/gibber-xmpp-stanza.h>
+
 G_BEGIN_DECLS
 
 typedef struct _SalutConnection SalutConnection;
@@ -73,6 +75,10 @@ typedef enum {
   LIST_HANDLE_FIRST = LIST_HANDLE_PUBLISH,
   LIST_HANDLE_LAST = LIST_HANDLE_KNOWN
 } SalutConnectionListHandle;
+
+void
+salut_connection_olpc_augment_invitation (SalutConnection *connection,
+    TpHandle room, GibberXmppNode *invite_node);
 
 G_END_DECLS
 

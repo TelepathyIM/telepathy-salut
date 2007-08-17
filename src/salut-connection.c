@@ -33,6 +33,7 @@
 
 #include "salut-connection.h"
 
+#include "salut-util.h"
 #include "salut-avahi-client.h"
 #include "salut-avahi-entry-group.h"
 #include "salut-contact-manager.h"
@@ -59,6 +60,8 @@
 #include <telepathy-glib/handle-repo-static.h>
 #include <telepathy-glib/handle-repo.h>
 #include <telepathy-glib/interfaces.h>
+
+#include <gibber/gibber-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
@@ -1883,6 +1886,32 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
 error:
   dbus_g_method_return_error (context, error);
   g_error_free (error);
+}
+
+void
+salut_connection_olpc_augment_invitation (SalutConnection *self,
+                                          TpHandle room,
+                                          GibberXmppNode *invite_node)
+{
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  const gchar *color = NULL, *name = NULL, *type = NULL;
+  gboolean is_private;
+  GibberXmppNode *properties_node;
+  GHashTable *properties;
+
+  if (!salut_self_merge_olpc_activity_properties (priv->self, room,
+        &color, &name, &type, &is_private))
+    return;
+
+  properties = create_properties_table (color, name, type, is_private);
+
+  properties_node = gibber_xmpp_node_add_child_ns (invite_node, "properties",
+      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+
+  salut_gibber_xmpp_node_add_children_from_properties (properties_node,
+      properties, "property");
+
+  g_hash_table_destroy (properties);
 }
 
 static void

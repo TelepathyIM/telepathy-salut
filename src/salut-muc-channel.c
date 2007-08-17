@@ -318,6 +318,9 @@ create_invitation (SalutMucChannel *self,
     (GHashTable *)gibber_muc_connection_get_parameters(priv->muc_connection),
     invitation_append_parameter, invite_node);
 
+  salut_connection_olpc_augment_invitation (priv->connection, priv->handle,
+      invite_node);
+
   return msg;
 }
 
