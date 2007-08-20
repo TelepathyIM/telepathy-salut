@@ -1103,6 +1103,7 @@ salut_self_foreach_olpc_activity (SalutSelf *self,
   DEBUG ("end");
 }
 
+/* FIXME: we should share this code with salut-connection.c */
 static GHashTable *
 create_properties_table (const gchar *color,
                          const gchar *name,
@@ -1150,20 +1151,28 @@ salut_self_olpc_augment_invitation (SalutSelf *self,
                                     TpHandle room,
                                     GibberXmppNode *invite_node)
 {
-  //SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  const gchar *color = NULL, *name = NULL, *type = NULL;
-  gboolean is_private;
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GibberXmppNode *properties_node;
   GHashTable *properties;
+  SalutOLPCActivity *activity;
+  GValue *activity_id_val;
 
-  if (!salut_self_merge_olpc_activity_properties (self, room,
-        &color, &name, &type, &is_private))
+  activity = g_hash_table_lookup (priv->olpc_activities,
+      GUINT_TO_POINTER (room));
+  if (activity == NULL)
     return;
 
-  properties = create_properties_table (color, name, type, is_private);
+  properties = create_properties_table (activity->color,
+      activity->name, activity->type, activity->is_private);
 
   properties_node = gibber_xmpp_node_add_child_ns (invite_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+
+  /* add the activity id */
+  activity_id_val = g_slice_new0 (GValue);
+  g_value_init (activity_id_val, G_TYPE_STRING);
+  g_value_set_static_string (activity_id_val, activity->activity_id);
+  g_hash_table_insert (properties, "id", activity_id_val);
 
   salut_gibber_xmpp_node_add_children_from_properties (properties_node,
       properties, "property");
