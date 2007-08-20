@@ -1979,7 +1979,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
 
   salut_contact_takes_part_olpc_activity (invitor, room, activity_id);
 
-  salut_contact_manager_add_invited_activity (priv->contact_manager,
+  salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
       invitor, room, activity_id, color, activity_name, activity_type);
 
   g_hash_table_destroy (properties);

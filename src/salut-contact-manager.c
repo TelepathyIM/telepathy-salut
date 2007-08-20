@@ -443,13 +443,13 @@ split_activity_name (const gchar **contact_name)
 }
 
 void
-salut_contact_manager_add_invited_activity (SalutContactManager *self,
-                                            SalutContact *invitor,
-                                            TpHandle room,
-                                            const gchar *activity_id,
-                                            const gchar *color,
-                                            const gchar *activity_name,
-                                            const gchar *activity_type)
+salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
+                                                 SalutContact *invitor,
+                                                 TpHandle room,
+                                                 const gchar *activity_id,
+                                                 const gchar *color,
+                                                 const gchar *activity_name,
+                                                 const gchar *activity_type)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContactManagerActivity *activity;
