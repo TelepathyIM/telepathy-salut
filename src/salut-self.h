@@ -26,6 +26,8 @@
 
 #include <telepathy-glib/handle-repo.h>
 
+#include <gibber/gibber-xmpp-stanza.h>
+
 #include "salut-avahi-client.h"
 #include "salut-presence.h"
 
@@ -118,6 +120,11 @@ typedef void (*SalutSelfOLPCActivityFunc)
 
 void salut_self_foreach_olpc_activity (SalutSelf *self,
     SalutSelfOLPCActivityFunc foreach, gpointer user_data);
+
+void
+salut_self_olpc_augment_invitation (SalutSelf *self,
+    TpHandle room, GibberXmppNode *invite_node);
+
 #endif
 
 G_END_DECLS

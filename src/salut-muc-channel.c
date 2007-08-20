@@ -40,6 +40,7 @@
 #include <gibber/gibber-muc-connection.h>
 
 #include "salut-connection.h"
+#include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-entry-group.h"
 
@@ -83,6 +84,7 @@ struct _SalutMucChannelPrivate
   gchar *object_path;
   TpHandle handle;
   SalutConnection *connection;
+  SalutSelf *self;
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberMucConnection *muc_connection;
   gchar *muc_name;
@@ -239,6 +241,9 @@ salut_muc_channel_constructor (GType type, guint n_props,
                                TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
                                G_MAXUINT);
 
+  g_object_get (priv->connection, "self", &(priv->self), NULL);
+  g_assert (priv->self != NULL);
+
   /* Connect to the bus */
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object(bus, priv->object_path, obj);
@@ -318,7 +323,7 @@ create_invitation (SalutMucChannel *self,
     (GHashTable *)gibber_muc_connection_get_parameters(priv->muc_connection),
     invitation_append_parameter, invite_node);
 
-  salut_connection_olpc_augment_invitation (priv->connection, priv->handle,
+  salut_self_olpc_augment_invitation (priv->self, priv->handle,
       invite_node);
 
   return msg;
@@ -751,6 +756,12 @@ salut_muc_channel_dispose (GObject *object)
     g_object_unref(priv->muc_connection);
     priv->muc_connection = NULL;
   }
+
+  if (priv->self != NULL)
+    {
+      g_object_unref (priv->self);
+      priv->self = NULL;
+    }
 
   if (priv->xmpp_connection_manager != NULL)
     {

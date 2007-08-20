@@ -30,9 +30,11 @@
 #include "salut-self.h"
 
 #include <gibber/gibber-linklocal-transport.h>
+#include <gibber/gibber-namespaces.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
+#include "salut-util.h"
 #include "salut-avahi-entry-group.h"
 
 #define DEBUG_FLAG DEBUG_SELF
@@ -1099,6 +1101,74 @@ salut_self_foreach_olpc_activity (SalutSelf *self,
       &ctx);
 
   DEBUG ("end");
+}
+
+static GHashTable *
+create_properties_table (const gchar *color,
+                         const gchar *name,
+                         const gchar *type,
+                         gboolean is_private)
+{
+  GHashTable *properties;
+  GValue *color_val, *name_val, *type_val, *private_val;
+
+  properties = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+
+  if (color != NULL)
+    {
+      color_val = g_slice_new0 (GValue);
+      g_value_init (color_val, G_TYPE_STRING);
+      g_value_set_static_string (color_val, color);
+      g_hash_table_insert (properties, "color", color_val);
+    }
+  if (name != NULL)
+    {
+      name_val = g_slice_new0 (GValue);
+      g_value_init (name_val, G_TYPE_STRING);
+      g_value_set_static_string (name_val, name);
+      g_hash_table_insert (properties, "name", name_val);
+    }
+  if (type != NULL)
+    {
+      type_val = g_slice_new0 (GValue);
+      g_value_init (type_val, G_TYPE_STRING);
+      g_value_set_static_string (type_val, type);
+      g_hash_table_insert (properties, "type", type_val);
+    }
+
+  private_val = g_slice_new0 (GValue);
+  g_value_init (private_val, G_TYPE_BOOLEAN);
+  g_value_set_boolean (private_val, is_private);
+  g_hash_table_insert (properties, "private", private_val);
+
+  return properties;
+}
+
+void
+salut_self_olpc_augment_invitation (SalutSelf *self,
+                                    TpHandle room,
+                                    GibberXmppNode *invite_node)
+{
+  //SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  const gchar *color = NULL, *name = NULL, *type = NULL;
+  gboolean is_private;
+  GibberXmppNode *properties_node;
+  GHashTable *properties;
+
+  if (!salut_self_merge_olpc_activity_properties (self, room,
+        &color, &name, &type, &is_private))
+    return;
+
+  properties = create_properties_table (color, name, type, is_private);
+
+  properties_node = gibber_xmpp_node_add_child_ns (invite_node, "properties",
+      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+
+  salut_gibber_xmpp_node_add_children_from_properties (properties_node,
+      properties, "property");
+
+  g_hash_table_destroy (properties);
 }
 
 #endif /* ENABLE_OLPC */

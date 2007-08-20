@@ -76,10 +76,6 @@ typedef enum {
   LIST_HANDLE_LAST = LIST_HANDLE_KNOWN
 } SalutConnectionListHandle;
 
-void
-salut_connection_olpc_augment_invitation (SalutConnection *connection,
-    TpHandle room, GibberXmppNode *invite_node);
-
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_CONNECTION_H__*/
