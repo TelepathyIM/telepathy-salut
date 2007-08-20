@@ -554,6 +554,18 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     g_hash_table_destroy(priv->contacts);
     priv->contacts = NULL;
   }
+
+  if (priv->olpc_activities_by_mdns != NULL)
+    {
+      g_hash_table_destroy (priv->olpc_activities_by_mdns);
+      priv->olpc_activities_by_mdns = NULL;
+    }
+
+  if (priv->olpc_activities_by_room != NULL)
+    {
+      g_hash_table_destroy (priv->olpc_activities_by_room);
+      priv->olpc_activities_by_room = NULL;
+    }
 }
 
 static void
