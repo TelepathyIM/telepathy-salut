@@ -546,7 +546,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
 }
 
 void
-salut_contact_join_private_olpc_activity (SalutContact *self,
+salut_contact_takes_part_olpc_activity (SalutContact *self,
                                           TpHandle room,
                                           const gchar *activity_id)
 {

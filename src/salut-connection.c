@@ -1977,7 +1977,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
        activity_type = g_value_get_string (activity_type_val);
     }
 
-  salut_contact_join_private_olpc_activity (invitor, room, activity_id);
+  salut_contact_takes_part_olpc_activity (invitor, room, activity_id);
 
   salut_contact_manager_add_invited_activity (priv->contact_manager,
       invitor, room, activity_id, color, activity_name, activity_type);
