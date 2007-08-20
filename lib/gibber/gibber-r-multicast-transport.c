@@ -272,6 +272,12 @@ gibber_r_multicast_transport_finalize (GObject *object)
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
+  if (priv->name != NULL)
+    {
+      g_free (priv->name);
+      priv->name = NULL;
+    }
+
   g_hash_table_destroy (priv->senders);
 
   G_OBJECT_CLASS (
