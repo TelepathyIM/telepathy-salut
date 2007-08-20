@@ -133,7 +133,9 @@ struct _SalutContactPrivate
   GList *avatar_requests;
   TpHandleRepoIface *room_repo;
 #ifdef ENABLE_OLPC
-  GHashTable *olpc_activities;
+  GHashTable *olpc_announced_activities;
+  /* activity id -> SalutContactActivity */
+  GHashTable *olpc_private_activities;
 #endif
 };
 
@@ -155,8 +157,10 @@ salut_contact_init (SalutContact *obj)
   obj->olpc_color = NULL;
   obj->olpc_cur_act = NULL;
   obj->olpc_cur_act_room = 0;
-  priv->olpc_activities = g_hash_table_new_full (g_str_hash, g_str_equal,
-      (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
+  priv->olpc_announced_activities = g_hash_table_new_full (g_str_hash,
+      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
+  priv->olpc_private_activities = g_hash_table_new_full (g_str_hash,
+      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
 #endif
   priv->client = NULL;
   priv->resolvers = NULL;
@@ -233,7 +237,8 @@ salut_contact_dispose (GObject *object)
       self->olpc_cur_act_room = 0;
     }
 
-  g_hash_table_destroy (priv->olpc_activities);
+  g_hash_table_destroy (priv->olpc_announced_activities);
+  g_hash_table_destroy (priv->olpc_private_activities);
 #endif
 
   priv->room_repo = NULL;
@@ -411,7 +416,9 @@ salut_contact_foreach_olpc_activity (SalutContact *self,
 
   DEBUG ("called");
 
-  g_hash_table_foreach (priv->olpc_activities, foreach_olpc_activity,
+  g_hash_table_foreach (priv->olpc_announced_activities, foreach_olpc_activity,
+      &ctx);
+  g_hash_table_foreach (priv->olpc_private_activities, foreach_olpc_activity,
       &ctx);
 
   DEBUG ("end");
@@ -458,11 +465,12 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
       avahi_free (txtvers);
     }
 
-  activity = g_hash_table_lookup (priv->olpc_activities, name);
+  activity = g_hash_table_lookup (priv->olpc_announced_activities, name);
   if (activity == NULL)
     {
       activity = activity_new (priv->room_repo);
-      g_hash_table_insert (priv->olpc_activities, g_strdup (name), activity);
+      g_hash_table_insert (priv->olpc_announced_activities, g_strdup (name),
+          activity);
     }
 
   if ((t = avahi_string_list_find (txt, "activity-id")) != NULL)
@@ -498,7 +506,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
     {
       DEBUG ("Activity ID %s, room handle %u: removing from hash",
           activity_id ? activity_id : "<NULL>", room_handle);
-      g_hash_table_remove (priv->olpc_activities, name);
+      g_hash_table_remove (priv->olpc_announced_activities, name);
 
       g_signal_emit (self, signals[CONTACT_CHANGE], 0,
           SALUT_CONTACT_OLPC_ACTIVITIES);
@@ -536,6 +544,34 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
   avahi_free (activity_name);
   avahi_free (color);
 }
+
+void
+salut_contact_join_private_olpc_activity (SalutContact *self,
+                                          TpHandle room,
+                                          const gchar *activity_id)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactActivity *activity;
+
+  activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
+  if (activity != NULL)
+      return;
+
+  DEBUG_CONTACT (self, "added in activity %s as he just invited us",
+      activity_id);
+
+  activity = activity_new (priv->room_repo);
+  g_hash_table_insert (priv->olpc_private_activities,
+      g_strdup (activity_id), activity);
+
+  activity->activity_id = g_strdup (activity_id);
+  activity->room = room;
+  tp_handle_ref (priv->room_repo, activity->room);
+
+  g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+      SALUT_CONTACT_OLPC_ACTIVITIES);
+}
+
 #endif
 
 static void
@@ -858,7 +894,7 @@ contact_drop_resolver (SalutContact *self,
   if (!tp_strdiff (type, "_olpc-activity._udp"))
     {
       /* one of their activities has fallen off */
-      g_hash_table_remove (priv->olpc_activities, name);
+      g_hash_table_remove (priv->olpc_announced_activities, name);
       g_signal_emit (self, signals[CONTACT_CHANGE], 0,
           SALUT_CONTACT_OLPC_ACTIVITIES);
     }
