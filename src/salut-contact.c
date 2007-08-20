@@ -862,6 +862,9 @@ contact_drop_resolver (SalutContact *self,
       g_signal_emit (self, signals[CONTACT_CHANGE], 0,
           SALUT_CONTACT_OLPC_ACTIVITIES);
     }
+
+  g_free (type);
+  g_free (name);
 #endif
 
   /* FIXME: what we actually want to be counting is the number of _presence
