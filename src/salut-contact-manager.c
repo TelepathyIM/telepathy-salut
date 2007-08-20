@@ -265,6 +265,38 @@ contact_found_cb(SalutContact *contact, gpointer userdata) {
 }
 
 #ifdef ENABLE_OLPC
+static gboolean
+update_activity (SalutContactManagerActivity *activity,
+                 const gchar *name,
+                 const gchar *type,
+                 const gchar *color)
+{
+  gboolean changed = FALSE;
+
+  if (name != NULL && tp_strdiff (activity->name, name))
+    {
+      g_free (activity->name);
+      activity->name = g_strdup (name);
+      changed = TRUE;
+    }
+
+  if (type != NULL && tp_strdiff (activity->type, type))
+    {
+      g_free (activity->type);
+      activity->type = g_strdup (type);
+      changed = TRUE;
+    }
+
+  if (color != NULL && tp_strdiff (activity->color, color))
+    {
+      g_free (activity->color);
+      activity->color = g_strdup (color);
+      changed = TRUE;
+    }
+
+  return changed;
+}
+
 static void
 activity_change_cb(SalutContact *contact,
                    const gchar *service_name,
@@ -318,26 +350,7 @@ activity_change_cb(SalutContact *contact,
           service_name);
     }
 
-  if (name != NULL && tp_strdiff (activity->name, name))
-    {
-      g_free (activity->name);
-      activity->name = g_strdup (name);
-      changed = TRUE;
-    }
-
-  if (type != NULL && tp_strdiff (activity->type, type))
-    {
-      g_free (activity->type);
-      activity->type = g_strdup (type);
-      changed = TRUE;
-    }
-
-  if (color != NULL && tp_strdiff (activity->color, color))
-    {
-      g_free (activity->color);
-      activity->color = g_strdup (color);
-      changed = TRUE;
-    }
+  update_activity (activity, name, type, color);
 }
 #endif
 
