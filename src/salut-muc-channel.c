@@ -614,6 +614,8 @@ muc_channel_add_member (GObject *iface,
   tp_group_mixin_change_members (G_OBJECT(self), "", empty, empty, empty,
       remote_pending, base_connection->self_handle,
       TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
+  tp_intset_destroy (empty);
+  tp_intset_destroy (remote_pending);
 
   stanza = create_invitation (self, handle, message);
 
