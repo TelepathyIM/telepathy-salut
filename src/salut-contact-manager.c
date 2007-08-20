@@ -441,6 +441,34 @@ split_activity_name (const gchar **contact_name)
   (*contact_name)++;
   return TRUE;
 }
+
+void
+salut_contact_manager_add_invited_activity (SalutContactManager *self,
+                                            SalutContact *invitor,
+                                            TpHandle room,
+                                            const gchar *activity_id,
+                                            const gchar *color,
+                                            const gchar *activity_name,
+                                            const gchar *activity_type)
+{
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+  SalutContactManagerActivity *activity;
+
+  activity = g_hash_table_lookup (priv->olpc_activities_by_room,
+      GUINT_TO_POINTER (room));
+  if (activity == NULL)
+    {
+      DEBUG ("new activity %s created due to invite from %s", activity_id,
+          invitor->name);
+
+      /* FIXME: we'll never decrement activity's refcount. So if
+       * the activity becomes public (and so announced), its refcount
+       * will be one unit too high */
+      activity = activity_new (self, room);
+    }
+
+  update_activity (activity, activity_name, activity_type, color);
+}
 #endif
 
 static void

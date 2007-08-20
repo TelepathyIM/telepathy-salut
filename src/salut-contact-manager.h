@@ -76,6 +76,12 @@ salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
 gboolean salut_contact_manager_merge_olpc_activity_properties
   (SalutContactManager *self, TpHandle handle, const gchar **color,
    const gchar **name, const gchar **type);
+
+void
+salut_contact_manager_add_invited_activity (SalutContactManager *self,
+    SalutContact *invitor, TpHandle room, const gchar *activity_id,
+    const gchar *color, const gchar *activity_name,
+    const gchar *activity_type);
 #endif
 
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/
