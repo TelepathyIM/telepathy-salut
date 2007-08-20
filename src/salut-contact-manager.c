@@ -465,6 +465,8 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
        * the activity becomes public (and so announced), its refcount
        * will be one unit too high */
       activity = activity_new (self, room);
+      g_hash_table_insert (priv->olpc_activities_by_room,
+          GUINT_TO_POINTER (room), activity);
     }
 
   update_activity (activity, activity_name, activity_type, color);
