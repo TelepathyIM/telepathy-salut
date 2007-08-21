@@ -242,6 +242,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
                                G_MAXUINT);
 
   g_object_get (priv->connection, "self", &(priv->self), NULL);
+  g_object_unref (priv->self);
   g_assert (priv->self != NULL);
 
   /* Connect to the bus */
@@ -756,12 +757,6 @@ salut_muc_channel_dispose (GObject *object)
     g_object_unref(priv->muc_connection);
     priv->muc_connection = NULL;
   }
-
-  if (priv->self != NULL)
-    {
-      g_object_unref (priv->self);
-      priv->self = NULL;
-    }
 
   if (priv->xmpp_connection_manager != NULL)
     {
