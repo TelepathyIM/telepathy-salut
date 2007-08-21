@@ -123,6 +123,8 @@ enum {
   PROP_IM_MANAGER,
   PROP_MUC_MANAGER,
   PROP_CONTACT_MANAGER,
+  PROP_SELF,
+  PROP_XCM,
   LAST_PROP
 };
 
@@ -268,6 +270,12 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_CONTACT_MANAGER:
       g_value_set_object (value, priv->contact_manager);
+      break;
+    case PROP_SELF:
+      g_value_set_object (value, priv->self);
+      break;
+    case PROP_XCM:
+      g_value_set_object (value, priv->xmpp_connection_manager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -593,6 +601,29 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "self",
+      "SalutSelf object",
+      "The Salut Self object associated with this Salut Connection",
+      SALUT_TYPE_SELF,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_SELF,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "The Salut XMPP Connection Manager associated with this Salut "
+      "Connection",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XCM,
       param_spec);
 }
 
