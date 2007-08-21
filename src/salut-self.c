@@ -991,6 +991,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
       if (!is_private)
         {
           /* activity becomes public */
+          DEBUG ("activity becomes public. Announce it");
           if (!announce_activity (self, activity, error))
             {
               return FALSE;
@@ -1001,7 +1002,8 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
           /* TODO: stop to announce the activity */
         }
     }
-  else if (activity_is_announced (activity))
+
+  if (activity_is_announced (activity))
     {
       return update_activity_service (activity, error);
     }
