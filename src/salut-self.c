@@ -657,6 +657,7 @@ announce_activity (SalutSelf *self,
   activity->service = salut_avahi_entry_group_add_service_strlist
       (activity->group, name, "_olpc-activity._udp", 0, error, txt_record);
 
+  DEBUG ("announce activity %s", name);
   g_free (name);
   avahi_string_list_free (txt_record);
 
@@ -744,6 +745,10 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
       activity->activity_id = g_strdup (value);
       need_update = TRUE;
     }
+
+  if (activity->is_private)
+    /* activity is private, no need to announce or update it */
+    return;
 
   if (!activity_is_announced (activity))
     {
