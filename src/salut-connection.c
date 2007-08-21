@@ -1733,7 +1733,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
     goto error;
 
   if (salut_contact_manager_merge_olpc_activity_properties
-      (priv->contact_manager, handle, &color, &name, &type))
+      (priv->contact_manager, handle, &color, &name, &type, &is_private))
     known = TRUE;
 
   /* Call this one second so it overwrites values from the first */
@@ -1977,10 +1977,10 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
        activity_type = g_value_get_string (activity_type_val);
     }
 
-  salut_contact_takes_part_olpc_activity (invitor, room, activity_id);
-
   salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
       invitor, room, activity_id, color, activity_name, activity_type);
+
+  salut_contact_takes_part_olpc_activity (invitor, room, activity_id);
 
   g_hash_table_destroy (properties);
 }

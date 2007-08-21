@@ -70,6 +70,7 @@ typedef struct
   gchar *color;
   gchar *name;
   gchar *type;
+  gboolean is_private;
   size_t refcount;
 } SalutContactManagerActivity;
 
@@ -108,6 +109,7 @@ activity_new (SalutContactManager *mgr,
   tp_handle_ref (room_repo, room_handle);
   activity->room = room_handle;
   activity->mgr = mgr;
+  activity->is_private = TRUE;
 
   DEBUG ("Creating SalutContactManagerActivity: handle %u", room_handle);
   g_hash_table_insert (priv->olpc_activities_by_room,
@@ -334,6 +336,8 @@ activity_change_cb(SalutContact *contact,
       if (activity == NULL)
         {
           activity = activity_new (mgr, room_handle);
+          /* we discover this activity, so it's not a private one */
+          activity->is_private = FALSE;
           changed = TRUE;
         }
       else
@@ -408,7 +412,8 @@ salut_contact_manager_merge_olpc_activity_properties
                                          TpHandle handle,
                                          const gchar **color,
                                          const gchar **name,
-                                         const gchar **type)
+                                         const gchar **type,
+                                         gboolean *is_private)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContactManagerActivity *activity = g_hash_table_lookup (
@@ -423,6 +428,8 @@ salut_contact_manager_merge_olpc_activity_properties
     *name = activity->name;
   if (activity->type != NULL && type != NULL)
     *type = activity->type;
+  if (is_private != NULL)
+    *is_private = activity->is_private;
   return TRUE;
 }
 
@@ -465,6 +472,8 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
        * the activity becomes public (and so announced), its refcount
        * will be one unit too high */
       activity = activity_new (self, room);
+      /* We didn't know this activity before, it's a private one */
+      activity->is_private = TRUE;
       g_hash_table_insert (priv->olpc_activities_by_room,
           GUINT_TO_POINTER (room), activity);
     }
