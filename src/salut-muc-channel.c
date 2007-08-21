@@ -324,7 +324,7 @@ create_invitation (SalutMucChannel *self,
     (GHashTable *)gibber_muc_connection_get_parameters(priv->muc_connection),
     invitation_append_parameter, invite_node);
 
-  salut_self_olpc_augment_invitation (priv->self, priv->handle,
+  salut_self_olpc_augment_invitation (priv->self, priv->handle, handle,
       invite_node);
 
   return msg;
@@ -539,6 +539,71 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
       TP_CHANNEL_GROUP_CHANGE_REASON_ERROR);
 }
 
+gboolean
+salut_muc_channel_send_invitation (SalutMucChannel *self,
+                                   TpHandle handle,
+                                   const gchar *message,
+                                   GError **error)
+{
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+  GibberXmppStanza *stanza;
+  SalutContactManager *contact_manager = NULL;
+  SalutContact *contact;
+  SalutXmppConnectionManagerRequestConnectionResult request_result;
+  gboolean result;
+  struct pending_connection_for_invite_data *data;
+  GibberXmppConnection *connection = NULL;
+
+  g_object_get (G_OBJECT (priv->connection), "contact-manager",
+      &contact_manager, NULL);
+  g_assert (contact_manager != NULL);
+
+  contact = salut_contact_manager_get_contact (contact_manager, handle);
+  g_object_unref (contact_manager);
+
+  if (contact == NULL)
+    {
+      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Couldn't contact the contact");
+      return FALSE;
+    }
+
+  DEBUG ("request XMPP connection with contact %s", contact->name);
+  request_result = salut_xmpp_connection_manager_request_connection (
+      priv->xmpp_connection_manager, contact, &connection, error);
+
+  if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
+    {
+      DEBUG ("request connection failed");
+      return FALSE;
+    }
+
+  stanza = create_invitation (self, handle, message);
+
+  if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+    {
+      DEBUG ("got an existing connection. Send the invite");
+      result = gibber_xmpp_connection_send (connection, stanza, error);
+      g_object_unref (stanza);
+      return TRUE;
+    }
+
+  DEBUG ("requested connection pending. We have to wait to send the invite");
+  data = pending_connection_for_invite_data_new ();
+  data->self = self;
+  data->contact = contact;
+  data->invite = stanza;
+
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), data);
+  g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
+      G_CALLBACK (xmpp_connection_manager_connection_failed_cb), data);
+
+  return TRUE;
+}
+
 static gboolean
 muc_channel_add_member (GObject *iface,
                         TpHandle handle,
@@ -548,13 +613,6 @@ muc_channel_add_member (GObject *iface,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
-  SalutContactManager *contact_manager = NULL;
-  SalutContact *contact;
-  GibberXmppStanza *stanza;
-  GibberXmppConnection *connection = NULL;
-  SalutXmppConnectionManagerRequestConnectionResult request_result;
-  gboolean result;
-  struct pending_connection_for_invite_data *data;
   TpIntSet *empty, *remote_pending;
 
   if (handle == base_connection->self_handle)
@@ -589,32 +647,11 @@ muc_channel_add_member (GObject *iface,
     }
 
   /* Adding a contact, let's invite him */
-  g_object_get (G_OBJECT (priv->connection), "contact-manager",
-      &contact_manager, NULL);
-  g_assert (contact_manager != NULL);
-
-  contact = salut_contact_manager_get_contact (contact_manager, handle);
-  g_object_unref (contact_manager);
-
-  if (contact == NULL)
-    {
-      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "Couldn't contact the contact");
-      return FALSE;
-    }
 
   DEBUG ("Trying to add handle %u to %s", handle ,priv->object_path);
 
-  DEBUG ("request XMPP connection with contact %s", contact->name);
-  request_result = salut_xmpp_connection_manager_request_connection (
-      priv->xmpp_connection_manager, contact, &connection, error);
-
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
-    {
-      DEBUG ("request connection failed");
-      return FALSE;
-    }
+  if (!salut_muc_channel_send_invitation (self, handle, message, error))
+    return FALSE;
 
   /* Set the contact as remote pending */
   empty = tp_intset_new ();
@@ -625,28 +662,6 @@ muc_channel_add_member (GObject *iface,
       TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
   tp_intset_destroy (empty);
   tp_intset_destroy (remote_pending);
-
-  stanza = create_invitation (self, handle, message);
-
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      DEBUG ("got an existing connection. Send the invite");
-      result = gibber_xmpp_connection_send (connection, stanza, error);
-      g_object_unref (stanza);
-      return TRUE;
-    }
-
-  DEBUG ("requested connection pending. We have to wait to send the invite");
-  data = pending_connection_for_invite_data_new ();
-  data->self = self;
-  data->contact = contact;
-  data->invite = stanza;
-
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), data);
-  g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
-      G_CALLBACK (xmpp_connection_manager_connection_failed_cb), data);
 
   return TRUE;
 }
