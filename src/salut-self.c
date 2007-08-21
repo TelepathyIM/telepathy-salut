@@ -37,6 +37,7 @@
 #include "salut-contact-manager.h"
 #include "salut-util.h"
 #include "salut-avahi-entry-group.h"
+#include "salut-muc-manager.h"
 
 #define DEBUG_FLAG DEBUG_SELF
 #include <debug.h>
@@ -71,11 +72,14 @@ typedef struct
   /* group and service can be NULL if the activity is private */
   SalutAvahiEntryGroup *group;
   SalutAvahiEntryGroupService *service;
+  SalutMucChannel *muc;
   gchar *activity_id;
   gchar *color;
   gchar *name;
   gchar *type;
   gboolean is_private;
+  /* Handles of contacts we invited to join this activity */
+  TpHandleSet *invited;
 } SalutOLPCActivity;
 
 static void
@@ -93,16 +97,22 @@ activity_free (SalutOLPCActivity *activity)
     g_object_unref (activity->group);
   activity->group = NULL;
 
+  if (activity->muc != NULL)
+    g_object_unref (activity->muc);
+  activity->muc = NULL;
+
   g_free (activity->activity_id);
   g_free (activity->color);
   g_free (activity->name);
   g_free (activity->type);
+  tp_handle_set_destroy (activity->invited);
 
   g_slice_free (SalutOLPCActivity, activity);
 }
 
 static SalutOLPCActivity *
 activity_new (TpHandleRepoIface *room_repo,
+              TpHandleRepoIface *contact_repo,
               TpHandle room,
               GError **error)
 {
@@ -116,6 +126,7 @@ activity_new (TpHandleRepoIface *room_repo,
   activity->room = room;
 
   activity->is_private = TRUE;
+  activity->invited = tp_handle_set_new (contact_repo);
 
   return activity;
 }
@@ -125,6 +136,7 @@ activity_new (TpHandleRepoIface *room_repo,
 struct _SalutSelfPrivate
 {
   SalutConnection *connection;
+  SalutMucManager *muc_manager;
   SalutContactManager *contact_manager;
   TpHandleRepoIface *room_repo;
 
@@ -236,6 +248,12 @@ salut_self_dispose (GObject *object)
       priv->contact_manager = NULL;
     }
 
+  if (priv->muc_manager != NULL)
+    {
+      g_object_unref (priv->muc_manager);
+      priv->muc_manager = NULL;
+    }
+
 #ifdef ENABLE_OLPC
   if (priv->olpc_activities != NULL)
     g_hash_table_destroy (priv->olpc_activities);
@@ -320,8 +338,12 @@ salut_self_new (SalutConnection *connection,
   priv = SALUT_SELF_GET_PRIVATE (ret);
 
   priv->connection = connection;
-  g_object_get (connection, "contact-manager", &(priv->contact_manager), NULL);
+  g_object_get (connection,
+      "contact-manager", &(priv->contact_manager),
+      "muc-manager", &(priv->muc_manager),
+      NULL);
   g_assert (priv->contact_manager != NULL);
+  g_assert (priv->muc_manager != NULL);
 
   priv->room_repo = room_repo;
 
@@ -692,6 +714,8 @@ salut_self_add_olpc_activity (SalutSelf *self,
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOLPCActivity *activity;
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
 
   g_return_val_if_fail (activity_id != NULL, NULL);
   g_return_val_if_fail (room != 0, NULL);
@@ -703,9 +727,19 @@ salut_self_add_olpc_activity (SalutSelf *self,
       return NULL;
     }
 
-  activity = activity_new (priv->room_repo, room, error);
+  activity = activity_new (priv->room_repo, contact_repo, room, error);
   if (activity == NULL)
     return NULL;
+
+  activity->muc = salut_muc_manager_get_text_channel (priv->muc_manager, room);
+  if (activity->muc == NULL)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Can't find muc channel for room %s", tp_handle_inspect (
+            priv->room_repo, room));
+      activity_free (activity);
+      return NULL;
+    }
 
   activity->activity_id = g_strdup (activity_id);
 
@@ -752,6 +786,10 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
       /* add the activity service if it's not in data->olpc_activities */
       activity = salut_self_add_olpc_activity (data->self, value,
           GPOINTER_TO_UINT (key), data->error);
+
+      if (activity == NULL)
+        return;
+
       activity->is_private = is_private;
     }
   /* activity was already known */
@@ -946,6 +984,44 @@ update_activity_service (SalutOLPCActivity *activity,
   return TRUE;
 }
 
+typedef struct
+{
+  SalutSelf *self;
+  SalutOLPCActivity *activity;
+} foreach_resend_invite_ctx;
+
+static void
+resend_invite_foreach (TpHandleSet *set,
+                       TpHandle handle,
+                       gpointer user_data)
+{
+  GError *error = NULL;
+  foreach_resend_invite_ctx *ctx = (foreach_resend_invite_ctx *) user_data;
+
+  if (!salut_muc_channel_send_invitation (ctx->activity->muc, handle,
+        "OLPC activity properties update", &error))
+    {
+      DEBUG ("failed to re-invite contact %d to activity %s", handle,
+          ctx->activity->activity_id);
+    }
+}
+
+static gboolean
+notify_activitiy_properties_changes (SalutSelf *self,
+                                     SalutOLPCActivity *activity,
+                                     GError **error)
+{
+  foreach_resend_invite_ctx ctx;
+
+  /* TODO send message to the muc */
+
+  /* Resend pending invitations so contacts will know about new properties */
+  ctx.self = self;
+  ctx.activity = activity;
+  tp_handle_set_foreach (activity->invited, resend_invite_foreach, &ctx);
+  return TRUE;
+}
+
 static gboolean
 update_activity (SalutOLPCActivity *activity,
                  const gchar *name,
@@ -1027,6 +1103,10 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
   if (activity_is_announced (activity))
     {
       return update_activity_service (activity, error);
+    }
+  else
+    {
+      return notify_activitiy_properties_changes (self, activity, error);
     }
 
   return TRUE;
@@ -1196,6 +1276,7 @@ create_properties_table (const gchar *color,
 void
 salut_self_olpc_augment_invitation (SalutSelf *self,
                                     TpHandle room,
+                                    TpHandle contact,
                                     GibberXmppNode *invite_node)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
@@ -1223,6 +1304,9 @@ salut_self_olpc_augment_invitation (SalutSelf *self,
 
   salut_gibber_xmpp_node_add_children_from_properties (properties_node,
       properties, "property");
+
+  /* FIXME: remove the handle when he joins the activity */
+  tp_handle_set_add (activity->invited, contact);
 
   g_hash_table_destroy (properties);
 }

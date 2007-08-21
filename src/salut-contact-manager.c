@@ -479,11 +479,12 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
                                                  TpHandle room,
                                                  const gchar *activity_id,
                                                  const gchar *color,
-                                                 const gchar *activity_name,
-                                                 const gchar *activity_type)
+                                                 const gchar *name,
+                                                 const gchar *type)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContactManagerActivity *activity;
+  gboolean changed = FALSE;
 
   activity = g_hash_table_lookup (priv->olpc_activities_by_room,
       GUINT_TO_POINTER (room));
@@ -496,13 +497,24 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
        * the activity becomes public (and so announced), its refcount
        * will be one unit too high */
       activity = activity_new (self, room);
+      activity->activity_id = g_strdup (activity_id);
       /* We didn't know this activity before, it's a private one */
       activity->is_private = TRUE;
       g_hash_table_insert (priv->olpc_activities_by_room,
           GUINT_TO_POINTER (room), activity);
+      changed = TRUE;
     }
 
-  update_activity (activity, activity_name, activity_type, color);
+  /* FIXME: we shouldn't trust invites anymore to update properties
+   * if we are in the activity */
+  if (update_activity (activity, name, type, color))
+    changed = TRUE;
+
+  if (changed)
+    {
+      g_signal_emit (self, signals[ACTIVITY_PROPERTIES_CHANGE], 0, room,
+          activity_id, color, name, type, TRUE);
+    }
 }
 #endif
 

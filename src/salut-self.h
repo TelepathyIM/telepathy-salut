@@ -124,7 +124,7 @@ void salut_self_foreach_olpc_activity (SalutSelf *self,
 
 void
 salut_self_olpc_augment_invitation (SalutSelf *self,
-    TpHandle room, GibberXmppNode *invite_node);
+    TpHandle room, TpHandle contact, GibberXmppNode *invite_node);
 
 #endif
 
