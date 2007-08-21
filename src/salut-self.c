@@ -730,6 +730,7 @@ static void
 _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
 {
   struct _set_olpc_activities_ctx *data = user_data;
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (data->self);
   SalutOLPCActivity *activity;
   gboolean need_update = FALSE;
 
@@ -742,15 +743,19 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
   activity = g_hash_table_lookup (data->olpc_activities, key);
   if (activity == NULL)
     {
+      gboolean is_private = TRUE;
+
+      salut_contact_manager_merge_olpc_activity_properties (
+          priv->contact_manager, GPOINTER_TO_UINT (key), NULL, NULL, NULL,
+          &is_private);
+
       /* add the activity service if it's not in data->olpc_activities */
-      salut_self_add_olpc_activity (data->self, value, GPOINTER_TO_UINT (key),
-          data->error);
-
-      return;
+      activity = salut_self_add_olpc_activity (data->self, value,
+          GPOINTER_TO_UINT (key), data->error);
+      activity->is_private = is_private;
     }
-
   /* activity was already known */
-  if (tp_strdiff (value, activity->activity_id))
+  else if (tp_strdiff (value, activity->activity_id))
     {
       /* if the user is claiming that the activity ID of a room has changed,
        * believe them... */
