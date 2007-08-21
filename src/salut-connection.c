@@ -727,7 +727,8 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
 
   g_assert(c == priv->avahi_client);
 
-  priv->self = salut_self_new(priv->avahi_client,
+  priv->self = salut_self_new (self,
+                              priv->avahi_client,
                               room_repo,
                               priv->nickname,
                               priv->first_name,

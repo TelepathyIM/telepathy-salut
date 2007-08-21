@@ -34,6 +34,7 @@
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
+#include "salut-contact-manager.h"
 #include "salut-util.h"
 #include "salut-avahi-entry-group.h"
 
@@ -123,6 +124,8 @@ activity_new (TpHandleRepoIface *room_repo,
 
 struct _SalutSelfPrivate
 {
+  SalutConnection *connection;
+  SalutContactManager *contact_manager;
   TpHandleRepoIface *room_repo;
 
   gchar *nickname;
@@ -227,6 +230,12 @@ salut_self_dispose (GObject *object)
 
   /* release any references held by the object here */
 
+  if (priv->contact_manager != NULL)
+    {
+      g_object_unref (priv->contact_manager);
+      priv->contact_manager = NULL;
+    }
+
 #ifdef ENABLE_OLPC
   if (priv->olpc_activities != NULL)
     g_hash_table_destroy (priv->olpc_activities);
@@ -292,7 +301,8 @@ salut_self_finalize (GObject *object)
 }
 
 SalutSelf *
-salut_self_new (SalutAvahiClient *client,
+salut_self_new (SalutConnection *connection,
+                SalutAvahiClient *client,
                 TpHandleRepoIface *room_repo,
                 const gchar *nickname,
                 const gchar *first_name,
@@ -308,6 +318,10 @@ salut_self_new (SalutAvahiClient *client,
 
   SalutSelf *ret = g_object_new(SALUT_TYPE_SELF, NULL);
   priv = SALUT_SELF_GET_PRIVATE (ret);
+
+  priv->connection = connection;
+  g_object_get (connection, "contact-manager", &(priv->contact_manager), NULL);
+  g_assert (priv->contact_manager != NULL);
 
   priv->room_repo = room_repo;
 
