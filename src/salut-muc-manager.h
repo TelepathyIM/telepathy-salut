@@ -25,6 +25,7 @@
 #include <salut-connection.h>
 #include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-client.h"
+#include "salut-muc-channel.h"
 
 G_BEGIN_DECLS
 
@@ -62,6 +63,10 @@ salut_muc_manager_new (SalutConnection *connection,
 gboolean
 salut_muc_manager_start (SalutMucManager *muc_manager,
     SalutAvahiClient *client, GError **error);
+
+SalutMucChannel *
+salut_muc_manager_get_text_channel (SalutMucManager *muc_manager,
+    TpHandle handle);
 
 G_END_DECLS
 

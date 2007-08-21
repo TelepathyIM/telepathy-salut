@@ -874,3 +874,12 @@ salut_muc_manager_start (SalutMucManager *self,
 
   return TRUE;
 }
+
+SalutMucChannel *
+salut_muc_manager_get_text_channel (SalutMucManager *self,
+                                    TpHandle handle)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  return g_hash_table_lookup (priv->text_channels, GUINT_TO_POINTER (handle));
+}
