@@ -946,6 +946,38 @@ update_activity_service (SalutOLPCActivity *activity,
   return TRUE;
 }
 
+static gboolean
+update_activity (SalutOLPCActivity *activity,
+                 const gchar *name,
+                 const gchar *type,
+                 const gchar *color)
+{
+  gboolean changed = FALSE;
+
+  if (name != NULL && tp_strdiff (activity->name, name))
+    {
+      g_free (activity->name);
+      activity->name = g_strdup (name);
+      changed = TRUE;
+    }
+
+  if (type != NULL && tp_strdiff (activity->type, type))
+    {
+      g_free (activity->type);
+      activity->type = g_strdup (type);
+      changed = TRUE;
+    }
+
+  if (color != NULL && tp_strdiff (activity->color, color))
+    {
+      g_free (activity->color);
+      activity->color = g_strdup (color);
+      changed = TRUE;
+    }
+
+  return changed;
+}
+
 gboolean
 salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          TpHandle handle,
@@ -968,24 +1000,11 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
       return FALSE;
     }
 
-  if (name != NULL)
-    {
-      g_free (activity->name);
-      activity->name = g_strdup (name);
-    }
-  if (color != NULL)
-    {
-      g_free (activity->color);
-      activity->color = g_strdup (color);
-    }
-  if (type != NULL)
-    {
-      g_free (activity->type);
-      activity->type = g_strdup (type);
-    }
+  update_activity (activity, name, type, color);
 
   if (activity->is_private != is_private)
     {
+      /* privacy policy change */
       activity->is_private = is_private;
 
       if (!is_private)
@@ -996,6 +1015,8 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
             {
               return FALSE;
             }
+
+          return update_activity_service (activity, error);
         }
       else
         {
