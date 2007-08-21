@@ -2076,6 +2076,27 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
 #endif
 }
 
+#ifdef ENABLE_OLPC
+static void
+_contact_manager_olpc_activity_properties_change_cb (SalutContactManager *mgr,
+                                                     TpHandle room,
+                                                     const gchar *id,
+                                                     const gchar *color,
+                                                     const gchar *name,
+                                                     const gchar *type,
+                                                     gboolean is_private,
+                                                     gpointer user_data)
+{
+  GHashTable *properties;
+
+  properties = create_properties_table (color, name, type, is_private);
+  salut_svc_olpc_activity_properties_emit_activity_properties_changed (
+      user_data, room, properties);
+
+  g_hash_table_destroy (properties);
+}
+#endif
+
 static GPtrArray*
 salut_connection_create_channel_factories(TpBaseConnection *base) {
   SalutConnection *self = SALUT_CONNECTION(base);
@@ -2086,6 +2107,10 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   priv->contact_manager = salut_contact_manager_new (self);
   g_signal_connect (priv->contact_manager, "contact-change",
       G_CALLBACK (_contact_manager_contact_change_cb), self);
+#ifdef ENABLE_OLPC
+  g_signal_connect (priv->contact_manager, "activity-properties-change",
+      G_CALLBACK (_contact_manager_olpc_activity_properties_change_cb), self);
+#endif
 
   /* Create the XMPP connection manager */
   priv->xmpp_connection_manager = salut_xmpp_connection_manager_new (self,

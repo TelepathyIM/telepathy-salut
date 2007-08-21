@@ -57,6 +57,9 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
 enum
 {
   CONTACT_CHANGE,
+#ifdef ENABLE_OLPC
+  ACTIVITY_PROPERTIES_CHANGE,
+#endif
   LAST_SIGNAL
 };
 
@@ -185,6 +188,19 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
       G_TYPE_NONE, 2,
       SALUT_TYPE_CONTACT,
       G_TYPE_INT);
+
+#ifdef ENABLE_OLPC
+  signals[ACTIVITY_PROPERTIES_CHANGE] = g_signal_new(
+      "activity-properties-change",
+      G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
+      G_SIGNAL_RUN_LAST,
+      0,
+      NULL, NULL,
+      salut_signals_marshal_VOID__UINT_STRING_STRING_STRING_STRING_BOOLEAN,
+      G_TYPE_NONE, 6,
+      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING,
+      G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN);
+#endif
 }
 
 static gboolean
@@ -338,6 +354,7 @@ activity_change_cb(SalutContact *contact,
           activity = activity_new (mgr, room_handle);
           /* we discover this activity, so it's not a private one */
           activity->is_private = FALSE;
+          activity->activity_id = g_strdup (activity_id);
           changed = TRUE;
         }
       else
@@ -354,7 +371,14 @@ activity_change_cb(SalutContact *contact,
           service_name);
     }
 
-  update_activity (activity, name, type, color);
+  if (update_activity (activity, name, type, color))
+    changed = TRUE;
+
+  if (changed)
+    {
+      g_signal_emit (mgr, signals[ACTIVITY_PROPERTIES_CHANGE], 0, room_handle,
+          activity_id, color, name, type, FALSE);
+    }
 }
 #endif
 
