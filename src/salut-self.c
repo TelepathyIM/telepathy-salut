@@ -1099,9 +1099,9 @@ create_properties_table (SalutOLPCActivity *activity)
 }
 
 static gboolean
-send_notification_msg (SalutSelf *self,
-                       SalutOLPCActivity *activity,
-                       GError **error)
+send_olpc_activity_properties_changes_msg (SalutSelf *self,
+                                           SalutOLPCActivity *activity,
+                                           GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GHashTable *properties;
@@ -1155,7 +1155,7 @@ notify_activitiy_properties_changes (SalutSelf *self,
                                      SalutOLPCActivity *activity,
                                      GError **error)
 {
-  if (!send_notification_msg (self, activity, error))
+  if (!send_olpc_activity_properties_changes_msg (self, activity, error))
     return FALSE;
 
   resend_invite (self, activity);
@@ -1249,6 +1249,13 @@ salut_self_olpc_activity_properties_updated (SalutSelf *self,
     }
 
   updated = update_activity (activity, name, type, color);
+
+  if (activity->is_private != is_private)
+    {
+      if (!update_activity_privacy_policy (self, activity, is_private, NULL))
+        return FALSE;
+      updated = TRUE;
+    }
 
   if (updated && activity_is_announced (activity))
     update_activity_service (activity, NULL);

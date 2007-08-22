@@ -1955,9 +1955,11 @@ check_properties (GHashTable *properties,
                   const gchar **id,
                   const gchar **color,
                   const gchar **name,
-                  const gchar **type)
+                  const gchar **type,
+                  gboolean *is_private)
 {
-  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val;
+  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val, 
+      *is_private_val;
 
   /* activity ID */
   activity_id_val = g_hash_table_lookup (properties, "id");
@@ -2019,6 +2021,20 @@ check_properties (GHashTable *properties,
         *type = g_value_get_string (activity_type_val);
     }
 
+  /* is_private */
+  is_private_val = g_hash_table_lookup (properties, "private");
+  if (is_private_val != NULL)
+    {
+     if (G_VALUE_TYPE (is_private_val) != G_TYPE_BOOLEAN)
+        {
+          DEBUG ("Invalid is_private type");
+          return FALSE;
+        }
+
+      if (is_private != NULL)
+        *is_private = g_value_get_boolean (is_private_val);
+    }
+
   return TRUE;
 }
 
@@ -2050,7 +2066,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
       "property");
 
   if (!check_properties (properties, &activity_id, &color, &activity_name,
-        &activity_type))
+        &activity_type, NULL))
     return;
 
   salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
@@ -2209,6 +2225,7 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL;
+  gboolean is_private = FALSE;
 
   props_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
@@ -2219,11 +2236,11 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
       "property");
 
   if (!check_properties (properties, &activity_id, &color, &activity_name,
-        &activity_type))
+        &activity_type, &is_private))
     return TRUE;
 
   olpc_activity_properties_changed (self, room, activity_id,
-      color, activity_name, activity_type, TRUE);
+      color, activity_name, activity_type, is_private);
 
   g_hash_table_destroy (properties);
 
