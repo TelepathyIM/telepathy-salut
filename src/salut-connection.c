@@ -1950,6 +1950,78 @@ error:
   g_error_free (error);
 }
 
+static gboolean
+check_properties (GHashTable *properties,
+                  const gchar **id,
+                  const gchar **color,
+                  const gchar **name,
+                  const gchar **type)
+{
+  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val;
+
+  /* activity ID */
+  activity_id_val = g_hash_table_lookup (properties, "id");
+  if (activity_id_val == NULL)
+    {
+      DEBUG ("No activity ID");
+      return FALSE;
+    }
+
+  if (G_VALUE_TYPE (activity_id_val) != G_TYPE_STRING)
+    {
+      DEBUG ("Invalid activity ID type");
+      return FALSE;
+    }
+
+  if (id != NULL)
+    *id = g_value_get_string (activity_id_val);
+
+  /* color */
+  color_val = g_hash_table_lookup (properties, "color");
+  if (color_val != NULL)
+    {
+      if (G_VALUE_TYPE (color_val) != G_TYPE_STRING)
+        {
+          DEBUG ("Invalid activity color type");
+          return FALSE;
+        }
+
+      if (color != NULL)
+        *color = g_value_get_string (color_val);
+      /* TODO: check color syntax */
+    }
+
+  /* name */
+  activity_name_val = g_hash_table_lookup (properties, "name");
+  if (activity_name_val != NULL)
+    {
+      if (G_VALUE_TYPE (activity_name_val) != G_TYPE_STRING)
+        {
+          DEBUG ("Invalid activity name type");
+          return FALSE;
+        }
+
+      if (name != NULL)
+        *name = g_value_get_string (activity_name_val);
+    }
+
+  /* type */
+  activity_type_val = g_hash_table_lookup (properties, "type");
+  if (activity_type_val != NULL)
+    {
+      if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
+        {
+          DEBUG ("Invalid activity type");
+          return FALSE;
+        }
+
+      if (type != NULL)
+        *type = g_value_get_string (activity_type_val);
+    }
+
+  return TRUE;
+}
+
 void
 salut_connection_olpc_observe_invitation (SalutConnection *self,
                                           TpHandle room,
@@ -1959,7 +2031,6 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GibberXmppNode *props_node;
   GHashTable *properties;
-  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL;
   SalutContact *invitor;
@@ -1978,51 +2049,9 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   properties = salut_gibber_xmpp_node_extract_properties (props_node,
       "property");
 
-  /* activity ID */
-  activity_id_val = g_hash_table_lookup (properties, "id");
-  if (activity_id_val == NULL)
-    {
-      DEBUG ("Invitation doesn't contain activity ID");
-      return;
-    }
-
-  if (G_VALUE_TYPE (activity_id_val) != G_TYPE_STRING)
-    {
-      DEBUG ("Invalid activity ID type");
-      return;
-    }
-  activity_id = g_value_get_string (activity_id_val);
-
-  /* color */
-  color_val = g_hash_table_lookup (properties, "color");
-  if (color_val != NULL)
-    {
-      if (G_VALUE_TYPE (color_val) != G_TYPE_STRING)
-        DEBUG ("Invalid activity color type");
-      else
-        color = g_value_get_string (color_val);
-      /* TODO: check color syntax */
-    }
-
-  /* name */
-  activity_name_val = g_hash_table_lookup (properties, "name");
-  if (activity_name_val != NULL)
-    {
-      if (G_VALUE_TYPE (activity_name_val) != G_TYPE_STRING)
-        DEBUG ("Invalid activity name type");
-      else
-        activity_name = g_value_get_string (activity_name_val);
-    }
-
-  /* type */
-  activity_type_val = g_hash_table_lookup (properties, "type");
-  if (activity_type_val != NULL)
-    {
-      if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
-        DEBUG ("Invalid activity type");
-      else
-       activity_type = g_value_get_string (activity_type_val);
-    }
+  if (!check_properties (properties, &activity_id, &color, &activity_name,
+        &activity_type))
+    return;
 
   salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
       invitor, room, activity_id, color, activity_name, activity_type);
@@ -2124,16 +2153,14 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
 
 #ifdef ENABLE_OLPC
 static void
-_contact_manager_olpc_activity_properties_change_cb (SalutContactManager *mgr,
-                                                     TpHandle room,
-                                                     const gchar *id,
-                                                     const gchar *new_color,
-                                                     const gchar *new_name,
-                                                     const gchar *new_type,
-                                                     gboolean new_is_private,
-                                                     gpointer user_data)
+olpc_activity_properties_changed (SalutConnection *self,
+                                  TpHandle room,
+                                  const gchar *id,
+                                  const gchar *new_color,
+                                  const gchar *new_name,
+                                  const gchar *new_type,
+                                  gboolean new_is_private)
 {
-  SalutConnection *self = SALUT_CONNECTION (user_data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GHashTable *properties;
   const gchar *color, *name, *type;
@@ -2151,9 +2178,56 @@ _contact_manager_olpc_activity_properties_change_cb (SalutContactManager *mgr,
 
   properties = create_properties_table (color, name, type, is_private);
   salut_svc_olpc_activity_properties_emit_activity_properties_changed (
-      user_data, room, properties);
+      self, room, properties);
 
   g_hash_table_destroy (properties);
+}
+
+static void
+_contact_manager_olpc_activity_properties_change_cb (SalutContactManager *mgr,
+                                                     TpHandle room,
+                                                     const gchar *id,
+                                                     const gchar *new_color,
+                                                     const gchar *new_name,
+                                                     const gchar *new_type,
+                                                     gboolean new_is_private,
+                                                     gpointer user_data)
+{
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+
+  olpc_activity_properties_changed (self, room, id, new_color,
+      new_name, new_type, new_is_private);
+}
+
+gboolean
+salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
+                                          TpHandle room,
+                                          TpHandle sender,
+                                          GibberXmppStanza *stanza)
+{
+  GibberXmppNode *props_node;
+  GHashTable *properties;
+  const gchar *activity_id, *color = NULL, *activity_name = NULL,
+        *activity_type = NULL;
+
+  props_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
+      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+  if (props_node == NULL)
+    return FALSE;
+
+  properties = salut_gibber_xmpp_node_extract_properties (props_node,
+      "property");
+
+  if (!check_properties (properties, &activity_id, &color, &activity_name,
+        &activity_type))
+    return TRUE;
+
+  olpc_activity_properties_changed (self, room, activity_id,
+      color, activity_name, activity_type, TRUE);
+
+  g_hash_table_destroy (properties);
+
+  return TRUE;
 }
 #endif
 

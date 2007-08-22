@@ -31,6 +31,7 @@
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-muc-connection.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
@@ -1006,19 +1007,120 @@ resend_invite_foreach (TpHandleSet *set,
     }
 }
 
-static gboolean
-notify_activitiy_properties_changes (SalutSelf *self,
-                                     SalutOLPCActivity *activity,
-                                     GError **error)
+static void
+resend_invite (SalutSelf *self,
+               SalutOLPCActivity *activity)
 {
   foreach_resend_invite_ctx ctx;
-
-  /* TODO send message to the muc */
 
   /* Resend pending invitations so contacts will know about new properties */
   ctx.self = self;
   ctx.activity = activity;
   tp_handle_set_foreach (activity->invited, resend_invite_foreach, &ctx);
+}
+
+/* FIXME: we should share this code with salut-connection.c */
+static GHashTable *
+create_properties_table (SalutOLPCActivity *activity)
+{
+  GHashTable *properties;
+  GValue *color_val, *name_val, *type_val, *private_val;
+
+  properties = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+
+  if (activity->color != NULL)
+    {
+      color_val = g_slice_new0 (GValue);
+      g_value_init (color_val, G_TYPE_STRING);
+      g_value_set_static_string (color_val, activity->color);
+      g_hash_table_insert (properties, "color", color_val);
+    }
+  if (activity->name != NULL)
+    {
+      name_val = g_slice_new0 (GValue);
+      g_value_init (name_val, G_TYPE_STRING);
+      g_value_set_static_string (name_val, activity->name);
+      g_hash_table_insert (properties, "name", name_val);
+    }
+  if (activity->type != NULL)
+    {
+      type_val = g_slice_new0 (GValue);
+      g_value_init (type_val, G_TYPE_STRING);
+      g_value_set_static_string (type_val, activity->type);
+      g_hash_table_insert (properties, "type", type_val);
+    }
+
+  private_val = g_slice_new0 (GValue);
+  g_value_init (private_val, G_TYPE_BOOLEAN);
+  g_value_set_boolean (private_val, activity->is_private);
+  g_hash_table_insert (properties, "private", private_val);
+
+  return properties;
+}
+
+static gboolean
+send_notification_msg (SalutSelf *self,
+                       SalutOLPCActivity *activity,
+                       GError **error)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  GHashTable *properties;
+  GValue *activity_id_val;
+  GibberXmppStanza *stanza;
+  GibberXmppNode *properties_node;
+  gchar *muc_name;
+  GibberMucConnection *muc_connection;
+  gboolean result;
+
+  g_assert (activity->muc != NULL);
+
+  g_object_get (activity->muc,
+      "name", &muc_name,
+      "muc-connection", &muc_connection,
+      NULL);
+
+  properties = create_properties_table (activity);
+
+  /* add the activity id */
+  activity_id_val = g_slice_new0 (GValue);
+  g_value_init (activity_id_val, G_TYPE_STRING);
+  g_value_set_static_string (activity_id_val, activity->activity_id);
+  g_hash_table_insert (properties, "id", activity_id_val);
+
+  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
+      GIBBER_STANZA_SUB_TYPE_GROUPCHAT,
+      priv->connection->name, muc_name,
+      GIBBER_NODE, "properties",
+        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+      GIBBER_NODE_END, GIBBER_STANZA_END);
+
+  properties_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
+      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+
+  salut_gibber_xmpp_node_add_children_from_properties (properties_node,
+      properties, "property");
+
+  result = gibber_muc_connection_send (muc_connection, stanza, error);
+
+  g_object_unref (stanza);
+  g_object_unref (muc_connection);
+  g_free (muc_name);
+  g_hash_table_destroy (properties);
+
+  return result;
+}
+
+static gboolean
+notify_activitiy_properties_changes (SalutSelf *self,
+                                     SalutOLPCActivity *activity,
+                                     GError **error)
+{
+  if (!send_notification_msg (self, activity, error))
+    return FALSE;
+
+  resend_invite (self, activity);
+
   return TRUE;
 }
 
@@ -1270,49 +1372,6 @@ salut_self_foreach_olpc_activity (SalutSelf *self,
   DEBUG ("end");
 }
 
-/* FIXME: we should share this code with salut-connection.c */
-static GHashTable *
-create_properties_table (const gchar *color,
-                         const gchar *name,
-                         const gchar *type,
-                         gboolean is_private)
-{
-  GHashTable *properties;
-  GValue *color_val, *name_val, *type_val, *private_val;
-
-  properties = g_hash_table_new_full (g_str_hash, g_str_equal,
-      NULL, (GDestroyNotify) tp_g_value_slice_free);
-
-  if (color != NULL)
-    {
-      color_val = g_slice_new0 (GValue);
-      g_value_init (color_val, G_TYPE_STRING);
-      g_value_set_static_string (color_val, color);
-      g_hash_table_insert (properties, "color", color_val);
-    }
-  if (name != NULL)
-    {
-      name_val = g_slice_new0 (GValue);
-      g_value_init (name_val, G_TYPE_STRING);
-      g_value_set_static_string (name_val, name);
-      g_hash_table_insert (properties, "name", name_val);
-    }
-  if (type != NULL)
-    {
-      type_val = g_slice_new0 (GValue);
-      g_value_init (type_val, G_TYPE_STRING);
-      g_value_set_static_string (type_val, type);
-      g_hash_table_insert (properties, "type", type_val);
-    }
-
-  private_val = g_slice_new0 (GValue);
-  g_value_init (private_val, G_TYPE_BOOLEAN);
-  g_value_set_boolean (private_val, is_private);
-  g_hash_table_insert (properties, "private", private_val);
-
-  return properties;
-}
-
 void
 salut_self_olpc_augment_invitation (SalutSelf *self,
                                     TpHandle room,
@@ -1330,8 +1389,7 @@ salut_self_olpc_augment_invitation (SalutSelf *self,
   if (activity == NULL)
     return;
 
-  properties = create_properties_table (activity->color,
-      activity->name, activity->type, activity->is_private);
+  properties = create_properties_table (activity);
 
   properties_node = gibber_xmpp_node_add_child_ns (invite_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);

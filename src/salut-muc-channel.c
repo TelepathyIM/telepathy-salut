@@ -915,6 +915,18 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
     return;
   }
 
+  from_handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
+  if (from_handle == 0) {
+    /* FIXME, unknown contact.. Need some way to handle this safely,
+     * just adding the contact is somewhat scary */
+    DEBUG("Got stanza from unknown contact, discarding");
+    return;
+  }
+
+  if (salut_connection_olpc_observe_muc_stanza (priv->connection, priv->handle,
+        from_handle, stanza))
+    return;
+
   if (!text_helper_parse_incoming_message(stanza, &from, &msgtype,
                                           &body, &body_offset)) {
     DEBUG("Couldn't parse stanza");
@@ -923,14 +935,6 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
 
   if (body == NULL) {
     DEBUG("Message with an empty body");
-    return;
-  }
-
-  from_handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
-  if (from_handle == 0) {
-    /* FIXME, unknown contact.. Need some way to handle this safely,
-     * just adding the contact is somewhat scary */
-    DEBUG("Got stanza from unknown contact, discarding");
     return;
   }
 

@@ -80,6 +80,10 @@ void
 salut_connection_olpc_observe_invitation (SalutConnection *connection,
     TpHandle room, TpHandle invitor_handle, GibberXmppNode *invite_node);
 
+gboolean
+salut_connection_olpc_observe_muc_stanza (SalutConnection *self, TpHandle room,
+    TpHandle sender, GibberXmppStanza *stanza);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_CONNECTION_H__*/
