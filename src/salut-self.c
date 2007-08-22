@@ -662,6 +662,37 @@ activity_is_announced (SalutOLPCActivity *activity)
 }
 
 static gboolean
+update_activity_service (SalutOLPCActivity *activity,
+                         GError **error)
+{
+  GError *err = NULL;
+  g_return_val_if_fail (activity_is_announced (activity), FALSE);
+
+  salut_avahi_entry_group_service_freeze (activity->service);
+
+  if (activity->name != NULL)
+    salut_avahi_entry_group_service_set (activity->service, "name",
+        activity->name, NULL);
+
+  if (activity->color != NULL)
+    salut_avahi_entry_group_service_set (activity->service, "color",
+        activity->color, NULL);
+
+  if (activity->type != NULL)
+    salut_avahi_entry_group_service_set (activity->service, "type",
+        activity->type, NULL);
+
+  if (!salut_avahi_entry_group_service_thaw (activity->service, &err))
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free (err);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
 announce_activity (SalutSelf *self,
                    SalutOLPCActivity *activity,
                    GError **error)
@@ -702,6 +733,10 @@ announce_activity (SalutSelf *self,
     return FALSE;
 
   if (!salut_avahi_entry_group_commit (activity->group, error))
+    return FALSE;
+
+  /* announce activities properties */
+  if (!update_activity_service (activity, error))
     return FALSE;
 
   return TRUE;
@@ -752,6 +787,38 @@ salut_self_add_olpc_activity (SalutSelf *self,
   return activity;
 }
 
+static gboolean
+update_activity (SalutOLPCActivity *activity,
+                 const gchar *name,
+                 const gchar *type,
+                 const gchar *color)
+{
+  gboolean changed = FALSE;
+
+  if (name != NULL && tp_strdiff (activity->name, name))
+    {
+      g_free (activity->name);
+      activity->name = g_strdup (name);
+      changed = TRUE;
+    }
+
+  if (type != NULL && tp_strdiff (activity->type, type))
+    {
+      g_free (activity->type);
+      activity->type = g_strdup (type);
+      changed = TRUE;
+    }
+
+  if (color != NULL && tp_strdiff (activity->color, color))
+    {
+      g_free (activity->color);
+      activity->color = g_strdup (color);
+      changed = TRUE;
+    }
+
+  return changed;
+}
+
 struct _set_olpc_activities_ctx
 {
   SalutSelf *self;
@@ -779,10 +846,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
   if (activity == NULL)
     {
       gboolean is_private = TRUE;
-
-      salut_contact_manager_merge_olpc_activity_properties (
-          priv->contact_manager, GPOINTER_TO_UINT (key), NULL, NULL, NULL,
-          &is_private);
+      const gchar *color, *name, *type;
 
       /* add the activity service if it's not in data->olpc_activities */
       activity = salut_self_add_olpc_activity (data->self, value,
@@ -791,7 +855,13 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
       if (activity == NULL)
         return;
 
-      activity->is_private = is_private;
+      if (salut_contact_manager_merge_olpc_activity_properties (
+          priv->contact_manager, GPOINTER_TO_UINT (key), &color, &name, &type,
+          &is_private))
+        {
+          update_activity (activity, name, type, color);
+          activity->is_private = is_private;
+        }
     }
   /* activity was already known */
   else if (tp_strdiff (value, activity->activity_id))
@@ -954,37 +1024,6 @@ salut_self_merge_olpc_activity_properties (SalutSelf *self,
   return TRUE;
 }
 
-static gboolean
-update_activity_service (SalutOLPCActivity *activity,
-                         GError **error)
-{
-  GError *err = NULL;
-  g_return_val_if_fail (activity_is_announced (activity), FALSE);
-
-  salut_avahi_entry_group_service_freeze (activity->service);
-
-  if (activity->name != NULL)
-    salut_avahi_entry_group_service_set (activity->service, "name",
-        activity->name, NULL);
-
-  if (activity->color != NULL)
-    salut_avahi_entry_group_service_set (activity->service, "color",
-        activity->color, NULL);
-
-  if (activity->type != NULL)
-    salut_avahi_entry_group_service_set (activity->service, "type",
-        activity->type, NULL);
-
-  if (!salut_avahi_entry_group_service_thaw (activity->service, &err))
-    {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-      g_error_free (err);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
 typedef struct
 {
   SalutSelf *self;
@@ -1124,38 +1163,6 @@ notify_activitiy_properties_changes (SalutSelf *self,
   return TRUE;
 }
 
-static gboolean
-update_activity (SalutOLPCActivity *activity,
-                 const gchar *name,
-                 const gchar *type,
-                 const gchar *color)
-{
-  gboolean changed = FALSE;
-
-  if (name != NULL && tp_strdiff (activity->name, name))
-    {
-      g_free (activity->name);
-      activity->name = g_strdup (name);
-      changed = TRUE;
-    }
-
-  if (type != NULL && tp_strdiff (activity->type, type))
-    {
-      g_free (activity->type);
-      activity->type = g_strdup (type);
-      changed = TRUE;
-    }
-
-  if (color != NULL && tp_strdiff (activity->color, color))
-    {
-      g_free (activity->color);
-      activity->color = g_strdup (color);
-      changed = TRUE;
-    }
-
-  return changed;
-}
-
 gboolean
 update_activity_privacy_policy (SalutSelf *self,
                                 SalutOLPCActivity *activity,
@@ -1168,12 +1175,7 @@ update_activity_privacy_policy (SalutSelf *self,
     {
       /* activity becomes public */
       DEBUG ("activity becomes public. Announce it");
-      if (!announce_activity (self, activity, error))
-        {
-          return FALSE;
-        }
-
-      return update_activity_service (activity, error);
+      return announce_activity (self, activity, error);
     }
   else
     {
