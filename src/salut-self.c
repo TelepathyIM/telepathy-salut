@@ -742,6 +742,23 @@ announce_activity (SalutSelf *self,
   return TRUE;
 }
 
+static gboolean
+stop_announce_activity (SalutSelf *self,
+                        SalutOLPCActivity *activity,
+                        GError **error)
+{
+
+  g_return_val_if_fail (activity_is_announced (activity), FALSE);
+  g_return_val_if_fail (activity->is_private, FALSE);
+
+  g_object_unref (activity->group);
+  activity->group = NULL;
+  activity->service = NULL;
+
+  DEBUG ("stop announce activity %s", activity->activity_id);
+  return TRUE;
+}
+
 static SalutOLPCActivity *
 salut_self_add_olpc_activity (SalutSelf *self,
                               const gchar *activity_id,
@@ -1179,10 +1196,8 @@ update_activity_privacy_policy (SalutSelf *self,
     }
   else
     {
-      /* TODO: stop to announce the activity */
+      return stop_announce_activity (self, activity, error);
     }
-
-  return TRUE;
 }
 
 gboolean
@@ -1221,9 +1236,16 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
     return TRUE;
 
   if (activity_is_announced (activity))
-    return update_activity_service (activity, error);
+    {
+      if (!send_olpc_activity_properties_changes_msg (self, activity, error))
+        return FALSE;
+
+      return update_activity_service (activity, error);
+    }
   else
-    return notify_activitiy_properties_changes (self, activity, error);
+    {
+      return notify_activitiy_properties_changes (self, activity, error);
+    }
 
   return TRUE;
 }
