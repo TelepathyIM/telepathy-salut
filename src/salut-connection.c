@@ -2127,13 +2127,27 @@ static void
 _contact_manager_olpc_activity_properties_change_cb (SalutContactManager *mgr,
                                                      TpHandle room,
                                                      const gchar *id,
-                                                     const gchar *color,
-                                                     const gchar *name,
-                                                     const gchar *type,
-                                                     gboolean is_private,
+                                                     const gchar *new_color,
+                                                     const gchar *new_name,
+                                                     const gchar *new_type,
+                                                     gboolean new_is_private,
                                                      gpointer user_data)
 {
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GHashTable *properties;
+  const gchar *color, *name, *type;
+  gboolean is_private;
+
+  if (!salut_self_olpc_activity_properties_updated (priv->self, room,
+        new_color, new_name, new_type, new_is_private))
+    /* Nothing was updated, no need to emit the signal */
+    return;
+
+  /* get most updated values */
+  if (!salut_self_merge_olpc_activity_properties (priv->self, room,
+        &color, &name, &type, &is_private))
+    return;
 
   properties = create_properties_table (color, name, type, is_private);
   salut_svc_olpc_activity_properties_emit_activity_properties_changed (

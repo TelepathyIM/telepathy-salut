@@ -110,6 +110,11 @@ gboolean salut_self_set_olpc_activity_properties (SalutSelf *self,
     const gchar *color, const gchar *name, const gchar *type,
     gboolean is_private, GError **error);
 
+gboolean salut_self_olpc_activity_properties_updated (SalutSelf *self,
+    TpHandle handle,
+    const gchar *color, const gchar *name, const gchar *type,
+    gboolean is_private);
+
 gboolean salut_self_set_olpc_activities (SalutSelf *self,
     GHashTable *act_id_to_room, GError **error);
 

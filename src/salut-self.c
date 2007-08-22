@@ -1055,6 +1055,33 @@ update_activity (SalutOLPCActivity *activity,
 }
 
 gboolean
+update_activity_privacy_policy (SalutSelf *self,
+                                SalutOLPCActivity *activity,
+                                gboolean is_private,
+                                GError **error)
+{
+  activity->is_private = is_private;
+
+  if (!is_private)
+    {
+      /* activity becomes public */
+      DEBUG ("activity becomes public. Announce it");
+      if (!announce_activity (self, activity, error))
+        {
+          return FALSE;
+        }
+
+      return update_activity_service (activity, error);
+    }
+  else
+    {
+      /* TODO: stop to announce the activity */
+    }
+
+  return TRUE;
+}
+
+gboolean
 salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          TpHandle handle,
                                          const gchar *color,
@@ -1066,6 +1093,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
       GUINT_TO_POINTER (handle));
+  gboolean updated;
 
   if (activity == NULL)
     {
@@ -1076,40 +1104,52 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
       return FALSE;
     }
 
-  update_activity (activity, name, type, color);
+  updated = update_activity (activity, name, type, color);
 
   if (activity->is_private != is_private)
     {
-      /* privacy policy change */
-      activity->is_private = is_private;
-
-      if (!is_private)
-        {
-          /* activity becomes public */
-          DEBUG ("activity becomes public. Announce it");
-          if (!announce_activity (self, activity, error))
-            {
-              return FALSE;
-            }
-
-          return update_activity_service (activity, error);
-        }
-      else
-        {
-          /* TODO: stop to announce the activity */
-        }
+      if (!update_activity_privacy_policy (self, activity, is_private, error))
+        return FALSE;
+      updated = TRUE;
     }
+
+  if (!updated)
+    return TRUE;
 
   if (activity_is_announced (activity))
-    {
-      return update_activity_service (activity, error);
-    }
+    return update_activity_service (activity, error);
   else
-    {
-      return notify_activitiy_properties_changes (self, activity, error);
-    }
+    return notify_activitiy_properties_changes (self, activity, error);
 
   return TRUE;
+}
+
+/* return TRUE if we have updated properties */
+gboolean
+salut_self_olpc_activity_properties_updated (SalutSelf *self,
+                                             TpHandle handle,
+                                             const gchar *color,
+                                             const gchar *name,
+                                             const gchar *type,
+                                             gboolean is_private)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
+      GUINT_TO_POINTER (handle));
+  gboolean updated;
+
+  if (activity == NULL)
+    {
+      /* We are not in this activity. Nothing to update */
+      return FALSE;
+    }
+
+  updated = update_activity (activity, name, type, color);
+
+  if (updated && activity_is_announced (activity))
+    update_activity_service (activity, NULL);
+
+  return updated;
 }
 
 gboolean
