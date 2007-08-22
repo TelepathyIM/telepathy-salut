@@ -2182,17 +2182,22 @@ olpc_activity_properties_changed (SalutConnection *self,
   const gchar *color, *name, *type;
   gboolean is_private;
 
-  if (!salut_self_olpc_activity_properties_updated (priv->self, room,
-        new_color, new_name, new_type, new_is_private))
-    /* Nothing was updated, no need to emit the signal */
-    return;
+  /* Update if needed */
+  salut_self_olpc_activity_properties_updated (priv->self, room,
+        new_color, new_name, new_type, new_is_private);
 
-  /* get most updated values */
-  if (!salut_self_merge_olpc_activity_properties (priv->self, room,
+  if (salut_self_merge_olpc_activity_properties (priv->self, room,
         &color, &name, &type, &is_private))
-    return;
+    {
+      /* SalutSelf know about this activity. Let's use its properties */
+      properties = create_properties_table (color, name, type, is_private);
+    }
+  else
+    {
+      properties = create_properties_table (new_color, new_name, new_type,
+          new_is_private);
+    }
 
-  properties = create_properties_table (color, name, type, is_private);
   salut_svc_olpc_activity_properties_emit_activity_properties_changed (
       self, room, properties);
 
