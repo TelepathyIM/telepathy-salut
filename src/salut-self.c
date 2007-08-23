@@ -165,6 +165,10 @@ struct _SalutSelfPrivate
   gboolean dispose_has_run;
 };
 
+void
+contact_manager_contact_change_cb (SalutContactManager *mgr,
+    SalutContact *contact, int changes, gpointer user_data);
+
 #define SALUT_SELF_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_SELF, SalutSelfPrivate))
 
 static void
@@ -392,6 +396,9 @@ salut_self_new (SalutConnection *connection,
   if (published_name == NULL) {
     priv->published_name = g_strdup(g_get_user_name());
   }
+
+  g_signal_connect (priv->contact_manager, "contact-change",
+      G_CALLBACK (contact_manager_contact_change_cb), ret);
 
   return ret;
 }
@@ -1434,10 +1441,59 @@ salut_self_olpc_augment_invitation (SalutSelf *self,
   salut_gibber_xmpp_node_add_children_from_properties (properties_node,
       properties, "property");
 
-  /* FIXME: remove the handle when he joins the activity */
   tp_handle_set_add (activity->invited, contact);
 
   g_hash_table_destroy (properties);
 }
+
+typedef struct
+{
+  GHashTable *olpc_activities;
+  TpHandle contact_handle;
+} remove_from_invited_ctx;
+
+static void
+remove_from_invited (const gchar *activity_id,
+                     TpHandle room,
+                     gpointer user_data)
+{
+  SalutOLPCActivity *activity;
+  remove_from_invited_ctx *data = (remove_from_invited_ctx *) user_data;
+
+  activity = g_hash_table_lookup (data->olpc_activities,
+      GUINT_TO_POINTER (room));
+  if (activity == NULL)
+    return;
+
+  if (tp_handle_set_remove (activity->invited, data->contact_handle))
+    DEBUG ("contact %d joined activity %s. Remove it from the invited list",
+        data->contact_handle, activity->activity_id);
+}
+
+/* when a buddy changes his activity list, check if we invited him
+ * to this activity and remove him from the invited set */
+void
+contact_manager_contact_change_cb (SalutContactManager *mgr,
+                                   SalutContact *contact,
+                                   int changes,
+                                   gpointer user_data)
+{
+  SalutSelf *self = SALUT_SELF (user_data);
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+      TP_BASE_CONNECTION (priv->connection), TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+  remove_from_invited_ctx data;
+
+  if (!(changes & SALUT_CONTACT_OLPC_ACTIVITIES))
+    return;
+
+  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
+
+  data.olpc_activities = priv->olpc_activities;
+  data.contact_handle = handle;
+  salut_contact_foreach_olpc_activity (contact, remove_from_invited, &data);
+}
+
 
 #endif /* ENABLE_OLPC */
