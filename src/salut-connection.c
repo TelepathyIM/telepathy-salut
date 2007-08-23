@@ -1715,15 +1715,15 @@ salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-
 static GHashTable *
 create_properties_table (const gchar *color,
                          const gchar *name,
                          const gchar *type,
+                         const gchar *tags,
                          gboolean is_private)
 {
   GHashTable *properties;
-  GValue *color_val, *name_val, *type_val, *private_val;
+  GValue *color_val, *name_val, *type_val, *tags_val, *private_val;
 
   properties = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
@@ -1749,6 +1749,13 @@ create_properties_table (const gchar *color,
       g_value_set_static_string (type_val, type);
       g_hash_table_insert (properties, "type", type_val);
     }
+  if (tags != NULL)
+    {
+      tags_val = g_slice_new0 (GValue);
+      g_value_init (tags_val, G_TYPE_STRING);
+      g_value_set_static_string (tags_val, tags);
+      g_hash_table_insert (properties, "tags", tags_val);
+    }
 
   private_val = g_slice_new0 (GValue);
   g_value_init (private_val, G_TYPE_BOOLEAN);
@@ -1769,7 +1776,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_ROOM);
   GHashTable *properties = NULL;
-  const gchar *color = NULL, *name = NULL, *type = NULL;
+  const gchar *color = NULL, *name = NULL, *type = NULL, *tags = NULL;
   gboolean is_private;
   GError *error = NULL;
   gboolean known = FALSE;
@@ -1780,12 +1787,13 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
     goto error;
 
   if (salut_contact_manager_merge_olpc_activity_properties
-      (priv->contact_manager, handle, &color, &name, &type, &is_private))
+      (priv->contact_manager, handle, &color, &name, &type, &tags,
+       &is_private))
     known = TRUE;
 
   /* Call this one second so it overwrites values from the first */
   if (salut_self_merge_olpc_activity_properties (priv->self, handle, &color,
-        &name, &type, &is_private))
+        &name, &type, &tags, &is_private))
     known = TRUE;
 
   if (!known)
@@ -1795,7 +1803,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
       goto error;
     }
 
-  properties = create_properties_table (color, name, type, is_private);
+  properties = create_properties_table (color, name, type, tags, is_private);
 
   salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
   g_hash_table_destroy (properties);
@@ -1820,10 +1828,11 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
       TP_HANDLE_TYPE_ROOM);
   GError *error = NULL;
   const gchar *known_properties[] = { "color", "name", "type", "private",
-      NULL };
+      "tags", NULL };
   const gchar *color = NULL;
   const gchar *name = NULL;
   const gchar *type = NULL;
+  const gchar *tags = NULL;
   gboolean is_private = TRUE;
   const GValue *val;
 
@@ -1925,6 +1934,19 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
       name = g_value_get_string (val);
     }
 
+  val = g_hash_table_lookup (properties, "tags");
+  if (val != NULL)
+    {
+      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "tags value should be of type s");
+          goto error;
+        }
+
+      tags = g_value_get_string (val);
+    }
+
   val = g_hash_table_lookup (properties, "private");
   if (val != NULL)
     {
@@ -1939,7 +1961,7 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
     }
 
   if (!salut_self_set_olpc_activity_properties (priv->self, handle, color,
-        name, type, is_private, &error))
+        name, type, tags, is_private, &error))
     goto error;
 
   salut_svc_olpc_activity_properties_return_from_set_properties (context);
@@ -1956,10 +1978,11 @@ check_properties (GHashTable *properties,
                   const gchar **color,
                   const gchar **name,
                   const gchar **type,
+                  const gchar **tags,
                   gboolean *is_private)
 {
-  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val, 
-      *is_private_val;
+  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val,
+      *tags_val, *is_private_val;
 
   /* activity ID */
   activity_id_val = g_hash_table_lookup (properties, "id");
@@ -2021,6 +2044,21 @@ check_properties (GHashTable *properties,
         *type = g_value_get_string (activity_type_val);
     }
 
+  /* tags */
+  tags_val = g_hash_table_lookup (properties, "tags");
+  if (tags_val != NULL)
+    {
+      if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
+        {
+          DEBUG ("Invalid tags type");
+          return FALSE;
+        }
+
+      if (type != NULL)
+        *tags = g_value_get_string (tags_val);
+    }
+
+
   /* is_private */
   is_private_val = g_hash_table_lookup (properties, "private");
   if (is_private_val != NULL)
@@ -2048,7 +2086,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   GibberXmppNode *props_node;
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
-        *activity_type = NULL;
+        *activity_type = NULL, *tags = NULL;
   SalutContact *invitor;
 
   props_node = gibber_xmpp_node_get_child_ns (invite_node, "properties",
@@ -2066,11 +2104,11 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
       "property");
 
   if (!check_properties (properties, &activity_id, &color, &activity_name,
-        &activity_type, NULL))
+        &activity_type, &tags, NULL))
     return;
 
   salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
-      invitor, room, activity_id, color, activity_name, activity_type);
+      invitor, room, activity_id, color, activity_name, activity_type, tags);
 
   salut_contact_takes_part_olpc_activity (invitor, room, activity_id);
 
@@ -2175,27 +2213,29 @@ olpc_activity_properties_changed (SalutConnection *self,
                                   const gchar *new_color,
                                   const gchar *new_name,
                                   const gchar *new_type,
+                                  const gchar *new_tags,
                                   gboolean new_is_private)
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GHashTable *properties;
-  const gchar *color, *name, *type;
+  const gchar *color, *name, *type, *tags;
   gboolean is_private;
 
   /* Update if needed */
   salut_self_olpc_activity_properties_updated (priv->self, room,
-        new_color, new_name, new_type, new_is_private);
+        new_color, new_name, new_type, new_tags, new_is_private);
 
   if (salut_self_merge_olpc_activity_properties (priv->self, room,
-        &color, &name, &type, &is_private))
+        &color, &name, &type, &tags, &is_private))
     {
       /* SalutSelf know about this activity. Let's use its properties */
-      properties = create_properties_table (color, name, type, is_private);
+      properties = create_properties_table (color, name, type, tags,
+          is_private);
     }
   else
     {
       properties = create_properties_table (new_color, new_name, new_type,
-          new_is_private);
+          new_tags, new_is_private);
     }
 
   salut_svc_olpc_activity_properties_emit_activity_properties_changed (
@@ -2211,13 +2251,14 @@ _contact_manager_olpc_activity_properties_change_cb (SalutContactManager *mgr,
                                                      const gchar *new_color,
                                                      const gchar *new_name,
                                                      const gchar *new_type,
+                                                     const gchar *new_tags,
                                                      gboolean new_is_private,
                                                      gpointer user_data)
 {
   SalutConnection *self = SALUT_CONNECTION (user_data);
 
   olpc_activity_properties_changed (self, room, id, new_color,
-      new_name, new_type, new_is_private);
+      new_name, new_type, new_tags, new_is_private);
 }
 
 gboolean
@@ -2229,7 +2270,7 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
   GibberXmppNode *props_node;
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
-        *activity_type = NULL;
+        *activity_type = NULL, *tags = NULL;
   gboolean is_private = FALSE;
 
   props_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
@@ -2241,11 +2282,11 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
       "property");
 
   if (!check_properties (properties, &activity_id, &color, &activity_name,
-        &activity_type, &is_private))
+        &activity_type, &tags, &is_private))
     return TRUE;
 
   olpc_activity_properties_changed (self, room, activity_id,
-      color, activity_name, activity_type, is_private);
+      color, activity_name, activity_type, tags, is_private);
 
   g_hash_table_destroy (properties);
 

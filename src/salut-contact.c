@@ -210,10 +210,10 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
   signals[ACTIVITY_CHANGE] = g_signal_new("activity-change",
       G_OBJECT_CLASS_TYPE (salut_contact_class),
       G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_signals_marshal_VOID__STRING_UINT_STRING_STRING_STRING_STRING,
-      G_TYPE_NONE,
-      6, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING,
-      G_TYPE_STRING, G_TYPE_STRING);
+      salut_signals_marshal_VOID__STRING_UINT_STRING_STRING_STRING_STRING_STRING,
+      G_TYPE_NONE, 7,
+      G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING,
+      G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 #endif
 }
 
@@ -446,6 +446,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
   char *color = NULL;
   char *activity_name = NULL;
   char *activity_type = NULL;
+  char *tags = NULL;
   SalutContactActivity *activity;
 
   DEBUG ("called: \"%s\".%s. on %s port %u", name, domain, host_name, port);
@@ -502,6 +503,11 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
       avahi_string_list_get_pair (t, NULL, &activity_type, NULL);
     }
 
+  if ((t = avahi_string_list_find (txt, "tags")) != NULL)
+    {
+      avahi_string_list_get_pair (t, NULL, &tags, NULL);
+    }
+
   if (room_handle == 0 || activity_id == NULL || activity_id[0] == '\0')
     {
       DEBUG ("Activity ID %s, room handle %u: removing from hash",
@@ -535,7 +541,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
 
   g_signal_emit (self, signals[ACTIVITY_CHANGE], 0,
       name, activity->room, activity->activity_id,
-      color, activity_name, activity_type);
+      color, activity_name, activity_type, tags);
 
   if (room_handle != 0)
     tp_handle_unref (priv->room_repo, room_handle);
@@ -543,6 +549,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
   avahi_free (activity_type);
   avahi_free (activity_name);
   avahi_free (color);
+  avahi_free (tags);
 }
 
 void

@@ -73,6 +73,7 @@ typedef struct
   gchar *color;
   gchar *name;
   gchar *type;
+  gchar *tags;
   gboolean is_private;
   size_t refcount;
 } SalutContactManagerActivity;
@@ -143,6 +144,7 @@ activity_unref (SalutContactManagerActivity *activity)
   g_free (activity->color);
   g_free (activity->name);
   g_free (activity->type);
+  g_free (activity->tags);
   g_slice_free (SalutContactManagerActivity, activity);
 }
 #endif
@@ -196,10 +198,10 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
       G_SIGNAL_RUN_LAST,
       0,
       NULL, NULL,
-      salut_signals_marshal_VOID__UINT_STRING_STRING_STRING_STRING_BOOLEAN,
-      G_TYPE_NONE, 6,
+      salut_signals_marshal_VOID__UINT_STRING_STRING_STRING_STRING_STRING_BOOLEAN,
+      G_TYPE_NONE, 7,
       G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING,
-      G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN);
+      G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN);
 #endif
 }
 
@@ -287,7 +289,8 @@ static gboolean
 update_activity (SalutContactManagerActivity *activity,
                  const gchar *name,
                  const gchar *type,
-                 const gchar *color)
+                 const gchar *color,
+                 const gchar *tags)
 {
   gboolean changed = FALSE;
 
@@ -312,6 +315,13 @@ update_activity (SalutContactManagerActivity *activity,
       changed = TRUE;
     }
 
+  if (tags != NULL && tp_strdiff (activity->tags, tags))
+    {
+      g_free (activity->tags);
+      activity->tags = g_strdup (tags);
+      changed = TRUE;
+    }
+
   return changed;
 }
 
@@ -323,6 +333,7 @@ activity_change_cb(SalutContact *contact,
                    const gchar *color,
                    const gchar *name,
                    const gchar *type,
+                   const gchar *tags,
                    gpointer userdata)
 {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER (userdata);
@@ -330,12 +341,13 @@ activity_change_cb(SalutContact *contact,
   gboolean changed = FALSE;
   SalutContactManagerActivity *activity;
 
-  DEBUG ("enter: sn=%s, h=%u, aid=%s, c=%s, n=%s, t=%s",
+  DEBUG ("enter: sn=%s, h=%u, aid=%s, c=%s, n=%s, t=%s, tags=%s",
       service_name, room_handle,
       activity_id ? activity_id : "<NULL>",
       color ? color : "<NULL>",
       name ? name : "<NULL>",
-      type ? type : "<NULL>");
+      type ? type : "<NULL>",
+      tags ? tags : "<NULL>");
 
   if (room_handle == 0)
     {
@@ -382,13 +394,13 @@ activity_change_cb(SalutContact *contact,
           service_name);
     }
 
-  if (update_activity (activity, name, type, color))
+  if (update_activity (activity, name, type, color, tags))
     changed = TRUE;
 
   if (changed)
     {
       g_signal_emit (mgr, signals[ACTIVITY_PROPERTIES_CHANGE], 0, room_handle,
-          activity_id, color, name, type, FALSE);
+          activity_id, color, name, type, tags, FALSE);
     }
 }
 #endif
@@ -448,6 +460,7 @@ salut_contact_manager_merge_olpc_activity_properties
                                          const gchar **color,
                                          const gchar **name,
                                          const gchar **type,
+                                         const gchar **tags,
                                          gboolean *is_private)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
@@ -463,6 +476,8 @@ salut_contact_manager_merge_olpc_activity_properties
     *name = activity->name;
   if (activity->type != NULL && type != NULL)
     *type = activity->type;
+  if (activity->tags != NULL && tags != NULL)
+    *tags = activity->tags;
   if (is_private != NULL)
     *is_private = activity->is_private;
   return TRUE;
@@ -491,7 +506,8 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
                                                  const gchar *activity_id,
                                                  const gchar *color,
                                                  const gchar *name,
-                                                 const gchar *type)
+                                                 const gchar *type,
+                                                 const gchar *tags)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContactManagerActivity *activity;
@@ -513,13 +529,13 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
       changed = TRUE;
     }
 
-  if (update_activity (activity, name, type, color))
+  if (update_activity (activity, name, type, color, tags))
     changed = TRUE;
 
   if (changed)
     {
       g_signal_emit (self, signals[ACTIVITY_PROPERTIES_CHANGE], 0, room,
-          activity_id, color, name, type, TRUE);
+          activity_id, color, name, type, tags, TRUE);
     }
 }
 #endif

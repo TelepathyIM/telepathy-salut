@@ -78,6 +78,7 @@ typedef struct
   gchar *color;
   gchar *name;
   gchar *type;
+  gchar *tags;
   gboolean is_private;
   /* Handles of contacts we invited to join this activity */
   TpHandleSet *invited;
@@ -106,6 +107,7 @@ activity_free (SalutOLPCActivity *activity)
   g_free (activity->color);
   g_free (activity->name);
   g_free (activity->type);
+  g_free (activity->tags);
   tp_handle_set_destroy (activity->invited);
 
   g_slice_free (SalutOLPCActivity, activity);
@@ -689,6 +691,10 @@ update_activity_service (SalutOLPCActivity *activity,
     salut_avahi_entry_group_service_set (activity->service, "type",
         activity->type, NULL);
 
+  if (activity->tags != NULL)
+    salut_avahi_entry_group_service_set (activity->service, "tags",
+        activity->tags, NULL);
+
   if (!salut_avahi_entry_group_service_thaw (activity->service, &err))
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
@@ -815,7 +821,8 @@ static gboolean
 update_activity (SalutOLPCActivity *activity,
                  const gchar *name,
                  const gchar *type,
-                 const gchar *color)
+                 const gchar *color,
+                 const gchar *tags)
 {
   gboolean changed = FALSE;
 
@@ -837,6 +844,13 @@ update_activity (SalutOLPCActivity *activity,
     {
       g_free (activity->color);
       activity->color = g_strdup (color);
+      changed = TRUE;
+    }
+
+  if (tags != NULL && tp_strdiff (activity->tags, tags))
+    {
+      g_free (activity->tags);
+      activity->tags = g_strdup (tags);
       changed = TRUE;
     }
 
@@ -870,7 +884,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
   if (activity == NULL)
     {
       gboolean is_private = TRUE;
-      const gchar *color, *name, *type;
+      const gchar *color, *name, *type, *tags;
 
       /* add the activity service if it's not in data->olpc_activities */
       activity = salut_self_add_olpc_activity (data->self, value,
@@ -881,9 +895,9 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
 
       if (salut_contact_manager_merge_olpc_activity_properties (
           priv->contact_manager, GPOINTER_TO_UINT (key), &color, &name, &type,
-          &is_private))
+          &tags, &is_private))
         {
-          update_activity (activity, name, type, color);
+          update_activity (activity, name, type, color, tags);
           activity->is_private = is_private;
         }
     }
@@ -1028,6 +1042,7 @@ salut_self_merge_olpc_activity_properties (SalutSelf *self,
                                            const gchar **color,
                                            const gchar **name,
                                            const gchar **type,
+                                           const gchar **tags,
                                            gboolean *is_private)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
@@ -1043,6 +1058,8 @@ salut_self_merge_olpc_activity_properties (SalutSelf *self,
     *name = activity->name;
   if (activity->type != NULL && type != NULL)
     *type = activity->type;
+  if (activity->tags != NULL && tags != NULL)
+    *tags = activity->tags;
   *is_private = activity->is_private;
   return TRUE;
 }
@@ -1086,7 +1103,7 @@ static GHashTable *
 create_properties_table (SalutOLPCActivity *activity)
 {
   GHashTable *properties;
-  GValue *color_val, *name_val, *type_val, *private_val;
+  GValue *color_val, *name_val, *type_val, *tags_val, *private_val;
 
   properties = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
@@ -1111,6 +1128,13 @@ create_properties_table (SalutOLPCActivity *activity)
       g_value_init (type_val, G_TYPE_STRING);
       g_value_set_static_string (type_val, activity->type);
       g_hash_table_insert (properties, "type", type_val);
+    }
+  if (activity->tags != NULL)
+    {
+      tags_val = g_slice_new0 (GValue);
+      g_value_init (tags_val, G_TYPE_STRING);
+      g_value_set_static_string (tags_val, activity->tags);
+      g_hash_table_insert (properties, "tags", tags_val);
     }
 
   private_val = g_slice_new0 (GValue);
@@ -1212,6 +1236,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          const gchar *color,
                                          const gchar *name,
                                          const gchar *type,
+                                         const gchar *tags,
                                          gboolean is_private,
                                          GError **error)
 {
@@ -1229,7 +1254,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
       return FALSE;
     }
 
-  updated = update_activity (activity, name, type, color);
+  updated = update_activity (activity, name, type, color, tags);
 
   if (activity->is_private != is_private)
     {
@@ -1263,6 +1288,7 @@ salut_self_olpc_activity_properties_updated (SalutSelf *self,
                                              const gchar *color,
                                              const gchar *name,
                                              const gchar *type,
+                                             const gchar *tags,
                                              gboolean is_private)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
@@ -1276,7 +1302,7 @@ salut_self_olpc_activity_properties_updated (SalutSelf *self,
       return FALSE;
     }
 
-  updated = update_activity (activity, name, type, color);
+  updated = update_activity (activity, name, type, color, tags);
 
   if (activity->is_private != is_private)
     {

@@ -75,13 +75,14 @@ salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
 #ifdef ENABLE_OLPC
 gboolean salut_contact_manager_merge_olpc_activity_properties
   (SalutContactManager *self, TpHandle handle, const gchar **color,
-   const gchar **name, const gchar **type, gboolean *is_private);
+   const gchar **name, const gchar **type, const gchar **tags,
+   gboolean *is_private);
 
 void
 salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
     SalutContact *invitor, TpHandle room, const gchar *activity_id,
     const gchar *color, const gchar *activity_name,
-    const gchar *activity_type);
+    const gchar *activity_type, const gchar *tags);
 #endif
 
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/
