@@ -547,13 +547,6 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       g_object_unref (priv->activity_browser);
       priv->activity_browser = NULL;
     }
-#endif
-
-  if (priv->contacts) {
-    g_hash_table_foreach_remove(priv->contacts, dispose_contact, mgr);
-    g_hash_table_destroy(priv->contacts);
-    priv->contacts = NULL;
-  }
 
   if (priv->olpc_activities_by_mdns != NULL)
     {
@@ -566,6 +559,13 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       g_hash_table_destroy (priv->olpc_activities_by_room);
       priv->olpc_activities_by_room = NULL;
     }
+#endif
+
+  if (priv->contacts) {
+    g_hash_table_foreach_remove(priv->contacts, dispose_contact, mgr);
+    g_hash_table_destroy(priv->contacts);
+    priv->contacts = NULL;
+  }
 }
 
 static void
