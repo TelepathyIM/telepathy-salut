@@ -74,7 +74,7 @@ static void *salut_params_new(void);
 static void salut_params_free(void *params);
 
 const TpCMProtocolSpec salut_protocols[] = {
-  {"salut", salut_params, salut_params_new, salut_params_free },
+  {"ll-xmpp", salut_params, salut_params_new, salut_params_free },
   { NULL, NULL}
 };
 
@@ -137,7 +137,7 @@ salut_connection_manager_new_connection(TpBaseConnectionManager *self,
   SalutConnection *conn;
   SalutParams *params = (SalutParams *)parsed_params;
 
-  g_assert(!tp_strdiff(proto, "salut"));
+  g_assert(!tp_strdiff(proto, "ll-xmpp"));
 
   conn = g_object_new(SALUT_TYPE_CONNECTION,
                       "protocol", proto,
