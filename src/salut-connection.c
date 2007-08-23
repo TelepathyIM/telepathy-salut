@@ -1815,6 +1815,163 @@ error:
   g_error_free (error);
 }
 
+static gboolean
+check_color (const gchar *color)
+{
+  int len, i;
+
+  /* be very anal about the color format */
+  len = strlen (color);
+  if (len != 15)
+    return FALSE;
+
+  for (i = 0 ; i < len ; i++)
+    {
+      switch (i)
+        {
+          case 0:
+          case 8:
+            if (color[i] != '#')
+              return FALSE;
+            break;
+          case 7:
+            if (color[i] != ',')
+              return FALSE;
+            break;
+          default:
+            if (!isxdigit (color[i]))
+              return FALSE;
+            break;
+        }
+    }
+
+  return TRUE;
+}
+
+static gboolean
+extract_properties_from_hash (GHashTable *properties,
+                              const gchar **id,
+                              const gchar **color,
+                              const gchar **name,
+                              const gchar **type,
+                              const gchar **tags,
+                              gboolean *is_private,
+                              GError **error)
+{
+  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val,
+      *tags_val, *is_private_val;
+
+  /* activity ID */
+  activity_id_val = g_hash_table_lookup (properties, "id");
+  if (activity_id_val != NULL)
+    {
+      if (G_VALUE_TYPE (activity_id_val) != G_TYPE_STRING)
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "Activity ID value should be of type s");
+          return FALSE;
+        }
+
+      if (id != NULL)
+        *id = g_value_get_string (activity_id_val);
+    }
+
+  /* color */
+  color_val = g_hash_table_lookup (properties, "color");
+  if (color_val != NULL)
+    {
+      if (G_VALUE_TYPE (color_val) != G_TYPE_STRING)
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "Color value should be of type s");
+          return FALSE;
+        }
+
+      if (color != NULL)
+        {
+          *color = g_value_get_string (color_val);
+
+           if (!check_color (*color))
+            {
+              g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                  "Color value has an incorrect format");
+              return FALSE;
+            }
+        }
+    }
+
+  /* name */
+  activity_name_val = g_hash_table_lookup (properties, "name");
+  if (activity_name_val != NULL)
+    {
+      if (G_VALUE_TYPE (activity_name_val) != G_TYPE_STRING)
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "name value should be of type s");
+          return FALSE;
+        }
+
+      if (name != NULL)
+        *name = g_value_get_string (activity_name_val);
+    }
+
+  /* type */
+  activity_type_val = g_hash_table_lookup (properties, "type");
+  if (activity_type_val != NULL)
+    {
+      if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "type value should be of type s");
+          return FALSE;
+        }
+
+      if (type != NULL)
+        {
+          *type = g_value_get_string (activity_type_val);
+
+          if (*type[0] == '\0')
+            {
+              g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                  "type value must be non-empty");
+              return FALSE;
+            }
+        }
+    }
+
+  /* tags */
+  tags_val = g_hash_table_lookup (properties, "tags");
+  if (tags_val != NULL)
+    {
+      if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "tags value should be of type s");
+          return FALSE;
+        }
+
+      if (type != NULL)
+        *tags = g_value_get_string (tags_val);
+    }
+
+  /* is_private */
+  is_private_val = g_hash_table_lookup (properties, "private");
+  if (is_private_val != NULL)
+    {
+     if (G_VALUE_TYPE (is_private_val) != G_TYPE_BOOLEAN)
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "private value should be of type b");
+          return FALSE;
+        }
+
+      if (is_private != NULL)
+        *is_private = g_value_get_boolean (is_private_val);
+    }
+
+  return TRUE;
+}
+
 static void
 salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
                                      TpHandle handle,
@@ -1829,12 +1986,8 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
   GError *error = NULL;
   const gchar *known_properties[] = { "color", "name", "type", "private",
       "tags", NULL };
-  const gchar *color = NULL;
-  const gchar *name = NULL;
-  const gchar *type = NULL;
-  const gchar *tags = NULL;
+  const gchar *color = NULL, *name = NULL, *type = NULL, *tags = NULL;
   gboolean is_private = TRUE;
-  const GValue *val;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1849,116 +2002,9 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
       goto error;
     }
 
-  val = (const GValue *) g_hash_table_lookup (properties, "color");
-  if (val != NULL)
-    {
-      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
-        {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-              "Color value should be of type s");
-          goto error;
-        }
-      else
-        {
-          int len;
-          gboolean correct = TRUE;
-
-          color = g_value_get_string (val);
-
-          /* be very anal about the color format */
-          len = strlen (color);
-          if (len != 15)
-            {
-              correct = FALSE;
-            }
-          else
-            {
-              int i;
-              for (i = 0 ; i < len ; i++)
-                {
-                  switch (i)
-                    {
-                      case 0:
-                      case 8:
-                        correct = (color[i] == '#');
-                        break;
-                      case 7:
-                        correct = (color[i] == ',');
-                        break;
-                      default:
-                        correct = isxdigit (color[i]);
-                        break;
-                    }
-                }
-            }
-
-          if (!correct)
-            {
-              error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                  "Color value has an incorrect format");
-              goto error;
-            }
-        }
-    }
-
-  val = g_hash_table_lookup (properties, "type");
-  if (val != NULL)
-    {
-      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
-        {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-              "name value should be of type s");
-          goto error;
-        }
-
-      type = g_value_get_string (val);
-
-      if (type[0] == '\0')
-        {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-              "type value must be non-empty");
-          goto error;
-        }
-    }
-
-  val = g_hash_table_lookup (properties, "name");
-  if (val != NULL)
-    {
-      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
-        {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-              "name value should be of type s");
-          goto error;
-        }
-
-      name = g_value_get_string (val);
-    }
-
-  val = g_hash_table_lookup (properties, "tags");
-  if (val != NULL)
-    {
-      if (G_VALUE_TYPE (val) != G_TYPE_STRING)
-        {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-              "tags value should be of type s");
-          goto error;
-        }
-
-      tags = g_value_get_string (val);
-    }
-
-  val = g_hash_table_lookup (properties, "private");
-  if (val != NULL)
-    {
-      if (G_VALUE_TYPE (val) != G_TYPE_BOOLEAN)
-        {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-              "private value should be of type b");
-          goto error;
-        }
-
-      is_private = g_value_get_boolean (val);
-    }
+  if (!extract_properties_from_hash (properties, NULL, &color, &name, &type,
+        &tags, &is_private, &error))
+    goto error;
 
   if (!salut_self_set_olpc_activity_properties (priv->self, handle, color,
         name, type, tags, is_private, &error))
@@ -1970,110 +2016,6 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
 error:
   dbus_g_method_return_error (context, error);
   g_error_free (error);
-}
-
-static gboolean
-check_properties (GHashTable *properties,
-                  const gchar **id,
-                  const gchar **color,
-                  const gchar **name,
-                  const gchar **type,
-                  const gchar **tags,
-                  gboolean *is_private)
-{
-  GValue *activity_id_val, *color_val, *activity_name_val, *activity_type_val,
-      *tags_val, *is_private_val;
-
-  /* activity ID */
-  activity_id_val = g_hash_table_lookup (properties, "id");
-  if (activity_id_val == NULL)
-    {
-      DEBUG ("No activity ID");
-      return FALSE;
-    }
-
-  if (G_VALUE_TYPE (activity_id_val) != G_TYPE_STRING)
-    {
-      DEBUG ("Invalid activity ID type");
-      return FALSE;
-    }
-
-  if (id != NULL)
-    *id = g_value_get_string (activity_id_val);
-
-  /* color */
-  color_val = g_hash_table_lookup (properties, "color");
-  if (color_val != NULL)
-    {
-      if (G_VALUE_TYPE (color_val) != G_TYPE_STRING)
-        {
-          DEBUG ("Invalid activity color type");
-          return FALSE;
-        }
-
-      if (color != NULL)
-        *color = g_value_get_string (color_val);
-      /* TODO: check color syntax */
-    }
-
-  /* name */
-  activity_name_val = g_hash_table_lookup (properties, "name");
-  if (activity_name_val != NULL)
-    {
-      if (G_VALUE_TYPE (activity_name_val) != G_TYPE_STRING)
-        {
-          DEBUG ("Invalid activity name type");
-          return FALSE;
-        }
-
-      if (name != NULL)
-        *name = g_value_get_string (activity_name_val);
-    }
-
-  /* type */
-  activity_type_val = g_hash_table_lookup (properties, "type");
-  if (activity_type_val != NULL)
-    {
-      if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
-        {
-          DEBUG ("Invalid activity type");
-          return FALSE;
-        }
-
-      if (type != NULL)
-        *type = g_value_get_string (activity_type_val);
-    }
-
-  /* tags */
-  tags_val = g_hash_table_lookup (properties, "tags");
-  if (tags_val != NULL)
-    {
-      if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
-        {
-          DEBUG ("Invalid tags type");
-          return FALSE;
-        }
-
-      if (type != NULL)
-        *tags = g_value_get_string (tags_val);
-    }
-
-
-  /* is_private */
-  is_private_val = g_hash_table_lookup (properties, "private");
-  if (is_private_val != NULL)
-    {
-     if (G_VALUE_TYPE (is_private_val) != G_TYPE_BOOLEAN)
-        {
-          DEBUG ("Invalid is_private type");
-          return FALSE;
-        }
-
-      if (is_private != NULL)
-        *is_private = g_value_get_boolean (is_private_val);
-    }
-
-  return TRUE;
 }
 
 void
@@ -2103,8 +2045,8 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   properties = salut_gibber_xmpp_node_extract_properties (props_node,
       "property");
 
-  if (!check_properties (properties, &activity_id, &color, &activity_name,
-        &activity_type, &tags, NULL))
+  if (!extract_properties_from_hash (properties, &activity_id, &color,
+        &activity_name, &activity_type, &tags, NULL, NULL))
     return;
 
   salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
@@ -2281,8 +2223,8 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
   properties = salut_gibber_xmpp_node_extract_properties (props_node,
       "property");
 
-  if (!check_properties (properties, &activity_id, &color, &activity_name,
-        &activity_type, &tags, &is_private))
+  if (!extract_properties_from_hash (properties, &activity_id, &color,
+        &activity_name, &activity_type, &tags, &is_private, NULL))
     return TRUE;
 
   olpc_activity_properties_changed (self, room, activity_id,
