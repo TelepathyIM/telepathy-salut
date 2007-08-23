@@ -857,6 +857,8 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
       return;
     }
 
+  DEBUG("Setting my alias to: %s", alias);
+
   if (!salut_self_set_alias (priv->self, alias, &error)) {
     dbus_g_method_return_error(context, error);
     g_error_free(error);
