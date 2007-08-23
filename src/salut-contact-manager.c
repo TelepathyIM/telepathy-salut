@@ -513,8 +513,6 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
       changed = TRUE;
     }
 
-  /* FIXME: we shouldn't trust invites anymore to update properties
-   * if we are in the activity */
   if (update_activity (activity, name, type, color))
     changed = TRUE;
 
