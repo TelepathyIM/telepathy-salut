@@ -359,7 +359,18 @@ activity_change_cb(SalutContact *contact,
         }
       else
         {
-          activity->refcount++;
+          if (activity->is_private)
+            {
+              /* We knew this activity before as a private activity.
+               * We don't increment it's refcount now as it was set to 1
+               * due to the invitation */
+              activity->is_private = FALSE;
+              changed = TRUE;
+            }
+          else
+            {
+              activity->refcount++;
+            }
         }
       DEBUG ("Activity %u now advertised as %s", room_handle, service_name);
       g_hash_table_insert (priv->olpc_activities_by_mdns,
@@ -493,9 +504,6 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
       DEBUG ("new activity %s created due to invite from %s", activity_id,
           invitor->name);
 
-      /* FIXME: we'll never decrement activity's refcount. So if
-       * the activity becomes public (and so announced), its refcount
-       * will be one unit too high */
       activity = activity_new (self, room);
       activity->activity_id = g_strdup (activity_id);
       /* We didn't know this activity before, it's a private one */
