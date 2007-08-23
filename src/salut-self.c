@@ -931,7 +931,6 @@ _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 {
   struct _set_olpc_activities_ctx *data = user_data;
 
-  /* FIXME: maybe we should just stop to announce this activity ? */
   /* delete the activity service if it's not in data->room_to_act_id */
   return (g_hash_table_lookup (data->room_to_act_id, key) == NULL);
 }
@@ -1494,6 +1493,4 @@ contact_manager_contact_change_cb (SalutContactManager *mgr,
   data.contact_handle = handle;
   salut_contact_foreach_olpc_activity (contact, remove_from_invited, &data);
 }
-
-
 #endif /* ENABLE_OLPC */
