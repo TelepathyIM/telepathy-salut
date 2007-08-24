@@ -1218,9 +1218,14 @@ gboolean
 update_activity_privacy (SalutSelf *self,
                          SalutOLPCActivity *activity,
                          gboolean is_private,
+                         gboolean *updated,
                          GError **error)
 {
+  if (activity->is_private == is_private)
+    return TRUE;
+
   activity->is_private = is_private;
+  *updated = TRUE;
 
   if (!is_private)
     {
@@ -1260,12 +1265,8 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
 
   updated = update_activity (activity, name, type, color, tags);
 
-  if (activity->is_private != is_private)
-    {
-      if (!update_activity_privacy (self, activity, is_private, error))
-        return FALSE;
-      updated = TRUE;
-    }
+  if (!update_activity_privacy (self, activity, is_private, &updated, error))
+    return FALSE;
 
   if (!updated)
     return TRUE;
@@ -1308,12 +1309,8 @@ salut_self_olpc_activity_properties_updated (SalutSelf *self,
 
   updated = update_activity (activity, name, type, color, tags);
 
-  if (activity->is_private != is_private)
-    {
-      if (!update_activity_privacy (self, activity, is_private, NULL))
-        return FALSE;
-      updated = TRUE;
-    }
+  if (!update_activity_privacy (self, activity, is_private, &updated, NULL))
+    return FALSE;
 
   if (updated && activity_is_announced (activity))
     update_activity_service (activity, NULL);
