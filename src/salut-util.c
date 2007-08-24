@@ -43,7 +43,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
   const gchar *value;
   GValue *gvalue;
 
-  if (0 != strcmp (node->name, data->prop))
+  if (tp_strdiff (node->name, data->prop))
     return TRUE;
 
   name = gibber_xmpp_node_get_attribute (node, "name");
@@ -57,7 +57,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
   if (type == NULL || value == NULL)
     return TRUE;
 
-  if (0 == strcmp (type, "bytes"))
+  if (!tp_strdiff (type, "bytes"))
     {
       GArray *arr;
       guchar *decoded;
@@ -75,36 +75,36 @@ xmpp_node_extract_property (GibberXmppNode *node,
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
       g_free (decoded);
     }
-  else if (0 == strcmp (type, "str"))
+  else if (!tp_strdiff (type, "str"))
     {
       gvalue = g_slice_new0 (GValue);
       g_value_init (gvalue, G_TYPE_STRING);
       g_value_set_string (gvalue, value);
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
-  else if (0 == strcmp (type, "int"))
+  else if (!tp_strdiff (type, "int"))
     {
       gvalue = g_slice_new0 (GValue);
       g_value_init (gvalue, G_TYPE_INT);
       g_value_set_int (gvalue, atoi (value));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
-  else if (0 == strcmp (type, "uint"))
+  else if (!tp_strdiff (type, "uint"))
     {
       gvalue = g_slice_new0 (GValue);
       g_value_init (gvalue, G_TYPE_UINT);
       g_value_set_uint (gvalue, atoi (value));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
-  else if (0 == strcmp (type, "b"))
+  else if (!tp_strdiff (type, "b"))
     {
       gboolean val;
 
-      if (strcmp (value, "0") == 0)
+      if (!tp_strdiff (value, "0"))
         {
           val = FALSE;
         }
-      else if (strcmp (value, "1") == 0)
+      else if (!tp_strdiff (value, "1"))
         {
           val = TRUE;
         }
