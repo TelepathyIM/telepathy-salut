@@ -2162,15 +2162,20 @@ olpc_activity_properties_changed (SalutConnection *self,
   GHashTable *properties;
   const gchar *color, *name, *type, *tags;
   gboolean is_private;
+  gboolean self_updated;
 
   /* Update if needed */
-  salut_self_olpc_activity_properties_updated (priv->self, room,
+  self_updated = salut_self_olpc_activity_properties_updated (priv->self, room,
         new_color, new_name, new_type, new_tags, new_is_private);
 
   if (salut_self_merge_olpc_activity_properties (priv->self, room,
         &color, &name, &type, &tags, &is_private))
     {
-      /* SalutSelf know about this activity. Let's use its properties */
+      /* SalutSelf know about this activity. Let's use its properties if
+       * something was updated */
+      if (!self_updated)
+        return;
+
       properties = create_properties_table (color, name, type, tags,
           is_private);
     }
