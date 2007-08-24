@@ -477,6 +477,9 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
   if ((t = avahi_string_list_find (txt, "activity-id")) != NULL)
     {
       avahi_string_list_get_pair (t, NULL, &activity_id, NULL);
+
+      /* remove from the private activity list if needed */
+      g_hash_table_remove (priv->olpc_private_activities, activity_id);
     }
 
   if ((t = avahi_string_list_find (txt, "room")) != NULL)
@@ -552,10 +555,21 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
   avahi_free (tags);
 }
 
+static gboolean
+activity_have_id (gpointer key,
+                  gpointer value,
+                  gpointer user_data)
+{
+  SalutContactActivity *activity = value;
+  const gchar *activity_id = user_data;
+
+  return (!tp_strdiff (activity->activity_id, activity_id));
+}
+
 void
 salut_contact_takes_part_olpc_activity (SalutContact *self,
-                                          TpHandle room,
-                                          const gchar *activity_id)
+                                        TpHandle room,
+                                        const gchar *activity_id)
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   SalutContactActivity *activity;
@@ -563,6 +577,11 @@ salut_contact_takes_part_olpc_activity (SalutContact *self,
   activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
   if (activity != NULL)
       return;
+
+  activity = g_hash_table_find (priv->olpc_announced_activities,
+      activity_have_id, (gchar *) activity_id);
+  if (activity_id != NULL)
+    return;
 
   DEBUG_CONTACT (self, "added in activity %s as he just invited us",
       activity_id);
