@@ -1215,10 +1215,10 @@ notify_activitiy_properties_changes (SalutSelf *self,
 }
 
 gboolean
-update_activity_privacy_policy (SalutSelf *self,
-                                SalutOLPCActivity *activity,
-                                gboolean is_private,
-                                GError **error)
+update_activity_privacy (SalutSelf *self,
+                         SalutOLPCActivity *activity,
+                         gboolean is_private,
+                         GError **error)
 {
   activity->is_private = is_private;
 
@@ -1262,7 +1262,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
 
   if (activity->is_private != is_private)
     {
-      if (!update_activity_privacy_policy (self, activity, is_private, error))
+      if (!update_activity_privacy (self, activity, is_private, error))
         return FALSE;
       updated = TRUE;
     }
@@ -1310,7 +1310,7 @@ salut_self_olpc_activity_properties_updated (SalutSelf *self,
 
   if (activity->is_private != is_private)
     {
-      if (!update_activity_privacy_policy (self, activity, is_private, NULL))
+      if (!update_activity_privacy (self, activity, is_private, NULL))
         return FALSE;
       updated = TRUE;
     }
