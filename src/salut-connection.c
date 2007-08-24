@@ -1723,44 +1723,44 @@ create_properties_table (const gchar *color,
                          gboolean is_private)
 {
   GHashTable *properties;
-  GValue *color_val, *name_val, *type_val, *tags_val, *private_val;
+  GValue *val;
 
   properties = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
 
   if (color != NULL)
     {
-      color_val = g_slice_new0 (GValue);
-      g_value_init (color_val, G_TYPE_STRING);
-      g_value_set_static_string (color_val, color);
-      g_hash_table_insert (properties, "color", color_val);
+      val = g_slice_new0 (GValue);
+      g_value_init (val, G_TYPE_STRING);
+      g_value_set_static_string (val, color);
+      g_hash_table_insert (properties, "color", val);
     }
   if (name != NULL)
     {
-      name_val = g_slice_new0 (GValue);
-      g_value_init (name_val, G_TYPE_STRING);
-      g_value_set_static_string (name_val, name);
-      g_hash_table_insert (properties, "name", name_val);
+      val = g_slice_new0 (GValue);
+      g_value_init (val, G_TYPE_STRING);
+      g_value_set_static_string (val, name);
+      g_hash_table_insert (properties, "name", val);
     }
   if (type != NULL)
     {
-      type_val = g_slice_new0 (GValue);
-      g_value_init (type_val, G_TYPE_STRING);
-      g_value_set_static_string (type_val, type);
-      g_hash_table_insert (properties, "type", type_val);
+      val = g_slice_new0 (GValue);
+      g_value_init (val, G_TYPE_STRING);
+      g_value_set_static_string (val, type);
+      g_hash_table_insert (properties, "type", val);
     }
   if (tags != NULL)
     {
-      tags_val = g_slice_new0 (GValue);
-      g_value_init (tags_val, G_TYPE_STRING);
-      g_value_set_static_string (tags_val, tags);
-      g_hash_table_insert (properties, "tags", tags_val);
+      val = g_slice_new0 (GValue);
+      g_value_init (val, G_TYPE_STRING);
+      g_value_set_static_string (val, tags);
+      g_hash_table_insert (properties, "tags", val);
     }
 
-  private_val = g_slice_new0 (GValue);
-  g_value_init (private_val, G_TYPE_BOOLEAN);
-  g_value_set_boolean (private_val, is_private);
-  g_hash_table_insert (properties, "private", private_val);
+  val = g_slice_new0 (GValue);
+  g_value_init (val, G_TYPE_BOOLEAN);
+  g_value_set_boolean (val, is_private);
+  g_hash_table_insert (properties, "private", val);
 
   return properties;
 }
