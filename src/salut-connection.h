@@ -21,6 +21,8 @@
 #ifndef __SALUT_CONNECTION_H__
 #define __SALUT_CONNECTION_H__
 
+#include "config.h"
+
 #include <glib-object.h>
 #include <dbus/dbus-glib.h>
 
@@ -76,6 +78,7 @@ typedef enum {
   LIST_HANDLE_LAST = LIST_HANDLE_KNOWN
 } SalutConnectionListHandle;
 
+#ifdef ENABLE_OLPC
 void
 salut_connection_olpc_observe_invitation (SalutConnection *connection,
     TpHandle room, TpHandle invitor_handle, GibberXmppNode *invite_node);
@@ -83,6 +86,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *connection,
 gboolean
 salut_connection_olpc_observe_muc_stanza (SalutConnection *self, TpHandle room,
     TpHandle sender, GibberXmppStanza *stanza);
+#endif
 
 G_END_DECLS
 

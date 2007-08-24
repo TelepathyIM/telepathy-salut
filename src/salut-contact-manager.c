@@ -658,6 +658,7 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       priv->activity_browser = NULL;
     }
 
+#ifdef ENABLE_OLPC
   if (priv->olpc_activities_by_mdns != NULL)
     {
       g_hash_table_destroy (priv->olpc_activities_by_mdns);
@@ -669,13 +670,6 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       g_hash_table_destroy (priv->olpc_activities_by_room);
       priv->olpc_activities_by_room = NULL;
     }
-#endif
-
-  if (priv->contacts) {
-    g_hash_table_foreach_remove(priv->contacts, dispose_contact, mgr);
-    g_hash_table_destroy(priv->contacts);
-    priv->contacts = NULL;
-  }
 }
 
 static void

@@ -324,8 +324,10 @@ create_invitation (SalutMucChannel *self,
     (GHashTable *)gibber_muc_connection_get_parameters(priv->muc_connection),
     invitation_append_parameter, invite_node);
 
+#ifdef ENABLE_OLPC
   salut_self_olpc_augment_invitation (priv->self, priv->handle, handle,
       invite_node);
+#endif
 
   return msg;
 }
@@ -923,9 +925,11 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
     return;
   }
 
+#ifdef ENABLE_OLPC
   if (salut_connection_olpc_observe_muc_stanza (priv->connection, priv->handle,
         from_handle, stanza))
     return;
+#endif
 
   if (!text_helper_parse_incoming_message(stanza, &from, &msgtype,
                                           &body, &body_offset)) {

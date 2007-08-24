@@ -167,9 +167,11 @@ struct _SalutSelfPrivate
   gboolean dispose_has_run;
 };
 
+#ifdef ENABLE_OLPC
 void
 contact_manager_contact_change_cb (SalutContactManager *mgr,
     SalutContact *contact, int changes, gpointer user_data);
+#endif
 
 #define SALUT_SELF_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_SELF, SalutSelfPrivate))
 
@@ -399,8 +401,10 @@ salut_self_new (SalutConnection *connection,
     priv->published_name = g_strdup(g_get_user_name());
   }
 
+#ifdef ENABLE_OLPC
   g_signal_connect (priv->contact_manager, "contact-change",
       G_CALLBACK (contact_manager_contact_change_cb), ret);
+#endif
 
   return ret;
 }

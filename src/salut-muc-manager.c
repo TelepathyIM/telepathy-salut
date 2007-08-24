@@ -748,8 +748,10 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
 
   invitor_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
 
+#ifdef ENABLE_OLPC
   salut_connection_olpc_observe_invitation (priv->connection, room_handle,
       invitor_handle, invite);
+#endif
 
   salut_muc_channel_invited (chan, invitor_handle, reason, NULL);
   tp_handle_unref (contact_repo, invitor_handle);
