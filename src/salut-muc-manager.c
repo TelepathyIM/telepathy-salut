@@ -652,7 +652,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar *protocol = NULL;
   const gchar **params;
   TpHandle room_handle;
-  TpHandle invitor_handle;
+  TpHandle inviter_handle;
   const gchar **p;
   GHashTable *params_hash;
   GibberMucConnection *connection = NULL;
@@ -746,15 +746,15 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   /* FIXME handle properly */
   g_assert(chan != NULL);
 
-  invitor_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
+  inviter_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
 
 #ifdef ENABLE_OLPC
   salut_connection_olpc_observe_invitation (priv->connection, room_handle,
-      invitor_handle, invite);
+      inviter_handle, invite);
 #endif
 
-  salut_muc_channel_invited (chan, invitor_handle, reason, NULL);
-  tp_handle_unref (contact_repo, invitor_handle);
+  salut_muc_channel_invited (chan, inviter_handle, reason, NULL);
+  tp_handle_unref (contact_repo, inviter_handle);
 
 discard:
   if (params_hash != NULL)

@@ -2021,7 +2021,7 @@ error:
 void
 salut_connection_olpc_observe_invitation (SalutConnection *self,
                                           TpHandle room,
-                                          TpHandle invitor_handle,
+                                          TpHandle inviter_handle,
                                           GibberXmppNode *invite_node)
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
@@ -2029,7 +2029,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL, *tags = NULL;
-  SalutContact *invitor;
+  SalutContact *inviter;
 
   props_node = gibber_xmpp_node_get_child_ns (invite_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
@@ -2037,9 +2037,9 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   if (props_node == NULL)
     return;
 
-  invitor = salut_contact_manager_get_contact (priv->contact_manager,
-      invitor_handle);
-  if (invitor == NULL)
+  inviter = salut_contact_manager_get_contact (priv->contact_manager,
+      inviter_handle);
+  if (inviter == NULL)
     return;
 
   properties = salut_gibber_xmpp_node_extract_properties (props_node,
@@ -2050,9 +2050,9 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
     return;
 
   salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
-      invitor, room, activity_id, color, activity_name, activity_type, tags);
+      inviter, room, activity_id, color, activity_name, activity_type, tags);
 
-  salut_contact_takes_part_olpc_activity (invitor, room, activity_id);
+  salut_contact_takes_part_olpc_activity (inviter, room, activity_id);
 
   g_hash_table_destroy (properties);
 }

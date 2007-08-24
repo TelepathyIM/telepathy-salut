@@ -501,7 +501,7 @@ split_activity_name (const gchar **contact_name)
 
 void
 salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
-                                                 SalutContact *invitor,
+                                                 SalutContact *inviter,
                                                  TpHandle room,
                                                  const gchar *activity_id,
                                                  const gchar *color,
@@ -518,7 +518,7 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
   if (activity == NULL)
     {
       DEBUG ("new activity %s created due to invite from %s", activity_id,
-          invitor->name);
+          inviter->name);
 
       activity = activity_new (self, room);
       activity->activity_id = g_strdup (activity_id);

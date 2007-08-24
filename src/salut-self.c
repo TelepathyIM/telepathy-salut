@@ -1202,9 +1202,9 @@ send_olpc_activity_properties_changes_msg (SalutSelf *self,
 }
 
 static gboolean
-notify_activitiy_properties_changes (SalutSelf *self,
-                                     SalutOLPCActivity *activity,
-                                     GError **error)
+notify_activity_properties_changes (SalutSelf *self,
+                                    SalutOLPCActivity *activity,
+                                    GError **error)
 {
   if (!send_olpc_activity_properties_changes_msg (self, activity, error))
     return FALSE;
@@ -1279,7 +1279,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
     }
   else
     {
-      return notify_activitiy_properties_changes (self, activity, error);
+      return notify_activity_properties_changes (self, activity, error);
     }
 
   return TRUE;

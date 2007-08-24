@@ -809,7 +809,7 @@ salut_muc_channel_finalize (GObject *object)
 }
 
 gboolean
-salut_muc_channel_invited (SalutMucChannel *self, TpHandle invitor,
+salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
                           const gchar *stanza, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
@@ -822,7 +822,7 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle invitor,
   /* Got invited to this muc channel */
   DEBUG("Got an invitation to %s from %s",
     tp_handle_inspect(room_repo, priv->handle),
-    tp_handle_inspect(contact_repo, invitor)
+    tp_handle_inspect(contact_repo, inviter)
     );
 
   /* If we are already a member, no further actions are needed */
@@ -831,7 +831,7 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle invitor,
     return TRUE;
   }
 
-  if (invitor == base_connection->self_handle) {
+  if (inviter == base_connection->self_handle) {
     /* Invited ourselves, go straight to members */
     gboolean r;
     GArray *members =  g_array_sized_new (FALSE, FALSE, sizeof(TpHandle), 1);
@@ -849,7 +849,7 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle invitor,
     tp_group_mixin_change_members(G_OBJECT(self), stanza,
                                   empty, empty,
                                   local_pending, empty,
-                                  invitor,
+                                  inviter,
                                   TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
     tp_intset_destroy(local_pending);
     tp_intset_destroy(empty);
