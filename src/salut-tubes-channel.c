@@ -59,9 +59,6 @@
     (dbus_g_type_get_struct ("GValueArray", \
       G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
 
-/* XXX make this conditionnale */
-#define HAVE_DBUS_TUBE 1
-
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void
@@ -264,7 +261,6 @@ salut_tubes_channel_set_property (GObject *object,
     }
 }
 
-#ifdef HAVE_DBUS_TUBE
 static void
 d_bus_names_changed_added (SalutTubesChannel *self,
                            guint tube_id,
@@ -360,7 +356,6 @@ add_yourself_in_dbus_names (SalutTubesChannel *self,
 
   g_free (dbus_name);
 }
-#endif
 
 /**
  * salut_tubes_channel_get_available_tube_types
@@ -392,7 +387,6 @@ salut_tubes_channel_get_available_tube_types (SalutSvcChannelTypeTubes *iface,
   g_array_free (ret, TRUE);
 }
 
-#ifdef HAVE_DBUS_TUBE
 struct _add_in_old_dbus_tubes_data
 {
   GHashTable *old_dbus_tubes;
@@ -461,7 +455,6 @@ emit_d_bus_names_changed_foreach (gpointer key,
 
   tp_handle_unref (contact_repo, data->contact);
 }
-#endif
 
 static void
 muc_connection_received_stanza_cb (GibberMucConnection *conn,
@@ -477,11 +470,9 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
   GibberXmppNode *tubes_node;
   GSList *l;
   gboolean request = FALSE;
-#ifdef HAVE_DBUS_TUBE
   GHashTable *old_dbus_tubes;
   struct _add_in_old_dbus_tubes_data add_data;
   struct _emit_d_bus_names_changed_foreach_data emit_data;
-#endif
 
   contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
   if (contact == 0)
@@ -503,14 +494,12 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
         "true"))
     request = TRUE;
 
-#ifdef HAVE_DBUS_TUBE
   /* Fill old_dbus_tubes with D-BUS tubes previoulsy announced by
    * the contact */
   old_dbus_tubes = g_hash_table_new (g_direct_hash, g_direct_equal);
   add_data.old_dbus_tubes = old_dbus_tubes;
   add_data.contact = contact;
   g_hash_table_foreach (priv->tubes, add_in_old_dbus_tubes, &add_data);
-#endif
 
   for (l = tubes_node->children; l != NULL; l = l->next)
     {
@@ -543,16 +532,6 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
           if (extract_tube_information (self, tube_node, &type,
                 &initiator_handle, &service, &parameters, NULL, &tube_id))
             {
-
-#ifndef HAVE_DBUS_TUBE
-              if (type == SALUT_TUBE_TYPE_DBUS)
-                {
-                  DEBUG ("Don't create the tube as D-Bus tube support"
-                      "is not built");
-                  continue;
-                }
-#endif
-
               create_new_tube (self, type, initiator_handle,
                   service, parameters, stream_id, tube_id);
               tube = g_hash_table_lookup (priv->tubes,
@@ -562,25 +541,21 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
               tp_handle_unref (contact_repo, initiator_handle);
             }
         }
-#ifdef HAVE_DBUS_TUBE
       else
         {
           /* The contact is in the tube.
            * Remove it from old_dbus_tubes if needed */
           g_hash_table_remove (old_dbus_tubes, GUINT_TO_POINTER (tube_id));
         }
-#endif
 
       if (tube == NULL)
         continue;
 
       g_object_get (tube, "type", &type, NULL);
 
-#ifdef HAVE_DBUS_TUBE
       if (type == SALUT_TUBE_TYPE_DBUS)
         {
           /* Update mapping of handle -> D-Bus name. */
-
           GHashTable *names;
           gchar *name;
 
@@ -608,10 +583,8 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
 
           g_hash_table_unref (names);
         }
-#endif
     }
 
-#ifdef HAVE_DBUS_TUBE
   /* Tubes remaining in old_dbus_tubes was left by the contact */
   emit_data.contact = contact;
   emit_data.self = self;
@@ -619,7 +592,6 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
       &emit_data);
 
   g_hash_table_destroy (old_dbus_tubes);
-#endif
 
   if (request)
     /* Contact requested tubes information */
@@ -760,10 +732,8 @@ tube_closed_cb (SalutTubeIface *tube,
     }
   DEBUG ("tube %d removed", tube_id);
 
-#ifdef HAVE_DBUS_TUBE
   /* Emit the DBusNamesChanged signal */
   d_bus_names_changed_removed (self, tube_id, priv->self_handle);
-#endif
 
   update_tubes_info (self, FALSE);
 
@@ -802,13 +772,11 @@ create_new_tube (SalutTubesChannel *self,
 
   switch (type)
     {
-#ifdef HAVE_DBUS_TUBE
     case SALUT_TUBE_TYPE_DBUS:
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
           initiator, service, parameters, stream_id, tube_id));
       break;
-#endif
       /*
     case TP_TUBE_TYPE_STREAM_UNIX:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
@@ -834,13 +802,11 @@ create_new_tube (SalutTubesChannel *self,
       parameters,
       state);
 
-#ifdef HAVE_DBUS_TUBE
   if (type == SALUT_TUBE_TYPE_DBUS &&
       state != SALUT_TUBE_STATE_LOCAL_PENDING)
     {
       add_yourself_in_dbus_names (self, tube_id);
     }
-#endif
 
   g_signal_connect (tube, "opened", G_CALLBACK (tube_opened_cb), self);
   g_signal_connect (tube, "closed", G_CALLBACK (tube_closed_cb), self);
@@ -1153,7 +1119,6 @@ salut_tubes_channel_offer_d_bus_tube (SalutSvcChannelTypeTubes *iface,
                                       GHashTable *parameters,
                                       DBusGMethodInvocation *context)
 {
-#ifdef HAVE_DBUS_TUBE
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
   TpBaseConnection *base;
@@ -1182,13 +1147,6 @@ salut_tubes_channel_offer_d_bus_tube (SalutSvcChannelTypeTubes *iface,
   salut_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 
   g_free (stream_id);
-#else
-  GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-      "D-Bus tube support not built" };
-
-  dbus_g_method_return_error (context, &error);
-  return;
-#endif
 }
 
 /**
@@ -1408,7 +1366,6 @@ salut_tubes_channel_get_d_bus_tube_address (SalutSvcChannelTypeTubes *iface,
                                             guint id,
                                             DBusGMethodInvocation *context)
 {
-#ifdef HAVE_DBUS_TUBE
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
   SalutTubeIface *tube;
@@ -1457,17 +1414,8 @@ salut_tubes_channel_get_d_bus_tube_address (SalutSvcChannelTypeTubes *iface,
   salut_svc_channel_type_tubes_return_from_get_d_bus_tube_address (context,
       addr);
   g_free (addr);
-
-#else /* ! HAVE_DBUS_TUBE */
-
-  GError error = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-      "D-Bus tube support not built" };
-
-  dbus_g_method_return_error (context, &error);
-#endif
 }
 
-#ifdef HAVE_DBUS_TUBE
 static void
 get_d_bus_names_foreach (gpointer key,
                          gpointer value,
@@ -1485,7 +1433,6 @@ get_d_bus_names_foreach (gpointer key,
       G_MAXUINT);
   g_ptr_array_add (ret, g_value_get_boxed (&tmp));
 }
-#endif
 
 /**
  * salut_tubes_channel_get_d_bus_names
@@ -1498,7 +1445,6 @@ salut_tubes_channel_get_d_bus_names (SalutSvcChannelTypeTubes *iface,
                                       guint id,
                                       DBusGMethodInvocation *context)
 {
-#ifdef HAVE_DBUS_TUBE
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
@@ -1555,14 +1501,6 @@ salut_tubes_channel_get_d_bus_names (SalutSvcChannelTypeTubes *iface,
     g_boxed_free (DBUS_NAME_PAIR_TYPE, ret->pdata[i]);
   g_hash_table_unref (names);
   g_ptr_array_free (ret, TRUE);
-
-#else /* HAVE_DBUS_TUBE */
-
-  GError error = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-      "D-Bus tube support not built" };
-
-  dbus_g_method_return_error (context, &error);
-#endif
 }
 
 /**
