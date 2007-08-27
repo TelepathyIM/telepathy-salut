@@ -1253,9 +1253,9 @@ salut_tubes_channel_offer_stream_unix_tube (SalutSvcChannelTypeTubes *iface,
 #endif
 
 /**
- * salut_tubes_channel_accept_tube
+ * salut_tubes_channel_accept_d_bus_tube
  *
- * Implements D-Bus method AcceptTube
+ * Implements D-Bus method AcceptDBusTube
  * on org.freedesktop.Telepathy.Channel.Type.Tubes
  */
 static void
@@ -1356,9 +1356,9 @@ salut_tubes_channel_close_tube (SalutSvcChannelTypeTubes *iface,
 }
 
 /**
- * salut_tubes_channel_get_d_bus_server_address
+ * salut_tubes_channel_get_d_bus_tube_address
  *
- * Implements D-Bus method GetDBusServerAddress
+ * Implements D-Bus method GetDBusTubeAddress
  * on org.freedesktop.Telepathy.Channel.Type.Tubes
  */
 static void
