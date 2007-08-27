@@ -160,8 +160,12 @@ salut_contact_init (SalutContact *obj)
   obj->olpc_color = NULL;
   obj->olpc_cur_act = NULL;
   obj->olpc_cur_act_room = 0;
-  priv->olpc_activities = g_hash_table_new_full (g_str_hash, g_str_equal,
-      (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
+  obj->olpc_ip4 = NULL;
+  obj->olpc_ip6 = NULL;
+  priv->olpc_announced_activities = g_hash_table_new_full (g_str_hash,
+      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
+  priv->olpc_private_activities = g_hash_table_new_full (g_str_hash,
+      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
 #endif
   priv->client = NULL;
   priv->resolvers = NULL;
