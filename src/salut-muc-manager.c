@@ -272,6 +272,14 @@ muc_channel_closed_cb (SalutMucChannel *chan,
     }
 }
 
+static void
+muc_channel_ready_cb (SalutMucChannel *chan,
+                      SalutMucManager *self)
+{
+  tp_channel_factory_iface_emit_new_channel (self, TP_CHANNEL_IFACE (chan),
+      NULL);
+}
+
 /**
  * tubes_channel_closed_cb:
  *
@@ -354,8 +362,7 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
-  tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
-      NULL);
+  g_signal_connect (chan, "ready", G_CALLBACK (muc_channel_ready_cb), mgr);
 
   return chan;
 }
@@ -557,7 +564,7 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
           if (text_chan == NULL)
             return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
 
-          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED;
         }
 
       g_assert (text_chan != NULL);
