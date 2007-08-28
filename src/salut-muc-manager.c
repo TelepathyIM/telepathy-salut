@@ -299,7 +299,27 @@ muc_channel_ready_cb (SalutMucChannel *chan,
     {
       g_hash_table_remove (priv->text_needed_for_tubes, chan);
       tp_channel_factory_iface_emit_new_channel (self,
-          (TpChannelIface *) tubes_chan, NULL);
+          TP_CHANNEL_IFACE (tubes_chan), NULL);
+    }
+}
+
+static void
+muc_channel_join_error_cb (SalutMucChannel *chan,
+                           SalutMucManager *self,
+                           GError *error)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  SalutTubesChannel *tubes_chan;
+
+  tp_channel_factory_iface_emit_channel_error (self, TP_CHANNEL_IFACE (chan),
+      error, NULL);
+
+  tubes_chan = g_hash_table_lookup (priv->text_needed_for_tubes, chan);
+  if (tubes_chan != NULL)
+    {
+      g_hash_table_remove (priv->text_needed_for_tubes, chan);
+      tp_channel_factory_iface_emit_channel_error (self,
+          TP_CHANNEL_IFACE (tubes_chan), error, NULL);
     }
 }
 
@@ -386,6 +406,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
   g_signal_connect (chan, "ready", G_CALLBACK (muc_channel_ready_cb), mgr);
+  g_signal_connect (chan, "join-error",
+      G_CALLBACK (muc_channel_join_error_cb), mgr);
 
   return chan;
 }

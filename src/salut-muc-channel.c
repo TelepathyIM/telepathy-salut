@@ -64,6 +64,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
 enum
 {
     READY,
+    JOIN_ERROR,
     LAST_SIGNAL
 };
 
@@ -97,6 +98,7 @@ struct _SalutMucChannelPrivate
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberMucConnection *muc_connection;
   gchar *muc_name;
+  gboolean connected;
   SalutAvahiClient *client;
   SalutAvahiEntryGroup *muc_group;
   SalutAvahiEntryGroupService *service;
@@ -217,6 +219,9 @@ static void
 muc_connection_connected_cb (GibberMucConnection *connection,
                              SalutMucChannel *self)
 {
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+
+  priv->connected = TRUE;
   g_signal_emit (self, signals[READY], 0);
 }
 
@@ -261,6 +266,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
 
   g_assert (priv->muc_connection != NULL);
 
+  priv->connected = FALSE;
   g_signal_connect (priv->muc_connection, "connected",
       G_CALLBACK (muc_connection_connected_cb), obj);
 
@@ -776,6 +782,15 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
         g_cclosure_marshal_VOID__VOID,
         G_TYPE_NONE, 0);
 
+  signals[JOIN_ERROR] = g_signal_new (
+        "join-error",
+        G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
+        G_SIGNAL_RUN_LAST,
+        0,
+        NULL, NULL,
+        g_cclosure_marshal_VOID__POINTER,
+        G_TYPE_NONE, 1, G_TYPE_POINTER);
+
   tp_text_mixin_class_init(object_class,
                            G_STRUCT_OFFSET(SalutMucChannelClass, text_class));
 
@@ -1038,6 +1053,16 @@ static void
 salut_muc_channel_disconnected(GibberTransport *transport,
                                              gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+
+  if (!priv->connected)
+    {
+      /* FIXME the disconnected signal should give us an error */
+      GError error = { TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+          "can't join the muc" };
+      g_signal_emit (self, signals[JOIN_ERROR], 0, &error);
+    }
+
   tp_svc_channel_emit_closed(self);
 }
 
