@@ -833,6 +833,8 @@ gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
   GibberRMulticastPacket *packet;
   gsize payloaded;
 
+  g_assert (priv->self != NULL);
+
   packet = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->self->id,
       priv->transport->max_packet_size);
 
