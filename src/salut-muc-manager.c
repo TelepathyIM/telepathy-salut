@@ -82,6 +82,10 @@ struct _SalutMucManagerPrivate
   GHashTable *text_channels;
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
+  /* Tubes channel requests which will be satisfied when the corresponding
+   * text channel is created.
+   * (SalutMucChannel *) => (SalutMucChannel *) */
+  GHashTable *text_needed_for_tubes;
 
   gboolean dispose_has_run;
   SalutAvahiClient *client;
@@ -108,6 +112,8 @@ salut_muc_manager_init (SalutMucManager *obj)
       g_free, g_object_unref);
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
+  priv->text_needed_for_tubes = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, NULL, NULL);
 }
 
 static void salut_muc_manager_dispose (GObject *object);
@@ -201,6 +207,12 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       priv->tubes_channels = NULL;
       g_hash_table_destroy (tmp);
     }
+
+  if (priv->text_needed_for_tubes != NULL)
+    {
+      g_hash_table_destroy (priv->text_needed_for_tubes);
+      priv->text_needed_for_tubes = NULL;
+    }
 }
 
 static void
@@ -276,8 +288,19 @@ static void
 muc_channel_ready_cb (SalutMucChannel *chan,
                       SalutMucManager *self)
 {
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  SalutTubesChannel *tubes_chan;
+
   tp_channel_factory_iface_emit_new_channel (self, TP_CHANNEL_IFACE (chan),
       NULL);
+
+  tubes_chan = g_hash_table_lookup (priv->text_needed_for_tubes, chan);
+  if (tubes_chan != NULL)
+    {
+      g_hash_table_remove (priv->text_needed_for_tubes, chan);
+      tp_channel_factory_iface_emit_new_channel (self,
+          (TpChannelIface *) tubes_chan, NULL);
+    }
 }
 
 /**
@@ -593,10 +616,18 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
                   handle, error);
               if (text_chan == NULL)
                 return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
+
+              tubes_chan = new_tubes_channel (mgr, handle, text_chan);
+              g_hash_table_insert (priv->text_needed_for_tubes,
+                  text_chan, tubes_chan);
+              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED;
+            }
+          else
+            {
+              tubes_chan = new_tubes_channel (mgr, handle, text_chan);
+              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
             }
 
-          tubes_chan = new_tubes_channel (mgr, handle, text_chan);
-          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
         }
 
       g_assert (tubes_chan != NULL);
