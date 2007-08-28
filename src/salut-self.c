@@ -888,7 +888,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
   if (activity == NULL)
     {
       gboolean is_private = TRUE;
-      const gchar *color, *name, *type, *tags;
+      const gchar *color = NULL, *name = NULL, *type = NULL, *tags = NULL;
 
       /* add the activity service if it's not in data->olpc_activities */
       activity = salut_self_add_olpc_activity (data->self, value,
