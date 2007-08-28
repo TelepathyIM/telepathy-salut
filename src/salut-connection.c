@@ -1406,7 +1406,8 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
 
   GError *error = NULL;
   /* Only three know properties, so handle it quite naively */
-  const gchar *known_properties[] = { "color", "key", "jid", NULL };
+  const gchar *known_properties[] = { "color", "key", "jid", "ip4-address",
+     "ip6-address", NULL };
   const gchar *color = NULL;
   const GArray *key = NULL;
   const gchar *jid = NULL;
