@@ -1565,6 +1565,85 @@ salut_tubes_channel_get_stream_unix_socket_address (SalutSvcChannelTypeTubes *if
 }
 #endif
 
+/**
+ * salut_tubes_channel_get_available_stream_tube_types
+ *
+ * Implements D-Bus method GetAvailableStreamTubeTypes
+ * on org.freedesktop.Telepathy.Channel.Type.Tubes
+ */
+static void
+salut_tubes_channel_get_available_stream_tube_types (SalutSvcChannelTypeTubes *iface,
+                                                     DBusGMethodInvocation *context)
+{
+  GHashTable *ret;
+
+  ret = g_hash_table_new (g_direct_hash, g_direct_equal);
+
+  salut_svc_channel_type_tubes_return_from_get_available_stream_tube_types (
+      context, ret);
+
+  g_hash_table_destroy (ret);
+}
+
+/**
+ * salut_tubes_channel_offer_tube
+ *
+ * Implements D-Bus method OfferTube
+ * on org.freedesktop.Telepathy.Channel.Type.Tubes
+ */
+static void
+salut_tubes_channel_offer_tube (SalutSvcChannelTypeTubes *iface,
+                                guint tube_type,
+                                const gchar *service,
+                                GHashTable *parameters,
+                                DBusGMethodInvocation *context)
+{
+  if (tube_type == SALUT_TUBE_TYPE_DBUS)
+    {
+      DEBUG ("deprecated");
+      /* they have the same return signature, so it's safe to do: */
+      salut_tubes_channel_offer_d_bus_tube (iface, service, parameters,
+          context);
+    }
+  else
+    {
+      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Deprecated method OfferTube only works for D-Bus tubes" };
+
+      dbus_g_method_return_error (context, &error);
+    }
+}
+
+/**
+ * salut_tubes_channel_accept_tube
+ *
+ * Implements D-Bus method AcceptTube
+ * on org.freedesktop.Telepathy.Channel.Type.Tubes
+ */
+static void
+salut_tubes_channel_accept_tube (SalutSvcChannelTypeTubes *iface,
+                                 guint id,
+                                 DBusGMethodInvocation *context)
+{
+  DEBUG ("deprecated");
+  salut_tubes_channel_accept_d_bus_tube (iface, id, context);
+}
+
+/**
+ * salut_tubes_channel_get_d_bus_server_address
+ *
+ * Implements D-Bus method GetDBusServerAddress
+ * on org.freedesktop.Telepathy.Channel.Type.Tubes
+ */
+static void
+salut_tubes_channel_get_d_bus_server_address (SalutSvcChannelTypeTubes *iface,
+                                               guint id,
+                                               DBusGMethodInvocation *context)
+{
+  DEBUG ("deprecated");
+  salut_tubes_channel_get_d_bus_tube_address (iface, id, context);
+}
+
 static void salut_tubes_channel_dispose (GObject *object);
 static void salut_tubes_channel_finalize (GObject *object);
 
@@ -1795,18 +1874,21 @@ tubes_iface_init (gpointer g_iface,
     klass, salut_tubes_channel_##x)
   IMPLEMENT(get_available_tube_types);
   IMPLEMENT(list_tubes);
-  IMPLEMENT(offer_d_bus_tube);
-  /*
-  IMPLEMENT(offer_d_bus_tube);
-  IMPLEMENT(offer_stream_unix_tube);
-  */
-  IMPLEMENT(accept_d_bus_tube);
   IMPLEMENT(close_tube);
+  IMPLEMENT(offer_d_bus_tube);
+  IMPLEMENT(accept_d_bus_tube);
   IMPLEMENT(get_d_bus_tube_address);
   IMPLEMENT(get_d_bus_names);
   /*
-  IMPLEMENT(get_stream_unix_socket_address);
+  IMPLEMENT(offer_stream_tube);
+  IMPLEMENT(accept_stream_tube);
+  IMPLEMENT(get_stream_tube_socket_address);
   */
+  IMPLEMENT(get_available_stream_tube_types);
+ /* DEPRECATED */
+  IMPLEMENT(offer_tube);
+  IMPLEMENT(accept_tube);
+  IMPLEMENT(get_d_bus_server_address);
 #undef IMPLEMENT
 }
 
