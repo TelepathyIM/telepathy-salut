@@ -60,6 +60,15 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 )
 
+/* signal enum */
+enum
+{
+    READY,
+    LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = {0};
+
 /* properties */
 enum
 {
@@ -204,7 +213,12 @@ salut_muc_channel_set_property (GObject     *object,
   }
 }
 
-
+static void
+muc_connection_connected_cb (GibberMucConnection *connection,
+                             SalutMucChannel *self)
+{
+  g_signal_emit (self, signals[READY], 0);
+}
 
 static GObject *
 salut_muc_channel_constructor (GType type, guint n_props,
@@ -244,6 +258,11 @@ salut_muc_channel_constructor (GType type, guint n_props,
   g_object_get (priv->connection, "self", &(priv->self), NULL);
   g_object_unref (priv->self);
   g_assert (priv->self != NULL);
+
+  g_assert (priv->muc_connection != NULL);
+
+  g_signal_connect (priv->muc_connection, "connected",
+      G_CALLBACK (muc_connection_connected_cb), obj);
 
   /* Connect to the bus */
   bus = tp_get_bus ();
@@ -747,6 +766,15 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
+
+  signals[READY] = g_signal_new (
+        "ready",
+        G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
+        G_SIGNAL_RUN_LAST,
+        0,
+        NULL, NULL,
+        g_cclosure_marshal_VOID__VOID,
+        G_TYPE_NONE, 0);
 
   tp_text_mixin_class_init(object_class,
                            G_STRUCT_OFFSET(SalutMucChannelClass, text_class));
