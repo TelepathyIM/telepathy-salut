@@ -1225,7 +1225,8 @@ update_activity_privacy (SalutSelf *self,
     return TRUE;
 
   activity->is_private = is_private;
-  *updated = TRUE;
+  if (updated != NULL)
+    *updated = TRUE;
 
   if (!is_private)
     {
