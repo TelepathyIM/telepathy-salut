@@ -1139,12 +1139,21 @@ generate_tube_id (void)
 
 /* XXX we should move that in some kind of bytestream factory */
 gchar *
-generate_stream_id (void)
+generate_stream_id (SalutTubesChannel *self)
 {
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   gchar *stream_id;
 
-  stream_id = g_strdup_printf ("%lu-%u", (unsigned long) time (NULL),
-      g_random_int ());
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      stream_id = g_strdup_printf ("%lu-%u", (unsigned long) time (NULL),
+          g_random_int ());
+    }
+  else
+    {
+      /* GibberMucConnection's stream-id is a guint8 */
+      stream_id = g_strdup_printf ("%u", g_random_int_range (1, G_MAXUINT8));
+    }
 
   return stream_id;
 }
@@ -1178,7 +1187,7 @@ salut_tubes_channel_offer_d_bus_tube (SalutSvcChannelTypeTubes *iface,
       (GDestroyNotify) tp_g_value_slice_free);
   g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
 
-  stream_id = generate_stream_id ();
+  stream_id = generate_stream_id (self);
   tube_id = generate_tube_id ();
 
   create_new_tube (self, SALUT_TUBE_TYPE_DBUS, priv->self_handle,
