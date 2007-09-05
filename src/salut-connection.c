@@ -1730,35 +1730,30 @@ create_properties_table (const gchar *color,
 
   if (color != NULL)
     {
-      val = g_slice_new0 (GValue);
-      g_value_init (val, G_TYPE_STRING);
+      val = tp_g_value_slice_new (G_TYPE_STRING);
       g_value_set_static_string (val, color);
       g_hash_table_insert (properties, "color", val);
     }
   if (name != NULL)
     {
-      val = g_slice_new0 (GValue);
-      g_value_init (val, G_TYPE_STRING);
+      val = tp_g_value_slice_new (G_TYPE_STRING);
       g_value_set_static_string (val, name);
       g_hash_table_insert (properties, "name", val);
     }
   if (type != NULL)
     {
-      val = g_slice_new0 (GValue);
-      g_value_init (val, G_TYPE_STRING);
+      val = tp_g_value_slice_new (G_TYPE_STRING);
       g_value_set_static_string (val, type);
       g_hash_table_insert (properties, "type", val);
     }
   if (tags != NULL)
     {
-      val = g_slice_new0 (GValue);
-      g_value_init (val, G_TYPE_STRING);
+      val = tp_g_value_slice_new (G_TYPE_STRING);
       g_value_set_static_string (val, tags);
       g_hash_table_insert (properties, "tags", val);
     }
 
-  val = g_slice_new0 (GValue);
-  g_value_init (val, G_TYPE_BOOLEAN);
+  val = tp_g_value_slice_new (G_TYPE_BOOLEAN);
   g_value_set_boolean (val, is_private);
   g_hash_table_insert (properties, "private", val);
 

@@ -69,30 +69,26 @@ xmpp_node_extract_property (GibberXmppNode *node,
 
       arr = g_array_new (FALSE, FALSE, sizeof (guchar));
       g_array_append_vals (arr, decoded, len);
-      gvalue = g_slice_new0 (GValue);
-      g_value_init (gvalue, DBUS_TYPE_G_UCHAR_ARRAY);
+      gvalue = tp_g_value_slice_new (DBUS_TYPE_G_UCHAR_ARRAY);
       g_value_take_boxed (gvalue, arr);
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
       g_free (decoded);
     }
   else if (!tp_strdiff (type, "str"))
     {
-      gvalue = g_slice_new0 (GValue);
-      g_value_init (gvalue, G_TYPE_STRING);
+      gvalue = tp_g_value_slice_new (G_TYPE_STRING);
       g_value_set_string (gvalue, value);
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
   else if (!tp_strdiff (type, "int"))
     {
-      gvalue = g_slice_new0 (GValue);
-      g_value_init (gvalue, G_TYPE_INT);
+      gvalue = tp_g_value_slice_new (G_TYPE_INT);
       g_value_set_int (gvalue, strtol (value, NULL, 10));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
   else if (!tp_strdiff (type, "uint"))
     {
-      gvalue = g_slice_new0 (GValue);
-      g_value_init (gvalue, G_TYPE_UINT);
+      gvalue = tp_g_value_slice_new (G_TYPE_UINT);
       g_value_set_uint (gvalue, strtoul (value, NULL, 10));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
@@ -114,8 +110,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
           return TRUE;
         }
 
-      gvalue = g_slice_new0 (GValue);
-      g_value_init (gvalue, G_TYPE_BOOLEAN);
+      gvalue = tp_g_value_slice_new (G_TYPE_BOOLEAN);
       g_value_set_boolean (gvalue, val);
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
