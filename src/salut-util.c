@@ -229,7 +229,7 @@ set_child_from_property (gpointer key,
     {
       gchar *str;
 
-      str = g_strdup_printf ("%d", g_value_get_uint (gvalue));
+      str = g_strdup_printf ("%u", g_value_get_uint (gvalue));
       gibber_xmpp_node_set_content (child, str);
 
       g_free (str);
