@@ -86,14 +86,14 @@ xmpp_node_extract_property (GibberXmppNode *node,
     {
       gvalue = g_slice_new0 (GValue);
       g_value_init (gvalue, G_TYPE_INT);
-      g_value_set_int (gvalue, atoi (value));
+      g_value_set_int (gvalue, strtol (value, NULL, 10));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
   else if (!tp_strdiff (type, "uint"))
     {
       gvalue = g_slice_new0 (GValue);
       g_value_init (gvalue, G_TYPE_UINT);
-      g_value_set_uint (gvalue, atoi (value));
+      g_value_set_uint (gvalue, strtoul (value, NULL, 10));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
   else if (!tp_strdiff (type, "bool"))
