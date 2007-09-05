@@ -74,7 +74,7 @@ GType salut_self_get_type(void);
 #define SALUT_SELF_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_SELF, SalutSelfClass))
 
-SalutSelf *salut_self_new (SalutConnection *conn,SalutAvahiClient *client,
+SalutSelf *salut_self_new (SalutConnection *conn, SalutAvahiClient *client,
     TpHandleRepoIface *room_repo, const gchar *nickname,
     const gchar *first_name, const gchar *last_name, const gchar *jid,
     const gchar *email, const gchar *published_name,
@@ -82,8 +82,7 @@ SalutSelf *salut_self_new (SalutConnection *conn,SalutAvahiClient *client,
     const gchar *olpc_color);
 
 /* Start announcing our presence on the network */
-gboolean
-salut_self_announce (SalutSelf *self, gint port, GError **error);
+gboolean salut_self_announce (SalutSelf *self, gint port, GError **error);
 
 gboolean salut_self_set_presence (SalutSelf *self,
     SalutPresenceId status, const gchar *message, GError **error);
@@ -127,8 +126,7 @@ typedef void (*SalutSelfOLPCActivityFunc)
 void salut_self_foreach_olpc_activity (SalutSelf *self,
     SalutSelfOLPCActivityFunc foreach, gpointer user_data);
 
-void
-salut_self_olpc_augment_invitation (SalutSelf *self,
+void salut_self_olpc_augment_invitation (SalutSelf *self,
     TpHandle room, TpHandle contact, GibberXmppNode *invite_node);
 #endif
 
