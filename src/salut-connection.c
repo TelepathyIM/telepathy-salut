@@ -1848,6 +1848,7 @@ check_color (const gchar *color)
   return TRUE;
 }
 
+/* returned strings are only valid as long as the hash table isn't modified */
 static gboolean
 extract_properties_from_hash (GHashTable *properties,
                               const gchar **id,
