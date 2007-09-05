@@ -133,6 +133,7 @@ struct _SalutContactPrivate
   GList *avatar_requests;
   TpHandleRepoIface *room_repo;
 #ifdef ENABLE_OLPC
+  /* mDNS instance name -> SalutContactActivity */
   GHashTable *olpc_announced_activities;
   /* activity id -> SalutContactActivity */
   GHashTable *olpc_private_activities;
