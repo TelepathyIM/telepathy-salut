@@ -63,7 +63,7 @@ create_sample_stanza (void)
         GIBBER_NODE_END,
         GIBBER_NODE, "prop",
           GIBBER_NODE_ATTRIBUTE, "name", "prop5",
-          GIBBER_NODE_ATTRIBUTE, "type", "b",
+          GIBBER_NODE_ATTRIBUTE, "type", "bool",
           GIBBER_NODE_TEXT, "1",
         GIBBER_NODE_END,
       GIBBER_NODE_END,
@@ -229,7 +229,7 @@ START_TEST (test_add_children_from_properties)
         }
       else if (strcmp (name, "prop5") == 0)
         {
-          fail_unless (strcmp (type, "b") == 0);
+          fail_unless (strcmp (type, "bool") == 0);
           fail_unless (strcmp (node->content, "1") == 0);
         }
       else

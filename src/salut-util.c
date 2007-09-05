@@ -96,7 +96,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
       g_value_set_uint (gvalue, atoi (value));
       g_hash_table_insert (data->properties, g_strdup (name), gvalue);
     }
-  else if (!tp_strdiff (type, "b"))
+  else if (!tp_strdiff (type, "bool"))
     {
       gboolean val;
 
@@ -199,7 +199,7 @@ set_child_from_property (gpointer key,
     }
   else if (G_VALUE_TYPE (gvalue) == G_TYPE_BOOLEAN)
     {
-      type = "b";
+      type = "bool";
     }
   else
     {
