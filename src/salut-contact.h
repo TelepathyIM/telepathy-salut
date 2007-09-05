@@ -131,7 +131,7 @@ typedef void (*SalutContactOLPCActivityFunc)
 void salut_contact_foreach_olpc_activity (SalutContact *self,
     SalutContactOLPCActivityFunc foreach, gpointer user_data);
 
-void salut_contact_takes_part_olpc_activity (SalutContact *self,
+void salut_contact_takes_part_in_olpc_activity (SalutContact *self,
     TpHandle room, const gchar *activity_id);
 #endif
 

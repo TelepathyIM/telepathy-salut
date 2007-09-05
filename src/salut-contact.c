@@ -557,9 +557,9 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
 }
 
 static gboolean
-activity_have_id (gpointer key,
-                  gpointer value,
-                  gpointer user_data)
+activity_has_id (gpointer key,
+                 gpointer value,
+                 gpointer user_data)
 {
   SalutContactActivity *activity = value;
   const gchar *activity_id = user_data;
@@ -568,9 +568,9 @@ activity_have_id (gpointer key,
 }
 
 void
-salut_contact_takes_part_olpc_activity (SalutContact *self,
-                                        TpHandle room,
-                                        const gchar *activity_id)
+salut_contact_takes_part_in_olpc_activity (SalutContact *self,
+                                           TpHandle room,
+                                           const gchar *activity_id)
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   SalutContactActivity *activity;
@@ -580,7 +580,7 @@ salut_contact_takes_part_olpc_activity (SalutContact *self,
       return;
 
   activity = g_hash_table_find (priv->olpc_announced_activities,
-      activity_have_id, (gchar *) activity_id);
+      activity_has_id, (gchar *) activity_id);
   if (activity_id != NULL)
     return;
 
