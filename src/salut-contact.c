@@ -579,6 +579,8 @@ salut_contact_takes_part_in_olpc_activity (SalutContact *self,
   if (activity != NULL)
       return;
 
+  /* TODO: maybe we should add a hash that maps activity ID => activity for
+   * announced activities */
   activity = g_hash_table_find (priv->olpc_announced_activities,
       activity_has_id, (gchar *) activity_id);
   if (activity_id != NULL)
