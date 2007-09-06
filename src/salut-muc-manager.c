@@ -31,6 +31,8 @@
 #include "salut-contact-manager.h"
 #include "salut-avahi-service-browser.h"
 #include "salut-tubes-channel.h"
+#include "salut-roomlist-channel.h"
+#include "salut-xmpp-connection-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -81,6 +83,7 @@ struct _SalutMucManagerPrivate
   GHashTable *text_channels;
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
+  SalutRoomlistChannel *roomlist_channel;
 
   gboolean dispose_has_run;
   SalutAvahiClient *client;
