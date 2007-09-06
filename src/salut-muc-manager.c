@@ -129,13 +129,6 @@ salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
   object_class->finalize = salut_muc_manager_finalize;
 }
 
-static void
-unref_foreach (gpointer object,
-               gpointer unused)
-{
-  g_object_unref (object);
-}
-
 void
 salut_muc_manager_dispose (GObject *object)
 {
@@ -217,7 +210,7 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     {
       GSList *l = priv->roomlist_channels;
       priv->roomlist_channels = NULL;
-      g_slist_foreach (l, unref_foreach, NULL);
+      g_slist_foreach (l, (GFunc) g_object_unref, NULL);
       g_slist_free (l);
     }
 }
