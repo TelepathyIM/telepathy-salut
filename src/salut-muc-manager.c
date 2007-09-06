@@ -83,7 +83,7 @@ struct _SalutMucManagerPrivate
   GHashTable *text_channels;
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
-  SalutRoomlistChannel *roomlist_channel;
+  GSList *roomlist_channels;
 
   gboolean dispose_has_run;
   SalutAvahiClient *client;
@@ -110,6 +110,8 @@ salut_muc_manager_init (SalutMucManager *obj)
       g_free, g_object_unref);
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
+
+  priv->roomlist_channels = NULL;
 }
 
 static void salut_muc_manager_dispose (GObject *object);
@@ -125,6 +127,13 @@ salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
 
   object_class->dispose = salut_muc_manager_dispose;
   object_class->finalize = salut_muc_manager_finalize;
+}
+
+static void
+unref_foreach (gpointer object,
+               gpointer unused)
+{
+  g_object_unref (object);
 }
 
 void
@@ -203,6 +212,14 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       priv->tubes_channels = NULL;
       g_hash_table_destroy (tmp);
     }
+
+  if (priv->roomlist_channels != NULL)
+    {
+      GSList *l = priv->roomlist_channels;
+      priv->roomlist_channels = NULL;
+      g_slist_foreach (l, unref_foreach, NULL);
+      g_slist_free (l);
+    }
 }
 
 static void
@@ -234,6 +251,15 @@ salut_muc_manager_iface_foreach_one(gpointer key,
 }
 
 static void
+salut_muc_manager_iface_foreach_one_list (TpChannelIface *chan,
+                                          gpointer data)
+{
+  struct foreach_data *f = (struct foreach_data *) data;
+
+  f->func (chan, f->data);
+}
+
+static void
 salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
                                         TpChannelFunc func, gpointer data) {
   SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
@@ -246,10 +272,8 @@ salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
   g_hash_table_foreach (priv->tubes_channels,
       salut_muc_manager_iface_foreach_one, &f);
 
-  if (priv->roomlist_channel)
-    {
-      func (TP_CHANNEL_IFACE (priv->roomlist_channel), data);
-    }
+  g_slist_foreach (priv->roomlist_channels,
+      (GFunc) salut_muc_manager_iface_foreach_one_list, data);
 }
 
 static void
@@ -539,10 +563,10 @@ roomlist_channel_closed_cb (SalutRoomlistChannel *chan,
   SalutMucManager *self = SALUT_MUC_MANAGER (data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
 
-  if (priv->roomlist_channel != NULL)
+  if (priv->roomlist_channels != NULL)
     {
-      g_object_unref (priv->roomlist_channel);
-      priv->roomlist_channel = NULL;
+      g_object_unref (chan);
+      priv->roomlist_channels = g_slist_remove (priv->roomlist_channels, chan);
     }
 }
 
@@ -552,38 +576,41 @@ add_room_to_roomlist_channel (gpointer key,
                               gpointer user_data)
 {
   const gchar *room_name = (const gchar *) key;
-  SalutMucManager *self = SALUT_MUC_MANAGER (user_data);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  SalutRoomlistChannel *roomlist_channel = SALUT_ROOMLIST_CHANNEL (user_data);
 
-  salut_roomlist_channel_add_room (priv->roomlist_channel, room_name);
+  salut_roomlist_channel_add_room (roomlist_channel, room_name);
 }
 
-static void
+static SalutRoomlistChannel *
 make_roomlist_channel (SalutMucManager *self,
                        gpointer request)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *conn = (TpBaseConnection *) priv->connection;
+  SalutRoomlistChannel *roomlist_channel;
   gchar *object_path;
+  static guint cpt = 0;
 
-  g_assert (priv->roomlist_channel == NULL);
+  object_path = g_strdup_printf ("%s/RoomlistChannel%u",
+      conn->object_path, cpt++);
 
-  object_path = g_strdup_printf ("%s/RoomlistChannel",
-      conn->object_path);
-
-  priv->roomlist_channel = salut_roomlist_channel_new (priv->connection,
+  roomlist_channel = salut_roomlist_channel_new (priv->connection,
       object_path);
 
   g_hash_table_foreach (priv->room_resolvers, add_room_to_roomlist_channel,
-      self);
+      roomlist_channel);
 
-  g_signal_connect (priv->roomlist_channel, "closed",
+  priv->roomlist_channels = g_slist_prepend (priv->roomlist_channels,
+      roomlist_channel);
+
+  g_signal_connect (roomlist_channel, "closed",
       (GCallback) roomlist_channel_closed_cb, self);
 
   tp_channel_factory_iface_emit_new_channel (self,
-      (TpChannelIface *) priv->roomlist_channel, request);
+      (TpChannelIface *) roomlist_channel, request);
 
   g_free (object_path);
+  return roomlist_channel;
 }
 
 static TpChannelFactoryRequestStatus
@@ -608,14 +635,10 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
 
   if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_ROOM_LIST))
     {
-      if (priv->roomlist_channel != NULL)
-        {
-          *ret = TP_CHANNEL_IFACE (priv->roomlist_channel);
-          return TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
-        }
+      SalutRoomlistChannel *roomlist_channel;
 
-      make_roomlist_channel (mgr, request);
-      *ret = TP_CHANNEL_IFACE (priv->roomlist_channel);
+      roomlist_channel = make_roomlist_channel (mgr, request);
+      *ret = TP_CHANNEL_IFACE (roomlist_channel);
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
     }
 
@@ -893,6 +916,13 @@ salut_muc_manager_new (SalutConnection *connection,
 }
 
 static void
+add_room_foreach (SalutRoomlistChannel *roomlist_channel,
+                  const gchar *room)
+{
+  salut_roomlist_channel_add_room (roomlist_channel, room);
+}
+
+static void
 browser_found (SalutAvahiServiceBrowser *browser,
                AvahiIfIndex interface,
                AvahiProtocol protocol,
@@ -926,8 +956,15 @@ browser_found (SalutAvahiServiceBrowser *browser,
 
   g_hash_table_insert (priv->room_resolvers, g_strdup (name), resolver);
 
-  if (priv->roomlist_channel != NULL)
-    salut_roomlist_channel_add_room (priv->roomlist_channel, name);
+  g_slist_foreach (priv->roomlist_channels, (GFunc) add_room_foreach,
+      (gchar *) name);
+}
+
+static void
+remove_room_foreach (SalutRoomlistChannel *roomlist_channel,
+                     const gchar *room)
+{
+  salut_roomlist_channel_remove_room (roomlist_channel, room);
 }
 
 static void
@@ -944,8 +981,9 @@ browser_removed (SalutAvahiServiceBrowser *browser,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
 
   DEBUG ("remove room: %s.%s.%s", name, type, domain);
-  if (priv->roomlist_channel != NULL)
-    salut_roomlist_channel_remove_room (priv->roomlist_channel, name);
+
+  g_slist_foreach (priv->roomlist_channels, (GFunc) remove_room_foreach,
+      (gchar *) name);
 
   g_hash_table_remove (priv->room_resolvers, name);
 }
