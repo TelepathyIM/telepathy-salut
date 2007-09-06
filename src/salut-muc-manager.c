@@ -82,10 +82,6 @@ struct _SalutMucManagerPrivate
   GHashTable *text_channels;
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
-  /* Tubes channel requests which will be satisfied when the corresponding
-   * text channel is created.
-   * (SalutMucChannel *) => (SalutMucChannel *) */
-  GHashTable *text_needed_for_tubes;
 
   gboolean dispose_has_run;
   SalutAvahiClient *client;
@@ -112,8 +108,6 @@ salut_muc_manager_init (SalutMucManager *obj)
       g_free, g_object_unref);
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
-  priv->text_needed_for_tubes = g_hash_table_new_full (g_direct_hash,
-      g_direct_equal, NULL, NULL);
 }
 
 static void salut_muc_manager_dispose (GObject *object);
@@ -207,12 +201,6 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       priv->tubes_channels = NULL;
       g_hash_table_destroy (tmp);
     }
-
-  if (priv->text_needed_for_tubes != NULL)
-    {
-      g_hash_table_destroy (priv->text_needed_for_tubes);
-      priv->text_needed_for_tubes = NULL;
-    }
 }
 
 static void
@@ -282,6 +270,23 @@ muc_channel_closed_cb (SalutMucChannel *chan,
 
       g_hash_table_remove (priv->text_channels, GUINT_TO_POINTER (handle));
     }
+}
+
+static void
+tubes_channel_ready_cb (SalutTubesChannel *chan,
+                        SalutMucManager *self)
+{
+  tp_channel_factory_iface_emit_new_channel (self,
+      TP_CHANNEL_IFACE (chan), NULL);
+}
+
+static void
+tubes_channel_join_error_cb (SalutTubesChannel *chan,
+                             SalutMucManager *self,
+                             GError *error)
+{
+  tp_channel_factory_iface_emit_channel_error (self,
+      TP_CHANNEL_IFACE (chan), error, NULL);
 }
 
 /**
@@ -405,8 +410,6 @@ new_tubes_channel (SalutMucManager *self,
       NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
-  tp_channel_factory_iface_emit_new_channel (self, TP_CHANNEL_IFACE (chan),
-      NULL);
 
   g_hash_table_insert (priv->tubes_channels, GUINT_TO_POINTER (room), chan);
 
@@ -599,22 +602,31 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
                   handle, error);
               if (text_chan == NULL)
                 return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
+            }
 
-              tubes_chan = new_tubes_channel (mgr, handle, text_chan);
-              g_hash_table_insert (priv->text_needed_for_tubes,
-                  text_chan, tubes_chan);
-              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED;
+          tubes_chan = new_tubes_channel (mgr, handle, text_chan);
+          g_assert (tubes_chan != NULL);
+          *ret = TP_CHANNEL_IFACE (tubes_chan);
+
+          if (tubes_chan->ready)
+            {
+              /* Tubes channel ready, let's announce it */
+              tp_channel_factory_iface_emit_new_channel (mgr,
+                  TP_CHANNEL_IFACE (tubes_chan), NULL);
+
+              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
             }
           else
             {
-              tubes_chan = new_tubes_channel (mgr, handle, text_chan);
-              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+              /* Have to wait the channel becomes ready before announce it */
+              g_signal_connect (tubes_chan, "ready",
+                  G_CALLBACK (tubes_channel_ready_cb), mgr);
+              g_signal_connect (tubes_chan, "join-error",
+                  G_CALLBACK (tubes_channel_join_error_cb), mgr);
+
+              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED;
             }
-
         }
-
-      g_assert (tubes_chan != NULL);
-      *ret = TP_CHANNEL_IFACE (tubes_chan);
     }
   else
     {
