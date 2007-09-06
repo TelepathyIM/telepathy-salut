@@ -220,9 +220,21 @@ muc_connection_connected_cb (GibberMucConnection *connection,
                              SalutMucChannel *self)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpIntSet *empty;
+  TpIntSet *add;
 
   priv->connected = TRUE;
   g_signal_emit (self, signals[READY], 0);
+
+  /* Now we are connected, move yourself to members */
+  empty = tp_intset_new ();
+  add = tp_intset_new ();
+  tp_intset_add (add, base_connection->self_handle);
+
+  tp_group_mixin_change_members (G_OBJECT (self),
+      "", add, empty, empty, empty, base_connection->self_handle,
+      TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
 }
 
 static GObject *
@@ -656,8 +668,10 @@ muc_channel_add_member (GObject *iface,
 
       if (salut_muc_channel_connect(self, NULL))
         {
+          /* We are considered as remote-pending while the muc connection
+           * is not connected */
           tp_group_mixin_change_members (G_OBJECT (self),
-              message, add, empty, empty, empty, base_connection->self_handle,
+              message, empty, empty, empty, add, base_connection->self_handle,
               TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
         }
       else
