@@ -387,11 +387,14 @@ salut_roomlist_channel_close (TpSvcChannel *iface,
                                DBusGMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
+  SalutRoomlistChannelPrivate *priv =
+    SALUT_ROOMLIST_CHANNEL_GET_PRIVATE (self);
   g_assert (SALUT_IS_ROOMLIST_CHANNEL (self));
 
   DEBUG ("called on %p", self);
 
-  g_object_run_dispose (G_OBJECT (self));
+  tp_svc_channel_emit_closed (iface);
+  priv->closed = TRUE;
 
   tp_svc_channel_return_from_close (context);
 }
