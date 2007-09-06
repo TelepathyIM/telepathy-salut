@@ -158,10 +158,12 @@ salut_roomlist_channel_set_property (GObject     *object,
     case PROP_HANDLE:
       /* this property is writable in the interface, but not actually
        * meaningfully changable on this channel, so we do nothing */
+      g_assert (g_value_get_uint (value) == 0);
       break;
     case PROP_HANDLE_TYPE:
       /* this property is writable in the interface, but not actually
        * meaningfully changable on this channel, so we do nothing */
+      g_assert (g_value_get_uint (value) == TP_HANDLE_TYPE_NONE);
       break;
     case PROP_CONNECTION:
       priv->connection = g_value_get_object (value);
