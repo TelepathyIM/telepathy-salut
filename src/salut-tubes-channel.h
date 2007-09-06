@@ -39,6 +39,7 @@ struct _SalutTubesChannel {
     GObject parent;
 
     SalutMucChannel *muc;
+    gboolean ready;
 
     gpointer priv;
 };
