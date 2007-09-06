@@ -91,8 +91,9 @@ salut_roomlist_channel_init (SalutRoomlistChannel *self)
 }
 
 static GObject *
-salut_roomlist_channel_constructor (GType type, guint n_props,
-                               GObjectConstructParam *props)
+salut_roomlist_channel_constructor (GType type,
+                                    guint n_props,
+                                    GObjectConstructParam *props)
 {
   GObject *obj;
   SalutRoomlistChannelPrivate *priv;
@@ -109,10 +110,10 @@ salut_roomlist_channel_constructor (GType type, guint n_props,
 }
 
 static void
-salut_roomlist_channel_get_property (GObject    *object,
-                                guint       property_id,
-                                GValue     *value,
-                                GParamSpec *pspec)
+salut_roomlist_channel_get_property (GObject *object,
+                                     guint property_id,
+                                     GValue *value,
+                                     GParamSpec *pspec)
 {
   SalutRoomlistChannel *chan = SALUT_ROOMLIST_CHANNEL (object);
   SalutRoomlistChannelPrivate *priv =
@@ -141,10 +142,10 @@ salut_roomlist_channel_get_property (GObject    *object,
 }
 
 static void
-salut_roomlist_channel_set_property (GObject     *object,
-                                guint        property_id,
-                                const GValue *value,
-                                GParamSpec   *pspec)
+salut_roomlist_channel_set_property (GObject *object,
+                                     guint property_id,
+                                     const GValue *value,
+                                     GParamSpec *pspec)
 {
   SalutRoomlistChannel *chan = SALUT_ROOMLIST_CHANNEL (object);
   SalutRoomlistChannelPrivate *priv =
@@ -384,7 +385,7 @@ salut_roomlist_channel_remove_room (SalutRoomlistChannel *self,
  */
 static void
 salut_roomlist_channel_close (TpSvcChannel *iface,
-                               DBusGMethodInvocation *context)
+                              DBusGMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
   SalutRoomlistChannelPrivate *priv =
@@ -408,7 +409,7 @@ salut_roomlist_channel_close (TpSvcChannel *iface,
  */
 static void
 salut_roomlist_channel_get_channel_type (TpSvcChannel *iface,
-                                          DBusGMethodInvocation *context)
+                                         DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_channel_type (context,
       TP_IFACE_CHANNEL_TYPE_ROOM_LIST);
@@ -423,7 +424,7 @@ salut_roomlist_channel_get_channel_type (TpSvcChannel *iface,
  */
 static void
 salut_roomlist_channel_get_handle (TpSvcChannel *self,
-                                    DBusGMethodInvocation *context)
+                                   DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_handle (context, 0, 0);
 }
@@ -437,7 +438,7 @@ salut_roomlist_channel_get_handle (TpSvcChannel *self,
  */
 static void
 salut_roomlist_channel_get_interfaces (TpSvcChannel *iface,
-                                        DBusGMethodInvocation *context)
+                                       DBusGMethodInvocation *context)
 {
   const char *interfaces[] = { NULL };
 
@@ -459,7 +460,7 @@ salut_roomlist_channel_get_interfaces (TpSvcChannel *iface,
  */
 static void
 salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList *iface,
-                                           DBusGMethodInvocation *context)
+                                          DBusGMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
   SalutRoomlistChannelPrivate *priv;
@@ -486,7 +487,7 @@ salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList *iface,
  */
 static void
 salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList *iface,
-                                    DBusGMethodInvocation *context)
+                                   DBusGMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
   SalutRoomlistChannelPrivate *priv;
@@ -510,13 +511,14 @@ salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList *iface,
  */
 static void
 salut_roomlist_channel_stop_listing (TpSvcChannelTypeRoomList *iface,
-                                      DBusGMethodInvocation *context)
+                                     DBusGMethodInvocation *context)
 {
   tp_svc_channel_type_room_list_return_from_stop_listing (context);
 }
 
 static void
-channel_iface_init (gpointer g_iface, gpointer iface_data)
+channel_iface_init (gpointer g_iface,
+                    gpointer iface_data)
 {
   TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
 
@@ -530,7 +532,8 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
 }
 
 static void
-roomlist_iface_init (gpointer g_iface, gpointer iface_data)
+roomlist_iface_init (gpointer g_iface,
+                     gpointer iface_data)
 {
   TpSvcChannelTypeRoomListClass *klass =
     (TpSvcChannelTypeRoomListClass *)g_iface;
