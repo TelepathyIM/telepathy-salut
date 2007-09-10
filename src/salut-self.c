@@ -1165,6 +1165,14 @@ send_olpc_activity_properties_changes_msg (SalutSelf *self,
       "muc-connection", &muc_connection,
       NULL);
 
+  if (muc_connection->state != GIBBER_MUC_CONNECTION_CONNECTED)
+    {
+      DEBUG ("Muc connection not connected yet. Drop activity change message");
+      g_object_unref (muc_connection);
+      g_free (muc_name);
+      return TRUE;
+    }
+
   properties = create_properties_table (activity);
 
   /* add the activity id */
