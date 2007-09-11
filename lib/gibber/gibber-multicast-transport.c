@@ -302,7 +302,7 @@ gibber_multicast_transport_validate_address(const gchar *address,
                 GIBBER_MULTICAST_TRANSPORT_ERROR,
                 GIBBER_MULTICAST_TRANSPORT_ERROR_INVALID_ADDRESS,
                 "Getaddrinfo failed: %s", gai_strerror(ret));
-                   
+
     goto err;
   }
 
