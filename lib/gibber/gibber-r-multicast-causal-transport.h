@@ -1,5 +1,5 @@
 /*
- * gibber-r-multicast-transport.h - Header for GibberRMulticastTransport
+ * gibber-r-multicast-transport.h - Header for GibberRMulticastCausalTransport
  * Copyright (C) 2006 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
@@ -18,66 +18,68 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __GIBBER_R_MULTICAST_TRANSPORT_H__
-#define __GIBBER_R_MULTICAST_TRANSPORT_H__
+#ifndef __GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_H__
+#define __GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_H__
 
 #include <glib-object.h>
 #include "gibber-transport.h"
 
 G_BEGIN_DECLS
 
-#define GIBBER_R_MULTICAST_DEFAULT_STREAM 0
+typedef struct _GibberRMulticastCausalTransport GibberRMulticastCausalTransport;
+typedef struct _GibberRMulticastCausalTransportClass
+    GibberRMulticastCausalTransportClass;
 
-typedef struct _GibberRMulticastTransport GibberRMulticastTransport;
-typedef struct _GibberRMulticastTransportClass GibberRMulticastTransportClass;
-
-struct _GibberRMulticastTransportClass {
+struct _GibberRMulticastCausalTransportClass {
     GibberTransportClass parent_class;
 };
 
-struct _GibberRMulticastTransport {
+struct _GibberRMulticastCausalTransport {
     GibberTransport parent;
 };
+
+GType gibber_r_multicast_causal_transport_get_type(void);
 
 typedef struct {
   GibberBuffer buffer;
   const gchar *sender;
   guint8 stream_id;
-} GibberRMulticastBuffer;
+} GibberRMulticastCausalBuffer;
 
-GType gibber_r_multicast_transport_get_type(void);
+#define GIBBER_R_MULTICAST_CAUSAL_DEFAULT_STREAM 0
 
 /* TYPE MACROS */
-#define GIBBER_TYPE_R_MULTICAST_TRANSPORT \
-  (gibber_r_multicast_transport_get_type())
-#define GIBBER_R_MULTICAST_TRANSPORT(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransport))
-#define GIBBER_R_MULTICAST_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportClass))
-#define GIBBER_IS_R_MULTICAST_TRANSPORT(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT))
-#define GIBBER_IS_R_MULTICAST_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_R_MULTICAST_TRANSPORT))
-#define GIBBER_R_MULTICAST_TRANSPORT_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportClass))
+#define GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT \
+  (gibber_r_multicast_causal_transport_get_type())
+#define GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT, GibberRMulticastCausalTransport))
+#define GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT, GibberRMulticastCausalTransportClass))
+#define GIBBER_IS_R_MULTICAST_CAUSAL_TRANSPORT(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT))
+#define GIBBER_IS_R_MULTICAST_CAUSAL_TRANSPORT_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT))
+#define GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_CLASS(obj) \
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT, GibberRMulticastCausalTransportClass))
 
-GibberRMulticastTransport *
-gibber_r_multicast_transport_new(GibberTransport *transport,
-                                 const gchar *name);
-
-gboolean
-gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
-                                     gboolean initial, GError **error);
+GibberRMulticastCausalTransport *
+gibber_r_multicast_causal_transport_new(GibberTransport *transport,
+    const gchar *name);
 
 gboolean
-gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
-                                  guint8 stream_id,
-                                  const guint8 *data,
-                                  gsize size,
-                                  GError **error);
+gibber_r_multicast_causal_transport_connect(
+    GibberRMulticastCausalTransport *transport,
+    gboolean initial, GError **error);
 
+gboolean
+gibber_r_multicast_causal_transport_send(
+    GibberRMulticastCausalTransport *transport,
+    guint8 stream_id,
+    const guint8 *data,
+    gsize size,
+    GError **error);
 
 
 G_END_DECLS
 
-#endif /* #ifndef __GIBBER_R_MULTICAST_TRANSPORT_H__*/
+#endif /* #ifndef __GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_H__*/
