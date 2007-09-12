@@ -48,8 +48,9 @@ generate_packet(guint32 serial) {
   }
   p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, 1500);
 
-  gibber_r_multicast_packet_set_data_info(p, serial,
-      (serial % G_MAXUINT8) - part, part, total);
+  gibber_r_multicast_packet_set_packet_id (p, serial);
+  gibber_r_multicast_packet_set_data_info(p, (serial % G_MAXUINT8) - part,
+      part, total);
 
   for (i = 0 ; receivers[i].receiver_id != 0; i++) {
     gibber_r_multicast_packet_add_sender_info(p,
