@@ -107,6 +107,9 @@ gibber_r_multicast_packet_finalize (GObject *object)
     case PACKET_TYPE_DATA:
       g_free(self->data.data.payload);
       break;
+    case PACKET_TYPE_ATTEMPT_JOIN:
+      g_array_free (self->data.attempt_join.senders, TRUE);
+      break;
     default:
       /* Nothing specific to free */;
   }
@@ -163,8 +166,7 @@ gibber_r_multicast_packet_add_sender_info(GibberRMulticastPacket *packet,
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
 
   g_assert(priv->data == NULL);
-  g_assert(packet->type == PACKET_TYPE_DATA
-      || packet->type == PACKET_TYPE_SESSION);
+  g_assert(IS_RELIABLE_PACKET (packet) || packet->type == PACKET_TYPE_SESSION);
 
   packet->depends = g_list_append(packet->depends, s);
 
@@ -252,6 +254,10 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
     case PACKET_TYPE_REPAIR_REQUEST:
       /* 32 bit packet id and 32 sender id*/
       result += 8;
+      break;
+    case PACKET_TYPE_ATTEMPT_JOIN:
+      /* 8 bit nr of senders, 32 bit per sender */
+      result += 1 + 4 * packet->data.attempt_join.senders->len;
       break;
     case PACKET_TYPE_SESSION:
          /* 8 bit nr sender info + N times 32 bit sender id, 32 bit packet id
@@ -427,6 +433,17 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
       add_guint32 (priv->data, priv->max_data, &(priv->size),
             packet->data.repair_request.packet_id);
       break;
+    case PACKET_TYPE_ATTEMPT_JOIN: {
+      int i;
+      add_guint8 (priv->data, priv->max_data, &(priv->size),
+            packet->data.attempt_join.senders->len);
+
+      for (i = 0; i < packet->data.attempt_join.senders->len; i++) {
+        add_guint32 (priv->data, priv->max_data, &(priv->size),
+          g_array_index (packet->data.attempt_join.senders, guint32, i));
+      }
+      break;
+    }
     case PACKET_TYPE_SESSION:
       add_sender_info (priv->data, priv->max_data, &(priv->size),
           packet->depends);
@@ -512,6 +529,17 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       result->data.repair_request.packet_id =
           get_guint32 (priv->data, priv->max_data, &(priv->size));
       break;
+    case PACKET_TYPE_ATTEMPT_JOIN: {
+      guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
+      guint8 i;
+      for (i = 0; i < nr; i++) {
+        guint32 sender = get_guint32 (priv->data,
+            priv->max_data, &(priv->size));
+        gibber_r_multicast_packet_attempt_join_add_sender (result,
+            sender, NULL);
+      }
+      break;
+    }
     case PACKET_TYPE_SESSION:
       result->depends =
           get_sender_info(priv->data, priv->max_data, &(priv->size));
@@ -550,6 +578,21 @@ gibber_r_multicast_packet_get_raw_data(GibberRMulticastPacket *packet,
  *size = priv->size;
 
  return priv->data;
+}
+
+gboolean
+gibber_r_multicast_packet_attempt_join_add_sender (
+   GibberRMulticastPacket *packet,
+   guint32 sender,
+   GError **error) {
+  if (packet->data.attempt_join.senders == NULL) {
+    packet->data.attempt_join.senders = g_array_new (FALSE, FALSE,
+        sizeof(guint32));
+  }
+
+  g_array_append_val (packet->data.attempt_join.senders, sender);
+
+  return TRUE;
 }
 
 gint32

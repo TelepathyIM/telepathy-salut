@@ -93,6 +93,13 @@ struct _GibberRMulticastRepairRequestPacket {
     guint32 packet_id;
 };
 
+typedef struct _GibberRMulticastAttemptJoinPacket
+    GibberRMulticastAttemptJoinPacket;
+struct _GibberRMulticastAttemptJoinPacket {
+    /* Unknown sender identifiers */
+    GArray *senders;
+};
+
 typedef struct _GibberRMulticastPacket GibberRMulticastPacket;
 typedef struct _GibberRMulticastPacketClass GibberRMulticastPacketClass;
 
@@ -115,6 +122,7 @@ struct _GibberRMulticastPacket {
       GibberRMulticastWhoisReplyPacket whois_reply;
       GibberRMulticastDataPacket data;
       GibberRMulticastRepairRequestPacket repair_request;
+      GibberRMulticastAttemptJoinPacket attempt_join;
     } data;
 };
 
@@ -181,6 +189,13 @@ guint8 * gibber_r_multicast_packet_get_payload (GibberRMulticastPacket *packet,
 /* Get the packets raw data, packet is immutable after this call */
 guint8 * gibber_r_multicast_packet_get_raw_data (GibberRMulticastPacket *packet,
     gsize *size);
+
+/* Add sender we want to start joining with to the attempt_join */
+gboolean gibber_r_multicast_packet_attempt_join_add_sender (
+   GibberRMulticastPacket *packet,
+   guint32 sender,
+   GError **error);
+
 
 /* Utility function to calculate the difference between two packet */
 gint32
