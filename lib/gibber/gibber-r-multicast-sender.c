@@ -548,7 +548,7 @@ pop_packet(GibberRMulticastSender *sender) {
 
 static void
 pop_packets(GibberRMulticastSender *sender) {
-  if (sender->name == NULL 
+  if (sender->name == NULL
       || sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
   {
     /* No popping untill we know the senders real name and we at least have
@@ -609,6 +609,25 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
   return;
 }
 
+
+void
+gibber_r_multicast_sender_set_start (GibberRMulticastSender *sender,
+    guint32 packet_id)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
+    g_assert(g_hash_table_size(priv->packet_cache) == 0);
+
+    sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
+    sender->next_input_packet = packet_id;
+    sender->next_output_packet = packet_id;
+    priv->first_packet = packet_id;
+  }
+}
+
+
 void
 gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
                                GibberRMulticastPacket *packet) {
@@ -618,13 +637,11 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
 
   g_assert(sender->id == packet->sender);
 
-  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
-    g_assert(g_hash_table_size(priv->packet_cache) == 0);
-
-    sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
-    sender->next_input_packet = packet->packet_id;
-    sender->next_output_packet = packet->packet_id;
-    priv->first_packet = packet->packet_id;
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
+    /* Don't know where to start, so ignore..
+     * A potential optimisation would be to cache a limited amount anyway, so
+     * we don't have to repair them if we should have catched these anyways */
+    return;
   }
 
   diff = gibber_r_multicast_packet_diff(sender->next_output_packet,
