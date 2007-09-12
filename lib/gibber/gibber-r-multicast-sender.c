@@ -684,7 +684,8 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
     return;
   }
 
-  if (diff < 0 && gibber_r_multicast_packet_diff(priv->first_packet, id) > 0) {
+  if (diff < 0
+      && gibber_r_multicast_packet_diff(priv->first_packet, id) >= 0) {
     schedule_do_repair(sender, id);
     return;
   }
