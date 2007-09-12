@@ -61,6 +61,7 @@ struct _GibberRMulticastTransportPrivate
 {
   gboolean dispose_has_run;
   GibberRMulticastCausalTransport *transport;
+  GHashTable *members;
 };
 
 #define GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(o) \
@@ -107,8 +108,10 @@ gibber_r_multicast_transport_get_property (GObject *object,
 static void
 gibber_r_multicast_transport_init (GibberRMulticastTransport *obj)
 {
-  /*GibberRMulticastTransportPrivate *priv =
-      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (obj); */
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (obj);
+
+  priv->members = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 }
 
 static void gibber_r_multicast_transport_dispose (GObject *object);
@@ -198,10 +201,11 @@ gibber_r_multicast_transport_dispose (GObject *object)
 void
 gibber_r_multicast_transport_finalize (GObject *object)
 {
-  /* GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
+   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
      GibberRMulticastTransportPrivate *priv =
         GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
-   */
+
+  g_hash_table_destroy (priv->members);
 
   G_OBJECT_CLASS (
       gibber_r_multicast_transport_parent_class)->finalize (object);
@@ -211,6 +215,20 @@ static void
 received_data (GibberTransport *transport, GibberBuffer *buffer,
     gpointer user_data)
 {
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastTransportPrivate *priv =
+        GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  GibberRMulticastCausalBuffer *cbuffer =
+    (GibberRMulticastCausalBuffer *)buffer;
+
+  /* Temporary hack to send NEW_SENDER on time, will be obsoleted by the new
+   * join algorithm */
+  if (!g_hash_table_lookup (priv->members, cbuffer->sender)) {
+    g_hash_table_insert (priv->members, g_strdup (cbuffer->sender),
+      GINT_TO_POINTER(TRUE));
+    g_signal_emit (self, signals[NEW_SENDER], 0, cbuffer->sender);
+  }
+
   gibber_transport_received_data_custom (GIBBER_TRANSPORT (user_data), buffer);
 }
 
