@@ -577,14 +577,22 @@ salut_contact_takes_part_in_olpc_activity (SalutContact *self,
 
   activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
   if (activity != NULL)
+    {
+      DEBUG_CONTACT (self,
+          "activity is already in contact's private activities list");
       return;
+    }
 
   /* TODO: maybe we should add a hash that maps activity ID => activity for
    * announced activities */
   activity = g_hash_table_find (priv->olpc_announced_activities,
       activity_has_id, (gchar *) activity_id);
-  if (activity_id != NULL)
-    return;
+  if (activity != NULL)
+    {
+      DEBUG_CONTACT (self,
+          "activity is already in contact's announced activities list");
+      return;
+    }
 
   DEBUG_CONTACT (self, "added in activity %s as he just invited us",
       activity_id);
