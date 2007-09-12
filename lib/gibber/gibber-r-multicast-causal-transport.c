@@ -915,8 +915,9 @@ gibber_r_multicast_causal_transport_send(GibberRMulticastCausalTransport *transp
     for (i = 0; i < packets->len && ret; i++) {
       packet = g_ptr_array_index(packets, i);
 
-      gibber_r_multicast_packet_set_data_info(packet, priv->packet_id++,
-         stream_id, i, packets->len);
+      gibber_r_multicast_packet_set_packet_id(packet, priv->packet_id++);
+      gibber_r_multicast_packet_set_data_info(packet, stream_id, i,
+         packets->len);
 
       ret = sendout_packet(self, packet, error);
       gibber_r_multicast_sender_push(priv->self, packet);
@@ -928,8 +929,8 @@ gibber_r_multicast_causal_transport_send(GibberRMulticastCausalTransport *transp
     g_ptr_array_free(packets, TRUE);
     return ret;
   } else {
-     gibber_r_multicast_packet_set_data_info(packet, priv->packet_id++,
-         stream_id, 0, 1);
+     gibber_r_multicast_packet_set_packet_id(packet, priv->packet_id++);
+     gibber_r_multicast_packet_set_data_info(packet, stream_id, 0, 1);
      gibber_r_multicast_sender_push(priv->self, packet);
      return sendout_packet(self, packet, error);
   }
