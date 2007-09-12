@@ -172,15 +172,23 @@ gibber_r_multicast_packet_add_sender_info(GibberRMulticastPacket *packet,
 }
 
 void
+
+gibber_r_multicast_packet_set_packet_id (GibberRMulticastPacket *packet,
+   guint32 packet_id)
+{
+  g_assert (IS_RELIABLE_PACKET(packet));
+  packet->packet_id = packet_id;
+}
+
+void
 gibber_r_multicast_packet_set_data_info(GibberRMulticastPacket *packet,
-    guint32 packet_id, guint8 stream_id, guint8 part, guint8 total)
+    guint8 stream_id, guint8 part, guint8 total)
 {
   g_assert(part < total);
   g_assert(packet->type == PACKET_TYPE_DATA);
 
   packet->data.data.packet_part = part;
   packet->data.data.packet_total = total;
-  packet->packet_id = packet_id;
   packet->data.data.stream_id = stream_id;
 }
 

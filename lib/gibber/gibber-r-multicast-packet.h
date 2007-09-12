@@ -146,9 +146,12 @@ gboolean gibber_r_multicast_packet_add_sender_info (
     guint32 packet_id,
     GError **error);
 
+void gibber_r_multicast_packet_set_packet_id (GibberRMulticastPacket *packet,
+  guint32 packet_id);
+
 /* Set info for PACKET_TYPE_DATA packets */
 void gibber_r_multicast_packet_set_data_info (GibberRMulticastPacket *packet,
-    guint32 packet_id, guint8 stream_id, guint8 part, guint8 total);
+    guint8 stream_id, guint8 part, guint8 total);
 
 /* Set info for PACKET_TYPE_REPAIR_REQUEST packets */
 void gibber_r_multicast_packet_set_repair_request_info (
