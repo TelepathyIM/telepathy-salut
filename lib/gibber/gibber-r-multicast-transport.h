@@ -23,10 +23,9 @@
 
 #include <glib-object.h>
 #include "gibber-transport.h"
+#include "gibber-r-multicast-causal-transport.h"
 
 G_BEGIN_DECLS
-
-#define GIBBER_R_MULTICAST_DEFAULT_STREAM 0
 
 typedef struct _GibberRMulticastTransport GibberRMulticastTransport;
 typedef struct _GibberRMulticastTransportClass GibberRMulticastTransportClass;
@@ -62,12 +61,11 @@ GType gibber_r_multicast_transport_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportClass))
 
 GibberRMulticastTransport *
-gibber_r_multicast_transport_new(GibberTransport *transport,
-                                 const gchar *name);
+gibber_r_multicast_transport_new(GibberRMulticastCausalTransport *transport);
 
 gboolean
 gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
-                                     gboolean initial, GError **error);
+                                     GError **error);
 
 gboolean
 gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
@@ -75,8 +73,6 @@ gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
                                   const guint8 *data,
                                   gsize size,
                                   GError **error);
-
-
 
 G_END_DECLS
 
