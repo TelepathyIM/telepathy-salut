@@ -69,7 +69,6 @@ rmc_transport_connected (GibberTransport *transport, gpointer user_data) {
   gibber_r_multicast_transport_connect (rm, NULL);
 }
 
-
 void
 rmulticast_connect (GibberRMulticastTransport *transport) 
 {
@@ -209,8 +208,9 @@ depends_connected (GibberTransport *transport, gpointer user_data)
          senders[i].sender_id,
          GIBBER_TRANSPORT (testtransport)->max_packet_size);
 
-      gibber_r_multicast_packet_set_data_info (packet, senders[i].packet_id,
-          0, 0, 1);
+      gibber_r_multicast_packet_set_packet_id (packet, senders[i].packet_id);
+      gibber_r_multicast_packet_set_data_info (packet, 0, 0, 1);
+
       data = gibber_r_multicast_packet_get_raw_data (packet, &size);
       test_transport_write (testtransport, data, size);
       g_object_unref (packet);
