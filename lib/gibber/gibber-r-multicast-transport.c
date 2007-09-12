@@ -247,12 +247,46 @@ gibber_r_multicast_transport_new(GibberRMulticastCausalTransport *transport)
   return result;
 }
 
+static void
+received_foreign_packet_cb (GibberRMulticastCausalTransport *ctransport,
+    GibberRMulticastPacket *packet, gpointer user_data) {
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  GList *l;
+
+  printf ("Received foreign packet from %x, type %d\n",
+    packet->sender, packet->type);
+
+  gibber_r_multicast_causal_transport_add_sender (priv->transport,
+      packet->sender);
+
+  if (IS_RELIABLE_PACKET (packet)) {
+    gibber_r_multicast_causal_transport_set_sender_start (priv->transport,
+      packet->sender, packet->packet_id);
+    for (l = packet->depends; l != 0; l = g_list_next (l)) {
+      GibberRMulticastPacketSenderInfo *info =
+        (GibberRMulticastPacketSenderInfo *)l->data;
+      gibber_r_multicast_causal_transport_add_sender (priv->transport,
+        info->sender_id);
+      gibber_r_multicast_causal_transport_set_sender_start (priv->transport,
+        info->sender_id, info->packet_id);
+    }
+  }
+}
+
 gboolean
 gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
     GError **error)
 {
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
+
   gibber_transport_set_state(GIBBER_TRANSPORT(transport),
          GIBBER_TRANSPORT_CONNECTED);
+
+  g_signal_connect (priv->transport, "received-foreign-packet",
+      G_CALLBACK (received_foreign_packet_cb), transport);
 
   return TRUE;
 }
