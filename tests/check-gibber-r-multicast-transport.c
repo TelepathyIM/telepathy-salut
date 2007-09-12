@@ -39,14 +39,17 @@ create_rmulticast_transport (TestTransport **testtransport,
                              gpointer user_data)
 {
   TestTransport *t;
+  GibberRMulticastCausalTransport *rmctransport;
   GibberRMulticastTransport *rmtransport;
 
   t = test_transport_new (test_send_hook, user_data);
   fail_unless (t != NULL);
   GIBBER_TRANSPORT (t)->max_packet_size = 150;
 
-  rmtransport = gibber_r_multicast_transport_new (
-      GIBBER_TRANSPORT(t), "test123");
+  rmctransport = gibber_r_multicast_causal_transport_new (GIBBER_TRANSPORT(t),
+     "test123");
+
+  rmtransport = gibber_r_multicast_transport_new (rmctransport);
 
   if (testtransport != NULL)
     {
@@ -58,6 +61,32 @@ create_rmulticast_transport (TestTransport **testtransport,
 
   return rmtransport;
 }
+
+static void
+rmc_transport_connected (GibberTransport *transport, gpointer user_data) {
+  GibberRMulticastTransport *rm = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+
+  gibber_r_multicast_transport_connect (rm, NULL);
+}
+
+
+void
+rmulticast_connect (GibberRMulticastTransport *transport) 
+{
+  GibberRMulticastCausalTransport *rmc;
+
+  fail_unless (transport != NULL);
+
+  g_object_get (transport, "transport", &rmc, NULL);
+  fail_unless (rmc != NULL);
+
+  g_signal_connect (rmc, "connected",
+    G_CALLBACK (rmc_transport_connected), transport);
+
+  fail_unless (gibber_r_multicast_causal_transport_connect (rmc,
+      FALSE, NULL));
+}
+
 
 /* test depends test */
 struct {
@@ -205,8 +234,7 @@ START_TEST (test_depends)
   g_signal_connect(rmtransport, "connected",
       G_CALLBACK(depends_connected), testtransport);
 
-  fail_unless (gibber_r_multicast_transport_connect (rmtransport,
-      FALSE, NULL));
+  rmulticast_connect (rmtransport);
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
@@ -296,8 +324,7 @@ START_TEST (test_fragmentation)
   g_signal_connect(rmtransport, "connected",
       G_CALLBACK(fragmentation_connected), NULL);
 
-  fail_unless (gibber_r_multicast_transport_connect (rmtransport,
-     FALSE, NULL));
+  rmulticast_connect (rmtransport);
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
@@ -377,8 +404,7 @@ START_TEST (test_unique_id)
   rmtransport = create_rmulticast_transport (NULL, "test123",
        unique_id_send_hook, &test_id);
 
-  fail_unless (gibber_r_multicast_transport_connect (rmtransport,
-      FALSE, NULL));
+  rmulticast_connect (rmtransport);
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
@@ -478,8 +504,7 @@ START_TEST (test_id_generation_conflict)
   rmtransport = create_rmulticast_transport (NULL, "test123",
        id_generation_conflict_send_hook, &test);
 
-  fail_unless (gibber_r_multicast_transport_connect (rmtransport,
-      FALSE, NULL));
+  rmulticast_connect (rmtransport);
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);

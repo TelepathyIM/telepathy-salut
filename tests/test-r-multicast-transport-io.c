@@ -11,7 +11,8 @@
 GMainLoop *loop;
 
 TestTransport *t;
-GibberRMulticastTransport *m;
+GibberRMulticastTransport *rm;
+GibberRMulticastCausalTransport *rmc;
 
 void
 received_data(GibberTransport *transport, GibberBuffer *buffer,
@@ -66,7 +67,7 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   if (packet)  {
     test_transport_write(t, b64, size);
   } else {
-    g_assert(gibber_transport_send(GIBBER_TRANSPORT(m), b64, size, NULL));
+    g_assert(gibber_transport_send(GIBBER_TRANSPORT(rm), b64, size, NULL));
   }
 
   g_free(b64);
@@ -91,9 +92,14 @@ new_sender_cb(GibberRMulticastTransport *transport,
 }
 
 static void
-connected (GibberRMulticastTransport *transport, gpointer user_data) {
+rm_connected (GibberRMulticastTransport *transport, gpointer user_data) {
   printf("CONNECTED:\n");
   fflush(stdout);
+}
+
+static void
+rmc_connected (GibberRMulticastTransport *transport, gpointer user_data) {
+  g_assert(gibber_r_multicast_transport_connect(rm, NULL));
 }
 
 int
@@ -112,17 +118,22 @@ main(int argc, char **argv){
   GIBBER_TRANSPORT(t)->max_packet_size = 1500;
   test_transport_set_echoing (t, TRUE);
 
-  m = gibber_r_multicast_transport_new(GIBBER_TRANSPORT(t), argv[1]);
-  gibber_transport_set_handler(GIBBER_TRANSPORT(m), received_data, argv[1]);
+  rmc = gibber_r_multicast_causal_transport_new(GIBBER_TRANSPORT(t), argv[1]);
 
-  g_signal_connect(m, "new-sender", 
+  rm = gibber_r_multicast_transport_new(rmc);
+  gibber_transport_set_handler(GIBBER_TRANSPORT(rm), received_data, argv[1]);
+
+  g_signal_connect(rm, "new-sender",
       G_CALLBACK(new_sender_cb), NULL);
 
-  g_signal_connect(m, "connected",
-    G_CALLBACK(connected), NULL);
+  g_signal_connect(rmc, "connected",
+    G_CALLBACK(rmc_connected), NULL);
+
+  g_signal_connect(rm, "connected",
+    G_CALLBACK(rm_connected), NULL);
 
   /* test transport starts out connected */
-  g_assert(gibber_r_multicast_transport_connect(m, FALSE, NULL));
+  g_assert(gibber_r_multicast_causal_transport_connect(rmc, FALSE, NULL));
 
   io = g_io_channel_unix_new(STDIN_FILENO);
   g_io_add_watch (io,  G_IO_IN, got_input, NULL);

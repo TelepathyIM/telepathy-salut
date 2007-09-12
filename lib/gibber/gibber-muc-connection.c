@@ -34,6 +34,7 @@
 #include "gibber-xmpp-writer.h"
 #include "gibber-multicast-transport.h"
 #include "gibber-r-multicast-transport.h"
+#include "gibber-r-multicast-causal-transport.h"
 
 #define PROTO_RMULTICAST  "rmulticast"
 
@@ -89,6 +90,7 @@ struct _GibberMucConnectionPrivate
   GHashTable *parameters;
 
   GibberMulticastTransport *mtransport;
+  GibberRMulticastCausalTransport *rmctransport;
   GibberRMulticastTransport *rmtransport;
 
   const gchar *current_sender;
@@ -405,9 +407,10 @@ gibber_muc_connection_new(const gchar *name,
   priv->port = g_strdup(port);
 
   priv->mtransport = gibber_multicast_transport_new();
-  priv->rmtransport = gibber_r_multicast_transport_new(
+  priv->rmctransport = gibber_r_multicast_causal_transport_new(
         GIBBER_TRANSPORT(priv->mtransport),
         priv->name);
+  priv->rmtransport = gibber_r_multicast_transport_new(priv->rmctransport);
   gibber_transport_set_handler(GIBBER_TRANSPORT(priv->rmtransport),
                                _connection_received_data,
                                result);
@@ -434,8 +437,8 @@ _rmtransport_lost_sender_cb(GibberRMulticastTransport *transport,
 }
 
 static void
-_rmtransport_connected_cb(GibberRMulticastTransport *transport,
-     gpointer user_data)
+_rmtransport_connected_cb (GibberRMulticastTransport *transport,
+    gpointer user_data)
 {
   GibberMucConnection *connection = GIBBER_MUC_CONNECTION (user_data);
 
@@ -444,7 +447,21 @@ _rmtransport_connected_cb(GibberRMulticastTransport *transport,
 }
 
 static void
-_rmtransport_disconnected_cb(GibberRMulticastTransport *transport,
+_rmctransport_connected_cb(GibberRMulticastTransport *transport,
+     gpointer user_data)
+{
+  GibberMucConnection *connection = GIBBER_MUC_CONNECTION (user_data);
+  GibberMucConnectionPrivate *priv =
+      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection);
+
+  if (!gibber_r_multicast_transport_connect (priv->rmtransport, NULL))
+  {
+    gibber_transport_disconnect (GIBBER_TRANSPORT (priv->rmctransport));
+  }
+}
+
+static void
+_transport_disconnected_cb(GibberRMulticastTransport *transport,
     gpointer user_data)
 {
   GibberMucConnection *connection = GIBBER_MUC_CONNECTION (user_data);
@@ -453,12 +470,11 @@ _rmtransport_disconnected_cb(GibberRMulticastTransport *transport,
   {
     return;
   }
-
   connection->state = GIBBER_MUC_CONNECTION_DISCONNECTED;
   g_signal_emit(connection, signals[DISCONNECTED], 0);
 }
 
-gboolean 
+gboolean
 gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
   GibberMucConnectionPrivate *priv = 
       GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
@@ -474,13 +490,16 @@ gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
   g_signal_connect (priv->rmtransport, "connected",
     G_CALLBACK (_rmtransport_connected_cb), connection);
 
+  g_signal_connect (priv->rmctransport, "connected",
+    G_CALLBACK (_rmctransport_connected_cb), connection);
+
   if (priv->address == NULL) {
     int attempts = 10;
     do {
       gibber_muc_connection_create_random_address(connection);
       if (gibber_multicast_transport_connect(priv->mtransport,
                                              priv->address, priv->port)) {
-        if (gibber_r_multicast_transport_connect(priv->rmtransport,
+        if (gibber_r_multicast_causal_transport_connect(priv->rmctransport,
                                                    TRUE, NULL)) {
           ret = TRUE;
         }
@@ -490,8 +509,8 @@ gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
   } else {
     if (gibber_multicast_transport_connect(priv->mtransport,
                                              priv->address, priv->port)) {
-      if (gibber_r_multicast_transport_connect(priv->rmtransport,
-                                                TRUE, NULL)) {
+      if (gibber_r_multicast_causal_transport_connect(priv->rmctransport,
+           TRUE, NULL)) {
         ret = TRUE;
       }
     }
@@ -509,7 +528,7 @@ gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
       "Failed to connect to multicast group");
   } else {
     g_signal_connect (priv->rmtransport, "disconnected",
-      G_CALLBACK (_rmtransport_disconnected_cb), connection);
+      G_CALLBACK (_transport_disconnected_cb), connection);
     g_signal_connect(priv->rmtransport, "new-sender",
                      G_CALLBACK(_rmtransport_new_sender_cb), connection);
     g_signal_connect(priv->rmtransport, "lost-sender",
@@ -578,7 +597,7 @@ static void _connection_received_data(GibberTransport *transport,
 
   g_assert(buffer->length > 0);
 
-  if (rmbuffer->stream_id != GIBBER_R_MULTICAST_DEFAULT_STREAM) {
+  if (rmbuffer->stream_id != GIBBER_R_MULTICAST_CAUSAL_DEFAULT_STREAM) {
     g_signal_emit(self, signals[RECEIVED_DATA], 0,
         rmbuffer->sender, rmbuffer->stream_id, buffer->data, buffer->length);
     return;
@@ -610,8 +629,7 @@ gibber_muc_connection_send(GibberMucConnection *connection,
     return FALSE;
   }
 
-  return gibber_r_multicast_transport_send(priv->rmtransport,
-      GIBBER_R_MULTICAST_DEFAULT_STREAM,
+  return gibber_transport_send (GIBBER_TRANSPORT (priv->rmtransport),
       data, length, error);
 }
 
