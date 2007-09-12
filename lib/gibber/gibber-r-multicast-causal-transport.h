@@ -80,6 +80,15 @@ gibber_r_multicast_causal_transport_send(
     gsize size,
     GError **error);
 
+void gibber_r_multicast_causal_transport_add_sender (
+    GibberRMulticastCausalTransport *transport, guint32 sender_id);
+
+void gibber_r_multicast_causal_transport_set_sender_start (
+    GibberRMulticastCausalTransport *transport,
+    guint32 sender_id,
+    guint32 packet_id);
+
+
 
 G_END_DECLS
 

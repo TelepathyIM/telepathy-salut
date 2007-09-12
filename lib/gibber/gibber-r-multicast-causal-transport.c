@@ -370,6 +370,7 @@ connected (GibberRMulticastCausalTransport *transport)
 
   priv->self = gibber_r_multicast_sender_new (transport->sender_id, priv->name,
       priv->senders);
+  gibber_r_multicast_sender_set_start (priv->self, priv->packet_id);
 
   g_hash_table_insert(priv->senders, GUINT_TO_POINTER(priv->self->id),
       priv->self);
@@ -552,34 +553,54 @@ name_discovered_cb(GibberRMulticastSender *sender, gchar *name,
 //  g_signal_emit(self, signals[NEW_SENDER], 0, name);
 }
 
-static GibberRMulticastSender *
-add_sender(GibberRMulticastCausalTransport *self, guint32 sender_id,
-           const gchar *name) {
+void
+gibber_r_multicast_causal_transport_add_sender(
+    GibberRMulticastCausalTransport *transport, guint32 sender_id) {
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastSender *sender;
 
-  sender = gibber_r_multicast_sender_new(sender_id, name, priv->senders);
+  sender = g_hash_table_lookup(priv->senders, GUINT_TO_POINTER(sender_id));
+
+  if (sender != NULL) {
+    return;
+  }
+
+  sender = gibber_r_multicast_sender_new(sender_id, NULL, priv->senders);
 
   g_hash_table_insert(priv->senders, GUINT_TO_POINTER(sender->id), sender);
 
   g_signal_connect(sender, "received-data",
-      G_CALLBACK(data_received_cb), self);
+      G_CALLBACK(data_received_cb), transport);
 
   g_signal_connect(sender, "received-control-packet",
-      G_CALLBACK(control_packet_received_cb), self);
+      G_CALLBACK(control_packet_received_cb), transport);
 
   g_signal_connect(sender, "repair-request",
-      G_CALLBACK(repair_request_cb), self);
+      G_CALLBACK(repair_request_cb), transport);
 
   g_signal_connect(sender, "whois-request",
-      G_CALLBACK(whois_request_cb), self);
+      G_CALLBACK(whois_request_cb), transport);
   g_signal_connect(sender, "whois-reply",
-      G_CALLBACK(whois_reply_cb), self);
+      G_CALLBACK(whois_reply_cb), transport);
   g_signal_connect(sender, "name-discovered",
-      G_CALLBACK(name_discovered_cb), self);
+      G_CALLBACK(name_discovered_cb), transport);
+}
 
-  return sender;
+
+void gibber_r_multicast_causal_transport_set_sender_start (
+    GibberRMulticastCausalTransport *transport,
+    guint32 sender_id,
+    guint32 packet_id) {
+
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+  GibberRMulticastSender *sender;
+
+  sender = g_hash_table_lookup(priv->senders, GUINT_TO_POINTER(sender_id));
+  g_assert (sender != NULL);
+
+  gibber_r_multicast_sender_set_start (sender, packet_id);
 }
 
 static void
@@ -604,11 +625,14 @@ handle_session_message(GibberRMulticastCausalTransport *self,
     num++;
 
     if (sender == NULL) {
-      sender = add_sender(self, sender_info->sender_id, NULL);
-    } else if (gibber_r_multicast_packet_diff(sender_info->packet_id,
-                   sender->next_input_packet) > 0) {
+      /* We will here about this guy in a reliable message we apparently didn't
+       * receive yet */
+      continue;
+    }
 
-      g_assert(sender->state > GIBBER_R_MULTICAST_SENDER_STATE_NEW);
+    if (gibber_r_multicast_packet_diff (sender_info->packet_id,
+                   sender->next_input_packet) > 0) {
+      g_assert (sender->state > GIBBER_R_MULTICAST_SENDER_STATE_NEW);
       outdated = TRUE;
     }
     gibber_r_multicast_sender_seen(sender, sender_info->packet_id);
@@ -638,9 +662,6 @@ handle_data_depends(GibberRMulticastCausalTransport *self,
         g_hash_table_lookup (priv->senders,
             GUINT_TO_POINTER (sender_info->sender_id));
 
-    if (sender == NULL) {
-      sender = add_sender (self, sender_info->sender_id, NULL);
-    }
     gibber_r_multicast_sender_seen (sender, sender_info->packet_id + 1);
   }
 }
@@ -705,15 +726,21 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
     DEBUG_TRANSPORT ("New sender polling for a unique id");
   } else {
     /* All packets with non-zero sender fall go through here to start detecting
-     * new sender as early as possible */
+     * foreign packets as early as possible */
     sender = g_hash_table_lookup (priv->senders,
         GUINT_TO_POINTER (packet->sender));
-    if (sender == NULL) {
-      sender = add_sender (self, packet->sender, NULL);
+    if (sender == NULL ||
+        (sender != priv->self
+           && sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW)) {
+      g_signal_emit (self, signals[RECEIVED_FOREIGN_PACKET],
+          0, packet);
     }
+    sender = g_hash_table_lookup (priv->senders,
+        GUINT_TO_POINTER (packet->sender));
   }
 
-  if (sender == priv->self && packet->type != PACKET_TYPE_WHOIS_REQUEST)
+  if (sender == NULL
+      || (sender == priv->self && packet->type != PACKET_TYPE_WHOIS_REQUEST))
     {
       goto out;
     }
@@ -742,10 +769,8 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
 
       g_assert(sender_id != 0);
 
-      if (rsender == NULL)
-        {
-          rsender = add_sender(self, sender_id, NULL);
-        }
+      g_assert (rsender != NULL);
+
       gibber_r_multicast_sender_repair_request(rsender,
          packet->data.repair_request.packet_id);
       break;
