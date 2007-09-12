@@ -38,6 +38,9 @@ HANDWRITTEN_SOURCES =             \
   gibber-multicast-transport.h    \
   gibber-r-multicast-transport.c  \
   gibber-r-multicast-transport.h  \
+  gibber-r-multicast-causal-transport.c  \
+  gibber-r-multicast-causal-transport.h  \
+  gibber-r-multicast-transport.h  \
   gibber-r-multicast-packet.c     \
   gibber-r-multicast-packet.h     \
   gibber-r-multicast-sender.c     \
