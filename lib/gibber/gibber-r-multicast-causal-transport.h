@@ -36,6 +36,7 @@ struct _GibberRMulticastCausalTransportClass {
 
 struct _GibberRMulticastCausalTransport {
     GibberTransport parent;
+    guint32 sender_id;
 };
 
 GType gibber_r_multicast_causal_transport_get_type(void);

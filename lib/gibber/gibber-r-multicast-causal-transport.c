@@ -93,7 +93,6 @@ struct _GibberRMulticastCausalTransportPrivate
   GibberRMulticastSender *self;
   guint timer;
   gchar *name;
-  guint32 sender_id;
 
   gint nr_join_requests;
   gint nr_join_requests_seen;
@@ -369,7 +368,7 @@ connected (GibberRMulticastCausalTransport *transport)
 
   DEBUG_TRANSPORT ("Connected to group");
 
-  priv->self = gibber_r_multicast_sender_new (priv->sender_id, priv->name,
+  priv->self = gibber_r_multicast_sender_new (transport->sender_id, priv->name,
       priv->senders);
 
   g_hash_table_insert(priv->senders, GUINT_TO_POINTER(priv->self->id),
@@ -384,7 +383,7 @@ connected (GibberRMulticastCausalTransport *transport)
 
   /* Send out an unsolicited whois reply */
   packet = gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REPLY,
-        priv->sender_id, priv->transport->max_packet_size);
+        transport->sender_id, priv->transport->max_packet_size);
 
   gibber_r_multicast_packet_set_whois_reply_info (packet, priv->name);
 
@@ -414,7 +413,7 @@ next_join_step (gpointer data)
           0, priv->transport->max_packet_size);
 
       gibber_r_multicast_packet_set_whois_request_info (packet,
-          priv->sender_id);
+          transport->sender_id);
 
       sendout_packet (transport, packet, NULL);
       g_object_unref (packet);
@@ -437,11 +436,11 @@ start_joining (GibberRMulticastCausalTransport *transport)
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
 
-  priv->sender_id = _random_nonzero_uint ();
+  transport->sender_id = _random_nonzero_uint ();
   priv->nr_join_requests = 0;
   priv->nr_join_requests_seen = 0;
 
-  DEBUG_TRANSPORT ("Started joining, id: %x", priv->sender_id);
+  DEBUG_TRANSPORT ("Started joining, id: %x", transport->sender_id);
 
   if (priv->timer != 0)
   {
@@ -656,7 +655,7 @@ joining_multicast_receive (GibberRMulticastCausalTransport *self,
 
   DEBUG_TRANSPORT ("Received packet type: %x", packet->type);
 
-  if (packet->sender == priv->sender_id)
+  if (packet->sender == self->sender_id)
     {
       DEBUG_TRANSPORT ("Detected collision with existing sender, "
         "restarting join process");
@@ -665,7 +664,7 @@ joining_multicast_receive (GibberRMulticastCausalTransport *self,
     }
 
   if (packet->type == PACKET_TYPE_WHOIS_REQUEST &&
-      packet->data.whois_request.sender_id == priv->sender_id)
+      packet->data.whois_request.sender_id == self->sender_id)
     {
       if (packet->sender != 0)
         {
