@@ -85,12 +85,12 @@ START_TEST (test_packet) {
   COMPARE(version);
   COMPARE(data.data.packet_part);
   COMPARE(data.data.packet_total);
-  COMPARE(data.data.packet_id);
+  COMPARE(packet_id);
   COMPARE(data.data.stream_id);
 
   fail_unless(a->sender == b->sender);
 
-  for (l = b->data.data.depends; l != NULL ; l = g_list_next(l)) 
+  for (l = b->depends; l != NULL ; l = g_list_next(l))
     {
       for (i = 0; senders[i].sender_id != 0 ; i++)
         {

@@ -594,7 +594,7 @@ handle_session_message(GibberRMulticastCausalTransport *self,
 
   g_assert (packet->type == PACKET_TYPE_SESSION);
 
-  for (l = packet->data.session.senders ; l != NULL ; l = g_list_next(l))
+  for (l = packet->depends; l != NULL ; l = g_list_next(l))
     {
       GibberRMulticastPacketSenderInfo *sender_info =
           (GibberRMulticastPacketSenderInfo *) l->data;
@@ -632,7 +632,7 @@ handle_data_depends(GibberRMulticastCausalTransport *self,
 
   g_assert (packet->type == PACKET_TYPE_DATA);
 
-  for (l = packet->data.data.depends; l != NULL ; l = g_list_next(l)) {
+  for (l = packet->depends; l != NULL ; l = g_list_next(l)) {
     GibberRMulticastPacketSenderInfo *sender_info =
         (GibberRMulticastPacketSenderInfo *) l->data;
     GibberRMulticastSender *sender =

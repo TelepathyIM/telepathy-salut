@@ -114,7 +114,7 @@ repair_message_cb(GibberRMulticastSender *sender,
                   gpointer user_data) {
 
   fail_unless(packet->type == PACKET_TYPE_DATA);
-  fail_unless (packet->data.data.packet_id == REPAIR_PACKET + serial_offset);
+  fail_unless (packet->packet_id == REPAIR_PACKET + serial_offset);
 
   g_main_loop_quit((GMainLoop *)user_data);
 }

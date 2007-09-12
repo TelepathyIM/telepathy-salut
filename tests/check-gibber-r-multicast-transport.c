@@ -148,9 +148,9 @@ depends_send_hook (GibberTransport *transport,
       goto out;
     }
 
-  fail_unless(g_list_length (packet->data.data.depends) > 0);
+  fail_unless(g_list_length (packet->depends) > 0);
 
-  for (l = packet->data.data.depends; l != NULL; l = g_list_next (l))
+  for (l = packet->depends; l != NULL; l = g_list_next (l))
     {
       for (i = 0; senders[i].name != NULL ; i++)
         {

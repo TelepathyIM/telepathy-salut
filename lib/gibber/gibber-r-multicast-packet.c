@@ -95,21 +95,17 @@ gibber_r_multicast_packet_finalize (GObject *object)
   GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
 
+  g_list_foreach(self->depends,
+          (GFunc)gibber_r_multicast_packet_sender_info_free, NULL);
+  g_list_free(self->depends);
+
   /* free any data held directly by the object here */
   switch (self->type) {
     case PACKET_TYPE_WHOIS_REPLY:
       g_free(self->data.whois_reply.sender_name);
       break;
     case PACKET_TYPE_DATA:
-      g_list_foreach(self->data.data.depends,
-          (GFunc)gibber_r_multicast_packet_sender_info_free, NULL);
-      g_list_free(self->data.data.depends);
       g_free(self->data.data.payload);
-      break;
-    case PACKET_TYPE_SESSION:
-      g_list_foreach(self->data.session.senders,
-          (GFunc)gibber_r_multicast_packet_sender_info_free, NULL);
-      g_list_free(self->data.session.senders);
       break;
     default:
       /* Nothing specific to free */;
@@ -170,12 +166,7 @@ gibber_r_multicast_packet_add_sender_info(GibberRMulticastPacket *packet,
   g_assert(packet->type == PACKET_TYPE_DATA
       || packet->type == PACKET_TYPE_SESSION);
 
-  if (packet->type == PACKET_TYPE_DATA) {
-    packet->data.data.depends = g_list_append(packet->data.data.depends, s);
-  } else {
-    packet->data.session.senders =
-        g_list_append(packet->data.session.senders, s);
-  }
+  packet->depends = g_list_append(packet->depends, s);
 
   return TRUE;
 }
@@ -189,7 +180,7 @@ gibber_r_multicast_packet_set_data_info(GibberRMulticastPacket *packet,
 
   packet->data.data.packet_part = part;
   packet->data.data.packet_total = total;
-  packet->data.data.packet_id = packet_id;
+  packet->packet_id = packet_id;
   packet->data.data.stream_id = stream_id;
 }
 
@@ -229,6 +220,14 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
 
   gsize result = 6; /* 8 bit type, 8 bit version, 32 bit sender */
 
+  if (IS_RELIABLE_PACKET (packet)) {
+      /*  32 bit packet id, 8 bit nr sender info */
+      result += 5;
+      /* 32 bit sender id, 32 bit packet id */
+      result += 8 * g_list_length(packet->depends);
+      result += packet->data.data.payload_size;
+  }
+
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
       /* 32 bit sender id */
@@ -239,13 +238,8 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
       result += 1 + strlen(packet->data.whois_reply.sender_name);
       break;
     case PACKET_TYPE_DATA:
-      /* 8 bit part, 8 bit total,
-         32 bit packet id, 8 bit stream id,
-         8 bit nr sender info */
-      result += 8;
-      /* 32 bit sender id, 32 bit packet id */
-      result += 8 * g_list_length(packet->data.data.depends);
-      result += packet->data.data.payload_size;
+      /* 8 bit part, 8 bit total, 8 bit stream id */
+      result += 3;
       break;
     case PACKET_TYPE_REPAIR_REQUEST:
       /* 32 bit packet id and 32 sender id*/
@@ -254,10 +248,9 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
     case PACKET_TYPE_SESSION:
          /* 8 bit nr sender info + N times 32 bit sender id, 32 bit packet id
           */
-      result += 1 + 8 * g_list_length(packet->data.session.senders);
+      result += 1 + 8 * g_list_length(packet->depends);
       break;
-    case PACKET_TYPE_BYE:
-    case PACKET_TYPE_INVALID:
+    default:
       /* Nothing to add */;
   }
 
@@ -389,6 +382,14 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
   add_guint8 (priv->data, priv->max_data, &(priv->size), packet->version);
   add_guint32 (priv->data, priv->max_data, &(priv->size), packet->sender);
 
+  if (IS_RELIABLE_PACKET(packet)) {
+    /* Add common reliable packet data */
+    add_guint32 (priv->data, priv->max_data, &(priv->size),
+      packet->packet_id);
+    add_sender_info (priv->data, priv->max_data, &(priv->size),
+      packet->depends);
+  }
+
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
       add_guint32 (priv->data, priv->max_data, &(priv->size),
@@ -399,16 +400,12 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
           packet->data.whois_reply.sender_name);
       break;
     case PACKET_TYPE_DATA:
-      add_guint32 (priv->data, priv->max_data, &(priv->size),
-            packet->data.data.packet_id);
       add_guint8 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.packet_part);
       add_guint8 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.packet_total);
       add_guint8 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.stream_id);
-      add_sender_info (priv->data, priv->max_data, &(priv->size),
-          packet->data.data.depends);
 
       g_assert(priv->size + packet->data.data.payload_size == priv->max_data);
 
@@ -424,7 +421,7 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
       break;
     case PACKET_TYPE_SESSION:
       add_sender_info (priv->data, priv->max_data, &(priv->size),
-          packet->data.session.senders);
+          packet->depends);
       break;
     case PACKET_TYPE_BYE:
       /* Not implemented, fall through */
@@ -473,6 +470,13 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   result->version = get_guint8 (priv->data, priv->max_data, &(priv->size));
   result->sender = get_guint32 (priv->data, priv->max_data, &(priv->size));
 
+  if (IS_RELIABLE_PACKET (result)) {
+    result->packet_id = get_guint32 (priv->data,
+      priv->max_data, &(priv->size));
+    result->depends =
+      get_sender_info (priv->data, priv->max_data, &(priv->size));
+  }
+
   switch (result->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
       result->data.whois_request.sender_id = get_guint32 (priv->data,
@@ -483,16 +487,12 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
           priv->max_data, &(priv->size));
       break;
     case PACKET_TYPE_DATA:
-      result->data.data.packet_id = get_guint32 (priv->data,
-           priv->max_data, &(priv->size));
       result->data.data.packet_part =
           get_guint8 (priv->data, priv->max_data, &(priv->size));
       result->data.data.packet_total =
           get_guint8 (priv->data, priv->max_data, &(priv->size));
       result->data.data.stream_id =
           get_guint8 (priv->data, priv->max_data, &(priv->size));
-      result->data.data.depends =
-          get_sender_info (priv->data, priv->max_data, &(priv->size));
 
       result->data.data.payload_size = priv->max_data - priv->size;
       result->data.data.payload = g_memdup(priv->data + priv->size,
@@ -505,7 +505,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
           get_guint32 (priv->data, priv->max_data, &(priv->size));
       break;
     case PACKET_TYPE_SESSION:
-      result->data.session.senders =
+      result->depends =
           get_sender_info(priv->data, priv->max_data, &(priv->size));
       break;
     case PACKET_TYPE_BYE:

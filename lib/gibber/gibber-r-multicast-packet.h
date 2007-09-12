@@ -26,14 +26,28 @@
 G_BEGIN_DECLS
 
 typedef enum {
+  /* Unreliable packets */
   PACKET_TYPE_WHOIS_REQUEST = 0,
   PACKET_TYPE_WHOIS_REPLY,
-  PACKET_TYPE_DATA,
   PACKET_TYPE_REPAIR_REQUEST,
   PACKET_TYPE_SESSION,
+  /* Reliable packets */
+  FIRST_RELIABLE_PACKET = 0xf,
+  PACKET_TYPE_DATA = FIRST_RELIABLE_PACKET,
+  /* No data just acknowledgement */
+  PACKET_TYPE_NO_DATA,
+  /* Some nodes failed */
+  PACKET_TYPE_FAILURE,
+  /* Start a joining attempt */
+  PACKET_TYPE_ATTEMPT_JOIN,
+  /* The real join */
+  PACKET_TYPE_JOIN,
+  /* Leaving now, bye */
   PACKET_TYPE_BYE,
   PACKET_TYPE_INVALID
 } GibberRMulticastPacketType;
+
+#define IS_RELIABLE_PACKET(p) (p->type >= FIRST_RELIABLE_PACKET)
 
 typedef struct {
   guint32 sender_id;
@@ -66,13 +80,8 @@ struct _GibberRMulticastDataPacket {
     guint8 *payload;
     gsize payload_size;
 
-    /* packet identifier */
-    guint32 packet_id;
-
     /* substream id */
     guint8 stream_id;
-    /* List of GibberRMulticastSenderInfo encoding dependency information */
-    GList *depends;
 };
 
 typedef struct _GibberRMulticastRepairRequestPacket
@@ -82,12 +91,6 @@ struct _GibberRMulticastRepairRequestPacket {
     guint32 sender_id;
     /* packet identifier */
     guint32 packet_id;
-};
-
-typedef struct _GibberRMulticastSessionPacket GibberRMulticastSessionPacket;
-struct _GibberRMulticastSessionPacket {
-    /* List of GibberRMulticastSenderInfo encoding sender information */
-    GList *senders;
 };
 
 typedef struct _GibberRMulticastPacket GibberRMulticastPacket;
@@ -100,12 +103,18 @@ struct _GibberRMulticastPacket {
     /* sender */
     guint32 sender;
 
+    /* packet identifier for reliable packets */
+    guint32 packet_id;
+
+    /* List of GibberRMulticastSenderInfo encoding dependency information for
+     * reliable packets or session information for session packets */
+    GList *depends;
+
     union {
       GibberRMulticastWhoisRequestPacket whois_request;
       GibberRMulticastWhoisReplyPacket whois_reply;
       GibberRMulticastDataPacket data;
       GibberRMulticastRepairRequestPacket repair_request;
-      GibberRMulticastSessionPacket session;
     } data;
 };
 
