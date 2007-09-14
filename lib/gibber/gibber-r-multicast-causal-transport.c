@@ -708,7 +708,7 @@ joining_multicast_receive (GibberRMulticastCausalTransport *self,
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
-  DEBUG_TRANSPORT ("Received packet type: %x", packet->type);
+  DEBUG_TRANSPORT ("Received packet type: 0x%x", packet->type);
 
   if (packet->sender == self->sender_id)
     {
