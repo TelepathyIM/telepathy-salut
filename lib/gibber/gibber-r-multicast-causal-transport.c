@@ -59,7 +59,8 @@ whois_reply_cb(GibberRMulticastSender *sender, gpointer user_data);
 static void
 schedule_session_message(GibberRMulticastCausalTransport *transport);
 
-G_DEFINE_TYPE(GibberRMulticastCausalTransport, gibber_r_multicast_causal_transport,
+G_DEFINE_TYPE(GibberRMulticastCausalTransport,
+              gibber_r_multicast_causal_transport,
               GIBBER_TYPE_TRANSPORT)
 
 /* signal enum */
@@ -99,7 +100,7 @@ struct _GibberRMulticastCausalTransportPrivate
 };
 
 #define GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(o) \
-  (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT, \
+  (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_CAUSAL_TRANSPORT,\
    GibberRMulticastCausalTransportPrivate))
 
 static guint32
@@ -116,12 +117,15 @@ _random_nonzero_uint(void)
 
 static void
 gibber_r_multicast_causal_transport_set_property (GObject *object,
-                                           guint property_id,
-                                           const GValue *value,
-                                           GParamSpec *pspec) {
-  GibberRMulticastCausalTransport *transport = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(object);
+    guint property_id,
+    const GValue *value,
+    GParamSpec *pspec)
+{
+  GibberRMulticastCausalTransport *transport =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(object);
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(transport);
+
   switch (property_id) {
     case PROP_NAME:
       priv->name = g_value_dup_string (value);
@@ -137,12 +141,15 @@ gibber_r_multicast_causal_transport_set_property (GObject *object,
 
 static void
 gibber_r_multicast_causal_transport_get_property (GObject *object,
-                                           guint property_id,
-                                           GValue *value,
-                                           GParamSpec *pspec) {
-  GibberRMulticastCausalTransport *transport = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(object);
+    guint property_id,
+    GValue *value,
+    GParamSpec *pspec)
+{
+  GibberRMulticastCausalTransport *transport =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(object);
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(transport);
+
   switch (property_id) {
     case PROP_NAME:
       g_value_set_string(value, priv->self->name);
@@ -180,7 +187,8 @@ gibber_r_multicast_causal_transport_disconnect(GibberTransport *transport);
 
 static void
 gibber_r_multicast_causal_transport_class_init (
-    GibberRMulticastCausalTransportClass *gibber_r_multicast_causal_transport_class)
+    GibberRMulticastCausalTransportClass *
+        gibber_r_multicast_causal_transport_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (
       gibber_r_multicast_causal_transport_class);
@@ -196,34 +204,36 @@ gibber_r_multicast_causal_transport_class_init (
 
   signals[SENDER_FAILING] =
     g_signal_new("sender-failing",
-                 G_OBJECT_CLASS_TYPE(gibber_r_multicast_causal_transport_class),
-                 G_SIGNAL_RUN_LAST,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__OBJECT,
-                 G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_SENDER);
+        G_OBJECT_CLASS_TYPE(gibber_r_multicast_causal_transport_class),
+        G_SIGNAL_RUN_LAST,
+        0,
+        NULL, NULL,
+        g_cclosure_marshal_VOID__OBJECT,
+        G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_SENDER);
 
   signals[RECEIVED_CONTROL_PACKET] =
     g_signal_new("received-control-packet",
-                 G_OBJECT_CLASS_TYPE(gibber_r_multicast_causal_transport_class),
-                 G_SIGNAL_RUN_LAST,
-                 0,
-                 NULL, NULL,
-                 _gibber_signals_marshal_VOID__OBJECT_OBJECT,
-                 G_TYPE_NONE, 2, GIBBER_TYPE_R_MULTICAST_SENDER,
-                 GIBBER_TYPE_R_MULTICAST_PACKET);
+        G_OBJECT_CLASS_TYPE(gibber_r_multicast_causal_transport_class),
+        G_SIGNAL_RUN_LAST,
+        0,
+        NULL, NULL,
+        _gibber_signals_marshal_VOID__OBJECT_OBJECT,
+        G_TYPE_NONE, 2, GIBBER_TYPE_R_MULTICAST_SENDER,
+        GIBBER_TYPE_R_MULTICAST_PACKET);
 
   signals[RECEIVED_FOREIGN_PACKET] =
     g_signal_new("received-foreign-packet",
-                 G_OBJECT_CLASS_TYPE(gibber_r_multicast_causal_transport_class),
-                 G_SIGNAL_RUN_LAST,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__OBJECT,
-                 G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_PACKET);
+        G_OBJECT_CLASS_TYPE(gibber_r_multicast_causal_transport_class),
+        G_SIGNAL_RUN_LAST,
+        0,
+        NULL, NULL,
+        g_cclosure_marshal_VOID__OBJECT,
+        G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_PACKET);
 
-  object_class->set_property = gibber_r_multicast_causal_transport_set_property;
-  object_class->get_property = gibber_r_multicast_causal_transport_get_property;
+  object_class->set_property =
+      gibber_r_multicast_causal_transport_set_property;
+  object_class->get_property =
+      gibber_r_multicast_causal_transport_get_property;
 
   param_spec = g_param_spec_object("transport",
                                    "transport",
@@ -254,7 +264,8 @@ gibber_r_multicast_causal_transport_class_init (
 void
 gibber_r_multicast_causal_transport_dispose (GObject *object)
 {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (object);
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (object);
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
@@ -273,15 +284,19 @@ gibber_r_multicast_causal_transport_dispose (GObject *object)
 
   /* release any references held by the object here */
 
-  if (G_OBJECT_CLASS (gibber_r_multicast_causal_transport_parent_class)->dispose)
-    G_OBJECT_CLASS (gibber_r_multicast_causal_transport_parent_class)->dispose (
-        object);
+  if (G_OBJECT_CLASS (
+      gibber_r_multicast_causal_transport_parent_class)->dispose)
+  {
+    G_OBJECT_CLASS (gibber_r_multicast_causal_transport_parent_class)->dispose
+       (object);
+  }
 }
 
 void
 gibber_r_multicast_causal_transport_finalize (GObject *object)
 {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (object);
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (object);
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
@@ -296,7 +311,8 @@ gibber_r_multicast_causal_transport_finalize (GObject *object)
 
 static gboolean
 sendout_packet(GibberRMulticastCausalTransport *transport,
-               GibberRMulticastPacket *packet, GError **error) {
+    GibberRMulticastPacket *packet, GError **error)
+{
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   guint8 *rawdata;
@@ -308,7 +324,8 @@ sendout_packet(GibberRMulticastCausalTransport *transport,
 }
 
 static void
-add_sender_info(gpointer key, gpointer value, gpointer user_data) {
+add_sender_info(gpointer key, gpointer value, gpointer user_data)
+{
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
   GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET(user_data);
   gboolean r;
@@ -324,9 +341,10 @@ add_sender_info(gpointer key, gpointer value, gpointer user_data) {
 
 static gboolean
 sendout_session_cb(gpointer data) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (data);
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (data);
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
   GibberRMulticastPacket *packet =
       gibber_r_multicast_packet_new(PACKET_TYPE_SESSION, priv->self->id,
@@ -344,9 +362,10 @@ sendout_session_cb(gpointer data) {
 }
 
 static void
-schedule_session_message(GibberRMulticastCausalTransport *transport) {
+schedule_session_message(GibberRMulticastCausalTransport *transport)
+{
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
 
   if (priv->timer != 0) {
     g_source_remove(priv->timer);
@@ -397,7 +416,8 @@ connected (GibberRMulticastCausalTransport *transport)
 static gboolean
 next_join_step (gpointer data)
 {
-  GibberRMulticastCausalTransport *transport = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(data);
+  GibberRMulticastCausalTransport *transport =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(data);
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(transport);
 
@@ -492,13 +512,15 @@ control_packet_received_cb(GibberRMulticastSender *sender,
 
 static void
 repair_request_cb(GibberRMulticastSender *sender, guint id,
-    gpointer user_data) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
+    gpointer user_data)
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet =
-    gibber_r_multicast_packet_new (PACKET_TYPE_REPAIR_REQUEST,
-        priv->self->id, priv->transport->max_packet_size);
+      gibber_r_multicast_packet_new (PACKET_TYPE_REPAIR_REQUEST,
+          priv->self->id, priv->transport->max_packet_size);
 
   gibber_r_multicast_packet_set_repair_request_info (packet, sender->id, id);
 
@@ -509,15 +531,19 @@ repair_request_cb(GibberRMulticastSender *sender, guint id,
 static void
 repair_message_cb(GibberRMulticastSender *sender,
                   GibberRMulticastPacket *packet,
-                  gpointer user_data) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
+                  gpointer user_data)
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
 
   sendout_packet(self, packet, NULL);
 }
 
 static void
-whois_reply_cb(GibberRMulticastSender *sender, gpointer user_data) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
+whois_reply_cb(GibberRMulticastSender *sender, gpointer user_data)
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet =
@@ -531,8 +557,10 @@ whois_reply_cb(GibberRMulticastSender *sender, gpointer user_data) {
 }
 
 static void
-whois_request_cb(GibberRMulticastSender *sender, gpointer user_data) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
+whois_request_cb(GibberRMulticastSender *sender, gpointer user_data) 
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet =
@@ -549,15 +577,18 @@ static void
 name_discovered_cb(GibberRMulticastSender *sender, gchar *name,
     gpointer user_data)
 {
-  //GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
-//  g_signal_emit(self, signals[NEW_SENDER], 0, name);
+  /* GibberRMulticastCausalTransport *self =
+   *     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
+   * g_signal_emit(self, signals[NEW_SENDER], 0, name);
+   */
 }
 
 void
 gibber_r_multicast_causal_transport_add_sender(
-    GibberRMulticastCausalTransport *transport, guint32 sender_id) {
+    GibberRMulticastCausalTransport *transport, guint32 sender_id)
+{
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastSender *sender;
 
   sender = g_hash_table_lookup(priv->senders, GUINT_TO_POINTER(sender_id));
@@ -591,10 +622,11 @@ gibber_r_multicast_causal_transport_add_sender(
 void gibber_r_multicast_causal_transport_set_sender_start (
     GibberRMulticastCausalTransport *transport,
     guint32 sender_id,
-    guint32 packet_id) {
+    guint32 packet_id)
+{
 
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastSender *sender;
 
   sender = g_hash_table_lookup(priv->senders, GUINT_TO_POINTER(sender_id));
@@ -605,9 +637,10 @@ void gibber_r_multicast_causal_transport_set_sender_start (
 
 static void
 handle_session_message(GibberRMulticastCausalTransport *self,
-                       GibberRMulticastPacket *packet) {
+                       GibberRMulticastPacket *packet)
+{
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GList *l;
   int num = 0;
   gboolean outdated = FALSE;
@@ -648,9 +681,10 @@ handle_session_message(GibberRMulticastCausalTransport *self,
 
 static void
 handle_data_depends(GibberRMulticastCausalTransport *self,
-                       GibberRMulticastPacket *packet) {
+                       GibberRMulticastPacket *packet)
+{
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GList *l;
 
   g_assert (packet->type == PACKET_TYPE_DATA);
@@ -672,7 +706,7 @@ joining_multicast_receive (GibberRMulticastCausalTransport *self,
 {
 
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
   DEBUG_TRANSPORT ("Received packet type: %x", packet->type);
 
@@ -708,10 +742,11 @@ joining_multicast_receive (GibberRMulticastCausalTransport *self,
 
 static void
 joined_multicast_receive (GibberRMulticastCausalTransport *self,
-    GibberRMulticastPacket *packet) {
+    GibberRMulticastPacket *packet)
+{
   GibberRMulticastSender *sender = NULL;
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
   DEBUG_TRANSPORT ("Got packet type: 0x%x", packet->type);
 
@@ -788,10 +823,12 @@ out:
 
 static void
 r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
-                    gpointer user_data) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
+                    gpointer user_data)
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
   GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet = NULL;
   GError *error = NULL;
 
@@ -839,8 +876,10 @@ gibber_r_multicast_causal_transport_new(GibberTransport *transport,
 }
 
 gboolean
-gibber_r_multicast_causal_transport_connect(GibberRMulticastCausalTransport *transport,
-                                     gboolean initial, GError **error) {
+gibber_r_multicast_causal_transport_connect(
+    GibberRMulticastCausalTransport *transport,
+    gboolean initial, GError **error)
+{
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
 
@@ -876,12 +915,15 @@ add_depend(gpointer key, gpointer value, gpointer user_data) {
 
 
 gboolean
-gibber_r_multicast_causal_transport_send(GibberRMulticastCausalTransport *transport,
-                                  guint8 stream_id,
-                                  const guint8 *data,
-                                  gsize size,
-                                  GError **error) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport);
+gibber_r_multicast_causal_transport_send(
+    GibberRMulticastCausalTransport *transport,
+    guint8 stream_id,
+    const guint8 *data,
+    gsize size,
+    GError **error)
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport);
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   struct hash_data hd;
@@ -938,9 +980,10 @@ gibber_r_multicast_causal_transport_send(GibberRMulticastCausalTransport *transp
 
 static gboolean
 gibber_r_multicast_causal_transport_do_send(GibberTransport *transport,
-                                     const guint8 *data,
-                                     gsize size,
-                                     GError **error) {
+    const guint8 *data,
+    gsize size,
+    GError **error)
+{
   return gibber_r_multicast_causal_transport_send(
      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(transport),
      GIBBER_R_MULTICAST_CAUSAL_DEFAULT_STREAM,
@@ -948,8 +991,10 @@ gibber_r_multicast_causal_transport_do_send(GibberTransport *transport,
 }
 
 static void
-gibber_r_multicast_causal_transport_disconnect(GibberTransport *transport) {
-  GibberRMulticastCausalTransport *self = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport);
+gibber_r_multicast_causal_transport_disconnect(GibberTransport *transport)
+{
+  GibberRMulticastCausalTransport *self =
+     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport);
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
