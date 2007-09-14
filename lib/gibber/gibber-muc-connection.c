@@ -221,6 +221,7 @@ gibber_muc_connection_dispose (GObject *object)
   g_object_unref(priv->reader);
   g_object_unref(priv->writer);
   g_object_unref(priv->mtransport);
+  g_object_unref(priv->rmctransport);
   g_object_unref(priv->rmtransport);
 
   if (G_OBJECT_CLASS (gibber_muc_connection_parent_class)->dispose)
