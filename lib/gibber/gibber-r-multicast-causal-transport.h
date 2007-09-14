@@ -88,6 +88,14 @@ void gibber_r_multicast_causal_transport_set_sender_start (
     guint32 sender_id,
     guint32 packet_id);
 
+guint32 gibber_r_multicast_causal_transport_send_attempt_join (
+    GibberRMulticastCausalTransport *transport,
+    GArray *new_senders,
+    gboolean repeat);
+
+void gibber_r_multicast_causal_transport_stop_attempt_join (
+    GibberRMulticastCausalTransport *transport,
+    guint32 attempt_join_id);
 
 
 G_END_DECLS

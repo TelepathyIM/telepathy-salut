@@ -790,10 +790,6 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
     case PACKET_TYPE_WHOIS_REPLY:
      gibber_r_multicast_sender_whois_push(sender, packet);
      break;
-    case PACKET_TYPE_DATA:
-      handle_data_depends(self, packet);
-      gibber_r_multicast_sender_push(sender, packet);
-      break;
     case PACKET_TYPE_REPAIR_REQUEST: {
       GibberRMulticastSender *rsender;
       guint32 sender_id;
@@ -814,7 +810,12 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
       handle_session_message(self, packet);
       break;
     default:
+      if (IS_RELIABLE_PACKET (packet)) {
+        handle_data_depends(self, packet);
+        gibber_r_multicast_sender_push(sender, packet);
+      } else {
         DEBUG_TRANSPORT ("Received unhandled packet type!!, ignoring");
+      }
   }
 
 out:
@@ -912,7 +913,18 @@ add_depend(gpointer key, gpointer value, gpointer user_data) {
   g_assert(r);
 }
 
+static void
+add_packet_depends (GibberRMulticastCausalTransport *self,
+    GibberRMulticastPacket *packet)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+  struct hash_data hd;
 
+  hd.sender = priv->self;
+  hd.packet = packet;
+  g_hash_table_foreach(priv->senders, add_depend, &hd);
+}
 
 gboolean
 gibber_r_multicast_causal_transport_send(
@@ -926,7 +938,6 @@ gibber_r_multicast_causal_transport_send(
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport);
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
-  struct hash_data hd;
   GibberRMulticastPacket *packet;
   gsize payloaded;
 
@@ -935,11 +946,7 @@ gibber_r_multicast_causal_transport_send(
   packet = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, priv->self->id,
       priv->transport->max_packet_size);
 
-  /* Add dependency information */
-  hd.sender = priv->self;
-  hd.packet = packet;
-  g_hash_table_foreach(priv->senders, add_depend, &hd);
-
+  add_packet_depends (self, packet);
   payloaded = gibber_r_multicast_packet_add_payload(packet, data, size);
 
   if (payloaded < size) {
@@ -1006,3 +1013,41 @@ gibber_r_multicast_causal_transport_disconnect(GibberTransport *transport)
                              GIBBER_TRANSPORT_DISCONNECTED);
   gibber_transport_disconnect(GIBBER_TRANSPORT(priv->transport));
 }
+
+
+guint32
+gibber_r_multicast_causal_transport_send_attempt_join (
+    GibberRMulticastCausalTransport *transport,
+    GArray *new_senders,
+    gboolean repeat) {
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+  GibberRMulticastPacket *packet;
+
+  packet = gibber_r_multicast_packet_new(PACKET_TYPE_ATTEMPT_JOIN,
+      priv->self->id, priv->transport->max_packet_size);
+
+  gibber_r_multicast_packet_attempt_join_add_senders (packet, new_senders,
+      NULL);
+
+  add_packet_depends (transport, packet);
+  gibber_r_multicast_sender_push (priv->self, packet);
+  gibber_r_multicast_sender_set_packet_repeat (priv->self,
+      packet->packet_id, repeat);
+
+  sendout_packet (transport, packet, NULL);
+
+  return packet->packet_id;
+}
+
+void gibber_r_multicast_causal_transport_stop_attempt_join (
+    GibberRMulticastCausalTransport *transport,
+    guint32 attempt_join_id)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+
+  gibber_r_multicast_sender_set_packet_repeat (priv->self,
+      attempt_join_id, FALSE);
+}
+
