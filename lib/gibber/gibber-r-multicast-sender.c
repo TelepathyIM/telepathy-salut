@@ -312,6 +312,14 @@ signal_data(GibberRMulticastSender *sender, guint8 stream_id,
   g_signal_emit(sender, signals[RECEIVED_DATA], 0, stream_id, data, size);
 }
 
+static void
+signal_control_packet(GibberRMulticastSender *sender,
+    GibberRMulticastPacket *packet)
+{
+  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_RUNNING;
+  g_signal_emit (sender, signals[RECEIVED_CONTROL_PACKET], 0, packet);
+}
+
 static gboolean
 request_repair(gpointer data) {
   PacketInfo *info = (PacketInfo *)data;
@@ -490,7 +498,18 @@ pop_packet(GibberRMulticastSender *sender) {
     return FALSE;
   }
 
-  g_assert (p->packet->type == PACKET_TYPE_DATA);
+  g_assert (IS_RELIABLE_PACKET);
+
+  if (!check_depends(sender, p->packet)) {
+    return FALSE;
+  }
+
+  if (p->packet->type != PACKET_TYPE_DATA) {
+    if (p->packet->type != PACKET_TYPE_NODATA) {
+      signal_control_packet (p->packet);
+    }
+    return TRUE;
+  }
 
   num = p->packet->data.data.packet_total;
   payload_size = p->packet->data.data.payload_size;
@@ -498,10 +517,6 @@ pop_packet(GibberRMulticastSender *sender) {
   if (gibber_r_multicast_packet_diff(p->packet->packet_id,
         sender->next_input_packet) < num) {
     DEBUG_SENDER(sender, "Not enough packets for defragmentation");
-    return FALSE;
-  }
-
-  if (!check_depends(sender, p->packet)) {
     return FALSE;
   }
 
