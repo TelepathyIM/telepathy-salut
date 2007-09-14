@@ -48,8 +48,10 @@ create_rmulticast_transport (TestTransport **testtransport,
 
   rmctransport = gibber_r_multicast_causal_transport_new (GIBBER_TRANSPORT(t),
      "test123");
+  g_object_unref (t);
 
   rmtransport = gibber_r_multicast_transport_new (rmctransport);
+  g_object_unref (rmctransport);
 
   if (testtransport != NULL)
     {
@@ -57,7 +59,6 @@ create_rmulticast_transport (TestTransport **testtransport,
     }
 
   test_transport_set_echoing (t, TRUE);
-  g_object_unref (t);
 
   return rmtransport;
 }
