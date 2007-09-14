@@ -570,12 +570,12 @@ pop_packets(GibberRMulticastSender *sender) {
   if (sender->name == NULL
       || sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
   {
-    /* No popping untill we know the senders real name and we at least have
+    /* No popping untill we know the senders mapped name and we at least have
      * some packets */
     return;
   }
 
-  while (pop_packet(sender)) 
+  while (pop_packet(sender))
     /* nothing */;
 }
 
@@ -600,7 +600,7 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
     g_hash_table_insert(priv->packet_cache, &info->packet_id, info);
   }
 
-  if (info->timeout != 0){ 
+  if (info->timeout != 0) {
     g_source_remove(info->timeout);
     info->timeout = 0;
   }
@@ -686,7 +686,7 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
 void
 gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender, 
                                          guint32 id) {
-  GibberRMulticastSenderPrivate *priv = 
+  GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   gint diff;
 
@@ -734,8 +734,6 @@ gboolean
 gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
   gint diff;
   guint32 i, last;
-  GibberRMulticastSenderPrivate *priv =
-      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
   DEBUG_SENDER(sender, "Seen next packet 0x%x", id);
 
