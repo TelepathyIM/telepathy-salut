@@ -584,13 +584,35 @@ gboolean
 gibber_r_multicast_packet_attempt_join_add_sender (
    GibberRMulticastPacket *packet,
    guint32 sender,
-   GError **error) {
+   GError **error)
+{
+  g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
+
   if (packet->data.attempt_join.senders == NULL) {
     packet->data.attempt_join.senders = g_array_new (FALSE, FALSE,
         sizeof(guint32));
   }
 
   g_array_append_val (packet->data.attempt_join.senders, sender);
+
+  return TRUE;
+}
+
+gboolean
+gibber_r_multicast_packet_attempt_join_add_senders (
+   GibberRMulticastPacket *packet,
+   GArray *senders,
+   GError **error)
+{
+  g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
+
+  if (packet->data.attempt_join.senders == NULL) {
+    packet->data.attempt_join.senders = g_array_sized_new (FALSE, FALSE,
+        sizeof(guint32), senders->len);
+  }
+
+  g_array_append_vals (packet->data.attempt_join.senders, senders->data, 
+      senders->len);
 
   return TRUE;
 }

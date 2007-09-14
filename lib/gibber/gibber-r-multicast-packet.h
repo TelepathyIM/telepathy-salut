@@ -196,6 +196,11 @@ gboolean gibber_r_multicast_packet_attempt_join_add_sender (
    guint32 sender,
    GError **error);
 
+gboolean gibber_r_multicast_packet_attempt_join_add_senders (
+   GibberRMulticastPacket *packet,
+   GArray *senders,
+   GError **error);
+
 
 /* Utility function to calculate the difference between two packet */
 gint32
