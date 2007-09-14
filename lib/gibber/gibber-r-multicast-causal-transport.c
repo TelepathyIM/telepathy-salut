@@ -899,7 +899,7 @@ add_depend(gpointer key, gpointer value, gpointer user_data) {
   struct hash_data *d = (struct hash_data *)user_data;
   gboolean r;
 
-  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
     return;
   }
 
