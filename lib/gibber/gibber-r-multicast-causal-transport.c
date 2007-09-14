@@ -1027,6 +1027,7 @@ gibber_r_multicast_causal_transport_send_attempt_join (
   packet = gibber_r_multicast_packet_new(PACKET_TYPE_ATTEMPT_JOIN,
       priv->self->id, priv->transport->max_packet_size);
 
+  gibber_r_multicast_packet_set_packet_id(packet, priv->packet_id++);
   gibber_r_multicast_packet_attempt_join_add_senders (packet, new_senders,
       NULL);
 
