@@ -720,12 +720,7 @@ gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
 
   DEBUG_SENDER(sender, "Seen next packet 0x%x", id);
 
-  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
-    sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
-    sender->next_input_packet = id;
-    sender->next_output_packet = id;
-    priv->first_packet = id;
-
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
     return FALSE;
   }
 
