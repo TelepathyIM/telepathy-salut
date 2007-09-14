@@ -48,8 +48,7 @@ static guint signals[LAST_SIGNAL] = {0};
 
 /* properties */
 enum {
-  PROP_NAME = 1,
-  PROP_TRANSPORT,
+  PROP_TRANSPORT = 1,
   LAST_PROPERTY
 };
 
