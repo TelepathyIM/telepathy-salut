@@ -498,15 +498,15 @@ pop_packet(GibberRMulticastSender *sender) {
     return FALSE;
   }
 
-  g_assert (IS_RELIABLE_PACKET);
+  g_assert (IS_RELIABLE_PACKET (p->packet));
 
   if (!check_depends(sender, p->packet)) {
     return FALSE;
   }
 
   if (p->packet->type != PACKET_TYPE_DATA) {
-    if (p->packet->type != PACKET_TYPE_NODATA) {
-      signal_control_packet (p->packet);
+    if (p->packet->type != PACKET_TYPE_NO_DATA) {
+      signal_control_packet (sender, p->packet);
     }
     return TRUE;
   }
