@@ -440,7 +440,7 @@ check_depends(GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  g_assert(packet->type == PACKET_TYPE_DATA);
+  g_assert (IS_RELIABLE_PACKET(packet));
 
   for (rlist = packet->depends;
       rlist != NULL; rlist = g_list_next(rlist)) {
