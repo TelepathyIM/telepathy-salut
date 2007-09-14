@@ -37,7 +37,8 @@ struct _GibberRMulticastSenderClass {
 typedef enum {
   /* We have no info about this sender whatsoever */
   GIBBER_R_MULTICAST_SENDER_STATE_NEW = 0,
-  /* We know the sequence numbering, but no data has been output just yet */
+  /* We know the sequence number we have to start from, but haven't send out
+   * any data yet */
   GIBBER_R_MULTICAST_SENDER_STATE_PREPARING,
   /* Data is flowing */
   GIBBER_R_MULTICAST_SENDER_STATE_RUNNING,
