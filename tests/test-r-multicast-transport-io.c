@@ -119,9 +119,11 @@ main(int argc, char **argv){
   test_transport_set_echoing (t, TRUE);
 
   rmc = gibber_r_multicast_causal_transport_new(GIBBER_TRANSPORT(t), argv[1]);
+  g_object_unref (t);
 
   rm = gibber_r_multicast_transport_new(rmc);
   gibber_transport_set_handler(GIBBER_TRANSPORT(rm), received_data, argv[1]);
+  g_object_unref (rmc);
 
   g_signal_connect(rm, "new-sender",
       G_CALLBACK(new_sender_cb), NULL);
