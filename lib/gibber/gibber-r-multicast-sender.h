@@ -101,6 +101,10 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
 
 void gibber_r_multicast_sender_whois_push(GibberRMulticastSender *sender,
     const GibberRMulticastPacket *packet);
+
+void gibber_r_multicast_sender_set_packet_repeat (
+    GibberRMulticastSender *sender, guint32 packet_id, gboolean repeat);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_R_MULTICAST_SENDER_H__*/

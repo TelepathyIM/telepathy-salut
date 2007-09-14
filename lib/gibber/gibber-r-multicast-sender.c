@@ -73,6 +73,7 @@ static guint signals[LAST_SIGNAL] = {0};
 typedef struct {
   guint32 packet_id;
   guint timeout;
+  gboolean repeating;
   GibberRMulticastPacket *packet;
   GibberRMulticastSender *sender;
 } PacketInfo;
@@ -360,6 +361,10 @@ do_repair(gpointer data) {
   info->timeout = 0;
   g_signal_emit(info->sender, signals[REPAIR_MESSAGE], 0, info->packet);
 
+  if (info->repeating) {
+    schedule_do_repair (info->sender, info->packet_id);
+  }
+
   return FALSE;
 }
 
@@ -377,7 +382,6 @@ schedule_do_repair(GibberRMulticastSender *sender, guint32 id) {
     /* Repair already scheduled, ignore */
     return;
   }
-
 
   timeout = g_random_int_range(MIN_DO_REPAIR_TIMEOUT, MAX_DO_REPAIR_TIMEOUT);
   info->timeout = g_timeout_add(timeout, do_repair, info);
@@ -784,4 +788,30 @@ gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
     default:
       g_assert_not_reached();
   }
+}
+
+void
+gibber_r_multicast_sender_set_packet_repeat (GibberRMulticastSender *sender,
+    guint32 packet_id, gboolean repeat) {
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  PacketInfo *info;
+
+  info = g_hash_table_lookup(priv->packet_cache, &packet_id);
+  g_assert (info != NULL && info->packet != NULL);
+
+  if (info->repeating == repeat) {
+    return;
+  }
+
+  info->repeating = repeat;
+
+  if (repeat && info->timeout == 0) {
+    schedule_do_repair (sender, packet_id);
+  }
+
+  /* FIXME: If repeat is turned off, we repeat it at least once more as there
+   * might have been a repair request after the last repeating.. This is
+   * ofcourse suboptimal */
 }
