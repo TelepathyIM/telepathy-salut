@@ -108,7 +108,8 @@ gibber_r_multicast_packet_finalize (GObject *object)
       g_free(self->data.data.payload);
       break;
     case PACKET_TYPE_ATTEMPT_JOIN:
-      g_array_free (self->data.attempt_join.senders, TRUE);
+      if (self->data.attempt_join.senders != NULL)
+        g_array_free (self->data.attempt_join.senders, TRUE);
       break;
     default:
       /* Nothing specific to free */;
