@@ -204,7 +204,7 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    0,
                    NULL, NULL,
                    g_cclosure_marshal_VOID__OBJECT,
-                   G_TYPE_NONE, 3, GIBBER_TYPE_R_MULTICAST_PACKET);
+                   G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_PACKET);
 
   signals[WHOIS_REPLY] =
       g_signal_new("whois-reply",
