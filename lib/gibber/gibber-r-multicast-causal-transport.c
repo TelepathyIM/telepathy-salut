@@ -703,14 +703,14 @@ handle_session_message(GibberRMulticastCausalTransport *self,
 }
 
 static void
-handle_data_depends(GibberRMulticastCausalTransport *self,
+handle_packet_depends(GibberRMulticastCausalTransport *self,
                        GibberRMulticastPacket *packet)
 {
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GList *l;
 
-  g_assert (packet->type == PACKET_TYPE_DATA);
+  g_assert (IS_RELIABLE_PACKET (packet));
 
   for (l = packet->depends; l != NULL ; l = g_list_next(l)) {
     GibberRMulticastPacketSenderInfo *sender_info =
@@ -824,7 +824,6 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
           GUINT_TO_POINTER(sender_id));
 
       g_assert(sender_id != 0);
-
       g_assert (rsender != NULL);
 
       gibber_r_multicast_sender_repair_request(rsender,
@@ -836,7 +835,7 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
       break;
     default:
       if (IS_RELIABLE_PACKET (packet)) {
-        handle_data_depends(self, packet);
+        handle_packet_depends(self, packet);
         gibber_r_multicast_sender_push(sender, packet);
       } else {
         DEBUG_TRANSPORT (self, "Received unhandled packet type!!, ignoring");
