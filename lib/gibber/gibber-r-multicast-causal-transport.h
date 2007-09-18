@@ -45,6 +45,7 @@ typedef struct {
   GibberBuffer buffer;
   const gchar *sender;
   guint8 stream_id;
+  guint32 sender_id;
 } GibberRMulticastCausalBuffer;
 
 #define GIBBER_R_MULTICAST_CAUSAL_DEFAULT_STREAM 0

@@ -491,6 +491,7 @@ data_received_cb(GibberRMulticastSender *sender, guint8 stream_id,
   rmbuffer.buffer.length = size;
   rmbuffer.sender = sender->name;
   rmbuffer.stream_id = stream_id;
+  rmbuffer.sender_id = sender->id;
 
   gibber_transport_received_data_custom(GIBBER_TRANSPORT(user_data),
       (GibberBuffer *)&rmbuffer);
