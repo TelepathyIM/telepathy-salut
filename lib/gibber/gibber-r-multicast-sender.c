@@ -632,7 +632,7 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
 
 
 void
-gibber_r_multicast_sender_set_start (GibberRMulticastSender *sender,
+gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
     guint32 packet_id)
 {
   GibberRMulticastSenderPrivate *priv =
@@ -645,6 +645,21 @@ gibber_r_multicast_sender_set_start (GibberRMulticastSender *sender,
     sender->next_input_packet = packet_id;
     sender->next_output_packet = packet_id;
     priv->first_packet = packet_id;
+  } else if (gibber_r_multicast_packet_diff (sender->next_input_packet, 
+      packet_id) > 0) {
+    /* Remove all repair requests for packets up to this packet_id */
+    guint32 i;
+    for (i = priv->first_packet; i < packet_id; i++) {
+      PacketInfo *info;
+      info = g_hash_table_lookup (priv->packet_cache, &i);
+      if (info != NULL && info->packet == NULL && info->timeout != 0) {
+        g_source_remove (info->timeout);
+        info->timeout = 0;
+      }
+    }
+
+    sender->next_input_packet = packet_id;
+    sender->next_output_packet = packet_id;
   }
 }
 

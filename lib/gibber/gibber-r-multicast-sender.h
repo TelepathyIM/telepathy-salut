@@ -81,7 +81,7 @@ GibberRMulticastSender *gibber_r_multicast_sender_new (guint32 id,
     const gchar *name, GHashTable *senders);
 
 /* Sequence for this sender starts at packet_id */
-void gibber_r_multicast_sender_set_start (GibberRMulticastSender *sender,
+void gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
     guint32 packet_id);
 
 void
