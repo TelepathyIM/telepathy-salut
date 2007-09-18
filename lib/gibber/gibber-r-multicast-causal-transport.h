@@ -84,7 +84,7 @@ gibber_r_multicast_causal_transport_send(
 void gibber_r_multicast_causal_transport_add_sender (
     GibberRMulticastCausalTransport *transport, guint32 sender_id);
 
-void gibber_r_multicast_causal_transport_set_sender_start (
+void gibber_r_multicast_causal_transport_update_sender_start (
     GibberRMulticastCausalTransport *transport,
     guint32 sender_id,
     guint32 packet_id);
