@@ -505,11 +505,11 @@ pop_packet(GibberRMulticastSender *sender) {
   }
 
   if (p->packet->type != PACKET_TYPE_DATA) {
+    sender->last_output_packet = p->packet->packet_id;
+    sender->next_output_packet = sender->next_output_packet + 1;
     if (p->packet->type != PACKET_TYPE_NO_DATA) {
       signal_control_packet (sender, p->packet);
     }
-    sender->last_output_packet = p->packet->packet_id;
-    sender->next_output_packet = sender->next_output_packet + 1;
     return TRUE;
   }
 
