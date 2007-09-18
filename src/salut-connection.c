@@ -112,6 +112,14 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
 #endif
     )
 
+static gboolean uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
+static void uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
 /* properties */
 enum {
   PROP_NICKNAME = 1,
@@ -645,6 +653,12 @@ salut_connection_dispose (GObject *object)
     g_object_unref (priv->self);
     priv->self = NULL;
   }
+
+#ifdef ENABLE_OLPC
+  salut_xmpp_connection_manager_remove_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      uninvite_stanza_filter, uninvite_stanza_callback, self);
+#endif
 
   if (priv->xmpp_connection_manager)
     {
@@ -2235,6 +2249,60 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
 
   return TRUE;
 }
+
+static gboolean
+uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
+                        GibberXmppConnection *conn,
+                        GibberXmppStanza *stanza,
+                        SalutContact *contact,
+                        gpointer user_data)
+{
+  return (gibber_xmpp_node_get_child_ns (stanza->node, "uninvite",
+        GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS) != NULL);
+}
+
+static void
+uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
+                          GibberXmppConnection *conn,
+                          GibberXmppStanza *stanza,
+                          SalutContact *contact,
+                          gpointer user_data)
+{
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
+      (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
+  GibberXmppNode *node;
+  TpHandle room_handle;
+  const gchar *room, *activity_id;
+
+  node = gibber_xmpp_node_get_child_ns (stanza->node, "uninvite",
+        GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+  g_assert (node != NULL);
+
+  room = gibber_xmpp_node_get_attribute (node, "room");
+  if (room == NULL)
+    {
+      DEBUG ("No room attribute");
+      return;
+    }
+
+  room_handle = tp_handle_lookup (room_repo, room, NULL, NULL);
+   if (room_handle == 0)
+    {
+      DEBUG ("room %s unknown", room);
+      return;
+    }
+
+   activity_id = gibber_xmpp_node_get_attribute (node, "id");
+   if (activity_id == NULL)
+     {
+       DEBUG ("No id attribute");
+       return;
+     }
+
+  salut_contact_left_private_activity (contact, room_handle, activity_id);
+}
+
 #endif
 
 static GPtrArray*
@@ -2255,6 +2323,12 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   /* Create the XMPP connection manager */
   priv->xmpp_connection_manager = salut_xmpp_connection_manager_new (self,
       priv->contact_manager);
+
+#ifdef ENABLE_OLPC
+  salut_xmpp_connection_manager_add_stanza_filter (
+    priv->xmpp_connection_manager, NULL,
+    uninvite_stanza_filter, uninvite_stanza_callback, self);
+#endif
 
   priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
