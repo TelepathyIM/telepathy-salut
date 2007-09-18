@@ -39,6 +39,7 @@
 #include "salut-util.h"
 #include "salut-avahi-entry-group.h"
 #include "salut-muc-manager.h"
+#include "salut-xmpp-connection-manager.h"
 
 #define DEBUG_FLAG DEBUG_SELF
 #include <debug.h>
@@ -141,6 +142,7 @@ struct _SalutSelfPrivate
   SalutConnection *connection;
   SalutMucManager *muc_manager;
   SalutContactManager *contact_manager;
+  SalutXmppConnectionManager *xmpp_connection_manager;
   TpHandleRepoIface *room_repo;
 
   gchar *nickname;
@@ -263,6 +265,12 @@ salut_self_dispose (GObject *object)
       priv->muc_manager = NULL;
     }
 
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
+
 #ifdef ENABLE_OLPC
   if (priv->olpc_activities != NULL)
     g_hash_table_destroy (priv->olpc_activities);
@@ -350,9 +358,11 @@ salut_self_new (SalutConnection *connection,
   g_object_get (connection,
       "contact-manager", &(priv->contact_manager),
       "muc-manager", &(priv->muc_manager),
+      "xmpp-connection-manager", &(priv->xmpp_connection_manager),
       NULL);
   g_assert (priv->contact_manager != NULL);
   g_assert (priv->muc_manager != NULL);
+  g_assert (priv->xmpp_connection_manager != NULL);
 
   priv->room_repo = room_repo;
 
@@ -776,6 +786,156 @@ stop_announce_activity (SalutSelf *self,
   return TRUE;
 }
 
+typedef struct
+{
+  SalutSelf *self;
+  SalutContact *contact;
+  GibberXmppStanza *msg;
+} pending_connection_for_uninvite_ctx;
+
+static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+                                           GibberXmppConnection *connection,
+                                           SalutContact *contact,
+                                           gpointer user_data)
+{
+  pending_connection_for_uninvite_ctx *ctx =
+    (pending_connection_for_uninvite_ctx *) user_data;
+
+  if (ctx->contact != contact)
+    /* Not the connection we are waiting for */
+    return;
+
+  DEBUG ("got awaited connection with %s. Send uninvite", contact->name);
+
+  gibber_xmpp_connection_send (connection, ctx->msg, NULL);
+
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
+      NULL, ctx);
+
+  g_slice_free (pending_connection_for_uninvite_ctx, ctx);
+}
+
+static void
+xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
+                                              GibberXmppConnection *connection,
+                                              SalutContact *contact,
+                                              GQuark domain,
+                                              gint code,
+                                              gchar *message,
+                                              gpointer user_data)
+{
+  pending_connection_for_uninvite_ctx *ctx =
+    (pending_connection_for_uninvite_ctx *) user_data;
+
+  if (ctx->contact != contact)
+    /* Not the connection we are waiting for */
+    return;
+
+  DEBUG ("awaited connection with %s failed: %s. Can't send uninvite",
+    contact->name, message);
+
+  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
+      NULL, ctx);
+
+  g_slice_free (pending_connection_for_uninvite_ctx, ctx);
+}
+
+static void
+revoke_invitations (SalutSelf *self,
+                    SalutOLPCActivity *activity)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  GibberXmppStanza *msg;
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+  TpIntSetIter iter = TP_INTSET_ITER_INIT (tp_handle_set_peek (
+        activity->invited));
+
+  if (tp_handle_set_size (activity->invited) <= 0)
+    return;
+
+  msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
+      GIBBER_STANZA_SUB_TYPE_NONE,
+      priv->connection->name, NULL,
+      GIBBER_NODE, "uninvite",
+        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+        GIBBER_NODE_ATTRIBUTE, "room", tp_handle_inspect (activity->room_repo,
+          activity->room),
+        GIBBER_NODE_ATTRIBUTE, "id", activity->activity_id,
+      GIBBER_NODE_END, GIBBER_STANZA_END);
+
+  DEBUG ("revoke invitations for activity %s", activity->activity_id);
+  while (tp_intset_iter_next (&iter))
+    {
+      TpHandle contact_handle;
+      SalutContact *contact;
+      SalutXmppConnectionManagerRequestConnectionResult request_result;
+      GibberXmppConnection *connection = NULL;
+      const gchar *to;
+
+      contact_handle = iter.element;
+      contact = salut_contact_manager_get_contact (priv->contact_manager,
+          contact_handle);
+      if (contact == NULL)
+        {
+          DEBUG ("Can't find contact %d", contact_handle);
+          continue;
+        }
+
+      to = tp_handle_inspect (contact_repo, contact_handle);
+      gibber_xmpp_node_set_attribute (msg->node, "to", to);
+
+      request_result = salut_xmpp_connection_manager_request_connection (
+          priv->xmpp_connection_manager, contact, &connection, NULL);
+
+      if (request_result ==
+          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
+        {
+          DEBUG ("request connection to %s failed", to);
+        }
+      else if (request_result ==
+          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+        {
+          if (!gibber_xmpp_connection_send (connection, msg, NULL))
+            DEBUG ("can't send uninvite to %s", to);
+        }
+      else
+        {
+          pending_connection_for_uninvite_ctx *ctx;
+
+          ctx = g_slice_new (pending_connection_for_uninvite_ctx);
+          g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+              G_CALLBACK (xmpp_connection_manager_new_connection_cb), ctx);
+          g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
+              G_CALLBACK (xmpp_connection_manager_connection_failed_cb), ctx);
+        }
+    }
+
+  g_object_unref (msg);
+}
+
+static void
+muc_closed_cb (SalutMucChannel *muc,
+               SalutSelf *self)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  TpHandle room_handle;
+  SalutOLPCActivity *activity;
+
+  /* We leave the muc. Revoke all invitations we sent for this activity */
+  g_object_get (muc, "handle", &room_handle, NULL);
+  activity = g_hash_table_lookup (priv->olpc_activities, GUINT_TO_POINTER
+      (room_handle));
+  if (activity == NULL)
+    {
+      DEBUG ("activity doesn't exist anymore");
+      return;
+    }
+
+  revoke_invitations (self, activity);
+}
+
 static SalutOLPCActivity *
 salut_self_add_olpc_activity (SalutSelf *self,
                               const gchar *activity_id,
@@ -810,6 +970,9 @@ salut_self_add_olpc_activity (SalutSelf *self,
       activity_free (activity);
       return NULL;
     }
+
+  g_signal_connect (activity->muc, "closed", G_CALLBACK (muc_closed_cb),
+      self);
 
   activity->activity_id = g_strdup (activity_id);
 
