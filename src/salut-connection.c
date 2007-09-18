@@ -2028,6 +2028,61 @@ error:
   g_error_free (error);
 }
 
+typedef struct
+{
+  SalutContact *inviter;
+  TpHandle room;
+  gchar *activity_id;
+} muc_ready_ctx;
+
+static muc_ready_ctx *
+muc_ready_ctx_new (SalutContact *inviter,
+                   TpHandle room,
+                   const gchar *activity_id)
+{
+  muc_ready_ctx *ctx = g_slice_new (muc_ready_ctx);
+  ctx->inviter = inviter;
+  g_object_ref (inviter);
+  ctx->room = room;
+  ctx->activity_id = g_strdup (activity_id);
+  return ctx;
+}
+
+static void
+muc_ready_ctx_free (muc_ready_ctx *ctx)
+{
+  if (ctx == NULL)
+    return;
+
+  g_object_unref (ctx->inviter);
+  g_free (ctx->activity_id);
+  g_slice_free (muc_ready_ctx, ctx);
+}
+
+static void
+muc_ready_cb (SalutMucChannel *muc,
+              muc_ready_ctx *ctx)
+{
+  /* We joined the muc so have to forget about invites */
+  salut_contact_left_private_activity (ctx->inviter, ctx->room,
+      ctx->activity_id);
+
+  g_signal_handlers_disconnect_matched (muc, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
+      NULL, ctx);
+  muc_ready_ctx_free (ctx);
+}
+
+static void
+muc_closed_cb (SalutMucChannel *muc,
+               muc_ready_ctx *ctx)
+{
+  /* FIXME: should we call left_private_activity here too ? */
+
+  g_signal_handlers_disconnect_matched (muc, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
+      NULL, ctx);
+  muc_ready_ctx_free (ctx);
+}
+
 void
 salut_connection_olpc_observe_invitation (SalutConnection *self,
                                           TpHandle room,
@@ -2040,6 +2095,8 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL, *tags = NULL;
   SalutContact *inviter;
+  SalutMucChannel *muc;
+  muc_ready_ctx *ctx;
 
   props_node = gibber_xmpp_node_get_child_ns (invite_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
@@ -2066,6 +2123,14 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
    * as, for now, we don't manage private activity membership (it's PS job) */
   salut_contact_takes_part_in_olpc_activity (inviter, room, activity_id);
 
+  muc = salut_muc_manager_get_text_channel (priv->muc_manager, room);
+  g_assert (muc != NULL);
+
+  ctx = muc_ready_ctx_new (inviter, room, activity_id);
+  g_signal_connect (muc, "ready", G_CALLBACK (muc_ready_cb), ctx);
+  g_signal_connect (muc, "closed", G_CALLBACK (muc_closed_cb), ctx);
+
+  g_object_unref (muc);
   g_hash_table_destroy (properties);
 }
 
