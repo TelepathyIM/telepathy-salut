@@ -609,6 +609,20 @@ salut_contact_takes_part_in_olpc_activity (SalutContact *self,
       SALUT_CONTACT_OLPC_ACTIVITIES);
 }
 
+void
+salut_contact_left_private_activity (SalutContact *self,
+                                     TpHandle room,
+                                     const gchar *activity_id)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  if (g_hash_table_remove (priv->olpc_private_activities, activity_id))
+    {
+      g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+          SALUT_CONTACT_OLPC_ACTIVITIES);
+    }
+}
+
 #endif
 
 static void

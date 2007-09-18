@@ -133,6 +133,10 @@ void salut_contact_foreach_olpc_activity (SalutContact *self,
 
 void salut_contact_takes_part_in_olpc_activity (SalutContact *self,
     TpHandle room, const gchar *activity_id);
+
+void salut_contact_left_private_activity (SalutContact *self, TpHandle room,
+    const gchar *activity_id);
+
 #endif
 
 G_END_DECLS
