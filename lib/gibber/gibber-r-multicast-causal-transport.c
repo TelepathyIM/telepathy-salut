@@ -389,7 +389,7 @@ connected (GibberRMulticastCausalTransport *transport)
 
   priv->self = gibber_r_multicast_sender_new (transport->sender_id, priv->name,
       priv->senders);
-  gibber_r_multicast_sender_set_start (priv->self, priv->packet_id);
+  gibber_r_multicast_sender_update_start (priv->self, priv->packet_id);
 
   g_hash_table_insert(priv->senders, GUINT_TO_POINTER(priv->self->id),
       priv->self);
@@ -619,7 +619,7 @@ gibber_r_multicast_causal_transport_add_sender(
 }
 
 
-void gibber_r_multicast_causal_transport_set_sender_start (
+void gibber_r_multicast_causal_transport_update_sender_start (
     GibberRMulticastCausalTransport *transport,
     guint32 sender_id,
     guint32 packet_id)
@@ -632,7 +632,7 @@ void gibber_r_multicast_causal_transport_set_sender_start (
   sender = g_hash_table_lookup(priv->senders, GUINT_TO_POINTER(sender_id));
   g_assert (sender != NULL);
 
-  gibber_r_multicast_sender_set_start (sender, packet_id);
+  gibber_r_multicast_sender_update_start (sender, packet_id);
 }
 
 static void
