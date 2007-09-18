@@ -897,6 +897,7 @@ revoke_invitations (SalutSelf *self,
       else if (request_result ==
           SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
         {
+          DEBUG ("send uninvite to %s", to);
           if (!gibber_xmpp_connection_send (connection, msg, NULL))
             DEBUG ("can't send uninvite to %s", to);
         }

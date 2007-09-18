@@ -2287,19 +2287,20 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
     }
 
   room_handle = tp_handle_lookup (room_repo, room, NULL, NULL);
-   if (room_handle == 0)
+  if (room_handle == 0)
     {
       DEBUG ("room %s unknown", room);
       return;
     }
 
-   activity_id = gibber_xmpp_node_get_attribute (node, "id");
-   if (activity_id == NULL)
-     {
-       DEBUG ("No id attribute");
-       return;
-     }
+  activity_id = gibber_xmpp_node_get_attribute (node, "id");
+  if (activity_id == NULL)
+    {
+      DEBUG ("No id attribute");
+      return;
+    }
 
+  DEBUG ("received uninvite from %s", contact->name);
   salut_contact_left_private_activity (contact, room_handle, activity_id);
 }
 
