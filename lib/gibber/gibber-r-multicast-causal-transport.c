@@ -522,8 +522,7 @@ data_received_cb(GibberRMulticastSender *sender, guint8 stream_id,
 
 static void
 control_packet_received_cb(GibberRMulticastSender *sender,
-                 GibberRMulticastPacket *packet,
-                 guint8 *data, gsize size, gpointer user_data) {
+                 GibberRMulticastPacket *packet, gpointer user_data) {
   GibberRMulticastCausalTransport *self =
   GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(user_data);
   GibberRMulticastCausalTransportPrivate *priv =
