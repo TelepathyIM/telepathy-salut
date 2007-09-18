@@ -615,12 +615,22 @@ salut_contact_left_private_activity (SalutContact *self,
                                      const gchar *activity_id)
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactActivity *activity;
 
-  if (g_hash_table_remove (priv->olpc_private_activities, activity_id))
+  activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
+  if (activity == NULL)
+    return;
+
+  if (activity->room != room)
     {
-      g_signal_emit (self, signals[CONTACT_CHANGE], 0,
-          SALUT_CONTACT_OLPC_ACTIVITIES);
+      DEBUG ("bad room handle: %d", room);
+      return;
     }
+
+  g_hash_table_remove (priv->olpc_private_activities, activity_id);
+
+  g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+      SALUT_CONTACT_OLPC_ACTIVITIES);
 }
 
 #endif
