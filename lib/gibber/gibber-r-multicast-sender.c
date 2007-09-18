@@ -674,7 +674,7 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
   }
 
   if (diff < 0 && gibber_r_multicast_packet_diff(priv->first_packet,
-             packet->packet_id) > 0) {
+             packet->packet_id) >= 0) {
     /* We already had this one, silently ignore */
     DEBUG_SENDER(sender, "Detect resent of packet 0x%x",
         packet->packet_id);
