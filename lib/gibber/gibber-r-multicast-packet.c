@@ -108,8 +108,7 @@ gibber_r_multicast_packet_finalize (GObject *object)
       g_free(self->data.data.payload);
       break;
     case PACKET_TYPE_ATTEMPT_JOIN:
-      if (self->data.attempt_join.senders != NULL)
-        g_array_free (self->data.attempt_join.senders, TRUE);
+      g_array_free (self->data.attempt_join.senders, TRUE);
       break;
     default:
       /* Nothing specific to free */;
@@ -152,6 +151,15 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
   result->sender = sender;
 
   priv->max_data = max_size;
+
+  switch (result->type) {
+    case PACKET_TYPE_ATTEMPT_JOIN:
+      result->data.attempt_join.senders = g_array_new (FALSE, FALSE,
+          sizeof(guint32));
+      break;
+    default:
+      break;
+  }
 
   return result;
 }
@@ -533,6 +541,10 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     case PACKET_TYPE_ATTEMPT_JOIN: {
       guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
       guint8 i;
+
+      result->data.attempt_join.senders = g_array_sized_new (FALSE, FALSE,
+          sizeof (guint32), nr);
+
       for (i = 0; i < nr; i++) {
         guint32 sender = get_guint32 (priv->data,
             priv->max_data, &(priv->size));
@@ -589,11 +601,6 @@ gibber_r_multicast_packet_attempt_join_add_sender (
 {
   g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
 
-  if (packet->data.attempt_join.senders == NULL) {
-    packet->data.attempt_join.senders = g_array_new (FALSE, FALSE,
-        sizeof(guint32));
-  }
-
   g_array_append_val (packet->data.attempt_join.senders, sender);
 
   return TRUE;
@@ -607,12 +614,7 @@ gibber_r_multicast_packet_attempt_join_add_senders (
 {
   g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
 
-  if (packet->data.attempt_join.senders == NULL) {
-    packet->data.attempt_join.senders = g_array_sized_new (FALSE, FALSE,
-        sizeof(guint32), senders->len);
-  }
-
-  g_array_append_vals (packet->data.attempt_join.senders, senders->data, 
+  g_array_append_vals (packet->data.attempt_join.senders, senders->data,
       senders->len);
 
   return TRUE;
