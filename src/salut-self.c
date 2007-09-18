@@ -916,27 +916,6 @@ revoke_invitations (SalutSelf *self,
   g_object_unref (msg);
 }
 
-static void
-muc_closed_cb (SalutMucChannel *muc,
-               SalutSelf *self)
-{
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  TpHandle room_handle;
-  SalutOLPCActivity *activity;
-
-  /* We leave the muc. Revoke all invitations we sent for this activity */
-  g_object_get (muc, "handle", &room_handle, NULL);
-  activity = g_hash_table_lookup (priv->olpc_activities, GUINT_TO_POINTER
-      (room_handle));
-  if (activity == NULL)
-    {
-      DEBUG ("activity doesn't exist anymore");
-      return;
-    }
-
-  revoke_invitations (self, activity);
-}
-
 static SalutOLPCActivity *
 salut_self_add_olpc_activity (SalutSelf *self,
                               const gchar *activity_id,
@@ -971,9 +950,6 @@ salut_self_add_olpc_activity (SalutSelf *self,
       activity_free (activity);
       return NULL;
     }
-
-  g_signal_connect (activity->muc, "closed", G_CALLBACK (muc_closed_cb),
-      self);
 
   activity->activity_id = g_strdup (activity_id);
 
@@ -1111,10 +1087,19 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
 static gboolean
 _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 {
+  SalutOLPCActivity *activity = (SalutOLPCActivity *) value;
   struct _set_olpc_activities_ctx *data = user_data;
+  gboolean remove;
 
   /* delete the activity service if it's not in data->room_to_act_id */
-  return (g_hash_table_lookup (data->room_to_act_id, key) == NULL);
+  remove = (g_hash_table_lookup (data->room_to_act_id, key) == NULL);
+
+  if (remove)
+    {
+      revoke_invitations (data->self, activity);
+    }
+
+  return remove;
 }
 
 gboolean
