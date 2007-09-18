@@ -2062,6 +2062,8 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
       inviter, room, activity_id, color, activity_name, activity_type, tags);
 
+  /* FIXME: we shouldn't add it if the local user is already in the activity
+   * as, for now, we don't manage private activity membership (it's PS job) */
   salut_contact_takes_part_in_olpc_activity (inviter, room, activity_id);
 
   g_hash_table_destroy (properties);
