@@ -2067,6 +2067,7 @@ muc_ready_cb (SalutMucChannel *muc,
   salut_contact_left_private_activity (ctx->inviter, ctx->room,
       ctx->activity_id);
 
+  DEBUG ("forget invite received from %s", ctx->inviter->name);
   g_signal_handlers_disconnect_matched (muc, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
       NULL, ctx);
   muc_ready_ctx_free (ctx);
