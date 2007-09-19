@@ -68,6 +68,9 @@ gboolean
 salut_muc_channel_send_invitation (SalutMucChannel *self,
     TpHandle handle, const gchar *message, GError **error);
 
+gboolean salut_muc_channel_publish_service (SalutMucChannel *self);
+
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_MUC_CHANNEL_H__*/

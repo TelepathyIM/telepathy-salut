@@ -372,8 +372,8 @@ create_invitation (SalutMucChannel *self,
   return msg;
 }
 
-static gboolean
-muc_channel_publish_service (SalutMucChannel *self)
+gboolean
+salut_muc_channel_publish_service (SalutMucChannel *self)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   AvahiStringList *txt_record = NULL;
@@ -686,7 +686,7 @@ muc_channel_add_member (GObject *iface,
 
       tp_intset_destroy (empty);
       tp_intset_destroy (add);
-      muc_channel_publish_service (self);
+      salut_muc_channel_publish_service (self);
       return ret;
     }
 
