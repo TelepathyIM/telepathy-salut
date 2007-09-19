@@ -112,6 +112,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
 #endif
     )
 
+#ifdef ENABLE_OLPC
 static gboolean uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
     GibberXmppConnection *conn, GibberXmppStanza *stanza,
     SalutContact *contact, gpointer user_data);
@@ -119,6 +120,7 @@ static gboolean uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
 static void uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
     GibberXmppConnection *conn, GibberXmppStanza *stanza,
     SalutContact *contact, gpointer user_data);
+#endif
 
 /* properties */
 enum {
