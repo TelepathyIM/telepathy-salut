@@ -972,6 +972,11 @@ browser_removed (SalutAvahiServiceBrowser *browser,
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpHandleRepoIface *room_repo =
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+  TpHandle handle;
+  SalutMucChannel *muc;
 
   DEBUG ("remove room: %s.%s.%s", name, type, domain);
 
@@ -979,6 +984,18 @@ browser_removed (SalutAvahiServiceBrowser *browser,
       (gchar *) name);
 
   g_hash_table_remove (priv->room_resolvers, name);
+
+  /* Do we have to re-announce this room ? */
+  handle = tp_handle_lookup (room_repo, name, NULL, NULL);
+  if (handle == 0)
+    return;
+
+  muc = g_hash_table_lookup (priv->text_channels, GUINT_TO_POINTER (handle));
+  if (muc == NULL)
+    return;
+
+  DEBUG ("We are in room %s. Try to re-announce it", name);
+  salut_muc_channel_publish_service (muc);
 }
 
 static void
