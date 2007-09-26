@@ -81,8 +81,10 @@ struct _SalutMucManagerPrivate
 
   /* GUINT_TO_POINTER (room_handle) => (SalutMucChannel *) */
   GHashTable *text_channels;
+#ifdef ENABLE_DBUS_TUBES
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
+#endif
   GSList *roomlist_channels;
 
   gboolean dispose_has_run;
@@ -108,8 +110,11 @@ salut_muc_manager_init (SalutMucManager *obj)
 
   priv->room_resolvers = g_hash_table_new_full (g_str_hash, g_str_equal,
       g_free, g_object_unref);
+
+#ifdef ENABLE_DBUS_TUBES
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
+#endif
 
   priv->roomlist_channels = NULL;
 }
@@ -146,7 +151,9 @@ salut_muc_manager_dispose (GObject *object)
 
   tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
   g_assert (priv->text_channels == NULL);
+#ifdef ENABLE_DBUS_TUBES
   g_assert (priv->tubes_channels == NULL);
+#endif
 
   if (priv->room_resolvers)
     {
@@ -199,12 +206,14 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
       priv->client = NULL;
     }
 
+#ifdef ENABLE_DBUS_TUBES
   if (priv->tubes_channels != NULL)
     {
       GHashTable *tmp = priv->tubes_channels;
       priv->tubes_channels = NULL;
       g_hash_table_destroy (tmp);
     }
+#endif
 
   if (priv->roomlist_channels != NULL)
     {
@@ -261,9 +270,12 @@ salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
   f.func = func;
   f.data = data;
 
-  g_hash_table_foreach(priv->text_channels, salut_muc_manager_iface_foreach_one, &f);
+  g_hash_table_foreach(priv->text_channels,
+      salut_muc_manager_iface_foreach_one, &f);
+#ifdef ENABLE_DBUS_TUBES
   g_hash_table_foreach (priv->tubes_channels,
       salut_muc_manager_iface_foreach_one, &f);
+#endif
 
   g_slist_foreach (priv->roomlist_channels,
       (GFunc) salut_muc_manager_iface_foreach_one_list, data);
@@ -282,6 +294,7 @@ muc_channel_closed_cb (SalutMucChannel *chan,
       g_object_get(chan, "handle", &handle, NULL);
       DEBUG ("Removing channel with handle %u", handle);
 
+#ifdef ENABLE_DBUS_TUBES
       if (priv->tubes_channels != NULL)
         {
           SalutTubesChannel *tubes;
@@ -291,11 +304,13 @@ muc_channel_closed_cb (SalutMucChannel *chan,
           if (tubes != NULL)
             salut_tubes_channel_close (tubes);
         }
+#endif
 
       g_hash_table_remove (priv->text_channels, GUINT_TO_POINTER (handle));
     }
 }
 
+#ifdef ENABLE_DBUS_TUBES
 static void
 tubes_channel_ready_cb (SalutTubesChannel *chan,
                         SalutMucManager *self)
@@ -339,6 +354,7 @@ tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
        * but closing the corresponding text channel would be too astonishing */
     }
 }
+#endif
 
 
 static GibberMucConnection *
@@ -402,6 +418,7 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   return chan;
 }
 
+#ifdef ENABLE_DBUS_TUBES
 /**
  * new_tubes_channel:
  *
@@ -441,6 +458,7 @@ new_tubes_channel (SalutMucManager *self,
 
   return chan;
 }
+#endif
 
 static gchar *
 _avahi_address_to_string_address (const AvahiAddress *address)
@@ -668,6 +686,7 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
       g_assert (text_chan != NULL);
       *ret = TP_CHANNEL_IFACE (text_chan);
     }
+#ifdef ENABLE_DBUS_TUBES
   else if (!tp_strdiff (chan_type, SALUT_IFACE_CHANNEL_TYPE_TUBES))
     {
       SalutTubesChannel *tubes_chan;
@@ -717,6 +736,7 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
             }
         }
     }
+#endif
   else
     {
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;

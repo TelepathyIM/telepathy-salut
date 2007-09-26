@@ -60,12 +60,8 @@ CORE_SOURCES =                                          \
     salut-contact-channel.c                             \
     text-helper.c                                       \
     text-helper.h                                       \
-    tube-dbus.h                                         \
-    tube-dbus.c                                         \
     salut-roomlist-channel.h                            \
     salut-roomlist-channel.c                            \
-    salut-tubes-channel.h                               \
-    salut-tubes-channel.c                               \
     salut-xmpp-connection-manager.h                     \
     salut-xmpp-connection-manager.c                     \
     tube-iface.h                                        \
@@ -80,6 +76,14 @@ CORE_SOURCES =                                          \
     debug.h                                             \
     ansi.h                                              \
     namespaces.h
+
+if ENABLE_DBUS_TUBES
+  CORE_SOURCES +=                                       \
+    tube-dbus.h                                         \
+    tube-dbus.c                                         \
+    salut-tubes-channel.h                               \
+    salut-tubes-channel.c
+endif
 
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES)
