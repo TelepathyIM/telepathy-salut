@@ -101,21 +101,23 @@ PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.0, dbus-glib-1 >= 0.61])
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
-#check D-Bus version to see whether we can enable tubes
-DBUS_VERSION=`$PKG_CONFIG dbus-1 --modversion`
-DBUS_VERSION_MAJOR=`echo $DBUS_VERSION | awk -F. '{print $1}'`
-DBUS_VERSION_MINOR=`echo $DBUS_VERSION | awk -F. '{print $2}'`
+dnl Check for D-Bus tubes
+AC_CHECK_LIB(dbus-1, dbus_message_marshal,
+             [have_dbus_message_marshal=yes],
+             [have_dbus_message_marshal=no],
+             [$DBUS_LIBS])
 
-AC_MSG_CHECKING([if D-Bus is recent enough for D-Bus tubes])
-if test "$DBUS_VERSION_MAJOR" -gt 1 -o "$DBUS_VERSION_MINOR" -ge 1; then
-  AC_MSG_RESULT(yes)
-  AC_DEFINE(ENABLE_DBUS_TUBES, [], [Enable dbus tubes])
-  ENABLE_DBUS_TUBES=yes
-else
-  AC_MSG_RESULT(no)
-  AC_WARN(Not building DBUS tube support)
+have_dbus_tube=no
+if test x$have_dbus_message_marshal = xyes; then
+  have_dbus_tube=yes
+  AC_DEFINE(ENABLE_DBUS_TUBES, 1, [Define if we have D-Bus tubes support])
 fi
-AM_CONDITIONAL(ENABLE_DBUS_TUBES, test "x$ENABLE_DBUS_TUBES" = "xyes")
+
+AM_CONDITIONAL(ENABLE_DBUS_TUBES, test x$have_dbus_tube = xyes)
+
+if test x$have_dbus_tube = xno; then
+  AC_MSG_WARN("Not building support for D-Bus tubes! (libdbus >= 1.1 required)")
+fi
 
 dnl Check for libxml2
 PKG_CHECK_MODULES(LIBXML2, [libxml-2.0])
