@@ -653,12 +653,12 @@ ibb_init_reply_cb (GibberConnection *conn,
 #endif
 
 /*
- * gibber_bytestream_ibb_initiation
+ * gibber_bytestream_ibb_initiate
  *
- * Implements gibber_bytestream_iface_initiation on GibberBytestreamIface
+ * Implements gibber_bytestream_iface_initiate on GibberBytestreamIface
  */
 static gboolean
-gibber_bytestream_ibb_initiation (GibberBytestreamIface *bytestream)
+gibber_bytestream_ibb_initiate (GibberBytestreamIface *bytestream)
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
@@ -714,7 +714,7 @@ bytestream_iface_init (gpointer g_iface,
 {
   GibberBytestreamIfaceClass *klass = (GibberBytestreamIfaceClass *) g_iface;
 
-  klass->initiation = gibber_bytestream_ibb_initiation;
+  klass->initiate = gibber_bytestream_ibb_initiate;
   klass->send = gibber_bytestream_ibb_send;
   klass->close = gibber_bytestream_ibb_close;
   klass->accept = gibber_bytestream_ibb_accept;

@@ -48,7 +48,7 @@ typedef struct _GibberBytestreamIfaceClass GibberBytestreamIfaceClass;
 struct _GibberBytestreamIfaceClass {
   GTypeInterface parent;
 
-  gboolean (*initiation) (GibberBytestreamIface *bytestream);
+  gboolean (*initiate) (GibberBytestreamIface *bytestream);
   gboolean (*send) (GibberBytestreamIface *bytestream, guint len, gchar *data);
   void (*close) (GibberBytestreamIface *bytestream);
   void (*accept) (GibberBytestreamIface *bytestream);
@@ -70,7 +70,7 @@ GType gibber_bytestream_iface_get_type (void);
                               GibberBytestreamIfaceClass))
 
 gboolean
-gibber_bytestream_iface_initiation (GibberBytestreamIface *bytestream);
+gibber_bytestream_iface_initiate (GibberBytestreamIface *bytestream);
 
 gboolean
 gibber_bytestream_iface_send (GibberBytestreamIface *bytestream, guint len,
