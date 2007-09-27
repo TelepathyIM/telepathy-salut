@@ -21,27 +21,10 @@
 #define __GIBBER_BYTESTREAM_IBB_H__
 
 #include <glib-object.h>
+#include "gibber-bytestream-iface.h"
 #include "gibber-xmpp-stanza.h"
 
-//#include <telepathy-glib/base-connection.h>
-
 G_BEGIN_DECLS
-
-typedef enum
-{
-  /* Received a SI request, response not yet sent */
-  GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING = 0,
-  /* We accepted SI request.
-   * bytestream specific init steps not yet performed */
-  GIBBER_BYTESTREAM_IBB_STATE_ACCEPTED,
-  /* Remote contact accepted the SI request.
-   * bytestream specific initiation started */
-  GIBBER_BYTESTREAM_IBB_STATE_INITIATING,
-  /* Bytestream open */
-  GIBBER_BYTESTREAM_IBB_STATE_OPEN,
-  GIBBER_BYTESTREAM_IBB_STATE_CLOSED,
-  LAST_GIBBER_BYTESTREAM_IBB_STATE,
-} GibberBytestreamIBBState;
 
 typedef struct _GibberBytestreamIBB GibberBytestreamIBB;
 typedef struct _GibberBytestreamIBBClass GibberBytestreamIBBClass;

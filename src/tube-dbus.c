@@ -264,7 +264,7 @@ static SalutTubeState
 get_tube_state (SalutTubeDBus *self)
 {
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
-  GibberBytestreamIBBState bytestream_state;
+  GibberBytestreamState bytestream_state;
 
   if (priv->bytestream == NULL)
     /* bytestream not yet created as we're waiting for the SI reply */
@@ -272,14 +272,14 @@ get_tube_state (SalutTubeDBus *self)
 
   g_object_get (priv->bytestream, "state", &bytestream_state, NULL);
 
-  if (bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_OPEN)
+  if (bytestream_state == GIBBER_BYTESTREAM_STATE_OPEN)
     return SALUT_TUBE_STATE_OPEN;
 
-  else if (bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING ||
-      bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_ACCEPTED)
+  else if (bytestream_state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING ||
+      bytestream_state == GIBBER_BYTESTREAM_STATE_ACCEPTED)
     return SALUT_TUBE_STATE_LOCAL_PENDING;
 
-  else if (bytestream_state == GIBBER_BYTESTREAM_IBB_STATE_INITIATING)
+  else if (bytestream_state == GIBBER_BYTESTREAM_STATE_INITIATING)
     return SALUT_TUBE_STATE_REMOTE_PENDING;
 
   else
@@ -289,13 +289,13 @@ get_tube_state (SalutTubeDBus *self)
 
 static void
 bytestream_state_changed_cb (GibberBytestreamIBB *bytestream,
-                             GibberBytestreamIBBState state,
+                             GibberBytestreamState state,
                              gpointer user_data)
 {
   SalutTubeDBus *self = SALUT_TUBE_DBUS (user_data);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
 
-  if (state == GIBBER_BYTESTREAM_IBB_STATE_CLOSED)
+  if (state == GIBBER_BYTESTREAM_STATE_CLOSED)
     {
       if (priv->bytestream != NULL)
         {
@@ -305,7 +305,7 @@ bytestream_state_changed_cb (GibberBytestreamIBB *bytestream,
 
       g_signal_emit (G_OBJECT (self), signals[CLOSED], 0);
     }
-  else if (state == GIBBER_BYTESTREAM_IBB_STATE_OPEN)
+  else if (state == GIBBER_BYTESTREAM_STATE_OPEN)
     {
       tube_dbus_open (self);
       g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
@@ -477,13 +477,13 @@ salut_tube_dbus_set_property (GObject *object,
       case PROP_BYTESTREAM:
         if (priv->bytestream == NULL)
           {
-            GibberBytestreamIBBState state;
+            GibberBytestreamState state;
 
             priv->bytestream = g_value_get_object (value);
             g_object_ref (priv->bytestream);
 
             g_object_get (priv->bytestream, "state", &state, NULL);
-            if (state == GIBBER_BYTESTREAM_IBB_STATE_OPEN)
+            if (state == GIBBER_BYTESTREAM_STATE_OPEN)
               {
                 tube_dbus_open (self);
               }
@@ -550,7 +550,7 @@ salut_tube_dbus_constructor (GType type,
        * It will be when we'll receive the answer of the SI request
        */
       GibberBytestreamIBB *bytestream;
-      GibberBytestreamIBBState state;
+      GibberBytestreamState state;
       const gchar *peer_id;
 
       g_assert (priv->muc_connection != NULL);
@@ -560,12 +560,12 @@ salut_tube_dbus_constructor (GType type,
       if (priv->initiator == priv->self_handle)
         {
           /* We create this tube, bytestream is open */
-          state = GIBBER_BYTESTREAM_IBB_STATE_OPEN;
+          state = GIBBER_BYTESTREAM_STATE_OPEN;
         }
       else
         {
           /* We don't create this tube, bytestream is local pending */
-          state = GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING;
+          state = GIBBER_BYTESTREAM_STATE_LOCAL_PENDING;
         }
 
       bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
@@ -926,7 +926,7 @@ salut_tube_dbus_accept (SalutTubeIface *tube)
 {
   SalutTubeDBus *self = SALUT_TUBE_DBUS (tube);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
-  GibberBytestreamIBBState state;
+  GibberBytestreamState state;
   gchar *stream_init_id;
 
   g_assert (priv->bytestream != NULL);
@@ -935,7 +935,7 @@ salut_tube_dbus_accept (SalutTubeIface *tube)
       "state", &state,
       NULL);
 
-  if (state != GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING)
+  if (state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     return;
 
   g_object_get (priv->bytestream,
@@ -981,7 +981,7 @@ salut_tube_dbus_accept (SalutTubeIface *tube)
       /* No SI so the bytestream is open */
       DEBUG ("no SI, bytestream open");
       g_object_set (priv->bytestream,
-          "state", GIBBER_BYTESTREAM_IBB_STATE_OPEN,
+          "state", GIBBER_BYTESTREAM_STATE_OPEN,
           NULL);
     }
 }

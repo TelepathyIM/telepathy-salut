@@ -70,7 +70,7 @@ struct _GibberBytestreamIBBPrivate
   gchar *peer_id;
   gchar *stream_id;
   gchar *stream_init_id;
-  GibberBytestreamIBBState state;
+  GibberBytestreamState state;
 
   guint16 seq;
   guint16 last_seq_recv;
@@ -137,7 +137,7 @@ stanza_received (GibberBytestreamIBB *self,
       return FALSE;
     }
 
-  if (priv->state != GIBBER_BYTESTREAM_IBB_STATE_OPEN)
+  if (priv->state != GIBBER_BYTESTREAM_STATE_OPEN)
     {
       DEBUG ("can't receive data through a not open bytestream (state: %d)",
           priv->state);
@@ -189,7 +189,7 @@ gibber_bytestream_ibb_dispose (GObject *object)
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (object);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
-  if (priv->state != GIBBER_BYTESTREAM_IBB_STATE_CLOSED)
+  if (priv->state != GIBBER_BYTESTREAM_STATE_CLOSED)
     {
       gibber_bytestream_ibb_close (self);
     }
@@ -422,10 +422,10 @@ gibber_bytestream_ibb_class_init (
   param_spec = g_param_spec_uint (
       "state",
       "Bytestream state",
-      "An enum (BytestreamIBBState) signifying the current state of"
+      "An enum (BytestreamState) signifying the current state of"
       "this bytestream object",
-      0, LAST_GIBBER_BYTESTREAM_IBB_STATE - 1,
-      GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING,
+      0, LAST_GIBBER_BYTESTREAM_STATE - 1,
+      GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
@@ -463,7 +463,7 @@ send_data_to (GibberBytestreamIBB *self,
   gchar *seq, *encoded;
   gboolean ret;
 
-  if (priv->state != GIBBER_BYTESTREAM_IBB_STATE_OPEN)
+  if (priv->state != GIBBER_BYTESTREAM_STATE_OPEN)
     {
       DEBUG ("can't send data through a not open bytestream (state: %d)",
           priv->state);
@@ -557,7 +557,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIBB *self, GibberXmppStanza *msg)
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GError *error = NULL;
 
-  if (priv->state != GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING)
+  if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
       /* The stream was previoulsy or automatically accepted */
       return;
@@ -572,7 +572,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIBB *self, GibberXmppStanza *msg)
 
   if (send_stanza (self, msg, &error))
     {
-      priv->state = GIBBER_BYTESTREAM_IBB_STATE_ACCEPTED;
+      priv->state = GIBBER_BYTESTREAM_STATE_ACCEPTED;
     }
   else
     {
@@ -588,7 +588,7 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self)
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GibberXmppStanza *stanza
 
-  if (priv->state != GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING)
+  if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
       DEBUG ("bytestream is not in the local pending state (state %d)",
           priv->state);
@@ -616,11 +616,11 @@ gibber_bytestream_ibb_close (GibberBytestreamIBB *self)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
-  if (priv->state == GIBBER_BYTESTREAM_IBB_STATE_CLOSED)
+  if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSED)
      /* bytestream already closed, do nothing */
      return;
 
-  if (priv->state == GIBBER_BYTESTREAM_IBB_STATE_LOCAL_PENDING)
+  if (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
       if (priv->stream_init_id != NULL)
         {
@@ -650,7 +650,7 @@ gibber_bytestream_ibb_close (GibberBytestreamIBB *self)
       g_object_unref (stanza);
     }
 
-  g_object_set (self, "state", GIBBER_BYTESTREAM_IBB_STATE_CLOSED, NULL);
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
 }
 
 #if 0
@@ -667,12 +667,12 @@ ibb_init_reply_cb (GibberConnection *conn,
     {
       /* yeah, stream initiated */
       DEBUG ("IBB stream initiated");
-      g_object_set (self, "state", GIBBER_BYTESTREAM_IBB_STATE_OPEN, NULL);
+      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN, NULL);
     }
   else
     {
       DEBUG ("error during IBB initiation");
-      g_object_set (self, "state", GIBBER_BYTESTREAM_IBB_STATE_CLOSED, NULL);
+      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
     }
 
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
@@ -686,7 +686,7 @@ gibber_bytestream_ibb_initiation (GibberBytestreamIBB *self)
   GibberXmppStanza *msg;
   GError *error = NULL;
 
-  if (priv->state != GIBBER_BYTESTREAM_IBB_STATE_INITIATING)
+  if (priv->state != GIBBER_BYTESTREAM_STATE_INITIATING)
     {
       DEBUG ("bytestream is not is the initiating state (state %d",
           priv->state);
