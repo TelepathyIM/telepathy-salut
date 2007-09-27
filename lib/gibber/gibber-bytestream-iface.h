@@ -39,7 +39,7 @@ typedef enum
   /* Bytestream open */
   GIBBER_BYTESTREAM_STATE_OPEN,
   GIBBER_BYTESTREAM_STATE_CLOSED,
-  LAST_GIBBER_BYTESTREAM_STATE,
+  NUM_GIBBER_BYTESTREAM_STATES,
 } GibberBytestreamState;
 
 typedef struct _GibberBytestreamIface GibberBytestreamIface;
