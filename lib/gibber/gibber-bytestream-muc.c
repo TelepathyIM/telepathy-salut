@@ -236,7 +236,6 @@ gibber_bytestream_muc_constructor (GType type,
 
   priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (GIBBER_BYTESTREAM_MUC (obj));
 
-  /* We can't be a private *and* a muc bytestream */
   g_assert (priv->muc_connection != NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
