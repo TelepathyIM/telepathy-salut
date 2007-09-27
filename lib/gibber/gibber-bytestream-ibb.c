@@ -347,6 +347,15 @@ gibber_bytestream_ibb_class_init (
   object_class->set_property = gibber_bytestream_ibb_set_property;
   object_class->constructor = gibber_bytestream_ibb_constructor;
 
+  g_object_class_override_property (object_class, PROP_SELF_ID,
+      "self-id");
+  g_object_class_override_property (object_class, PROP_PEER_ID,
+      "peer-id");
+  g_object_class_override_property (object_class, PROP_STREAM_ID,
+      "stream-id");
+  g_object_class_override_property (object_class, PROP_STATE,
+      "state");
+
   param_spec = g_param_spec_object (
       "xmpp-connection",
       "GibberXmppConnection object",
@@ -375,42 +384,6 @@ gibber_bytestream_ibb_class_init (
   g_object_class_install_property (object_class, PROP_MUC_CONNECTION,
       param_spec);
 
- param_spec = g_param_spec_string (
-      "self-id",
-      "self ID",
-      "the ID of the local user",
-      "",
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_SELF_ID, param_spec);
-
- param_spec = g_param_spec_string (
-      "peer-id",
-      "peer JID",
-      "the ID of the muc or the remote user associated with this bytestream",
-      "",
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_PEER_ID, param_spec);
-
-  param_spec = g_param_spec_string (
-      "stream-id",
-      "stream ID",
-      "the ID of the stream",
-      "",
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_STREAM_ID, param_spec);
-
   param_spec = g_param_spec_string (
       "stream-init-id",
       "stream init ID",
@@ -423,19 +396,6 @@ gibber_bytestream_ibb_class_init (
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
       param_spec);
-
-  param_spec = g_param_spec_uint (
-      "state",
-      "Bytestream state",
-      "An enum (BytestreamState) signifying the current state of"
-      "this bytestream object",
-      0, NUM_GIBBER_BYTESTREAM_STATES - 1,
-      GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_STATE, param_spec);
 
   signals[DATA_RECEIVED] =
     g_signal_new ("data-received",
