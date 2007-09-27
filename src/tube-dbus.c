@@ -926,7 +926,6 @@ salut_tube_dbus_accept (SalutTubeIface *tube)
   SalutTubeDBus *self = SALUT_TUBE_DBUS (tube);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
   GibberBytestreamState state;
-  gchar *stream_init_id;
 
   g_assert (priv->bytestream != NULL);
 
@@ -937,43 +936,9 @@ salut_tube_dbus_accept (SalutTubeIface *tube)
   if (state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     return;
 
-  g_object_get (priv->bytestream,
-      "stream-init-id", &stream_init_id,
-      NULL);
-
-  if (stream_init_id != NULL)
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      /* Bytestream was created using a SI request so
-       * we have to accept it */
-#if 0
-      LmMessage *msg;
-      LmMessageNode *si, *tube_node;
-
-      DEBUG ("accept the SI request");
-
-      msg = salut_bytestream_ibb_make_accept_iq (priv->bytestream);
-      if (msg == NULL)
-        {
-          DEBUG ("can't create SI accept IQ. Close the bytestream");
-          gibber_bytestream_ibb_close (priv->bytestream);
-          return;
-        }
-
-      si = lm_message_node_get_child_with_namespace (msg->node, "si",
-          NS_SI);
-      g_assert (si != NULL);
-
-      tube_node = lm_message_node_add_child (si, "tube", "");
-      lm_message_node_set_attribute (tube_node, "xmlns", NS_SI_TUBES_OLD);
-
-      lm_message_node_add_child (tube_node, "dbus-name",
-          priv->dbus_local_name);
-
-      salut_bytestream_ibb_accept (priv->bytestream, msg);
-
-      lm_message_unref (msg);
-      g_free (stream_init_id);
-#endif
+      /* TODO: SI reply */
     }
   else
     {
