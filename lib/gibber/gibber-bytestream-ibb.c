@@ -708,6 +708,17 @@ gibber_bytestream_ibb_initiate (GibberBytestreamIface *bytestream)
   return TRUE;
 }
 
+/*
+ * gibber_bytestream_ibb_get_protocol
+ *
+ * Implements gibber_bytestream_iface_get_protocol on GibberBytestreamIface
+ */
+static const gchar *
+gibber_bytestream_ibb_get_protocol (GibberBytestreamIface *bytestream)
+{
+  return GIBBER_XMPP_NS_IBB;
+}
+
 static void
 bytestream_iface_init (gpointer g_iface,
                        gpointer iface_data)
@@ -718,4 +729,5 @@ bytestream_iface_init (gpointer g_iface,
   klass->send = gibber_bytestream_ibb_send;
   klass->close = gibber_bytestream_ibb_close;
   klass->accept = gibber_bytestream_ibb_accept;
+  klass->get_protocol = gibber_bytestream_ibb_get_protocol;
 }
