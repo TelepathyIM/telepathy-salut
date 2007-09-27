@@ -16,6 +16,8 @@ HANDWRITTEN_SOURCES =             \
   gibber-bytestream-ibb.c         \
   gibber-bytestream-iface.h       \
   gibber-bytestream-iface.c       \
+  gibber-bytestream-muc.h         \
+  gibber-bytestream-muc.c         \
   gibber-debug.c                  \
   gibber-debug.h                  \
   gibber-xmpp-node.c              \
