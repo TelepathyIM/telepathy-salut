@@ -421,7 +421,7 @@ send_data_to (GibberBytestreamIBB *self,
               const gchar *to,
               gboolean groupchat,
               guint len,
-              gchar *str)
+              const gchar *str)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GibberXmppStanza *stanza;
@@ -486,7 +486,7 @@ send_data_to (GibberBytestreamIBB *self,
 static gboolean
 gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
                             guint len,
-                            gchar *str)
+                            const gchar *str)
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);

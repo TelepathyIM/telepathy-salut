@@ -33,9 +33,9 @@ gibber_bytestream_iface_initiate (GibberBytestreamIface *self)
 gboolean
 gibber_bytestream_iface_send (GibberBytestreamIface *self,
                               guint len,
-                              gchar *data)
+                              const gchar *data)
 {
-  gboolean (*virtual_method)(GibberBytestreamIface *, guint, gchar *) =
+  gboolean (*virtual_method)(GibberBytestreamIface *, guint, const gchar *) =
     GIBBER_BYTESTREAM_IFACE_GET_CLASS (self)->send;
   g_assert (virtual_method != NULL);
   return virtual_method (self, len, data);
