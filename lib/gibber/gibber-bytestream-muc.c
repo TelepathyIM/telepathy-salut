@@ -70,7 +70,6 @@ struct _GibberBytestreamMucPrivate
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
-  gchar *stream_init_id;
   GibberBytestreamState state;
   guint8 stream_id_multicast;
 
@@ -142,7 +141,6 @@ gibber_bytestream_muc_finalize (GObject *object)
   GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
 
   g_free (priv->stream_id);
-  g_free (priv->stream_init_id);
   g_free (priv->self_id);
   g_free (priv->peer_id);
 
