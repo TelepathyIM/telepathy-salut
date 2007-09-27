@@ -58,24 +58,6 @@ GType gibber_bytestream_ibb_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_BYTESTREAM_IBB,\
                               GibberBytestreamIBBClass))
 
-gboolean
-gibber_bytestream_ibb_initiation (GibberBytestreamIBB *ibb);
-
-gboolean
-gibber_bytestream_ibb_send (GibberBytestreamIBB *ibb, guint len,
-   gchar *str);
-
-void
-gibber_bytestream_ibb_close (GibberBytestreamIBB *ibb);
-
-/*
-GibberXmppStanza *
-gibber_bytestream_ibb_make_accept_iq (GibberBytestreamIBB *ibb);
-*/
-
-void
-gibber_bytestream_ibb_accept (GibberBytestreamIBB *ibb, GibberXmppStanza *msg);
-
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_BYTESTREAM_IBB_H__ */

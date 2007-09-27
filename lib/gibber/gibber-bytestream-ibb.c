@@ -34,9 +34,14 @@
 #include "gibber-debug.h"
 
 #include "signals-marshal.h"
-//#include "bytestream-factory.h"
 
-G_DEFINE_TYPE (GibberBytestreamIBB, gibber_bytestream_ibb, G_TYPE_OBJECT);
+static void
+bytestream_iface_init (gpointer g_iface, gpointer iface_data);
+
+G_DEFINE_TYPE_WITH_CODE (GibberBytestreamIBB, gibber_bytestream_ibb,
+    G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (GIBBER_TYPE_BYTESTREAM_IFACE,
+      bytestream_iface_init));
 
 /* signals */
 enum
@@ -191,7 +196,7 @@ gibber_bytestream_ibb_dispose (GObject *object)
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_CLOSED)
     {
-      gibber_bytestream_ibb_close (self);
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self));
     }
 
   G_OBJECT_CLASS (gibber_bytestream_ibb_parent_class)->dispose (object);
@@ -513,16 +518,19 @@ send_data_to (GibberBytestreamIBB *self,
   return ret;
 }
 
-gboolean
-gibber_bytestream_ibb_send (GibberBytestreamIBB *self,
+/*
+ * gibber_bytestream_ibb_send
+ *
+ * Implements gibber_bytestream_iface_send on GibberBytestreamIface
+ */
+static gboolean
+gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
                             guint len,
                             gchar *str)
 {
-  GibberBytestreamIBBPrivate *priv;
+  GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
+  GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   gboolean groupchat = FALSE;
-
-  g_assert (GIBBER_IS_BYTESTREAM_IBB (self));
-  priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
   if (priv->muc_connection != NULL)
     groupchat = TRUE;
@@ -551,34 +559,33 @@ gibber_bytestream_ibb_make_accept_iq (GibberBytestreamIBB *self)
 }
 */
 
-void
-gibber_bytestream_ibb_accept (GibberBytestreamIBB *self, GibberXmppStanza *msg)
+/*
+ * gibber_bytestream_ibb_accept
+ *
+ * Implements gibber_bytestream_iface_accept on GibberBytestreamIface
+ */
+static void
+gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream)
 {
+  GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  GError *error = NULL;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
       /* The stream was previoulsy or automatically accepted */
+      DEBUG ("stream was already accepted");
       return;
     }
 
-  if (priv->xmpp_connnection != NULL ||
+  if (priv->xmpp_connnection == NULL ||
       priv->stream_init_id == NULL)
     {
       DEBUG ("can't accept a bytestream not created due to a SI request");
       return;
     }
 
-  if (send_stanza (self, msg, &error))
-    {
-      priv->state = GIBBER_BYTESTREAM_STATE_ACCEPTED;
-    }
-  else
-    {
-      DEBUG ("send accept stanza failed: %s", error->message);
-      g_error_free (error);
-    }
+  DEBUG ("stream is now accepted");
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_ACCEPTED, NULL);
 }
 
 static void
@@ -611,9 +618,15 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self)
   */
 }
 
-void
-gibber_bytestream_ibb_close (GibberBytestreamIBB *self)
+/*
+ * gibber_bytestream_ibb_close
+ *
+ * Implements gibber_bytestream_iface_close on GibberBytestreamIface
+ */
+static void
+gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream)
 {
+  GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
   if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSED)
@@ -679,9 +692,15 @@ ibb_init_reply_cb (GibberConnection *conn,
 }
 #endif
 
-gboolean
-gibber_bytestream_ibb_initiation (GibberBytestreamIBB *self)
+/*
+ * gibber_bytestream_ibb_initiation
+ *
+ * Implements gibber_bytestream_iface_initiation on GibberBytestreamIface
+ */
+static gboolean
+gibber_bytestream_ibb_initiation (GibberBytestreamIface *bytestream)
 {
+  GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GibberXmppStanza *msg;
   GError *error = NULL;
@@ -727,4 +746,16 @@ gibber_bytestream_ibb_initiation (GibberBytestreamIBB *self)
   g_object_unref (msg);
 
   return TRUE;
+}
+
+static void
+bytestream_iface_init (gpointer g_iface,
+                       gpointer iface_data)
+{
+  GibberBytestreamIfaceClass *klass = (GibberBytestreamIfaceClass *) g_iface;
+
+  klass->initiation = gibber_bytestream_ibb_initiation;
+  klass->send = gibber_bytestream_ibb_send;
+  klass->close = gibber_bytestream_ibb_close;
+  klass->accept = gibber_bytestream_ibb_accept;
 }
