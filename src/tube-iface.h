@@ -22,7 +22,7 @@
 
 #include <glib-object.h>
 
-#include <gibber/gibber-bytestream-ibb.h>
+#include <gibber/gibber-bytestream-iface.h>
 
 G_BEGIN_DECLS
 
@@ -35,7 +35,7 @@ struct _SalutTubeIfaceClass {
   void (*accept) (SalutTubeIface *tube);
   void (*close) (SalutTubeIface *tube);
   void (*add_bytestream) (SalutTubeIface *tube,
-      GibberBytestreamIBB *bytestream);
+      GibberBytestreamIface *bytestream);
 };
 
 GType salut_tube_iface_get_type (void);
@@ -59,7 +59,7 @@ salut_tube_iface_close (SalutTubeIface *tube);
 
 void
 salut_tube_iface_add_bytestream (SalutTubeIface *tube,
-    GibberBytestreamIBB *bytestream);
+    GibberBytestreamIface *bytestream);
 
 G_END_DECLS
 

@@ -90,7 +90,7 @@ struct _SalutTubeDBusPrivate
   TpHandle self_handle;
   GibberMucConnection *muc_connection;
   guint id;
-  GibberBytestreamIBB *bytestream;
+  GibberBytestreamIface *bytestream;
   gchar *stream_id;
   TpHandle initiator;
   gchar *service;
@@ -113,8 +113,8 @@ struct _SalutTubeDBusPrivate
 #define SALUT_TUBE_DBUS_GET_PRIVATE(obj) \
     ((SalutTubeDBusPrivate *) obj->priv)
 
-static void data_received_cb (GibberBytestreamIBB *ibb, const gchar *from,
-    GString *data, gpointer user_data);
+static void data_received_cb (GibberBytestreamIface *bytestream,
+    const gchar *from, GString *data, gpointer user_data);
 
 /*
  * Characters used are permissible both in filenames and in D-Bus names. (See
@@ -169,7 +169,7 @@ filter_cb (DBusConnection *conn,
   if (!dbus_message_marshal (msg, &marshalled, &len))
     goto out;
 
-  gibber_bytestream_ibb_send (priv->bytestream, len, marshalled);
+  gibber_bytestream_iface_send (priv->bytestream, len, marshalled);
 
 out:
   if (marshalled != NULL)
@@ -288,7 +288,7 @@ get_tube_state (SalutTubeDBus *self)
 }
 
 static void
-bytestream_state_changed_cb (GibberBytestreamIBB *bytestream,
+bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
                              GibberBytestreamState state,
                              gpointer user_data)
 {
@@ -325,7 +325,7 @@ salut_tube_dbus_dispose (GObject *object)
 
   if (priv->bytestream)
     {
-      gibber_bytestream_ibb_close (priv->bytestream);
+      gibber_bytestream_iface_close (priv->bytestream);
     }
 
   if (priv->dbus_conn)
@@ -684,10 +684,9 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 
   param_spec = g_param_spec_object (
       "bytestream",
-      "SalutBytestreamIBB object",
-      "Salut bytestream IBB object used for streaming data for this D-Bus"
-      "tube object.",
-      GIBBER_TYPE_BYTESTREAM_IBB,
+      "Object implementing the GibberBytestreamIface interface",
+      "Bytestream object used for streaming data for this D-Bus",
+      G_TYPE_OBJECT,
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
@@ -818,7 +817,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 }
 
 static void
-data_received_cb (GibberBytestreamIBB *ibb,
+data_received_cb (GibberBytestreamIface *bytestream,
                   const gchar *from,
                   GString *data,
                   gpointer user_data)
@@ -999,7 +998,7 @@ salut_tube_dbus_close (SalutTubeIface *tube)
 
   if (priv->bytestream != NULL)
     {
-      gibber_bytestream_ibb_close (priv->bytestream);
+      gibber_bytestream_iface_close (priv->bytestream);
     }
   else
     {
@@ -1015,10 +1014,10 @@ salut_tube_dbus_close (SalutTubeIface *tube)
 
 static void
 salut_tube_dbus_add_bytestream (SalutTubeIface *tube,
-                                GibberBytestreamIBB *bytestream)
+                                GibberBytestreamIface *bytestream)
 {
   DEBUG ("D-Bus doesn't support extra bytestream");
-  gibber_bytestream_ibb_close (bytestream);
+  gibber_bytestream_iface_close (bytestream);
 }
 
 static void

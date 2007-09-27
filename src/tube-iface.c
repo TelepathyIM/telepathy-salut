@@ -41,9 +41,9 @@ salut_tube_iface_close (SalutTubeIface *self)
 
 void
 salut_tube_iface_add_bytestream (SalutTubeIface *self,
-                                 GibberBytestreamIBB *bytestream)
+                                 GibberBytestreamIface *bytestream)
 {
-  void (*virtual_method)(SalutTubeIface *, GibberBytestreamIBB *) =
+  void (*virtual_method)(SalutTubeIface *, GibberBytestreamIface *) =
     SALUT_TUBE_IFACE_GET_CLASS (self)->add_bytestream;
   g_assert (virtual_method != NULL);
   virtual_method (self, bytestream);
