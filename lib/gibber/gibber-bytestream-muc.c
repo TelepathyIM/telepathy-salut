@@ -322,8 +322,8 @@ gibber_bytestream_muc_send (GibberBytestreamIface *bytestream,
   GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
   GError *error = NULL;
 
-  if (!gibber_muc_connection_send_raw (priv->muc_connection, priv->stream_id_multicast,
-        (const guint8 *) str, len, &error))
+  if (!gibber_muc_connection_send_raw (priv->muc_connection,
+        priv->stream_id_multicast, (const guint8 *) str, len, &error))
     {
       DEBUG ("send failed: %s", error->message);
       g_error_free (error);
