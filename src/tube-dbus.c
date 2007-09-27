@@ -30,6 +30,7 @@
 #include <telepathy-glib/util.h>
 
 #include <gibber/gibber-bytestream-ibb.h>
+#include <gibber/gibber-bytestream-muc.h>
 #include <gibber/gibber-muc-connection.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
@@ -543,7 +544,7 @@ salut_tube_dbus_constructor (GType type,
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
     {
       /*
-       * We have to create an IBB bytestream that will be
+       * We have to create an MUC bytestream that will be
        * used by this MUC tube to communicate.
        *
        * We don't create the bytestream of private D-Bus tube yet.
@@ -568,13 +569,12 @@ salut_tube_dbus_constructor (GType type,
           state = GIBBER_BYTESTREAM_STATE_LOCAL_PENDING;
         }
 
-      bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
+      bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_MUC,
             "muc-connection", priv->muc_connection,
             "stream-id", priv->stream_id,
             "state", state,
             "self-id", priv->conn->name,
             "peer-id", peer_id,
-            "stream-init-id", NULL,
             NULL);
 
       g_object_set (self, "bytestream", bytestream, NULL);
