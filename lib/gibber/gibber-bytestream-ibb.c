@@ -69,7 +69,7 @@ enum
 typedef struct _GibberBytestreamIBBPrivate GibberBytestreamIBBPrivate;
 struct _GibberBytestreamIBBPrivate
 {
-  GibberXmppConnection *xmpp_connnection;
+  GibberXmppConnection *xmpp_connection;
   GibberMucConnection *muc_connection;
   gchar *self_id;
   gchar *peer_id;
@@ -92,7 +92,7 @@ gibber_bytestream_ibb_init (GibberBytestreamIBB *self)
 
   self->priv = priv;
 
-  priv->xmpp_connnection = NULL;
+  priv->xmpp_connection = NULL;
   priv->muc_connection = NULL;
   priv->self_id = NULL;
   priv->peer_id = NULL;
@@ -111,8 +111,8 @@ send_stanza (GibberBytestreamIBB *self,
   if (priv->muc_connection != NULL)
     return gibber_muc_connection_send (priv->muc_connection, stanza, error);
 
-  if (priv->xmpp_connnection != NULL)
-    return gibber_xmpp_connection_send (priv->xmpp_connnection, stanza, error);
+  if (priv->xmpp_connection != NULL)
+    return gibber_xmpp_connection_send (priv->xmpp_connection, stanza, error);
 
   g_assert_not_reached ();
 }
@@ -231,7 +231,7 @@ gibber_bytestream_ibb_get_property (GObject *object,
   switch (property_id)
     {
       case PROP_XMPP_CONNECTION:
-        g_value_set_object (value, priv->xmpp_connnection);
+        g_value_set_object (value, priv->xmpp_connection);
         break;
       case PROP_MUC_CONNECTION:
         g_value_set_object (value, priv->muc_connection);
@@ -269,9 +269,9 @@ gibber_bytestream_ibb_set_property (GObject *object,
   switch (property_id)
     {
       case PROP_XMPP_CONNECTION:
-        priv->xmpp_connnection = g_value_get_object (value);
-        if (priv->xmpp_connnection != NULL)
-          g_signal_connect (priv->xmpp_connnection, "received-stanza",
+        priv->xmpp_connection = g_value_get_object (value);
+        if (priv->xmpp_connection != NULL)
+          g_signal_connect (priv->xmpp_connection, "received-stanza",
               G_CALLBACK (xmpp_connection_received_stanza_cb), self);
         break;
       case PROP_MUC_CONNECTION:
@@ -323,7 +323,7 @@ gibber_bytestream_ibb_constructor (GType type,
   priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (GIBBER_BYTESTREAM_IBB (obj));
 
   /* We can't be a private *and* a muc bytestream */
-  g_assert (priv->xmpp_connnection == NULL || priv->muc_connection == NULL);
+  g_assert (priv->xmpp_connection == NULL || priv->muc_connection == NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
 
@@ -577,7 +577,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream)
       return;
     }
 
-  if (priv->xmpp_connnection == NULL ||
+  if (priv->xmpp_connection == NULL ||
       priv->stream_init_id == NULL)
     {
       DEBUG ("can't accept a bytestream not created due to a SI request");
@@ -642,7 +642,7 @@ gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream)
         }
     }
 
-  else if (priv->xmpp_connnection != NULL)
+  else if (priv->xmpp_connection != NULL)
     {
       /* XXX : Does it make sense to send a close message in a
        * muc bytestream ? */
@@ -712,7 +712,7 @@ gibber_bytestream_ibb_initiation (GibberBytestreamIface *bytestream)
       return FALSE;
     }
 
-  if (priv->xmpp_connnection == NULL)
+  if (priv->xmpp_connection == NULL)
     {
       DEBUG ("Can only initiate a private bytestream");
       return FALSE;
