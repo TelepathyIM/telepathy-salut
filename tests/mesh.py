@@ -67,7 +67,7 @@ class BaseMeshNode(protocol.ProcessProtocol):
     self.unknownOutput(line)
 
   def unknownOutput(self, line):
-    print self.name + " - unknown output: " + line.rstrip()
+    print self.name + " (U) " + line.rstrip()
 
   def outReceived(self, data):
     lines = (self.__buffer + data).split(self.delimiter)
