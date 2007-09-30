@@ -670,8 +670,6 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
             send_attempt_join (self, FALSE);
           break;
       }
-
-      send_attempt_join (self, FALSE);
       break;
     }
     default:
