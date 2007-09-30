@@ -436,18 +436,19 @@ schedule_whois_request(GibberRMulticastSender *sender) {
 static gboolean
 check_depends(GibberRMulticastSender *sender,
               GibberRMulticastPacket *packet) {
-  GList *rlist;
+  int i;
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
   g_assert (IS_RELIABLE_PACKET(packet));
 
-  for (rlist = packet->depends;
-      rlist != NULL; rlist = g_list_next(rlist)) {
+  for (i = 0; i < packet->depends->len; i++) {
     GibberRMulticastSender *s;
     GibberRMulticastPacketSenderInfo *sender_info;
 
-    sender_info = (GibberRMulticastPacketSenderInfo *)rlist->data;
+    sender_info = g_array_index (packet->depends,
+        GibberRMulticastPacketSenderInfo *, i);
+
     s = g_hash_table_lookup(priv->senders,
         GUINT_TO_POINTER(sender_info->sender_id));
 

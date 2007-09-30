@@ -53,7 +53,9 @@ struct _GibberRMulticastPacketPrivate
 static void
 gibber_r_multicast_packet_init (GibberRMulticastPacket *obj)
 {
-  /* allocate any data required by the object here */
+  GibberRMulticastPacket *self = GIBBER_R_MULTICAST_PACKET (obj);
+  self->depends = g_array_new (FALSE, FALSE,
+      sizeof (GibberRMulticastPacketSenderInfo *));
 }
 
 static void gibber_r_multicast_packet_dispose (GObject *object);
@@ -94,10 +96,13 @@ gibber_r_multicast_packet_finalize (GObject *object)
   GibberRMulticastPacket *self = GIBBER_R_MULTICAST_PACKET (object);
   GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
+  int i;
 
-  g_list_foreach(self->depends,
-          (GFunc)gibber_r_multicast_packet_sender_info_free, NULL);
-  g_list_free(self->depends);
+  for (i = 0; i < self->depends->len ; i++) {
+    gibber_r_multicast_packet_sender_info_free (
+        g_array_index (self->depends, GibberRMulticastPacketSenderInfo *, i));
+  }
+  g_array_free(self->depends, TRUE);
 
   /* free any data held directly by the object here */
   switch (self->type) {
@@ -177,7 +182,7 @@ gibber_r_multicast_packet_add_sender_info(GibberRMulticastPacket *packet,
   g_assert(priv->data == NULL);
   g_assert(IS_RELIABLE_PACKET (packet) || packet->type == PACKET_TYPE_SESSION);
 
-  packet->depends = g_list_append(packet->depends, s);
+  g_array_append_val (packet->depends, s);
 
   return TRUE;
 }
@@ -243,7 +248,7 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
       /*  32 bit packet id, 8 bit nr sender info */
       result += 5;
       /* 32 bit sender id, 32 bit packet id */
-      result += 8 * g_list_length(packet->depends);
+      result += 8 * packet->depends->len;
       result += packet->data.data.payload_size;
   }
 
@@ -271,7 +276,7 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
     case PACKET_TYPE_SESSION:
          /* 8 bit nr sender info + N times 32 bit sender id, 32 bit packet id
           */
-      result += 1 + 8 * g_list_length(packet->depends);
+      result += 1 + 8 * packet->depends->len;
       break;
     default:
       /* Nothing to add */;
@@ -344,29 +349,32 @@ get_string(const guint8 *data, gsize length, gsize *offset) {
 }
 
 static void
-add_sender_info(guint8 *data, gsize length, gsize *offset, GList *senders)
+add_sender_info(guint8 *data, gsize length, gsize *offset, GArray *senders)
 {
   guint nr_items;
-  GList *l;
+  int i;
 
-  nr_items = g_list_length(senders);
+  nr_items = senders->len;
   add_guint8(data, length, offset, nr_items);
 
-  for (l = senders; l != NULL; l = g_list_next(l))
+  for (i = 0; i < senders->len; i++)
     {
       GibberRMulticastPacketSenderInfo *info =
-          (GibberRMulticastPacketSenderInfo *)l->data;
+          g_array_index (senders, GibberRMulticastPacketSenderInfo *, i);
       add_guint32(data, length, offset, info->sender_id);
       add_guint32(data, length, offset, info->packet_id);
     }
 }
 
-static GList *
-get_sender_info(guint8 *data, gsize length, gsize *offset) {
-  GList *l = NULL;
+static void
+get_sender_info(guint8 *data, gsize length, gsize *offset, GArray *depends) {
   guint8 nr_items;
 
-  for (nr_items = get_guint8(data, length, offset); nr_items > 0; nr_items--) {
+  nr_items = get_guint8(data, length, offset);
+  g_array_set_size (depends, nr_items);
+
+
+  for (; nr_items > 0; nr_items--) {
     GibberRMulticastPacketSenderInfo *sender_info;
     guint32 sender_id;
     guint32 packet_id;
@@ -375,10 +383,8 @@ get_sender_info(guint8 *data, gsize length, gsize *offset) {
     packet_id = get_guint32(data, length, offset);
     sender_info =
         gibber_r_multicast_packet_sender_info_new(sender_id, packet_id);
-    l = g_list_prepend(l, sender_info);
+    g_array_append_val (depends, sender_info);
   }
-
-  return l;
 }
 
 static void
@@ -507,8 +513,8 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   if (IS_RELIABLE_PACKET (result)) {
     result->packet_id = get_guint32 (priv->data,
       priv->max_data, &(priv->size));
-    result->depends =
-      get_sender_info (priv->data, priv->max_data, &(priv->size));
+    get_sender_info (priv->data, priv->max_data, &(priv->size),
+        result->depends);
   }
 
   switch (result->type) {
@@ -554,8 +560,8 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       break;
     }
     case PACKET_TYPE_SESSION:
-      result->depends =
-          get_sender_info(priv->data, priv->max_data, &(priv->size));
+      get_sender_info(priv->data, priv->max_data, &(priv->size),
+          result->depends);
       break;
     case PACKET_TYPE_BYE:
       /* Not implemented, fall through */

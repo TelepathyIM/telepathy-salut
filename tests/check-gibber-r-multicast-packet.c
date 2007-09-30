@@ -59,8 +59,7 @@ START_TEST (test_data_packet) {
   gsize len;
   guint8 *pdata;
   gsize plen;
-  GList *l;
-  int i;
+  int i,n;
   sender_t senders[] =
     { { 0x300, 500, FALSE }, { 0x400, 600, FALSE }, { 0, 0, FALSE } };
   gchar *payload = "1234567890";
@@ -90,12 +89,13 @@ START_TEST (test_data_packet) {
 
   fail_unless(a->sender == b->sender);
 
-  for (l = b->depends; l != NULL ; l = g_list_next(l))
+  for (n = 0 ; n < b->depends->len; n++)
     {
       for (i = 0; senders[i].sender_id != 0 ; i++)
         {
           GibberRMulticastPacketSenderInfo *s =
-              (GibberRMulticastPacketSenderInfo *)l->data;
+              g_array_index (b->depends,
+                  GibberRMulticastPacketSenderInfo *, n);
           if (senders[i].sender_id == s->sender_id) {
             fail_unless(senders[i].packet_id == s->packet_id);
             fail_unless(senders[i].seen == FALSE);
@@ -128,8 +128,7 @@ START_TEST (test_attempt_join_packet) {
   guint32 packet_id = 1200;
   guint8 *data;
   gsize len;
-  GList *l;
-  int i;
+  int i, n;
   sender_t senders[] =
     { { 0x300, 500, FALSE }, { 0x400, 600, FALSE }, { 0, 0, FALSE } };
   sender_t new_senders[] =
@@ -160,12 +159,13 @@ START_TEST (test_attempt_join_packet) {
 
   fail_unless(a->sender == b->sender);
 
-  for (l = b->depends; l != NULL ; l = g_list_next(l))
+  for (n = 0; n < b->depends->len; n++)
     {
       for (i = 0; senders[i].sender_id != 0 ; i++)
         {
           GibberRMulticastPacketSenderInfo *s =
-              (GibberRMulticastPacketSenderInfo *)l->data;
+              g_array_index (b->depends,
+                  GibberRMulticastPacketSenderInfo *, n);
           if (senders[i].sender_id == s->sender_id) {
             fail_unless(senders[i].packet_id == s->packet_id);
             fail_unless(senders[i].seen == FALSE);

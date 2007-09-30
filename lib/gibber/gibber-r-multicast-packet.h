@@ -115,7 +115,7 @@ struct _GibberRMulticastPacket {
 
     /* List of GibberRMulticastSenderInfo encoding dependency information for
      * reliable packets or session information for session packets */
-    GList *depends;
+    GArray *depends;
 
     union {
       GibberRMulticastWhoisRequestPacket whois_request;

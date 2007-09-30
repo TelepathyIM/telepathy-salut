@@ -111,8 +111,7 @@ depends_send_hook (GibberTransport *transport,
                    gpointer user_data)
 {
   GibberRMulticastPacket *packet;
-  int i;
-  GList *l;
+  int i, n;
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
   fail_unless (packet != NULL);
@@ -148,14 +147,15 @@ depends_send_hook (GibberTransport *transport,
       goto out;
     }
 
-  fail_unless(g_list_length (packet->depends) > 0);
+  fail_unless(packet->depends->len > 0);
 
-  for (l = packet->depends; l != NULL; l = g_list_next (l))
+  for (n = 0; n < packet->depends->len; n++)
     {
       for (i = 0; senders[i].name != NULL ; i++)
         {
           GibberRMulticastPacketSenderInfo *sender_info =
-              (GibberRMulticastPacketSenderInfo *)l->data;
+              g_array_index (packet->depends,
+                  GibberRMulticastPacketSenderInfo *, i);
           if (senders[i].sender_id == sender_info->sender_id)
             {
               fail_unless (senders[i].seen == FALSE);

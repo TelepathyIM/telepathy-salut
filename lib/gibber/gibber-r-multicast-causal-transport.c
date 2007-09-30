@@ -665,21 +665,19 @@ handle_session_message(GibberRMulticastCausalTransport *self,
 {
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
-  GList *l;
-  int num = 0;
+  int i;
   gboolean outdated = FALSE;
 
   g_assert (packet->type == PACKET_TYPE_SESSION);
 
-  for (l = packet->depends; l != NULL ; l = g_list_next(l))
+  for (i = 0; i < packet->depends->len ; i++)
     {
       GibberRMulticastPacketSenderInfo *sender_info =
-          (GibberRMulticastPacketSenderInfo *) l->data;
+          g_array_index (packet->depends,
+              GibberRMulticastPacketSenderInfo *, i);
       GibberRMulticastSender *sender =
           g_hash_table_lookup(priv->senders,
               GUINT_TO_POINTER(sender_info->sender_id));
-
-    num++;
 
     if (sender == NULL) {
       /* We will here about this guy in a reliable message we apparently didn't
@@ -697,7 +695,8 @@ handle_session_message(GibberRMulticastCausalTransport *self,
 
   /* Reschedule the sending out of a session message if the received session
    * message was at least as up to date as us */
-  if (!outdated && g_hash_table_size(priv->senders) == num) {
+  if (!outdated &&
+        g_hash_table_size(priv->senders) == packet->depends->len + 1) {
     DEBUG_TRANSPORT (self, "Rescheduling session message");
     schedule_session_message(self);
   }
@@ -709,13 +708,13 @@ handle_packet_depends(GibberRMulticastCausalTransport *self,
 {
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
-  GList *l;
+  int i;
 
   g_assert (IS_RELIABLE_PACKET (packet));
 
-  for (l = packet->depends; l != NULL ; l = g_list_next(l)) {
+  for (i = 0 ; i <  packet->depends->len; i++) {
     GibberRMulticastPacketSenderInfo *sender_info =
-        (GibberRMulticastPacketSenderInfo *) l->data;
+        g_array_index (packet->depends, GibberRMulticastPacketSenderInfo *, i);
     GibberRMulticastSender *sender =
         g_hash_table_lookup (priv->senders,
             GUINT_TO_POINTER (sender_info->sender_id));

@@ -448,12 +448,12 @@ send_attempt_join (GibberRMulticastTransport *self, gboolean send_empty) {
 }
 
 static gboolean
-depends_list_contains (GList *depends, guint32 id) {
-  GList *l;
+depends_list_contains (GArray *depends, guint32 id) {
+  int i;
 
-  for (l = depends; l != NULL; l = g_list_next (l)) {
+  for (i = 0; i < depends->len; i++) {
     GibberRMulticastPacketSenderInfo *info =
-      (GibberRMulticastPacketSenderInfo *)l->data;
+        g_array_index (depends, GibberRMulticastPacketSenderInfo *, i);
 
     if (info->sender_id == id)
       return TRUE;
@@ -493,13 +493,13 @@ update_member (GibberRMulticastTransport *self,
 static gboolean
 update_foreign_member_list (GibberRMulticastTransport *self,
    GibberRMulticastPacket *packet, MemberState state) {
-  GList *l;
+  int i;
   gboolean changed = FALSE;
 
   changed |= update_member (self, packet->sender, state, packet->packet_id);
-  for (l = packet->depends; l != NULL; l = g_list_next (l)) {
+  for (i = 0 ; i < packet->depends->len; i++) {
     GibberRMulticastPacketSenderInfo *info =
-      (GibberRMulticastPacketSenderInfo *)l->data;
+        g_array_index (packet->depends, GibberRMulticastPacketSenderInfo *, i);
     changed |= update_member (self, info->sender_id, state, info->packet_id);
   }
   return changed;
@@ -604,8 +604,7 @@ static gint cmp_attempt_join_state (GibberRMulticastTransport *transport,
   }
 
   if (g_hash_table_size (priv->members) ==
-      packet->data.attempt_join.senders->len +
-      g_list_length (packet->depends)) {
+      packet->data.attempt_join.senders->len + packet->depends->len) {
     return 0;
   }
 
