@@ -451,28 +451,20 @@ check_depends(GibberRMulticastSender *sender,
     s = g_hash_table_lookup(priv->senders,
         GUINT_TO_POINTER(sender_info->sender_id));
 
-    g_assert (s != NULL);
-
-    if (s->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
-      break;
-    }
-
-    if (s->state == GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
-      if (gibber_r_multicast_packet_diff(sender_info->packet_id,
-                                         s->next_output_packet) <= 0) {
-        DEBUG_SENDER(sender,
-            "Waiting for packet %x of node %x (not yet running)",
-            sender_info->packet_id, sender_info->sender_id);
-        return FALSE;
-      }
-      break;
+    if (s == NULL || s->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
+      /* If the node depends on a sender that's unknown to us, the depends
+       * can't be satisfied */
+      DEBUG_SENDER(sender, "Unknown node in dependency list: %x",
+          sender_info->sender_id);
+      return FALSE;
     }
 
     if (gibber_r_multicast_packet_diff(sender_info->packet_id,
-                                       s->last_output_packet) < 0) {
-      DEBUG_SENDER(sender, "Waiting for packet %x of node %x", 
-          sender_info->packet_id, sender_info->sender_id);
-      return FALSE;
+                                         s->next_output_packet) < 0) {
+        DEBUG_SENDER(sender,
+            "Waiting node %x to complete it's messages up to %x",
+            sender_info->sender_id, sender_info->packet_id);
+        return FALSE;
     }
   }
   return TRUE;
