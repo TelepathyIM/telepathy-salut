@@ -371,8 +371,6 @@ get_sender_info(guint8 *data, gsize length, gsize *offset, GArray *depends) {
   guint8 nr_items;
 
   nr_items = get_guint8(data, length, offset);
-  g_array_set_size (depends, nr_items);
-
 
   for (; nr_items > 0; nr_items--) {
     GibberRMulticastPacketSenderInfo *sender_info;
