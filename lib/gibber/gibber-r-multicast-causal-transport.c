@@ -42,8 +42,9 @@
 #define ACTIVE_JOIN_INTERVAL 250
 
 #define DEBUG_TRANSPORT(transport, format,...) \
-  DEBUG("group %s (%x): " format, priv->name, transport->sender_id, \
-      ##__VA_ARGS__)
+  DEBUG("%s (%x): " format, \
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(transport)->name, \
+      transport->sender_id, ##__VA_ARGS__)
 
 struct hash_data {
   GibberRMulticastSender *sender;
@@ -372,6 +373,7 @@ sendout_session_cb(gpointer data) {
       gibber_r_multicast_packet_new(PACKET_TYPE_SESSION, priv->self->id,
                                     priv->transport->max_packet_size);
 
+  DEBUG_TRANSPORT (self, "Preparing session message");
   g_hash_table_foreach(priv->senders, add_sender_info, packet);
   DEBUG_TRANSPORT (self, "Sending out session message");
   sendout_packet(self, packet, NULL);
@@ -718,7 +720,7 @@ handle_packet_depends(GibberRMulticastCausalTransport *self,
         g_hash_table_lookup (priv->senders,
             GUINT_TO_POINTER (sender_info->sender_id));
 
-    gibber_r_multicast_sender_seen (sender, sender_info->packet_id + 1);
+    gibber_r_multicast_sender_seen (sender, sender_info->packet_id);
   }
 }
 
@@ -771,9 +773,6 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
-  DEBUG_TRANSPORT (self, "Received packet type: 0x%x from %x",
-      packet->type, packet->sender);
-
   if (packet->sender == 0) {
     if (packet->type != PACKET_TYPE_WHOIS_REQUEST)
       {
@@ -793,6 +792,8 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
            && sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW)) {
       g_signal_emit (self, signals[RECEIVED_FOREIGN_PACKET],
           0, packet);
+      DEBUG_TRANSPORT (self, "Foreign packet Received type: 0x%x from %x",
+        packet->type, packet->sender);
     }
     sender = g_hash_table_lookup (priv->senders,
         GUINT_TO_POINTER (packet->sender));
@@ -803,6 +804,9 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
     {
       goto out;
     }
+
+  DEBUG_TRANSPORT (self, "Received packet type: 0x%x from %x",
+      packet->type, packet->sender);
 
   switch (packet->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
@@ -851,8 +855,6 @@ r_multicast_receive(GibberTransport *transport, GibberBuffer *buffer,
 {
   GibberRMulticastCausalTransport *self =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
-  GibberRMulticastCausalTransportPrivate *priv =
-      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet = NULL;
   GError *error = NULL;
 
@@ -932,7 +934,7 @@ add_depend(gpointer key, gpointer value, gpointer user_data) {
   }
 
   r = gibber_r_multicast_packet_add_sender_info(d->packet, sender->id,
-               sender->last_output_packet, NULL);
+               sender->next_output_packet, NULL);
   g_assert(r);
 }
 
@@ -1057,7 +1059,8 @@ gibber_r_multicast_causal_transport_send_attempt_join (
   add_packet_depends (transport, packet);
 
   str = g_array_uint32_to_str (new_senders);
-  DEBUG_TRANSPORT (transport, "Sending out AJ: %s", str);
+  DEBUG_TRANSPORT (transport, "Sending out %sAJ: %s",
+      repeat ? "repeating " : "", str);
   g_free (str);
 
   gibber_r_multicast_sender_push (priv->self, packet);
