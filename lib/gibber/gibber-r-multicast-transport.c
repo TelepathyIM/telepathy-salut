@@ -33,6 +33,11 @@
 #define MIN_ATTEMPT_JOIN_TIMEOUT 100
 #define MAX_ATTEMPT_JOIN_TIMEOUT 400
 
+/* Time between the last attempt join packet and the start of the joining phase
+ */
+#define MIN_JOINING_START_TIMEOUT 4800
+#define MAX_JOINING_START_TIMEOUT 5200
+
 G_DEFINE_TYPE(GibberRMulticastTransport, gibber_r_multicast_transport,
               GIBBER_TYPE_TRANSPORT)
 
@@ -77,6 +82,8 @@ struct _GibberRMulticastTransportPrivate
   gboolean repeating_join;
   gboolean send_empty;
   guint timeout;
+
+  guint joining_timeout;
 
   State state;
 };
@@ -243,6 +250,16 @@ gibber_r_multicast_transport_dispose (GObject *object)
     priv->transport = NULL;
   }
 
+  if (priv->timeout != 0) {
+    g_source_remove (priv->timeout);
+    priv->timeout =0;
+  }
+
+  if (priv->joining_timeout != 0) {
+    g_source_remove (priv->joining_timeout);
+    priv->timeout =0;
+  }
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose)
     G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose (
@@ -351,6 +368,65 @@ member_set_state (GibberRMulticastTransport *self, guint32 id,
   info->state = state;
 }
 
+static void
+str_add_member (gpointer key, MemberInfo *value, GString *str) {
+  g_string_append_printf (str, "%x, ", value->id);
+}
+
+
+static gchar *
+member_list_to_str (GibberRMulticastTransport *self) {
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  GString *str = g_string_sized_new (3 + 9 * g_hash_table_size (priv->members));
+
+  g_string_append (str, "{ ");
+  g_hash_table_foreach (priv->members, (GHFunc) str_add_member, str);
+  g_string_insert (str, str->len - 1, " }");
+
+  return g_string_free (str, FALSE);
+}
+
+
+static gboolean
+start_joining_phase (gpointer user_data)
+{
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  gchar *members;
+
+  g_assert (priv->state == STATE_GATHERING);
+
+  members = member_list_to_str (self);
+  DEBUG ("Entering join state: %s", members);
+  g_free(members);
+
+  priv->state = STATE_JOINING;
+
+  return FALSE;
+}
+
+static void
+continue_gathering_phase (GibberRMulticastTransport *self) {
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+
+  g_assert (priv->state != STATE_JOINING);
+
+  if (priv->state != STATE_GATHERING) {
+    DEBUG ("Entering gathering state");
+    priv->state = STATE_GATHERING;
+  }
+
+  if (priv->joining_timeout != 0)
+    g_source_remove (priv->joining_timeout);
+
+  priv->joining_timeout = g_timeout_add (
+    g_random_int_range (MIN_JOINING_START_TIMEOUT, MAX_JOINING_START_TIMEOUT),
+    start_joining_phase, self);
+}
+
 static gboolean
 guint32_array_contains (GArray *array, guint32 id) {
   int i;
@@ -432,7 +508,8 @@ send_attempt_join (GibberRMulticastTransport *self, gboolean send_empty) {
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
 
   g_assert (priv->state != STATE_JOINING);
-  priv->state = STATE_GATHERING;
+
+  continue_gathering_phase (self);
 
   /* schedule a send attempt for later on. If there wasn't one scheduled just
    * yet */
@@ -646,6 +723,8 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
         /* Already started the joining process, so don't send attempt join */
         break;
       }
+
+      continue_gathering_phase (self);
 
       switch (info_compare) {
         case 1:
