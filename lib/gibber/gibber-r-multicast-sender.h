@@ -53,9 +53,10 @@ struct _GibberRMulticastSender {
 
     /* Next packet we want to send out */
     guint32 next_output_packet;
-
-    /* Last packet that we send in the output stream*/
-    guint32 last_output_packet;
+    /* Next data packet we want to send out. Can be different from
+     * next_output_packet iff holding back data.. Guaranteed to be <=
+     * next_output_packet */
+    guint32 next_output_data_packet;
 
     /* Next packet we expect from the sender */
     guint32 next_input_packet;
@@ -83,6 +84,14 @@ GibberRMulticastSender *gibber_r_multicast_sender_new (guint32 id,
 /* Sequence for this sender starts at packet_id */
 void gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
     guint32 packet_id);
+
+/* Tell the sender to not signal data starting from this packet */
+void gibber_r_multicast_sender_hold_data (GibberRMulticastSender *sender,
+  guint32 packet_id);
+
+
+/* Stop holding back data of the sender */
+void gibber_r_multicast_sender_release_data (GibberRMulticastSender *sender);
 
 void
 gibber_r_multicast_sender_push(GibberRMulticastSender *sender,

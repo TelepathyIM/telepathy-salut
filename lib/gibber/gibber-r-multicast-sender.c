@@ -117,6 +117,14 @@ struct _GibberRMulticastSenderPrivate
 
   /* whois reply/request timer */
   guint whois_timer;
+
+  /* Whether we are currently in the process of popping packets */
+  gboolean popping;
+
+  /* Whether we are holding back data currently */
+  gboolean holding_data;
+  guint32 holding_point;
+
 };
 
 #define GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderPrivate))
@@ -445,6 +453,7 @@ check_depends(GibberRMulticastSender *sender,
   for (i = 0; i < packet->depends->len; i++) {
     GibberRMulticastSender *s;
     GibberRMulticastPacketSenderInfo *sender_info;
+    guint32 other;
 
     sender_info = g_array_index (packet->depends,
         GibberRMulticastPacketSenderInfo *, i);
@@ -460,8 +469,13 @@ check_depends(GibberRMulticastSender *sender,
       return FALSE;
     }
 
-    if (gibber_r_multicast_packet_diff(sender_info->packet_id,
-                                         s->next_output_packet) < 0) {
+    if (packet->type == PACKET_TYPE_DATA) {
+      other = s->next_output_data_packet;
+    } else {
+      other = s->next_output_packet;
+    }
+
+    if (gibber_r_multicast_packet_diff(sender_info->packet_id, other) < 0) {
         DEBUG_SENDER(sender,
             "Waiting node %x to complete it's messages up to %x",
             sender_info->sender_id, sender_info->packet_id);
@@ -472,40 +486,16 @@ check_depends(GibberRMulticastSender *sender,
 }
 
 static gboolean
-pop_packet(GibberRMulticastSender *sender) {
+pop_data_packet (GibberRMulticastSender *sender, guint32 start)
+{
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
-  int i;
-  int num;
-  gsize payload_size, size;
   guint8 *data;
   PacketInfo *p;
+  gsize payload_size, size;
+  int num, i;
 
   p = g_hash_table_lookup(priv->packet_cache, &sender->next_output_packet);
-
-  DEBUG_SENDER(sender, "Looking at 0x%x", sender->next_output_packet);
-
-  if (p == NULL || p->packet == NULL) {
-    /* No packet yet.. too bad :( */
-    DEBUG_SENDER(sender, "No new packets to pop");
-    return FALSE;
-  }
-
-  g_assert (IS_RELIABLE_PACKET (p->packet));
-
-  if (!check_depends(sender, p->packet)) {
-    return FALSE;
-  }
-
-  if (p->packet->type != PACKET_TYPE_DATA) {
-    sender->last_output_packet = p->packet->packet_id;
-    sender->next_output_packet = sender->next_output_packet + 1;
-    if (p->packet->type != PACKET_TYPE_NO_DATA) {
-      signal_control_packet (sender, p->packet);
-    }
-    return TRUE;
-  }
-
   num = p->packet->data.data.packet_total;
   payload_size = p->packet->data.data.payload_size;
   /* Need to be at least num behind last_packet */
@@ -527,12 +517,25 @@ pop_packet(GibberRMulticastSender *sender) {
     payload_size += tp->packet->data.data.payload_size;
   }
 
+  if (start == sender->next_output_packet)
+    sender->next_output_packet = sender->next_output_packet + num;
+
+  if (priv->holding_data &&
+      gibber_r_multicast_packet_diff (p->packet->packet_id,
+      priv->holding_point) <= 0) {
+    DEBUG_SENDER (sender, "Holding back 0x%x - 0x%x",
+      p->packet->packet_id, p->packet->packet_id + num - 1);
+
+    /* We did actually have the data needed to pop */
+    return TRUE;
+  }
+
+  sender->next_output_data_packet = start + num;
+
   /* Complete packet we can send out */
   DEBUG_SENDER(sender, "Sending out 0x%x - 0x%x",
       p->packet->packet_id, p->packet->packet_id + num - 1);
 
-  sender->last_output_packet = p->packet->packet_id + num - 1;
-  sender->next_output_packet = sender->next_output_packet + num;
 
   if (num == 1) {
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
@@ -558,6 +561,80 @@ pop_packet(GibberRMulticastSender *sender) {
   }
 
   return TRUE;
+}
+
+static gboolean
+pop_packet(GibberRMulticastSender *sender) {
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+  PacketInfo *p;
+  gboolean popped = FALSE;
+  guint32 to_pop;
+
+  if (priv->popping)
+    {
+      /* Don't pop stuff recursively..  */
+      return FALSE;
+    }
+
+  priv->popping = TRUE;
+
+  if (sender->next_output_data_packet != sender->next_output_packet) {
+     if (!priv->holding_data ||
+          gibber_r_multicast_packet_diff (sender->next_output_data_packet,
+         priv->holding_point) > 0) {
+       to_pop = sender->next_output_data_packet;
+       DEBUG_SENDER (sender, "Popping old data packet");
+     } else {
+       /* We already popped all the data we could, continue on the normal
+        * packets */
+       to_pop = sender->next_output_packet;
+     }
+  } else {
+    to_pop = sender->next_output_packet;
+  }
+
+  p = g_hash_table_lookup(priv->packet_cache, &to_pop);
+
+  DEBUG_SENDER(sender, "Looking at 0x%x", to_pop);
+
+  if (p == NULL || p->packet == NULL) {
+    /* No packet yet.. too bad :( */
+    DEBUG_SENDER(sender, "No new packets to pop"); goto out;
+  }
+
+  g_assert (IS_RELIABLE_PACKET (p->packet));
+  if (!check_depends(sender, p->packet)) {
+    goto out;
+  }
+
+  if (p->packet->type != PACKET_TYPE_DATA) {
+    if (to_pop == sender->next_output_packet)
+      {
+       /* If both are the same, they can stay the same... */
+       if (sender->next_output_packet == sender->next_output_data_packet)
+         {
+           sender->next_output_data_packet++;
+         }
+       sender->next_output_packet++;
+       if (p->packet->type != PACKET_TYPE_NO_DATA)
+         {
+           signal_control_packet (sender, p->packet);
+         }
+      }
+    else
+      {
+        sender->next_output_data_packet++;
+      }
+    popped = TRUE;
+    goto out;
+  }
+
+  popped = pop_data_packet (sender, to_pop);
+
+out:
+  priv->popping = FALSE;
+  return popped;
 }
 
 static void
@@ -637,6 +714,7 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
     sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
     sender->next_input_packet = packet_id;
     sender->next_output_packet = packet_id;
+    sender->next_output_data_packet = packet_id;
     priv->first_packet = packet_id;
   } else if (gibber_r_multicast_packet_diff (sender->next_input_packet, 
       packet_id) > 0) {
@@ -653,9 +731,9 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
 
     sender->next_input_packet = packet_id;
     sender->next_output_packet = packet_id;
+    sender->next_output_data_packet = packet_id;
   }
 }
-
 
 void
 gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
@@ -838,3 +916,30 @@ gibber_r_multicast_sender_set_packet_repeat (GibberRMulticastSender *sender,
    * might have been a repair request after the last repeating.. This is
    * ofcourse suboptimal */
 }
+
+/* Tell the sender to not signal data starting from this packet */
+void
+gibber_r_multicast_sender_hold_data (GibberRMulticastSender *sender,
+  guint32 packet_id)
+{
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
+
+  priv->holding_data = TRUE;
+  priv->holding_point = packet_id;
+
+  /* Pop packets in case the holding_point moved forward */
+  pop_packets (sender);
+}
+
+/* Stop holding back data of the sender */
+void
+gibber_r_multicast_sender_release_data (GibberRMulticastSender *sender)
+{
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
+
+  priv->holding_data = FALSE;
+  pop_packets (sender);
+}
+
