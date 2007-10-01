@@ -1,5 +1,6 @@
 /*
- * check-gibber-r-multicast-transport.c - R Multicast Transport test
+ * check-gibber-r-multicast-causal-transport.c
+ *    - R Multicast CausalTransport test
  * Copyright (C) 2007 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
@@ -20,7 +21,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <gibber/gibber-r-multicast-transport.h>
+#include <gibber/gibber-r-multicast-causal-transport.h>
 #include <gibber/gibber-r-multicast-packet.h>
 #include "test-transport.h"
 
@@ -32,7 +33,7 @@
 #define TEST_DATA_SIZE 300
 GMainLoop *loop;
 
-GibberRMulticastTransport *
+GibberRMulticastCausalTransport *
 create_rmulticast_transport (TestTransport **testtransport,
                              const gchar *name,
                              test_transport_send_hook test_send_hook,
@@ -40,7 +41,6 @@ create_rmulticast_transport (TestTransport **testtransport,
 {
   TestTransport *t;
   GibberRMulticastCausalTransport *rmctransport;
-  GibberRMulticastTransport *rmtransport;
 
   t = test_transport_new (test_send_hook, user_data);
   fail_unless (t != NULL);
@@ -50,9 +50,6 @@ create_rmulticast_transport (TestTransport **testtransport,
      "test123");
   g_object_unref (t);
 
-  rmtransport = gibber_r_multicast_transport_new (rmctransport);
-  g_object_unref (rmctransport);
-
   if (testtransport != NULL)
     {
       *testtransport = t;
@@ -60,30 +57,16 @@ create_rmulticast_transport (TestTransport **testtransport,
 
   test_transport_set_echoing (t, TRUE);
 
-  return rmtransport;
-}
-
-static void
-rmc_transport_connected (GibberTransport *transport, gpointer user_data) {
-  GibberRMulticastTransport *rm = GIBBER_R_MULTICAST_TRANSPORT (user_data);
-
-  gibber_r_multicast_transport_connect (rm, NULL);
+  return rmctransport;
 }
 
 void
-rmulticast_connect (GibberRMulticastTransport *transport) 
+rmulticast_connect (GibberRMulticastCausalTransport *transport)
 {
-  GibberRMulticastCausalTransport *rmc;
 
   fail_unless (transport != NULL);
 
-  g_object_get (transport, "transport", &rmc, NULL);
-  fail_unless (rmc != NULL);
-
-  g_signal_connect (rmc, "connected",
-    G_CALLBACK (rmc_transport_connected), transport);
-
-  fail_unless (gibber_r_multicast_causal_transport_connect (rmc,
+  fail_unless (gibber_r_multicast_causal_transport_connect (transport,
       FALSE, NULL));
 }
 
@@ -155,11 +138,11 @@ depends_send_hook (GibberTransport *transport,
         {
           GibberRMulticastPacketSenderInfo *sender_info =
               g_array_index (packet->depends,
-                  GibberRMulticastPacketSenderInfo *, i);
+                  GibberRMulticastPacketSenderInfo *, n);
           if (senders[i].sender_id == sender_info->sender_id)
             {
               fail_unless (senders[i].seen == FALSE);
-              fail_unless (senders[i].packet_id == sender_info->packet_id);
+              fail_unless (senders[i].packet_id + 1 == sender_info->packet_id);
               senders[i].seen = TRUE;
               break;
             }
@@ -181,7 +164,8 @@ out:
 static gboolean
 depends_send_test_data (gpointer data)
 {
-  GibberRMulticastTransport *t = GIBBER_R_MULTICAST_TRANSPORT (data);
+  GibberRMulticastCausalTransport *t =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (data);
   guint8 testdata[] = { 1, 2, 3 };
 
   fail_unless (gibber_transport_send (GIBBER_TRANSPORT (t), testdata,
@@ -193,8 +177,8 @@ depends_send_test_data (gpointer data)
 static void
 depends_connected (GibberTransport *transport, gpointer user_data)
 {
-  GibberRMulticastTransport *rmtransport
-    = GIBBER_R_MULTICAST_TRANSPORT(transport);
+  GibberRMulticastCausalTransport *rmctransport
+    = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(transport);
   TestTransport *testtransport = TEST_TRANSPORT (user_data);
   int i;
 
@@ -205,9 +189,15 @@ depends_connected (GibberTransport *transport, gpointer user_data)
       GibberRMulticastPacket *packet;
       guint8 *data;
       gsize size;
+
       packet = gibber_r_multicast_packet_new (PACKET_TYPE_DATA,
          senders[i].sender_id,
          GIBBER_TRANSPORT (testtransport)->max_packet_size);
+
+      gibber_r_multicast_causal_transport_add_sender (rmctransport,
+        senders[i].sender_id);
+      gibber_r_multicast_causal_transport_update_sender_start (rmctransport,
+        senders[i].sender_id, senders[i].packet_id);
 
       gibber_r_multicast_packet_set_packet_id (packet, senders[i].packet_id);
       gibber_r_multicast_packet_set_data_info (packet, 0, 0, 1);
@@ -218,24 +208,24 @@ depends_connected (GibberTransport *transport, gpointer user_data)
     }
 
   /* Wait more then 200 ms, so all senders can get go to running */
-  g_timeout_add (300, depends_send_test_data, rmtransport);
+  g_timeout_add (300, depends_send_test_data, rmctransport);
 }
 
 START_TEST (test_depends)
 {
-  GibberRMulticastTransport *rmtransport;
+  GibberRMulticastCausalTransport *rmctransport;
   TestTransport *testtransport;
   int i;
 
   loop = g_main_loop_new (NULL, FALSE);
 
-  rmtransport = create_rmulticast_transport (&testtransport, "test123",
+  rmctransport = create_rmulticast_transport (&testtransport, "test123",
        depends_send_hook, NULL);
 
-  g_signal_connect(rmtransport, "connected",
+  g_signal_connect(rmctransport, "connected",
       G_CALLBACK(depends_connected), testtransport);
 
-  rmulticast_connect (rmtransport);
+  rmulticast_connect (rmctransport);
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
@@ -245,7 +235,7 @@ START_TEST (test_depends)
       fail_unless (senders[i].seen);
     }
 
-  g_object_unref (rmtransport);
+  g_object_unref (rmctransport);
 }
 END_TEST
 
@@ -299,8 +289,8 @@ out:
 
 static void
 fragmentation_connected (GibberTransport *transport, gpointer user_data) {
-  GibberRMulticastTransport *rmtransport
-    = GIBBER_R_MULTICAST_TRANSPORT(transport);
+  GibberRMulticastCausalTransport *rmctransport
+    = GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(transport);
   guint8 testdata[TEST_DATA_SIZE];
   int i;
 
@@ -309,28 +299,28 @@ fragmentation_connected (GibberTransport *transport, gpointer user_data) {
       testdata[i] = (guint8) (i & 0xff);
     }
 
-  fail_unless (gibber_transport_send (GIBBER_TRANSPORT (rmtransport),
+  fail_unless (gibber_transport_send (GIBBER_TRANSPORT (rmctransport),
       (guint8 *)testdata, TEST_DATA_SIZE, NULL));
 }
 
 START_TEST (test_fragmentation)
 {
-  GibberRMulticastTransport *rmtransport;
+  GibberRMulticastCausalTransport *rmctransport;
 
   loop = g_main_loop_new (NULL, FALSE);
 
-  rmtransport = create_rmulticast_transport (NULL, "test123",
+  rmctransport = create_rmulticast_transport (NULL, "test123",
        fragmentation_send_hook, NULL);
 
-  g_signal_connect(rmtransport, "connected",
+  g_signal_connect(rmctransport, "connected",
       G_CALLBACK(fragmentation_connected), NULL);
 
-  rmulticast_connect (rmtransport);
+  rmulticast_connect (rmctransport);
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
 
-  g_object_unref (rmtransport);
+  g_object_unref (rmctransport);
 }
 END_TEST
 
@@ -396,21 +386,21 @@ START_TEST (test_unique_id)
   /* Test if the multicast transport correctly handles the case that it gets a
    * WHOIS_REPLY on one of it's WHOIS_REQUESTS when it's determining a unique
    * id for itself */
-  GibberRMulticastTransport *rmtransport;
+  GibberRMulticastCausalTransport *rmctransport;
   guint32 test_id;
 
   test_id = 0;
   loop = g_main_loop_new (NULL, FALSE);
 
-  rmtransport = create_rmulticast_transport (NULL, "test123",
+  rmctransport = create_rmulticast_transport (NULL, "test123",
        unique_id_send_hook, &test_id);
 
-  rmulticast_connect (rmtransport);
+  rmulticast_connect (rmctransport);
 
   g_main_loop_run (loop);
   g_main_loop_unref (loop);
 
-  g_object_unref (rmtransport);
+  g_object_unref (rmctransport);
 }
 END_TEST
 
@@ -494,7 +484,7 @@ START_TEST (test_id_generation_conflict)
   /* Test if the multicast transport correctly handles the case that it sees
    * another WHOIS_REQUEST on one of it's WHOIS_REQUESTS when it's determining
    * a unique id for itself */
-  GibberRMulticastTransport *rmtransport; unique_id_conflict_test_t test;
+  GibberRMulticastCausalTransport *rmtransport; unique_id_conflict_test_t test;
 
   test.id = 0;
   test.count = 0;
@@ -516,9 +506,9 @@ END_TEST
 
 
 TCase *
-make_gibber_r_multicast_transport_tcase (void)
+make_gibber_r_multicast_causal_transport_tcase (void)
 {
-  TCase *tc = tcase_create ("Gibber R Multicast transport");
+  TCase *tc = tcase_create ("Gibber R Multicast Causal transport");
   tcase_add_test (tc, test_unique_id);
   tcase_add_loop_test (tc, test_id_generation_conflict, 0,
       ID_GENERATION_EXPECTED_POLLS);

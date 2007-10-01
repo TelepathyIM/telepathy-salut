@@ -50,23 +50,23 @@ test_r_multicast_transport_io_CFLAGS = \
 if HAVE_CHECK
 check_PROGRAMS += check-main
 TESTS += check-main
-check_main_SOURCES =                     \
-    check-main.c                         \
-    check-helpers.c                      \
-    check-helpers.h                      \
-    check-gibber.h                       \
-    check-salut.h                        \
-    check-gibber-xmpp-node.c             \
-    check-gibber-xmpp-reader.c           \
-    check-node-properties.c              \
-    check-gibber-r-multicast-transport.c \
-    test-transport.c                     \
-    test-transport.h                     \
-    check-gibber-xmpp-connection.c       \
-    check-gibber-r-multicast-packet.c    \
-    check-gibber-r-multicast-sender.c    \
-    check-gibber-xmpp-stanza.c           \
-    check-gibber-iq-helper.c             \
+check_main_SOURCES =                             \
+    check-main.c                                 \
+    check-helpers.c                              \
+    check-helpers.h                              \
+    check-gibber.h                               \
+    check-salut.h                                \
+    check-gibber-xmpp-node.c                     \
+    check-gibber-xmpp-reader.c                   \
+    check-node-properties.c                      \
+    check-gibber-r-multicast-causal-transport.c \
+    test-transport.c                             \
+    test-transport.h                             \
+    check-gibber-xmpp-connection.c               \
+    check-gibber-r-multicast-packet.c            \
+    check-gibber-r-multicast-sender.c            \
+    check-gibber-xmpp-stanza.c                   \
+    check-gibber-iq-helper.c                     \
     check-gibber-xmpp-connection-listener.c \
     check-gibber-xmpp-error.c
 

@@ -24,7 +24,7 @@ make_gibber_suite (void)
 #endif
     suite_add_tcase (s, make_gibber_r_multicast_packet_tcase());
     suite_add_tcase (s, make_gibber_r_multicast_sender_tcase());
-    suite_add_tcase (s, make_gibber_r_multicast_transport_tcase());
+    suite_add_tcase (s, make_gibber_r_multicast_causal_transport_tcase());
     suite_add_tcase (s, make_gibber_xmpp_stanza_tcase ());
     suite_add_tcase (s, make_gibber_iq_helper_tcase ());
     suite_add_tcase (s, make_gibber_xmpp_connection_listener_tcase ());
