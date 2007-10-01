@@ -4,7 +4,7 @@ from twisted.internet import reactor
 from mesh import Mesh
 import sys
 
-NUMNODES = 10
+NUMNODES = 5
 NUMPACKETS = 10
 
 
@@ -19,7 +19,7 @@ class TestMesh(Mesh):
   def connected(self, node):
     if node == self.nodes[0]:
       for x in xrange(0, NUMPACKETS):
-        reactor.callLater(0.1 * x,
+        reactor.callLater(1.0 * x,
           (lambda y: node.pushInput(str(y) + "\n")), x)
 
 
@@ -54,9 +54,9 @@ m = TestMesh()
 for x in xrange(0, NUMNODES):
   nodes.append(m.addNode("node" + str(x)))
 
-# Connect all nodes to all others. 1024 bytes/s bandwidth, 50ms delay and 50%
+# Connect all nodes to all others. 1024 bytes/s bandwidth, 50ms delay and 0%
 # packet loss.. (bandwidth and delay aren't implemented just yet)
-m.connect_full(1024, 50, 0.30)
+m.connect_full(1024, 50, 0)
 
 def timeout():
   global success
