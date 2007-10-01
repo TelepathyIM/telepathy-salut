@@ -164,12 +164,15 @@ START_TEST (test_sender) {
   for (i = 0 ; receivers[i].receiver_id != 0; i++) {
     s = gibber_r_multicast_sender_new(receivers[i].receiver_id,
         receivers[i].name, senders);
+    gibber_r_multicast_sender_update_start(s, receivers[i].packet_id);
     gibber_r_multicast_sender_seen(s, receivers[i].packet_id + 1);
     g_hash_table_insert(senders, GUINT_TO_POINTER(s->id), s);
   }
   s = gibber_r_multicast_sender_new(SENDER, SENDER_NAME, senders);
   g_signal_connect(s, "received-data", G_CALLBACK(data_received_cb), loop);
   g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
+
+  gibber_r_multicast_sender_update_start(s, serial_offset);
 
   if (tests[_i].test_seen) {
     gibber_r_multicast_sender_seen(s, serial_offset);
