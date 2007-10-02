@@ -118,9 +118,6 @@ struct _GibberRMulticastSenderPrivate
   /* whois reply/request timer */
   guint whois_timer;
 
-  /* Whether we are currently in the process of popping packets */
-  gboolean popping;
-
   /* Whether we are holding back data currently */
   gboolean holding_data;
   guint32 holding_point;
@@ -443,7 +440,8 @@ schedule_whois_request(GibberRMulticastSender *sender) {
 
 static gboolean
 check_depends(GibberRMulticastSender *sender,
-              GibberRMulticastPacket *packet) {
+              GibberRMulticastPacket *packet,
+              gboolean data) {
   int i;
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
@@ -469,7 +467,7 @@ check_depends(GibberRMulticastSender *sender,
       return FALSE;
     }
 
-    if (packet->type == PACKET_TYPE_DATA) {
+    if (data) {
       other = s->next_output_data_packet;
     } else {
       other = s->next_output_packet;
@@ -495,7 +493,10 @@ pop_data_packet (GibberRMulticastSender *sender, guint32 start)
   gsize payload_size, size;
   int num, i;
 
-  p = g_hash_table_lookup(priv->packet_cache, &sender->next_output_packet);
+  p = g_hash_table_lookup(priv->packet_cache, &start);
+
+  g_assert (p != NULL);
+
   num = p->packet->data.data.packet_total;
   payload_size = p->packet->data.data.payload_size;
   /* Need to be at least num behind last_packet */
@@ -530,12 +531,16 @@ pop_data_packet (GibberRMulticastSender *sender, guint32 start)
     return TRUE;
   }
 
+  if (!check_depends (sender, p->packet, TRUE))
+    {
+      return FALSE;
+    }
+
   sender->next_output_data_packet = start + num;
 
   /* Complete packet we can send out */
   DEBUG_SENDER(sender, "Sending out 0x%x - 0x%x",
       p->packet->packet_id, p->packet->packet_id + num - 1);
-
 
   if (num == 1) {
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
@@ -571,14 +576,6 @@ pop_packet(GibberRMulticastSender *sender) {
   gboolean popped = FALSE;
   guint32 to_pop;
 
-  if (priv->popping)
-    {
-      /* Don't pop stuff recursively..  */
-      return FALSE;
-    }
-
-  priv->popping = TRUE;
-
   if (sender->next_output_data_packet != sender->next_output_packet) {
      if (!priv->holding_data ||
           gibber_r_multicast_packet_diff (sender->next_output_data_packet,
@@ -588,6 +585,7 @@ pop_packet(GibberRMulticastSender *sender) {
      } else {
        /* We already popped all the data we could, continue on the normal
         * packets */
+       DEBUG_SENDER (sender, "old data already popped");
        to_pop = sender->next_output_packet;
      }
   } else {
@@ -604,7 +602,7 @@ pop_packet(GibberRMulticastSender *sender) {
   }
 
   g_assert (IS_RELIABLE_PACKET (p->packet));
-  if (!check_depends(sender, p->packet)) {
+  if (!check_depends(sender, p->packet, FALSE)) {
     goto out;
   }
 
@@ -633,7 +631,6 @@ pop_packet(GibberRMulticastSender *sender) {
   popped = pop_data_packet (sender, to_pop);
 
 out:
-  priv->popping = FALSE;
   return popped;
 }
 
