@@ -1067,3 +1067,21 @@ void gibber_r_multicast_causal_transport_stop_attempt_join (
   gibber_r_multicast_sender_set_packet_repeat (priv->self,
       attempt_join_id, FALSE);
 }
+
+
+void
+gibber_r_multicast_causal_transport_send_join (
+    GibberRMulticastCausalTransport *transport) {
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+  GibberRMulticastPacket *packet;
+
+  packet = gibber_r_multicast_packet_new(PACKET_TYPE_JOIN,
+      priv->self->id, priv->transport->max_packet_size);
+
+  gibber_r_multicast_packet_set_packet_id(packet, priv->packet_id++);
+  add_packet_depends (transport, packet);
+
+  gibber_r_multicast_sender_push (priv->self, packet);
+  sendout_packet (transport, packet, NULL);
+}
