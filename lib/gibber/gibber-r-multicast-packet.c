@@ -461,6 +461,9 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
       add_sender_info (priv->data, priv->max_data, &(priv->size),
           packet->depends);
       break;
+    case PACKET_TYPE_JOIN:
+      /* Nothing extra here */
+      break;
     case PACKET_TYPE_BYE:
       /* Not implemented, fall through */
     default:
@@ -560,6 +563,8 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     case PACKET_TYPE_SESSION:
       get_sender_info(priv->data, priv->max_data, &(priv->size),
           result->depends);
+      break;
+    case PACKET_TYPE_JOIN:
       break;
     case PACKET_TYPE_BYE:
       /* Not implemented, fall through */
