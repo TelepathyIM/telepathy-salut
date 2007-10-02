@@ -199,11 +199,222 @@ START_TEST (test_sender) {
   g_object_unref (s);
 } END_TEST
 
+/* Holding test */
+typedef struct {
+  gchar *name;
+  guint32 packet_id;
+  GibberRMulticastPacketType packet_type;
+  gchar *data;
+  gchar *depend_node;
+  guint32 depend_packet_id;
+} h_setup_t;
+
+typedef enum {
+  EXPECT = 0,
+  HOLD,
+  UNHOLD,
+  DONE
+} h_expect_type_t;
+
+typedef struct {
+  h_expect_type_t type;
+  gchar *expected_node;
+  GibberRMulticastPacketType packet_type;
+  guint32 hold_id;
+} h_expect_t;
+
+typedef struct {
+  int test_step;
+  GHashTable *senders;
+  h_expect_t *expectation;
+} h_data_t;
+
+static void h_next_test_step (h_data_t *d);
+
+static gboolean
+h_find_sender (gpointer key, gpointer value, gpointer user_data) {
+  GibberRMulticastSender *s = GIBBER_R_MULTICAST_SENDER (value);
+
+  return strcmp (s->name, (gchar *)user_data) == 0;
+}
+
+static gboolean
+h_idle_next_step (gpointer user_data) {
+  h_data_t *d = (h_data_t *)user_data;
+  h_expect_t *e = &(d->expectation[d->test_step]);
+  GibberRMulticastSender *s;
+
+  switch (e->type) {
+    case EXPECT:
+      fail ("Should not be reached");
+      break;
+    case HOLD:
+      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      fail_unless (s != NULL);
+      d->test_step++;
+      gibber_r_multicast_sender_hold_data (s, e->hold_id);
+      h_next_test_step(d);
+      break;
+    case UNHOLD:
+      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      fail_unless (s != NULL);
+      d->test_step++;
+      gibber_r_multicast_sender_release_data (s);
+      h_next_test_step(d);
+      break;
+    case DONE:
+      /* And there was great rejoice */
+      g_main_loop_quit (loop);
+      break;
+  }
+
+  return FALSE;
+}
+
+static void
+h_next_test_step (h_data_t *d) {
+  switch (d->expectation[d->test_step].type) {
+    case EXPECT:
+      break;
+    case HOLD:
+    case UNHOLD:
+    case DONE:
+      g_idle_add (h_idle_next_step, d);
+  }
+}
+
+static void
+h_received_data_cb (GibberRMulticastSender *sender, guint8 stream_id,
+    guint8 *data, gsize size, gpointer user_data) {
+  h_data_t *d = (h_data_t *) user_data;
+
+  fail_unless (d->expectation[d->test_step].type == EXPECT);
+  fail_unless (d->expectation[d->test_step].packet_type == PACKET_TYPE_DATA);
+  fail_unless (
+    strcmp (d->expectation[d->test_step].expected_node, sender->name) == 0);
+
+  d->test_step++;
+  h_next_test_step(d);
+}
+
+static void
+h_received_control_packet_cb (GibberRMulticastSender *sender,
+    GibberRMulticastPacket *packet, gpointer user_data) {
+  h_data_t *d = (h_data_t *) user_data;
+
+  fail_unless (d->expectation[d->test_step].type == EXPECT);
+  fail_unless (d->expectation[d->test_step].packet_type == packet->type);
+  fail_unless (
+    strcmp (d->expectation[d->test_step].expected_node, sender->name) == 0);
+
+  d->test_step++;
+  h_next_test_step(d);
+}
+
+START_TEST (test_holding) {
+  GHashTable *senders;
+  guint32 sender_offset = 0xf00;
+  h_setup_t setup[] =  {
+      { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0 },
+      { "node1", 0x1, PACKET_TYPE_DATA,         "001",  "node0", 0x2 },
+      { "node0", 0x2, PACKET_TYPE_DATA,         "002",  "node1", 0x2 },
+      { "node1", 0x2, PACKET_TYPE_DATA,         "002",  "node0", 0x3 },
+      { "node0", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node1", 0x3 },
+      { "node1", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node0", 0x4 },
+      { "node0", 0x4, PACKET_TYPE_DATA,          "003", "node1", 0x4 },
+      { "node1", 0x4, PACKET_TYPE_DATA,          "003", "node0", 0x5 },
+      { "node0", 0x5, PACKET_TYPE_JOIN,          NULL,  "node1", 0x5 },
+      { "node1", 0x5, PACKET_TYPE_JOIN,          NULL,  "node0", 0x6 },
+      { NULL },
+    };
+
+     /* control packets aren't hold back, thus we get them interleaved at first
+      */
+  h_expect_t expectation[] = {
+     { EXPECT, "node0", PACKET_TYPE_ATTEMPT_JOIN },
+     { EXPECT, "node1", PACKET_TYPE_ATTEMPT_JOIN },
+     { EXPECT, "node0", PACKET_TYPE_JOIN },
+     { EXPECT, "node1", PACKET_TYPE_JOIN },
+     /* only unhold node1, nothing should happen as they depend on those of
+      * node0 */
+     { HOLD,   "node1", PACKET_TYPE_INVALID, 0x3 },
+     /* unhold node0 too, packets should start flowing */
+     { HOLD,   "node0", PACKET_TYPE_INVALID, 0x3 },
+     { EXPECT, "node0", PACKET_TYPE_DATA },
+     { EXPECT, "node1", PACKET_TYPE_DATA },
+     { EXPECT, "node0", PACKET_TYPE_DATA },
+     { EXPECT, "node1", PACKET_TYPE_DATA },
+     { UNHOLD, "node1" },
+     { UNHOLD, "node0" },
+     { EXPECT, "node0", PACKET_TYPE_DATA },
+     { EXPECT, "node1", PACKET_TYPE_DATA },
+     { DONE },
+  };
+  h_data_t data = { 0, NULL, expectation };
+  int i;
+
+  g_type_init();
+  loop = g_main_loop_new(NULL, FALSE);
+
+  senders = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+      NULL, g_object_unref);
+  data.senders = senders;
+
+  for (i = 0; setup[i].name != NULL; i++)
+    {
+      GibberRMulticastSender *s0, *s1 = NULL;
+      GibberRMulticastPacket *p;
+
+      s0 = g_hash_table_find (senders, h_find_sender, setup[i].name);
+      if (s0 == NULL)
+        {
+          s0 = gibber_r_multicast_sender_new (sender_offset++,
+              setup[i].name, senders);
+          gibber_r_multicast_sender_update_start (s0, setup[i].packet_id);
+          gibber_r_multicast_sender_hold_data (s0, setup[i].packet_id);
+          g_hash_table_insert (senders, GUINT_TO_POINTER(s0->id), s0);
+
+          g_signal_connect (s0, "received-data",
+              G_CALLBACK (h_received_data_cb), &data);
+          g_signal_connect (s0, "received-control-packet",
+              G_CALLBACK (h_received_control_packet_cb), &data);
+        }
+
+      p = gibber_r_multicast_packet_new (setup[i].packet_type, s0->id, 1500);
+      gibber_r_multicast_packet_set_packet_id (p, setup[i].packet_id);
+
+      if (setup[i].depend_node != NULL)
+        {
+          s1 = g_hash_table_find (senders, h_find_sender,
+              setup[i].depend_node);
+          fail_unless (s1 != NULL);
+
+          fail_unless (gibber_r_multicast_packet_add_sender_info (p, s1->id,
+              setup[i].depend_packet_id, NULL));
+        }
+      if (setup[i].packet_type == PACKET_TYPE_DATA)
+        {
+          fail_unless (setup[i].data != NULL);
+
+          gibber_r_multicast_packet_set_data_info (p, 0, 0, 1);
+          gibber_r_multicast_packet_add_payload (p,
+              (guint8 *) setup[i].data, strlen (setup[i].data));
+        }
+      gibber_r_multicast_sender_push (s0, p);
+    }
+
+  while (data.expectation[data.test_step].type != DONE)
+    {
+      g_main_loop_run (loop);
+    }
+} END_TEST
+
 TCase *
 make_gibber_r_multicast_sender_tcase (void)
 {
     TCase *tc = tcase_create ("RMulticast Sender");
     tcase_set_timeout (tc, 20);
     tcase_add_loop_test (tc, test_sender, 0, NUMBER_OF_TESTS);
+    tcase_add_test (tc, test_holding);
     return tc;
 }
