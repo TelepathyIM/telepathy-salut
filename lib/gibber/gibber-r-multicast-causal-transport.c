@@ -497,18 +497,8 @@ start_joining (GibberRMulticastCausalTransport *transport)
 }
 
 static void
-senders_updated(gpointer key, gpointer value, gpointer user_data) {
-  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
-  gibber_r_multicast_senders_updated(sender);
-}
-
-static void
 data_received_cb(GibberRMulticastSender *sender, guint8 stream_id,
                  guint8 *data, gsize size, gpointer user_data) {
-  GibberRMulticastCausalTransport *self =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(user_data);
-  GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastCausalBuffer rmbuffer;
 
   rmbuffer.buffer.data = data;
@@ -519,7 +509,6 @@ data_received_cb(GibberRMulticastSender *sender, guint8 stream_id,
 
   gibber_transport_received_data_custom(GIBBER_TRANSPORT(user_data),
       (GibberBuffer *)&rmbuffer);
-  g_hash_table_foreach(priv->senders, senders_updated, self);
 }
 
 static void
@@ -527,11 +516,8 @@ control_packet_received_cb(GibberRMulticastSender *sender,
                  GibberRMulticastPacket *packet, gpointer user_data) {
   GibberRMulticastCausalTransport *self =
   GIBBER_R_MULTICAST_CAUSAL_TRANSPORT(user_data);
-  GibberRMulticastCausalTransportPrivate *priv =
-    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
   g_signal_emit(self, signals[RECEIVED_CONTROL_PACKET], 0, sender, packet);
-  g_hash_table_foreach(priv->senders, senders_updated, self);
 }
 
 static void

@@ -638,7 +638,17 @@ out:
 }
 
 static void
+senders_updated(gpointer key, gpointer value, gpointer user_data) {
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
+  gibber_r_multicast_senders_updated(sender);
+}
+
+static void
 pop_packets(GibberRMulticastSender *sender) {
+  gboolean popped = FALSE;
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
   if (sender->name == NULL
       || sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
   {
@@ -648,7 +658,13 @@ pop_packets(GibberRMulticastSender *sender) {
   }
 
   while (pop_packet(sender))
-    /* nothing */;
+    popped = TRUE;
+
+  if (popped)
+    {
+      g_hash_table_foreach(priv->senders, senders_updated, NULL);
+    }
+
 }
 
 void
