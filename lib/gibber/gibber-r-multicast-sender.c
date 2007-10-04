@@ -940,6 +940,7 @@ gibber_r_multicast_sender_hold_data (GibberRMulticastSender *sender,
 
   priv->holding_data = TRUE;
   priv->holding_point = packet_id;
+  DEBUG_SENDER (sender, "Holding data starting at %x", packet_id);
 
   /* Pop packets in case the holding_point moved forward */
   pop_packets (sender);
@@ -952,6 +953,7 @@ gibber_r_multicast_sender_release_data (GibberRMulticastSender *sender)
   GibberRMulticastSenderPrivate *priv =
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
 
+  DEBUG_SENDER (sender, "Releasing data");
   priv->holding_data = FALSE;
   pop_packets (sender);
 }
