@@ -34,8 +34,8 @@
 
 #include "signals-marshal.h"
 
-#define SESSION_TIMEOUT_MIN 500
-#define SESSION_TIMEOUT_MAX 800
+#define SESSION_TIMEOUT_MIN 1500
+#define SESSION_TIMEOUT_MAX 3000
 
 #define NR_JOIN_REQUESTS_TO_SEND 3
 #define PASSIVE_JOIN_TIME  500
