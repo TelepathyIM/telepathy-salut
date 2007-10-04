@@ -1119,3 +1119,19 @@ gibber_r_multicast_causal_transport_send_join (
   gibber_r_multicast_sender_push (priv->self, packet);
   sendout_packet (transport, packet, NULL);
 }
+
+GibberRMulticastSender *
+gibber_r_multicast_causal_transport_get_sender (
+    GibberRMulticastCausalTransport *transport,
+    guint32 sender_id)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+  GibberRMulticastSender *sender;
+
+  sender = g_hash_table_lookup (priv->senders, GUINT_TO_POINTER (sender_id));
+  g_assert (sender != NULL);
+
+  return sender;
+}
+

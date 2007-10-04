@@ -23,6 +23,7 @@
 
 #include <glib-object.h>
 #include "gibber-transport.h"
+#include "gibber-r-multicast-sender.h"
 
 G_BEGIN_DECLS
 
@@ -95,8 +96,13 @@ guint32 gibber_r_multicast_causal_transport_send_attempt_join (
     gboolean repeat);
 
 void gibber_r_multicast_causal_transport_stop_attempt_join (
-    GibberRMulticastCausalTransport *transport,
-    guint32 attempt_join_id);
+    GibberRMulticastCausalTransport *transport, guint32 attempt_join_id);
+
+void gibber_r_multicast_causal_transport_send_join (
+    GibberRMulticastCausalTransport *transport);
+
+GibberRMulticastSender *gibber_r_multicast_causal_transport_get_sender (
+    GibberRMulticastCausalTransport *transport, guint32 sender_id);
 
 
 G_END_DECLS
