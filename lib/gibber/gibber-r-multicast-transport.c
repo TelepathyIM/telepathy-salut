@@ -38,6 +38,8 @@
 #define MIN_JOINING_START_TIMEOUT 4800
 #define MAX_JOINING_START_TIMEOUT 5200
 
+static void stop_send_attempt_join (GibberRMulticastTransport *self);
+
 G_DEFINE_TYPE(GibberRMulticastTransport, gibber_r_multicast_transport,
               GIBBER_TYPE_TRANSPORT)
 
@@ -84,6 +86,8 @@ struct _GibberRMulticastTransportPrivate
   guint timeout;
 
   guint joining_timeout;
+  /* People who were in the join message you sent */
+  GArray *send_join;
 
   State state;
 };
@@ -108,6 +112,7 @@ typedef enum {
 typedef struct {
   MemberState state;
   guint32 id;
+  gboolean agreed_join;
 } MemberInfo;
 
 #define GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(o) \
@@ -117,7 +122,7 @@ typedef struct {
 static void free_member_info (gpointer info);
 static MemberInfo *member_get_info (GibberRMulticastTransport *self,
     guint32 id);
-static MemberState member_get_state (GibberRMulticastTransport *self, 
+static MemberState member_get_state (GibberRMulticastTransport *self,
     guint32 id);
 
 struct HTData {
@@ -260,6 +265,11 @@ gibber_r_multicast_transport_dispose (GObject *object)
     priv->timeout =0;
   }
 
+  if (priv->send_join != NULL) {
+    g_array_free (priv->send_join, TRUE);
+    priv->send_join = NULL;
+  }
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose)
     G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose (
@@ -286,16 +296,9 @@ received_data (GibberTransport *transport, GibberBuffer *buffer,
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
   GibberRMulticastCausalBuffer *cbuffer =
     (GibberRMulticastCausalBuffer *)buffer;
-  MemberInfo *info;
-
-  info = member_get_info (self, cbuffer->sender_id);
-  if (info->state == MEMBER_STATE_ATTEMPT_JOIN_DONE) {
-      g_signal_emit (self, signals[NEW_SENDER], 0, cbuffer->sender);
-      info->state = MEMBER_STATE_MEMBER;
-  }
 
   if (member_get_state (self, cbuffer->sender_id)
-        >= MEMBER_STATE_ATTEMPT_JOIN_DONE) {
+        == MEMBER_STATE_MEMBER) {
     gibber_transport_received_data_custom (GIBBER_TRANSPORT (self),
         buffer);
   }
@@ -370,7 +373,10 @@ member_set_state (GibberRMulticastTransport *self, guint32 id,
 
 static void
 str_add_member (gpointer key, MemberInfo *value, GString *str) {
-  g_string_append_printf (str, "%x, ", value->id);
+  if (value->state >= MEMBER_STATE_ATTEMPT_JOIN_REPEAT)
+    {
+      g_string_append_printf (str, "%x, ", value->id);
+    }
 }
 
 
@@ -378,7 +384,8 @@ static gchar *
 member_list_to_str (GibberRMulticastTransport *self) {
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
-  GString *str = g_string_sized_new (3 + 9 * g_hash_table_size (priv->members));
+  GString *str = g_string_sized_new (
+      3 + 9 * g_hash_table_size (priv->members));
 
   g_string_append (str, "{ ");
   g_hash_table_foreach (priv->members, (GHFunc) str_add_member, str);
@@ -387,22 +394,70 @@ member_list_to_str (GibberRMulticastTransport *self) {
   return g_string_free (str, FALSE);
 }
 
-
-static gboolean
-start_joining_phase (gpointer user_data)
-{
+static void
+add_to_join (gpointer key, gpointer value, gpointer user_data) {
+  MemberInfo *info = (MemberInfo *)value;
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
-  gchar *members;
 
-  g_assert (priv->state == STATE_GATHERING);
+  if (info->state >=  MEMBER_STATE_ATTEMPT_JOIN_REPEAT) {
+    g_array_append_val (priv->send_join, info->id);
+  }
+
+  info->agreed_join = FALSE;
+}
+
+static void
+start_joining_phase (GibberRMulticastTransport *self)
+{
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  gchar *members;
+  MemberInfo *info;
+  GibberRMulticastSender *sender;
+
+  if (priv->state == STATE_GATHERING)
+    {
+      stop_send_attempt_join (self);
+      g_source_remove (priv->joining_timeout);
+      /* every member with state >= MEMBER_STATE_ATTEMPT_JOIN_REPEAT, will be
+       * in our join */
+      g_assert (priv->send_join == NULL);
+      priv->send_join = g_array_new (FALSE, FALSE, sizeof (guint32));
+
+    }
+  else
+    {
+      g_assert (priv->state == STATE_JOINING);
+      g_array_free (priv->send_join, TRUE);
+      priv->send_join = g_array_new (FALSE, FALSE, sizeof (guint32));
+    }
 
   members = member_list_to_str (self);
-  DEBUG ("Entering join state: %s", members);
+  DEBUG ("New join state: %s", members);
   g_free(members);
 
   priv->state = STATE_JOINING;
+  g_hash_table_foreach (priv->members, (GHFunc) add_to_join, self);
+
+  info = g_hash_table_lookup (priv->members, &priv->transport->sender_id);
+  info->agreed_join = TRUE;
+
+  sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+    priv->transport->sender_id);
+
+  gibber_r_multicast_sender_hold_data (sender,
+      sender->next_input_packet);
+  gibber_r_multicast_causal_transport_send_join (priv->transport);
+}
+
+static gboolean
+do_start_joining_phase (gpointer user_data)
+{
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+
+  start_joining_phase (self);
 
   return FALSE;
 }
@@ -424,7 +479,7 @@ continue_gathering_phase (GibberRMulticastTransport *self) {
 
   priv->joining_timeout = g_timeout_add (
     g_random_int_range (MIN_JOINING_START_TIMEOUT, MAX_JOINING_START_TIMEOUT),
-    start_joining_phase, self);
+    do_start_joining_phase, self);
 }
 
 static gboolean
@@ -458,6 +513,7 @@ static void
 stop_send_attempt_join (GibberRMulticastTransport *self) {
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
+
   if (priv->repeating_join) {
     gibber_r_multicast_causal_transport_stop_attempt_join (priv->transport,
       priv->attempt_join_id);
@@ -688,6 +744,43 @@ static gint cmp_attempt_join_state (GibberRMulticastTransport *transport,
   return 1;
 }
 
+static gboolean
+equal_joins (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
+{
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  guint i;
+
+  g_assert (packet->type == PACKET_TYPE_JOIN);
+
+  if (packet->depends->len == priv->send_join->len)
+    {
+      DEBUG ("Blurp");
+      return FALSE;
+    }
+
+  if (!depends_list_contains (packet->depends, priv->transport->sender_id))
+    {
+      DEBUG ("Flop");
+      return FALSE;
+    }
+
+  for (i = 0; i < priv->send_join->len; i++)
+    {
+      guint32 id = g_array_index (priv->send_join, guint32, i);
+
+      if (id != packet->sender && !depends_list_contains (packet->depends,
+          g_array_index (priv->send_join, guint32, i)))
+        {
+          DEBUG ("Node %x not contained in the join",
+              g_array_index (priv->send_join, guint32, i));
+          return FALSE;
+        }
+    }
+
+  return TRUE;
+}
+
 static void
 received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
     GibberRMulticastSender *sender, GibberRMulticastPacket *packet,
@@ -734,7 +827,7 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
           stop_send_attempt_join (self);
           break;
         case 0:
-          if (priv->timeout != 0 || 
+          if (priv->timeout != 0 ||
               packet->sender > priv->transport->sender_id) {
             /* We didn't send out the latest info just yet so dont..
              * Or we're sending equavalent info, so use the sender_id to get a
@@ -750,6 +843,84 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
           break;
       }
       break;
+    }
+
+    case PACKET_TYPE_JOIN: {
+
+      gibber_r_multicast_sender_hold_data (sender, packet->packet_id);
+      if (priv->state == STATE_GATHERING)
+        {
+          start_joining_phase (self);
+        }
+
+      DEBUG ("Received join from %s", sender->name);
+
+      if (equal_joins (self, packet)) {
+        guint i;
+        gboolean agreed = TRUE;
+        MemberInfo *info;
+
+        DEBUG ("%s agreed with our join", sender->name);
+
+        info = g_hash_table_lookup (priv->members, &packet->sender);
+        info->agreed_join = TRUE;
+
+        for (i = 0 ; i < priv->send_join->len; i++)
+          {
+           info = g_hash_table_lookup (priv->members,
+             &g_array_index (priv->send_join, guint32, i));
+            agreed &= info->agreed_join;
+            if (!agreed)
+              break;
+          }
+
+        if (agreed)
+          {
+            DEBUG ("---Finished joining phase!!!!---");
+            for (i = 0 ; i < priv->send_join->len; i++)
+              {
+                info = member_get_info (self,
+                    g_array_index (priv->send_join, guint32, i));
+                GibberRMulticastSender *sender =
+                    gibber_r_multicast_causal_transport_get_sender (
+                        priv->transport, info->id);
+
+                if (info->state != MEMBER_STATE_MEMBER)
+                  {
+
+                    DEBUG ("New member: %s (%x)", sender->name, info->id);
+
+                    info->state = MEMBER_STATE_MEMBER;
+                    g_signal_emit (self, signals[NEW_SENDER], 0, sender->name);
+                  }
+                gibber_r_multicast_sender_release_data (sender);
+              }
+            DEBUG ("--------------------------------");
+          }
+      } else {
+        guint i;
+        DEBUG ("%s disagreed with our join", sender->name);
+        MemberInfo *info;
+
+        for (i = 0 ; i < priv->send_join->len; i++)
+          {
+           info = g_hash_table_lookup (priv->members,
+             &g_array_index (priv->send_join, guint32, i));
+           if (info->id == packet->sender)
+             {
+               gibber_r_multicast_sender_release_data (
+                   gibber_r_multicast_causal_transport_get_sender (
+                       priv->transport, info->id));
+             }
+          }
+        if (packet->depends->len >= priv->send_join->len)
+          {
+            /* Start the joining phase again */
+            /* TODO doublecheck we know about these senders */
+            start_joining_phase (self);
+          }
+      }
+
     }
     default:
       break;
