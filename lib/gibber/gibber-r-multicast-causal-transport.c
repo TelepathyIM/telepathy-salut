@@ -786,10 +786,11 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
           DEBUG_TRANSPORT (self, "Foreign packet Received type: 0x%x from %x",
               packet->type, packet->sender);
           g_signal_emit (self, signals[RECEIVED_FOREIGN_PACKET], 0, packet);
+
+          sender = g_hash_table_lookup (priv->senders,
+              GUINT_TO_POINTER (packet->sender));
         }
-      sender = g_hash_table_lookup (priv->senders,
-          GUINT_TO_POINTER (packet->sender));
-    }
+      }
 
   if (sender == NULL
       || (sender == priv->self && packet->type != PACKET_TYPE_WHOIS_REQUEST))
