@@ -435,7 +435,7 @@ next_join_step (gpointer data)
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
 
-  DEBUG_TRANSPORT (transport, "Next join step: %d", priv->nr_join_requests);
+  DEBUG_TRANSPORT (transport, "step: %d", priv->nr_join_requests);
 
   if (priv->nr_join_requests < NR_JOIN_REQUESTS_TO_SEND)
     {
