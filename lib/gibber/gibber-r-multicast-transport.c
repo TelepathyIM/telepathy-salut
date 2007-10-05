@@ -655,7 +655,7 @@ received_foreign_packet_cb (GibberRMulticastCausalTransport *ctransport,
   gibber_r_multicast_causal_transport_add_sender (priv->transport,
       packet->sender);
 
-  if (IS_RELIABLE_PACKET (packet)) {
+  if (IS_RELIABLE_PACKET (packet) || packet->type == PACKET_TYPE_SESSION) {
     if (packet->type == PACKET_TYPE_ATTEMPT_JOIN) {
       /* Either the sender wants a start position from us or has replied to one
        * or our AJ messages.. Or it's some completely unrelated packet and we
