@@ -58,6 +58,9 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   } else if (g_str_has_prefix(buffer, "RECV:")) {
     packet = TRUE;
     p = buffer + strlen("RECV:");
+  } else if (strcmp (buffer, "DISCONNECT\n") == 0) {
+    gibber_transport_disconnect (GIBBER_TRANSPORT(rm));
+    goto out;
   } else {
     g_assert_not_reached();
   }
@@ -73,6 +76,7 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   g_free(b64);
   g_free(buffer);
 
+out:
   return TRUE;
 }
 
@@ -92,9 +96,23 @@ new_sender_cb(GibberRMulticastTransport *transport,
 }
 
 static void
+lost_sender_cb(GibberRMulticastTransport *transport,
+              const char *name, gpointer user_data) {
+  printf("LEFTNODE:%s\n", name);
+  fflush(stdout);
+}
+
+static void
 rm_connected (GibberRMulticastTransport *transport, gpointer user_data) {
   printf("CONNECTED:\n");
   fflush(stdout);
+}
+
+static void
+rm_disconnected (GibberRMulticastTransport *transport, gpointer user_data) {
+  printf("DISCONNECTED:\n");
+  fflush(stdout);
+  g_main_loop_quit (loop);
 }
 
 static void
@@ -128,11 +146,17 @@ main(int argc, char **argv){
   g_signal_connect(rm, "new-sender",
       G_CALLBACK(new_sender_cb), NULL);
 
+  g_signal_connect(rm, "lost-sender",
+      G_CALLBACK(lost_sender_cb), NULL);
+
   g_signal_connect(rmc, "connected",
     G_CALLBACK(rmc_connected), NULL);
 
   g_signal_connect(rm, "connected",
     G_CALLBACK(rm_connected), NULL);
+
+  g_signal_connect(rm, "disconnected",
+    G_CALLBACK(rm_disconnected), NULL);
 
   /* test transport starts out connected */
   g_assert(gibber_r_multicast_causal_transport_connect(rmc, FALSE, NULL));
