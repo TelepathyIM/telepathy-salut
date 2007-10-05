@@ -981,14 +981,27 @@ gibber_r_multicast_transport_do_send(GibberTransport *transport,
 }
 
 static void
+transport_disconnected(GibberTransport *transport,
+  gpointer user_data)
+{
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+
+  gibber_transport_set_state(GIBBER_TRANSPORT(self),
+                             GIBBER_TRANSPORT_DISCONNECTED);
+}
+
+static void
 gibber_r_multicast_transport_disconnect(GibberTransport *transport) {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (transport);
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  gibber_transport_set_state(GIBBER_TRANSPORT(self),
-                             GIBBER_TRANSPORT_DISCONNECTED);
   priv->state = STATE_DISCONNECTED;
 
+  gibber_transport_set_state(GIBBER_TRANSPORT(self),
+                             GIBBER_TRANSPORT_DISCONNECTING);
+
+  g_signal_connect (priv->transport, "disconnected",
+      G_CALLBACK(transport_disconnected), self);
   gibber_transport_disconnect(GIBBER_TRANSPORT(priv->transport));
 }
