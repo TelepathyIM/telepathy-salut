@@ -26,16 +26,17 @@
 G_BEGIN_DECLS
 
 typedef enum {
-  GIBBER_TRANSPORT_DISCONNECTED,
+  GIBBER_TRANSPORT_DISCONNECTED = 0,
   GIBBER_TRANSPORT_CONNECTING,
   GIBBER_TRANSPORT_CONNECTED,
+  GIBBER_TRANSPORT_DISCONNECTING,
 } GibberTransportState;
 
 
 typedef struct _GibberTransport GibberTransport;
 typedef struct _GibberTransportClass GibberTransportClass;
 typedef struct _GibberBuffer GibberBuffer;
-typedef void (*GibberHandlerFunc)(GibberTransport *transport, 
+typedef void (*GibberHandlerFunc)(GibberTransport *transport,
                                    GibberBuffer *buffer,
                                    gpointer user_data);
 
@@ -46,7 +47,7 @@ struct _GibberBuffer {
 
 struct _GibberTransportClass {
     GObjectClass parent_class;
-    gboolean (*send) (GibberTransport *transport, 
+    gboolean (*send) (GibberTransport *transport,
                           const guint8 *data, gsize length, GError **error);
     void (*disconnect) (GibberTransport *transport);
 };
@@ -57,7 +58,6 @@ struct _GibberTransport {
 
     /* Maximum packet size for transports where it matters, 0 otherwise */
     gsize max_packet_size;
-
 
     /* FIXME Should be private... */
     GibberHandlerFunc handler;

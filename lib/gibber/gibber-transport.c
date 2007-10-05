@@ -36,6 +36,7 @@ enum
   CONNECTED,
   CONNECTING,
   DISCONNECTED,
+  DISCONNECTING,
   ERROR,
   LAST_SIGNAL
 };
@@ -89,7 +90,16 @@ gibber_transport_class_init (GibberTransportClass *gibber_transport_class)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  signals[DISCONNECTED] = 
+  signals[DISCONNECTING] =
+    g_signal_new ("disconnecting",
+                  G_OBJECT_CLASS_TYPE (gibber_transport_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
+
+  signals[DISCONNECTED] =
     g_signal_new ("disconnected",
                   G_OBJECT_CLASS_TYPE (gibber_transport_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
@@ -98,7 +108,7 @@ gibber_transport_class_init (GibberTransportClass *gibber_transport_class)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  signals[ERROR] = 
+  signals[ERROR] =
     g_signal_new ("error",
                   G_OBJECT_CLASS_TYPE (gibber_transport_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
@@ -151,11 +161,12 @@ gibber_transport_received_data_custom(GibberTransport *transport,
   }
 }
 
-void 
-gibber_transport_set_state(GibberTransport *transport, 
+void
+gibber_transport_set_state(GibberTransport *transport,
                           GibberTransportState state) {
   if (state != transport->state) {
     transport->state = state;
+
     switch (state) {
       case GIBBER_TRANSPORT_DISCONNECTED:
         g_signal_emit(transport, signals[DISCONNECTED], 0);
@@ -166,11 +177,14 @@ gibber_transport_set_state(GibberTransport *transport,
       case GIBBER_TRANSPORT_CONNECTED:
         g_signal_emit(transport, signals[CONNECTED], 0);
         break;
+      case GIBBER_TRANSPORT_DISCONNECTING:
+        g_signal_emit(transport, signals[DISCONNECTING], 0);
+        break;
     }
   }
 }
 
-GibberTransportState 
+GibberTransportState
 gibber_transport_get_state(GibberTransport *transport) {
   return transport->state;
 }
