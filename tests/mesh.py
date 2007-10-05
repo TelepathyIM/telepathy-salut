@@ -23,7 +23,6 @@ class BaseMeshNode(protocol.ProcessProtocol):
   def __sendPacket(self, data):
     return self.sendPacket(b64decode(data))
 
-
   def gotOutput(self, sender, data):
     "Should be overridden"
     print "Output: " + data
@@ -32,8 +31,15 @@ class BaseMeshNode(protocol.ProcessProtocol):
     "Should be overridden"
     print "Connected!!"
 
+  def node_disconnected(self):
+    "Should be overridden"
+    print "Disconnected!!"
+
   def __connected(self, data):
     self.node_connected()
+
+  def __disconnected(self, data):
+    self.node_disconnected()
 
   def __gotOutput(self, data):
     (sender, rawdata) = data.split(":", 1)
@@ -45,17 +51,27 @@ class BaseMeshNode(protocol.ProcessProtocol):
     if not data in self.peers:
       self.peers.append(data)
 
+  def leftNode(self, data):
+    print "Left node: " + data
+    self.peers.remove(data)
+
   def recvPacket(self, data):
     self.process.write("RECV:" + b64encode(data) + "\n")
 
   def pushInput(self, data):
     self.process.write("INPUT:" + b64encode(data) + "\n")
 
+  def disconnect(self):
+    self.process.write("DISCONNECT\n")
+
   def lineReceived(self, line):
-    commands = { "SEND"      :  self.__sendPacket,
-                 "OUTPUT"    :  self.__gotOutput,
-                 "CONNECTED" :  self.__connected,
-                 "NEWNODE":  self.newNode }
+    commands = { "SEND"         :  self.__sendPacket,
+                 "OUTPUT"       :  self.__gotOutput,
+                 "CONNECTED"    :  self.__connected,
+                 "DISCONNECTED" :  self.__disconnected,
+                 "NEWNODE"      :  self.newNode,
+                 "LEFTNODE"      :  self.leftNode
+                 }
 
     parts = line.rstrip().split(":", 1)
     if len(parts) == 2:
@@ -147,3 +163,8 @@ class Mesh:
   def addMeshNode(self, node):
     self.nodes.append(node)
     return node
+
+  def connected (self, node):
+    "To be overwritten"
+    pass
+
