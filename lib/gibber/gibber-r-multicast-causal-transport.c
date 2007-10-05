@@ -41,6 +41,10 @@
 #define PASSIVE_JOIN_TIME  500
 #define ACTIVE_JOIN_INTERVAL 250
 
+/* Send three bye's on disconnect at 500 ms intervals */
+#define NR_BYE_TO_SEND 3
+#define BYE_INTERVAL 500
+
 #define DEBUG_TRANSPORT(transport, format,...) \
   DEBUG("%s (%x): " format, \
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(transport)->name, \
@@ -97,6 +101,8 @@ struct _GibberRMulticastCausalTransportPrivate
 
   gint nr_join_requests;
   gint nr_join_requests_seen;
+
+  gint nr_bye;
 };
 
 #define GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(o) \
@@ -272,8 +278,15 @@ gibber_r_multicast_causal_transport_dispose (GObject *object)
     g_source_remove (priv->timer);
   }
 
-  /* release any references held by the object here */
+  if (priv->self != NULL)
+    {
+      g_object_unref (priv->self);
+      priv->self = NULL;
+    }
 
+  g_hash_table_remove_all (priv->senders);
+
+  /* release any references held by the object here */
   if (G_OBJECT_CLASS (
       gibber_r_multicast_causal_transport_parent_class)->dispose)
   {
@@ -407,6 +420,8 @@ connected (GibberRMulticastCausalTransport *transport)
 
   g_hash_table_insert (priv->senders, GUINT_TO_POINTER (priv->self->id),
       priv->self);
+  g_object_ref (priv->self);
+
   g_signal_connect (priv->self, "repair-message",
       G_CALLBACK (repair_message_cb), transport);
   g_signal_connect (priv->self, "whois-reply",
@@ -868,14 +883,16 @@ r_multicast_receive (GibberTransport *transport,
     {
       switch (GIBBER_TRANSPORT (self)->state)
         {
-        case GIBBER_TRANSPORT_CONNECTING:
-          joining_multicast_receive (self, packet);
-          break;
-        case GIBBER_TRANSPORT_CONNECTED:
-          joined_multicast_receive (self, packet);
-          break;
-        default:
-          g_assert_not_reached ();
+          case GIBBER_TRANSPORT_CONNECTING:
+            joining_multicast_receive (self, packet);
+            break;
+          case GIBBER_TRANSPORT_CONNECTED:
+            joined_multicast_receive (self, packet);
+            break;
+          case GIBBER_TRANSPORT_DISCONNECTING:
+            break;
+          default:
+            g_assert_not_reached ();
         }
   }
 
@@ -1039,6 +1056,43 @@ gibber_r_multicast_causal_transport_do_send(GibberTransport *transport,
      data, size, error);
 }
 
+static gboolean
+send_next_bye (gpointer data)
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (data);
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+   GibberRMulticastPacket *packet;
+
+   DEBUG ("Sending bye nr %d", priv->nr_bye);
+
+   packet = gibber_r_multicast_packet_new (PACKET_TYPE_BYE,
+     priv->self->id, priv->transport->max_packet_size);
+   gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id);
+
+   sendout_packet (self, packet, NULL);
+   g_object_unref (packet);
+
+   priv->nr_bye++;
+
+  if (priv->nr_bye < NR_BYE_TO_SEND)
+    {
+      priv->timer = g_timeout_add (BYE_INTERVAL,
+          send_next_bye, self);
+    }
+  else
+    {
+      gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
+      gibber_transport_set_state (GIBBER_TRANSPORT (self),
+                              GIBBER_TRANSPORT_DISCONNECTED);
+      g_object_unref (priv->self);
+      priv->self = NULL;
+    }
+
+  return FALSE;
+}
+
 static void
 gibber_r_multicast_causal_transport_disconnect (GibberTransport *transport)
 {
@@ -1052,11 +1106,13 @@ gibber_r_multicast_causal_transport_disconnect (GibberTransport *transport)
       g_source_remove(priv->timer);
     }
 
-  gibber_transport_set_state (GIBBER_TRANSPORT (self),
-                              GIBBER_TRANSPORT_DISCONNECTED);
-  gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
-}
+  g_hash_table_remove_all (priv->senders);
 
+  gibber_transport_set_state (GIBBER_TRANSPORT (self),
+                              GIBBER_TRANSPORT_DISCONNECTING);
+  priv->nr_bye = 0;
+  send_next_bye (self);
+}
 
 guint32
 gibber_r_multicast_causal_transport_send_attempt_join (
