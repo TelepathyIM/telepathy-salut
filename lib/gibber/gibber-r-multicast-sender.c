@@ -30,7 +30,7 @@
 #include "gibber-debug.h"
 
 #define DEBUG_SENDER(sender, format, ...) \
-  DEBUG("%s %x (%p): " format, sender->name, sender->id, sender, ##__VA_ARGS__)
+  DEBUG("%s %x: " format, sender->name, sender->id, ##__VA_ARGS__)
 
 #define PACKET_CACHE_SIZE 256
 
