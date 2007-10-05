@@ -466,6 +466,7 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
       break;
     case PACKET_TYPE_BYE:
       /* Not implemented, fall through */
+      break;
     default:
       g_assert_not_reached();
   }
@@ -567,7 +568,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     case PACKET_TYPE_JOIN:
       break;
     case PACKET_TYPE_BYE:
-      /* Not implemented, fall through */
+      break;
     default:
       g_assert_not_reached();
   }
