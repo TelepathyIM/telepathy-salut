@@ -115,6 +115,9 @@ gibber_r_multicast_packet_finalize (GObject *object)
     case PACKET_TYPE_ATTEMPT_JOIN:
       g_array_free (self->data.attempt_join.senders, TRUE);
       break;
+    case PACKET_TYPE_FAILURE:
+      g_array_free (self->data.failure.failures, TRUE);
+      break;
     default:
       /* Nothing specific to free */;
   }
@@ -160,6 +163,10 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
   switch (result->type) {
     case PACKET_TYPE_ATTEMPT_JOIN:
       result->data.attempt_join.senders = g_array_new (FALSE, FALSE,
+          sizeof(guint32));
+      break;
+    case PACKET_TYPE_FAILURE:
+      result->data.failure.failures = g_array_new (FALSE, FALSE,
           sizeof(guint32));
       break;
     default:
@@ -272,6 +279,10 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
     case PACKET_TYPE_ATTEMPT_JOIN:
       /* 8 bit nr of senders, 32 bit per sender */
       result += 1 + 4 * packet->data.attempt_join.senders->len;
+      break;
+    case PACKET_TYPE_FAILURE:
+      /* 8 bit nr of senders, 32 bit per failure */
+      result += 1 + 4 * packet->data.failure.failures->len;
       break;
     case PACKET_TYPE_SESSION:
          /* 8 bit nr sender info + N times 32 bit sender id, 32 bit packet id
@@ -457,6 +468,17 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
       }
       break;
     }
+    case PACKET_TYPE_FAILURE: {
+      int i;
+      add_guint8 (priv->data, priv->max_data, &(priv->size),
+            packet->data.failure.failures->len);
+
+      for (i = 0; i < packet->data.failure.failures->len; i++) {
+        add_guint32 (priv->data, priv->max_data, &(priv->size),
+          g_array_index (packet->data.failure.failures, guint32, i));
+      }
+      break;
+    }
     case PACKET_TYPE_SESSION:
       add_sender_info (priv->data, priv->max_data, &(priv->size),
           packet->depends);
@@ -562,6 +584,21 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       }
       break;
     }
+    case PACKET_TYPE_FAILURE: {
+      guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
+      guint8 i;
+
+      result->data.failure.failures = g_array_sized_new (FALSE, FALSE,
+          sizeof (guint32), nr);
+
+      for (i = 0; i < nr; i++) {
+        guint32 sender = get_guint32 (priv->data,
+            priv->max_data, &(priv->size));
+        gibber_r_multicast_packet_failure_add_sender (result,
+            sender, NULL);
+      }
+      break;
+    }
     case PACKET_TYPE_SESSION:
       get_sender_info(priv->data, priv->max_data, &(priv->size),
           result->depends);
@@ -628,6 +665,33 @@ gibber_r_multicast_packet_attempt_join_add_senders (
   g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
 
   g_array_append_vals (packet->data.attempt_join.senders, senders->data,
+      senders->len);
+
+  return TRUE;
+}
+
+gboolean
+gibber_r_multicast_packet_failure_add_sender (
+   GibberRMulticastPacket *packet,
+   guint32 sender,
+   GError **error)
+{
+  g_assert (packet->type == PACKET_TYPE_FAILURE);
+
+  g_array_append_val (packet->data.failure.failures, sender);
+
+  return TRUE;
+}
+
+gboolean
+gibber_r_multicast_packet_failure_add_senders (
+   GibberRMulticastPacket *packet,
+   GArray *senders,
+   GError **error)
+{
+  g_assert (packet->type == PACKET_TYPE_FAILURE);
+
+  g_array_append_vals (packet->data.failure.failures, senders->data,
       senders->len);
 
   return TRUE;
