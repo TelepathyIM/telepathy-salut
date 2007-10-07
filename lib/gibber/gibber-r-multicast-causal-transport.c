@@ -631,6 +631,8 @@ gibber_r_multicast_causal_transport_add_sender (
   g_signal_connect (sender, "received-control-packet",
       G_CALLBACK (control_packet_received_cb), transport);
 
+  g_signal_connect (sender, "repair-message",
+      G_CALLBACK (repair_message_cb), transport);
   g_signal_connect (sender, "repair-request",
       G_CALLBACK (repair_request_cb), transport);
 
