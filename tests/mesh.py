@@ -7,7 +7,6 @@ import random
 class BaseMeshNode(protocol.ProcessProtocol):
   delimiter = '\n'
   __buffer = ''
-  peers = []
 
   def __init__(self, name):
     self.name = name
@@ -15,6 +14,7 @@ class BaseMeshNode(protocol.ProcessProtocol):
                     "./test-r-multicast-transport-io",
                     ("test-r-multicast-transport-io", name), 
                     None)
+    self.peers = []
 
   def sendPacket(self, data):
     "Should be overridden"
@@ -47,13 +47,12 @@ class BaseMeshNode(protocol.ProcessProtocol):
 
 
   def newNode(self, data):
-    #print "New node: " + data
     if not data in self.peers:
       self.peers.append(data)
 
   def leftNode(self, data):
-    print "Left node: " + data
-    self.peers.remove(data)
+    node = data.rstrip()
+    self.peers.remove(node)
 
   def recvPacket(self, data):
     self.process.write("RECV:" + b64encode(data) + "\n")
@@ -122,12 +121,11 @@ class Link:
   def send(self, data):
     if random.random() > self.dropchance:
       self.target.recvPacket(data)
-    #else:
-      #print "packet dropped"
 
 class Mesh:
-  nodes = []
-  connections = {};
+  def __init__ (self):
+    self.nodes = []
+    self.connections = {}
 
   def connect(self, node):
     print node.name + " got connected"
