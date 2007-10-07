@@ -539,6 +539,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       result->data.data.payload_size = priv->max_data - priv->size;
       result->data.data.payload = g_memdup(priv->data + priv->size,
           result->data.data.payload_size);
+      priv->size += result->data.data.payload_size;
       break;
     case PACKET_TYPE_REPAIR_REQUEST:
       result->data.repair_request.sender_id =
@@ -572,6 +573,8 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     default:
       g_assert_not_reached();
   }
+
+  g_assert (priv->size == priv->max_data);
 
   return result;
 }
