@@ -514,6 +514,19 @@ guint32_array_contains (GArray *array, guint32 id) {
 }
 
 static void
+guint32_array_remove (GArray *array, guint32 id)
+{
+  int i;
+  for (i = 0; i < array->len; i++) {
+    if (g_array_index (array, guint32, i) == id)
+      {
+        g_array_remove_index_fast (array, i);
+        return;
+      }
+  }
+}
+
+static void
 add_to_senders (gpointer key, gpointer value, gpointer user_data) {
   struct HTData *data = (struct HTData *)user_data;
   MemberInfo *info = (MemberInfo *)value;
@@ -721,7 +734,9 @@ received_foreign_packet_cb (GibberRMulticastCausalTransport *ctransport,
       }
     }
 
-    if (packet->type != PACKET_TYPE_DATA || packet->data.data.packet_part == 0)
+    if (packet->type != PACKET_TYPE_BYE
+         && (packet->type != PACKET_TYPE_DATA
+             || packet->data.data.packet_part == 0))
       {
         /* Foreign packet, with no mention of us.. Mark them as unknown */
         update_foreign_member_list (self, packet, MEMBER_STATE_UNKNOWN);
@@ -848,6 +863,15 @@ find_unfailed_member (gpointer key, gpointer value, gpointer user_data)
 }
 
 static void
+remove_failure (gpointer key, gpointer value, gpointer user_data)
+{
+  guint32 *id = (guint32 *)user_data;
+  MemberInfo *info = (MemberInfo *)value;
+
+  guint32_array_remove (info->failures, *id);
+}
+
+static void
 check_failure_completion (GibberRMulticastTransport *self, guint32 id)
 {
   GibberRMulticastTransportPrivate *priv =
@@ -859,10 +883,14 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
       return;
     }
 
+  g_hash_table_foreach (priv->members, remove_failure, &id);
+
   DEBUG ("Failure process finished for %x\n", id);
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
       id);
   g_signal_emit (self, signals[LOST_SENDER], 0, sender->name);
+  gibber_r_multicast_causal_transport_remove_sender (priv->transport, id);
+  g_hash_table_remove (priv->members, &id);
 }
 
 static void
