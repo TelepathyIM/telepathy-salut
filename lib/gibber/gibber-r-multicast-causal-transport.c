@@ -726,7 +726,9 @@ handle_packet_depends (GibberRMulticastCausalTransport *self,
           g_hash_table_lookup (priv->senders,
               GUINT_TO_POINTER (sender_info->sender_id));
 
-      gibber_r_multicast_sender_seen (sender, sender_info->packet_id);
+      /* This might be a resent after which the sender was removed */
+      if (sender != NULL)
+        gibber_r_multicast_sender_seen (sender, sender_info->packet_id);
     }
 }
 
@@ -897,7 +899,7 @@ r_multicast_receive (GibberTransport *transport,
           default:
             g_assert_not_reached ();
         }
-  }
+    }
 
   if (error != NULL)
     g_error_free(error);
@@ -1219,5 +1221,15 @@ gibber_r_multicast_causal_transport_get_sender (
   g_assert (sender != NULL);
 
   return sender;
+}
+
+void
+gibber_r_multicast_causal_transport_remove_sender (
+    GibberRMulticastCausalTransport *transport, guint32 sender_id)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+
+  g_hash_table_remove (priv->senders, GUINT_TO_POINTER(sender_id));
 }
 
