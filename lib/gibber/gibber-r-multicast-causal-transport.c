@@ -952,7 +952,8 @@ add_depend (gpointer key,
   struct hash_data *d = (struct hash_data *) user_data;
   gboolean r;
 
-  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING
+      || sender->state == GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
     return;
 
   if (sender == d->sender)
@@ -1160,6 +1161,32 @@ void gibber_r_multicast_causal_transport_stop_attempt_join (
       attempt_join_id, FALSE);
 }
 
+void
+gibber_r_multicast_causal_transport_send_failure (
+    GibberRMulticastCausalTransport *transport,
+    GArray *failures)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+  GibberRMulticastPacket *packet;
+  gchar *str;
+
+  packet = gibber_r_multicast_packet_new (PACKET_TYPE_FAILURE,
+      priv->self->id, priv->transport->max_packet_size);
+
+  gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
+  gibber_r_multicast_packet_failure_add_senders (packet, failures,
+      NULL);
+  add_packet_depends (transport, packet);
+
+  str = g_array_uint32_to_str (failures);
+  DEBUG_TRANSPORT (transport, "Sending out failure: %s", str);
+  g_free (str);
+
+  gibber_r_multicast_sender_push (priv->self, packet);
+
+  sendout_packet (transport, packet, NULL);
+}
 
 void
 gibber_r_multicast_causal_transport_send_join (
