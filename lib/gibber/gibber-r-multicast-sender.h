@@ -42,6 +42,8 @@ typedef enum {
   GIBBER_R_MULTICAST_SENDER_STATE_PREPARING,
   /* Data is flowing */
   GIBBER_R_MULTICAST_SENDER_STATE_RUNNING,
+  /* Node has failed, still pop packets but stop depending on it */
+  GIBBER_R_MULTICAST_SENDER_STATE_FAILED,
 } GibberRMulticastSenderState;
 
 struct _GibberRMulticastSender {
