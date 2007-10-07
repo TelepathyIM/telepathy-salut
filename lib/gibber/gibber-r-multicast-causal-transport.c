@@ -720,7 +720,8 @@ handle_packet_depends (GibberRMulticastCausalTransport *self,
   for (i = 0 ; i <  packet->depends->len; i++)
     {
       GibberRMulticastPacketSenderInfo *sender_info =
-          g_array_index (packet->depends, GibberRMulticastPacketSenderInfo *, i);
+          g_array_index (packet->depends,
+              GibberRMulticastPacketSenderInfo *, i);
       GibberRMulticastSender *sender =
           g_hash_table_lookup (priv->senders,
               GUINT_TO_POINTER (sender_info->sender_id));
@@ -737,8 +738,8 @@ joining_multicast_receive (GibberRMulticastCausalTransport *self,
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
-  DEBUG_TRANSPORT (self, "Received packet type: 0x%x from %x", packet->type,
-      packet->sender);
+  DEBUG_TRANSPORT (self, "Received packet type: 0x%x from %x id %x",
+     packet->type, packet->sender, packet->packet_id);
 
   if (packet->sender == self->sender_id)
     {
