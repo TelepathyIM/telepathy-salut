@@ -65,6 +65,8 @@ class TestMesh(Mesh):
       self.done += 1
 
     if self.done == NUMNODES - 1:
+      for x in self.nodes:
+        x.stats()
       self.nodes[-1].disconnect()
 
 m = TestMesh()
