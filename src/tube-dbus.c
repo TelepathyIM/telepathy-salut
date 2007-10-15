@@ -105,7 +105,7 @@ struct _SalutTubeDBusPrivate
   DBusServer *dbus_srv;
   /* the connection to dbus_srv from a local client, or NULL */
   DBusConnection *dbus_conn;
-  /* mapping of contact handle -> D-Bus name */
+  /* mapping of contact handle -> D-Bus name (NULL for 1-1 D-Bus tubes) */
   GHashTable *dbus_names;
 
   gboolean dispose_has_run;
@@ -165,7 +165,10 @@ filter_cb (DBusConnection *conn,
       goto out;
     }
 
-  dbus_message_set_sender (msg, priv->dbus_local_name);
+  if (priv->dbus_local_name != NULL)
+    {
+      dbus_message_set_sender (msg, priv->dbus_local_name);
+    }
 
   if (!dbus_message_marshal (msg, &marshalled, &len))
     goto out;
@@ -254,7 +257,6 @@ salut_tube_dbus_init (SalutTubeDBus *self)
 {
   SalutTubeDBusPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       SALUT_TYPE_TUBE_DBUS, SalutTubeDBusPrivate);
-  gchar suffix[8];
 
   self->priv = priv;
 
@@ -262,15 +264,6 @@ salut_tube_dbus_init (SalutTubeDBus *self)
   priv->muc_connection = NULL;
   priv->dispose_has_run = FALSE;
 
-  /* XXX: check this doesn't clash with other bus names */
-  /* this has to contain at least two dot-separated components */
-
-  generate_ascii_string (8, suffix);
-  priv->dbus_local_name = g_strdup_printf (":1.%.8s", suffix);
-  priv->dbus_names = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-      NULL, g_free);
-
-  DEBUG ("local name: %s", priv->dbus_local_name);
 }
 
 static void
@@ -586,9 +579,18 @@ salut_tube_dbus_constructor (GType type,
       GibberBytestreamIBB *bytestream;
       GibberBytestreamState state;
       const gchar *peer_id;
+      gchar suffix[8];
 
       g_assert (priv->muc_connection != NULL);
       g_assert (priv->stream_id != NULL);
+
+      priv->dbus_names = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+          NULL, g_free);
+
+      generate_ascii_string (8, suffix);
+      priv->dbus_local_name = g_strdup_printf (":1.%.8s", suffix);
+
+      DEBUG ("local name: %s", priv->dbus_local_name);
 
       peer_id = tp_handle_inspect (handles_repo, priv->handle);
       if (priv->initiator == priv->self_handle)
@@ -616,6 +618,10 @@ salut_tube_dbus_constructor (GType type,
     {
       /* Private tube */
       g_assert (priv->muc_connection == NULL);
+
+      /* The D-Bus names mapping is used in muc tubes only */
+      priv->dbus_local_name = NULL;
+      priv->dbus_names = NULL;
     }
 
   return obj;
@@ -762,8 +768,6 @@ data_received_cb (GibberBytestreamIface *bytestream,
   DBusMessage *msg;
   DBusError error = {0,};
   guint32 serial;
-  const gchar *sender_name;
-  const gchar *destination;
 
   if (!priv->dbus_conn)
     {
@@ -783,36 +787,43 @@ data_received_cb (GibberBytestreamIface *bytestream,
       return;
     }
 
-  destination = dbus_message_get_destination (msg);
-  /* If destination is NULL this msg is broadcasted (signals) so we don't have
-   * to check it */
-  if (destination != NULL && tp_strdiff (priv->dbus_local_name, destination))
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
     {
-      /* This message is not intended to this tube.
-       * Discard it. */
-      DEBUG ("message not intended to this tube (destination = %s)",
-          destination);
-      dbus_message_unref (msg);
-      return;
-    }
+      const gchar *destination;
+      const gchar *sender_name;
 
-  sender = tp_handle_lookup (contact_repo, from, NULL, NULL);
-  if (sender == 0)
-    {
-      DEBUG ("unkown sender: %s", from);
-      dbus_message_unref (msg);
-      return;
-    }
+      destination = dbus_message_get_destination (msg);
+      /* If destination is NULL this msg is broadcasted (signals) so we don't
+       * have to check it */
+      if (destination != NULL && tp_strdiff (priv->dbus_local_name,
+            destination))
+        {
+          /* This message is not intended to this tube.
+           * Discard it. */
+          DEBUG ("message not intended to this tube (destination = %s)",
+              destination);
+          dbus_message_unref (msg);
+          return;
+        }
 
-  sender_name = g_hash_table_lookup (priv->dbus_names,
-      GUINT_TO_POINTER (sender));
+      sender = tp_handle_lookup (contact_repo, from, NULL, NULL);
+      if (sender == 0)
+        {
+          DEBUG ("unkown sender: %s", from);
+          dbus_message_unref (msg);
+          return;
+        }
 
-  if (tp_strdiff (sender_name, dbus_message_get_sender (msg)))
-    {
-      DEBUG ("invalid sender %s (expected %s for sender handle %d)",
-             dbus_message_get_sender (msg), sender_name, sender);
-      dbus_message_unref (msg);
-      return;
+      sender_name = g_hash_table_lookup (priv->dbus_names,
+          GUINT_TO_POINTER (sender));
+
+      if (tp_strdiff (sender_name, dbus_message_get_sender (msg)))
+        {
+          DEBUG ("invalid sender %s (expected %s for sender handle %d)",
+                 dbus_message_get_sender (msg), sender_name, sender);
+          dbus_message_unref (msg);
+          return;
+        }
     }
 
   /* XXX: what do do if this returns FALSE? */
