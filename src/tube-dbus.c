@@ -284,19 +284,21 @@ get_tube_state (SalutTubeDBus *self)
 
   g_object_get (priv->bytestream, "state", &bytestream_state, NULL);
 
-  if (bytestream_state == GIBBER_BYTESTREAM_STATE_OPEN)
-    return TP_TUBE_STATE_OPEN;
-
-  else if (bytestream_state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING ||
-      bytestream_state == GIBBER_BYTESTREAM_STATE_ACCEPTED)
-    return TP_TUBE_STATE_LOCAL_PENDING;
-
-  else if (bytestream_state == GIBBER_BYTESTREAM_STATE_INITIATING)
-    return TP_TUBE_STATE_REMOTE_PENDING;
-
-  else
-    g_assert_not_reached ();
-  return TP_TUBE_STATE_REMOTE_PENDING;
+  switch (bytestream_state)
+    {
+      case GIBBER_BYTESTREAM_STATE_OPEN:
+        return TP_TUBE_STATE_OPEN;
+        break;
+      case GIBBER_BYTESTREAM_STATE_LOCAL_PENDING:
+      case GIBBER_BYTESTREAM_STATE_ACCEPTED:
+        return TP_TUBE_STATE_LOCAL_PENDING;
+        break;
+      case GIBBER_BYTESTREAM_STATE_INITIATING:
+        return TP_TUBE_STATE_REMOTE_PENDING;
+        break;
+      default:
+        g_assert_not_reached ();
+    }
 }
 
 static void
