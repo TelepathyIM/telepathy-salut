@@ -22,8 +22,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
@@ -39,9 +41,6 @@
 #include "namespaces.h"
 #include "tube-iface.h"
 
-/*
-#include "bytestream-factory.h"
-*/
 
 static void
 tube_iface_init (gpointer g_iface, gpointer iface_data);
@@ -100,6 +99,8 @@ struct _SalutTubeDBusPrivate
   gchar *dbus_local_name;
   /* the address that we are listening for D-Bus connections on */
   gchar *dbus_srv_addr;
+  /* the path of the UNIX socket used by the D-Bus server */
+  gchar *socket_path;
   /* the server that's listening on dbus_srv_addr */
   DBusServer *dbus_srv;
   /* the connection to dbus_srv from a local client, or NULL */
@@ -202,23 +203,46 @@ new_connection_cb (DBusServer *server,
 static void
 tube_dbus_open (SalutTubeDBus *self)
 {
+#define SERVER_LISTEN_MAX_TRIES 5
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
-  DBusError error = {0,};
-  gchar suffix[8];
+  guint i;
 
   g_signal_connect (priv->bytestream, "data-received",
       G_CALLBACK (data_received_cb), self);
 
-  generate_ascii_string (8, suffix);
-  priv->dbus_srv_addr = g_strdup_printf (
-      "unix:path=/tmp/dbus-salut-%.8s", suffix);
-  DEBUG ("listening on %s", priv->dbus_srv_addr);
-  priv->dbus_srv = dbus_server_listen (priv->dbus_srv_addr, &error);
+  for (i = 0; i < SERVER_LISTEN_MAX_TRIES; i++)
+    {
+      gchar suffix[8];
+      DBusError error;
 
-  /* XXX: if dbus_server_listen fails, we should retry with different
-   * addresses, then close the tube if we give up
-   */
-  g_assert (priv->dbus_srv);
+      g_free (priv->dbus_srv_addr);
+      g_free (priv->socket_path);
+
+      generate_ascii_string (8, suffix);
+      priv->socket_path = g_strdup_printf ("%s/dbus-salut-%.8s",
+          g_get_tmp_dir (), suffix);
+      priv->dbus_srv_addr = g_strdup_printf ("unix:path=%s",
+          priv->socket_path);
+
+      dbus_error_init (&error);
+      priv->dbus_srv = dbus_server_listen (priv->dbus_srv_addr, &error);
+
+      if (priv->dbus_srv_addr != NULL)
+        break;
+
+      DEBUG ("dbus_server_listen failed (try %u): %s: %s", i, error.name,
+          error.message);
+      dbus_error_free (&error);
+    }
+
+  if (priv->dbus_srv_addr == NULL)
+    {
+      DEBUG ("all attempts failed. Close the tube");
+      salut_tube_iface_accept (SALUT_TUBE_IFACE (self));
+      return;
+    }
+
+  DEBUG ("listening on %s", priv->dbus_srv_addr);
 
   dbus_server_set_new_connection_function (priv->dbus_srv, new_connection_cb,
       self, NULL);
@@ -337,11 +361,21 @@ salut_tube_dbus_dispose (GObject *object)
   if (priv->dbus_srv)
     dbus_server_unref (priv->dbus_srv);
 
-  if (priv->dbus_srv_addr)
-    g_free (priv->dbus_srv_addr);
+  if (priv->socket_path != NULL)
+    {
+      if (g_unlink (priv->socket_path) != 0)
+        {
+          DEBUG ("unlink of %s failed: %s", priv->socket_path,
+              g_strerror (errno));
+        }
+    }
 
-  if (priv->dbus_local_name)
-    g_free (priv->dbus_local_name);
+  g_free (priv->dbus_srv_addr);
+  priv->dbus_srv_addr = NULL;
+  g_free (priv->socket_path);
+  priv->socket_path = NULL;
+  g_free (priv->dbus_local_name);
+  priv->dbus_local_name = NULL;
 
   if (priv->dbus_names)
     {
