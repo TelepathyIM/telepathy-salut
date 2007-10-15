@@ -2,7 +2,20 @@
 
 from twisted.internet import reactor, protocol
 from base64 import b64encode, b64decode
+from struct import unpack
 import random
+
+packettypes = {    0: "Whois request",
+                   1: "Whois reply",
+                   2: "Repair request",
+                   3: "Session",
+                 0xf: "Data",
+                0x10: "No data",
+                0x11: "Failure",
+                0x12: "Attempt join",
+                0x13: "Join",
+                0x14: "Bye"
+}
 
 class BaseMeshNode(protocol.ProcessProtocol):
   delimiter = '\n'
@@ -15,13 +28,22 @@ class BaseMeshNode(protocol.ProcessProtocol):
                     ("test-r-multicast-transport-io", name), 
                     None)
     self.peers = []
+    self.packets = {}
 
   def sendPacket(self, data):
     "Should be overridden"
     print "Should send: " + data
 
   def __sendPacket(self, data):
-    return self.sendPacket(b64decode(data))
+    binary = b64decode(data)
+    type = unpack("B", binary[0])[0]
+    self.packets[type] = self.packets.get(type, 0) + 1
+    return self.sendPacket(binary)
+
+  def stats(self):
+    print "-------" + self.name + "-------"
+    for (a,b) in self.packets.iteritems():
+      print packettypes[a] + ":\t" + str(b)
 
   def gotOutput(self, sender, data):
     "Should be overridden"
