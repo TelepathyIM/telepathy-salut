@@ -123,9 +123,10 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
     GibberXmppNode *tube_node, TpTubeType *type, TpHandle *initiator_handle,
     const gchar **service, GHashTable **parameters, gboolean *offering,
     guint *tube_id);
-static void create_new_tube (SalutTubesChannel *self, TpTubeType type,
-    TpHandle initiator, const gchar *service, GHashTable *parameters,
-    const gchar *stream_id, guint tube_id);
+static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
+    TpTubeType type, TpHandle initiator, const gchar *service,
+    GHashTable *parameters, const gchar *stream_id, guint tube_id,
+    GibberBytestreamIface *bytestream);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -573,10 +574,8 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
           if (extract_tube_information (self, tube_node, &type,
                 &initiator_handle, &service, &parameters, NULL, &tube_id))
             {
-              create_new_tube (self, type, initiator_handle,
-                  service, parameters, stream_id, tube_id);
-              tube = g_hash_table_lookup (priv->tubes,
-                  GUINT_TO_POINTER (tube_id));
+              tube = create_new_tube (self, type, initiator_handle,
+                  service, parameters, stream_id, tube_id, NULL);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -794,14 +793,15 @@ tube_opened_cb (SalutTubeIface *tube,
       TP_TUBE_STATE_OPEN);
 }
 
-static void
+static SalutTubeIface *
 create_new_tube (SalutTubesChannel *self,
                  TpTubeType type,
                  TpHandle initiator,
                  const gchar *service,
                  GHashTable *parameters,
                  const gchar *stream_id,
-                 guint tube_id)
+                 guint tube_id,
+                 GibberBytestreamIface *bytestream)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
@@ -816,7 +816,7 @@ create_new_tube (SalutTubesChannel *self,
     case TP_TUBE_TYPE_DBUS:
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
-          initiator, service, parameters, stream_id, tube_id));
+          initiator, service, parameters, stream_id, tube_id, bytestream));
       break;
       /*
     case TP_TUBE_TYPE_STREAM_UNIX:
@@ -854,6 +854,8 @@ create_new_tube (SalutTubesChannel *self,
 
   if (muc_connection != NULL)
     g_object_unref (muc_connection);
+
+  return tube;
 }
 
 static gboolean
@@ -1189,10 +1191,8 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   stream_id = generate_stream_id (self);
   tube_id = generate_tube_id ();
 
-  create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      service, parameters_copied, (const gchar*) stream_id, tube_id);
-
-  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+  tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
+      service, parameters_copied, (const gchar*) stream_id, tube_id, NULL);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 

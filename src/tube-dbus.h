@@ -24,6 +24,7 @@
 
 #include "salut-connection.h"
 #include <gibber/gibber-muc-connection.h>
+#include <gibber/gibber-bytestream-iface.h>
 
 G_BEGIN_DECLS
 
@@ -63,7 +64,7 @@ salut_tube_dbus_new (SalutConnection *conn, TpHandle handle,
     TpHandleType handle_type, TpHandle self_handle,
     GibberMucConnection *muc_connection, TpHandle initiator,
     const gchar *service, GHashTable *parameters, const gchar *stream_id,
-    guint id);
+    guint id, GibberBytestreamIface *bytestream);
 
 G_END_DECLS
 
