@@ -123,10 +123,9 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
     GibberXmppNode *tube_node, TpTubeType *type, TpHandle *initiator_handle,
     const gchar **service, GHashTable **parameters, gboolean *offering,
     guint *tube_id);
-static void
-create_new_tube (SalutTubesChannel *self, TpTubeType type, TpHandle initiator,
-    const gchar *service, GHashTable *parameters, const gchar *stream_id,
-    guint tube_id);
+static void create_new_tube (SalutTubesChannel *self, TpTubeType type,
+    TpHandle initiator, const gchar *service, GHashTable *parameters,
+    const gchar *stream_id, guint tube_id);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -1201,109 +1200,6 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
 }
 
 /**
- * salut_tubes_channel_offer_stream_unix_tube
- *
- * Implements D-Bus method OfferStreamUnixTube
- * on org.freedesktop.Telepathy.Channel.Type.Tubes
- */
-#if 0
-static void
-salut_tubes_channel_offer_stream_unix_tube (TpSvcChannelTypeTubes *iface,
-                                             const gchar *service,
-                                             const gchar *socket,
-                                             GHashTable *parameters,
-                                             DBusGMethodInvocation *context)
-{
-  GError error = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-      "Stream Unix tube not implemented" };
-
-  dbus_g_method_return_error (context, &error);
-  return;
-  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
-  SalutTubesChannelPrivate *priv;
-  TpBaseConnection *base;
-  guint tube_id;
-  SalutTubeIface *tube;
-  GHashTable *parameters_copied;
-  gchar *stream_id;
-  struct stat stat_buff;
-
-  g_assert (SALUT_IS_TUBES_CHANNEL (self));
-
-  priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  base = (TpBaseConnection*) priv->conn;
-
-  if (g_stat (socket, &stat_buff) == -1)
-    {
-      GError *error = NULL;
-
-      DEBUG ("Error calling stat on socket: %s", g_strerror (errno));
-
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "%s: %s",
-          socket, g_strerror (errno));
-
-      dbus_g_method_return_error (context, error);
-
-      g_error_free (error);
-      return;
-    }
-
-  if (!S_ISSOCK (stat_buff.st_mode))
-    {
-      GError *error = NULL;
-
-      DEBUG ("%s is not a socket", socket);
-
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-          "%s is not a socket", socket);
-
-      dbus_g_method_return_error (context, error);
-
-      g_error_free (error);
-      return;
-    }
-
-  parameters_copied = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-      (GDestroyNotify) tp_g_value_slice_free);
-  g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
-
-  stream_id = salut_bytestream_factory_generate_stream_id ();
-  tube_id = generate_tube_id ();
-
-  create_new_tube (self, TP_TUBE_TYPE_STREAM_UNIX, priv->self_handle,
-      service, parameters_copied, (const gchar*) stream_id, tube_id);
-
-  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
-
-  g_object_set (tube, "socket", socket, NULL);
-
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      /* Stream initiation */
-      GError *error = NULL;
-
-      if (!start_stream_initiation (self, tube, stream_id, &error))
-        {
-          salut_tube_iface_close (tube);
-
-          dbus_g_method_return_error (context, error);
-
-          g_error_free (error);
-          g_free (stream_id);
-          return;
-        }
-    }
-
-  g_signal_connect (tube, "new-connection",
-      G_CALLBACK (stream_unix_tube_new_connection_cb), self);
-
-  tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
-
-  g_free (stream_id);
-}
-#endif
-
-/**
  * salut_tubes_channel_accept_d_bus_tube
  *
  * Implements D-Bus method AcceptDBusTube
@@ -1555,76 +1451,15 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
 }
 
 /**
- * salut_tubes_channel_get_stream_unix_socket_address
- *
- * Implements D-Bus method GetStreamSocketAddress
- * on org.freedesktop.Telepathy.Channel.Type.Tubes
- */
-#if 0
-static void
-salut_tubes_channel_get_stream_unix_socket_address (TpSvcChannelTypeTubes *iface,
-                                                    guint id,
-                                                    DBusGMethodInvocation *context)
-{
-  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
-  SalutTubesChannelPrivate *priv  = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  SalutTubeIface *tube;
-  TpTubeType type;
-  TpTubeState state;
-  gchar *socket;
-
-  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
-  if (tube == NULL)
-    {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
-
-      dbus_g_method_return_error (context, &error);
-      return;
-    }
-
-  g_object_get (tube,
-      "type", &type,
-      "state", &state,
-      NULL);
-
-  if (type != TP_TUBE_TYPE_STREAM_UNIX)
-    {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-          "Tube is not a Stream tube" };
-
-      dbus_g_method_return_error (context, &error);
-      return;
-    }
-
-  if (state != TP_TUBE_STATE_OPEN)
-    {
-      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "Tube is not open" };
-
-      dbus_g_method_return_error (context, &error);
-      return;
-    }
-
-  g_object_get (tube,
-      "socket", &socket,
-      NULL);
-
-  tp_svc_channel_type_tubes_return_from_get_stream_unix_socket_address (
-      context, socket);
-
-  g_free (socket);
-}
-#endif
-
-/**
  * salut_tubes_channel_get_available_stream_tube_types
  *
  * Implements D-Bus method GetAvailableStreamTubeTypes
  * on org.freedesktop.Telepathy.Channel.Type.Tubes
  */
 static void
-salut_tubes_channel_get_available_stream_tube_types (TpSvcChannelTypeTubes *iface,
-                                                     DBusGMethodInvocation *context)
+salut_tubes_channel_get_available_stream_tube_types (
+    TpSvcChannelTypeTubes *iface,
+    DBusGMethodInvocation *context)
 {
   GHashTable *ret;
 
@@ -1736,11 +1571,6 @@ salut_tubes_channel_dispose (GObject *object)
       tp_external_group_mixin_finalize (object);
 
   salut_tubes_channel_close (self);
-
-  /*
-  g_object_unref (priv->contact);
-  priv->contact = NULL;
-  */
 
   if (G_OBJECT_CLASS (salut_tubes_channel_parent_class)->dispose)
     G_OBJECT_CLASS (salut_tubes_channel_parent_class)->dispose (object);
@@ -1878,7 +1708,7 @@ static void
 tubes_iface_init (gpointer g_iface,
                   gpointer iface_data)
 {
-  TpSvcChannelTypeTubesClass *klass = (TpSvcChannelTypeTubesClass *)g_iface;
+  TpSvcChannelTypeTubesClass *klass = (TpSvcChannelTypeTubesClass *) g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_type_tubes_implement_##x (\
     klass, salut_tubes_channel_##x)
