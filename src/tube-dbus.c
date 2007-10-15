@@ -259,11 +259,6 @@ salut_tube_dbus_init (SalutTubeDBus *self)
       SALUT_TYPE_TUBE_DBUS, SalutTubeDBusPrivate);
 
   self->priv = priv;
-
-  priv->bytestream = NULL;
-  priv->muc_connection = NULL;
-  priv->dispose_has_run = FALSE;
-
 }
 
 static void
