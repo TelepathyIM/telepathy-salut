@@ -246,7 +246,7 @@ tube_dbus_open (SalutTubeDBus *self)
   if (priv->dbus_srv_addr == NULL)
     {
       DEBUG ("all attempts failed. Close the tube");
-      salut_tube_iface_accept (SALUT_TUBE_IFACE (self));
+      salut_tube_iface_accept (SALUT_TUBE_IFACE (self), NULL);
       return;
     }
 
@@ -996,8 +996,9 @@ salut_tube_dbus_new (SalutConnection *conn,
  *
  * Implements salut_tube_iface_accept on SalutTubeIface
  */
-static void
-salut_tube_dbus_accept (SalutTubeIface *tube)
+static gboolean
+salut_tube_dbus_accept (SalutTubeIface *tube,
+                        GError **error)
 {
   SalutTubeDBus *self = SALUT_TUBE_DBUS (tube);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
@@ -1010,7 +1011,7 @@ salut_tube_dbus_accept (SalutTubeIface *tube)
       NULL);
 
   if (state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
-    return;
+    return TRUE;
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
@@ -1024,6 +1025,8 @@ salut_tube_dbus_accept (SalutTubeIface *tube)
           "state", GIBBER_BYTESTREAM_STATE_OPEN,
           NULL);
     }
+
+  return TRUE;
 }
 
 /*

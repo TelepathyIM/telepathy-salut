@@ -1255,7 +1255,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  salut_tube_iface_accept (tube);
+  salut_tube_iface_accept (tube, NULL);
 
   update_tubes_info (self, FALSE);
 

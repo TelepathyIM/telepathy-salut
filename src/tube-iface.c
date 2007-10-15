@@ -23,13 +23,14 @@
 
 #include <glib.h>
 
-void
-salut_tube_iface_accept (SalutTubeIface *self)
+gboolean
+salut_tube_iface_accept (SalutTubeIface *self,
+                         GError **error)
 {
-  void (*virtual_method)(SalutTubeIface *) =
+  gboolean (*virtual_method)(SalutTubeIface *, GError **) =
     SALUT_TUBE_IFACE_GET_CLASS (self)->accept;
   g_assert (virtual_method != NULL);
-  virtual_method (self);
+  return virtual_method (self, error);
 }
 
 void

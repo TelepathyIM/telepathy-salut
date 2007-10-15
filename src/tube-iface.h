@@ -32,7 +32,7 @@ typedef struct _SalutTubeIfaceClass SalutTubeIfaceClass;
 struct _SalutTubeIfaceClass {
   GTypeInterface parent;
 
-  void (*accept) (SalutTubeIface *tube);
+  gboolean (*accept) (SalutTubeIface *tube, GError **error);
   void (*close) (SalutTubeIface *tube);
   void (*add_bytestream) (SalutTubeIface *tube,
       GibberBytestreamIface *bytestream);
@@ -51,8 +51,8 @@ GType salut_tube_iface_get_type (void);
   (G_TYPE_INSTANCE_GET_INTERFACE ((obj), SALUT_TYPE_TUBE_IFACE,\
                               SalutTubeIfaceClass))
 
-void
-salut_tube_iface_accept (SalutTubeIface *tube);
+gboolean
+salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
 
 void
 salut_tube_iface_close (SalutTubeIface *tube);
