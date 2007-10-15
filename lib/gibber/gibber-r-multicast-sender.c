@@ -628,10 +628,9 @@ pop_packet(GibberRMulticastSender *sender) {
         sender->next_output_data_packet++;
       }
     popped = TRUE;
-    goto out;
+  } else {
+    popped = pop_data_packet (sender, to_pop);
   }
-
-  popped = pop_data_packet (sender, to_pop);
 
 out:
   return popped;
@@ -640,6 +639,7 @@ out:
 static void
 senders_updated(gpointer key, gpointer value, gpointer user_data) {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
+
   gibber_r_multicast_senders_updated(sender);
 }
 
@@ -664,7 +664,6 @@ pop_packets(GibberRMulticastSender *sender) {
     {
       g_hash_table_foreach(priv->senders, senders_updated, NULL);
     }
-
 }
 
 void
