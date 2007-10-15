@@ -37,7 +37,6 @@
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 
-#include "extensions/extensions.h"
 #include "namespaces.h"
 
 #define DEBUG_FLAG DEBUG_MUC
@@ -687,7 +686,7 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
       *ret = TP_CHANNEL_IFACE (text_chan);
     }
 #ifdef ENABLE_DBUS_TUBES
-  else if (!tp_strdiff (chan_type, SALUT_IFACE_CHANNEL_TYPE_TUBES))
+  else if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
       SalutTubesChannel *tubes_chan;
 

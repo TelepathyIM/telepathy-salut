@@ -35,7 +35,6 @@
 
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
-#include "extensions/extensions.h"
 #include "salut-connection.h"
 #include "namespaces.h"
 #include "tube-iface.h"
@@ -261,7 +260,7 @@ unref_handle_foreach (gpointer key,
   tp_handle_unref (contact_repo, handle);
 }
 
-static SalutTubeState
+static TpTubeState
 get_tube_state (SalutTubeDBus *self)
 {
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
@@ -269,23 +268,23 @@ get_tube_state (SalutTubeDBus *self)
 
   if (priv->bytestream == NULL)
     /* bytestream not yet created as we're waiting for the SI reply */
-    return SALUT_TUBE_STATE_REMOTE_PENDING;
+    return TP_TUBE_STATE_REMOTE_PENDING;
 
   g_object_get (priv->bytestream, "state", &bytestream_state, NULL);
 
   if (bytestream_state == GIBBER_BYTESTREAM_STATE_OPEN)
-    return SALUT_TUBE_STATE_OPEN;
+    return TP_TUBE_STATE_OPEN;
 
   else if (bytestream_state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING ||
       bytestream_state == GIBBER_BYTESTREAM_STATE_ACCEPTED)
-    return SALUT_TUBE_STATE_LOCAL_PENDING;
+    return TP_TUBE_STATE_LOCAL_PENDING;
 
   else if (bytestream_state == GIBBER_BYTESTREAM_STATE_INITIATING)
-    return SALUT_TUBE_STATE_REMOTE_PENDING;
+    return TP_TUBE_STATE_REMOTE_PENDING;
 
   else
     g_assert_not_reached ();
-  return SALUT_TUBE_STATE_REMOTE_PENDING;
+  return TP_TUBE_STATE_REMOTE_PENDING;
 }
 
 static void
@@ -416,7 +415,7 @@ salut_tube_dbus_get_property (GObject *object,
         g_value_set_string (value, priv->stream_id);
         break;
       case PROP_TYPE:
-        g_value_set_uint (value, SALUT_TUBE_TYPE_DBUS);
+        g_value_set_uint (value, TP_TUBE_TYPE_DBUS);
         break;
       case PROP_INITIATOR:
         g_value_set_uint (value, priv->initiator);
