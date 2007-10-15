@@ -45,6 +45,7 @@
 #include "salut-muc-channel.h"
 #include "tube-iface.h"
 #include "tube-dbus.h"
+#include "tube-stream.h"
 
 #define SALUT_CHANNEL_TUBE_TYPE \
     (dbus_g_type_get_struct ("GValueArray", \
@@ -848,13 +849,11 @@ create_new_tube (SalutTubesChannel *self,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
           initiator, service, parameters, tube_id, bytestream));
       break;
-      /*
-    case TP_TUBE_TYPE_STREAM_UNIX:
+    case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
           priv->handle, priv->handle_type, priv->self_handle, initiator,
           service, parameters, tube_id));
       break;
-      */
     default:
       g_assert_not_reached ();
     }
@@ -909,12 +908,10 @@ extract_tube_information (SalutTubesChannel *self,
       _type = gibber_xmpp_node_get_attribute (tube_node, "type");
 
 
-      /*
       if (!tp_strdiff (_type, "stream"))
         {
-          *type = TP_TUBE_TYPE_STREAM_UNIX;
+          *type = TP_TUBE_TYPE_STREAM;
         }
-        */
       if (!tp_strdiff (_type, "dbus"))
         {
           *type = TP_TUBE_TYPE_DBUS;
@@ -1062,11 +1059,9 @@ publish_tube_in_node (SalutTubesChannel *self,
 
         }
         break;
-        /*
-      case TP_TUBE_TYPE_STREAM_UNIX:
+      case TP_TUBE_TYPE_STREAM:
         gibber_xmpp_node_set_attribute (node, "type", "stream");
         break;
-        */
       default:
         g_assert_not_reached ();
     }
@@ -1451,6 +1446,164 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
   g_ptr_array_free (ret, TRUE);
 }
 
+#if 0
+static gboolean
+send_new_stream_tube_msg (SalutTubesChannel *self,
+                          SalutTubeIface *tube,
+                          const gchar *stream_id,
+                          GError **error)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  GibberXmppNode *tube_node = NULL;
+  GibberXmppStanza *msg;
+  TpHandleRepoIface *contact_repo;
+  const gchar *jid;
+  TpTubeType type;
+  gboolean result;
+
+  g_object_get (tube, "type", &type, NULL);
+  g_assert (type == TP_TUBE_TYPE_STREAM);
+
+  contact_repo = tp_base_connection_get_handles (
+     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+  jid = tp_handle_inspect (contact_repo, priv->handle);
+
+  msg = gibber_xmpp_stanza_build (
+      GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
+      priv->conn->name, jid,
+      GIBBER_NODE, "tube",
+        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+      GIBBER_NODE_END,
+      GIBBER_NODE, "amp",
+        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_AMP,
+        GIBBER_NODE, "rule",
+          GIBBER_NODE_ATTRIBUTE, "condition", "deliver-at",
+          GIBBER_NODE_ATTRIBUTE, "value", "stored",
+          GIBBER_NODE_ATTRIBUTE, "action", "error",
+        GIBBER_NODE_END,
+        GIBBER_NODE, "rule",
+          GIBBER_NODE_ATTRIBUTE, "condition", "match-resource",
+          GIBBER_NODE_ATTRIBUTE, "value", "exact",
+          GIBBER_NODE_ATTRIBUTE, "action", "error",
+        GIBBER_NODE_END,
+      GIBBER_NODE_END,
+      GIBBER_STANZA_END);
+
+  tube_node = gibber_xmpp_node_get_child_ns (msg->node, "tube",
+      GIBBER_TELEPATHY_NS_TUBES);
+  g_assert (tube_node != NULL);
+
+  publish_tube_in_node (self, tube_node, tube);
+
+  /* TODO: send the stanza using the p2p connection */
+
+  g_object_unref (msg);
+  return result;
+}
+#endif
+
+static void
+stream_tube_new_connection_cb (SalutTubeIface *tube,
+                               guint contact,
+                               gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  guint tube_id;
+  TpTubeType type;
+
+  g_object_get (tube,
+      "id", &tube_id,
+      "type", &type,
+      NULL);
+
+  g_assert (type == TP_TUBE_TYPE_STREAM);
+
+  tp_svc_channel_type_tubes_emit_stream_tube_new_connection (self,
+      tube_id, contact);
+}
+
+/**
+ * salut_tubes_channel_offer_stream_tube
+ *
+ * Implements D-Bus method OfferStreamTube
+ * on org.freedesktop.Telepathy.Channel.Type.Tubes
+ */
+static void
+salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
+                                        const gchar *service,
+                                        GHashTable *parameters,
+                                        guint address_type,
+                                        const GValue *address,
+                                        guint access_control,
+                                        const GValue *access_control_param,
+                                        DBusGMethodInvocation *context)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
+  SalutTubesChannelPrivate *priv;
+  TpBaseConnection *base;
+  guint tube_id;
+  SalutTubeIface *tube;
+  GHashTable *parameters_copied;
+  gchar *stream_id;
+  GError *error = NULL;
+
+  priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  base = (TpBaseConnection*) priv->conn;
+
+  if (!salut_tube_stream_check_params (address_type, address,
+        access_control, access_control_param, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  parameters_copied = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+      (GDestroyNotify) tp_g_value_slice_free);
+  g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
+
+  stream_id = generate_stream_id (self);
+  tube_id = generate_tube_id ();
+
+  tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
+      service, parameters_copied, (const gchar *) stream_id, tube_id, NULL);
+
+  g_object_set (tube,
+      "address-type", address_type,
+      "address", address,
+      "access-control", access_control,
+      "access-control-param", access_control_param,
+      NULL);
+
+#if 0
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      /* Stream initiation */
+      GError *error = NULL;
+
+      if (!send_new_stream_tube_msg (self, tube, stream_id, &error))
+        {
+          salut_tube_iface_close (tube);
+
+          dbus_g_method_return_error (context, error);
+
+          g_error_free (error);
+          g_free (stream_id);
+          return;
+        }
+    }
+#endif
+
+  g_signal_connect (tube, "new-connection",
+      G_CALLBACK (stream_tube_new_connection_cb), self);
+
+  tp_svc_channel_type_tubes_return_from_offer_stream_tube (context,
+      tube_id);
+
+  g_free (stream_id);
+}
+
 /**
  * salut_tubes_channel_get_available_stream_tube_types
  *
@@ -1720,8 +1873,8 @@ tubes_iface_init (gpointer g_iface,
   IMPLEMENT(accept_d_bus_tube);
   IMPLEMENT(get_d_bus_tube_address);
   IMPLEMENT(get_d_bus_names);
-  /*
   IMPLEMENT(offer_stream_tube);
+  /*
   IMPLEMENT(accept_stream_tube);
   IMPLEMENT(get_stream_tube_socket_address);
   */
