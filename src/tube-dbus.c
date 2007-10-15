@@ -108,6 +108,11 @@ struct _SalutTubeDBusPrivate
   /* mapping of contact handle -> D-Bus name (NULL for 1-1 D-Bus tubes) */
   GHashTable *dbus_names;
 
+  /* Message reassembly buffer (CONTACT tubes only) */
+  GString *reassembly_buffer;
+  /* Number of bytes that will be in the next message, 0 if unknown */
+  guint32 reassembly_bytes_needed;
+
   gboolean dispose_has_run;
 };
 
@@ -382,6 +387,9 @@ salut_tube_dbus_dispose (GObject *object)
       priv->muc_connection = NULL;
     }
 
+  if (priv->reassembly_buffer)
+    g_string_free (priv->reassembly_buffer, TRUE);
+
   tp_handle_unref (contact_repo, priv->initiator);
 
   priv->dispose_has_run = TRUE;
@@ -619,6 +627,10 @@ salut_tube_dbus_constructor (GType type,
       /* The D-Bus names mapping is used in muc tubes only */
       priv->dbus_local_name = NULL;
       priv->dbus_names = NULL;
+
+      /* For contact tubes we need to be able to reassemble messages. */
+      priv->reassembly_buffer = g_string_new ("");
+      priv->reassembly_bytes_needed = 0;
     }
 
   return obj;
@@ -752,16 +764,12 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 }
 
 static void
-data_received_cb (GibberBytestreamIface *bytestream,
-                  const gchar *from,
-                  GString *data,
-                  gpointer user_data)
+message_received (SalutTubeDBus *tube,
+                  TpHandle sender,
+                  const char *data,
+                  size_t len)
 {
-  SalutTubeDBus *tube = SALUT_TUBE_DBUS (user_data);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
-  TpHandle sender;
   DBusMessage *msg;
   DBusError error = {0,};
   guint32 serial;
@@ -772,15 +780,14 @@ data_received_cb (GibberBytestreamIface *bytestream,
       return;
     }
 
-  /* XXX: This naïvely assumes that the underlying transport always gives
-   * us complete messages. This is true for IBB, at least.
-   */
+  msg = dbus_message_demarshal (data, len, &error);
 
-  msg = dbus_message_demarshal (data->str, data->len, &error);
-  if (!msg)
+  if (msg == NULL)
     {
       /* message was corrupted */
-      DEBUG ("received corrupted message from %s", from);
+      DEBUG ("received corrupted message from %d: %s: %s", sender,
+          error.name, error.message);
+      dbus_error_free (&error);
       return;
     }
 
@@ -799,16 +806,7 @@ data_received_cb (GibberBytestreamIface *bytestream,
            * Discard it. */
           DEBUG ("message not intended to this tube (destination = %s)",
               destination);
-          dbus_message_unref (msg);
-          return;
-        }
-
-      sender = tp_handle_lookup (contact_repo, from, NULL, NULL);
-      if (sender == 0)
-        {
-          DEBUG ("unkown sender: %s", from);
-          dbus_message_unref (msg);
-          return;
+          goto unref;
         }
 
       sender_name = g_hash_table_lookup (priv->dbus_names,
@@ -818,15 +816,153 @@ data_received_cb (GibberBytestreamIface *bytestream,
         {
           DEBUG ("invalid sender %s (expected %s for sender handle %d)",
                  dbus_message_get_sender (msg), sender_name, sender);
-          dbus_message_unref (msg);
-          return;
+          goto unref;
         }
     }
 
   /* XXX: what do do if this returns FALSE? */
   dbus_connection_send (priv->dbus_conn, msg, &serial);
 
+unref:
   dbus_message_unref (msg);
+}
+
+static guint32
+collect_le32 (char *str)
+{
+  unsigned char *bytes = (unsigned char *) str;
+
+  return bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
+}
+
+static guint32
+collect_be32 (char *str)
+{
+  unsigned char *bytes = (unsigned char *) str;
+
+  return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 24) | bytes[3];
+}
+
+static void
+data_received_cb (GibberBytestreamIface *stream,
+                  const gchar *from,
+                  GString *data,
+                  gpointer user_data)
+{
+  SalutTubeDBus *tube = SALUT_TUBE_DBUS (user_data);
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  TpHandle sender;
+
+  sender = tp_handle_lookup (contact_repo, from, NULL, NULL);
+  if (sender == 0)
+    {
+      DEBUG ("unkown sender: %s", from);
+      return;
+    }
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      GString *buf = priv->reassembly_buffer;
+
+      g_assert (buf != NULL);
+
+      g_string_append_len (buf, data->str, data->len);
+      DEBUG ("Received %" G_GSIZE_FORMAT " bytes, so we now have %"
+          G_GSIZE_FORMAT " bytes in reassembly buffer", data->len, buf->len);
+
+      /* Each D-Bus message has a 16-byte fixed header, in which
+       *
+       * * byte 0 is 'l' (ell) or 'B' for endianness
+       * * bytes 4-7 are body length "n" in bytes in that endianness
+       * * bytes 12-15 are length "m" of param array in bytes in that
+       *   endianness
+       *
+       * followed by m + n + ((8 - (m % 8)) % 8) bytes of other content.
+       */
+
+      while (buf->len >= 16)
+        {
+          guint32 body_length, params_length, m;
+
+          /* see if we have a whole message and have already calculated
+           * how many bytes it needs */
+
+          if (priv->reassembly_bytes_needed != 0)
+            {
+              if (buf->len >= priv->reassembly_bytes_needed)
+                {
+                  DEBUG ("Received complete D-Bus message of size %"
+                      G_GINT32_FORMAT, priv->reassembly_bytes_needed);
+                  message_received (tube, sender, buf->str,
+                      priv->reassembly_bytes_needed);
+                  g_string_erase (buf, 0, priv->reassembly_bytes_needed);
+                  priv->reassembly_bytes_needed = 0;
+                }
+              else
+                {
+                  /* we'll have to wait for more data */
+                  break;
+                }
+            }
+
+          if (buf->len < 16)
+            break;
+
+          /* work out how big the next message is going to be */
+
+          if (buf->str[0] == DBUS_BIG_ENDIAN)
+            {
+              body_length = collect_be32 (buf->str + 4);
+              m = collect_be32 (buf->str + 12);
+            }
+          else if (buf->str[0] == DBUS_LITTLE_ENDIAN)
+            {
+              body_length = collect_le32 (buf->str + 4);
+              m = collect_le32 (buf->str + 12);
+            }
+          else
+            {
+              DEBUG ("D-Bus message has unknown endianness byte 0x%x, "
+                  "closing tube", (unsigned int) buf->str[0]);
+              salut_tube_iface_close (SALUT_TUBE_IFACE (tube));
+              return;
+            }
+
+          /* pad to 8-byte boundary */
+          params_length = m + ((8 - (m % 8)) % 8);
+          g_assert (params_length % 8 == 0);
+          g_assert (params_length >= m);
+          g_assert (params_length < m + 8);
+
+          priv->reassembly_bytes_needed = params_length + body_length + 16;
+
+          /* n.b.: this looks as if it could be simplified to just the third
+           * test, but that would be wrong if the addition had overflowed, so
+           * don't do that. The first and second tests are sufficient to
+           * ensure no overflow on 32-bit platforms */
+          if (body_length > DBUS_MAXIMUM_MESSAGE_LENGTH ||
+              params_length > DBUS_MAXIMUM_ARRAY_LENGTH ||
+              priv->reassembly_bytes_needed > DBUS_MAXIMUM_MESSAGE_LENGTH)
+            {
+              DEBUG ("D-Bus message is too large to be valid, closing tube");
+              salut_tube_iface_close (SALUT_TUBE_IFACE (tube));
+              return;
+            }
+
+          g_assert (priv->reassembly_bytes_needed != 0);
+          DEBUG ("We need %" G_GINT32_FORMAT " bytes for the next full "
+              "message", priv->reassembly_bytes_needed);
+        }
+    }
+  else
+    {
+      /* MUC bytestreams are message-boundary preserving, which is necessary,
+       * because we can't assume we started at the beginning */
+      g_assert (GIBBER_IS_BYTESTREAM_MUC (priv->bytestream));
+      message_received (tube, sender, data->str, data->len);
+    }
 }
 
 SalutTubeDBus *
