@@ -229,6 +229,11 @@ typedef struct {
   h_expect_t *expectation;
 } h_data_t;
 
+typedef struct {
+  h_setup_t *setup;
+  h_expect_t *expectation;
+} h_test_t;
+
 static void h_next_test_step (h_data_t *d);
 
 static gboolean
@@ -311,46 +316,84 @@ h_received_control_packet_cb (GibberRMulticastSender *sender,
   h_next_test_step(d);
 }
 
+h_setup_t h_setup0[] =  {
+    { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0 },
+    { "node1", 0x1, PACKET_TYPE_DATA,         "001",  "node0", 0x2 },
+    { "node0", 0x2, PACKET_TYPE_DATA,         "002",  "node1", 0x2 },
+    { "node1", 0x2, PACKET_TYPE_DATA,         "002",  "node0", 0x3 },
+    { "node0", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node1", 0x3 },
+    { "node1", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node0", 0x4 },
+    { "node0", 0x4, PACKET_TYPE_DATA,          "003", "node1", 0x4 },
+    { "node1", 0x4, PACKET_TYPE_DATA,          "003", "node0", 0x5 },
+    { "node0", 0x5, PACKET_TYPE_JOIN,          NULL,  "node1", 0x5 },
+    { "node1", 0x5, PACKET_TYPE_JOIN,          NULL,  "node0", 0x6 },
+    { NULL },
+  };
+
+h_expect_t h_expectation0[] = {
+   { EXPECT, "node0", PACKET_TYPE_ATTEMPT_JOIN },
+   { EXPECT, "node1", PACKET_TYPE_ATTEMPT_JOIN },
+   { EXPECT, "node0", PACKET_TYPE_JOIN },
+   { EXPECT, "node1", PACKET_TYPE_JOIN },
+   /* only unhold node1, nothing should happen as they depend on those of
+    * node0 */
+   { HOLD,   "node1", PACKET_TYPE_INVALID, 0x3 },
+   /* unhold node0 too, packets should start flowing */
+   { HOLD,   "node0", PACKET_TYPE_INVALID, 0x3 },
+   { EXPECT, "node0", PACKET_TYPE_DATA },
+   { EXPECT, "node1", PACKET_TYPE_DATA },
+   { EXPECT, "node0", PACKET_TYPE_DATA },
+   { EXPECT, "node1", PACKET_TYPE_DATA },
+   { UNHOLD, "node1" },
+   { UNHOLD, "node0" },
+   { EXPECT, "node0", PACKET_TYPE_DATA },
+   { EXPECT, "node1", PACKET_TYPE_DATA },
+   { DONE },
+};
+
+h_setup_t h_setup1[] =  {
+    { "node0", 0x1, PACKET_TYPE_ATTEMPT_JOIN, "001",  "node1",    0x2 },
+    { "node1", 0x1, PACKET_TYPE_ATTEMPT_JOIN, "001",  NULL },
+    { NULL },
+};
+
+h_expect_t h_expectation1[] = {
+   { EXPECT, "node1", PACKET_TYPE_ATTEMPT_JOIN },
+   { EXPECT, "node0", PACKET_TYPE_ATTEMPT_JOIN },
+   { DONE }
+};
+
+#define NUMBER_OF_H_TESTS 2
+h_test_t h_tests[NUMBER_OF_H_TESTS] = {
+    { h_setup0, h_expectation0 },
+    { h_setup1, h_expectation1 },
+  };
+
+
+static void
+add_h_sender (guint32 sender, gchar *name, GHashTable *senders,
+  guint32 packet_id, h_data_t *data)
+{
+  GibberRMulticastSender *s;
+
+  s = gibber_r_multicast_sender_new (sender, name, senders);
+  gibber_r_multicast_sender_update_start (s, packet_id);
+  gibber_r_multicast_sender_hold_data (s, packet_id);
+  g_hash_table_insert (senders, GUINT_TO_POINTER(s->id), s);
+
+  g_signal_connect (s, "received-data",
+     G_CALLBACK (h_received_data_cb), data);
+  g_signal_connect (s, "received-control-packet",
+     G_CALLBACK (h_received_control_packet_cb), data);
+}
+
 START_TEST (test_holding) {
   GHashTable *senders;
   guint32 sender_offset = 0xf00;
-  h_setup_t setup[] =  {
-      { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0 },
-      { "node1", 0x1, PACKET_TYPE_DATA,         "001",  "node0", 0x2 },
-      { "node0", 0x2, PACKET_TYPE_DATA,         "002",  "node1", 0x2 },
-      { "node1", 0x2, PACKET_TYPE_DATA,         "002",  "node0", 0x3 },
-      { "node0", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node1", 0x3 },
-      { "node1", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node0", 0x4 },
-      { "node0", 0x4, PACKET_TYPE_DATA,          "003", "node1", 0x4 },
-      { "node1", 0x4, PACKET_TYPE_DATA,          "003", "node0", 0x5 },
-      { "node0", 0x5, PACKET_TYPE_JOIN,          NULL,  "node1", 0x5 },
-      { "node1", 0x5, PACKET_TYPE_JOIN,          NULL,  "node0", 0x6 },
-      { NULL },
-    };
-
      /* control packets aren't hold back, thus we get them interleaved at first
       */
-  h_expect_t expectation[] = {
-     { EXPECT, "node0", PACKET_TYPE_ATTEMPT_JOIN },
-     { EXPECT, "node1", PACKET_TYPE_ATTEMPT_JOIN },
-     { EXPECT, "node0", PACKET_TYPE_JOIN },
-     { EXPECT, "node1", PACKET_TYPE_JOIN },
-     /* only unhold node1, nothing should happen as they depend on those of
-      * node0 */
-     { HOLD,   "node1", PACKET_TYPE_INVALID, 0x3 },
-     /* unhold node0 too, packets should start flowing */
-     { HOLD,   "node0", PACKET_TYPE_INVALID, 0x3 },
-     { EXPECT, "node0", PACKET_TYPE_DATA },
-     { EXPECT, "node1", PACKET_TYPE_DATA },
-     { EXPECT, "node0", PACKET_TYPE_DATA },
-     { EXPECT, "node1", PACKET_TYPE_DATA },
-     { UNHOLD, "node1" },
-     { UNHOLD, "node0" },
-     { EXPECT, "node0", PACKET_TYPE_DATA },
-     { EXPECT, "node1", PACKET_TYPE_DATA },
-     { DONE },
-  };
-  h_data_t data = { 0, NULL, expectation };
+  h_test_t *test = h_tests + _i;
+  h_data_t data = { 0, NULL, test->expectation };
   int i;
 
   g_type_init();
@@ -360,45 +403,44 @@ START_TEST (test_holding) {
       NULL, g_object_unref);
   data.senders = senders;
 
-  for (i = 0; setup[i].name != NULL; i++)
+  for (i = 0; test->setup[i].name != NULL; i++)
+    {
+      GibberRMulticastSender *s;
+      s =  g_hash_table_find (senders, h_find_sender, test->setup[i].name);
+      if (s == NULL)
+        {
+          add_h_sender (sender_offset++, test->setup[i].name, senders,
+            test->setup[i].packet_id, &data);
+        }
+    }
+
+  for (i = 0; test->setup[i].name != NULL; i++)
     {
       GibberRMulticastSender *s0, *s1 = NULL;
       GibberRMulticastPacket *p;
 
-      s0 = g_hash_table_find (senders, h_find_sender, setup[i].name);
-      if (s0 == NULL)
-        {
-          s0 = gibber_r_multicast_sender_new (sender_offset++,
-              setup[i].name, senders);
-          gibber_r_multicast_sender_update_start (s0, setup[i].packet_id);
-          gibber_r_multicast_sender_hold_data (s0, setup[i].packet_id);
-          g_hash_table_insert (senders, GUINT_TO_POINTER(s0->id), s0);
+      s0 = g_hash_table_find (senders, h_find_sender, test->setup[i].name);
+      fail_unless (s0 != NULL);
 
-          g_signal_connect (s0, "received-data",
-              G_CALLBACK (h_received_data_cb), &data);
-          g_signal_connect (s0, "received-control-packet",
-              G_CALLBACK (h_received_control_packet_cb), &data);
-        }
+      p = gibber_r_multicast_packet_new (test->setup[i].packet_type, s0->id,
+          1500);
+      gibber_r_multicast_packet_set_packet_id (p, test->setup[i].packet_id);
 
-      p = gibber_r_multicast_packet_new (setup[i].packet_type, s0->id, 1500);
-      gibber_r_multicast_packet_set_packet_id (p, setup[i].packet_id);
-
-      if (setup[i].depend_node != NULL)
+      if (test->setup[i].depend_node != NULL)
         {
           s1 = g_hash_table_find (senders, h_find_sender,
-              setup[i].depend_node);
+              test->setup[i].depend_node);
           fail_unless (s1 != NULL);
-
           fail_unless (gibber_r_multicast_packet_add_sender_info (p, s1->id,
-              setup[i].depend_packet_id, NULL));
+              test->setup[i].depend_packet_id, NULL));
         }
-      if (setup[i].packet_type == PACKET_TYPE_DATA)
+      if (test->setup[i].packet_type == PACKET_TYPE_DATA)
         {
-          fail_unless (setup[i].data != NULL);
+          fail_unless (test->setup[i].data != NULL);
 
           gibber_r_multicast_packet_set_data_info (p, 0, 0, 1);
           gibber_r_multicast_packet_add_payload (p,
-              (guint8 *) setup[i].data, strlen (setup[i].data));
+              (guint8 *) test->setup[i].data, strlen (test->setup[i].data));
         }
       gibber_r_multicast_sender_push (s0, p);
     }
@@ -407,6 +449,7 @@ START_TEST (test_holding) {
     {
       g_main_loop_run (loop);
     }
+
 } END_TEST
 
 TCase *
@@ -415,6 +458,6 @@ make_gibber_r_multicast_sender_tcase (void)
     TCase *tc = tcase_create ("RMulticast Sender");
     tcase_set_timeout (tc, 20);
     tcase_add_loop_test (tc, test_sender, 0, NUMBER_OF_TESTS);
-    tcase_add_test (tc, test_holding);
+    tcase_add_loop_test (tc, test_holding, 0, NUMBER_OF_H_TESTS );
     return tc;
 }
