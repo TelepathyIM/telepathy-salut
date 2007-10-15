@@ -558,11 +558,6 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
       TpTubeType type;
 
       stream_id = gibber_xmpp_node_get_attribute (tube_node, "stream-id");
-      if (stream_id == NULL)
-        {
-          DEBUG ("no stream id attribute");
-          continue;
-        }
 
       extract_tube_information (self, tube_node, NULL,
           NULL, NULL, NULL, &tube_id);
@@ -910,7 +905,7 @@ extract_tube_information (SalutTubesChannel *self,
         {
           *type = TP_TUBE_TYPE_STREAM;
         }
-      if (!tp_strdiff (_type, "dbus"))
+      else if (!tp_strdiff (_type, "dbus"))
         {
           *type = TP_TUBE_TYPE_DBUS;
         }
