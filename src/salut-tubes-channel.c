@@ -1587,6 +1587,170 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 }
 
 /**
+ * salut_tubes_channel_accept_stream_tube
+ *
+ * Implements D-Bus method AcceptStreamTube
+ * on org.freedesktop.Telepathy.Channel.Type.Tubes
+ */
+static void
+salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
+                                        guint id,
+                                        guint address_type,
+                                        guint access_control,
+                                        const GValue *access_control_param,
+                                        DBusGMethodInvocation *context)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
+  SalutTubesChannelPrivate *priv;
+  SalutTubeIface *tube;
+  TpTubeState state;
+  TpTubeType type;
+  GValue *address;
+  GError *error = NULL;
+
+  g_assert (SALUT_IS_TUBES_CHANNEL (self));
+
+  priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
+  if (tube == NULL)
+    {
+      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
+
+  if (address_type != TP_SOCKET_ADDRESS_TYPE_UNIX &&
+      address_type != TP_SOCKET_ADDRESS_TYPE_IPV4 &&
+      address_type != TP_SOCKET_ADDRESS_TYPE_IPV6)
+    {
+      GError *error = NULL;
+
+      error = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Address type %d not implemented", address_type);
+
+      dbus_g_method_return_error (context, error);
+
+      g_error_free (error);
+      return;
+    }
+
+  if (access_control != TP_SOCKET_ACCESS_CONTROL_LOCALHOST)
+    {
+      GError *error = NULL;
+
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Unix sockets only support localhost control access");
+
+      dbus_g_method_return_error (context, error);
+
+      g_error_free (error);
+      return;
+    }
+
+  g_object_get (tube,
+      "type", &type,
+      "state", &state,
+      NULL);
+
+  if (type != TP_TUBE_TYPE_STREAM)
+    {
+      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Tube is not a stream tube" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
+
+  if (state != TP_TUBE_STATE_LOCAL_PENDING)
+    {
+      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Tube is not in the local pending state" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
+
+  g_object_set (tube,
+      "address-type", address_type,
+      "access-control", access_control,
+      "access-control-param", access_control_param,
+      NULL);
+
+  if (!salut_tube_iface_accept (tube, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  update_tubes_info (self, FALSE);
+
+  g_object_get (tube, "address", &address, NULL);
+
+  tp_svc_channel_type_tubes_return_from_accept_stream_tube (context,
+      address);
+}
+
+/**
+ * salut_tubes_channel_get_stream_tube_socket_address
+ *
+ * Implements D-Bus method GetStreamTubeSocketAddress
+ * on org.freedesktop.Telepathy.Channel.Type.Tubes
+ */
+static void
+salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface,
+                                                    guint id,
+                                                    DBusGMethodInvocation *context)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
+  SalutTubesChannelPrivate *priv  = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  SalutTubeIface *tube;
+  TpTubeType type;
+  TpTubeState state;
+  GValue *address;
+
+  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
+  if (tube == NULL)
+    {
+      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
+
+  g_object_get (tube,
+      "type", &type,
+      "state", &state,
+      NULL);
+
+  if (type != TP_TUBE_TYPE_STREAM)
+    {
+      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Tube is not a Stream tube" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
+
+  if (state != TP_TUBE_STATE_OPEN)
+    {
+      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Tube is not open" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
+
+  g_object_get (tube,
+      "address", &address,
+      NULL);
+
+  tp_svc_channel_type_tubes_return_from_get_stream_tube_socket_address (
+      context, TP_SOCKET_ADDRESS_TYPE_UNIX, address);
+}
+
+/**
  * salut_tubes_channel_get_available_stream_tube_types
  *
  * Implements D-Bus method GetAvailableStreamTubeTypes
@@ -1885,10 +2049,8 @@ tubes_iface_init (gpointer g_iface,
   IMPLEMENT(get_d_bus_tube_address);
   IMPLEMENT(get_d_bus_names);
   IMPLEMENT(offer_stream_tube);
-  /*
   IMPLEMENT(accept_stream_tube);
   IMPLEMENT(get_stream_tube_socket_address);
-  */
   IMPLEMENT(get_available_stream_tube_types);
 #undef IMPLEMENT
 }
