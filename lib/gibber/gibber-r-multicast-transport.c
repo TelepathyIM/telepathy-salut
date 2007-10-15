@@ -985,13 +985,13 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
     }
 
     case PACKET_TYPE_JOIN: {
+      DEBUG ("Received join from %s", sender->name);
       gibber_r_multicast_sender_hold_data (sender, packet->packet_id);
+
       if (priv->state == STATE_GATHERING)
         {
           start_joining_phase (self);
         }
-
-      DEBUG ("Received join from %s", sender->name);
 
       if (equal_joins (self, packet)) {
         guint i;
