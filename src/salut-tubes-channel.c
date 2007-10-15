@@ -420,10 +420,8 @@ salut_tubes_channel_get_available_tube_types (TpSvcChannelTypeTubes *iface,
   ret = g_array_sized_new (FALSE, FALSE, sizeof (TpTubeType), 1);
   type = TP_TUBE_TYPE_DBUS;
   g_array_append_val (ret, type);
-  /*
-  type = TP_TUBE_TYPE_STREAM_UNIX;
+  type = TP_TUBE_TYPE_STREAM;
   g_array_append_val (ret, type);
-  */
 
   tp_svc_channel_type_tubes_return_from_get_available_tube_types (context,
       ret);
