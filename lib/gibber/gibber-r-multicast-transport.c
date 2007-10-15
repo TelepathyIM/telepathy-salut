@@ -1033,6 +1033,7 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
                   }
                 gibber_r_multicast_sender_release_data (sender);
               }
+            priv->state = STATE_NORMAL;
             DEBUG ("--------------------------------");
           }
       } else {
