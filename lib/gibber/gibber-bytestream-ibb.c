@@ -35,6 +35,8 @@
 
 #include "signals-marshal.h"
 
+/* FIXME: implement fragmentation using the "block-size" attribute */
+
 static void
 bytestream_iface_init (gpointer g_iface, gpointer iface_data);
 
