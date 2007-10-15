@@ -863,9 +863,7 @@ gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
 
 void
 gibber_r_multicast_senders_updated(GibberRMulticastSender *sender) {
-  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_RUNNING) {
-    pop_packets(sender);
-  }
+  pop_packets(sender);
 }
 
 void
