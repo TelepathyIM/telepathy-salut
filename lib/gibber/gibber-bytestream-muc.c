@@ -1,5 +1,5 @@
 /*
- * gibber-bytestream-ibb.c - Source for GibberBytestreamMuc
+ * gibber-bytestream-muc.c - Source for GibberBytestreamMuc
  * Copyright (C) 2007 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or

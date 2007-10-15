@@ -1,5 +1,5 @@
 /*
- * gibber-bytestream-ibb.h - Header for GibberBytestreamMuc
+ * gibber-bytestream-muc.h - Header for GibberBytestreamMuc
  * Copyright (C) 2007 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
