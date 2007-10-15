@@ -435,7 +435,9 @@ schedule_whois_request(GibberRMulticastSender *sender) {
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
    gint timeout = g_random_int_range(MIN_WHOIS_TIMEOUT,
                                      MAX_WHOIS_TIMEOUT);
-   DEBUG_SENDER(sender, "Scheduled whois request in %d ms", timeout);
+   DEBUG_SENDER(sender, "(Re)Scheduled whois request in %d ms", timeout);
+   if (priv->whois_timer != 0)
+     g_source_remove (priv->whois_timer);
    priv->whois_timer = g_timeout_add(timeout, do_whois_request, sender);
 }
 
@@ -876,12 +878,21 @@ gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
     case PACKET_TYPE_WHOIS_REQUEST:
       g_assert (packet->data.whois_request.sender_id == sender->id);
 
-      if (sender->name != NULL && priv->whois_timer == 0) {
-        gint timeout = g_random_int_range(MIN_WHOIS_TIMEOUT,
-                                          MAX_WHOIS_TIMEOUT);
-        priv->whois_timer = g_timeout_add(timeout, do_whois_reply, sender);
-        DEBUG_SENDER(sender, "Scheduled whois reply in %d ms", timeout);
-      }
+      if (sender->name != NULL)
+        {
+          if (priv->whois_timer == 0)
+            {
+              gint timeout = g_random_int_range(MIN_WHOIS_TIMEOUT,
+                                                MAX_WHOIS_TIMEOUT);
+              priv->whois_timer =
+                g_timeout_add(timeout, do_whois_reply, sender);
+              DEBUG_SENDER(sender, "Scheduled whois reply in %d ms", timeout);
+            }
+        }
+      else
+        {
+          schedule_whois_request(sender);
+        }
       break;
     case PACKET_TYPE_WHOIS_REPLY:
       g_assert(packet->sender == sender->id);
