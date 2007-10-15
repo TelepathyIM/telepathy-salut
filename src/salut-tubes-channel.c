@@ -125,8 +125,7 @@ static void muc_connection_new_senders_cb (GibberMucConnection *conn,
     GArray *senders, gpointer user_data);
 static gboolean extract_tube_information (SalutTubesChannel *self,
     GibberXmppNode *tube_node, TpTubeType *type, TpHandle *initiator_handle,
-    const gchar **service, GHashTable **parameters, gboolean *offering,
-    guint *tube_id);
+    const gchar **service, GHashTable **parameters, guint *tube_id);
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
     TpTubeType type, TpHandle initiator, const gchar *service,
     GHashTable *parameters, guint tube_id, GibberBytestreamIface *bytestream);
@@ -566,7 +565,7 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
         }
 
       extract_tube_information (self, tube_node, NULL,
-          NULL, NULL, NULL, NULL, &tube_id);
+          NULL, NULL, NULL, &tube_id);
       tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
 
       if (tube == NULL)
@@ -579,7 +578,7 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
           guint tube_id;
 
           if (extract_tube_information (self, tube_node, &type,
-                &initiator_handle, &service, &parameters, NULL, &tube_id))
+                &initiator_handle, &service, &parameters, &tube_id))
             {
               tube = create_new_tube (self, type, initiator_handle,
                   service, parameters, tube_id, NULL);
@@ -894,7 +893,6 @@ extract_tube_information (SalutTubesChannel *self,
                           TpHandle *initiator_handle,
                           const gchar **service,
                           GHashTable **parameters,
-                          gboolean *offering,
                           guint *tube_id)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
@@ -950,17 +948,6 @@ extract_tube_information (SalutTubesChannel *self,
       node = gibber_xmpp_node_get_child (tube_node, "parameters");
       *parameters = salut_gibber_xmpp_node_extract_properties (node,
           "parameter");
-    }
-
-  if (offering != NULL)
-    {
-      const gchar *_offering;
-
-      _offering = gibber_xmpp_node_get_attribute (tube_node, "offering");
-      if (!tp_strdiff (_offering, "false"))
-        *offering = FALSE;
-      else
-        *offering = TRUE;
     }
 
   if (tube_id != NULL)
