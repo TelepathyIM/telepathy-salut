@@ -193,6 +193,8 @@ gibber_bytestream_muc_set_property (GObject *object,
         priv->muc_connection = g_value_get_object (value);
         if (priv->muc_connection != NULL)
           {
+            /* FIXME: at some point it could be useful to modify Gibber's
+             * API to only be notified for data from a given stream */
             g_signal_connect (priv->muc_connection, "received-data",
                 G_CALLBACK (muc_connection_received_data_cb), self);
           }
