@@ -43,6 +43,7 @@
 #include "salut-contact.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
+#include "salut-bytestream-manager.h"
 /*
 #include "salut-tubes-manager.h"
 */
@@ -135,6 +136,7 @@ enum {
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
+  PROP_BYTESTREAM_MANAGER,
   LAST_PROP
 };
 
@@ -177,6 +179,9 @@ struct _SalutConnectionPrivate
   /* Tubes channel manager */
   /* XXX disabled while private tubes aren't implemented */
   /* SalutTubesManager *tubes_manager; */
+
+  /* Bytestream manager */
+  SalutBytestreamManager *bytestream_manager;
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
@@ -286,6 +291,9 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_XCM:
       g_value_set_object (value, priv->xmpp_connection_manager);
+      break;
+    case PROP_BYTESTREAM_MANAGER:
+      g_value_set_object (value, priv->bytestream_manager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -635,6 +643,17 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XCM,
       param_spec);
+
+  param_spec = g_param_spec_object (
+      "bytestream-manager",
+      "SalutBytestreamManager object",
+      "The Salut Bytestream Manager associated with this Salut Connection",
+      SALUT_TYPE_BYTESTREAM_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_BYTESTREAM_MANAGER,
+      param_spec);
 }
 
 void
@@ -672,6 +691,12 @@ salut_connection_dispose (GObject *object)
     g_object_unref (priv->avahi_client);
     priv->avahi_client = NULL;
   }
+
+  if (priv->bytestream_manager != NULL)
+    {
+      g_object_unref (priv->bytestream_manager);
+      priv->bytestream_manager = NULL;
+    }
 
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_connection_parent_class)->dispose)
@@ -2410,6 +2435,9 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   /*
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
   */
+
+  /* Create the bytestream manager */
+  priv->bytestream_manager = salut_bytestream_manager_new (self);
 
   g_ptr_array_add(factories, priv->contact_manager);
   g_ptr_array_add(factories, priv->im_manager);
