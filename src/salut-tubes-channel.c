@@ -1005,13 +1005,6 @@ publish_tube_in_node (SalutTubesChannel *self,
   g_object_get (G_OBJECT (tube),
       "type", &type,
       "initiator", &initiator_handle,
-      NULL);
-
-  if (type == TP_TUBE_TYPE_STREAM && initiator_handle != priv->self_handle)
-    /* We only announce stream tubes we initiated */
-    return;
-
-  g_object_get (G_OBJECT (tube),
       "service", &service,
       "parameters", &parameters,
       "id", &tube_id,
@@ -1077,17 +1070,27 @@ publish_tubes_in_node (gpointer key,
   SalutTubeIface *tube = (SalutTubeIface *) value;
   struct _i_hate_g_hash_table_foreach *data =
     (struct _i_hate_g_hash_table_foreach *) user_data;
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (
+      data->self);
   TpTubeState state;
   GibberXmppNode *tube_node;
+  TpTubeType type;
+  TpHandle initiator;
 
   if (tube == NULL)
     return;
 
   g_object_get (tube,
-                "state", &state,
-                NULL);
+      "state", &state,
+      "type", &type,
+      "initiator", &initiator,
+      NULL);
 
   if (state != TP_TUBE_STATE_OPEN)
+    return;
+
+  if (type == TP_TUBE_TYPE_STREAM && initiator != priv->self_handle)
+    /* We only announce stream tubes we initiated */
     return;
 
   tube_node = gibber_xmpp_node_add_child (data->tubes_node, "tube");
