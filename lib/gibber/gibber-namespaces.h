@@ -29,4 +29,16 @@
 #define GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS \
   (const gchar *)"http://laptop.org/xmpp/activity-properties"
 
+#define GIBBER_XMPP_NS_SI \
+  (const gchar *)"http://jabber.org/protocol/si"
+
+#define GIBBER_XMPP_NS_FEATURENEG \
+  (const gchar *)"http://jabber.org/protocol/feature-neg"
+
+#define GIBBER_XMPP_NS_DATA \
+  (const gchar *)"jabber:x:data"
+
+#define GIBBER_XMPP_NS_STANZAS \
+  (const gchar *)"urn:ietf:params:xml:ns:xmpp-stanzas"
+
 #endif /* #ifndef __GIBBER_NAMESPACES_H__ */
