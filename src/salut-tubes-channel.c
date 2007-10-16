@@ -1003,11 +1003,18 @@ publish_tube_in_node (SalutTubesChannel *self,
   TpHandle initiator_handle;
 
   g_object_get (G_OBJECT (tube),
+      "type", &type,
+      "initiator", &initiator_handle,
+      NULL);
+
+  if (type == TP_TUBE_TYPE_STREAM && initiator_handle != priv->self_handle)
+    /* We only announce stream tubes we initiated */
+    return;
+
+  g_object_get (G_OBJECT (tube),
       "service", &service,
       "parameters", &parameters,
-      "type", &type,
       "id", &tube_id,
-      "initiator", &initiator_handle,
       NULL);
 
   id_str = g_strdup_printf ("%u", tube_id);
