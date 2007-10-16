@@ -1146,3 +1146,34 @@ salut_muc_manager_get_text_channel (SalutMucManager *self,
   g_object_ref (muc);
   return muc;
 }
+
+void
+salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
+                                            GibberBytestreamIface *bytestream,
+                                            TpHandle room_handle,
+                                            const gchar *stream_id,
+                                            GibberXmppStanza *msg)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
+     (TpBaseConnection*) priv->connection, TP_HANDLE_TYPE_ROOM);
+  SalutTubesChannel *chan;
+
+  g_return_if_fail (tp_handle_is_valid (room_repo, room_handle, NULL));
+
+  chan = g_hash_table_lookup (priv->tubes_channels,
+      GUINT_TO_POINTER (room_handle));
+  if (chan == NULL)
+    {
+      /*
+      GError e = { GABBLE_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+          "No tubes channel available for this MUC" };
+
+      DEBUG ("tubes channel doesn't exist for muc %d", room_handle);
+      gabble_bytestream_iface_close (bytestream, &e);
+      */
+      return;
+    }
+
+  salut_tubes_channel_bytestream_offered (chan, bytestream, msg);
+}

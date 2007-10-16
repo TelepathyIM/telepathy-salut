@@ -22,6 +22,8 @@
 
 #include <glib-object.h>
 
+#include <gibber/gibber-bytestream-iface.h>
+
 #include <salut-connection.h>
 #include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-client.h"
@@ -67,6 +69,10 @@ salut_muc_manager_start (SalutMucManager *muc_manager,
 SalutMucChannel *
 salut_muc_manager_get_text_channel (SalutMucManager *muc_manager,
     TpHandle handle);
+
+void salut_muc_manager_handle_si_stream_request (SalutMucManager *muc_manager,
+    GibberBytestreamIface *bytestream, TpHandle room_handle,
+    const gchar *stream_id, GibberXmppStanza *msg);
 
 G_END_DECLS
 
