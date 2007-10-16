@@ -41,4 +41,7 @@
 #define GIBBER_XMPP_NS_STANZAS \
   (const gchar *)"urn:ietf:params:xml:ns:xmpp-stanzas"
 
+#define GIBBER_XMPP_NS_OOB \
+  (const gchar *)"jabber:iq:oob"
+
 #endif /* #ifndef __GIBBER_NAMESPACES_H__ */
