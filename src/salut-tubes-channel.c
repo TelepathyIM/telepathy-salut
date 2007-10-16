@@ -2043,6 +2043,92 @@ salut_tubes_channel_get_interfaces (TpSvcChannel *iface,
     }
 }
 
+/* Called when we receive a SI request,
+ * via either salut_muc_manager_handle_si_stream_request or
+ * salut_tubes_manager_handle_si_stream_request
+ */
+void
+salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
+                                        GibberBytestreamIface *bytestream,
+                                        GibberXmppStanza *msg)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  const gchar *stream_id, *tmp;
+  gchar *endptr;
+  GibberXmppNode *si_node, *stream_node;
+  guint tube_id;
+  unsigned long tube_id_tmp;
+  SalutTubeIface *tube;
+  GibberStanzaType type;
+  GibberStanzaSubType sub_type;
+
+  /* Caller is expected to have checked that we have a stream or muc-stream
+   * node with a stream ID and the TUBES profile
+   */
+  gibber_xmpp_stanza_get_type_info (msg, &type, &sub_type);
+  g_return_if_fail (type == GIBBER_STANZA_TYPE_IQ);
+  g_return_if_fail (sub_type == GIBBER_STANZA_SUB_TYPE_SET);
+
+  si_node = gibber_xmpp_node_get_child_ns (msg->node, "si",
+      GIBBER_XMPP_NS_SI);
+  g_return_if_fail (si_node != NULL);
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    stream_node = gibber_xmpp_node_get_child_ns (si_node,
+        "stream", GIBBER_TELEPATHY_NS_TUBES);
+  else
+    stream_node = gibber_xmpp_node_get_child_ns (si_node,
+        "muc-stream", GIBBER_TELEPATHY_NS_TUBES);
+  g_return_if_fail (stream_node != NULL);
+
+  stream_id = gibber_xmpp_node_get_attribute (si_node, "id");
+  g_return_if_fail (stream_id != NULL);
+
+  tmp = gibber_xmpp_node_get_attribute (stream_node, "tube");
+  if (tmp == NULL)
+    {
+      /*
+      GError e = { GABBLE_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+          "<stream> or <muc-stream> has no tube attribute" };
+
+      NODE_DEBUG (stream_node, e.message);
+      gabble_bytestream_iface_close (bytestream, &e);
+      */
+      return;
+    }
+  tube_id_tmp = strtoul (tmp, &endptr, 10);
+  if (!endptr || *endptr || tube_id_tmp > G_MAXUINT32)
+    {
+      /*
+      GError e = { GABBLE_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+          "<stream> or <muc-stream> tube attribute not numeric or > 2**32" };
+
+      DEBUG ("tube id is not numeric or > 2**32: %s", tmp);
+      gabble_bytestream_iface_close (bytestream, &e);
+      */
+      return;
+    }
+  tube_id = (guint) tube_id_tmp;
+
+  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+  if (tube == NULL)
+    {
+      /*
+      GError e = { GABBLE_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+          "<stream> or <muc-stream> tube attribute points to a nonexistent "
+          "tube" };
+
+      DEBUG ("tube %u doesn't exist", tube_id);
+      gabble_bytestream_iface_close (bytestream, &e);
+      */
+      return;
+    }
+
+  DEBUG ("received new bytestream request for existing tube: %u", tube_id);
+
+  salut_tube_iface_add_bytestream (tube, bytestream);
+}
+
 static void
 tubes_iface_init (gpointer g_iface,
                   gpointer iface_data)

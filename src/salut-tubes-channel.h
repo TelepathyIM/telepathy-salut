@@ -23,6 +23,7 @@
 #include <glib-object.h>
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-bytestream-iface.h>
 
 #include "salut-muc-channel.h"
 
@@ -64,6 +65,9 @@ GType salut_tubes_channel_get_type (void);
                               SalutTubesChannelClass))
 
 void salut_tubes_channel_close (SalutTubesChannel *channel);
+
+void salut_tubes_channel_bytestream_offered (SalutTubesChannel *chanel,
+    GibberBytestreamIface *bytestream, GibberXmppStanza *msg);
 
 G_END_DECLS
 
