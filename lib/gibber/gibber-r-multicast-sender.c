@@ -697,14 +697,11 @@ insert_packet(GibberRMulticastSender *sender, GibberRMulticastPacket *packet) {
   DEBUG_SENDER(sender, "Inserting packet 0x%x", packet->packet_id);
   info->packet = g_object_ref(packet);
 
-  if (gibber_r_multicast_packet_diff(priv->first_packet,
-          packet->packet_id) < 0) {
-    priv->first_packet = packet->packet_id;
-  } else if (gibber_r_multicast_packet_diff(sender->next_input_packet,
+  if (gibber_r_multicast_packet_diff(sender->next_input_packet,
                  packet->packet_id) >= 0) {
     /* Potentially needs some repairs */
     guint32 i;
-    for (i = sender->next_input_packet; 
+    for (i = sender->next_input_packet;
         i != packet->packet_id; i++) {
       schedule_repair(sender, i);
     }
@@ -733,7 +730,7 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
     sender->next_output_packet = packet_id;
     sender->next_output_data_packet = packet_id;
     priv->first_packet = packet_id;
-  } else if (gibber_r_multicast_packet_diff (sender->next_input_packet, 
+  } else if (gibber_r_multicast_packet_diff (sender->next_input_packet,
       packet_id) > 0) {
     /* Remove all repair requests for packets up to this packet_id */
     guint32 i;
