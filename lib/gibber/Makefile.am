@@ -51,6 +51,8 @@ HANDWRITTEN_SOURCES =             \
   gibber-iq-helper.h              \
   gibber-xmpp-connection-listener.c \
   gibber-xmpp-connection-listener.h \
+  gibber-xmpp-error.h             \
+  gibber-xmpp-error.c             \
   libmd5-rfc/md5.c                \
   libmd5-rfc/md5.h
 
