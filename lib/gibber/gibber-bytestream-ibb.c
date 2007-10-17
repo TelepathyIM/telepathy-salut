@@ -59,7 +59,6 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_XMPP_CONNECTION = 1,
-  PROP_MUC_CONNECTION,
   PROP_SELF_ID,
   PROP_PEER_ID,
   PROP_STREAM_ID,
@@ -72,7 +71,6 @@ typedef struct _GibberBytestreamIBBPrivate GibberBytestreamIBBPrivate;
 struct _GibberBytestreamIBBPrivate
 {
   GibberXmppConnection *xmpp_connection;
-  GibberMucConnection *muc_connection;
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
@@ -93,14 +91,6 @@ gibber_bytestream_ibb_init (GibberBytestreamIBB *self)
       GIBBER_TYPE_BYTESTREAM_IBB, GibberBytestreamIBBPrivate);
 
   self->priv = priv;
-
-  priv->xmpp_connection = NULL;
-  priv->muc_connection = NULL;
-  priv->self_id = NULL;
-  priv->peer_id = NULL;
-
-  priv->seq = 0;
-  priv->last_seq_recv = 0;
 }
 
 static gboolean
@@ -110,19 +100,15 @@ send_stanza (GibberBytestreamIBB *self,
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
-  if (priv->muc_connection != NULL)
-    return gibber_muc_connection_send (priv->muc_connection, stanza, error);
-
-  if (priv->xmpp_connection != NULL)
-    return gibber_xmpp_connection_send (priv->xmpp_connection, stanza, error);
-
-  g_assert_not_reached ();
+  return gibber_xmpp_connection_send (priv->xmpp_connection, stanza, error);
 }
 
-static gboolean
-stanza_received (GibberBytestreamIBB *self,
-                 GibberXmppStanza *stanza)
+static void
+xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
+                                    GibberXmppStanza *stanza,
+                                    gpointer user_data)
 {
+  GibberBytestreamIBB *self = (GibberBytestreamIBB *) user_data;
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GibberXmppNode *data;
   GString *str;
@@ -134,28 +120,28 @@ stanza_received (GibberBytestreamIBB *self,
       GIBBER_XMPP_NS_IBB);
   if (data == NULL)
     {
-      return FALSE;
+      return;
     }
 
   stream_id = gibber_xmpp_node_get_attribute (data, "sid");
   if (stream_id == NULL || strcmp (stream_id, priv->stream_id) != 0)
     {
       DEBUG ("bad stream id");
-      return FALSE;
+      return;
     }
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_OPEN)
     {
       DEBUG ("can't receive data through a not open bytestream (state: %d)",
           priv->state);
-      return FALSE;
+      return;
     }
 
   from = gibber_xmpp_node_get_attribute (stanza->node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field, ignoring");
-      return FALSE;
+      return;
     }
 
   // XXX check sequence number ?
@@ -166,28 +152,7 @@ stanza_received (GibberBytestreamIBB *self,
 
   g_string_free (str, TRUE);
   g_free (decoded);
-  return TRUE;
-}
-
-static void
-xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
-                                    GibberXmppStanza *stanza,
-                                    gpointer user_data)
-{
-  GibberBytestreamIBB *self = (GibberBytestreamIBB *) user_data;
-
-  stanza_received (self, stanza);
-}
-
-static void
-muc_connection_received_stanza_cb (GibberMucConnection *conn,
-                                   const gchar *from,
-                                   GibberXmppStanza *stanza,
-                                   gpointer user_data)
-{
-  GibberBytestreamIBB *self = (GibberBytestreamIBB *) user_data;
-
-  stanza_received (self, stanza);
+  return;
 }
 
 static void
@@ -211,10 +176,7 @@ gibber_bytestream_ibb_finalize (GObject *object)
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
   g_free (priv->stream_id);
-
-  if (priv->stream_init_id)
-    g_free (priv->stream_init_id);
-
+  g_free (priv->stream_init_id);
   g_free (priv->self_id);
   g_free (priv->peer_id);
 
@@ -234,9 +196,6 @@ gibber_bytestream_ibb_get_property (GObject *object,
     {
       case PROP_XMPP_CONNECTION:
         g_value_set_object (value, priv->xmpp_connection);
-        break;
-      case PROP_MUC_CONNECTION:
-        g_value_set_object (value, priv->muc_connection);
         break;
       case PROP_SELF_ID:
         g_value_set_string (value, priv->self_id);
@@ -275,12 +234,6 @@ gibber_bytestream_ibb_set_property (GObject *object,
         if (priv->xmpp_connection != NULL)
           g_signal_connect (priv->xmpp_connection, "received-stanza",
               G_CALLBACK (xmpp_connection_received_stanza_cb), self);
-        break;
-      case PROP_MUC_CONNECTION:
-        priv->muc_connection = g_value_get_object (value);
-        if (priv->muc_connection != NULL)
-          g_signal_connect (priv->muc_connection, "received-stanza",
-              G_CALLBACK (muc_connection_received_stanza_cb), self);
         break;
       case PROP_SELF_ID:
         g_free (priv->self_id);
@@ -324,8 +277,8 @@ gibber_bytestream_ibb_constructor (GType type,
 
   priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (GIBBER_BYTESTREAM_IBB (obj));
 
-  /* We can't be a private *and* a muc bytestream */
-  g_assert (priv->xmpp_connection == NULL || priv->muc_connection == NULL);
+  g_assert (priv->xmpp_connection != NULL);
+  g_assert (priv->stream_init_id != NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
 
@@ -372,20 +325,6 @@ gibber_bytestream_ibb_class_init (
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
       param_spec);
 
-  param_spec = g_param_spec_object (
-      "muc-connection",
-      "GibberMucConnection object",
-      "Gibber MUC connection object used for communication by this "
-      "bytestream if it's a muc one",
-      GIBBER_TYPE_MUC_CONNECTION,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_MUC_CONNECTION,
-      param_spec);
-
   param_spec = g_param_spec_string (
       "stream-init-id",
       "stream init ID",
@@ -418,13 +357,17 @@ gibber_bytestream_ibb_class_init (
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
-gboolean
-send_data_to (GibberBytestreamIBB *self,
-              const gchar *to,
-              gboolean groupchat,
-              guint len,
-              const gchar *str)
+/*
+ * gibber_bytestream_ibb_send
+ *
+ * Implements gibber_bytestream_iface_send on GibberBytestreamIface
+ */
+static gboolean
+gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
+                            guint len,
+                            const gchar *str)
 {
+  GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GibberXmppStanza *stanza;
   gchar *seq, *encoded;
@@ -465,11 +408,6 @@ send_data_to (GibberBytestreamIBB *self,
       GIBBER_NODE_END,
       GIBBER_STANZA_END);
 
-  if (groupchat)
-    {
-      gibber_xmpp_node_set_attribute (stanza->node, "type", "groupchat");
-    }
-
   DEBUG ("send %d bytes", len);
   ret = send_stanza (self, stanza, NULL);
 
@@ -481,38 +419,11 @@ send_data_to (GibberBytestreamIBB *self,
 }
 
 /*
- * gibber_bytestream_ibb_send
- *
- * Implements gibber_bytestream_iface_send on GibberBytestreamIface
- */
-static gboolean
-gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
-                            guint len,
-                            const gchar *str)
-{
-  GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
-  GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  gboolean groupchat = FALSE;
-
-  if (priv->muc_connection != NULL)
-    groupchat = TRUE;
-
-  return send_data_to (self, priv->peer_id, groupchat, len, str);
-}
-
-/*
 GibberXmppStanza *
 gibber_bytestream_ibb_make_accept_iq (GibberBytestreamIBB *self)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   LmMessage *msg;
-
-  if (priv->peer_handle_type == TP_HANDLE_TYPE_ROOM ||
-      priv->stream_init_id == NULL)
-    {
-      DEBUG ("bytestream was not created due to a SI request");
-      return NULL;
-    }
 
   msg = gibber_bytestream_factory_make_accept_iq (priv->peer_jid,
       priv->stream_init_id, NS_IBB);
@@ -539,36 +450,19 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream)
       return;
     }
 
-  if (priv->xmpp_connection == NULL ||
-      priv->stream_init_id == NULL)
-    {
-      DEBUG ("can't accept a bytestream not created due to a SI request");
-      return;
-    }
-
   DEBUG ("stream is now accepted");
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_ACCEPTED, NULL);
 }
 
-static void
-gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
-                               GError *error)
+static GibberXmppStanza *
+make_si_decline_iq (const gchar *from,
+                    const gchar *to,
+                    const gchar *stream_init_id)
 {
-  GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  GibberXmppStanza *stanza;
-
-  g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
-
-  if (priv->stream_init_id == NULL)
-    {
-      DEBUG ("can't decline a bytestream not created due to a SI request");
-      return;
-    }
-
-  stanza = gibber_xmpp_stanza_build (
+  return gibber_xmpp_stanza_build (
       GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
-      priv->self_id, priv->peer_id,
-      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      from, to,
+      GIBBER_NODE_ATTRIBUTE, "id", stream_init_id,
       GIBBER_NODE, "error",
         GIBBER_NODE_ATTRIBUTE, "code", "403",
         GIBBER_NODE_ATTRIBUTE, "type", "cancel",
@@ -580,6 +474,19 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
           GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
         GIBBER_NODE_END,
       GIBBER_NODE_END, GIBBER_STANZA_END);
+}
+
+static void
+gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
+                               GError *error)
+{
+  GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
+  GibberXmppStanza *stanza;
+
+  g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
+
+  stanza = make_si_decline_iq (priv->self_id, priv->peer_id,
+      priv->stream_init_id);
 
   /* FIXME: use error if not NULL */
 
@@ -606,11 +513,8 @@ gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream,
 
   if (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
-      if (priv->stream_init_id != NULL)
-        {
-          /* Stream was created using SI so we decline the request */
-          gibber_bytestream_ibb_decline (self, error);
-        }
+      /* Stream was created using SI so we decline the request */
+      gibber_bytestream_ibb_decline (self, error);
     }
 
   else if (priv->xmpp_connection != NULL)
