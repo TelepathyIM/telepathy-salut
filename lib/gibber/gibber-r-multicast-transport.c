@@ -88,6 +88,8 @@ struct _GibberRMulticastTransportPrivate
   guint joining_timeout;
   /* People who were in the join message you sent */
   GArray *send_join;
+  /* People who were marked as failures in our join */
+  GArray *send_join_failures;
 
   /* People we saw to have failed, but not send a failure packet for yet */
   GArray *pending_failures;
@@ -110,6 +112,10 @@ typedef enum {
   MEMBER_STATE_MEMBER,
   /* failure! */
   MEMBER_STATE_FAILING,
+  /* Node failing that was a member */
+  MEMBER_STATE_MEMBER_FAILING,
+  /* Failed before we even know what this node was all about */
+  MEMBER_STATE_INSTANT_FAILURE,
 } MemberState;
 
 typedef struct {
@@ -398,9 +404,29 @@ member_set_state (GibberRMulticastTransport *self, guint32 id,
 
 static void
 str_add_member (gpointer key, MemberInfo *value, GString *str) {
-  if (value->state >= MEMBER_STATE_ATTEMPT_JOIN_REPEAT)
+  switch (value->state)
     {
-      g_string_append_printf (str, "%x, ", value->id);
+      case MEMBER_STATE_UNKNOWN:
+      case MEMBER_STATE_ATTEMPT_JOIN_STARTED:
+        g_string_append_printf (str, "%x U, ", value->id);
+        break;
+     case MEMBER_STATE_ATTEMPT_JOIN_REPEAT:
+     case MEMBER_STATE_ATTEMPT_JOIN_DONE:
+     case MEMBER_STATE_JOINING:
+        g_string_append_printf (str, "%x N, ", value->id);
+        break;
+     case MEMBER_STATE_MEMBER:
+        g_string_append_printf (str, "%x M, ", value->id);
+        break;
+     case MEMBER_STATE_FAILING:
+        g_string_append_printf (str, "%x F, ", value->id);
+        break;
+     case MEMBER_STATE_MEMBER_FAILING:
+        g_string_append_printf (str, "%x MF, ", value->id);
+        break;
+     case MEMBER_STATE_INSTANT_FAILURE:
+        g_string_append_printf (str, "%x IF, ", value->id);
+        break;
     }
 }
 
@@ -426,11 +452,27 @@ add_to_join (gpointer key, gpointer value, gpointer user_data) {
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  if (info->state >=  MEMBER_STATE_ATTEMPT_JOIN_REPEAT) {
+  g_assert (info->state >= MEMBER_STATE_ATTEMPT_JOIN_REPEAT);
+
+  if (info->state <=  MEMBER_STATE_FAILING) {
     g_array_append_val (priv->send_join, info->id);
   }
 
+  if (info->state >= MEMBER_STATE_FAILING)
+    {
+      g_array_append_val (priv->send_join_failures, info->id);
+    }
+
   info->agreed_join = FALSE;
+}
+
+static void
+check_join_state (gpointer key, MemberInfo *value, gpointer user_data)
+{
+  if (value->state < MEMBER_STATE_ATTEMPT_JOIN_REPEAT)
+    {
+      value->state = MEMBER_STATE_INSTANT_FAILURE;
+    }
 }
 
 static void
@@ -448,13 +490,17 @@ start_joining_phase (GibberRMulticastTransport *self)
       /* every member with state >= MEMBER_STATE_ATTEMPT_JOIN_REPEAT, will be
        * in our join */
       g_assert (priv->send_join == NULL);
+      g_assert (priv->send_join_failures == NULL);
       priv->send_join = g_array_new (FALSE, FALSE, sizeof (guint32));
+      priv->send_join_failures = g_array_new (FALSE, FALSE, sizeof (guint32));
 
+      g_hash_table_foreach (priv->members, (GHFunc)check_join_state, self);
     }
   else
     {
       g_assert (priv->state == STATE_JOINING);
       g_array_free (priv->send_join, TRUE);
+      g_array_free (priv->send_join_failures, TRUE);
       priv->send_join = g_array_new (FALSE, FALSE, sizeof (guint32));
     }
 
@@ -468,9 +514,15 @@ start_joining_phase (GibberRMulticastTransport *self)
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
     priv->transport->sender_id);
 
+  /* We'll send them as failures as part of this join instead of in a dedicated
+   * failure packet */
+  priv->pending_failures =
+      g_array_remove_range (priv->pending_failures, 0,
+          priv->pending_failures->len);
   gibber_r_multicast_sender_hold_data (sender,
       sender->next_input_packet);
-  gibber_r_multicast_causal_transport_send_join (priv->transport);
+  gibber_r_multicast_causal_transport_send_join (priv->transport,
+    priv->send_join_failures);
 }
 
 static gboolean
@@ -793,41 +845,6 @@ static gint cmp_attempt_join_state (GibberRMulticastTransport *transport,
   return 1;
 }
 
-static gboolean
-equal_joins (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
-{
-  GibberRMulticastTransportPrivate *priv =
-    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
-  guint i;
-
-  g_assert (packet->type == PACKET_TYPE_JOIN);
-
-  if (packet->depends->len == priv->send_join->len + 1)
-    {
-      return FALSE;
-    }
-
-  if (!depends_list_contains (packet->depends, priv->transport->sender_id))
-    {
-      return FALSE;
-    }
-
-  for (i = 0; i < priv->send_join->len; i++)
-    {
-      guint32 id = g_array_index (priv->send_join, guint32, i);
-
-      if (id != packet->sender && !depends_list_contains (packet->depends,
-          g_array_index (priv->send_join, guint32, i)))
-        {
-          DEBUG ("Node %x not contained in the join",
-              g_array_index (priv->send_join, guint32, i));
-          return FALSE;
-        }
-    }
-
-  return TRUE;
-}
-
 static void
 send_failure_packet (GibberRMulticastTransport *self)
 {
@@ -877,18 +894,22 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
   GibberRMulticastSender *sender;
+  MemberInfo *info;
 
   if (g_hash_table_find (priv->members, find_unfailed_member, &id) != NULL)
     {
       return;
     }
 
+  info = member_get_info (self, id);
   g_hash_table_foreach (priv->members, remove_failure, &id);
 
   DEBUG ("Failure process finished for %x\n", id);
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
       id);
-  g_signal_emit (self, signals[LOST_SENDER], 0, sender->name);
+  if (info->state == MEMBER_STATE_MEMBER_FAILING)
+    g_signal_emit (self, signals[LOST_SENDER], 0, sender->name);
+
   gibber_r_multicast_causal_transport_remove_sender (priv->transport, id);
   g_hash_table_remove (priv->members, &id);
 }
@@ -913,11 +934,182 @@ handle_failure_packet (GibberRMulticastTransport *self,
         {
           g_array_append_val (priv->pending_failures, id);
           send_failure_packet (self);
-          member_set_state (self, packet->sender, MEMBER_STATE_FAILING);
+          member_set_state (self, packet->sender,
+            info->state == MEMBER_STATE_MEMBER ?
+              MEMBER_STATE_MEMBER_FAILING : MEMBER_STATE_FAILING
+          );
         }
       g_array_append_val (info->failures, id);
       check_failure_completion (self, id);
     }
+}
+
+static gint
+check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
+{
+  GibberRMulticastTransportPrivate *priv =
+    GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  guint i;
+  guint seen;
+  gint result = 0;
+
+  g_assert (packet->type == PACKET_TYPE_JOIN);
+
+  for (i = 0; i < packet->data.join.failures->len; i++)
+    {
+      MemberInfo *info;
+      guint32 id;
+
+      id = g_array_index (packet->data.join.failures, guint32 , i);
+
+      if (id == priv->transport->sender_id)
+        {
+          /* Uh, oh, we failed! */
+          DEBUG ("FAILURE FAILURE FAILURE");
+          return 1;
+        }
+
+      info = member_get_info (self, id);
+      if (info->state < MEMBER_STATE_ATTEMPT_JOIN_REPEAT)
+        {
+          info->state = MEMBER_STATE_INSTANT_FAILURE;
+          result = -1;
+        }
+      else if (info->state < MEMBER_STATE_MEMBER)
+        {
+          info->state = MEMBER_STATE_FAILING;
+          result = -1;
+        }
+      else if (info->state == MEMBER_STATE_MEMBER)
+        {
+          info->state = MEMBER_STATE_MEMBER_FAILING;
+          result = -1;
+        }
+    }
+
+  if (result != 0)
+    return result;
+
+  if (!depends_list_contains (packet->depends, priv->transport->sender_id))
+    {
+      /* Hmm, a join without us.. Odd.. Should not happen unless we're one of
+       * the failures */
+      DEBUG ("FAILURE FAILURE FAILURE IMPOSSIBLE");
+      return 1;
+    }
+
+  /* We already saw our own id in the depends */
+  seen = 1;
+  for (i = 0; i < priv->send_join->len; i++)
+    {
+      guint32 id = g_array_index (priv->send_join, guint32, i);
+
+      if (id != packet->sender && !depends_list_contains (packet->depends,
+          g_array_index (priv->send_join, guint32, i)))
+        {
+          DEBUG ("Node %x not contained in the join",
+              g_array_index (priv->send_join, guint32, i));
+          result = 1;
+
+        }
+      else
+       {
+         seen++;
+       }
+    }
+
+  if (seen != packet->depends->len + 1)
+    result = -1;
+
+  return result;
+}
+
+static void
+release_data (gpointer key, MemberInfo *value, GibberRMulticastTransport *self)
+{
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
+  GibberRMulticastSender *sender =
+      gibber_r_multicast_causal_transport_get_sender (
+          priv->transport, value->id);
+
+  gibber_r_multicast_sender_release_data (sender);
+}
+
+static void
+check_agreement (GibberRMulticastTransport *self)
+{
+  guint i;
+  MemberInfo *info;
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
+
+  for (i = 0 ; i < priv->send_join->len; i++)
+    {
+      info = g_hash_table_lookup (priv->members,
+        &g_array_index (priv->send_join, guint32, i));
+
+      if (info->state >= MEMBER_STATE_FAILING)
+        continue;
+
+      if (!info->agreed_join)
+        return;
+    }
+
+  DEBUG ("---Finished joining phase!!!!---");
+  for (i = 0 ; i < priv->send_join->len; i++)
+    {
+      info = member_get_info (self,
+        g_array_index (priv->send_join, guint32, i));
+      GibberRMulticastSender *sender =
+          gibber_r_multicast_causal_transport_get_sender (
+              priv->transport, info->id);
+
+      if (info->state != MEMBER_STATE_MEMBER &&
+            info->state < MEMBER_STATE_FAILING)
+        {
+          DEBUG ("New member: %s (%x)", sender->name, info->id);
+
+          info->state = MEMBER_STATE_MEMBER;
+          g_signal_emit (self, signals[NEW_SENDER], 0, sender->name);
+        }
+    }
+
+  for (i = 0 ; i < priv->send_join_failures->len; i++)
+    {
+      info = member_get_info (self,
+        g_array_index (priv->send_join_failures, guint32, i));
+      switch (info->state)
+        {
+          case MEMBER_STATE_MEMBER_FAILING: {
+            GibberRMulticastSender *sender =
+              gibber_r_multicast_causal_transport_get_sender (priv->transport,
+                info->id);
+            if (info->state == MEMBER_STATE_MEMBER_FAILING)
+              g_signal_emit (self, signals[LOST_SENDER], 0, sender->name);
+          }
+          /* fallthrough */
+          case MEMBER_STATE_FAILING:
+            g_hash_table_foreach (priv->members, remove_failure, &(info->id));
+            gibber_r_multicast_causal_transport_remove_sender (priv->transport,
+                info->id);
+            break;
+          case MEMBER_STATE_INSTANT_FAILURE:
+            break;
+          default:
+            g_assert_not_reached ();
+        }
+      g_hash_table_remove (priv->members, &(info->id));
+    }
+
+  g_array_free (priv->send_join, TRUE);
+  priv->send_join = NULL;
+  g_array_free (priv->send_join_failures, TRUE);
+  priv->send_join_failures = NULL;
+  priv->state = STATE_NORMAL;
+  DEBUG ("--------------------------------");
+
+  g_hash_table_foreach (priv->members, (GHFunc) release_data, self);
 }
 
 static void
@@ -943,6 +1135,13 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
 
       changed |= update_foreign_member_list (self, packet,
           MEMBER_STATE_ATTEMPT_JOIN_DONE);
+
+      if (priv->state == STATE_JOINING) {
+        /* Already started the joining process, so don't send or process new
+         * joiners */
+        break;
+      }
+
       for (i = 0; i < packet->data.attempt_join.senders->len; i++)
         {
           guint32 id = g_array_index (packet->data.attempt_join.senders,
@@ -950,11 +1149,6 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
            changed |=
                update_member (self, id, MEMBER_STATE_ATTEMPT_JOIN_STARTED, 0);
         }
-
-      if (priv->state == STATE_JOINING) {
-        /* Already started the joining process, so don't send attempt join */
-        break;
-      }
 
       continue_gathering_phase (self);
 
@@ -993,71 +1187,30 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
           start_joining_phase (self);
         }
 
-      if (equal_joins (self, packet)) {
-        guint i;
-        gboolean agreed = TRUE;
-        MemberInfo *info;
+      switch (check_join (self, packet)) {
+        case 0: {
+          MemberInfo *info;
 
-        DEBUG ("%s agreed with our join", sender->name);
+          DEBUG ("%s agreed with our join", sender->name);
 
-        info = g_hash_table_lookup (priv->members, &packet->sender);
-        info->agreed_join = TRUE;
-
-        for (i = 0 ; i < priv->send_join->len; i++)
-          {
-           info = g_hash_table_lookup (priv->members,
-             &g_array_index (priv->send_join, guint32, i));
-            agreed &= info->agreed_join;
-            if (!agreed)
-              break;
-          }
-
-        if (agreed)
-          {
-            DEBUG ("---Finished joining phase!!!!---");
-            for (i = 0 ; i < priv->send_join->len; i++)
-              {
-                info = member_get_info (self,
-                    g_array_index (priv->send_join, guint32, i));
-                GibberRMulticastSender *sender =
-                    gibber_r_multicast_causal_transport_get_sender (
-                        priv->transport, info->id);
-
-                if (info->state != MEMBER_STATE_MEMBER)
-                  {
-
-                    DEBUG ("New member: %s (%x)", sender->name, info->id);
-
-                    info->state = MEMBER_STATE_MEMBER;
-                    g_signal_emit (self, signals[NEW_SENDER], 0, sender->name);
-                  }
-                gibber_r_multicast_sender_release_data (sender);
-              }
-            priv->state = STATE_NORMAL;
-            DEBUG ("--------------------------------");
-          }
-      } else {
-        guint i;
-        DEBUG ("%s disagreed with our join", sender->name);
-        MemberInfo *info;
-
-        for (i = 0 ; i < priv->send_join->len; i++)
-          {
-           info = g_hash_table_lookup (priv->members,
-             &g_array_index (priv->send_join, guint32, i));
-           if (info->id == packet->sender)
-             {
-               gibber_r_multicast_sender_release_data (
-                   gibber_r_multicast_causal_transport_get_sender (
-                       priv->transport, info->id));
-             }
-          }
-        if (packet->depends->len >= priv->send_join->len)
-          {
-            /* Start the joining phase again */
-            /* TODO doublecheck we know about these senders */
-            start_joining_phase (self);
-          }
+          info = g_hash_table_lookup (priv->members, &packet->sender);
+          info->agreed_join = TRUE;
+          check_agreement (self);
+          break;
+        }
+        case 1:
+          /* Our join had more info, so we don't need to resent it */
+          DEBUG ("%s disagreed with our join with less info", sender->name);
+          gibber_r_multicast_sender_release_data (
+            gibber_r_multicast_causal_transport_get_sender (
+              priv->transport, packet->sender));
+          break;
+        case -1:
+          DEBUG ("%s disagreed with our join", sender->name);
+          /* Start the joining phase again */
+          start_joining_phase (self);
+          check_agreement (self);
+        break;
       }
       break;
     }
@@ -1067,9 +1220,11 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
     case PACKET_TYPE_BYE: {
       MemberInfo *info = member_get_info (self, packet->sender);
 
-      if (info->state != MEMBER_STATE_FAILING)
+      if (info->state < MEMBER_STATE_FAILING)
         {
-          member_set_state (self, packet->sender, MEMBER_STATE_FAILING);
+          member_set_state (self, packet->sender,
+            info->state == MEMBER_STATE_MEMBER ?
+              MEMBER_STATE_MEMBER_FAILING : MEMBER_STATE_FAILING);
           g_array_append_val (priv->pending_failures, packet->sender);
 
           send_failure_packet (self);
