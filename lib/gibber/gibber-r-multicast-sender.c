@@ -466,9 +466,9 @@ check_depends(GibberRMulticastSender *sender,
       /* The node depends on a sender that's unknown to us, this can only
        * happen when an AJ packet is sent. So the node will get known to us
        * after this packet.. Thus we can skip this dependency */
-      g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
       DEBUG_SENDER(sender, "Unknown node in dependency list: %x",
           sender_info->sender_id);
+      g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
       continue;
     }
 
