@@ -29,6 +29,7 @@
 #include "gibber-muc-connection.h"
 #include "gibber-xmpp-stanza.h"
 #include "gibber-namespaces.h"
+#include "gibber-xmpp-error.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -454,28 +455,6 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream)
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_ACCEPTED, NULL);
 }
 
-static GibberXmppStanza *
-make_si_decline_iq (const gchar *from,
-                    const gchar *to,
-                    const gchar *stream_init_id)
-{
-  return gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
-      from, to,
-      GIBBER_NODE_ATTRIBUTE, "id", stream_init_id,
-      GIBBER_NODE, "error",
-        GIBBER_NODE_ATTRIBUTE, "code", "403",
-        GIBBER_NODE_ATTRIBUTE, "type", "cancel",
-        GIBBER_NODE, "forbidden",
-          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
-        GIBBER_NODE_END,
-        GIBBER_NODE, "text",
-          GIBBER_NODE_TEXT, "Offer Declined",
-          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
-        GIBBER_NODE_END,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
-}
-
 static void
 gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
                                GError *error)
@@ -485,10 +464,21 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
 
   g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
-  stanza = make_si_decline_iq (priv->self_id, priv->peer_id,
-      priv->stream_init_id);
+  stanza = gibber_xmpp_stanza_build (
+      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+      priv->self_id, priv->peer_id,
+      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      GIBBER_STANZA_END);
 
-  /* FIXME: use error if not NULL */
+  if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
+    {
+      gibber_xmpp_error_to_node (error->code, stanza->node, error->message);
+    }
+  else
+    {
+      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, stanza->node,
+          "Offer Declined");
+    }
 
   send_stanza (self, stanza, NULL);
 
