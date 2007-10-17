@@ -17,6 +17,22 @@ packettypes = {    0: "Whois request",
                 0x14: "Bye"
 }
 
+WHOIS_REQUEST   = 0x0
+WHOIS_REPLY     = 0x1
+REPAIR_REQUEST  = 0x2
+SESSION         = 0x3
+DATA            = 0xf
+NO_DATA         = 0x10
+FAILURE         = 0x11
+ATTEMPT_JOIN    = 0x12
+JOIN            = 0x13
+BYE             = 0x14
+
+def packet_type(data):
+  return unpack("B", data[0])[0]
+
+
+
 class BaseMeshNode(protocol.ProcessProtocol):
   delimiter = '\n'
   __buffer = ''
@@ -36,7 +52,7 @@ class BaseMeshNode(protocol.ProcessProtocol):
 
   def __sendPacket(self, data):
     binary = b64decode(data)
-    type = unpack("B", binary[0])[0]
+    type = packet_type(binary)
     self.packets[type] = self.packets.get(type, 0) + 1
     return self.sendPacket(binary)
 
