@@ -516,9 +516,11 @@ start_joining_phase (GibberRMulticastTransport *self)
 
   /* We'll send them as failures as part of this join instead of in a dedicated
    * failure packet */
-  priv->pending_failures =
+  if (priv->pending_failures->len > 0)
+    {
       g_array_remove_range (priv->pending_failures, 0,
           priv->pending_failures->len);
+    }
   gibber_r_multicast_sender_hold_data (sender,
       sender->next_input_packet);
   gibber_r_multicast_causal_transport_send_join (priv->transport,
