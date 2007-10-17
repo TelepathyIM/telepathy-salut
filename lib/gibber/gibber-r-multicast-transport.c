@@ -853,6 +853,9 @@ send_failure_packet (GibberRMulticastTransport *self)
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
+  g_assert (priv->pending_failures != NULL);
+  g_assert (priv->pending_failures->len != 0);
+
   gibber_r_multicast_causal_transport_send_failure (priv->transport,
     priv->pending_failures);
 
@@ -932,7 +935,7 @@ handle_failure_packet (GibberRMulticastTransport *self,
       MemberInfo *finfo = member_get_info (self, id);
 
       DEBUG ("%x failed %x", packet->sender, id);
-      if (finfo->state != MEMBER_STATE_FAILING)
+      if (finfo->state < MEMBER_STATE_FAILING)
         {
           g_array_append_val (priv->pending_failures, id);
           send_failure_packet (self);
@@ -995,9 +998,8 @@ check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
   if (!depends_list_contains (packet->depends, priv->transport->sender_id))
     {
       /* Hmm, a join without us.. Odd.. Should not happen unless we're one of
-       * the failures */
-      DEBUG ("FAILURE FAILURE FAILURE IMPOSSIBLE");
-      return 1;
+       * the failures.. Was was handle earlier */
+      g_assert_not_reached();
     }
 
   /* We already saw our own id in the depends */
