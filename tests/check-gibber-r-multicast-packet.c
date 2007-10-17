@@ -53,8 +53,8 @@ START_TEST (test_data_packet) {
   GibberRMulticastPacket *b;
   guint32 sender_id = 1234;
   guint32 packet_id = 1200;
-  guint8 part = 2, total = 3;
-  guint8 stream_id = 56;
+  guint32 part = 2, total = 3;
+  guint16 stream_id = 56;
   guint8 *data;
   gsize len;
   guint8 *pdata;
