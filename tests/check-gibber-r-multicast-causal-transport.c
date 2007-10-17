@@ -155,9 +155,9 @@ depends_send_hook (GibberTransport *transport,
       fail_unless (senders[i].seen, "Not all senders in depends");
     }
 
-  g_object_unref (packet);
   g_main_loop_quit (loop);
 out:
+  g_object_unref (packet);
   return TRUE;
 }
 
