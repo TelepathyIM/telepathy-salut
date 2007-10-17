@@ -1193,7 +1193,7 @@ gibber_r_multicast_causal_transport_send_failure (
 
 void
 gibber_r_multicast_causal_transport_send_join (
-    GibberRMulticastCausalTransport *transport) {
+    GibberRMulticastCausalTransport *transport, GArray *failures) {
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastPacket *packet;
@@ -1203,6 +1203,7 @@ gibber_r_multicast_causal_transport_send_join (
 
   gibber_r_multicast_packet_set_packet_id(packet, priv->packet_id++);
   add_packet_depends (transport, packet);
+  gibber_r_multicast_packet_join_add_failures (packet, failures, NULL);
 
   gibber_r_multicast_sender_push (priv->self, packet);
   sendout_packet (transport, packet, NULL);

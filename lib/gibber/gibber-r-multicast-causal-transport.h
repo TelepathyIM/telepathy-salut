@@ -99,7 +99,7 @@ void gibber_r_multicast_causal_transport_stop_attempt_join (
     GibberRMulticastCausalTransport *transport, guint32 attempt_join_id);
 
 void gibber_r_multicast_causal_transport_send_join (
-    GibberRMulticastCausalTransport *transport);
+    GibberRMulticastCausalTransport *transport, GArray *failures);
 
 void gibber_r_multicast_causal_transport_send_failure (
     GibberRMulticastCausalTransport *transport, GArray *failures);
