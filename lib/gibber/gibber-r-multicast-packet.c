@@ -212,10 +212,12 @@ gibber_r_multicast_packet_set_packet_id (GibberRMulticastPacket *packet,
 
 void
 gibber_r_multicast_packet_set_data_info(GibberRMulticastPacket *packet,
-    guint8 stream_id, guint8 part, guint8 total)
+    guint16 stream_id, guint32 part, guint32 total)
 {
   g_assert(part < total);
   g_assert(packet->type == PACKET_TYPE_DATA);
+  g_assert (part < 0x1000000);
+  g_assert (total < 0x1000000);
 
   packet->data.data.packet_part = part;
   packet->data.data.packet_total = total;
@@ -276,8 +278,8 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
       result += 1 + strlen(packet->data.whois_reply.sender_name);
       break;
     case PACKET_TYPE_DATA:
-      /* 8 bit part, 8 bit total, 8 bit stream id */
-      result += 3;
+      /* 24 bit part, 24 bit total, 16 bit stream id */
+      result += 8;
       break;
     case PACKET_TYPE_REPAIR_REQUEST:
       /* 32 bit packet id and 32 sender id*/
@@ -321,6 +323,50 @@ get_guint8(const guint8 *data, gsize length, gsize *offset) {
   i = *(data + *offset);
   (*offset)++;
   return i;
+}
+
+static void
+add_guint16(guint8 *data, gsize length, gsize *offset, guint16 i) {
+  guint16 ni = htons(i);
+
+  g_assert(*offset + 2 <= length);
+
+  memcpy(data + *offset, &ni, 2);
+  (*offset) += 2;
+}
+
+static guint16
+get_guint16(const guint8 *data, gsize length, gsize *offset) {
+  guint16 ni;
+  g_assert(*offset + 2 <= length);
+
+  memcpy(&ni, data + *offset, 2);
+  (*offset)+=2;
+
+  return ntohs(ni);
+}
+
+static void
+add_guint24(guint8 *data, gsize length, gsize *offset, guint32 i) {
+  guint32 ni = htonl(i);
+
+  g_assert(*offset + 3 <= length);
+
+  memcpy(data + *offset, ((guint8 *)&ni) + 1, 3);
+  (*offset) += 3;
+}
+
+static guint32
+get_guint24(const guint8 *data, gsize length, gsize *offset) {
+  guint32 ni = 0;
+  g_assert(*offset + 3 <= length);
+
+  /* Network byte order is big endian, so just put the 24 bit int inside the
+   * last three bytes */
+  memcpy(((guint8 *)&ni) + 1, data + *offset, 3);
+  (*offset)+=3;
+
+  return ntohl(ni);
 }
 
 static void
@@ -449,11 +495,11 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
           packet->data.whois_reply.sender_name);
       break;
     case PACKET_TYPE_DATA:
-      add_guint8 (priv->data, priv->max_data, &(priv->size),
+      add_guint24 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.packet_part);
-      add_guint8 (priv->data, priv->max_data, &(priv->size),
+      add_guint24 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.packet_total);
-      add_guint8 (priv->data, priv->max_data, &(priv->size),
+      add_guint16 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.stream_id);
 
       g_assert(priv->size + packet->data.data.payload_size == priv->max_data);
@@ -571,11 +617,11 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       break;
     case PACKET_TYPE_DATA:
       result->data.data.packet_part =
-          get_guint8 (priv->data, priv->max_data, &(priv->size));
+          get_guint24 (priv->data, priv->max_data, &(priv->size));
       result->data.data.packet_total =
-          get_guint8 (priv->data, priv->max_data, &(priv->size));
+          get_guint24 (priv->data, priv->max_data, &(priv->size));
       result->data.data.stream_id =
-          get_guint8 (priv->data, priv->max_data, &(priv->size));
+          get_guint16 (priv->data, priv->max_data, &(priv->size));
 
       result->data.data.payload_size = priv->max_data - priv->size;
       result->data.data.payload = g_memdup(priv->data + priv->size,
