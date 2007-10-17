@@ -1059,24 +1059,6 @@ check_agreement (GibberRMulticastTransport *self)
     }
 
   DEBUG ("---Finished joining phase!!!!---");
-  for (i = 0 ; i < priv->send_join->len; i++)
-    {
-      info = member_get_info (self,
-        g_array_index (priv->send_join, guint32, i));
-      GibberRMulticastSender *sender =
-          gibber_r_multicast_causal_transport_get_sender (
-              priv->transport, info->id);
-
-      if (info->state != MEMBER_STATE_MEMBER &&
-            info->state < MEMBER_STATE_FAILING)
-        {
-          DEBUG ("New member: %s (%x)", sender->name, info->id);
-
-          info->state = MEMBER_STATE_MEMBER;
-          g_signal_emit (self, signals[NEW_SENDER], 0, sender->name);
-        }
-    }
-
   for (i = 0 ; i < priv->send_join_failures->len; i++)
     {
       info = member_get_info (self,
@@ -1103,6 +1085,29 @@ check_agreement (GibberRMulticastTransport *self)
         }
       g_hash_table_remove (priv->members, &(info->id));
     }
+
+  for (i = 0 ; i < priv->send_join->len; i++)
+    {
+      GibberRMulticastSender *sender;
+      info = g_hash_table_lookup (priv->members,
+        &g_array_index (priv->send_join, guint32, i));
+
+      if (info == NULL)
+        continue;
+
+      sender = gibber_r_multicast_causal_transport_get_sender (
+              priv->transport, info->id);
+
+      if (info->state != MEMBER_STATE_MEMBER &&
+            info->state < MEMBER_STATE_FAILING)
+        {
+          DEBUG ("New member: %s (%x)", sender->name, info->id);
+
+          info->state = MEMBER_STATE_MEMBER;
+          g_signal_emit (self, signals[NEW_SENDER], 0, sender->name);
+        }
+    }
+
 
   g_array_free (priv->send_join, TRUE);
   priv->send_join = NULL;
