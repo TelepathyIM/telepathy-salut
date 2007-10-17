@@ -115,6 +115,9 @@ gibber_r_multicast_packet_finalize (GObject *object)
     case PACKET_TYPE_ATTEMPT_JOIN:
       g_array_free (self->data.attempt_join.senders, TRUE);
       break;
+    case PACKET_TYPE_JOIN:
+      g_array_free (self->data.join.failures, TRUE);
+      break;
     case PACKET_TYPE_FAILURE:
       g_array_free (self->data.failure.failures, TRUE);
       break;
@@ -163,6 +166,10 @@ gibber_r_multicast_packet_new(GibberRMulticastPacketType type,
   switch (result->type) {
     case PACKET_TYPE_ATTEMPT_JOIN:
       result->data.attempt_join.senders = g_array_new (FALSE, FALSE,
+          sizeof(guint32));
+      break;
+    case PACKET_TYPE_JOIN:
+      result->data.join.failures = g_array_new (FALSE, FALSE,
           sizeof(guint32));
       break;
     case PACKET_TYPE_FAILURE:
@@ -279,6 +286,10 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
     case PACKET_TYPE_ATTEMPT_JOIN:
       /* 8 bit nr of senders, 32 bit per sender */
       result += 1 + 4 * packet->data.attempt_join.senders->len;
+      break;
+    case PACKET_TYPE_JOIN:
+      /* 8 bit nr of senders, 32 bit per failure */
+      result += 1 + 4 * packet->data.join.failures->len;
       break;
     case PACKET_TYPE_FAILURE:
       /* 8 bit nr of senders, 32 bit per failure */
@@ -468,6 +479,17 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
       }
       break;
     }
+    case PACKET_TYPE_JOIN: {
+      int i;
+      add_guint8 (priv->data, priv->max_data, &(priv->size),
+            packet->data.join.failures->len);
+
+      for (i = 0; i < packet->data.join.failures->len; i++) {
+        add_guint32 (priv->data, priv->max_data, &(priv->size),
+          g_array_index (packet->data.join.failures, guint32, i));
+      }
+      break;
+    }
     case PACKET_TYPE_FAILURE: {
       int i;
       add_guint8 (priv->data, priv->max_data, &(priv->size),
@@ -482,9 +504,6 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
     case PACKET_TYPE_SESSION:
       add_sender_info (priv->data, priv->max_data, &(priv->size),
           packet->depends);
-      break;
-    case PACKET_TYPE_JOIN:
-      /* Nothing extra here */
       break;
     case PACKET_TYPE_BYE:
       /* Not implemented, fall through */
@@ -584,6 +603,21 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       }
       break;
     }
+    case PACKET_TYPE_JOIN: {
+      guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
+      guint8 i;
+
+      result->data.join.failures = g_array_sized_new (FALSE, FALSE,
+          sizeof (guint32), nr);
+
+      for (i = 0; i < nr; i++) {
+        guint32 failure = get_guint32 (priv->data,
+            priv->max_data, &(priv->size));
+        gibber_r_multicast_packet_join_add_failure (result,
+            failure, NULL);
+      }
+      break;
+    }
     case PACKET_TYPE_FAILURE: {
       guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
       guint8 i;
@@ -602,8 +636,6 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     case PACKET_TYPE_SESSION:
       get_sender_info(priv->data, priv->max_data, &(priv->size),
           result->depends);
-      break;
-    case PACKET_TYPE_JOIN:
       break;
     case PACKET_TYPE_BYE:
       break;
@@ -656,6 +688,7 @@ gibber_r_multicast_packet_attempt_join_add_sender (
   return TRUE;
 }
 
+/* Add senders that have failed */
 gboolean
 gibber_r_multicast_packet_attempt_join_add_senders (
    GibberRMulticastPacket *packet,
@@ -666,6 +699,31 @@ gibber_r_multicast_packet_attempt_join_add_senders (
 
   g_array_append_vals (packet->data.attempt_join.senders, senders->data,
       senders->len);
+
+  return TRUE;
+}
+
+
+gboolean
+gibber_r_multicast_packet_join_add_failure (GibberRMulticastPacket *packet,
+   guint32 failure, GError **error)
+{
+  g_assert (packet->type == PACKET_TYPE_JOIN);
+
+  g_array_append_val (packet->data.join.failures, failure);
+
+  return TRUE;
+}
+
+gboolean
+gibber_r_multicast_packet_join_add_failures (GibberRMulticastPacket *packet,
+   GArray *failures,
+   GError **error)
+{
+  g_assert (packet->type == PACKET_TYPE_JOIN);
+
+  g_array_append_vals (packet->data.join.failures, failures->data,
+      failures->len);
 
   return TRUE;
 }

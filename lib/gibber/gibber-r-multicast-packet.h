@@ -106,6 +106,13 @@ struct _GibberRMulticastFailurePacket {
     GArray *failures;
 };
 
+typedef struct _GibberRMulticastJoinPacket
+    GibberRMulticastJoinPacket;
+struct _GibberRMulticastJoinPacket {
+    /* Unknown sender identifiers */
+    GArray *failures;
+};
+
 
 typedef struct _GibberRMulticastPacket GibberRMulticastPacket;
 typedef struct _GibberRMulticastPacketClass GibberRMulticastPacketClass;
@@ -130,6 +137,7 @@ struct _GibberRMulticastPacket {
       GibberRMulticastDataPacket data;
       GibberRMulticastRepairRequestPacket repair_request;
       GibberRMulticastAttemptJoinPacket attempt_join;
+      GibberRMulticastJoinPacket join;
       GibberRMulticastFailurePacket failure;
     } data;
 };
@@ -207,6 +215,17 @@ gboolean gibber_r_multicast_packet_attempt_join_add_sender (
 gboolean gibber_r_multicast_packet_attempt_join_add_senders (
    GibberRMulticastPacket *packet,
    GArray *senders,
+   GError **error);
+
+/* Add senders that have failed */
+gboolean gibber_r_multicast_packet_join_add_failure (
+   GibberRMulticastPacket *packet,
+   guint32 failure,
+   GError **error);
+
+gboolean gibber_r_multicast_packet_join_add_failures (
+   GibberRMulticastPacket *packet,
+   GArray *failures,
    GError **error);
 
 /* Add senders that have failed */
