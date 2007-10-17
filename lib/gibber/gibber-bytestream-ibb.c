@@ -198,7 +198,7 @@ gibber_bytestream_ibb_dispose (GObject *object)
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_CLOSED)
     {
-      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self));
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
     }
 
   G_OBJECT_CLASS (gibber_bytestream_ibb_parent_class)->dispose (object);
@@ -551,33 +551,41 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream)
 }
 
 static void
-gibber_bytestream_ibb_decline (GibberBytestreamIBB *self)
+gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
+                               GError *error)
 {
-/*
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  GibberXmppStanza *stanza
+  GibberXmppStanza *stanza;
 
-  if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
-    {
-      DEBUG ("bytestream is not in the local pending state (state %d)",
-          priv->state);
-      return;
-    }
+  g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
-  if (priv->peer_handle_type == TP_HANDLE_TYPE_ROOM ||
-      priv->stream_init_id == NULL)
+  if (priv->stream_init_id == NULL)
     {
       DEBUG ("can't decline a bytestream not created due to a SI request");
       return;
     }
 
-  msg = gibber_bytestream_factory_make_decline_iq (priv->peer_jid,
-      priv->stream_init_id);
+  stanza = gibber_xmpp_stanza_build (
+      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+      priv->self_id, priv->peer_id,
+      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      GIBBER_NODE, "error",
+        GIBBER_NODE_ATTRIBUTE, "code", "403",
+        GIBBER_NODE_ATTRIBUTE, "type", "cancel",
+        GIBBER_NODE, "forbidden",
+          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
+        GIBBER_NODE_END,
+        GIBBER_NODE, "text",
+          GIBBER_NODE_TEXT, "Offer Declined",
+          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
+        GIBBER_NODE_END,
+      GIBBER_NODE_END, GIBBER_STANZA_END);
 
-  _gibber_connection_send (priv->conn, msg, NULL);
+  /* FIXME: use error if not NULL */
 
-  lm_message_unref (msg);
-  */
+  send_stanza (self, stanza, NULL);
+
+  g_object_unref (stanza);
 }
 
 /*
@@ -586,7 +594,8 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self)
  * Implements gibber_bytestream_iface_close on GibberBytestreamIface
  */
 static void
-gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream)
+gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream,
+                             GError *error)
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
@@ -600,14 +609,12 @@ gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream)
       if (priv->stream_init_id != NULL)
         {
           /* Stream was created using SI so we decline the request */
-          gibber_bytestream_ibb_decline (self);
+          gibber_bytestream_ibb_decline (self, error);
         }
     }
 
   else if (priv->xmpp_connection != NULL)
     {
-      /* XXX : Does it make sense to send a close message in a
-       * muc bytestream ? */
       GibberXmppStanza *stanza;
 
       DEBUG ("send IBB close stanza");

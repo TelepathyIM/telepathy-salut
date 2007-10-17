@@ -51,7 +51,7 @@ struct _GibberBytestreamIfaceClass {
   gboolean (*initiate) (GibberBytestreamIface *bytestream);
   gboolean (*send) (GibberBytestreamIface *bytestream, guint len,
       const gchar *data);
-  void (*close) (GibberBytestreamIface *bytestream);
+  void (*close) (GibberBytestreamIface *bytestream, GError *error);
   void (*accept) (GibberBytestreamIface *bytestream);
   const gchar * (*get_protocol) (GibberBytestreamIface *bytestream);
 };
@@ -70,22 +70,18 @@ GType gibber_bytestream_iface_get_type (void);
   (G_TYPE_INSTANCE_GET_INTERFACE ((obj), GIBBER_TYPE_BYTESTREAM_IFACE,\
                               GibberBytestreamIfaceClass))
 
-gboolean
-gibber_bytestream_iface_initiate (GibberBytestreamIface *bytestream);
+gboolean gibber_bytestream_iface_initiate (GibberBytestreamIface *bytestream);
 
-gboolean
-gibber_bytestream_iface_send (GibberBytestreamIface *bytestream, guint len,
-   const gchar *data);
+gboolean gibber_bytestream_iface_send (GibberBytestreamIface *bytestream,
+    guint len, const gchar *data);
 
-void
-gibber_bytestream_iface_close (GibberBytestreamIface *bytestream);
+void gibber_bytestream_iface_close (GibberBytestreamIface *bytestream,
+    GError *error);
 
-void
-gibber_bytestream_iface_accept (GibberBytestreamIface *bytestream);
+void gibber_bytestream_iface_accept (GibberBytestreamIface *bytestream);
 
-const gchar *
-gibber_bytestream_iface_get_protocol (GibberBytestreamIface *bytestream);
-
+const gchar * gibber_bytestream_iface_get_protocol (
+    GibberBytestreamIface *bytestream);
 
 G_END_DECLS
 

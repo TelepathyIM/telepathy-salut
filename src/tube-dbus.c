@@ -396,7 +396,7 @@ salut_tube_dbus_dispose (GObject *object)
 
   if (priv->bytestream)
     {
-      gibber_bytestream_iface_close (priv->bytestream);
+      gibber_bytestream_iface_close (priv->bytestream, NULL);
     }
 
   if (priv->dbus_conn)
@@ -1091,7 +1091,7 @@ salut_tube_dbus_close (SalutTubeIface *tube)
 
   if (priv->bytestream != NULL)
     {
-      gibber_bytestream_iface_close (priv->bytestream);
+      gibber_bytestream_iface_close (priv->bytestream, NULL);
     }
   else
     {
@@ -1110,7 +1110,7 @@ salut_tube_dbus_add_bytestream (SalutTubeIface *tube,
                                 GibberBytestreamIface *bytestream)
 {
   DEBUG ("D-Bus doesn't support extra bytestream");
-  gibber_bytestream_iface_close (bytestream);
+  gibber_bytestream_iface_close (bytestream, NULL);
 }
 
 gboolean

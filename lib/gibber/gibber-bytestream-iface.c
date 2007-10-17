@@ -42,12 +42,13 @@ gibber_bytestream_iface_send (GibberBytestreamIface *self,
 }
 
 void
-gibber_bytestream_iface_close (GibberBytestreamIface *self)
+gibber_bytestream_iface_close (GibberBytestreamIface *self,
+                               GError *error)
 {
-  void (*virtual_method)(GibberBytestreamIface *) =
+  void (*virtual_method)(GibberBytestreamIface *, GError *error) =
     GIBBER_BYTESTREAM_IFACE_GET_CLASS (self)->close;
   g_assert (virtual_method != NULL);
-  virtual_method (self);
+  virtual_method (self, error);
 }
 
 void

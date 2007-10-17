@@ -132,7 +132,7 @@ gibber_bytestream_muc_dispose (GObject *object)
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_CLOSED)
     {
-      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self));
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
     }
 
   g_hash_table_destroy (priv->senders);
@@ -381,7 +381,8 @@ gibber_bytestream_muc_accept (GibberBytestreamIface *bytestream)
  * Implements gibber_bytestream_iface_close on GibberBytestreamIface
  */
 static void
-gibber_bytestream_muc_close (GibberBytestreamIface *bytestream)
+gibber_bytestream_muc_close (GibberBytestreamIface *bytestream,
+                             GError *error)
 {
   GibberBytestreamMuc *self = GIBBER_BYTESTREAM_MUC (bytestream);
   GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
