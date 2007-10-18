@@ -319,8 +319,7 @@ gibber_xmpp_error_quark (void)
 GibberXmppError
 gibber_xmpp_error_from_node (GibberXmppNode *error_node)
 {
-  int i;
-  gint j;
+  gint i, j;
   const gchar *error_code_str;
 
   g_return_val_if_fail (error_node != NULL, XMPP_ERROR_UNDEFINED_CONDITION);
