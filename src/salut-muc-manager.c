@@ -192,6 +192,9 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
   SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
 
+  g_signal_handlers_disconnect_matched (priv->browser, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, mgr);
+
   if (priv->text_channels)
     {
       GHashTable *tmp = priv->text_channels;
