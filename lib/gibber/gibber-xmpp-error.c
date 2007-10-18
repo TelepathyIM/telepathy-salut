@@ -323,7 +323,7 @@ gibber_xmpp_error_from_node (GibberXmppNode *error_node)
   gint j;
   const gchar *error_code_str;
 
-  g_return_val_if_fail (error_node != NULL, INVALID_XMPP_ERROR);
+  g_return_val_if_fail (error_node != NULL, XMPP_ERROR_UNDEFINED_CONDITION);
 
   /* First, try to look it up the modern way */
   if (error_node->children)
@@ -366,7 +366,7 @@ gibber_xmpp_error_from_node (GibberXmppNode *error_node)
         }
     }
 
-  return INVALID_XMPP_ERROR;
+  return XMPP_ERROR_UNDEFINED_CONDITION;
 }
 
 static GError *
