@@ -146,7 +146,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
     {
       "not-allowed",
       "the recipient or server does not allow any entity to perform the action",
-      "action cancel",
+      "cancel",
       0,
       NULL,
       { 405, 0, },
