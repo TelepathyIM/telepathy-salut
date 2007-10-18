@@ -331,7 +331,8 @@ gibber_xmpp_error_from_node (GibberXmppNode *error_node)
       /* skip UNDEFINED_CONDITION */
       for (i = NUM_XMPP_ERRORS - 1; i > 0; i--)
         {
-          if (gibber_xmpp_node_get_child (error_node, xmpp_errors[i].name))
+          if (gibber_xmpp_node_get_child_ns (error_node, xmpp_errors[i].name,
+                xmpp_errors[i].namespace))
             {
               return i;
             }
