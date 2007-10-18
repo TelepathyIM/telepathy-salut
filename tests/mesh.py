@@ -88,9 +88,17 @@ class BaseMeshNode(protocol.ProcessProtocol):
     if not data in self.peers:
       self.peers.append(data)
 
+  def __newNodes(self, data):
+    for x in data.split():
+      self.newNode(x)
+
   def leftNode(self, data):
     node = data.rstrip()
     self.peers.remove(node)
+
+  def __leftNodes(self, data):
+    for x in data.split():
+      self.leftNode (x)
 
   def recvPacket(self, data):
     self.process.write("RECV:" + b64encode(data) + "\n")
@@ -106,8 +114,8 @@ class BaseMeshNode(protocol.ProcessProtocol):
                  "OUTPUT"       :  self.__gotOutput,
                  "CONNECTED"    :  self.__connected,
                  "DISCONNECTED" :  self.__disconnected,
-                 "NEWNODE"      :  self.newNode,
-                 "LEFTNODE"      :  self.leftNode
+                 "NEWNODES"      :  self.__newNodes,
+                 "LOSTNODES"      :  self.__leftNodes
                  }
 
     parts = line.rstrip().split(":", 1)

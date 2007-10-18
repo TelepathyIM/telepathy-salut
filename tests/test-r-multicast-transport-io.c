@@ -89,16 +89,32 @@ got_error(GIOChannel *source, GIOCondition condition, gpointer user_data) {
 }
 
 static void
-new_sender_cb(GibberRMulticastTransport *transport,
-              const char *name, gpointer user_data) {
-  printf("NEWNODE:%s\n", name);
+new_senders_cb(GibberRMulticastTransport *transport,
+              GArray *names, gpointer user_data) {
+  int i;
+  GString *str = g_string_new ("NEWNODES:");
+
+  for (i = 0; i < names->len; i++)
+    {
+      g_string_append_printf (str, "%s ", g_array_index (names, gchar *, i));
+    }
+  printf("%s\n", str->str);
+  g_string_free (str, TRUE);
   fflush(stdout);
 }
 
 static void
-lost_sender_cb(GibberRMulticastTransport *transport,
-              const char *name, gpointer user_data) {
-  printf("LEFTNODE:%s\n", name);
+lost_senders_cb(GibberRMulticastTransport *transport,
+               GArray *names, gpointer user_data) {
+  int i;
+  GString *str = g_string_new ("LOSTNODES:");
+
+  for (i = 0; i < names->len; i++)
+    {
+      g_string_append_printf (str, "%s ", g_array_index (names, gchar *, i));
+    }
+  printf("%s\n", str->str);
+  g_string_free (str, TRUE);
   fflush(stdout);
 }
 
@@ -143,11 +159,11 @@ main(int argc, char **argv){
   gibber_transport_set_handler(GIBBER_TRANSPORT(rm), received_data, argv[1]);
   g_object_unref (rmc);
 
-  g_signal_connect(rm, "new-sender",
-      G_CALLBACK(new_sender_cb), NULL);
+  g_signal_connect(rm, "new-senders",
+      G_CALLBACK(new_senders_cb), NULL);
 
-  g_signal_connect(rm, "lost-sender",
-      G_CALLBACK(lost_sender_cb), NULL);
+  g_signal_connect(rm, "lost-senders",
+      G_CALLBACK(lost_senders_cb), NULL);
 
   g_signal_connect(rmc, "connected",
     G_CALLBACK(rmc_connected), NULL);
