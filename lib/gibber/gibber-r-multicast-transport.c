@@ -1052,9 +1052,8 @@ check_agreement (GibberRMulticastTransport *self)
   MemberInfo *info;
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
-
-  GArray *new = g_array_new (FALSE, FALSE, sizeof(gchar *));
-  GArray *lost = g_array_new (FALSE, FALSE, sizeof(gchar *));
+  GArray *new;
+  GArray *lost;
 
   for (i = 0 ; i < priv->send_join->len; i++)
     {
@@ -1069,6 +1068,9 @@ check_agreement (GibberRMulticastTransport *self)
     }
 
   DEBUG ("---Finished joining phase!!!!---");
+  new = g_array_new (FALSE, FALSE, sizeof(gchar *));
+  lost = g_array_new (FALSE, FALSE, sizeof(gchar *));
+
   for (i = 0 ; i < priv->send_join_failures->len; i++)
     {
       info = member_get_info (self,
