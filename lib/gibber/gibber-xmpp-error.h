@@ -72,7 +72,6 @@ typedef enum {
 
     NUM_XMPP_ERRORS,
 
-    XMPP_ERROR_UNKNOWN,
     INVALID_XMPP_ERROR,
 } GibberXmppError;
 

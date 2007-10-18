@@ -369,7 +369,7 @@ static GError *
 gibber_xmpp_error_to_g_error (GibberXmppError error)
 {
   if (error >= NUM_XMPP_ERRORS)
-      return g_error_new (GIBBER_XMPP_ERROR, XMPP_ERROR_UNKNOWN,
+      return g_error_new (GIBBER_XMPP_ERROR, XMPP_ERROR_UNDEFINED_CONDITION,
           "Unknown or invalid XMPP error");
 
   return g_error_new (GIBBER_XMPP_ERROR,
@@ -471,8 +471,8 @@ gibber_message_get_xmpp_error (GibberXmppStanza *msg)
         }
       else
         {
-          return g_error_new (GIBBER_XMPP_ERROR, XMPP_ERROR_UNKNOWN,
-              "Unknown or invalid XMPP error");
+          return g_error_new (GIBBER_XMPP_ERROR,
+              XMPP_ERROR_UNDEFINED_CONDITION, "Unknown or invalid XMPP error");
         }
     }
 
