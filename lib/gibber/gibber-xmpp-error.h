@@ -74,7 +74,7 @@ typedef enum {
 } GibberXmppError;
 
 GQuark gibber_xmpp_error_quark (void);
-#define GIBBER_XMPP_ERROR gibber_xmpp_error_quark ()
+#define GIBBER_XMPP_ERROR (gibber_xmpp_error_quark ())
 
 GibberXmppError gibber_xmpp_error_from_node (GibberXmppNode *error_node);
 GibberXmppNode *gibber_xmpp_error_to_node (GibberXmppError error,
