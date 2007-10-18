@@ -203,7 +203,7 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  0,
                  NULL, NULL,
                  g_cclosure_marshal_VOID__POINTER,
-                 G_TYPE_NONE, 1, G_TYPE_STRING);
+                 G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
 void
