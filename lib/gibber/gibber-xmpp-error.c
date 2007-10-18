@@ -393,8 +393,8 @@ gibber_xmpp_error_to_node (GibberXmppError error,
   GibberXmppNode *error_node, *node;
   gchar str[6];
 
-  if (error == XMPP_ERROR_UNDEFINED_CONDITION || error >= NUM_XMPP_ERRORS)
-    return NULL;
+  g_return_val_if_fail (error != XMPP_ERROR_UNDEFINED_CONDITION &&
+      error < NUM_XMPP_ERRORS, NULL);
 
   if (xmpp_errors[error].specialises)
     {
