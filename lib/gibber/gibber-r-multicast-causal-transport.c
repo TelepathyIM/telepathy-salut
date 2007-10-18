@@ -1090,10 +1090,12 @@ send_next_bye (gpointer data)
   else
     {
       gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
-      gibber_transport_set_state (GIBBER_TRANSPORT (self),
-                              GIBBER_TRANSPORT_DISCONNECTED);
+
       g_object_unref (priv->self);
       priv->self = NULL;
+
+      gibber_transport_set_state (GIBBER_TRANSPORT (self),
+          GIBBER_TRANSPORT_DISCONNECTED);
     }
 
   return FALSE;
