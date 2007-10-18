@@ -46,8 +46,8 @@ G_DEFINE_TYPE(GibberRMulticastTransport, gibber_r_multicast_transport,
 /* signal enum */
 enum
 {
-    NEW_SENDER,
-    LOST_SENDER,
+    NEW_SENDERS,
+    LOST_SENDERS,
     LAST_SIGNAL
 };
 
@@ -216,23 +216,23 @@ gibber_r_multicast_transport_class_init (
   object_class->dispose = gibber_r_multicast_transport_dispose;
   object_class->finalize = gibber_r_multicast_transport_finalize;
 
-  signals[NEW_SENDER] =
-    g_signal_new("new-sender",
+  signals[NEW_SENDERS] =
+    g_signal_new("new-senders",
                  G_OBJECT_CLASS_TYPE(gibber_r_multicast_transport_class),
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
-                 g_cclosure_marshal_VOID__STRING,
-                 G_TYPE_NONE, 1, G_TYPE_STRING);
+                 g_cclosure_marshal_VOID__POINTER,
+                 G_TYPE_NONE, 1, G_TYPE_POINTER);
 
-  signals[LOST_SENDER] =
-    g_signal_new("lost-sender",
+  signals[LOST_SENDERS] =
+    g_signal_new("lost-senders",
                  G_OBJECT_CLASS_TYPE(gibber_r_multicast_transport_class),
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
-                 g_cclosure_marshal_VOID__STRING,
-                 G_TYPE_NONE, 1, G_TYPE_STRING);
+                 g_cclosure_marshal_VOID__POINTER,
+                 G_TYPE_NONE, 1, G_TYPE_POINTER);
 
   object_class->set_property = gibber_r_multicast_transport_set_property;
   object_class->get_property = gibber_r_multicast_transport_get_property;
@@ -913,7 +913,12 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
       id);
   if (info->state == MEMBER_STATE_MEMBER_FAILING)
-    g_signal_emit (self, signals[LOST_SENDER], 0, sender->name);
+    {
+      GArray *lost = g_array_new (FALSE, FALSE, sizeof (gchar *));
+      g_array_append_val (lost, sender->name);
+      g_signal_emit (self, signals[LOST_SENDERS], 0, lost);
+      g_array_free (lost, TRUE);
+    }
 
   gibber_r_multicast_causal_transport_remove_sender (priv->transport, id);
   g_hash_table_remove (priv->members, &id);
@@ -1048,6 +1053,9 @@ check_agreement (GibberRMulticastTransport *self)
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
 
+  GArray *new = g_array_new (FALSE, FALSE, sizeof(gchar *));
+  GArray *lost = g_array_new (FALSE, FALSE, sizeof(gchar *));
+
   for (i = 0 ; i < priv->send_join->len; i++)
     {
       info = g_hash_table_lookup (priv->members,
@@ -1072,7 +1080,10 @@ check_agreement (GibberRMulticastTransport *self)
               gibber_r_multicast_causal_transport_get_sender (priv->transport,
                 info->id);
             if (info->state == MEMBER_STATE_MEMBER_FAILING)
-              g_signal_emit (self, signals[LOST_SENDER], 0, sender->name);
+              {
+                gchar *name = g_strdup (sender->name);
+                g_array_append_val (lost, name);
+              }
           }
           /* fallthrough */
           case MEMBER_STATE_FAILING:
@@ -1104,12 +1115,19 @@ check_agreement (GibberRMulticastTransport *self)
             info->state < MEMBER_STATE_FAILING)
         {
           DEBUG ("New member: %s (%x)", sender->name, info->id);
-
           info->state = MEMBER_STATE_MEMBER;
-          g_signal_emit (self, signals[NEW_SENDER], 0, sender->name);
+          g_array_append_val (new, sender->name);
         }
     }
 
+  g_signal_emit (self, signals[LOST_SENDERS], 0, lost);
+  g_signal_emit (self, signals[NEW_SENDERS], 0, new);
+
+  for (i = 0 ; i < lost->len ; i++) {
+    g_free (g_array_index (lost, gchar *, i));
+  }
+  g_array_free (lost, TRUE);
+  g_array_free (new, TRUE);
 
   g_array_free (priv->send_join, TRUE);
   priv->send_join = NULL;
