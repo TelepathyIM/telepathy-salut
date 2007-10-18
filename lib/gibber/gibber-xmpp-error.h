@@ -1,8 +1,7 @@
 /*
  * gibber-xmpp-error.h - Header for Gibber's XMPP error handling API
- * Copyright (C) 2006 Collabora Ltd.
+ * Copyright (C) 2006-2007 Collabora Ltd.
  * Copyright (C) 2006 Nokia Corporation
- *   @author Ole Andre Vadla Ravnaas <ole.andre.ravnaas@collabora.co.uk>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
