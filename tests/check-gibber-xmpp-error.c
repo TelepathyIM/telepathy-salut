@@ -103,7 +103,7 @@ START_TEST (test_message_get_xmpp_error)
 {
   GibberXmppError xmpp_error;
 
-  for (xmpp_error = 0; xmpp_error < NUM_XMPP_ERRORS; xmpp_error++)
+  for (xmpp_error = 1; xmpp_error < NUM_XMPP_ERRORS; xmpp_error++)
     {
       GibberXmppStanza *stanza;
       GError *error;
