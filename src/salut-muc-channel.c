@@ -953,19 +953,39 @@ salut_muc_channel_send_stanza(SalutMucChannel *self, guint type,
 
 static void
 salut_muc_channel_change_members(SalutMucChannel *self,
-                                 TpHandle from_handle,
+                                 GArray *members,
                                  gboolean joining) {
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpHandleRepoIface *contact_repo =
+      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSet *empty, *changes;
+  int i;
 
   empty = tp_intset_new();
   changes = tp_intset_new();
-  tp_intset_add(changes, from_handle);
+
+  for (i = 0 ; i < members->len; i++)
+    {
+      TpHandle handle;
+      gchar *sender = g_array_index (members, gchar *, i);
+
+      handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
+      /* FIXME what to do with invalid handles */
+      if (handle == 0) 
+        {
+          DEBUG("New sender, but unknown contact");
+          continue;
+        }
+      tp_intset_add(changes, handle);
+    }
+
   tp_group_mixin_change_members(G_OBJECT(self),
                                 "",
                                 joining ? changes : empty,
                                 joining ? empty : changes,
                                 empty, empty,
-                                from_handle,
+                                0,
                                 TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy(changes);
   tp_intset_destroy(empty);
@@ -1023,43 +1043,19 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
 }
 
 static void
-salut_muc_channel_new_sender(GibberMucConnection *connection, gchar *sender,
+salut_muc_channel_new_senders(GibberMucConnection *connection, GArray *senders,
                              gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
-  TpHandle handle;
 
-  handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
-  /* FIXME what to do with invalid handles */
-  if (handle == 0) {
-    DEBUG("New sender, but unknown contact");
-    return;
-  }
-
-  salut_muc_channel_change_members(self, handle, TRUE);
+  salut_muc_channel_change_members(self, senders, TRUE);
 }
 
 static void
-salut_muc_channel_lost_sender(GibberMucConnection *connection, gchar *sender,
-                             gpointer user_data) {
+salut_muc_channel_lost_senders(GibberMucConnection *connection,
+    GArray *senders, gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
-  TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
-  TpHandle handle;
 
-  handle = tp_handle_lookup(contact_repo, sender, NULL, NULL);
-  /* FIXME what to do with invalid handles */
-  if (handle == 0) {
-    DEBUG("Lost sender, but unknown contact");
-    return;
-  }
-
-  salut_muc_channel_change_members(self, handle, FALSE);
+  salut_muc_channel_change_members(self, senders, FALSE);
 }
 
 static gboolean
@@ -1072,11 +1068,11 @@ salut_muc_channel_connect(SalutMucChannel *channel, GError **error) {
   g_signal_connect(priv->muc_connection, "disconnected",
                    G_CALLBACK(salut_muc_channel_disconnected), channel);
 
-  g_signal_connect(priv->muc_connection, "new-sender",
-                   G_CALLBACK(salut_muc_channel_new_sender), channel);
+  g_signal_connect(priv->muc_connection, "new-senders",
+                   G_CALLBACK(salut_muc_channel_new_senders), channel);
 
-  g_signal_connect(priv->muc_connection, "lost-sender",
-                   G_CALLBACK(salut_muc_channel_lost_sender), channel);
+  g_signal_connect(priv->muc_connection, "lost-senders",
+                   G_CALLBACK(salut_muc_channel_lost_senders), channel);
 
   return gibber_muc_connection_connect(priv->muc_connection, error);
 }
