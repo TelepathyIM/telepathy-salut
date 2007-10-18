@@ -44,7 +44,8 @@ typedef enum
 {
   GIBBER_MUC_CONNECTION_DISCONNECTED = 0,
   GIBBER_MUC_CONNECTION_CONNECTING,
-  GIBBER_MUC_CONNECTION_CONNECTED
+  GIBBER_MUC_CONNECTION_CONNECTED,
+  GIBBER_MUC_CONNECTION_DISCONNECTING,
 } GibberMucConnectionState;
 
 
@@ -86,7 +87,7 @@ gibber_muc_connection_new(const gchar *name,
                          GHashTable *parameters,
                          GError **error);
 
-gboolean 
+gboolean
 gibber_muc_connection_connect(GibberMucConnection *connection, GError **error);
 
 void

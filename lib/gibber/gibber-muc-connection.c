@@ -66,6 +66,7 @@ enum
     DISCONNECTED,
     CONNECTING,
     CONNECTED,
+    DISCONNECTING,
     NEW_SENDERS,
     LOST_SENDERS,
     LAST_SIGNAL
@@ -180,6 +181,15 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
 
   signals[CONNECTED] = 
     g_signal_new("connected", 
+                 G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
+                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                 0,
+                 NULL, NULL,
+                 g_cclosure_marshal_VOID__VOID,
+                 G_TYPE_NONE, 0);
+
+  signals[DISCONNECTING] =
+    g_signal_new("disconnecting",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
@@ -543,8 +553,8 @@ gibber_muc_connection_disconnect(GibberMucConnection *connection) {
   GibberMucConnectionPrivate *priv = 
       GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
 
-  connection->state = GIBBER_MUC_CONNECTION_DISCONNECTED;
-  g_signal_emit(connection, signals[DISCONNECTED], 0);
+  connection->state = GIBBER_MUC_CONNECTION_DISCONNECTING;
+  g_signal_emit(connection, signals[DISCONNECTING], 0);
 
   gibber_transport_disconnect(GIBBER_TRANSPORT(priv->rmtransport));
 }
