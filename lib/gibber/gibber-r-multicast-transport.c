@@ -1120,12 +1120,16 @@ check_agreement (GibberRMulticastTransport *self)
         }
     }
 
-  g_signal_emit (self, signals[LOST_SENDERS], 0, lost);
-  g_signal_emit (self, signals[NEW_SENDERS], 0, new);
+  if (lost->len > 0)
+    g_signal_emit (self, signals[LOST_SENDERS], 0, lost);
+
+  if (new->len > 0)
+    g_signal_emit (self, signals[NEW_SENDERS], 0, new);
 
   for (i = 0 ; i < lost->len ; i++) {
     g_free (g_array_index (lost, gchar *, i));
   }
+
   g_array_free (lost, TRUE);
   g_array_free (new, TRUE);
 
