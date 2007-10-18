@@ -319,7 +319,8 @@ gibber_xmpp_error_quark (void)
 GibberXmppError
 gibber_xmpp_error_from_node (GibberXmppNode *error_node)
 {
-  gint i, j;
+  int i;
+  gint j;
   const gchar *error_code_str;
 
   g_return_val_if_fail (error_node != NULL, INVALID_XMPP_ERROR);
@@ -327,8 +328,9 @@ gibber_xmpp_error_from_node (GibberXmppNode *error_node)
   /* First, try to look it up the modern way */
   if (error_node->children)
     {
-      /* skip UNDEFINED_CONDITION */
-      for (i = NUM_XMPP_ERRORS - 1; i > 0; i--)
+      /* we loop backwards because the most specific errors are the larger
+       * numbers; the >= 0 test is OK because i is signed */
+      for (i = NUM_XMPP_ERRORS - 1; i >= 0; i--)
         {
           if (gibber_xmpp_node_get_child_ns (error_node, xmpp_errors[i].name,
                 xmpp_errors[i].namespace))
