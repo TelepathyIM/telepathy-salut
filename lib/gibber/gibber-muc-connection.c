@@ -66,8 +66,8 @@ enum
     DISCONNECTED,
     CONNECTING,
     CONNECTED,
-    NEW_SENDER,
-    LOST_SENDER,
+    NEW_SENDERS,
+    LOST_SENDERS,
     LAST_SIGNAL
 };
 
@@ -187,22 +187,22 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  g_cclosure_marshal_VOID__VOID,
                  G_TYPE_NONE, 0);
 
-  signals[NEW_SENDER] =
-    g_signal_new("new-sender",
+  signals[NEW_SENDERS] =
+    g_signal_new("new-senders",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
-                 g_cclosure_marshal_VOID__STRING,
-                 G_TYPE_NONE, 1, G_TYPE_STRING);
+                 g_cclosure_marshal_VOID__POINTER,
+                 G_TYPE_NONE, 1, G_TYPE_POINTER);
 
-  signals[LOST_SENDER] =
-    g_signal_new("lost-sender",
+  signals[LOST_SENDERS] =
+    g_signal_new("lost-senders",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST,
                  0,
                  NULL, NULL,
-                 g_cclosure_marshal_VOID__STRING,
+                 g_cclosure_marshal_VOID__POINTER,
                  G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
@@ -424,17 +424,17 @@ err:
 }
 
 static void
-_rmtransport_new_sender_cb(GibberRMulticastTransport *transport,
-                           gchar *sender, gpointer user_data) {
-   g_signal_emit(GIBBER_MUC_CONNECTION(user_data), signals[NEW_SENDER],
-       0, sender);
+_rmtransport_new_senders_cb(GibberRMulticastTransport *transport,
+                           gpointer new, gpointer user_data) {
+   g_signal_emit(GIBBER_MUC_CONNECTION(user_data), signals[NEW_SENDERS],
+       0, new);
 }
 
 static void
-_rmtransport_lost_sender_cb(GibberRMulticastTransport *transport,
-                           gchar *sender, gpointer user_data) {
-   g_signal_emit(GIBBER_MUC_CONNECTION(user_data), signals[LOST_SENDER],
-       0, sender);
+_rmtransport_lost_senders_cb(GibberRMulticastTransport *transport,
+                            gpointer lost, gpointer user_data) {
+   g_signal_emit(GIBBER_MUC_CONNECTION(user_data), signals[LOST_SENDERS],
+       0, lost);
 }
 
 static void
@@ -530,10 +530,10 @@ gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
   } else {
     g_signal_connect (priv->rmtransport, "disconnected",
       G_CALLBACK (_transport_disconnected_cb), connection);
-    g_signal_connect(priv->rmtransport, "new-sender",
-                     G_CALLBACK(_rmtransport_new_sender_cb), connection);
-    g_signal_connect(priv->rmtransport, "lost-sender",
-                     G_CALLBACK(_rmtransport_lost_sender_cb), connection);
+    g_signal_connect(priv->rmtransport, "new-senders",
+                     G_CALLBACK(_rmtransport_new_senders_cb), connection);
+    g_signal_connect(priv->rmtransport, "lost-senders",
+                     G_CALLBACK(_rmtransport_lost_senders_cb), connection);
   }
   return ret;
 }
