@@ -1050,6 +1050,7 @@ check_agreement (GibberRMulticastTransport *self)
 {
   guint i;
   MemberInfo *info;
+  GibberRMulticastSender *sender;
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
   GArray *new;
@@ -1142,6 +1143,9 @@ check_agreement (GibberRMulticastTransport *self)
   priv->state = STATE_NORMAL;
   DEBUG ("--------------------------------");
 
+  sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+      priv->transport->sender_id);
+  gibber_r_multicast_sender_release_data (sender);
   g_hash_table_foreach (priv->members, (GHFunc) release_data, self);
 }
 
