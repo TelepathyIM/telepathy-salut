@@ -639,10 +639,12 @@ out:
 }
 
 static void
-senders_updated(gpointer key, gpointer value, gpointer user_data) {
+senders_collect(gpointer key, gpointer value, gpointer user_data) {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
+  GList **senders = (GList **)user_data;
 
-  gibber_r_multicast_senders_updated(sender);
+  g_object_ref (sender);
+  *senders = g_list_prepend(*senders, sender);
 }
 
 static void
@@ -659,13 +661,26 @@ pop_packets(GibberRMulticastSender *sender) {
     return;
   }
 
+  g_object_ref (sender);
+
   while (pop_packet(sender))
     popped = TRUE;
 
   if (popped)
     {
-      g_hash_table_foreach(priv->senders, senders_updated, NULL);
+      GList *senders = NULL;
+      GList *tmp;
+
+      g_hash_table_foreach(priv->senders, senders_collect, &senders);
+      for (tmp = senders; tmp != NULL; tmp = tmp->next)
+        {
+          GibberRMulticastSender *s = GIBBER_R_MULTICAST_SENDER (tmp->data);
+          gibber_r_multicast_senders_updated(s);
+          g_object_unref (s);
+        }
+      g_list_free (senders);
     }
+  g_object_unref (sender);
 }
 
 void
