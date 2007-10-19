@@ -344,7 +344,8 @@ g_array_uint32_to_str (GArray *array)
   {
     g_string_append_printf (str, " %x,", g_array_index (array, guint32, i));
   }
-  g_string_overwrite (str, str->len - 1, " }");
+  g_string_truncate (str, str->len - 1);
+  g_string_append (str, " }");
 
   return g_string_free (str, FALSE);
 }
