@@ -81,6 +81,8 @@ if ENABLE_DBUS_TUBES
   CORE_SOURCES +=                                       \
     tube-dbus.h                                         \
     tube-dbus.c                                         \
+    tube-stream.h                                       \
+    tube-stream.c                                       \
     salut-tubes-channel.h                               \
     salut-tubes-channel.c
 endif
