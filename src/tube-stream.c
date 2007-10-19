@@ -1380,8 +1380,6 @@ static void
 augment_si_accept_iq (GibberXmppNode *si,
                       gpointer user_data)
 {
-  g_print ("aaaaa augment\n");
-
   gibber_xmpp_node_add_child_ns (si, "tube", GIBBER_TELEPATHY_NS_TUBES);
 }
 
