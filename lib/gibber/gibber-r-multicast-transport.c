@@ -741,6 +741,13 @@ received_foreign_packet_cb (GibberRMulticastCausalTransport *ctransport,
     return;
   }
 
+  if (packet->type == PACKET_TYPE_BYE)
+    {
+      /* Ignore foreign bye packets, we don't care about people that are
+       * leaving */
+      return;
+    }
+
   /* Always add sender, regardless of the packet. So that the causal layer can
    * start requesting id -> name mapping */
   gibber_r_multicast_causal_transport_add_sender (priv->transport,
@@ -788,9 +795,8 @@ received_foreign_packet_cb (GibberRMulticastCausalTransport *ctransport,
       }
     }
 
-    if (packet->type != PACKET_TYPE_BYE
-         && (packet->type != PACKET_TYPE_DATA
-             || packet->data.data.packet_part == 0))
+    if (packet->type != PACKET_TYPE_DATA
+        || packet->data.data.packet_part == 0)
       {
         /* Foreign packet, with no mention of us.. Mark them as unknown */
         update_foreign_member_list (self, packet, MEMBER_STATE_UNKNOWN);
