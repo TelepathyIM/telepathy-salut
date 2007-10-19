@@ -27,6 +27,8 @@
 #include <gibber/gibber-bytestream-oob.h>
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-xmpp-error.h>
+#include <gibber/gibber-iq-helper.h>
 
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
@@ -58,14 +60,6 @@ struct _SalutBytestreamManagerPrivate
 
 #define SALUT_BYTESTREAM_MANAGER_GET_PRIVATE(obj) \
     ((SalutBytestreamManagerPrivate *) obj->priv)
-
-static GibberXmppStanza *
-make_profile_not_understood_iq (const gchar *from, const gchar *to,
-    const gchar *stream_init_id);
-
-static GibberXmppStanza *
-make_no_valid_stream_iq (const gchar *from, const gchar *to,
-    const gchar *stream_init_id);
 
 static void
 salut_bytestream_manager_init (SalutBytestreamManager *self)
@@ -309,9 +303,21 @@ si_request_cb (SalutXmppConnectionManager *xcm,
   const gchar *profile, *from, *stream_id, *stream_init_id, *mime_type;
   GSList *stream_methods = NULL;
 
+   /* after this point, the message is for us, so in all cases we either handle
+   * it or send an error reply */
+
   if (!streaminit_parse_request (stanza, &profile, &from, &stream_id,
         &stream_init_id, &mime_type, &stream_methods))
-    return;
+    {
+      GibberXmppStanza *reply;
+
+      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
+          "failed to parse SI request");
+      gibber_xmpp_connection_send (connection, reply, NULL);
+
+      g_object_unref (reply);
+      return;
+    }
 
   si = gibber_xmpp_node_get_child_ns (stanza->node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
@@ -333,14 +339,17 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       GibberXmppStanza *reply;
 
       DEBUG ("SI request doesn't contain any supported stream method.");
-      reply = make_no_valid_stream_iq (priv->connection->name, from,
-          stream_init_id);
+      reply = gibber_iq_helper_new_error_reply (stanza,
+          XMPP_ERROR_SI_NO_VALID_STREAMS, NULL);
 
       gibber_xmpp_connection_send (connection, reply, NULL);
 
       g_object_unref (reply);
       goto out;
     }
+
+  /* Now that we have a bytestream, it's responsible for declining the IQ
+   * if needed. */
 
   /* As bytestreams are not XCM aware, they can't take/release
    * the connection so we do it for them.
@@ -354,16 +363,10 @@ si_request_cb (SalutXmppConnectionManager *xcm,
   /* We inform the right manager we received a SI request */
   if (tp_strdiff (profile, GIBBER_TELEPATHY_NS_TUBES))
     {
-      GibberXmppStanza *reply;
-
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_SI_BAD_PROFILE, "" };
       DEBUG ("SI profile unsupported: %s", profile);
 
-      reply = make_profile_not_understood_iq (priv->connection->name,
-          from, stream_init_id);
-      gibber_xmpp_connection_send (connection, reply, NULL);
-
-      gibber_bytestream_iface_close (bytestream, NULL);
-      g_object_unref (reply);
+      gibber_bytestream_iface_close (bytestream, &e);
       goto out;
     }
 
@@ -372,6 +375,8 @@ si_request_cb (SalutXmppConnectionManager *xcm,
    *  - a 1-1 tube extra bytestream offer
    *  - a muc tube extra bytestream offer
    */
+
+  /* TODO: implement 1-1 tubes */
 
   node = gibber_xmpp_node_get_child_ns (si, "muc-stream",
         GIBBER_TELEPATHY_NS_TUBES);
@@ -405,8 +410,12 @@ si_request_cb (SalutXmppConnectionManager *xcm,
     }
   else
     {
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+          "Invalid tube SI request: expected <tube>, <stream> or "
+          "<muc-stream>" };
+
       DEBUG ("Invalid tube SI request");
-      gibber_bytestream_iface_close (bytestream, NULL);
+      gibber_bytestream_iface_close (bytestream, &e);
       goto out;
     }
 
@@ -972,46 +981,4 @@ salut_bytestream_manager_negotiate_stream (SalutBytestreamManager *self,
       streaminit_reply_cb_data_free (data);
       return FALSE;
     }
-}
-
-static GibberXmppStanza *
-make_profile_not_understood_iq (const gchar *from,
-                                const gchar *to,
-                                const gchar *stream_init_id)
-{
-  return gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
-      from, to,
-      GIBBER_NODE_ATTRIBUTE, "id", stream_init_id,
-      GIBBER_NODE, "error",
-        GIBBER_NODE_ATTRIBUTE, "code", "400",
-        GIBBER_NODE_ATTRIBUTE, "type", "cancel",
-        GIBBER_NODE, "bad-request",
-          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
-        GIBBER_NODE_END,
-        GIBBER_NODE, "bad-profile",
-          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_SI,
-        GIBBER_NODE_END,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
-}
-
-static GibberXmppStanza *
-make_no_valid_stream_iq (const gchar *from,
-                         const gchar *to,
-                         const gchar *stream_init_id)
-{
-  return gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
-      from, to,
-      GIBBER_NODE_ATTRIBUTE, "id", stream_init_id,
-      GIBBER_NODE, "error",
-        GIBBER_NODE_ATTRIBUTE, "code", "400",
-        GIBBER_NODE_ATTRIBUTE, "type", "cancel",
-        GIBBER_NODE, "bad-request",
-          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
-        GIBBER_NODE_END,
-        GIBBER_NODE, "no-valid-streams",
-          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_SI,
-        GIBBER_NODE_END,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
 }
