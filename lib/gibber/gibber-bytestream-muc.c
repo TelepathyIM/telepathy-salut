@@ -370,7 +370,9 @@ gibber_bytestream_muc_send (GibberBytestreamIface *bytestream,
  * Implements gibber_bytestream_iface_accept on GibberBytestreamIface
  */
 static void
-gibber_bytestream_muc_accept (GibberBytestreamIface *bytestream)
+gibber_bytestream_muc_accept (GibberBytestreamIface *bytestream,
+                              GibberBytestreamAugmentSiAcceptReply func,
+                              gpointer user_data)
 {
   /* Don't have to accept a muc bytestream */
 }

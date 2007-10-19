@@ -42,6 +42,9 @@ typedef enum
   NUM_GIBBER_BYTESTREAM_STATES,
 } GibberBytestreamState;
 
+typedef void (* GibberBytestreamAugmentSiAcceptReply) (
+    GibberXmppNode *si, gpointer user_data);
+
 typedef struct _GibberBytestreamIface GibberBytestreamIface;
 typedef struct _GibberBytestreamIfaceClass GibberBytestreamIfaceClass;
 
@@ -52,7 +55,8 @@ struct _GibberBytestreamIfaceClass {
   gboolean (*send) (GibberBytestreamIface *bytestream, guint len,
       const gchar *data);
   void (*close) (GibberBytestreamIface *bytestream, GError *error);
-  void (*accept) (GibberBytestreamIface *bytestream);
+  void (*accept) (GibberBytestreamIface *bytestream,
+      GibberBytestreamAugmentSiAcceptReply func, gpointer user_data);
   const gchar * (*get_protocol) (GibberBytestreamIface *bytestream);
 };
 
@@ -78,7 +82,8 @@ gboolean gibber_bytestream_iface_send (GibberBytestreamIface *bytestream,
 void gibber_bytestream_iface_close (GibberBytestreamIface *bytestream,
     GError *error);
 
-void gibber_bytestream_iface_accept (GibberBytestreamIface *bytestream);
+void gibber_bytestream_iface_accept (GibberBytestreamIface *bytestream,
+    GibberBytestreamAugmentSiAcceptReply func, gpointer user_data);
 
 const gchar * gibber_bytestream_iface_get_protocol (
     GibberBytestreamIface *bytestream);

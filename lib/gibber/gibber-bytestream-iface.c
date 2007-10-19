@@ -52,12 +52,15 @@ gibber_bytestream_iface_close (GibberBytestreamIface *self,
 }
 
 void
-gibber_bytestream_iface_accept (GibberBytestreamIface *self)
+gibber_bytestream_iface_accept (GibberBytestreamIface *self,
+                                GibberBytestreamAugmentSiAcceptReply func,
+                                gpointer user_data)
 {
-  void (*virtual_method)(GibberBytestreamIface *) =
+  void (*virtual_method)(GibberBytestreamIface *,
+      GibberBytestreamAugmentSiAcceptReply, gpointer) =
     GIBBER_BYTESTREAM_IFACE_GET_CLASS (self)->accept;
   g_assert (virtual_method != NULL);
-  virtual_method (self);
+  virtual_method (self, func, user_data);
 }
 
 const gchar *

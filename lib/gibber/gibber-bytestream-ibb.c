@@ -419,19 +419,32 @@ gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
   return ret;
 }
 
-/*
-GibberXmppStanza *
-gibber_bytestream_ibb_make_accept_iq (GibberBytestreamIBB *self)
+static GibberXmppStanza *
+create_si_accept_iq (GibberBytestreamIBB *self)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  LmMessage *msg;
 
-  msg = gibber_bytestream_factory_make_accept_iq (priv->peer_jid,
-      priv->stream_init_id, NS_IBB);
-
-  return msg;
+  return gibber_xmpp_stanza_build (
+      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_RESULT,
+      priv->self_id, priv->peer_id,
+      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      GIBBER_NODE, "si",
+        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_SI,
+        GIBBER_NODE, "feature",
+          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_FEATURENEG,
+          GIBBER_NODE, "x",
+            GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_DATA,
+            GIBBER_NODE_ATTRIBUTE, "type", "submit",
+            GIBBER_NODE, "field",
+              GIBBER_NODE_ATTRIBUTE, "var", "stream-method",
+              GIBBER_NODE, "value",
+                GIBBER_NODE_TEXT, GIBBER_XMPP_NS_IBB,
+              GIBBER_NODE_END,
+            GIBBER_NODE_END,
+          GIBBER_NODE_END,
+        GIBBER_NODE_END,
+      GIBBER_NODE_END, GIBBER_STANZA_END);
 }
-*/
 
 /*
  * gibber_bytestream_ibb_accept
@@ -439,10 +452,14 @@ gibber_bytestream_ibb_make_accept_iq (GibberBytestreamIBB *self)
  * Implements gibber_bytestream_iface_accept on GibberBytestreamIface
  */
 static void
-gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream)
+gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
+                              GibberBytestreamAugmentSiAcceptReply func,
+                              gpointer user_data)
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
+  GibberXmppStanza *stanza;
+  GibberXmppNode *si;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
@@ -450,6 +467,15 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream)
       DEBUG ("stream was already accepted");
       return;
     }
+
+  stanza = create_si_accept_iq (self);
+  si = gibber_xmpp_node_get_child_ns (stanza->node, "si", GIBBER_XMPP_NS_SI);
+  g_assert (si != NULL);
+
+  /* let the caller add his profile specific data */
+  func (si, user_data);
+
+  gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
 
   DEBUG ("stream is now accepted");
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_ACCEPTED, NULL);
