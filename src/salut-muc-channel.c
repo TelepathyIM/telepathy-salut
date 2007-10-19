@@ -337,26 +337,34 @@ create_invitation (SalutMucChannel *self,
   TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_ROOM);
   GibberXmppStanza *msg;
-  GibberXmppNode *x_node, *invite_node;
+  GibberXmppNode *invite_node;
 
   const gchar *name = tp_handle_inspect(contact_repo, handle);
 
-  msg = gibber_xmpp_stanza_new("message");
+  msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
+      GIBBER_STANZA_SUB_TYPE_NORMAL,
+      priv->connection->name, name,
+      GIBBER_NODE, "body",
+        GIBBER_NODE_TEXT, "You got a chatroom invitation",
+      GIBBER_NODE_END,
+      GIBBER_NODE, "x",
+        GIBBER_NODE_XMLNS, NS_LLMUC,
+        GIBBER_NODE, "invite",
+          GIBBER_NODE_ASSIGN_TO, &invite_node,
+          GIBBER_NODE_ATTRIBUTE, "protocol",
+            gibber_muc_connection_get_protocol (priv->muc_connection),
+          GIBBER_NODE, "roomname",
+            GIBBER_NODE_TEXT, tp_handle_inspect (room_repo, priv->handle),
+          GIBBER_NODE_END,
+        GIBBER_NODE_END,
+      GIBBER_NODE_END,
+      GIBBER_STANZA_END);
 
-  gibber_xmpp_node_set_attribute(msg->node, "from", priv->connection->name);
-  gibber_xmpp_node_set_attribute(msg->node, "to", name);
-
-  gibber_xmpp_node_add_child_with_content(msg->node, "body",
-                                         "You got a chatroom invitation");
-  x_node = gibber_xmpp_node_add_child_ns(msg->node, "x", NS_LLMUC);
-
-  invite_node = gibber_xmpp_node_add_child(x_node, "invite");
-  gibber_xmpp_node_set_attribute(invite_node, "protocol",
-        gibber_muc_connection_get_protocol(priv->muc_connection));
-
-  if (message != NULL && *message != '\0') {
-    gibber_xmpp_node_add_child_with_content(invite_node, "reason", message);
-  }
+  if (message != NULL && *message != '\0')
+    {
+      gibber_xmpp_node_add_child_with_content(invite_node, "reason",
+          message);
+    }
 
   gibber_xmpp_node_add_child_with_content(invite_node, "roomname",
                        tp_handle_inspect(room_repo, priv->handle));
