@@ -63,15 +63,6 @@ gibber_bytestream_iface_accept (GibberBytestreamIface *self,
   virtual_method (self, func, user_data);
 }
 
-const gchar *
-gibber_bytestream_iface_get_protocol (GibberBytestreamIface *self)
-{
-  const gchar * (*virtual_method)(GibberBytestreamIface *) =
-    GIBBER_BYTESTREAM_IFACE_GET_CLASS (self)->get_protocol;
-  g_assert (virtual_method != NULL);
-  return virtual_method (self);
-}
-
 static void
 gibber_bytestream_iface_base_init (gpointer klass)
 {
@@ -126,6 +117,17 @@ gibber_bytestream_iface_base_init (gpointer klass)
           0, NUM_GIBBER_BYTESTREAM_STATES - 1,
           GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
           G_PARAM_READWRITE |
+          G_PARAM_STATIC_NAME |
+          G_PARAM_STATIC_NICK |
+          G_PARAM_STATIC_BLURB);
+      g_object_interface_install_property (klass, param_spec);
+
+     param_spec = g_param_spec_string (
+          "protocol",
+          "protocol",
+          "the name of the protocol implemented by this bytestream",
+          NULL,
+          G_PARAM_READABLE |
           G_PARAM_STATIC_NAME |
           G_PARAM_STATIC_NICK |
           G_PARAM_STATIC_BLURB);

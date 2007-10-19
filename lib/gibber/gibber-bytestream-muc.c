@@ -59,6 +59,7 @@ enum
   PROP_PEER_ID,
   PROP_STREAM_ID,
   PROP_STATE,
+  PROP_PROTOCOL,
   LAST_PROPERTY
 };
 
@@ -203,6 +204,9 @@ gibber_bytestream_muc_get_property (GObject *object,
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
         break;
+      case PROP_PROTOCOL:
+        g_value_set_string (value, "rmulticast");
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -300,6 +304,8 @@ gibber_bytestream_muc_class_init (
       "stream-id");
   g_object_class_override_property (object_class, PROP_STATE,
       "state");
+  g_object_class_override_property (object_class, PROP_PROTOCOL,
+      "protocol");
 
   param_spec = g_param_spec_object (
       "muc-connection",
@@ -425,25 +431,6 @@ gibber_bytestream_muc_get_protocol (GibberBytestreamIface *bytestream)
   return "rmulticast";
 }
 
-void
-gibber_bytestream_muc_add_sender (GibberBytestreamMuc *self,
-                                  const gchar *sender,
-                                  guint16 stream_id)
-{
-  GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
-
-  g_hash_table_insert (priv->senders, g_strdup (sender),
-      GUINT_TO_POINTER ((guint) stream_id));
-}
-
-void gibber_bytestream_muc_remove_sender (GibberBytestreamMuc *self,
-                                          const gchar *sender)
-{
-  GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
-
-  g_hash_table_remove (priv->senders, sender);
-}
-
 static void
 bytestream_iface_init (gpointer g_iface,
                        gpointer iface_data)
@@ -454,5 +441,4 @@ bytestream_iface_init (gpointer g_iface,
   klass->send = gibber_bytestream_muc_send;
   klass->close = gibber_bytestream_muc_close;
   klass->accept = gibber_bytestream_muc_accept;
-  klass->get_protocol = gibber_bytestream_muc_get_protocol;
 }

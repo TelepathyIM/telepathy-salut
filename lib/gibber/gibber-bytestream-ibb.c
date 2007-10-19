@@ -65,6 +65,7 @@ enum
   PROP_STREAM_ID,
   PROP_STREAM_INIT_ID,
   PROP_STATE,
+  PROP_PROTOCOL,
   LAST_PROPERTY
 };
 
@@ -213,6 +214,9 @@ gibber_bytestream_ibb_get_property (GObject *object,
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
         break;
+      case PROP_PROTOCOL:
+        g_value_set_string (value, GIBBER_XMPP_NS_IBB);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -311,6 +315,8 @@ gibber_bytestream_ibb_class_init (
       "stream-id");
   g_object_class_override_property (object_class, PROP_STATE,
       "state");
+  g_object_class_override_property (object_class, PROP_PROTOCOL,
+      "protocol");
 
   param_spec = g_param_spec_object (
       "xmpp-connection",
@@ -637,17 +643,6 @@ gibber_bytestream_ibb_initiate (GibberBytestreamIface *bytestream)
   return TRUE;
 }
 
-/*
- * gibber_bytestream_ibb_get_protocol
- *
- * Implements gibber_bytestream_iface_get_protocol on GibberBytestreamIface
- */
-static const gchar *
-gibber_bytestream_ibb_get_protocol (GibberBytestreamIface *bytestream)
-{
-  return GIBBER_XMPP_NS_IBB;
-}
-
 static void
 bytestream_iface_init (gpointer g_iface,
                        gpointer iface_data)
@@ -658,5 +653,4 @@ bytestream_iface_init (gpointer g_iface,
   klass->send = gibber_bytestream_ibb_send;
   klass->close = gibber_bytestream_ibb_close;
   klass->accept = gibber_bytestream_ibb_accept;
-  klass->get_protocol = gibber_bytestream_ibb_get_protocol;
 }

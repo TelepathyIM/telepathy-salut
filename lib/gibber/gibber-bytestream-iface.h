@@ -57,7 +57,6 @@ struct _GibberBytestreamIfaceClass {
   void (*close) (GibberBytestreamIface *bytestream, GError *error);
   void (*accept) (GibberBytestreamIface *bytestream,
       GibberBytestreamAugmentSiAcceptReply func, gpointer user_data);
-  const gchar * (*get_protocol) (GibberBytestreamIface *bytestream);
 };
 
 GType gibber_bytestream_iface_get_type (void);
@@ -84,9 +83,6 @@ void gibber_bytestream_iface_close (GibberBytestreamIface *bytestream,
 
 void gibber_bytestream_iface_accept (GibberBytestreamIface *bytestream,
     GibberBytestreamAugmentSiAcceptReply func, gpointer user_data);
-
-const gchar * gibber_bytestream_iface_get_protocol (
-    GibberBytestreamIface *bytestream);
 
 G_END_DECLS
 
