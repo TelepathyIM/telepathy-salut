@@ -28,6 +28,7 @@
 #include "gibber-bytestream-iface.h"
 #include "gibber-muc-connection.h"
 #include "gibber-linklocal-transport.h"
+#include "gibber-namespaces.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -205,7 +206,7 @@ gibber_bytestream_muc_get_property (GObject *object,
         g_value_set_uint (value, priv->state);
         break;
       case PROP_PROTOCOL:
-        g_value_set_string (value, "rmulticast");
+        g_value_set_string (value, GIBBER_TELEPATHY_NS_RMULTICAST);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
