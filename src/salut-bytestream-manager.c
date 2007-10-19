@@ -480,7 +480,6 @@ salut_bytestream_manager_set_property (GObject *object,
       case PROP_CONNECTION:
         priv->connection = g_value_get_object (value);
         break;
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
