@@ -58,6 +58,8 @@ CORE_SOURCES =                                          \
     salut-presence.h                                    \
     salut-contact-channel.h                             \
     salut-contact-channel.c                             \
+    salut-bytestream-manager.h                          \
+    salut-bytestream-manager.c                          \
     text-helper.c                                       \
     text-helper.h                                       \
     salut-roomlist-channel.h                            \
