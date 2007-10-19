@@ -679,9 +679,10 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
   SalutBytestreamManagerPrivate *priv =
     SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (data->self);
   GibberStanzaSubType sub_type;
-  GibberXmppNode *si, *feature, *x, *field, *value;
+  GibberXmppNode *si, *feature, *x;
   GibberBytestreamIface *bytestream = NULL;
   const gchar *from, *stream_method, *stream_init_id;
+  GSList *x_children;
 
   salut_xmpp_connection_manager_remove_stanza_filter (
       manager, connection, si_request_reply_filter, si_request_reply_cb, data);
@@ -728,64 +729,75 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
       goto END;
     }
 
-  field = gibber_xmpp_node_get_child (x, "field");
-  if (field == NULL ||
-      tp_strdiff (gibber_xmpp_node_get_attribute (field, "var"),
-        "stream-method"))
+  for (x_children = x->children; x_children;
+      x_children = g_slist_next (x_children))
     {
-      DEBUG ("got a SI reply without stream methods");
-      goto END;
+      GibberXmppNode *value, *field = x_children->data;
+
+      if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "var"),
+            "stream-method"))
+        /* some future field, ignore it */
+        continue;
+
+      value = gibber_xmpp_node_get_child (field, "value");
+      if (value == NULL)
+        {
+          DEBUG ("SI reply's stream-method field "
+              "doesn't contain stream-method value");
+          goto END;
+        }
+
+      stream_method = value->content;
+
+      if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_OOB))
+      {
+        gchar *host;
+
+        /* FIXME: there is probably a better way to define this hostname.
+         * Using avahi and/or Salut API ? */
+        host = g_strdup_printf ("%s.local", g_get_host_name ());
+
+        /* Remote user have accepted the stream */
+        DEBUG ("remote user chose a OOB bytestream");
+        bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_OOB,
+              "xmpp-connection", connection,
+              "stream-id", data->stream_id,
+              "state", GIBBER_BYTESTREAM_STATE_INITIATING,
+              "self-id", priv->connection->name,
+              "peer-id", from,
+              "stream-init-id", NULL,
+              "host", host,
+              NULL);
+
+        g_free (host);
+      }
+    else if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_IBB))
+      {
+        /* Remote user have accepted the stream */
+        DEBUG ("remote user chose a IBB bytestream");
+        bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
+              "xmpp-connection", connection,
+              "stream-id", data->stream_id,
+              "state", GIBBER_BYTESTREAM_STATE_INITIATING,
+              "self-id", priv->connection->name,
+              "peer-id", from,
+              "stream-init-id", NULL,
+              NULL);
+      }
+    else
+      {
+        DEBUG ("Remote user chose an unsupported stream method");
+        goto END;
+      }
+
+      /* no need to parse the rest of the fields, we've found the one we
+       * wanted */
+      break;
+
     }
 
-  value = gibber_xmpp_node_get_child (field, "value");
-  if (value == NULL)
-    {
-      DEBUG ("got a SI reply without stream-method value");
-      goto END;
-    }
-
-  stream_method = value->content;
-
-  if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_OOB))
-    {
-      gchar *host;
-
-      /* FIXME: there is probably a better way to define this hostname.
-       * Using avahi and/or Salut API ? */
-      host = g_strdup_printf ("%s.local", g_get_host_name ());
-
-      /* Remote user have accepted the stream */
-      DEBUG ("remote user chose a OOB bytestream");
-      bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_OOB,
-            "xmpp-connection", connection,
-            "stream-id", data->stream_id,
-            "state", GIBBER_BYTESTREAM_STATE_INITIATING,
-            "self-id", priv->connection->name,
-            "peer-id", from,
-            "stream-init-id", NULL,
-            "host", host,
-            NULL);
-
-      g_free (host);
-    }
-  else if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_IBB))
-    {
-      /* Remote user have accepted the stream */
-      DEBUG ("remote user chose a IBB bytestream");
-      bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
-            "xmpp-connection", connection,
-            "stream-id", data->stream_id,
-            "state", GIBBER_BYTESTREAM_STATE_INITIATING,
-            "self-id", priv->connection->name,
-            "peer-id", from,
-            "stream-init-id", NULL,
-            NULL);
-    }
-  else
-    {
-      DEBUG ("Remote user chose an unsupported stream method");
-      goto END;
-    }
+  if (bytestream == NULL)
+    goto END;
 
   DEBUG ("stream %s accepted. Start to initiate it", data->stream_id);
 
