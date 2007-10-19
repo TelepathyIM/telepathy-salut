@@ -230,6 +230,15 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
           }
           break;
 
+        case GIBBER_NODE_ASSIGN_TO:
+          {
+            GibberXmppNode **dest = va_arg (ap, GibberXmppNode **);
+
+            gibber_goto_if_fail (dest != NULL, error_build_parsing);
+            *dest = stack->data;
+          }
+          break;
+
         default:
           gibber_goto_if_reached (error_build_parsing);
         }

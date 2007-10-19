@@ -36,7 +36,7 @@ typedef enum {
 typedef struct _GibberTransport GibberTransport;
 typedef struct _GibberTransportClass GibberTransportClass;
 typedef struct _GibberBuffer GibberBuffer;
-typedef void (*GibberHandlerFunc)(GibberTransport *transport,
+typedef void (*GibberHandlerFunc) (GibberTransport *transport,
                                    GibberBuffer *buffer,
                                    gpointer user_data);
 
