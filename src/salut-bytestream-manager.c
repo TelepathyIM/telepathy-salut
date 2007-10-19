@@ -109,8 +109,8 @@ streaminit_parse_request (GibberXmppStanza *stanza,
                           const gchar **mime_type,
                           GSList **stream_methods)
 {
-  GibberXmppNode *iq, *si, *feature, *x, *field;
-  GSList *l;
+  GibberXmppNode *iq, *si, *feature, *x;
+  GSList *x_children, *field_children;
 
   iq = stanza->node;
 
@@ -136,7 +136,8 @@ streaminit_parse_request (GibberXmppStanza *stanza,
     }
 
   *mime_type = gibber_xmpp_node_get_attribute (si, "mime-type");
-  /* if no mime_type is defined, we assume "binary/octect-stream" */
+  /* if no mime_type is defined, XEP-0095 says to assume "binary/octect-stream"
+   * which is presumably a typo for "application/octet-stream" */
 
   *profile = gibber_xmpp_node_get_attribute (si, "profile");
   if (*profile == NULL)
@@ -161,50 +162,52 @@ streaminit_parse_request (GibberXmppStanza *stanza,
       return FALSE;
     }
 
-  field = gibber_xmpp_node_get_child (x, "field");
-  if (field == NULL)
+  for (x_children = x->children; x_children;
+      x_children = g_slist_next (x_children))
     {
-      DEBUG ("got a SI request without stream method list");
-      return FALSE;
-    }
+      GibberXmppNode *field = x_children->data;
 
-  if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "var"),
-        "stream-method"))
-    {
-      DEBUG ("got a SI request without stream method list");
-      return FALSE;
-    }
-
-  if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "type"),
-        "list-single"))
-    {
-      DEBUG ("got a SI request without stream method list");
-      return FALSE;
-    }
-
-  /* Get the stream methods offered */
-  *stream_methods = NULL;
-  for (l = field->children; l != NULL; l = g_slist_next (l))
-    {
-      GibberXmppNode *stream_method;
-      GibberXmppNode *value;
-      const gchar *stream_method_str;
-
-      stream_method = (GibberXmppNode *) l->data;
-
-      value = gibber_xmpp_node_get_child (stream_method, "value");
-      if (value == NULL)
+      if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "var"),
+            "stream-method"))
+        /* some future field, ignore it */
         continue;
 
-      stream_method_str = value->content;
-      if (!tp_strdiff (stream_method_str, ""))
-        continue;
+      if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "type"),
+            "list-single"))
+        {
+          DEBUG ( "SI request's stream-method field was "
+              "not of type list-single");
+          return FALSE;
+        }
 
-      DEBUG ("Got stream-method %s", stream_method_str);
+      /* Get the stream methods offered */
+      *stream_methods = NULL;
+      for (field_children = field->children; field_children;
+          field_children = g_slist_next (field_children))
+        {
+          GibberXmppNode *stream_method, *value;
+          const gchar *stream_method_str;
 
-      /* Append to the stream_methods list */
-      *stream_methods = g_slist_append (*stream_methods,
-          (gchar *) stream_method_str);
+          stream_method = (GibberXmppNode *) field_children->data;
+
+          value = gibber_xmpp_node_get_child (stream_method, "value");
+          if (value == NULL)
+            continue;
+
+          stream_method_str = value->content;
+          if (!tp_strdiff (stream_method_str, ""))
+            continue;
+
+          DEBUG ("Got stream-method %s", stream_method_str);
+
+          /* Append to the stream_methods list */
+          *stream_methods = g_slist_append (*stream_methods,
+              (gchar *) stream_method_str);
+        }
+
+      /* no need to parse the rest of the fields, we've found the one we
+       * wanted */
+      break;
     }
 
   if (*stream_methods == NULL)
