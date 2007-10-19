@@ -1016,7 +1016,7 @@ salut_muc_channel_change_members (SalutMucChannel *self,
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
       (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSet *empty, *changes;
-  int i;
+  guint i;
 
   empty = tp_intset_new ();
   changes = tp_intset_new ();
