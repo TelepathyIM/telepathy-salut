@@ -26,6 +26,8 @@
 
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-iq-helper.h>
+#include <gibber/gibber-xmpp-error.h>
+#include <gibber/gibber-namespaces.h>
 
 #include <check.h>
 #include "check-helpers.h"
@@ -277,6 +279,7 @@ START_TEST (test_new_error_reply)
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
   GibberXmppStanza *stanza, *reply;
+  GibberXmppNode *error_node, *node;
   gboolean result;
 
   received_reply = FALSE;
@@ -290,11 +293,29 @@ START_TEST (test_new_error_reply)
       NULL, NULL, NULL);
   fail_unless (result);
 
-  reply = gibber_iq_helper_new_error_reply (stanza);
+  reply = gibber_iq_helper_new_error_reply (stanza,
+      XMPP_ERROR_BAD_REQUEST, "test");
+  g_print ("%s\n", gibber_xmpp_node_to_string (reply->node));
   fail_unless (reply != NULL);
   fail_unless (strcmp (reply->node->name, "iq") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (reply->node, "type"),
         "error") == 0);
+
+  error_node = gibber_xmpp_node_get_child (reply->node, "error");
+  fail_if (error_node == NULL);
+  fail_if (strcmp (gibber_xmpp_node_get_attribute (error_node, "code"),
+        "400") != 0);
+  fail_if (strcmp (gibber_xmpp_node_get_attribute (error_node, "type"),
+        "modify") != 0);
+
+  node = gibber_xmpp_node_get_child_ns (error_node, "bad-request",
+      GIBBER_XMPP_NS_STANZAS);
+  fail_if (node == NULL);
+
+  node = gibber_xmpp_node_get_child (error_node, "text");
+  fail_if (node == NULL);
+  fail_if (strcmp (node->content, "test") != 0);
+
   result = gibber_xmpp_connection_send (xmpp_connection, reply, NULL);
   fail_unless (result);
 
