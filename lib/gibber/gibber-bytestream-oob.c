@@ -37,6 +37,7 @@
 #include "gibber-namespaces.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-xmpp-error.h"
+#include "gibber-iq-helper.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -307,7 +308,13 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
     }
   else
     {
-      /* FIXME: send OOB error response */
+      GibberXmppStanza *reply;
+
+      reply = gibber_iq_helper_new_error_reply (stanza,
+          XMPP_ERROR_ITEM_NOT_FOUND, NULL);
+
+      gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
+      g_object_unref (reply);
     }
 
   return TRUE;
