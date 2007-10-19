@@ -81,6 +81,8 @@ struct _GibberBytestreamIBBPrivate
 
   guint16 seq;
   guint16 last_seq_recv;
+
+  gboolean dispose_has_run;
 };
 
 #define GIBBER_BYTESTREAM_IBB_GET_PRIVATE(obj) \
@@ -162,6 +164,10 @@ gibber_bytestream_ibb_dispose (GObject *object)
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (object);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
+
+  if (priv->dispose_has_run)
+    return;
+  priv->dispose_has_run = TRUE;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_CLOSED)
     {
