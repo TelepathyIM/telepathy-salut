@@ -177,7 +177,8 @@ gibber_r_multicast_causal_transport_init (GibberRMulticastCausalTransport *obj)
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
-  priv->senders = g_hash_table_new (g_direct_hash, g_direct_equal);
+  priv->senders = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, g_object_unref);
   priv->packet_id = g_random_int ();
 }
 
