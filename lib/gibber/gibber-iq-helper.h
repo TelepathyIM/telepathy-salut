@@ -24,6 +24,7 @@
 
 #include "gibber-xmpp-stanza.h"
 #include "gibber-xmpp-connection.h"
+#include "gibber-xmpp-error.h"
 
 G_BEGIN_DECLS
 
@@ -78,7 +79,8 @@ GibberXmppStanza *
 gibber_iq_helper_new_result_reply (GibberXmppStanza *iq);
 
 GibberXmppStanza *
-gibber_iq_helper_new_error_reply (GibberXmppStanza *iq);
+gibber_iq_helper_new_error_reply (GibberXmppStanza *iq, GibberXmppError error,
+    const gchar *errmsg);
 
 G_END_DECLS
 

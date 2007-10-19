@@ -379,7 +379,14 @@ gibber_iq_helper_new_result_reply (GibberXmppStanza *iq)
 }
 
 GibberXmppStanza *
-gibber_iq_helper_new_error_reply (GibberXmppStanza *iq)
+gibber_iq_helper_new_error_reply (GibberXmppStanza *iq,
+                                  GibberXmppError error,
+                                  const gchar *errmsg)
 {
-  return new_reply (iq, GIBBER_STANZA_SUB_TYPE_ERROR);
+  GibberXmppStanza *stanza;
+
+  stanza = new_reply (iq, GIBBER_STANZA_SUB_TYPE_ERROR);
+  gibber_xmpp_error_to_node (error, stanza->node, errmsg);
+
+  return stanza;
 }
