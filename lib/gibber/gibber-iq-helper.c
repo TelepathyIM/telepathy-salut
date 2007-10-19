@@ -388,5 +388,7 @@ gibber_iq_helper_new_error_reply (GibberXmppStanza *iq,
   stanza = new_reply (iq, GIBBER_STANZA_SUB_TYPE_ERROR);
   gibber_xmpp_error_to_node (error, stanza->node, errmsg);
 
+  /* TODO: Would be cool to copy <iq> children as in Gabble */
+
   return stanza;
 }
