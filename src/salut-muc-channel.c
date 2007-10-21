@@ -81,6 +81,7 @@ enum
   PROP_CONNECTION,
   PROP_NAME,
   PROP_CLIENT,
+  PROP_CREATOR,
   PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
@@ -102,6 +103,7 @@ struct _SalutMucChannelPrivate
   SalutAvahiClient *client;
   SalutAvahiEntryGroup *muc_group;
   SalutAvahiEntryGroupService *service;
+  gboolean creator;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -155,6 +157,9 @@ salut_muc_channel_get_property (GObject    *object,
     case PROP_CLIENT:
       g_value_set_object (value, priv->client);
       break;
+    case PROP_CREATOR:
+      g_value_set_boolean (value, priv->creator);
+      break;
     case PROP_XMPP_CONNECTION_MANAGER:
       g_value_set_object (value, priv->xmpp_connection_manager);
       break;
@@ -205,6 +210,9 @@ salut_muc_channel_set_property (GObject     *object,
     case PROP_CLIENT:
       priv->client = g_value_get_object (value);
       break;
+    case PROP_CREATOR:
+      priv->creator = g_value_get_boolean (value);
+      break;
    case PROP_XMPP_CONNECTION_MANAGER:
       priv->xmpp_connection_manager = g_value_get_object (value);
       g_object_ref (priv->xmpp_connection_manager);
@@ -216,8 +224,7 @@ salut_muc_channel_set_property (GObject     *object,
 }
 
 static void
-muc_connection_connected_cb (GibberMucConnection *connection,
-                             SalutMucChannel *self)
+salut_muc_channel_add_self_to_members (SalutMucChannel *self)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
@@ -238,6 +245,16 @@ muc_connection_connected_cb (GibberMucConnection *connection,
 
   tp_intset_destroy (empty);
   tp_intset_destroy (add);
+}
+
+static void
+muc_connection_connected_cb (GibberMucConnection *connection,
+                             SalutMucChannel *self)
+{
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->creator)
+    salut_muc_channel_add_self_to_members (self);
 }
 
 static GObject *
@@ -805,6 +822,18 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
+  param_spec = g_param_spec_boolean (
+      "creator",
+      "creator",
+      "Whether or not we created this muc",
+      FALSE,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class,
+      PROP_CREATOR, param_spec);
+
   signals[READY] = g_signal_new (
         "ready",
         G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
@@ -1046,8 +1075,13 @@ static void
 salut_muc_channel_new_senders(GibberMucConnection *connection, GArray *senders,
                              gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
 
   salut_muc_channel_change_members(self, senders, TRUE);
+  if (!tp_handle_set_is_member (self->group.members,
+      base_connection->self_handle))
+    salut_muc_channel_add_self_to_members (self);
 }
 
 static void

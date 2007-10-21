@@ -393,7 +393,8 @@ _get_connection_parameters (SalutMucManager *mgr,
 static SalutMucChannel *
 salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
                                    TpHandle handle,
-                                   GibberMucConnection *connection)
+                                   GibberMucConnection *connection,
+                                   gboolean new_connection)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
@@ -419,6 +420,7 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
       "handle", handle,
       "name", name,
       "client", priv->client,
+      "creator", new_connection,
       "xmpp-connection-manager", priv->xmpp_connection_manager,
       NULL);
   g_free (path);
@@ -582,7 +584,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   DEBUG ("Connect succeeded");
 
   text_chan = salut_muc_manager_new_muc_channel (mgr, handle,
-      connection);
+      connection, params == NULL);
   r = salut_muc_channel_invited (text_chan,
         base_connection->self_handle, NULL, NULL);
   /* Inviting ourselves to a connected channel should always
@@ -908,7 +910,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
           goto discard;
         }
       /* Need to create a new one */
-      chan = salut_muc_manager_new_muc_channel (self, room_handle, connection);
+      chan = salut_muc_manager_new_muc_channel (self, room_handle,
+          connection, FALSE);
     }
 
   /* FIXME handle properly */
