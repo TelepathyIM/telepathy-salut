@@ -27,6 +27,9 @@
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
 
+/* Maximum time to wait for others joining the group  */
+#define CONNECTED_TIMEOUT 60 * 1000
+
 #include "salut-muc-channel.h"
 
 #include <gibber/gibber-transport.h>
@@ -104,6 +107,7 @@ struct _SalutMucChannelPrivate
   SalutAvahiEntryGroup *muc_group;
   SalutAvahiEntryGroupService *service;
   gboolean creator;
+  guint timeout;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -247,6 +251,18 @@ salut_muc_channel_add_self_to_members (SalutMucChannel *self)
   tp_intset_destroy (add);
 }
 
+static gboolean
+connected_timeout_cb (gpointer user_data)
+{
+  SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+
+  salut_muc_channel_add_self_to_members (self);
+  priv->timeout = 0;
+
+  return FALSE;
+}
+
 static void
 muc_connection_connected_cb (GibberMucConnection *connection,
                              SalutMucChannel *self)
@@ -255,6 +271,9 @@ muc_connection_connected_cb (GibberMucConnection *connection,
 
   if (priv->creator)
     salut_muc_channel_add_self_to_members (self);
+  else
+    priv->timeout = g_timeout_add (CONNECTED_TIMEOUT, connected_timeout_cb,
+        self);
 }
 
 static GObject *
@@ -327,6 +346,7 @@ salut_muc_channel_init (SalutMucChannel *self)
   priv->muc_name = NULL;
   priv->client = NULL;
   priv->service = NULL;
+  priv->timeout = 0;
 }
 
 static void salut_muc_channel_dispose (GObject *object);
@@ -891,6 +911,12 @@ salut_muc_channel_dispose (GObject *object)
       priv->muc_group = NULL;
     }
 
+  if (priv->timeout != 0)
+    {
+      g_source_remove (priv->timeout);
+      priv->timeout = 0;
+    }
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
     G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose (object);
@@ -1116,6 +1142,12 @@ salut_muc_channel_disconnected(GibberTransport *transport,
                                              gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->timeout != 0)
+    {
+      g_source_remove (priv->timeout);
+      priv->timeout = 0;
+    }
 
   if (!priv->connected)
     {
