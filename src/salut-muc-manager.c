@@ -96,6 +96,18 @@ struct _SalutMucManagerPrivate
 #define SALUT_MUC_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate))
 
 static void
+room_resolver_removed (gpointer data)
+{
+  GArray *arr = (GArray *)data;
+  int i;
+  for (i = 0; i < arr->len; i++)
+    {
+      g_object_unref (g_array_index (arr, GObject *, i));
+    }
+  g_array_free (arr, TRUE);
+}
+
+static void
 salut_muc_manager_init (SalutMucManager *obj)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
@@ -108,7 +120,7 @@ salut_muc_manager_init (SalutMucManager *obj)
                                          NULL, g_object_unref);
 
   priv->room_resolvers = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, g_object_unref);
+      g_free, room_resolver_removed);
 
 #ifdef ENABLE_DBUS_TUBES
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
@@ -489,41 +501,51 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   GError *connection_error = NULL;
   const gchar *room_name;
   GHashTable *params = NULL;
-  SalutAvahiServiceResolver *resolver;
+  GArray *arr;
   gboolean r;
 
   room_name = tp_handle_inspect (room_repo, handle);
-  resolver = g_hash_table_lookup (priv->room_resolvers, room_name);
-  if (resolver != NULL)
+  arr = g_hash_table_lookup (priv->room_resolvers, room_name);
+  if (arr != NULL && arr->len > 0)
     {
       /* This MUC already exists on the network, so we reuse its
        * address */
       AvahiAddress avahi_address;
       uint16_t p;
+      int i;
 
-      if (!salut_avahi_service_resolver_get_address (resolver,
-            &avahi_address, &p))
+      for (i = 0; i < arr->len; i++)
         {
-          DEBUG ("..._get_address failed: creating a new MUC room instead");
-        }
-      else
-        {
-          gchar *address = _avahi_address_to_string_address (&avahi_address);
+           SalutAvahiServiceResolver *resolver;
+           resolver = g_array_index (arr, SalutAvahiServiceResolver *, i);
 
-          if (address == NULL)
-            {
-              DEBUG ("stringifying AvahiAddress failed: creating a new MUC "
-                  "room instead");
-            }
-          else
-            {
-              gchar *port = g_strdup_printf ("%u", p);
+           if (!salut_avahi_service_resolver_get_address (resolver,
+                 &avahi_address, &p))
+             {
+               DEBUG ("..._get_address failed:"
+                   "creating a new MUC room instead");
+             }
+           else
+             {
+               gchar *address =
+                   _avahi_address_to_string_address (&avahi_address);
 
-              params = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-                  g_free);
-              g_hash_table_insert (params, "address", address);
-              g_hash_table_insert (params, "port", port);
-              DEBUG ("found %s port %s for room %s", address, port, room_name);
+              if (address == NULL)
+                {
+                  DEBUG ("stringifying AvahiAddress failed: creating a new MUC "
+                      "room instead");
+                }
+              else
+                {
+                  gchar *port = g_strdup_printf ("%u", p);
+
+                  params = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+                      g_free);
+                  g_hash_table_insert (params, "address", address);
+                  g_hash_table_insert (params, "port", port);
+                  DEBUG ("found %s port %s for room %s", address, port,
+                      room_name);
+                }
             }
         }
     }
@@ -949,12 +971,9 @@ browser_found (SalutAvahiServiceBrowser *browser,
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  GArray *arr;
   SalutAvahiServiceResolver *resolver;
   GError *error = NULL;
-
-  resolver = g_hash_table_lookup (priv->room_resolvers, name);
-  if (resolver != NULL)
-    return;
 
   DEBUG ("found room: %s.%s.%s", name, type, domain);
   resolver = salut_avahi_service_resolver_new (interface, protocol,
@@ -969,10 +988,15 @@ browser_found (SalutAvahiServiceBrowser *browser,
       return;
     }
 
-  g_hash_table_insert (priv->room_resolvers, g_strdup (name), resolver);
-
-  g_slist_foreach (priv->roomlist_channels, (GFunc) add_room_foreach,
-      (gchar *) name);
+  arr = g_hash_table_lookup (priv->room_resolvers, name);
+  if (arr == NULL)
+    {
+      arr = g_array_new (FALSE, FALSE, sizeof (GObject *));
+      g_hash_table_insert (priv->room_resolvers, g_strdup (name), arr);
+      g_slist_foreach (priv->roomlist_channels, (GFunc) add_room_foreach,
+          (gchar *) name);
+    }
+  g_array_append_val (arr, resolver);
 }
 
 static void
@@ -999,9 +1023,46 @@ browser_removed (SalutAvahiServiceBrowser *browser,
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   TpHandle handle;
   SalutMucChannel *muc;
+  GArray *arr;
+  int i;
+
+
+  arr = g_hash_table_lookup (priv->room_resolvers, name);
+  g_assert (arr != NULL);
+
+  for (i = 0; i < arr->len; i++)
+    {
+      SalutAvahiServiceResolver *resolver;
+      AvahiIfIndex r_interface;
+      AvahiProtocol r_protocol;
+      gchar *r_name;
+      gchar *r_type;
+      gchar *r_domain;
+
+      resolver = g_array_index (arr, SalutAvahiServiceResolver *, i);
+      g_object_get((gpointer)resolver,
+          "interface", &r_interface,
+          "protocol", &r_protocol,
+          "name", &r_name,
+          "type", &r_type,
+          "domain", &r_domain,
+          NULL);
+      if (interface == r_interface
+          && protocol == r_protocol
+          && !tp_strdiff(name, r_name)
+          && !tp_strdiff(type, r_type)
+          && !tp_strdiff(domain, r_domain))
+        {
+          g_object_unref (resolver);
+          g_array_remove_index_fast (arr, i);
+          break;
+        }
+    }
+
+  if (arr->len > 0)
+    return;
 
   DEBUG ("remove room: %s.%s.%s", name, type, domain);
-
   g_slist_foreach (priv->roomlist_channels, (GFunc) remove_room_foreach,
       (gchar *) name);
 
