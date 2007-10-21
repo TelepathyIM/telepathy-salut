@@ -292,7 +292,7 @@ salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
 #endif
 
   g_slist_foreach (priv->roomlist_channels,
-      (GFunc) salut_muc_manager_iface_foreach_one_list, data);
+      (GFunc) salut_muc_manager_iface_foreach_one_list, &f);
 }
 
 static void
