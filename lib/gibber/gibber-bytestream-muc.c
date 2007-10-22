@@ -70,7 +70,7 @@ struct _GibberBytestreamMucPrivate
   gchar *peer_id;
   gchar *stream_id;
   GibberBytestreamState state;
-  guint8 stream_id_multicast;
+  guint16 stream_id_multicast;
 
   gboolean dispose_has_run;
 };
@@ -96,7 +96,7 @@ gibber_bytestream_muc_init (GibberBytestreamMuc *self)
 static void
 muc_connection_received_data_cb (GibberMucConnection *muc_connection,
                                  const gchar *sender,
-                                 guint8 stream_id,
+                                 guint stream_id,
                                  const guint8 *data,
                                  gsize length,
                                  GibberBytestreamMuc *self)
@@ -242,7 +242,7 @@ gibber_bytestream_muc_constructor (GType type,
   g_assert (priv->peer_id != NULL);
   g_assert (priv->stream_id != NULL);
 
-  priv->stream_id_multicast = (guint8) atoi (priv->stream_id);
+  priv->stream_id_multicast = (guint16) atoi (priv->stream_id);
 
   return obj;
 }

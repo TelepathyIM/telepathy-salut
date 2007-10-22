@@ -45,7 +45,7 @@ GType gibber_r_multicast_causal_transport_get_type (void);
 typedef struct {
   GibberBuffer buffer;
   const gchar *sender;
-  guint8 stream_id;
+  guint16 stream_id;
   guint32 sender_id;
 } GibberRMulticastCausalBuffer;
 
@@ -81,7 +81,7 @@ gboolean gibber_r_multicast_causal_transport_connect (
     GError **error);
 
 gboolean gibber_r_multicast_causal_transport_send (
-    GibberRMulticastCausalTransport *transport, guint8 stream_id,
+    GibberRMulticastCausalTransport *transport, guint16 stream_id,
     const guint8 *data, gsize size, GError **error);
 
 void gibber_r_multicast_causal_transport_add_sender (

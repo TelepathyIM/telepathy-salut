@@ -144,14 +144,14 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  _gibber_signals_marshal_VOID__STRING_OBJECT,
                  G_TYPE_NONE, 2, G_TYPE_STRING, GIBBER_TYPE_XMPP_STANZA);
   signals[RECEIVED_DATA] = 
-    g_signal_new("received-data", 
+    g_signal_new("received-data",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
                  NULL, NULL,
-                 _gibber_signals_marshal_VOID__STRING_UCHAR_POINTER_ULONG,
+                 _gibber_signals_marshal_VOID__STRING_UINT_POINTER_ULONG,
                  G_TYPE_NONE, 4, G_TYPE_STRING,
-                 G_TYPE_UCHAR, G_TYPE_POINTER, G_TYPE_ULONG);
+                 G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_ULONG);
   signals[PARSE_ERROR] = 
     g_signal_new("parse-error", 
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
@@ -610,7 +610,8 @@ static void _connection_received_data(GibberTransport *transport,
 
   if (rmbuffer->stream_id != GIBBER_R_MULTICAST_CAUSAL_DEFAULT_STREAM) {
     g_signal_emit(self, signals[RECEIVED_DATA], 0,
-        rmbuffer->sender, rmbuffer->stream_id, buffer->data, buffer->length);
+        rmbuffer->sender, (guint) rmbuffer->stream_id,
+        buffer->data, buffer->length);
     return;
   }
 
@@ -646,7 +647,7 @@ gibber_muc_connection_send(GibberMucConnection *connection,
 
 gboolean
 gibber_muc_connection_send_raw(GibberMucConnection *connection,
-                               guint8 stream_id,
+                               guint16 stream_id,
                                const guint8 *data,
                                gsize size ,
                                GError **error) {

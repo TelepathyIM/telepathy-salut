@@ -505,7 +505,7 @@ start_joining (GibberRMulticastCausalTransport *transport)
 
 static void
 data_received_cb (GibberRMulticastSender *sender,
-                  guint8 stream_id,
+                  guint16 stream_id,
                   guint8 *data,
                   gsize size,
                   gpointer user_data)
@@ -985,7 +985,7 @@ add_packet_depends (GibberRMulticastCausalTransport *self,
 gboolean
 gibber_r_multicast_causal_transport_send (
     GibberRMulticastCausalTransport *transport,
-    guint8 stream_id,
+    guint16 stream_id,
     const guint8 *data,
     gsize size,
     GError **error)

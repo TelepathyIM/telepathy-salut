@@ -1129,8 +1129,8 @@ generate_stream_id (SalutTubesChannel *self)
     }
   else
     {
-      /* GibberMucConnection's stream-id is a guint8 */
-      stream_id = g_strdup_printf ("%u", g_random_int_range (1, G_MAXUINT8));
+      /* GibberMucConnection's stream-id is a guint16 */
+      stream_id = g_strdup_printf ("%u", g_random_int_range (1, G_MAXUINT16));
     }
 
   return stream_id;

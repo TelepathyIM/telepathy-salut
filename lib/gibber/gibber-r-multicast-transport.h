@@ -41,7 +41,7 @@ struct _GibberRMulticastTransport {
 typedef struct {
   GibberBuffer buffer;
   const gchar *sender;
-  guint8 stream_id;
+  guint16 stream_id;
 } GibberRMulticastBuffer;
 
 GType gibber_r_multicast_transport_get_type(void);
@@ -69,7 +69,7 @@ gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
 
 gboolean
 gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
-                                  guint8 stream_id,
+                                  guint16 stream_id,
                                   const guint8 *data,
                                   gsize size,
                                   GError **error);
