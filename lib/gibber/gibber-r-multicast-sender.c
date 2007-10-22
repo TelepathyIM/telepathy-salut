@@ -200,8 +200,8 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                    0,
                    NULL, NULL,
-                   _gibber_signals_marshal_VOID__UCHAR_POINTER_ULONG,
-                   G_TYPE_NONE, 3, G_TYPE_UCHAR, G_TYPE_POINTER, G_TYPE_ULONG);
+                   _gibber_signals_marshal_VOID__UINT_POINTER_ULONG,
+                   G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_ULONG);
 
   signals[RECEIVED_CONTROL_PACKET] =
       g_signal_new("received-control-packet",
@@ -312,7 +312,7 @@ gibber_r_multicast_sender_new(guint32 id,
 }
 
 static void
-signal_data(GibberRMulticastSender *sender, guint8 stream_id,
+signal_data(GibberRMulticastSender *sender, guint16 stream_id,
             guint8 *data, gsize size) {
   sender->state = GIBBER_R_MULTICAST_SENDER_STATE_RUNNING;
   g_signal_emit(sender, signals[RECEIVED_DATA], 0, stream_id, data, size);
