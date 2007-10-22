@@ -641,16 +641,6 @@ muc_connection_new_sender_cb (GibberMucConnection *conn,
 }
 
 static void
-muc_connection_new_sender_cb (GibberMucConnection *conn,
-                              const gchar *sender,
-                              gpointer user_data)
-{
-  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
-
-  update_tubes_info (self);
-}
-
-static void
 muc_connection_lost_sender_cb (GibberMucConnection *conn,
                                const gchar *sender,
                                gpointer user_data)
