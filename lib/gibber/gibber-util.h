@@ -24,6 +24,10 @@
 
 #include <glib.h>
 
+G_BEGIN_DECLS
+
 void normalize_address (struct sockaddr_storage *addr);
+
+G_END_DECLS
 
 #endif /* #ifndef __GIBBER_UTIL_H__ */
