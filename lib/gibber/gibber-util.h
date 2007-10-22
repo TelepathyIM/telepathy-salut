@@ -20,7 +20,10 @@
 #ifndef __GIBBER_UTIL_H__
 #define __GIBBER_UTIL_H__
 
-#include <glib-object.h>
+#include <netdb.h>
 
+#include <glib.h>
+
+void normalize_address (struct sockaddr_storage *addr);
 
 #endif /* #ifndef __GIBBER_UTIL_H__ */
