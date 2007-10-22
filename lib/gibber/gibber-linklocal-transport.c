@@ -26,7 +26,7 @@
 #include <errno.h>
 
 #include "gibber-linklocal-transport.h"
-//#include "telepathy-errors.h"
+#include "gibber-util.h"
 
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"
@@ -189,17 +189,12 @@ gibber_ll_transport_get_address(GibberLLTransport *transport,
                                 socklen_t *len) {
   GibberFdTransport *fd_transport = GIBBER_FD_TRANSPORT(transport);
   gboolean success = FALSE;
-  struct sockaddr_in *s4 = (struct sockaddr_in*) addr;
-  struct sockaddr_in6 *s6 = (struct sockaddr_in6*) addr;
 
   g_assert(fd_transport->fd >= 0);
   g_assert(*len == sizeof(struct sockaddr_storage));
 
   success = (getpeername(fd_transport->fd, (struct sockaddr *) addr, len) == 0);
-  if (s6->sin6_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED(&(s6->sin6_addr))) {
-    /* Normalize to ipv4 address */
-    s4->sin_family = AF_INET;
-    s4->sin_addr.s_addr = s6->sin6_addr.s6_addr32[3];
-  }
+  gibber_normalize_address (addr);
+
   return success;
 }
