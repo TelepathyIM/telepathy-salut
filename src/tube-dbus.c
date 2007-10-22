@@ -208,6 +208,8 @@ filter_cb (DBusConnection *conn,
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);
   gchar *marshalled = NULL;
   gint len;
+  const gchar *destination;
+  dbus_uint32_t serial;
 
   if (dbus_message_get_type (msg) == DBUS_MESSAGE_TYPE_SIGNAL &&
       !tp_strdiff (dbus_message_get_interface (msg),
@@ -231,6 +233,18 @@ filter_cb (DBusConnection *conn,
     goto out;
 
   gibber_bytestream_iface_send (priv->bytestream, len, marshalled);
+
+  if (GIBBER_IS_BYTESTREAM_MUC (priv->bytestream))
+    {
+      /* In a Salut MUC we never receive messages we sent, so we need to
+       * artificially receive our own messages. */
+      destination = dbus_message_get_destination (msg);
+      if (destination == NULL || !tp_strdiff (priv->dbus_local_name,
+            destination))
+        {
+          dbus_connection_send (priv->dbus_conn, msg, &serial);
+        }
+    }
 
 out:
   if (marshalled != NULL)
