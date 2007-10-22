@@ -1041,7 +1041,7 @@ browser_removed (SalutAvahiServiceBrowser *browser,
       gchar *r_domain;
 
       resolver = g_array_index (arr, SalutAvahiServiceResolver *, i);
-      g_object_get((gpointer)resolver,
+      g_object_get ((gpointer) resolver,
           "interface", &r_interface,
           "protocol", &r_protocol,
           "name", &r_name,
@@ -1050,9 +1050,9 @@ browser_removed (SalutAvahiServiceBrowser *browser,
           NULL);
       if (interface == r_interface
           && protocol == r_protocol
-          && !tp_strdiff(name, r_name)
-          && !tp_strdiff(type, r_type)
-          && !tp_strdiff(domain, r_domain))
+          && !tp_strdiff (name, r_name)
+          && !tp_strdiff (type, r_type)
+          && !tp_strdiff (domain, r_domain))
         {
           g_object_unref (resolver);
           g_array_remove_index_fast (arr, i);
