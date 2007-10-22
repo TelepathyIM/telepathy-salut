@@ -311,8 +311,8 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
 }
 
 static gboolean
-parse_oob_close_iq (GibberBytestreamOOB *self,
-                    GibberXmppStanza *stanza)
+parse_oob_iq_result (GibberBytestreamOOB *self,
+                     GibberXmppStanza *stanza)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   GibberStanzaType type;
@@ -357,7 +357,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
   if (parse_oob_init_iq (self, stanza))
     return;
 
-  if (parse_oob_close_iq (self, stanza))
+  if (parse_oob_iq_result (self, stanza))
     return;
 }
 
