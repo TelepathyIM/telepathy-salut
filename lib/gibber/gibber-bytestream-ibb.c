@@ -146,7 +146,6 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
 
   g_string_free (str, TRUE);
   g_free (decoded);
-  return;
 }
 
 static void
