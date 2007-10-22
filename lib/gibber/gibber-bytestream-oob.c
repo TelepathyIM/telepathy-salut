@@ -666,16 +666,32 @@ gibber_bytestream_oob_send (GibberBytestreamIface *bytestream,
 
   status = g_io_channel_write_chars (priv->data_channel, str, len, &written,
       &error);
-  if (status == G_IO_STATUS_NORMAL)
+  switch (status)
     {
-      DEBUG ("%d bytes send", written);
-    }
-  else
-    {
-      DEBUG ("error writing to socket: %s", error ? error->message : "");
+      case G_IO_STATUS_NORMAL:
+        DEBUG ("%d bytes send", written);
+        break;
+      case G_IO_STATUS_AGAIN:
+        /* TODO */
+        break;
+      case G_IO_STATUS_EOF:
+        DEBUG ("error writing from socket: EOF");
+        goto writing_error;
+        break;
+      default: /* G_IO_STATUS_ERROR */
+        DEBUG ("error writing to socket: %s", error ? error->message : "");
+        goto writing_error;
     }
 
   return TRUE;
+
+writing_error:
+  gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
+
+  if (error != NULL)
+    g_error_free (error);
+
+  return FALSE;
 }
 
 static GibberXmppStanza *
