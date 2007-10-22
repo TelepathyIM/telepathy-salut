@@ -1694,7 +1694,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  update_tubes_info (self, FALSE);
+  update_tubes_info (self);
 
   g_object_get (tube, "address", &address, NULL);
 
