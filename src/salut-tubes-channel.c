@@ -119,6 +119,8 @@ static void muc_connection_received_stanza_cb (GibberMucConnection *conn,
     const gchar *sender, GibberXmppStanza *stanza, gpointer user_data);
 static void muc_connection_lost_sender_cb (GibberMucConnection *conn,
     const gchar *sender, gpointer user_data);
+static void muc_connection_new_sender_cb (GibberMucConnection *conn,
+    const gchar *sender, gpointer user_data);
 static gboolean extract_tube_information (SalutTubesChannel *self,
     GibberXmppNode *tube_node, TpTubeType *type, TpHandle *initiator_handle,
     const gchar **service, GHashTable **parameters, gboolean *offering,
@@ -206,6 +208,8 @@ salut_tubes_channel_constructor (GType type,
 
       g_signal_connect (priv->muc_connection, "received-stanza",
           G_CALLBACK (muc_connection_received_stanza_cb), self);
+      g_signal_connect (priv->muc_connection, "new-sender",
+          G_CALLBACK (muc_connection_new_sender_cb), self);
       g_signal_connect (priv->muc_connection, "lost-sender",
           G_CALLBACK (muc_connection_lost_sender_cb), self);
 
@@ -636,6 +640,16 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
   if (request)
     /* Contact requested tubes information */
     update_tubes_info (self, FALSE);
+}
+
+static void
+muc_connection_new_sender_cb (GibberMucConnection *conn,
+                              const gchar *sender,
+                              gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+
+  update_tubes_info (self);
 }
 
 static void
