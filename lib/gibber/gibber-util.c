@@ -26,7 +26,7 @@
 #include "gibber-util.h"
 
 void
-normalize_address (struct sockaddr_storage *addr)
+gibber_normalize_address (struct sockaddr_storage *addr)
 {
   struct sockaddr_in *s4 = (struct sockaddr_in *) addr;
   struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) addr;

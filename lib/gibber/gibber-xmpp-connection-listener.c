@@ -242,7 +242,7 @@ listener_io_in_cb (GIOChannel *source,
 
   fd = g_io_channel_unix_get_fd (source);
   nfd = accept (fd, (struct sockaddr *) &addr, &addrlen);
-  normalize_address (&addr);
+  gibber_normalize_address (&addr);
 
   transport = gibber_ll_transport_new ();
   gibber_ll_transport_open_fd (transport, nfd);

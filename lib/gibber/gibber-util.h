@@ -26,7 +26,7 @@
 
 G_BEGIN_DECLS
 
-void normalize_address (struct sockaddr_storage *addr);
+void gibber_normalize_address (struct sockaddr_storage *addr);
 
 G_END_DECLS
 
