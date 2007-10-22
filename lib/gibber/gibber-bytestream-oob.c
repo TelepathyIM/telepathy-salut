@@ -950,7 +950,7 @@ listener_io_in_cb (GIOChannel *source,
 
   listen_fd = g_io_channel_unix_get_fd (source);
   fd = accept (listen_fd, (struct sockaddr *) &addr, &addrlen);
-  normalize_address (&addr);
+  gibber_normalize_address (&addr);
 
   ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
       host, NI_MAXHOST, port, NI_MAXSERV,
