@@ -94,7 +94,6 @@ struct _GibberBytestreamIBBPrivate
   guint listener_watch;
   GIOChannel *data_channel;
   guint data_watch;
-  GString *buffer;
 
   gboolean dispose_has_run;
 };
@@ -132,37 +131,35 @@ data_io_in_cb (GIOChannel *source,
 #define BUFF_SIZE 4096
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  int fd;
   gchar buff[BUFF_SIZE];
-  gsize readed;
+  gsize bytes_read;
   GIOStatus status;
   GError *error = NULL;
-  gboolean have_to_wait_for_reading = FALSE;
+  GString *buffer = NULL;
 
   if (! (condition & G_IO_IN))
     return TRUE;
 
-  fd = g_io_channel_unix_get_fd (source);
-
   do
     {
       memset (&buff, 0, BUFF_SIZE);
-      status = g_io_channel_read_chars (source, buff, BUFF_SIZE, &readed,
+
+      buffer = g_string_sized_new (BUFF_SIZE);
+
+      status = g_io_channel_read_chars (source, buff, BUFF_SIZE, &bytes_read,
           &error);
 
       switch (status)
         {
           case G_IO_STATUS_NORMAL:
-            if (priv->buffer == NULL)
-              priv->buffer = g_string_new_len (buff, readed);
-            else
-              g_string_append_len (priv->buffer, buff, readed);
+            g_string_append_len (buffer, buff, bytes_read);
+            g_string_set_size (buffer, bytes_read);
             break;
 
           case G_IO_STATUS_AGAIN:
-            /* We have to wait before be able to finish the reading */
-            have_to_wait_for_reading = TRUE;
-            break;
+            /* We have to wait */
+            g_string_free (buffer, TRUE);
+            return TRUE;
 
           case G_IO_STATUS_EOF:
             DEBUG ("error reading from socket: EOF");
@@ -175,32 +172,24 @@ data_io_in_cb (GIOChannel *source,
             goto reading_error;
         }
 
-    } while (readed == BUFF_SIZE && !have_to_wait_for_reading);
-
-  if (!have_to_wait_for_reading)
-    {
-      DEBUG ("read %d bytes from socket", priv->buffer->len);
-
+      DEBUG ("read %d bytes from socket", buffer->len);
       g_signal_emit (G_OBJECT (self), signals[DATA_RECEIVED], 0, priv->peer_id,
-          priv->buffer);
+          buffer);
 
-      g_string_free (priv->buffer, TRUE);
-      priv->buffer = NULL;
-    }
+      g_string_free (buffer, TRUE);
+    } while (bytes_read == BUFF_SIZE);
 
   return TRUE;
 
 reading_error:
   gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
 
-  if (priv->buffer != NULL)
-    {
-      g_string_free (priv->buffer, TRUE);
-      priv->buffer = NULL;
-    }
+  g_string_free (buffer, TRUE);
 
   if (error != NULL)
-    g_error_free (error);
+    {
+      g_error_free (error);
+    }
 
   return FALSE;
 }
@@ -443,9 +432,6 @@ gibber_bytestream_oob_finalize (GObject *object)
   g_free (priv->host);
   g_free (priv->self_id);
   g_free (priv->peer_id);
-
-  if (priv->buffer != NULL)
-    g_string_free (priv->buffer, TRUE);
 
   G_OBJECT_CLASS (gibber_bytestream_oob_parent_class)->finalize (object);
 }
