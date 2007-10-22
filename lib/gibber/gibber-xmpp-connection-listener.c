@@ -232,8 +232,15 @@ normalize_address (struct sockaddr_storage *addr)
   if (s6->sin6_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED (&(s6->sin6_addr)))
     {
       /* Normalize to ipv4 address */
+      u_int32_t addr_big_endian;
+      u_int16_t port;
+
+      addr_big_endian = s6->sin6_addr.s6_addr[12];
+      port = s6->sin6_port;
+
       s4->sin_family = AF_INET;
-      s4->sin_addr.s_addr = s6->sin6_addr.s6_addr32[3];
+      memcpy (&addr_big_endian, s6->sin6_addr.s6_addr + 12, 4);
+      s4->sin_port = port;
     }
 }
 
