@@ -97,16 +97,6 @@ gibber_bytestream_ibb_init (GibberBytestreamIBB *self)
   self->priv = priv;
 }
 
-static gboolean
-send_stanza (GibberBytestreamIBB *self,
-             GibberXmppStanza *stanza,
-             GError **error)
-{
-  GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-
-  return gibber_xmpp_connection_send (priv->xmpp_connection, stanza, error);
-}
-
 static void
 xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
                                     GibberXmppStanza *stanza,
@@ -422,7 +412,7 @@ gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
       GIBBER_STANZA_END);
 
   DEBUG ("send %d bytes", len);
-  ret = send_stanza (self, stanza, NULL);
+  ret = gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
 
   g_object_unref (stanza);
   g_free (encoded);
@@ -518,7 +508,7 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
           "Offer Declined");
     }
 
-  send_stanza (self, stanza, NULL);
+  gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
 
   g_object_unref (stanza);
 }
@@ -559,7 +549,7 @@ gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream,
             GIBBER_NODE_ATTRIBUTE, "sid", priv->stream_id,
           GIBBER_NODE_END, GIBBER_STANZA_END);
 
-      send_stanza (self, stanza, NULL);
+      gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
 
       g_object_unref (stanza);
     }
@@ -635,7 +625,7 @@ gibber_bytestream_ibb_initiate (GibberBytestreamIface *bytestream)
       GIBBER_NODE_END, GIBBER_STANZA_END);
 
   /* XXX should send using _with_reply (ibb_init_reply_cb) */
-  if (!send_stanza (self, msg, &error))
+  if (!gibber_xmpp_connection_send (priv->xmpp_connection, msg, &error))
     {
       DEBUG ("Error when sending IBB init stanza: %s", error->message);
 
