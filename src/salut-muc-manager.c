@@ -98,7 +98,7 @@ struct _SalutMucManagerPrivate
 static void
 room_resolver_removed (gpointer data)
 {
-  GArray *arr = (GArray *)data;
+  GArray *arr = (GArray *) data;
   int i;
   for (i = 0; i < arr->len; i++)
     {
