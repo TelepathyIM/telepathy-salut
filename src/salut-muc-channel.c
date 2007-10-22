@@ -1101,11 +1101,18 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
 }
 
 static void
-salut_muc_channel_new_senders(GibberMucConnection *connection, GArray *senders,
-                             gpointer user_data) {
-  SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
+salut_muc_channel_new_senders (GibberMucConnection *connection,
+                               GArray *senders,
+                               gpointer user_data)
+{
+  SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
 
-  salut_muc_channel_change_members(self, senders, TRUE);
+  salut_muc_channel_change_members (self, senders, TRUE);
+  if (!tp_handle_set_is_member (self->group.members,
+      base_connection->self_handle))
+    salut_muc_channel_add_self_to_members (self);
 }
 
 static void
