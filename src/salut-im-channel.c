@@ -829,7 +829,8 @@ salut_im_channel_is_text_message (GibberXmppStanza *stanza)
   if (type != GIBBER_STANZA_TYPE_MESSAGE)
     return FALSE;
 
-  if (gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC) != NULL)
+  if (gibber_xmpp_node_get_child_ns (stanza->node, "x",
+        NS_TP_LL_ROOM_INVITATION) != NULL)
     /* discard MUC invite */
     return FALSE;
 

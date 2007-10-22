@@ -799,7 +799,8 @@ invite_stanza_filter (SalutXmppConnectionManager *mgr,
   if (type != GIBBER_STANZA_TYPE_MESSAGE)
     return FALSE;
 
-  return (gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC) != NULL);
+  return (gibber_xmpp_node_get_child_ns (stanza->node, "x",
+        NS_TP_LL_ROOM_INVITATION) != NULL);
 }
 
 static void
@@ -828,7 +829,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   GHashTable *params_hash;
   GibberMucConnection *connection = NULL;
 
-  node = gibber_xmpp_node_get_child_ns (stanza->node, "x", NS_LLMUC);
+  node = gibber_xmpp_node_get_child_ns (stanza->node, "x",
+      NS_TP_LL_ROOM_INVITATION);
   g_assert (node != NULL);
 
   DEBUG("Got an invitation");
