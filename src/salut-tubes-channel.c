@@ -114,7 +114,7 @@ struct _SalutTubesChannelPrivate
 #define SALUT_TUBES_CHANNEL_GET_PRIVATE(obj) \
   ((SalutTubesChannelPrivate *) obj->priv)
 
-static gboolean update_tubes_info (SalutTubesChannel *self, gboolean request);
+static gboolean update_tubes_info (SalutTubesChannel *self);
 static void muc_connection_received_stanza_cb (GibberMucConnection *conn,
     const gchar *sender, GibberXmppStanza *stanza, gpointer user_data);
 static void muc_connection_lost_sender_cb (GibberMucConnection *conn,
@@ -150,9 +150,6 @@ muc_channel_ready_cb (SalutMucChannel *chan,
                       SalutTubesChannel *self)
 {
   self->ready = TRUE;
-
-  /* request tubes infos */
-  update_tubes_info (self, TRUE);
 
   g_signal_emit (self, signals[READY], 0);
 }
@@ -515,7 +512,6 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
   TpHandle contact;
   GibberXmppNode *tubes_node;
   GSList *l;
-  gboolean request = FALSE;
   GHashTable *old_dbus_tubes;
   struct _add_in_old_dbus_tubes_data add_data;
   struct _emit_d_bus_names_changed_foreach_data emit_data;
@@ -535,10 +531,6 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
       GIBBER_TELEPATHY_NS_TUBES);
   if (tubes_node == NULL)
     return;
-
-  if (!tp_strdiff (gibber_xmpp_node_get_attribute (tubes_node, "request"),
-        "true"))
-    request = TRUE;
 
   /* Fill old_dbus_tubes with D-BUS tubes previoulsy announced by
    * the contact */
@@ -636,10 +628,16 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
       &emit_data);
 
   g_hash_table_destroy (old_dbus_tubes);
+}
 
-  if (request)
-    /* Contact requested tubes information */
-    update_tubes_info (self, FALSE);
+static void
+muc_connection_new_sender_cb (GibberMucConnection *conn,
+                              const gchar *sender,
+                              gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+
+  update_tubes_info (self);
 }
 
 static void
@@ -789,7 +787,7 @@ tube_closed_cb (SalutTubeIface *tube,
   /* Emit the DBusNamesChanged signal */
   d_bus_names_changed_removed (self, tube_id, priv->self_handle);
 
-  update_tubes_info (self, FALSE);
+  update_tubes_info (self);
 
   tp_svc_channel_type_tubes_emit_tube_closed (self, tube_id);
 }
@@ -845,7 +843,7 @@ create_new_tube (SalutTubesChannel *self,
 
   DEBUG ("create tube %u", tube_id);
   g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);
-  update_tubes_info (self, FALSE);
+  update_tubes_info (self);
 
   g_object_get (tube, "state", &state, NULL);
 
@@ -1095,8 +1093,7 @@ publish_tubes_in_node (gpointer key,
 }
 
 static gboolean
-update_tubes_info (SalutTubesChannel *self,
-                   gboolean request)
+update_tubes_info (SalutTubesChannel *self)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *conn = (TpBaseConnection*) priv->conn;
@@ -1123,9 +1120,6 @@ update_tubes_info (SalutTubesChannel *self,
 
   node = gibber_xmpp_node_get_child_ns (msg->node, "tubes",
       GIBBER_TELEPATHY_NS_TUBES);
-
-  if (request)
-    gibber_xmpp_node_set_attribute (node, "request", "true");
 
   data.self = self;
   data.tubes_node = node;
@@ -1271,7 +1265,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
 
   salut_tube_iface_accept (tube, NULL);
 
-  update_tubes_info (self, FALSE);
+  update_tubes_info (self);
 
   g_object_get (tube,
       "dbus-address", &addr,
