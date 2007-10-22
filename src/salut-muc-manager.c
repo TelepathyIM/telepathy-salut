@@ -545,6 +545,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
                   g_hash_table_insert (params, "port", port);
                   DEBUG ("found %s port %s for room %s", address, port,
                       room_name);
+                  break;
                 }
             }
         }
