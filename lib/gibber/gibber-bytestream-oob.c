@@ -38,6 +38,7 @@
 #include "gibber-linklocal-transport.h"
 #include "gibber-xmpp-error.h"
 #include "gibber-iq-helper.h"
+#include "gibber-util.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -830,27 +831,6 @@ make_oob_init_iq (const gchar *from,
           GIBBER_NODE_TEXT, url,
         GIBBER_NODE_END,
       GIBBER_NODE_END, GIBBER_STANZA_END);
-}
-
-static void
-normalize_address (struct sockaddr_storage *addr)
-{
-  struct sockaddr_in *s4 = (struct sockaddr_in *) addr;
-  struct sockaddr_in6 *s6 = (struct sockaddr_in6 *) addr;
-
-  if (s6->sin6_family == AF_INET6 && IN6_IS_ADDR_V4MAPPED (&(s6->sin6_addr)))
-    {
-      /* Normalize to ipv4 address */
-      u_int32_t addr_big_endian;
-      u_int16_t port;
-
-      addr_big_endian = s6->sin6_addr.s6_addr[12];
-      port = s6->sin6_port;
-
-      s4->sin_family = AF_INET;
-      memcpy (&addr_big_endian, s6->sin6_addr.s6_addr + 12, 4);
-      s4->sin_port = port;
-    }
 }
 
 static gboolean
