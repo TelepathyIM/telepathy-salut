@@ -473,8 +473,11 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
   si = gibber_xmpp_node_get_child_ns (stanza->node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
-  /* let the caller add his profile specific data */
-  func (si, user_data);
+  if (func != NULL)
+    {
+      /* let the caller add his profile specific data */
+      func (si, user_data);
+    }
 
   gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
 
