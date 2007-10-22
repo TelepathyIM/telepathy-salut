@@ -665,10 +665,11 @@ muc_channel_add_member (GObject *iface,
       gboolean ret = TRUE;
 
       if (tp_handle_set_is_member (self->group.remote_pending,
-          base_connection->self_handle)) {
-        /* Already in remote pending, no need to redo */
-        return TRUE;
-      }
+          base_connection->self_handle))
+        {
+          /* Already in remote pending, no need to redo */
+          return TRUE;
+        }
 
       empty = tp_intset_new ();
       add = tp_intset_new ();
