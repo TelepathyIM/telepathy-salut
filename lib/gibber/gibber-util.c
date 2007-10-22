@@ -37,11 +37,11 @@ normalize_address (struct sockaddr_storage *addr)
       u_int32_t addr_big_endian;
       u_int16_t port;
 
-      addr_big_endian = s6->sin6_addr.s6_addr[12];
+      memcpy (&addr_big_endian, s6->sin6_addr.s6_addr + 12, 4);
       port = s6->sin6_port;
 
       s4->sin_family = AF_INET;
-      memcpy (&addr_big_endian, s6->sin6_addr.s6_addr + 12, 4);
+      s4->sin_addr.s_addr = addr_big_endian;
       s4->sin_port = port;
     }
 }
