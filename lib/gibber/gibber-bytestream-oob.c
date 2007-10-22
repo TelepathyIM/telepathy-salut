@@ -134,28 +134,23 @@ data_io_in_cb (GIOChannel *source,
 #define BUFF_SIZE 4096
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  gchar buff[BUFF_SIZE];
   gsize bytes_read;
   GIOStatus status;
   GError *error = NULL;
-  GString *buffer = NULL;
+  GString *buffer;
 
   if (! (condition & G_IO_IN))
     return TRUE;
 
+  buffer = g_string_sized_new (BUFF_SIZE);
   do
     {
-      memset (&buff, 0, BUFF_SIZE);
-
-      buffer = g_string_sized_new (BUFF_SIZE);
-
-      status = g_io_channel_read_chars (source, buff, BUFF_SIZE, &bytes_read,
-          &error);
+      status = g_io_channel_read_chars (source, buffer->str, BUFF_SIZE,
+          &bytes_read, &error);
 
       switch (status)
         {
           case G_IO_STATUS_NORMAL:
-            g_string_append_len (buffer, buff, bytes_read);
             g_string_set_size (buffer, bytes_read);
             break;
 
@@ -179,8 +174,10 @@ data_io_in_cb (GIOChannel *source,
       g_signal_emit (G_OBJECT (self), signals[DATA_RECEIVED], 0, priv->peer_id,
           buffer);
 
-      g_string_free (buffer, TRUE);
+      g_string_set_size (buffer, BUFF_SIZE);
     } while (bytes_read == BUFF_SIZE);
+
+  g_string_free (buffer, TRUE);
 
   return TRUE;
 
