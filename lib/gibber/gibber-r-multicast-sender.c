@@ -488,85 +488,141 @@ check_depends(GibberRMulticastSender *sender,
   return TRUE;
 }
 
+static void
+update_next_data_output_state (GibberRMulticastSender *self)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (self);
+
+  self->next_output_data_packet++;
+
+  for (; self->next_output_data_packet != self->next_output_packet;
+      self->next_output_data_packet++)
+    {
+      PacketInfo *p;
+      p = g_hash_table_lookup(priv->packet_cache,
+          &(self->next_output_data_packet));
+
+      g_assert (p != NULL);
+      if (p->packet->type == PACKET_TYPE_DATA
+        && (p->packet->data.data.packet_part +  1 ==
+          p->packet->data.data.packet_total))
+        {
+          break;
+        }
+    }
+}
+
 static gboolean
-pop_data_packet (GibberRMulticastSender *sender, guint32 start)
+pop_data_packet (GibberRMulticastSender *sender)
 {
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   guint8 *data;
   PacketInfo *p;
   gsize payload_size, size;
-  int num, i;
+  guint16 stream_id;
+  guint32 num;
+  guint32 i;
 
-  p = g_hash_table_lookup(priv->packet_cache, &start);
+  /* If we're holding before this, skip */
+  if (priv->holding_data &&
+    gibber_r_multicast_packet_diff (sender->next_output_data_packet,
+      priv->holding_point)
+      <= 0)
+    {
+      DEBUG_SENDER (sender, "Holding back data finishing at %x",
+        sender->next_output_data_packet);
+      return FALSE;
+    }
 
+  DEBUG_SENDER (sender, "Trying to pop data finishing at %x",
+    sender->next_output_data_packet);
+
+  p = g_hash_table_lookup(priv->packet_cache,
+    &sender->next_output_data_packet);
   g_assert (p != NULL);
 
+  g_assert (p->packet->data.data.packet_part + 1 ==
+    p->packet->data.data.packet_total);
+
+  /* Backwards search for the start, validate the pieces and check the size */
   num = p->packet->data.data.packet_total;
+  stream_id =  p->packet->data.data.stream_id;
+
   payload_size = p->packet->data.data.payload_size;
-  /* Need to be at least num behind last_packet */
-  if (gibber_r_multicast_packet_diff(p->packet->packet_id,
-        sender->next_input_packet) < num) {
-    DEBUG_SENDER(sender, "Not enough packets for defragmentation");
+
+  if (num > 1)
+    {
+      guint32 next = num - 2;
+      guint32 i;
+      gboolean found = FALSE;
+
+      for (i = p->packet->packet_id - 1;
+        gibber_r_multicast_packet_diff (priv->first_packet, i) >= 0; i--)
+        {
+           p = g_hash_table_lookup(priv->packet_cache, &i);
+
+           g_assert (p != NULL);
+           if (p->packet->type == PACKET_TYPE_DATA &&
+             p->packet->data.data.stream_id == stream_id)
+             {
+               g_assert (p->packet->data.data.packet_part == next);
+               payload_size += p->packet->data.data.payload_size;
+               if (next == 0)
+                 {
+                   found = TRUE;
+                   break;
+                 }
+               next--;
+             }
+        }
+
+      if (!found)
+        {
+          /* If we couldn't find the start it must have happened before we
+           * joined the causal ordering */
+          update_next_data_output_state (sender);
+          return TRUE;
+        }
+    }
+
+  /* p is guaranteed to be the PacketInfo of the first packet */
+  if (!check_depends(sender, p->packet, TRUE)) {
     return FALSE;
   }
 
-  for (i = p->packet_id + 1; i != p->packet_id + num ; i++) {
-    /* Check if we have everything */
-    PacketInfo *tp  = g_hash_table_lookup(priv->packet_cache, &i);
-
-    if (tp == NULL || tp->packet == NULL) {
-      DEBUG_SENDER(sender, "Missing packet for defragmentation");
-      /* Nope one missing */
-      return FALSE;
-    }
-    payload_size += tp->packet->data.data.payload_size;
-  }
-
-  if (start == sender->next_output_packet)
-    sender->next_output_packet = sender->next_output_packet + num;
-
-  if (priv->holding_data &&
-      gibber_r_multicast_packet_diff (p->packet->packet_id,
-      priv->holding_point) <= 0) {
-    DEBUG_SENDER (sender, "Holding back 0x%x - 0x%x",
-      p->packet->packet_id, p->packet->packet_id + num - 1);
-
-    /* We did actually have the data needed to pop */
-    return TRUE;
-  }
-
-  if (!check_depends (sender, p->packet, TRUE))
-    {
-      return FALSE;
-    }
-
-  sender->next_output_data_packet = start + num;
-
-  /* Complete packet we can send out */
-  DEBUG_SENDER(sender, "Sending out 0x%x - 0x%x",
-      p->packet->packet_id, p->packet->packet_id + num - 1);
-
+  /* Everything is fine, now do a forward pass to gather all the payload, we
+   * could have cached this info, but oh well */
   if (num == 1) {
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
     g_assert(size == payload_size);
+
+    update_next_data_output_state (sender);
     signal_data(sender, p->packet->data.data.stream_id, data, size);
   } else {
     data = g_malloc(payload_size);
     gsize off = 0;
-    for (i = p->packet_id; i != p->packet->packet_id + num ; i++) {
-      /* Check if we have everything */
-      PacketInfo *tp  = g_hash_table_lookup(priv->packet_cache, &i);
-      guint8 *d;
+    guint8 *d;
+    gsize size;
 
-      d = gibber_r_multicast_packet_get_payload(tp->packet, &size);
-      g_assert(off + size <= payload_size);
-      memcpy(data + off, d, size);
-      off += size;
-    }
+    for (i = p->packet_id ; i != sender->next_output_data_packet + 1 ; i++)
+      {
+        PacketInfo *tp  = g_hash_table_lookup(priv->packet_cache, &i);
+
+        if (tp->packet->type == PACKET_TYPE_DATA
+          && tp->packet->data.data.stream_id == stream_id)
+          {
+             d = gibber_r_multicast_packet_get_payload(tp->packet, &size);
+             g_assert(off + size <= payload_size);
+             memcpy(data + off, d, size);
+             off += size;
+          }
+      }
     g_assert(off == payload_size);
 
-    signal_data(sender, p->packet->data.data.stream_id, data, payload_size);
+    update_next_data_output_state (sender);
+    signal_data(sender, stream_id, data, payload_size);
     g_free(data);
   }
 
@@ -578,64 +634,74 @@ pop_packet(GibberRMulticastSender *sender) {
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   PacketInfo *p;
-  gboolean popped = FALSE;
-  guint32 to_pop;
+
+  DEBUG_SENDER (sender, "Next output: 0x%x Next output data: 0x%x",
+      sender->next_output_packet, sender->next_output_data_packet);
 
   if (sender->next_output_data_packet != sender->next_output_packet) {
-     if (!priv->holding_data ||
-          gibber_r_multicast_packet_diff (sender->next_output_data_packet,
-         priv->holding_point) > 0) {
-       to_pop = sender->next_output_data_packet;
-       DEBUG_SENDER (sender, "Popping old data packet");
-     } else {
-       /* We already popped all the data we could, continue on the normal
-        * packets */
-       DEBUG_SENDER (sender, "old data already popped");
-       to_pop = sender->next_output_packet;
-     }
-  } else {
-    to_pop = sender->next_output_packet;
+    /* We saw the end of some data message before the end of the data stream,
+     * first try if we can pop this */
+     if (pop_data_packet (sender))
+         return TRUE;
   }
 
-  p = g_hash_table_lookup(priv->packet_cache, &to_pop);
+  p = g_hash_table_lookup(priv->packet_cache, &(sender->next_output_packet));
 
-  DEBUG_SENDER(sender, "Looking at 0x%x", to_pop);
+  DEBUG_SENDER(sender, "Looking at 0x%x", sender->next_output_packet);
 
   if (p == NULL || p->packet == NULL) {
     /* No packet yet.. too bad :( */
-    DEBUG_SENDER(sender, "No new packets to pop"); goto out;
+    DEBUG_SENDER(sender, "No new packets to pop"); 
+    return FALSE;
   }
 
   g_assert (IS_RELIABLE_PACKET (p->packet));
-  if (!check_depends(sender, p->packet, FALSE)) {
-    goto out;
-  }
+  if (!check_depends (sender, p->packet, FALSE))
+    {
+      return FALSE;
+    }
 
-  if (p->packet->type != PACKET_TYPE_DATA) {
-    if (to_pop == sender->next_output_packet)
-      {
-       /* If both are the same, they can stay the same... */
-       if (sender->next_output_packet == sender->next_output_data_packet)
-         {
-           sender->next_output_data_packet++;
-         }
-       sender->next_output_packet++;
-       if (p->packet->type != PACKET_TYPE_NO_DATA)
-         {
-           signal_control_packet (sender, p->packet);
-         }
-      }
-    else
-      {
+  if (p->packet->type == PACKET_TYPE_DATA)
+    {
+      /* A data packet. If we had a potential end before this one, skip it
+       * we're holding back the data for some reason otherwise check
+       * if it's an end */
+
+      if (sender->next_output_data_packet == sender->next_output_packet)
+        {
+          sender->next_output_packet++;
+          /* If this is the end, try to pop it. Otherwise ignore */
+          if (p->packet->data.data.packet_part +  1 ==
+              p->packet->data.data.packet_total)
+            {
+              /* If we could pop this, then advance next_output_data_packet
+               * otherwise keep it at this location */
+              pop_data_packet (sender);
+              return TRUE;
+            }
+          else
+            {
+              sender->next_output_data_packet++;
+            }
+        }
+      else
+        sender->next_output_packet++;
+    }
+  else
+    {
+      if (sender->next_output_packet == sender->next_output_data_packet)
         sender->next_output_data_packet++;
-      }
-    popped = TRUE;
-  } else {
-    popped = pop_data_packet (sender, to_pop);
-  }
 
-out:
-  return popped;
+      sender->next_output_packet++;
+
+      if (p->packet->type != PACKET_TYPE_NO_DATA)
+        {
+         signal_control_packet (sender, p->packet);
+        }
+    }
+
+
+  return TRUE;
 }
 
 static void

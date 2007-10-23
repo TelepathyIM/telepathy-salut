@@ -56,7 +56,8 @@ struct _GibberRMulticastSender {
     /* Next packet we want to send out */
     guint32 next_output_packet;
     /* Next data packet we want to send out. Can be different from
-     * next_output_packet iff holding back data.. Guaranteed to be <=
+     * next_output_packet iff holding back data or a fragmented data message is
+     * interleaved with control messages.. Guaranteed to be <=
      * next_output_packet */
     guint32 next_output_data_packet;
 
