@@ -1138,6 +1138,24 @@ salut_tube_dbus_add_name (SalutTubeDBus *self,
       return FALSE;
     }
 
+  if (g_str_has_prefix (name, ":2."))
+    {
+      gchar *supposed_name;
+      const gchar *contact_name;
+
+      contact_name = tp_handle_inspect (contact_repo, handle);
+      supposed_name = generate_dbus_unique_name (contact_name);
+
+      if (tp_strdiff (name, supposed_name))
+        {
+          DEBUG ("contact %s announces %s as D-Bus name but it should be %s",
+              contact_name, name, supposed_name);
+          g_free (supposed_name);
+          return FALSE;
+        }
+      g_free (supposed_name);
+    }
+
   g_hash_table_insert (priv->dbus_names, GUINT_TO_POINTER (handle),
       g_strdup (name));
   tp_handle_ref (contact_repo, handle);
