@@ -143,6 +143,18 @@ transport_handler (GibberTransport *transport,
   g_string_free (buffer, TRUE);
 }
 
+static void
+transport_disconnected_cb (GibberTransport *transport,
+                           GibberBytestreamOOB *self)
+{
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+  if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSED)
+    return;
+
+  DEBUG ("transport disconnected. close the bytestream");
+  gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
+}
+
 static gboolean
 set_transport (GibberBytestreamOOB *self,
                GibberTransport *transport)
@@ -153,6 +165,9 @@ set_transport (GibberBytestreamOOB *self,
 
   priv->transport = transport;
   gibber_transport_set_handler (transport, transport_handler, self);
+
+  g_signal_connect (transport, "disconnected",
+      G_CALLBACK (transport_disconnected_cb), self);
 
   return gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED;
 }
