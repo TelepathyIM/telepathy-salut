@@ -451,7 +451,7 @@ xmpp_connection_stream_closed_cb (GibberXmppConnection *connection,
 
 static void
 xmpp_connection_transport_disconnected_cb (GibberLLTransport *transport,
-                                      gpointer userdata)
+                                           gpointer userdata)
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (userdata);
   DEBUG ("XMPP connection transport closed. Close the OOB bytestream");
