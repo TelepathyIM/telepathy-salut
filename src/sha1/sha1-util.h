@@ -22,7 +22,9 @@
 
 #include <glib.h>
 
-gchar *
-sha1_hex (const guint8 *bytes, guint len);
+#include "sha1/sha1.h"
+
+gchar *sha1_hex (const guint8 *bytes, guint len);
+void sha1_bin (const gchar *bytes, guint len, guchar out[SHA1_HASH_SIZE]);
 
 #endif /* #ifndef __SALUT_SHA1_UTIL__ */
