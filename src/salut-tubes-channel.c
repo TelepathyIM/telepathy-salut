@@ -994,7 +994,6 @@ publish_tube_in_node (SalutTubesChannel *self,
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
     (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
   TpHandle initiator_handle;
-  const gchar *initiator;
 
   g_object_get (G_OBJECT (tube),
       "service", &service,
@@ -1008,15 +1007,32 @@ publish_tube_in_node (SalutTubesChannel *self,
 
   gibber_xmpp_node_set_attribute (node, "service", service);
   gibber_xmpp_node_set_attribute (node, "id", id_str);
-  initiator = tp_handle_inspect (contact_repo, initiator_handle);
-  gibber_xmpp_node_set_attribute (node, "initiator", initiator);
 
   g_free (id_str);
 
   switch (type)
     {
       case TP_TUBE_TYPE_DBUS:
-        gibber_xmpp_node_set_attribute (node, "type", "dbus");
+        {
+          gchar *name, *stream_id;
+
+          g_object_get (G_OBJECT (tube),
+              "dbus-name", &name,
+              "stream-id", &stream_id,
+              NULL);
+
+          gibber_xmpp_node_set_attribute (node, "type", "dbus");
+          gibber_xmpp_node_set_attribute (node, "stream-id", stream_id);
+          gibber_xmpp_node_set_attribute (node, "initiator",
+              tp_handle_inspect (contact_repo, initiator_handle));
+
+          if (name != NULL)
+            gibber_xmpp_node_set_attribute (node, "dbus-name", name);
+
+          g_free (name);
+          g_free (stream_id);
+
+        }
         break;
         /*
       case TP_TUBE_TYPE_STREAM_UNIX:
@@ -1025,22 +1041,6 @@ publish_tube_in_node (SalutTubesChannel *self,
         */
       default:
         g_assert_not_reached ();
-    }
-
-  if (type == TP_TUBE_TYPE_DBUS)
-    {
-      gchar *name, *stream_id;
-
-      g_object_get (G_OBJECT (tube),
-          "dbus-name", &name,
-          "stream-id", &stream_id,
-          NULL);
-
-      gibber_xmpp_node_set_attribute (node, "dbus-name", name);
-      gibber_xmpp_node_set_attribute (node, "stream-id", stream_id);
-
-      g_free (name);
-      g_free (stream_id);
     }
 
   parameters_node = gibber_xmpp_node_add_child (node, "parameters");
