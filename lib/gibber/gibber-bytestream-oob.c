@@ -683,6 +683,7 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
 
   DEBUG ("stream is now accepted");
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_ACCEPTED, NULL);
+  g_object_unref (stanza);
 }
 
 static void
