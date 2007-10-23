@@ -39,6 +39,9 @@
 #include "gibber-xmpp-error.h"
 #include "gibber-iq-helper.h"
 #include "gibber-util.h"
+#include "gibber-transport.h"
+#include "gibber-tcp-transport.h"
+#include "gibber-fd-transport.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -91,12 +94,9 @@ struct _GibberBytestreamIBBPrivate
   GibberBytestreamState state;
   gchar *host;
 
+  GibberTransport *transport;
   GIOChannel *listener;
   guint listener_watch;
-  GIOChannel *data_channel;
-  guint data_in_watch;
-  guint data_out_watch;
-  GString *write_buffer;
 
   gboolean dispose_has_run;
 };
@@ -126,161 +126,44 @@ make_iq_oob_sucess_response (const gchar *from,
       GIBBER_STANZA_END);
 }
 
-static gboolean
-data_io_in_cb (GIOChannel *source,
-               GIOCondition condition,
-               gpointer user_data)
+static void
+transport_handler (GibberTransport *transport,
+                   GibberBuffer *data,
+                   gpointer user_data)
 {
-#define BUFF_SIZE 4096
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  gsize bytes_read;
-  GIOStatus status;
-  GError *error = NULL;
   GString *buffer;
 
-  if (! (condition & G_IO_IN))
-    return TRUE;
+  buffer = g_string_new_len ((const gchar *) data->data, data->length);
 
-  buffer = g_string_sized_new (BUFF_SIZE);
-  do
-    {
-      status = g_io_channel_read_chars (source, buffer->str, BUFF_SIZE,
-          &bytes_read, &error);
-
-      switch (status)
-        {
-          case G_IO_STATUS_NORMAL:
-            g_string_set_size (buffer, bytes_read);
-            break;
-
-          case G_IO_STATUS_AGAIN:
-            /* We have to wait */
-            g_string_free (buffer, TRUE);
-            return TRUE;
-
-          case G_IO_STATUS_EOF:
-            DEBUG ("error reading from socket: EOF");
-            goto reading_error;
-            break;
-
-          default:
-            DEBUG ("error reading from socket: %s",
-                error ? error->message : "");
-            goto reading_error;
-        }
-
-      DEBUG ("read %d bytes from socket", buffer->len);
-      g_signal_emit (G_OBJECT (self), signals[DATA_RECEIVED], 0, priv->peer_id,
-          buffer);
-
-      g_string_set_size (buffer, BUFF_SIZE);
-    } while (bytes_read == BUFF_SIZE);
+  g_signal_emit (G_OBJECT (self), signals[DATA_RECEIVED], 0, priv->peer_id,
+      buffer);
 
   g_string_free (buffer, TRUE);
-
-  return TRUE;
-
-reading_error:
-  gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
-
-  g_string_free (buffer, TRUE);
-
-  if (error != NULL)
-    {
-      g_error_free (error);
-    }
-
-  return FALSE;
 }
 
 static gboolean
-write_on_socket (GibberBytestreamOOB *self,
-                 const gchar *str,
-                 guint len,
-                 gsize *written)
+set_transport (GibberBytestreamOOB *self,
+               GibberTransport *transport)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  GIOStatus status;
-  GError *error = NULL;
 
-  status = g_io_channel_write_chars (priv->data_channel, str, len, written,
-      &error);
-  switch (status)
-    {
-      case G_IO_STATUS_NORMAL:
-        DEBUG ("%d bytes send", *written);
-        break;
-      case G_IO_STATUS_AGAIN:
-        /* We have to wait */
-        break;
-      case G_IO_STATUS_EOF:
-        DEBUG ("error writing from socket: EOF");
-        goto writing_error;
-        break;
-      default: /* G_IO_STATUS_ERROR */
-        DEBUG ("error writing to socket: %s", error ? error->message : "");
-        goto writing_error;
-    }
+  g_assert (priv->transport == NULL);
 
-  return TRUE;
+  priv->transport = transport;
+  gibber_transport_set_handler (transport, transport_handler, self);
 
-writing_error:
-  gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
-
-  if (error != NULL)
-    g_error_free (error);
-
-  return FALSE;
-}
-
-static gboolean
-flush_write_buffer (GibberBytestreamOOB *self)
-{
-  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  gsize written;
-
-  if (priv->write_buffer == NULL)
-    return TRUE;
-
-  if (!write_on_socket (self, priv->write_buffer->str,
-        priv->write_buffer->len, &written))
-    return FALSE;
-
- if (written == priv->write_buffer->len)
-    {
-      /* Buffer fully flushed */
-      g_string_free (priv->write_buffer, TRUE);
-      priv->write_buffer = NULL;
-    }
- else
-   {
-     g_string_erase (priv->write_buffer, 0, written);
-   }
-
-  return TRUE;
-}
-
-static gboolean
-data_io_out_cb (GIOChannel *source,
-                GIOCondition condition,
-                gpointer user_data)
-{
-  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
-
-  /* We can write, try to flush the buffer */
-  return flush_write_buffer (self);
+  return gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED;
 }
 
 static gboolean
 connect_to_url (GibberBytestreamOOB *self,
                 const gchar *url)
 {
-  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+  GibberTCPTransport *tcp_transport;
   gchar **tokens;
   const gchar *host, *port;
-  int fd, ret;
-  struct addrinfo req, *ans = NULL;
 
   if (!g_str_has_prefix (url, "x-tcp://"))
     {
@@ -293,47 +176,16 @@ connect_to_url (GibberBytestreamOOB *self,
   host = tokens[0];
   port = tokens[1];
 
-  memset (&req, 0, sizeof(req));
-  req.ai_flags = AI_PASSIVE;
-  req.ai_family = AF_UNSPEC;
-  req.ai_socktype = SOCK_STREAM;
-  req.ai_protocol = IPPROTO_TCP;
+  tcp_transport = gibber_tcp_transport_new ();
+  gibber_tcp_transport_connect (tcp_transport, host, port);
 
-  ret = getaddrinfo (host, port, &req, &ans);
-  if (ret != 0)
+  if (!set_transport (self, GIBBER_TRANSPORT (tcp_transport)))
     {
-      DEBUG ("getaddrinfo failed: %s", gai_strerror (ret));
+      DEBUG ("connect to %s failed", url);
       return FALSE;
     }
-
-  fd = socket (ans->ai_family, ans->ai_socktype, ans->ai_protocol);
-  if (fd == -1)
-    {
-      DEBUG ("socket failed: %s", g_strerror (errno));
-      freeaddrinfo (ans);
-      return FALSE;
-    }
-
-  if (connect (fd, ans->ai_addr, ans->ai_addrlen) == -1)
-    {
-      DEBUG ("connect to %s:%s failed: %s", host, port, g_strerror (errno));
-      freeaddrinfo (ans);
-      return FALSE;
-    }
-
-  DEBUG ("connected to %s:%s", host, port);
-  priv->data_channel = g_io_channel_unix_new (fd);
-  g_io_channel_set_encoding (priv->data_channel, NULL, NULL);
-  g_io_channel_set_buffered (priv->data_channel, FALSE);
-  g_io_channel_set_close_on_unref (priv->data_channel, TRUE);
-
-  priv->data_in_watch = g_io_add_watch (priv->data_channel, G_IO_IN,
-      data_io_in_cb, self);
-  priv->data_out_watch = g_io_add_watch (priv->data_channel, G_IO_OUT,
-      data_io_out_cb, self);
 
   g_strfreev (tokens);
-  freeaddrinfo (ans);
   return TRUE;
 }
 
@@ -490,17 +342,9 @@ gibber_bytestream_oob_dispose (GObject *object)
       g_source_remove (priv->listener_watch);
     }
 
-  if (priv->data_channel != NULL)
+  if (priv->transport != NULL)
     {
-      g_io_channel_unref (priv->data_channel);
-      priv->data_channel = NULL;
-      g_source_remove (priv->data_in_watch);
-      g_source_remove (priv->data_out_watch);
-    }
-
-  if (priv->write_buffer != NULL)
-    {
-      g_string_free (priv->write_buffer, TRUE);
+      g_object_unref (priv->transport);
     }
 
   G_OBJECT_CLASS (gibber_bytestream_oob_parent_class)->dispose (object);
@@ -738,7 +582,7 @@ gibber_bytestream_oob_send (GibberBytestreamIface *bytestream,
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (bytestream);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  gsize written;
+  GError *error = NULL;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_OPEN)
     {
@@ -747,31 +591,14 @@ gibber_bytestream_oob_send (GibberBytestreamIface *bytestream,
       return FALSE;
     }
 
-  if (!flush_write_buffer (self))
-    return FALSE;
-
-  if (priv->write_buffer != NULL)
+  if (!gibber_transport_send (priv->transport, (const guint8 *) str, len,
+        &error))
     {
-      /* Buffer was not fully flushed can't write now */
-      g_string_append_len (priv->write_buffer, str, len);
-      return TRUE;
-    }
+      DEBUG ("sending failed: %s", error->message);
+      g_error_free (error);
 
-  if (!write_on_socket (self, str, len, &written))
-    return FALSE;
-
-  if (written < len)
-    {
-      /* We have to bufferize remaining data */
-      if (priv->write_buffer == NULL)
-        {
-          priv->write_buffer = g_string_new_len (str + written, len - written);
-        }
-      else
-        {
-          g_string_append_len (priv->write_buffer, str + written,
-              len - written);
-        }
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
+      return FALSE;
     }
 
   return TRUE;
@@ -941,12 +768,12 @@ listener_io_in_cb (GIOChannel *source,
                    gpointer user_data)
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
-  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   int listen_fd, fd, ret;
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
   struct sockaddr_storage addr;
   socklen_t addrlen = sizeof (struct sockaddr_storage);
+  GibberLLTransport *ll_transport;
 
   listen_fd = g_io_channel_unix_get_fd (source);
   fd = accept (listen_fd, (struct sockaddr *) &addr, &addrlen);
@@ -963,15 +790,15 @@ listener_io_in_cb (GIOChannel *source,
 
   /* FIXME: we should probably check if it's the right host */
 
-  priv->data_channel = g_io_channel_unix_new (fd);
-  g_io_channel_set_encoding (priv->data_channel, NULL, NULL);
-  g_io_channel_set_buffered (priv->data_channel, FALSE);
-  g_io_channel_set_close_on_unref (priv->data_channel, TRUE);
+  ll_transport = gibber_ll_transport_new ();
+  gibber_ll_transport_open_fd (ll_transport, fd);
 
-  priv->data_in_watch = g_io_add_watch (priv->data_channel, G_IO_IN,
-      data_io_in_cb, self);
-  priv->data_out_watch = g_io_add_watch (priv->data_channel, G_IO_OUT,
-      data_io_out_cb, self);
+  if (!set_transport (self, GIBBER_TRANSPORT (ll_transport)))
+    {
+      /* this shouldn't happened */
+      DEBUG ("transport wasn't properly connected");
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
+    }
 
   DEBUG ("bytestream is now open");
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN, NULL);
