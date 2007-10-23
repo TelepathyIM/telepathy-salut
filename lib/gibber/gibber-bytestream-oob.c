@@ -181,7 +181,6 @@ set_transport (GibberBytestreamOOB *self,
                GibberTransport *transport)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  GibberTransportState state;
 
   g_assert (priv->transport == NULL);
 
@@ -192,16 +191,6 @@ set_transport (GibberBytestreamOOB *self,
       G_CALLBACK (transport_connected_cb), self);
   g_signal_connect (transport, "disconnected",
       G_CALLBACK (transport_disconnected_cb), self);
-
-  state = gibber_transport_get_state (transport);
-  if (state == GIBBER_TRANSPORT_CONNECTED)
-    {
-      transport_connected_cb (transport, self);
-    }
-  else if (state == GIBBER_TRANSPORT_DISCONNECTED)
-    {
-      transport_disconnected_cb (transport, self);
-    }
 }
 
 static void
@@ -228,9 +217,8 @@ connect_to_url (GibberBytestreamOOB *self,
   port = tokens[1];
 
   tcp_transport = gibber_tcp_transport_new ();
-  gibber_tcp_transport_connect (tcp_transport, host, port);
-
   set_transport (self, GIBBER_TRANSPORT (tcp_transport));
+  gibber_tcp_transport_connect (tcp_transport, host, port);
 
   g_strfreev (tokens);
 }
@@ -825,9 +813,8 @@ listener_io_in_cb (GIOChannel *source,
   /* FIXME: we should probably check if it's the right host */
 
   ll_transport = gibber_ll_transport_new ();
-  gibber_ll_transport_open_fd (ll_transport, fd);
-
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
+  gibber_ll_transport_open_fd (ll_transport, fd);
 
   return FALSE;
 }
