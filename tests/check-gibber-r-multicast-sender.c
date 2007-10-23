@@ -200,6 +200,8 @@ START_TEST (test_sender) {
 } END_TEST
 
 /* Holding test */
+guint32 idle_timer = 0;
+
 typedef struct {
   gchar *name;
   guint32 packet_id;
@@ -249,6 +251,8 @@ h_idle_next_step (gpointer user_data) {
   h_expect_t *e = &(d->expectation[d->test_step]);
   GibberRMulticastSender *s;
 
+  idle_timer = 0;
+
   switch (e->type) {
     case EXPECT:
       fail ("Should not be reached");
@@ -284,7 +288,10 @@ h_next_test_step (h_data_t *d) {
     case HOLD:
     case UNHOLD:
     case DONE:
-      g_idle_add (h_idle_next_step, d);
+      if (idle_timer == 0)
+        {
+          idle_timer = g_idle_add (h_idle_next_step, d);
+        }
   }
 }
 
@@ -445,10 +452,13 @@ START_TEST (test_holding) {
       gibber_r_multicast_sender_push (s0, p);
     }
 
-  while (data.expectation[data.test_step].type != DONE)
-    {
-      g_main_loop_run (loop);
-    }
+    do
+      {
+        g_main_loop_run (loop);
+      }
+    while (data.expectation[data.test_step].type != DONE);
+
+  fail_unless (idle_timer == 0);
 
 } END_TEST
 
