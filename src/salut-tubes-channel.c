@@ -361,10 +361,7 @@ add_name_in_dbus_names (SalutTubesChannel *self,
                         const gchar *dbus_name)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
   SalutTubeDBus *tube;
-  GHashTable *names;
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     return;
@@ -373,17 +370,11 @@ add_name_in_dbus_names (SalutTubesChannel *self,
   if (tube == NULL)
     return;
 
-  g_object_get (tube,
-      "dbus-names", &names,
-      NULL);
-
-  g_hash_table_insert (names, GUINT_TO_POINTER (handle), g_strdup (dbus_name));
-  tp_handle_ref (contact_repo, handle);
-
-  /* Emit the DBusNamesChanged signal */
-  d_bus_names_changed_added (self, tube_id, handle, dbus_name);
-
-  g_hash_table_unref (names);
+  if (salut_tube_dbus_add_name (tube, handle, dbus_name))
+    {
+      /* Emit the DBusNamesChanged signal */
+      d_bus_names_changed_added (self, tube_id, handle, dbus_name);
+    }
 }
 
 static void
@@ -456,24 +447,19 @@ add_in_old_dbus_tubes (gpointer key,
   struct _add_in_old_dbus_tubes_data *data =
     (struct _add_in_old_dbus_tubes_data *) user_data;
   TpTubeType type;
-  GHashTable *names;
 
   g_object_get (tube, "type", &type, NULL);
 
   if (type != TP_TUBE_TYPE_DBUS)
     return;
 
-  g_object_get (tube, "dbus-names", &names, NULL);
-  g_assert (names);
-
-  if (g_hash_table_lookup (names, GUINT_TO_POINTER (data->contact)))
+  if (salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
+        data->contact))
     {
       /* contact was in this tube */
       g_hash_table_insert (data->old_dbus_tubes, GUINT_TO_POINTER (tube_id),
           tube);
     }
-
-  g_hash_table_unref (names);
 }
 
 struct
@@ -492,21 +478,12 @@ emit_d_bus_names_changed_foreach (gpointer key,
   SalutTubeDBus *tube = SALUT_TUBE_DBUS (value);
   struct _emit_d_bus_names_changed_foreach_data *data =
     (struct _emit_d_bus_names_changed_foreach_data *) user_data;
-  GHashTable *names;
-  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (
-      data->self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
-  /* Remove from the D-Bus names mapping */
-  g_object_get (tube, "dbus-names", &names, NULL);
-  g_hash_table_remove (names, GUINT_TO_POINTER (data->contact));
-  g_hash_table_unref (names);
-
-  /* Emit the DBusNamesChanged signal */
-  d_bus_names_changed_removed (data->self, tube_id, data->contact);
-
-  tp_handle_unref (contact_repo, data->contact);
+  if (salut_tube_dbus_remove_name (tube, data->contact))
+    {
+      /* Emit the DBusNamesChanged signal */
+      d_bus_names_changed_removed (data->self, tube_id, data->contact);
+    }
 }
 
 static void
@@ -602,14 +579,8 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
       if (type == TP_TUBE_TYPE_DBUS)
         {
           /* Update mapping of handle -> D-Bus name. */
-          GHashTable *names;
-          gchar *name;
-
-          g_object_get (tube, "dbus-names", &names, NULL);
-          g_assert (names);
-          name = g_hash_table_lookup (names, GUINT_TO_POINTER (contact));
-
-          if (!name)
+          if (!salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
+                contact))
             {
               /* Contact just joined the tube */
               const gchar *new_name;
@@ -626,8 +597,6 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
 
               add_name_in_dbus_names (self, tube_id, contact, new_name);
             }
-
-          g_hash_table_unref (names);
         }
     }
 
