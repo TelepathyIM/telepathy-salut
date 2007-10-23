@@ -996,6 +996,7 @@ gibber_r_multicast_causal_transport_send (
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastPacket *packet;
   gsize payloaded;
+  gboolean ret = TRUE;
 
   g_assert (priv->self != NULL);
 
@@ -1009,7 +1010,6 @@ gibber_r_multicast_causal_transport_send (
     {
       GPtrArray *packets = g_ptr_array_sized_new(2);
       int i;
-      gboolean ret = TRUE;
 
       g_ptr_array_add(packets, packet);
 
@@ -1041,15 +1041,17 @@ gibber_r_multicast_causal_transport_send (
         }
 
       g_ptr_array_free (packets, TRUE);
-      return ret;
     }
   else
     {
       gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
       gibber_r_multicast_packet_set_data_info (packet, stream_id, 0, 1);
       gibber_r_multicast_sender_push (priv->self, packet);
-      return sendout_packet (self, packet, error);
+      ret = sendout_packet (self, packet, error);
+      g_object_unref (packet);
     }
+
+  return ret;
 }
 
 static gboolean
