@@ -66,6 +66,14 @@ salut_tube_dbus_new (SalutConnection *conn, TpHandle handle,
     const gchar *service, GHashTable *parameters, const gchar *stream_id,
     guint id, GibberBytestreamIface *bytestream);
 
+gboolean salut_tube_dbus_add_name (SalutTubeDBus *self, TpHandle handle,
+    const gchar *name);
+
+gboolean salut_tube_dbus_remove_name (SalutTubeDBus *self, TpHandle handle);
+
+gboolean salut_tube_dbus_handle_in_names (SalutTubeDBus *self,
+    TpHandle handle);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_TUBE_DBUS_H__ */

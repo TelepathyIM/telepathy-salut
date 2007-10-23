@@ -1120,6 +1120,64 @@ salut_tube_dbus_add_bytestream (SalutTubeIface *tube,
   gibber_bytestream_iface_close (bytestream);
 }
 
+gboolean
+salut_tube_dbus_add_name (SalutTubeDBus *self,
+                         TpHandle handle,
+                         const gchar *name)
+{
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+  g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
+
+  if (g_hash_table_lookup (priv->dbus_names, GUINT_TO_POINTER (handle))
+      != NULL)
+    {
+      DEBUG ("contact %d has already announced his D-Bus name", handle);
+      return FALSE;
+    }
+
+  g_hash_table_insert (priv->dbus_names, GUINT_TO_POINTER (handle),
+      g_strdup (name));
+  tp_handle_ref (contact_repo, handle);
+
+  return TRUE;
+}
+
+gboolean
+salut_tube_dbus_remove_name (SalutTubeDBus *self,
+                             TpHandle handle)
+{
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  const gchar *name;
+
+  g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
+
+  name = g_hash_table_lookup (priv->dbus_names, GUINT_TO_POINTER (handle));
+  if (name == NULL)
+    return FALSE;
+
+  g_hash_table_remove (priv->dbus_names, GUINT_TO_POINTER (handle));
+
+  tp_handle_unref (contact_repo, handle);
+  return TRUE;
+}
+
+gboolean
+salut_tube_dbus_handle_in_names (SalutTubeDBus *self,
+                                 TpHandle handle)
+{
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+
+  g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
+
+  return (g_hash_table_lookup (priv->dbus_names, GUINT_TO_POINTER (handle))
+      != NULL);
+}
+
 static void
 tube_iface_init (gpointer g_iface,
                  gpointer iface_data)
