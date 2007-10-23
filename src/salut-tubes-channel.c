@@ -575,6 +575,34 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
           if (extract_tube_information (self, tube_node, &type,
                 &initiator_handle, &service, &parameters, &tube_id))
             {
+              switch (type)
+                {
+                  case TP_TUBE_TYPE_DBUS:
+                    {
+                      if (initiator_handle == 0)
+                        {
+                          DEBUG ("D-Bus tube initiator missing");
+                          /* skip to the next child of <tubes> */
+                          continue;
+                        }
+                    }
+                    break;
+                  case TP_TUBE_TYPE_STREAM:
+                    {
+                      if (initiator_handle != 0)
+                        /* ignore it */
+                        tp_handle_unref (contact_repo, initiator_handle);
+
+                      initiator_handle = contact;
+                      tp_handle_ref (contact_repo, initiator_handle);
+                    }
+                    break;
+                  default:
+                    {
+                      g_assert_not_reached ();
+                    }
+                }
+
               tube = create_new_tube (self, type, initiator_handle,
                   service, parameters, tube_id, NULL);
 
