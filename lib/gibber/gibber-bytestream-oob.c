@@ -359,6 +359,7 @@ gibber_bytestream_oob_dispose (GObject *object)
 
   if (priv->transport != NULL)
     {
+      gibber_transport_disconnect (priv->transport);
       g_object_unref (priv->transport);
     }
 
