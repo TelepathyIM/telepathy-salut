@@ -209,12 +209,16 @@ typedef struct {
   gchar *data;
   gchar *depend_node;
   guint32 depend_packet_id;
+  guint16 data_stream_id;
+  guint32 data_part;
+  guint32 data_total;
 } h_setup_t;
 
 typedef enum {
   EXPECT = 0,
   HOLD,
   UNHOLD,
+  UNHOLD_IMMEDIATE,
   DONE
 } h_expect_type_t;
 
@@ -223,6 +227,7 @@ typedef struct {
   gchar *expected_node;
   GibberRMulticastPacketType packet_type;
   guint32 hold_id;
+  guint32 data_stream_id;
 } h_expect_t;
 
 typedef struct {
@@ -254,6 +259,7 @@ h_idle_next_step (gpointer user_data) {
   idle_timer = 0;
 
   switch (e->type) {
+    case UNHOLD_IMMEDIATE:
     case EXPECT:
       fail ("Should not be reached");
       break;
@@ -282,8 +288,18 @@ h_idle_next_step (gpointer user_data) {
 
 static void
 h_next_test_step (h_data_t *d) {
+  GibberRMulticastSender *s;
+  h_expect_t *e = &(d->expectation[d->test_step]);
+
   switch (d->expectation[d->test_step].type) {
     case EXPECT:
+      break;
+    case UNHOLD_IMMEDIATE:
+      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      fail_unless (s != NULL);
+      d->test_step++;
+      gibber_r_multicast_sender_release_data (s);
+      h_next_test_step(d);
       break;
     case HOLD:
     case UNHOLD:
@@ -296,12 +312,13 @@ h_next_test_step (h_data_t *d) {
 }
 
 static void
-h_received_data_cb (GibberRMulticastSender *sender, guint8 stream_id,
+h_received_data_cb (GibberRMulticastSender *sender, guint16 stream_id,
     guint8 *data, gsize size, gpointer user_data) {
   h_data_t *d = (h_data_t *) user_data;
 
   fail_unless (d->expectation[d->test_step].type == EXPECT);
   fail_unless (d->expectation[d->test_step].packet_type == PACKET_TYPE_DATA);
+  fail_unless (d->expectation[d->test_step].data_stream_id == stream_id);
   fail_unless (
     strcmp (d->expectation[d->test_step].expected_node, sender->name) == 0);
 
@@ -324,14 +341,14 @@ h_received_control_packet_cb (GibberRMulticastSender *sender,
 }
 
 h_setup_t h_setup0[] =  {
-    { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0 },
-    { "node1", 0x1, PACKET_TYPE_DATA,         "001",  "node0", 0x2 },
-    { "node0", 0x2, PACKET_TYPE_DATA,         "002",  "node1", 0x2 },
-    { "node1", 0x2, PACKET_TYPE_DATA,         "002",  "node0", 0x3 },
+    { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 0, 1 },
+    { "node1", 0x1, PACKET_TYPE_DATA,         "001",  "node0", 0x2, 0, 0, 1 },
+    { "node0", 0x2, PACKET_TYPE_DATA,         "002",  "node1", 0x2, 0, 0, 1 },
+    { "node1", 0x2, PACKET_TYPE_DATA,         "002",  "node0", 0x3, 0, 0, 1 },
     { "node0", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node1", 0x3 },
     { "node1", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  "node0", 0x4 },
-    { "node0", 0x4, PACKET_TYPE_DATA,          "003", "node1", 0x4 },
-    { "node1", 0x4, PACKET_TYPE_DATA,          "003", "node0", 0x5 },
+    { "node0", 0x4, PACKET_TYPE_DATA,          "003", "node1", 0x4, 0, 0, 1 },
+    { "node1", 0x4, PACKET_TYPE_DATA,          "003", "node0", 0x5, 0, 0, 1 },
     { "node0", 0x5, PACKET_TYPE_JOIN,          NULL,  "node1", 0x5 },
     { "node1", 0x5, PACKET_TYPE_JOIN,          NULL,  "node0", 0x6 },
     { NULL },
@@ -347,14 +364,14 @@ h_expect_t h_expectation0[] = {
    { HOLD,   "node1", PACKET_TYPE_INVALID, 0x3 },
    /* unhold node0 too, packets should start flowing */
    { HOLD,   "node0", PACKET_TYPE_INVALID, 0x3 },
-   { EXPECT, "node0", PACKET_TYPE_DATA },
-   { EXPECT, "node1", PACKET_TYPE_DATA },
-   { EXPECT, "node0", PACKET_TYPE_DATA },
-   { EXPECT, "node1", PACKET_TYPE_DATA },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 0 },
+   { EXPECT, "node1", PACKET_TYPE_DATA, 0, 0 },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 0 },
+   { EXPECT, "node1", PACKET_TYPE_DATA, 0, 0 },
    { UNHOLD, "node1" },
    { UNHOLD, "node0" },
-   { EXPECT, "node0", PACKET_TYPE_DATA },
-   { EXPECT, "node1", PACKET_TYPE_DATA },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 0 },
+   { EXPECT, "node1", PACKET_TYPE_DATA, 0, 0 },
    { DONE },
 };
 
@@ -370,10 +387,52 @@ h_expect_t h_expectation1[] = {
    { DONE }
 };
 
-#define NUMBER_OF_H_TESTS 2
+h_setup_t h_setup2[] =  {
+    { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 0, 3 },
+    { "node0", 0x3, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 1, 3 },
+    { "node0", 0x6, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 2, 3 },
+    { "node0", 0x2, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 1, 0, 2 },
+    { "node0", 0x4, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 2, 0, 1 },
+    { "node0", 0x5, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 1, 1, 2 },
+    { NULL },
+};
+
+h_expect_t h_expectation2[] = {
+   { UNHOLD, "node0" },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 2 },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 1 },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 0 },
+   { DONE }
+};
+
+h_setup_t h_setup3[] =  {
+    { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 0, 3 },
+    { "node0", 0x2, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 1, 0, 2 },
+    { "node0", 0x3, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  NULL },
+    { "node0", 0x4, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 1, 3 },
+    { "node0", 0x5, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 2, 0, 1 },
+    { "node0", 0x6, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 1, 1, 2 },
+    { "node0", 0x7, PACKET_TYPE_ATTEMPT_JOIN,  NULL,  NULL },
+    { "node0", 0x8, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 2, 3 },
+    { NULL },
+};
+
+h_expect_t h_expectation3[] = {
+   { EXPECT, "node0", PACKET_TYPE_ATTEMPT_JOIN },
+   { UNHOLD_IMMEDIATE, "node0" },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 2 },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 1 },
+   { EXPECT, "node0", PACKET_TYPE_ATTEMPT_JOIN },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 0 },
+   { DONE }
+};
+
+#define NUMBER_OF_H_TESTS 4
 h_test_t h_tests[NUMBER_OF_H_TESTS] = {
     { h_setup0, h_expectation0 },
     { h_setup1, h_expectation1 },
+    { h_setup2, h_expectation2 },
+    { h_setup3, h_expectation3 },
   };
 
 
@@ -445,12 +504,17 @@ START_TEST (test_holding) {
         {
           fail_unless (test->setup[i].data != NULL);
 
-          gibber_r_multicast_packet_set_data_info (p, 0, 0, 1);
+          gibber_r_multicast_packet_set_data_info (p,
+            test->setup[i].data_stream_id,
+            test->setup[i].data_part,
+            test->setup[i].data_total);
           gibber_r_multicast_packet_add_payload (p,
               (guint8 *) test->setup[i].data, strlen (test->setup[i].data));
         }
       gibber_r_multicast_sender_push (s0, p);
     }
+
+    h_next_test_step (&data);
 
     do
       {
