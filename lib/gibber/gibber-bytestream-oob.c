@@ -144,6 +144,15 @@ transport_handler (GibberTransport *transport,
 }
 
 static void
+transport_connected_cb (GibberTransport *transport,
+                        GibberBytestreamOOB *self)
+{
+  DEBUG ("transport connected. Bytestream is now open");
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
+      NULL);
+}
+
+static void
 transport_disconnected_cb (GibberTransport *transport,
                            GibberBytestreamOOB *self)
 {
@@ -152,27 +161,50 @@ transport_disconnected_cb (GibberTransport *transport,
     return;
 
   DEBUG ("transport disconnected. close the bytestream");
-  gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
+
+  if (priv->state == GIBBER_BYTESTREAM_STATE_ACCEPTED)
+    {
+      /* Connection to host failed */
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+          "connection failed" };
+
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+    }
+  else
+    {
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
+    }
 }
 
-static gboolean
+static void
 set_transport (GibberBytestreamOOB *self,
                GibberTransport *transport)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+  GibberTransportState state;
 
   g_assert (priv->transport == NULL);
 
   priv->transport = transport;
   gibber_transport_set_handler (transport, transport_handler, self);
 
+  g_signal_connect (transport, "connected",
+      G_CALLBACK (transport_connected_cb), self);
   g_signal_connect (transport, "disconnected",
       G_CALLBACK (transport_disconnected_cb), self);
 
-  return gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED;
+  state = gibber_transport_get_state (transport);
+  if (state == GIBBER_TRANSPORT_CONNECTED)
+    {
+      transport_connected_cb (transport, self);
+    }
+  else if (state == GIBBER_TRANSPORT_DISCONNECTED)
+    {
+      transport_disconnected_cb (transport, self);
+    }
 }
 
-static gboolean
+static void
 connect_to_url (GibberBytestreamOOB *self,
                 const gchar *url)
 {
@@ -182,8 +214,12 @@ connect_to_url (GibberBytestreamOOB *self,
 
   if (!g_str_has_prefix (url, "x-tcp://"))
     {
-      DEBUG ("URL is not a TCP url: %s", url);
-      return FALSE;
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+          "URL is not a TCP URL" };
+
+      DEBUG ("URL is not a TCP URL: %s. Close the bytestream", url);
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+      return;
     }
 
   url += strlen ("x-tcp://");
@@ -194,14 +230,9 @@ connect_to_url (GibberBytestreamOOB *self,
   tcp_transport = gibber_tcp_transport_new ();
   gibber_tcp_transport_connect (tcp_transport, host, port);
 
-  if (!set_transport (self, GIBBER_TRANSPORT (tcp_transport)))
-    {
-      DEBUG ("connect to %s failed", url);
-      return FALSE;
-    }
+  set_transport (self, GIBBER_TRANSPORT (tcp_transport));
 
   g_strfreev (tokens);
-  return TRUE;
 }
 
 static gboolean
@@ -237,21 +268,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
   priv->stream_open_id = g_strdup (gibber_xmpp_node_get_attribute (
         stanza->node, "id"));
 
-  if (connect_to_url (self, url))
-    {
-      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
-          NULL);
-    }
-  else
-    {
-      GibberXmppStanza *reply;
-
-      reply = gibber_iq_helper_new_error_reply (stanza,
-          XMPP_ERROR_ITEM_NOT_FOUND, NULL);
-
-      gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
-      g_object_unref (reply);
-    }
+  connect_to_url (self, url);
 
   return TRUE;
 }
@@ -810,15 +827,7 @@ listener_io_in_cb (GIOChannel *source,
   ll_transport = gibber_ll_transport_new ();
   gibber_ll_transport_open_fd (ll_transport, fd);
 
-  if (!set_transport (self, GIBBER_TRANSPORT (ll_transport)))
-    {
-      /* this shouldn't happened */
-      DEBUG ("transport wasn't properly connected");
-      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
-    }
-
-  DEBUG ("bytestream is now open");
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN, NULL);
+  set_transport (self, GIBBER_TRANSPORT (ll_transport));
 
   return FALSE;
 }
