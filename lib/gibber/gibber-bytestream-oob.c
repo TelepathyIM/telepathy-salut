@@ -562,7 +562,7 @@ gibber_bytestream_oob_class_init (
   param_spec = g_param_spec_string (
       "host",
       "host",
-      "The host to use in the OOB URL",
+      "The hostname to use in the OOB URL. Literal are not allowed",
       "",
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
