@@ -921,13 +921,21 @@ extract_tube_information (SalutTubesChannel *self,
       const gchar *initiator;
 
       initiator = gibber_xmpp_node_get_attribute (tube_node, "initiator");
-      *initiator_handle = tp_handle_ensure (contact_repo, initiator, NULL,
-          NULL);
 
-      if (*initiator_handle == 0)
+      if (initiator != NULL)
         {
-          DEBUG ("invalid initiator ID %s", initiator);
-          return FALSE;
+          *initiator_handle = tp_handle_ensure (contact_repo, initiator, NULL,
+              NULL);
+
+          if (*initiator_handle == 0)
+            {
+              DEBUG ("invalid initiator ID %s", initiator);
+              return FALSE;
+            }
+        }
+      else
+        {
+          *initiator_handle = 0;
         }
     }
 
