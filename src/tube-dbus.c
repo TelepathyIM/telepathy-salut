@@ -40,6 +40,7 @@
 #include "salut-connection.h"
 #include "namespaces.h"
 #include "tube-iface.h"
+#include "sha1/sha1-util.h"
 
 
 static void
@@ -139,6 +140,57 @@ generate_ascii_string (guint len,
 
   for (i = 0; i < len; i++)
     buf[i] = chars[g_random_int_range (0, 64)];
+}
+
+static gchar *
+generate_dbus_unique_name (const gchar *nick)
+{
+  gchar *encoded, *result;
+  size_t len;
+  guint i;
+
+  len = strlen (nick);
+
+  if (len <= 186)
+    {
+      encoded = g_base64_encode ((const guchar *) nick, strlen (nick));
+    }
+  else
+    {
+      guchar sha1[20];
+      GString *tmp;
+
+      sha1_bin (nick, len, sha1);
+      tmp = g_string_sized_new (169 + 20);
+
+      g_string_append_len (tmp, nick, 169);
+      g_string_append_len (tmp, (const gchar *) sha1, 20);
+
+      encoded = g_base64_encode ((const guchar *) tmp->str, tmp->len);
+
+      g_string_free (tmp, TRUE);
+    }
+
+  for (i = 0; encoded[i] != '\0'; i++)
+    {
+      switch (encoded[i])
+        {
+          case '+':
+            encoded[i] = '_';
+            break;
+          case '/':
+            encoded[i] = '-';
+            break;
+          case '=':
+            encoded[i] = 'A';
+            break;
+        }
+    }
+
+  result = g_strdup_printf (":2.%s", encoded);
+
+  g_free (encoded);
+  return result;
 }
 
 struct _find_contact_data
@@ -584,7 +636,6 @@ salut_tube_dbus_constructor (GType type,
       GibberBytestreamIBB *bytestream;
       GibberBytestreamState state;
       const gchar *peer_id;
-      gchar suffix[8];
 
       g_assert (priv->muc_connection != NULL);
       g_assert (priv->stream_id != NULL);
@@ -592,8 +643,7 @@ salut_tube_dbus_constructor (GType type,
       priv->dbus_names = g_hash_table_new_full (g_direct_hash, g_direct_equal,
           NULL, g_free);
 
-      generate_ascii_string (8, suffix);
-      priv->dbus_local_name = g_strdup_printf (":1.%.8s", suffix);
+      priv->dbus_local_name = generate_dbus_unique_name (priv->conn->name);
 
       DEBUG ("local name: %s", priv->dbus_local_name);
 
