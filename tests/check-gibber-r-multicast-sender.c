@@ -173,6 +173,7 @@ START_TEST (test_sender) {
   g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
   gibber_r_multicast_sender_update_start(s, serial_offset);
+  gibber_r_multicast_sender_set_data_start(s, serial_offset);
 
   if (tests[_i].test_seen) {
     gibber_r_multicast_sender_seen(s, serial_offset);
@@ -216,6 +217,7 @@ typedef struct {
 
 typedef enum {
   EXPECT = 0,
+  START_DATA,
   HOLD,
   UNHOLD,
   UNHOLD_IMMEDIATE,
@@ -260,6 +262,7 @@ h_idle_next_step (gpointer user_data) {
 
   switch (e->type) {
     case UNHOLD_IMMEDIATE:
+    case START_DATA:
     case EXPECT:
       fail ("Should not be reached");
       break;
@@ -299,6 +302,13 @@ h_next_test_step (h_data_t *d) {
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_release_data (s);
+      h_next_test_step(d);
+      break;
+    case START_DATA:
+      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      fail_unless (s != NULL);
+      d->test_step++;
+      gibber_r_multicast_sender_set_data_start (s, e->hold_id);
       h_next_test_step(d);
       break;
     case HOLD:
@@ -359,6 +369,10 @@ h_expect_t h_expectation0[] = {
    { EXPECT, "node1", PACKET_TYPE_ATTEMPT_JOIN },
    { EXPECT, "node0", PACKET_TYPE_JOIN },
    { EXPECT, "node1", PACKET_TYPE_JOIN },
+   /* Set the data start of node1 to 0x1, which means all the data should still
+    * be popped off */
+   { START_DATA, "node1", PACKET_TYPE_INVALID, 0x1 },
+   { START_DATA, "node0", PACKET_TYPE_INVALID, 0x1 },
    /* only unhold node1, nothing should happen as they depend on those of
     * node0 */
    { HOLD,   "node1", PACKET_TYPE_INVALID, 0x3 },
@@ -398,6 +412,7 @@ h_setup_t h_setup2[] =  {
 };
 
 h_expect_t h_expectation2[] = {
+   { START_DATA, "node0", PACKET_TYPE_INVALID, 0x1 },
    { UNHOLD, "node0" },
    { EXPECT, "node0", PACKET_TYPE_DATA, 0, 2 },
    { EXPECT, "node0", PACKET_TYPE_DATA, 0, 1 },
@@ -419,6 +434,7 @@ h_setup_t h_setup3[] =  {
 
 h_expect_t h_expectation3[] = {
    { EXPECT, "node0", PACKET_TYPE_ATTEMPT_JOIN },
+   { START_DATA, "node0", PACKET_TYPE_INVALID, 0x1 },
    { UNHOLD_IMMEDIATE, "node0" },
    { EXPECT, "node0", PACKET_TYPE_DATA, 0, 2 },
    { EXPECT, "node0", PACKET_TYPE_DATA, 0, 1 },
@@ -427,12 +443,31 @@ h_expect_t h_expectation3[] = {
    { DONE }
 };
 
-#define NUMBER_OF_H_TESTS 4
+h_setup_t h_setup4[] =  {
+    { "node0", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 0, 3 },
+    { "node0", 0x2, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 1, 0, 2 },
+    { "node0", 0x3, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 1, 3 },
+    { "node0", 0x4, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 2, 0, 1 },
+    { "node0", 0x5, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 1, 1, 2 },
+    { "node0", 0x6, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 2, 3 },
+    { NULL },
+};
+
+h_expect_t h_expectation4[] = {
+   { START_DATA, "node0", PACKET_TYPE_INVALID, 0x2 },
+   { UNHOLD, "node0" },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 2 },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 1 },
+   { DONE }
+};
+
+#define NUMBER_OF_H_TESTS 5
 h_test_t h_tests[NUMBER_OF_H_TESTS] = {
     { h_setup0, h_expectation0 },
     { h_setup1, h_expectation1 },
     { h_setup2, h_expectation2 },
     { h_setup3, h_expectation3 },
+    { h_setup4, h_expectation4 },
   };
 
 
