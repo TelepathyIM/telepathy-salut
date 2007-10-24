@@ -315,11 +315,10 @@ received_data (GibberTransport *transport, GibberBuffer *buffer,
   GibberRMulticastCausalBuffer *cbuffer =
     (GibberRMulticastCausalBuffer *)buffer;
 
-  if (member_get_state (self, cbuffer->sender_id)
-        == MEMBER_STATE_MEMBER) {
-    gibber_transport_received_data_custom (GIBBER_TRANSPORT (self),
-        buffer);
-  }
+  g_assert (member_get_state (self, cbuffer->sender_id)
+        == MEMBER_STATE_MEMBER);
+
+  gibber_transport_received_data_custom (GIBBER_TRANSPORT (self), buffer);
 }
 
 GibberRMulticastTransport *
