@@ -70,7 +70,7 @@ struct _GibberBytestreamMucPrivate
   gchar *peer_id;
   gchar *stream_id;
   GibberBytestreamState state;
-  guint16 stream_id_multicast;
+  guint8 stream_id_multicast;
 
   gboolean dispose_has_run;
 };
@@ -86,9 +86,8 @@ gibber_bytestream_muc_init (GibberBytestreamMuc *self)
 
   self->priv = priv;
 
-  priv->muc_connection = NULL;
-  priv->self_id = NULL;
-  priv->peer_id = NULL;
+  priv->senders = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, NULL);
 
   priv->dispose_has_run = FALSE;
 }
@@ -103,8 +102,12 @@ muc_connection_received_data_cb (GibberMucConnection *muc_connection,
 {
   GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
   GString *str;
+  guint sender_stream_id;
 
-  if (priv->stream_id_multicast != stream_id)
+  sender_stream_id = GPOINTER_TO_UINT (g_hash_table_lookup (priv->senders,
+        sender));
+
+  if (sender_stream_id == 0 || (guint8) sender_stream_id != stream_id)
     return;
 
   str = g_string_new_len ((const gchar *) data, length);
@@ -129,6 +132,8 @@ gibber_bytestream_muc_dispose (GObject *object)
     {
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self));
     }
+
+  g_hash_table_destroy (priv->senders);
 
   G_OBJECT_CLASS (gibber_bytestream_muc_parent_class)->dispose (object);
 }
@@ -381,6 +386,25 @@ static const gchar *
 gibber_bytestream_muc_get_protocol (GibberBytestreamIface *bytestream)
 {
   return "rmulticast";
+}
+
+void
+gibber_bytestream_muc_add_sender (GibberBytestreamMuc *self,
+                                  const gchar *sender,
+                                  guint8 stream_id)
+{
+  GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
+
+  g_hash_table_insert (priv->senders, g_strdup (sender),
+      GUINT_TO_POINTER ((guint) stream_id));
+}
+
+void gibber_bytestream_muc_remove_sender (GibberBytestreamMuc *self,
+                                          const gchar *sender)
+{
+  GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
+
+  g_hash_table_remove (priv->senders, sender);
 }
 
 static void

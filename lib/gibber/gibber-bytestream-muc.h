@@ -58,6 +58,12 @@ GType gibber_bytestream_muc_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_BYTESTREAM_MUC,\
                               GibberBytestreamMucClass))
 
+void gibber_bytestream_muc_add_sender (GibberBytestreamMuc *bytestream,
+    const gchar *sender, guint8 stream_id);
+
+void gibber_bytestream_muc_remove_sender (GibberBytestreamMuc *bytestream,
+    const gchar *sender);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_BYTESTREAM_MUC_H__ */
