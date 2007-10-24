@@ -70,7 +70,9 @@ struct _GibberBytestreamMucPrivate
   gchar *peer_id;
   gchar *stream_id;
   GibberBytestreamState state;
-  guint8 stream_id_multicast;
+  guint16 stream_id_multicast;
+  /* gchar *sender -> guint8 stream-id */
+  GHashTable *senders;
 
   gboolean dispose_has_run;
 };
