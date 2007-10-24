@@ -59,7 +59,7 @@ GType gibber_bytestream_muc_get_type (void);
                               GibberBytestreamMucClass))
 
 void gibber_bytestream_muc_add_sender (GibberBytestreamMuc *bytestream,
-    const gchar *sender, guint8 stream_id);
+    const gchar *sender, guint16 stream_id);
 
 void gibber_bytestream_muc_remove_sender (GibberBytestreamMuc *bytestream,
     const gchar *sender);

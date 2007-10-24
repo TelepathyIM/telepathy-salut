@@ -71,7 +71,7 @@ struct _GibberBytestreamMucPrivate
   gchar *stream_id;
   GibberBytestreamState state;
   guint16 stream_id_multicast;
-  /* gchar *sender -> guint8 stream-id */
+  /* gchar *sender -> guint16 stream-id */
   GHashTable *senders;
 
   gboolean dispose_has_run;
@@ -98,7 +98,7 @@ static void
 muc_connection_received_data_cb (GibberMucConnection *muc_connection,
                                  const gchar *sender,
                                  guint stream_id,
-                                 const guint8 *data,
+                                 const guint16 *data,
                                  gsize length,
                                  GibberBytestreamMuc *self)
 {
@@ -109,7 +109,7 @@ muc_connection_received_data_cb (GibberMucConnection *muc_connection,
   sender_stream_id = GPOINTER_TO_UINT (g_hash_table_lookup (priv->senders,
         sender));
 
-  if (sender_stream_id == 0 || (guint8) sender_stream_id != stream_id)
+  if (sender_stream_id == 0 || (guint16) sender_stream_id != stream_id)
     return;
 
   str = g_string_new_len ((const gchar *) data, length);
@@ -393,7 +393,7 @@ gibber_bytestream_muc_get_protocol (GibberBytestreamIface *bytestream)
 void
 gibber_bytestream_muc_add_sender (GibberBytestreamMuc *self,
                                   const gchar *sender,
-                                  guint8 stream_id)
+                                  guint16 stream_id)
 {
   GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
 

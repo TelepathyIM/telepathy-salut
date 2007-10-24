@@ -633,7 +633,7 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
 
                   if (GIBBER_IS_BYTESTREAM_MUC (bytestream))
                     {
-                      guint8 tmp = (guint8) atoi (stream_id);
+                      guint16 tmp = (guint16) atoi (stream_id);
 
                       gibber_bytestream_muc_add_sender (
                           GIBBER_BYTESTREAM_MUC (bytestream), sender, tmp);
