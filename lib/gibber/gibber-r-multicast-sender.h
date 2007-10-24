@@ -40,8 +40,10 @@ typedef enum {
   /* We know the sequence number we have to start from, but haven't send out
    * any data yet */
   GIBBER_R_MULTICAST_SENDER_STATE_PREPARING,
-  /* Data is flowing */
+  /* Non-data Packets are flowing */
   GIBBER_R_MULTICAST_SENDER_STATE_RUNNING,
+  /* Data is flowing */
+  GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING,
   /* Node has failed, still pop packets but stop depending on it */
   GIBBER_R_MULTICAST_SENDER_STATE_FAILED,
 } GibberRMulticastSenderState;
@@ -86,6 +88,9 @@ GibberRMulticastSender *gibber_r_multicast_sender_new (guint32 id,
 
 /* Sequence for this sender starts at packet_id */
 void gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
+    guint32 packet_id);
+
+void gibber_r_multicast_sender_set_data_start (GibberRMulticastSender *sender,
     guint32 packet_id);
 
 /* Tell the sender to not signal data starting from this packet */

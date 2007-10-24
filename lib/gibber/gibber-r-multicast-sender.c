@@ -123,6 +123,9 @@ struct _GibberRMulticastSenderPrivate
   gboolean holding_data;
   guint32 holding_point;
 
+  /* Whether we went know the data starting point or not */
+  gboolean start_data;
+  guint32 start_point;
 };
 
 #define GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderPrivate))
@@ -314,7 +317,7 @@ gibber_r_multicast_sender_new(guint32 id,
 static void
 signal_data(GibberRMulticastSender *sender, guint16 stream_id,
             guint8 *data, gsize size) {
-  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_RUNNING;
+  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING;
   g_signal_emit(sender, signals[RECEIVED_DATA], 0, stream_id, data, size);
 }
 
@@ -322,7 +325,7 @@ static void
 signal_control_packet(GibberRMulticastSender *sender,
     GibberRMulticastPacket *packet)
 {
-  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_RUNNING;
+  sender->state = MAX(GIBBER_R_MULTICAST_SENDER_STATE_RUNNING, sender->state);
   g_signal_emit (sender, signals[RECEIVED_CONTROL_PACKET], 0, packet);
 }
 
@@ -582,12 +585,36 @@ pop_data_packet (GibberRMulticastSender *sender)
         {
           /* If we couldn't find the start it must have happened before we
            * joined the causal ordering */
+          DEBUG_SENDER (sender,
+            "Ignoring data starting before our first packet");
           update_next_data_output_state (sender);
           return TRUE;
         }
     }
 
   /* p is guaranteed to be the PacketInfo of the first packet */
+
+  /* If there is data from before our startpoint, ignore it */
+  if (sender->state != GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING
+      && !priv->start_data)
+  {
+     DEBUG_SENDER (sender,
+         "Ignoring data as we don't have a data startpoint yet");
+     update_next_data_output_state (sender);
+     return TRUE;
+  }
+
+
+  if (priv->start_data &&
+      gibber_r_multicast_packet_diff (priv->start_point, p->packet_id) < 0)
+    {
+       DEBUG_SENDER (sender,
+           "Ignoring data from before the data startpoint");
+       update_next_data_output_state (sender);
+       return TRUE;
+    }
+
+
   if (!check_depends(sender, p->packet, TRUE)) {
     return FALSE;
   }
@@ -831,6 +858,21 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
 }
 
 void
+gibber_r_multicast_sender_set_data_start (GibberRMulticastSender *sender,
+    guint32 packet_id)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  g_assert (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING);
+
+  DEBUG_SENDER (sender, "Setting data start at 0x%x", packet_id);
+
+  priv->start_data = TRUE;
+  priv->start_point = packet_id;
+}
+
+void
 gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
                                GibberRMulticastPacket *packet) {
   GibberRMulticastSenderPrivate *priv =
@@ -1047,4 +1089,3 @@ gibber_r_multicast_sender_release_data (GibberRMulticastSender *sender)
   priv->holding_data = FALSE;
   pop_packets (sender);
 }
-
