@@ -122,6 +122,7 @@ typedef struct {
   MemberState state;
   guint32 id;
   gboolean agreed_join;
+  guint32 join_packet_id;
   /* Failures recorded by this node */
   GArray *failures;
 } MemberInfo;
@@ -1125,6 +1126,8 @@ check_agreement (GibberRMulticastTransport *self)
         {
           DEBUG ("New member: %s (%x)", sender->name, info->id);
           info->state = MEMBER_STATE_MEMBER;
+          gibber_r_multicast_sender_set_data_start (sender,
+              info->join_packet_id);
           g_array_append_val (new, sender->name);
         }
     }
@@ -1222,8 +1225,13 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
     }
 
     case PACKET_TYPE_JOIN: {
+      MemberInfo *info;
+
       DEBUG ("Received join from %s", sender->name);
+      info = g_hash_table_lookup (priv->members, &packet->sender);
       gibber_r_multicast_sender_hold_data (sender, packet->packet_id);
+
+      info->join_packet_id = packet->packet_id;
 
       if (priv->state == STATE_GATHERING)
         {
@@ -1232,11 +1240,9 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
 
       switch (check_join (self, packet)) {
         case 0: {
-          MemberInfo *info;
 
           DEBUG ("%s agreed with our join", sender->name);
 
-          info = g_hash_table_lookup (priv->members, &packet->sender);
           info->agreed_join = TRUE;
           check_agreement (self);
           break;
