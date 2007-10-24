@@ -609,7 +609,7 @@ name_discovered_cb(GibberRMulticastSender *sender, gchar *name,
    */
 }
 
-void
+GibberRMulticastSender *
 gibber_r_multicast_causal_transport_add_sender (
     GibberRMulticastCausalTransport *transport,
     guint32 sender_id)
@@ -621,7 +621,7 @@ gibber_r_multicast_causal_transport_add_sender (
   sender = g_hash_table_lookup (priv->senders, GUINT_TO_POINTER (sender_id));
 
   if (sender != NULL)
-    return;
+    return sender;
 
   sender = gibber_r_multicast_sender_new (sender_id, NULL, priv->senders);
 
@@ -644,6 +644,8 @@ gibber_r_multicast_causal_transport_add_sender (
       G_CALLBACK (whois_reply_cb), transport);
   g_signal_connect (sender, "name-discovered",
       G_CALLBACK (name_discovered_cb), transport);
+
+  return sender;
 }
 
 

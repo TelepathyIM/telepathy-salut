@@ -84,7 +84,7 @@ gboolean gibber_r_multicast_causal_transport_send (
     GibberRMulticastCausalTransport *transport, guint16 stream_id,
     const guint8 *data, gsize size, GError **error);
 
-void gibber_r_multicast_causal_transport_add_sender (
+GibberRMulticastSender *gibber_r_multicast_causal_transport_add_sender (
     GibberRMulticastCausalTransport *transport, guint32 sender_id);
 
 void gibber_r_multicast_causal_transport_update_sender_start (
