@@ -211,6 +211,9 @@ connect_to_url (GibberBytestreamOOB *self,
       return;
     }
 
+  /* TODO: if we want to support IPv6 literals, we have to remove
+   * [] around the address */
+
   url += strlen ("x-tcp://");
   tokens = g_strsplit (url, ":", 2);
   host = tokens[0];
