@@ -621,6 +621,10 @@ pop_data_packet (GibberRMulticastSender *sender)
 
   /* Everything is fine, now do a forward pass to gather all the payload, we
    * could have cached this info, but oh well */
+  DEBUG_SENDER (sender, "Popping data 0x%x -> 0x%x stream_id: %x",
+    p->packet_id, sender->next_output_data_packet,
+    p->packet->data.data.stream_id);
+
   if (num == 1) {
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
     g_assert(size == payload_size);
