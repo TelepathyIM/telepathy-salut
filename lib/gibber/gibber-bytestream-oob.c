@@ -276,6 +276,7 @@ parse_oob_iq_result (GibberBytestreamOOB *self,
       sub_type != GIBBER_STANZA_SUB_TYPE_RESULT)
     return FALSE;
 
+  /* FIXME: we should check if it's the right sender */
   id = gibber_xmpp_node_get_attribute (stanza->node, "id");
 
   if (id == NULL || strcmp (id, priv->stream_open_id) != 0)
