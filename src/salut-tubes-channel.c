@@ -33,6 +33,7 @@
 #include <telepathy-glib/svc-channel.h>
 
 #include <gibber/gibber-muc-connection.h>
+#include <gibber/gibber-bytestream-muc.h>
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 
@@ -478,11 +479,36 @@ emit_d_bus_names_changed_foreach (gpointer key,
   SalutTubeDBus *tube = SALUT_TUBE_DBUS (value);
   struct _emit_d_bus_names_changed_foreach_data *data =
     (struct _emit_d_bus_names_changed_foreach_data *) user_data;
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (
+      data->self);
 
   if (salut_tube_dbus_remove_name (tube, data->contact))
     {
       /* Emit the DBusNamesChanged signal */
       d_bus_names_changed_removed (data->self, tube_id, data->contact);
+    }
+
+  /* Remove the contact as sender in the muc bytestream */
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+    {
+      GibberBytestreamIface *bytestream;
+
+      g_object_get (tube, "bytestream", &bytestream, NULL);
+      g_assert (bytestream != NULL);
+
+      if (GIBBER_IS_BYTESTREAM_MUC (bytestream))
+        {
+          TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+              (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+          const gchar *sender;
+
+          sender = tp_handle_inspect (contact_repo, data->contact);
+          if (sender != NULL)
+            gibber_bytestream_muc_remove_sender (
+                GIBBER_BYTESTREAM_MUC (bytestream), sender);
+        }
+
+      g_object_unref (bytestream);
     }
 }
 
@@ -596,6 +622,25 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
                 }
 
               add_name_in_dbus_names (self, tube_id, contact, new_name);
+
+              /* associate the contact with his stream id */
+              if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+                {
+                  GibberBytestreamIface *bytestream;
+
+                  g_object_get (tube, "bytestream", &bytestream, NULL);
+                  g_assert (bytestream != NULL);
+
+                  if (GIBBER_IS_BYTESTREAM_MUC (bytestream))
+                    {
+                      guint8 tmp = (guint8) atoi (stream_id);
+
+                      gibber_bytestream_muc_add_sender (
+                          GIBBER_BYTESTREAM_MUC (bytestream), sender, tmp);
+                    }
+
+                  g_object_unref (bytestream);
+                }
             }
         }
     }
