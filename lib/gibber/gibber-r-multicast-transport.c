@@ -690,11 +690,12 @@ update_member (GibberRMulticastTransport *self,
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
   MemberInfo *info;
   gboolean changed;
+  GibberRMulticastSender *sender;
 
   if (sender_id == priv->transport->sender_id)
     return FALSE;
 
-  gibber_r_multicast_causal_transport_add_sender (priv->transport,
+  sender = gibber_r_multicast_causal_transport_add_sender (priv->transport,
       sender_id);
 
   info = member_get_info (self, sender_id);
@@ -707,8 +708,7 @@ update_member (GibberRMulticastTransport *self,
         && info->state < MEMBER_STATE_JOINING) {
     /* We are guaranteed that this member didn't send a join before this
      * packet_id */
-    gibber_r_multicast_causal_transport_update_sender_start (priv->transport,
-        sender_id, packet_id);
+    gibber_r_multicast_sender_update_start (sender, packet_id);
   }
 
   return changed;
@@ -1249,9 +1249,7 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
         case 1:
           /* Our join had more info, so we don't need to resent it */
           DEBUG ("%s disagreed with our join with less info", sender->name);
-          gibber_r_multicast_sender_release_data (
-            gibber_r_multicast_causal_transport_get_sender (
-              priv->transport, packet->sender));
+          gibber_r_multicast_sender_release_data (sender);
           break;
         case -1:
           DEBUG ("%s disagreed with our join", sender->name);
