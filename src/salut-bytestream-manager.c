@@ -814,8 +814,8 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
   if (!gibber_bytestream_iface_initiate (bytestream))
     {
       /* Initiation failed. */
-      g_object_unref (bytestream);
       gibber_bytestream_iface_close (bytestream, NULL);
+      g_object_unref (bytestream);
       bytestream = NULL;
     }
 
