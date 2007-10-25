@@ -833,6 +833,7 @@ create_new_tube (SalutTubesChannel *self,
                  TpHandle initiator,
                  const gchar *service,
                  GHashTable *parameters,
+                 /* TODO: remove the stream_id param */
                  const gchar *stream_id,
                  guint tube_id,
                  GibberBytestreamIface *bytestream)
@@ -850,7 +851,7 @@ create_new_tube (SalutTubesChannel *self,
     case TP_TUBE_TYPE_DBUS:
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
-          initiator, service, parameters, stream_id, tube_id, bytestream));
+          initiator, service, parameters, tube_id, bytestream));
       break;
       /*
     case TP_TUBE_TYPE_STREAM_UNIX:

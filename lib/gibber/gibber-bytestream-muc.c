@@ -247,9 +247,10 @@ gibber_bytestream_muc_constructor (GType type,
   g_assert (priv->muc_connection != NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
-  g_assert (priv->stream_id != NULL);
 
-  priv->stream_id_multicast = (guint16) atoi (priv->stream_id);
+  priv->stream_id_multicast = gibber_muc_connection_new_stream (
+      priv->muc_connection);
+  priv->stream_id = g_strdup_printf ("%u", priv->stream_id_multicast);
 
   return obj;
 }
@@ -365,6 +366,9 @@ gibber_bytestream_muc_close (GibberBytestreamIface *bytestream)
      return;
 
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
+
+  gibber_muc_connection_free_stream (priv->muc_connection,
+      priv->stream_id_multicast);
 }
 
 /*

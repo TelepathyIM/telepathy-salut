@@ -576,10 +576,6 @@ salut_tube_dbus_set_property (GObject *object,
                 G_CALLBACK (bytestream_state_changed_cb), self);
           }
         break;
-      case PROP_STREAM_ID:
-        g_free (priv->stream_id);
-        priv->stream_id = g_value_dup_string (value);
-        break;
       case PROP_INITIATOR:
         priv->initiator = g_value_get_uint (value);
         break;
@@ -638,7 +634,6 @@ salut_tube_dbus_constructor (GType type,
       const gchar *peer_id;
 
       g_assert (priv->muc_connection != NULL);
-      g_assert (priv->stream_id != NULL);
 
       priv->dbus_names = g_hash_table_new_full (g_direct_hash, g_direct_equal,
           NULL, g_free);
@@ -661,11 +656,12 @@ salut_tube_dbus_constructor (GType type,
 
       bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_MUC,
             "muc-connection", priv->muc_connection,
-            "stream-id", priv->stream_id,
             "state", state,
             "self-id", priv->conn->name,
             "peer-id", peer_id,
             NULL);
+
+      g_object_get (bytestream, "stream-id", &priv->stream_id, NULL);
 
       g_object_set (self, "bytestream", bytestream, NULL);
     }
@@ -753,8 +749,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "stream id",
       "The identifier of this tube's bytestream",
       "",
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
+      G_PARAM_READABLE |
       G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -1024,7 +1019,6 @@ salut_tube_dbus_new (SalutConnection *conn,
                      TpHandle initiator,
                      const gchar *service,
                      GHashTable *parameters,
-                     const gchar *stream_id,
                      guint id,
                      GibberBytestreamIface *bytestream)
 {
@@ -1037,7 +1031,6 @@ salut_tube_dbus_new (SalutConnection *conn,
       "initiator", initiator,
       "service", service,
       "parameters", parameters,
-      "stream-id", stream_id,
       "id", id,
       NULL);
 
