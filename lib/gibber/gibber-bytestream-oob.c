@@ -94,6 +94,9 @@ struct _GibberBytestreamIBBPrivate
   GibberBytestreamState state;
   gchar *host;
 
+  /* Are we the recipient of this bytestream?
+   * If not we are the sender */
+  gboolean recipient;
   GibberTransport *transport;
   GIOChannel *listener;
   guint listener_watch;
@@ -256,6 +259,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
     return FALSE;
   url = url_node->content;
 
+  priv->recipient = TRUE;
   priv->stream_open_id = g_strdup (gibber_xmpp_node_get_attribute (
         stanza->node, "id"));
 
@@ -272,6 +276,10 @@ parse_oob_iq_result (GibberBytestreamOOB *self,
   GibberStanzaType type;
   GibberStanzaSubType sub_type;
   const gchar *id;
+
+  if (priv->recipient)
+    /* Only the sender have to wait for the IQ reply */
+    return FALSE;
 
   gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
 
@@ -757,24 +765,33 @@ gibber_bytestream_oob_close (GibberBytestreamIface *bytestream,
       gibber_bytestream_oob_decline (self, error);
     }
 
-  if (priv->xmpp_connection->stream_flags ==
-      GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN)
+  if (priv->recipient)
     {
-      GibberXmppStanza *stanza;
+      /* We are the recipient and so have to send the reply
+       * to the OOB opening IQ */
+      if (priv->xmpp_connection->stream_flags ==
+          GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN)
+        {
+          GibberXmppStanza *stanza;
 
-      /* As described in the XEP, we send result IQ when we have
-       * finished to use the OOB */
-      stanza = make_iq_oob_sucess_response (priv->self_id,
-          priv->peer_id, priv->stream_open_id);
+          /* As described in the XEP, we send result IQ when we have
+           * finished to use the OOB */
+          stanza = make_iq_oob_sucess_response (priv->self_id,
+              priv->peer_id, priv->stream_open_id);
 
-      DEBUG ("send OOB close stanza");
+          DEBUG ("send OOB close stanza");
 
-      gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
-      g_object_unref (stanza);
+          gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
+          g_object_unref (stanza);
+        }
+      else
+        {
+          DEBUG ("XMPP connection is closed. Don't send OOB close stanza");
+        }
     }
   else
     {
-      DEBUG ("XMPP connection is closed. Don't send OOB close stanza");
+      /* We are the sender. Don't have to send anything */
     }
 
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
@@ -957,6 +974,8 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
       return FALSE;
     }
   g_assert (priv->host != NULL);
+
+  priv->recipient = FALSE;
 
   port = start_listen_for_connection (self);
   if (port == -1)
