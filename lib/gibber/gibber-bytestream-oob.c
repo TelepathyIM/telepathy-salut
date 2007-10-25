@@ -372,6 +372,15 @@ gibber_bytestream_oob_dispose (GObject *object)
       g_object_unref (priv->transport);
     }
 
+  if (priv->xmpp_connection != NULL)
+    {
+      g_signal_handlers_disconnect_matched (priv->xmpp_connection->transport,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+      g_signal_handlers_disconnect_matched (priv->xmpp_connection,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+      g_object_unref (priv->xmpp_connection);
+    }
+
   G_OBJECT_CLASS (gibber_bytestream_oob_parent_class)->dispose (object);
 }
 
@@ -453,6 +462,7 @@ gibber_bytestream_oob_set_property (GObject *object,
            G_CALLBACK (xmpp_connection_transport_disconnected_cb), self);
         g_signal_connect (priv->xmpp_connection, "parse-error",
            G_CALLBACK (xmpp_connection_parse_error_cb), self);
+        g_object_ref (priv->xmpp_connection);
         break;
       case PROP_SELF_ID:
         g_free (priv->self_id);
