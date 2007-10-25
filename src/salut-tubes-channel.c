@@ -1166,27 +1166,6 @@ generate_tube_id (void)
   return g_random_int_range (0, G_MAXINT);
 }
 
-/* XXX we should move that in some kind of bytestream factory */
-gchar *
-generate_stream_id (SalutTubesChannel *self)
-{
-  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  gchar *stream_id;
-
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      stream_id = g_strdup_printf ("%lu-%u", (unsigned long) time (NULL),
-          g_random_int ());
-    }
-  else
-    {
-      /* GibberMucConnection's stream-id is a guint16 */
-      stream_id = g_strdup_printf ("%u", g_random_int_range (1, G_MAXUINT16));
-    }
-
-  return stream_id;
-}
-
 /**
  * salut_tubes_channel_offer_d_bus_tube
  *
