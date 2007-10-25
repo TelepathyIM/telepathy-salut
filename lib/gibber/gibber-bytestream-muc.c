@@ -153,6 +153,29 @@ gibber_bytestream_muc_finalize (GObject *object)
   G_OBJECT_CLASS (gibber_bytestream_muc_parent_class)->finalize (object);
 }
 
+static gboolean
+check_stream_id (GibberBytestreamMuc *self)
+{
+  GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
+
+  if (priv->stream_id_multicast != 0)
+    return TRUE;
+
+  /* No stream allocated yet. Request one now */
+  priv->stream_id_multicast = gibber_muc_connection_new_stream (
+      priv->muc_connection);
+  if (priv->stream_id_multicast == 0)
+    {
+      DEBUG ("Can't allocate a new stream. Bytestream closed");
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self));
+      return FALSE;
+    }
+
+  priv->stream_id = g_strdup_printf ("%u", priv->stream_id_multicast);
+
+  return TRUE;
+}
+
 static void
 gibber_bytestream_muc_get_property (GObject *object,
                                     guint property_id,
@@ -174,6 +197,7 @@ gibber_bytestream_muc_get_property (GObject *object,
         g_value_set_string (value, priv->peer_id);
         break;
       case PROP_STREAM_ID:
+        check_stream_id (self);
         g_value_set_string (value, priv->stream_id);
         break;
       case PROP_STATE:
@@ -247,10 +271,6 @@ gibber_bytestream_muc_constructor (GType type,
   g_assert (priv->muc_connection != NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
-
-  priv->stream_id_multicast = gibber_muc_connection_new_stream (
-      priv->muc_connection);
-  priv->stream_id = g_strdup_printf ("%u", priv->stream_id_multicast);
 
   return obj;
 }
@@ -328,6 +348,11 @@ gibber_bytestream_muc_send (GibberBytestreamIface *bytestream,
   GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
   GError *error = NULL;
 
+  if (!check_stream_id (self))
+    {
+      return FALSE;
+    }
+
   if (!gibber_muc_connection_send_raw (priv->muc_connection,
         priv->stream_id_multicast, (const guint8 *) str, len, &error))
     {
@@ -367,8 +392,11 @@ gibber_bytestream_muc_close (GibberBytestreamIface *bytestream)
 
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
 
-  gibber_muc_connection_free_stream (priv->muc_connection,
-      priv->stream_id_multicast);
+  if (priv->stream_id_multicast != 0)
+    {
+      gibber_muc_connection_free_stream (priv->muc_connection,
+          priv->stream_id_multicast);
+    }
 }
 
 /*
