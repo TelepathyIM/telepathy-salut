@@ -128,8 +128,7 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
     guint *tube_id);
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
     TpTubeType type, TpHandle initiator, const gchar *service,
-    GHashTable *parameters, const gchar *stream_id, guint tube_id,
-    GibberBytestreamIface *bytestream);
+    GHashTable *parameters, guint tube_id, GibberBytestreamIface *bytestream);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -584,7 +583,7 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
                 &initiator_handle, &service, &parameters, NULL, &tube_id))
             {
               tube = create_new_tube (self, type, initiator_handle,
-                  service, parameters, stream_id, tube_id, NULL);
+                  service, parameters, tube_id, NULL);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -833,8 +832,6 @@ create_new_tube (SalutTubesChannel *self,
                  TpHandle initiator,
                  const gchar *service,
                  GHashTable *parameters,
-                 /* TODO: remove the stream_id param */
-                 const gchar *stream_id,
                  guint tube_id,
                  GibberBytestreamIface *bytestream)
 {
@@ -1208,7 +1205,6 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   guint tube_id;
   SalutTubeIface *tube;
   GHashTable *parameters_copied;
-  gchar *stream_id;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1219,15 +1215,12 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
       (GDestroyNotify) tp_g_value_slice_free);
   g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
 
-  stream_id = generate_stream_id (self);
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      service, parameters_copied, (const gchar*) stream_id, tube_id, NULL);
+      service, parameters_copied, tube_id, NULL);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
-
-  g_free (stream_id);
 }
 
 /**
