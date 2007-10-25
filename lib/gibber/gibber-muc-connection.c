@@ -708,9 +708,16 @@ gibber_muc_connection_new_stream (GibberMucConnection *self)
     /* All streams are allocated */
     return 0;
 
+  /* in pathological cases (nearly running out of streams) that function
+   * will be O(n**2) */
   stream_id = priv->last_stream_allocated + 1;
   while (stream_is_used (self, stream_id))
-    stream_id++;
+    {
+      if (stream_id == G_MAXUINT16)
+        stream_id = 1;
+      else
+        stream_id++;
+    }
 
   priv->last_stream_allocated = stream_id;
   g_array_append_val (priv->streams_used, stream_id);
