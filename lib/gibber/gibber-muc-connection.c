@@ -125,7 +125,7 @@ gibber_muc_connection_init (GibberMucConnection *obj)
                    G_CALLBACK(_reader_received_stanza_cb), obj);
 
   priv->streams_used = g_array_sized_new (FALSE, TRUE, sizeof (guint16), 1);
-  /* O is the "default" stream */
+  /* 0 is the "default" stream */
   stream_id = 0;
   g_array_append_val (priv->streams_used, stream_id);
   priv->last_stream_allocated = 0;
