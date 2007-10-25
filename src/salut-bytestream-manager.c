@@ -441,10 +441,22 @@ salut_bytestream_manager_dispose (GObject *object)
   g_object_unref (priv->im_manager);
   g_object_unref (priv->muc_manager);
   g_object_unref (priv->xmpp_connection_manager);
-  g_free (priv->host_name_fqdn);
 
   if (G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->dispose (object);
+}
+
+void
+salut_bytestream_manager_finalize (GObject *object)
+{
+  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (object);
+  SalutBytestreamManagerPrivate *priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (
+      self);
+
+  g_free (priv->host_name_fqdn);
+
+  if (G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->finalize)
+    G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->finalize (object);
 }
 
 static void
@@ -541,6 +553,7 @@ salut_bytestream_manager_class_init (
 
   object_class->constructor = salut_bytestream_manager_constructor;
   object_class->dispose = salut_bytestream_manager_dispose;
+  object_class->finalize = salut_bytestream_manager_finalize;
 
   object_class->get_property = salut_bytestream_manager_get_property;
   object_class->set_property = salut_bytestream_manager_set_property;
