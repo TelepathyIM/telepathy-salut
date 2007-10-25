@@ -67,7 +67,8 @@ typedef void (* SalutBytestreamManagerNegotiateReplyFunc) (
     GibberXmppStanza *stanza, gpointer user_data);
 
 SalutBytestreamManager *
-salut_bytestream_manager_new (SalutConnection *connection);
+salut_bytestream_manager_new (SalutConnection *connection,
+    const gchar *host_name_fqdn);
 
 GibberXmppStanza *
 salut_bytestream_manager_make_stream_init_iq (const gchar *from,

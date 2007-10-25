@@ -847,6 +847,10 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
             TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
     }
+
+  /* Create the bytestream manager */
+  priv->bytestream_manager = salut_bytestream_manager_new (self,
+    avahi_client_get_host_name_fqdn (priv->avahi_client->avahi_client));
 }
 
 /* public functions */
@@ -2435,9 +2439,6 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   /*
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
   */
-
-  /* Create the bytestream manager */
-  priv->bytestream_manager = salut_bytestream_manager_new (self);
 
   g_ptr_array_add(factories, priv->contact_manager);
   g_ptr_array_add(factories, priv->im_manager);
