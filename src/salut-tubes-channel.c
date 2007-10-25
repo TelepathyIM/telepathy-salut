@@ -1573,7 +1573,6 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   guint tube_id;
   SalutTubeIface *tube;
   GHashTable *parameters_copied;
-  gchar *stream_id;
   GError *error = NULL;
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
@@ -1591,11 +1590,10 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
       (GDestroyNotify) tp_g_value_slice_free);
   g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
 
-  stream_id = generate_stream_id (self);
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
-      service, parameters_copied, (const gchar *) stream_id, tube_id, NULL);
+      service, parameters_copied, tube_id, NULL);
 
   g_object_set (tube,
       "address-type", address_type,
@@ -1628,8 +1626,6 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 
   tp_svc_channel_type_tubes_return_from_offer_stream_tube (context,
       tube_id);
-
-  g_free (stream_id);
 }
 
 /**

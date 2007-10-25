@@ -169,7 +169,7 @@ check_stream_id (GibberBytestreamMuc *self)
   if (priv->stream_id_multicast == 0)
     {
       DEBUG ("Can't allocate a new stream. Bytestream closed");
-      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self));
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
       return FALSE;
     }
 
@@ -421,15 +421,23 @@ gibber_bytestream_muc_initiate (GibberBytestreamIface *bytestream)
   return TRUE;
 }
 
-/*
- * gibber_bytestream_muc_get_protocol
- *
- * Implements gibber_bytestream_iface_get_protocol on GibberBytestreamIface
- */
-static const gchar *
-gibber_bytestream_muc_get_protocol (GibberBytestreamIface *bytestream)
+void
+gibber_bytestream_muc_add_sender (GibberBytestreamMuc *self,
+                                  const gchar *sender,
+                                  guint16 stream_id)
 {
-  return "rmulticast";
+  GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
+
+  g_hash_table_insert (priv->senders, g_strdup (sender),
+      GUINT_TO_POINTER ((guint) stream_id));
+}
+
+void gibber_bytestream_muc_remove_sender (GibberBytestreamMuc *self,
+                                          const gchar *sender)
+{
+  GibberBytestreamMucPrivate *priv = GIBBER_BYTESTREAM_MUC_GET_PRIVATE (self);
+
+  g_hash_table_remove (priv->senders, sender);
 }
 
 static void
