@@ -95,6 +95,8 @@ struct _GibberMucConnectionPrivate
   GibberRMulticastTransport *rmtransport;
 
   const gchar *current_sender;
+  GArray *streams_used;
+  guint16 last_stream_allocated;
 };
 
 #define GIBBER_MUC_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_MUC_CONNECTION, GibberMucConnectionPrivate))
@@ -114,12 +116,19 @@ static void
 gibber_muc_connection_init (GibberMucConnection *obj)
 {
   GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (obj);
+  guint16 stream_id;
 
   /* allocate any data required by the object here */
   priv->reader = gibber_xmpp_reader_new_no_stream();
   priv->writer = gibber_xmpp_writer_new_no_stream();
   g_signal_connect(priv->reader, "received-stanza",
                    G_CALLBACK(_reader_received_stanza_cb), obj);
+
+  priv->streams_used = g_array_sized_new (FALSE, TRUE, sizeof (guint16), 1);
+  /* O is the "default" stream */
+  stream_id = 0;
+  g_array_append_val (priv->streams_used, stream_id);
+  priv->last_stream_allocated = 0;
 }
 
 static void gibber_muc_connection_dispose (GObject *object);
@@ -267,6 +276,8 @@ gibber_muc_connection_finalize (GObject *object)
     g_hash_table_destroy(priv->parameters);
     priv->parameters = NULL;
   }
+
+  g_array_free (priv->streams_used, TRUE);
 
   G_OBJECT_CLASS (gibber_muc_connection_parent_class)->finalize (object);
 }
@@ -651,6 +662,27 @@ gibber_muc_connection_send(GibberMucConnection *connection,
       data, length, error);
 }
 
+static gboolean
+stream_is_used (GibberMucConnection *self,
+                guint16 stream_id)
+{
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
+  guint i;
+
+  for (i = 0; i < priv->streams_used->len; i++)
+    {
+      guint16 tmp;
+
+      tmp = g_array_index (priv->streams_used, guint16, i);
+      if (tmp == stream_id)
+        {
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
 gboolean
 gibber_muc_connection_send_raw(GibberMucConnection *connection,
                                guint16 stream_id,
@@ -660,9 +692,50 @@ gibber_muc_connection_send_raw(GibberMucConnection *connection,
   GibberMucConnectionPrivate *priv =
     GIBBER_MUC_CONNECTION_GET_PRIVATE (connection);
 
+  g_assert (stream_is_used (connection, stream_id));
+
   return gibber_r_multicast_transport_send(priv->rmtransport,
       stream_id, data, size, error);
 }
 
+guint16
+gibber_muc_connection_new_stream (GibberMucConnection *self)
+{
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
+  guint16 stream_id;
 
+  if (priv->streams_used->len >= G_MAXUINT16)
+    /* All streams are allocated */
+    return 0;
 
+  stream_id = priv->last_stream_allocated + 1;
+  while (stream_is_used (self, stream_id))
+    stream_id++;
+
+  priv->last_stream_allocated = stream_id;
+  g_array_append_val (priv->streams_used, stream_id);
+
+  return stream_id;
+}
+
+void
+gibber_muc_connection_free_stream (GibberMucConnection *self,
+                                   guint16 stream_id)
+{
+  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
+  guint i;
+
+  g_assert (stream_id != 0);
+
+  for (i = 0; i < priv->streams_used->len; i++)
+    {
+      guint16 tmp;
+
+      tmp = g_array_index (priv->streams_used, guint16, i);
+      if (tmp == stream_id)
+        {
+          g_array_remove_index_fast (priv->streams_used, i);
+          return;
+        }
+    }
+}

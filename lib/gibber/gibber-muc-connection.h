@@ -111,6 +111,11 @@ gibber_muc_connection_send_raw(GibberMucConnection *connection,
                                guint16 stream_id, const guint8 *data,
                                gsize size, GError **error);
 
+guint16 gibber_muc_connection_new_stream (GibberMucConnection *connection);
+
+void gibber_muc_connection_free_stream (GibberMucConnection *connection,
+    guint16 stream_id);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_MUC_CONNECTION_H__*/
