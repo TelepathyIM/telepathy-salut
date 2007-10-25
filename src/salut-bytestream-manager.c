@@ -520,6 +520,7 @@ salut_bytestream_manager_constructor (GType type,
   g_assert (priv->im_manager != NULL);
   g_assert (priv->muc_manager != NULL);
   g_assert (priv->xmpp_connection_manager != NULL);
+  g_assert (priv->host_name_fqdn != NULL);
 
   salut_xmpp_connection_manager_add_stanza_filter (
       priv->xmpp_connection_manager, NULL, si_request_filter,
