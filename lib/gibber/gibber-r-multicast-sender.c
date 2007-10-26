@@ -173,6 +173,9 @@ struct _GibberRMulticastSenderPrivate
   /* Whether we went know the data starting point or not */
   gboolean start_data;
   guint32 start_point;
+
+  /* Endpoint is just there in case we are in failure mode */
+  guint32 end_point;
 };
 
 #define GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderPrivate))
@@ -359,7 +362,9 @@ gibber_r_multicast_sender_new(guint32 id,
 static void
 signal_data(GibberRMulticastSender *sender, guint16 stream_id,
             guint8 *data, gsize size) {
-  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING;
+  sender->state = MAX(GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING,
+    sender->state);
+
   g_signal_emit(sender, signals[RECEIVED_DATA], 0, stream_id, data, size);
 }
 
@@ -508,12 +513,8 @@ check_depends(GibberRMulticastSender *sender,
         sender_info->sender_id);
 
     if (s == NULL || s->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
-      /* The node depends on a sender that's unknown to us, this can only
-       * happen when an AJ packet is sent. So the node will get known to us
-       * after this packet.. Thus we can skip this dependency */
-      DEBUG_SENDER(sender, "Unknown node in dependency list: %x",
-          sender_info->sender_id);
-      g_assert (packet->type == PACKET_TYPE_ATTEMPT_JOIN);
+      DEBUG_SENDER(sender, "Unknown node in dependency list of packet %x: %x",
+          sender_info->sender_id, packet->packet_id);
       continue;
     }
 
@@ -527,6 +528,13 @@ check_depends(GibberRMulticastSender *sender,
         DEBUG_SENDER(sender,
             "Waiting node %x to complete it's messages up to %x",
             sender_info->sender_id, sender_info->packet_id);
+        if (s->state == GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+          {
+            DEBUG_SENDER(sender,
+              "Asking failed node %x to complete it's messages up to %x",
+              sender_info->sender_id, sender_info->packet_id);
+            gibber_r_multicast_sender_update_end (s, sender_info->packet_id);
+          }
         return FALSE;
     }
   }
@@ -717,6 +725,14 @@ pop_packet(GibberRMulticastSender *sender) {
      if (pop_data_packet (sender))
          return TRUE;
   }
+
+  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_FAILED
+      && gibber_r_multicast_packet_diff(priv->end_point,
+        sender->next_output_packet) >= 0)
+    {
+       DEBUG_SENDER (sender, "Not looking at packets behind the endpoint");
+       return FALSE;
+    }
 
   p = g_hash_table_lookup(priv->packet_cache, &(sender->next_output_packet));
 
@@ -923,6 +939,36 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
     sender->next_output_packet = packet_id;
     sender->next_output_data_packet = packet_id;
   }
+}
+
+void
+gibber_r_multicast_sender_update_end (GibberRMulticastSender *sender,
+  guint32 packet_id)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  g_assert (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_FAILED);
+
+  if  (gibber_r_multicast_packet_diff (priv->end_point, packet_id) >= 0);
+    {
+      DEBUG_SENDER (sender, "Updating end to %x", packet_id);
+      priv->end_point = packet_id;
+      pop_packets (sender);
+    }
+}
+
+void
+gibber_r_multicast_sender_set_failed (GibberRMulticastSender *sender)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_FAILED;
+  priv->end_point = sender->next_output_packet;
+
+  DEBUG_SENDER (sender, "Marked sender as failed. Endpoint %x",
+      priv->end_point);
 }
 
 void

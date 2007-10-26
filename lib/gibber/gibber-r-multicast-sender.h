@@ -113,6 +113,11 @@ GibberRMulticastSender *gibber_r_multicast_sender_new (guint32 id,
 void gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
     guint32 packet_id);
 
+void gibber_r_multicast_sender_update_end (GibberRMulticastSender *sender,
+    guint32 packet_id);
+
+void gibber_r_multicast_sender_set_failed (GibberRMulticastSender *sender);
+
 void gibber_r_multicast_sender_set_data_start (GibberRMulticastSender *sender,
     guint32 packet_id);
 
