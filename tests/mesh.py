@@ -137,7 +137,7 @@ class BaseMeshNode(protocol.ProcessProtocol):
       self.lineReceived(line)
 
   def errReceived(self, data):
-    print "Error: " + data
+    print self.name + " Error: " + data.rstrip()
 
   def processEnded(self, reason):
     if self.process.status != 0:
