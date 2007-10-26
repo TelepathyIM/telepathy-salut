@@ -1203,3 +1203,30 @@ gibber_r_multicast_sender_release_data (GibberRMulticastSender *sender)
   priv->holding_data = FALSE;
   pop_packets (sender);
 }
+
+static void
+stop_packet (gpointer key, gpointer value, gpointer user_data)
+{
+  PacketInfo *p = (PacketInfo *)value;
+
+  if (p->timeout != 0)
+    {
+      g_source_remove (p->timeout);
+      p->timeout = 0;
+    }
+}
+
+void
+gibber_r_multicast_sender_stop (GibberRMulticastSender *sender)
+{
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
+
+  if (priv->whois_timer != 0)
+    {
+      g_source_remove (priv->whois_timer);
+      priv->whois_timer = 0;
+    }
+
+  g_hash_table_foreach (priv->packet_cache, stop_packet, NULL);
+}

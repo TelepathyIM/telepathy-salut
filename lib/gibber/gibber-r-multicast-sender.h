@@ -150,6 +150,9 @@ void gibber_r_multicast_sender_whois_push(GibberRMulticastSender *sender,
 void gibber_r_multicast_sender_set_packet_repeat (
     GibberRMulticastSender *sender, guint32 packet_id, gboolean repeat);
 
+/* Stop all pending requests */
+void gibber_r_multicast_sender_stop (GibberRMulticastSender *sender);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_R_MULTICAST_SENDER_H__*/
