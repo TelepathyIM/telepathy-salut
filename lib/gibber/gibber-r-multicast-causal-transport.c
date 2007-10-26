@@ -846,10 +846,16 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
               sender_id);
 
           g_assert (sender_id != 0);
-          g_assert (rsender != NULL);
 
-          gibber_r_multicast_sender_repair_request (rsender,
-             packet->data.repair_request.packet_id);
+          if (rsender != NULL)
+            {
+              gibber_r_multicast_sender_repair_request (rsender,
+                 packet->data.repair_request.packet_id);
+            }
+          else
+            {
+              DEBUG ("Ignoring repair request for unknown original sender");
+            }
           break;
         }
     case PACKET_TYPE_SESSION:
