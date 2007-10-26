@@ -101,6 +101,9 @@ struct _GibberBytestreamIBBPrivate
   GIOChannel *listener;
   guint listener_watch;
 
+  GibberBytestreamOOBCheckAddrFunc check_addr_func;
+  gpointer check_addr_func_data;
+
   gboolean dispose_has_run;
 };
 
@@ -821,6 +824,7 @@ listener_io_in_cb (GIOChannel *source,
                    gpointer user_data)
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   int listen_fd, fd, ret;
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
@@ -836,12 +840,17 @@ listener_io_in_cb (GIOChannel *source,
       host, NI_MAXHOST, port, NI_MAXSERV,
       NI_NUMERICHOST | NI_NUMERICSERV);
 
+  if (priv->check_addr_func != NULL && !priv->check_addr_func (self, &addr,
+        addrlen, priv->check_addr_func_data))
+    {
+      DEBUG ("connection from %s refused by the bytestream user", host);
+      return TRUE;
+    }
+
   if (ret == 0)
     DEBUG("New connection from %s port %s", host, port);
   else
     DEBUG("New connection..");
-
-  /* FIXME: we should probably check if it's the right host */
 
   ll_transport = gibber_ll_transport_new ();
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
@@ -1013,6 +1022,19 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
 
   return TRUE;
 }
+
+void
+gibber_bytestream_oob_set_check_addr_func (
+    GibberBytestreamOOB *self,
+    GibberBytestreamOOBCheckAddrFunc func,
+    gpointer user_data)
+{
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+
+  priv->check_addr_func = func;
+  priv->check_addr_func_data = user_data;
+}
+
 
 static void
 bytestream_iface_init (gpointer g_iface,

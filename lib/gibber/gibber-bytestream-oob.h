@@ -22,12 +22,19 @@
 
 #include <glib-object.h>
 
+#include <netdb.h>
+
 #include "gibber-bytestream-iface.h"
 
 G_BEGIN_DECLS
 
 typedef struct _GibberBytestreamOOB GibberBytestreamOOB;
 typedef struct _GibberBytestreamOOBClass GibberBytestreamOOBClass;
+
+typedef gboolean (* GibberBytestreamOOBCheckAddrFunc) (
+    GibberBytestreamOOB *bytestream, struct sockaddr_storage *addr,
+    socklen_t addrlen, gpointer user_data);
+
 
 struct _GibberBytestreamOOBClass {
   GObjectClass parent_class;
@@ -57,6 +64,10 @@ GType gibber_bytestream_oob_get_type (void);
 #define GIBBER_BYTESTREAM_OOB_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_BYTESTREAM_OOB,\
                               GibberBytestreamOOBClass))
+
+void gibber_bytestream_oob_set_check_addr_func (
+    GibberBytestreamOOB *bytestream, GibberBytestreamOOBCheckAddrFunc func,
+    gpointer user_data);
 
 G_END_DECLS
 
