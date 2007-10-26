@@ -27,6 +27,16 @@
 
 G_BEGIN_DECLS
 
+typedef struct _GibberRMulticastSenderGroup GibberRMulticastSenderGroup;
+
+struct _GibberRMulticastSenderGroup {
+  /* public */
+  GHashTable *senders;
+  /* private */
+  gboolean popping;
+  GQueue *pop_queue;
+};
+
 typedef struct _GibberRMulticastSender GibberRMulticastSender;
 typedef struct _GibberRMulticastSenderClass GibberRMulticastSenderClass;
 
@@ -83,8 +93,21 @@ GType gibber_r_multicast_sender_get_type(void);
 #define GIBBER_R_MULTICAST_SENDER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderClass))
 
+GibberRMulticastSenderGroup *gibber_r_multicast_sender_group_new (void);
+
+void gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group);
+void gibber_r_multicast_sender_group_add (GibberRMulticastSenderGroup *group,
+    GibberRMulticastSender *sender);
+
+GibberRMulticastSender * gibber_r_multicast_sender_group_lookup (
+    GibberRMulticastSenderGroup *group, guint32 sender_id);
+
+void gibber_r_multicast_sender_group_remove (
+    GibberRMulticastSenderGroup *group, guint32 sender_id);
+
+
 GibberRMulticastSender *gibber_r_multicast_sender_new (guint32 id,
-    const gchar *name, GHashTable *senders);
+    const gchar *name, GibberRMulticastSenderGroup *group);
 
 /* Sequence for this sender starts at packet_id */
 void gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,

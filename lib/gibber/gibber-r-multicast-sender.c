@@ -43,6 +43,54 @@
 #define MIN_WHOIS_TIMEOUT 150
 #define MAX_WHOIS_TIMEOUT 250
 
+
+GibberRMulticastSenderGroup *
+gibber_r_multicast_sender_group_new (void)
+{
+  GibberRMulticastSenderGroup *result;
+  result = g_slice_new0 (GibberRMulticastSenderGroup);
+
+  result->senders = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, g_object_unref);
+  result->pop_queue = g_queue_new();
+  return result;
+}
+
+void
+gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
+{
+  g_assert (group->popping == FALSE);
+  g_hash_table_destroy (group->senders);
+  g_queue_free (group->pop_queue);
+  g_slice_free (GibberRMulticastSenderGroup, group);
+}
+
+void
+gibber_r_multicast_sender_group_add (GibberRMulticastSenderGroup *group,
+    GibberRMulticastSender *sender)
+{
+  g_hash_table_insert (group->senders, GUINT_TO_POINTER (sender->id), sender);
+}
+
+
+GibberRMulticastSender *
+gibber_r_multicast_sender_group_lookup (GibberRMulticastSenderGroup *group,
+    guint32 sender_id)
+{
+  return g_hash_table_lookup (group->senders, GUINT_TO_POINTER (sender_id));
+}
+
+void
+gibber_r_multicast_sender_group_remove (GibberRMulticastSenderGroup *group,
+    guint32 sender_id)
+{
+  gpointer s;
+
+  s = g_hash_table_lookup (group->senders, GUINT_TO_POINTER(sender_id));
+  g_queue_remove (group->pop_queue, s);
+  g_hash_table_remove (group->senders, GUINT_TO_POINTER(sender_id));
+}
+
 static void schedule_repair(GibberRMulticastSender *sender, guint32 id);
 static void schedule_do_repair(GibberRMulticastSender *sender, guint32 id);
 static void schedule_whois_request(GibberRMulticastSender *sender);
@@ -65,7 +113,7 @@ enum
 
 /* properties */
 enum {
-  PROP_SENDERS_HASH = 1,
+  PROP_SENDER_GROUP = 1,
   LAST_PROPERTY
 };
 
@@ -109,10 +157,9 @@ struct _GibberRMulticastSenderPrivate
   gboolean dispose_has_run;
   /* hash table with packets */
   GHashTable *packet_cache;
-  /* Other senders on the network 
-   * (sender id -> GibberRMulticastSender object)
-   */
-  GHashTable *senders;
+  /* Sendergroup to which we belong */
+  GibberRMulticastSenderGroup *group;
+
   /* Very first packet number in the current window */
   guint32 first_packet;
 
@@ -154,11 +201,9 @@ gibber_r_multicast_sender_set_property(GObject *object,
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
 
   switch (property_id) {
-    case PROP_SENDERS_HASH:
-      priv->senders = (GHashTable *)g_value_get_pointer(value);
-      if (priv->senders != NULL) {
-        g_hash_table_ref(priv->senders);
-      }
+    case PROP_SENDER_GROUP:
+      priv->group =
+          (GibberRMulticastSenderGroup *) g_value_get_pointer(value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
@@ -242,14 +287,14 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    g_cclosure_marshal_VOID__STRING,
                    G_TYPE_NONE, 1, G_TYPE_STRING);
 
-  param_spec = g_param_spec_pointer ("senderhash",
-                                     "Sender Hash",
-                                     "Hash of other senders",
+  param_spec = g_param_spec_pointer ("sendergroup",
+                                     "Sender Group",
+                                     "Group of senders",
                                      G_PARAM_CONSTRUCT_ONLY |
                                      G_PARAM_WRITABLE       |
                                      G_PARAM_STATIC_NAME    |
                                      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_SENDERS_HASH,
+  g_object_class_install_property(object_class, PROP_SENDER_GROUP,
       param_spec);
 }
 
@@ -267,10 +312,6 @@ gibber_r_multicast_sender_dispose (GObject *object)
 
   g_hash_table_destroy(priv->packet_cache);
 
-  /* release any references held by the object here */
-  if (priv->senders != NULL) {
-    g_hash_table_unref(priv->senders);
-  }
   if (priv->whois_timer != 0) {
     g_source_remove(priv->whois_timer);
     priv->whois_timer = 0;
@@ -298,10 +339,12 @@ gibber_r_multicast_sender_finalize (GObject *object)
 GibberRMulticastSender *
 gibber_r_multicast_sender_new(guint32 id,
                               const gchar *name,
-                              GHashTable *senders) {
+                              GibberRMulticastSenderGroup *group) {
   GibberRMulticastSender *sender =
-    g_object_new(GIBBER_TYPE_R_MULTICAST_SENDER, "senderhash", senders,
+    g_object_new(GIBBER_TYPE_R_MULTICAST_SENDER, "sendergroup", group,
         NULL);
+
+  g_assert(group != NULL);
 
   sender->id = id;
   sender->name = g_strdup(name);
@@ -310,7 +353,6 @@ gibber_r_multicast_sender_new(guint32 id,
     schedule_whois_request(sender);
   }
 
-  g_assert(senders != NULL);
   return sender;
 }
 
@@ -462,8 +504,8 @@ check_depends(GibberRMulticastSender *sender,
     sender_info = g_array_index (packet->depends,
         GibberRMulticastPacketSenderInfo *, i);
 
-    s = g_hash_table_lookup(priv->senders,
-        GUINT_TO_POINTER(sender_info->sender_id));
+    s = gibber_r_multicast_sender_group_lookup(priv->group,
+        sender_info->sender_id);
 
     if (s == NULL || s->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
       /* The node depends on a sender that's unknown to us, this can only
@@ -735,27 +777,17 @@ pop_packet(GibberRMulticastSender *sender) {
   return TRUE;
 }
 
-static void
-senders_collect(gpointer key, gpointer value, gpointer user_data) {
-  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
-  GList **senders = (GList **)user_data;
-
-  g_object_ref (sender);
-  *senders = g_list_prepend(*senders, sender);
-}
-
-static void
-pop_packets(GibberRMulticastSender *sender) {
+static gboolean
+do_pop_packets (GibberRMulticastSender *sender)
+{
   gboolean popped = FALSE;
-  GibberRMulticastSenderPrivate *priv =
-      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
   if (sender->name == NULL
       || sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
   {
     /* No popping untill we know the senders mapped name and we at least have
      * some packets */
-    return;
+    return FALSE;
   }
 
   g_object_ref (sender);
@@ -763,21 +795,53 @@ pop_packets(GibberRMulticastSender *sender) {
   while (pop_packet(sender))
     popped = TRUE;
 
-  if (popped)
-    {
-      GList *senders = NULL;
-      GList *tmp;
-
-      g_hash_table_foreach(priv->senders, senders_collect, &senders);
-      for (tmp = senders; tmp != NULL; tmp = tmp->next)
-        {
-          GibberRMulticastSender *s = GIBBER_R_MULTICAST_SENDER (tmp->data);
-          gibber_r_multicast_senders_updated(s);
-          g_object_unref (s);
-        }
-      g_list_free (senders);
-    }
   g_object_unref (sender);
+
+  return popped;
+}
+
+static void
+senders_collect(gpointer key, gpointer value, gpointer user_data) {
+  GibberRMulticastSender *s = GIBBER_R_MULTICAST_SENDER(value);
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (user_data);
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  g_queue_push_tail (priv->group->pop_queue, s);
+}
+
+
+static void
+pop_packets(GibberRMulticastSender *sender) {
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+  gboolean pop;
+
+
+  if (priv->group->popping)
+    return;
+
+  priv->group->popping = TRUE;
+
+  g_object_ref(sender);
+
+  pop = do_pop_packets (sender);
+  while (pop)
+    {
+      GibberRMulticastSender *s;
+      pop = FALSE;
+
+      /* Now try to pop as much as possible from others in this group */
+      g_hash_table_foreach(priv->group->senders, senders_collect, sender);
+
+      while ((s = g_queue_pop_head (priv->group->pop_queue)) != NULL)
+        {
+          pop |= do_pop_packets (s);
+        }
+    }
+
+  g_object_unref(sender);
+  priv->group->popping = FALSE;
 }
 
 void
