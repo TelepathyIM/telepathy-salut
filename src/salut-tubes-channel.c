@@ -1474,63 +1474,6 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
   g_ptr_array_free (ret, TRUE);
 }
 
-#if 0
-static gboolean
-send_new_stream_tube_msg (SalutTubesChannel *self,
-                          SalutTubeIface *tube,
-                          const gchar *stream_id,
-                          GError **error)
-{
-  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  GibberXmppNode *tube_node = NULL;
-  GibberXmppStanza *msg;
-  TpHandleRepoIface *contact_repo;
-  const gchar *jid;
-  TpTubeType type;
-  gboolean result;
-
-  g_object_get (tube, "type", &type, NULL);
-  g_assert (type == TP_TUBE_TYPE_STREAM);
-
-  contact_repo = tp_base_connection_get_handles (
-     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
-
-  jid = tp_handle_inspect (contact_repo, priv->handle);
-
-  msg = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
-      priv->conn->name, jid,
-      GIBBER_NODE, "tube",
-        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
-      GIBBER_NODE_END,
-      GIBBER_NODE, "amp",
-        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_AMP,
-        GIBBER_NODE, "rule",
-          GIBBER_NODE_ATTRIBUTE, "condition", "deliver-at",
-          GIBBER_NODE_ATTRIBUTE, "value", "stored",
-          GIBBER_NODE_ATTRIBUTE, "action", "error",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "rule",
-          GIBBER_NODE_ATTRIBUTE, "condition", "match-resource",
-          GIBBER_NODE_ATTRIBUTE, "value", "exact",
-          GIBBER_NODE_ATTRIBUTE, "action", "error",
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-      GIBBER_STANZA_END);
-
-  tube_node = gibber_xmpp_node_get_child_ns (msg->node, "tube",
-      GIBBER_TELEPATHY_NS_TUBES);
-  g_assert (tube_node != NULL);
-
-  publish_tube_in_node (self, tube_node, tube);
-
-  /* TODO: send the stanza using the p2p connection */
-
-  g_object_unref (msg);
-  return result;
-}
-#endif
-
 static void
 stream_tube_new_connection_cb (SalutTubeIface *tube,
                                guint contact,
@@ -1601,25 +1544,6 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
       "access-control", access_control,
       "access-control-param", access_control_param,
       NULL);
-
-#if 0
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      /* Stream initiation */
-      GError *error = NULL;
-
-      if (!send_new_stream_tube_msg (self, tube, stream_id, &error))
-        {
-          salut_tube_iface_close (tube);
-
-          dbus_g_method_return_error (context, error);
-
-          g_error_free (error);
-          g_free (stream_id);
-          return;
-        }
-    }
-#endif
 
   g_signal_connect (tube, "new-connection",
       G_CALLBACK (stream_tube_new_connection_cb), self);
