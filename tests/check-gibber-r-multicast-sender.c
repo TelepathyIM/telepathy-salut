@@ -146,6 +146,7 @@ add_packet(gpointer data) {
 
 START_TEST (test_sender) {
   GibberRMulticastSender *s;
+  GibberRMulticastSenderGroup *group;
   test_t tests[NUMBER_OF_TESTS] = {
     { (guint32)(~0 - NR_PACKETS/2), TRUE },
     { 0xff, TRUE },
@@ -154,8 +155,7 @@ START_TEST (test_sender) {
   int i;
 
   g_type_init();
-  GHashTable *senders = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-                                              NULL, g_object_unref);
+  group = gibber_r_multicast_sender_group_new ();
   loop = g_main_loop_new(NULL, FALSE);
 
   serial_offset = tests[_i].serial_offset;
@@ -163,12 +163,12 @@ START_TEST (test_sender) {
 
   for (i = 0 ; receivers[i].receiver_id != 0; i++) {
     s = gibber_r_multicast_sender_new(receivers[i].receiver_id,
-        receivers[i].name, senders);
+        receivers[i].name, group);
     gibber_r_multicast_sender_update_start(s, receivers[i].packet_id);
     gibber_r_multicast_sender_seen(s, receivers[i].packet_id + 1);
-    g_hash_table_insert(senders, GUINT_TO_POINTER(s->id), s);
+    gibber_r_multicast_sender_group_add (group, s);
   }
-  s = gibber_r_multicast_sender_new(SENDER, SENDER_NAME, senders);
+  s = gibber_r_multicast_sender_new(SENDER, SENDER_NAME, group);
   g_signal_connect(s, "received-data", G_CALLBACK(data_received_cb), loop);
   g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
@@ -196,8 +196,7 @@ START_TEST (test_sender) {
 
   g_main_loop_run(loop);
 
-  g_hash_table_destroy (senders);
-  g_object_unref (s);
+  gibber_r_multicast_sender_group_free (group);
 } END_TEST
 
 /* Holding test */
@@ -218,6 +217,7 @@ typedef struct {
 typedef enum {
   EXPECT = 0,
   START_DATA,
+  FAIL,
   HOLD,
   UNHOLD,
   UNHOLD_IMMEDIATE,
@@ -234,7 +234,7 @@ typedef struct {
 
 typedef struct {
   int test_step;
-  GHashTable *senders;
+  GibberRMulticastSenderGroup *group;
   h_expect_t *expectation;
 } h_data_t;
 
@@ -263,18 +263,21 @@ h_idle_next_step (gpointer user_data) {
   switch (e->type) {
     case UNHOLD_IMMEDIATE:
     case START_DATA:
+    case FAIL:
     case EXPECT:
       fail ("Should not be reached");
       break;
     case HOLD:
-      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      s = g_hash_table_find (d->group->senders,
+          h_find_sender, e->expected_node);
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_hold_data (s, e->hold_id);
       h_next_test_step(d);
       break;
     case UNHOLD:
-      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      s = g_hash_table_find (d->group->senders,
+          h_find_sender, e->expected_node);
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_release_data (s);
@@ -298,17 +301,27 @@ h_next_test_step (h_data_t *d) {
     case EXPECT:
       break;
     case UNHOLD_IMMEDIATE:
-      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      s = g_hash_table_find (d->group->senders,
+          h_find_sender, e->expected_node);
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_release_data (s);
       h_next_test_step(d);
       break;
     case START_DATA:
-      s = g_hash_table_find (d->senders, h_find_sender, e->expected_node);
+      s = g_hash_table_find (d->group->senders,
+          h_find_sender, e->expected_node);
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_set_data_start (s, e->hold_id);
+      h_next_test_step(d);
+      break;
+    case FAIL:
+      s = g_hash_table_find (d->group->senders,
+          h_find_sender, e->expected_node);
+      fail_unless (s != NULL);
+      d->test_step++;
+      gibber_r_multicast_sender_set_failed(s);
       h_next_test_step(d);
       break;
     case HOLD:
@@ -328,9 +341,9 @@ h_received_data_cb (GibberRMulticastSender *sender, guint16 stream_id,
 
   fail_unless (d->expectation[d->test_step].type == EXPECT);
   fail_unless (d->expectation[d->test_step].packet_type == PACKET_TYPE_DATA);
-  fail_unless (d->expectation[d->test_step].data_stream_id == stream_id);
   fail_unless (
     strcmp (d->expectation[d->test_step].expected_node, sender->name) == 0);
+  fail_unless (d->expectation[d->test_step].data_stream_id == stream_id);
 
   d->test_step++;
   h_next_test_step(d);
@@ -461,26 +474,55 @@ h_expect_t h_expectation4[] = {
    { DONE }
 };
 
-#define NUMBER_OF_H_TESTS 5
+/* Test if failing a node correctly pops the minimum amount of packets needed
+ * to fulfill all dependencies */
+h_setup_t h_setup5[] =  {
+    { "node1", 0x1, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 1, 0, 1 },
+    { "node1", 0x2, PACKET_TYPE_DATA,         "001",  "node0", 0x3, 2, 0, 1 },
+
+    /* As the very first thing do a Control packet, which isn't hold back. To
+     * force the setting of FAIL (as the setup instructions are run as soon as
+     * the join packet is received) */
+    { "node0", 0x1, PACKET_TYPE_JOIN,         "001",  NULL,    0x0, 1, 0, 1 },
+    { "node0", 0x2, PACKET_TYPE_DATA,         "001",  "node1", 0x2, 2, 0, 1 },
+    { "node0", 0x3, PACKET_TYPE_DATA,         "001",  NULL,    0x0, 0, 0, 1 },
+    { NULL },
+};
+
+h_expect_t h_expectation5[] = {
+   { EXPECT, "node0", PACKET_TYPE_JOIN, 0, 1 },
+   { START_DATA, "node0", PACKET_TYPE_INVALID, 0x1 },
+   { START_DATA, "node1", PACKET_TYPE_INVALID, 0x1 },
+   { FAIL,   "node0", PACKET_TYPE_INVALID, 0x2 },
+   { UNHOLD, "node0" },
+   { UNHOLD, "node1" },
+   { EXPECT, "node1", PACKET_TYPE_DATA, 0, 1 },
+   { EXPECT, "node0", PACKET_TYPE_DATA, 0, 2 },
+   { EXPECT, "node1", PACKET_TYPE_DATA, 0, 2 },
+   { DONE }
+};
+
+#define NUMBER_OF_H_TESTS 6
 h_test_t h_tests[NUMBER_OF_H_TESTS] = {
     { h_setup0, h_expectation0 },
     { h_setup1, h_expectation1 },
     { h_setup2, h_expectation2 },
     { h_setup3, h_expectation3 },
     { h_setup4, h_expectation4 },
+    { h_setup5, h_expectation5 },
   };
 
 
 static void
-add_h_sender (guint32 sender, gchar *name, GHashTable *senders,
+add_h_sender (guint32 sender, gchar *name, GibberRMulticastSenderGroup *group,
   guint32 packet_id, h_data_t *data)
 {
   GibberRMulticastSender *s;
 
-  s = gibber_r_multicast_sender_new (sender, name, senders);
+  s = gibber_r_multicast_sender_new (sender, name, group);
   gibber_r_multicast_sender_update_start (s, packet_id);
   gibber_r_multicast_sender_hold_data (s, packet_id);
-  g_hash_table_insert (senders, GUINT_TO_POINTER(s->id), s);
+  gibber_r_multicast_sender_group_add (group, s);
 
   g_signal_connect (s, "received-data",
      G_CALLBACK (h_received_data_cb), data);
@@ -489,7 +531,7 @@ add_h_sender (guint32 sender, gchar *name, GHashTable *senders,
 }
 
 START_TEST (test_holding) {
-  GHashTable *senders;
+  GibberRMulticastSenderGroup *group;
   guint32 sender_offset = 0xf00;
      /* control packets aren't hold back, thus we get them interleaved at first
       */
@@ -500,17 +542,17 @@ START_TEST (test_holding) {
   g_type_init();
   loop = g_main_loop_new(NULL, FALSE);
 
-  senders = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-      NULL, g_object_unref);
-  data.senders = senders;
+  group = gibber_r_multicast_sender_group_new ();
+  data.group = group;
 
   for (i = 0; test->setup[i].name != NULL; i++)
     {
       GibberRMulticastSender *s;
-      s =  g_hash_table_find (senders, h_find_sender, test->setup[i].name);
+      s =  g_hash_table_find (group->senders,
+          h_find_sender, test->setup[i].name);
       if (s == NULL)
         {
-          add_h_sender (sender_offset++, test->setup[i].name, senders,
+          add_h_sender (sender_offset++, test->setup[i].name, group,
             test->setup[i].packet_id, &data);
         }
     }
@@ -520,7 +562,8 @@ START_TEST (test_holding) {
       GibberRMulticastSender *s0, *s1 = NULL;
       GibberRMulticastPacket *p;
 
-      s0 = g_hash_table_find (senders, h_find_sender, test->setup[i].name);
+      s0 = g_hash_table_find (group->senders, h_find_sender,
+          test->setup[i].name);
       fail_unless (s0 != NULL);
 
       p = gibber_r_multicast_packet_new (test->setup[i].packet_type, s0->id,
@@ -529,7 +572,7 @@ START_TEST (test_holding) {
 
       if (test->setup[i].depend_node != NULL)
         {
-          s1 = g_hash_table_find (senders, h_find_sender,
+          s1 = g_hash_table_find (group->senders, h_find_sender,
               test->setup[i].depend_node);
           fail_unless (s1 != NULL);
           fail_unless (gibber_r_multicast_packet_add_sender_info (p, s1->id,
