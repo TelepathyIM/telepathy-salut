@@ -94,7 +94,7 @@ struct _GibberRMulticastCausalTransportPrivate
   gboolean dispose_has_run;
   GibberTransport *transport;
   guint32 packet_id;
-  GHashTable *senders;
+  GibberRMulticastSenderGroup *sender_group;
   GibberRMulticastSender *self;
   guint timer;
   gchar *name;
@@ -177,8 +177,7 @@ gibber_r_multicast_causal_transport_init (GibberRMulticastCausalTransport *obj)
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
-  priv->senders = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-      NULL, g_object_unref);
+  priv->sender_group = gibber_r_multicast_sender_group_new ();
   priv->packet_id = g_random_int ();
 }
 
@@ -285,7 +284,7 @@ gibber_r_multicast_causal_transport_dispose (GObject *object)
       priv->self = NULL;
     }
 
-  g_hash_table_remove_all (priv->senders);
+  gibber_r_multicast_sender_group_free (priv->sender_group);
 
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (
@@ -306,8 +305,6 @@ gibber_r_multicast_causal_transport_finalize (GObject *object)
 
   /* free any data held directly by the object here */
   g_free (priv->name);
-
-  g_hash_table_destroy (priv->senders);
 
   G_OBJECT_CLASS (
       gibber_r_multicast_causal_transport_parent_class)->finalize (object);
@@ -380,7 +377,7 @@ sendout_session_cb (gpointer data)
           priv->transport->max_packet_size);
 
   DEBUG_TRANSPORT (self, "Preparing session message");
-  g_hash_table_foreach (priv->senders, add_sender_info, packet);
+  g_hash_table_foreach (priv->sender_group->senders, add_sender_info, packet);
   DEBUG_TRANSPORT (self, "Sending out session message");
   sendout_packet (self, packet, NULL);
   g_object_unref (packet);
@@ -417,11 +414,11 @@ connected (GibberRMulticastCausalTransport *transport)
   DEBUG_TRANSPORT (transport, "Connected to group");
 
   priv->self = gibber_r_multicast_sender_new (transport->sender_id, priv->name,
-      priv->senders);
+      priv->sender_group);
   gibber_r_multicast_sender_update_start (priv->self, priv->packet_id);
 
-  g_hash_table_insert (priv->senders, GUINT_TO_POINTER (priv->self->id),
-      priv->self);
+  gibber_r_multicast_sender_group_add (priv->sender_group, priv->self);
+
   g_object_ref (priv->self);
 
   g_signal_connect (priv->self, "repair-message",
@@ -618,14 +615,15 @@ gibber_r_multicast_causal_transport_add_sender (
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastSender *sender;
 
-  sender = g_hash_table_lookup (priv->senders, GUINT_TO_POINTER (sender_id));
+  sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+      sender_id);
 
   if (sender != NULL)
     return sender;
 
-  sender = gibber_r_multicast_sender_new (sender_id, NULL, priv->senders);
+  sender = gibber_r_multicast_sender_new (sender_id, NULL, priv->sender_group);
 
-  g_hash_table_insert (priv->senders, GUINT_TO_POINTER (sender->id), sender);
+  gibber_r_multicast_sender_group_add (priv->sender_group, sender);
 
   g_signal_connect (sender, "received-data",
       G_CALLBACK (data_received_cb), transport);
@@ -659,7 +657,8 @@ void gibber_r_multicast_causal_transport_update_sender_start (
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastSender *sender;
 
-  sender = g_hash_table_lookup (priv->senders, GUINT_TO_POINTER (sender_id));
+  sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+      sender_id);
   g_assert (sender != NULL);
 
   gibber_r_multicast_sender_update_start (sender, packet_id);
@@ -682,8 +681,8 @@ handle_session_message (GibberRMulticastCausalTransport *self,
           g_array_index (packet->depends,
               GibberRMulticastPacketSenderInfo *, i);
       GibberRMulticastSender *sender =
-          g_hash_table_lookup (priv->senders,
-              GUINT_TO_POINTER (sender_info->sender_id));
+          gibber_r_multicast_sender_group_lookup (priv->sender_group,
+              sender_info->sender_id);
 
       if (sender == NULL)
         {
@@ -704,7 +703,8 @@ handle_session_message (GibberRMulticastCausalTransport *self,
   /* Reschedule the sending out of a session message if the received session
    * message was at least as up to date as us */
   if (!outdated &&
-        g_hash_table_size (priv->senders) == packet->depends->len + 1)
+        g_hash_table_size (priv->sender_group->senders)
+            == packet->depends->len + 1)
     {
       DEBUG_TRANSPORT (self, "Rescheduling session message");
       schedule_session_message(self);
@@ -727,8 +727,8 @@ handle_packet_depends (GibberRMulticastCausalTransport *self,
           g_array_index (packet->depends,
               GibberRMulticastPacketSenderInfo *, i);
       GibberRMulticastSender *sender =
-          g_hash_table_lookup (priv->senders,
-              GUINT_TO_POINTER (sender_info->sender_id));
+          gibber_r_multicast_sender_group_lookup (priv->sender_group,
+              sender_info->sender_id);
 
       /* This might be a resent after which the sender was removed */
       if (sender != NULL)
@@ -801,8 +801,8 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
     {
       /* All packets with non-zero sender fall go through here to start
        * detecting foreign packets as early as possible */
-      sender = g_hash_table_lookup (priv->senders,
-          GUINT_TO_POINTER (packet->sender));
+      sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+              packet->sender);
       if (sender == NULL ||
           (sender != priv->self &&
              sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW))
@@ -811,8 +811,8 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
               packet->type, packet->sender);
           g_signal_emit (self, signals[RECEIVED_FOREIGN_PACKET], 0, packet);
 
-          sender = g_hash_table_lookup (priv->senders,
-              GUINT_TO_POINTER (packet->sender));
+          sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+              packet->sender);
         }
       }
 
@@ -828,8 +828,8 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
   switch (packet->type)
     {
     case PACKET_TYPE_WHOIS_REQUEST:
-      sender = g_hash_table_lookup (priv->senders,
-          GUINT_TO_POINTER (packet->data.whois_request.sender_id));
+      sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+          packet->data.whois_request.sender_id);
       if (sender == NULL)
         goto out;
       /* fallthrough */
@@ -842,8 +842,8 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
           guint32 sender_id;
 
           sender_id = packet->data.repair_request.sender_id;
-          rsender = g_hash_table_lookup (priv->senders,
-              GUINT_TO_POINTER (sender_id));
+          rsender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+              sender_id);
 
           g_assert (sender_id != 0);
           g_assert (rsender != NULL);
@@ -981,7 +981,7 @@ add_packet_depends (GibberRMulticastCausalTransport *self,
 
   hd.sender = priv->self;
   hd.packet = packet;
-  g_hash_table_foreach (priv->senders, add_depend, &hd);
+  g_hash_table_foreach (priv->sender_group->senders, add_depend, &hd);
 }
 
 gboolean
@@ -1120,8 +1120,6 @@ gibber_r_multicast_causal_transport_disconnect (GibberTransport *transport)
       g_source_remove(priv->timer);
     }
 
-  g_hash_table_remove_all (priv->senders);
-
   gibber_transport_set_state (GIBBER_TRANSPORT (self),
                               GIBBER_TRANSPORT_DISCONNECTING);
   priv->nr_bye = 0;
@@ -1226,7 +1224,8 @@ gibber_r_multicast_causal_transport_get_sender (
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastSender *sender;
 
-  sender = g_hash_table_lookup (priv->senders, GUINT_TO_POINTER (sender_id));
+  sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+              sender_id);
   g_assert (sender != NULL);
 
   return sender;
@@ -1239,6 +1238,6 @@ gibber_r_multicast_causal_transport_remove_sender (
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
 
-  g_hash_table_remove (priv->senders, GUINT_TO_POINTER(sender_id));
+  gibber_r_multicast_sender_group_remove (priv->sender_group, sender_id);
 }
 
