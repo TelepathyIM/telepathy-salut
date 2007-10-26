@@ -1676,6 +1676,7 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
   TpTubeType type;
   TpTubeState state;
   GValue *address;
+  TpSocketAddressType address_type;
 
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
   if (tube == NULL)
@@ -1711,10 +1712,11 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
 
   g_object_get (tube,
       "address", &address,
+      "address-type", &address_type,
       NULL);
 
   tp_svc_channel_type_tubes_return_from_get_stream_tube_socket_address (
-      context, TP_SOCKET_ADDRESS_TYPE_UNIX, address);
+      context, address_type, address);
 }
 
 /**
