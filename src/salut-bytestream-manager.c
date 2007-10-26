@@ -706,6 +706,44 @@ si_request_reply_filter (SalutXmppConnectionManager *manager,
   return (!tp_strdiff (iq_id, data->iq_id));
 }
 
+static gboolean
+check_bytestream_oob_peer_addr (GibberBytestreamOOB *bytestream,
+                                struct sockaddr_storage *addr,
+                                socklen_t addrlen,
+                                gpointer user_data)
+{
+  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (user_data);
+  SalutBytestreamManagerPrivate *priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (
+      self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+  SalutContactManager *contact_mgr;
+  SalutContact *contact;
+  gchar *peer;
+  gboolean result;
+
+  g_object_get (bytestream, "peer-id", &peer, NULL);
+  g_assert (peer != NULL);
+
+  handle = tp_handle_lookup (contact_repo, peer, NULL, NULL);
+  g_assert (handle != 0);
+  g_free (peer);
+
+  g_object_get (priv->connection, "contact-manager", &contact_mgr, NULL);
+  g_assert (contact_mgr != NULL);
+
+  contact = salut_contact_manager_get_contact (contact_mgr, handle);
+  g_object_unref (contact_mgr);
+  if (contact == NULL)
+    return FALSE;
+
+  result = salut_contact_has_address (contact, addr);
+  g_object_unref (contact);
+
+  return result;
+}
+
 static void
 si_request_reply_cb (SalutXmppConnectionManager *manager,
                      GibberXmppConnection *connection,
@@ -801,6 +839,9 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
               "stream-init-id", NULL,
               "host", priv->host_name_fqdn,
               NULL);
+        gibber_bytestream_oob_set_check_addr_func (
+            GIBBER_BYTESTREAM_OOB (bytestream), check_bytestream_oob_peer_addr,
+            data->self);
       }
     else if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_IBB))
       {
