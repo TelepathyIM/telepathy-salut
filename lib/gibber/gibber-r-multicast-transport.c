@@ -482,6 +482,7 @@ start_joining_phase (GibberRMulticastTransport *self)
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   gchar *members;
   GibberRMulticastSender *sender;
+  int i;
 
   if (priv->state == STATE_GATHERING)
     {
@@ -514,17 +515,28 @@ start_joining_phase (GibberRMulticastTransport *self)
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
     priv->transport->sender_id);
 
-  /* We'll send them as failures as part of this join instead of in a dedicated
-   * failure packet */
-  if (priv->pending_failures->len > 0)
-    {
-      g_array_remove_range (priv->pending_failures, 0,
-          priv->pending_failures->len);
-    }
   gibber_r_multicast_sender_hold_data (sender,
       sender->next_input_packet);
   gibber_r_multicast_causal_transport_send_join (priv->transport,
     priv->send_join_failures);
+
+  /* We'll send them as failures as part of this join instead of in a dedicated
+   * failure packet */
+  for (i = 0; i < priv->pending_failures->len; i++)
+    {
+      GibberRMulticastSender *sender;
+      sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+        g_array_index (priv->pending_failures, guint32, i));
+
+      gibber_r_multicast_sender_set_failed(sender);
+    }
+
+  if (priv->pending_failures->len > 0)
+    {
+      g_array_remove_range (priv->pending_failures, 0,
+          priv->pending_failures->len);
+      gibber_r_multicast_sender_set_failed(sender);
+    }
 }
 
 static gboolean
@@ -858,12 +870,22 @@ send_failure_packet (GibberRMulticastTransport *self)
 {
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  guint i;
 
   g_assert (priv->pending_failures != NULL);
   g_assert (priv->pending_failures->len != 0);
 
   gibber_r_multicast_causal_transport_send_failure (priv->transport,
     priv->pending_failures);
+
+  for (i = 0; i < priv->pending_failures->len; i++)
+    {
+      GibberRMulticastSender *sender;
+      sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+        g_array_index (priv->pending_failures, guint32, i));
+
+      gibber_r_multicast_sender_set_failed(sender);
+    }
 
   priv->pending_failures =
     g_array_remove_range (priv->pending_failures, 0,
@@ -993,11 +1015,13 @@ check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
         }
       else if (info->state < MEMBER_STATE_MEMBER)
         {
+          g_array_append_val (priv->pending_failures, id);
           info->state = MEMBER_STATE_FAILING;
           result = -1;
         }
       else if (info->state == MEMBER_STATE_MEMBER)
         {
+          g_array_append_val (priv->pending_failures, id);
           info->state = MEMBER_STATE_MEMBER_FAILING;
           result = -1;
         }
