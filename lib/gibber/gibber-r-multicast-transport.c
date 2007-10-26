@@ -1262,14 +1262,11 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
         }
 
       switch (check_join (self, packet)) {
-        case 0: {
-
+        case 0:
           DEBUG ("%s agreed with our join", sender->name);
-
           info->agreed_join = TRUE;
           check_agreement (self);
           break;
-        }
         case 1:
           /* Our join had more info, so we don't need to resent it */
           DEBUG ("%s disagreed with our join with less info", sender->name);
