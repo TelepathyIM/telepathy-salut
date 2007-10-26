@@ -951,7 +951,7 @@ handle_failure_packet (GibberRMulticastTransport *self,
           g_array_append_val (priv->pending_failures, id);
           send_failure_packet (self);
           member_set_state (self, packet->sender,
-            info->state == MEMBER_STATE_MEMBER ?
+            finfo->state == MEMBER_STATE_MEMBER ?
               MEMBER_STATE_MEMBER_FAILING : MEMBER_STATE_FAILING
           );
         }
