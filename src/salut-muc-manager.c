@@ -26,6 +26,7 @@
 #include "salut-muc-manager.h"
 
 #include <gibber/gibber-muc-connection.h>
+#include <gibber/gibber-xmpp-error.h>
 
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
@@ -1165,13 +1166,11 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
       GUINT_TO_POINTER (room_handle));
   if (chan == NULL)
     {
-      /*
-      GError e = { GABBLE_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
           "No tubes channel available for this MUC" };
 
       DEBUG ("tubes channel doesn't exist for muc %d", room_handle);
-      gabble_bytestream_iface_close (bytestream, &e);
-      */
+      gibber_bytestream_iface_close (bytestream, &e);
       return;
     }
 
