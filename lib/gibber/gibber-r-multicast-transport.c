@@ -937,7 +937,7 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
   info = member_get_info (self, id);
   g_hash_table_foreach (priv->members, remove_failure, &id);
 
-  DEBUG ("Failure process finished for %x\n", id);
+  DEBUG ("Failure process finished for %x", id);
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
       id);
   if (info->state == MEMBER_STATE_MEMBER_FAILING)
@@ -953,11 +953,41 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
 }
 
 static void
+fail_member (GibberRMulticastTransport *self, MemberInfo *info, guint32 id)
+{
+  MemberInfo *finfo;
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+
+  if (id == priv->transport->sender_id)
+    {
+      DEBUG ("Someone regarded us as a failure :(");
+      return;
+    }
+
+  finfo = member_get_info (self, id);
+
+  if (finfo->state < MEMBER_STATE_FAILING)
+    {
+       g_array_append_val (priv->pending_failures, id);
+       if (finfo->state == MEMBER_STATE_MEMBER)
+         finfo->state = MEMBER_STATE_MEMBER_FAILING;
+       else
+         finfo->state =  MEMBER_STATE_FAILING;
+       send_failure_packet (self);
+    }
+
+  if (info != NULL)
+     g_array_append_val (info->failures, id);
+
+  check_failure_completion (self, id);
+}
+
+
+static void
 handle_failure_packet (GibberRMulticastTransport *self,
     GibberRMulticastPacket *packet)
 {
-  GibberRMulticastTransportPrivate *priv =
-      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
   MemberInfo *info;
   int i;
 
@@ -965,20 +995,9 @@ handle_failure_packet (GibberRMulticastTransport *self,
   for (i = 0; i < packet->data.failure.failures->len; i++)
     {
       guint32 id = g_array_index(packet->data.failure.failures, guint32, i);
-      MemberInfo *finfo = member_get_info (self, id);
 
       DEBUG ("%x failed %x", packet->sender, id);
-      if (finfo->state < MEMBER_STATE_FAILING)
-        {
-          g_array_append_val (priv->pending_failures, id);
-          send_failure_packet (self);
-          member_set_state (self, id,
-            finfo->state == MEMBER_STATE_MEMBER ?
-              MEMBER_STATE_MEMBER_FAILING : MEMBER_STATE_FAILING
-          );
-        }
-      g_array_append_val (info->failures, id);
-      check_failure_completion (self, id);
+      fail_member (self, info, id);
     }
 }
 
@@ -1284,24 +1303,24 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
     case PACKET_TYPE_FAILURE:
       handle_failure_packet (self, packet);
       break;
-    case PACKET_TYPE_BYE: {
-      MemberInfo *info = member_get_info (self, packet->sender);
-
-      if (info->state < MEMBER_STATE_FAILING)
-        {
-          member_set_state (self, packet->sender,
-            info->state == MEMBER_STATE_MEMBER ?
-              MEMBER_STATE_MEMBER_FAILING : MEMBER_STATE_FAILING);
-          g_array_append_val (priv->pending_failures, packet->sender);
-
-          send_failure_packet (self);
-          check_failure_completion (self, packet->sender);
-        }
+    case PACKET_TYPE_BYE:
+      fail_member (self, NULL, packet->sender);
       break;
-    }
     default:
       break;
   }
+}
+
+static void
+sender_failed_cb (GibberRMulticastCausalTransport *ctransport,
+    GibberRMulticastSender *sender, gpointer user_data)
+{
+
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+
+  DEBUG ("%s (%x) failed", sender->name, sender->id);
+
+  fail_member (self, NULL, sender->id);
 }
 
 gboolean
@@ -1324,6 +1343,9 @@ gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
 
   g_signal_connect (priv->transport, "received-control-packet",
       G_CALLBACK (received_control_packet_cb), transport);
+
+  g_signal_connect (priv->transport, "sender-failed",
+      G_CALLBACK (sender_failed_cb), transport);
 
   return TRUE;
 }
