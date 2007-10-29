@@ -893,7 +893,7 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
 
 END:
   /* user callback */
-  data->func (bytestream, (const gchar*) data->stream_id, stanza,
+  data->func (bytestream, data->stream_id, stanza,
       data->user_data);
 
   streaminit_reply_cb_data_free (data);
@@ -982,7 +982,7 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
 
  /* Call the user callback without bytestream to inform him the SI request
   * failed */
-  data->func (NULL, (const gchar*) data->stream_id, NULL,
+  data->func (NULL, data->stream_id, NULL,
       data->user_data);
 
   g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
