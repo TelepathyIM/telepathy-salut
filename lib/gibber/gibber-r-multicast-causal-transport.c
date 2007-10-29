@@ -70,7 +70,7 @@ G_DEFINE_TYPE(GibberRMulticastCausalTransport,
 /* signal enum */
 enum
 {
-    SENDER_FAILING,
+    SENDER_FAILED,
     RECEIVED_CONTROL_PACKET,
     RECEIVED_FOREIGN_PACKET,
     LAST_SIGNAL
@@ -208,8 +208,8 @@ gibber_r_multicast_causal_transport_class_init (
   object_class->dispose = gibber_r_multicast_causal_transport_dispose;
   object_class->finalize = gibber_r_multicast_causal_transport_finalize;
 
-  signals[SENDER_FAILING] =
-    g_signal_new ("sender-failing",
+  signals[SENDER_FAILED] =
+    g_signal_new ("sender-failed",
         G_OBJECT_CLASS_TYPE (gibber_r_multicast_causal_transport_class),
         G_SIGNAL_RUN_LAST,
         0,
@@ -598,6 +598,16 @@ whois_request_cb (GibberRMulticastSender *sender,
 }
 
 static void
+sender_failed_cb (GibberRMulticastSender *sender,
+                  gpointer user_data)
+{
+  GibberRMulticastCausalTransport *self =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
+
+  g_signal_emit(self, signals[SENDER_FAILED], 0, sender);
+}
+
+static void
 name_discovered_cb(GibberRMulticastSender *sender, gchar *name,
     gpointer user_data)
 {
@@ -643,6 +653,9 @@ gibber_r_multicast_causal_transport_add_sender (
       G_CALLBACK (whois_reply_cb), transport);
   g_signal_connect (sender, "name-discovered",
       G_CALLBACK (name_discovered_cb), transport);
+
+  g_signal_connect (sender, "failed",
+      G_CALLBACK (sender_failed_cb), transport);
 
   return sender;
 }
