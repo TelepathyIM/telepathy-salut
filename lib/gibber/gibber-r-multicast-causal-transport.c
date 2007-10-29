@@ -816,8 +816,7 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
         }
       }
 
-  if (sender == NULL
-      || (sender == priv->self && packet->type != PACKET_TYPE_WHOIS_REQUEST))
+  if (sender == NULL || sender == priv->self)
     {
       goto out;
     }
