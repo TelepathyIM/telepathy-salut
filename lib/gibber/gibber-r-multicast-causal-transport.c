@@ -356,7 +356,8 @@ add_sender_info (gpointer key,
   GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET (user_data);
   gboolean r;
 
-  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW)
+  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW ||
+      sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
     return;
 
   r = gibber_r_multicast_packet_add_sender_info (packet, sender->id,
@@ -965,7 +966,7 @@ add_depend (gpointer key,
   gboolean r;
 
   if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING
-      || sender->state == GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+      || sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
     return;
 
   if (sender == d->sender)
