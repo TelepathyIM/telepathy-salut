@@ -613,7 +613,9 @@ check_depends(GibberRMulticastSender *sender,
     s = gibber_r_multicast_sender_group_lookup(priv->group,
         sender_info->sender_id);
 
-    if (s == NULL || s->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
+    if (s == NULL
+        || s->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW
+        || s->state == GIBBER_R_MULTICAST_SENDER_STATE_UNKNOWN_FAILED) {
       DEBUG_SENDER(sender, "Unknown node in dependency list of packet %x: %x",
           sender_info->sender_id, packet->packet_id);
       continue;
@@ -899,8 +901,8 @@ do_pop_packets (GibberRMulticastSender *sender)
 {
   gboolean popped = FALSE;
 
-  if (sender->name == NULL
-      || sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING
+      || sender->state > GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
   {
     /* No popping untill we know the senders mapped name and we at least have
      * some packets */
@@ -1065,11 +1067,35 @@ gibber_r_multicast_sender_set_failed (GibberRMulticastSender *sender)
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  sender->state = GIBBER_R_MULTICAST_SENDER_STATE_FAILED;
-  priv->end_point = sender->next_output_packet;
+  if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+    return;
 
-  DEBUG_SENDER (sender, "Marked sender as failed. Endpoint %x",
-      priv->end_point);
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING)
+    {
+      DEBUG_SENDER (sender, "Failed before we knew anything");
+      set_state (sender, GIBBER_R_MULTICAST_SENDER_STATE_UNKNOWN_FAILED);
+    }
+  else
+    {
+      set_state (sender, GIBBER_R_MULTICAST_SENDER_STATE_FAILED);
+      priv->end_point = sender->next_output_packet;
+      DEBUG_SENDER (sender, "Marked sender as failed. Endpoint %x",
+        priv->end_point);
+    }
+
+  /* failed, no need to fail us again */
+  if (priv->fail_timer != 0)
+    {
+      g_source_remove (priv->fail_timer);
+      priv->fail_timer = 0;
+    }
+
+  /* failed, no need to get our name anymore */
+  if (priv->whois_timer != 0)
+    {
+      g_source_remove (priv->whois_timer);
+      priv->whois_timer = 0;
+    }
 }
 
 void
@@ -1178,7 +1204,8 @@ gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id) {
   g_assert (sender != NULL);
   DEBUG_SENDER(sender, "Seen next packet 0x%x", id);
 
-  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
+  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING
+      || sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_UNKNOWN_FAILED) {
     return FALSE;
   }
 
