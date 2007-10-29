@@ -454,7 +454,7 @@ add_to_join (gpointer key, gpointer value, gpointer user_data) {
 
   g_assert (info->state >= MEMBER_STATE_ATTEMPT_JOIN_REPEAT);
 
-  if (info->state <=  MEMBER_STATE_FAILING) {
+  if (info->state <  MEMBER_STATE_FAILING) {
     g_array_append_val (priv->send_join, info->id);
   }
 
@@ -469,9 +469,23 @@ add_to_join (gpointer key, gpointer value, gpointer user_data) {
 static void
 check_join_state (gpointer key, MemberInfo *value, gpointer user_data)
 {
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastTransportPrivate *priv =
+     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+  GibberRMulticastSender *sender;
+
   if (value->state < MEMBER_STATE_ATTEMPT_JOIN_REPEAT)
     {
       value->state = MEMBER_STATE_INSTANT_FAILURE;
+    }
+
+  sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+    value->id);
+
+  if (sender->name == NULL)
+    {
+      value->state = MEMBER_STATE_FAILING;
+      g_array_append_val (priv->pending_failures, value->id);
     }
 }
 
@@ -503,6 +517,7 @@ start_joining_phase (GibberRMulticastTransport *self)
       g_array_free (priv->send_join, TRUE);
       g_array_free (priv->send_join_failures, TRUE);
       priv->send_join = g_array_new (FALSE, FALSE, sizeof (guint32));
+      priv->send_join_failures = g_array_new (FALSE, FALSE, sizeof (guint32));
     }
 
   members = member_list_to_str (self);
@@ -535,7 +550,6 @@ start_joining_phase (GibberRMulticastTransport *self)
     {
       g_array_remove_range (priv->pending_failures, 0,
           priv->pending_failures->len);
-      gibber_r_multicast_sender_set_failed(sender);
     }
 }
 
@@ -1049,6 +1063,13 @@ check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
   if (result != 0)
     return result;
 
+  /* We send some failures this node doesn't know about yet, so the info isn't
+   * the same. But we might have less info iff it has non-failed members we
+   * don't know about */
+  if (priv->send_join_failures->len !=  packet->data.join.failures->len)
+    result = 1;
+
+
   if (!depends_list_contains (packet->depends, priv->transport->sender_id))
     {
       /* Hmm, a join without us.. Odd.. Should not happen unless we're one of
@@ -1056,28 +1077,34 @@ check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
       g_assert_not_reached();
     }
 
-  /* We already saw our own id in the depends */
-  seen = 1;
-  for (i = 0; i < priv->send_join->len; i++)
+  seen = 0;
+  for (i = 0; i < packet->depends->len; i++)
     {
-      guint32 id = g_array_index (priv->send_join, guint32, i);
+      GibberRMulticastPacketSenderInfo *sinfo =
+          g_array_index (packet->depends,
+              GibberRMulticastPacketSenderInfo *, i);
 
-      if (id != packet->sender && !depends_list_contains (packet->depends,
-          g_array_index (priv->send_join, guint32, i)))
+      if (guint32_array_contains (priv->send_join, sinfo->sender_id)
+          || sinfo->sender_id == priv->transport->sender_id)
         {
-          DEBUG ("Node %x not contained in the join",
-              g_array_index (priv->send_join, guint32, i));
-          result = 1;
-
+          seen++;
+          continue;
         }
-      else
+
+     /* Not in send_join or ourselves, then it must be a failure.. */
+     if (!guint32_array_contains (priv->send_join_failures, sinfo->sender_id))
        {
-         seen++;
+          DEBUG ("Node %x is unknown to us. Marking as instant failure",
+              sinfo->sender_id);
+          result = -1;
+          member_set_state (self, sinfo->sender_id,
+             MEMBER_STATE_INSTANT_FAILURE);
        }
     }
 
-  if (seen != packet->depends->len + 1)
-    result = -1;
+  /* Node's join didn't contain all senders we know about */
+  if (result == 0 && seen != priv->send_join->len)
+    result = 1;
 
   return result;
 }
