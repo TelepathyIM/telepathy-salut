@@ -366,6 +366,14 @@ gibber_r_multicast_sender_finalize (GObject *object)
   G_OBJECT_CLASS (gibber_r_multicast_sender_parent_class)->finalize (object);
 }
 
+static void
+set_state (GibberRMulticastSender *sender,
+   GibberRMulticastSenderState state)
+{
+  g_assert (sender->state <= state);
+
+  sender->state = state;
+}
 
 GibberRMulticastSender *
 gibber_r_multicast_sender_new(guint32 id,
@@ -395,8 +403,8 @@ gibber_r_multicast_sender_new(guint32 id,
 static void
 signal_data(GibberRMulticastSender *sender, guint16 stream_id,
             guint8 *data, gsize size) {
-  sender->state = MAX(GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING,
-    sender->state);
+  set_state (sender,
+    MAX(GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING, sender->state));
 
   g_signal_emit(sender, signals[RECEIVED_DATA], 0, stream_id, data, size);
 }
@@ -405,7 +413,9 @@ static void
 signal_control_packet(GibberRMulticastSender *sender,
     GibberRMulticastPacket *packet)
 {
-  sender->state = MAX(GIBBER_R_MULTICAST_SENDER_STATE_RUNNING, sender->state);
+  set_state (sender,
+    MAX(GIBBER_R_MULTICAST_SENDER_STATE_RUNNING, sender->state));
+
   g_signal_emit (sender, signals[RECEIVED_CONTROL_PACKET], 0, packet);
 }
 
@@ -1020,7 +1030,8 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
     g_assert(g_hash_table_size(priv->packet_cache) == 0);
 
-    sender->state = GIBBER_R_MULTICAST_SENDER_STATE_PREPARING;
+    set_state (sender, GIBBER_R_MULTICAST_SENDER_STATE_PREPARING);
+
     sender->next_input_packet = packet_id;
     sender->next_output_packet = packet_id;
     sender->next_output_data_packet = packet_id;
