@@ -64,7 +64,7 @@
   g_free (_type);                                                           \
 } G_STMT_END
 
-#define PRESENCE_TIMEOUT 300
+#define PRESENCE_TIMEOUT 300000
 
 G_DEFINE_TYPE(SalutContact, salut_contact, G_TYPE_OBJECT)
 
