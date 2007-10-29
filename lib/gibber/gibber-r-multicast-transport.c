@@ -125,6 +125,7 @@ typedef struct {
   guint32 join_packet_id;
   /* Failures recorded by this node */
   GArray *failures;
+  GibberRMulticastTransport *transport;
 } MemberInfo;
 
 #define GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(o) \
@@ -348,6 +349,7 @@ new_member (GibberRMulticastTransport *self, guint32 id)
   info = g_slice_new0 (MemberInfo);
   info->id = id;
   info->failures = g_array_new (FALSE, FALSE, sizeof (guint32));
+  info->transport = self;
   g_hash_table_insert (priv->members, &info->id, info);
 
   return info;
@@ -467,6 +469,36 @@ add_to_join (gpointer key, gpointer value, gpointer user_data) {
 }
 
 static void
+fail_duplicated (gpointer key, gpointer value, gpointer user_data)
+{
+  MemberInfo *info = (MemberInfo *) value;
+  MemberInfo *cinfo = (MemberInfo *) user_data;
+  GibberRMulticastSender *sender;
+  GibberRMulticastSender *csender;
+  GibberRMulticastTransportPrivate *priv =
+     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (cinfo->transport);
+
+  if (info == cinfo)
+    return;
+
+  /* No need to check members that will fail anyways */
+  if (info->state < MEMBER_STATE_ATTEMPT_JOIN_REPEAT
+      || info->state >= MEMBER_STATE_FAILING)
+    return;
+
+  sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+    info->id);
+  csender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+    cinfo->id);
+
+  if (sender->name != NULL && strcmp (csender->name, sender->name) == 0)
+    {
+      info->state = MEMBER_STATE_FAILING;
+      g_array_append_val (priv->pending_failures, info->id);
+    }
+}
+
+static void
 check_join_state (gpointer key, MemberInfo *value, gpointer user_data)
 {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
@@ -487,6 +519,14 @@ check_join_state (gpointer key, MemberInfo *value, gpointer user_data)
       value->state = MEMBER_STATE_FAILING;
       g_array_append_val (priv->pending_failures, value->id);
     }
+  else if (value->state < MEMBER_STATE_MEMBER)
+   {
+     /* Check if any other members has the same name, if so fail it.
+      * This will ensure that we prioritise new responsive members over current
+      * ones. Major usecase is where someone parts ungracefully and reconnects
+      * later on. */
+     g_hash_table_foreach (priv->members, fail_duplicated, value);
+   }
 }
 
 static void
