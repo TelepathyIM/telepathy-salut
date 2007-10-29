@@ -914,8 +914,7 @@ do_pop_packets (GibberRMulticastSender *sender)
   if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING
       || sender->state > GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
   {
-    /* No popping untill we know the senders mapped name and we at least have
-     * some packets */
+    /* No popping untill we have at least some information */
     return FALSE;
   }
 
@@ -948,29 +947,41 @@ pop_packets(GibberRMulticastSender *sender) {
 
 
   if (priv->group->popping)
-    return;
+    {
+      if (!g_queue_find (priv->group->pop_queue, sender))
+        {
+          /* Ensure that data is popped at the next opportunity */
+          g_queue_push_tail (priv->group->pop_queue, sender);
+        }
+      return;
+    }
+
 
   priv->group->popping = TRUE;
 
   g_object_ref(sender);
 
   pop = do_pop_packets (sender);
-  while (pop)
+
+  /* If something is popped or a node queued itself for popping, go for it */
+  while (pop || g_queue_peek_head(priv->group->pop_queue) != NULL)
     {
       GibberRMulticastSender *s;
+
+      /* If something was popped, try to pop as much as possible from others in
+       * this group. Else just pop all senders in the queue */
+      if (pop)
+        g_hash_table_foreach(priv->group->senders, senders_collect, sender);
+
       pop = FALSE;
-
-      /* Now try to pop as much as possible from others in this group */
-      g_hash_table_foreach(priv->group->senders, senders_collect, sender);
-
       while ((s = g_queue_pop_head (priv->group->pop_queue)) != NULL)
         {
           pop |= do_pop_packets (s);
         }
     }
 
-  g_object_unref(sender);
   priv->group->popping = FALSE;
+  g_object_unref(sender);
 }
 
 void
