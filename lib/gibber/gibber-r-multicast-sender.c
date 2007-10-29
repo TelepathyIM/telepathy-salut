@@ -281,6 +281,15 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
                    g_cclosure_marshal_VOID__VOID,
                    G_TYPE_NONE, 0);
 
+  signals[FAILED] =
+      g_signal_new("failed",
+                   G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
+                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                   0,
+                   NULL, NULL,
+                   g_cclosure_marshal_VOID__VOID,
+                   G_TYPE_NONE, 0);
+
   signals[NAME_DISCOVERED] =
       g_signal_new("name-discovered",
                    G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
