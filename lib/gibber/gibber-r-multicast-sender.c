@@ -974,7 +974,10 @@ pop_packets(GibberRMulticastSender *sender) {
       /* If something was popped, try to pop as much as possible from others in
        * this group. Else just pop all senders in the queue */
       if (pop)
-        g_hash_table_foreach(priv->group->senders, senders_collect, sender);
+        {
+          g_queue_clear (priv->group->pop_queue);
+          g_hash_table_foreach(priv->group->senders, senders_collect, sender);
+        }
 
       pop = FALSE;
       while ((s = g_queue_pop_head (priv->group->pop_queue)) != NULL)
