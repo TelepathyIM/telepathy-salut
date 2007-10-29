@@ -417,6 +417,7 @@ connected (GibberRMulticastCausalTransport *transport)
   priv->self = gibber_r_multicast_sender_new (transport->sender_id, priv->name,
       priv->sender_group);
   gibber_r_multicast_sender_update_start (priv->self, priv->packet_id);
+  gibber_r_multicast_sender_set_data_start (priv->self, priv->packet_id);
 
   gibber_r_multicast_sender_group_add (priv->sender_group, priv->self);
 
