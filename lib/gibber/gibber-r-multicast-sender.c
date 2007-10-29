@@ -79,6 +79,7 @@ void
 gibber_r_multicast_sender_group_add (GibberRMulticastSenderGroup *group,
     GibberRMulticastSender *sender)
 {
+  DEBUG ("Adding %x to sender group", sender->id);
   g_hash_table_insert (group->senders, GUINT_TO_POINTER (sender->id), sender);
 }
 
@@ -95,6 +96,8 @@ gibber_r_multicast_sender_group_remove (GibberRMulticastSenderGroup *group,
     guint32 sender_id)
 {
   gpointer s;
+
+  DEBUG ("Removing %x from sender group", sender_id);
 
   s = g_hash_table_lookup (group->senders, GUINT_TO_POINTER(sender_id));
   g_queue_remove (group->pop_queue, s);
@@ -1038,6 +1041,9 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
+  g_assert (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_FAILED);
+
+  DEBUG_SENDER (sender, "Updating start to %x", packet_id);
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
     g_assert(g_hash_table_size(priv->packet_cache) == 0);
 
