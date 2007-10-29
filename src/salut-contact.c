@@ -64,6 +64,7 @@
   g_free (_type);                                                           \
 } G_STMT_END
 
+#define PRESENCE_TIMEOUT 300
 
 G_DEFINE_TYPE(SalutContact, salut_contact, G_TYPE_OBJECT)
 
@@ -132,6 +133,7 @@ struct _SalutContactPrivate
   SalutAvahiRecordBrowser *record_browser;
   GList *avatar_requests;
   TpHandleRepoIface *room_repo;
+  guint presence_resolver_failed_timer;
 #ifdef ENABLE_OLPC
   /* mDNS instance name -> SalutContactActivity */
   GHashTable *olpc_announced_activities;
@@ -650,6 +652,13 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
 
   DEBUG_RESOLVER (self, resolver, "contact %s resolved", self->name);
 
+  if (priv->presence_resolver_failed_timer != 0)
+    {
+      DEBUG_CONTACT (self, "remove presence resolver timer");
+      g_source_remove (priv->presence_resolver_failed_timer);
+      priv->presence_resolver_failed_timer = 0;
+    }
+
 #define SET_CHANGE(x) changes |= x
 
   if ((t = avahi_string_list_find(txt, "status")) != NULL) {
@@ -981,13 +990,35 @@ contact_drop_resolver (SalutContact *self,
   }
 }
 
+static gboolean
+presence_resolver_failed_timeout (gpointer data)
+{
+  SalutContact *self = SALUT_CONTACT (data);
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  DEBUG_CONTACT (self, "presence resolver timer expired. Remove contact");
+  priv->presence_resolver_failed_timer = 0;
+  contact_lost (self);
+
+  return FALSE;
+}
+
 static void
 contact_failed_cb(SalutAvahiServiceResolver *resolver, GError *error,
                    gpointer userdata) {
   SalutContact *self = SALUT_CONTACT (userdata);
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
 
-  DEBUG_RESOLVER (self, resolver, "failed: %s. Ignoring, "
-    "presence might become stale", error->message);
+  if (priv->presence_resolver_failed_timer == 0)
+    /* There is already a timer running */
+    return;
+
+  DEBUG_RESOLVER (self, resolver, "failed: %s. Start presence resolver timer",
+      error->message);
+
+  priv->presence_resolver_failed_timer = g_timeout_add (
+      PRESENCE_TIMEOUT, presence_resolver_failed_timeout,
+      self);
 }
 
 void
