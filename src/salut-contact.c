@@ -1009,7 +1009,7 @@ contact_failed_cb(SalutAvahiServiceResolver *resolver, GError *error,
   SalutContact *self = SALUT_CONTACT (userdata);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
 
-  if (priv->presence_resolver_failed_timer == 0)
+  if (priv->presence_resolver_failed_timer != 0)
     /* There is already a timer running */
     return;
 
