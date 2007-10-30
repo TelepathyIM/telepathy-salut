@@ -157,7 +157,7 @@ gibber_r_multicast_transport_set_property (GObject *object,
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(transport);
   switch (property_id) {
     case PROP_TRANSPORT:
-      priv->transport = g_object_ref(g_value_get_object(value));
+      priv->transport = g_value_dup_object(value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -269,12 +269,12 @@ gibber_r_multicast_transport_flush_state (GibberRMulticastTransport *self)
 
   if (priv->timeout != 0) {
     g_source_remove (priv->timeout);
-    priv->timeout =0;
+    priv->timeout = 0;
   }
 
   if (priv->joining_timeout != 0) {
     g_source_remove (priv->joining_timeout);
-    priv->timeout =0;
+    priv->joining_timeout = 0;
   }
 
   if (priv->send_join != NULL) {
@@ -321,7 +321,8 @@ gibber_r_multicast_transport_dispose (GObject *object)
 }
 
 void
-gibber_r_multicast_transport_finalize (GObject *object) { GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
+gibber_r_multicast_transport_finalize (GObject *object) {
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
      GibberRMulticastTransportPrivate *priv =
         GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
