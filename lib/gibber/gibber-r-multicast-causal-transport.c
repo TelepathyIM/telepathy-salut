@@ -136,10 +136,11 @@ gibber_r_multicast_causal_transport_set_property (GObject *object,
 
   switch (property_id) {
     case PROP_NAME:
+      /* Only set on initialisation */
       priv->name = g_value_dup_string (value);
       break;
     case PROP_TRANSPORT:
-      priv->transport = g_object_ref (g_value_get_object (value));
+      priv->transport = g_value_dup_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -669,7 +670,6 @@ void gibber_r_multicast_causal_transport_update_sender_start (
     guint32 sender_id,
     guint32 packet_id)
 {
-
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastSender *sender;
