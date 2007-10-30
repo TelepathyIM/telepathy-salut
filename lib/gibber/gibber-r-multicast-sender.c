@@ -1181,7 +1181,7 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
 }
 
 void
-gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender, 
+gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
                                          guint32 id) {
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
