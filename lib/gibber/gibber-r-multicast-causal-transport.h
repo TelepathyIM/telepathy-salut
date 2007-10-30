@@ -108,7 +108,10 @@ GibberRMulticastSender *gibber_r_multicast_causal_transport_get_sender (
     GibberRMulticastCausalTransport *transport, guint32 sender_id);
 
 void gibber_r_multicast_causal_transport_remove_sender (
-    GibberRMulticastCausalTransport *transprot, guint32 sender_id);
+    GibberRMulticastCausalTransport *transport, guint32 sender_id);
+
+void gibber_r_multicast_causal_transport_reset (
+    GibberRMulticastCausalTransport *transport);
 
 G_END_DECLS
 

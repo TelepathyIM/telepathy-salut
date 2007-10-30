@@ -103,6 +103,8 @@ struct _GibberRMulticastCausalTransportPrivate
   gint nr_join_requests_seen;
 
   gint nr_bye;
+
+  gboolean resetting;
 };
 
 #define GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE(o) \
@@ -1020,6 +1022,9 @@ gibber_r_multicast_causal_transport_send (
   gsize payloaded;
   gboolean ret = TRUE;
 
+  if (priv->resetting)
+    return TRUE;
+
   g_assert (priv->self != NULL);
 
   packet = gibber_r_multicast_packet_new (PACKET_TYPE_DATA, priv->self->id,
@@ -1088,6 +1093,35 @@ gibber_r_multicast_causal_transport_do_send(GibberTransport *transport,
      data, size, error);
 }
 
+static void
+reconnect (GibberRMulticastCausalTransport *self)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+
+  /* Remove all data and start connection phase */
+  gibber_r_multicast_sender_group_free (priv->sender_group);
+  priv->sender_group = gibber_r_multicast_sender_group_new ();
+  priv->packet_id = g_random_int ();
+
+  g_assert(gibber_r_multicast_causal_transport_connect (self, FALSE, NULL));
+}
+
+static void
+disconnect_done (GibberRMulticastCausalTransport *self)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+
+  gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
+
+  g_object_unref (priv->self);
+  priv->self = NULL;
+
+  gibber_transport_set_state (GIBBER_TRANSPORT (self),
+    GIBBER_TRANSPORT_DISCONNECTED);
+}
+
 static gboolean
 send_next_bye (gpointer data)
 {
@@ -1113,15 +1147,13 @@ send_next_bye (gpointer data)
       priv->timer = g_timeout_add (BYE_INTERVAL,
           send_next_bye, self);
     }
-  else
+  else if (priv->resetting)
     {
-      gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
-
-      g_object_unref (priv->self);
-      priv->self = NULL;
-
-      gibber_transport_set_state (GIBBER_TRANSPORT (self),
-          GIBBER_TRANSPORT_DISCONNECTED);
+      reconnect (self);
+    }
+   else
+    {
+      disconnect_done (self);
     }
 
   return FALSE;
@@ -1136,12 +1168,16 @@ stop_sender (gpointer key, gpointer value, gpointer user_data)
 }
 
 static void
-gibber_r_multicast_causal_transport_disconnect (GibberTransport *transport)
+do_disconnect (GibberRMulticastCausalTransport *transport)
 {
   GibberRMulticastCausalTransport *self =
      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport);
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+
+  if (gibber_transport_get_state (GIBBER_TRANSPORT (self))
+      == GIBBER_TRANSPORT_DISCONNECTING)
+    return;
 
   if (priv->timer != 0)
     {
@@ -1156,6 +1192,37 @@ gibber_r_multicast_causal_transport_disconnect (GibberTransport *transport)
 
   priv->nr_bye = 0;
   send_next_bye (self);
+}
+
+static void
+gibber_r_multicast_causal_transport_disconnect (GibberTransport *transport)
+{
+  GibberRMulticastCausalTransport *self =
+     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport);
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+
+  priv->resetting = FALSE;
+  if (gibber_transport_get_state (GIBBER_TRANSPORT (self))
+       < GIBBER_TRANSPORT_CONNECTED)
+    {
+      disconnect_done (self);
+    }
+  else
+    {
+      do_disconnect (self);
+    }
+}
+
+void
+gibber_r_multicast_causal_transport_reset (
+    GibberRMulticastCausalTransport *transport)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+
+  priv->resetting = TRUE;
+  do_disconnect (transport);
 }
 
 guint32
