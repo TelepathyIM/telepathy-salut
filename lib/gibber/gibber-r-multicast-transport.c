@@ -71,7 +71,9 @@ typedef enum {
   /* Gathering new people */
   STATE_GATHERING,
   /* Joining */
-  STATE_JOINING
+  STATE_JOINING,
+  /* Resetting */
+  STATE_RESETTING
 } State;
 
 struct _GibberRMulticastTransportPrivate
@@ -95,6 +97,8 @@ struct _GibberRMulticastTransportPrivate
   GArray *pending_failures;
 
   State state;
+
+  gulong reconnect_handler;
 };
 
 typedef enum {
@@ -254,21 +258,14 @@ gibber_r_multicast_transport_class_init (
   transport_class->disconnect = gibber_r_multicast_transport_disconnect;
 }
 
-void
-gibber_r_multicast_transport_dispose (GObject *object)
+static void
+gibber_r_multicast_transport_flush_state (GibberRMulticastTransport *self)
 {
-  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  if (priv->dispose_has_run)
-    return;
-
-  priv->dispose_has_run = TRUE;
-  if (priv->transport != NULL) {
-    g_object_unref(priv->transport);
-    priv->transport = NULL;
-  }
+  priv->repeating_join = FALSE;
+  priv->send_empty = FALSE;
 
   if (priv->timeout != 0) {
     g_source_remove (priv->timeout);
@@ -285,11 +282,37 @@ gibber_r_multicast_transport_dispose (GObject *object)
     priv->send_join = NULL;
   }
 
-  if (priv->pending_failures != NULL)
+  if (priv->send_join_failures != NULL) {
+    g_array_free (priv->send_join_failures, TRUE);
+    priv->send_join_failures = NULL;
+  }
+
+  if (priv->pending_failures->len > 0)
     {
-      g_array_free (priv->pending_failures, TRUE);
-      priv->pending_failures = NULL;
+      g_array_remove_range (priv->pending_failures, 0,
+          priv->pending_failures->len);
     }
+  g_hash_table_remove_all (priv->members);
+}
+
+void
+gibber_r_multicast_transport_dispose (GObject *object)
+{
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (object);
+  GibberRMulticastTransportPrivate *priv =
+      GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+
+  if (priv->dispose_has_run)
+    return;
+
+  priv->dispose_has_run = TRUE;
+
+  gibber_r_multicast_transport_flush_state (self);
+
+  if (priv->transport != NULL) {
+    g_object_unref(priv->transport);
+    priv->transport = NULL;
+  }
 
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (gibber_r_multicast_transport_parent_class)->dispose)
@@ -303,9 +326,43 @@ gibber_r_multicast_transport_finalize (GObject *object) { GibberRMulticastTransp
         GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   g_hash_table_destroy (priv->members);
+  if (priv->pending_failures != NULL)
+    {
+      g_array_free (priv->pending_failures, TRUE);
+      priv->pending_failures = NULL;
+    }
 
   G_OBJECT_CLASS (
       gibber_r_multicast_transport_parent_class)->finalize (object);
+}
+
+static void
+transport_reconnected (GibberTransport *transport, gpointer user_data)
+{
+  GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
+  GibberRMulticastTransportPrivate *priv =
+     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+
+  DEBUG ("Resetting done");
+  g_signal_handler_disconnect (priv->transport, priv->reconnect_handler);
+  priv->state = STATE_NORMAL;
+}
+
+static void
+gibber_r_multicast_transport_reset (GibberRMulticastTransport *self)
+{
+  GibberRMulticastTransportPrivate *priv =
+     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
+
+  priv->state = STATE_RESETTING;
+  DEBUG ("Resetting!");
+
+  gibber_r_multicast_transport_flush_state (self);
+
+
+  priv->reconnect_handler = g_signal_connect (priv->transport, "connected",
+      G_CALLBACK(transport_reconnected), self);
+  gibber_r_multicast_causal_transport_reset (priv->transport);
 }
 
 static void
@@ -1016,6 +1073,7 @@ fail_member (GibberRMulticastTransport *self, MemberInfo *info, guint32 id)
   if (id == priv->transport->sender_id)
     {
       DEBUG ("Someone regarded us as a failure :(");
+      gibber_r_multicast_transport_reset (self);
       return;
     }
 
@@ -1076,7 +1134,8 @@ check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
       if (id == priv->transport->sender_id)
         {
           /* Uh, oh, we failed! */
-          DEBUG ("FAILURE FAILURE FAILURE");
+          DEBUG ("Join says we are a failure :(");
+          gibber_r_multicast_transport_reset (self);
           return 1;
         }
 
@@ -1113,8 +1172,9 @@ check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
   if (!depends_list_contains (packet->depends, priv->transport->sender_id))
     {
       /* Hmm, a join without us.. Odd.. Should not happen unless we're one of
-       * the failures.. Was was handle earlier */
-      g_assert_not_reached();
+       * the failures.. Should be handled earlier. but reset anyways */
+      DEBUG ("Join doesn't contain us, shouldn't happen, reset to be sure :(");
+      gibber_r_multicast_transport_reset (self);
     }
 
   seen = 0;
@@ -1460,6 +1520,10 @@ gibber_r_multicast_transport_disconnect(GibberTransport *transport) {
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
+  if (priv->state == STATE_RESETTING)
+    {
+       g_signal_handler_disconnect (priv->transport, priv->reconnect_handler);
+    }
   priv->state = STATE_DISCONNECTED;
 
   gibber_transport_set_state(GIBBER_TRANSPORT(self),
