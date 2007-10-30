@@ -419,11 +419,9 @@ get_string(const guint8 *data, gsize length, gsize *offset) {
 static void
 add_sender_info(guint8 *data, gsize length, gsize *offset, GArray *senders)
 {
-  guint nr_items;
   int i;
 
-  nr_items = senders->len;
-  add_guint8(data, length, offset, nr_items);
+  add_guint8(data, length, offset, senders->len);
 
   for (i = 0; i < senders->len; i++)
     {
