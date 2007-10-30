@@ -2,7 +2,7 @@
  * gibber-r-multicast-causal-transport.c -
  *     Source for GibberRMulticastCausalTransport
  *
- * Copyright (C) 2006 Collabora Ltd.
+ * Copyright (C) 2006-2007 Collabora Ltd.
  * @author Sjoerd Simons <sjoerd@luon.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -1112,6 +1112,11 @@ disconnect_done (GibberRMulticastCausalTransport *self)
 {
   GibberRMulticastCausalTransportPrivate *priv =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+
+  if (priv->timer != 0)
+    {
+      g_source_remove(priv->timer);
+    }
 
   gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
 
