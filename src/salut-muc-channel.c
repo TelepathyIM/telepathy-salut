@@ -238,6 +238,12 @@ salut_muc_channel_add_self_to_members (SalutMucChannel *self)
   priv->connected = TRUE;
   g_signal_emit (self, signals[READY], 0);
 
+  if (priv->timeout != 0)
+    {
+      g_source_remove (priv->timeout);
+      priv->timeout = 0;
+    }
+
   /* Now we are connected, move yourself to members */
   empty = tp_intset_new ();
   add = tp_intset_new ();
