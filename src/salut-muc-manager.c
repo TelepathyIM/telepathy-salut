@@ -722,6 +722,7 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
       if (tubes_chan != NULL)
         {
           status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+          *ret = TP_CHANNEL_IFACE (tubes_chan);
         }
       else
         {
