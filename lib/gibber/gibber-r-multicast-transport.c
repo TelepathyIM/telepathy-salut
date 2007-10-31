@@ -920,7 +920,7 @@ received_foreign_packet_cb (GibberRMulticastCausalTransport *ctransport,
     }
 
     if (packet->type != PACKET_TYPE_DATA
-        || packet->data.data.packet_part == 0)
+        || packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_START)
       {
         /* Foreign packet, with no mention of us.. Mark them as unknown */
         update_foreign_member_list (self, packet, MEMBER_STATE_UNKNOWN);

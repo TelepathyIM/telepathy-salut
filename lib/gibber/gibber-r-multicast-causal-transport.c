@@ -1035,48 +1035,33 @@ gibber_r_multicast_causal_transport_send (
 
   if (payloaded < size)
     {
-      GPtrArray *packets = g_ptr_array_sized_new(2);
-      int i;
-
-      g_ptr_array_add(packets, packet);
-
-      while (payloaded < size)
+      do
         {
+          gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
+          gibber_r_multicast_packet_set_data_info (packet, stream_id, 0, size);
+          ret = sendout_packet (self, packet, error);
+          gibber_r_multicast_sender_push (priv->self, packet);
+          g_object_unref (packet);
+
           packet = gibber_r_multicast_packet_new (PACKET_TYPE_DATA,
               priv->self->id, priv->transport->max_packet_size);
           payloaded += gibber_r_multicast_packet_add_payload (packet,
               data + payloaded, size - payloaded);
-          g_ptr_array_add (packets, packet);
-        }
-
-      for (i = 0; i < packets->len && ret; i++)
-        {
-          packet = g_ptr_array_index (packets, i);
-
-          gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
-          gibber_r_multicast_packet_set_data_info (packet, stream_id, i,
-             packets->len);
-
-          ret = sendout_packet (self, packet, error);
-          gibber_r_multicast_sender_push (priv->self, packet);
-          g_object_unref (packet);
-        }
-
-      for (; i < packets->len; i++)
-        {
-          g_object_unref (g_ptr_array_index (packets, i));
-        }
-
-      g_ptr_array_free (packets, TRUE);
-    }
+      } while (payloaded < size);
+     gibber_r_multicast_packet_set_data_info (packet, stream_id,
+        GIBBER_R_MULTICAST_DATA_PACKET_END, size);
+   }
   else
     {
-      gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
-      gibber_r_multicast_packet_set_data_info (packet, stream_id, 0, 1);
-      gibber_r_multicast_sender_push (priv->self, packet);
-      ret = sendout_packet (self, packet, error);
-      g_object_unref (packet);
+      gibber_r_multicast_packet_set_data_info (packet, stream_id,
+        GIBBER_R_MULTICAST_DATA_PACKET_START
+        | GIBBER_R_MULTICAST_DATA_PACKET_END, size);
+
     }
+  gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
+  gibber_r_multicast_sender_push (priv->self, packet);
+  ret = sendout_packet (self, packet, error);
+  g_object_unref (packet);
 
   return ret;
 }

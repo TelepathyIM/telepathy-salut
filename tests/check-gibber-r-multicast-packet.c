@@ -56,7 +56,8 @@ START_TEST (test_data_packet)
   GibberRMulticastPacket *b;
   guint32 sender_id = 1234;
   guint32 packet_id = 1200;
-  guint32 part = 2, total = 3;
+  guint8 flags = GIBBER_R_MULTICAST_DATA_PACKET_START;
+  guint32 total_size = 800;
   guint16 stream_id = 56;
   guint8 *data;
   gsize len;
@@ -71,7 +72,7 @@ START_TEST (test_data_packet)
 
   a = gibber_r_multicast_packet_new (PACKET_TYPE_DATA, sender_id, 1500);
   gibber_r_multicast_packet_set_packet_id (a, packet_id);
-  gibber_r_multicast_packet_set_data_info (a, stream_id, part, total);
+  gibber_r_multicast_packet_set_data_info (a, stream_id, flags, total_size);
 
   for (i = 0 ; senders[i].sender_id != 0; i++)
     {
@@ -88,8 +89,7 @@ START_TEST (test_data_packet)
 
   COMPARE (type);
   COMPARE (version);
-  COMPARE (data.data.packet_part);
-  COMPARE (data.data.packet_total);
+  COMPARE (data.data.total_size);
   COMPARE (packet_id);
   COMPARE (data.data.stream_id);
 

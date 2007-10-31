@@ -674,8 +674,7 @@ update_next_data_output_state (GibberRMulticastSender *self)
 
       g_assert (p != NULL);
       if (p->packet->type == PACKET_TYPE_DATA
-        && (p->packet->data.data.packet_part +  1 ==
-          p->packet->data.data.packet_total))
+        && (p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_END))
         {
           break;
         }
@@ -687,12 +686,8 @@ pop_data_packet (GibberRMulticastSender *sender)
 {
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
-  guint8 *data;
   PacketInfo *p;
-  gsize payload_size, size;
   guint16 stream_id;
-  guint32 num;
-  guint32 i;
 
   /* If we're holding before this, skip */
   if (priv->holding_data &&
@@ -712,20 +707,14 @@ pop_data_packet (GibberRMulticastSender *sender)
     &sender->next_output_data_packet);
   g_assert (p != NULL);
 
-  g_assert (p->packet->data.data.packet_part + 1 ==
-    p->packet->data.data.packet_total);
+  g_assert (p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_END);
 
   /* Backwards search for the start, validate the pieces and check the size */
-  num = p->packet->data.data.packet_total;
-  stream_id =  p->packet->data.data.stream_id;
-
-  payload_size = p->packet->data.data.payload_size;
-
-  if (num > 1)
+  if (!(p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_START))
     {
-      guint32 next = num - 2;
       guint32 i;
       gboolean found = FALSE;
+      stream_id = p->packet->data.data.stream_id;
 
       for (i = p->packet->packet_id - 1;
         gibber_r_multicast_packet_diff (priv->first_packet, i) >= 0; i--)
@@ -733,18 +722,15 @@ pop_data_packet (GibberRMulticastSender *sender)
            p = g_hash_table_lookup(priv->packet_cache, &i);
 
            g_assert (p != NULL);
-           if (p->packet->type == PACKET_TYPE_DATA &&
-             p->packet->data.data.stream_id == stream_id)
-             {
-               g_assert (p->packet->data.data.packet_part == next);
-               payload_size += p->packet->data.data.payload_size;
-               if (next == 0)
-                 {
-                   found = TRUE;
-                   break;
-                 }
-               next--;
-             }
+
+           if (p->packet->type == PACKET_TYPE_DATA
+             && p->packet->data.data.stream_id == stream_id
+             &&  (p->packet->data.data.flags &
+                  GIBBER_R_MULTICAST_DATA_PACKET_START))
+               {
+                 found = TRUE;
+                 break;
+               }
         }
 
       if (!found)
@@ -770,7 +756,6 @@ pop_data_packet (GibberRMulticastSender *sender)
      return TRUE;
   }
 
-
   if (priv->start_data &&
       gibber_r_multicast_packet_diff (priv->start_point, p->packet_id) < 0)
     {
@@ -791,17 +776,23 @@ pop_data_packet (GibberRMulticastSender *sender)
     p->packet_id, sender->next_output_data_packet,
     p->packet->data.data.stream_id);
 
-  if (num == 1) {
+  if (p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_END) {
+    gsize size;
+    guint8 *data;
+
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
-    g_assert(size == payload_size);
+    g_assert(size == p->packet->data.data.total_size);
 
     update_next_data_output_state (sender);
     signal_data(sender, p->packet->data.data.stream_id, data, size);
   } else {
-    data = g_malloc(payload_size);
     gsize off = 0;
-    guint8 *d;
+    guint8 *data, *d;
+    guint32 payload_size, i;
     gsize size;
+
+    payload_size = p->packet->data.data.total_size;
+    data = g_malloc(payload_size);
 
     for (i = p->packet_id ; i != sender->next_output_data_packet + 1 ; i++)
       {
@@ -876,8 +867,7 @@ pop_packet(GibberRMulticastSender *sender) {
         {
           sender->next_output_packet++;
           /* If this is the end, try to pop it. Otherwise ignore */
-          if (p->packet->data.data.packet_part +  1 ==
-              p->packet->data.data.packet_total)
+          if (p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_END)
             {
               /* If we could pop this, then advance next_output_data_packet
                * otherwise keep it at this location */
