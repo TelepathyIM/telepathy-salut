@@ -71,11 +71,14 @@ struct _GibberRMulticastWhoisReplyPacket {
     gchar *sender_name;
 };
 
+#define GIBBER_R_MULTICAST_DATA_PACKET_START 0x1
+#define GIBBER_R_MULTICAST_DATA_PACKET_END  0x2
+
 typedef struct _GibberRMulticastDataPacket GibberRMulticastDataPacket;
 struct _GibberRMulticastDataPacket {
     /* These are actually 24 bits in the wire protocol */
-    guint32 packet_part;
-    guint32 packet_total;
+    guint8 flags;
+    guint32 total_size;
 
     /* payload */
     guint8 *payload;
@@ -176,7 +179,7 @@ void gibber_r_multicast_packet_set_packet_id (GibberRMulticastPacket *packet,
 
 /* Set info for PACKET_TYPE_DATA packets */
 void gibber_r_multicast_packet_set_data_info (GibberRMulticastPacket *packet,
-    guint16 stream_id, guint32 part, guint32 total);
+    guint16 stream_id, guint8 flags, guint32 size);
 
 /* Set info for PACKET_TYPE_REPAIR_REQUEST packets */
 void gibber_r_multicast_packet_set_repair_request_info (
