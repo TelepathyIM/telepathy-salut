@@ -875,12 +875,13 @@ pop_data_packet (GibberRMulticastSender *sender)
 
   g_assert (p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_END);
 
+  stream_id = p->packet->data.data.stream_id;
+
   /* Backwards search for the start, validate the pieces and check the size */
   if (!(p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_START))
     {
       guint32 i;
       gboolean found = FALSE;
-      stream_id = p->packet->data.data.stream_id;
 
       for (i = p->packet->packet_id - 1;
         gibber_r_multicast_packet_diff (priv->first_packet, i) >= 0; i--)
