@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-stylesheet type='text/xsl' href='xep.xsl'?>
+<xep>
+<header>
+  <title>Link-local chat room invitations</title>
+  <abstract>Multi-user Chat over Reliable Multicast.</abstract>
+  <legal>Copyright (c) 2007 Collabora Limited. This document may be
+    distributed under the same terms as the Telepathy specification.</legal>
+  <number>proto-ll-room-invitation</number>
+  <status>ProtoXEP</status>
+  <type>Extension</type>
+  <sig>Standards</sig>
+  <approver>Telepathy project</approver>
+  <dependencies>
+    <spec>XMPP Core</spec>
+  </dependencies>
+  <supersedes/>
+  <supersededby/>
+  <shortname>NOT YET ASSIGNED</shortname>
+  <author>
+    <firstname>Simon</firstname>
+    <surname>McVittie</surname>
+    <email>simon.mcvittie@collabora.co.uk</email>
+    <jid>simon.mcvittie@collabora.co.uk</jid>
+  </author>
+  <revision>
+    <version>0.0.1</version>
+    <date>2007-09-26</date>
+    <initials>smcv</initials>
+    <remark><p>First draft.</p></remark>
+  </revision>
+</header>
+<section1 topic='Introduction' anchor='intro'>
+  <p></p>
+</section1>
+<section1 topic='Requirements' anchor='reqs'>
+  <p>STRONGLY RECOMMENDED.</p>
+</section1>
+<section1 topic='Glossary' anchor='glossary'>
+  <p>OPTIONAL.</p>
+</section1>
+<section1 topic='Use Cases' anchor='usecases'>
+  <section2 topic='Inviting a contact to a room'>
+    <code>
+      <![CDATA[
+      <!-- Sent via TCP from crone1@desktop to hecate@broom -->
+      <message from='crone1@desktop' to='hecate@broom'>
+        <x xmlns='http://collabora.co.uk/protocol/llmuc'>
+          <invite protocol='rmulticast'>
+            <roomname>Witchcraft</roomname>
+            <address>224.0.0.66</address>
+            <port>13251</port>
+            <!-- reason is optional -->
+            <reason>We need to plot Macbeth's doom, but the XMPP server is
+              down</reason>
+          </invite>
+        </x>
+        <!-- for compatibility with legacy clients -->
+        <body>You got a chatroom invitation</body>
+      </message>
+      ]]>
+    </code>
+  </section2>
+</section1>
+<section1 topic='Business Rules' anchor='rules'>
+  <p>OPTIONAL.</p>
+</section1>
+<section1 topic='Implementation Notes' anchor='impl'>
+  <p>OPTIONAL.</p>
+</section1>
+<section1 topic='Internationalization Considerations' anchor='i18n'>
+  <p>OPTIONAL.</p>
+</section1>
+<section1 topic='Security Considerations' anchor='security'>
+  <p>REQUIRED.</p>
+</section1>
+<section1 topic='IANA Considerations' anchor='iana'>
+  <p>REQUIRED.</p>
+</section1>
+<section1 topic='XMPP Registrar Considerations' anchor='registrar'>
+  <p>None.</p>
+</section1>
+<section1 topic='XML Schema' anchor='schema'>
+  <code>
+    <![CDATA[
+    <!-- FIXME: the namespace should be
+    http://telepathy.freedesktop.org/xmpp/protocol/ll/muc/ or something -->
+    <xs:schema
+    xmlns:xs='http://www.w3.org/2001/XMLSchema'
+      targetNamespace='http://collabora.co.uk/protocol/llmuc'
+      xmlns='http://collabora.co.uk/protocol/llmuc'
+      elementFormDefault='qualified'>
+
+      <!-- LLMUC invitation. Sent over the IM socket -->
+
+      <xs:element name='x'>
+        <xs:complexType>
+          <xs:choice>
+            <xs:element ref='invite'/>
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+
+
+      <xs:element name='invite'>
+        <xs:complexType>
+
+          <xs:attribute name='protocol' use='required'>
+            <xs:simpleType>
+              <xs:restriction base='xs:string'>
+                <!-- Other values may be added in future -->
+                <xs:enumeration value='rmulticast'/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:attribute>
+
+          <xs:all>
+            <xs:element name='roomname' type='xs:string'/>
+            <xs:element name='reason' minOccurs='0' type='xs:string'/>
+
+            <!-- Required for the 'rmulticast' protocol -->
+            <xs:element name='address' type='xs:string'/>
+            <xs:element name='port' type='xs:unsignedShort'/>
+
+            <!-- In OLPC builds, <properties> with NS_OLPC_ACTIVITY_PROPS
+              goes here -->
+            <xs:any minOccurs='0' maxOccurs='unbounded' namespace='##other'>
+          </xs:all>
+
+        </xs:complexType>
+      </xs:element>
+
+    </xs:schema>
+    ]]>
+  </code>
+</section1>
+</xep>

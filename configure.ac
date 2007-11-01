@@ -180,6 +180,7 @@ PKG_CHECK_MODULES([CHECK], [check >= 0.9.4],
 AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
 
 AC_OUTPUT( Makefile                       \
+           docs/Makefile                  \
            lib/Makefile                   \
            lib/gibber/Makefile            \
            lib/gibber/examples/Makefile   \
