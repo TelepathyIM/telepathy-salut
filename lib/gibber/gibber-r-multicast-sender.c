@@ -838,7 +838,9 @@ update_next_data_output_state (GibberRMulticastSender *self)
       p = g_hash_table_lookup(priv->packet_cache,
           &(self->next_output_data_packet));
 
-      g_assert (p != NULL);
+      if (p == NULL)
+        continue;
+
       if (p->packet->type == PACKET_TYPE_DATA
         && (p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_END))
         {
