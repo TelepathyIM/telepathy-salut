@@ -49,6 +49,10 @@
 #define MIN_WHOIS_REPLY_TIMEOUT 50
 #define MAX_WHOIS_REPLY_TIMEOUT 200
 
+/* At least one packet must be popped every 5 minutes.. Reliable keepalives
+ * are send out every three minutes.. */
+#define MAX_PROGRESS_TIMEOUT 300000
+
 /* The senders name should be discovered within about 10 seconds or else it is
  * fauly */
 #define NAME_DISCOVERY_TIME  10000
@@ -191,6 +195,7 @@ static void schedule_do_repair(GibberRMulticastSender *sender, guint32 id);
 static void schedule_whois_request(GibberRMulticastSender *sender,
     gboolean rescheduled);
 static gboolean name_discovery_failed_cb (gpointer data);
+static void schedule_progress_timer (GibberRMulticastSender *self);
 
 G_DEFINE_TYPE(GibberRMulticastSender, gibber_r_multicast_sender, G_TYPE_OBJECT)
 
@@ -268,6 +273,7 @@ struct _GibberRMulticastSenderPrivate
 
   /* whois reply/request timer */
   guint whois_timer;
+
   /* timer untill which a failure even occurs  */
   guint fail_timer;
 
@@ -486,11 +492,16 @@ gibber_r_multicast_sender_new(guint32 id,
   sender->id = id;
   sender->name = g_strdup(name);
 
-  if (sender->name == NULL) {
-    schedule_whois_request(sender, FALSE);
-    priv->fail_timer = g_timeout_add (NAME_DISCOVERY_TIME,
-      name_discovery_failed_cb, sender);
-  }
+  if (sender->name == NULL) 
+    {
+      schedule_whois_request(sender, FALSE);
+      priv->fail_timer = g_timeout_add (NAME_DISCOVERY_TIME,
+        name_discovery_failed_cb, sender);
+    }
+  else
+   {
+     schedule_progress_timer (sender);
+   }
 
   return sender;
 }
@@ -569,6 +580,39 @@ name_discovery_failed_cb (gpointer data)
   return FALSE;
 }
 
+static gboolean
+progress_failed_cb (gpointer data)
+{
+  GibberRMulticastSender *self = GIBBER_R_MULTICAST_SENDER (data);
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (self);
+
+  DEBUG_SENDER (self, "Failed to make progress in time");
+
+  priv->fail_timer = 0;
+
+  signal_failure (self);
+
+  return FALSE;
+}
+
+static void
+schedule_progress_timer (GibberRMulticastSender *self)
+{
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (self);
+
+  /* If we didn't discover the name, that timer is still running */
+  if (self->name == NULL)
+    return;
+
+  if (priv->fail_timer != 0)
+    g_source_remove (priv->fail_timer);
+
+  priv->fail_timer = g_timeout_add (MAX_PROGRESS_TIMEOUT,
+      progress_failed_cb, self);
+}
+
 static void
 name_discovered (GibberRMulticastSender *self, const gchar *name)
 {
@@ -590,6 +634,8 @@ name_discovered (GibberRMulticastSender *self, const gchar *name)
   self->name = g_strdup(name);
   DEBUG_SENDER(self, "Name discovered");
   g_signal_emit(self, signals[NAME_DISCOVERED], 0, self->name);
+
+  schedule_progress_timer (self);
 }
 
 static gboolean
@@ -1067,6 +1113,8 @@ pop_packet(GibberRMulticastSender *sender) {
       packet_info_try_gc (sender, p);
     }
 
+  /* We successfully popped a new packet (weee), reschedule our watch dog */
+  schedule_progress_timer (sender);
 
   return TRUE;
 }
