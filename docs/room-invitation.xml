@@ -45,7 +45,7 @@
       <![CDATA[
       <!-- Sent via TCP from crone1@desktop to hecate@broom -->
       <message from='crone1@desktop' to='hecate@broom'>
-        <x xmlns='http://collabora.co.uk/protocol/llmuc'>
+        <x xmlns='http://telepathy.freedesktop.org/xmpp/ll/room-invitation'>
           <invite protocol='rmulticast'>
             <roomname>Witchcraft</roomname>
             <address>224.0.0.66</address>
@@ -87,8 +87,8 @@
     http://telepathy.freedesktop.org/xmpp/protocol/ll/muc/ or something -->
     <xs:schema
     xmlns:xs='http://www.w3.org/2001/XMLSchema'
-      targetNamespace='http://collabora.co.uk/protocol/llmuc'
-      xmlns='http://collabora.co.uk/protocol/llmuc'
+      targetNamespace='http://telepathy.freedesktop.org/xmpp/ll/room-invitation'
+      xmlns='http://telepathy.freedesktop.org/xmpp/ll/room-invitation'
       elementFormDefault='qualified'>
 
       <!-- LLMUC invitation. Sent over the IM socket -->
