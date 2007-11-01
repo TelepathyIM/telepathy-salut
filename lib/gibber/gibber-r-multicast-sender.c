@@ -606,6 +606,10 @@ schedule_progress_timer (GibberRMulticastSender *self)
   if (self->name == NULL)
     return;
 
+  /* No need for a watchdog if it has failed already */
+  if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+    return;
+
   if (priv->fail_timer != 0)
     g_source_remove (priv->fail_timer);
 
