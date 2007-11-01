@@ -296,10 +296,7 @@ parse_oob_iq_result (GibberBytestreamOOB *self,
   if (id == NULL || strcmp (id, priv->stream_open_id) != 0)
     return FALSE;
 
-  DEBUG ("received OOB close stanza. Bytestream closed");
-
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED,
-      NULL);
+  DEBUG ("received OOB close stanza - ignoring");
 
   return TRUE;
 }
