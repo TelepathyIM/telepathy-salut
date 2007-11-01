@@ -524,7 +524,8 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
           packet->depends);
       break;
     case PACKET_TYPE_BYE:
-      /* Not implemented, fall through */
+      break;
+    case PACKET_TYPE_NO_DATA:
       break;
     default:
       g_assert_not_reached();
@@ -655,6 +656,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       get_sender_info(priv->data, priv->max_data, &(priv->size),
           result->depends);
       break;
+    case PACKET_TYPE_NO_DATA:
     case PACKET_TYPE_BYE:
       break;
     default:
