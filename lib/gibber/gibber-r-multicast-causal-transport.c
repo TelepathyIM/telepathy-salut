@@ -41,6 +41,10 @@
 #define PASSIVE_JOIN_TIME  500
 #define ACTIVE_JOIN_INTERVAL 250
 
+/* At least send a reliable packet _with_ depends every 3 minutes as keepalive
+ * and to ack pending data */
+#define KEEPALIVE_TIMEOUT 180000
+
 /* Send three bye's on disconnect at 500 ms intervals */
 #define NR_BYE_TO_SEND 3
 #define BYE_INTERVAL 500
@@ -61,6 +65,8 @@ static void whois_reply_cb (GibberRMulticastSender *sender,
     gpointer user_data);
 
 static void schedule_session_message (
+    GibberRMulticastCausalTransport *transport);
+static void schedule_keepalive_message (
     GibberRMulticastCausalTransport *transport);
 
 G_DEFINE_TYPE(GibberRMulticastCausalTransport,
@@ -97,6 +103,7 @@ struct _GibberRMulticastCausalTransportPrivate
   GibberRMulticastSenderGroup *sender_group;
   GibberRMulticastSender *self;
   guint timer;
+  guint keepalive_timer;
   gchar *name;
 
   gint nr_join_requests;
@@ -281,6 +288,11 @@ gibber_r_multicast_causal_transport_dispose (GObject *object)
     g_source_remove (priv->timer);
   }
 
+  if (priv->keepalive_timer != 0)
+    {
+      g_source_remove(priv->keepalive_timer);
+    }
+
   if (priv->self != NULL)
     {
       g_object_unref (priv->self);
@@ -322,6 +334,11 @@ sendout_packet (GibberRMulticastCausalTransport *transport,
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   guint8 *rawdata;
   gsize rawsize;
+
+  if (IS_RELIABLE_PACKET (packet)
+      && (packet->depends->len != 0
+          || g_hash_table_size(priv->sender_group->senders) == 0))
+    schedule_keepalive_message (transport);
 
   rawdata = gibber_r_multicast_packet_get_raw_data(packet, &rawsize);
   return gibber_transport_send(GIBBER_TRANSPORT(priv->transport),
@@ -407,7 +424,6 @@ schedule_session_message (GibberRMulticastCausalTransport *transport)
           sendout_session_cb, transport);
 }
 
-
 static void
 connected (GibberRMulticastCausalTransport *transport)
 {
@@ -444,6 +460,7 @@ connected (GibberRMulticastCausalTransport *transport)
   g_object_unref (packet);
 
   schedule_session_message (transport);
+  schedule_keepalive_message (transport);
 }
 
 static gboolean
@@ -1006,6 +1023,46 @@ add_packet_depends (GibberRMulticastCausalTransport *self,
   g_hash_table_foreach (priv->sender_group->senders, add_depend, &hd);
 }
 
+static gboolean
+send_keepalive_cb (gpointer data)
+{
+  GibberRMulticastCausalTransport *self =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (data);
+  GibberRMulticastCausalTransportPrivate *priv =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+  GibberRMulticastPacket *packet;
+
+  /* Sending out a reliable packet will reschedule the keepalive */
+  priv->keepalive_timer = 0;
+
+  DEBUG ("Sending out keepalive");
+  packet = gibber_r_multicast_packet_new (PACKET_TYPE_NO_DATA,
+      priv->self->id, priv->transport->max_packet_size);
+
+  gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
+  add_packet_depends (self, packet);
+
+  gibber_r_multicast_sender_push (priv->self, packet);
+  sendout_packet (self, packet, NULL);
+
+  return FALSE;
+}
+
+
+static void
+schedule_keepalive_message (GibberRMulticastCausalTransport *transport)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+
+  if (priv->keepalive_timer != 0)
+    g_source_remove(priv->keepalive_timer);
+
+  priv->timer =
+      g_timeout_add (KEEPALIVE_TIMEOUT, send_keepalive_cb, transport);
+}
+
+
 gboolean
 gibber_r_multicast_causal_transport_send (
     GibberRMulticastCausalTransport *transport,
@@ -1172,6 +1229,11 @@ do_disconnect (GibberRMulticastCausalTransport *transport)
   if (priv->timer != 0)
     {
       g_source_remove(priv->timer);
+    }
+
+  if (priv->keepalive_timer != 0)
+    {
+      g_source_remove(priv->keepalive_timer);
     }
 
   gibber_transport_set_state (GIBBER_TRANSPORT (self),
