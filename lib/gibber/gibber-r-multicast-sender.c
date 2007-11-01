@@ -607,7 +607,7 @@ schedule_progress_timer (GibberRMulticastSender *self)
     return;
 
   /* No need for a watchdog if it has failed already */
-  if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+  if (self->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
     return;
 
   if (priv->fail_timer != 0)
