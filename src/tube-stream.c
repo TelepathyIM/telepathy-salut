@@ -36,6 +36,10 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-bytestream-iface.h>
+#include <gibber/gibber-transport.h>
+#include <gibber/gibber-tcp-transport.h>
+#include <gibber/gibber-fd-transport.h>
+
 
 #define DEBUG_FLAG DEBUG_TUBES
 
@@ -111,9 +115,8 @@ struct _SalutTubeStreamPrivate
   TpHandleType handle_type;
   TpHandle self_handle;
   guint id;
-  GHashTable *fd_to_bytestreams;
-  GHashTable *bytestream_to_io_channel;
-  GHashTable *io_channel_to_watcher_source_id;
+  GHashTable *transport_to_bytestream;
+  GHashTable *bytestream_to_transport;
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
@@ -151,71 +154,26 @@ generate_ascii_string (guint len,
     buf[i] = chars[g_random_int_range (0, 64)];
 }
 
-gboolean
-data_to_read_on_socket_cb (GIOChannel *source,
-                           GIOCondition condition,
-                           gpointer data)
+static void
+transport_handler (GibberTransport *transport,
+                   GibberBuffer *data,
+                   gpointer user_data)
 {
-  SalutTubeStream *self = SALUT_TUBE_STREAM (data);
+  SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GibberBytestreamIface *bytestream;
-  int fd;
-  gchar buffer[4096];
-  gsize num_read;
-  GIOStatus status;
-  GError *error = NULL;
-  gboolean result = TRUE;
 
-  if (! (condition & G_IO_IN))
-    return TRUE;
-
-  fd = g_io_channel_unix_get_fd (source);
-
-  bytestream = g_hash_table_lookup (priv->fd_to_bytestreams,
-      GINT_TO_POINTER (fd));
+  bytestream = g_hash_table_lookup (priv->transport_to_bytestream, transport);
   if (bytestream == NULL)
     {
-      DEBUG ("no bytestream associated with this socket");
-
-      g_hash_table_remove (priv->io_channel_to_watcher_source_id, source);
-      return FALSE;
+      DEBUG ("no bytestream associated with this transport");
+      return;
     }
 
-  memset (&buffer, 0, sizeof (buffer));
+  DEBUG ("read %" G_GSIZE_FORMAT " bytes from socket", data->length);
 
-  status = g_io_channel_read_chars (source, buffer, 4096, &num_read, &error);
-  if (status == G_IO_STATUS_NORMAL)
-    {
-      DEBUG ("read %" G_GSIZE_FORMAT " bytes from socket", num_read);
-
-      gibber_bytestream_iface_send (bytestream, num_read, buffer);
-      result = TRUE;
-    }
-  else if (status == G_IO_STATUS_EOF)
-    {
-      DEBUG ("error reading from socket: EOF");
-
-      gibber_bytestream_iface_close (bytestream, NULL);
-      result = FALSE;
-    }
-  else if (status == G_IO_STATUS_AGAIN)
-    {
-      DEBUG ("error reading from socket: resource temporarily unavailable");
-
-      result = TRUE;
-    }
-  else
-    {
-      DEBUG ("error reading from socket: %s", error ? error->message : "");
-
-      gibber_bytestream_iface_close (bytestream, NULL);
-      result = FALSE;
-    }
-
-  if (error != NULL)
-    g_error_free (error);
-
-  return TRUE;
+  gibber_bytestream_iface_send (bytestream, data->length,
+      (const gchar *) data->data);
 }
 
 static void
@@ -225,40 +183,31 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GIOChannel *channel;
-
-  channel = g_hash_table_lookup (priv->bytestream_to_io_channel,
-      bytestream);
-  if (channel == NULL)
-    {
-      DEBUG ("no IO channel associated with the bytestream");
-      return;
-    }
 
   if (state == GIBBER_BYTESTREAM_STATE_OPEN)
     {
-      guint source_id;
       DEBUG ("extra bytestream open");
 
       g_signal_connect (bytestream, "data-received",
           G_CALLBACK (data_received_cb), self);
-
-      source_id = g_io_add_watch (channel, G_IO_IN, data_to_read_on_socket_cb,
-          self);
-      g_hash_table_insert (priv->io_channel_to_watcher_source_id,
-          g_io_channel_ref (channel), GUINT_TO_POINTER (source_id));
     }
   else if (state == GIBBER_BYTESTREAM_STATE_CLOSED)
     {
-      int fd;
+      GibberTransport *transport;
 
       DEBUG ("extra bytestream closed");
+      transport = g_hash_table_lookup (priv->bytestream_to_transport,
+          bytestream);
+      if (transport != NULL)
+        {
+          g_signal_handlers_disconnect_matched (transport, G_SIGNAL_MATCH_DATA,
+              0, 0, NULL, NULL, self);
 
-      fd = g_io_channel_unix_get_fd (channel);
+          gibber_transport_disconnect (transport);
+          g_hash_table_remove (priv->transport_to_bytestream, transport);
+        }
 
-      g_hash_table_remove (priv->fd_to_bytestreams, GINT_TO_POINTER (fd));
-      g_hash_table_remove (priv->bytestream_to_io_channel, bytestream);
-      g_hash_table_remove (priv->io_channel_to_watcher_source_id, channel);
+      g_hash_table_remove (priv->bytestream_to_transport, bytestream);
     }
 }
 
@@ -269,6 +218,40 @@ struct _extra_bytestream_negotiate_cb_data
 };
 
 static void
+transport_disconnected_cb (GibberTransport *transport,
+                           SalutTubeStream *self)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GibberBytestreamIface *bytestream;
+
+  bytestream = g_hash_table_lookup (priv->transport_to_bytestream, transport);
+  if (bytestream == NULL)
+    return;
+
+  DEBUG ("transport disconnected. close the extra bytestream");
+
+  gibber_bytestream_iface_close (bytestream, NULL);
+}
+
+static void
+add_transport (SalutTubeStream *self,
+               GibberTransport *transport,
+               GibberBytestreamIface *bytestream)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  gibber_transport_set_handler (transport, transport_handler, self);
+
+  g_hash_table_insert (priv->transport_to_bytestream,
+      g_object_ref (transport), g_object_ref (bytestream));
+  g_hash_table_insert (priv->bytestream_to_transport,
+      g_object_ref (bytestream), g_object_ref (transport));
+
+  g_signal_connect (transport, "disconnected",
+      G_CALLBACK (transport_disconnected_cb), self);
+}
+
+static void
 extra_bytestream_negotiate_cb (GibberBytestreamIface *bytestream,
                                const gchar *stream_id,
                                GibberXmppStanza *msg,
@@ -277,8 +260,7 @@ extra_bytestream_negotiate_cb (GibberBytestreamIface *bytestream,
   struct _extra_bytestream_negotiate_cb_data *data =
     (struct _extra_bytestream_negotiate_cb_data *) user_data;
   SalutTubeStream *self = data->self;
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GIOChannel *channel;
+  GibberLLTransport *ll_transport;
 
   if (bytestream == NULL)
     {
@@ -290,15 +272,9 @@ extra_bytestream_negotiate_cb (GibberBytestreamIface *bytestream,
 
   DEBUG ("extra bytestream accepted");
 
-  channel = g_io_channel_unix_new (data->fd);
-  g_io_channel_set_encoding (channel, NULL, NULL);
-  g_io_channel_set_buffered (channel, FALSE);
-  g_io_channel_set_close_on_unref (channel, TRUE);
-
-  g_hash_table_insert (priv->fd_to_bytestreams, GINT_TO_POINTER (data->fd),
-      g_object_ref (bytestream));
-  g_hash_table_insert (priv->bytestream_to_io_channel,
-      g_object_ref (bytestream), channel);
+  ll_transport = gibber_ll_transport_new ();
+  gibber_ll_transport_open_fd (ll_transport, data->fd);
+  add_transport (self, GIBBER_TRANSPORT (ll_transport), bytestream);
 
   g_signal_connect (bytestream, "state-changed",
                 G_CALLBACK (extra_bytestream_state_changed_cb), self);
@@ -484,9 +460,9 @@ new_connection_to_socket (SalutTubeStream *self,
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   int fd;
-  GIOChannel *channel;
   SockAddr addr;
   socklen_t len;
+  GibberLLTransport *ll_transport;
 
   g_assert (priv->initiator == priv->self_handle);
 
@@ -583,15 +559,9 @@ new_connection_to_socket (SalutTubeStream *self,
     }
   DEBUG ("Connected to socket");
 
-  channel = g_io_channel_unix_new (fd);
-  g_io_channel_set_encoding (channel, NULL, NULL);
-  g_io_channel_set_buffered (channel, FALSE);
-  g_io_channel_set_close_on_unref (channel, TRUE);
-
-  g_hash_table_insert (priv->fd_to_bytestreams, GINT_TO_POINTER (fd),
-      g_object_ref (bytestream));
-  g_hash_table_insert (priv->bytestream_to_io_channel,
-      g_object_ref (bytestream), channel);
+  ll_transport = gibber_ll_transport_new ();
+  gibber_ll_transport_open_fd (ll_transport, fd);
+  add_transport (self, GIBBER_TRANSPORT (ll_transport), bytestream);
 
   g_signal_connect (bytestream, "state-changed",
       G_CALLBACK (extra_bytestream_state_changed_cb), self);
@@ -778,19 +748,6 @@ tube_stream_open (SalutTubeStream *self,
 }
 
 static void
-remove_watcher_source_id (gpointer data)
-{
-  guint source_id = GPOINTER_TO_UINT (data);
-  GSource *source;
-
-  source = g_main_context_find_source_by_id (NULL, source_id);
-  if (source != NULL)
-    {
-      g_source_destroy (source);
-    }
-}
-
-static void
 salut_tube_stream_init (SalutTubeStream *self)
 {
   SalutTubeStreamPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
@@ -798,16 +755,13 @@ salut_tube_stream_init (SalutTubeStream *self)
 
   self->priv = priv;
 
-  priv->fd_to_bytestreams = g_hash_table_new_full (g_direct_hash,
-      g_direct_equal, NULL, (GDestroyNotify) g_object_unref);
-
-  priv->bytestream_to_io_channel = g_hash_table_new_full (g_direct_hash,
+  priv->transport_to_bytestream = g_hash_table_new_full (g_direct_hash,
       g_direct_equal, (GDestroyNotify) g_object_unref,
-      (GDestroyNotify) g_io_channel_unref);
+      (GDestroyNotify) g_object_unref);
 
-  priv->io_channel_to_watcher_source_id = g_hash_table_new_full (g_direct_hash,
-      g_direct_equal, (GDestroyNotify) g_io_channel_unref,
-      (GDestroyNotify) remove_watcher_source_id);
+  priv->bytestream_to_transport = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, (GDestroyNotify) g_object_unref,
+      (GDestroyNotify) g_object_unref);
 
   priv->listen_io_channel = NULL;
   priv->listen_io_channel_source_id = 0;
@@ -827,22 +781,22 @@ close_each_extra_bytestream (gpointer key,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GibberTransport *transport = (GibberTransport *) key;
   GibberBytestreamIface *bytestream = (GibberBytestreamIface *) value;
-  GIOChannel *channel;
 
-  /* We are iterating over priv->fd_to_bytestreams so we can't modify it.
+  /* We are iterating over priv->transport_to_bytestream so we can't modify it.
    * Disconnect signals so extra_bytestream_state_changed_cb won't be
    * called */
   g_signal_handlers_disconnect_matched (bytestream, G_SIGNAL_MATCH_DATA,
       0, 0, NULL, NULL, self);
 
+  g_signal_handlers_disconnect_matched (transport, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, self);
+
   gibber_bytestream_iface_close (bytestream, NULL);
+  gibber_transport_disconnect (transport);
 
-  channel = g_hash_table_lookup (priv->bytestream_to_io_channel, bytestream);
-  g_assert (channel != NULL);
-
-  g_hash_table_remove (priv->bytestream_to_io_channel, bytestream);
-  g_hash_table_remove (priv->io_channel_to_watcher_source_id, channel);
+  g_hash_table_remove (priv->bytestream_to_transport, bytestream);
 
   return TRUE;
 }
@@ -879,22 +833,16 @@ salut_tube_stream_dispose (GObject *object)
       g_string_free (path, TRUE);
     }
 
-  if (priv->fd_to_bytestreams != NULL)
+  if (priv->transport_to_bytestream != NULL)
     {
-      g_hash_table_destroy (priv->fd_to_bytestreams);
-      priv->fd_to_bytestreams = NULL;
+      g_hash_table_destroy (priv->transport_to_bytestream);
+      priv->transport_to_bytestream = NULL;
     }
 
-  if (priv->bytestream_to_io_channel != NULL)
+  if (priv->bytestream_to_transport != NULL)
     {
-      g_hash_table_destroy (priv->bytestream_to_io_channel);
-      priv->bytestream_to_io_channel = NULL;
-    }
-
-  if (priv->io_channel_to_watcher_source_id != NULL)
-    {
-      g_hash_table_destroy (priv->io_channel_to_watcher_source_id);
-      priv->io_channel_to_watcher_source_id = NULL;
+      g_hash_table_destroy (priv->bytestream_to_transport);
+      priv->bytestream_to_transport = NULL;
     }
 
   tp_handle_unref (contact_repo, priv->initiator);
@@ -1236,34 +1184,24 @@ data_received_cb (GibberBytestreamIface *bytestream,
 {
   SalutTubeStream *tube = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (tube);
-  gsize written;
-  GIOChannel *channel;
-  GIOStatus status;
+  GibberTransport *transport;
   GError *error = NULL;
 
   DEBUG ("received %" G_GSIZE_FORMAT " bytes from bytestream", data->len);
 
-  channel = g_hash_table_lookup (priv->bytestream_to_io_channel, bytestream);
-  if (channel == NULL)
+  transport = g_hash_table_lookup (priv->bytestream_to_transport, bytestream);
+  if (transport == NULL)
     {
-      DEBUG ("no IO channel associated with the bytestream");
+      DEBUG ("no transport associated with the bytestream");
       return;
     }
 
-  status = g_io_channel_write_chars (channel, data->str, data->len,
-      &written, &error);
-  if (status == G_IO_STATUS_NORMAL)
-    {
-      DEBUG ("%" G_GSIZE_FORMAT " bytes written to the socket", written);
-    }
-  else
-    {
-      DEBUG ("error writing to socket: %s",
-          error ? error->message : "");
-    }
-
-  if (error != NULL)
+  if (!gibber_transport_send (transport, (const guint8 *) data->str, data->len,
+      &error))
+  {
+    DEBUG ("sending failed: %s", error->message);
     g_error_free (error);
+  }
 }
 
 SalutTubeStream *
@@ -1329,7 +1267,7 @@ salut_tube_stream_close (SalutTubeIface *tube)
     return;
   priv->closed = TRUE;
 
-  g_hash_table_foreach_remove (priv->fd_to_bytestreams,
+  g_hash_table_foreach_remove (priv->transport_to_bytestream,
       close_each_extra_bytestream, self);
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
