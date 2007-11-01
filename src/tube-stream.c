@@ -39,7 +39,6 @@
 #include <gibber/gibber-transport.h>
 #include <gibber/gibber-fd-transport.h>
 
-
 #define DEBUG_FLAG DEBUG_TUBES
 
 #include "debug.h"
