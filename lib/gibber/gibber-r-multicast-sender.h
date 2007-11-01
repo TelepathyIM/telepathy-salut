@@ -151,6 +151,12 @@ void gibber_r_multicast_sender_whois_push(GibberRMulticastSender *sender,
 void gibber_r_multicast_sender_set_packet_repeat (
     GibberRMulticastSender *sender, guint32 packet_id, gboolean repeat);
 
+/* Ack management */
+gboolean gibber_r_multicast_sender_get_ack (GibberRMulticastSender *sender,
+    guint32 sender_id, guint32 *ack);
+void gibber_r_multicast_sender_ack (GibberRMulticastSender *sender,
+    guint32 ack);
+
 /* Stop all pending requests */
 void gibber_r_multicast_sender_stop (GibberRMulticastSender *sender);
 

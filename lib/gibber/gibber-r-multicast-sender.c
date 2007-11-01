@@ -53,6 +53,23 @@
  * fauly */
 #define NAME_DISCOVERY_TIME  10000
 
+typedef struct {
+  guint32 sender_id;
+  guint32 packet_id;
+} AckInfo;
+
+static void
+ack_info_free(gpointer data) {
+  g_slice_free(AckInfo, data);
+}
+
+static AckInfo *
+ack_info_new(guint32 sender_id) {
+  AckInfo *result;
+  result = g_slice_new0(AckInfo);
+  result->sender_id = sender_id;
+  return result;
+}
 
 GibberRMulticastSenderGroup *
 gibber_r_multicast_sender_group_new (void)
@@ -104,6 +121,71 @@ gibber_r_multicast_sender_group_remove (GibberRMulticastSenderGroup *group,
   g_hash_table_remove (group->senders, GUINT_TO_POINTER(sender_id));
 }
 
+static void
+create_sender_array (gpointer key, gpointer value, gpointer user_data)
+{
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
+  GArray *array = (GArray *)user_data;
+  AckInfo info;
+
+  info.sender_id =  sender->id;
+  info.packet_id = sender->next_input_packet;
+
+  g_array_append_val (array, info);
+}
+
+static void
+update_sender_acks (gpointer key, gpointer value, gpointer user_data)
+{
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
+  GArray *array = (GArray *)user_data;
+  gint i;
+
+  for (i = 0; i < array->len ; i++)
+    {
+      AckInfo *info = &g_array_index (array, AckInfo, i);
+      guint32 ack;
+
+      if (sender->id == info->sender_id)
+        continue;
+
+      if (gibber_r_multicast_sender_get_ack (sender, info->sender_id, &ack))
+        {
+          if (gibber_r_multicast_packet_diff (ack, info->packet_id) > 0)
+            info->packet_id = ack;
+        }
+      else
+       {
+         g_array_remove_index_fast (array, i);
+         /* The last element is now placed at location i, so retry i */
+         i--;
+         continue;
+       }
+    }
+}
+
+void
+gibber_r_multicast_sender_group_gc (GibberRMulticastSenderGroup *group)
+{
+  GArray *array;
+  guint i;
+
+  array = g_array_sized_new (FALSE, TRUE, sizeof (AckInfo),
+      g_hash_table_size (group->senders));
+
+  g_hash_table_foreach (group->senders, create_sender_array, array);
+  g_hash_table_foreach (group->senders, update_sender_acks, array);
+
+  for (i = 0; i < array->len ; i++)
+    {
+      AckInfo *info = &g_array_index (array, AckInfo, i);
+      GibberRMulticastSender *sender = g_hash_table_lookup (group->senders,
+        GUINT_TO_POINTER (info->sender_id));
+
+      gibber_r_multicast_sender_ack (sender, info->packet_id);
+    }
+}
+
 static void schedule_repair(GibberRMulticastSender *sender, guint32 id);
 static void schedule_do_repair(GibberRMulticastSender *sender, guint32 id);
 static void schedule_whois_request(GibberRMulticastSender *sender,
@@ -140,6 +222,8 @@ typedef struct {
   gboolean repeating;
   GibberRMulticastPacket *packet;
   GibberRMulticastSender *sender;
+  gboolean acked;
+  gboolean popped;
 } PacketInfo;
 
 static void
@@ -172,6 +256,10 @@ struct _GibberRMulticastSenderPrivate
   gboolean dispose_has_run;
   /* hash table with packets */
   GHashTable *packet_cache;
+
+  /* Table with acks per sender */
+  GHashTable *acks;
+
   /* Sendergroup to which we belong */
   GibberRMulticastSenderGroup *group;
 
@@ -206,6 +294,9 @@ gibber_r_multicast_sender_init (GibberRMulticastSender *obj)
   /* allocate any data required by the object here */
   priv->packet_cache = g_hash_table_new_full(g_int_hash, g_int_equal,
                                              NULL, packet_info_free);
+
+  priv->acks = g_hash_table_new_full(g_int_hash, g_int_equal,
+                                             NULL, ack_info_free);
 }
 
 static void gibber_r_multicast_sender_dispose (GObject *object);
@@ -340,6 +431,7 @@ gibber_r_multicast_sender_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
   g_hash_table_destroy(priv->packet_cache);
+  g_hash_table_destroy(priv->acks);
 
   if (priv->whois_timer != 0) {
     g_source_remove(priv->whois_timer);
@@ -401,6 +493,30 @@ gibber_r_multicast_sender_new(guint32 id,
   }
 
   return sender;
+}
+
+static void
+packet_info_try_gc (GibberRMulticastSender *sender, PacketInfo *info)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+  guint32 packet_id, i;
+
+  if (!info->acked || !info->popped || info->repeating)
+    return;
+
+  packet_id = info->packet_id;
+  g_hash_table_remove (priv->packet_cache, &packet_id);
+
+  if (packet_id == priv->first_packet)
+    {
+      for (i = packet_id; i !=  sender->next_output_data_packet; i++)
+        if (g_hash_table_lookup (priv->packet_cache, &i) != NULL)
+          break;
+
+      priv->first_packet = i;
+    }
+
 }
 
 static void
@@ -720,8 +836,8 @@ pop_data_packet (GibberRMulticastSender *sender)
         gibber_r_multicast_packet_diff (priv->first_packet, i) >= 0; i--)
         {
            p = g_hash_table_lookup(priv->packet_cache, &i);
-
-           g_assert (p != NULL);
+           if (p == NULL)
+             continue;
 
            if (p->packet->type == PACKET_TYPE_DATA
              && p->packet->data.data.stream_id == stream_id
@@ -785,6 +901,9 @@ pop_data_packet (GibberRMulticastSender *sender)
 
     update_next_data_output_state (sender);
     signal_data(sender, p->packet->data.data.stream_id, data, size);
+
+    p->popped = TRUE;
+    packet_info_try_gc (sender, p);
   } else {
     gsize off = 0;
     guint8 *data, *d;
@@ -798,6 +917,9 @@ pop_data_packet (GibberRMulticastSender *sender)
       {
         PacketInfo *tp  = g_hash_table_lookup(priv->packet_cache, &i);
 
+        if (tp == NULL)
+          continue;
+
         if (tp->packet->type == PACKET_TYPE_DATA
           && tp->packet->data.data.stream_id == stream_id)
           {
@@ -805,6 +927,9 @@ pop_data_packet (GibberRMulticastSender *sender)
              g_assert(off + size <= payload_size);
              memcpy(data + off, d, size);
              off += size;
+
+             tp->popped = TRUE;
+             packet_info_try_gc (sender, tp);
           }
       }
     g_assert(off == payload_size);
@@ -815,6 +940,47 @@ pop_data_packet (GibberRMulticastSender *sender)
   }
 
   return TRUE;
+}
+
+static void
+update_acks (GibberRMulticastSender *sender, GibberRMulticastPacket *packet)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  guint i;
+  gboolean updated = FALSE;
+
+  for (i = 0; i < packet->depends->len; i++)
+    {
+      GibberRMulticastPacketSenderInfo *senderinfo;
+      AckInfo *info;
+
+      senderinfo = g_array_index (packet->depends,
+        GibberRMulticastPacketSenderInfo *, i);
+
+      info = (AckInfo *)g_hash_table_lookup (priv->acks,
+          &senderinfo->sender_id);
+
+      if (info == NULL)
+        {
+          info = ack_info_new (senderinfo->sender_id);
+          g_hash_table_insert (priv->acks, &info->sender_id, info);
+          info->packet_id = senderinfo->packet_id;
+          updated = TRUE;
+        }
+      else if (gibber_r_multicast_packet_diff (info->packet_id,
+          senderinfo->packet_id) > 0)
+        {
+           info->packet_id = senderinfo->packet_id;
+           updated = TRUE;
+        }
+    }
+
+    if (updated)
+      {
+        gibber_r_multicast_sender_group_gc (priv->group);
+      }
 }
 
 static gboolean
@@ -852,6 +1018,9 @@ pop_packet(GibberRMulticastSender *sender) {
   }
 
   g_assert (IS_RELIABLE_PACKET (p->packet));
+
+  update_acks (sender, p->packet);
+
   if (!check_depends (sender, p->packet, FALSE))
     {
       return FALSE;
@@ -893,6 +1062,9 @@ pop_packet(GibberRMulticastSender *sender) {
         {
          signal_control_packet (sender, p->packet);
         }
+
+      p->popped = TRUE;
+      packet_info_try_gc (sender, p);
     }
 
 
@@ -1314,14 +1486,65 @@ gibber_r_multicast_sender_set_packet_repeat (GibberRMulticastSender *sender,
 
   info->repeating = repeat;
 
-  if (repeat && info->timeout == 0) {
-    schedule_do_repair (sender, packet_id);
-  }
+  if (repeat && info->timeout == 0) 
+    {
+      schedule_do_repair (sender, packet_id);
+    }
+  else
+   {
+     packet_info_try_gc (sender, info);
+   }
 
   /* FIXME: If repeat is turned off, we repeat it at least once more as there
    * might have been a repair request after the last repeating.. This is
    * ofcourse suboptimal */
 }
+
+gboolean
+gibber_r_multicast_sender_get_ack (GibberRMulticastSender *sender,
+    guint32 sender_id, guint32 *ack)
+{
+  AckInfo *info;
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  info = (AckInfo *)g_hash_table_lookup (priv->acks, &sender_id);
+
+  if (info == NULL)
+    return FALSE;
+
+  *ack = info->packet_id;
+
+ return TRUE;
+
+}
+
+void
+gibber_r_multicast_sender_ack (GibberRMulticastSender *sender, guint32 ack)
+{
+  guint32 i;
+  GibberRMulticastSenderPrivate *priv =
+    GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  if (gibber_r_multicast_packet_diff (priv->first_packet, ack) < 0)
+    {
+      return;
+    }
+
+  for (i = priv->first_packet ; i != ack; i++)
+    {
+      PacketInfo *info;
+
+      info = g_hash_table_lookup (priv->packet_cache, &i);
+      if (info == NULL)
+        continue;
+
+      info->acked = TRUE;
+      packet_info_try_gc (sender, info);
+    }
+}
+
+
 
 /* Tell the sender to not signal data starting from this packet */
 void
