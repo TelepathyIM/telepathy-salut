@@ -26,7 +26,7 @@
 G_BEGIN_DECLS
 
 #define SALUT_DNSSD_CLIQUE "_clique._udp"
-#define SALUT_DNSSD_OLPC_ACTIVITY "_olpc-activity._udp"
+#define SALUT_DNSSD_OLPC_ACTIVITY "_olpc-activity1._udp"
 #define SALUT_DNSSD_PRESENCE "_presence._tcp"
 
 /* private structure */
