@@ -79,6 +79,7 @@ static void
 gibber_r_multicast_packet_init (GibberRMulticastPacket *obj)
 {
   GibberRMulticastPacket *self = GIBBER_R_MULTICAST_PACKET (obj);
+  self->version = PACKET_VERSION;
   self->depends = g_array_new (FALSE, FALSE,
       sizeof (GibberRMulticastPacketSenderInfo *));
 }
