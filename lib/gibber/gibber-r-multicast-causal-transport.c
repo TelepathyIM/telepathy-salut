@@ -1278,6 +1278,7 @@ gibber_r_multicast_causal_transport_send_attempt_join (
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastPacket *packet;
   gchar *str;
+  guint32 packet_id;
 
   packet = gibber_r_multicast_packet_new (PACKET_TYPE_ATTEMPT_JOIN,
       priv->self->id, priv->transport->max_packet_size);
@@ -1298,7 +1299,10 @@ gibber_r_multicast_causal_transport_send_attempt_join (
 
   sendout_packet (transport, packet, NULL);
 
-  return packet->packet_id;
+  packet_id = packet->packet_id;
+  g_object_unref (packet);
+
+  return packet_id;
 }
 
 void gibber_r_multicast_causal_transport_stop_attempt_join (
