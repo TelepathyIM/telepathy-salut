@@ -520,10 +520,10 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
     case PACKET_TYPE_DATA:
       add_guint8 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.flags);
-      add_guint32 (priv->data, priv->max_data, &(priv->size),
-          packet->data.data.total_size);
       add_guint16 (priv->data, priv->max_data, &(priv->size),
           packet->data.data.stream_id);
+      add_guint32 (priv->data, priv->max_data, &(priv->size),
+          packet->data.data.total_size);
 
       g_assert(priv->size + packet->data.data.payload_size == priv->max_data);
 
@@ -655,8 +655,11 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   priv->size = PACKET_PREFIX_LENGTH;
   priv->max_data = size;
 
-  GET_GUINT8 (result->type);
   GET_GUINT8 (result->version);
+  if (result->version != PACKET_VERSION)
+    goto parse_error;
+
+  GET_GUINT8 (result->type);
   GET_GUINT32 (result->sender);
 
 
@@ -679,8 +682,8 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       break;
     case PACKET_TYPE_DATA:
       GET_GUINT8 (result->data.data.flags);
-      GET_GUINT32 (result->data.data.total_size);
       GET_GUINT16 (result->data.data.stream_id);
+      GET_GUINT32 (result->data.data.total_size);
 
       result->data.data.payload_size = priv->max_data - priv->size;
       result->data.data.payload = g_memdup(priv->data + priv->size,
