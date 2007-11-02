@@ -348,6 +348,7 @@ unique_id_send_hook (GibberTransport *transport,
 
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
+  fail_unless (packet != NULL);
 
   if (*test_id == 0)
     {
@@ -435,6 +436,7 @@ id_generation_conflict_send_hook (GibberTransport *transport,
   unique_id_conflict_test_t *test = (unique_id_conflict_test_t *)user_data;
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
+  fail_unless (packet != NULL);
 
   if (test->id == 0)
     {
