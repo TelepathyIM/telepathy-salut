@@ -230,6 +230,7 @@ bytestream_state_changed (GibberBytestreamIface *bytestream,
       salut_xmpp_connection_manager_release_connection (mgr, connection);
 
       g_object_unref (connection);
+      g_object_unref (bytestream);
     }
 }
 
@@ -887,7 +888,6 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
     {
       /* Initiation failed. */
       gibber_bytestream_iface_close (bytestream, NULL);
-      g_object_unref (bytestream);
       bytestream = NULL;
     }
 
