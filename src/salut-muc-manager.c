@@ -814,7 +814,6 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   SalutMucChannel *chan;
   const gchar *room = NULL;
   const gchar *reason = NULL;
-  const gchar *protocol = NULL;
   const gchar **params;
   TpHandle room_handle;
   TpHandle inviter_handle;
@@ -842,13 +841,6 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
 
   if (reason == NULL)
     reason = "";
-
-  protocol = gibber_xmpp_node_get_attribute (invite, "protocol");
-  if (protocol == NULL)
-    {
-      DEBUG ("Invalid invitation, (missing protocol) discarding");
-      return;
-    }
 
   params = gibber_muc_connection_get_required_parameters (
       GIBBER_TELEPATHY_NS_CLIQUE);
@@ -886,7 +878,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
 
   if (chan == NULL)
     {
-      connection = _get_connection (self, protocol, params_hash, NULL);
+      connection = _get_connection (self, GIBBER_TELEPATHY_NS_CLIQUE,
+          params_hash, NULL);
       if (connection == NULL)
         {
           DEBUG ("Invalid invitation, (wrong protocol parameters) discarding");
