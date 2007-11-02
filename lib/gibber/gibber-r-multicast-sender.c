@@ -96,6 +96,21 @@ gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
   g_slice_free (GibberRMulticastSenderGroup, group);
 }
 
+static void
+stop_sender (gpointer key, gpointer value, gpointer user_data)
+{
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
+
+  gibber_r_multicast_sender_stop (sender);
+}
+
+void
+gibber_r_multicast_sender_group_stop (GibberRMulticastSenderGroup *group)
+{
+  g_hash_table_foreach (group->senders, stop_sender, NULL);
+  group->stopped = TRUE;
+}
+
 void
 gibber_r_multicast_sender_group_add (GibberRMulticastSenderGroup *group,
     GibberRMulticastSender *sender)
@@ -1130,6 +1145,8 @@ static gboolean
 do_pop_packets (GibberRMulticastSender *sender)
 {
   gboolean popped = FALSE;
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
   if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING
       || sender->state > GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
@@ -1137,6 +1154,10 @@ do_pop_packets (GibberRMulticastSender *sender)
     /* No popping untill we have at least some information */
     return FALSE;
   }
+
+  /* Don't pop if our sender group was stopped */
+  if (priv->group->stopped)
+    return FALSE;
 
   g_object_ref (sender);
 

@@ -34,6 +34,7 @@ struct _GibberRMulticastSenderGroup {
   GHashTable *senders;
   /* private */
   gboolean popping;
+  gboolean stopped;
   GQueue *pop_queue;
 };
 
@@ -97,6 +98,7 @@ GType gibber_r_multicast_sender_get_type(void);
 GibberRMulticastSenderGroup *gibber_r_multicast_sender_group_new (void);
 
 void gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group);
+void gibber_r_multicast_sender_group_stop (GibberRMulticastSenderGroup *group);
 void gibber_r_multicast_sender_group_add (GibberRMulticastSenderGroup *group,
     GibberRMulticastSender *sender);
 
