@@ -41,7 +41,7 @@ generate_packet(guint32 serial) {
   guint8 flags = 0;
   gint total = 1;
   gchar *payload;
-  guint8 stream_id;
+  guint8 stream_id = 0;
   int i;
 
   switch (serial % 3)
