@@ -952,7 +952,7 @@ contact_drop_resolver (SalutContact *self,
       "type", &type,
       "name", &name,
       NULL);
-  if (!tp_strdiff (type, "_olpc-activity._udp"))
+  if (!tp_strdiff (type, SALUT_DNSSD_OLPC_ACTIVITY))
     {
       /* one of their activities has fallen off */
       g_hash_table_remove (priv->olpc_announced_activities, name);
@@ -965,7 +965,7 @@ contact_drop_resolver (SalutContact *self,
 #endif
 
   /* FIXME: what we actually want to be counting is the number of _presence
-   * resolvers, ignoring the _olpc-activity ones. However, if someone's still
+   * resolvers, ignoring the OLPC activity ones. However, if someone's still
    * advertising activities, we can probably consider them to be online? */
   priv->resolvers = g_list_remove(priv->resolvers, resolver);
 
@@ -1009,7 +1009,7 @@ salut_contact_add_service(SalutContact *contact,
 
 #ifdef ENABLE_OLPC
   /* FIXME: better way to do this? */
-  if (!tp_strdiff (type, "_olpc-activity._udp"))
+  if (!tp_strdiff (type, SALUT_DNSSD_OLPC_ACTIVITY))
     {
       g_signal_connect(resolver, "found", G_CALLBACK(activity_resolved_cb),
           contact);
@@ -1233,7 +1233,7 @@ salut_contact_retrieve_avatar(SalutContact *contact) {
     return;
   }
 
-  name = g_strdup_printf("%s._presence._tcp.local", contact->name);
+  name = g_strdup_printf("%s." SALUT_DNSSD_PRESENCE ".local", contact->name);
   priv->record_browser = salut_avahi_record_browser_new(name, 0xA);
   g_free(name);
 

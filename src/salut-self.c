@@ -519,7 +519,7 @@ salut_self_announce (SalutSelf *self,
   if ((priv->presence =
           salut_avahi_entry_group_add_service_strlist(priv->presence_group,
                                                       self->name,
-                                                      "_presence._tcp",
+                                                      SALUT_DNSSD_PRESENCE,
                                                       port,
                                                       error,
                                                       txt_record)) == NULL) {
@@ -601,7 +601,7 @@ salut_self_publish_avatar(SalutSelf *self, guint8 *data,
   gchar *name;
   gboolean ret;
   gboolean is_new = FALSE;
-  name = g_strdup_printf("%s._presence._tcp.local", self->name);
+  name = g_strdup_printf("%s." SALUT_DNSSD_PRESENCE ".local", self->name);
 
   if (priv->avatar_group == NULL) {
     priv->avatar_group = salut_avahi_entry_group_new();
@@ -750,7 +750,7 @@ announce_activity (SalutSelf *self,
         activity->activity_id);
 
   activity->service = salut_avahi_entry_group_add_service_strlist
-      (activity->group, name, "_olpc-activity._udp", 0, error, txt_record);
+      (activity->group, name, SALUT_DNSSD_OLPC_ACTIVITY, 0, error, txt_record);
 
   DEBUG ("announce activity %s", name);
   g_free (name);

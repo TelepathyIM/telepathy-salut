@@ -492,7 +492,7 @@ split_activity_name (const gchar **contact_name)
   if (*contact_name == NULL)
     {
       *contact_name = orig;
-      DEBUG ("Ignoring invalid _olpc-activity with no ':': %s", orig);
+      DEBUG ("Ignoring invalid OLPC activity DNS-SD with no ':': %s", orig);
       return FALSE;
     }
   (*contact_name)++;
@@ -834,10 +834,11 @@ salut_contact_manager_new(SalutConnection *connection) {
 
   priv->connection = connection;
 
-  priv->presence_browser = salut_avahi_service_browser_new ("_presence._tcp");
+  priv->presence_browser = salut_avahi_service_browser_new
+      (SALUT_DNSSD_PRESENCE);
 #ifdef ENABLE_OLPC
   priv->activity_browser = salut_avahi_service_browser_new
-    ("_olpc-activity._udp");
+      (SALUT_DNSSD_OLPC_ACTIVITY);
 #endif
 
   return ret;

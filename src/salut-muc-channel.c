@@ -479,7 +479,7 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
       goto publish_service_error;
     }
 
-  host = g_strdup_printf ("%s._salut-room._udp.local", priv->muc_name);
+  host = g_strdup_printf ("%s." SALUT_DNSSD_CLIQUE ".local", priv->muc_name);
 
   /* Add the record */
   if (!salut_avahi_entry_group_add_record_full (priv->muc_group,
@@ -499,7 +499,7 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
    * we'll be able to allow multiple announcers */
   priv->service = salut_avahi_entry_group_add_service_full_strlist (
       priv->muc_group, AVAHI_IF_UNSPEC, addr.proto, 0, priv->muc_name,
-      "_salut-room._udp", NULL, host, port, &error, txt_record);
+      SALUT_DNSSD_CLIQUE, NULL, host, port, &error, txt_record);
   if (priv->service == NULL)
     {
       DEBUG ("add service failed: %s", error->message);

@@ -113,7 +113,7 @@ salut_muc_manager_init (SalutMucManager *obj)
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
   priv->connection = NULL;
   priv->client = NULL;
-  priv->browser = salut_avahi_service_browser_new ("_salut-room._udp");
+  priv->browser = salut_avahi_service_browser_new (SALUT_DNSSD_CLIQUE);
 
   /* allocate any data required by the object here */
   priv->text_channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
