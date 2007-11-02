@@ -1342,6 +1342,7 @@ gibber_r_multicast_causal_transport_send_failure (
   gibber_r_multicast_sender_push (priv->self, packet);
 
   sendout_packet (transport, packet, NULL);
+  g_object_unref (packet);
 }
 
 void
