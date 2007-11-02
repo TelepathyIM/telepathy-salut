@@ -55,7 +55,8 @@ typedef enum {
   PACKET_TYPE_INVALID
 } GibberRMulticastPacketType;
 
-#define IS_RELIABLE_PACKET(p) (p->type >= FIRST_RELIABLE_PACKET)
+#define GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET(p) \
+  (p->type >= FIRST_RELIABLE_PACKET && p->type < PACKET_TYPE_INVALID)
 
 typedef struct {
   guint32 sender_id;

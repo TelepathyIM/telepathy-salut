@@ -796,7 +796,7 @@ check_depends(GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  g_assert (IS_RELIABLE_PACKET(packet));
+  g_assert (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET(packet));
 
   for (i = 0; i < packet->depends->len; i++) {
     GibberRMulticastSender *s;
@@ -1087,7 +1087,7 @@ pop_packet(GibberRMulticastSender *sender) {
     return FALSE;
   }
 
-  g_assert (IS_RELIABLE_PACKET (p->packet));
+  g_assert (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (p->packet));
 
   update_acks (sender, p->packet);
 

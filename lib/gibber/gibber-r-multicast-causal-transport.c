@@ -335,7 +335,7 @@ sendout_packet (GibberRMulticastCausalTransport *transport,
   guint8 *rawdata;
   gsize rawsize;
 
-  if (IS_RELIABLE_PACKET (packet)
+  if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet)
       && (packet->depends->len != 0
           || g_hash_table_size(priv->sender_group->senders) == 0))
     schedule_keepalive_message (transport);
@@ -753,7 +753,7 @@ handle_packet_depends (GibberRMulticastCausalTransport *self,
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
   int i;
 
-  g_assert (IS_RELIABLE_PACKET (packet));
+  g_assert (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet));
 
   for (i = 0 ; i <  packet->depends->len; i++)
     {
@@ -895,7 +895,7 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
       handle_session_message (self, packet);
       break;
     default:
-      if (IS_RELIABLE_PACKET (packet))
+      if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet))
         {
           handle_packet_depends (self, packet);
           gibber_r_multicast_sender_push (sender, packet);

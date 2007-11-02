@@ -209,7 +209,8 @@ gibber_r_multicast_packet_add_sender_info(GibberRMulticastPacket *packet,
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
 
   g_assert(priv->data == NULL);
-  g_assert(IS_RELIABLE_PACKET (packet) || packet->type == PACKET_TYPE_SESSION);
+  g_assert(GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet)
+      || packet->type == PACKET_TYPE_SESSION);
 
   g_array_append_val (packet->depends, s);
 
@@ -221,7 +222,7 @@ void
 gibber_r_multicast_packet_set_packet_id (GibberRMulticastPacket *packet,
    guint32 packet_id)
 {
-  g_assert (IS_RELIABLE_PACKET(packet));
+  g_assert (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET(packet));
   packet->packet_id = packet_id;
 }
 
@@ -272,7 +273,7 @@ gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
 
   gsize result = 6; /* 8 bit type, 8 bit version, 32 bit sender */
 
-  if (IS_RELIABLE_PACKET (packet)) {
+  if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet)) {
       /*  32 bit packet id, 8 bit nr sender info */
       result += 5;
       /* 32 bit sender id, 32 bit packet id */
@@ -476,7 +477,7 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
   add_guint8 (priv->data, priv->max_data, &(priv->size), packet->version);
   add_guint32 (priv->data, priv->max_data, &(priv->size), packet->sender);
 
-  if (IS_RELIABLE_PACKET(packet)) {
+  if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET(packet)) {
     /* Add common reliable packet data */
     add_guint32 (priv->data, priv->max_data, &(priv->size),
       packet->packet_id);
@@ -619,7 +620,7 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   GET_GUINT32 (result->sender);
 
 
-  if (IS_RELIABLE_PACKET (result)) {
+  if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (result)) {
     GET_GUINT32 (result->packet_id);
     if (!get_sender_info (priv->data, priv->max_data, &(priv->size),
         result->depends))
