@@ -1207,14 +1207,6 @@ send_next_bye (gpointer data)
 }
 
 static void
-stop_sender (gpointer key, gpointer value, gpointer user_data)
-{
-  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(value);
-
-  gibber_r_multicast_sender_stop (sender);
-}
-
-static void
 do_disconnect (GibberRMulticastCausalTransport *transport)
 {
   GibberRMulticastCausalTransport *self =
@@ -1239,8 +1231,7 @@ do_disconnect (GibberRMulticastCausalTransport *transport)
   gibber_transport_set_state (GIBBER_TRANSPORT (self),
                               GIBBER_TRANSPORT_DISCONNECTING);
 
-  g_hash_table_foreach (priv->sender_group->senders,
-    stop_sender, NULL);
+  gibber_r_multicast_sender_group_stop (priv->sender_group);
 
   priv->nr_bye = 0;
   send_next_bye (self);
