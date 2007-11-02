@@ -27,6 +27,16 @@
 
 #include "gibber-r-multicast-packet.h"
 
+#define PACKET_VERSION 1
+
+#define PACKET_PREFIX { 'C', 'l', 'i', 'q', 'u', 'e' }
+#define PACKET_PREFIX_LENGTH 6
+
+/* Our packet header is the prefix, version (1 byte), type (1 byte)
+ * and sender id (4 bytes) */
+#define PACKET_HEADER_SIZE 6 + PACKET_PREFIX_LENGTH
+
+
 static void gibber_r_multicast_packet_sender_info_free(
     GibberRMulticastPacketSenderInfo *sender_info);
 
@@ -271,7 +281,8 @@ static gsize
 gibber_r_multicast_packet_calculate_size(GibberRMulticastPacket *packet)
 {
 
-  gsize result = 6; /* 8 bit type, 8 bit version, 32 bit sender */
+    /* 8 bit type, 8 bit version, 32 bit sender */
+  gsize result = PACKET_HEADER_SIZE;
 
   if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet)) {
       /*  32 bit packet id, 8 bit nr sender info */
@@ -454,6 +465,17 @@ get_sender_info(guint8 *data, gsize length, gsize *offset, GArray *depends) {
 }
 
 static void
+packet_add_prefix (guint8 *data, gsize length, gsize *offset)
+{
+  guint8 prefix[] = PACKET_PREFIX;
+
+  g_assert (*offset + PACKET_PREFIX_LENGTH <= length);
+
+  memcpy (data + *offset, prefix, PACKET_PREFIX_LENGTH);
+  *offset += PACKET_PREFIX_LENGTH;
+}
+
+static void
 gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
   GibberRMulticastPacketPrivate *priv =
      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (packet);
@@ -473,8 +495,9 @@ gibber_r_multicast_packet_build(GibberRMulticastPacket *packet) {
   priv->data = g_malloc0(priv->max_data);
   priv->size = 0;
 
-  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->type);
+  packet_add_prefix (priv->data, priv->max_data, &(priv->size));
   add_guint8 (priv->data, priv->max_data, &(priv->size), packet->version);
+  add_guint8 (priv->data, priv->max_data, &(priv->size), packet->type);
   add_guint32 (priv->data, priv->max_data, &(priv->size), packet->sender);
 
   if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET(packet)) {
@@ -583,6 +606,19 @@ gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
   return avail;
 }
 
+static gboolean
+packet_check_prefix (const guint8 *data)
+{
+  int i;
+  guint8 prefix[] = PACKET_PREFIX;
+
+  for (i = 0; i < PACKET_PREFIX_LENGTH; i++)
+    if (data[i] != prefix[i])
+      return FALSE;
+
+  return TRUE;
+}
+
 #define GET_GUINT8(target) G_STMT_START {                             \
   if (priv->size + 1 > priv->max_data)                                \
     goto parse_error;                                                 \
@@ -601,18 +637,22 @@ gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
   target = get_guint32 (priv->data, priv->max_data, &(priv->size));   \
 } G_STMT_END
 
-
 /* Create a packet by parsing raw data, packet is immutable afterwards */
 GibberRMulticastPacket *
 gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
     GError **error) {
-  GibberRMulticastPacket *result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET,
-                                                NULL);
-  GibberRMulticastPacketPrivate *priv =
-      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE(result);
+  GibberRMulticastPacket *result = NULL;
+
+  GibberRMulticastPacketPrivate *priv;
+
+  if (size < PACKET_HEADER_SIZE || !packet_check_prefix (data))
+    goto parse_error;
+
+  result = g_object_new(GIBBER_TYPE_R_MULTICAST_PACKET, NULL);
+  priv = GIBBER_R_MULTICAST_PACKET_GET_PRIVATE(result);
 
   priv->data = g_memdup(data, size);
-  priv->size = 0;
+  priv->size = PACKET_PREFIX_LENGTH;
   priv->max_data = size;
 
   GET_GUINT8 (result->type);
@@ -722,7 +762,8 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   return result;
 
 parse_error:
-  g_object_unref (result);
+  if (result != NULL)
+    g_object_unref (result);
 
   g_set_error (error,
     GIBBER_R_MULTICAST_PACKET_ERROR,

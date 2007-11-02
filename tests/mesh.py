@@ -29,7 +29,7 @@ JOIN            = 0x13
 BYE             = 0x14
 
 def packet_type(data):
-  return unpack("B", data[0])[0]
+  return unpack("B", data[7])[0]
 
 
 
