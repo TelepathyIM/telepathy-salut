@@ -75,8 +75,7 @@ CORE_SOURCES =                                          \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
-    debug.h                                             \
-    ansi.h
+    debug.h
 
 if ENABLE_DBUS_TUBES
   CORE_SOURCES +=                                       \
