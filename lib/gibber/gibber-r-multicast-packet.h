@@ -25,6 +25,14 @@
 
 G_BEGIN_DECLS
 
+GQuark gibber_r_multicast_packet_error_quark (void);
+#define GIBBER_R_MULTICAST_PACKET_ERROR \
+  gibber_r_multicast_packet_error_quark()
+
+typedef enum {
+  GIBBER_R_MULTICAST_PACKET_ERROR_PARSE_ERROR
+} GibberRMulticastPacketErrors;
+
 typedef enum {
   /* Unreliable packets */
   PACKET_TYPE_WHOIS_REQUEST = 0,

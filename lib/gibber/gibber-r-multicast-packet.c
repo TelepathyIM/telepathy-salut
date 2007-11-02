@@ -32,6 +32,8 @@ static void gibber_r_multicast_packet_sender_info_free(
 
 G_DEFINE_TYPE(GibberRMulticastPacket, gibber_r_multicast_packet, G_TYPE_OBJECT)
 
+GQuark gibber_r_multicast_packet_error_quark (void);
+
 /* private structure */
 typedef struct _GibberRMulticastPacketPrivate GibberRMulticastPacketPrivate;
 
@@ -45,6 +47,19 @@ struct _GibberRMulticastPacketPrivate
   /* Maximum data size */
   gsize max_data;
 };
+
+GQuark
+gibber_r_multicast_packet_error_quark (void)
+{
+  static GQuark quark = 0;
+
+  if (!quark)
+    quark = g_quark_from_static_string (
+        "gibber_r_multicast_packet_error");
+
+  return quark;
+}
+
 
 #define GIBBER_R_MULTICAST_PACKET_GET_PRIVATE(o) \
   (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_PACKET, \
@@ -381,9 +396,13 @@ get_string(const guint8 *data, gsize length, gsize *offset) {
   gsize len;
   gchar *str;
 
+  if (*offset + 1 > length)
+    return NULL;
+
   len = get_guint8(data, length, offset);
 
-  g_assert(*offset + len <= length);
+  if (*offset + len > length)
+    return NULL;
 
   str = g_strndup((gchar *)data + *offset, len);
   (*offset) += len;
@@ -406,9 +425,12 @@ add_sender_info(guint8 *data, gsize length, gsize *offset, GArray *senders)
     }
 }
 
-static void
+static gboolean
 get_sender_info(guint8 *data, gsize length, gsize *offset, GArray *depends) {
   guint8 nr_items;
+
+  if (*offset + 1 > length)
+    return FALSE;
 
   nr_items = get_guint8(data, length, offset);
 
@@ -417,12 +439,17 @@ get_sender_info(guint8 *data, gsize length, gsize *offset, GArray *depends) {
     guint32 sender_id;
     guint32 packet_id;
 
+    if (*offset + 8 > length)
+      return FALSE;
+
     sender_id = get_guint32(data, length, offset);
     packet_id = get_guint32(data, length, offset);
     sender_info =
         gibber_r_multicast_packet_sender_info_new(sender_id, packet_id);
     g_array_append_val (depends, sender_info);
   }
+
+  return TRUE;
 }
 
 static void
@@ -555,6 +582,25 @@ gibber_r_multicast_packet_add_payload(GibberRMulticastPacket *packet,
   return avail;
 }
 
+#define GET_GUINT8(target) G_STMT_START {                             \
+  if (priv->size + 1 > priv->max_data)                                \
+    goto parse_error;                                                 \
+  target = get_guint8 (priv->data, priv->max_data, &(priv->size));    \
+} G_STMT_END
+
+#define GET_GUINT16(target) G_STMT_START {                            \
+  if (priv->size + 2 > priv->max_data)                                \
+    goto parse_error;                                                 \
+  target = get_guint16 (priv->data, priv->max_data, &(priv->size));   \
+} G_STMT_END
+
+#define GET_GUINT32(target) G_STMT_START {                            \
+  if (priv->size + 4 > priv->max_data)                                \
+    goto parse_error;                                                 \
+  target = get_guint32 (priv->data, priv->max_data, &(priv->size));   \
+} G_STMT_END
+
+
 /* Create a packet by parsing raw data, packet is immutable afterwards */
 GibberRMulticastPacket *
 gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
@@ -568,33 +614,32 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
   priv->size = 0;
   priv->max_data = size;
 
-  result->type = get_guint8 (priv->data, priv->max_data, &(priv->size));
-  result->version = get_guint8 (priv->data, priv->max_data, &(priv->size));
-  result->sender = get_guint32 (priv->data, priv->max_data, &(priv->size));
+  GET_GUINT8 (result->type);
+  GET_GUINT8 (result->version);
+  GET_GUINT32 (result->sender);
+
 
   if (IS_RELIABLE_PACKET (result)) {
-    result->packet_id = get_guint32 (priv->data,
-      priv->max_data, &(priv->size));
-    get_sender_info (priv->data, priv->max_data, &(priv->size),
-        result->depends);
+    GET_GUINT32 (result->packet_id);
+    if (!get_sender_info (priv->data, priv->max_data, &(priv->size),
+        result->depends))
+      goto parse_error;
   }
 
   switch (result->type) {
     case PACKET_TYPE_WHOIS_REQUEST:
-      result->data.whois_request.sender_id = get_guint32 (priv->data,
-          priv->max_data, &(priv->size));
+      GET_GUINT32 (result->data.whois_request.sender_id);
       break;
     case PACKET_TYPE_WHOIS_REPLY:
       result->data.whois_reply.sender_name = get_string(priv->data,
           priv->max_data, &(priv->size));
+      if (result->data.whois_reply.sender_name == NULL)
+        goto parse_error;
       break;
     case PACKET_TYPE_DATA:
-      result->data.data.flags =
-          get_guint8 (priv->data, priv->max_data, &(priv->size));
-      result->data.data.total_size =
-          get_guint32 (priv->data, priv->max_data, &(priv->size));
-      result->data.data.stream_id =
-          get_guint16 (priv->data, priv->max_data, &(priv->size));
+      GET_GUINT8 (result->data.data.flags);
+      GET_GUINT32 (result->data.data.total_size);
+      GET_GUINT16 (result->data.data.stream_id);
 
       result->data.data.payload_size = priv->max_data - priv->size;
       result->data.data.payload = g_memdup(priv->data + priv->size,
@@ -602,70 +647,88 @@ gibber_r_multicast_packet_parse(const guint8 *data, gsize size,
       priv->size += result->data.data.payload_size;
       break;
     case PACKET_TYPE_REPAIR_REQUEST:
-      result->data.repair_request.sender_id =
-          get_guint32 (priv->data, priv->max_data, &(priv->size));
-      result->data.repair_request.packet_id =
-          get_guint32 (priv->data, priv->max_data, &(priv->size));
+      GET_GUINT32 (result->data.repair_request.sender_id);
+      GET_GUINT32 (result->data.repair_request.packet_id);
       break;
     case PACKET_TYPE_ATTEMPT_JOIN: {
-      guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
+      guint8 nr;
       guint8 i;
+
+      GET_GUINT8 (nr);
 
       result->data.attempt_join.senders = g_array_sized_new (FALSE, FALSE,
           sizeof (guint32), nr);
 
       for (i = 0; i < nr; i++) {
-        guint32 sender = get_guint32 (priv->data,
-            priv->max_data, &(priv->size));
+        guint32 sender;
+        GET_GUINT32 (sender);
         gibber_r_multicast_packet_attempt_join_add_sender (result,
             sender, NULL);
       }
       break;
     }
     case PACKET_TYPE_JOIN: {
-      guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
+      guint8 nr;
       guint8 i;
+
+      GET_GUINT8 (nr);
 
       result->data.join.failures = g_array_sized_new (FALSE, FALSE,
           sizeof (guint32), nr);
 
       for (i = 0; i < nr; i++) {
-        guint32 failure = get_guint32 (priv->data,
-            priv->max_data, &(priv->size));
+        guint32 failure;
+
+        GET_GUINT32 (failure);
         gibber_r_multicast_packet_join_add_failure (result,
             failure, NULL);
       }
       break;
     }
     case PACKET_TYPE_FAILURE: {
-      guint8 nr = get_guint8 (priv->data, priv->max_data, &(priv->size));
+      guint8 nr;
       guint8 i;
+
+      GET_GUINT8 (nr);
 
       result->data.failure.failures = g_array_sized_new (FALSE, FALSE,
           sizeof (guint32), nr);
 
       for (i = 0; i < nr; i++) {
-        guint32 sender = get_guint32 (priv->data,
-            priv->max_data, &(priv->size));
+        guint32 sender;
+
+        GET_GUINT32 (sender);
         gibber_r_multicast_packet_failure_add_sender (result,
             sender, NULL);
       }
       break;
     }
     case PACKET_TYPE_SESSION:
-      get_sender_info(priv->data, priv->max_data, &(priv->size),
-          result->depends);
+      if (!get_sender_info(priv->data, priv->max_data, &(priv->size),
+          result->depends))
+        goto parse_error;
       break;
     case PACKET_TYPE_NO_DATA:
     case PACKET_TYPE_BYE:
       break;
     default:
-      g_assert_not_reached();
+      goto parse_error;
   }
 
-  g_assert (priv->size == priv->max_data);
+  if  (priv->size != priv->max_data)
+    goto parse_error;
 
   return result;
+
+parse_error:
+  g_object_unref (result);
+
+  g_set_error (error,
+    GIBBER_R_MULTICAST_PACKET_ERROR,
+    GIBBER_R_MULTICAST_PACKET_ERROR_PARSE_ERROR,
+    "Failed to parse packet");
+
+  return NULL;
 }
 
 /* Get the packets payload */
