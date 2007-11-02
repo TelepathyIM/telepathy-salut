@@ -1058,10 +1058,17 @@ browser_removed (SalutAvahiServiceBrowser *browser,
           && !tp_strdiff (type, r_type)
           && !tp_strdiff (domain, r_domain))
         {
+          g_free (r_name);
+          g_free (r_type);
+          g_free (r_domain);
           g_object_unref (resolver);
           g_array_remove_index_fast (arr, i);
           break;
         }
+
+      g_free (r_name);
+      g_free (r_type);
+      g_free (r_domain);
     }
 
   if (arr->len > 0)
