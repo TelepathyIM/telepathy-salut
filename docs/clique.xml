@@ -87,7 +87,8 @@
         ; defines some TXT keys for _clique._udp
         Witchcraft._clique._udp.local. IN TXT "txtvers=0"
       ]]>
-  </section>
+    </code>
+  </section2>
 
   <section2 topic='Inviting a contact to a public or private room'>
     <p>In this example crone@desktop invites hecate@broom to the
