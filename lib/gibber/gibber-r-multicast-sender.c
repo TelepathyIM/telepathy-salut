@@ -203,6 +203,8 @@ gibber_r_multicast_sender_group_gc (GibberRMulticastSenderGroup *group)
 
       gibber_r_multicast_sender_ack (sender, info->packet_id);
     }
+
+  g_array_free (array, TRUE);
 }
 
 static void schedule_repair(GibberRMulticastSender *sender, guint32 id);
