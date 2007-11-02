@@ -355,12 +355,10 @@ gibber_muc_connection_create_random_address(GibberMucConnection *self) {
 
   /* Just pick any port above 1024 */
   p = g_random_int_range(1024, G_MAXUINT16);
-  /* Ensure that we never mess with mdns */
-  if (p == 5353)
-    p++;
   priv->port = g_strdup_printf("%d", p);
   /* For now just pick ipv4 in the link-local scope... */
-  priv->address = g_strdup_printf("224.0.0.%d", g_random_int_range(1, 254));
+  priv->address =
+      g_strdup_printf("239.255.71.%d", g_random_int_range(1, 254));
 
   /* Just to be sure */
   ret = gibber_muc_connection_validate_address(priv->address, priv->port, NULL);
