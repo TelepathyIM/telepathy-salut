@@ -86,9 +86,11 @@ START_TEST (test_data_packet)
   data = gibber_r_multicast_packet_get_raw_data (a, &len);
 
   b = gibber_r_multicast_packet_parse (data, len, NULL);
+  fail_unless (b != NULL);
 
   COMPARE (type);
   COMPARE (version);
+  COMPARE (data.data.flags);
   COMPARE (data.data.total_size);
   COMPARE (packet_id);
   COMPARE (data.data.stream_id);
@@ -162,6 +164,8 @@ START_TEST (test_attempt_join_packet)
   data = gibber_r_multicast_packet_get_raw_data (a, &len);
 
   b = gibber_r_multicast_packet_parse (data, len, NULL);
+
+  fail_unless (b != NULL);
 
   COMPARE (type);
   COMPARE (version);
