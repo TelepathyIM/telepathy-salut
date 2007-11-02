@@ -284,7 +284,7 @@ gibber_muc_connection_finalize (GObject *object)
 
 const gchar **
 gibber_muc_connection_get_protocols(void) {
-  static const gchar *protocols[] = { PROTO_RMULTICAST, NULL };
+  static const gchar *protocols[] = { GIBBER_TELEPATHY_NS_CLIQUE, NULL };
   return protocols;
 }
 
@@ -295,7 +295,7 @@ gibber_muc_connection_get_required_parameters(const gchar *protocol) {
   struct {
     const gchar *protocol;
     const gchar **parameters;
-  } protocols[] = { { PROTO_RMULTICAST, parameters },
+  } protocols[] = { { GIBBER_TELEPATHY_NS_CLIQUE, parameters },
                     { NULL, NULL }
                   };
 
@@ -398,7 +398,7 @@ gibber_muc_connection_new(const gchar *name,
   GibberMucConnectionPrivate *priv;
 
   if (protocol != NULL && strcmp(protocol, PROTO_RMULTICAST) != 0) {
-    g_set_error(error,
+    g_set_error(error, 
                 GIBBER_MUC_CONNECTION_ERROR,
                 GIBBER_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
                 "Invalid protocol: %s", protocol);
@@ -425,7 +425,7 @@ gibber_muc_connection_new(const gchar *name,
 
   priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (result);
   priv->name = g_strdup(name);
-  if (protocol != NULL) {
+  if (protocol != NULL) { 
     priv->protocol = g_strdup(protocol);
   } else {
     priv->protocol = g_strdup(PROTO_RMULTICAST);

@@ -45,20 +45,18 @@
   <section2 topic='Inviting a contact to a room'>
     <code>
       <![CDATA[
-      <!-- Sent via TCP from crone1@desktop to hecate@broom -->
-      <message from='crone1@desktop' to='hecate@broom'>
-        <x xmlns='http://telepathy.freedesktop.org/xmpp/ll/room-invitation'>
-          <invite protocol='rmulticast'>
-            <roomname>Witchcraft</roomname>
-            <address>224.0.0.66</address>
-            <port>13251</port>
-            <!-- reason is optional -->
-            <reason>We need to plot Macbeth's doom, but the XMPP server is
-              down</reason>
-          </invite>
-        </x>
-        <!-- for compatibility with legacy clients -->
-        <body>You got a chatroom invitation</body>
+      <!-- Sent via TCP from crone@desktop to hecate@broom -->
+      <message from='crone@desktop' to='hecate@broom'>
+        <invite xmlns='http://telepathy.freedesktop.org/xmpp/clique'>
+          <roomname>Witchcraft</roomname>
+          <address>224.0.0.66</address>
+          <port>13251</port>
+          <!-- reason is optional -->
+          <reason>We need to plot Macbeth's doom, but the XMPP server is
+            down</reason>
+        </invite>
+        <!-- Displayed by iChat and other non-Clique-compatible clients -->
+        <body>You got a Clique chatroom invitation</body>
       </message>
       ]]>
     </code>
@@ -85,42 +83,19 @@
 <section1 topic='XML Schema' anchor='schema'>
   <code>
     <![CDATA[
-    <!-- FIXME: the namespace should be
-    http://telepathy.freedesktop.org/xmpp/protocol/ll/muc/ or something -->
     <xs:schema
     xmlns:xs='http://www.w3.org/2001/XMLSchema'
-      targetNamespace='http://telepathy.freedesktop.org/xmpp/ll/room-invitation'
-      xmlns='http://telepathy.freedesktop.org/xmpp/ll/room-invitation'
+      targetNamespace='http://telepathy.freedesktop.org/xmpp/clique'
+      xmlns='http://telepathy.freedesktop.org/xmpp/clique'
       elementFormDefault='qualified'>
 
       <!-- LLMUC invitation. Sent over the IM socket -->
-
-      <xs:element name='x'>
-        <xs:complexType>
-          <xs:choice>
-            <xs:element ref='invite'/>
-          </xs:choice>
-        </xs:complexType>
-      </xs:element>
-
-
       <xs:element name='invite'>
         <xs:complexType>
-
-          <xs:attribute name='protocol' use='required'>
-            <xs:simpleType>
-              <xs:restriction base='xs:string'>
-                <!-- Other values may be added in future -->
-                <xs:enumeration value='rmulticast'/>
-              </xs:restriction>
-            </xs:simpleType>
-          </xs:attribute>
-
           <xs:all>
             <xs:element name='roomname' type='xs:string'/>
             <xs:element name='reason' minOccurs='0' type='xs:string'/>
 
-            <!-- Required for the 'rmulticast' protocol -->
             <xs:element name='address' type='xs:string'/>
             <xs:element name='port' type='xs:unsignedShort'/>
 
@@ -128,7 +103,6 @@
               goes here -->
             <xs:any minOccurs='0' maxOccurs='unbounded' namespace='##other'>
           </xs:all>
-
         </xs:complexType>
       </xs:element>
 

@@ -20,7 +20,4 @@
 #ifndef __NAMESPACES__H__
 #define __NAMESPACES__H__
 
-#define NS_TP_LL_ROOM_INVITATION \
-  "http://telepathy.freedesktop.org/xmpp/ll/room-invitation"
-
 #endif /* _NAMESPACES__H__ */

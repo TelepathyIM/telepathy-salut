@@ -384,12 +384,6 @@ _get_connection (SalutMucManager *mgr,
       protocol, parameters, error);
 }
 
-static const gchar **
-_get_connection_parameters (SalutMucManager *mgr,
-                            const gchar *protocol)
-{
-  return gibber_muc_connection_get_required_parameters (protocol);
-}
 
 static SalutMucChannel *
 salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
@@ -799,8 +793,8 @@ invite_stanza_filter (SalutXmppConnectionManager *mgr,
   if (type != GIBBER_STANZA_TYPE_MESSAGE)
     return FALSE;
 
-  return (gibber_xmpp_node_get_child_ns (stanza->node, "x",
-        NS_TP_LL_ROOM_INVITATION) != NULL);
+  return (gibber_xmpp_node_get_child_ns (stanza->node, "invite",
+        GIBBER_TELEPATHY_NS_CLIQUE) != NULL);
 }
 
 static void
@@ -817,7 +811,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
-  GibberXmppNode *node, *invite, *room_node, *reason_node;
+  GibberXmppNode *invite, *room_node, *reason_node;
   SalutMucChannel *chan;
   const gchar *room = NULL;
   const gchar *reason = NULL;
@@ -829,18 +823,11 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   GHashTable *params_hash;
   GibberMucConnection *connection = NULL;
 
-  node = gibber_xmpp_node_get_child_ns (stanza->node, "x",
-      NS_TP_LL_ROOM_INVITATION);
-  g_assert (node != NULL);
+  invite = gibber_xmpp_node_get_child_ns (stanza->node, "invite",
+      GIBBER_TELEPATHY_NS_CLIQUE);
+  g_assert (invite != NULL);
 
   DEBUG("Got an invitation");
-
-  invite = gibber_xmpp_node_get_child (node, "invite");
-  if (invite == NULL)
-    {
-      DEBUG ("Got invitation, but no invite block!?");
-      return;
-    }
 
   room_node = gibber_xmpp_node_get_child (invite, "roomname");
   if (room_node == NULL)
@@ -864,7 +851,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
       return;
     }
 
-  params = _get_connection_parameters (self, protocol);
+  params = gibber_muc_connection_get_required_parameters (
+      GIBBER_TELEPATHY_NS_CLIQUE);
   if (params == NULL)
     {
       DEBUG ("Invalid invitation, (unknown protocol) discarding");
