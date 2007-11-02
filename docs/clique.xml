@@ -27,7 +27,7 @@
   </author>
   <revision>
     <version>0.0.1</version>
-    <date>2007-09-26</date>
+    <date>2007-11-02</date>
     <initials>smcv</initials>
     <remark><p>First draft.</p></remark>
   </revision>
@@ -70,11 +70,13 @@
 
   <section2 topic='Advertising a public link-local chatroom via mDNS'>
     <p>In this example a chatroom called "Witchcraft" uses the multicast
-      group 224.0.0.66, port 13251.</p>
+      group 239.255.71.66, port 13251 (arbitrarily chosen).</p>
+    <p>We recommend that chatrooms use a random high port number
+      in a random multicast group in the range 239.255.71.x.</p>
     <code>
       <![CDATA[
         ; A dummy A record for the chatroom's multicast group
-        Witchcraft._clique._udp.local. IN A 224.0.0.66
+        Witchcraft._clique._udp.local. IN A 239.255.71.66
 
         ; A DNS-SD service of type _clique._udp
         _clique._udp.local. IN PTR Witchcraft._clique._udp.local.
@@ -101,7 +103,7 @@
       <message from='crone@desktop' to='hecate@broom'>
         <invite xmlns='http://telepathy.freedesktop.org/xmpp/clique'>
           <roomname>Witchcraft</roomname>
-          <address>224.0.0.66</address>
+          <address>239.255.71.66</address>
           <port>13251</port>
           <!-- reason is optional -->
           <reason>We need to plot Macbeth's doom, but the XMPP server is
