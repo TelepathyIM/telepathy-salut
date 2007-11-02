@@ -1120,12 +1120,13 @@ recheck_failures (GibberRMulticastTransport *self)
   array = g_array_new (FALSE, TRUE, sizeof (guint32));
   g_hash_table_foreach (priv->members, collect_failed_members, array);
 
-
   for (i = 0; i < array->len ; i++)
     {
        check_failure_completion (self,
          g_array_index (array, guint32, i));
     }
+
+  g_array_free (array, TRUE);
 }
 
 static void
