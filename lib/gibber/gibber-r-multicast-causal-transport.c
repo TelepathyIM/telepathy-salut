@@ -147,7 +147,7 @@ gibber_r_multicast_causal_transport_set_property (GObject *object,
       priv->name = g_value_dup_string (value);
       break;
     case PROP_TRANSPORT:
-      priv->transport = g_value_dup_object (value);
+      priv->transport = GIBBER_TRANSPORT (g_value_dup_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
