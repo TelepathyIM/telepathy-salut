@@ -32,6 +32,7 @@
 
 #include "salut-muc-channel.h"
 
+#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-transport.h>
 
 #include <telepathy-glib/channel-iface.h>
@@ -47,7 +48,6 @@
 #include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-entry-group.h"
 
-#include "namespaces.h"
 #include "text-helper.h"
 
 static void

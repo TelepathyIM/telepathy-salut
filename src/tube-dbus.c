@@ -38,7 +38,6 @@
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
 #include "salut-connection.h"
-#include "namespaces.h"
 #include "tube-iface.h"
 #include "sha1/sha1-util.h"
 

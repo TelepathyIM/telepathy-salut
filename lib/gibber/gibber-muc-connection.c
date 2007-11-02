@@ -30,6 +30,7 @@
 #include "gibber-muc-connection.h"
 #include "signals-marshal.h"
 
+#include "gibber-namespaces.h"
 #include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"
 #include "gibber-multicast-transport.h"

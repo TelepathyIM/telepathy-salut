@@ -36,7 +36,6 @@
 #include "salut-contact.h"
 #include "text-helper.h"
 #include "salut-xmpp-connection-manager.h"
-#include "namespaces.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>

@@ -34,8 +34,6 @@
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 
-#include "namespaces.h"
-
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
 

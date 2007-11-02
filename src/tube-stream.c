@@ -45,7 +45,6 @@
 #include "signals-marshal.h"
 #include "extensions/extensions.h"
 #include "salut-connection.h"
-#include "namespaces.h"
 #include "tube-iface.h"
 #include "salut-bytestream-manager.h"
 #include "salut-contact-manager.h"

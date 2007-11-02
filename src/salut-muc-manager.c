@@ -26,6 +26,7 @@
 #include "salut-muc-manager.h"
 
 #include <gibber/gibber-muc-connection.h>
+#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
 #include "salut-muc-channel.h"
@@ -37,8 +38,6 @@
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
-
-#include "namespaces.h"
 
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
