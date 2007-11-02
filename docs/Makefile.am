@@ -1,5 +1,5 @@
 PROTO_XEP_XML = \
-    room-invitation.xml
+    clique.xml
 PROTO_XEP_HTML = $(PROTO_XEP_XML:.xml=.html)
 
 proto-xep-html: $(PROTO_XEP_HTML)
