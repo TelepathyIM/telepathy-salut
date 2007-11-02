@@ -2,17 +2,19 @@
 <?xml-stylesheet type='text/xsl' href='xep.xsl'?>
 <xep>
 <header>
-  <title>Link-local chat room invitations</title>
-  <abstract>Multi-user Chat over Reliable Multicast.</abstract>
+  <title>Clique - link-local chat rooms</title>
+  <abstract>A protocol for serverless link-local multi-user chat over
+    reliable multicast.</abstract>
   <legal>Copyright (c) 2007 Collabora Limited. This document may be
     distributed under the same terms as the Telepathy specification.</legal>
-  <number>proto-ll-room-invitation</number>
+  <number>proto-clique</number>
   <status>ProtoXEP</status>
   <type>Extension</type>
   <sig>Standards</sig>
   <approver>Telepathy project</approver>
   <dependencies>
     <spec>XMPP Core</spec>
+    <spec>XEP-0174</spec>
   </dependencies>
   <supersedes/>
   <supersededby/>
@@ -31,7 +33,7 @@
   </revision>
 </header>
 <section1 topic='Introduction' anchor='intro'>
-  <p></p>
+  <p>Clique is an extension of XEP-0174 to support multi-user chat.</p>
 </section1>
 <section1 topic='Requirements' anchor='reqs'>
   <p>STRONGLY RECOMMENDED.</p>
