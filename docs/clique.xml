@@ -33,7 +33,30 @@
   </revision>
 </header>
 <section1 topic='Introduction' anchor='intro'>
-  <p>Clique is an extension of XEP-0174 to support multi-user chat.</p>
+  <p>Clique is an extension of XEP-0174 to support multi-user chat.
+    It consists of the following components:</p>
+
+  <ul>
+    <li>a binary multicast message-passing protocol sometimes referred to
+      as rMulticast, with retransmission/reliability,
+      fragmentation/reassembly, causal ordering, and reliable membership
+      semantics, in which messages are associated with a stream ID in the
+      range 0 to 65535</li>
+    <li>XMPP-like XML messages sent with stream ID 0</li>
+    <li>optional auxiliary data (e.g. Tubes) sent with stream IDs
+      1-65535, with semantics signalled by XML messages in stream 0</li>
+  </ul>
+
+  <p>The chat room behaves a lot like XMPP, and namespaces used in XMPP
+    have their usual semantics. However, instead of a stream of XML
+    as in XMPP, Clique's XMPP-like messages are individually well-formed
+    XML documents.</p>
+
+  <p>XEP-0174 instance names are used for identification in a chat
+    room.</p>
+
+  <p>The Clique XML namespace can also be used for certain elements sent
+    over XEP-0174 unicast TCP streams, for instance to send invitations.</p>
 </section1>
 <section1 topic='Requirements' anchor='reqs'>
   <p>STRONGLY RECOMMENDED.</p>
@@ -42,10 +65,39 @@
   <p>OPTIONAL.</p>
 </section1>
 <section1 topic='Use Cases' anchor='usecases'>
-  <section2 topic='Inviting a contact to a room'>
+  <p>FIXME: there need to be some examples of the actual Clique protocol
+    here</p>
+
+  <section2 topic='Advertising a public link-local chatroom via mDNS'>
+    <p>In this example a chatroom called "Witchcraft" uses the multicast
+      group 224.0.0.66, port 13251.</p>
     <code>
       <![CDATA[
-      <!-- Sent via TCP from crone@desktop to hecate@broom -->
+        ; A dummy A record for the chatroom's multicast group
+        Witchcraft._clique._udp.local. IN A 224.0.0.66
+
+        ; A DNS-SD service of type _clique._udp
+        _clique._udp.local. IN PTR Witchcraft._clique._udp.local.
+        Witchcraft._clique._udp.local. IN SRV 13251 ._clique._udp.local.
+
+        ; For future expansion - implementations SHOULD NOT resolve this,
+        ; unless they implement a future version of this protocol that
+        ; defines some TXT keys for _clique._udp
+        Witchcraft._clique._udp.local. IN TXT "txtvers=0"
+      ]]>
+  </section>
+
+  <section2 topic='Inviting a contact to a public or private room'>
+    <p>In this example crone@desktop invites hecate@broom to the
+      chatroom given above.</p>
+    <p>This would work just as well if the chatroom was not advertised
+      in mDNS; this can be used to make "private" chatrooms. Note however
+      that anyone with a network traffic sniffer can see the chatroom
+      itself.</p>
+    <code>
+      <![CDATA[
+      <!-- Sent via XEP-0174 unicast TCP from crone@desktop to
+           hecate@broom -->
       <message from='crone@desktop' to='hecate@broom'>
         <invite xmlns='http://telepathy.freedesktop.org/xmpp/clique'>
           <roomname>Witchcraft</roomname>
