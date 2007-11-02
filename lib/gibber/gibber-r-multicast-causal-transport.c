@@ -1058,7 +1058,7 @@ schedule_keepalive_message (GibberRMulticastCausalTransport *transport)
   if (priv->keepalive_timer != 0)
     g_source_remove(priv->keepalive_timer);
 
-  priv->timer =
+  priv->keepalive_timer =
       g_timeout_add (KEEPALIVE_TIMEOUT, send_keepalive_cb, transport);
 }
 
