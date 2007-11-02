@@ -34,7 +34,7 @@
 
 /* Our packet header is the prefix, version (1 byte), type (1 byte)
  * and sender id (4 bytes) */
-#define PACKET_HEADER_SIZE 6 + PACKET_PREFIX_LENGTH
+#define PACKET_HEADER_SIZE (6 + PACKET_PREFIX_LENGTH)
 
 
 static void gibber_r_multicast_packet_sender_info_free(
