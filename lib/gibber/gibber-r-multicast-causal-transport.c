@@ -1044,6 +1044,7 @@ send_keepalive_cb (gpointer data)
 
   gibber_r_multicast_sender_push (priv->self, packet);
   sendout_packet (self, packet, NULL);
+  g_object_unref (packet);
 
   return FALSE;
 }
