@@ -36,8 +36,6 @@
 #include "gibber-r-multicast-transport.h"
 #include "gibber-r-multicast-causal-transport.h"
 
-#define PROTO_RMULTICAST  "rmulticast"
-
 #define ADDRESS_KEY "address"
 #define PORT_KEY "port"
 
@@ -288,6 +286,8 @@ gibber_muc_connection_get_protocols(void) {
   return protocols;
 }
 
+/* FIXME: we can probably get major simplification in this class
+ * if we declare that Clique is the only protocol it supports */
 const gchar **
 gibber_muc_connection_get_required_parameters(const gchar *protocol) {
   int i;
