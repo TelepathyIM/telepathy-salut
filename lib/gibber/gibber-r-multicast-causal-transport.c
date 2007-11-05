@@ -628,16 +628,6 @@ sender_failed_cb (GibberRMulticastSender *sender,
   g_signal_emit(self, signals[SENDER_FAILED], 0, sender);
 }
 
-static void
-name_discovered_cb(GibberRMulticastSender *sender, gchar *name,
-    gpointer user_data)
-{
-  /* GibberRMulticastCausalTransport *self =
-   *     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
-   * g_signal_emit(self, signals[NEW_SENDER], 0, name);
-   */
-}
-
 GibberRMulticastSender *
 gibber_r_multicast_causal_transport_add_sender (
     GibberRMulticastCausalTransport *transport,
@@ -672,8 +662,6 @@ gibber_r_multicast_causal_transport_add_sender (
       G_CALLBACK (whois_request_cb), transport);
   g_signal_connect (sender, "whois-reply",
       G_CALLBACK (whois_reply_cb), transport);
-  g_signal_connect (sender, "name-discovered",
-      G_CALLBACK (name_discovered_cb), transport);
 
   g_signal_connect (sender, "failed",
       G_CALLBACK (sender_failed_cb), transport);
@@ -826,7 +814,7 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
           DEBUG_TRANSPORT (self, "Invalid packet (sender is 0, which is "
               "not valid for type %x)",
             packet->type);
-          goto out;
+          return;
         }
 
       DEBUG_TRANSPORT (self, "New sender polling for a unique id");
@@ -852,7 +840,7 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
 
   if (sender == NULL || sender == priv->self)
     {
-      goto out;
+      return;
     }
 
   DEBUG_TRANSPORT (self, "Received packet type: 0x%x from %x",
@@ -864,7 +852,7 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
       sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
           packet->data.whois_request.sender_id);
       if (sender == NULL)
-        goto out;
+        break;
       /* fallthrough */
     case PACKET_TYPE_WHOIS_REPLY:
       gibber_r_multicast_sender_whois_push (sender, packet);
@@ -906,8 +894,6 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
         }
   }
 
-out:
-  return;
 }
 
 static void
