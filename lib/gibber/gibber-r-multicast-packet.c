@@ -122,7 +122,7 @@ gibber_r_multicast_packet_finalize (GObject *object)
   GibberRMulticastPacket *self = GIBBER_R_MULTICAST_PACKET (object);
   GibberRMulticastPacketPrivate *priv =
       GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
-  int i;
+  guint i;
 
   for (i = 0; i < self->depends->len ; i++) {
     gibber_r_multicast_packet_sender_info_free (
