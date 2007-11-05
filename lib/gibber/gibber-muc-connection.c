@@ -53,7 +53,7 @@ static void _connection_received_data(GibberTransport *transport,
                                       gpointer user_data);
 
 
-G_DEFINE_TYPE(GibberMucConnection, gibber_muc_connection, 
+G_DEFINE_TYPE(GibberMucConnection, gibber_muc_connection,
               G_TYPE_OBJECT)
 
 /* signal enum */
@@ -84,7 +84,7 @@ struct _GibberMucConnectionPrivate
   gchar *protocol;
   gchar *address;
   gchar *port;
-  
+ 
   GibberXmppReader *reader;
   GibberXmppWriter *writer;
 
@@ -134,9 +134,9 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
 
   object_class->dispose = gibber_muc_connection_dispose;
   object_class->finalize = gibber_muc_connection_finalize;
-  
-  signals[RECEIVED_STANZA] = 
-    g_signal_new("received-stanza", 
+ 
+  signals[RECEIVED_STANZA] =
+    g_signal_new("received-stanza",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
@@ -156,8 +156,8 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  _gibber_signals_marshal_VOID__STRING_UINT_POINTER_ULONG,
                  G_TYPE_NONE, 4, G_TYPE_STRING,
                  G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_ULONG);
-  signals[PARSE_ERROR] = 
-    g_signal_new("parse-error", 
+  signals[PARSE_ERROR] =
+    g_signal_new("parse-error",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
@@ -165,8 +165,8 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  g_cclosure_marshal_VOID__STRING,
                  G_TYPE_NONE, 1, G_TYPE_STRING);
 
-  signals[DISCONNECTED] = 
-    g_signal_new("disconnected", 
+  signals[DISCONNECTED] =
+    g_signal_new("disconnected",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
@@ -174,8 +174,8 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  g_cclosure_marshal_VOID__VOID,
                  G_TYPE_NONE, 0);
 
-  signals[CONNECTING] = 
-    g_signal_new("connecting", 
+  signals[CONNECTING] =
+    g_signal_new("connecting",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
@@ -183,8 +183,8 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  g_cclosure_marshal_VOID__VOID,
                  G_TYPE_NONE, 0);
 
-  signals[CONNECTED] = 
-    g_signal_new("connected", 
+  signals[CONNECTED] =
+    g_signal_new("connected",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                  0,
@@ -275,14 +275,14 @@ const gchar **
 gibber_muc_connection_get_protocols(void) {
   static const gchar *protocols[] = { PROTO_RMULTICAST, NULL };
   return protocols;
-} 
+}
 
 const gchar **
 gibber_muc_connection_get_required_parameters(const gchar *protocol) {
   int i;
   static const gchar *parameters[] = { ADDRESS_KEY, PORT_KEY, NULL };
   struct {
-    const gchar *protocol; 
+    const gchar *protocol;
     const gchar **parameters;
   } protocols[] = { { PROTO_RMULTICAST, parameters },
                     { NULL, NULL }
@@ -377,7 +377,7 @@ gibber_muc_connection_create_random_address(GibberMucConnection *self) {
 }
 
 GibberMucConnection *
-gibber_muc_connection_new(const gchar *name, 
+gibber_muc_connection_new(const gchar *name,
                          const gchar *protocol,
                          GHashTable *parameters,
                          GError **error) {
@@ -387,7 +387,7 @@ gibber_muc_connection_new(const gchar *name,
   GibberMucConnectionPrivate *priv;
 
   if (protocol != NULL && strcmp(protocol, PROTO_RMULTICAST) != 0) {
-    g_set_error(error, 
+    g_set_error(error,
                 GIBBER_MUC_CONNECTION_ERROR,
                 GIBBER_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
                 "Invalid protocol: %s", protocol);
@@ -397,7 +397,7 @@ gibber_muc_connection_new(const gchar *name,
     address = g_hash_table_lookup(parameters, ADDRESS_KEY);
     port = g_hash_table_lookup(parameters, PORT_KEY);
     if (address == NULL || port == NULL) {
-      g_set_error(error, 
+      g_set_error(error,
                   GIBBER_MUC_CONNECTION_ERROR,
                   GIBBER_MUC_CONNECTION_ERROR_INVALID_PARAMETERS,
                   "Missing address or port parameter");
@@ -414,7 +414,7 @@ gibber_muc_connection_new(const gchar *name,
 
   priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (result);
   priv->name = g_strdup(name);
-  if (protocol != NULL) { 
+  if (protocol != NULL) {
     priv->protocol = g_strdup(protocol);
   } else {
     priv->protocol = g_strdup(PROTO_RMULTICAST);
@@ -493,8 +493,8 @@ _transport_disconnected_cb(GibberRMulticastTransport *transport,
 
 gboolean
 gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
-  GibberMucConnectionPrivate *priv = 
-      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
+  GibberMucConnectionPrivate *priv =
+      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection);
   int ret = FALSE;
 
   if (connection->state > GIBBER_MUC_CONNECTION_DISCONNECTED) {
@@ -556,8 +556,8 @@ gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
 
 void
 gibber_muc_connection_disconnect(GibberMucConnection *connection) {
-  GibberMucConnectionPrivate *priv = 
-      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
+  GibberMucConnectionPrivate *priv =
+      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection);
 
   connection->state = GIBBER_MUC_CONNECTION_DISCONNECTING;
   g_signal_emit(connection, signals[DISCONNECTING], 0);
@@ -567,38 +567,38 @@ gibber_muc_connection_disconnect(GibberMucConnection *connection) {
 
 const gchar *
 gibber_muc_connection_get_protocol(GibberMucConnection *connection) {
-  GibberMucConnectionPrivate *priv = 
-      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection); 
+  GibberMucConnectionPrivate *priv =
+      GIBBER_MUC_CONNECTION_GET_PRIVATE(connection);
   return priv->protocol;
 }
 
 /* Current parameters of the transport. str -> str */
 const GHashTable *
 gibber_muc_connection_get_parameters(GibberMucConnection *connection) {
-  GibberMucConnectionPrivate *priv = 
+  GibberMucConnectionPrivate *priv =
     GIBBER_MUC_CONNECTION_GET_PRIVATE(connection);
 
-  g_assert(priv->mtransport != NULL && 
+  g_assert(priv->mtransport != NULL &&
       gibber_transport_get_state(
           GIBBER_TRANSPORT(priv->mtransport)) ==
               GIBBER_TRANSPORT_CONNECTED);
 
   if (priv->parameters == NULL) {
-    priv->parameters = g_hash_table_new(g_str_hash, g_str_equal); 
+    priv->parameters = g_hash_table_new(g_str_hash, g_str_equal);
     g_hash_table_insert(priv->parameters, ADDRESS_KEY, priv->address);
     g_hash_table_insert(priv->parameters, PORT_KEY, priv->port);
   }
   return priv->parameters;
 }
 
-static void 
+static void
 _reader_received_stanza_cb(GibberXmppReader *reader, GibberXmppStanza *stanza,
                  gpointer user_data) {
   GibberMucConnection *self = GIBBER_MUC_CONNECTION(user_data);
   GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
 
   g_assert(priv->current_sender != NULL);
-  g_signal_emit(self, signals[RECEIVED_STANZA], 0, 
+  g_signal_emit(self, signals[RECEIVED_STANZA], 0,
       priv->current_sender, stanza);
 }
 
@@ -624,11 +624,11 @@ static void _connection_received_data(GibberTransport *transport,
   /* Ensure we're not disposed inside while running the reader is busy */
   g_object_ref(self);
   priv->current_sender = rmbuffer->sender;
-  ret = gibber_xmpp_reader_push(priv->reader, buffer->data, 
+  ret = gibber_xmpp_reader_push(priv->reader, buffer->data,
                                 buffer->length, &error);
   priv->current_sender = NULL;
   if (!ret) {
-    g_signal_emit(self, signals[PARSE_ERROR], 0); 
+    g_signal_emit(self, signals[PARSE_ERROR], 0);
   }
   g_object_unref(self);
 }
@@ -637,7 +637,7 @@ gboolean
 gibber_muc_connection_send(GibberMucConnection *connection,
                           GibberXmppStanza *stanza,
                           GError **error) {
-  GibberMucConnectionPrivate *priv = 
+  GibberMucConnectionPrivate *priv =
     GIBBER_MUC_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
