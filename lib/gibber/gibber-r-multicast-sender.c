@@ -793,7 +793,7 @@ static gboolean
 check_depends(GibberRMulticastSender *sender,
               GibberRMulticastPacket *packet,
               gboolean data) {
-  int i;
+  guint i;
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
