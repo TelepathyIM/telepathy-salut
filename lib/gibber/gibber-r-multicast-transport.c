@@ -748,7 +748,7 @@ continue_gathering_phase (GibberRMulticastTransport *self) {
 
 static gboolean
 guint32_array_contains (GArray *array, guint32 id) {
-  int i;
+  guint i;
   for (i = 0; i < array->len; i++) {
     if (g_array_index (array, guint32, i) == id)
       return TRUE;
@@ -759,7 +759,7 @@ guint32_array_contains (GArray *array, guint32 id) {
 static void
 guint32_array_remove (GArray *array, guint32 id)
 {
-  int i;
+  guint i;
   for (i = 0; i < array->len; i++) {
     if (g_array_index (array, guint32, i) == id)
       {
@@ -859,7 +859,7 @@ send_attempt_join (GibberRMulticastTransport *self, gboolean send_empty) {
 
 static gboolean
 depends_list_contains (GArray *depends, guint32 id) {
-  int i;
+  guint i;
 
   for (i = 0; i < depends->len; i++) {
     GibberRMulticastPacketSenderInfo *info =
@@ -906,7 +906,7 @@ update_member (GibberRMulticastTransport *self,
 static gboolean
 update_foreign_member_list (GibberRMulticastTransport *self,
    GibberRMulticastPacket *packet, MemberState state) {
-  int i;
+  guint i;
   gboolean changed = FALSE;
 
   changed |= update_member (self, packet->sender, state, packet->packet_id);
@@ -1074,7 +1074,7 @@ send_failure_packet (GibberRMulticastTransport *self)
 static gboolean
 find_unfailed_member (gpointer key, gpointer value, gpointer user_data)
 {
-  int i;
+  guint i;
   guint32 *id = (guint32 *)user_data;
   MemberInfo *info = (MemberInfo *)value;
 
@@ -1234,7 +1234,7 @@ handle_failure_packet (GibberRMulticastTransport *self,
     GibberRMulticastPacket *packet)
 {
   MemberInfo *info;
-  int i;
+  guint i;
 
   info = member_get_info (self, packet->sender);
   for (i = 0; i < packet->data.failure.failures->len; i++)
@@ -1479,7 +1479,7 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
   switch (packet->type) {
     case PACKET_TYPE_ATTEMPT_JOIN: {
       int info_compare;
-      int i;
+      guint i;
       gboolean changed = FALSE;
 
       /* We can prevent/stop our join attempts iff some other node in our
