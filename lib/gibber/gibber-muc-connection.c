@@ -143,7 +143,11 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  NULL, NULL,
                  _gibber_signals_marshal_VOID__STRING_OBJECT,
                  G_TYPE_NONE, 2, G_TYPE_STRING, GIBBER_TYPE_XMPP_STANZA);
-  signals[RECEIVED_DATA] = 
+  /*  UINT: 16 bit stream id
+   *  POINTER: guint8 * data buffer
+   *  ULONG: data buffer size
+   */
+  signals[RECEIVED_DATA] =
     g_signal_new("received-data",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
@@ -197,6 +201,7 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  g_cclosure_marshal_VOID__VOID,
                  G_TYPE_NONE, 0);
 
+  /* POINTER: GArray of gchar*  containing the names of the new senders */
   signals[NEW_SENDERS] =
     g_signal_new("new-senders",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
@@ -206,6 +211,7 @@ gibber_muc_connection_class_init (GibberMucConnectionClass *gibber_muc_connectio
                  g_cclosure_marshal_VOID__POINTER,
                  G_TYPE_NONE, 1, G_TYPE_POINTER);
 
+  /* POINTER: GArray of gchar* containing the names of the lost senders */
   signals[LOST_SENDERS] =
     g_signal_new("lost-senders",
                  G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
