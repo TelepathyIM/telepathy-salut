@@ -47,6 +47,8 @@
 ^data/[^/]*\.service$
 ^data/salut.manager$
 ^depcomp$
+^docs/xep\.xsl$
+^docs/telepathy-salut\.8$
 ^extensions/_gen(/|$)
 ^extensions/extensions\.html$
 ^install-sh$

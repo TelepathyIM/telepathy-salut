@@ -1,0 +1,39 @@
+.TH TELEPATHY-SALUT "8" "October 2007" "Telepathy" "D-Bus services"
+\" This man page was written by Simon McVittie for the Debian project,
+\" but may be used by others.
+\" Copyright © 2007 Collabora Ltd. <http://www.collabora.co.uk/>
+\" It may be distributed under the same terms as telepathy-salut itself.
+.SH NAME
+telepathy-salut \- Telepathy connection manager for link-local XMPP
+.SH SYNOPSIS
+\fB@libexecdir@/telepathy\-salut\fR
+.SH DESCRIPTION
+Salut implements the Telepathy D-Bus specification for link-local XMPP
+(XEP-0174, often called "Bonjour"), allowing Telepathy clients like
+.BR empathy (1)
+to communicate with other implementations of link-local XMPP, such as
+iChat. It also extends the protocol to support multicast-based chat rooms
+and collaboration.
+.PP
+It is a D-Bus service which runs on the session bus, and should usually be
+started automatically by D-Bus activation. However, it might be useful to
+start it manually for debugging.
+.SH OPTIONS
+There are no command-line options.
+.SH ENVIRONMENT
+.TP
+\fBSALUT_LOGFILE\fR=\fIfilename\fR
+If set, debug output will go to the given file rather than to stderr.
+.TP
+\fBSALUT_DEBUG\fR=\fItype\fR
+May be set to "all" for full debug output, or various undocumented options
+(which may change from release to release) to filter the output.
+\fBGIBBER_DEBUG\fR=\fItype\fR
+May be set to "all" for full debug output from the Gibber XMPP library used by
+Salut, or various undocumented options (which may change from release to
+release) to filter the output.
+.SH SEE ALSO
+.IR http://telepathy.freedesktop.org/ ,
+.IR http://telepathy.freedesktop.org/wiki/CategorySalut ,
+.IR http://www.xmpp.org/extensions/xep-0174.html ,
+.BR empathy (1)

@@ -1,3 +1,13 @@
+man_MANS = telepathy-salut.8
+
+EXTRA_DIST = $(man_MANS:.8=.8.in)
+CLEANFILES = $(man_MANS)
+
+%.8: %.8.in Makefile
+	sed -e 's,[@]libexecdir[@],@libexecdir@,' < $< > $@
+
+# ---- Proto-XEPs (not automatically generated, see README) ----
+
 PROTO_XEP_XML = \
     clique.xml
 PROTO_XEP_HTML = $(PROTO_XEP_XML:.xml=.html)
@@ -19,4 +29,4 @@ xep.xsl:
 	@echo "wget 'http://svn.xmpp.org:18080/browse/~raw,r=1214/XMPP/trunk/extensions/xep.xsl'"
 	@exit 1
 
-EXTRA_DIST = $(PROTO_XEP_XML)
+EXTRA_DIST += $(PROTO_XEP_XML)
