@@ -356,7 +356,9 @@ gibber_muc_connection_create_random_address(GibberMucConnection *self) {
   /* Just pick any port above 1024 */
   p = g_random_int_range(1024, G_MAXUINT16);
   priv->port = g_strdup_printf("%d", p);
-  /* For now just pick ipv4 in the link-local scope... */
+  /* RFC 2365 defines 239.255.0.0/16 as the IPv4 local scope (for multicast
+   * addresses). One /24 net was randomly picked out of this and is used for
+   * Clique muc groups */
   priv->address =
       g_strdup_printf("239.255.71.%d", g_random_int_range(1, 254));
 
