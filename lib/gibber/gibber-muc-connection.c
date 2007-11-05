@@ -398,12 +398,12 @@ gibber_muc_connection_new(const gchar *name,
   GibberMucConnection *result;
   GibberMucConnectionPrivate *priv;
 
-  if (protocol != NULL && strcmp(protocol, PROTO_RMULTICAST) != 0) {
-    g_set_error(error, 
-                GIBBER_MUC_CONNECTION_ERROR,
-                GIBBER_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
-                "Invalid protocol: %s", protocol);
-  }
+  if (protocol != NULL && strcmp (protocol, GIBBER_TELEPATHY_NS_CLIQUE) != 0)
+    {
+      g_set_error(error, GIBBER_MUC_CONNECTION_ERROR,
+          GIBBER_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
+          "Invalid protocol: %s", protocol);
+    }
 
   if (parameters != NULL) {
     address = g_hash_table_lookup(parameters, ADDRESS_KEY);
@@ -426,11 +426,14 @@ gibber_muc_connection_new(const gchar *name,
 
   priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (result);
   priv->name = g_strdup(name);
-  if (protocol != NULL) { 
-    priv->protocol = g_strdup(protocol);
-  } else {
-    priv->protocol = g_strdup(PROTO_RMULTICAST);
-  }
+  if (protocol != NULL)
+    {
+      priv->protocol = g_strdup (protocol);
+    }
+  else
+    {
+      priv->protocol = g_strdup (GIBBER_TELEPATHY_NS_CLIQUE);
+    }
 
   priv->address = g_strdup(address);
   priv->port = g_strdup(port);
