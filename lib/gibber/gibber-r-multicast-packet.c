@@ -103,7 +103,8 @@ void
 gibber_r_multicast_packet_dispose (GObject *object)
 {
   GibberRMulticastPacket *self = GIBBER_R_MULTICAST_PACKET (object);
-  GibberRMulticastPacketPrivate *priv = GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
+  GibberRMulticastPacketPrivate *priv =
+      GIBBER_R_MULTICAST_PACKET_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
