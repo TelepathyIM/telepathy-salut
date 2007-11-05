@@ -30,11 +30,13 @@ G_BEGIN_DECLS
 typedef struct _GibberRMulticastSenderGroup GibberRMulticastSenderGroup;
 
 struct _GibberRMulticastSenderGroup {
-  /* public */
+  /* <public>
+   * GUINT_TO_POINTER (sender_id) => owned GibberRMulticastSender */
   GHashTable *senders;
-  /* private */
+  /* <private> */
   gboolean popping;
   gboolean stopped;
+  /* queue of GibberRMulticast GibberRMulticastSender * */
   GQueue *pop_queue;
 };
 

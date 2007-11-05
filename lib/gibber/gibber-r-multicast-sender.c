@@ -279,7 +279,8 @@ struct _GibberRMulticastSenderPrivate
   /* hash table with packets */
   GHashTable *packet_cache;
 
-  /* Table with acks per sender */
+  /* Table with acks per sender
+   * guint32 * => owned AckInfo * */
   GHashTable *acks;
 
   /* Sendergroup to which we belong */
