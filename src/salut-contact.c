@@ -939,11 +939,11 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
             {
               case AVAHI_PROTO_INET:
                 self->olpc_ip4 = saddr;
-                SET_CHANGE (SALUT_CONTACT_OLPC_IP4);
+                SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
                 break;
               case AVAHI_PROTO_INET6:
                 self->olpc_ip6 = saddr;
-                SET_CHANGE (SALUT_CONTACT_OLPC_IP6);
+                SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
                 break;
               default:
                 g_free (saddr);

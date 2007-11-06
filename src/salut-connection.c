@@ -2263,9 +2263,7 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
   }
 
 #ifdef ENABLE_OLPC
-  if ((changes & SALUT_CONTACT_OLPC_PROPERTIES) ||
-      (changes & SALUT_CONTACT_OLPC_IP4) ||
-      (changes & SALUT_CONTACT_OLPC_IP6))
+  if (changes & SALUT_CONTACT_OLPC_PROPERTIES)
     _contact_manager_contact_olpc_properties_changed (self, contact, handle);
 
   if (changes & SALUT_CONTACT_OLPC_CURRENT_ACTIVITY)
