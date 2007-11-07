@@ -85,7 +85,8 @@ GType salut_contact_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT, SalutContactClass))
 
 SalutContact *salut_contact_new(SalutAvahiClient *client,
-    TpHandleRepoIface *room_repo, const gchar *name);
+    TpHandleRepoIface *room_repo, const gchar *name,
+    TpHandleRepoIface *contact_repo);
 
 void
 salut_contact_add_service(SalutContact *contact,
