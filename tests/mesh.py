@@ -92,8 +92,7 @@ class BaseMeshNode(protocol.ProcessProtocol):
     for x in data.split():
       self.newNode(x)
 
-  def leftNode(self, data):
-    node = data.rstrip()
+  def leftNode(self, node):
     self.peers.remove(node)
 
   def __leftNodes(self, data):
