@@ -1034,7 +1034,8 @@ salut_muc_channel_change_members (SalutMucChannel *self,
        * floating around for people with no _presence TXT record */
       if (handle == 0)
         {
-          DEBUG ("New sender (%s), but unknown contact", sender);
+          DEBUG ("%s sender (%s), but unknown contact",
+              joining ? "New" : "Lost", sender);
           continue;
         }
       tp_intset_add (changes, handle);
