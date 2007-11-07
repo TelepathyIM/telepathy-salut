@@ -682,6 +682,9 @@ schedule_repair(GibberRMulticastSender *sender, guint32 id) {
   PacketInfo *info;
   guint timeout;
 
+  if (sender->state > GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
+    return;
+
   info = g_hash_table_lookup(priv->packet_cache, &id);
 
   if (info != NULL && (info->packet != NULL || info->timeout != 0)) {
@@ -1439,17 +1442,26 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
 
   if (diff >= 0 && diff < PACKET_CACHE_SIZE) {
     PacketInfo *info = g_hash_table_lookup(priv->packet_cache, &id);
+
+    if (info != NULL && info->packet != NULL)
+      {
+        schedule_do_repair(sender, id);
+        return;
+      }
+
+    if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
+      /* In stopped state we only send out repairs for packets we have */
+      return;
+
     if (info == NULL) {
       guint32 i;
 
       for (i = sender->next_output_packet ; i != id + 1; i++ ){
         schedule_repair(sender, i);
       }
-    } else if (info->packet != NULL) {
-      schedule_do_repair(sender, id);
     } else {
       /* else we already knew about the packets existance, but didn't see
-       the packet just yet. Which means we already have a repair timeout 
+       the packet just yet. Which means we already have a repair timeout
        running */
        g_assert(info->timeout != 0);
        /* Reschedule the repair */
@@ -1457,7 +1469,6 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
        info->timeout = 0;
        schedule_repair(sender, id);
     }
-    return;
   }
 
   if (diff < 0
@@ -1680,4 +1691,5 @@ gibber_r_multicast_sender_stop (GibberRMulticastSender *sender)
     }
 
   g_hash_table_foreach (priv->packet_cache, stop_packet, NULL);
+  set_state (sender, GIBBER_R_MULTICAST_SENDER_STATE_STOPPED);
 }

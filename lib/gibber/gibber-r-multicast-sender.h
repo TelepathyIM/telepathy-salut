@@ -59,7 +59,8 @@ typedef enum {
   GIBBER_R_MULTICAST_SENDER_STATE_DATA_RUNNING,
   /* Node has failed, still pop packets but stop depending on it */
   GIBBER_R_MULTICAST_SENDER_STATE_FAILED,
-  GIBBER_R_MULTICAST_SENDER_STATE_UNKNOWN_FAILED
+  GIBBER_R_MULTICAST_SENDER_STATE_UNKNOWN_FAILED,
+  GIBBER_R_MULTICAST_SENDER_STATE_STOPPED,
 } GibberRMulticastSenderState;
 
 struct _GibberRMulticastSender {
@@ -161,7 +162,7 @@ gboolean gibber_r_multicast_sender_get_ack (GibberRMulticastSender *sender,
 void gibber_r_multicast_sender_ack (GibberRMulticastSender *sender,
     guint32 ack);
 
-/* Stop all pending requests */
+/* Stop all pending requests, only reply to repair requests */
 void gibber_r_multicast_sender_stop (GibberRMulticastSender *sender);
 
 G_END_DECLS
