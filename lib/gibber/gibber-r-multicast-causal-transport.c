@@ -896,6 +896,43 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
 
 }
 
+/* Packet received while disconnecting. Only react on repair requests and
+ * incoming reliable packets (to cancel repair request sends)
+ */
+static void
+disconnecting_multicast_receive (GibberRMulticastCausalTransport *self,
+                                GibberRMulticastPacket *packet)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
+  GibberRMulticastSender *sender;
+
+  if (packet->sender == 0)
+    return;
+
+  sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+      packet->sender);
+
+  if (sender == NULL)
+    return;
+
+  if (packet->type == PACKET_TYPE_REPAIR_REQUEST)
+    {
+      sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
+        packet->data.repair_request.sender_id);
+      if (sender != NULL)
+        gibber_r_multicast_sender_repair_request (sender,
+          packet->data.repair_request.packet_id);
+    }
+
+  if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet))
+    {
+      gibber_r_multicast_sender_push (sender, packet);
+    }
+}
+
+
+
 static void
 r_multicast_receive (GibberTransport *transport,
                      GibberBuffer *buffer,
@@ -924,6 +961,7 @@ r_multicast_receive (GibberTransport *transport,
             joined_multicast_receive (self, packet);
             break;
           case GIBBER_TRANSPORT_DISCONNECTING:
+            disconnecting_multicast_receive (self, packet);
             break;
           default:
             g_assert_not_reached ();
