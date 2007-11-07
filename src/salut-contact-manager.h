@@ -85,4 +85,7 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
     const gchar *activity_type, const gchar *tags);
 #endif
 
+SalutContact * salut_contact_manager_create_contact (SalutContactManager *mgr,
+    const gchar *name);
+
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/

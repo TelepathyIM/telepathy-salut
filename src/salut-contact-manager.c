@@ -540,6 +540,36 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
 }
 #endif
 
+SalutContact *
+salut_contact_manager_create_contact (SalutContactManager *self,
+                                      const gchar *name)
+{
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+  SalutContact *contact;
+
+  contact = salut_contact_new (priv->client, room_repo, name);
+
+  g_hash_table_insert (priv->contacts, g_strdup (contact->name), contact);
+  DEBUG("Adding %s to contacts", name);
+
+  g_signal_connect (contact, "found",
+      G_CALLBACK(contact_found_cb), self);
+  g_signal_connect (contact, "contact-change",
+      G_CALLBACK(contact_change_cb), self);
+#ifdef ENABLE_OLPC
+  g_signal_connect (contact, "activity-change",
+      G_CALLBACK (activity_change_cb), self);
+#endif
+  g_signal_connect (contact, "lost",
+      G_CALLBACK(contact_lost_cb), self);
+
+  g_object_weak_ref (G_OBJECT (contact), _contact_finalized_cb , self);
+
+  return contact;
+}
+
 static void
 browser_found(SalutAvahiServiceBrowser *browser,
               AvahiIfIndex interface, AvahiProtocol protocol,
@@ -548,8 +578,6 @@ browser_found(SalutAvahiServiceBrowser *browser,
               gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
   SalutContact *contact;
   const char *contact_name = name;
 
@@ -567,20 +595,7 @@ browser_found(SalutAvahiServiceBrowser *browser,
   /* FIXME: For now we assume name is unique on the lan */
   contact = g_hash_table_lookup (priv->contacts, contact_name);
   if (contact == NULL) {
-    contact = salut_contact_new(priv->client, room_repo, contact_name);
-    g_hash_table_insert(priv->contacts, g_strdup(contact->name), contact);
-    DEBUG("Adding %s to contacts", contact_name);
-    g_signal_connect(contact, "found",
-                     G_CALLBACK(contact_found_cb), mgr);
-    g_signal_connect(contact, "contact-change",
-                     G_CALLBACK(contact_change_cb), mgr);
-#ifdef ENABLE_OLPC
-    g_signal_connect(contact, "activity-change",
-        G_CALLBACK(activity_change_cb), mgr);
-#endif
-    g_signal_connect(contact, "lost",
-                     G_CALLBACK(contact_lost_cb), mgr);
-    g_object_weak_ref(G_OBJECT(contact), _contact_finalized_cb , mgr);
+    contact = salut_contact_manager_create_contact (mgr, contact_name);
   } else  if (!salut_contact_has_services(contact)) {
     g_object_ref(contact);
   }
