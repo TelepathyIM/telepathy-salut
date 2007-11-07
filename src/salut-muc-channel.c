@@ -1049,7 +1049,8 @@ salut_muc_channel_add_members (SalutMucChannel *self,
           DEBUG ("Create a contact for new sender %s", sender);
           contact = salut_contact_manager_create_contact (contact_mgr, sender);
 
-          handle = tp_handle_ensure (contact_repo, sender, NULL, NULL);
+          handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
+          g_assert (handle != 0);
         }
       else
         {
