@@ -108,6 +108,8 @@ struct _SalutMucChannelPrivate
   SalutAvahiEntryGroupService *service;
   gboolean creator;
   guint timeout;
+  /* (gchar *) -> (SalutContact *) */
+  GHashTable *senders;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -353,6 +355,8 @@ salut_muc_channel_init (SalutMucChannel *self)
   priv->client = NULL;
   priv->service = NULL;
   priv->timeout = 0;
+  priv->senders = g_hash_table_new_full (g_str_hash, g_str_equal,
+      (GDestroyNotify) g_free, (GDestroyNotify) g_object_unref);
 }
 
 static void salut_muc_channel_dispose (GObject *object);
@@ -918,6 +922,12 @@ salut_muc_channel_dispose (GObject *object)
       priv->timeout = 0;
     }
 
+  if (priv->senders != NULL)
+    {
+      g_hash_table_destroy (priv->senders);
+      priv->senders = NULL;
+    }
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
     G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose (object);
@@ -1019,7 +1029,6 @@ salut_muc_channel_add_members (SalutMucChannel *self,
   TpIntSet *empty, *changes;
   guint i;
   SalutContactManager *contact_mgr;
-  SalutContact *contact;
 
   empty = tp_intset_new ();
   changes = tp_intset_new ();
@@ -1032,6 +1041,7 @@ salut_muc_channel_add_members (SalutMucChannel *self,
     {
       TpHandle handle;
       gchar *sender = g_array_index (members, gchar *, i);
+      SalutContact *contact;
 
       handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
       if (handle == 0)
@@ -1048,6 +1058,7 @@ salut_muc_channel_add_members (SalutMucChannel *self,
           g_assert (contact != NULL);
         }
 
+      g_hash_table_insert (priv->senders, g_strdup (sender), contact);
       tp_intset_add (changes, handle);
     }
 
@@ -1074,15 +1085,9 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
       (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSet *empty, *changes;
   guint i;
-  SalutContactManager *contact_mgr;
-  SalutContact *contact;
 
   empty = tp_intset_new ();
   changes = tp_intset_new ();
-
-  g_object_get (G_OBJECT (priv->connection), "contact-manager",
-      &contact_mgr, NULL);
-  g_assert (contact_mgr != NULL);
 
   for (i = 0; i < members->len; i++)
     {
@@ -1096,12 +1101,7 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
           continue;
         }
 
-      contact = salut_contact_manager_get_contact (contact_mgr, handle);
-      g_assert (contact != NULL);
-      /* We want to release the ref we kept on this contact but get_contact
-       * ref it, so we have to call unref twice */
-      g_object_unref (contact);
-      g_object_unref (contact);
+      g_hash_table_remove (priv->senders, sender);
 
       tp_intset_add (changes, handle);
     }
@@ -1115,7 +1115,6 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
                                  TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (changes);
   tp_intset_destroy (empty);
-  g_object_unref (contact_mgr);
 }
 
 static void
