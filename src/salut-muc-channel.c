@@ -1018,9 +1018,15 @@ salut_muc_channel_add_members (SalutMucChannel *self,
       (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSet *empty, *changes;
   guint i;
+  SalutContactManager *contact_mgr;
+  SalutContact *contact;
 
   empty = tp_intset_new ();
   changes = tp_intset_new ();
+
+  g_object_get (G_OBJECT (priv->connection), "contact-manager",
+      &contact_mgr, NULL);
+  g_assert (contact_mgr != NULL);
 
   for (i = 0; i < members->len; i++)
     {
@@ -1030,9 +1036,18 @@ salut_muc_channel_add_members (SalutMucChannel *self,
       handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
       if (handle == 0)
         {
-          DEBUG ("New sender (%s), but unknown contact", sender);
-          continue;
+          DEBUG ("Create a contact for new sender %s", sender);
+          contact = salut_contact_manager_create_contact (contact_mgr, sender);
+
+          handle = tp_handle_ensure (contact_repo, sender, NULL, NULL);
         }
+      else
+        {
+          contact = salut_contact_manager_get_contact (contact_mgr, handle);
+          /* contact has been refed */
+          g_assert (contact != NULL);
+        }
+
       tp_intset_add (changes, handle);
     }
 
@@ -1045,6 +1060,7 @@ salut_muc_channel_add_members (SalutMucChannel *self,
                                  TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (changes);
   tp_intset_destroy (empty);
+  g_object_unref (contact_mgr);
 }
 
 static void
@@ -1058,9 +1074,15 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
       (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSet *empty, *changes;
   guint i;
+  SalutContactManager *contact_mgr;
+  SalutContact *contact;
 
   empty = tp_intset_new ();
   changes = tp_intset_new ();
+
+  g_object_get (G_OBJECT (priv->connection), "contact-manager",
+      &contact_mgr, NULL);
+  g_assert (contact_mgr != NULL);
 
   for (i = 0; i < members->len; i++)
     {
@@ -1073,6 +1095,14 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
           DEBUG ("Lost sender (%s), but unknown contact", sender);
           continue;
         }
+
+      contact = salut_contact_manager_get_contact (contact_mgr, handle);
+      g_assert (contact != NULL);
+      /* We want to release the ref we kept on this contact but get_contact
+       * ref it, so we have to call unref twice */
+      g_object_unref (contact);
+      g_object_unref (contact);
+
       tp_intset_add (changes, handle);
     }
 
@@ -1085,6 +1115,7 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
                                  TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (changes);
   tp_intset_destroy (empty);
+  g_object_unref (contact_mgr);
 }
 
 static void
