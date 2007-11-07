@@ -1008,9 +1008,8 @@ salut_muc_channel_send_stanza(SalutMucChannel *self, guint type,
 }
 
 static void
-salut_muc_channel_change_members (SalutMucChannel *self,
-                                  GArray *members,
-                                  gboolean joining)
+salut_muc_channel_add_members (SalutMucChannel *self,
+                               GArray *members)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection =
@@ -1029,13 +1028,9 @@ salut_muc_channel_change_members (SalutMucChannel *self,
       gchar *sender = g_array_index (members, gchar *, i);
 
       handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
-      /* FIXME: what to do with invalid handles? We could _ensure
-       * rather than _lookup, but that would mean we'd have handles
-       * floating around for people with no _presence TXT record */
       if (handle == 0)
         {
-          DEBUG ("%s sender (%s), but unknown contact",
-              joining ? "New" : "Lost", sender);
+          DEBUG ("New sender (%s), but unknown contact", sender);
           continue;
         }
       tp_intset_add (changes, handle);
@@ -1043,8 +1038,48 @@ salut_muc_channel_change_members (SalutMucChannel *self,
 
   tp_group_mixin_change_members (G_OBJECT(self),
                                  "",
-                                 joining ? changes : empty,
-                                 joining ? empty : changes,
+                                 changes,
+                                 empty,
+                                 empty, empty,
+                                 0,
+                                 TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+  tp_intset_destroy (changes);
+  tp_intset_destroy (empty);
+}
+
+static void
+salut_muc_channel_remove_members (SalutMucChannel *self,
+                                  GArray *members)
+{
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+  TpBaseConnection *base_connection =
+      (TpBaseConnection *) (priv->connection);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
+      (base_connection, TP_HANDLE_TYPE_CONTACT);
+  TpIntSet *empty, *changes;
+  guint i;
+
+  empty = tp_intset_new ();
+  changes = tp_intset_new ();
+
+  for (i = 0; i < members->len; i++)
+    {
+      TpHandle handle;
+      gchar *sender = g_array_index (members, gchar *, i);
+
+      handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
+      if (handle == 0)
+        {
+          DEBUG ("Lost sender (%s), but unknown contact", sender);
+          continue;
+        }
+      tp_intset_add (changes, handle);
+    }
+
+  tp_group_mixin_change_members (G_OBJECT(self),
+                                 "",
+                                 empty,
+                                 changes,
                                  empty, empty,
                                  0,
                                  TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
@@ -1112,7 +1147,7 @@ salut_muc_channel_new_senders (GibberMucConnection *connection,
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
 
-  salut_muc_channel_change_members (self, senders, TRUE);
+  salut_muc_channel_add_members (self, senders);
   if (!tp_handle_set_is_member (self->group.members,
       base_connection->self_handle))
     salut_muc_channel_add_self_to_members (self);
@@ -1123,7 +1158,7 @@ salut_muc_channel_lost_senders(GibberMucConnection *connection,
     GArray *senders, gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
 
-  salut_muc_channel_change_members(self, senders, FALSE);
+  salut_muc_channel_remove_members (self, senders);
 }
 
 static gboolean
