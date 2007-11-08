@@ -31,6 +31,7 @@
 #include "salut-avahi-enums.h"
 
 #include "salut-presence.h"
+#include "salut-connection.h"
 
 G_BEGIN_DECLS
 
@@ -84,9 +85,8 @@ GType salut_contact_get_type(void);
 #define SALUT_CONTACT_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT, SalutContactClass))
 
-SalutContact *salut_contact_new(SalutAvahiClient *client,
-    TpHandleRepoIface *room_repo, const gchar *name,
-    TpHandleRepoIface *contact_repo);
+SalutContact *salut_contact_new (SalutAvahiClient *client,
+    SalutConnection *conn, const gchar *name);
 
 void
 salut_contact_add_service(SalutContact *contact,

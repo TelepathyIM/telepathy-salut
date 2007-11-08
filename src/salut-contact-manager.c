@@ -544,13 +544,9 @@ salut_contact_manager_create_contact (SalutContactManager *self,
                                       const gchar *name)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
   SalutContact *contact;
 
-  contact = salut_contact_new (priv->client, room_repo, name, contact_repo);
+  contact = salut_contact_new (priv->client, priv->connection, name);
 
   g_hash_table_insert (priv->contacts, g_strdup (contact->name), contact);
   DEBUG("Adding %s to contacts", name);

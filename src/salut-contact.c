@@ -125,6 +125,7 @@ typedef struct _SalutContactPrivate SalutContactPrivate;
 
 struct _SalutContactPrivate
 {
+  SalutConnection *connection;
   gboolean dispose_has_run;
   gchar *alias;
   SalutAvahiClient *client;
@@ -132,8 +133,6 @@ struct _SalutContactPrivate
   gboolean found;
   SalutAvahiRecordBrowser *record_browser;
   GList *avatar_requests;
-  TpHandleRepoIface *room_repo;
-  TpHandleRepoIface *contact_repo;
   guint presence_resolver_failed_timer;
   TpHandle handle;
 #ifdef ENABLE_OLPC
@@ -229,6 +228,8 @@ salut_contact_dispose (GObject *object)
 {
   SalutContact *self = SALUT_CONTACT (object);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
+      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
 
   DEBUG_CONTACT (self, "Disposing contact");
 
@@ -240,15 +241,16 @@ salut_contact_dispose (GObject *object)
 #ifdef ENABLE_OLPC
   if (self->olpc_cur_act_room != 0)
     {
-      tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
+      TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+          ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+
+      tp_handle_unref (room_repo, self->olpc_cur_act_room);
       self->olpc_cur_act_room = 0;
     }
 
   g_hash_table_destroy (priv->olpc_announced_activities);
   g_hash_table_destroy (priv->olpc_private_activities);
 #endif
-
-  priv->room_repo = NULL;
 
   salut_contact_avatar_request_flush(self, NULL, 0);
 
@@ -262,7 +264,7 @@ salut_contact_dispose (GObject *object)
   priv->resolvers = NULL;
 
   if (priv->handle != 0)
-    tp_handle_unref (priv->contact_repo, priv->handle);
+    tp_handle_unref (contact_repo, priv->handle);
 
   if (G_OBJECT_CLASS (salut_contact_parent_class)->dispose)
     G_OBJECT_CLASS (salut_contact_parent_class)->dispose (object);
@@ -356,12 +358,12 @@ find_resolver(SalutContact *contact,
 
 SalutContact *
 salut_contact_new(SalutAvahiClient *client,
-                  TpHandleRepoIface *room_repo,
-                  const gchar *name,
-                  TpHandleRepoIface *contact_repo)
+                  SalutConnection *connection,
+                  const gchar *name)
 {
   SalutContact *ret;
   SalutContactPrivate *priv;
+  TpHandleRepoIface *contact_repo;
 
   ret = g_object_new(SALUT_TYPE_CONTACT, NULL);
   priv = SALUT_CONTACT_GET_PRIVATE (ret);
@@ -370,8 +372,10 @@ salut_contact_new(SalutAvahiClient *client,
 
   g_object_ref(client);
   priv->client = client;
-  priv->room_repo = room_repo;
-  priv->contact_repo = contact_repo;
+  priv->connection = connection;
+
+  contact_repo = tp_base_connection_get_handles
+      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
 
   priv->handle = tp_handle_ensure (contact_repo, name, NULL, NULL);
 
@@ -456,6 +460,8 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
 {
   SalutContact *self = SALUT_CONTACT (userdata);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
   AvahiStringList *t;
   TpHandle room_handle = 0;
   char *activity_id = NULL;
@@ -485,7 +491,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
   activity = g_hash_table_lookup (priv->olpc_announced_activities, name);
   if (activity == NULL)
     {
-      activity = activity_new (priv->room_repo);
+      activity = activity_new (room_repo);
       g_hash_table_insert (priv->olpc_announced_activities, g_strdup (name),
           activity);
     }
@@ -503,7 +509,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
       char *room_name;
 
       avahi_string_list_get_pair (t, NULL, &room_name, NULL);
-      room_handle = tp_handle_ensure (priv->room_repo, room_name, NULL, NULL);
+      room_handle = tp_handle_ensure (room_repo, room_name, NULL, NULL);
       avahi_free (room_name);
     }
 
@@ -550,7 +556,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
       activity_id = NULL;
 
       if (activity->room != 0)
-        tp_handle_unref (priv->room_repo, activity->room);
+        tp_handle_unref (room_repo, activity->room);
       activity->room = room_handle;
       room_handle = 0;
 
@@ -563,7 +569,7 @@ activity_resolved_cb (SalutAvahiServiceResolver *resolver,
       color, activity_name, activity_type, tags);
 
   if (room_handle != 0)
-    tp_handle_unref (priv->room_repo, room_handle);
+    tp_handle_unref (room_repo, room_handle);
   avahi_free (activity_id);
   avahi_free (activity_type);
   avahi_free (activity_name);
@@ -589,6 +595,8 @@ salut_contact_takes_part_in_olpc_activity (SalutContact *self,
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   SalutContactActivity *activity;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
 
   activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
   if (activity != NULL)
@@ -612,13 +620,13 @@ salut_contact_takes_part_in_olpc_activity (SalutContact *self,
   DEBUG_CONTACT (self, "added in activity %s as he just invited us",
       activity_id);
 
-  activity = activity_new (priv->room_repo);
+  activity = activity_new (room_repo);
   g_hash_table_insert (priv->olpc_private_activities,
       g_strdup (activity_id), activity);
 
   activity->activity_id = g_strdup (activity_id);
   activity->room = room;
-  tp_handle_ref (priv->room_repo, activity->room);
+  tp_handle_ref (room_repo, activity->room);
 
   g_signal_emit (self, signals[CONTACT_CHANGE], 0,
       SALUT_CONTACT_OLPC_ACTIVITIES);
@@ -847,7 +855,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
             }
           else
             {
-              room_handle = tp_handle_ensure (priv->room_repo, room_value,
+              room_handle = tp_handle_ensure (room_repo, room_value,
                   NULL, NULL);
             }
           avahi_free (room_value);
@@ -868,7 +876,7 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
             {
               g_free (self->olpc_cur_act);
               if (self->olpc_cur_act_room != 0)
-                tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
+                tp_handle_unref (room_repo, self->olpc_cur_act_room);
               self->olpc_cur_act = NULL;
               self->olpc_cur_act_room = 0;
               SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
@@ -883,14 +891,14 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
             {
               g_free (self->olpc_cur_act);
               if (self->olpc_cur_act_room != 0)
-                tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
+                tp_handle_unref (room_repo, self->olpc_cur_act_room);
               self->olpc_cur_act_room = room_handle;
               self->olpc_cur_act = g_strdup (act_value);
               SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
             }
           else
             {
-              tp_handle_unref (priv->room_repo, room_handle);
+              tp_handle_unref (room_repo, room_handle);
             }
           avahi_free (act_value);
         }
