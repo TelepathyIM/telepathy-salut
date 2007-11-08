@@ -276,10 +276,9 @@ contact_found_cb(SalutContact *contact, gpointer userdata) {
   TpIntSet *to_rem = tp_intset_new();
   TpHandle handle;
 
-  handle = tp_handle_ensure(handle_repo, contact->name, NULL, NULL);
+  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   tp_intset_add(to_add, handle);
   change_all_groups(mgr, to_add, to_rem);
-  /* Add an extra ref, to ensure keeping this untill we got the lost signal */
   tp_intset_destroy(to_add);
   tp_intset_destroy(to_rem);
 }
