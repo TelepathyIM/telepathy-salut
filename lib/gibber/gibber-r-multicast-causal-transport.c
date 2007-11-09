@@ -1404,6 +1404,18 @@ gibber_r_multicast_causal_transport_get_sender (
   return sender;
 }
 
+GibberRMulticastSender *
+gibber_r_multicast_causal_transport_get_sender_by_name (
+    GibberRMulticastCausalTransport *transport,
+    const gchar *name)
+{
+  GibberRMulticastCausalTransportPrivate *priv =
+    GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
+
+  return gibber_r_multicast_sender_group_lookup_by_name (priv->sender_group,
+     name);
+}
+
 void
 gibber_r_multicast_causal_transport_remove_sender (
     GibberRMulticastCausalTransport *transport, guint32 sender_id)
