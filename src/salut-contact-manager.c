@@ -579,7 +579,7 @@ salut_contact_manager_ensure_contact (SalutContactManager *self,
   contact = g_hash_table_lookup (priv->contacts, name);
   if (contact == NULL)
     {
-      DEBUG ("contact %s doesn't exist yet. Create it", name);
+      DEBUG ("contact %s doesn't exist yet. Creating it", name);
       contact = salut_contact_manager_create_contact (self, name);
     }
   else
