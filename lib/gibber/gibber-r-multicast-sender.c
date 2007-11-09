@@ -983,12 +983,14 @@ pop_data_packet (GibberRMulticastSender *sender)
     p->packet_id, sender->next_output_data_packet,
     p->packet->data.data.stream_id);
 
-  if (p->packet->data.data.flags & GIBBER_R_MULTICAST_DATA_PACKET_END) {
+  if (p->packet->packet_id == sender->next_output_data_packet) {
     gsize size;
     guint8 *data;
 
     data = gibber_r_multicast_packet_get_payload(p->packet, &size);
-    g_assert(size == p->packet->data.data.total_size);
+
+    if (size != p->packet->data.data.total_size)
+      goto incorrect_data_size;
 
     update_next_data_output_state (sender);
     signal_data(sender, p->packet->data.data.stream_id, data, size);
@@ -997,7 +999,7 @@ pop_data_packet (GibberRMulticastSender *sender)
     packet_info_try_gc (sender, p);
   } else {
     gsize off = 0;
-    guint8 *data, *d;
+    guint8 *data = NULL, *d;
     guint32 payload_size, i;
     gsize size;
 
@@ -1015,7 +1017,12 @@ pop_data_packet (GibberRMulticastSender *sender)
           && tp->packet->data.data.stream_id == stream_id)
           {
              d = gibber_r_multicast_packet_get_payload(tp->packet, &size);
-             g_assert(off + size <= payload_size);
+             if (off + size > payload_size)
+               {
+                 off += size;
+                 break;
+               }
+
              memcpy(data + off, d, size);
              off += size;
 
@@ -1023,7 +1030,12 @@ pop_data_packet (GibberRMulticastSender *sender)
              packet_info_try_gc (sender, tp);
           }
       }
-    g_assert(off == payload_size);
+
+    if (off != payload_size)
+      {
+        g_free (data);
+        goto incorrect_data_size;
+      }
 
     update_next_data_output_state (sender);
     signal_data(sender, stream_id, data, payload_size);
@@ -1031,6 +1043,10 @@ pop_data_packet (GibberRMulticastSender *sender)
   }
 
   return TRUE;
+incorrect_data_size:
+  DEBUG_SENDER (sender, "Data packet didn't have the claimed amount of data");
+  signal_failure (sender);
+  return FALSE;
 }
 
 static void
