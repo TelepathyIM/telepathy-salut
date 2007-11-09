@@ -1043,21 +1043,8 @@ salut_muc_channel_add_members (SalutMucChannel *self,
       gchar *sender = g_array_index (members, gchar *, i);
       SalutContact *contact;
 
+      contact = salut_contact_manager_ensure_contact (contact_mgr, sender);
       handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
-      if (handle == 0)
-        {
-          DEBUG ("Create a contact for new sender %s", sender);
-          contact = salut_contact_manager_create_contact (contact_mgr, sender);
-
-          handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
-          g_assert (handle != 0);
-        }
-      else
-        {
-          contact = salut_contact_manager_get_contact (contact_mgr, handle);
-          /* contact has been refed */
-          g_assert (contact != NULL);
-        }
 
       g_hash_table_insert (priv->senders, g_strdup (sender), contact);
       tp_intset_add (changes, handle);

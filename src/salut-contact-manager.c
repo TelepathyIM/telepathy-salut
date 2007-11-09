@@ -539,7 +539,7 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
 }
 #endif
 
-SalutContact *
+static SalutContact *
 salut_contact_manager_create_contact (SalutContactManager *self,
                                       const gchar *name)
 {
@@ -565,6 +565,27 @@ salut_contact_manager_create_contact (SalutContactManager *self,
       G_CALLBACK(contact_lost_cb), self);
 
   g_object_weak_ref (G_OBJECT (contact), _contact_finalized_cb , self);
+
+  return contact;
+}
+
+SalutContact *
+salut_contact_manager_ensure_contact (SalutContactManager *self,
+                                      const gchar *name)
+{
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+  SalutContact *contact;
+
+  contact = g_hash_table_lookup (priv->contacts, name);
+  if (contact == NULL)
+    {
+      DEBUG ("contact %s doesn't exist yet. Create it", name);
+      contact = salut_contact_manager_create_contact (self, name);
+    }
+  else
+    {
+      g_object_ref (contact);
+    }
 
   return contact;
 }
