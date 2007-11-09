@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "gibber-r-multicast-sender.h"
+#include "gibber-util.h"
 #include "signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_RMULTICAST_SENDER
@@ -125,6 +126,22 @@ gibber_r_multicast_sender_group_lookup (GibberRMulticastSenderGroup *group,
     guint32 sender_id)
 {
   return g_hash_table_lookup (group->senders, GUINT_TO_POINTER (sender_id));
+}
+
+static gboolean
+find_by_name (gpointer key, gpointer value, gpointer user_data)
+{
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
+  const gchar *name = (gchar *)user_data;
+
+  return !gibber_strdiff (sender->name, name);
+}
+
+GibberRMulticastSender *
+gibber_r_multicast_sender_group_lookup_by_name (
+    GibberRMulticastSenderGroup *group, const gchar *name)
+{
+  return g_hash_table_find (group->senders, find_by_name, (gpointer) name);
 }
 
 void

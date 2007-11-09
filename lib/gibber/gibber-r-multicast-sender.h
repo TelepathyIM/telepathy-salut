@@ -108,6 +108,9 @@ void gibber_r_multicast_sender_group_add (GibberRMulticastSenderGroup *group,
 GibberRMulticastSender * gibber_r_multicast_sender_group_lookup (
     GibberRMulticastSenderGroup *group, guint32 sender_id);
 
+GibberRMulticastSender * gibber_r_multicast_sender_group_lookup_by_name (
+    GibberRMulticastSenderGroup *group, const gchar *name);
+
 void gibber_r_multicast_sender_group_remove (
     GibberRMulticastSenderGroup *group, guint32 sender_id);
 
