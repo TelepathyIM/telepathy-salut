@@ -105,6 +105,9 @@ class BaseMeshNode(protocol.ProcessProtocol):
   def pushInput(self, data):
     self.process.write("INPUT:" + b64encode(data) + "\n")
 
+  def fail(self, name):
+    self.process.write("FAIL:" + name + "\n")
+
   def disconnect(self):
     self.process.write("DISCONNECT\n")
 
