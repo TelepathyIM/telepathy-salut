@@ -669,6 +669,10 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
   AvahiStringList *t;
   gint changes = 0;
   gboolean alias_seen = FALSE;
+#ifdef ENABLE_OLPC
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+    ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+#endif
 
   DEBUG_RESOLVER (self, resolver, "contact %s resolved", self->name);
 
