@@ -134,7 +134,6 @@ struct _SalutContactPrivate
   SalutAvahiRecordBrowser *record_browser;
   GList *avatar_requests;
   guint presence_resolver_failed_timer;
-  TpHandle handle;
 #ifdef ENABLE_OLPC
   /* mDNS instance name -> SalutContactActivity */
   GHashTable *olpc_announced_activities;
@@ -263,8 +262,8 @@ salut_contact_dispose (GObject *object)
   g_list_free(priv->resolvers);
   priv->resolvers = NULL;
 
-  if (priv->handle != 0)
-    tp_handle_unref (contact_repo, priv->handle);
+  if (self->handle != 0)
+    tp_handle_unref (contact_repo, self->handle);
 
   if (G_OBJECT_CLASS (salut_contact_parent_class)->dispose)
     G_OBJECT_CLASS (salut_contact_parent_class)->dispose (object);
@@ -377,7 +376,7 @@ salut_contact_new(SalutAvahiClient *client,
   contact_repo = tp_base_connection_get_handles
       ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
 
-  priv->handle = tp_handle_ensure (contact_repo, name, NULL, NULL);
+  ret->handle = tp_handle_ensure (contact_repo, name, NULL, NULL);
 
   return ret;
 }

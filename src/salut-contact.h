@@ -59,6 +59,7 @@ struct _SalutContact {
     gchar *avatar_token;
     gchar *status_message;
     gchar *jid;
+    TpHandle handle;
 #ifdef ENABLE_OLPC
     GArray *olpc_key;
     gchar *olpc_color;

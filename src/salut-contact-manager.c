@@ -268,16 +268,10 @@ change_all_groups(SalutContactManager *mgr, TpIntSet *add, TpIntSet *rem) {
 static void
 contact_found_cb(SalutContact *contact, gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(priv->connection), TP_HANDLE_TYPE_CONTACT);
-
   TpIntSet *to_add = tp_intset_new();
   TpIntSet *to_rem = tp_intset_new();
-  TpHandle handle;
 
-  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
-  tp_intset_add(to_add, handle);
+  tp_intset_add(to_add, contact->handle);
   change_all_groups(mgr, to_add, to_rem);
   tp_intset_destroy(to_add);
   tp_intset_destroy(to_rem);
@@ -416,20 +410,13 @@ contact_change_cb(SalutContact *contact, gint changes, gpointer userdata) {
 static void
 contact_lost_cb(SalutContact *contact, gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(priv->connection), TP_HANDLE_TYPE_CONTACT);
 
   TpIntSet *to_add = tp_intset_new();
   TpIntSet *to_rem = tp_intset_new();
-  TpHandle handle;
 
   DEBUG("Removing %s from contacts", contact->name);
-  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
 
-  g_assert(handle != 0);
-
-  tp_intset_add(to_rem, handle);
+  tp_intset_add(to_rem, contact->handle);
   change_all_groups(mgr, to_add, to_rem);
 
   tp_intset_destroy(to_add);

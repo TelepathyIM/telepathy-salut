@@ -1022,10 +1022,6 @@ salut_muc_channel_add_members (SalutMucChannel *self,
                                GArray *members)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *base_connection =
-      (TpBaseConnection *) (priv->connection);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
-      (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSet *empty, *changes;
   guint i;
   SalutContactManager *contact_mgr;
@@ -1039,15 +1035,13 @@ salut_muc_channel_add_members (SalutMucChannel *self,
 
   for (i = 0; i < members->len; i++)
     {
-      TpHandle handle;
       gchar *sender = g_array_index (members, gchar *, i);
       SalutContact *contact;
 
       contact = salut_contact_manager_ensure_contact (contact_mgr, sender);
-      handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
 
       g_hash_table_insert (priv->senders, sender, contact);
-      tp_intset_add (changes, handle);
+      tp_intset_add (changes, contact->handle);
     }
 
   tp_group_mixin_change_members (G_OBJECT(self),
