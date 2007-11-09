@@ -356,7 +356,7 @@ salut_muc_channel_init (SalutMucChannel *self)
   priv->service = NULL;
   priv->timeout = 0;
   priv->senders = g_hash_table_new_full (g_str_hash, g_str_equal,
-      (GDestroyNotify) g_free, (GDestroyNotify) g_object_unref);
+      NULL, (GDestroyNotify) g_object_unref);
 }
 
 static void salut_muc_channel_dispose (GObject *object);
@@ -1046,7 +1046,7 @@ salut_muc_channel_add_members (SalutMucChannel *self,
       contact = salut_contact_manager_ensure_contact (contact_mgr, sender);
       handle = tp_handle_lookup (contact_repo, sender, NULL, NULL);
 
-      g_hash_table_insert (priv->senders, g_strdup (sender), contact);
+      g_hash_table_insert (priv->senders, sender, contact);
       tp_intset_add (changes, handle);
     }
 
