@@ -27,6 +27,7 @@
 G_BEGIN_DECLS
 
 void gibber_normalize_address (struct sockaddr_storage *addr);
+gboolean gibber_strdiff (const gchar *left, const gchar *right);
 
 G_END_DECLS
 

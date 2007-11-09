@@ -45,3 +45,28 @@ gibber_normalize_address (struct sockaddr_storage *addr)
       s4->sin_port = port;
     }
 }
+
+/**
+ * gibber_strdiff:
+ * @left: The first string to compare (may be NULL)
+ * @right: The second string to compare (may be NULL)
+ *
+ * Return %TRUE if the given strings are different. Unlike #strcmp this
+ * function will handle null pointers, treating them as distinct from any
+ * string.
+ *
+ * Returns: %FALSE if @left and @right are both %NULL, or if
+ *          neither is %NULL and both have the same contents; %TRUE otherwise
+ */
+gboolean
+gibber_strdiff (const gchar *left, const gchar *right)
+{
+  if ((NULL == left) != (NULL == right))
+    return TRUE;
+
+  else if (left == right)
+    return FALSE;
+
+  else
+    return (0 != strcmp (left, right));
+}
