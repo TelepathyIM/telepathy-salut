@@ -546,6 +546,8 @@ salut_contact_manager_create_contact (SalutContactManager *self,
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContact *contact;
 
+  g_assert (g_hash_table_lookup (priv->contacts, name) == NULL);
+
   contact = salut_contact_new (priv->client, priv->connection, name);
 
   g_hash_table_insert (priv->contacts, g_strdup (contact->name), contact);
