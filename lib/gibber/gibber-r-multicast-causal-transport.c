@@ -1114,13 +1114,14 @@ gibber_r_multicast_causal_transport_send (
 
   add_packet_depends (self, packet);
   payloaded = gibber_r_multicast_packet_add_payload (packet, data, size);
+  gibber_r_multicast_packet_set_data_info (packet, stream_id,
+        GIBBER_R_MULTICAST_DATA_PACKET_START, size);
 
   if (payloaded < size)
     {
       do
         {
           gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
-          gibber_r_multicast_packet_set_data_info (packet, stream_id, 0, size);
           ret = sendout_packet (self, packet, error);
           gibber_r_multicast_sender_push (priv->self, packet);
           g_object_unref (packet);
@@ -1129,6 +1130,7 @@ gibber_r_multicast_causal_transport_send (
               priv->self->id, priv->transport->max_packet_size);
           payloaded += gibber_r_multicast_packet_add_payload (packet,
               data + payloaded, size - payloaded);
+          gibber_r_multicast_packet_set_data_info (packet, stream_id, 0, size);
       } while (payloaded < size);
      gibber_r_multicast_packet_set_data_info (packet, stream_id,
         GIBBER_R_MULTICAST_DATA_PACKET_END, size);
