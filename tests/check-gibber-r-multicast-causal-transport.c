@@ -30,7 +30,8 @@
 /* Numer of polls we expect the id generation to do */
 #define ID_GENERATION_EXPECTED_POLLS 3
 
-#define TEST_DATA_SIZE 300
+/* Assume mtu is 1500, we want at least 3 packets */
+#define TEST_DATA_SIZE 3300
 GMainLoop *loop;
 
 GibberRMulticastCausalTransport *
@@ -272,8 +273,14 @@ fragmentation_send_hook (GibberTransport *transport,
     }
 
   payload = gibber_r_multicast_packet_get_payload (packet, &size);
-  bytes += size;
 
+  if (bytes == 0)
+    fail_unless
+      (packet->data.data.flags == GIBBER_R_MULTICAST_DATA_PACKET_START);
+  else if (bytes + size < TEST_DATA_SIZE)
+    fail_unless (packet->data.data.flags == 0);
+
+  bytes += size;
   fail_unless (bytes <= TEST_DATA_SIZE);
 
   /* check our bytes */
@@ -285,6 +292,8 @@ fragmentation_send_hook (GibberTransport *transport,
 
   if (bytes == TEST_DATA_SIZE)
     {
+      fail_unless
+        (packet->data.data.flags == GIBBER_R_MULTICAST_DATA_PACKET_END);
       g_object_unref (packet);
       g_main_loop_quit (loop);
       return FALSE;
