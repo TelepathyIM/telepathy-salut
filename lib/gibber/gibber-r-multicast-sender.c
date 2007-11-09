@@ -1710,3 +1710,10 @@ gibber_r_multicast_sender_stop (GibberRMulticastSender *sender)
   g_hash_table_foreach (priv->packet_cache, stop_packet, NULL);
   set_state (sender, GIBBER_R_MULTICAST_SENDER_STATE_STOPPED);
 }
+
+void
+gibber_r_multicast_sender_fail (GibberRMulticastSender *sender)
+{
+  signal_failure (sender);
+}
+

@@ -168,6 +168,9 @@ void gibber_r_multicast_sender_ack (GibberRMulticastSender *sender,
 /* Stop all pending requests, only reply to repair requests */
 void gibber_r_multicast_sender_stop (GibberRMulticastSender *sender);
 
+/* Trigger failure detection, for testing only */
+void gibber_r_multicast_sender_fail (GibberRMulticastSender *sender);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_R_MULTICAST_SENDER_H__*/
