@@ -39,6 +39,19 @@ send_hook(GibberTransport *transport, const guint8 *data,
   return TRUE;
 }
 
+static void
+fail_node (gchar *name)
+{
+  GibberRMulticastSender *sender;
+
+  name = g_strstrip(name);
+
+  sender = gibber_r_multicast_causal_transport_get_sender_by_name (rmc, name);
+  g_assert (sender != NULL);
+
+  gibber_r_multicast_sender_fail (sender);
+}
+
 gboolean
 got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   GIOStatus s;
@@ -61,6 +74,10 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   } else if (strcmp (buffer, "DISCONNECT\n") == 0) {
     gibber_transport_disconnect (GIBBER_TRANSPORT(rm));
     goto out;
+  } else if (g_str_has_prefix(buffer, "FAIL:")) {
+    /* this will modify our buffer */
+    fail_node (buffer + strlen("FAIL:"));
+    goto out;
   } else {
     g_assert_not_reached();
   }
@@ -74,9 +91,9 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   }
 
   g_free(b64);
+out:
   g_free(buffer);
 
-out:
   return TRUE;
 }
 
