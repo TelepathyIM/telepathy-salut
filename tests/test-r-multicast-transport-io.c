@@ -49,7 +49,7 @@ fail_node (gchar *name)
   sender = gibber_r_multicast_causal_transport_get_sender_by_name (rmc, name);
   g_assert (sender != NULL);
 
-  gibber_r_multicast_sender_fail (sender);
+  _gibber_r_multicast_TEST_sender_fail (sender);
 }
 
 gboolean

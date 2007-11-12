@@ -169,7 +169,7 @@ void gibber_r_multicast_sender_ack (GibberRMulticastSender *sender,
 void gibber_r_multicast_sender_stop (GibberRMulticastSender *sender);
 
 /* Trigger failure detection, for testing only */
-void gibber_r_multicast_sender_fail (GibberRMulticastSender *sender);
+void _gibber_r_multicast_TEST_sender_fail (GibberRMulticastSender *sender);
 
 G_END_DECLS
 

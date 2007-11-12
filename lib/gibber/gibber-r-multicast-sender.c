@@ -1728,7 +1728,7 @@ gibber_r_multicast_sender_stop (GibberRMulticastSender *sender)
 }
 
 void
-gibber_r_multicast_sender_fail (GibberRMulticastSender *sender)
+_gibber_r_multicast_TEST_sender_fail (GibberRMulticastSender *sender)
 {
   signal_failure (sender);
 }
