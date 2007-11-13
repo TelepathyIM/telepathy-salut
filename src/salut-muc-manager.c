@@ -1140,12 +1140,14 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
      (TpBaseConnection*) priv->connection, TP_HANDLE_TYPE_ROOM);
-  SalutTubesChannel *chan;
+  SalutTubesChannel *chan = NULL;
 
   g_return_if_fail (tp_handle_is_valid (room_repo, room_handle, NULL));
 
+#ifdef ENABLE_DBUS_TUBES
   chan = g_hash_table_lookup (priv->tubes_channels,
       GUINT_TO_POINTER (room_handle));
+#endif
   if (chan == NULL)
     {
       GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
