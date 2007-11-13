@@ -63,7 +63,6 @@ GDebugKey keys[] = {
   { "muc-connection", DEBUG_MUC },
   { "net",            DEBUG_NET },
   { "connection",     DEBUG_CONNECTION },
-  { "persist",        DEBUG_PERSIST },
   { "self",           DEBUG_SELF },
   { "tubes",          DEBUG_TUBES },
   { "xmpp-connection-manager",  DEBUG_XCM },
@@ -81,8 +80,13 @@ void debug_set_flags_from_env ()
 
   flags_string = g_getenv ("SALUT_DEBUG");
 
+#ifdef HAVE_TP_DEBUG_SET_FLAGS
+      tp_debug_set_flags (flags_string);
+#else
+      tp_debug_set_flags_from_string (flags_string);
+#endif
+
   if (flags_string) {
-    tp_debug_set_flags_from_env("SALUT_DEBUG");
     debug_set_flags (g_parse_debug_string (flags_string, keys, nkeys));
   }
 }

@@ -131,6 +131,11 @@ PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.5.14])
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
+AC_CHECK_LIB(telepathy-glib, tp_debug_set_flags,
+  [ AC_DEFINE(HAVE_TP_DEBUG_SET_FLAGS, [],
+    [Define if tp_debug_set_flags() function is provided by telepathy-glib]) ],
+  [], [$TP_GLIB_LIBS])
+
 dnl Check for OpenSSL
 PKG_CHECK_MODULES(LIBSSL, [openssl], 
             [ HAVE_LIBSSL="yes" ],
