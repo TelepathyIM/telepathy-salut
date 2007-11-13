@@ -436,8 +436,9 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
   size_t dns_payload_length;
   AvahiAddress addr;
 
+  /* We are already announcing this muc group */
   if (priv->muc_group != NULL)
-    return;
+    return TRUE;
 
   g_assert (priv->service == NULL);
 
