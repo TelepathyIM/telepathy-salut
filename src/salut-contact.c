@@ -265,6 +265,12 @@ salut_contact_dispose (GObject *object)
   if (self->handle != 0)
     tp_handle_unref (contact_repo, self->handle);
 
+  if (priv->presence_resolver_failed_timer > 0)
+    {
+      g_source_remove (priv->presence_resolver_failed_timer);
+      priv->presence_resolver_failed_timer = 0;
+    }
+
   if (G_OBJECT_CLASS (salut_contact_parent_class)->dispose)
     G_OBJECT_CLASS (salut_contact_parent_class)->dispose (object);
 }
