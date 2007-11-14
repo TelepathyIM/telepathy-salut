@@ -5,7 +5,7 @@ AC_PREREQ([2.59])
 #     odd minor -> development series
 #     even minor -> stable series
 #     increment micro for each release within a series
-#   set salut_release to 1.
+#   set salut_nano_version to 0.
 
 m4_define([salut_major_version], [0])
 m4_define([salut_minor_version], [1])
