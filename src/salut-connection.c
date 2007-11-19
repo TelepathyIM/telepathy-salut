@@ -1701,6 +1701,9 @@ salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
 
   DEBUG ("called for %u", handle);
 
+  if (!check_contact (base, handle, context))
+    return;
+
   if (handle == base->self_handle)
     {
       arr = g_ptr_array_new ();
