@@ -2083,8 +2083,6 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = (TpBaseConnection *) self;
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
-      TP_HANDLE_TYPE_ROOM);
   GError *error = NULL;
   const gchar *known_properties[] = { "color", "name", "type", "private",
       "tags", NULL };
@@ -2093,8 +2091,8 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  if (!tp_handle_is_valid(room_repo, handle, &error))
-    goto error;
+  if (!check_room (base, handle, context))
+    return;
 
   if (g_hash_table_find (properties, find_unknown_properties, known_properties)
       != NULL)
