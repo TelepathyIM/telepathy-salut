@@ -1370,6 +1370,17 @@ check_contact (TpBaseConnection *base,
   return check_handle (contact_repo, contact, context);
 }
 
+static gboolean
+check_room (TpBaseConnection *base,
+            TpHandle contact,
+            DBusGMethodInvocation *context)
+{
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
+      base, TP_HANDLE_TYPE_ROOM);
+
+  return check_handle (room_repo, contact, context);
+}
+
 static void
 salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
                                       TpHandle handle,
@@ -1647,8 +1658,6 @@ salut_connection_olpc_set_current_activity (SalutSvcOLPCBuddyInfo *iface,
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = (TpBaseConnection *) self;
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
-      TP_HANDLE_TYPE_ROOM);
   GError *error = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -1668,12 +1677,8 @@ salut_connection_olpc_set_current_activity (SalutSvcOLPCBuddyInfo *iface,
     }
   else
     {
-      if (!tp_handle_is_valid (room_repo, room_handle, &error))
-        {
-          dbus_g_method_return_error (context, error);
-          g_error_free (error);
-          return;
-        }
+      if (!check_room (base, room_handle, context))
+        return;
     }
 
   if (!salut_self_set_olpc_current_activity (priv->self, activity_id,
