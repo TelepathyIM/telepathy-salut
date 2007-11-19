@@ -1342,6 +1342,34 @@ _contact_manager_contact_olpc_properties_changed (SalutConnection *self,
       contact->olpc_color, contact->jid, contact->olpc_ip4, contact->olpc_ip6);
 }
 
+static gboolean
+check_handle (TpHandleRepoIface *handle_repo,
+              TpHandle handle,
+              DBusGMethodInvocation *context)
+{
+  GError *error = NULL;
+
+  if (!tp_handle_is_valid (handle_repo, handle, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
+check_contact (TpBaseConnection *base,
+               TpHandle contact,
+               DBusGMethodInvocation *context)
+{
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      base, TP_HANDLE_TYPE_CONTACT);
+
+  return check_handle (contact_repo, contact, context);
+}
+
 static void
 salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
                                       TpHandle handle,
@@ -1353,6 +1381,9 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
   GHashTable *properties = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+  if (!check_contact (base, handle, context))
+    return;
 
   if (handle == base->self_handle)
     {
