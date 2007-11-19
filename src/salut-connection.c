@@ -1602,6 +1602,9 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
 
   DEBUG ("called for %u", handle);
 
+  if (!check_contact (base, handle, context))
+    return;
+
   if (handle == base->self_handle)
     {
       DEBUG ("Returning my own cur.act.: %s -> %u",
