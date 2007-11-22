@@ -111,6 +111,7 @@ auth_success(GibberSaslAuth *sasl, gpointer user_data) {
   printf("Authentication successfull!!\n");
   state = DONE;
   /* Reopen the connection */
+  gibber_xmpp_connection_restart(conn);
   gibber_xmpp_connection_open(conn, server, NULL, "1.0");
 }
 
@@ -137,6 +138,7 @@ start_ssl(GibberXmppConnection *connection, GibberXmppStanza *stanza) {
   gibber_xmpp_connection_disengage(connection);
 
   ssl = gibber_ssl_transport_new(GIBBER_TRANSPORT(transport));
+  gibber_xmpp_connection_restart(connection);
   gibber_xmpp_connection_engage(connection, GIBBER_TRANSPORT(ssl));
 
   g_signal_connect(ssl, "connected", 
