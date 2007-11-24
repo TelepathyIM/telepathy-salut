@@ -1148,7 +1148,6 @@ pop_packet(GibberRMulticastSender *sender) {
               /* If we could pop this, then advance next_output_data_packet
                * otherwise keep it at this location */
               pop_data_packet (sender);
-              return TRUE;
             }
           else
             {
