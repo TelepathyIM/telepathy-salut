@@ -1610,9 +1610,10 @@ gibber_r_multicast_sender_set_packet_repeat (GibberRMulticastSender *sender,
 
   info->repeating = repeat;
 
-  if (repeat && info->timeout == 0)
+  if (repeat)
     {
-      schedule_do_repair (sender, packet_id);
+      if (info->timeout == 0)
+         schedule_do_repair (sender, packet_id);
     }
   else
    {
