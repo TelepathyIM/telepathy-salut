@@ -28,9 +28,19 @@ ATTEMPT_JOIN    = 0x12
 JOIN            = 0x13
 BYE             = 0x14
 
+def packet_sender(data):
+  return unpack ("!I", data[8:12])[0]
+
 def packet_type(data):
   return unpack("B", data[7])[0]
 
+def dump_depends(data):
+  sender = packet_sender(data)
+  num_senders = unpack("B", data[16])[0]
+  print "sender: %x (%d)" % (sender, num_senders)
+  for x in xrange (0, num_senders):
+    (sender, depend) = unpack("!II", data[17 + x:17 + x + 8])
+    print "%x:\t%x" % (sender, depend)
 
 
 class BaseMeshNode(protocol.ProcessProtocol):
