@@ -61,6 +61,8 @@ typedef enum {
   GIBBER_R_MULTICAST_SENDER_STATE_FAILED,
   GIBBER_R_MULTICAST_SENDER_STATE_UNKNOWN_FAILED,
   GIBBER_R_MULTICAST_SENDER_STATE_STOPPED,
+  /* Will be removed as soon as all dependencies are resolved */
+  GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL,
 } GibberRMulticastSenderState;
 
 struct _GibberRMulticastSender {
@@ -159,9 +161,11 @@ void gibber_r_multicast_sender_whois_push(GibberRMulticastSender *sender,
 void gibber_r_multicast_sender_set_packet_repeat (
     GibberRMulticastSender *sender, guint32 packet_id, gboolean repeat);
 
+/* Returns the amount of unpopped or unacked packets */
+guint gibber_r_multicast_sender_packet_cache_size (
+    GibberRMulticastSender *sender);
+
 /* Ack management */
-gboolean gibber_r_multicast_sender_get_ack (GibberRMulticastSender *sender,
-    guint32 sender_id, guint32 *ack);
 void gibber_r_multicast_sender_ack (GibberRMulticastSender *sender,
     guint32 ack);
 
