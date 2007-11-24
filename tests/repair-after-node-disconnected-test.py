@@ -16,6 +16,9 @@
 #   misses some of the senders packets.  Only after the sender node is fully
 #   gone, the retrivier is allowed to retrieve it's data packet.. Thus it needs
 #   to be able to retrieve them from its remaining peers
+# - After successfull finishing an extra packet is send by the retriever, which
+#   has the side-effect of acking all packets of node0. The debug output should
+#   reveal that node0 is disposed by everyone shortly afterwards
 #
 # This can yield false negatives in two cases:
 #   * The bye packets aren't received by any of the observers/retriever.
@@ -106,6 +109,7 @@ class ObserverMeshNode(MeshNode):
 
     if (observers_done == NUMOBSERVERS):
       reactor.crash()
+      retriever.pushInput("blaat\n");
 
 class RetrieverMeshNode(ObserverMeshNode):
   def __init__ (self, name, mesh):
@@ -121,6 +125,9 @@ class TestMesh(Mesh):
 
   def gotOutput(self, node, sender, data):
     global success
+
+    if sender == "retriever":
+      return
 
     if self.expected.get(node) == None:
       self.expected[node] = 0
@@ -167,11 +174,16 @@ def timeout():
   success = False
   reactor.crash()
 
-reactor.callLater(60, timeout)
+id = reactor.callLater(60, timeout)
 reactor.run()
+
+id.cancel()
 
 if not success:
   print "FAILED"
   sys.exit(-1)
 
-print "SUCCESS"
+print "SUCCES!!.. Waiting 30 before exiting"
+
+reactor.callLater(30, reactor.stop)
+reactor.run()
