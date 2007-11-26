@@ -594,9 +594,18 @@ check_join_state (gpointer key, MemberInfo *value, gpointer user_data)
   if (value->state < MEMBER_STATE_ATTEMPT_JOIN_REPEAT)
     {
       value->state = MEMBER_STATE_INSTANT_FAILURE;
+      gibber_r_multicast_causal_transport_remove_sender (priv->transport,
+        value->id);
     }
 
   DEBUG ("Checking join state of %x", value->id);
+  if (value->state >= MEMBER_STATE_FAILING)
+    {
+      /* Already taken care off */
+      return;
+    }
+
+
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
     value->id);
 
