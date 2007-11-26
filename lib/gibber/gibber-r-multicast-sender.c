@@ -153,6 +153,9 @@ find_by_name (gpointer key, gpointer value, gpointer user_data)
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
   const gchar *name = (gchar *)user_data;
 
+  if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL)
+    return FALSE;
+
   return !gibber_strdiff (sender->name, name);
 }
 
