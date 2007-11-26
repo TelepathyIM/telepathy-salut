@@ -1488,10 +1488,11 @@ check_join_agreement (GibberRMulticastTransport *self)
   priv->send_join_failures = NULL;
   priv->state = STATE_NORMAL;
 
-  if (priv->timeout != 0) {
-    g_source_remove (priv->timeout);
-    priv->timeout = 0;
-  }
+  if (priv->timeout != 0)
+    {
+      g_source_remove (priv->timeout);
+      priv->timeout = 0;
+    }
   DEBUG ("--------------------------------");
 
   sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
