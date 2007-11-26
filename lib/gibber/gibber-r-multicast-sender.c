@@ -107,8 +107,11 @@ gibber_r_multicast_sender_group_new (void)
 void
 gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
 {
+  GHashTable *h;
   g_assert (group->popping == FALSE);
-  g_hash_table_destroy (group->senders);
+  h = group->senders;
+  group->senders = NULL;
+  g_hash_table_destroy (h);
   g_queue_free (group->pop_queue);
   g_slice_free (GibberRMulticastSenderGroup, group);
 }
@@ -600,7 +603,8 @@ gibber_r_multicast_sender_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  g_hash_table_foreach (priv->group->senders, cleanup_acks, self);
+  if (priv->group->senders != NULL)
+    g_hash_table_foreach (priv->group->senders, cleanup_acks, self);
 
   g_hash_table_destroy(priv->packet_cache);
   g_hash_table_destroy(priv->acks);
