@@ -96,6 +96,7 @@ struct _GibberMucConnectionPrivate
   const gchar *current_sender;
   GArray *streams_used;
   guint16 last_stream_allocated;
+  gulong rmc_connected_handler;
 };
 
 #define GIBBER_MUC_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_MUC_CONNECTION, GibberMucConnectionPrivate))
@@ -490,6 +491,8 @@ _rmctransport_connected_cb(GibberRMulticastTransport *transport,
   {
     gibber_transport_disconnect (GIBBER_TRANSPORT (priv->rmctransport));
   }
+
+  g_signal_handler_disconnect (transport, priv->rmc_connected_handler);
 }
 
 static void
@@ -522,8 +525,8 @@ gibber_muc_connection_connect(GibberMucConnection *connection, GError **error) {
   g_signal_connect (priv->rmtransport, "connected",
     G_CALLBACK (_rmtransport_connected_cb), connection);
 
-  g_signal_connect (priv->rmctransport, "connected",
-    G_CALLBACK (_rmctransport_connected_cb), connection);
+  priv->rmc_connected_handler = g_signal_connect (priv->rmctransport,
+      "connected", G_CALLBACK (_rmctransport_connected_cb), connection);
 
   if (priv->address == NULL) {
     int attempts = 10;

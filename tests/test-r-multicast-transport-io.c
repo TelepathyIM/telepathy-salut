@@ -13,6 +13,7 @@ GMainLoop *loop;
 TestTransport *t;
 GibberRMulticastTransport *rm;
 GibberRMulticastCausalTransport *rmc;
+gulong rmc_connected_handler = 0;
 
 void
 received_data(GibberTransport *transport, GibberBuffer *buffer,
@@ -151,6 +152,7 @@ rm_disconnected (GibberRMulticastTransport *transport, gpointer user_data) {
 static void
 rmc_connected (GibberRMulticastTransport *transport, gpointer user_data) {
   g_assert(gibber_r_multicast_transport_connect(rm, NULL));
+  g_signal_handler_disconnect (transport, rmc_connected_handler);
 }
 
 int
@@ -182,7 +184,7 @@ main(int argc, char **argv){
   g_signal_connect(rm, "lost-senders",
       G_CALLBACK(lost_senders_cb), NULL);
 
-  g_signal_connect(rmc, "connected",
+  rmc_connected_handler = g_signal_connect(rmc, "connected",
     G_CALLBACK(rmc_connected), NULL);
 
   g_signal_connect(rm, "connected",
