@@ -701,6 +701,26 @@ packet_info_try_gc (GibberRMulticastSender *sender, PacketInfo *info)
 }
 
 static void
+cancel_failure_timers (GibberRMulticastSender *sender)
+{
+  GibberRMulticastSenderPrivate *priv =
+      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+  /* Cancel timers that are not needed anymore now the sender has failed */
+  if (priv->fail_timer != 0)
+    {
+      g_source_remove (priv->fail_timer);
+      priv->fail_timer = 0;
+    }
+
+  /* failed, no need to get our name anymore */
+  if (priv->whois_timer != 0)
+    {
+      g_source_remove (priv->whois_timer);
+      priv->whois_timer = 0;
+    }
+}
+
+static void
 signal_data(GibberRMulticastSender *sender, guint16 stream_id,
             guint8 *data, gsize size) {
   set_state (sender,
@@ -726,7 +746,7 @@ signal_failure (GibberRMulticastSender *sender)
     return;
 
   DEBUG_SENDER (sender, "Signalling senders failure");
-  gibber_r_multicast_sender_set_failed (sender);
+  cancel_failure_timers (sender);
   g_signal_emit (sender, signals[FAILED], 0);
 }
 
@@ -1538,19 +1558,7 @@ gibber_r_multicast_sender_set_failed (GibberRMulticastSender *sender)
         priv->end_point);
     }
 
-  /* failed, no need to fail us again */
-  if (priv->fail_timer != 0)
-    {
-      g_source_remove (priv->fail_timer);
-      priv->fail_timer = 0;
-    }
-
-  /* failed, no need to get our name anymore */
-  if (priv->whois_timer != 0)
-    {
-      g_source_remove (priv->whois_timer);
-      priv->whois_timer = 0;
-    }
+  cancel_failure_timers (sender);
 }
 
 void
