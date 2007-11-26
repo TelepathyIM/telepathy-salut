@@ -725,6 +725,7 @@ do_start_joining_phase (gpointer user_data)
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
 
   start_joining_phase (self);
+  check_join_agreement (self);
 
   return FALSE;
 }
