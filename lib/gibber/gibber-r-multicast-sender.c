@@ -1785,6 +1785,12 @@ gibber_r_multicast_sender_packet_cache_size ( GibberRMulticastSender *sender)
   GibberRMulticastSenderPrivate *priv =
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
+  /* The important cache size is untill our cutoff point, which can be less
+   * then the last packet we actually did receive from this sender */
+  if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+    return gibber_r_multicast_packet_diff (priv->first_packet,
+        priv->end_point);
+
   return gibber_r_multicast_packet_diff (priv->first_packet,
       sender->next_input_packet);
 }
