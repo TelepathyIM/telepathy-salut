@@ -1167,12 +1167,17 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
     }
 
   gibber_r_multicast_causal_transport_remove_sender (priv->transport, id);
-  g_hash_table_remove (priv->members, &id);
 
+  /* During the joining process, don't remove members as they still need to be
+   * flagged as failed during the join */
   if (priv->state == STATE_JOINING)
     {
+      /* Make it an instant failure as we already cleaned up this node */
+      info->state = MEMBER_STATE_INSTANT_FAILURE;
       check_join_agreement (self);
     }
+  else
+    g_hash_table_remove (priv->members, &id);
 
   /* Recheck all pending failures */
   recheck_failures (self);
