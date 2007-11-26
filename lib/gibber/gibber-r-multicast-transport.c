@@ -1496,13 +1496,7 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
       int info_compare;
       guint i;
       gboolean changed = FALSE;
-
-      /* We can prevent/stop our join attempts iff some other node in our
-       * current group is sending out some with more info */
-      info_compare = cmp_attempt_join_state (self, packet);
-
-      changed |= update_foreign_member_list (self, packet,
-          MEMBER_STATE_ATTEMPT_JOIN_DONE);
+      gboolean self_in_senders = FALSE;
 
       if (priv->state == STATE_JOINING) {
         /* Already started the joining process, so don't send or process new
@@ -1510,13 +1504,23 @@ received_control_packet_cb (GibberRMulticastCausalTransport *ctransport,
         break;
       }
 
+      /* We can prevent/stop our join attempts iff some other node in our
+       * current group is sending out some with more info */
+      info_compare = cmp_attempt_join_state (self, packet);
+
       for (i = 0; i < packet->data.attempt_join.senders->len; i++)
         {
           guint32 id = g_array_index (packet->data.attempt_join.senders,
               guint32, i);
+           if (id == priv->transport->sender_id)
+             self_in_senders = TRUE;
            changed |=
                update_member (self, id, MEMBER_STATE_ATTEMPT_JOIN_STARTED, 0);
         }
+
+      changed |= update_foreign_member_list (self, packet,
+          self_in_senders ?  MEMBER_STATE_ATTEMPT_JOIN_REPEAT
+              : MEMBER_STATE_ATTEMPT_JOIN_DONE);
 
       continue_gathering_phase (self);
 
