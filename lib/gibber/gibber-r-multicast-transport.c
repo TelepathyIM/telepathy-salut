@@ -913,7 +913,8 @@ update_foreign_member_list (GibberRMulticastTransport *self,
   guint i;
   gboolean changed = FALSE;
 
-  changed |= update_member (self, packet->sender, state, packet->packet_id);
+  changed |= update_member (self, packet->sender, state,
+      packet->packet_id + 1);
   for (i = 0 ; i < packet->depends->len; i++) {
     GibberRMulticastPacketSenderInfo *info =
         g_array_index (packet->depends, GibberRMulticastPacketSenderInfo *, i);
