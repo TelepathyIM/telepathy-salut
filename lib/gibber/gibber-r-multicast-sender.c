@@ -722,7 +722,7 @@ signal_control_packet(GibberRMulticastSender *sender,
 static void
 signal_failure (GibberRMulticastSender *sender)
 {
-  if (sender->state > GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+  if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
     return;
 
   DEBUG_SENDER (sender, "Signalling senders failure");
