@@ -253,7 +253,9 @@ gboolean gibber_r_multicast_packet_failure_add_senders (
    GError **error);
 
 
-/* Utility function to calculate the difference between two packet */
+/* Utility function to calculate the difference between two packet id's.
+ * Correctly handle overflow conditions and CLAMP to G_MAXINT32 and
+ * -G_MAXINT32 */
 gint32
 gibber_r_multicast_packet_diff (guint32 from, guint32 to);
 
