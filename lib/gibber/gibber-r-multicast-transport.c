@@ -1217,7 +1217,18 @@ fail_member (GibberRMulticastTransport *self, MemberInfo *info, guint32 id)
       return;
     }
 
-  finfo = member_get_info (self, id);
+  finfo = g_hash_table_lookup (priv->members, &id);
+
+  if (finfo == NULL || finfo->state < MEMBER_STATE_ATTEMPT_JOIN_REPEAT)
+    {
+      /* We don't know starting or end points of these, makes no sense to send
+       * failure messages for them. Will be handles at time of JOIN.
+       */
+      gibber_r_multicast_causal_transport_remove_sender (priv->transport, id);
+      if (finfo != NULL)
+        finfo->state = MEMBER_STATE_INSTANT_FAILURE;
+      return;
+    }
 
   if (finfo->state < MEMBER_STATE_FAILING)
     {
