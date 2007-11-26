@@ -1364,8 +1364,13 @@ do_pop_packets (GibberRMulticastSender *sender)
 
   g_object_ref (sender);
 
-  while (pop_packet(sender))
-    popped = TRUE;
+  while (sender->state <= GIBBER_R_MULTICAST_SENDER_STATE_FAILED)
+    {
+      if (!pop_packet(sender))
+        break;
+
+      popped = TRUE;
+    }
 
   g_object_unref (sender);
 
