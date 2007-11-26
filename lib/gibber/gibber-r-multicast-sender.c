@@ -244,7 +244,7 @@ get_direct_ack (GibberRMulticastSender *sender, GibberRMulticastSender *target)
 
   ack = gibber_r_multicast_sender_get_ackinfo (sender, target->id);
 
-  if (G_LIKELY(ack != NULL))
+  if (G_LIKELY (ack != NULL))
    {
      /* Returning the direct ack if there is one */
      if (G_LIKELY (gibber_r_multicast_packet_diff (
@@ -258,7 +258,7 @@ get_direct_ack (GibberRMulticastSender *sender, GibberRMulticastSender *target)
 static gboolean
 find_indirect_ack (gpointer key, gpointer value, gpointer user_data)
 {
-  struct _group_ht_data *hd = (struct _group_ht_data *)user_data;
+  struct _group_ht_data *hd = (struct _group_ht_data *) user_data;
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
   AckInfo *target_ack, *ack;
 
@@ -282,7 +282,7 @@ static gboolean
 failure_not_acked (gpointer key, gpointer value, gpointer user_data)
 {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
-  struct _group_ht_data *hd = (struct _group_ht_data *)user_data;
+  struct _group_ht_data *hd = (struct _group_ht_data *) user_data;
 
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL)
     return FALSE;
@@ -1201,7 +1201,7 @@ update_acks (GibberRMulticastSender *sender, GibberRMulticastPacket *packet)
       senderinfo = g_array_index (packet->depends,
         GibberRMulticastPacketSenderInfo *, i);
 
-      info = (AckInfo *)g_hash_table_lookup (priv->acks,
+      info = (AckInfo *) g_hash_table_lookup (priv->acks,
           &senderinfo->sender_id);
 
       if (G_UNLIKELY(info == NULL))
