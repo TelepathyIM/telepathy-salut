@@ -1616,6 +1616,8 @@ gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
 
   g_assert (gibber_transport_get_state (GIBBER_TRANSPORT(priv->transport)) ==
       GIBBER_TRANSPORT_CONNECTED);
+  g_assert (gibber_transport_get_state (GIBBER_TRANSPORT(transport)) !=
+      GIBBER_TRANSPORT_CONNECTED);
 
   gibber_transport_set_state(GIBBER_TRANSPORT(transport),
          GIBBER_TRANSPORT_CONNECTED);
