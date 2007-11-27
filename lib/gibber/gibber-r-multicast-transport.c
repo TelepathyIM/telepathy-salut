@@ -1102,6 +1102,8 @@ find_unfailed_member (gpointer key, gpointer value, gpointer user_data)
         return FALSE;
     }
 
+  DEBUG ("%x didn't fail %x on time", info->id, *id);
+
   return TRUE;
 }
 
