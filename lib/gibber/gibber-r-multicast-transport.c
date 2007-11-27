@@ -1448,20 +1448,22 @@ check_join_agreement (GibberRMulticastTransport *self)
 
   for (i = 0 ; i < priv->send_join->len; i++)
     {
-      GibberRMulticastSender *sender;
       info = g_hash_table_lookup (priv->members,
         &g_array_index (priv->send_join, guint32, i));
 
       if (info == NULL)
         continue;
 
-      sender = gibber_r_multicast_causal_transport_get_sender (
-              priv->transport, info->id);
-
       if (info->state != MEMBER_STATE_MEMBER &&
             info->state < MEMBER_STATE_FAILING)
         {
+          GibberRMulticastSender *sender;
+
+          sender = gibber_r_multicast_causal_transport_get_sender (
+              priv->transport, info->id);
+
           DEBUG ("New member: %s (%x)", sender->name, info->id);
+
           info->state = MEMBER_STATE_MEMBER;
           gibber_r_multicast_sender_set_data_start (sender,
               info->join_packet_id);
