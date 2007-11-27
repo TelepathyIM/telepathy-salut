@@ -220,6 +220,15 @@ class Mesh:
     self.nodes.append(node)
     return node
 
+  def removeMeshNode (self, node):
+    self.nodes.remove(node)
+    del self.connections[node]
+    for (n, links) in self.connections.iteritems():
+        for link in links:
+          if link.target == node:
+            self.connections[n].remove(link)
+
+
   def connected (self, node):
     "To be overwritten"
     pass
