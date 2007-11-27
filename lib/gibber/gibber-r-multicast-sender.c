@@ -1643,8 +1643,8 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
         return;
       }
 
-    if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
-      /* In stopped state we only send out repairs for packets we have */
+    if (sender->state > GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
+      /* Beyond stopped state we only send out repairs for packets we have */
       return;
 
     if (info == NULL) {
