@@ -1120,7 +1120,8 @@ collect_failed_members (gpointer key, gpointer value, gpointer user_data)
   MemberInfo *info = (MemberInfo *)value;
   GArray *array = (GArray *)user_data;
 
-  if (info->state >= MEMBER_STATE_FAILING)
+  if (info->state >= MEMBER_STATE_FAILING &&
+      info->state < MEMBER_STATE_INSTANT_FAILURE)
     g_array_append_val (array, info->id);
 }
 
@@ -1183,6 +1184,11 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
     {
       /* Make it an instant failure as we already cleaned up this node */
       info->state = MEMBER_STATE_INSTANT_FAILURE;
+      if (info->fail_timeout != 0)
+        {
+          g_source_remove (info->fail_timeout);
+          info->fail_timeout = 0;
+        }
       check_join_agreement (self);
     }
   else
