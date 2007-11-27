@@ -1469,6 +1469,11 @@ check_join_agreement (GibberRMulticastTransport *self)
               info->join_packet_id);
           g_array_append_val (new, sender->name);
         }
+
+      if (info->state >= MEMBER_STATE_FAILING)
+        {
+           g_hash_table_remove (priv->members, &(info->id));
+        }
     }
 
   if (lost->len > 0)
