@@ -1042,7 +1042,7 @@ browser_removed (SalutAvahiServiceBrowser *browser,
   if (muc == NULL)
     return;
 
-  DEBUG ("We are in room %s. Try to re-announce it", name);
+  DEBUG ("We know this room %s. Try to re-announce it", name);
   salut_muc_channel_publish_service (muc);
 }
 
