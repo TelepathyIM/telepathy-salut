@@ -75,16 +75,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
 );
 
-/* signal enum */
-enum
-{
-    READY,
-    JOIN_ERROR,
-    LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
-
 enum
 {
   PROP_OBJECT_PATH = 1,
@@ -146,23 +136,6 @@ salut_tubes_channel_init (SalutTubesChannel *self)
   priv->closed = FALSE;
 }
 
-static void
-muc_channel_ready_cb (SalutMucChannel *chan,
-                      SalutTubesChannel *self)
-{
-  self->ready = TRUE;
-
-  g_signal_emit (self, signals[READY], 0);
-}
-
-static void
-muc_channel_join_error_cb (SalutMucChannel *chan,
-                           GError *error,
-                           SalutTubesChannel *self)
-{
-  g_signal_emit (self, signals[JOIN_ERROR], 0, error);
-}
-
 static GObject *
 salut_tubes_channel_constructor (GType type,
                                  guint n_props,
@@ -192,7 +165,6 @@ salut_tubes_channel_constructor (GType type,
       g_assert (self->muc == NULL);
       priv->self_handle = ((TpBaseConnection *)
           (priv->conn))->self_handle;
-      self->ready = TRUE;
       break;
 
     case TP_HANDLE_TYPE_ROOM:
@@ -210,18 +182,6 @@ salut_tubes_channel_constructor (GType type,
           G_CALLBACK (muc_connection_new_senders_cb), self);
       g_signal_connect (priv->muc_connection, "lost-senders",
           G_CALLBACK (muc_connection_lost_senders_cb), self);
-
-      if (priv->muc_connection->state == GIBBER_MUC_CONNECTION_CONNECTED)
-        {
-          muc_channel_ready_cb (self->muc, self);
-        }
-      else
-        {
-          g_signal_connect (self->muc, "ready",
-              G_CALLBACK (muc_channel_ready_cb), self);
-          g_signal_connect (self->muc, "join-error",
-              G_CALLBACK (muc_channel_join_error_cb), self);
-        }
 
       break;
     default:
@@ -1843,24 +1803,6 @@ salut_tubes_channel_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_MUC, param_spec);
-
-  signals[READY] = g_signal_new (
-        "ready",
-        G_OBJECT_CLASS_TYPE (salut_tubes_channel_class),
-        G_SIGNAL_RUN_LAST,
-        0,
-        NULL, NULL,
-        g_cclosure_marshal_VOID__VOID,
-        G_TYPE_NONE, 0);
-
-  signals[JOIN_ERROR] = g_signal_new (
-        "join-error",
-        G_OBJECT_CLASS_TYPE (salut_tubes_channel_class),
-        G_SIGNAL_RUN_LAST,
-        0,
-        NULL, NULL,
-        g_cclosure_marshal_VOID__POINTER,
-        G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
 void

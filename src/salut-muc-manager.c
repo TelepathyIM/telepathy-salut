@@ -325,23 +325,6 @@ muc_channel_closed_cb (SalutMucChannel *chan,
 }
 
 #ifdef ENABLE_DBUS_TUBES
-static void
-tubes_channel_ready_cb (SalutTubesChannel *chan,
-                        SalutMucManager *self)
-{
-  tp_channel_factory_iface_emit_new_channel (self,
-      TP_CHANNEL_IFACE (chan), NULL);
-}
-
-static void
-tubes_channel_join_error_cb (SalutTubesChannel *chan,
-                             SalutMucManager *self,
-                             GError *error)
-{
-  tp_channel_factory_iface_emit_channel_error (self,
-      TP_CHANNEL_IFACE (chan), error, NULL);
-}
-
 /**
  * tubes_channel_closed_cb:
  *
@@ -738,24 +721,11 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
           g_assert (tubes_chan != NULL);
           *ret = TP_CHANNEL_IFACE (tubes_chan);
 
-          if (tubes_chan->ready)
-            {
-              /* Tubes channel ready, let's announce it */
-              tp_channel_factory_iface_emit_new_channel (mgr,
-                  TP_CHANNEL_IFACE (tubes_chan), NULL);
+          /* Tubes channel ready, let's announce it */
+          tp_channel_factory_iface_emit_new_channel (mgr,
+            TP_CHANNEL_IFACE (tubes_chan), NULL);
 
-              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-            }
-          else
-            {
-              /* Have to wait the channel becomes ready before announce it */
-              g_signal_connect (tubes_chan, "ready",
-                  G_CALLBACK (tubes_channel_ready_cb), mgr);
-              g_signal_connect (tubes_chan, "join-error",
-                  G_CALLBACK (tubes_channel_join_error_cb), mgr);
-
-              status = TP_CHANNEL_FACTORY_REQUEST_STATUS_QUEUED;
-            }
+          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
         }
     }
 #endif
