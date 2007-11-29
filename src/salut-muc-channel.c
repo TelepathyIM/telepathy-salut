@@ -282,6 +282,8 @@ muc_connection_connected_cb (GibberMucConnection *connection,
   else
     priv->timeout = g_timeout_add (CONNECTED_TIMEOUT, connected_timeout_cb,
         self);
+
+  salut_muc_channel_publish_service  (self);
 }
 
 static GObject *
@@ -441,6 +443,13 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
     return TRUE;
 
   g_assert (priv->service == NULL);
+
+  /* We didn't connect to this group just yet */
+  if (priv->muc_connection->state != GIBBER_MUC_CONNECTION_CONNECTED)
+    {
+      DEBUG ("Not yet connected to this muc, not announcing");
+      return TRUE;
+    }
 
   priv->muc_group = salut_avahi_entry_group_new ();
 
@@ -746,7 +755,6 @@ muc_channel_add_member (GObject *iface,
 
       tp_intset_destroy (empty);
       tp_intset_destroy (add);
-      salut_muc_channel_publish_service (self);
       return ret;
     }
 
