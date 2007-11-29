@@ -38,8 +38,11 @@
 #define MIN_DO_REPAIR_TIMEOUT 50
 #define MAX_DO_REPAIR_TIMEOUT 100
 
-#define MIN_REPAIR_TIMEOUT 150
-#define MAX_REPAIR_TIMEOUT 250
+#define MIN_INITIAL_REPAIR_TIMEOUT 150
+#define MAX_INITIAL_REPAIR_TIMEOUT 250
+
+#define MIN_REPAIR_TIMEOUT 500
+#define MAX_REPAIR_TIMEOUT 800
 
 #define MIN_FIRST_WHOIS_TIMEOUT 50
 #define MAX_FIRST_WHOIS_TIMEOUT 200
@@ -866,12 +869,20 @@ schedule_repair(GibberRMulticastSender *sender, guint32 id) {
 
   if (info != NULL && (info->packet != NULL || info->timeout != 0)) {
     return;
-  } else if (info == NULL) {
-    info = packet_info_new(sender, id);
-    g_hash_table_insert(priv->packet_cache, &info->packet_id, info);
   }
 
-  timeout = g_random_int_range(MIN_REPAIR_TIMEOUT, MAX_REPAIR_TIMEOUT);
+  if (info == NULL)
+    {
+      info = packet_info_new(sender, id);
+      g_hash_table_insert(priv->packet_cache, &info->packet_id, info);
+      timeout = g_random_int_range(MIN_INITIAL_REPAIR_TIMEOUT,
+          MAX_INITIAL_REPAIR_TIMEOUT);
+    }
+  else
+    {
+      timeout = g_random_int_range(MIN_REPAIR_TIMEOUT, MAX_REPAIR_TIMEOUT);
+    }
+
   info->timeout = g_timeout_add(timeout, request_repair, info);
   DEBUG_SENDER(sender,
     "Scheduled repair request for 0x%x in %d ms", id, timeout);
