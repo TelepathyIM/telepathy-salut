@@ -1899,6 +1899,9 @@ gibber_r_multicast_sender_stop (GibberRMulticastSender *sender)
   GibberRMulticastSenderPrivate *priv =
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
 
+  if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
+    return;
+
   if (priv->whois_timer != 0)
     {
       g_source_remove (priv->whois_timer);
