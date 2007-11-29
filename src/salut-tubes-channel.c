@@ -1212,6 +1212,17 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   base = (TpBaseConnection*) priv->conn;
 
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM
+    && !tp_handle_set_is_member(TP_GROUP_MIXIN(self->muc)->members,
+        priv->self_handle))
+    {
+      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+         "Tube channel isn't connected" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
+
   parameters_copied = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
       (GDestroyNotify) tp_g_value_slice_free);
   g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
@@ -1521,6 +1532,17 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   base = (TpBaseConnection*) priv->conn;
+
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM
+    && !tp_handle_set_is_member(TP_GROUP_MIXIN(self->muc)->members,
+        priv->self_handle))
+    {
+      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+         "Tube channel isn't connected" };
+
+      dbus_g_method_return_error (context, &error);
+      return;
+    }
 
   if (!salut_tube_stream_check_params (address_type, address,
         access_control, access_control_param, &error))
