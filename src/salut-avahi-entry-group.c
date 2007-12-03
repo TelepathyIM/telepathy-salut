@@ -65,6 +65,8 @@ struct _SalutAvahiEntryGroupServicePrivate {
   SalutAvahiEntryGroupService public;
   SalutAvahiEntryGroup *group;
   gboolean frozen;
+  /* Owned SalutAvahiEntryGroupServiceEntry =>
+   *   Owned * SalutAvahiEntryGroupServiceEntry */
   GHashTable *entries;
 };
 
