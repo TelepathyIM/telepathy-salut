@@ -142,9 +142,9 @@ def type_to_gtype(s):
     elif s == 'u': #uint32
         return ("guint ", "G_TYPE_UINT","UINT", False)
     elif s == 'x': #int64
-        return ("gint ", "G_TYPE_INT64","INT64", False)
-    elif s == 't': #uint32
-        return ("guint ", "G_TYPE_UINT64","UINT64", False)
+        return ("gint64 ", "G_TYPE_INT64","INT64", False)
+    elif s == 't': #uint64
+        return ("guint64 ", "G_TYPE_UINT64","UINT64", False)
     elif s == 'd': #double
         return ("gdouble ", "G_TYPE_DOUBLE","DOUBLE", False)
     elif s == 's': #string
