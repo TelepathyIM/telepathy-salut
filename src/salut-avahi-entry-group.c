@@ -600,8 +600,12 @@ salut_avahi_entry_group_service_remove_key(SalutAvahiEntryGroupService *service,
                                            const gchar *key, GError **error) {
   SalutAvahiEntryGroupServicePrivate *priv =
     (SalutAvahiEntryGroupServicePrivate *) service;
+  SalutAvahiEntryGroupServiceEntry e;
 
-  g_hash_table_remove(priv->entries, key);
+  e.value = (guint8 *) key;
+  e.size = strlen(key);
+
+  g_hash_table_remove(priv->entries, &e);
 
   if (!priv->frozen)
     return salut_avahi_entry_group_service_thaw(service, error);
