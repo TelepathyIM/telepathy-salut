@@ -176,6 +176,9 @@ def type_to_gtype(s):
     elif s[:2] == 'a(': #array of structs, recurse
         gtype = type_to_gtype(s[1:])[1]
         return ("GPtrArray *", "(dbus_g_type_get_collection (\"GPtrArray\", "+gtype+"))", "BOXED", True)
+    elif s[:2] == 'aa': #array of arrays, recurse
+        gtype = type_to_gtype(s[1:])[1]
+        return ("GPtrArray *", "(dbus_g_type_get_collection (\"GPtrArray\", "+gtype+"))", "BOXED", True)
     elif s == 'a{ss}': #hash table of string to string
         return ("GHashTable *", "DBUS_TYPE_G_STRING_STRING_HASHTABLE", "BOXED", False)
     elif s[:2] == 'a{':  #some arbitrary hash tables
