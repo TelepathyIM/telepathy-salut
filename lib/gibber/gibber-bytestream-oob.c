@@ -40,7 +40,6 @@
 #include "gibber-iq-helper.h"
 #include "gibber-util.h"
 #include "gibber-transport.h"
-#include "gibber-tcp-transport.h"
 #include "gibber-fd-transport.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
@@ -203,9 +202,13 @@ static void
 connect_to_url (GibberBytestreamOOB *self,
                 const gchar *url)
 {
-  GibberTCPTransport *tcp_transport;
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+  GibberLLTransport *ll_transport;
   gchar **tokens;
+  struct sockaddr_storage addr;
+  socklen_t len;
   const gchar *host, *port;
+  gint portnum = 0;
 
   if (!g_str_has_prefix (url, "x-tcp://"))
     {
@@ -225,10 +228,42 @@ connect_to_url (GibberBytestreamOOB *self,
   host = tokens[0];
   port = tokens[1];
 
-  tcp_transport = gibber_tcp_transport_new ();
-  set_transport (self, GIBBER_TRANSPORT (tcp_transport));
-  gibber_tcp_transport_connect (tcp_transport, host, port);
+  /* FIXME, this is very specific to salut and won't work with a normal xmpp
+   * client */
+  if (!gibber_transport_get_sockaddr (
+      GIBBER_TRANSPORT (priv->xmpp_connection->transport),
+      &addr, &len)) 
+    {
+      /* I'm too lazy to create more specific errors for this  as it should
+       * never happen while using salut anyway.. */
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+          "Unsable get socket address for the control connection" };
+      DEBUG ("Could not get socket address for the control connection" );
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+      goto out;
+    }
 
+  if (port != NULL)
+    portnum = atoi (port);
+
+  if (portnum <= 0 || portnum > G_MAXUINT16)
+   {
+      /* I'm too lazy to create more specific errors for this  as it should
+       * never happen while using salut anyway.. */
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_NOT_ACCEPTABLE,
+          "Invalid port number" };
+      DEBUG ("Invalid port number: %s", port);
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+      goto out;
+   }
+
+  ((struct sockaddr_in *) &addr)->sin_port = g_htons ((guint16)portnum);
+
+  ll_transport = gibber_ll_transport_new ();
+  set_transport (self, GIBBER_TRANSPORT (ll_transport));
+  gibber_ll_transport_open_sockaddr (ll_transport, &addr, NULL);
+
+out:
   g_strfreev (tokens);
 }
 
