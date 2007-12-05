@@ -875,14 +875,12 @@ start_listen_for_connection (GibberBytestreamOOB *self)
   req.ai_socktype = SOCK_STREAM;
   req.ai_protocol = IPPROTO_TCP;
 
-  ret = getaddrinfo (priv->host, "0", &req, &ans);
+  ret = getaddrinfo (NULL, "0", &req, &ans);
   if (ret != 0)
     {
       DEBUG ("getaddrinfo failed: %s", gai_strerror (ret));
       goto error;
     }
-
-  ((struct sockaddr_in *) ans->ai_addr)->sin_port = 0;
 
   fd = socket (ans->ai_family, ans->ai_socktype, ans->ai_protocol);
   if (fd == -1)
