@@ -1,7 +1,7 @@
 /*
- * gibber-linklocal-transport.c - Source for GibberFdTransport
- * Copyright (C) 2006 Collabora Ltd.
- *   @author: Sjoerd Simons <sjoerd@luon.net>
+ * gibber-fd-transport.c - Source for GibberFdTransport
+ * Copyright (C) 2006-2007 Collabora Ltd.
+ *   @author: Sjoerd Simons <sjoerd.simons@collabora.co.uk>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
