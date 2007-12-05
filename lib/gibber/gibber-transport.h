@@ -23,6 +23,8 @@
 
 #include <glib-object.h>
 
+#include <sys/socket.h>
+
 G_BEGIN_DECLS
 
 typedef enum {
@@ -50,6 +52,8 @@ struct _GibberTransportClass {
     gboolean (*send) (GibberTransport *transport,
                           const guint8 *data, gsize length, GError **error);
     void (*disconnect) (GibberTransport *transport);
+    gboolean (*get_sockaddr) (GibberTransport *transport,
+        struct sockaddr_storage *addr, socklen_t *len);
 };
 
 struct _GibberTransport {
@@ -105,6 +109,9 @@ void gibber_transport_disconnect(GibberTransport *transport);
 void gibber_transport_set_handler(GibberTransport *transport,
                                   GibberHandlerFunc func,
                                   gpointer user_data);
+
+gboolean gibber_transport_get_sockaddr (GibberTransport *transport,
+    struct sockaddr_storage *addr, socklen_t *len);
 
 G_END_DECLS
 
