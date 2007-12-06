@@ -726,7 +726,7 @@ handle_session_message (GibberRMulticastCausalTransport *self,
    * message was at least as up to date as us */
   if (!outdated &&
         g_hash_table_size (priv->sender_group->senders)
-            == packet->depends->len + 1)
+            == packet->depends->len)
     {
       DEBUG_TRANSPORT (self, "Rescheduling session message");
       schedule_session_message(self);
