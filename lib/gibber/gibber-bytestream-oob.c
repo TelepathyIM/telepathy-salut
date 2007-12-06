@@ -257,7 +257,7 @@ connect_to_url (GibberBytestreamOOB *self,
       goto out;
    }
 
-  ((struct sockaddr_in *) &addr)->sin_port = g_htons ((guint16)portnum);
+  ((struct sockaddr_in *) &addr)->sin_port = g_htons ((guint16) portnum);
 
   ll_transport = gibber_ll_transport_new ();
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
