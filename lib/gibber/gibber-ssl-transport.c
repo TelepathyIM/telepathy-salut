@@ -289,6 +289,23 @@ ssl_handle_read(GibberTransport *transport, GibberBuffer *buffer,
   }
 }
 
+static void
+transport_disconnecting (GibberTransport *transport,
+                         gpointer user_data)
+{
+  GibberTransport *ssl = GIBBER_TRANSPORT(user_data);
+
+  gibber_transport_set_state(ssl, GIBBER_TRANSPORT_DISCONNECTING);
+}
+
+static void
+transport_disconnected (GibberTransport *transport,
+                        gpointer user_data)
+{
+  GibberTransport *ssl = GIBBER_TRANSPORT(user_data);
+
+  gibber_transport_set_state(ssl, GIBBER_TRANSPORT_DISCONNECTED);
+}
 
 GibberSSLTransport *
 gibber_ssl_transport_new(GibberTransport *transport) {
@@ -301,6 +318,12 @@ gibber_ssl_transport_new(GibberTransport *transport) {
   priv->transport = g_object_ref(transport);
 
   gibber_transport_set_handler(priv->transport, ssl_handle_read, ssl);
+
+  g_signal_connect (priv->transport, "disconnecting",
+    G_CALLBACK (transport_disconnecting), ssl);
+
+  g_signal_connect (priv->transport, "disconnected",
+    G_CALLBACK (transport_disconnected), ssl);
 
   /* FIXME catch errors */
   ssl_base_initialize(ssl, NULL);
