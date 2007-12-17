@@ -988,6 +988,7 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
 
   g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
       NULL, data);
+  streaminit_reply_cb_data_free (data);
 }
 
 /*
