@@ -120,8 +120,9 @@ gibber_tcp_transport_connect(GibberTCPTransport *tcp_transport,
   req.ai_socktype = SOCK_STREAM;
   req.ai_protocol = IPPROTO_TCP;
 
-  if (getaddrinfo(host, port, &req, &ans) != 0) {
-    DEBUG("getaddrinfo failed: %s", strerror(errno));
+  ret = getaddrinfo(host, port, &req, &ans);
+  if (ret != 0) {
+    DEBUG("getaddrinfo failed: %s", gai_strerror(ret));
     goto failed;
   }
 
