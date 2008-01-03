@@ -163,7 +163,7 @@ salut_roomlist_channel_set_property (GObject *object,
        * meaningfully changeable on this channel, so we do nothing */
       value_str = g_value_get_string (value);
       g_assert (value_str == NULL || !tp_strdiff (value_str,
-            TP_IFACE_CHANNEL_TYPE_TEXT));
+            TP_IFACE_CHANNEL_TYPE_ROOM_LIST));
       break;
     case PROP_HANDLE:
       /* this property is writable in the interface, but not actually
