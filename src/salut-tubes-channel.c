@@ -247,6 +247,11 @@ salut_tubes_channel_set_property (GObject *object,
         g_free (priv->object_path);
         priv->object_path = g_value_dup_string (value);
         break;
+      case PROP_CHANNEL_TYPE:
+        /* this property is writable in the interface (in
+         * telepathy-glib > 0.7.0), but not actually
+         * meaningfully changeable on this channel, so we do nothing */
+        break;
       case PROP_HANDLE_TYPE:
         priv->handle_type = g_value_get_uint (value);
         break;

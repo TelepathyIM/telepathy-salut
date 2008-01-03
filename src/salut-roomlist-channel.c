@@ -150,11 +150,20 @@ salut_roomlist_channel_set_property (GObject *object,
   SalutRoomlistChannel *chan = SALUT_ROOMLIST_CHANNEL (object);
   SalutRoomlistChannelPrivate *priv =
     SALUT_ROOMLIST_CHANNEL_GET_PRIVATE (chan);
+  const gchar *value_str;
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
       g_free (priv->object_path);
       priv->object_path = g_value_dup_string (value);
+      break;
+    case PROP_CHANNEL_TYPE:
+      /* this property is writable in the interface (in
+       * telepathy-glib > 0.7.0), but not actually
+       * meaningfully changeable on this channel, so we do nothing */
+      value_str = g_value_get_string (value);
+      g_assert (value_str == NULL || !tp_strdiff (value_str,
+            TP_IFACE_CHANNEL_TYPE_TEXT));
       break;
     case PROP_HANDLE:
       /* this property is writable in the interface, but not actually
