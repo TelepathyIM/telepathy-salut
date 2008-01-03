@@ -240,6 +240,7 @@ salut_tubes_channel_set_property (GObject *object,
 {
   SalutTubesChannel *chan = SALUT_TUBES_CHANNEL (object);
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (chan);
+  const gchar *value_str;
 
   switch (property_id)
     {
@@ -251,6 +252,9 @@ salut_tubes_channel_set_property (GObject *object,
         /* this property is writable in the interface (in
          * telepathy-glib > 0.7.0), but not actually
          * meaningfully changeable on this channel, so we do nothing */
+        value_str = g_value_get_string (value);
+        g_assert (value_str == NULL || !tp_strdiff (value_str,
+              TP_IFACE_CHANNEL_TYPE_TUBES));
         break;
       case PROP_HANDLE_TYPE:
         priv->handle_type = g_value_get_uint (value);
