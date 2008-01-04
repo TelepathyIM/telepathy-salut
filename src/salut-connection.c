@@ -1070,6 +1070,7 @@ salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
      context, priv->self->avatar_token);
 }
 
+
 static void
 salut_connection_get_avatar_tokens(TpSvcConnectionInterfaceAvatars *iface,
                                    const GArray *contacts,
@@ -1116,6 +1117,67 @@ salut_connection_get_avatar_tokens(TpSvcConnectionInterfaceAvatars *iface,
 
   g_free(ret);
 }
+
+static void
+salut_connection_get_known_avatar_tokens(
+    TpSvcConnectionInterfaceAvatars *iface,
+    const GArray *contacts,
+    DBusGMethodInvocation *context)
+{
+  int i;
+  GHashTable *ret;
+  GError *err = NULL;
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_CONTACT);
+
+  if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
+    {
+      dbus_g_method_return_error (context, err);
+      g_error_free (err);
+      return;
+    }
+
+  ret = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_free);
+
+  for (i = 0; i < contacts->len ; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      gchar *tokens = NULL;
+
+      if (base->self_handle == handle)
+        {
+          tokens = g_strdup (priv->self->avatar_token);
+        }
+      else
+        {
+          SalutContact *contact;
+          contact =
+             salut_contact_manager_get_contact (priv->contact_manager, handle);
+          if (contact != NULL)
+            {
+              tokens  = g_strdup (contact->avatar_token);
+              g_object_unref (contact);
+            }
+        }
+
+      if (tokens == NULL)
+        tokens = g_strdup ("");
+
+      g_hash_table_insert (ret, GUINT_TO_POINTER (handle), tokens);
+    }
+
+  tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
+     context, ret);
+
+  g_hash_table_destroy (ret);
+}
+
 
 static void
 _request_avatar_cb(SalutContact *contact, guint8 *avatar, gsize size,
@@ -1205,6 +1267,7 @@ TpSvcConnectionInterfaceAvatarsClass *klass =
     (klass, salut_connection_##x)
   IMPLEMENT(get_avatar_requirements);
   IMPLEMENT(get_avatar_tokens);
+  IMPLEMENT(get_known_avatar_tokens);
   IMPLEMENT(request_avatar);
   IMPLEMENT(set_avatar);
   IMPLEMENT(clear_avatar);
