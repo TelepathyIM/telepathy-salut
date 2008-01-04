@@ -1178,6 +1178,79 @@ salut_connection_get_known_avatar_tokens(
   g_hash_table_destroy (ret);
 }
 
+static void
+_request_avatars_cb (SalutContact *contact, guint8 *avatar, gsize size,
+    gpointer user_data)
+{
+  GArray *arr;
+
+  arr = g_array_sized_new (FALSE, FALSE, sizeof (guint8), size);
+  arr = g_array_append_vals (arr, avatar, size);
+
+  tp_svc_connection_interface_avatars_emit_avatar_retrieved (
+    (GObject *) user_data, contact->handle,
+    contact->avatar_token != NULL ? contact->avatar_token : "", arr, "");
+
+  g_array_free (arr, TRUE);
+}
+
+static void
+salut_connection_request_avatars (
+    TpSvcConnectionInterfaceAvatars *iface,
+    const GArray *contacts,
+    DBusGMethodInvocation *context)
+{
+  int i;
+  GError *err = NULL;
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_CONTACT);
+
+  if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
+    {
+      dbus_g_method_return_error (context, err);
+      g_error_free (err);
+      return;
+    }
+
+  for (i = 0; i < contacts->len ; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+
+      if (base->self_handle == handle)
+        {
+           GArray *arr;
+           arr = g_array_sized_new(FALSE, FALSE, sizeof(guint8),
+             priv->self->avatar_size);
+           arr = g_array_append_vals(arr, priv->self->avatar, 
+             priv->self->avatar_size);
+
+            tp_svc_connection_interface_avatars_emit_avatar_retrieved (
+                (GObject *) self, base->self_handle,
+                priv->self->avatar_token != NULL ?
+                  priv->self->avatar_token : "",
+                arr, "");
+          g_array_free (arr, TRUE);
+        }
+      else
+        {
+          SalutContact *contact;
+          contact =
+             salut_contact_manager_get_contact (priv->contact_manager, handle);
+          if (contact != NULL)
+            {
+              salut_contact_get_avatar (contact, _request_avatars_cb, self);
+            }
+        }
+    }
+
+  tp_svc_connection_interface_avatars_return_from_request_avatars (context);
+}
 
 static void
 _request_avatar_cb(SalutContact *contact, guint8 *avatar, gsize size,
@@ -1269,6 +1342,7 @@ TpSvcConnectionInterfaceAvatarsClass *klass =
   IMPLEMENT(get_avatar_tokens);
   IMPLEMENT(get_known_avatar_tokens);
   IMPLEMENT(request_avatar);
+  IMPLEMENT(request_avatars);
   IMPLEMENT(set_avatar);
   IMPLEMENT(clear_avatar);
 #undef IMPLEMENT
