@@ -1066,6 +1066,8 @@ salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
     return;
   }
 
+  tp_svc_connection_interface_avatars_emit_avatar_updated(self,
+      base->self_handle, priv->self->avatar_token);
   tp_svc_connection_interface_avatars_return_from_set_avatar(
      context, priv->self->avatar_token);
 }
