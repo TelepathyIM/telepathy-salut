@@ -3,14 +3,7 @@ BUILT_SOURCES = \
     signals-marshal.h \
     signals-marshal.c \
     salut-presence-enumtypes.h \
-    salut-presence-enumtypes.c  \
-    salut-avahi-client-enumtypes.h \
-    salut-avahi-client-enumtypes.c  \
-    salut-avahi-entry-group-enumtypes.h \
-    salut-avahi-entry-group-enumtypes.c  \
-    salut-avahi-enums-enumtypes.h \
-    salut-avahi-enums-enumtypes.c
-
+    salut-presence-enumtypes.c
 
 # correctly clean the generated source files
 CLEANFILES = $(BUILT_SOURCES)
@@ -40,19 +33,6 @@ CORE_SOURCES =                                          \
     salut-self.c                                        \
     salut-contact-channel.c                             \
     salut-contact-channel.h                             \
-    salut-avahi-errors.c                                \
-    salut-avahi-errors.h                                \
-    salut-avahi-client.c                                \
-    salut-avahi-client.h                                \
-    salut-avahi-entry-group.c                           \
-    salut-avahi-entry-group.h                           \
-    salut-avahi-record-browser.c                        \
-    salut-avahi-record-browser.h                        \
-    salut-avahi-service-browser.c                       \
-    salut-avahi-service-browser.h                       \
-    salut-avahi-service-resolver.c                      \
-    salut-avahi-service-resolver.h                      \
-    salut-avahi-enums.h                                 \
     salut-connection.c                                  \
     salut-connection.h                                  \
     salut-presence.h                                    \

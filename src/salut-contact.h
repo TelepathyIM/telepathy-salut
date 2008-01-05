@@ -27,8 +27,8 @@
 
 #include <telepathy-glib/handle-repo.h>
 
-#include "salut-avahi-service-resolver.h"
-#include "salut-avahi-enums.h"
+#include <avahi-gobject/ga-service-resolver.h>
+#include <avahi-gobject/ga-enums.h>
 
 #include "salut-presence.h"
 #include "salut-connection.h"
@@ -86,7 +86,7 @@ GType salut_contact_get_type(void);
 #define SALUT_CONTACT_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT, SalutContactClass))
 
-SalutContact *salut_contact_new (SalutAvahiClient *client,
+SalutContact *salut_contact_new (GaClient *client,
     SalutConnection *conn, const gchar *name);
 
 void

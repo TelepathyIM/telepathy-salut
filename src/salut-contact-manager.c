@@ -30,8 +30,8 @@
 #include "salut-contact.h"
 #include "salut-presence-enumtypes.h"
 
-#include "salut-avahi-service-browser.h"
-#include "salut-avahi-enums.h"
+#include <avahi-gobject/ga-service-browser.h>
+#include <avahi-gobject/ga-enums.h>
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -83,14 +83,14 @@ typedef struct _SalutContactManagerPrivate SalutContactManagerPrivate;
 
 struct _SalutContactManagerPrivate
 {
-  SalutAvahiServiceBrowser *presence_browser;
+  GaServiceBrowser *presence_browser;
 #ifdef ENABLE_OLPC
-  SalutAvahiServiceBrowser *activity_browser;
+  GaServiceBrowser *activity_browser;
   GHashTable *olpc_activities_by_mdns;
   GHashTable *olpc_activities_by_room;
 #endif
   SalutConnection *connection;
-  SalutAvahiClient *client;
+  GaClient *client;
   GHashTable *channels;
   GHashTable *contacts;
   gboolean dispose_has_run;
@@ -578,10 +578,10 @@ salut_contact_manager_ensure_contact (SalutContactManager *self,
 }
 
 static void
-browser_found(SalutAvahiServiceBrowser *browser,
+browser_found(GaServiceBrowser *browser,
               AvahiIfIndex interface, AvahiProtocol protocol,
               const char *name, const char *type, const char *domain,
-              SalutAvahiLookupResultFlags flags,
+              GaLookupResultFlags flags,
               gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
@@ -610,10 +610,10 @@ browser_found(SalutAvahiServiceBrowser *browser,
 }
 
 static void
-browser_removed(SalutAvahiServiceBrowser *browser,
+browser_removed(GaServiceBrowser *browser,
               AvahiIfIndex interface, AvahiProtocol protocol,
               const char *name, const char *type, const char *domain,
-              SalutAvahiLookupResultFlags flags,
+              GaLookupResultFlags flags,
               gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
@@ -645,7 +645,7 @@ browser_removed(SalutAvahiServiceBrowser *browser,
 }
 
 static void
-browser_failed(SalutAvahiServiceBrowser *browser,
+browser_failed(GaServiceBrowser *browser,
                GError *error, gpointer userdata) {
   /* FIXME proper error handling */
   g_warning("browser failed -> %s", error->message);
@@ -856,10 +856,10 @@ salut_contact_manager_new(SalutConnection *connection) {
 
   priv->connection = connection;
 
-  priv->presence_browser = salut_avahi_service_browser_new
+  priv->presence_browser = ga_service_browser_new
       (SALUT_DNSSD_PRESENCE);
 #ifdef ENABLE_OLPC
-  priv->activity_browser = salut_avahi_service_browser_new
+  priv->activity_browser = ga_service_browser_new
       (SALUT_DNSSD_OLPC_ACTIVITY);
 #endif
 
@@ -868,7 +868,7 @@ salut_contact_manager_new(SalutConnection *connection) {
 
 gboolean
 salut_contact_manager_start(SalutContactManager *mgr,
-                            SalutAvahiClient *client, GError **error) {
+                            GaClient *client, GError **error) {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
 
   g_assert(priv->client == NULL);
@@ -883,7 +883,7 @@ salut_contact_manager_start(SalutContactManager *mgr,
   g_signal_connect(priv->presence_browser, "failure",
                    G_CALLBACK(browser_failed), mgr);
 
-  if (!salut_avahi_service_browser_attach(priv->presence_browser,
+  if (!ga_service_browser_attach(priv->presence_browser,
         priv->client, error))
     {
       return FALSE;
@@ -897,7 +897,7 @@ salut_contact_manager_start(SalutContactManager *mgr,
   g_signal_connect (priv->activity_browser, "failure",
       G_CALLBACK (browser_failed), mgr);
 
-  if (!salut_avahi_service_browser_attach(priv->activity_browser,
+  if (!ga_service_browser_attach(priv->activity_browser,
         priv->client, error))
     {
       return FALSE;

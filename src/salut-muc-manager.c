@@ -25,13 +25,14 @@
 
 #include "salut-muc-manager.h"
 
+#include <avahi-gobject/ga-service-browser.h>
+
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
-#include "salut-avahi-service-browser.h"
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
 #include "salut-xmpp-connection-manager.h"
@@ -87,9 +88,9 @@ struct _SalutMucManagerPrivate
   GSList *roomlist_channels;
 
   gboolean dispose_has_run;
-  SalutAvahiClient *client;
-  SalutAvahiServiceBrowser *browser;
-  /* room name => (SalutAvahiServiceResolver *) */
+  GaClient *client;
+  GaServiceBrowser *browser;
+  /* room name => (GaServiceResolver *) */
   GHashTable *room_resolvers;
 };
 
@@ -113,7 +114,7 @@ salut_muc_manager_init (SalutMucManager *obj)
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
   priv->connection = NULL;
   priv->client = NULL;
-  priv->browser = salut_avahi_service_browser_new (SALUT_DNSSD_CLIQUE);
+  priv->browser = ga_service_browser_new (SALUT_DNSSD_CLIQUE);
 
   /* allocate any data required by the object here */
   priv->text_channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
@@ -495,10 +496,10 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
 
       for (i = 0; i < arr->len; i++)
         {
-           SalutAvahiServiceResolver *resolver;
-           resolver = g_array_index (arr, SalutAvahiServiceResolver *, i);
+           GaServiceResolver *resolver;
+           resolver = g_array_index (arr, GaServiceResolver *, i);
 
-           if (!salut_avahi_service_resolver_get_address (resolver,
+           if (!ga_service_resolver_get_address (resolver,
                  &avahi_address, &p))
              {
                DEBUG ("..._get_address failed:"
@@ -918,26 +919,26 @@ add_room_foreach (SalutRoomlistChannel *roomlist_channel,
 }
 
 static void
-browser_found (SalutAvahiServiceBrowser *browser,
+browser_found (GaServiceBrowser *browser,
                AvahiIfIndex interface,
                AvahiProtocol protocol,
                const char *name,
                const char *type,
                const char *domain,
-               SalutAvahiLookupResultFlags flags,
+               GaLookupResultFlags flags,
                gpointer userdata)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   GArray *arr;
-  SalutAvahiServiceResolver *resolver;
+  GaServiceResolver *resolver;
   GError *error = NULL;
 
   DEBUG ("found room: %s.%s.%s", name, type, domain);
-  resolver = salut_avahi_service_resolver_new (interface, protocol,
+  resolver = ga_service_resolver_new (interface, protocol,
       name, type, domain, protocol, 0);
 
-  if (!salut_avahi_service_resolver_attach (resolver, priv->client,
+  if (!ga_service_resolver_attach (resolver, priv->client,
         &error))
     {
       DEBUG ("resolver attach failed: %s", error->message);
@@ -965,13 +966,13 @@ remove_room_foreach (SalutRoomlistChannel *roomlist_channel,
 }
 
 static void
-browser_removed (SalutAvahiServiceBrowser *browser,
+browser_removed (GaServiceBrowser *browser,
                  AvahiIfIndex interface,
                  AvahiProtocol protocol,
                  const char *name,
                  const char *type,
                  const char *domain,
-                 SalutAvahiLookupResultFlags flags,
+                 GaLookupResultFlags flags,
                  gpointer userdata)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
@@ -990,14 +991,14 @@ browser_removed (SalutAvahiServiceBrowser *browser,
 
   for (i = 0; i < arr->len; i++)
     {
-      SalutAvahiServiceResolver *resolver;
+      GaServiceResolver *resolver;
       AvahiIfIndex r_interface;
       AvahiProtocol r_protocol;
       gchar *r_name;
       gchar *r_type;
       gchar *r_domain;
 
-      resolver = g_array_index (arr, SalutAvahiServiceResolver *, i);
+      resolver = g_array_index (arr, GaServiceResolver *, i);
       g_object_get ((gpointer) resolver,
           "interface", &r_interface,
           "protocol", &r_protocol,
@@ -1047,7 +1048,7 @@ browser_removed (SalutAvahiServiceBrowser *browser,
 }
 
 static void
-browser_failed (SalutAvahiServiceBrowser *browser,
+browser_failed (GaServiceBrowser *browser,
                 GError *error,
                 gpointer userdata)
 {
@@ -1057,7 +1058,7 @@ browser_failed (SalutAvahiServiceBrowser *browser,
 
 gboolean
 salut_muc_manager_start (SalutMucManager *self,
-                         SalutAvahiClient *client,
+                         GaClient *client,
                          GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -1075,7 +1076,7 @@ salut_muc_manager_start (SalutMucManager *self,
   g_signal_connect (priv->browser, "failure",
                    G_CALLBACK (browser_failed), self);
 
-  if (!salut_avahi_service_browser_attach (priv->browser, priv->client,
+  if (!ga_service_browser_attach (priv->browser, priv->client,
         error))
     {
       DEBUG ("browser attach failed");

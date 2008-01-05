@@ -152,7 +152,7 @@ AC_SUBST(DBUS_SERVICES_DIR)
 AC_DEFINE_UNQUOTED(DBUS_SERVICES_DIR, "$DBUS_SERVICES_DIR", [DBus services directory])
 
 dnl Check for Avahi
-PKG_CHECK_MODULES(AVAHI, [ avahi-client, avahi-glib ])
+PKG_CHECK_MODULES(AVAHI, [ avahi-gobject ])
 AC_SUBST(AVAHI_CFLAGS)
 AC_SUBST(AVAHI_LIBS)
 

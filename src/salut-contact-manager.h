@@ -22,9 +22,9 @@
 #define __SALUT_CONTACT_MANAGER_H__
 
 #include <glib-object.h>
+#include <avahi-gobject/ga-client.h>
 
 #include "salut-connection.h"
-#include "salut-avahi-client.h"
 #include "salut-contact.h"
 
 G_BEGIN_DECLS
@@ -61,7 +61,7 @@ SalutContactManager *
 salut_contact_manager_new(SalutConnection *connection);
 
 gboolean salut_contact_manager_start(SalutContactManager *mgr,
-                                     SalutAvahiClient *client,
+                                     GaClient *client,
                                      GError **error);
 
 

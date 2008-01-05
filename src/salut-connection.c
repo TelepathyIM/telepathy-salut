@@ -30,12 +30,12 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
+#include <avahi-gobject/ga-client.h>
+#include <avahi-gobject/ga-entry-group.h>
 
 #include "salut-connection.h"
 
 #include "salut-util.h"
-#include "salut-avahi-client.h"
-#include "salut-avahi-entry-group.h"
 #include "salut-contact-manager.h"
 #include "salut-contact-channel.h"
 #include "salut-im-manager.h"
@@ -159,7 +159,7 @@ struct _SalutConnectionPrivate
 #endif
 
   /* Avahi client for browsing and resolving */
-  SalutAvahiClient *avahi_client;
+  GaClient *avahi_client;
 
   /* TpHandler for our presence on the lan */
   SalutSelf *self;
@@ -791,8 +791,8 @@ _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
 }
 
 static void
-_salut_avahi_client_failure_cb(SalutAvahiClient *c,
-                              SalutAvahiClientState state,
+_ga_client_failure_cb(GaClient *c,
+                              GaClientState state,
                               gpointer data) {
   /* FIXME better error messages */
   /* FIXME instead of full disconnect we could handle the avahi restart */
@@ -803,8 +803,8 @@ _salut_avahi_client_failure_cb(SalutAvahiClient *c,
 }
 
 static void
-_salut_avahi_client_running_cb(SalutAvahiClient *c,
-                              SalutAvahiClientState state,
+_ga_client_running_cb(GaClient *c,
+                              GaClientState state,
                               gpointer data) {
   SalutConnection *self = SALUT_CONNECTION(data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
@@ -2673,14 +2673,14 @@ salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
       TP_CONNECTION_STATUS_REASON_REQUESTED);
   */
 
-  priv->avahi_client = salut_avahi_client_new(SALUT_AVAHI_CLIENT_FLAG_NO_FAIL);
+  priv->avahi_client = ga_client_new(GA_CLIENT_FLAG_NO_FAIL);
 
   g_signal_connect(priv->avahi_client, "state-changed::running",
-                   G_CALLBACK(_salut_avahi_client_running_cb), self);
+                   G_CALLBACK(_ga_client_running_cb), self);
   g_signal_connect(priv->avahi_client, "state-changed::failure",
-                   G_CALLBACK(_salut_avahi_client_failure_cb), self);
+                   G_CALLBACK(_ga_client_failure_cb), self);
 
-  if (!salut_avahi_client_start(priv->avahi_client, &client_error)) {
+  if (!ga_client_start(priv->avahi_client, &client_error)) {
     *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                          "Unstable to initialize the avahi client: %s",
                          client_error->message);

@@ -26,10 +26,8 @@
 #include "salut-presence.h"
 #include "salut-presence-enumtypes.h"
 
-
-#include "salut-avahi-enums.h"
-#include "salut-avahi-service-resolver.h"
-#include "salut-avahi-record-browser.h"
+#include <avahi-gobject/ga-service-resolver.h>
+#include <avahi-gobject/ga-record-browser.h>
 #include <avahi-common/address.h>
 #include <avahi-common/defs.h>
 #include <avahi-common/malloc.h>
@@ -128,10 +126,10 @@ struct _SalutContactPrivate
   SalutConnection *connection;
   gboolean dispose_has_run;
   gchar *alias;
-  SalutAvahiClient *client;
+  GaClient *client;
   GList *resolvers;
   gboolean found;
-  SalutAvahiRecordBrowser *record_browser;
+  GaRecordBrowser *record_browser;
   GList *avatar_requests;
   guint presence_resolver_failed_timer;
 #ifdef ENABLE_OLPC
@@ -345,7 +343,7 @@ compare_resolver(gconstpointer a, gconstpointer b) {
   return result;
 }
 
-static SalutAvahiServiceResolver *
+static GaServiceResolver *
 find_resolver(SalutContact *contact,
               AvahiIfIndex interface, AvahiProtocol protocol,
               const gchar *name, const gchar *type, const gchar *domain) {
@@ -358,11 +356,11 @@ find_resolver(SalutContact *contact,
   info.type = type;
   info.domain = domain;
   ret = g_list_find_custom(priv->resolvers, &info, compare_resolver);
-  return ret ? SALUT_AVAHI_SERVICE_RESOLVER(ret->data) : NULL;
+  return ret ? GA_SERVICE_RESOLVER(ret->data) : NULL;
 }
 
 SalutContact *
-salut_contact_new(SalutAvahiClient *client,
+salut_contact_new(GaClient *client,
                   SalutConnection *connection,
                   const gchar *name)
 {
@@ -450,7 +448,7 @@ salut_contact_foreach_olpc_activity (SalutContact *self,
 }
 
 static void
-activity_resolved_cb (SalutAvahiServiceResolver *resolver,
+activity_resolved_cb (GaServiceResolver *resolver,
                       AvahiIfIndex interface,
                       AvahiProtocol protocol,
                       gchar *name,
@@ -664,7 +662,7 @@ salut_contact_left_private_activity (SalutContact *self,
 #endif
 
 static void
-contact_resolved_cb(SalutAvahiServiceResolver *resolver,
+contact_resolved_cb(GaServiceResolver *resolver,
                     AvahiIfIndex interface, AvahiProtocol protocol,
                     gchar *name, gchar *type, gchar *domain, gchar *host_name,
                     AvahiAddress *address, gint port,
@@ -1007,7 +1005,7 @@ contact_lost(SalutContact *contact) {
 
 static void
 contact_drop_resolver (SalutContact *self,
-                       SalutAvahiServiceResolver *resolver)
+                       GaServiceResolver *resolver)
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   gint resolvers_left;
@@ -1062,7 +1060,7 @@ presence_resolver_failed_timeout (gpointer data)
 }
 
 static void
-contact_failed_cb(SalutAvahiServiceResolver *resolver, GError *error,
+contact_failed_cb(GaServiceResolver *resolver, GError *error,
                    gpointer userdata) {
   SalutContact *self = SALUT_CONTACT (userdata);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
@@ -1085,13 +1083,13 @@ salut_contact_add_service(SalutContact *contact,
                           const char *name, const char *type,
                           const char *domain) {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  SalutAvahiServiceResolver *resolver;
+  GaServiceResolver *resolver;
   resolver = find_resolver(contact, interface, protocol, name, type, domain);
 
   if (resolver)
     return;
 
-  resolver = salut_avahi_service_resolver_new(interface,
+  resolver = ga_service_resolver_new(interface,
                                               protocol,
                                               name, type, domain,
                                               protocol, 0);
@@ -1111,7 +1109,7 @@ salut_contact_add_service(SalutContact *contact,
     }
 
   g_signal_connect(resolver, "failure", G_CALLBACK(contact_failed_cb), contact);
-  if (!salut_avahi_service_resolver_attach(resolver, priv->client, NULL)) {
+  if (!ga_service_resolver_attach(resolver, priv->client, NULL)) {
     g_warning("Failed to attach resolver");
   }
 
@@ -1124,7 +1122,7 @@ salut_contact_remove_service(SalutContact *contact,
                           AvahiIfIndex interface, AvahiProtocol protocol,
                           const char *name, const char *type,
                           const char *domain) {
-  SalutAvahiServiceResolver *resolver;
+  GaServiceResolver *resolver;
   resolver =  find_resolver(contact, interface, protocol, name, type, domain);
 
   if (!resolver)
@@ -1166,7 +1164,7 @@ _avahi_address_to_sockaddr(AvahiAddress *address, guint16 port,
 
 static void
 _add_address(gpointer data, gpointer user_data) {
-  SalutAvahiServiceResolver *resolver = SALUT_AVAHI_SERVICE_RESOLVER(data);
+  GaServiceResolver *resolver = GA_SERVICE_RESOLVER(data);
   GArray *addresses = (GArray *)user_data;
   salut_contact_address_t s_address;
   AvahiAddress address;
@@ -1174,7 +1172,7 @@ _add_address(gpointer data, gpointer user_data) {
   AvahiIfIndex ifindex;
 
   g_object_get(resolver, "interface", &ifindex, NULL);
-  if (salut_avahi_service_resolver_get_address(resolver, &address, &port)) {
+  if (ga_service_resolver_get_address(resolver, &address, &port)) {
     _avahi_address_to_sockaddr(&address, port, ifindex, &(s_address.address));
     g_array_append_val(addresses, s_address);
   }
@@ -1195,7 +1193,7 @@ salut_contact_get_addresses(SalutContact *contact) {
 
 static gint
 _compare_address(gconstpointer a, gconstpointer b) {
-  SalutAvahiServiceResolver *resolver = SALUT_AVAHI_SERVICE_RESOLVER(a);
+  GaServiceResolver *resolver = GA_SERVICE_RESOLVER(a);
   struct sockaddr_storage addr_a;
   struct sockaddr_storage *addr_b = (struct sockaddr_storage *)b;
   AvahiIfIndex ifindex;
@@ -1203,7 +1201,7 @@ _compare_address(gconstpointer a, gconstpointer b) {
   uint16_t port;
 
   g_object_get(resolver, "interface", &ifindex, NULL);
-  if (!salut_avahi_service_resolver_get_address(resolver, &address, &port)) {
+  if (!ga_service_resolver_get_address(resolver, &address, &port)) {
     return -1;
   }
   _avahi_address_to_sockaddr(&address, port, ifindex, &addr_a);
@@ -1278,7 +1276,7 @@ salut_contact_avatar_request_flush(SalutContact *contact,
 }
 
 static void
-salut_contact_avatar_all_for_now(SalutAvahiRecordBrowser *browser,
+salut_contact_avatar_all_for_now(GaRecordBrowser *browser,
                                  gpointer user_data) {
   SalutContact *contact = SALUT_CONTACT(user_data);
 
@@ -1287,7 +1285,7 @@ salut_contact_avatar_all_for_now(SalutAvahiRecordBrowser *browser,
 }
 
 static void
-salut_contact_avatar_failure(SalutAvahiRecordBrowser *browser, GError *error,
+salut_contact_avatar_failure(GaRecordBrowser *browser, GError *error,
                              gpointer user_data) {
   SalutContact *contact = SALUT_CONTACT(user_data);
 
@@ -1297,7 +1295,7 @@ salut_contact_avatar_failure(SalutAvahiRecordBrowser *browser, GError *error,
 }
 
 static void
-salut_contact_avatar_found(SalutAvahiRecordBrowser *browser,
+salut_contact_avatar_found(GaRecordBrowser *browser,
                            AvahiIfIndex interface, AvahiProtocol protocol,
                            gchar *name, guint16 clazz, guint16 type,
                            guint8 *rdata, gsize rdata_size,
@@ -1323,7 +1321,7 @@ salut_contact_retrieve_avatar(SalutContact *contact) {
   }
 
   name = g_strdup_printf("%s." SALUT_DNSSD_PRESENCE ".local", contact->name);
-  priv->record_browser = salut_avahi_record_browser_new(name, 0xA);
+  priv->record_browser = ga_record_browser_new(name, 0xA);
   g_free(name);
 
   g_signal_connect(priv->record_browser, "new-record",
@@ -1333,7 +1331,7 @@ salut_contact_retrieve_avatar(SalutContact *contact) {
   g_signal_connect(priv->record_browser, "failure",
                    G_CALLBACK(salut_contact_avatar_failure), contact);
 
-  salut_avahi_record_browser_attach(priv->record_browser,
+  ga_record_browser_attach(priv->record_browser,
                                     priv->client, &error);
 }
 

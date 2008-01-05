@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
+#include <avahi-gobject/ga-entry-group.h>
 
 #include "salut-self.h"
 
@@ -37,7 +38,6 @@
 
 #include "salut-contact-manager.h"
 #include "salut-util.h"
-#include "salut-avahi-entry-group.h"
 #include "salut-muc-manager.h"
 #include "salut-xmpp-connection-manager.h"
 
@@ -72,8 +72,8 @@ typedef struct
   TpHandleRepoIface *room_repo;
   TpHandle room;
   /* group and service can be NULL if the activity is private */
-  SalutAvahiEntryGroup *group;
-  SalutAvahiEntryGroupService *service;
+  GaEntryGroup *group;
+  GaEntryGroupService *service;
   SalutMucChannel *muc;
   gchar *activity_id;
   gchar *color;
@@ -156,15 +156,15 @@ struct _SalutSelfPrivate
   GIOChannel *listener;
   guint io_watch_in;
 
-  SalutAvahiClient *client;
-  SalutAvahiEntryGroup *presence_group;
-  SalutAvahiEntryGroupService *presence;
+  GaClient *client;
+  GaEntryGroup *presence_group;
+  GaEntryGroupService *presence;
 #ifdef ENABLE_OLPC
   /* handle owned by the SalutOLPCActivity -> SalutOLPCActivity */
   GHashTable *olpc_activities;
 #endif
 
-  SalutAvahiEntryGroup *avatar_group;
+  GaEntryGroup *avatar_group;
 
   gboolean dispose_has_run;
 };
@@ -337,7 +337,7 @@ salut_self_finalize (GObject *object)
 
 SalutSelf *
 salut_self_new (SalutConnection *connection,
-                SalutAvahiClient *client,
+                GaClient *client,
                 TpHandleRepoIface *room_repo,
                 const gchar *nickname,
                 const gchar *first_name,
@@ -472,16 +472,16 @@ AvahiStringList *create_txt_record(SalutSelf *self, int port) {
 }
 
 static void
-_avahi_presence_group_established(SalutAvahiEntryGroup *group,
-                                  SalutAvahiEntryGroupState state,
+_avahi_presence_group_established(GaEntryGroup *group,
+                                  GaEntryGroupState state,
                                   gpointer data) {
   SalutSelf *self = SALUT_SELF(data);
   g_signal_emit(self, signals[ESTABLISHED], 0, NULL);
 }
 
 static void
-_avahi_presence_group_failed(SalutAvahiEntryGroup *group,
-                             SalutAvahiEntryGroupState state,
+_avahi_presence_group_failed(GaEntryGroup *group,
+                             GaEntryGroupState state,
                              gpointer data) {
   printf("FAILED\n");
 }
@@ -495,7 +495,7 @@ salut_self_announce (SalutSelf *self,
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   AvahiStringList *txt_record = NULL;
 
-  priv->presence_group = salut_avahi_entry_group_new();
+  priv->presence_group = ga_entry_group_new();
 
   g_signal_connect(priv->presence_group,
                    "state-changed::established",
@@ -507,7 +507,7 @@ salut_self_announce (SalutSelf *self,
                    "state-changed::failure",
                    G_CALLBACK(_avahi_presence_group_failed), self);
 
-  if (!salut_avahi_entry_group_attach(priv->presence_group,
+  if (!ga_entry_group_attach(priv->presence_group,
                                       priv->client, error)) {
     goto error;
   };
@@ -517,7 +517,7 @@ salut_self_announce (SalutSelf *self,
   txt_record = create_txt_record(self, port);
 
   if ((priv->presence =
-          salut_avahi_entry_group_add_service_strlist(priv->presence_group,
+          ga_entry_group_add_service_strlist(priv->presence_group,
                                                       self->name,
                                                       SALUT_DNSSD_PRESENCE,
                                                       port,
@@ -526,7 +526,7 @@ salut_self_announce (SalutSelf *self,
     goto error;
   }
 
-  if (!salut_avahi_entry_group_commit(priv->presence_group, error)) {
+  if (!ga_entry_group_commit(priv->presence_group, error)) {
     goto error;
   }
 
@@ -550,17 +550,17 @@ salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
   g_free(self->status_message);
   self->status_message = g_strdup(message);
 
-  salut_avahi_entry_group_service_freeze(priv->presence);
-  salut_avahi_entry_group_service_set(priv->presence, "status",
+  ga_entry_group_service_freeze(priv->presence);
+  ga_entry_group_service_set(priv->presence, "status",
                                salut_presence_status_txt_names[self->status],
                                NULL);
   if (self->status_message) {
-    salut_avahi_entry_group_service_set(priv->presence, "msg",
+    ga_entry_group_service_set(priv->presence, "msg",
                                         self->status_message, NULL);
   } else {
-    salut_avahi_entry_group_service_remove_key(priv->presence, "msg", NULL);
+    ga_entry_group_service_remove_key(priv->presence, "msg", NULL);
   }
-  return salut_avahi_entry_group_service_thaw(priv->presence, error);
+  return ga_entry_group_service_thaw(priv->presence, error);
 }
 
 const gchar *
@@ -584,7 +584,7 @@ salut_self_set_alias (SalutSelf *self, const gchar *alias, GError **error)
   priv->alias = g_strdup (alias);
   priv->nickname = g_strdup (alias);
 
-  ret = salut_avahi_entry_group_service_set (priv->presence, "nick",
+  ret = ga_entry_group_service_set (priv->presence, "nick",
       priv->alias, &err);
   if (!ret)
     {
@@ -604,18 +604,18 @@ salut_self_publish_avatar(SalutSelf *self, guint8 *data,
   name = g_strdup_printf("%s." SALUT_DNSSD_PRESENCE ".local", self->name);
 
   if (priv->avatar_group == NULL) {
-    priv->avatar_group = salut_avahi_entry_group_new();
-    salut_avahi_entry_group_attach(priv->avatar_group, priv->client, NULL);
+    priv->avatar_group = ga_entry_group_new();
+    ga_entry_group_attach(priv->avatar_group, priv->client, NULL);
     is_new = TRUE;
   }
 
-  ret = salut_avahi_entry_group_add_record(priv->avatar_group,
+  ret = ga_entry_group_add_record(priv->avatar_group,
                                            is_new ? 0 : AVAHI_PUBLISH_UPDATE,
                                            name, 0xA, 120, data, size, error);
   g_free(name);
 
   if (is_new) {
-    salut_avahi_entry_group_commit(priv->avatar_group, error);
+    ga_entry_group_commit(priv->avatar_group, error);
   }
 
 
@@ -627,7 +627,7 @@ salut_self_remove_avatar(SalutSelf *self) {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
   DEBUG("Removing avatar");
-  salut_avahi_entry_group_service_remove_key(priv->presence, "phsh", NULL);
+  ga_entry_group_service_remove_key(priv->presence, "phsh", NULL);
   if (priv->avatar_group) {
     g_object_unref(priv->avatar_group);
     priv->avatar_group = NULL;
@@ -661,7 +661,7 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
     if (size > 0) {
       self->avatar_token = sha1_hex(data, size);
     }
-    ret = salut_avahi_entry_group_service_set(priv->presence, "phsh",
+    ret = ga_entry_group_service_set(priv->presence, "phsh",
                                               self->avatar_token,
                                               &err);
   }
@@ -691,25 +691,25 @@ update_activity_service (SalutOLPCActivity *activity,
   GError *err = NULL;
   g_return_val_if_fail (activity_is_announced (activity), FALSE);
 
-  salut_avahi_entry_group_service_freeze (activity->service);
+  ga_entry_group_service_freeze (activity->service);
 
   if (activity->name != NULL)
-    salut_avahi_entry_group_service_set (activity->service, "name",
+    ga_entry_group_service_set (activity->service, "name",
         activity->name, NULL);
 
   if (activity->color != NULL)
-    salut_avahi_entry_group_service_set (activity->service, "color",
+    ga_entry_group_service_set (activity->service, "color",
         activity->color, NULL);
 
   if (activity->type != NULL)
-    salut_avahi_entry_group_service_set (activity->service, "type",
+    ga_entry_group_service_set (activity->service, "type",
         activity->type, NULL);
 
   if (activity->tags != NULL)
-    salut_avahi_entry_group_service_set (activity->service, "tags",
+    ga_entry_group_service_set (activity->service, "tags",
         activity->tags, NULL);
 
-  if (!salut_avahi_entry_group_service_thaw (activity->service, &err))
+  if (!ga_entry_group_service_thaw (activity->service, &err))
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
       g_error_free (err);
@@ -736,8 +736,8 @@ announce_activity (SalutSelf *self,
   /* caller should already have validated this */
   g_return_val_if_fail (room_name != NULL, FALSE);
 
-  activity->group = salut_avahi_entry_group_new ();
-  if (!salut_avahi_entry_group_attach (activity->group, priv->client, error))
+  activity->group = ga_entry_group_new ();
+  if (!ga_entry_group_attach (activity->group, priv->client, error))
     return FALSE;
 
   name = g_strdup_printf ("%s:%s@%s", room_name, priv->published_name,
@@ -749,7 +749,7 @@ announce_activity (SalutSelf *self,
     txt_record = avahi_string_list_add_printf (txt_record, "activity-id=%s",
         activity->activity_id);
 
-  activity->service = salut_avahi_entry_group_add_service_strlist
+  activity->service = ga_entry_group_add_service_strlist
       (activity->group, name, SALUT_DNSSD_OLPC_ACTIVITY, 0, error, txt_record);
 
   DEBUG ("announce activity %s", name);
@@ -759,7 +759,7 @@ announce_activity (SalutSelf *self,
   if (activity->service == NULL)
     return FALSE;
 
-  if (!salut_avahi_entry_group_commit (activity->group, error))
+  if (!ga_entry_group_commit (activity->group, error))
     return FALSE;
 
   /* announce activities properties */
@@ -1073,7 +1073,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
     {
       GError *e;
 
-      if (!salut_avahi_entry_group_service_set (activity->service,
+      if (!ga_entry_group_service_set (activity->service,
             "activity-id", value, &e))
         {
           g_set_error (data->error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
@@ -1172,15 +1172,15 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
   if (room != 0)
     tp_handle_ref (priv->room_repo, room);
 
-  salut_avahi_entry_group_service_freeze(priv->presence);
+  ga_entry_group_service_freeze(priv->presence);
 
-  salut_avahi_entry_group_service_set (priv->presence,
+  ga_entry_group_service_set (priv->presence,
       "olpc-current-activity", self->olpc_cur_act, NULL);
 
-  salut_avahi_entry_group_service_set (priv->presence,
+  ga_entry_group_service_set (priv->presence,
       "olpc-current-activity-room", room_name, NULL);
 
-  ret = salut_avahi_entry_group_service_thaw(priv->presence, &err);
+  ret = ga_entry_group_service_thaw(priv->presence, &err);
   if (!ret)
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
@@ -1481,7 +1481,7 @@ salut_self_set_olpc_properties (SalutSelf *self,
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GError *err = NULL;
 
-  salut_avahi_entry_group_service_freeze(priv->presence);
+  ga_entry_group_service_freeze(priv->presence);
   if (key != NULL)
     {
       size_t key_len = key->len;
@@ -1509,7 +1509,7 @@ salut_self_set_olpc_properties (SalutSelf *self,
           size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
           gchar *name = g_strdup_printf ("olpc-key-part%u", i);
 
-          salut_avahi_entry_group_service_set_arbitrary (priv->presence, name,
+          ga_entry_group_service_set_arbitrary (priv->presence, name,
               key_data, step, NULL);
           g_free (name);
 
@@ -1523,7 +1523,7 @@ salut_self_set_olpc_properties (SalutSelf *self,
         {
           gchar *name = g_strdup_printf ("olpc-key-part%u", i);
 
-          salut_avahi_entry_group_service_remove_key (priv->presence, name,
+          ga_entry_group_service_remove_key (priv->presence, name,
               NULL);
           g_free (name);
 
@@ -1535,7 +1535,7 @@ salut_self_set_olpc_properties (SalutSelf *self,
       g_free (self->olpc_color);
       self->olpc_color = g_strdup (color);
 
-      salut_avahi_entry_group_service_set (priv->presence, "olpc-color",
+      ga_entry_group_service_set (priv->presence, "olpc-color",
           color, NULL);
     }
   if (jid != NULL)
@@ -1543,11 +1543,11 @@ salut_self_set_olpc_properties (SalutSelf *self,
       g_free (self->jid);
       self->jid = g_strdup (jid);
 
-      salut_avahi_entry_group_service_set (priv->presence, "jid",
+      ga_entry_group_service_set (priv->presence, "jid",
           jid, NULL);
     }
 
-  if (!salut_avahi_entry_group_service_thaw(priv->presence, &err))
+  if (!ga_entry_group_service_thaw(priv->presence, &err))
     {
       g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
       g_error_free(err);

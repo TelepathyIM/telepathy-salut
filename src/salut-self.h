@@ -23,13 +23,13 @@
 #include "config.h"
 
 #include <glib-object.h>
+#include <avahi-gobject/ga-client.h>
 
 #include <telepathy-glib/handle-repo.h>
 
 #include <gibber/gibber-xmpp-stanza.h>
 
 #include "salut-connection.h"
-#include "salut-avahi-client.h"
 #include "salut-presence.h"
 
 G_BEGIN_DECLS
@@ -74,7 +74,7 @@ GType salut_self_get_type(void);
 #define SALUT_SELF_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_SELF, SalutSelfClass))
 
-SalutSelf *salut_self_new (SalutConnection *conn, SalutAvahiClient *client,
+SalutSelf *salut_self_new (SalutConnection *conn, GaClient *client,
     TpHandleRepoIface *room_repo, const gchar *nickname,
     const gchar *first_name, const gchar *last_name, const gchar *jid,
     const gchar *email, const gchar *published_name,

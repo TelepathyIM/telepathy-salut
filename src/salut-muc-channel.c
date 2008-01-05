@@ -42,11 +42,11 @@
 #include <telepathy-glib/util.h>
 
 #include <gibber/gibber-muc-connection.h>
+#include <avahi-gobject/ga-entry-group.h>
 
 #include "salut-connection.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
-#include "salut-avahi-entry-group.h"
 
 #include "text-helper.h"
 
@@ -103,9 +103,9 @@ struct _SalutMucChannelPrivate
   GibberMucConnection *muc_connection;
   gchar *muc_name;
   gboolean connected;
-  SalutAvahiClient *client;
-  SalutAvahiEntryGroup *muc_group;
-  SalutAvahiEntryGroupService *service;
+  GaClient *client;
+  GaEntryGroup *muc_group;
+  GaEntryGroupService *service;
   gboolean creator;
   guint timeout;
   /* (gchar *) -> (SalutContact *) */
@@ -451,9 +451,9 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
       return TRUE;
     }
 
-  priv->muc_group = salut_avahi_entry_group_new ();
+  priv->muc_group = ga_entry_group_new ();
 
-  if (!salut_avahi_entry_group_attach (priv->muc_group, priv->client, &error))
+  if (!ga_entry_group_attach (priv->muc_group, priv->client, &error))
     {
       DEBUG ("entry group attach failed: %s", error->message);
       goto publish_service_error;
@@ -498,7 +498,7 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
   host = g_strdup_printf ("%s." SALUT_DNSSD_CLIQUE ".local", priv->muc_name);
 
   /* Add the record */
-  if (!salut_avahi_entry_group_add_record_full (priv->muc_group,
+  if (!ga_entry_group_add_record_full (priv->muc_group,
         AVAHI_IF_UNSPEC, addr.proto, 0,
         host, AVAHI_DNS_CLASS_IN, dns_type, AVAHI_DEFAULT_TTL_HOST_NAME,
         &(addr.data.data), dns_payload_length, &error))
@@ -513,7 +513,7 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
 
   /* We shouldn't add the service but manually create the SRV record so
    * we'll be able to allow multiple announcers */
-  priv->service = salut_avahi_entry_group_add_service_full_strlist (
+  priv->service = ga_entry_group_add_service_full_strlist (
       priv->muc_group, AVAHI_IF_UNSPEC, addr.proto, 0, priv->muc_name,
       SALUT_DNSSD_CLIQUE, NULL, host, port, &error, txt_record);
   if (priv->service == NULL)
@@ -522,7 +522,7 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
       goto publish_service_error;
     }
 
-  if (!salut_avahi_entry_group_commit (priv->muc_group, &error))
+  if (!ga_entry_group_commit (priv->muc_group, &error))
     {
       DEBUG ("entry group commit failed: %s", error->message);
       goto publish_service_error;
@@ -835,10 +835,10 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
 
   param_spec = g_param_spec_object (
       "client",
-      "SalutAvahiClient object",
+      "GaClient object",
       "Salut Avahi client used with the"
       " connection that owns this MUC channel",
-      SALUT_TYPE_AVAHI_CLIENT,
+      GA_TYPE_CLIENT,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
