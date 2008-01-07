@@ -1066,7 +1066,7 @@ salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
     return;
   }
 
-  tp_svc_connection_interface_avatars_emit_avatar_updated(self,
+  tp_svc_connection_interface_avatars_emit_avatar_updated (self,
       base->self_handle, priv->self->avatar_token);
   tp_svc_connection_interface_avatars_return_from_set_avatar(
      context, priv->self->avatar_token);
@@ -1202,7 +1202,7 @@ salut_connection_request_avatars (
     const GArray *contacts,
     DBusGMethodInvocation *context)
 {
-  int i;
+  gint i;
   GError *err = NULL;
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
@@ -1227,9 +1227,9 @@ salut_connection_request_avatars (
       if (base->self_handle == handle)
         {
            GArray *arr;
-           arr = g_array_sized_new(FALSE, FALSE, sizeof(guint8),
+           arr = g_array_sized_new (FALSE, FALSE, sizeof(guint8),
              priv->self->avatar_size);
-           arr = g_array_append_vals(arr, priv->self->avatar, 
+           arr = g_array_append_vals (arr, priv->self->avatar, 
              priv->self->avatar_size);
 
             tp_svc_connection_interface_avatars_emit_avatar_retrieved (
