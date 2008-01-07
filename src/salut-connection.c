@@ -1247,6 +1247,7 @@ salut_connection_request_avatars (
           if (contact != NULL)
             {
               salut_contact_get_avatar (contact, _request_avatars_cb, self);
+              g_object_unref (contact);
             }
         }
     }
