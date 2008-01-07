@@ -641,17 +641,19 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
   GError *err = NULL;
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
-  if (size == 0) {
-    salut_self_remove_avatar(self);
-    return TRUE;
-  }
-
-
   g_free(self->avatar_token);
   self->avatar_token = NULL;
 
   g_free(self->avatar);
   self->avatar = NULL;
+
+  self->avatar_size = 0;
+
+  if (size == 0) {
+    salut_self_remove_avatar(self);
+    return TRUE;
+  }
+
 
   ret = salut_self_publish_avatar(self, data, size, &err);
 
