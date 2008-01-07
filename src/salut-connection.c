@@ -1163,15 +1163,17 @@ salut_connection_get_known_avatar_tokens(
              salut_contact_manager_get_contact (priv->contact_manager, handle);
           if (contact != NULL)
             {
-              tokens  = g_strdup (contact->avatar_token);
+              if (contact->avatar_token != NULL)
+                tokens  = g_strdup (contact->avatar_token);
+              else
+                /* We always know the tokens, if it's unset then it's "" */
+                tokens = g_strdup ("");
               g_object_unref (contact);
             }
         }
 
-      if (tokens == NULL)
-        tokens = g_strdup ("");
-
-      g_hash_table_insert (ret, GUINT_TO_POINTER (handle), tokens);
+      if (tokens != NULL)
+        g_hash_table_insert (ret, GUINT_TO_POINTER (handle), tokens);
     }
 
   tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
@@ -1186,12 +1188,15 @@ _request_avatars_cb (SalutContact *contact, guint8 *avatar, gsize size,
 {
   GArray *arr;
 
+  if (avatar == NULL)
+    return;
+
   arr = g_array_sized_new (FALSE, FALSE, sizeof (guint8), size);
   arr = g_array_append_vals (arr, avatar, size);
 
   tp_svc_connection_interface_avatars_emit_avatar_retrieved (
     (GObject *) user_data, contact->handle,
-    contact->avatar_token != NULL ? contact->avatar_token : "", arr, "");
+    contact->avatar_token, arr, "");
 
   g_array_free (arr, TRUE);
 }
@@ -1227,17 +1232,19 @@ salut_connection_request_avatars (
       if (base->self_handle == handle)
         {
            GArray *arr;
-           arr = g_array_sized_new (FALSE, FALSE, sizeof(guint8),
-             priv->self->avatar_size);
-           arr = g_array_append_vals (arr, priv->self->avatar, 
-             priv->self->avatar_size);
 
-            tp_svc_connection_interface_avatars_emit_avatar_retrieved (
-                (GObject *) self, base->self_handle,
-                priv->self->avatar_token != NULL ?
-                  priv->self->avatar_token : "",
-                arr, "");
-          g_array_free (arr, TRUE);
+           if (priv->self->avatar != NULL)
+             {
+               arr = g_array_sized_new (FALSE, FALSE, sizeof(guint8),
+                 priv->self->avatar_size);
+               arr = g_array_append_vals (arr, priv->self->avatar,
+                 priv->self->avatar_size);
+
+               tp_svc_connection_interface_avatars_emit_avatar_retrieved (
+                  (GObject *) self, base->self_handle,
+                    priv->self->avatar_token, arr, "");
+               g_array_free (arr, TRUE);
+             }
         }
       else
         {
