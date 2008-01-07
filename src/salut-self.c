@@ -650,6 +650,7 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
   self->avatar_size = 0;
 
   if (size == 0) {
+    self->avatar_token = g_strdup("");
     salut_self_remove_avatar(self);
     return TRUE;
   }
