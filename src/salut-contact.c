@@ -90,6 +90,9 @@ static void
 salut_contact_avatar_request_flush(SalutContact *contact,
     guint8 *data, gsize size);
 
+static void
+salut_contact_retrieve_avatar (SalutContact *contact);
+
 #ifdef ENABLE_OLPC
 typedef struct {
   char *activity_id;
@@ -408,8 +411,19 @@ update_alias(SalutContact *self, const gchar *new, gboolean *valid) {
 
 static void
 purge_cached_avatar(SalutContact *self, const gchar *token) {
-  g_free(self->avatar_token);
-  self->avatar_token = g_strdup(token);
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  g_free (self->avatar_token);
+  self->avatar_token = g_strdup (token);
+
+  /* the avatar token has changed, restart retrieving the avatar just to be
+   * sure */
+  if (priv->record_browser != NULL)
+    {
+      g_object_unref (priv->record_browser);
+      priv->record_browser = NULL;
+      salut_contact_retrieve_avatar(self);
+    }
 }
 
 #ifdef ENABLE_OLPC
