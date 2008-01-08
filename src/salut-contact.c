@@ -422,7 +422,7 @@ purge_cached_avatar(SalutContact *self, const gchar *token) {
     {
       g_object_unref (priv->record_browser);
       priv->record_browser = NULL;
-      salut_contact_retrieve_avatar(self);
+      salut_contact_retrieve_avatar (self);
     }
 }
 
