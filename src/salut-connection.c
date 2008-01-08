@@ -50,11 +50,6 @@
 
 #include "salut-presence.h"
 
-#include <avahi-client/client.h>
-#include <avahi-client/lookup.h>
-#include <avahi-common/error.h>
-#include <avahi-glib/glib-watch.h>
-
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
