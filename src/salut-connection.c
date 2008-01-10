@@ -846,6 +846,7 @@ _salut_avahi_client_running_cb(SalutAvahiClient *c,
             TP_BASE_CONNECTION(self),
             TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
+      return;
     }
 
   /* Create the bytestream manager */
