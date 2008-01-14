@@ -739,7 +739,7 @@ resolver_resolv_srv (GibberResolver *resolver, guint id,
           GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE, "Invalid reply received");
     }
 
-  gibber_resolver_srv_result (resolver, id, entries, NULL);
+  gibber_resolver_srv_result (resolver, id, entries, error);
 
   if (error != NULL)
     g_error_free (error);
