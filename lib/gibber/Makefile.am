@@ -30,6 +30,8 @@ HANDWRITTEN_SOURCES =             \
   gibber-xmpp-stanza.h            \
   gibber-xmpp-writer.c            \
   gibber-xmpp-writer.h            \
+  gibber-resolver.c               \
+  gibber-resolver.h               \
   gibber-transport.c              \
   gibber-transport.h              \
   gibber-fd-transport.c           \
@@ -95,7 +97,7 @@ if HAVE_LIBSSL
   AM_CFLAGS += @LIBSSL_CFLAGS@
 endif
 
-AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@
+AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ -lresolv
 
 if HAVE_LIBSSL
   AM_LDFLAGS += @LIBSSL_LIBS@
