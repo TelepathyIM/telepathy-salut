@@ -145,6 +145,27 @@ AC_SUBST(LIBSSL_CFLAGS)
 AC_SUBST(LIBSSL_LIBS)
 AM_CONDITIONAL(HAVE_LIBSSL, test "x$HAVE_LIBSSL" = "xyes")
 
+AC_CHECK_FUNC(res_query, ,
+  [AC_CHECK_LIB(resolv, res_query, [ RESOLV_LIBS="-lresolv" ],
+    [ save_libs="$LIBS"
+      LIBS="-lresolv $LIBS"
+      AC_MSG_CHECKING([for res_query in -lresolv (alternate version)])
+      AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM([[#include <resolv.h>]], [[res_query(0,0,0,0,0)]])],
+        [ AC_MSG_RESULT(yes)
+          LIBS="$save_libs"
+          RESOLV_LIBS="-lresolv"
+        ],
+        [ AC_MSG_RESULT(no)
+          LIBS="$save_libs"
+          AC_CHECK_LIB(bind, res_query,
+            [ RESOLV_LIBS="-lbind" ],
+            [ AC_MSG_ERROR(res_query not found) ] ) ] ) ] )
+  ]
+)
+
+AC_SUBST(RESOLV_LIBS)
+
 
 AS_AC_EXPAND(DATADIR, $datadir)
 DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
