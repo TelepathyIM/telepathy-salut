@@ -87,6 +87,9 @@ GType gibber_resolver_get_type(void);
 #define GIBBER_RESOLVER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_RESOLVER, GibberResolverClass))
 
+GibberResolver * gibber_resolver_get_resolver (void);
+void gibber_resolver_set_resolver (GType object_type);
+
 typedef struct {
   gint address_family;
   gint socket_type;

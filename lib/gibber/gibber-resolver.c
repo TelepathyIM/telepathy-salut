@@ -33,6 +33,33 @@
 
 #include "gibber-resolver.h"
 
+static GibberResolver *resolver_singleton = NULL;
+static GType resolver_singleton_type = 0;
+
+GibberResolver *
+gibber_resolver_get_resolver (void)
+{
+
+  if (resolver_singleton_type == 0)
+    resolver_singleton_type = GIBBER_TYPE_RESOLVER;
+
+  if (resolver_singleton == NULL)
+    resolver_singleton = g_object_new (resolver_singleton_type, NULL);
+
+  return resolver_singleton;
+}
+
+void
+gibber_resolver_set_resolver (GType object_type)
+{
+  if (resolver_singleton_type != object_type && resolver_singleton != NULL)
+    g_object_unref (resolver_singleton);
+
+  resolver_singleton_type = object_type;
+}
+
+
+
 G_DEFINE_TYPE(GibberResolver, gibber_resolver, G_TYPE_OBJECT)
 
 typedef struct {

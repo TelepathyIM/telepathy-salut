@@ -114,7 +114,7 @@ main(int argc, char **argv) {
 
   mainloop = g_main_loop_new(NULL, FALSE);
 
-  resolver = g_object_new (GIBBER_TYPE_RESOLVER, NULL);
+  resolver = gibber_resolver_get_resolver ();
 
   gibber_resolver_srv (resolver, hostname, servicename,
     GIBBER_RESOLVER_SERVICE_TYPE_TCP,
