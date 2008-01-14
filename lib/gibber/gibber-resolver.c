@@ -26,6 +26,8 @@
 #include <netinet/in.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
+#include <sys/types.h>
+#include <netdb.h>
 
 #include <errno.h>
 
@@ -587,8 +589,8 @@ gibber_resolver_nameinfo_result (GibberResolver *resolver, guint jobid,
 
 
 #define ANSWER_BUFSIZE 10240
-static GList *
-res_query_to_list (guchar *answer, int length)
+GList *
+gibber_resolver_res_query_to_list (guchar *answer, int length)
 {
   GList *list = NULL;
   int qdcount;
@@ -642,7 +644,75 @@ failed:
  return NULL;
 }
 
+GError *
+gibber_resolver_gai_error_to_g_error (int error)
+{
+  gint code;
+  
+  switch (error) {
+    case EAI_BADFLAGS:
+    case EAI_ADDRFAMILY:
+    case EAI_SOCKTYPE:
+    case EAI_FAMILY:
+    case EAI_SERVICE:
+      code = GIBBER_RESOLVER_ERROR_INVALID_ARGUMENT;
+      break;
 
+    case EAI_AGAIN:
+      code = GIBBER_RESOLVER_ERROR_RESOLVE_TEMPORARY_FAILURE;
+      break;
+    case EAI_FAIL:
+    case EAI_NODATA:
+    case EAI_NONAME:
+      code = GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE;
+      break;
+
+    case EAI_MEMORY:
+    case EAI_OVERFLOW:
+      code = GIBBER_RESOLVER_ERROR_MEMORY;
+      break;
+
+    case EAI_SYSTEM:
+    default:
+      code = GIBBER_RESOLVER_ERROR_UNKNOWN;
+  }
+
+  return g_error_new (GIBBER_RESOLVER_ERROR, code, gai_strerror (error));
+}
+
+GError *
+gibber_resolver_h_error_to_g_error (int error)
+{
+  gint code;
+  gchar *message;
+
+  switch (error) {
+    case NO_RECOVERY:
+      code = GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE,
+      message = "Non-recoverable error";
+      break;
+    case HOST_NOT_FOUND:
+      code = GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE,
+      message = "Authoritative Answer Host not found";
+      break;
+    case NO_DATA:
+      code = GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE;
+      message = "Valid name, no data record of requested type.";
+      break;
+    case TRY_AGAIN:
+      code = GIBBER_RESOLVER_ERROR_RESOLVE_TEMPORARY_FAILURE,
+      message = "Temporary resolver failure";
+      break;
+    default:
+      code = GIBBER_RESOLVER_ERROR_UNKNOWN;
+      message = "Unknown error";
+  }
+
+  return g_error_new (GIBBER_RESOLVER_ERROR, code, message);
+}
+
+
+/* Default GibberResolver implementation (blocking) */
 static gboolean
 resolver_resolv_srv (GibberResolver *resolver, guint id,
   const gchar *service_name, const char *service,
@@ -650,6 +720,8 @@ resolver_resolv_srv (GibberResolver *resolver, guint id,
 {
   gchar *srv_str;
   int ret;
+  GList *entries = NULL;
+  GError *error = NULL;
   guchar answer[ANSWER_BUFSIZE];
 
   srv_str = g_strdup_printf ("_%s._%s.%s", service,
@@ -658,17 +730,19 @@ resolver_resolv_srv (GibberResolver *resolver, guint id,
   ret = res_query (srv_str, C_IN, T_SRV, answer, ANSWER_BUFSIZE);
 
   if (ret < 0)
-    {
-      /* FIXME decent error code */
-      GError e = { GIBBER_RESOLVER_ERROR, 0,
-        "Srv lookup failed" };
-      gibber_resolver_srv_result (resolver, id, NULL, &e);
-    }
+    error = gibber_resolver_h_error_to_g_error (h_errno);
   else
     {
-      GList *entries = res_query_to_list (answer, ret);
-      gibber_resolver_srv_result (resolver, id, entries, NULL);
+      entries = gibber_resolver_res_query_to_list (answer, ret);
+      if (entries == NULL)
+        error = g_error_new (GIBBER_RESOLVER_ERROR,
+          GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE, "Invalid reply received");
     }
+
+  gibber_resolver_srv_result (resolver, id, entries, NULL);
+
+  if (error != NULL)
+    g_error_free (error);
 
   g_free (srv_str);
 
@@ -694,9 +768,9 @@ resolver_resolv_addrinfo (GibberResolver *resolver, guint id,
 
   if (ret != 0)
     {
-      GError e = { GIBBER_RESOLVER_ERROR, -ret, (gchar *)gai_strerror (ret) };
-      gibber_resolver_addrinfo_result (resolver, id,
-        NULL, &e);
+      GError *e = gibber_resolver_gai_error_to_g_error (ret);
+      gibber_resolver_addrinfo_result (resolver, id, NULL, e);
+      g_error_free (e);
       return FALSE;
     }
 
@@ -727,9 +801,10 @@ resolver_resolv_nameinfo (GibberResolver *resolver, guint id,
 
   if (ret != 0)
     {
-      GError e = { GIBBER_RESOLVER_ERROR, ret, (gchar *) gai_strerror (ret) };
+      GError *e = gibber_resolver_gai_error_to_g_error (ret);
 
-      gibber_resolver_nameinfo_result (resolver, id, NULL, NULL, &e);
+      gibber_resolver_nameinfo_result (resolver, id, NULL, NULL, e);
+      g_error_free (e);
       return FALSE;
     }
 

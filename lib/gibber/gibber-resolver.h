@@ -33,6 +33,19 @@ GQuark gibber_resolver_error_quark (void);
   gibber_resolver_error_quark()
 
 typedef enum {
+  /* Invalid or unsupported arguments */
+  GIBBER_RESOLVER_ERROR_INVALID_ARGUMENT,
+  /* Temperary failure in name resolving */
+  GIBBER_RESOLVER_ERROR_RESOLVE_TEMPORARY_FAILURE,
+  /* Failed to resolve */
+  GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE,
+  /* Failed to allocate memory or overflow */
+  GIBBER_RESOLVER_ERROR_MEMORY,
+  /* Unknown error */
+  GIBBER_RESOLVER_ERROR_UNKNOWN,
+} GibberResolverError;
+
+typedef enum {
   GIBBER_RESOLVER_SERVICE_TYPE_UDP,
   GIBBER_RESOLVER_SERVICE_TYPE_TCP
 } GibberResolverServiceType;
@@ -151,6 +164,9 @@ void gibber_resolver_addrinfo_result (GibberResolver *resolver, guint jobid,
 void gibber_resolver_nameinfo_result (GibberResolver *resolver, guint jobid,
   const gchar *hostname, const gchar *port, GError *error);
 
+GList *gibber_resolver_res_query_to_list (guchar *answer, int length);
+GError *gibber_resolver_gai_error_to_g_error (int error);
+GError *gibber_resolver_h_error_to_g_error (int error);
 
 G_END_DECLS
 
