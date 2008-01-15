@@ -18,7 +18,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,8 +30,12 @@
 
 #include <errno.h>
 
+#include "config.h"
 #include "gibber-resolver.h"
-#include "gibber-resolver-asyncns.h"
+
+#ifdef HAVE_LIBASYNCNS
+  #include "gibber-resolver-asyncns.h"
+#endif
 
 static GibberResolver *resolver_singleton = NULL;
 static GType resolver_singleton_type = 0;
@@ -42,7 +45,11 @@ gibber_resolver_get_resolver (void)
 {
 
   if (resolver_singleton_type == 0)
+#ifdef HAVE_LIBASYNCNS
     resolver_singleton_type = GIBBER_TYPE_RESOLVER_ASYNCNS;
+#else
+    resolver_singleton_type = GIBBER_TYPE_RESOLVER;
+#endif
 
   if (resolver_singleton == NULL)
     resolver_singleton = g_object_new (resolver_singleton_type, NULL);

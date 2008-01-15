@@ -168,7 +168,10 @@ AC_SUBST(RESOLV_LIBS)
 
 dnl Check for libasyncns
 PKG_CHECK_MODULES(LIBASYNCNS, [libasyncns >= 0.3],
-  [ HAVE_LIBASYNCNS="yes" ] )
+  [ HAVE_LIBASYNCNS="yes"
+    AC_DEFINE(HAVE_LIBASYNCNS, 1, [Define if asyncns support is available])
+  ],
+  [ AC_WARN(libasyncns not found: Resolving will be synchronous!) ] )
 
 AC_SUBST(LIBASYNCNS_CFLAGS)
 AC_SUBST(LIBASYNCNS_LIBS)
