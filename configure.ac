@@ -193,13 +193,13 @@ AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
 AC_CHECK_HEADERS(execinfo.h)
 
 dnl check for libsasl2 (for sasl test)
-AC_CHECK_LIB(sasl2, sasl_server_new, 
-             [LIBSASL2_LIBS="-lsasl2" 
-              LIBSASL2_CFLAGS="" 
+AC_CHECK_LIB(sasl2, sasl_server_new,
+             [LIBSASL2_LIBS="-lsasl2"
+              LIBSASL2_CFLAGS=""
               HAVE_LIBSASL2=yes
-              AC_DEFINE(HAVE_LIBSASL2, 1, 
-                        [Define if libsasl2 support is available]) 
-             ], 
+              AC_DEFINE(HAVE_LIBSASL2, 1,
+                        [Define if libsasl2 support is available])
+             ],
              [ AC_MSG_WARN(libsasl2 not found: not building sasl tests) ] )
 
 AC_SUBST(LIBSASL2_LIBS)
