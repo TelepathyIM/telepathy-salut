@@ -73,6 +73,11 @@ libgibber_la_SOURCES +=     \
     gibber-ssl-transport.h
 endif
 
+if HAVE_LIBASYNCNS
+libgibber_la_SOURCES +=       \
+  gibber-resolver-asyncns.c   \
+  gibber-resolver-asyncns.h
+endif
 
 CLEANFILES=$(BUILT_SOURCES)
 dist-hook:
@@ -97,8 +102,16 @@ if HAVE_LIBSSL
   AM_CFLAGS += @LIBSSL_CFLAGS@
 endif
 
+if HAVE_LIBASYNCNS
+  AM_CFLAGS += @LIBASYNCNS_CFLAGS@
+endif
+
 AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @RESOLV_LIBS@
 
 if HAVE_LIBSSL
   AM_LDFLAGS += @LIBSSL_LIBS@
+endif
+
+if HAVE_LIBASYNCNS
+  AM_LDFLAGS += @LIBASYNCNS_LIBS@
 endif

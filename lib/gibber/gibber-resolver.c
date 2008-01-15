@@ -32,6 +32,7 @@
 #include <errno.h>
 
 #include "gibber-resolver.h"
+#include "gibber-resolver-asyncns.h"
 
 static GibberResolver *resolver_singleton = NULL;
 static GType resolver_singleton_type = 0;
@@ -41,7 +42,7 @@ gibber_resolver_get_resolver (void)
 {
 
   if (resolver_singleton_type == 0)
-    resolver_singleton_type = GIBBER_TYPE_RESOLVER;
+    resolver_singleton_type = GIBBER_TYPE_RESOLVER_ASYNCNS;
 
   if (resolver_singleton == NULL)
     resolver_singleton = g_object_new (resolver_singleton_type, NULL);
@@ -85,7 +86,6 @@ struct _GibberResolverPrivate
   /* guint * -> GibberResolverJob struct */
   GHashTable *jobs;
 };
-
 
 static gboolean resolver_resolv_srv (GibberResolver *resolver, guint id,
   const gchar *service_name, const char *service,
