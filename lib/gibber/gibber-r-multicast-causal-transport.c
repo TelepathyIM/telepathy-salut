@@ -1189,8 +1189,11 @@ disconnect_done (GibberRMulticastCausalTransport *self)
 
   gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
 
-  g_object_unref (priv->self);
-  priv->self = NULL;
+  if (priv->self != NULL)
+    {
+      g_object_unref (priv->self);
+      priv->self = NULL;
+    }
 
   gibber_transport_set_state (GIBBER_TRANSPORT (self),
     GIBBER_TRANSPORT_DISCONNECTED);
