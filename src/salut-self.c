@@ -1386,8 +1386,16 @@ update_activity_privacy (SalutSelf *self,
   if (!is_private)
     {
       /* activity becomes public */
+      GError *err = NULL;
+
       DEBUG ("activity becomes public. Announce it");
-      return announce_activity (self, activity, error);
+      if (!announce_activity (self, activity, &err))
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+          g_error_free (err);
+          return FALSE;
+        }
+      return TRUE;
     }
   else
     {
