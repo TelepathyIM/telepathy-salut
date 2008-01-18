@@ -1369,7 +1369,7 @@ notify_activity_properties_changes (SalutSelf *self,
   return TRUE;
 }
 
-gboolean
+static gboolean
 update_activity_privacy (SalutSelf *self,
                          SalutOLPCActivity *activity,
                          gboolean is_private,
