@@ -1309,6 +1309,7 @@ send_olpc_activity_properties_changes_msg (SalutSelf *self,
   gchar *muc_name;
   GibberMucConnection *muc_connection;
   gboolean result;
+  GError *err = NULL;
 
   g_assert (activity->muc != NULL);
 
@@ -1346,7 +1347,12 @@ send_olpc_activity_properties_changes_msg (SalutSelf *self,
   salut_gibber_xmpp_node_add_children_from_properties (properties_node,
       properties, "property");
 
-  result = gibber_muc_connection_send (muc_connection, stanza, error);
+  result = gibber_muc_connection_send (muc_connection, stanza, &err);
+  if (!result)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free (err);
+    }
 
   g_object_unref (stanza);
   g_object_unref (muc_connection);
