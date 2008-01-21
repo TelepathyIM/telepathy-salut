@@ -28,6 +28,7 @@
 #include <salut-connection.h>
 #include "salut-xmpp-connection-manager.h"
 #include "salut-muc-channel.h"
+#include "salut-tubes-channel.h"
 
 G_BEGIN_DECLS
 
@@ -73,6 +74,9 @@ salut_muc_manager_get_text_channel (SalutMucManager *muc_manager,
 void salut_muc_manager_handle_si_stream_request (SalutMucManager *muc_manager,
     GibberBytestreamIface *bytestream, TpHandle room_handle,
     const gchar *stream_id, GibberXmppStanza *msg);
+
+SalutTubesChannel * salut_muc_manager_ensure_tubes_channel (
+    SalutMucManager *muc_manager, TpHandle handle);
 
 G_END_DECLS
 

@@ -1146,3 +1146,25 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
 
   salut_tubes_channel_bytestream_offered (chan, bytestream, msg);
 }
+
+SalutTubesChannel *
+salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
+                                        TpHandle handle)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  SalutTubesChannel *tubes_chan;
+
+  tubes_chan = g_hash_table_lookup (priv->tubes_channels,
+      GUINT_TO_POINTER (handle));
+  if (tubes_chan != NULL)
+    {
+      g_object_ref (tubes_chan);
+      return tubes_chan;
+    }
+
+  tubes_chan = create_tubes_channel (self, handle, NULL);
+  g_assert (tubes_chan != NULL);
+  g_object_ref (tubes_chan);
+
+  return tubes_chan;
+}
