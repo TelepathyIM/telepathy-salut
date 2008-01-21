@@ -495,6 +495,8 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
   GHashTable *old_dbus_tubes;
   struct _add_in_old_dbus_tubes_data add_data;
   struct _emit_d_bus_names_changed_foreach_data emit_data;
+  GibberStanzaType type;
+  GibberStanzaSubType sub_type;
 
   contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
   if (contact == 0)
@@ -505,6 +507,11 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
 
   if (contact == priv->self_handle)
     /* We don't need to inspect our own tubes */
+    return;
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
+  if (type != GIBBER_STANZA_TYPE_MESSAGE
+      || sub_type != GIBBER_STANZA_SUB_TYPE_GROUPCHAT)
     return;
 
   tubes_node = gibber_xmpp_node_get_child_ns (stanza->node, "tubes",
