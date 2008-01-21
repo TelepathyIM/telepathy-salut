@@ -108,8 +108,6 @@ struct _SalutTubesChannelPrivate
   ((SalutTubesChannelPrivate *) obj->priv)
 
 static gboolean update_tubes_info (SalutTubesChannel *self);
-static void muc_connection_received_stanza_cb (GibberMucConnection *conn,
-    const gchar *sender, GibberXmppStanza *stanza, gpointer user_data);
 static void muc_connection_lost_senders_cb (GibberMucConnection *conn,
     GArray *senders, gpointer user_data);
 static void muc_connection_new_senders_cb (GibberMucConnection *conn,
@@ -176,8 +174,6 @@ salut_tubes_channel_constructor (GType type,
           NULL);
       g_assert (priv->muc_connection != NULL);
 
-      g_signal_connect (priv->muc_connection, "received-stanza",
-          G_CALLBACK (muc_connection_received_stanza_cb), self);
       g_signal_connect (priv->muc_connection, "new-senders",
           G_CALLBACK (muc_connection_new_senders_cb), self);
       g_signal_connect (priv->muc_connection, "lost-senders",
@@ -479,13 +475,11 @@ emit_d_bus_names_changed_foreach (gpointer key,
     }
 }
 
-static void
-muc_connection_received_stanza_cb (GibberMucConnection *conn,
-                                   const gchar *sender,
-                                   GibberXmppStanza *stanza,
-                                   gpointer user_data)
+void
+tubes_message_received (SalutTubesChannel *self,
+                        const gchar *sender,
+                        GibberXmppStanza *stanza)
 {
-  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);

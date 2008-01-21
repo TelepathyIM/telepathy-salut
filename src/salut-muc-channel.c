@@ -47,6 +47,7 @@
 #include "salut-connection.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
+#include "salut-muc-manager.h"
 
 #include "text-helper.h"
 
@@ -110,6 +111,7 @@ struct _SalutMucChannelPrivate
   guint timeout;
   /* (gchar *) -> (SalutContact *) */
   GHashTable *senders;
+  SalutMucManager *muc_manager;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -330,6 +332,11 @@ salut_muc_channel_constructor (GType type, guint n_props,
   priv->connected = FALSE;
   g_signal_connect (priv->muc_connection, "connected",
       G_CALLBACK (muc_connection_connected_cb), obj);
+
+  g_object_get (priv->connection,
+      "muc-manager", &(priv->muc_manager),
+      NULL);
+  g_assert (priv->muc_manager != NULL);
 
   /* Connect to the bus */
   bus = tp_get_bus ();
@@ -939,6 +946,12 @@ salut_muc_channel_dispose (GObject *object)
       priv->senders = NULL;
     }
 
+  if (priv->muc_manager != NULL)
+    {
+      g_object_unref (priv->muc_manager);
+      priv->muc_manager = NULL;
+    }
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
     G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose (object);
@@ -1124,6 +1137,7 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
   const gchar *from, *to, *body, *body_offset;
   TpChannelTextMessageType msgtype;
   TpHandle from_handle;
+  GibberXmppNode *tubes_node;
 
   to = gibber_xmpp_node_get_attribute(stanza->node, "to");
   if (strcmp(to, priv->muc_name)) {
@@ -1144,6 +1158,21 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
         from_handle, stanza))
     return;
 #endif
+
+  tubes_node = gibber_xmpp_node_get_child_ns (stanza->node, "tubes",
+      GIBBER_TELEPATHY_NS_TUBES);
+  if (tubes_node != NULL)
+    {
+      SalutTubesChannel *tubes_chan;
+
+      tubes_chan = salut_muc_manager_ensure_tubes_channel (priv->muc_manager,
+          priv->handle);
+      g_assert (tubes_chan != NULL);
+
+      tubes_message_received (tubes_chan, sender, stanza);
+
+      g_object_unref (tubes_chan);
+    }
 
   if (!text_helper_parse_incoming_message(stanza, &from, &msgtype,
                                           &body, &body_offset)) {
