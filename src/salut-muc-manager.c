@@ -445,6 +445,8 @@ new_tubes_channel (SalutMucManager *self,
       NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
+  tp_channel_factory_iface_emit_new_channel (self,
+      TP_CHANNEL_IFACE (chan), NULL);
 
   g_hash_table_insert (priv->tubes_channels, GUINT_TO_POINTER (room), chan);
 
@@ -629,6 +631,33 @@ make_roomlist_channel (SalutMucManager *self,
   return roomlist_channel;
 }
 
+static SalutTubesChannel *
+create_tubes_channel (SalutMucManager *self,
+                      TpHandle handle,
+                      GError **error)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  SalutMucChannel *text_chan;
+  SalutTubesChannel *tubes_chan;
+
+  text_chan = g_hash_table_lookup (priv->text_channels,
+      GUINT_TO_POINTER (handle));
+
+  if (text_chan == NULL)
+    {
+      DEBUG ("have to create the text channel before the tubes one");
+      text_chan = salut_muc_manager_request_new_muc_channel (self,
+          handle, error);
+      if (text_chan == NULL)
+        return NULL;
+    }
+
+  tubes_chan = new_tubes_channel (self, handle, text_chan);
+  g_assert (tubes_chan != NULL);
+
+  return tubes_chan;
+}
+
 static TpChannelFactoryRequestStatus
 salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
                                          const gchar *chan_type,
@@ -706,25 +735,11 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
         }
       else
         {
-          text_chan = g_hash_table_lookup (priv->text_channels,
-              GUINT_TO_POINTER (handle));
+          tubes_chan = create_tubes_channel (mgr, handle, error);
+          if (tubes_chan == NULL)
+            return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
 
-          if (text_chan == NULL)
-            {
-              DEBUG ("have to create the text channel before the tubes one");
-              text_chan = salut_muc_manager_request_new_muc_channel (mgr,
-                  handle, error);
-              if (text_chan == NULL)
-                return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
-            }
-
-          tubes_chan = new_tubes_channel (mgr, handle, text_chan);
-          g_assert (tubes_chan != NULL);
           *ret = TP_CHANNEL_IFACE (tubes_chan);
-
-          /* Tubes channel ready, let's announce it */
-          tp_channel_factory_iface_emit_new_channel (mgr,
-            TP_CHANNEL_IFACE (tubes_chan), NULL);
 
           status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
         }
