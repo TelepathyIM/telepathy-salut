@@ -504,7 +504,7 @@ muc_connection_received_stanza_cb (GibberMucConnection *conn,
     }
 
   if (contact == priv->self_handle)
-    /* We don't need to inspect our own presence */
+    /* We don't need to inspect our own tubes */
     return;
 
   tubes_node = gibber_xmpp_node_get_child_ns (stanza->node, "tubes",
