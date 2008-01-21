@@ -493,11 +493,7 @@ tubes_message_received (SalutTubesChannel *self,
   GibberStanzaSubType sub_type;
 
   contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
-  if (contact == 0)
-    {
-      DEBUG ("unknown sender: %s", sender);
-      return;
-    }
+  g_assert (contact != 0);
 
   if (contact == priv->self_handle)
     /* We don't need to inspect our own tubes */
@@ -510,8 +506,7 @@ tubes_message_received (SalutTubesChannel *self,
 
   tubes_node = gibber_xmpp_node_get_child_ns (stanza->node, "tubes",
       GIBBER_TELEPATHY_NS_TUBES);
-  if (tubes_node == NULL)
-    return;
+  g_assert (tubes_node != NULL);
 
   /* Fill old_dbus_tubes with D-BUS tubes previoulsy announced by
    * the contact */
