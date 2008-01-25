@@ -978,10 +978,12 @@ contact_resolved_cb(SalutAvahiServiceResolver *resolver,
           switch (address->proto)
             {
               case AVAHI_PROTO_INET:
+                g_free (self->olpc_ip4);
                 self->olpc_ip4 = saddr;
                 SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
                 break;
               case AVAHI_PROTO_INET6:
+                g_free (self->olpc_ip6);
                 self->olpc_ip6 = saddr;
                 SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
                 break;
