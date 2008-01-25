@@ -410,6 +410,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
 
       salut_muc_manager_handle_si_stream_request (muc_mgr,
           bytestream, room_handle, stream_id, stanza);
+      g_object_unref (muc_mgr);
     }
   else
     {
