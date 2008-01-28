@@ -34,10 +34,13 @@ resolver_addrinfo_cb (GibberResolver *resolver, GList *entries, GError *error,
     {
       GibberResolverAddrInfo *addr = (GibberResolverAddrInfo *) e->data;
       gchar *hostname, *portname;
+      gboolean ret;
 
-      g_assert (gibber_resolver_sockaddr_to_str (
+      ret = gibber_resolver_sockaddr_to_str (
         (struct sockaddr *) &(addr->sockaddr), addr->sockaddr_len,
-        &hostname, &portname, NULL));
+        &hostname, &portname, NULL);
+
+      g_assert (ret == TRUE);
 
       printf ("\t %s %s\n", hostname, portname);
 
