@@ -495,7 +495,7 @@ weight_sort_srv_list (GList *srv_list)
   GibberResolverSrvRecord *srv;
 
   /* Sort srv list of equal priority but with weight as specified in RFC2782 */
-  srv = (GibberResolverSrvRecord *)srv_list->data;
+  srv = (GibberResolverSrvRecord *) srv_list->data;
 
   g_assert (srv_list != NULL);
 
@@ -617,7 +617,7 @@ gibber_resolver_nameinfo_result (GibberResolver *resolver, guint jobid,
 
   g_assert (job != NULL);
 
-  callback = (gibber_resolver_nameinfo_cb)job->callback;
+  callback = (gibber_resolver_nameinfo_cb) job->callback;
   callback (resolver, hostname, port, error,
     job->user_data, job->weak_object);
 
@@ -638,17 +638,18 @@ gibber_resolver_res_query_to_list (guchar *answer, int length)
   HEADER *head = (HEADER *)answer;
   char name[256];
 
-  qdcount = ntohs(head->qdcount);
-  ancount = ntohs(head->ancount);
+  qdcount = ntohs (head->qdcount);
+  ancount = ntohs (head->ancount);
 
   /* Ignore the questions */
-  while (qdcount-- > 0 && (len = dn_expand(answer, end, pos, name, 255)) >= 0)
+  while (qdcount-- > 0 && (len = dn_expand (answer, end, pos, name, 255)) >= 0)
     {
        pos += len + QFIXEDSZ;
      }
 
    /* Parse the answers */
-   while (ancount-- > 0 && (len = dn_expand(answer, end, pos, name, 255)) >= 0)
+   while (ancount-- > 0
+       && (len = dn_expand (answer, end, pos, name, 255)) >= 0)
      {
        uint16_t pref, weight, port, class, type;
 
