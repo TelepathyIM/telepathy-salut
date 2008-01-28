@@ -655,8 +655,8 @@ gibber_resolver_res_query_to_list (guchar *answer, int length)
 
        /* Ignore the initial string, which has the query in it */
        pos += len;
-       GETSHORT (type, pos);
-       GETSHORT (class, pos);
+       NS_GET16 (type, pos);
+       NS_GET16 (class, pos);
 
        if (type != T_SRV || class != C_IN)
          goto failed;
@@ -664,9 +664,9 @@ gibber_resolver_res_query_to_list (guchar *answer, int length)
        /* skip ttl and dlen */
        pos += 6;
 
-       GETSHORT(pref, pos);
-       GETSHORT(weight, pos);
-       GETSHORT(port, pos);
+       NS_GET16 (pref, pos);
+       NS_GET16 (weight, pos);
+       NS_GET16 (port, pos);
        len = dn_expand(answer, end, pos, name, 255);
 
        list = g_list_prepend (list,
