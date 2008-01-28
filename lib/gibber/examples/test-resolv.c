@@ -32,7 +32,7 @@ resolver_addrinfo_cb (GibberResolver *resolver, GList *entries, GError *error,
 
   for (e = entries; e != NULL; e = e->next)
     {
-      GibberResolverAddrInfo *addr = (GibberResolverAddrInfo *)e->data;
+      GibberResolverAddrInfo *addr = (GibberResolverAddrInfo *) e->data;
       gchar *hostname, *portname;
 
       g_assert (gibber_resolver_sockaddr_to_str (
