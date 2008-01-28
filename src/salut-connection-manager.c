@@ -118,6 +118,7 @@ static void salut_params_free(void *params) {
   g_free(p->last_name);
   g_free(p->email);
   g_free(p->jid);
+  g_free (p->published_name);
 
   g_slice_free(SalutParams, params);
 };
