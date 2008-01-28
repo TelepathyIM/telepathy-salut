@@ -408,7 +408,7 @@ gibber_resolver_sockaddr_to_str (const struct sockaddr *sa, gsize salen,
     }
 
   if (address != NULL)
-    *address = g_strdup(name);
+    *address = g_strdup (name);
 
   if (service != NULL)
     *service = g_strdup (servicename);
