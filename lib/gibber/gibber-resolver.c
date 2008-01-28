@@ -189,7 +189,7 @@ gibber_resolver_finalize (GObject *object)
 static void
 weak_object_destroyed (gpointer data, GObject *old_object)
 {
-  GibberResolverJob *job = (GibberResolverJob *)data;
+  GibberResolverJob *job = (GibberResolverJob *) data;
 
   g_assert (job->weak_object == old_object);
 
