@@ -173,6 +173,7 @@ check_stream_id (GibberBytestreamMuc *self)
       return FALSE;
     }
 
+  g_assert (priv->stream_id == NULL);
   priv->stream_id = g_strdup_printf ("%u", priv->stream_id_multicast);
 
   return TRUE;
@@ -246,8 +247,8 @@ gibber_bytestream_muc_set_property (GObject *object,
         priv->peer_id = g_value_dup_string (value);
         break;
       case PROP_STREAM_ID:
-        g_free (priv->stream_id);
-        priv->stream_id = g_value_dup_string (value);
+        /* Stream ID isn't supposed to be defined by the bytestream user as we
+         * use gibber_muc_connection_new_stream to generate one */
         break;
       case PROP_STATE:
         if (priv->state != g_value_get_uint (value))
