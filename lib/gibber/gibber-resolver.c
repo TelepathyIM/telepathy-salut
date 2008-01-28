@@ -471,9 +471,9 @@ weight_sort_srv_list_total (GList *srv_list, gint total)
 
   num = g_random_int_range (0, total + 1);
 
-  for (l = srv_list ; l != NULL; l = l->next)
+  for (l = srv_list ; l != NULL; l = g_list_next (l))
     {
-      srv = (GibberResolverSrvRecord *)l->data;
+      srv = (GibberResolverSrvRecord *) l->data;
       num -= srv->weight;
       if (num <= 0)
         break;
@@ -499,9 +499,9 @@ weight_sort_srv_list (GList *srv_list)
 
   g_assert (srv_list != NULL);
 
-  for (l = srv_list; l != NULL; l = l->next)
+  for (l = srv_list; l != NULL; l = g_list_next (l))
     {
-      srv = (GibberResolverSrvRecord *)l->data;
+      srv = (GibberResolverSrvRecord *) l->data;
       total += srv->weight;
     }
 
