@@ -61,7 +61,10 @@ void
 gibber_resolver_set_resolver (GType object_type)
 {
   if (resolver_singleton_type != object_type && resolver_singleton != NULL)
-    g_object_unref (resolver_singleton);
+    {
+      g_object_unref (resolver_singleton);
+      resolver_singleton = NULL;
+    }
 
   resolver_singleton_type = object_type;
 }
