@@ -38,7 +38,7 @@ resolver_srv_cb (GibberResolver *resolver, GList *srv_list, GError *error,
   int last_prio = 0;
   int last_weight = 0;
 
-  for (s = srv_list ; s != NULL; s = s->next)
+  for (s = srv_list ; s != NULL; s = g_list_next (s))
     {
       GibberResolverSrvRecord *r = (GibberResolverSrvRecord *) s->data;
 
