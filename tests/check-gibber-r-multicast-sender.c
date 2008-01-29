@@ -607,6 +607,8 @@ START_TEST (test_holding) {
               (guint8 *) test->setup[i].data, strlen (test->setup[i].data));
         }
       gibber_r_multicast_sender_push (s0, p);
+
+      g_object_unref (p);
     }
 
     h_next_test_step (&data);
