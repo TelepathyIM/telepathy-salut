@@ -640,7 +640,7 @@ browser_removed(GaServiceBrowser *browser,
     salut_contact_remove_service(contact, interface, protocol,
                                  name, type, domain);
   } else {
-    g_message("Unknown contact removed from service browser");
+    DEBUG ("Unknown contact removed from service browser");
   }
 }
 
