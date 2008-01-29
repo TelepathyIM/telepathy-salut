@@ -1101,6 +1101,7 @@ salut_contact_add_service(SalutContact *contact,
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
   GaServiceResolver *resolver;
   resolver = find_resolver(contact, interface, protocol, name, type, domain);
+  GError *error = NULL;
 
   if (resolver)
     return;
@@ -1125,8 +1126,9 @@ salut_contact_add_service(SalutContact *contact,
     }
 
   g_signal_connect(resolver, "failure", G_CALLBACK(contact_failed_cb), contact);
-  if (!ga_service_resolver_attach(resolver, priv->client, NULL)) {
-    g_warning("Failed to attach resolver");
+  if (!ga_service_resolver_attach(resolver, priv->client, &error)) {
+    g_warning("Failed to attach resolver: %s", error->message);
+    g_free (error);
   }
 
   DEBUG_RESOLVER (contact, resolver, "added");
