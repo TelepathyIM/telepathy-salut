@@ -1737,6 +1737,9 @@ gibber_r_multicast_transport_disconnect(GibberTransport *transport) {
     }
   priv->state = STATE_DISCONNECTED;
 
+  /* Remove all the state we had. This will also stop all running timers */
+  gibber_r_multicast_transport_flush_state (self);
+
   gibber_transport_set_state(GIBBER_TRANSPORT(self),
                              GIBBER_TRANSPORT_DISCONNECTING);
 
