@@ -295,7 +295,6 @@ START_TEST (test_new_error_reply)
 
   reply = gibber_iq_helper_new_error_reply (stanza,
       XMPP_ERROR_BAD_REQUEST, "test");
-  g_print ("%s\n", gibber_xmpp_node_to_string (reply->node));
   fail_unless (reply != NULL);
   fail_unless (strcmp (reply->node->name, "iq") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (reply->node, "type"),
