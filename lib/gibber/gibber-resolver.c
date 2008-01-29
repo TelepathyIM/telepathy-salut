@@ -199,8 +199,11 @@ weak_object_destroyed (gpointer data, GObject *old_object)
 }
 
 static guint
-gibber_resolver_job_add (GibberResolver *resolver, GCallback callback,
-   gpointer user_data, GDestroyNotify destroy, GObject *weak_object)
+gibber_resolver_job_add (GibberResolver *resolver,
+                         GCallback callback,
+                         gpointer user_data,
+                         GDestroyNotify destroy,
+                         GObject *weak_object)
 {
   GibberResolverPrivate *priv = GIBBER_RESOLVER_GET_PRIVATE (resolver);
   GibberResolverJob *job;
@@ -247,8 +250,11 @@ static void free_job (gpointer data)
 }
 
 GibberResolverAddrInfo *
-gibber_resolver_addrinfo_new (gint address_family, gint socket_type,
-  gint protocol, struct sockaddr *addr, gsize sockaddr_len)
+gibber_resolver_addrinfo_new (gint address_family,
+                              gint socket_type,
+                              gint protocol,
+                              struct sockaddr *addr,
+                              gsize sockaddr_len)
 {
   GibberResolverAddrInfo *result;
 
@@ -283,8 +289,10 @@ gibber_resolver_addrinfo_list_free (GList *addrinfo_list)
 }
 
 GibberResolverSrvRecord *
-gibber_resolver_srv_record_new (gchar *hostname, guint16 port,
-  guint16 priority, guint16 weight)
+gibber_resolver_srv_record_new (gchar *hostname,
+                                guint16 port,
+                                guint16 priority,
+                                guint16 weight)
 {
   GibberResolverSrvRecord *result;
 
@@ -320,10 +328,13 @@ gibber_resolver_srv_list_free (GList *srv_list)
 
 guint
 gibber_resolver_srv (GibberResolver *resolver,
-  const gchar *service_name, const char *service,
-  GibberResolverServiceType type,
-  gibber_resolver_srv_cb callback,
-  gpointer user_data, GDestroyNotify destroy, GObject *weak_object)
+                     const gchar *service_name,
+                     const char *service,
+                     GibberResolverServiceType type,
+                     gibber_resolver_srv_cb callback,
+                     gpointer user_data,
+                     GDestroyNotify destroy,
+                     GObject *weak_object)
 {
   GibberResolverClass *cls = GIBBER_RESOLVER_GET_CLASS (resolver);
   gboolean ret;
@@ -339,10 +350,16 @@ gibber_resolver_srv (GibberResolver *resolver,
 
 guint
 gibber_resolver_addrinfo (GibberResolver *resolver,
-  const gchar *hostname, const char *port,
-  int address_family, int sock_type, int protocol, int flags,
-  gibber_resolver_addrinfo_cb callback,
-  gpointer user_data, GDestroyNotify destroy, GObject *weak_object)
+                          const gchar *hostname,
+                          const char *port,
+                          int address_family,
+                          int sock_type,
+                          int protocol,
+                          int flags,
+                          gibber_resolver_addrinfo_cb callback,
+                          gpointer user_data,
+                          GDestroyNotify destroy,
+                          GObject *weak_object)
 {
   GibberResolverClass *cls = GIBBER_RESOLVER_GET_CLASS (resolver);
   gboolean ret;
@@ -358,9 +375,14 @@ gibber_resolver_addrinfo (GibberResolver *resolver,
 }
 
 guint
-gibber_resolver_nameinfo (GibberResolver *resolver, const struct sockaddr *sa,
-  socklen_t salen, gint flags, gibber_resolver_nameinfo_cb callback,
-  gpointer user_data, GDestroyNotify destroy, GObject *weak_object)
+gibber_resolver_nameinfo (GibberResolver *resolver,
+                          const struct sockaddr *sa,
+                          socklen_t salen,
+                          gint flags,
+                          gibber_resolver_nameinfo_cb callback,
+                          gpointer user_data,
+                          GDestroyNotify destroy,
+                          GObject *weak_object)
 {
   GibberResolverClass *cls = GIBBER_RESOLVER_GET_CLASS (resolver);
   gboolean ret;
@@ -391,8 +413,11 @@ gibber_resolver_cancel (GibberResolver *resolver, guint id)
 }
 
 gboolean
-gibber_resolver_sockaddr_to_str (const struct sockaddr *sa, gsize salen,
-  gchar **address, gchar **service, GError **error)
+gibber_resolver_sockaddr_to_str (const struct sockaddr *sa,
+                                 gsize salen,
+                                 gchar **address,
+                                 gchar **service,
+                                 GError **error)
 {
   int ret;
   gchar name[NI_MAXHOST], servicename[NI_MAXSERV];
@@ -568,7 +593,8 @@ sort_srv_list (GList *srv_list)
 }
 
 void
-gibber_resolver_srv_result (GibberResolver *resolver, guint jobid,
+gibber_resolver_srv_result (GibberResolver *resolver,
+                            guint jobid,
   GList *srv_list, GError *error)
 {
   GibberResolverPrivate *priv = GIBBER_RESOLVER_GET_PRIVATE (resolver);
@@ -588,8 +614,10 @@ gibber_resolver_srv_result (GibberResolver *resolver, guint jobid,
 }
 
 void
-gibber_resolver_addrinfo_result (GibberResolver *resolver, guint jobid,
-  GList *entries, GError *error)
+gibber_resolver_addrinfo_result (GibberResolver *resolver,
+                                 guint jobid,
+                                 GList *entries,
+                                 GError *error)
 {
   GibberResolverPrivate *priv = GIBBER_RESOLVER_GET_PRIVATE (resolver);
   GibberResolverJob *job;
@@ -606,8 +634,11 @@ gibber_resolver_addrinfo_result (GibberResolver *resolver, guint jobid,
 }
 
 void
-gibber_resolver_nameinfo_result (GibberResolver *resolver, guint jobid,
-  const gchar *hostname, const gchar *port, GError *error)
+gibber_resolver_nameinfo_result (GibberResolver *resolver,
+                                 guint jobid,
+                                 const gchar *hostname,
+                                 const gchar *port,
+                                 GError *error)
 {
   GibberResolverPrivate *priv = GIBBER_RESOLVER_GET_PRIVATE (resolver);
   GibberResolverJob *job;
@@ -686,7 +717,7 @@ GError *
 gibber_resolver_gai_error_to_g_error (int error)
 {
   gint code;
-  
+
   switch (error) {
     case EAI_BADFLAGS:
     case EAI_ADDRFAMILY:
@@ -752,9 +783,11 @@ gibber_resolver_h_error_to_g_error (int error)
 
 /* Default GibberResolver implementation (blocking) */
 static gboolean
-resolver_resolv_srv (GibberResolver *resolver, guint id,
-  const gchar *service_name, const char *service,
-  GibberResolverServiceType type)
+resolver_resolv_srv (GibberResolver *resolver,
+                     guint id,
+                     const gchar *service_name,
+                     const char *service,
+                     GibberResolverServiceType type)
 {
   gchar *srv_str;
   int ret;
@@ -788,9 +821,14 @@ resolver_resolv_srv (GibberResolver *resolver, guint id,
 }
 
 static gboolean
-resolver_resolv_addrinfo (GibberResolver *resolver, guint id,
-  const gchar *hostname, const char *port, int address_family, int sock_type,
-  int protocol, int flags)
+resolver_resolv_addrinfo (GibberResolver *resolver,
+                          guint id,
+                          const gchar *hostname,
+                          const char *port,
+                          int address_family,
+                          int sock_type,
+                          int protocol,
+                          int flags)
 {
   struct addrinfo req, *ans = NULL, *tmpaddr;
   int ret;
@@ -828,8 +866,11 @@ resolver_resolv_addrinfo (GibberResolver *resolver, guint id,
 }
 
 static gboolean
-resolver_resolv_nameinfo (GibberResolver *resolver, guint id,
-  const struct sockaddr *sa, socklen_t salen, gint flags)
+resolver_resolv_nameinfo (GibberResolver *resolver,
+                          guint id,
+                          const struct sockaddr *sa,
+                          socklen_t salen,
+                          gint flags)
 {
   int ret;
   gchar name[NI_MAXHOST], servicename[NI_MAXSERV];
