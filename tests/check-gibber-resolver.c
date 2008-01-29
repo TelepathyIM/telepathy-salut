@@ -1,7 +1,7 @@
 /*
- * check-gibber-xmpp-stanza.c - Test for gibber-xmpp-stanza functions
- * Copyright (C) 2007 Collabora Ltd.
- * @author Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
+ * check-gibber-resolver.c - Test for gibber-resolver functions
+ * Copyright (C) 2008 Collabora Ltd.
+ * @author Sjoerd Simons <sjoerd.simons@collabora.co.uk>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
