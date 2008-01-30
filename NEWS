@@ -1,0 +1,5 @@
+telepathy-salut 0.2.2 (2008-01-30)
+==================================
+This new release in the 0.2 stable branch fix few issues in the Clique protocol
+and tubes code. Most of this bug were discovered thanks to hyperactivity, a
+collaboration stress testing tool we are developing for the OLPC project.
