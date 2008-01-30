@@ -3,3 +3,23 @@ telepathy-salut 0.2.2 (2008-01-30)
 This new release in the 0.2 stable branch fix few issues in the Clique protocol
 and tubes code. Most of this bug were discovered thanks to hyperactivity, a
 collaboration stress testing tool we are developing for the OLPC project.
+
+
+telepathy-salut 0.2.1 (2008-01-08)
+==================================
+Apart from some small bugfixes this updates the Avatar interface to comply
+with the current telepathy spec.
+
+As salut doesn't have persistent avatar storage, the clients need to ensure the
+avatar is set upon each connection. See sf bug #1825366 [0] for the suggested
+changes to telepathy-mission-control.
+
+[0] http://sourceforge.net/tracker/index.php?func=detail&aid=1825366&group_id=190214&atid=932444
+
+
+telepathy-salut 0.2.0 (2007-12-07)
+==================================
+This release marks the start of the 0.2 stable branch.
+
+This release fixes stream tubes on system where nss-mdns isn't installed and
+various other small bugfixes.
