@@ -1,0 +1,13 @@
+telepathy-salut 0.3.0 (2008-01-08)
+==================================
+This is the first release in the unstable 0.3 series.
+
+Apart from some small bugfixes this updates the Avatar interface to comply with
+the current telepathy spec and uses avahi-gobject instead of the internal avahi
+gobject wrappers. This means at least avahi 0.6.22 is needed for this version.
+
+As salut doesn't have persistent avatar storage, the clients need to ensure the
+avatar is set upon each connection. See sf bug #1825366 [0] for the suggested
+changes to telepathy-mission-control.
+
+[0] http://sourceforge.net/tracker/index.php?func=detail&aid=1825366&group_id=190214&atid=932444
