@@ -1065,9 +1065,14 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
 
   if (!activity_is_announced (activity))
     {
-      if (!announce_activity (data->self, activity, data->error))
+      GError *e;
+
+      if (!announce_activity (data->self, activity, &e))
         {
-          DEBUG ("can't announce activity");
+          DEBUG ("can't announce activity: %s", e->message);
+          g_set_error (data->error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+              e->message);
+          g_error_free (e);
           g_hash_table_remove (data->olpc_activities, key);
           return;
         }
