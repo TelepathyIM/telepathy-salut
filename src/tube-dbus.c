@@ -642,7 +642,7 @@ salut_tube_dbus_constructor (GType type,
        * We don't create the bytestream of private D-Bus tube yet.
        * It will be when we'll receive the answer of the SI request
        */
-      GibberBytestreamIBB *bytestream;
+      GibberBytestreamMuc *bytestream;
       GibberBytestreamState state;
       const gchar *peer_id;
 
