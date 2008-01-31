@@ -677,6 +677,7 @@ salut_tube_dbus_constructor (GType type,
       g_object_get (bytestream, "stream-id", &priv->stream_id, NULL);
 
       g_object_set (self, "bytestream", bytestream, NULL);
+      g_object_unref (bytestream);
     }
   else
     {
