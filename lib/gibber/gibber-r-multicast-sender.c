@@ -179,6 +179,12 @@ gibber_r_multicast_sender_group_remove (GibberRMulticastSenderGroup *group,
 
   s = g_hash_table_lookup (group->senders, GUINT_TO_POINTER(sender_id));
 
+  if (s == NULL)
+    {
+      DEBUG ("Can't remove unknown sender id: %x", sender_id);
+      return;
+    }
+
   g_queue_remove (group->pop_queue, s);
   if (gibber_r_multicast_sender_packet_cache_size (s) > 0)
     {
