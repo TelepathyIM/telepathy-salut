@@ -952,12 +952,11 @@ static gboolean
 do_whois_request(gpointer data) {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(data);
 
-  priv->whois_timer = 0;
+  schedule_whois_request(sender, TRUE);
 
   DEBUG_SENDER(sender, "Sending out whois request");
   g_signal_emit(sender, signals[WHOIS_REQUEST], 0);
 
-  schedule_whois_request(sender, TRUE);
 
   return FALSE;
 }
