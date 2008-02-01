@@ -1128,7 +1128,7 @@ salut_contact_add_service(SalutContact *contact,
   g_signal_connect(resolver, "failure", G_CALLBACK(contact_failed_cb), contact);
   if (!ga_service_resolver_attach(resolver, priv->client, &error)) {
     g_warning("Failed to attach resolver: %s", error->message);
-    g_free (error);
+    g_error_free (error);
   }
 
   DEBUG_RESOLVER (contact, resolver, "added");
