@@ -816,7 +816,7 @@ schedule_progress_timer (GibberRMulticastSender *self)
 }
 
 static void
-name_discovered (GibberRMulticastSender *self, const gchar *name)
+stop_whois_discovery (GibberRMulticastSender *self)
 {
   GibberRMulticastSenderPrivate *priv =
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (self);
@@ -832,6 +832,13 @@ name_discovered (GibberRMulticastSender *self, const gchar *name)
       g_source_remove (priv->fail_timer);
       priv->fail_timer = 0;
     }
+
+}
+
+static void
+name_discovered (GibberRMulticastSender *self, const gchar *name)
+{
+  stop_whois_discovery (self);
 
   self->name = g_strdup(name);
   DEBUG_SENDER(self, "Name discovered");
@@ -944,8 +951,6 @@ do_whois_reply(gpointer data) {
 static gboolean
 do_whois_request(gpointer data) {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(data);
-  GibberRMulticastSenderPrivate *priv =
-      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(sender);
 
   priv->whois_timer = 0;
 
@@ -1755,12 +1760,9 @@ gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
         name_discovered (sender, packet->data.whois_reply.sender_name);
       } else {
         /* FIXME: collision detection */
+        stop_whois_discovery (sender);
       }
-      if (priv->whois_timer != 0) {
-        DEBUG_SENDER(sender, "Cancelled scheduled whois packet");
-        g_source_remove(priv->whois_timer);
-        priv->whois_timer = 0;
-      }
+
       pop_packets(sender);
       break;
     default:
