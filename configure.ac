@@ -139,9 +139,9 @@ AC_CHECK_LIB(telepathy-glib, tp_debug_set_flags,
 dnl Check for OpenSSL
 AC_ARG_ENABLE(ssl,
   AC_HELP_STRING([--enable-ssl],[enable gibber ssl transport [[default=no]]]),
-    enable_ssl=, enable_ssl=no )
+    enable_ssl=$enableval, enable_ssl=no )
 
-if test x = xyes; then
+if test x$enable_ssl = xyes; then
   PKG_CHECK_MODULES(LIBSSL, [openssl], 
               [ HAVE_LIBSSL="yes" ],
               [ AC_MSG_ERROR(openssl not found) ] )
