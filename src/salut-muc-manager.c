@@ -1002,7 +1002,11 @@ browser_removed (GaServiceBrowser *browser,
 
 
   arr = g_hash_table_lookup (priv->room_resolvers, name);
-  g_assert (arr != NULL);
+
+  if (arr == NULL) {
+    DEBUG ("Browser removed for %s, but didn't have any resolvers", name);
+    return;
+  }
 
   for (i = 0; i < arr->len; i++)
     {
