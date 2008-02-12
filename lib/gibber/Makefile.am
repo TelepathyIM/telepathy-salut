@@ -85,7 +85,7 @@ dist-hook:
 
 signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
 	( cd $(srcdir) && \
-	sed -n -e 's/.*_gibber_signals_marshal_\([A-Z]*__[A-Z_]*\).*/\1/p' \
+	sed -n -e 's/.*_gibber_signals_marshal_\([A-Z0-9]*__[A-Z0-9_]*\).*/\1/p' \
 		$(HANDWRITTEN_SOURCES) ) \
 		| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@
 
