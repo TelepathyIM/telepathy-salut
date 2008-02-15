@@ -1,3 +1,12 @@
+telepathy-salut 0.3.1 (2008-02-15)
+==================================
+This unstable release fixes few Clique crashers and some others issues.
+Most of these bugs were discovered thanks to hyperactivity, a
+collaboration stress testing tool we are developing for the OLPC project.
+
+This new version also introduces a new DNS resolver in Gibber but it's not
+used in Salut yet.
+
 telepathy-salut 0.3.0 (2008-01-08)
 ==================================
 This is the first release in the unstable 0.3 series.
