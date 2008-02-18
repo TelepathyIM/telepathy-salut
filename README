@@ -1,8 +1,8 @@
-================
+===============
 telepathy-salut
-================
+===============
 
-Gabble is a link-local XMPP ("Bonjour") connection manager for the Telepathy
+Salut is a link-local XMPP (XEP-0174) connection manager for the Telepathy
 framework, currently supporting presence and single-user chats with iChat
 interoperability, and multi-user chats and Tubes using the Clique protocol.
 
@@ -17,10 +17,12 @@ Requirements
 telepathy-salut requires:
   telepathy-glib <http://telepathy.freedesktop.org/releases/telepathy-glib/>
   libxml2 <http://xmlsoft.org/>
-  avahi-client, avahi-glib <http://avahi.org/download/>
+  avahi-gobject <http://avahi.org/download/>
   GLib, GObject <http://ftp.gnome.org/pub/GNOME/sources/glib/>
   libdbus <http://dbus.freedesktop.org/releases/dbus/>
   The D-Bus GLib bindings <http://dbus.freedesktop.org/releases/dbus-glib/>
+and optionally uses:
+  libasyncns <http://0pointer.de/lennart/projects/libasyncns/>
 
 At build time, it also requires:
   GNU make <http://www.gnu.org/software/make/>
