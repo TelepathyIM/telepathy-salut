@@ -4,7 +4,8 @@ telepathy-salut
 
 Salut is a link-local XMPP (XEP-0174) connection manager for the Telepathy
 framework, currently supporting presence and single-user chats with iChat
-interoperability, and multi-user chats and Tubes using the Clique protocol.
+interoperability, and multi-user chats and Tubes using the Clique protocol
+<http://telepathy.freedesktop.org/wiki/Clique>.
 
 Telepathy is a D-Bus framework for unifying real time communication,
 including instant messaging, voice calls and video calls. It abstracts
