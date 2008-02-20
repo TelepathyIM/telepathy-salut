@@ -47,6 +47,9 @@ gibber_fd_transport_get_sockaddr (GibberTransport *transport,
 
 static void _do_disconnect(GibberFdTransport *self);
 
+static gboolean gibber_fd_transport_buffer_is_empty (
+    GibberTransport *transport);
+
 G_DEFINE_TYPE(GibberFdTransport, gibber_fd_transport, GIBBER_TYPE_TRANSPORT)
 
 /* private structure */
@@ -104,6 +107,7 @@ gibber_fd_transport_class_init (GibberFdTransportClass *gibber_fd_transport_clas
   transport_class->send = gibber_fd_transport_send;
   transport_class->disconnect = gibber_fd_transport_disconnect;
   transport_class->get_sockaddr = gibber_fd_transport_get_sockaddr;
+  transport_class->buffer_is_empty = gibber_fd_transport_buffer_is_empty;
 
   gibber_fd_transport_class->read = gibber_fd_transport_read;
   gibber_fd_transport_class->write = gibber_fd_transport_write;
@@ -373,4 +377,14 @@ gibber_fd_transport_get_sockaddr (GibberTransport *transport,
    *len = sizeof (struct sockaddr_storage);
 
    return (getpeername (self->fd, (struct sockaddr *)addr, len) == 0);
+}
+
+static gboolean
+gibber_fd_transport_buffer_is_empty (GibberTransport *transport)
+{
+  GibberFdTransport *self = GIBBER_FD_TRANSPORT (transport);
+  GibberFdTransportPrivate *priv =
+     GIBBER_FD_TRANSPORT_GET_PRIVATE (self);
+
+  return (priv->output_buffer == NULL || priv->output_buffer->len == 0);
 }
