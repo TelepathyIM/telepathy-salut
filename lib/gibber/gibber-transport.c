@@ -244,3 +244,12 @@ gibber_transport_get_sockaddr (GibberTransport *transport,
 
   return FALSE;
 }
+
+gboolean
+gibber_transport_buffer_is_empty (GibberTransport *transport)
+{
+  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
+
+  return cls->buffer_is_empty (transport);
+}
+
