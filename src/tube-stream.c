@@ -212,6 +212,35 @@ add_transport (SalutTubeStream *self,
 }
 
 static void
+remove_transport (SalutTubeStream *self,
+                  GibberTransport *transport)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GibberBytestreamIface *bytestream;
+
+  bytestream = g_hash_table_lookup (priv->transport_to_bytestream, transport);
+  g_assert (bytestream != NULL);
+
+  DEBUG ("disconnect and remove transport");
+  g_signal_handlers_disconnect_matched (transport, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, self);
+
+  gibber_transport_disconnect (transport);
+  g_hash_table_remove (priv->transport_to_bytestream, transport);
+
+  g_hash_table_remove (priv->bytestream_to_transport, bytestream);
+  g_hash_table_remove (priv->bytestream_to_fd, bytestream);
+}
+
+static void
+transport_buffer_empty_cb (GibberTransport *transport,
+                           SalutTubeStream *self)
+{
+  DEBUG ("buffer is now empty. Transport can be removed");
+  remove_transport (self, transport);
+}
+
+static void
 extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
                                    GibberBytestreamState state,
                                    gpointer user_data)
@@ -246,15 +275,18 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
           bytestream);
       if (transport != NULL)
         {
-          g_signal_handlers_disconnect_matched (transport, G_SIGNAL_MATCH_DATA,
-              0, 0, NULL, NULL, self);
-
-          gibber_transport_disconnect (transport);
-          g_hash_table_remove (priv->transport_to_bytestream, transport);
+          if (gibber_transport_buffer_is_empty (transport))
+            {
+              DEBUG ("Buffer is empty, we can remove the transport");
+              remove_transport (self, transport);
+            }
+          else
+            {
+              DEBUG ("Wait buffer is empty before disconnect the transport");
+              g_signal_connect (transport, "buffer-empty",
+                  G_CALLBACK (transport_buffer_empty_cb), self);
+            }
         }
-
-      g_hash_table_remove (priv->bytestream_to_transport, bytestream);
-      g_hash_table_remove (priv->bytestream_to_fd, bytestream);
     }
 }
 
