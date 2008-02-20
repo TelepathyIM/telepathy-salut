@@ -260,6 +260,7 @@ _channel_io_out(GIOChannel *source, GIOCondition condition, gpointer data) {
   }
   if (priv->output_buffer->len == 0) {
     priv->watch_out = 0;
+    g_signal_emit_by_name (self, "buffer-empty");
     return FALSE;
   }
 
