@@ -254,3 +254,8 @@ gibber_transport_buffer_is_empty (GibberTransport *transport)
   return cls->buffer_is_empty (transport);
 }
 
+void
+gibber_transport_emit_buffer_empty (GibberTransport *transport)
+{
+  g_signal_emit (transport, signals[BUFFER_EMPTY], 0);
+}

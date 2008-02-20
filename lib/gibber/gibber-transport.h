@@ -117,6 +117,9 @@ gboolean gibber_transport_get_sockaddr (GibberTransport *transport,
 gboolean
 gibber_transport_buffer_is_empty (GibberTransport *transport);
 
+void
+gibber_transport_emit_buffer_empty (GibberTransport *transport);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_TRANSPORT_H__*/
