@@ -206,6 +206,7 @@ _writeout(GibberFdTransport *self, const guint8 *data, gsize len) {
     }
   }
   if (written == len) {
+    gibber_transport_emit_buffer_empty (GIBBER_TRANSPORT (self));
     return;
   }
 
