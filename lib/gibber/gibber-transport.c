@@ -38,6 +38,7 @@ enum
   DISCONNECTED,
   DISCONNECTING,
   ERROR,
+  BUFFER_EMPTY,
   LAST_SIGNAL
 };
 
@@ -72,6 +73,16 @@ gibber_transport_class_init (GibberTransportClass *gibber_transport_class)
 
   object_class->dispose = gibber_transport_dispose;
   object_class->finalize = gibber_transport_finalize;
+
+  signals[BUFFER_EMPTY] = 
+    g_signal_new ("buffer-empty",
+                  G_OBJECT_CLASS_TYPE (gibber_transport_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
+
   signals[CONNECTED] = 
     g_signal_new ("connected",
                   G_OBJECT_CLASS_TYPE (gibber_transport_class),
