@@ -109,6 +109,10 @@ struct _GibberBytestreamIBBPrivate
 #define GIBBER_BYTESTREAM_OOB_GET_PRIVATE(obj) \
     ((GibberBytestreamOOBPrivate *) (GibberBytestreamOOB *)obj->priv)
 
+static void gibber_bytestream_oob_do_close (GibberBytestreamOOB *self,
+    GError *error, gboolean can_wait);
+static void bytestream_closed (GibberBytestreamOOB *self);
+
 static void
 gibber_bytestream_oob_init (GibberBytestreamOOB *self)
 {
@@ -387,15 +391,6 @@ xmpp_connection_parse_error_cb (GibberXmppConnection *connection,
 }
 
 static void
-transport_buffer_empty_cb (GibberTransport *transport,
-                           GibberBytestreamOOB *self)
-{
-  DEBUG ("buffer is now empty. Transport can be disconnected");
-  gibber_transport_disconnect (transport);
-  g_object_unref (transport);
-}
-
-static void
 gibber_bytestream_oob_dispose (GObject *object)
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (object);
@@ -408,7 +403,16 @@ gibber_bytestream_oob_dispose (GObject *object)
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_CLOSED)
     {
-      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
+      if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSING)
+        {
+          g_signal_handlers_disconnect_matched (priv->transport,
+              G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+          bytestream_closed (self);
+        }
+      else
+        {
+          gibber_bytestream_oob_do_close (self, NULL, FALSE);
+        }
     }
 
   if (priv->listener != NULL)
@@ -416,22 +420,6 @@ gibber_bytestream_oob_dispose (GObject *object)
       g_io_channel_unref (priv->listener);
       priv->listener = NULL;
       g_source_remove (priv->listener_watch);
-    }
-
-  if (priv->transport != NULL)
-    {
-      if (gibber_transport_buffer_is_empty (priv->transport))
-        {
-          DEBUG ("Buffer is empty, we can disconnect the transport");
-          gibber_transport_disconnect (priv->transport);
-          g_object_unref (priv->transport);
-        }
-      else
-        {
-          DEBUG ("Wait buffer is empty before disconnect the transport");
-          g_signal_connect (priv->transport, "buffer-empty",
-              G_CALLBACK (transport_buffer_empty_cb), self);
-        }
     }
 
   if (priv->xmpp_connection != NULL)
@@ -768,56 +756,9 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
 }
 
 static void
-gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
-                               GError *error)
+bytestream_closed (GibberBytestreamOOB *self)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  GibberXmppStanza *stanza;
-
-  g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
-
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
-      priv->self_id, priv->peer_id,
-      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
-      GIBBER_STANZA_END);
-
-  if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
-    {
-      gibber_xmpp_error_to_node (error->code, stanza->node, error->message);
-    }
-  else
-    {
-      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, stanza->node,
-          "Offer Declined");
-    }
-
-  gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
-
-  g_object_unref (stanza);
-}
-
-/*
- * gibber_bytestream_oob_close
- *
- * Implements gibber_bytestream_iface_close on GibberBytestreamIface
- */
-static void
-gibber_bytestream_oob_close (GibberBytestreamIface *bytestream,
-                             GError *error)
-{
-  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (bytestream);
-  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-
-  if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSED)
-     /* bytestream already closed, do nothing */
-     return;
-
-  if (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
-    {
-      /* Stream was created using SI so we decline the request */
-      gibber_bytestream_oob_decline (self, error);
-    }
 
   if (priv->recipient)
     {
@@ -848,7 +789,99 @@ gibber_bytestream_oob_close (GibberBytestreamIface *bytestream,
       /* We are the sender. Don't have to send anything */
     }
 
+  if (priv->transport != NULL)
+    {
+      g_signal_handlers_disconnect_matched (priv->transport,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+      gibber_transport_disconnect (priv->transport);
+      g_object_unref (priv->transport);
+      priv->transport = NULL;
+    }
+
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
+}
+
+static void
+transport_buffer_empty_cb (GibberTransport *transport,
+                           GibberBytestreamOOB *self)
+{
+  DEBUG ("buffer is now empty. Bytestream can be closed");
+  bytestream_closed (self);
+}
+
+static void
+gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
+                               GError *error)
+ {
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+  GibberXmppStanza *stanza;
+
+  g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
+
+  stanza = gibber_xmpp_stanza_build (
+      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+      priv->self_id, priv->peer_id,
+      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      GIBBER_STANZA_END);
+
+  if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
+    {
+      gibber_xmpp_error_to_node (error->code, stanza->node, error->message);
+    }
+  else
+    {
+      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, stanza->node,
+          "Offer Declined");
+    }
+
+  gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
+
+  g_object_unref (stanza);
+}
+
+static void
+gibber_bytestream_oob_do_close (GibberBytestreamOOB *self,
+                                GError *error,
+                                gboolean can_wait)
+{
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+
+  if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSED)
+     /* bytestream already closed, do nothing */
+     return;
+
+  if (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
+    {
+      /* Stream was created using SI so we decline the request */
+      gibber_bytestream_oob_decline (self, error);
+    }
+
+  if (can_wait && priv->transport != NULL &&
+      !gibber_transport_buffer_is_empty (priv->transport))
+    {
+      DEBUG ("Wait transport buffer is empty before close the bytestream");
+      g_signal_connect (priv->transport, "buffer-empty",
+          G_CALLBACK (transport_buffer_empty_cb), self);
+      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
+    }
+  else
+    {
+      DEBUG ("Transport buffer is empty, we can close the bytestream");
+      bytestream_closed (self);
+    }
+}
+
+/*
+ * gibber_bytestream_oob_close
+ *
+ * Implements gibber_bytestream_iface_close on GibberBytestreamIface
+ */
+static void
+gibber_bytestream_oob_close (GibberBytestreamIface *bytestream,
+                             GError *error)
+{
+  gibber_bytestream_oob_do_close (GIBBER_BYTESTREAM_OOB (bytestream), error,
+      TRUE);
 }
 
 static GibberXmppStanza *
