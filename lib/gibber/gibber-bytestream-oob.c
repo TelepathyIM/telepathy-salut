@@ -387,6 +387,15 @@ xmpp_connection_parse_error_cb (GibberXmppConnection *connection,
 }
 
 static void
+transport_buffer_empty_cb (GibberTransport *transport,
+                           GibberBytestreamOOB *self)
+{
+  DEBUG ("buffer is now empty. Transport can be disconnected");
+  gibber_transport_disconnect (transport);
+  g_object_unref (transport);
+}
+
+static void
 gibber_bytestream_oob_dispose (GObject *object)
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (object);
@@ -411,8 +420,18 @@ gibber_bytestream_oob_dispose (GObject *object)
 
   if (priv->transport != NULL)
     {
-      gibber_transport_disconnect (priv->transport);
-      g_object_unref (priv->transport);
+      if (gibber_transport_buffer_is_empty (priv->transport))
+        {
+          DEBUG ("Buffer is empty, we can disconnect the transport");
+          gibber_transport_disconnect (priv->transport);
+          g_object_unref (priv->transport);
+        }
+      else
+        {
+          DEBUG ("Wait buffer is empty before disconnect the transport");
+          g_signal_connect (priv->transport, "buffer-empty",
+              G_CALLBACK (transport_buffer_empty_cb), self);
+        }
     }
 
   if (priv->xmpp_connection != NULL)
