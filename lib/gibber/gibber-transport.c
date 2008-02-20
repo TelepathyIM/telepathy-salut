@@ -250,6 +250,7 @@ gibber_transport_buffer_is_empty (GibberTransport *transport)
 {
   GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
 
+  g_assert (cls->buffer_is_empty != NULL);
   return cls->buffer_is_empty (transport);
 }
 
