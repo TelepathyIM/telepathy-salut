@@ -36,6 +36,9 @@
 
 #include "signals-marshal.h"
 
+/* IMPORTANT NOTE: This bytestream is not used anymore by Salut and so probably
+ * a bit rotten */
+
 /* FIXME: implement fragmentation using the "block-size" attribute */
 
 static void
