@@ -369,7 +369,8 @@ xmpp_connection_stream_closed_cb (GibberXmppConnection *connection,
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (userdata);
   DEBUG ("XMPP connection: stream closed. Close the OOB bytestream");
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
+  bytestream_closed (self);
 }
 
 static void
@@ -378,7 +379,8 @@ xmpp_connection_transport_disconnected_cb (GibberLLTransport *transport,
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (userdata);
   DEBUG ("XMPP connection transport closed. Close the OOB bytestream");
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
+  bytestream_closed (self);
 }
 
 static void
@@ -387,7 +389,8 @@ xmpp_connection_parse_error_cb (GibberXmppConnection *connection,
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (userdata);
   DEBUG ("XMPP connection: parse error. Close the OOB bytestream");
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
+  bytestream_closed (self);
 }
 
 static void
@@ -856,13 +859,13 @@ gibber_bytestream_oob_do_close (GibberBytestreamOOB *self,
       gibber_bytestream_oob_decline (self, error);
     }
 
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
   if (can_wait && priv->transport != NULL &&
       !gibber_transport_buffer_is_empty (priv->transport))
     {
       DEBUG ("Wait transport buffer is empty before close the bytestream");
       g_signal_connect (priv->transport, "buffer-empty",
           G_CALLBACK (transport_buffer_empty_cb), self);
-      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
     }
   else
     {
