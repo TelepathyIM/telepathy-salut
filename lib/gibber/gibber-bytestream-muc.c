@@ -403,6 +403,7 @@ gibber_bytestream_muc_close (GibberBytestreamIface *bytestream,
      /* bytestream already closed, do nothing */
      return;
 
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
   if (priv->stream_id_multicast != 0)
     {
       gibber_muc_connection_free_stream (priv->muc_connection,
