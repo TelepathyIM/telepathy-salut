@@ -408,8 +408,6 @@ gibber_bytestream_oob_dispose (GObject *object)
     {
       if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSING)
         {
-          g_signal_handlers_disconnect_matched (priv->transport,
-              G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
           bytestream_closed (self);
         }
       else
