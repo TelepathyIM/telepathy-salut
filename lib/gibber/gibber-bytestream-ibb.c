@@ -534,6 +534,8 @@ gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream,
      /* bytestream already closed, do nothing */
      return;
 
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
+
   if (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
       /* Stream was created using SI so we decline the request */
