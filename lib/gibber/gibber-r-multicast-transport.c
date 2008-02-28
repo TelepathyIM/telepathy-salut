@@ -1102,7 +1102,7 @@ find_unfailed_member (gpointer key, gpointer value, gpointer user_data)
         return FALSE;
     }
 
-  DEBUG ("%x didn't fail %x on time", info->id, *id);
+  DEBUG ("At least %x didn't fail %x", info->id, *id);
 
   return TRUE;
 }
@@ -1214,6 +1214,8 @@ fail_member_timeout_cb (gpointer user_data)
   while ((tinfo = g_hash_table_find (priv->members, find_unfailed_member,
       &info->id)) != NULL)
     {
+      DEBUG ("Failing %x because it didn't fail %x in time", tinfo->id, 
+          info->id);
       fail_member (self, NULL, tinfo->id);
     }
 

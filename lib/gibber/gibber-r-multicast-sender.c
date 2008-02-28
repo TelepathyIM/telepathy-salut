@@ -1519,9 +1519,9 @@ gibber_r_multicast_sender_update_start (GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
+  DEBUG_SENDER (sender, "Updating start to %x", packet_id);
   g_assert (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_FAILED);
 
-  DEBUG_SENDER (sender, "Updating start to %x", packet_id);
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW) {
     g_assert(g_hash_table_size(priv->packet_cache) == 0);
 
