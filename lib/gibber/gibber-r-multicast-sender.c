@@ -321,6 +321,7 @@ gc_failures (gpointer key, gpointer value, gpointer user_data)
   GibberRMulticastSenderGroup *group =
       (GibberRMulticastSenderGroup *) user_data;
   struct _group_ht_data hd;
+  gboolean ret = FALSE;
 
   if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL)
     return FALSE;
@@ -328,7 +329,11 @@ gc_failures (gpointer key, gpointer value, gpointer user_data)
   hd.group = group;
   hd.target = sender;
 
-  return g_hash_table_find (group->senders, failure_not_acked, &hd) == NULL;
+  ret = (g_hash_table_find (group->senders, failure_not_acked, &hd) == NULL);
+
+  DEBUG_SENDER (sender, "%s by GC", ret ? "Removed" : "Not removed");
+
+  return ret;
 }
 
 void
