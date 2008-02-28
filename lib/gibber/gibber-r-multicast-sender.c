@@ -186,12 +186,13 @@ gibber_r_multicast_sender_group_remove (GibberRMulticastSenderGroup *group,
     }
 
   g_queue_remove (group->pop_queue, s);
+  set_state (s, GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL);
+
   if (gibber_r_multicast_sender_packet_cache_size (s) > 0)
     {
       DEBUG ("Keeping %x in cache, %d items left", sender_id,
           gibber_r_multicast_sender_packet_cache_size(s));
       gibber_r_multicast_sender_stop (s);
-      set_state (s, GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL);
     }
   else
    {
