@@ -1348,6 +1348,7 @@ check_join (GibberRMulticastTransport *self, GibberRMulticastPacket *packet)
        * the failures.. Should be handled earlier. but reset anyways */
       DEBUG ("Join doesn't contain us, shouldn't happen, reset to be sure :(");
       gibber_r_multicast_transport_reset (self);
+      return JOIN_FAILED;
     }
 
   seen = 0;
