@@ -1417,7 +1417,12 @@ check_join_agreement (GibberRMulticastTransport *self)
       if (info == NULL)
         continue;
 
-      if (info->state >= MEMBER_STATE_FAILING)
+      /* send_join only contains members we didn't consider as failures at the
+       * time of the join message. The failure process for those has to be
+       * completely done before we can discard them, as it might have send out
+       * a JOIN we just hadn't received just yet.. Only after their failing
+       * has finished the state gets set to MEMBER_STATE_INSTANT_FAILURE  */
+      if (info->state >= MEMBER_STATE_INSTANT_FAILURE)
         continue;
 
       if (!info->agreed_join)
