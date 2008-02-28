@@ -635,6 +635,7 @@ setup_joining_phase (GibberRMulticastTransport *self)
     {
       stop_send_attempt_join (self);
       g_source_remove (priv->joining_timeout);
+      priv->joining_timeout = 0;
       /* every member with state >= MEMBER_STATE_ATTEMPT_JOIN_REPEAT, will be
        * in our join */
       g_assert (priv->send_join == NULL);
