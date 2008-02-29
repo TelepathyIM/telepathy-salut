@@ -61,8 +61,49 @@
  * fauly */
 #define NAME_DISCOVERY_TIME  10000
 
+#define GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(o)  \
+  (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_SENDER, \
+    GibberRMulticastSenderPrivate))
+
+/* private structure */
+typedef struct _GibberRMulticastSenderPrivate GibberRMulticastSenderPrivate;
+
 static void set_state (GibberRMulticastSender *sender,
    GibberRMulticastSenderState state);
+
+struct _GibberRMulticastSenderPrivate
+{
+  gboolean dispose_has_run;
+  /* hash table with packets */
+  GHashTable *packet_cache;
+
+  /* Table with acks per sender
+   * guint32 * => owned AckInfo * */
+  GHashTable *acks;
+
+  /* Sendergroup to which we belong */
+  GibberRMulticastSenderGroup *group;
+
+  /* Very first packet number in the current window */
+  guint32 first_packet;
+
+  /* whois reply/request timer */
+  guint whois_timer;
+
+  /* timer untill which a failure even occurs  */
+  guint fail_timer;
+
+  /* Whether we are holding back data currently */
+  gboolean holding_data;
+  guint32 holding_point;
+
+  /* Whether we went know the data starting point or not */
+  gboolean start_data;
+  guint32 start_point;
+
+  /* Endpoint is just there in case we are in failure mode */
+  guint32 end_point;
+};
 
 typedef struct {
   guint32 sender_id;
@@ -104,6 +145,7 @@ gibber_r_multicast_sender_group_new (void)
   result->senders = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
   result->pop_queue = g_queue_new();
+  result->pending_removal = g_ptr_array_new ();
   return result;
 }
 
@@ -111,10 +153,21 @@ void
 gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
 {
   GHashTable *h;
+  int i;
+
   g_assert (group->popping == FALSE);
+
   h = group->senders;
   group->senders = NULL;
   g_hash_table_destroy (h);
+
+  for (i = 0; i < group->pending_removal->len ; i++)
+    {
+      g_object_unref (G_OBJECT (g_ptr_array_index(group->pending_removal, i)));
+    }
+
+  g_ptr_array_free (group->pending_removal, TRUE);
+
   g_queue_free (group->pop_queue);
   g_slice_free (GibberRMulticastSenderGroup, group);
 }
@@ -169,6 +222,39 @@ gibber_r_multicast_sender_group_lookup_by_name (
   return g_hash_table_find (group->senders, find_by_name, (gpointer) name);
 }
 
+static void
+cleanup_acks (gpointer key, gpointer value, gpointer user_data)
+{
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
+  GibberRMulticastSenderPrivate *priv =
+     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
+
+  g_hash_table_remove (priv->acks, (guint32 *)user_data);
+}
+
+static void
+gibber_r_multicast_sender_group_gc_acks (GibberRMulticastSenderGroup *group,
+    guint32 sender_id)
+{
+  int i;
+  GibberRMulticastSender *s;
+  /* If there are no more senders for sender_id in the list, clean up the acks
+   */
+  if (g_hash_table_lookup (group->senders, GUINT_TO_POINTER (sender_id))
+      != NULL)
+    return;
+
+  for (i = 0; group->pending_removal->len ; i++)
+    {
+      s = GIBBER_R_MULTICAST_SENDER (
+          g_ptr_array_index (group->pending_removal, i));
+      if (s->id == sender_id)
+        return;
+    }
+
+  g_hash_table_foreach (group->senders, cleanup_acks, &sender_id);
+}
+
 void
 gibber_r_multicast_sender_group_remove (GibberRMulticastSenderGroup *group,
     guint32 sender_id)
@@ -193,10 +279,13 @@ gibber_r_multicast_sender_group_remove (GibberRMulticastSenderGroup *group,
       DEBUG ("Keeping %x in cache, %d items left", sender_id,
           gibber_r_multicast_sender_packet_cache_size(s));
       gibber_r_multicast_sender_stop (s);
+      g_hash_table_steal (group->senders, GUINT_TO_POINTER (sender_id));
+      g_ptr_array_add (group->pending_removal, s);
     }
   else
    {
      g_hash_table_remove (group->senders, GUINT_TO_POINTER(sender_id));
+     gibber_r_multicast_sender_group_gc_acks (group, sender_id);
    }
 
 }
@@ -316,25 +405,24 @@ failure_not_acked (gpointer key, gpointer value, gpointer user_data)
 }
 
 static gboolean
-gc_failures (gpointer key, gpointer value, gpointer user_data)
+can_gc_sender (GibberRMulticastSenderGroup *group,
+    GibberRMulticastSender *sender)
 {
-  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
-  GibberRMulticastSenderGroup *group =
-      (GibberRMulticastSenderGroup *) user_data;
   struct _group_ht_data hd;
-  gboolean ret = FALSE;
-
-  if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL)
-    return FALSE;
+  GibberRMulticastSender *ret;
 
   hd.group = group;
   hd.target = sender;
 
-  ret = (g_hash_table_find (group->senders, failure_not_acked, &hd) == NULL);
+  ret = g_hash_table_find (group->senders, failure_not_acked, &hd);
 
-  DEBUG_SENDER (sender, "%s by GC", ret ? "Removed" : "Not removed");
+  if (ret == NULL)
+    DEBUG_SENDER (sender, "Removed by GC");
+  else
+    DEBUG_SENDER (sender, "Not removed by GC because of %s (%x)",
+      ret->name, ret->id);
 
-  return ret;
+  return ret == NULL;
 }
 
 void
@@ -360,7 +448,142 @@ gibber_r_multicast_sender_group_gc (GibberRMulticastSenderGroup *group)
 
   g_array_free (array, TRUE);
 
-  g_hash_table_foreach_remove (group->senders, gc_failures, group);
+  /* Check if we can remove pending removals */
+  for (i = 0; i < group->pending_removal->len ; i++)
+    {
+      GibberRMulticastSender *s;
+
+      s = GIBBER_R_MULTICAST_SENDER (g_ptr_array_index (group->pending_removal,
+          i));
+      if (can_gc_sender (group, s));
+        {
+          g_ptr_array_remove_index_fast (group->pending_removal, i);
+          gibber_r_multicast_sender_group_gc_acks (group, s->id);
+          g_object_unref (s);
+          /* Last entry has replaced i, so force a retry of i */
+          i--;
+        }
+    }
+}
+
+gboolean
+gibber_r_multicast_sender_group_push_packet (
+    GibberRMulticastSenderGroup *group, GibberRMulticastPacket *packet)
+{
+  gboolean handled = FALSE;
+  GibberRMulticastSender *sender;
+  int i;
+
+  if (packet->type == PACKET_TYPE_WHOIS_REQUEST)
+    sender = gibber_r_multicast_sender_group_lookup (group,
+        packet->data.whois_request.sender_id);
+  else
+    sender = gibber_r_multicast_sender_group_lookup (group,
+        packet->sender);
+
+  switch (packet->type)
+    {
+      case PACKET_TYPE_WHOIS_REQUEST:
+        /* Pending removal nodes still reply to WHOIS_REQUEST to prevent new
+         * nodes from taking the same id */
+        if (sender == NULL)
+          {
+            GibberRMulticastSender *s;
+            for (i = 0; i < group->pending_removal->len ; i++)
+              {
+                s = GIBBER_R_MULTICAST_SENDER (
+                   g_ptr_array_index (group->pending_removal, i));
+                if (s->id == sender->id)
+                  {
+                    sender = s;
+                    break;
+                  }
+              }
+          }
+        /* fallthrough */
+      case PACKET_TYPE_WHOIS_REPLY:
+        if (sender != NULL)
+          {
+            gibber_r_multicast_sender_whois_push (sender, packet);
+            handled = TRUE;
+          }
+        break;
+    case PACKET_TYPE_REPAIR_REQUEST:
+        {
+          GibberRMulticastSender *rsender;
+          guint32 sender_id;
+          guint32 packet_id = packet->data.repair_request.packet_id;
+
+          sender_id = packet->data.repair_request.sender_id;
+          rsender = gibber_r_multicast_sender_group_lookup (group, sender_id);
+
+          g_assert (sender_id != 0);
+
+          if (rsender == NULL ||
+                gibber_r_multicast_sender_repair_request (rsender, packet_id))
+            {
+              /* rsender took up the repair request. */
+              handled = TRUE;
+              break;
+            }
+
+            for (i = 0; i < group->pending_removal->len ; i++)
+              {
+                rsender = GIBBER_R_MULTICAST_SENDER (
+                   g_ptr_array_index (group->pending_removal, i));
+                if (rsender->id == sender_id)
+                  {
+                    if (gibber_r_multicast_sender_repair_request (rsender,
+                          packet_id))
+                      {
+                        handled = TRUE;
+                        break;
+                      }
+                  }
+              }
+            DEBUG ("Ignoring repair request for unknown original sender");
+          break;
+        }
+    case PACKET_TYPE_SESSION:
+      /* Session message aren't handled by us. But if we know the sender it's
+       * at least not a foreign sender */
+      if (sender != NULL)
+        handled = TRUE;
+      break;
+    default:
+      if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet))
+        {
+          if (sender != NULL
+                && sender->state > GIBBER_R_MULTICAST_SENDER_STATE_NEW )
+            {
+              gibber_r_multicast_sender_push (sender, packet);
+              handled = TRUE;
+            }
+          else
+            {
+              for (i = 0; i < group->pending_removal->len ; i++)
+                {
+                  sender = GIBBER_R_MULTICAST_SENDER (
+                     g_ptr_array_index (group->pending_removal, i));
+                  if (sender->id == packet->sender)
+                    {
+                      /* Say we have handled a reliable packet if there is any
+                       * node to remove with the right sender id.. This means
+                       * we handle packets for a removed sender longer then
+                       * strictly needed, but this doesn't hurt */
+                       handled = TRUE;
+                       break;
+                    }
+                }
+            }
+        }
+      else
+        {
+          DEBUG ("Received unhandled packet type!!, ignoring");
+        }
+    }
+
+  return handled;
 }
 
 static void schedule_repair(GibberRMulticastSender *sender, guint32 id);
@@ -425,45 +648,6 @@ packet_info_new(GibberRMulticastSender*sender, guint32 packet_id) {
   result->sender = sender;
   return result;
 }
-
-/* private structure */
-typedef struct _GibberRMulticastSenderPrivate GibberRMulticastSenderPrivate;
-
-struct _GibberRMulticastSenderPrivate
-{
-  gboolean dispose_has_run;
-  /* hash table with packets */
-  GHashTable *packet_cache;
-
-  /* Table with acks per sender
-   * guint32 * => owned AckInfo * */
-  GHashTable *acks;
-
-  /* Sendergroup to which we belong */
-  GibberRMulticastSenderGroup *group;
-
-  /* Very first packet number in the current window */
-  guint32 first_packet;
-
-  /* whois reply/request timer */
-  guint whois_timer;
-
-  /* timer untill which a failure even occurs  */
-  guint fail_timer;
-
-  /* Whether we are holding back data currently */
-  gboolean holding_data;
-  guint32 holding_point;
-
-  /* Whether we went know the data starting point or not */
-  gboolean start_data;
-  guint32 start_point;
-
-  /* Endpoint is just there in case we are in failure mode */
-  guint32 end_point;
-};
-
-#define GIBBER_R_MULTICAST_SENDER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderPrivate))
 
 static void
 gibber_r_multicast_sender_init (GibberRMulticastSender *obj)
@@ -598,17 +782,6 @@ gibber_r_multicast_sender_class_init (GibberRMulticastSenderClass *gibber_r_mult
       param_spec);
 }
 
-static void
-cleanup_acks (gpointer key, gpointer value, gpointer user_data)
-{
-  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
-  GibberRMulticastSenderPrivate *priv =
-     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
-  GibberRMulticastSender *target = GIBBER_R_MULTICAST_SENDER (user_data);
-
-  g_hash_table_remove (priv->acks, &target->id);
-}
-
 void
 gibber_r_multicast_sender_dispose (GObject *object)
 {
@@ -622,9 +795,6 @@ gibber_r_multicast_sender_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
-
-  if (priv->group->senders != NULL)
-    g_hash_table_foreach (priv->group->senders, cleanup_acks, self);
 
   g_hash_table_destroy(priv->packet_cache);
   g_hash_table_destroy(priv->acks);
@@ -1649,7 +1819,7 @@ gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
     sender->next_output_packet, sender->next_input_packet);
 }
 
-void
+gboolean
 gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
                                          guint32 id) {
   GibberRMulticastSenderPrivate *priv =
@@ -1658,7 +1828,7 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
 
   if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
     DEBUG_SENDER(sender, "ignore repair request");
-    return;
+    return FALSE;
   }
 
   diff = gibber_r_multicast_packet_diff(sender->next_output_packet, id);
@@ -1669,12 +1839,12 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
     if (info != NULL && info->packet != NULL)
       {
         schedule_do_repair(sender, id);
-        return;
+        return TRUE;
       }
 
     if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
       /* Beyond stopped state we only send out repairs for packets we have */
-      return;
+      return FALSE;
 
     if (info == NULL) {
       guint32 i;
@@ -1697,11 +1867,13 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
   if (diff < 0
       && gibber_r_multicast_packet_diff(priv->first_packet, id) >= 0) {
     schedule_do_repair(sender, id);
-    return;
+    return TRUE;
   }
 
   DEBUG_SENDER(sender, "Repair request packet 0x%x out of range, ignoring",
       id);
+
+  return FALSE;
 }
 
 gboolean
