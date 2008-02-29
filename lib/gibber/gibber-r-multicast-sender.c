@@ -163,7 +163,8 @@ gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
 
   for (i = 0; i < group->pending_removal->len ; i++)
     {
-      g_object_unref (G_OBJECT (g_ptr_array_index(group->pending_removal, i)));
+      g_object_unref (G_OBJECT (
+        g_ptr_array_index (group->pending_removal, i)));
     }
 
   g_ptr_array_free (group->pending_removal, TRUE);
@@ -229,7 +230,7 @@ cleanup_acks (gpointer key, gpointer value, gpointer user_data)
   GibberRMulticastSenderPrivate *priv =
      GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  g_hash_table_remove (priv->acks, (guint32 *)user_data);
+  g_hash_table_remove (priv->acks, (guint32 *) user_data);
 }
 
 static void
@@ -568,7 +569,7 @@ gibber_r_multicast_sender_group_push_packet (
                     {
                       /* Say we have handled a reliable packet if there is any
                        * node to remove with the right sender id.. This means
-                       * we handle packets for a removed sender longer then
+                       * we handle packets for a removed sender longer than
                        * strictly needed, but this doesn't hurt */
                        handled = TRUE;
                        break;
