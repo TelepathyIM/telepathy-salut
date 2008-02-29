@@ -1824,23 +1824,23 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
       GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
   gint diff;
+  PacketInfo *info;
 
   if (sender->state < GIBBER_R_MULTICAST_SENDER_STATE_PREPARING) {
     DEBUG_SENDER(sender, "ignore repair request");
     return FALSE;
   }
 
+  info = g_hash_table_lookup(priv->packet_cache, &id);
+  if (info != NULL && info->packet != NULL)
+    {
+      schedule_do_repair(sender, id);
+      return TRUE;
+    }
+
   diff = gibber_r_multicast_packet_diff(sender->next_output_packet, id);
 
   if (diff >= 0 && diff < PACKET_CACHE_SIZE) {
-    PacketInfo *info = g_hash_table_lookup(priv->packet_cache, &id);
-
-    if (info != NULL && info->packet != NULL)
-      {
-        schedule_do_repair(sender, id);
-        return TRUE;
-      }
-
     if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
       /* Beyond stopped state we only send out repairs for packets we have */
       return FALSE;
@@ -1861,11 +1861,7 @@ gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
        info->timeout = 0;
        schedule_repair(sender, id);
     }
-  }
 
-  if (diff < 0
-      && gibber_r_multicast_packet_diff(priv->first_packet, id) >= 0) {
-    schedule_do_repair(sender, id);
     return TRUE;
   }
 
