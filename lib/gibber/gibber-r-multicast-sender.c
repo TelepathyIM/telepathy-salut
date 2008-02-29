@@ -493,7 +493,7 @@ gibber_r_multicast_sender_group_push_packet (
               {
                 s = GIBBER_R_MULTICAST_SENDER (
                    g_ptr_array_index (group->pending_removal, i));
-                if (s->id == sender->id)
+                if (s->id == packet->data.whois_request.sender_id)
                   {
                     sender = s;
                     break;
