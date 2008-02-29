@@ -36,8 +36,10 @@ struct _GibberRMulticastSenderGroup {
   /* <private> */
   gboolean popping;
   gboolean stopped;
-  /* queue of GibberRMulticast GibberRMulticastSender * */
+  /* queue of GibberRMulticast GibberRMulticastSender */
   GQueue *pop_queue;
+  /* GArray of pending removal GibberRMulticastSenders */
+  GPtrArray *pending_removal;
 };
 
 typedef struct _GibberRMulticastSender GibberRMulticastSender;
@@ -116,6 +118,8 @@ GibberRMulticastSender * gibber_r_multicast_sender_group_lookup_by_name (
 void gibber_r_multicast_sender_group_remove (
     GibberRMulticastSenderGroup *group, guint32 sender_id);
 
+gboolean gibber_r_multicast_sender_group_push_packet (
+  GibberRMulticastSenderGroup *group, GibberRMulticastPacket *packet);
 
 GibberRMulticastSender *gibber_r_multicast_sender_new (guint32 id,
     const gchar *name, GibberRMulticastSenderGroup *group);
@@ -151,7 +155,7 @@ gibber_r_multicast_senders_updated(GibberRMulticastSender *sender);
 gboolean
 gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id);
 
-void
+gboolean
 gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
                                          guint32 id);
 

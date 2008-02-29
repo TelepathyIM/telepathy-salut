@@ -803,7 +803,6 @@ static void
 joined_multicast_receive (GibberRMulticastCausalTransport *self,
                           GibberRMulticastPacket *packet)
 {
-  GibberRMulticastSender *sender = NULL;
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
 
@@ -818,82 +817,58 @@ joined_multicast_receive (GibberRMulticastCausalTransport *self,
         }
 
       DEBUG_TRANSPORT (self, "New sender polling for a unique id");
-    }
-  else
-    {
-      /* All packets with non-zero sender fall go through here to start
-       * detecting foreign packets as early as possible */
-      sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
-              packet->sender);
-      if (sender == NULL ||
-          (sender != priv->self &&
-             sender->state == GIBBER_R_MULTICAST_SENDER_STATE_NEW))
-        {
-          DEBUG_TRANSPORT (self, "Foreign packet Received type: 0x%x from %x",
-              packet->type, packet->sender);
-          g_signal_emit (self, signals[RECEIVED_FOREIGN_PACKET], 0, packet);
-
-          sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
-              packet->sender);
-        }
-      }
-
-  if (sender == NULL || sender == priv->self)
-    {
+      /* Just try to push the packet once. If the id is known a whois reply
+       * will be scheduled otherwise it's dropped as should be */
+      gibber_r_multicast_sender_group_push_packet (priv->sender_group, packet);
       return;
     }
+
+  if (packet->sender == self->sender_id)
+    /* Discard our own packets */
+    return;
 
   DEBUG_TRANSPORT (self, "Received packet type: 0x%x from %x",
       packet->type, packet->sender);
 
+  if (!gibber_r_multicast_sender_group_push_packet (priv->sender_group,
+        packet))
+    {
+      /* No entries that could pick up the packet, signal a foreign message so
+       * the membership protocol can handle it if needed */
+      DEBUG_TRANSPORT (self, "Foreign packet Received type: 0x%x from %x",
+          packet->type, packet->sender);
+      g_signal_emit (self, signals[RECEIVED_FOREIGN_PACKET], 0, packet);
+
+      /* Retry the push. the signal handler might have added it */
+      if (!gibber_r_multicast_sender_group_push_packet (priv->sender_group,
+            packet))
+        return;
+    }
+
+    /* The packet was picked up by one of the nodes, time for some
+     * postprocessing */
+
   switch (packet->type)
     {
-    case PACKET_TYPE_WHOIS_REQUEST:
-      sender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
-          packet->data.whois_request.sender_id);
-      if (sender == NULL)
+      case PACKET_TYPE_WHOIS_REQUEST:
+      case PACKET_TYPE_WHOIS_REPLY:
+      case PACKET_TYPE_REPAIR_REQUEST:
+         /* No postprocessing needed */
+         break;
+      case PACKET_TYPE_SESSION:
+        handle_session_message (self, packet);
         break;
-      /* fallthrough */
-    case PACKET_TYPE_WHOIS_REPLY:
-      gibber_r_multicast_sender_whois_push (sender, packet);
-      break;
-    case PACKET_TYPE_REPAIR_REQUEST:
-        {
-          GibberRMulticastSender *rsender;
-          guint32 sender_id;
-
-          sender_id = packet->data.repair_request.sender_id;
-          rsender = gibber_r_multicast_sender_group_lookup (priv->sender_group,
-              sender_id);
-
-          g_assert (sender_id != 0);
-
-          if (rsender != NULL)
-            {
-              gibber_r_multicast_sender_repair_request (rsender,
-                 packet->data.repair_request.packet_id);
-            }
-          else
-            {
-              DEBUG ("Ignoring repair request for unknown original sender");
-            }
-          break;
-        }
-    case PACKET_TYPE_SESSION:
-      handle_session_message (self, packet);
-      break;
-    default:
-      if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet))
-        {
-          handle_packet_depends (self, packet);
-          gibber_r_multicast_sender_push (sender, packet);
-        }
-      else
-        {
-          DEBUG_TRANSPORT (self, "Received unhandled packet type!!, ignoring");
-        }
-  }
-
+      default:
+        if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet))
+          {
+            handle_packet_depends (self, packet);
+          }
+        else
+          {
+            DEBUG_TRANSPORT (self,
+                "Received unhandled packet type!!, ignoring");
+          }
+    }
 }
 
 /* Packet received while disconnecting. Only react on repair requests and
