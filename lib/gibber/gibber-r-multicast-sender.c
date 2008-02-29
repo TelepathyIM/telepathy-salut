@@ -511,15 +511,14 @@ gibber_r_multicast_sender_group_push_packet (
     case PACKET_TYPE_REPAIR_REQUEST:
         {
           GibberRMulticastSender *rsender;
-          guint32 sender_id;
+          guint32 sender_id = packet->data.repair_request.sender_id;
           guint32 packet_id = packet->data.repair_request.packet_id;
 
-          sender_id = packet->data.repair_request.sender_id;
           rsender = gibber_r_multicast_sender_group_lookup (group, sender_id);
 
           g_assert (sender_id != 0);
 
-          if (rsender == NULL ||
+          if (rsender != NULL &&
                 gibber_r_multicast_sender_repair_request (rsender, packet_id))
             {
               /* rsender took up the repair request. */
