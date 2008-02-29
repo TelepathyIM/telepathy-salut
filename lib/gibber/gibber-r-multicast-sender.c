@@ -244,7 +244,7 @@ gibber_r_multicast_sender_group_gc_acks (GibberRMulticastSenderGroup *group,
       != NULL)
     return;
 
-  for (i = 0; group->pending_removal->len ; i++)
+  for (i = 0; i < group->pending_removal->len ; i++)
     {
       s = GIBBER_R_MULTICAST_SENDER (
           g_ptr_array_index (group->pending_removal, i));
