@@ -36,6 +36,7 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-bytestream-iface.h>
+#include <gibber/gibber-bytestream-oob.h>
 #include <gibber/gibber-transport.h>
 #include <gibber/gibber-fd-transport.h>
 
@@ -194,24 +195,6 @@ transport_disconnected_cb (GibberTransport *transport,
 }
 
 static void
-add_transport (SalutTubeStream *self,
-               GibberTransport *transport,
-               GibberBytestreamIface *bytestream)
-{
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  gibber_transport_set_handler (transport, transport_handler, self);
-
-  g_hash_table_insert (priv->transport_to_bytestream,
-      g_object_ref (transport), g_object_ref (bytestream));
-  g_hash_table_insert (priv->bytestream_to_transport,
-      g_object_ref (bytestream), g_object_ref (transport));
-
-  g_signal_connect (transport, "disconnected",
-      G_CALLBACK (transport_disconnected_cb), self);
-}
-
-static void
 remove_transport (SalutTubeStream *self,
                   GibberTransport *transport)
 {
@@ -236,8 +219,68 @@ static void
 transport_buffer_empty_cb (GibberTransport *transport,
                            SalutTubeStream *self)
 {
-  DEBUG ("buffer is now empty. Transport can be removed");
-  remove_transport (self, transport);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GibberBytestreamIface *bytestream;
+  GibberBytestreamState state;
+
+  bytestream = g_hash_table_lookup (priv->transport_to_bytestream, transport);
+  g_assert (bytestream != NULL);
+  g_object_get (bytestream, "state", &state, NULL);
+
+  if (state == GIBBER_BYTESTREAM_STATE_CLOSED)
+    {
+      DEBUG ("buffer is now empty. Transport can be removed");
+      remove_transport (self, transport);
+      return;
+    }
+
+  /* Buffer is empty so we can unblock the buffer if it was blocked */
+  gibber_bytestream_oob_block_read (GIBBER_BYTESTREAM_OOB (bytestream),
+      FALSE);
+}
+
+static void
+add_transport (SalutTubeStream *self,
+               GibberTransport *transport,
+               GibberBytestreamIface *bytestream)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  gibber_transport_set_handler (transport, transport_handler, self);
+
+  g_hash_table_insert (priv->transport_to_bytestream,
+      g_object_ref (transport), g_object_ref (bytestream));
+  g_hash_table_insert (priv->bytestream_to_transport,
+      g_object_ref (bytestream), g_object_ref (transport));
+
+  g_signal_connect (transport, "disconnected",
+      G_CALLBACK (transport_disconnected_cb), self);
+  g_signal_connect (transport, "buffer-empty",
+      G_CALLBACK (transport_buffer_empty_cb), self);
+}
+
+static void
+bytestream_write_blocked_cb (GibberBytestreamIface *bytestream,
+                             gboolean blocked,
+                             SalutTubeStream *self)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GibberTransport *transport;
+
+  transport = g_hash_table_lookup (priv->bytestream_to_transport,
+      bytestream);
+  g_assert (transport != NULL);
+
+  if (blocked)
+    {
+      DEBUG ("bytestream blocked, stop to read data from the tube socket");
+    }
+  else
+    {
+      DEBUG ("bytestream unblocked, restart to read data from the tube socket");
+    }
+
+  gibber_transport_block (transport, blocked);
 }
 
 static void
@@ -257,6 +300,8 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
 
       g_signal_connect (bytestream, "data-received",
           G_CALLBACK (data_received_cb), self);
+      g_signal_connect (bytestream, "write-blocked",
+          G_CALLBACK (bytestream_write_blocked_cb), self);
 
       fd = GPOINTER_TO_INT (g_hash_table_lookup (priv->bytestream_to_fd,
             bytestream));
@@ -283,8 +328,6 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
           else
             {
               DEBUG ("Wait buffer is empty before disconnect the transport");
-              g_signal_connect (transport, "buffer-empty",
-                  G_CALLBACK (transport_buffer_empty_cb), self);
             }
         }
     }
@@ -1254,6 +1297,18 @@ data_received_cb (GibberBytestreamIface *bytestream,
     DEBUG ("sending failed: %s", error->message);
     g_error_free (error);
   }
+
+  if (!gibber_transport_buffer_is_empty (transport))
+    {
+      /* We >don't want to send more data while the buffer isn't empty */
+      /* FIXME: Should we move this as bytestream-iface method? */
+      if (GIBBER_IS_BYTESTREAM_OOB (bytestream))
+          {
+            DEBUG ("tube buffer isn't empty. Block the bytestream");
+            gibber_bytestream_oob_block_read (
+              GIBBER_BYTESTREAM_OOB (bytestream), TRUE);
+          }
+    }
 }
 
 SalutTubeStream *
