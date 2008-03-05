@@ -55,6 +55,7 @@ struct _GibberTransportClass {
     gboolean (*get_sockaddr) (GibberTransport *transport,
         struct sockaddr_storage *addr, socklen_t *len);
     gboolean (*buffer_is_empty) (GibberTransport *transport);
+    void (*block) (GibberTransport *transport, gboolean block);
 };
 
 struct _GibberTransport {
@@ -119,6 +120,10 @@ gibber_transport_buffer_is_empty (GibberTransport *transport);
 
 void
 gibber_transport_emit_buffer_empty (GibberTransport *transport);
+
+void
+gibber_transport_block (GibberTransport *transport,
+                        gboolean block);
 
 G_END_DECLS
 

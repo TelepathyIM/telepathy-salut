@@ -259,3 +259,14 @@ gibber_transport_emit_buffer_empty (GibberTransport *transport)
 {
   g_signal_emit (transport, signals[BUFFER_EMPTY], 0);
 }
+
+void
+gibber_transport_block (GibberTransport *transport,
+                        gboolean block)
+{
+  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
+
+  g_assert (cls->block != NULL);
+  cls->block (transport, block);
+}
+
