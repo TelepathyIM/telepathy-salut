@@ -99,6 +99,8 @@ struct _GibberBytestreamIBBPrivate
   GibberTransport *transport;
   GIOChannel *listener;
   guint listener_watch;
+  gboolean write_blocked;
+  gboolean read_blocked;
 
   GibberBytestreamOOBCheckAddrFunc check_addr_func;
   gpointer check_addr_func_data;
@@ -1118,6 +1120,20 @@ gibber_bytestream_oob_set_check_addr_func (
   priv->check_addr_func_data = user_data;
 }
 
+void
+gibber_bytestream_oob_block_read (GibberBytestreamOOB *self,
+                                  gboolean block)
+{
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+
+  if (priv->read_blocked == block)
+    return;
+
+  priv->read_blocked = block;
+
+  DEBUG ("%s the transport bytestream", block ? "block": "unblock");
+  gibber_transport_block (priv->transport, block);
+}
 
 static void
 bytestream_iface_init (gpointer g_iface,
