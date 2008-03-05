@@ -60,6 +60,7 @@ enum
 {
   DATA_RECEIVED,
   STATE_CHANGED,
+  WRITE_BLOCKED,
   LAST_SIGNAL
 };
 
@@ -188,6 +189,38 @@ transport_disconnected_cb (GibberTransport *transport,
 }
 
 static void
+change_write_blocked_state (GibberBytestreamOOB *self,
+                            gboolean blocked)
+{
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+
+  if (priv->write_blocked == blocked)
+    return;
+
+  priv->write_blocked = blocked;
+  g_signal_emit (self, signals[WRITE_BLOCKED], 0, blocked);
+}
+
+static void
+transport_buffer_empty_cb (GibberTransport *transport,
+                           GibberBytestreamOOB *self)
+{
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+
+  if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSING)
+    {
+      DEBUG ("buffer is now empty. Bytestream can be closed");
+      bytestream_closed (self);
+    }
+
+  else if (priv->write_blocked)
+    {
+      DEBUG ("buffer is empty, unblock write to the bytestream");
+      change_write_blocked_state (self, FALSE);
+    }
+}
+
+static void
 set_transport (GibberBytestreamOOB *self,
                GibberTransport *transport)
 {
@@ -202,6 +235,8 @@ set_transport (GibberBytestreamOOB *self,
       G_CALLBACK (transport_connected_cb), self);
   g_signal_connect (transport, "disconnected",
       G_CALLBACK (transport_disconnected_cb), self);
+  g_signal_connect (priv->transport, "buffer-empty",
+      G_CALLBACK (transport_buffer_empty_cb), self);
 }
 
 static void
@@ -656,6 +691,15 @@ gibber_bytestream_oob_class_init (
                   NULL, NULL,
                   g_cclosure_marshal_VOID__UINT,
                   G_TYPE_NONE, 1, G_TYPE_UINT);
+
+  signals[WRITE_BLOCKED] =
+    g_signal_new ("write-blocked",
+                  G_OBJECT_CLASS_TYPE (gibber_bytestream_oob_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__BOOLEAN,
+                  G_TYPE_NONE, 1, G_TYPE_BOOLEAN);
 }
 
 /*
@@ -679,6 +723,13 @@ gibber_bytestream_oob_send (GibberBytestreamIface *bytestream,
       return FALSE;
     }
 
+  if (priv->write_blocked)
+    {
+      DEBUG ("can't send data for now, bytestream is blocked");
+      return FALSE;
+    }
+
+  DEBUG ("send %u bytes through bytestream", len);
   if (!gibber_transport_send (priv->transport, (const guint8 *) str, len,
         &error))
     {
@@ -687,6 +738,13 @@ gibber_bytestream_oob_send (GibberBytestreamIface *bytestream,
 
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
       return FALSE;
+    }
+
+  if (!gibber_transport_buffer_is_empty (priv->transport))
+    {
+      /* We >don't want to send more data while the buffer isn't empty */
+      DEBUG ("buffer isn't empty. Block write to the bytestream");
+      change_write_blocked_state (self, TRUE);
     }
 
   return TRUE;
@@ -805,14 +863,6 @@ bytestream_closed (GibberBytestreamOOB *self)
 }
 
 static void
-transport_buffer_empty_cb (GibberTransport *transport,
-                           GibberBytestreamOOB *self)
-{
-  DEBUG ("buffer is now empty. Bytestream can be closed");
-  bytestream_closed (self);
-}
-
-static void
 gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
                                GError *error)
  {
@@ -864,8 +914,6 @@ gibber_bytestream_oob_do_close (GibberBytestreamOOB *self,
       !gibber_transport_buffer_is_empty (priv->transport))
     {
       DEBUG ("Wait transport buffer is empty before close the bytestream");
-      g_signal_connect (priv->transport, "buffer-empty",
-          G_CALLBACK (transport_buffer_empty_cb), self);
     }
   else
     {
