@@ -61,15 +61,12 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
                         G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
                                         salut_muc_manager_factory_iface_init));
 
-/* signal enum */
-/*
-enum
-{
-    LAST_SIGNAL
+/* properties */
+enum {
+  PROP_CONNECTION = 1,
+  PROP_XCM,
+  LAST_PROP
 };
-
-static guint signals[LAST_SIGNAL] = {0};
-*/
 
 /* private structure */
 typedef struct _SalutMucManagerPrivate SalutMucManagerPrivate;
@@ -131,6 +128,73 @@ salut_muc_manager_init (SalutMucManager *obj)
   priv->roomlist_channels = NULL;
 }
 
+static void
+salut_muc_manager_get_property (GObject *object,
+                                guint property_id,
+                                GValue *value,
+                                GParamSpec *pspec)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (object);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        g_value_set_object (value, priv->connection);
+        break;
+      case PROP_XCM:
+        g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+salut_muc_manager_set_property (GObject *object,
+                                guint property_id,
+                                const GValue *value,
+                                GParamSpec *pspec)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (object);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        priv->connection = g_value_get_object (value);
+        break;
+      case PROP_XCM:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static GObject *
+salut_muc_manager_constructor (GType type,
+                               guint n_props,
+                               GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutMucManagerPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_muc_manager_parent_class)->
+    constructor (type, n_props, props);
+
+  priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
+
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      invite_stanza_filter, invite_stanza_callback, obj);
+
+  return obj;
+}
+
 static void salut_muc_manager_dispose (GObject *object);
 static void salut_muc_manager_finalize (GObject *object);
 
@@ -138,12 +202,44 @@ static void
 salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_muc_manager_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (salut_muc_manager_class,
                               sizeof (SalutMucManagerPrivate));
 
+  object_class->get_property = salut_muc_manager_get_property;
+  object_class->set_property = salut_muc_manager_set_property;
+
+  object_class->constructor = salut_muc_manager_constructor;
   object_class->dispose = salut_muc_manager_dispose;
   object_class->finalize = salut_muc_manager_finalize;
+
+  param_spec = g_param_spec_object (
+      "connection",
+      "SalutConnection object",
+      "The Salut Connection associated with this muc manager",
+      SALUT_TYPE_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "The Salut XMPP Connection Manager associated with this muc "
+      "manager",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XCM,
+      param_spec);
 }
 
 void
@@ -906,24 +1002,13 @@ SalutMucManager *
 salut_muc_manager_new (SalutConnection *connection,
                        SalutXmppConnectionManager *xmpp_connection_manager)
 {
-  SalutMucManager *ret = NULL;
-  SalutMucManagerPrivate *priv;
+  g_assert (connection != NULL);
+  g_assert (xmpp_connection_manager != NULL);
 
-  g_assert(connection != NULL);
-
-  ret = g_object_new(SALUT_TYPE_MUC_MANAGER, NULL);
-  priv = SALUT_MUC_MANAGER_GET_PRIVATE (ret);
-
-  priv->xmpp_connection_manager = xmpp_connection_manager;
-  g_object_ref (xmpp_connection_manager);
-
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      invite_stanza_filter, invite_stanza_callback, ret);
-
-  priv->connection = connection;
-
-  return ret;
+  return g_object_new(SALUT_TYPE_MUC_MANAGER,
+      "connection", connection,
+      "xmpp-connection-manager", xmpp_connection_manager,
+      NULL);
 }
 
 static void
