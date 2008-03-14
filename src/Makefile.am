@@ -46,6 +46,12 @@ CORE_SOURCES =                                          \
     salut-roomlist-channel.c                            \
     salut-xmpp-connection-manager.h                     \
     salut-xmpp-connection-manager.c                     \
+    salut-discovery-client.h                            \
+    salut-discovery-client.c                            \
+    salut-avahi-discovery-client.h                      \
+    salut-avahi-discovery-client.c                      \
+    salut-avahi-muc-manager.h                           \
+    salut-avahi-muc-manager.c                           \
     tube-iface.h                                        \
     tube-iface.c                                        \
     sha1/sha1-util.h                                    \
