@@ -23,7 +23,6 @@
 #include <glib-object.h>
 
 #include <gibber/gibber-bytestream-iface.h>
-#include <avahi-gobject/ga-client.h>
 
 #include <salut-connection.h>
 #include "salut-xmpp-connection-manager.h"
@@ -37,6 +36,14 @@ typedef struct _SalutMucManagerClass SalutMucManagerClass;
 
 struct _SalutMucManagerClass {
     GObjectClass parent_class;
+
+    /* public abstract methods */
+    gboolean (*start) (SalutMucManager *self, GError **error);
+
+    /* private abstract methods */
+    gboolean (*find_muc_address) (SalutMucManager *self, const gchar *name,
+        gchar **address, guint16 *port);
+    GSList * (*get_rooms) (SalutMucManager *self);
 };
 
 struct _SalutMucManager {
@@ -59,13 +66,8 @@ GType salut_muc_manager_get_type(void);
 #define SALUT_MUC_MANAGER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_MANAGER, SalutMucManagerClass))
 
-SalutMucManager *
-salut_muc_manager_new (SalutConnection *connection,
-                       SalutXmppConnectionManager *xmpp_connection_manager);
-
 gboolean
-salut_muc_manager_start (SalutMucManager *muc_manager,
-    GaClient *client, GError **error);
+salut_muc_manager_start (SalutMucManager *muc_manager, GError **error);
 
 SalutMucChannel *
 salut_muc_manager_get_text_channel (SalutMucManager *muc_manager,
@@ -77,6 +79,14 @@ void salut_muc_manager_handle_si_stream_request (SalutMucManager *muc_manager,
 
 SalutTubesChannel * salut_muc_manager_ensure_tubes_channel (
     SalutMucManager *muc_manager, TpHandle handle);
+
+
+/* "protected" methods */
+void salut_muc_manager_room_discovered (SalutMucManager *muc_manager,
+    const gchar *room);
+
+void salut_muc_manager_room_removed (SalutMucManager *muc_manager,
+    const gchar *room);
 
 G_END_DECLS
 

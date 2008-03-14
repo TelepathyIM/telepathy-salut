@@ -25,8 +25,6 @@
 
 #include "salut-muc-manager.h"
 
-#include <avahi-gobject/ga-service-browser.h>
-
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
@@ -36,6 +34,10 @@
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
 #include "salut-xmpp-connection-manager.h"
+
+/* HACK */
+#include "salut-discovery-client.h"
+#include "salut-avahi-discovery-client.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -85,40 +87,19 @@ struct _SalutMucManagerPrivate
   GSList *roomlist_channels;
 
   gboolean dispose_has_run;
-  GaClient *client;
-  GaServiceBrowser *browser;
-  /* room name => (GaServiceResolver *) */
-  GHashTable *room_resolvers;
 };
 
 #define SALUT_MUC_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate))
-
-static void
-room_resolver_removed (gpointer data)
-{
-  GArray *arr = (GArray *) data;
-  int i;
-  for (i = 0; i < arr->len; i++)
-    {
-      g_object_unref (g_array_index (arr, GObject *, i));
-    }
-  g_array_free (arr, TRUE);
-}
 
 static void
 salut_muc_manager_init (SalutMucManager *obj)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
   priv->connection = NULL;
-  priv->client = NULL;
-  priv->browser = ga_service_browser_new (SALUT_DNSSD_CLIQUE);
 
   /* allocate any data required by the object here */
   priv->text_channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                          NULL, g_object_unref);
-
-  priv->room_resolvers = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, room_resolver_removed);
 
 #ifdef ENABLE_DBUS_TUBES
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
@@ -263,19 +244,11 @@ salut_muc_manager_dispose (GObject *object)
   g_assert (priv->tubes_channels == NULL);
 #endif
 
-  if (priv->room_resolvers)
-    {
-      g_hash_table_destroy (priv->room_resolvers);
-      priv->room_resolvers = NULL;
-    }
-
   if (priv->xmpp_connection_manager != NULL)
     {
       g_object_unref (priv->xmpp_connection_manager);
       priv->xmpp_connection_manager = NULL;
     }
-
-  g_object_unref (priv->browser);
 
   /* release any references held by the object here */
 
@@ -301,21 +274,12 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
   SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
 
-  g_signal_handlers_disconnect_matched (priv->browser, G_SIGNAL_MATCH_DATA,
-      0, 0, NULL, NULL, mgr);
-
   if (priv->text_channels)
     {
       GHashTable *tmp = priv->text_channels;
       priv->text_channels = NULL;
       g_hash_table_destroy(tmp);
   }
-
-  if (priv->client != NULL)
-    {
-      g_object_unref (priv->client);
-      priv->client = NULL;
-    }
 
 #ifdef ENABLE_DBUS_TUBES
   if (priv->tubes_channels != NULL)
@@ -477,6 +441,11 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   SalutMucChannel *chan;
   const gchar *name;
   gchar *path = NULL;
+  /* HACK */
+  SalutDiscoveryClient *discovery_client;
+
+  /* HACK */
+  g_object_get (mgr, "discovery-client", &discovery_client, NULL);
 
   g_assert (g_hash_table_lookup (priv->text_channels,
         GUINT_TO_POINTER (handle)) == NULL);
@@ -493,7 +462,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
       "muc_connection", connection,
       "handle", handle,
       "name", name,
-      "client", priv->client,
+      /* HACK */
+      "client", SALUT_AVAHI_DISCOVERY_CLIENT(discovery_client)->avahi_client,
       "creator", new_connection,
       "xmpp-connection-manager", priv->xmpp_connection_manager,
       NULL);
@@ -552,19 +522,6 @@ new_tubes_channel (SalutMucManager *self,
 }
 #endif
 
-static gchar *
-_avahi_address_to_string_address (const AvahiAddress *address)
-{
-  gchar str[AVAHI_ADDRESS_STR_MAX];
-
-  if (avahi_address_snprint (str, sizeof (str), address) == NULL)
-    {
-      DEBUG ("Failed to convert AvahiAddress to string");
-      return NULL;
-    }
-  return g_strdup (str);
-}
-
 static SalutMucChannel *
 salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
                                            TpHandle handle,
@@ -579,54 +536,25 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   GError *connection_error = NULL;
   const gchar *room_name;
   GHashTable *params = NULL;
-  GArray *arr;
+  gchar *address;
+  guint16 p;
   gboolean r;
 
   room_name = tp_handle_inspect (room_repo, handle);
-  arr = g_hash_table_lookup (priv->room_resolvers, room_name);
-  if (arr != NULL && arr->len > 0)
+
+  if (SALUT_MUC_MANAGER_GET_CLASS (mgr)->find_muc_address (mgr, room_name,
+        &address, &p))
     {
       /* This MUC already exists on the network, so we reuse its
        * address */
-      AvahiAddress avahi_address;
-      uint16_t p;
-      int i;
+      gchar *port = g_strdup_printf ("%u", p);
 
-      for (i = 0; i < arr->len; i++)
-        {
-           GaServiceResolver *resolver;
-           resolver = g_array_index (arr, GaServiceResolver *, i);
-
-           if (!ga_service_resolver_get_address (resolver,
-                 &avahi_address, &p))
-             {
-               DEBUG ("..._get_address failed:"
-                   "creating a new MUC room instead");
-             }
-           else
-             {
-               gchar *address =
-                   _avahi_address_to_string_address (&avahi_address);
-
-              if (address == NULL)
-                {
-                  DEBUG ("stringifying AvahiAddress failed: creating a new MUC "
-                      "room instead");
-                }
-              else
-                {
-                  gchar *port = g_strdup_printf ("%u", p);
-
-                  params = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-                      g_free);
-                  g_hash_table_insert (params, "address", address);
-                  g_hash_table_insert (params, "port", port);
-                  DEBUG ("found %s port %s for room %s", address, port,
-                      room_name);
-                  break;
-                }
-            }
-        }
+      params = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+          g_free);
+      g_hash_table_insert (params, "address", address);
+      g_hash_table_insert (params, "port", port);
+      DEBUG ("found %s port %s for room %s", address, port,
+          room_name);
     }
   else
     {
@@ -684,17 +612,6 @@ roomlist_channel_closed_cb (SalutRoomlistChannel *chan,
     }
 }
 
-static void
-add_room_to_roomlist_channel (gpointer key,
-                              gpointer value,
-                              gpointer user_data)
-{
-  const gchar *room_name = (const gchar *) key;
-  SalutRoomlistChannel *roomlist_channel = SALUT_ROOMLIST_CHANNEL (user_data);
-
-  salut_roomlist_channel_add_room (roomlist_channel, room_name);
-}
-
 static SalutRoomlistChannel *
 make_roomlist_channel (SalutMucManager *self,
                        gpointer request)
@@ -704,6 +621,7 @@ make_roomlist_channel (SalutMucManager *self,
   SalutRoomlistChannel *roomlist_channel;
   gchar *object_path;
   static guint cpt = 0;
+  GSList *rooms, *l;
 
   object_path = g_strdup_printf ("%s/RoomlistChannel%u",
       conn->object_path, cpt++);
@@ -711,8 +629,13 @@ make_roomlist_channel (SalutMucManager *self,
   roomlist_channel = salut_roomlist_channel_new (priv->connection,
       object_path);
 
-  g_hash_table_foreach (priv->room_resolvers, add_room_to_roomlist_channel,
-      roomlist_channel);
+  rooms = SALUT_MUC_MANAGER_GET_CLASS (self)->get_rooms (self);
+  for (l = rooms; l != NULL; l = g_slist_next (l))
+    {
+      const gchar *room_name = l->data;
+
+      salut_roomlist_channel_add_room (roomlist_channel, room_name);
+    }
 
   priv->roomlist_channels = g_slist_prepend (priv->roomlist_channels,
       roomlist_channel);
@@ -998,196 +921,12 @@ discard:
 }
 
 /* public functions */
-SalutMucManager *
-salut_muc_manager_new (SalutConnection *connection,
-                       SalutXmppConnectionManager *xmpp_connection_manager)
-{
-  g_assert (connection != NULL);
-  g_assert (xmpp_connection_manager != NULL);
-
-  return g_object_new(SALUT_TYPE_MUC_MANAGER,
-      "connection", connection,
-      "xmpp-connection-manager", xmpp_connection_manager,
-      NULL);
-}
-
-static void
-add_room_foreach (SalutRoomlistChannel *roomlist_channel,
-                  const gchar *room)
-{
-  salut_roomlist_channel_add_room (roomlist_channel, room);
-}
-
-static void
-browser_found (GaServiceBrowser *browser,
-               AvahiIfIndex interface,
-               AvahiProtocol protocol,
-               const char *name,
-               const char *type,
-               const char *domain,
-               GaLookupResultFlags flags,
-               gpointer userdata)
-{
-  SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-  GArray *arr;
-  GaServiceResolver *resolver;
-  GError *error = NULL;
-
-  DEBUG ("found room: %s.%s.%s", name, type, domain);
-  resolver = ga_service_resolver_new (interface, protocol,
-      name, type, domain, protocol, 0);
-
-  if (!ga_service_resolver_attach (resolver, priv->client,
-        &error))
-    {
-      DEBUG ("resolver attach failed: %s", error->message);
-      g_object_unref (resolver);
-      g_error_free (error);
-      return;
-    }
-
-  arr = g_hash_table_lookup (priv->room_resolvers, name);
-  if (arr == NULL)
-    {
-      arr = g_array_new (FALSE, FALSE, sizeof (GObject *));
-      g_hash_table_insert (priv->room_resolvers, g_strdup (name), arr);
-      g_slist_foreach (priv->roomlist_channels, (GFunc) add_room_foreach,
-          (gchar *) name);
-    }
-  g_array_append_val (arr, resolver);
-}
-
-static void
-remove_room_foreach (SalutRoomlistChannel *roomlist_channel,
-                     const gchar *room)
-{
-  salut_roomlist_channel_remove_room (roomlist_channel, room);
-}
-
-static void
-browser_removed (GaServiceBrowser *browser,
-                 AvahiIfIndex interface,
-                 AvahiProtocol protocol,
-                 const char *name,
-                 const char *type,
-                 const char *domain,
-                 GaLookupResultFlags flags,
-                 gpointer userdata)
-{
-  SalutMucManager *self = SALUT_MUC_MANAGER (userdata);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
-  TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
-  TpHandle handle;
-  SalutMucChannel *muc;
-  GArray *arr;
-  int i;
-
-
-  arr = g_hash_table_lookup (priv->room_resolvers, name);
-
-  if (arr == NULL) {
-    DEBUG ("Browser removed for %s, but didn't have any resolvers", name);
-    return;
-  }
-
-  for (i = 0; i < arr->len; i++)
-    {
-      GaServiceResolver *resolver;
-      AvahiIfIndex r_interface;
-      AvahiProtocol r_protocol;
-      gchar *r_name;
-      gchar *r_type;
-      gchar *r_domain;
-
-      resolver = g_array_index (arr, GaServiceResolver *, i);
-      g_object_get ((gpointer) resolver,
-          "interface", &r_interface,
-          "protocol", &r_protocol,
-          "name", &r_name,
-          "type", &r_type,
-          "domain", &r_domain,
-          NULL);
-      if (interface == r_interface
-          && protocol == r_protocol
-          && !tp_strdiff (name, r_name)
-          && !tp_strdiff (type, r_type)
-          && !tp_strdiff (domain, r_domain))
-        {
-          g_free (r_name);
-          g_free (r_type);
-          g_free (r_domain);
-          g_object_unref (resolver);
-          g_array_remove_index_fast (arr, i);
-          break;
-        }
-
-      g_free (r_name);
-      g_free (r_type);
-      g_free (r_domain);
-    }
-
-  if (arr->len > 0)
-    return;
-
-  DEBUG ("remove room: %s.%s.%s", name, type, domain);
-  g_slist_foreach (priv->roomlist_channels, (GFunc) remove_room_foreach,
-      (gchar *) name);
-
-  g_hash_table_remove (priv->room_resolvers, name);
-
-  /* Do we have to re-announce this room ? */
-  handle = tp_handle_lookup (room_repo, name, NULL, NULL);
-  if (handle == 0)
-    return;
-
-  muc = g_hash_table_lookup (priv->text_channels, GUINT_TO_POINTER (handle));
-  if (muc == NULL)
-    return;
-
-  DEBUG ("We know this room %s. Try to re-announce it", name);
-  salut_muc_channel_publish_service (muc);
-}
-
-static void
-browser_failed (GaServiceBrowser *browser,
-                GError *error,
-                gpointer userdata)
-{
-  /* FIXME proper error handling */
-  DEBUG ("browser failed -> %s", error->message);
-}
 
 gboolean
 salut_muc_manager_start (SalutMucManager *self,
-                         GaClient *client,
                          GError **error)
 {
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-
-  if (priv->client != NULL)
-    g_object_unref (priv->client);
-
-  priv->client = client;
-  g_object_ref (priv->client);
-
-  g_signal_connect (priv->browser, "new-service",
-                   G_CALLBACK (browser_found), self);
-  g_signal_connect (priv->browser, "removed-service",
-                   G_CALLBACK (browser_removed), self);
-  g_signal_connect (priv->browser, "failure",
-                   G_CALLBACK (browser_failed), self);
-
-  if (!ga_service_browser_attach (priv->browser, priv->client,
-        error))
-    {
-      DEBUG ("browser attach failed");
-      return FALSE;
-   }
-
-  return TRUE;
+  return SALUT_MUC_MANAGER_GET_CLASS (self)->start (self, error);
 }
 
 SalutMucChannel *
@@ -1256,4 +995,55 @@ salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
   g_object_ref (tubes_chan);
 
   return tubes_chan;
+}
+
+static void
+add_room_foreach (SalutRoomlistChannel *roomlist_channel,
+                  const gchar *room)
+{
+  salut_roomlist_channel_add_room (roomlist_channel, room);
+}
+
+void
+salut_muc_manager_room_discovered (SalutMucManager *self,
+                                  const gchar *room)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  g_slist_foreach (priv->roomlist_channels, (GFunc) add_room_foreach,
+      (gchar *) room);
+}
+
+static void
+remove_room_foreach (SalutRoomlistChannel *roomlist_channel,
+                     const gchar *room)
+{
+  salut_roomlist_channel_remove_room (roomlist_channel, room);
+}
+
+void
+salut_muc_manager_room_removed (SalutMucManager *self,
+                                const gchar *room)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpHandleRepoIface *room_repo =
+      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+  TpHandle handle;
+  SalutMucChannel *muc;
+
+  g_slist_foreach (priv->roomlist_channels, (GFunc) remove_room_foreach,
+      (gchar *) room);
+
+    /* Do we have to re-announce this room ? */
+  handle = tp_handle_lookup (room_repo, room, NULL, NULL);
+  if (handle == 0)
+    return;
+
+  muc = g_hash_table_lookup (priv->text_channels, GUINT_TO_POINTER (handle));
+  if (muc == NULL)
+    return;
+
+  DEBUG ("We know this room %s. Try to re-announce it", room);
+  salut_muc_channel_publish_service (muc);
 }
