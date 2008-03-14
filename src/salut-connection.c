@@ -30,9 +30,6 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
-#include <avahi-gobject/ga-client.h>
-#include <avahi-gobject/ga-entry-group.h>
-
 #include "salut-connection.h"
 
 #include "salut-util.h"
@@ -49,6 +46,10 @@
 */
 
 #include "salut-presence.h"
+#include "salut-discovery-client.h"
+/* HACK */
+#include "salut-avahi-discovery-client.h"
+#include "salut-avahi-muc-manager.h"
 
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/dbus.h>
@@ -153,8 +154,8 @@ struct _SalutConnectionPrivate
   GArray *olpc_key;
 #endif
 
-  /* Avahi client for browsing and resolving */
-  GaClient *avahi_client;
+  /* Discovery client for browsing and resolving */
+  SalutDiscoveryClient *discovery_client;
 
   /* TpHandler for our presence on the lan */
   SalutSelf *self;
@@ -236,11 +237,15 @@ salut_connection_init (SalutConnection *obj)
   priv->olpc_key = NULL;
 #endif
 
-  priv->avahi_client = NULL;
+  priv->discovery_client = NULL;
   priv->self = NULL;
 
   priv->contact_manager = NULL;
   priv->xmpp_connection_manager = NULL;
+
+  /* FIXME: make this configurable */
+  priv->discovery_client = SALUT_DISCOVERY_CLIENT (
+      salut_avahi_discovery_client_new ());
 }
 
 static void
@@ -679,10 +684,11 @@ salut_connection_dispose (GObject *object)
       priv->xmpp_connection_manager = NULL;
     }
 
-  if (priv->avahi_client) {
-    g_object_unref (priv->avahi_client);
-    priv->avahi_client = NULL;
-  }
+  if (priv->discovery_client != NULL)
+    {
+      g_object_unref (priv->discovery_client);
+      priv->discovery_client = NULL;
+    }
 
   if (priv->bytestream_manager != NULL)
     {
@@ -749,8 +755,9 @@ _self_established_cb(SalutSelf *s, gpointer data) {
 
   base->self_handle = tp_handle_ensure(handle_repo, self->name, NULL, NULL);
 
+  /* HACK */
   if (!salut_contact_manager_start(priv->contact_manager,
-           priv->avahi_client, NULL)) {
+           SALUT_AVAHI_DISCOVERY_CLIENT(priv->discovery_client)->avahi_client, NULL)) {
     /* FIXME handle error */
     tp_base_connection_change_status(
         TP_BASE_CONNECTION(base),
@@ -759,7 +766,7 @@ _self_established_cb(SalutSelf *s, gpointer data) {
     return;
   }
 
-  if (!salut_muc_manager_start (priv->muc_manager, priv->avahi_client, NULL))
+  if (!salut_muc_manager_start (priv->muc_manager, NULL))
     {
       /* XXX handle error */
       return;
@@ -783,31 +790,16 @@ _self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
 }
 
 static void
-_ga_client_failure_cb(GaClient *c,
-                              GaClientState state,
-                              gpointer data) {
-  /* FIXME better error messages */
-  /* FIXME instead of full disconnect we could handle the avahi restart */
-  tp_base_connection_change_status(
-        TP_BASE_CONNECTION(data),
-        TP_CONNECTION_STATUS_DISCONNECTED,
-        TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
-}
-
-static void
-_ga_client_running_cb(GaClient *c,
-                              GaClientState state,
-                              gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
+discovery_client_running (SalutConnection *self)
+{
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
       (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
   gint port;
 
-  g_assert(c == priv->avahi_client);
-
   priv->self = salut_self_new (self,
-                              priv->avahi_client,
+      /* HACK */
+                              SALUT_AVAHI_DISCOVERY_CLIENT (priv->discovery_client)->avahi_client,
                               room_repo,
                               priv->nickname,
                               priv->first_name,
@@ -842,10 +834,33 @@ _ga_client_running_cb(GaClient *c,
     }
 
   /* Create the bytestream manager */
+  /* HACK */
   priv->bytestream_manager = salut_bytestream_manager_new (self,
-    avahi_client_get_host_name_fqdn (priv->avahi_client->avahi_client));
+    avahi_client_get_host_name_fqdn (SALUT_AVAHI_DISCOVERY_CLIENT(priv->discovery_client)->avahi_client->avahi_client));
 }
 
+static void
+_discovery_client_state_changed_cb (SalutDiscoveryClient *client,
+                                    SalutDiscoveryClientState state,
+                                    SalutConnection *self)
+{
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+
+  g_assert(client == priv->discovery_client);
+
+  if (state == SALUT_DISCOVERY_CLIENT_STATE_CONNECTED)
+    {
+      discovery_client_running (self);
+    }
+  else if (state == SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTED)
+    {
+      /* FIXME better error messages */
+      /* FIXME instead of full disconnect we could handle the avahi restart */
+      tp_base_connection_change_status(TP_BASE_CONNECTION (self),
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
+    }
+}
 /* public functions */
 static void
 _salut_connection_disconnect(SalutConnection *self) {
@@ -856,10 +871,11 @@ _salut_connection_disconnect(SalutConnection *self) {
     priv->self = NULL;
   }
 
-  if (priv->avahi_client) {
-    g_object_unref(priv->avahi_client);
-    priv->avahi_client = NULL;
-  }
+  if (priv->discovery_client != NULL)
+    {
+      g_object_unref (priv->discovery_client);
+      priv->discovery_client = NULL;
+    }
 }
 
 
@@ -2632,8 +2648,8 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
-  priv->muc_manager = salut_muc_manager_new (self,
-      priv->xmpp_connection_manager);
+  priv->muc_manager = salut_discovery_client_create_muc_manager (
+      priv->discovery_client, self, priv->xmpp_connection_manager);
 
   /*
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
@@ -2676,20 +2692,17 @@ salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
       TP_CONNECTION_STATUS_REASON_REQUESTED);
   */
 
-  priv->avahi_client = ga_client_new(GA_CLIENT_FLAG_NO_FAIL);
+  g_signal_connect(priv->discovery_client, "state-changed",
+      G_CALLBACK (_discovery_client_state_changed_cb), self);
 
-  g_signal_connect(priv->avahi_client, "state-changed::running",
-                   G_CALLBACK(_ga_client_running_cb), self);
-  g_signal_connect(priv->avahi_client, "state-changed::failure",
-                   G_CALLBACK(_ga_client_failure_cb), self);
-
-  if (!ga_client_start(priv->avahi_client, &client_error)) {
-    *error = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                         "Unstable to initialize the avahi client: %s",
-                         client_error->message);
-    g_error_free(client_error);
-    goto error;
-  }
+  if (!salut_discovery_client_start (priv->discovery_client, &client_error))
+    {
+      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Unstable to initialize the avahi client: %s",
+          client_error->message);
+      g_error_free (client_error);
+      goto error;
+    }
 
   return TRUE;
 
