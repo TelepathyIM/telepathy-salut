@@ -40,12 +40,19 @@ struct _SalutMucChannelClass {
   GObjectClass parent_class;
   TpGroupMixinClass group_class;
   TpTextMixinClass text_class;
+
+  /* Virtual method */
+  gboolean (*publish_service) (SalutMucChannel *self,
+      GibberMucConnection *muc_connection, const gchar *muc_name);
 };
 
 struct _SalutMucChannel {
     GObject parent;
     TpGroupMixin group;
     TpTextMixin text;
+
+    /* private */
+    SalutConnection *connection;
 };
 
 GType salut_muc_channel_get_type(void);
@@ -75,10 +82,10 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
 
 gboolean salut_muc_channel_publish_service (SalutMucChannel *self);
 
-SalutMucChannel * salut_muc_channel_new (SalutConnection *connection,
-    const gchar *path, GibberMucConnection *muc_connection, TpHandle handle,
-    const gchar *name, GaClient *avahi_client, gboolean creator,
-    SalutXmppConnectionManager *xcm);
+/* FIXME: This is an ugly workaround. See fd.o #15092
+ * We shouldn't export this function */
+gboolean salut_muc_channel_add_member (GObject *iface, TpHandle handle,
+    const gchar *message, GError **error);
 
 G_END_DECLS
 

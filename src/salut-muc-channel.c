@@ -42,7 +42,6 @@
 #include <telepathy-glib/util.h>
 
 #include <gibber/gibber-muc-connection.h>
-#include <avahi-gobject/ga-entry-group.h>
 
 #include "salut-connection.h"
 #include "salut-self.h"
@@ -84,7 +83,6 @@ enum
   PROP_MUC_CONNECTION,
   PROP_CONNECTION,
   PROP_NAME,
-  PROP_CLIENT,
   PROP_CREATOR,
   PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
@@ -104,9 +102,6 @@ struct _SalutMucChannelPrivate
   GibberMucConnection *muc_connection;
   gchar *muc_name;
   gboolean connected;
-  GaClient *client;
-  GaEntryGroup *muc_group;
-  GaEntryGroupService *service;
   gboolean creator;
   guint timeout;
   /* (gchar *) -> (SalutContact *) */
@@ -157,13 +152,10 @@ salut_muc_channel_get_property (GObject    *object,
       g_value_set_uint (value, priv->handle);
       break;
     case PROP_CONNECTION:
-      g_value_set_object (value, priv->connection);
+      g_value_set_object (value, chan->connection);
       break;
     case PROP_MUC_CONNECTION:
       g_value_set_object (value, priv->muc_connection);
-      break;
-    case PROP_CLIENT:
-      g_value_set_object (value, priv->client);
       break;
     case PROP_CREATOR:
       g_value_set_boolean (value, priv->creator);
@@ -200,7 +192,7 @@ salut_muc_channel_set_property (GObject     *object,
       priv->handle = g_value_get_uint (value);
       break;
     case PROP_CONNECTION:
-      priv->connection = g_value_get_object (value);
+      chan->connection = g_value_get_object (value);
       break;
     case PROP_MUC_CONNECTION:
       priv->muc_connection = g_value_get_object (value);
@@ -214,9 +206,6 @@ salut_muc_channel_set_property (GObject     *object,
       g_assert(tmp == NULL
                || !tp_strdiff(g_value_get_string(value),
                        TP_IFACE_CHANNEL_TYPE_TEXT));
-      break;
-    case PROP_CLIENT:
-      priv->client = g_value_get_object (value);
       break;
     case PROP_CREATOR:
       priv->creator = g_value_get_boolean (value);
@@ -235,7 +224,7 @@ static void
 salut_muc_channel_add_self_to_members (SalutMucChannel *self)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
   TpIntSet *empty;
   TpIntSet *add;
 
@@ -302,6 +291,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
                               GObjectConstructParam *props) {
   GObject *obj;
   DBusGConnection *bus;
+  SalutMucChannel *self;
   SalutMucChannelPrivate *priv;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *handle_repo;
@@ -311,10 +301,11 @@ salut_muc_channel_constructor (GType type, guint n_props,
   obj = G_OBJECT_CLASS(salut_muc_channel_parent_class)->
         constructor(type, n_props, props);
 
-  priv = SALUT_MUC_CHANNEL_GET_PRIVATE (SALUT_MUC_CHANNEL (obj));
+  self = SALUT_MUC_CHANNEL (obj);
+  priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
   /* Ref our handle */
-  base_conn = TP_BASE_CONNECTION(priv->connection);
+  base_conn = TP_BASE_CONNECTION(self->connection);
 
   handle_repo = tp_base_connection_get_handles(base_conn,
       TP_HANDLE_TYPE_ROOM);
@@ -332,7 +323,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
                                TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
                                G_MAXUINT);
 
-  g_object_get (priv->connection, "self", &(priv->self), NULL);
+  g_object_get (self->connection, "self", &(priv->self), NULL);
   g_object_unref (priv->self);
   g_assert (priv->self != NULL);
 
@@ -342,7 +333,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
   g_signal_connect (priv->muc_connection, "connected",
       G_CALLBACK (muc_connection_connected_cb), obj);
 
-  g_object_get (priv->connection,
+  g_object_get (self->connection,
       "muc-manager", &(priv->muc_manager),
       NULL);
   g_assert (priv->muc_manager != NULL);
@@ -367,11 +358,9 @@ salut_muc_channel_init (SalutMucChannel *self)
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   /* allocate any data required by the object here */
   priv->object_path = NULL;
-  priv->connection = NULL;
+  self->connection = NULL;
   priv->xmpp_connection_manager = NULL;
   priv->muc_name = NULL;
-  priv->client = NULL;
-  priv->service = NULL;
   priv->timeout = 0;
   priv->senders = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) g_object_unref);
@@ -396,7 +385,7 @@ create_invitation (SalutMucChannel *self,
                    const gchar *message)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(self->connection);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo =
@@ -408,7 +397,7 @@ create_invitation (SalutMucChannel *self,
 
   msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
       GIBBER_STANZA_SUB_TYPE_NORMAL,
-      priv->connection->name, name,
+      self->connection->name, name,
       GIBBER_NODE, "body",
         GIBBER_NODE_TEXT, "You got a Clique chatroom invitation",
       GIBBER_NODE_END,
@@ -444,129 +433,9 @@ gboolean
 salut_muc_channel_publish_service (SalutMucChannel *self)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  AvahiStringList *txt_record = NULL;
-  GError *error = NULL;
-  const GHashTable *params;
-  const gchar *address, *port_str;
-  gchar *host = NULL;
-  guint16 port;
-  uint16_t dns_type;
-  size_t dns_payload_length;
-  AvahiAddress addr;
 
-  /* We are already announcing this muc group */
-  if (priv->muc_group != NULL)
-    return TRUE;
-
-  g_assert (priv->service == NULL);
-
-  /* We didn't connect to this group just yet */
-  if (priv->muc_connection->state != GIBBER_MUC_CONNECTION_CONNECTED)
-    {
-      DEBUG ("Not yet connected to this muc, not announcing");
-      return TRUE;
-    }
-
-  priv->muc_group = ga_entry_group_new ();
-
-  if (!ga_entry_group_attach (priv->muc_group, priv->client, &error))
-    {
-      DEBUG ("entry group attach failed: %s", error->message);
-      goto publish_service_error;
-    }
-
-  params = gibber_muc_connection_get_parameters (priv->muc_connection);
-  address = g_hash_table_lookup ((GHashTable *) params, "address");
-  if (address == NULL)
-    {
-      DEBUG ("can't find connection address");
-      goto publish_service_error;
-    }
-  port_str = g_hash_table_lookup ((GHashTable *) params, "port");
-  if (port_str == NULL)
-    {
-      DEBUG ("can't find connection port");
-      goto publish_service_error;
-    }
-
-  if (avahi_address_parse (address, AVAHI_PROTO_UNSPEC, &addr) == NULL)
-    {
-      DEBUG ("Can't convert address \"%s\" to AvahiAddress", address);
-      goto publish_service_error;
-    }
-
-  switch (addr.proto)
-    {
-    case AVAHI_PROTO_INET:
-      dns_type = AVAHI_DNS_TYPE_A;
-      dns_payload_length = sizeof (AvahiIPv4Address);
-      break;
-    case AVAHI_PROTO_INET6:
-      dns_type = AVAHI_DNS_TYPE_AAAA;
-      dns_payload_length = sizeof (AvahiIPv6Address);
-      break;
-    default:
-      DEBUG ("Don't know how to convert AvahiProtocol 0x%x to DNS record",
-          addr.proto);
-      goto publish_service_error;
-    }
-
-  host = g_strdup_printf ("%s." SALUT_DNSSD_CLIQUE ".local", priv->muc_name);
-
-  /* Add the record */
-  if (!ga_entry_group_add_record_full (priv->muc_group,
-        AVAHI_IF_UNSPEC, addr.proto, 0,
-        host, AVAHI_DNS_CLASS_IN, dns_type, AVAHI_DEFAULT_TTL_HOST_NAME,
-        &(addr.data.data), dns_payload_length, &error))
-    {
-      DEBUG ("add A/AAAA record failed: %s", error->message);
-      goto publish_service_error;
-    }
-
-  port = atoi (port_str);
-
-  txt_record = avahi_string_list_new ("txtvers=0", NULL);
-
-  /* We shouldn't add the service but manually create the SRV record so
-   * we'll be able to allow multiple announcers */
-  priv->service = ga_entry_group_add_service_full_strlist (
-      priv->muc_group, AVAHI_IF_UNSPEC, addr.proto, 0, priv->muc_name,
-      SALUT_DNSSD_CLIQUE, NULL, host, port, &error, txt_record);
-  if (priv->service == NULL)
-    {
-      DEBUG ("add service failed: %s", error->message);
-      goto publish_service_error;
-    }
-
-  if (!ga_entry_group_commit (priv->muc_group, &error))
-    {
-      DEBUG ("entry group commit failed: %s", error->message);
-      goto publish_service_error;
-    }
-
-  DEBUG ("service created: %s %s %d", priv->muc_name, host, port);
-  avahi_string_list_free (txt_record);
-  g_free (host);
-  return TRUE;
-
-publish_service_error:
-  if (priv->muc_group != NULL)
-    {
-      g_object_unref (priv->muc_group);
-      priv->muc_group = NULL;
-    }
-
-  priv->service = NULL;
-
-  if (txt_record != NULL)
-    avahi_string_list_free (txt_record);
-
-  if (host != NULL)
-    g_free (host);
-
-  if (error != NULL)
-    g_error_free (error);
-  return FALSE;
+  return SALUT_MUC_CHANNEL_GET_CLASS (self)->publish_service (self,
+      priv->muc_connection, priv->muc_name);
 }
 
 struct
@@ -624,8 +493,7 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
                                               gpointer user_data)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
   struct pending_connection_for_invite_data *data =
@@ -674,7 +542,7 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
   struct pending_connection_for_invite_data *data;
   GibberXmppConnection *connection = NULL;
 
-  g_object_get (G_OBJECT (priv->connection), "contact-manager",
+  g_object_get (G_OBJECT (self->connection), "contact-manager",
       &contact_manager, NULL);
   g_assert (contact_manager != NULL);
 
@@ -724,15 +592,17 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
   return TRUE;
 }
 
-static gboolean
-muc_channel_add_member (GObject *iface,
-                        TpHandle handle,
-                        const gchar *message,
-                        GError **error)
+/* FIXME: This is an ugly workaround. See fd.o #15092
+ * We shouldn't export this function */
+gboolean
+salut_muc_channel_add_member (GObject *iface,
+                              TpHandle handle,
+                              const gchar *message,
+                              GError **error)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
   TpIntSet *empty, *remote_pending;
 
   if (handle == base_connection->self_handle)
@@ -850,19 +720,6 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                    PROP_CONNECTION, param_spec);
 
   param_spec = g_param_spec_object (
-      "client",
-      "GaClient object",
-      "Salut Avahi client used with the"
-      " connection that owns this MUC channel",
-      GA_TYPE_CLIENT,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class,
-      PROP_CLIENT, param_spec);
-
-  param_spec = g_param_spec_object (
       "xmpp-connection-manager",
       "SalutXmppConnectionManager object",
       "Salut XMPP Connection manager used for this MUC channel",
@@ -909,7 +766,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
 
   tp_group_mixin_class_init(object_class,
     G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
-    muc_channel_add_member, NULL);
+    salut_muc_channel_add_member, NULL);
 }
 
 void
@@ -935,12 +792,6 @@ salut_muc_channel_dispose (GObject *object)
     {
       g_object_unref (priv->xmpp_connection_manager);
       priv->xmpp_connection_manager = NULL;
-    }
-
-  if (priv->muc_group != NULL)
-    {
-      g_object_unref (priv->muc_group);
-      priv->muc_group = NULL;
     }
 
   if (priv->timeout != 0)
@@ -986,7 +837,7 @@ gboolean
 salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
                           const gchar *stanza, GError **error) {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(self->connection);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo =
@@ -1062,7 +913,7 @@ salut_muc_channel_add_members (SalutMucChannel *self,
   empty = tp_intset_new ();
   changes = tp_intset_new ();
 
-  g_object_get (G_OBJECT (priv->connection), "contact-manager",
+  g_object_get (G_OBJECT (self->connection), "contact-manager",
       &contact_mgr, NULL);
   g_assert (contact_mgr != NULL);
 
@@ -1095,7 +946,7 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection =
-      (TpBaseConnection *) (priv->connection);
+      (TpBaseConnection *) (self->connection);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
       (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSet *empty, *changes;
@@ -1139,7 +990,7 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
                                   gpointer user_data) {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION(self->connection);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles(base_connection, TP_HANDLE_TYPE_CONTACT);
 
@@ -1163,7 +1014,7 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
   }
 
 #ifdef ENABLE_OLPC
-  if (salut_connection_olpc_observe_muc_stanza (priv->connection, priv->handle,
+  if (salut_connection_olpc_observe_muc_stanza (self->connection, priv->handle,
         from_handle, stanza))
     return;
 #endif
@@ -1205,8 +1056,7 @@ salut_muc_channel_new_senders (GibberMucConnection *connection,
                                gpointer user_data)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
 
   salut_muc_channel_add_members (self, senders);
   if (!tp_handle_set_is_member (self->group.members,
@@ -1389,7 +1239,7 @@ salut_muc_channel_send (TpSvcChannelTypeText *channel,
   GError *error = NULL;
 
   GibberXmppStanza *stanza =
-      text_helper_create_message_groupchat (priv->connection->name,
+      text_helper_create_message_groupchat (self->connection->name,
           priv->muc_name, type, text, &error);
 
   if (stanza == NULL) {
@@ -1406,29 +1256,6 @@ salut_muc_channel_send (TpSvcChannelTypeText *channel,
 
   g_object_unref(G_OBJECT(stanza));
   tp_svc_channel_type_text_return_from_send(context);
-}
-
-SalutMucChannel *
-salut_muc_channel_new (SalutConnection *connection,
-                       const gchar *path,
-                       GibberMucConnection *muc_connection,
-                       TpHandle handle,
-                       const gchar *name,
-                       GaClient *avahi_client,
-                       gboolean creator,
-                       SalutXmppConnectionManager *xcm)
-{
-  return g_object_new (SALUT_TYPE_MUC_CHANNEL,
-      "connection", connection,
-      "object-path", path,
-      "muc_connection", muc_connection,
-      "handle", handle,
-      "name", name,
-      /* HACK */
-      "client", avahi_client,
-      "creator", creator,
-      "xmpp-connection-manager", xcm,
-      NULL);
 }
 
 static void
