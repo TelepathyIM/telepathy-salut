@@ -36,6 +36,7 @@
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
 #include "salut-xmpp-connection-manager.h"
+#include "salut-avahi-muc-channel.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -347,6 +348,25 @@ salut_avahi_muc_manager_get_rooms (SalutMucManager *mgr)
   return rooms;
 }
 
+static SalutMucChannel * 
+salut_avahi_muc_manager_create_muc_channel (
+    SalutMucManager *mgr,
+    SalutConnection *connection,
+    const gchar *path,
+    GibberMucConnection *muc_connection,
+    TpHandle handle,
+    const gchar *name,
+    gboolean creator,
+    SalutXmppConnectionManager *xcm)
+{
+  SalutAvahiMucManager *self = SALUT_AVAHI_MUC_MANAGER (mgr);
+  SalutAvahiMucManagerPrivate *priv = SALUT_AVAHI_MUC_MANAGER_GET_PRIVATE (self);
+
+  return SALUT_MUC_CHANNEL (salut_avahi_muc_channel_new (connection,
+        path, muc_connection, handle, name, priv->discovery_client, creator,
+        xcm));
+}
+
 static void
 salut_avahi_muc_manager_class_init (
     SalutAvahiMucManagerClass *salut_avahi_muc_manager_class)
@@ -368,6 +388,8 @@ salut_avahi_muc_manager_class_init (
   muc_manager_class->find_muc_address =
     salut_avahi_muc_manager_find_muc_address;
   muc_manager_class->get_rooms = salut_avahi_muc_manager_get_rooms;
+  muc_manager_class->create_muc_channel =
+    salut_avahi_muc_manager_create_muc_channel;
 
   param_spec = g_param_spec_object (
       "discovery-client",

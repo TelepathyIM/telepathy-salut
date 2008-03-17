@@ -28,6 +28,7 @@
 #include "salut-xmpp-connection-manager.h"
 #include "salut-muc-channel.h"
 #include "salut-tubes-channel.h"
+#include "salut-muc-channel.h"
 
 G_BEGIN_DECLS
 
@@ -43,7 +44,13 @@ struct _SalutMucManagerClass {
     /* private abstract methods */
     gboolean (*find_muc_address) (SalutMucManager *self, const gchar *name,
         gchar **address, guint16 *port);
+
     GSList * (*get_rooms) (SalutMucManager *self);
+
+    SalutMucChannel * (*create_muc_channel) (SalutMucManager *self,
+        SalutConnection *connection, const gchar *path,
+        GibberMucConnection *muc_connection, TpHandle handle,
+        const gchar *name, gboolean creator, SalutXmppConnectionManager *xcm);
 };
 
 struct _SalutMucManager {
