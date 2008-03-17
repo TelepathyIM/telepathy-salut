@@ -53,6 +53,12 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
       salut_contact_manager_factory_iface_init));
 
+enum
+{
+  PROP_CONNECTION = 1,
+  LAST_PROP
+};
+
 /* signal enum */
 enum
 {
@@ -150,6 +156,71 @@ activity_unref (SalutContactManagerActivity *activity)
 #endif
 
 static void
+salut_contact_manager_get_property (GObject *object,
+                                    guint property_id,
+                                    GValue *value,
+                                    GParamSpec *pspec)
+{
+  SalutContactManager *self = SALUT_CONTACT_MANAGER (object);
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        g_value_set_object (value, priv->connection);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+salut_contact_manager_set_property (GObject *object,
+                                    guint property_id,
+                                    const GValue *value,
+                                    GParamSpec *pspec)
+{
+  SalutContactManager *self = SALUT_CONTACT_MANAGER (object);
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        priv->connection = g_value_get_object (value);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static GObject *
+salut_contact_manager_constructor (GType type,
+                                   guint n_props,
+                                   GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutContactManager *self;
+  SalutContactManagerPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_contact_manager_parent_class)->
+    constructor (type, n_props, props);
+
+  self = SALUT_CONTACT_MANAGER (obj);
+  priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+
+  priv->presence_browser = ga_service_browser_new
+      (SALUT_DNSSD_PRESENCE);
+#ifdef ENABLE_OLPC
+  priv->activity_browser = ga_service_browser_new
+      (SALUT_DNSSD_OLPC_ACTIVITY);
+#endif
+
+  return obj;
+}
+
+static void
 salut_contact_manager_init (SalutContactManager *obj)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (obj);
@@ -175,11 +246,29 @@ static void
 salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manager_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_contact_manager_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (salut_contact_manager_class, sizeof (SalutContactManagerPrivate));
 
+  object_class->constructor = salut_contact_manager_constructor;
+  object_class->get_property = salut_contact_manager_get_property;
+  object_class->set_property = salut_contact_manager_set_property;
+
   object_class->dispose = salut_contact_manager_dispose;
   object_class->finalize = salut_contact_manager_finalize;
+
+  param_spec = g_param_spec_object (
+      "connection",
+      "SalutConnection object",
+      "The Salut Connection associated with this contact manager",
+      SALUT_TYPE_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION,
+      param_spec);
 
   signals[CONTACT_CHANGE] = g_signal_new("contact-change",
       G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
@@ -847,23 +936,11 @@ salut_contact_manager_get_channel (SalutContactManager *mgr,
 
 /* public functions */
 SalutContactManager *
-salut_contact_manager_new(SalutConnection *connection) {
-  SalutContactManager *ret = NULL;
-  SalutContactManagerPrivate *priv;
-
-  ret = g_object_new(SALUT_TYPE_CONTACT_MANAGER, NULL);
-  priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (ret);
-
-  priv->connection = connection;
-
-  priv->presence_browser = ga_service_browser_new
-      (SALUT_DNSSD_PRESENCE);
-#ifdef ENABLE_OLPC
-  priv->activity_browser = ga_service_browser_new
-      (SALUT_DNSSD_OLPC_ACTIVITY);
-#endif
-
-  return ret;
+salut_contact_manager_new (SalutConnection *connection)
+{
+  return g_object_new (SALUT_TYPE_CONTACT_MANAGER,
+      "connection", connection,
+      NULL);
 }
 
 gboolean
