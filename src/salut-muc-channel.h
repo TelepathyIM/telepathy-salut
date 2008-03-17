@@ -26,6 +26,11 @@
 #include <telepathy-glib/text-mixin.h>
 #include <telepathy-glib/group-mixin.h>
 
+#include <gibber/gibber-muc-connection.h>
+
+#include "salut-connection.h"
+#include "salut-xmpp-connection-manager.h"
+
 G_BEGIN_DECLS
 
 typedef struct _SalutMucChannel SalutMucChannel;
@@ -70,6 +75,10 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
 
 gboolean salut_muc_channel_publish_service (SalutMucChannel *self);
 
+SalutMucChannel * salut_muc_channel_new (SalutConnection *connection,
+    const gchar *path, GibberMucConnection *muc_connection, TpHandle handle,
+    const gchar *name, GaClient *avahi_client, gboolean creator,
+    SalutXmppConnectionManager *xcm);
 
 G_END_DECLS
 

@@ -456,17 +456,9 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   name = tp_handle_inspect (room_repo, handle);
   path = g_strdup_printf ("%s/MucChannel/%u", base_connection->object_path,
       handle);
-  chan = g_object_new (SALUT_TYPE_MUC_CHANNEL,
-      "connection", priv->connection,
-      "object-path", path,
-      "muc_connection", connection,
-      "handle", handle,
-      "name", name,
-      /* HACK */
-      "client", SALUT_AVAHI_DISCOVERY_CLIENT(discovery_client)->avahi_client,
-      "creator", new_connection,
-      "xmpp-connection-manager", priv->xmpp_connection_manager,
-      NULL);
+  chan = salut_muc_channel_new (priv->connection, path, connection, handle,
+      name, SALUT_AVAHI_DISCOVERY_CLIENT(discovery_client)->avahi_client,
+      new_connection, priv->xmpp_connection_manager);
   g_free (path);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);

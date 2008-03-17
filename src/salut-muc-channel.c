@@ -1408,6 +1408,29 @@ salut_muc_channel_send (TpSvcChannelTypeText *channel,
   tp_svc_channel_type_text_return_from_send(context);
 }
 
+SalutMucChannel *
+salut_muc_channel_new (SalutConnection *connection,
+                       const gchar *path,
+                       GibberMucConnection *muc_connection,
+                       TpHandle handle,
+                       const gchar *name,
+                       GaClient *avahi_client,
+                       gboolean creator,
+                       SalutXmppConnectionManager *xcm)
+{
+  return g_object_new (SALUT_TYPE_MUC_CHANNEL,
+      "connection", connection,
+      "object-path", path,
+      "muc_connection", muc_connection,
+      "handle", handle,
+      "name", name,
+      /* HACK */
+      "client", avahi_client,
+      "creator", creator,
+      "xmpp-connection-manager", xcm,
+      NULL);
+}
+
 static void
 text_iface_init(gpointer g_iface, gpointer iface_data) {
   TpSvcChannelTypeTextClass *klass = (TpSvcChannelTypeTextClass *)g_iface;
