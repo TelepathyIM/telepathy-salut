@@ -213,6 +213,7 @@ _ga_client_failure_cb (GaClient *c,
                        GaClientState state,
                        SalutAvahiDiscoveryClient *self)
 {
+  change_state (self, SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTING);
   change_state (self, SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTED);
 }
 
