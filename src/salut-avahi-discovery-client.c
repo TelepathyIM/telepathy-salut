@@ -89,6 +89,27 @@ salut_avahi_discovery_client_init (SalutAvahiDiscoveryClient *self)
 }
 
 static void
+change_state (SalutAvahiDiscoveryClient *self,
+              SalutDiscoveryClientState state)
+{
+  SalutAvahiDiscoveryClientPrivate *priv =
+    SALUT_AVAHI_DISCOVERY_CLIENT_GET_PRIVATE (self);
+
+  if (priv->state == state)
+    return;
+
+  priv->state = state;
+  g_signal_emit (G_OBJECT (self), signals[STATE_CHANGED], 0, state);
+}
+
+static void
+disconnect_client (SalutAvahiDiscoveryClient *self)
+{
+  change_state (self, SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTING);
+  change_state (self, SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTED);
+}
+
+static void
 salut_avahi_discovery_client_dispose (GObject *object)
 {
   SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (object);
@@ -102,6 +123,7 @@ salut_avahi_discovery_client_dispose (GObject *object)
 
   if (self->avahi_client != NULL)
     {
+      disconnect_client (self);
       g_object_unref (self->avahi_client);
       self->avahi_client = NULL;
     }
@@ -187,20 +209,6 @@ salut_avahi_discovery_client_new (void)
 }
 
 static void
-change_state (SalutAvahiDiscoveryClient *self,
-              SalutDiscoveryClientState state)
-{
-  SalutAvahiDiscoveryClientPrivate *priv =
-    SALUT_AVAHI_DISCOVERY_CLIENT_GET_PRIVATE (self);
-
-  if (priv->state == state)
-    return;
-
-  priv->state = state;
-  g_signal_emit (G_OBJECT (self), signals[STATE_CHANGED], 0, state);
-}
-
-static void
 _ga_client_running_cb (GaClient *c,
                        GaClientState state,
                        SalutAvahiDiscoveryClient *self)
@@ -213,8 +221,7 @@ _ga_client_failure_cb (GaClient *c,
                        GaClientState state,
                        SalutAvahiDiscoveryClient *self)
 {
-  change_state (self, SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTING);
-  change_state (self, SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTED);
+  disconnect_client (self);
 }
 
 /*
