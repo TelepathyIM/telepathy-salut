@@ -755,15 +755,14 @@ _self_established_cb(SalutSelf *s, gpointer data) {
 
   base->self_handle = tp_handle_ensure(handle_repo, self->name, NULL, NULL);
 
-  /* HACK */
-  if (!salut_contact_manager_start(priv->contact_manager,
-           SALUT_AVAHI_DISCOVERY_CLIENT(priv->discovery_client)->avahi_client, NULL)) {
-    /* FIXME handle error */
-    tp_base_connection_change_status(
-        TP_BASE_CONNECTION(base),
-        TP_CONNECTION_STATUS_CONNECTING,
-        TP_CONNECTION_STATUS_REASON_REQUESTED);
-    return;
+  if (!salut_contact_manager_start (priv->contact_manager, NULL))
+    {
+      /* FIXME handle error */
+      tp_base_connection_change_status(
+          TP_BASE_CONNECTION(base),
+          TP_CONNECTION_STATUS_CONNECTING,
+          TP_CONNECTION_STATUS_REASON_REQUESTED);
+      return;
   }
 
   if (!salut_muc_manager_start (priv->muc_manager, NULL))
@@ -2627,7 +2626,8 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   GPtrArray *factories = g_ptr_array_sized_new(3);
 
   /* Create the contact manager */
-  priv->contact_manager = salut_contact_manager_new (self);
+  priv->contact_manager = salut_discovery_client_create_contact_manager (
+      priv->discovery_client, self);
   g_signal_connect (priv->contact_manager, "contact-change",
       G_CALLBACK (_contact_manager_contact_change_cb), self);
 #ifdef ENABLE_OLPC
