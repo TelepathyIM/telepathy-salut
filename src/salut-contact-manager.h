@@ -34,10 +34,16 @@ typedef struct _SalutContactManagerClass SalutContactManagerClass;
 
 struct _SalutContactManagerClass {
     GObjectClass parent_class;
+
+    /* public abstract methods */
+    gboolean (*start) (SalutContactManager *self, GError **error);
 };
 
 struct _SalutContactManager {
     GObject parent;
+
+    /* private */
+    GHashTable *contacts;
 };
 
 
@@ -57,12 +63,11 @@ GType salut_contact_manager_get_type(void);
 #define SALUT_CONTACT_MANAGER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerClass))
 
+/* HACK */
 SalutContactManager *
 salut_contact_manager_new(SalutConnection *connection);
 
-gboolean salut_contact_manager_start(SalutContactManager *mgr,
-                                     GaClient *client,
-                                     GError **error);
+gboolean salut_contact_manager_start (SalutContactManager *mgr, GError **error);
 
 
 SalutContact *
@@ -86,6 +91,10 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
 #endif
 
 SalutContact * salut_contact_manager_ensure_contact (SalutContactManager *mgr,
+    const gchar *name);
+
+/* restricted methods */
+SalutContact * salut_contact_manager_create_contact (SalutContactManager *self,
     const gchar *name);
 
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/

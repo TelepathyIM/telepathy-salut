@@ -30,9 +30,6 @@
 #include "salut-contact.h"
 #include "salut-presence-enumtypes.h"
 
-#include <avahi-gobject/ga-service-browser.h>
-#include <avahi-gobject/ga-enums.h>
-
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 
@@ -89,16 +86,14 @@ typedef struct _SalutContactManagerPrivate SalutContactManagerPrivate;
 
 struct _SalutContactManagerPrivate
 {
-  GaServiceBrowser *presence_browser;
 #ifdef ENABLE_OLPC
-  GaServiceBrowser *activity_browser;
+  /* FIXME: HACK we should move this */
   GHashTable *olpc_activities_by_mdns;
   GHashTable *olpc_activities_by_room;
 #endif
   SalutConnection *connection;
   GaClient *client;
   GHashTable *channels;
-  GHashTable *contacts;
   gboolean dispose_has_run;
 };
 
@@ -210,13 +205,6 @@ salut_contact_manager_constructor (GType type,
   self = SALUT_CONTACT_MANAGER (obj);
   priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
 
-  priv->presence_browser = ga_service_browser_new
-      (SALUT_DNSSD_PRESENCE);
-#ifdef ENABLE_OLPC
-  priv->activity_browser = ga_service_browser_new
-      (SALUT_DNSSD_OLPC_ACTIVITY);
-#endif
-
   return obj;
 }
 
@@ -228,7 +216,7 @@ salut_contact_manager_init (SalutContactManager *obj)
   /* allocate any data required by the object here */
   priv->channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
                                          NULL, g_object_unref);
-  priv->contacts = g_hash_table_new_full(g_str_hash, g_str_equal,
+  obj->contacts = g_hash_table_new_full(g_str_hash, g_str_equal,
                                          g_free, NULL);
 
 #ifdef ENABLE_OLPC
@@ -521,10 +509,8 @@ _contact_remove_finalized(gpointer key, gpointer value, gpointer data) {
 static void
 _contact_finalized_cb(gpointer data, GObject *old_object) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(data);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  g_hash_table_foreach_remove(priv->contacts,
-                              _contact_remove_finalized,
-                              old_object);
+  g_hash_table_foreach_remove (mgr->contacts, _contact_remove_finalized,
+      old_object);
 }
 
 #ifdef ENABLE_OLPC
@@ -555,22 +541,6 @@ salut_contact_manager_merge_olpc_activity_properties
     *tags = activity->tags;
   if (is_private != NULL)
     *is_private = activity->is_private;
-  return TRUE;
-}
-
-static gboolean
-split_activity_name (const gchar **contact_name)
-{
-  const gchar *orig = *contact_name;
-
-  *contact_name = strchr (*contact_name, ':');
-  if (*contact_name == NULL)
-    {
-      *contact_name = orig;
-      DEBUG ("Ignoring invalid OLPC activity DNS-SD with no ':': %s", orig);
-      return FALSE;
-    }
-  (*contact_name)++;
   return TRUE;
 }
 
@@ -615,18 +585,19 @@ salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
 }
 #endif
 
-static SalutContact *
+SalutContact *
 salut_contact_manager_create_contact (SalutContactManager *self,
                                       const gchar *name)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContact *contact;
 
-  g_assert (g_hash_table_lookup (priv->contacts, name) == NULL);
+  g_assert (g_hash_table_lookup (self->contacts, name) == NULL);
 
+  /* HACK */
   contact = salut_contact_new (priv->client, priv->connection, name);
 
-  g_hash_table_insert (priv->contacts, g_strdup (contact->name), contact);
+  g_hash_table_insert (self->contacts, g_strdup (contact->name), contact);
   DEBUG("Adding %s to contacts", name);
 
   g_signal_connect (contact, "found",
@@ -649,10 +620,9 @@ SalutContact *
 salut_contact_manager_ensure_contact (SalutContactManager *self,
                                       const gchar *name)
 {
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContact *contact;
 
-  contact = g_hash_table_lookup (priv->contacts, name);
+  contact = g_hash_table_lookup (self->contacts, name);
   if (contact == NULL)
     {
       DEBUG ("contact %s doesn't exist yet. Creating it", name);
@@ -664,80 +634,6 @@ salut_contact_manager_ensure_contact (SalutContactManager *self,
     }
 
   return contact;
-}
-
-static void
-browser_found(GaServiceBrowser *browser,
-              AvahiIfIndex interface, AvahiProtocol protocol,
-              const char *name, const char *type, const char *domain,
-              GaLookupResultFlags flags,
-              gpointer userdata) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  SalutContact *contact;
-  const char *contact_name = name;
-
-  if (flags & AVAHI_LOOKUP_RESULT_OUR_OWN)
-    return;
-
-#ifdef ENABLE_OLPC
-  if (browser == priv->activity_browser)
-    {
-      if (!split_activity_name (&contact_name))
-        return;
-    }
-#endif
-
-  /* FIXME: For now we assume name is unique on the lan */
-  contact = g_hash_table_lookup (priv->contacts, contact_name);
-  if (contact == NULL) {
-    contact = salut_contact_manager_create_contact (mgr, contact_name);
-  } else  if (!salut_contact_has_services(contact)) {
-    g_object_ref(contact);
-  }
-  salut_contact_add_service(contact, interface, protocol, name, type, domain);
-}
-
-static void
-browser_removed(GaServiceBrowser *browser,
-              AvahiIfIndex interface, AvahiProtocol protocol,
-              const char *name, const char *type, const char *domain,
-              GaLookupResultFlags flags,
-              gpointer userdata) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
-  SalutContact *contact;
-  const char *contact_name = name;
-
-  DEBUG("Browser removed for %s", name);
-
-#ifdef ENABLE_OLPC
-  if (browser == priv->activity_browser)
-    {
-      if (!split_activity_name (&contact_name))
-        return;
-    }
-
-  /* stop caring about this activity advertisement, and also the activity
-   * if nobody is advertising it any more */
-  DEBUG ("Activity %s no longer advertised", name);
-  g_hash_table_remove (priv->olpc_activities_by_mdns, name);
-#endif
-
-  contact = g_hash_table_lookup (priv->contacts, contact_name);
-  if (contact != NULL) {
-    salut_contact_remove_service(contact, interface, protocol,
-                                 name, type, domain);
-  } else {
-    DEBUG ("Unknown contact removed from service browser");
-  }
-}
-
-static void
-browser_failed(GaServiceBrowser *browser,
-               GError *error, gpointer userdata) {
-  /* FIXME proper error handling */
-  g_warning("browser failed -> %s", error->message);
 }
 
 static void
@@ -756,19 +652,7 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     priv->client = NULL;
   }
 
-  if (priv->presence_browser)
-    {
-      g_object_unref (priv->presence_browser);
-      priv->presence_browser = NULL;
-    }
-
 #ifdef ENABLE_OLPC
-  if (priv->activity_browser)
-    {
-      g_object_unref (priv->activity_browser);
-      priv->activity_browser = NULL;
-    }
-
   if (priv->olpc_activities_by_mdns != NULL)
     {
       g_hash_table_destroy (priv->olpc_activities_by_mdns);
@@ -782,10 +666,10 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     }
 #endif
 
-  if (priv->contacts) {
-    g_hash_table_foreach_remove(priv->contacts, dispose_contact, mgr);
-    g_hash_table_destroy(priv->contacts);
-    priv->contacts = NULL;
+  if (mgr->contacts) {
+    g_hash_table_foreach_remove (mgr->contacts, dispose_contact, mgr);
+    g_hash_table_destroy (mgr->contacts);
+    mgr->contacts = NULL;
   }
 }
 
@@ -944,44 +828,10 @@ salut_contact_manager_new (SalutConnection *connection)
 }
 
 gboolean
-salut_contact_manager_start(SalutContactManager *mgr,
-                            GaClient *client, GError **error) {
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
-
-  g_assert(priv->client == NULL);
-
-  priv->client = client;
-  g_object_ref(client);
-
-  g_signal_connect(priv->presence_browser, "new-service",
-                   G_CALLBACK(browser_found), mgr);
-  g_signal_connect(priv->presence_browser, "removed-service",
-                   G_CALLBACK(browser_removed), mgr);
-  g_signal_connect(priv->presence_browser, "failure",
-                   G_CALLBACK(browser_failed), mgr);
-
-  if (!ga_service_browser_attach(priv->presence_browser,
-        priv->client, error))
-    {
-      return FALSE;
-    }
-
-#ifdef ENABLE_OLPC
-  g_signal_connect (priv->activity_browser, "new-service",
-      G_CALLBACK (browser_found), mgr);
-  g_signal_connect (priv->activity_browser, "removed-service",
-      G_CALLBACK (browser_removed), mgr);
-  g_signal_connect (priv->activity_browser, "failure",
-      G_CALLBACK (browser_failed), mgr);
-
-  if (!ga_service_browser_attach(priv->activity_browser,
-        priv->client, error))
-    {
-      return FALSE;
-    }
-#endif
-
-  return TRUE;
+salut_contact_manager_start (SalutContactManager *self,
+                             GError **error)
+{
+  return SALUT_CONTACT_MANAGER_GET_CLASS (self)->start (self, error);
 }
 
 SalutContact *
@@ -995,7 +845,7 @@ salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle) {
   g_return_val_if_fail(name, NULL);
 
   DEBUG("Getting contact for: %s", name);
-  ret =  g_hash_table_lookup(priv->contacts, name);
+  ret =  g_hash_table_lookup(mgr->contacts, name);
 
   if (ret != NULL) {
     g_object_ref(ret);
@@ -1024,12 +874,11 @@ salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
                                                struct sockaddr_storage *address)
 {
   GList *list = NULL;
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
   gpointer data[2];
 
   data[0] = address;
   data[1] = &list;
-  g_hash_table_foreach(priv->contacts, _find_by_address, data);
+  g_hash_table_foreach (mgr->contacts, _find_by_address, data);
   return list;
 }
 
