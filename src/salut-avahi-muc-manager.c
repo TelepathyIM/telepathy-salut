@@ -185,9 +185,8 @@ browser_removed (GaServiceBrowser *browser,
                  const char *type,
                  const char *domain,
                  GaLookupResultFlags flags,
-                 gpointer userdata)
+                 SalutAvahiMucManager *self)
 {
-  SalutAvahiMucManager *self = SALUT_AVAHI_MUC_MANAGER (userdata);
   SalutAvahiMucManagerPrivate *priv = SALUT_AVAHI_MUC_MANAGER_GET_PRIVATE (self);
   GArray *arr;
   int i;
@@ -248,7 +247,7 @@ browser_removed (GaServiceBrowser *browser,
 static void
 browser_failed (GaServiceBrowser *browser,
                 GError *error,
-                gpointer userdata)
+                SalutAvahiMucManager *self)
 {
   /* FIXME proper error handling */
   DEBUG ("browser failed -> %s", error->message);
@@ -262,11 +261,11 @@ salut_avahi_muc_manager_start (SalutMucManager *mgr,
   SalutAvahiMucManagerPrivate *priv = SALUT_AVAHI_MUC_MANAGER_GET_PRIVATE (self);
 
   g_signal_connect (priv->browser, "new-service",
-                   G_CALLBACK (browser_found), self);
+      G_CALLBACK (browser_found), self);
   g_signal_connect (priv->browser, "removed-service",
-                   G_CALLBACK (browser_removed), self);
+      G_CALLBACK (browser_removed), self);
   g_signal_connect (priv->browser, "failure",
-                   G_CALLBACK (browser_failed), self);
+      G_CALLBACK (browser_failed), self);
 
   if (!ga_service_browser_attach (priv->browser,
         priv->discovery_client->avahi_client, error))
