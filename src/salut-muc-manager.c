@@ -34,10 +34,7 @@
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
 #include "salut-xmpp-connection-manager.h"
-
-/* HACK */
 #include "salut-discovery-client.h"
-#include "salut-avahi-discovery-client.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -441,11 +438,6 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   SalutMucChannel *chan;
   const gchar *name;
   gchar *path = NULL;
-  /* HACK */
-  SalutDiscoveryClient *discovery_client;
-
-  /* HACK */
-  g_object_get (mgr, "discovery-client", &discovery_client, NULL);
 
   g_assert (g_hash_table_lookup (priv->text_channels,
         GUINT_TO_POINTER (handle)) == NULL);
