@@ -345,7 +345,7 @@ activity_change_cb(SalutContact *contact,
   if (room_handle == 0)
     {
       DEBUG ("Treating activity advertisement with room_handle 0 as removal");
-      g_hash_table_remove (priv->olpc_activities_by_mdns, name);
+      g_hash_table_remove (priv->olpc_activities_by_mdns, service_name);
       return;
     }
 
