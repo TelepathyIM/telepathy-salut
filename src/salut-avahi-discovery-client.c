@@ -37,6 +37,7 @@
 #include "debug.h"
 
 #include "salut-avahi-muc-manager.h"
+#include "salut-avahi-contact-manager.h"
 
 #include "signals-marshal.h"
 
@@ -262,6 +263,23 @@ salut_avahi_discovery_client_create_muc_manager (SalutDiscoveryClient *client,
       self));
 }
 
+/*
+ * salut_avahi_discovery_client_create_contact_manager
+ *
+ * Implements salut_discovery_client_create_contact_manager on
+ * SalutDiscoveryClient
+ */
+static SalutContactManager *
+salut_avahi_discovery_client_create_contact_manager (
+    SalutDiscoveryClient *client,
+    SalutConnection *connection)
+{
+  SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (client);
+
+  return SALUT_CONTACT_MANAGER (salut_avahi_contact_manager_new (connection,
+        self));
+}
+
 static void
 discovery_client_init (gpointer g_iface,
                        gpointer iface_data)
@@ -270,4 +288,6 @@ discovery_client_init (gpointer g_iface,
 
   klass->start = salut_avahi_discovery_client_start;
   klass->create_muc_manager = salut_avahi_discovery_client_create_muc_manager;
+  klass->create_contact_manager =
+    salut_avahi_discovery_client_create_contact_manager;
 }
