@@ -43,6 +43,17 @@ salut_discovery_client_create_muc_manager (SalutDiscoveryClient *self,
   return virtual_method (self, connection, xcm);
 }
 
+SalutContactManager *
+salut_discovery_client_create_contact_manager (SalutDiscoveryClient *self,
+                                               SalutConnection *connection)
+{
+  SalutContactManager * (*virtual_method)(SalutDiscoveryClient *,
+    SalutConnection *) =
+    SALUT_DISCOVERY_CLIENT_GET_CLASS (self)->create_contact_manager;
+  g_assert (virtual_method != NULL);
+  return virtual_method (self, connection);
+}
+
 static void
 salut_discovery_client_base_init (gpointer klass)
 {

@@ -23,6 +23,7 @@
 #include <glib-object.h>
 
 #include "salut-muc-manager.h"
+#include "salut-contact-manager.h"
 
 G_BEGIN_DECLS
 
@@ -45,6 +46,8 @@ struct _SalutDiscoveryClientClass
   gboolean (*start) (SalutDiscoveryClient *clt, GError **error);
   SalutMucManager * (*create_muc_manager) (SalutDiscoveryClient *clt,
       SalutConnection *connection, SalutXmppConnectionManager *xcm);
+  SalutContactManager * (*create_contact_manager) (SalutDiscoveryClient *clt,
+      SalutConnection *connection);
 };
 
 GType salut_discovery_client_get_type (void);
@@ -67,6 +70,9 @@ gboolean salut_discovery_client_start (SalutDiscoveryClient *clt,
 SalutMucManager * salut_discovery_client_create_muc_manager (
     SalutDiscoveryClient *clt, SalutConnection *connection,
     SalutXmppConnectionManager *xcm);
+
+SalutContactManager * salut_discovery_client_create_contact_manager (
+    SalutDiscoveryClient *clt, SalutConnection *connection);
 
 G_END_DECLS
 
