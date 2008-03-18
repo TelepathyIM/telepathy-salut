@@ -54,6 +54,8 @@ CORE_SOURCES =                                          \
     salut-avahi-muc-manager.c                           \
     salut-avahi-muc-channel.h                           \
     salut-avahi-muc-channel.c                           \
+    salut-avahi-contact-manager.h                       \
+    salut-avahi-contact-manager.c                       \
     tube-iface.h                                        \
     tube-iface.c                                        \
     sha1/sha1-util.h                                    \
