@@ -63,12 +63,7 @@ GType salut_contact_manager_get_type(void);
 #define SALUT_CONTACT_MANAGER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerClass))
 
-/* HACK */
-SalutContactManager *
-salut_contact_manager_new(SalutConnection *connection);
-
 gboolean salut_contact_manager_start (SalutContactManager *mgr, GError **error);
-
 
 SalutContact *
 salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle);

@@ -819,14 +819,6 @@ salut_contact_manager_get_channel (SalutContactManager *mgr,
 }
 
 /* public functions */
-SalutContactManager *
-salut_contact_manager_new (SalutConnection *connection)
-{
-  return g_object_new (SALUT_TYPE_CONTACT_MANAGER,
-      "connection", connection,
-      NULL);
-}
-
 gboolean
 salut_contact_manager_start (SalutContactManager *self,
                              GError **error)
