@@ -1147,6 +1147,7 @@ reconnect (GibberRMulticastCausalTransport *self)
   gibber_r_multicast_sender_group_free (priv->sender_group);
   priv->sender_group = gibber_r_multicast_sender_group_new ();
   priv->packet_id = g_random_int ();
+  priv->resetting = FALSE;
 
   g_assert(gibber_r_multicast_causal_transport_connect (self, FALSE, NULL));
 }
