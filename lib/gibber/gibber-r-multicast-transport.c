@@ -1707,6 +1707,9 @@ gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
+  if (priv->state == STATE_RESETTING)
+    return TRUE;
+
   return gibber_r_multicast_causal_transport_send(priv->transport,
      stream_id, data, size, error);
 }
@@ -1719,6 +1722,9 @@ gibber_r_multicast_transport_do_send(GibberTransport *transport,
 {
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (transport);
+
+  if (priv->state == STATE_RESETTING)
+    return TRUE;
 
   return gibber_transport_send(GIBBER_TRANSPORT(priv->transport),
       data, size, error);
