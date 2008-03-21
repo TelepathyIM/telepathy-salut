@@ -687,6 +687,8 @@ salut_connection_dispose (GObject *object)
   if (priv->discovery_client != NULL)
     {
       g_object_unref (priv->discovery_client);
+      g_signal_handlers_disconnect_matched (priv->discovery_client,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
       priv->discovery_client = NULL;
     }
 
@@ -873,6 +875,8 @@ _salut_connection_disconnect(SalutConnection *self) {
   if (priv->discovery_client != NULL)
     {
       g_object_unref (priv->discovery_client);
+      g_signal_handlers_disconnect_matched (priv->discovery_client,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
       priv->discovery_client = NULL;
     }
 }
