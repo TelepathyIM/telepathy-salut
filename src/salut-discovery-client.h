@@ -24,6 +24,7 @@
 
 #include "salut-muc-manager.h"
 #include "salut-contact-manager.h"
+#include "salut-olpc-activity-manager.h"
 
 G_BEGIN_DECLS
 
@@ -48,6 +49,8 @@ struct _SalutDiscoveryClientClass
       SalutConnection *connection, SalutXmppConnectionManager *xcm);
   SalutContactManager * (*create_contact_manager) (SalutDiscoveryClient *clt,
       SalutConnection *connection);
+  SalutOlpcActivityManager * (*create_olpc_activity_manager) (
+      SalutDiscoveryClient *clt, SalutConnection *connection);
 };
 
 GType salut_discovery_client_get_type (void);
@@ -72,6 +75,9 @@ SalutMucManager * salut_discovery_client_create_muc_manager (
     SalutXmppConnectionManager *xcm);
 
 SalutContactManager * salut_discovery_client_create_contact_manager (
+    SalutDiscoveryClient *clt, SalutConnection *connection);
+
+SalutOlpcActivityManager * salut_discovery_client_create_olpc_activity_manager (
     SalutDiscoveryClient *clt, SalutConnection *connection);
 
 G_END_DECLS

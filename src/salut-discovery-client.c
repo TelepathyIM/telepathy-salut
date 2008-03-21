@@ -54,6 +54,17 @@ salut_discovery_client_create_contact_manager (SalutDiscoveryClient *self,
   return virtual_method (self, connection);
 }
 
+SalutOlpcActivityManager *
+salut_discovery_client_create_olpc_activity_manager (SalutDiscoveryClient *self,
+                                                     SalutConnection *connection)
+{
+  SalutOlpcActivityManager * (*virtual_method)(SalutDiscoveryClient *,
+    SalutConnection *) =
+    SALUT_DISCOVERY_CLIENT_GET_CLASS (self)->create_olpc_activity_manager;
+  g_assert (virtual_method != NULL);
+  return virtual_method (self, connection);
+}
+
 static void
 salut_discovery_client_base_init (gpointer klass)
 {
