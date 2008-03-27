@@ -300,16 +300,16 @@ salut_avahi_contact_manager_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  if (priv->discovery_client != NULL)
-    {
-      g_object_unref (priv->discovery_client);
-      priv->discovery_client = NULL;
-    }
-
   if (priv->presence_browser != NULL)
     {
       g_object_unref (priv->presence_browser);
       priv->presence_browser = NULL;
+    }
+
+  if (priv->discovery_client != NULL)
+    {
+      g_object_unref (priv->discovery_client);
+      priv->discovery_client = NULL;
     }
 
   if (G_OBJECT_CLASS (salut_avahi_contact_manager_parent_class)->dispose)
