@@ -31,6 +31,7 @@
 #include "debug.h"
 
 #include "salut-avahi-contact-manager.h"
+#include "salut-avahi-contact.h"
 
 G_DEFINE_TYPE (SalutAvahiContactManager, salut_avahi_contact_manager,
     SALUT_TYPE_CONTACT_MANAGER);
@@ -49,9 +50,6 @@ struct _SalutAvahiContactManagerPrivate
 {
   SalutAvahiDiscoveryClient *discovery_client;
   GaServiceBrowser *presence_browser;
-#ifdef ENABLE_OLPC
-  GaServiceBrowser *activity_browser;
-#endif
 
   gboolean dispose_has_run;
 };
@@ -62,9 +60,9 @@ struct _SalutAvahiContactManagerPrivate
 
 static void
 salut_avahi_contact_manager_get_property (GObject *object,
-                                      guint property_id,
-                                      GValue *value,
-                                      GParamSpec *pspec)
+                                          guint property_id,
+                                          GValue *value,
+                                          GParamSpec *pspec)
 {
   SalutAvahiContactManager *chan = SALUT_AVAHI_CONTACT_MANAGER (object);
   SalutAvahiContactManagerPrivate *priv =
@@ -82,9 +80,9 @@ salut_avahi_contact_manager_get_property (GObject *object,
 
 static void
 salut_avahi_contact_manager_set_property (GObject *object,
-                                      guint property_id,
-                                      const GValue *value,
-                                      GParamSpec *pspec)
+                                          guint property_id,
+                                          const GValue *value,
+                                          GParamSpec *pspec)
 {
   SalutAvahiContactManager *chan = SALUT_AVAHI_CONTACT_MANAGER (object);
   SalutAvahiContactManagerPrivate *priv =
@@ -103,8 +101,8 @@ salut_avahi_contact_manager_set_property (GObject *object,
 
 static GObject *
 salut_avahi_contact_manager_constructor (GType type,
-                                     guint n_props,
-                                     GObjectConstructParam *props)
+                                         guint n_props,
+                                         GObjectConstructParam *props)
 {
   GObject *obj;
   SalutAvahiContactManager *self;
@@ -117,9 +115,6 @@ salut_avahi_contact_manager_constructor (GType type,
   priv = SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE (self);
 
   priv->presence_browser = ga_service_browser_new (SALUT_DNSSD_PRESENCE);
-#ifdef ENABLE_OLPC
-  priv->activity_browser = ga_service_browser_new (SALUT_DNSSD_OLPC_ACTIVITY);
-#endif
 
   return obj;
 }
@@ -135,20 +130,16 @@ salut_avahi_contact_manager_init (SalutAvahiContactManager *self)
   priv->discovery_client = NULL;
 }
 
-static gboolean
-split_activity_name (const gchar **contact_name)
+static SalutContact *
+salut_avahi_contact_manager_create_contact (SalutContactManager *mgr,
+                                            const gchar *name)
 {
-  const gchar *orig = *contact_name;
+  SalutAvahiContactManager *self = SALUT_AVAHI_CONTACT_MANAGER (mgr);
+  SalutAvahiContactManagerPrivate *priv =
+    SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE (self);
 
-  *contact_name = strchr (*contact_name, ':');
-  if (*contact_name == NULL)
-    {
-      *contact_name = orig;
-      DEBUG ("Ignoring invalid OLPC activity DNS-SD with no ':': %s", orig);
-      return FALSE;
-    }
-  (*contact_name)++;
-  return TRUE;
+  return SALUT_CONTACT (salut_avahi_contact_new (mgr->connection,
+      name, priv->discovery_client));
 }
 
 static void
@@ -161,8 +152,6 @@ browser_found (GaServiceBrowser *browser,
                GaLookupResultFlags flags,
                SalutAvahiContactManager *self)
 {
-  SalutAvahiContactManagerPrivate *priv =
-    SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER (self);
   SalutContact *contact;
   const char *contact_name = name;
@@ -170,26 +159,21 @@ browser_found (GaServiceBrowser *browser,
   if (flags & AVAHI_LOOKUP_RESULT_OUR_OWN)
     return;
 
-#ifdef ENABLE_OLPC
-  if (browser == priv->activity_browser)
-    {
-      if (!split_activity_name (&contact_name))
-        return;
-    }
-#endif
-
   /* FIXME: For now we assume name is unique on the lan */
   contact = g_hash_table_lookup (mgr->contacts, contact_name);
   if (contact == NULL)
     {
-      contact = salut_contact_manager_create_contact (mgr, contact_name);
+      contact = salut_avahi_contact_manager_create_contact (mgr, contact_name);
+      salut_contact_manager_contact_created (mgr, contact);
     }
-  else if (!salut_contact_has_services (contact))
+  else if (!salut_avahi_contact_has_services (SALUT_AVAHI_CONTACT (contact)))
     {
+      /* We keep a ref on the contact as long it has services */
      g_object_ref (contact);
     }
 
-  salut_contact_add_service (contact, interface, protocol, name, type, domain);
+  salut_avahi_contact_add_service (SALUT_AVAHI_CONTACT (contact), interface,
+      protocol, name, type, domain);
 }
 
 static void
@@ -202,33 +186,17 @@ browser_removed (GaServiceBrowser *browser,
                  GaLookupResultFlags flags,
                  SalutAvahiContactManager *self)
 {
-  SalutAvahiContactManagerPrivate *priv =
-    SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE (self);
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER (self);
   SalutContact *contact;
   const char *contact_name = name;
 
   DEBUG("Browser removed for %s", name);
 
-#ifdef ENABLE_OLPC
-  if (browser == priv->activity_browser)
-    {
-      if (!split_activity_name (&contact_name))
-        return;
-
-      /* stop caring about this activity advertisement, and also the activity
-       * if nobody is advertising it any more */
-      DEBUG ("Activity %s no longer advertised", name);
-      /* HACK */
-      //g_hash_table_remove (priv->olpc_activities_by_mdns, name);
-    }
-#endif
-
   contact = g_hash_table_lookup (mgr->contacts, contact_name);
   if (contact != NULL)
     {
-      salut_contact_remove_service (contact, interface, protocol,
-          name, type, domain);
+      salut_avahi_contact_remove_service (SALUT_AVAHI_CONTACT (contact),
+          interface, protocol, name, type, domain);
     }
   else
     {
@@ -267,22 +235,18 @@ salut_avahi_contact_manager_start (SalutContactManager *mgr,
       return FALSE;
     }
 
-#ifdef ENABLE_OLPC
-  g_signal_connect (priv->activity_browser, "new-service",
-      G_CALLBACK (browser_found), self);
-  g_signal_connect (priv->activity_browser, "removed-service",
-      G_CALLBACK (browser_removed), self);
-  g_signal_connect (priv->activity_browser, "failure",
-      G_CALLBACK (browser_failed), self);
-
-  if (!ga_service_browser_attach(priv->activity_browser,
-        priv->discovery_client->avahi_client, error))
-    {
-      return FALSE;
-    }
-
-#endif
   return TRUE;
+}
+
+static void
+salut_avahi_contact_manager_dispose_contact (SalutContactManager *mgr,
+                                             SalutContact *contact)
+{
+  if (salut_avahi_contact_has_services (SALUT_AVAHI_CONTACT (contact)))
+    {
+      /* We reffed this contact as it has services */
+      g_object_unref (contact);
+    }
 }
 
 static void salut_avahi_contact_manager_dispose (GObject *object);
@@ -305,6 +269,10 @@ salut_avahi_contact_manager_class_init (
   object_class->set_property = salut_avahi_contact_manager_set_property;
 
   contact_manager_class->start = salut_avahi_contact_manager_start;
+  contact_manager_class->create_contact =
+    salut_avahi_contact_manager_create_contact;
+  contact_manager_class->dispose_contact =
+    salut_avahi_contact_manager_dispose_contact;
 
   param_spec = g_param_spec_object (
       "discovery-client",
@@ -343,14 +311,6 @@ salut_avahi_contact_manager_dispose (GObject *object)
       g_object_unref (priv->presence_browser);
       priv->presence_browser = NULL;
     }
-
-#ifdef ENABLE_OLPC
-  if (priv->activity_browser != NULL)
-    {
-      g_object_unref (priv->activity_browser);
-      priv->activity_browser = NULL;
-    }
-#endif
 
   if (G_OBJECT_CLASS (salut_avahi_contact_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_avahi_contact_manager_parent_class)->dispose (object);
