@@ -60,95 +60,21 @@ enum
 enum
 {
   CONTACT_CHANGE,
-#ifdef ENABLE_OLPC
-  ACTIVITY_PROPERTIES_CHANGE,
-#endif
   LAST_SIGNAL
 };
 
 static guint signals[LAST_SIGNAL] = {0};
-
-typedef struct
-{
-  SalutContactManager *mgr;
-  TpHandle room;
-  gchar *activity_id;
-  gchar *color;
-  gchar *name;
-  gchar *type;
-  gchar *tags;
-  gboolean is_private;
-  size_t refcount;
-} SalutContactManagerActivity;
 
 /* private structure */
 typedef struct _SalutContactManagerPrivate SalutContactManagerPrivate;
 
 struct _SalutContactManagerPrivate
 {
-#ifdef ENABLE_OLPC
-  /* FIXME: HACK we should move this */
-  GHashTable *olpc_activities_by_mdns;
-  GHashTable *olpc_activities_by_room;
-#endif
-  SalutConnection *connection;
-  GaClient *client;
   GHashTable *channels;
   gboolean dispose_has_run;
 };
 
 #define SALUT_CONTACT_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerPrivate))
-
-#ifdef ENABLE_OLPC
-static SalutContactManagerActivity *
-activity_new (SalutContactManager *mgr,
-              TpHandle room_handle)
-{
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    (TP_BASE_CONNECTION (priv->connection), TP_HANDLE_TYPE_ROOM);
-  SalutContactManagerActivity *activity = g_slice_new0
-    (SalutContactManagerActivity);
-
-  activity->refcount = 1;
-  tp_handle_ref (room_repo, room_handle);
-  activity->room = room_handle;
-  activity->mgr = mgr;
-  activity->is_private = TRUE;
-
-  DEBUG ("Creating SalutContactManagerActivity: handle %u", room_handle);
-  g_hash_table_insert (priv->olpc_activities_by_room,
-      GUINT_TO_POINTER (room_handle), activity);
-
-  return activity;
-}
-
-static void
-activity_unref (SalutContactManagerActivity *activity)
-{
-  SalutContactManagerPrivate *priv;
-  TpHandleRepoIface *room_repo;
-
-  if (--activity->refcount != 0)
-    return;
-
-  priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (activity->mgr);
-  room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
-
-  DEBUG ("Dropping SalutContactManagerActivity: handle %u", activity->room);
-  g_hash_table_remove (priv->olpc_activities_by_room,
-      GUINT_TO_POINTER (activity->room));
-  tp_handle_unref (room_repo, activity->room);
-
-  g_free (activity->activity_id);
-  g_free (activity->color);
-  g_free (activity->name);
-  g_free (activity->type);
-  g_free (activity->tags);
-  g_slice_free (SalutContactManagerActivity, activity);
-}
-#endif
 
 static void
 salut_contact_manager_get_property (GObject *object,
@@ -157,12 +83,11 @@ salut_contact_manager_get_property (GObject *object,
                                     GParamSpec *pspec)
 {
   SalutContactManager *self = SALUT_CONTACT_MANAGER (object);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
 
   switch (property_id)
     {
       case PROP_CONNECTION:
-        g_value_set_object (value, priv->connection);
+        g_value_set_object (value, self->connection);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -177,12 +102,11 @@ salut_contact_manager_set_property (GObject *object,
                                     GParamSpec *pspec)
 {
   SalutContactManager *self = SALUT_CONTACT_MANAGER (object);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
 
   switch (property_id)
     {
       case PROP_CONNECTION:
-        priv->connection = g_value_get_object (value);
+        self->connection = g_value_get_object (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -196,14 +120,9 @@ salut_contact_manager_constructor (GType type,
                                    GObjectConstructParam *props)
 {
   GObject *obj;
-  SalutContactManager *self;
-  SalutContactManagerPrivate *priv;
 
   obj = G_OBJECT_CLASS (salut_contact_manager_parent_class)->
     constructor (type, n_props, props);
-
-  self = SALUT_CONTACT_MANAGER (obj);
-  priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
 
   return obj;
 }
@@ -214,17 +133,9 @@ salut_contact_manager_init (SalutContactManager *obj)
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (obj);
 
   /* allocate any data required by the object here */
-  priv->channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-                                         NULL, g_object_unref);
-  obj->contacts = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                         g_free, NULL);
-
-#ifdef ENABLE_OLPC
-  priv->olpc_activities_by_mdns = g_hash_table_new_full (g_str_hash,
-      g_str_equal, g_free, (GDestroyNotify) activity_unref);
-  priv->olpc_activities_by_room = g_hash_table_new (g_direct_hash,
-      g_direct_equal);
-#endif
+  priv->channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, g_object_unref);
+  obj->contacts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 }
 
 static void salut_contact_manager_dispose (GObject *object);
@@ -267,33 +178,18 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
       G_TYPE_NONE, 2,
       SALUT_TYPE_CONTACT,
       G_TYPE_INT);
-
-#ifdef ENABLE_OLPC
-  signals[ACTIVITY_PROPERTIES_CHANGE] = g_signal_new(
-      "activity-properties-change",
-      G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
-      G_SIGNAL_RUN_LAST,
-      0,
-      NULL, NULL,
-      salut_signals_marshal_VOID__UINT_STRING_STRING_STRING_STRING_STRING_BOOLEAN,
-      G_TYPE_NONE, 7,
-      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING,
-      G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN);
-#endif
 }
 
 static gboolean
 dispose_contact(gpointer key, gpointer value, gpointer object) {
   SalutContact *contact = SALUT_CONTACT(value);
+  SalutContactManager *self = SALUT_CONTACT_MANAGER (object);
 
   g_object_weak_unref(G_OBJECT(contact), _contact_finalized_cb, object);
   g_signal_handlers_disconnect_matched(contact, G_SIGNAL_MATCH_DATA,
                                        0, 0, NULL, NULL, object);
 
-  if (salut_contact_has_services(contact)) {
-    g_object_unref(contact);
-  }
-
+  SALUT_CONTACT_MANAGER_GET_CLASS (self)->dispose_contact (self, contact);
   return TRUE;
 }
 
@@ -354,127 +250,6 @@ contact_found_cb(SalutContact *contact, gpointer userdata) {
   tp_intset_destroy(to_rem);
 }
 
-#ifdef ENABLE_OLPC
-static gboolean
-update_activity (SalutContactManagerActivity *activity,
-                 const gchar *name,
-                 const gchar *type,
-                 const gchar *color,
-                 const gchar *tags)
-{
-  gboolean changed = FALSE;
-
-  if (name != NULL && tp_strdiff (activity->name, name))
-    {
-      g_free (activity->name);
-      activity->name = g_strdup (name);
-      changed = TRUE;
-    }
-
-  if (type != NULL && tp_strdiff (activity->type, type))
-    {
-      g_free (activity->type);
-      activity->type = g_strdup (type);
-      changed = TRUE;
-    }
-
-  if (color != NULL && tp_strdiff (activity->color, color))
-    {
-      g_free (activity->color);
-      activity->color = g_strdup (color);
-      changed = TRUE;
-    }
-
-  if (tags != NULL && tp_strdiff (activity->tags, tags))
-    {
-      g_free (activity->tags);
-      activity->tags = g_strdup (tags);
-      changed = TRUE;
-    }
-
-  return changed;
-}
-
-static void
-activity_change_cb(SalutContact *contact,
-                   const gchar *service_name,
-                   TpHandle room_handle,
-                   const gchar *activity_id,
-                   const gchar *color,
-                   const gchar *name,
-                   const gchar *type,
-                   const gchar *tags,
-                   gpointer userdata)
-{
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (userdata);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
-  gboolean changed = FALSE;
-  SalutContactManagerActivity *activity;
-
-  DEBUG ("enter: sn=%s, h=%u, aid=%s, c=%s, n=%s, t=%s, tags=%s",
-      service_name, room_handle,
-      activity_id ? activity_id : "<NULL>",
-      color ? color : "<NULL>",
-      name ? name : "<NULL>",
-      type ? type : "<NULL>",
-      tags ? tags : "<NULL>");
-
-  if (room_handle == 0)
-    {
-      DEBUG ("Treating activity advertisement with room_handle 0 as removal");
-      g_hash_table_remove (priv->olpc_activities_by_mdns, service_name);
-      return;
-    }
-
-  activity = g_hash_table_lookup (priv->olpc_activities_by_mdns, service_name);
-  if (activity == NULL)
-    {
-      activity = g_hash_table_lookup (priv->olpc_activities_by_room,
-          GUINT_TO_POINTER (room_handle));
-      if (activity == NULL)
-        {
-          activity = activity_new (mgr, room_handle);
-          /* we discover this activity, so it's not a private one */
-          activity->is_private = FALSE;
-          activity->activity_id = g_strdup (activity_id);
-          changed = TRUE;
-        }
-      else
-        {
-          if (activity->is_private)
-            {
-              /* We knew this activity before as a private activity.
-               * We don't increment it's refcount now as it was set to 1
-               * due to the invitation */
-              activity->is_private = FALSE;
-              changed = TRUE;
-            }
-          else
-            {
-              activity->refcount++;
-            }
-        }
-      DEBUG ("Activity %u now advertised as %s", room_handle, service_name);
-      g_hash_table_insert (priv->olpc_activities_by_mdns,
-          g_strdup (service_name), activity);
-    }
-  else
-    {
-      DEBUG ("Activity %u already known to be advertised as %s", room_handle,
-          service_name);
-    }
-
-  if (update_activity (activity, name, type, color, tags))
-    changed = TRUE;
-
-  if (changed)
-    {
-      g_signal_emit (mgr, signals[ACTIVITY_PROPERTIES_CHANGE], 0, room_handle,
-          activity_id, color, name, type, tags, FALSE);
-    }
-}
-#endif
-
 static void
 contact_change_cb(SalutContact *contact, gint changes, gpointer userdata) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
@@ -498,6 +273,7 @@ contact_lost_cb(SalutContact *contact, gpointer userdata) {
 
   tp_intset_destroy(to_add);
   tp_intset_destroy(to_rem);
+  /* FIXME: the contact was reffed in the the avahi-mgr */
   g_object_unref(contact);
 }
 
@@ -513,107 +289,23 @@ _contact_finalized_cb(gpointer data, GObject *old_object) {
       old_object);
 }
 
-#ifdef ENABLE_OLPC
-gboolean
-salut_contact_manager_merge_olpc_activity_properties
-                                        (SalutContactManager *self,
-                                         TpHandle handle,
-                                         const gchar **color,
-                                         const gchar **name,
-                                         const gchar **type,
-                                         const gchar **tags,
-                                         gboolean *is_private)
-{
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
-  SalutContactManagerActivity *activity = g_hash_table_lookup (
-      priv->olpc_activities_by_room, GUINT_TO_POINTER (handle));
-
-  if (activity == NULL)
-    return FALSE;
-
-  if (activity->color != NULL && color != NULL)
-    *color = activity->color;
-  if (activity->name != NULL && name != NULL)
-    *name = activity->name;
-  if (activity->type != NULL && type != NULL)
-    *type = activity->type;
-  if (activity->tags != NULL && tags != NULL)
-    *tags = activity->tags;
-  if (is_private != NULL)
-    *is_private = activity->is_private;
-  return TRUE;
-}
-
 void
-salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
-                                                 SalutContact *inviter,
-                                                 TpHandle room,
-                                                 const gchar *activity_id,
-                                                 const gchar *color,
-                                                 const gchar *name,
-                                                 const gchar *type,
-                                                 const gchar *tags)
+salut_contact_manager_contact_created (SalutContactManager *self,
+                                       SalutContact *contact)
 {
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
-  SalutContactManagerActivity *activity;
-  gboolean changed = FALSE;
-
-  activity = g_hash_table_lookup (priv->olpc_activities_by_room,
-      GUINT_TO_POINTER (room));
-  if (activity == NULL)
-    {
-      DEBUG ("new activity %s created due to invite from %s", activity_id,
-          inviter->name);
-
-      activity = activity_new (self, room);
-      activity->activity_id = g_strdup (activity_id);
-      /* We didn't know this activity before, it's a private one */
-      activity->is_private = TRUE;
-      g_hash_table_insert (priv->olpc_activities_by_room,
-          GUINT_TO_POINTER (room), activity);
-      changed = TRUE;
-    }
-
-  if (update_activity (activity, name, type, color, tags))
-    changed = TRUE;
-
-  if (changed)
-    {
-      g_signal_emit (self, signals[ACTIVITY_PROPERTIES_CHANGE], 0, room,
-          activity_id, color, name, type, tags, TRUE);
-    }
-}
-#endif
-
-SalutContact *
-salut_contact_manager_create_contact (SalutContactManager *self,
-                                      const gchar *name)
-{
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
-  SalutContact *contact;
-
-  g_assert (g_hash_table_lookup (self->contacts, name) == NULL);
-
-  /* HACK */
-  contact = salut_contact_new (priv->client, priv->connection, name);
+  g_assert (g_hash_table_lookup (self->contacts, contact->name) == NULL);
 
   g_hash_table_insert (self->contacts, g_strdup (contact->name), contact);
-  DEBUG("Adding %s to contacts", name);
+  DEBUG("Adding %s to contacts", contact->name);
 
   g_signal_connect (contact, "found",
       G_CALLBACK(contact_found_cb), self);
   g_signal_connect (contact, "contact-change",
       G_CALLBACK(contact_change_cb), self);
-#ifdef ENABLE_OLPC
-  g_signal_connect (contact, "activity-change",
-      G_CALLBACK (activity_change_cb), self);
-#endif
   g_signal_connect (contact, "lost",
       G_CALLBACK(contact_lost_cb), self);
 
   g_object_weak_ref (G_OBJECT (contact), _contact_finalized_cb , self);
-
-  return contact;
 }
 
 SalutContact *
@@ -626,7 +318,9 @@ salut_contact_manager_ensure_contact (SalutContactManager *self,
   if (contact == NULL)
     {
       DEBUG ("contact %s doesn't exist yet. Creating it", name);
-      contact = salut_contact_manager_create_contact (self, name);
+      contact = SALUT_CONTACT_MANAGER_GET_CLASS (self)->create_contact (self,
+          name);
+      salut_contact_manager_contact_created (self, contact);
     }
   else
     {
@@ -646,25 +340,6 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     g_hash_table_destroy(priv->channels);
     priv->channels = NULL;
   }
-
-  if (priv->client) {
-    g_object_unref(priv->client);
-    priv->client = NULL;
-  }
-
-#ifdef ENABLE_OLPC
-  if (priv->olpc_activities_by_mdns != NULL)
-    {
-      g_hash_table_destroy (priv->olpc_activities_by_mdns);
-      priv->olpc_activities_by_mdns = NULL;
-    }
-
-  if (priv->olpc_activities_by_room != NULL)
-    {
-      g_hash_table_destroy (priv->olpc_activities_by_room);
-      priv->olpc_activities_by_room = NULL;
-    }
-#endif
 
   if (mgr->contacts) {
     g_hash_table_foreach_remove (mgr->contacts, dispose_contact, mgr);
@@ -725,11 +400,10 @@ salut_contact_manager_factory_iface_request(TpChannelFactoryIface *iface,
                                              TpChannelIface **ret,
                                              GError **error) {
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(iface);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
   SalutContactChannel *chan;
   gboolean created;
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(priv->connection), TP_HANDLE_TYPE_LIST);
+      TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_LIST);
 
   /* We only support contact list channels */
   if (tp_strdiff(chan_type, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST)) {
@@ -770,7 +444,7 @@ salut_contact_manager_new_channel (SalutContactManager *mgr,
                                    TpHandle handle)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
-  TpBaseConnection *base_conn = (TpBaseConnection *) (priv->connection);
+  TpBaseConnection *base_conn = (TpBaseConnection *) (mgr->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_LIST);
   SalutContactChannel *chan;
@@ -785,7 +459,7 @@ salut_contact_manager_new_channel (SalutContactManager *mgr,
       name);
 
   chan = g_object_new (SALUT_TYPE_CONTACT_CHANNEL,
-      "connection", priv->connection,
+      "connection", mgr->connection,
       "object-path", path,
       "handle", handle,
       NULL);
@@ -828,9 +502,8 @@ salut_contact_manager_start (SalutContactManager *self,
 
 SalutContact *
 salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle) {
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(priv->connection), TP_HANDLE_TYPE_CONTACT);
+      TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_CONTACT);
   const char *name = tp_handle_inspect(handle_repo, handle);
   SalutContact *ret;
 
@@ -873,4 +546,3 @@ salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
   g_hash_table_foreach (mgr->contacts, _find_by_address, data);
   return list;
 }
-

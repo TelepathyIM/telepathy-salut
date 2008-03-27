@@ -37,12 +37,19 @@ struct _SalutContactManagerClass {
 
     /* public abstract methods */
     gboolean (*start) (SalutContactManager *self, GError **error);
+
+    /* private abstract methods */
+    SalutContact * (*create_contact) (SalutContactManager *self,
+        const gchar *name);
+    void (*dispose_contact) (SalutContactManager *self,
+        SalutContact *contact);
 };
 
 struct _SalutContactManager {
     GObject parent;
 
     /* private */
+    SalutConnection *connection;
     GHashTable *contacts;
 };
 
@@ -72,24 +79,11 @@ GList *
 salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
                                               struct sockaddr_storage *address);
 
-#ifdef ENABLE_OLPC
-gboolean salut_contact_manager_merge_olpc_activity_properties
-  (SalutContactManager *self, TpHandle handle, const gchar **color,
-   const gchar **name, const gchar **type, const gchar **tags,
-   gboolean *is_private);
-
-void
-salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
-    SalutContact *invitor, TpHandle room, const gchar *activity_id,
-    const gchar *color, const gchar *activity_name,
-    const gchar *activity_type, const gchar *tags);
-#endif
-
 SalutContact * salut_contact_manager_ensure_contact (SalutContactManager *mgr,
     const gchar *name);
 
 /* restricted methods */
-SalutContact * salut_contact_manager_create_contact (SalutContactManager *self,
-    const gchar *name);
+void salut_contact_manager_contact_created (SalutContactManager *self,
+    SalutContact *contact);
 
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/
