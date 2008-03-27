@@ -311,7 +311,7 @@ salut_avahi_muc_channel_class_init (
     salut_muc_channel_add_member, NULL);
 }
 
-void
+static void
 salut_avahi_muc_channel_dispose (GObject *object)
 {
   SalutAvahiMucChannel *self = SALUT_AVAHI_MUC_CHANNEL (object);
