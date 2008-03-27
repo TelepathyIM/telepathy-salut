@@ -404,7 +404,7 @@ salut_avahi_muc_manager_class_init (
       param_spec);
 }
 
-void
+static void
 salut_avahi_muc_manager_dispose (GObject *object)
 {
   SalutAvahiMucManager *self = SALUT_AVAHI_MUC_MANAGER (object);
@@ -421,16 +421,16 @@ salut_avahi_muc_manager_dispose (GObject *object)
       priv->room_resolvers = NULL;
     }
 
-  if (priv->discovery_client != NULL)
-    {
-      g_object_unref (priv->discovery_client);
-      priv->discovery_client = NULL;
-    }
-
   if (priv->browser != NULL)
     {
       g_object_unref (priv->browser);
       priv->browser = NULL;
+    }
+
+  if (priv->discovery_client != NULL)
+    {
+      g_object_unref (priv->discovery_client);
+      priv->discovery_client = NULL;
     }
 
   /* release any references held by the object here */
