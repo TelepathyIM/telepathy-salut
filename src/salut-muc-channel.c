@@ -265,6 +265,8 @@ connected_timeout_cb (gpointer user_data)
   SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
+  DEBUG ("Didn't receive muc senders. Timeout expired, "
+      "adding myself as member anyway");
   salut_muc_channel_add_self_to_members (self);
   priv->timeout = 0;
 
@@ -278,10 +280,17 @@ muc_connection_connected_cb (GibberMucConnection *connection,
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
   if (priv->creator)
-    salut_muc_channel_add_self_to_members (self);
+    {
+      DEBUG ("I created this muc. Adding myself as member now");
+      salut_muc_channel_add_self_to_members (self);
+    }
   else
-    priv->timeout = g_timeout_add (CONNECTED_TIMEOUT, connected_timeout_cb,
-        self);
+    {
+      DEBUG ("I didn't create this muc. Waiting for senders before adding "
+          "myself as member");
+      priv->timeout = g_timeout_add (CONNECTED_TIMEOUT, connected_timeout_cb,
+          self);
+    }
 
   salut_muc_channel_publish_service  (self);
 }
@@ -1173,7 +1182,10 @@ salut_muc_channel_new_senders (GibberMucConnection *connection,
   salut_muc_channel_add_members (self, senders);
   if (!tp_handle_set_is_member (self->group.members,
       base_connection->self_handle))
-    salut_muc_channel_add_self_to_members (self);
+    {
+      DEBUG ("Got new senders. Adding myself as member");
+      salut_muc_channel_add_self_to_members (self);
+    }
 }
 
 static void
