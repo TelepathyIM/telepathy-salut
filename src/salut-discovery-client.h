@@ -25,6 +25,7 @@
 #include "salut-muc-manager.h"
 #include "salut-contact-manager.h"
 #include "salut-olpc-activity-manager.h"
+#include "salut-self.h"
 
 G_BEGIN_DECLS
 
@@ -51,6 +52,10 @@ struct _SalutDiscoveryClientClass
       SalutConnection *connection);
   SalutOlpcActivityManager * (*create_olpc_activity_manager) (
       SalutDiscoveryClient *clt, SalutConnection *connection);
+  SalutSelf * (*create_self) (SalutDiscoveryClient *clt, SalutConnection *conn,
+      const gchar *nickname, const gchar *first_name, const gchar *last_name,
+      const gchar *jid, const gchar *email, const gchar *published_name,
+      const GArray *olpc_key, const gchar *olpc_color);
 };
 
 GType salut_discovery_client_get_type (void);
@@ -79,6 +84,12 @@ SalutContactManager * salut_discovery_client_create_contact_manager (
 
 SalutOlpcActivityManager * salut_discovery_client_create_olpc_activity_manager (
     SalutDiscoveryClient *clt, SalutConnection *connection);
+
+SalutSelf * salut_discovery_client_create_self (
+    SalutDiscoveryClient *clt, SalutConnection *connection,
+    const gchar *nickname, const gchar *first_name, const gchar *last_name,
+    const gchar *jid, const gchar *email, const gchar *published_name,
+    const GArray *olpc_key, const gchar *olpc_color);
 
 G_END_DECLS
 

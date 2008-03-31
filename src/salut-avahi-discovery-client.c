@@ -39,6 +39,7 @@
 #include "salut-avahi-muc-manager.h"
 #include "salut-avahi-contact-manager.h"
 #include "salut-avahi-olpc-activity-manager.h"
+#include "salut-avahi-self.h"
 
 #include "signals-marshal.h"
 
@@ -298,6 +299,29 @@ salut_avahi_discovery_client_create_olpc_activity_manager (
         connection, self));
 }
 
+/*
+ * salut_avahi_discovery_client_create_self
+ *
+ * Implements salut_discovery_client_create_self on SalutDiscoveryClient
+ */
+static SalutSelf *
+salut_avahi_discovery_client_create_self (SalutDiscoveryClient *client,
+                                          SalutConnection *connection,
+                                          const gchar *nickname,
+                                          const gchar *first_name,
+                                          const gchar *last_name,
+                                          const gchar *jid,
+                                          const gchar *email,
+                                          const gchar *published_name,
+                                          const GArray *olpc_key,
+                                          const gchar *olpc_color)
+{
+  SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (client);
+
+  return SALUT_SELF (salut_avahi_self_new (connection, self, nickname, first_name,
+      last_name, jid, email, published_name, olpc_key, olpc_color));
+}
+
 static void
 discovery_client_init (gpointer g_iface,
                        gpointer iface_data)
@@ -310,4 +334,5 @@ discovery_client_init (gpointer g_iface,
     salut_avahi_discovery_client_create_contact_manager;
   klass->create_olpc_activity_manager =
     salut_avahi_discovery_client_create_olpc_activity_manager;
+  klass->create_self = salut_avahi_discovery_client_create_self;
 }

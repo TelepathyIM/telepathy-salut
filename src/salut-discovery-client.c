@@ -65,6 +65,27 @@ salut_discovery_client_create_olpc_activity_manager (SalutDiscoveryClient *self,
   return virtual_method (self, connection);
 }
 
+SalutSelf *
+salut_discovery_client_create_self (SalutDiscoveryClient *self,
+                                    SalutConnection *connection,
+                                    const gchar *nickname,
+                                    const gchar *first_name,
+                                    const gchar *last_name,
+                                    const gchar *jid,
+                                    const gchar *email,
+                                    const gchar *published_name,
+                                    const GArray *olpc_key,
+                                    const gchar *olpc_color)
+{
+  SalutSelf * (*virtual_method)(SalutDiscoveryClient *, SalutConnection *,
+      const gchar *, const gchar *, const gchar *, const gchar *,
+      const gchar *, const gchar *, const GArray *, const gchar *) =
+    SALUT_DISCOVERY_CLIENT_GET_CLASS (self)->create_self;
+  g_assert (virtual_method != NULL);
+  return virtual_method (self, connection, nickname, first_name, last_name,
+      jid, email, published_name, olpc_key, olpc_color);
+}
+
 static void
 salut_discovery_client_base_init (gpointer klass)
 {
