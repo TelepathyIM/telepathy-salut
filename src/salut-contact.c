@@ -26,12 +26,6 @@
 #include "salut-presence.h"
 #include "salut-presence-enumtypes.h"
 
-#include <avahi-gobject/ga-service-resolver.h>
-#include <avahi-gobject/ga-record-browser.h>
-#include <avahi-common/address.h>
-#include <avahi-common/defs.h>
-#include <avahi-common/malloc.h>
-
 #include <telepathy-glib/util.h>
 
 #define DEBUG_FLAG DEBUG_CONTACTS
@@ -41,30 +35,14 @@
   DEBUG ("Contact %s: " format, contact->name, ##__VA_ARGS__);  \
 } G_STMT_END
 
-#define DEBUG_RESOLVER(contact, resolver, format, ...) G_STMT_START {       \
-  gchar *_name;                                                             \
-  gchar *_type;                                                             \
-  gint _interface;                                                          \
-  gint _protocol;                                                           \
-                                                                            \
-  g_object_get (G_OBJECT(resolver),                                         \
-      "name", &_name,                                                       \
-      "type", &_type,                                                       \
-      "interface", &_interface,                                             \
-      "protocol", &_protocol,                                               \
-      NULL                                                                  \
-  );                                                                        \
-                                                                            \
-  DEBUG_CONTACT (contact, "Resolver (%s %s intf: %d proto: %d): " format,   \
-    _name, _type, _interface, _protocol, ##__VA_ARGS__);                    \
-                                                                            \
-  g_free (_name);                                                           \
-  g_free (_type);                                                           \
-} G_STMT_END
-
-#define PRESENCE_TIMEOUT (1200 * 1000)
-
 G_DEFINE_TYPE(SalutContact, salut_contact, G_TYPE_OBJECT)
+
+/* properties */
+enum {
+  PROP_CONNECTION = 1,
+  PROP_NAME,
+  LAST_PROP
+};
 
 /* signal enum */
 enum
@@ -86,13 +64,6 @@ typedef struct {
   gpointer user_data;
 } AvatarRequest;
 
-static void
-salut_contact_avatar_request_flush(SalutContact *contact,
-    guint8 *data, gsize size);
-
-static void
-salut_contact_retrieve_avatar (SalutContact *contact);
-
 #ifdef ENABLE_OLPC
 typedef struct {
   char *activity_id;
@@ -103,7 +74,7 @@ typedef struct {
 static void
 activity_free (SalutContactActivity *activity)
 {
-  avahi_free (activity->activity_id);
+  //avahi_free (activity->activity_id);
   if (activity->room != 0)
     {
       tp_handle_unref (activity->room_repo, activity->room);
@@ -126,15 +97,9 @@ typedef struct _SalutContactPrivate SalutContactPrivate;
 
 struct _SalutContactPrivate
 {
-  SalutConnection *connection;
   gboolean dispose_has_run;
   gchar *alias;
-  GaClient *client;
-  GList *resolvers;
-  gboolean found;
-  GaRecordBrowser *record_browser;
   GList *avatar_requests;
-  guint presence_resolver_failed_timer;
 #ifdef ENABLE_OLPC
   /* mDNS instance name -> SalutContactActivity */
   GHashTable *olpc_announced_activities;
@@ -144,6 +109,33 @@ struct _SalutContactPrivate
 };
 
 #define SALUT_CONTACT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT, SalutContactPrivate))
+
+static GObject *
+salut_contact_constructor (GType type,
+                           guint n_props,
+                           GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutContact *self;
+  SalutContactPrivate *priv;
+  TpHandleRepoIface *contact_repo;
+
+  obj = G_OBJECT_CLASS (salut_contact_parent_class)->
+    constructor (type, n_props, props);
+
+  self = SALUT_CONTACT (obj);
+  priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  g_assert (self->connection != NULL);
+  g_assert (self->name != NULL);
+
+  contact_repo = tp_base_connection_get_handles
+      ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
+
+  self->handle = tp_handle_ensure (contact_repo, self->name, NULL, NULL);
+
+  return obj;
+}
 
 static void
 salut_contact_init (SalutContact *obj)
@@ -168,10 +160,52 @@ salut_contact_init (SalutContact *obj)
   priv->olpc_private_activities = g_hash_table_new_full (g_str_hash,
       g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
 #endif
-  priv->client = NULL;
-  priv->resolvers = NULL;
-  priv->found = FALSE;
+  obj->found = FALSE;
   priv->alias = NULL;
+}
+
+static void
+salut_contact_get_property (GObject *object,
+                            guint property_id,
+                            GValue *value,
+                            GParamSpec *pspec)
+{
+  SalutContact *self = SALUT_CONTACT (object);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        g_value_set_object (value, self->connection);
+        break;
+      case PROP_NAME:
+        g_value_set_string (value, self->name);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+salut_contact_set_property (GObject *object,
+                            guint property_id,
+                            const GValue *value,
+                            GParamSpec *pspec)
+{
+  SalutContact *self = SALUT_CONTACT (object);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        self->connection = g_value_get_object (value);
+        break;
+      case PROP_NAME:
+        self->name = g_value_dup_string (value);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
 }
 
 static void salut_contact_dispose (GObject *object);
@@ -181,8 +215,13 @@ static void
 salut_contact_class_init (SalutContactClass *salut_contact_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_contact_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (salut_contact_class, sizeof (SalutContactPrivate));
+
+  object_class->constructor = salut_contact_constructor;
+  object_class->get_property = salut_contact_get_property;
+  object_class->set_property = salut_contact_set_property;
 
   object_class->dispose = salut_contact_dispose;
   object_class->finalize = salut_contact_finalize;
@@ -212,6 +251,32 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
                                 g_cclosure_marshal_VOID__VOID,
                                 G_TYPE_NONE, 0);
 
+  param_spec = g_param_spec_object (
+      "connection",
+      "SalutConnection object",
+      "The Salut Connection associated with this contact",
+      SALUT_TYPE_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "name",
+      "name",
+      "The name of this contact",
+      NULL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_NAME,
+      param_spec);
+
 #ifdef ENABLE_OLPC
   signals[ACTIVITY_CHANGE] = g_signal_new("activity-change",
       G_OBJECT_CLASS_TYPE (salut_contact_class),
@@ -229,7 +294,7 @@ salut_contact_dispose (GObject *object)
   SalutContact *self = SALUT_CONTACT (object);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+      ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
 
   DEBUG_CONTACT (self, "Disposing contact");
 
@@ -242,7 +307,7 @@ salut_contact_dispose (GObject *object)
   if (self->olpc_cur_act_room != 0)
     {
       TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-          ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+          ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
 
       tp_handle_unref (room_repo, self->olpc_cur_act_room);
       self->olpc_cur_act_room = 0;
@@ -255,22 +320,9 @@ salut_contact_dispose (GObject *object)
   salut_contact_avatar_request_flush(self, NULL, 0);
 
   /* release any references held by the object here */
-  if (priv->client)
-    g_object_unref(priv->client);
-  priv->client = NULL;
-
-  g_list_foreach(priv->resolvers, (GFunc)g_object_unref, NULL);
-  g_list_free(priv->resolvers);
-  priv->resolvers = NULL;
 
   if (self->handle != 0)
     tp_handle_unref (contact_repo, self->handle);
-
-  if (priv->presence_resolver_failed_timer > 0)
-    {
-      g_source_remove (priv->presence_resolver_failed_timer);
-      priv->presence_resolver_failed_timer = 0;
-    }
 
   if (G_OBJECT_CLASS (salut_contact_parent_class)->dispose)
     G_OBJECT_CLASS (salut_contact_parent_class)->dispose (object);
@@ -302,128 +354,16 @@ salut_contact_finalize (GObject *object) {
   G_OBJECT_CLASS (salut_contact_parent_class)->finalize (object);
 }
 
-struct resolverinfo {
-  AvahiIfIndex interface;
-  AvahiProtocol protocol;
-  const gchar *name;
-  const gchar *type;
-  const gchar *domain;
-};
-
-static gint
-compare_resolver(gconstpointer a, gconstpointer b) {
-  struct resolverinfo *info = (struct resolverinfo *) b;
-
-  AvahiIfIndex interface;
-  AvahiProtocol protocol;
-  gchar *name;
-  gchar *type;
-  gchar *domain;
-  gint result;
-
-  g_object_get((gpointer)a,
-               "interface", &interface,
-               "protocol", &protocol,
-               "name", &name,
-               "type", &type,
-               "domain", &domain,
-               NULL);
-  if (interface == info->interface
-      && protocol == info->protocol
-      && !strcmp(name, info->name)
-      && !strcmp(type, info->type)
-      && !strcmp(domain, info->domain)) {
-      result = 0;
-  }
-  else
-    {
-      result = 1;
-    }
-
-  g_free (name);
-  g_free (type);
-  g_free (domain);
-  return result;
-}
-
-static GaServiceResolver *
-find_resolver(SalutContact *contact,
-              AvahiIfIndex interface, AvahiProtocol protocol,
-              const gchar *name, const gchar *type, const gchar *domain) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  struct resolverinfo info;
-  GList *ret;
-  info.interface = interface;
-  info.protocol = protocol;
-  info.name = name;
-  info.type = type;
-  info.domain = domain;
-  ret = g_list_find_custom(priv->resolvers, &info, compare_resolver);
-  return ret ? GA_SERVICE_RESOLVER(ret->data) : NULL;
-}
-
-SalutContact *
-salut_contact_new(GaClient *client,
-                  SalutConnection *connection,
-                  const gchar *name)
-{
-  SalutContact *ret;
-  SalutContactPrivate *priv;
-  TpHandleRepoIface *contact_repo;
-
-  ret = g_object_new(SALUT_TYPE_CONTACT, NULL);
-  priv = SALUT_CONTACT_GET_PRIVATE (ret);
-
-  ret->name = g_strdup(name);
-
-  g_object_ref(client);
-  priv->client = client;
-  priv->connection = connection;
-
-  contact_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
-
-  ret->handle = tp_handle_ensure (contact_repo, name, NULL, NULL);
-
-  return ret;
-}
-
-/* valid is true if this was a valid alias
- * changed is true if the contacts alias actually changed */
-static gboolean
-update_alias(SalutContact *self, const gchar *new, gboolean *valid) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-  if (new == NULL || *new == '\0') {
-    *valid = FALSE;
-    return FALSE;
-  }
-
-  if (priv->alias == NULL || strcmp(priv->alias, new) != 0)  {
-    g_free(priv->alias);
-    priv->alias = g_strdup(new);
-    *valid = TRUE;
-    return TRUE;
-  }
-
-  *valid = TRUE;
-  return FALSE;
-}
-
 static void
-purge_cached_avatar(SalutContact *self, const gchar *token) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-
+purge_cached_avatar (SalutContact *self,
+                    const gchar *token)
+{
   g_free (self->avatar_token);
   self->avatar_token = g_strdup (token);
 
   /* the avatar token has changed, restart retrieving the avatar just to be
    * sure */
-  if (priv->record_browser != NULL)
-    {
-      g_object_unref (priv->record_browser);
-      priv->record_browser = NULL;
-      salut_contact_retrieve_avatar (self);
-    }
+  SALUT_CONTACT_GET_CLASS (self)->retrieve_avatar (self);
 }
 
 #ifdef ENABLE_OLPC
@@ -461,139 +401,6 @@ salut_contact_foreach_olpc_activity (SalutContact *self,
   DEBUG ("end");
 }
 
-static void
-activity_resolved_cb (GaServiceResolver *resolver,
-                      AvahiIfIndex interface,
-                      AvahiProtocol protocol,
-                      gchar *name,
-                      gchar *type,
-                      gchar *domain,
-                      gchar *host_name,
-                      AvahiAddress *a,
-                      gint port,
-                      AvahiStringList *txt,
-                      AvahiLookupResultFlags flags,
-                      gpointer userdata)
-{
-  SalutContact *self = SALUT_CONTACT (userdata);
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
-  AvahiStringList *t;
-  TpHandle room_handle = 0;
-  char *activity_id = NULL;
-  char *color = NULL;
-  char *activity_name = NULL;
-  char *activity_type = NULL;
-  char *tags = NULL;
-  SalutContactActivity *activity;
-
-  DEBUG ("called: \"%s\".%s. on %s port %u", name, domain, host_name, port);
-
-  if ((t = avahi_string_list_find (txt, "txtvers")) != NULL)
-    {
-      char *txtvers;
-
-      avahi_string_list_get_pair (t, NULL, &txtvers, NULL);
-      if (tp_strdiff (txtvers, "0"))
-        {
-          DEBUG ("Ignoring record with txtvers not 0: %s",
-              txtvers ? txtvers : "(no value)");
-          avahi_free (txtvers);
-          return;
-        }
-      avahi_free (txtvers);
-    }
-
-  activity = g_hash_table_lookup (priv->olpc_announced_activities, name);
-  if (activity == NULL)
-    {
-      activity = activity_new (room_repo);
-      g_hash_table_insert (priv->olpc_announced_activities, g_strdup (name),
-          activity);
-    }
-
-  if ((t = avahi_string_list_find (txt, "activity-id")) != NULL)
-    {
-      avahi_string_list_get_pair (t, NULL, &activity_id, NULL);
-
-      /* remove from the private activity list if needed */
-      g_hash_table_remove (priv->olpc_private_activities, activity_id);
-    }
-
-  if ((t = avahi_string_list_find (txt, "room")) != NULL)
-    {
-      char *room_name;
-
-      avahi_string_list_get_pair (t, NULL, &room_name, NULL);
-      room_handle = tp_handle_ensure (room_repo, room_name, NULL, NULL);
-      avahi_free (room_name);
-    }
-
-  if ((t = avahi_string_list_find (txt, "color")) != NULL)
-    {
-      avahi_string_list_get_pair (t, NULL, &color, NULL);
-    }
-
-  if ((t = avahi_string_list_find (txt, "name")) != NULL)
-    {
-      avahi_string_list_get_pair (t, NULL, &activity_name, NULL);
-    }
-
-  if ((t = avahi_string_list_find (txt, "type")) != NULL)
-    {
-      avahi_string_list_get_pair (t, NULL, &activity_type, NULL);
-    }
-
-  if ((t = avahi_string_list_find (txt, "tags")) != NULL)
-    {
-      avahi_string_list_get_pair (t, NULL, &tags, NULL);
-    }
-
-  if (room_handle == 0 || activity_id == NULL || activity_id[0] == '\0')
-    {
-      DEBUG ("Activity ID %s, room handle %u: removing from hash",
-          activity_id ? activity_id : "<NULL>", room_handle);
-      g_hash_table_remove (priv->olpc_announced_activities, name);
-
-      g_signal_emit (self, signals[CONTACT_CHANGE], 0,
-          SALUT_CONTACT_OLPC_ACTIVITIES);
-    }
-  else if (activity->room != room_handle ||
-      tp_strdiff (activity->activity_id, activity_id))
-    {
-      DEBUG ("Activity ID %s, room handle %u: updating hash",
-          activity_id, room_handle);
-
-      /* transfer ownerships to the SalutContactActivity, and set to
-       * NULL/0 so the end of this function doesn't free them */
-      if (activity->activity_id != NULL)
-        avahi_free (activity->activity_id);
-      activity->activity_id = activity_id;
-      activity_id = NULL;
-
-      if (activity->room != 0)
-        tp_handle_unref (room_repo, activity->room);
-      activity->room = room_handle;
-      room_handle = 0;
-
-      g_signal_emit (self, signals[CONTACT_CHANGE], 0,
-          SALUT_CONTACT_OLPC_ACTIVITIES);
-    }
-
-  g_signal_emit (self, signals[ACTIVITY_CHANGE], 0,
-      name, activity->room, activity->activity_id,
-      color, activity_name, activity_type, tags);
-
-  if (room_handle != 0)
-    tp_handle_unref (room_repo, room_handle);
-  avahi_free (activity_id);
-  avahi_free (activity_type);
-  avahi_free (activity_name);
-  avahi_free (color);
-  avahi_free (tags);
-}
-
 static gboolean
 activity_has_id (gpointer key,
                  gpointer value,
@@ -613,7 +420,7 @@ salut_contact_takes_part_in_olpc_activity (SalutContact *self,
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
   SalutContactActivity *activity;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+      ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
 
   activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
   if (activity != NULL)
@@ -675,584 +482,17 @@ salut_contact_left_private_activity (SalutContact *self,
 
 #endif
 
-static void
-contact_resolved_cb(GaServiceResolver *resolver,
-                    AvahiIfIndex interface, AvahiProtocol protocol,
-                    gchar *name, gchar *type, gchar *domain, gchar *host_name,
-                    AvahiAddress *address, gint port,
-                    AvahiStringList *txt, AvahiLookupResultFlags flags,
-                    gpointer userdata) {
-  SalutContact *self = SALUT_CONTACT (userdata);
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-  AvahiStringList *t;
-  gint changes = 0;
-  gboolean alias_seen = FALSE;
-#ifdef ENABLE_OLPC
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
-#endif
-
-  DEBUG_RESOLVER (self, resolver, "contact %s resolved", self->name);
-
-  if (priv->presence_resolver_failed_timer != 0)
-    {
-      DEBUG_CONTACT (self, "remove presence resolver timer");
-      g_source_remove (priv->presence_resolver_failed_timer);
-      priv->presence_resolver_failed_timer = 0;
-    }
-
-#define SET_CHANGE(x) changes |= x
-
-  if ((t = avahi_string_list_find(txt, "status")) != NULL) {
-    int i;
-    char *value;
-    avahi_string_list_get_pair(t, NULL, &value, NULL);
-
-    for (i = 0; i < SALUT_PRESENCE_NR_PRESENCES ; i++) {
-      if (!strcmp(value, salut_presence_status_txt_names[i])) {
-        break;
-      }
-    }
-
-    if (i != self->status && i < SALUT_PRESENCE_NR_PRESENCES) {
-      SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
-      self->status = i;
-    }
-
-    avahi_free(value);
-  }
-
-  if ((t = avahi_string_list_find(txt, "msg")) != NULL) {
-    char *value;
-    avahi_string_list_get_pair(t, NULL, &value, NULL);
-    if (self->status_message == NULL || strcmp(self->status_message, value)) {
-      SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
-      g_free(self->status_message);
-      self->status_message = g_strdup(value);
-    }
-    avahi_free(value);
-  } else if (self->status_message != NULL) {
-    SET_CHANGE(SALUT_CONTACT_STATUS_CHANGED);
-    g_free(self->status_message);
-    self->status_message = NULL;
-  }
-
-  if ((t = avahi_string_list_find(txt, "nick")) != NULL) {
-    char *value;
-    avahi_string_list_get_pair(t, NULL, &value, NULL);
-    if (update_alias(self, value, &alias_seen)) {
-      SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
-    }
-    avahi_free(value);
-  }
-
-  if (!alias_seen) {
-    char *first = NULL;
-    char *last = NULL;
-
-    /* Fallback to trying 1st + last as alias */
-    if ((t = avahi_string_list_find(txt, "1st")) != NULL) {
-      avahi_string_list_get_pair(t, NULL, &first, NULL);
-    }
-
-    if ((t = avahi_string_list_find(txt, "last")) != NULL) {
-      avahi_string_list_get_pair(t, NULL, &last, NULL);
-    }
-
-    if (first != NULL && last != NULL) {
-      gchar *alias = NULL;
-
-      alias = g_strdup_printf("%s %s", first, last);
-
-      if (update_alias(self, alias, &alias_seen)) {
-        SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
-      }
-      g_free(alias);
-    } else if (first != NULL) {
-      if (update_alias(self, first, &alias_seen)) {
-        SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
-      }
-    } else if (last != NULL) {
-      if (update_alias(self, last, &alias_seen)) {
-        SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
-      }
-    }
-    avahi_free(first);
-    avahi_free(last);
-  }
-
-  if (!alias_seen && priv->alias != NULL) {
-    /* No alias anymore ? */
-    g_free(priv->alias);
-    priv->alias = NULL;
-    SET_CHANGE(SALUT_CONTACT_ALIAS_CHANGED);
-  }
-
-  if (!priv->found) {
-    g_signal_emit(self, signals[FOUND], 0);
-    /* Initially force updates of everything */
-    SET_CHANGE(0xff);
-    priv->found = TRUE;
-  }
-
-  if ((t = avahi_string_list_find(txt, "phsh")) != NULL) {
-    char *value;
-    avahi_string_list_get_pair(t, NULL, &value, NULL);
-
-    if (tp_strdiff(self->avatar_token, value)) {
-      /* Purge the cache */
-      purge_cached_avatar(self, value);
-      SET_CHANGE(SALUT_CONTACT_AVATAR_CHANGED);
-    }
-
-    avahi_free(value);
-  } else if (self->avatar_token != NULL) {
-    purge_cached_avatar(self, NULL);
-    SET_CHANGE(SALUT_CONTACT_AVATAR_CHANGED);
-  }
-
-  t = avahi_string_list_find(txt, "jid");
-  if (t != NULL)
-    {
-      char *value;
-      avahi_string_list_get_pair (t, NULL, &value, NULL);
-
-      if (tp_strdiff (self->jid, value))
-        {
-          g_free (self->jid);
-          self->jid = g_strdup (value);
-#ifdef ENABLE_OLPC
-          SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
-#endif
-        }
-      avahi_free (value);
-    }
-
-#ifdef ENABLE_OLPC
-  if ((t = avahi_string_list_find (txt, "olpc-color")) != NULL)
-    {
-      char *value;
-
-      avahi_string_list_get_pair (t, NULL, &value, NULL);
-      if (tp_strdiff (self->olpc_color, value))
-        {
-          g_free (self->olpc_color);
-          self->olpc_color = g_strdup (value);
-          SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
-        }
-
-      avahi_free (value);
-  }
-
-  do
-    {
-      AvahiStringList *act_link = avahi_string_list_find (txt,
-          "olpc-current-activity");
-      AvahiStringList *room_link = avahi_string_list_find (txt,
-          "olpc-current-activity-room");
-      char *act_value = NULL;
-      TpHandle room_handle = 0;
-
-      if (act_link != NULL)
-        {
-          avahi_string_list_get_pair (act_link, NULL, &act_value, NULL);
-          if (act_value == NULL || *act_value == '\0')
-            {
-              DEBUG ("No current activity; ignoring current activity room, if "
-                  "any");
-              avahi_free (act_value);
-              act_value = NULL;
-            }
-        }
-
-      if (act_value != NULL && room_link != NULL)
-        {
-          char *room_value;
-
-          avahi_string_list_get_pair (room_link, NULL, &room_value, NULL);
-          if (room_value == NULL || *room_value == '\0')
-            {
-              room_handle = 0;
-            }
-          else
-            {
-              room_handle = tp_handle_ensure (room_repo, room_value,
-                  NULL, NULL);
-            }
-          avahi_free (room_value);
-
-          if (room_handle == 0)
-            {
-              DEBUG ("Invalid room \"%s\" for current activity \"%s\": "
-                  "ignoring", room_value, act_value);
-              avahi_free (act_value);
-              act_value = NULL;
-            }
-        }
-
-      if (act_value == NULL || room_handle == 0)
-        {
-          DEBUG ("Unsetting current activity");
-          if (self->olpc_cur_act != NULL || self->olpc_cur_act_room != 0)
-            {
-              g_free (self->olpc_cur_act);
-              if (self->olpc_cur_act_room != 0)
-                tp_handle_unref (room_repo, self->olpc_cur_act_room);
-              self->olpc_cur_act = NULL;
-              self->olpc_cur_act_room = 0;
-              SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
-            }
-        }
-      else
-        {
-          DEBUG ("Current activity %s, room handle %d", act_value,
-              room_handle);
-          if (tp_strdiff (self->olpc_cur_act, act_value) ||
-              self->olpc_cur_act_room != room_handle)
-            {
-              g_free (self->olpc_cur_act);
-              if (self->olpc_cur_act_room != 0)
-                tp_handle_unref (room_repo, self->olpc_cur_act_room);
-              self->olpc_cur_act_room = room_handle;
-              self->olpc_cur_act = g_strdup (act_value);
-              SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
-            }
-          else
-            {
-              tp_handle_unref (room_repo, room_handle);
-            }
-          avahi_free (act_value);
-        }
-    }
-  while (0);
-
-  if ((t = avahi_string_list_find (txt, "olpc-key-part0")) != NULL)
-    {
-      guint i = 0;
-      gchar *name = NULL;
-      /* FIXME: how big are OLPC keys anyway? */
-      GArray *new_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
-          512);
-
-      while (t)
-        {
-          char *v;
-          size_t v_size;
-
-          avahi_string_list_get_pair (t, NULL, &v, &v_size);
-          g_array_append_vals (new_key, v, v_size);
-          avahi_free (v);
-
-          i++;
-          g_free (name);
-          name = g_strdup_printf ("olpc-key-part%u", i);
-          t = avahi_string_list_find (txt, name);
-        }
-      g_free (name);
-
-      if (self->olpc_key == NULL ||
-          self->olpc_key->len != new_key->len ||
-          memcmp (self->olpc_key->data, new_key->data, new_key->len) != 0)
-        {
-          if (self->olpc_key != NULL)
-            {
-              g_array_free (self->olpc_key, TRUE);
-            }
-          self->olpc_key = new_key;
-          SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
-        }
-      else
-        {
-          g_array_free (new_key, TRUE);
-        }
-    }
-
-  if (address != NULL)
-    {
-      gchar* saddr = g_malloc0 (AVAHI_ADDRESS_STR_MAX);
-
-      if (avahi_address_snprint (saddr, AVAHI_ADDRESS_STR_MAX, address))
-        {
-          switch (address->proto)
-            {
-              case AVAHI_PROTO_INET:
-                g_free (self->olpc_ip4);
-                self->olpc_ip4 = saddr;
-                SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
-                break;
-              case AVAHI_PROTO_INET6:
-                g_free (self->olpc_ip6);
-                self->olpc_ip6 = saddr;
-                SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
-                break;
-              default:
-                g_free (saddr);
-                break;
-            }
-        }
-      else
-        {
-          g_free (saddr);
-        }
-    }
-
-#endif
-
-  if (changes != 0) {
-    g_signal_emit(self, signals[CONTACT_CHANGE], 0, changes);
-  }
-}
-
-static void
-contact_lost(SalutContact *contact) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-
-  contact->status = SALUT_PRESENCE_OFFLINE;
-  g_free(contact->status_message);
-  contact->status_message = NULL;
-
-  DEBUG_CONTACT (contact, "disappeared from the local link");
-
-  priv->found = FALSE;
-  g_signal_emit(contact, signals[CONTACT_CHANGE], 0,
-      SALUT_CONTACT_STATUS_CHANGED);
-  g_signal_emit(contact, signals[LOST], 0);
-}
-
-static void
-contact_drop_resolver (SalutContact *self,
-                       GaServiceResolver *resolver)
-{
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-  gint resolvers_left;
-#ifdef ENABLE_OLPC
-  gchar *type;
-  gchar *name;
-
-  g_object_get (resolver,
-      "type", &type,
-      "name", &name,
-      NULL);
-  if (!tp_strdiff (type, SALUT_DNSSD_OLPC_ACTIVITY))
-    {
-      /* one of their activities has fallen off */
-      g_hash_table_remove (priv->olpc_announced_activities, name);
-      g_signal_emit (self, signals[CONTACT_CHANGE], 0,
-          SALUT_CONTACT_OLPC_ACTIVITIES);
-    }
-
-  g_free (type);
-  g_free (name);
-#endif
-
-  /* FIXME: what we actually want to be counting is the number of _presence
-   * resolvers, ignoring the OLPC activity ones. However, if someone's still
-   * advertising activities, we can probably consider them to be online? */
-  priv->resolvers = g_list_remove(priv->resolvers, resolver);
-
-  resolvers_left = g_list_length (priv->resolvers);
-
-  DEBUG_RESOLVER (self, resolver, "removed, %d left for %s", resolvers_left,
-     self->name);
-
-  g_object_unref(resolver);
-
-  if (resolvers_left == 0 && priv->found) {
-    contact_lost(self);
-  }
-}
-
-static gboolean
-presence_resolver_failed_timeout (gpointer data)
-{
-  SalutContact *self = SALUT_CONTACT (data);
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-
-  DEBUG_CONTACT (self, "presence resolver timer expired. Remove contact");
-  priv->presence_resolver_failed_timer = 0;
-  contact_lost (self);
-
-  return FALSE;
-}
-
-static void
-contact_failed_cb(GaServiceResolver *resolver, GError *error,
-                   gpointer userdata) {
-  SalutContact *self = SALUT_CONTACT (userdata);
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-
-  if (priv->presence_resolver_failed_timer != 0)
-    /* There is already a timer running */
-    return;
-
-  DEBUG_RESOLVER (self, resolver, "failed: %s. Start presence resolver timer",
-      error->message);
-
-  priv->presence_resolver_failed_timer = g_timeout_add (
-      PRESENCE_TIMEOUT, presence_resolver_failed_timeout,
-      self);
-}
-
-void
-salut_contact_add_service(SalutContact *contact,
-                          AvahiIfIndex interface, AvahiProtocol protocol,
-                          const char *name, const char *type,
-                          const char *domain) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  GaServiceResolver *resolver;
-  resolver = find_resolver(contact, interface, protocol, name, type, domain);
-  GError *error = NULL;
-
-  if (resolver)
-    return;
-
-  resolver = ga_service_resolver_new(interface,
-                                              protocol,
-                                              name, type, domain,
-                                              protocol, 0);
-
-#ifdef ENABLE_OLPC
-  /* FIXME: better way to do this? */
-  if (!tp_strdiff (type, SALUT_DNSSD_OLPC_ACTIVITY))
-    {
-      g_signal_connect(resolver, "found", G_CALLBACK(activity_resolved_cb),
-          contact);
-    }
-  else
-#endif
-    {
-      g_signal_connect(resolver, "found", G_CALLBACK(contact_resolved_cb),
-          contact);
-    }
-
-  g_signal_connect(resolver, "failure", G_CALLBACK(contact_failed_cb), contact);
-  if (!ga_service_resolver_attach(resolver, priv->client, &error)) {
-    g_warning("Failed to attach resolver: %s", error->message);
-    g_error_free (error);
-  }
-
-  DEBUG_RESOLVER (contact, resolver, "added");
-  priv->resolvers = g_list_prepend(priv->resolvers, resolver);
-}
-
-void
-salut_contact_remove_service(SalutContact *contact,
-                          AvahiIfIndex interface, AvahiProtocol protocol,
-                          const char *name, const char *type,
-                          const char *domain) {
-  GaServiceResolver *resolver;
-  resolver =  find_resolver(contact, interface, protocol, name, type, domain);
-
-  if (!resolver)
-    return;
-
-  DEBUG_RESOLVER (contact, resolver, "remove requested");
-
-  contact_drop_resolver (contact, resolver);
-}
-
-static void
-_avahi_address_to_sockaddr(AvahiAddress *address, guint16 port,
-                           AvahiIfIndex index,
-                           struct sockaddr_storage *sockaddr) {
-  switch (address->proto) {
-    case AVAHI_PROTO_INET: {
-      struct sockaddr_in *sockaddr4 = (struct sockaddr_in *)sockaddr;
-      sockaddr4->sin_family = AF_INET;
-      sockaddr4->sin_port = htons(port);
-      /* ->address is already in network byte order */
-      sockaddr4->sin_addr.s_addr = address->data.ipv4.address;
-      break;
-    }
-    case AVAHI_PROTO_INET6: {
-      struct sockaddr_in6 *sockaddr6 = (struct sockaddr_in6 *)sockaddr;
-      sockaddr6->sin6_family = AF_INET6;
-      sockaddr6->sin6_port = htons(port);
-      memcpy(sockaddr6->sin6_addr.s6_addr,
-             address->data.ipv6.address, 16);
-
-      sockaddr6->sin6_flowinfo = 0;
-      sockaddr6->sin6_scope_id = index;
-      break;
-    }
-    default:
-      g_assert_not_reached();
-  }
-}
-
-static void
-_add_address(gpointer data, gpointer user_data) {
-  GaServiceResolver *resolver = GA_SERVICE_RESOLVER(data);
-  GArray *addresses = (GArray *)user_data;
-  salut_contact_address_t s_address;
-  AvahiAddress address;
-  guint16 port;
-  AvahiIfIndex ifindex;
-
-  g_object_get(resolver, "interface", &ifindex, NULL);
-  if (ga_service_resolver_get_address(resolver, &address, &port)) {
-    _avahi_address_to_sockaddr(&address, port, ifindex, &(s_address.address));
-    g_array_append_val(addresses, s_address);
-  }
-}
-
 GArray *
-salut_contact_get_addresses(SalutContact *contact) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  GArray *addresses;
-
-  addresses = g_array_sized_new(TRUE, TRUE,
-                                sizeof(salut_contact_address_t),
-                                g_list_length(priv->resolvers));
-  g_list_foreach(priv->resolvers, _add_address, addresses);
-
-  return addresses;
-}
-
-static gint
-_compare_address(gconstpointer a, gconstpointer b) {
-  GaServiceResolver *resolver = GA_SERVICE_RESOLVER(a);
-  struct sockaddr_storage addr_a;
-  struct sockaddr_storage *addr_b = (struct sockaddr_storage *)b;
-  AvahiIfIndex ifindex;
-  AvahiAddress address;
-  uint16_t port;
-
-  g_object_get(resolver, "interface", &ifindex, NULL);
-  if (!ga_service_resolver_get_address(resolver, &address, &port)) {
-    return -1;
-  }
-  _avahi_address_to_sockaddr(&address, port, ifindex, &addr_a);
-
-  if ( ((struct sockaddr *)&addr_a)->sa_family
-       != ((struct sockaddr *)addr_b)->sa_family) {
-    return -1;
-  }
-
-  switch (((struct sockaddr *)&addr_a)->sa_family) {
-    case AF_INET: {
-      struct sockaddr_in *a4 = (struct sockaddr_in *)&addr_a;
-      struct sockaddr_in *b4 = (struct sockaddr_in *)addr_b;
-      return b4->sin_addr.s_addr - a4->sin_addr.s_addr;
-    }
-    case AF_INET6: {
-      struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)&addr_a;
-      struct sockaddr_in6 *b6 = (struct sockaddr_in6 *)addr_b;
-      /* FIXME should we compare the scope_id too ? */
-      return memcmp(a6->sin6_addr.s6_addr, b6->sin6_addr.s6_addr, 16);
-    }
-    default:
-      g_assert_not_reached();
-  }
-  return 0;
+salut_contact_get_addresses (SalutContact *self)
+{
+  return SALUT_CONTACT_GET_CLASS (self)->get_addresses (self);
 }
 
 gboolean
-salut_contact_has_address(SalutContact *contact,
-                           struct sockaddr_storage *address) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  return
-     (g_list_find_custom(priv->resolvers, address, _compare_address) != NULL);
+salut_contact_has_address (SalutContact *self,
+                           struct sockaddr_storage *address)
+{
+  return SALUT_CONTACT_GET_CLASS (self)->has_address (self, address);
 }
 
 const gchar *
@@ -1264,23 +504,14 @@ salut_contact_get_alias(SalutContact *contact) {
   return priv->alias;
 }
 
-gboolean
-salut_contact_has_services(SalutContact *contact) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  return priv->resolvers != NULL;
-}
-
-static void
-salut_contact_avatar_request_flush(SalutContact *contact,
-                                   guint8 *data, gsize size) {
+void
+salut_contact_avatar_request_flush (SalutContact *contact,
+                                    guint8 *data,
+                                    gsize size)
+{
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE(contact);
   GList *list, *liststart;
   AvatarRequest *request;
-
-
-  if (priv->record_browser != NULL)
-    g_object_unref(priv->record_browser);
-  priv->record_browser = NULL;
 
   liststart = priv->avatar_requests;
   priv->avatar_requests = NULL;
@@ -1291,66 +522,6 @@ salut_contact_avatar_request_flush(SalutContact *contact,
     g_slice_free(AvatarRequest, request);
   }
   g_list_free(liststart);
-}
-
-static void
-salut_contact_avatar_all_for_now(GaRecordBrowser *browser,
-                                 gpointer user_data) {
-  SalutContact *contact = SALUT_CONTACT(user_data);
-
-  DEBUG("All for now for resolving %s's record", contact->name);
-  salut_contact_avatar_request_flush(contact, NULL, 0);
-}
-
-static void
-salut_contact_avatar_failure(GaRecordBrowser *browser, GError *error,
-                             gpointer user_data) {
-  SalutContact *contact = SALUT_CONTACT(user_data);
-
-  DEBUG("Resolving record for %s failed: %s", contact->name, error->message);
-
-  salut_contact_avatar_request_flush(contact, NULL, 0);
-}
-
-static void
-salut_contact_avatar_found(GaRecordBrowser *browser,
-                           AvahiIfIndex interface, AvahiProtocol protocol,
-                           gchar *name, guint16 clazz, guint16 type,
-                           guint8 *rdata, gsize rdata_size,
-                           AvahiLookupFlags flags, gpointer user_data) {
-  SalutContact *contact = SALUT_CONTACT(user_data);
-
-  DEBUG("Found avatar for %s for size %zd", contact->name, rdata_size);
-
-  if (rdata_size <= 0)
-    salut_contact_avatar_request_flush(contact, NULL, 0);
-
-  salut_contact_avatar_request_flush(contact, rdata, rdata_size);
-}
-
-static void
-salut_contact_retrieve_avatar(SalutContact *contact) {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  gchar *name;
-  GError *error = NULL;
-
-  if (priv->record_browser != NULL) {
-    return;
-  }
-
-  name = g_strdup_printf("%s." SALUT_DNSSD_PRESENCE ".local", contact->name);
-  priv->record_browser = ga_record_browser_new(name, 0xA);
-  g_free(name);
-
-  g_signal_connect(priv->record_browser, "new-record",
-                   G_CALLBACK(salut_contact_avatar_found), contact);
-  g_signal_connect(priv->record_browser, "all-for-now",
-                   G_CALLBACK(salut_contact_avatar_all_for_now), contact);
-  g_signal_connect(priv->record_browser, "failure",
-                   G_CALLBACK(salut_contact_avatar_failure), contact);
-
-  ga_record_browser_attach(priv->record_browser,
-                                    priv->client, &error);
 }
 
 void
@@ -1374,5 +545,244 @@ salut_contact_get_avatar(SalutContact *contact,
   request->user_data = user_data;
   priv->avatar_requests = g_list_append(priv->avatar_requests, request);
 
-  salut_contact_retrieve_avatar(contact);
+  SALUT_CONTACT_GET_CLASS (contact)->retrieve_avatar (contact);
+}
+
+/* valid is true if this was a valid alias
+ * returned value is true if the contacts alias actually changed */
+static gboolean
+update_alias (SalutContact *self,
+              const gchar *new,
+              gboolean *valid)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  if (new == NULL || *new == '\0')
+    {
+      *valid = FALSE;
+      return FALSE;
+    }
+
+  *valid = TRUE;
+  if (tp_strdiff (priv->alias, new))
+    {
+      g_free (priv->alias);
+      priv->alias = g_strdup (new);
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
+void
+salut_contact_change (SalutContact *self,
+                      gint status,
+                      const gchar *status_msg,
+                      const gchar *nick,
+                      const gchar *first,
+                      const gchar *last,
+                      const gchar *avatar_token,
+                      const gchar *jid,
+                      const gchar *olpc_color,
+                      const gchar *current_act_id,
+                      TpHandle current_act_room,
+                      GArray *olpc_key,
+                      const gchar *ip4_addr,
+                      const gchar *ip6_addr)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  gboolean alias_seen = FALSE;
+  gint changes = 0;
+#ifdef ENABLE_OLPC
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+    ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
+#endif
+
+#define SET_CHANGE(x) changes |= x
+
+  /* status */
+  if (status != self->status && status < SALUT_PRESENCE_NR_PRESENCES)
+    {
+      SET_CHANGE (SALUT_CONTACT_STATUS_CHANGED);
+      self->status = status;
+    }
+
+  /* status message */
+  if (status_msg != NULL && tp_strdiff (self->status_message, status_msg))
+    {
+      SET_CHANGE (SALUT_CONTACT_STATUS_CHANGED);
+      g_free (self->status_message);
+      self->status_message = g_strdup (status_msg);
+    }
+  else if (status_msg == NULL && self->status_message != NULL)
+    {
+      SET_CHANGE (SALUT_CONTACT_STATUS_CHANGED);
+      g_free (self->status_message);
+      self->status_message = NULL;
+    }
+
+  /* alias */
+  if (update_alias (self, nick, &alias_seen))
+    SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
+
+  if (!alias_seen)
+    {
+      /* Fallback to trying 1st + last as alias */
+      if (first != NULL && last != NULL)
+        {
+          gchar *alias = NULL;
+
+          alias = g_strdup_printf ("%s %s", first, last);
+
+          if (update_alias (self, alias, &alias_seen))
+            SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
+          g_free (alias);
+        }
+      else if (first != NULL)
+        {
+          if (update_alias (self, first, &alias_seen))
+            SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
+        }
+      else if (last != NULL)
+        {
+          if (update_alias (self, last, &alias_seen))
+            SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
+        }
+    }
+
+  if (!alias_seen && priv->alias != NULL)
+    {
+      /* No alias anymore ? */
+      g_free (priv->alias);
+      priv->alias = NULL;
+      SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
+    }
+
+  /* avatar token */
+  if (avatar_token != NULL && tp_strdiff (self->avatar_token, avatar_token))
+    {
+      /* Purge the cache */
+      purge_cached_avatar (self, avatar_token);
+      SET_CHANGE (SALUT_CONTACT_AVATAR_CHANGED);
+    }
+  else if (avatar_token == NULL && self->avatar_token != NULL)
+    {
+      purge_cached_avatar (self, NULL);
+      SET_CHANGE (SALUT_CONTACT_AVATAR_CHANGED);
+    }
+
+  /* jid */
+  if (jid != NULL && tp_strdiff (self->jid, jid))
+    {
+      g_free (self->jid);
+      self->jid = g_strdup (jid);
+#ifdef ENABLE_OLPC
+      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+#endif
+    }
+
+#ifdef  ENABLE_OLPC
+  /* OLPC color */
+  if (olpc_color != NULL && tp_strdiff (self->olpc_color, olpc_color))
+    {
+      g_free (self->olpc_color);
+      self->olpc_color = g_strdup (olpc_color);
+      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+    }
+
+  /* current activity */
+ if (current_act_id == NULL || current_act_room == 0)
+   {
+     DEBUG ("Unsetting current activity");
+     if (self->olpc_cur_act != NULL || self->olpc_cur_act_room != 0)
+       {
+         g_free (self->olpc_cur_act);
+         if (self->olpc_cur_act_room != 0)
+           tp_handle_unref (room_repo, self->olpc_cur_act_room);
+         self->olpc_cur_act = NULL;
+         self->olpc_cur_act_room = 0;
+         SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
+       }
+  }
+  else
+    {
+      DEBUG ("Current activity %s, room handle %d", current_act_id,
+          current_act_room);
+      if (tp_strdiff (self->olpc_cur_act, current_act_id) ||
+          self->olpc_cur_act_room != current_act_room)
+        {
+          g_free (self->olpc_cur_act);
+          if (self->olpc_cur_act_room != 0)
+            tp_handle_unref (room_repo, self->olpc_cur_act_room);
+          self->olpc_cur_act_room = current_act_room;
+          tp_handle_ref (room_repo, current_act_room);
+          self->olpc_cur_act = g_strdup (current_act_id);
+          SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
+        }
+      else
+        {
+          tp_handle_unref (room_repo, current_act_room);
+        }
+    }
+
+  /* OLPC key */
+  if (olpc_key != NULL)
+    {
+      if (self->olpc_key == NULL || self->olpc_key->len != olpc_key->len ||
+          memcmp (self->olpc_key->data, olpc_key->data, olpc_key->len) != 0)
+            {
+              if (self->olpc_key != NULL)
+                {
+                  g_array_free (self->olpc_key, TRUE);
+                }
+              self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+                  olpc_key->len);
+              g_array_append_vals (self->olpc_key, olpc_key->data, olpc_key->len);
+              SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+            }
+    }
+
+  /* address */
+  if (ip4_addr != NULL && tp_strdiff (ip4_addr, self->olpc_ip4))
+    {
+      g_free (self->olpc_ip4);
+      self->olpc_ip4 = g_strdup (ip4_addr);
+      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+    }
+
+  if (ip6_addr != NULL && tp_strdiff (ip6_addr, self->olpc_ip4))
+    {
+      g_free (self->olpc_ip6);
+      self->olpc_ip6 = g_strdup (ip6_addr);
+      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+    }
+#endif
+
+  if (!self->found)
+    {
+      g_signal_emit (self, signals[FOUND], 0);
+      /* Initially force updates of everything */
+      SET_CHANGE (0xff);
+      self->found = TRUE;
+    }
+
+  if (changes != 0)
+    {
+      g_signal_emit (self, signals[CONTACT_CHANGE], 0, changes);
+    }
+}
+
+void
+salut_contact_lost (SalutContact *self)
+{
+  self->status = SALUT_PRESENCE_OFFLINE;
+  g_free (self->status_message);
+  self->status_message = NULL;
+
+  DEBUG_CONTACT (self, "disappeared from the local link");
+
+  self->found = FALSE;
+  g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+      SALUT_CONTACT_STATUS_CHANGED);
+  g_signal_emit(self, signals[LOST], 0);
 }
