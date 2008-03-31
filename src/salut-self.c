@@ -44,13 +44,23 @@
 #define DEBUG_FLAG DEBUG_SELF
 #include <debug.h>
 
-#include "sha1/sha1-util.h"
+G_DEFINE_TYPE (SalutSelf, salut_self, G_TYPE_OBJECT)
 
+/* properties */
+enum
+{
+  PROP_CONNECTION = 1,
+  PROP_NICKNAME,
+  PROP_FIRST_NAME,
+  PROP_LAST_NAME,
+  PROP_JID,
+  PROP_EMAIL,
+  PROP_PUBLISHED_NAME,
 #ifdef ENABLE_OLPC
-#define KEY_SEGMENT_SIZE 200
+  PROP_OLPC_KEY,
+  PROP_OLPC_COLOR
 #endif
-
-G_DEFINE_TYPE(SalutSelf, salut_self, G_TYPE_OBJECT)
+};
 
 /* signal enum */
 enum
@@ -114,6 +124,7 @@ activity_free (SalutOLPCActivity *activity)
   g_slice_free (SalutOLPCActivity, activity);
 }
 
+#if 0
 static SalutOLPCActivity *
 activity_new (TpHandleRepoIface *room_repo,
               TpHandleRepoIface *contact_repo,
@@ -134,37 +145,24 @@ activity_new (TpHandleRepoIface *room_repo,
 
   return activity;
 }
+#endif
 
 #endif
 
 struct _SalutSelfPrivate
 {
-  SalutConnection *connection;
   SalutMucManager *muc_manager;
   SalutContactManager *contact_manager;
   SalutXmppConnectionManager *xmpp_connection_manager;
   TpHandleRepoIface *room_repo;
 
-  gchar *nickname;
-  gchar *first_name;
-  gchar *last_name;
-  gchar *email;
-  gchar *published_name;
-
-  gchar *alias;
-
   GIOChannel *listener;
   guint io_watch_in;
 
-  GaClient *client;
-  GaEntryGroup *presence_group;
-  GaEntryGroupService *presence;
 #ifdef ENABLE_OLPC
   /* handle owned by the SalutOLPCActivity -> SalutOLPCActivity */
   GHashTable *olpc_activities;
 #endif
-
-  GaEntryGroup *avatar_group;
 
   gboolean dispose_has_run;
 };
@@ -193,19 +191,180 @@ salut_self_init (SalutSelf *obj)
   obj->olpc_cur_act_room = 0;
 #endif
 
-  priv->first_name = NULL;
-  priv->last_name = NULL;
-  priv->email = NULL;
-  priv->published_name = NULL;
+  obj->first_name = NULL;
+  obj->last_name = NULL;
+  obj->email = NULL;
+  obj->published_name = NULL;
 
-  priv->client = NULL;
-  priv->presence_group = NULL;
-  priv->presence = NULL;
 #ifdef ENABLE_OLPC
   priv->olpc_activities = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, (GDestroyNotify) activity_free);
 #endif
   priv->listener = NULL;
+}
+
+static void
+salut_self_get_property (GObject *object,
+                         guint property_id,
+                         GValue *value,
+                         GParamSpec *pspec)
+{
+  SalutSelf *self = SALUT_SELF (object);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        g_value_set_object (value, self->connection);
+        break;
+      case PROP_NICKNAME:
+        g_value_set_string (value, self->nickname);
+        break;
+      case PROP_FIRST_NAME:
+        g_value_set_string (value, self->first_name);
+        break;
+      case PROP_LAST_NAME:
+        g_value_set_string (value, self->last_name);
+        break;
+      case PROP_JID:
+        g_value_set_string (value, self->jid);
+        break;
+      case PROP_EMAIL:
+        g_value_set_string (value, self->email);
+        break;
+      case PROP_PUBLISHED_NAME:
+        g_value_set_string (value, self->published_name);
+        break;
+#ifdef ENABLE_OLPC
+      case PROP_OLPC_KEY:
+        g_value_set_pointer (value, self->olpc_key);
+        break;
+      case PROP_OLPC_COLOR:
+        g_value_set_string (value, self->olpc_color);
+        break;
+#endif
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+salut_self_set_property (GObject *object,
+                         guint property_id,
+                         const GValue *value,
+                         GParamSpec *pspec)
+{
+  SalutSelf *self = SALUT_SELF (object);
+  GArray *arr;
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        self->connection = g_value_get_object (value);
+        break;
+      case PROP_NICKNAME:
+        g_free (self->nickname);
+        self->nickname = g_value_dup_string (value);
+        break;
+      case PROP_FIRST_NAME:
+        g_free (self->first_name);
+        self->first_name = g_value_dup_string (value);
+        break;
+      case PROP_LAST_NAME:
+        g_free (self->last_name);
+        self->last_name = g_value_dup_string (value);
+        break;
+      case PROP_JID:
+        g_free (self->jid);
+        self->jid = g_value_dup_string (value);
+        break;
+      case PROP_EMAIL:
+        g_free (self->email);
+        self->email = g_value_dup_string (value);
+        break;
+      case PROP_PUBLISHED_NAME:
+        g_free (self->published_name);
+        self->published_name = g_value_dup_string (value);
+        break;
+#ifdef ENABLE_OLPC
+      case PROP_OLPC_KEY:
+        arr = g_value_get_pointer (value);
+        if (arr != NULL)
+          {
+            if (self->olpc_key != NULL)
+              g_array_free (self->olpc_key, TRUE);
+
+            self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
+                arr->len);
+            g_array_append_vals (self->olpc_key, arr->data, arr->len);
+          }
+        break;
+      case PROP_OLPC_COLOR:
+        g_free (self->olpc_color);
+        self->olpc_color = g_value_dup_string (value);
+        break;
+#endif
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static GObject *
+salut_self_constructor (GType type,
+                        guint n_props,
+                        GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutSelf *self;
+  SalutSelfPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_self_parent_class)->
+    constructor (type, n_props, props);
+
+  self = SALUT_SELF (obj);
+  priv = SALUT_SELF_GET_PRIVATE (self);
+
+  g_assert (self->connection != NULL);
+  g_object_get (self->connection,
+      "contact-manager", &(priv->contact_manager),
+      "muc-manager", &(priv->muc_manager),
+      "xmpp-connection-manager", &(priv->xmpp_connection_manager),
+      NULL);
+  g_assert (priv->contact_manager != NULL);
+  g_assert (priv->muc_manager != NULL);
+  g_assert (priv->xmpp_connection_manager != NULL);
+
+  priv->room_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
+
+  /* Prefer using the nickname as alias */
+  if (self->nickname != NULL)
+    {
+      self->alias = g_strdup (self->nickname);
+    }
+  else
+    {
+      if (self->first_name != NULL)
+        {
+          if (self->last_name != NULL)
+            self->alias = g_strdup_printf ("%s %s", self->first_name,
+                self->last_name);
+          else
+            self->alias = g_strdup (self->first_name);
+        }
+      else if (self->last_name != NULL)
+        {
+          self->alias = g_strdup (self->last_name);
+        }
+    }
+
+#ifdef ENABLE_OLPC
+  g_signal_connect (priv->contact_manager, "contact-change",
+      G_CALLBACK (contact_manager_contact_change_cb), self);
+#endif
+
+  return obj;
 }
 
 static void salut_self_dispose (GObject *object);
@@ -215,11 +374,134 @@ static void
 salut_self_class_init (SalutSelfClass *salut_self_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_self_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (salut_self_class, sizeof (SalutSelfPrivate));
 
+  object_class->constructor = salut_self_constructor;
+  object_class->get_property = salut_self_get_property;
+  object_class->set_property = salut_self_set_property;
+
   object_class->dispose = salut_self_dispose;
   object_class->finalize = salut_self_finalize;
+
+  param_spec = g_param_spec_object (
+      "connection",
+      "SalutConnection object",
+      "The Salut Connection associated with this self object",
+      SALUT_TYPE_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "nickname",
+      "the nickname",
+      "The nickname of the self user",
+      NULL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_NICKNAME,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "first-name",
+      "the first name",
+      "The first name of the self user",
+      NULL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_FIRST_NAME,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "last-name",
+      "the last name",
+      "The last name of the self user",
+      NULL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_LAST_NAME,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "jid",
+      "the jid",
+      "The jabber ID of the self user",
+      NULL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_JID,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "email",
+      "the email",
+      "The email of the self user",
+      NULL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_EMAIL,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "published-name",
+      "the published name",
+      "The name used to publish the presence service",
+      g_get_user_name (),
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_PUBLISHED_NAME,
+      param_spec);
+
+#ifdef ENABLE_OLPC
+  param_spec = g_param_spec_pointer (
+      "olpc-key",
+      "the OLPC key",
+      "A pointer to a GArray containing the OLPC key",
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_OLPC_KEY,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "olpc-color",
+      "the OLPC color",
+      "The OLPC color of the self user",
+      NULL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_OLPC_COLOR,
+      param_spec);
+#endif
 
   signals[ESTABLISHED] =
     g_signal_new ("established",
@@ -284,21 +566,6 @@ salut_self_dispose (GObject *object)
 
   priv->room_repo = NULL;
 
-  if (priv->client != NULL)
-    g_object_unref(priv->client);
-  priv->client = NULL;
-
-  if (priv->presence_group != NULL)
-    g_object_unref(priv->presence_group);
-
-  priv->presence_group = NULL;
-  priv->presence = NULL;
-
-  if (priv->avatar_group != NULL)
-    g_object_unref(priv->avatar_group);
-
-  priv->avatar_group = NULL;
-
   if (priv->listener) {
     g_io_channel_unref(priv->listener);
     g_source_remove(priv->io_watch_in);
@@ -313,18 +580,17 @@ void
 salut_self_finalize (GObject *object)
 {
   SalutSelf *self = SALUT_SELF (object);
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
 
   g_free (self->jid);
   g_free (self->name);
 
-  g_free(priv->first_name);
-  g_free(priv->last_name);
-  g_free(priv->email);
-  g_free(priv->published_name);
-  g_free (priv->alias);
+  g_free (self->first_name);
+  g_free (self->last_name);
+  g_free (self->email);
+  g_free (self->published_name);
+  g_free (self->alias);
 #ifdef ENABLE_OLPC
   if (self->olpc_key != NULL)
     g_array_free (self->olpc_key, TRUE);
@@ -335,214 +601,18 @@ salut_self_finalize (GObject *object)
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
 
-SalutSelf *
-salut_self_new (SalutConnection *connection,
-                GaClient *client,
-                TpHandleRepoIface *room_repo,
-                const gchar *nickname,
-                const gchar *first_name,
-                const gchar *last_name,
-                const gchar *jid,
-                const gchar *email,
-                const gchar *published_name,
-                const GArray *olpc_key,
-                const gchar *olpc_color) {
-  SalutSelfPrivate *priv;
-
-  g_assert(client != NULL);
-
-  SalutSelf *ret = g_object_new(SALUT_TYPE_SELF, NULL);
-  priv = SALUT_SELF_GET_PRIVATE (ret);
-
-  priv->connection = connection;
-  g_object_get (connection,
-      "contact-manager", &(priv->contact_manager),
-      "muc-manager", &(priv->muc_manager),
-      "xmpp-connection-manager", &(priv->xmpp_connection_manager),
-      NULL);
-  g_assert (priv->contact_manager != NULL);
-  g_assert (priv->muc_manager != NULL);
-  g_assert (priv->xmpp_connection_manager != NULL);
-
-  priv->room_repo = room_repo;
-
-  priv->client = client;
-  g_object_ref(client);
-
-  ret->jid = g_strdup(jid);
-
-  priv->nickname = g_strdup(nickname);
-  priv->first_name = g_strdup(first_name);
-  priv->last_name = g_strdup(last_name);
-  priv->email = g_strdup(email);
-  priv->published_name = g_strdup(published_name);
-  priv->alias = NULL;
-#ifdef ENABLE_OLPC
-  if (olpc_key != NULL)
-    {
-      ret->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
-          olpc_key->len);
-      g_array_append_vals (ret->olpc_key, olpc_key->data, olpc_key->len);
-    }
-  ret->olpc_color = g_strdup (olpc_color);
-#endif
-
-  /* Prefer using the nickname as alias */
-  if (nickname != NULL)
-    {
-      priv->alias = g_strdup (nickname);
-    }
-  else
-    {
-      if (first_name != NULL)
-        {
-          if (last_name != NULL)
-            priv->alias = g_strdup_printf ("%s %s", first_name, last_name);
-          else
-            priv->alias = g_strdup (first_name);
-        }
-      else if (last_name != NULL)
-        {
-          priv->alias = g_strdup (last_name);
-        }
-    }
-
-  if (published_name == NULL) {
-    priv->published_name = g_strdup(g_get_user_name());
-  }
-
-#ifdef ENABLE_OLPC
-  g_signal_connect (priv->contact_manager, "contact-change",
-      G_CALLBACK (contact_manager_contact_change_cb), ret);
-#endif
-
-  return ret;
-}
-
-static
-AvahiStringList *create_txt_record(SalutSelf *self, int port) {
-  AvahiStringList *ret;
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-
-   ret = avahi_string_list_new("txtvers=1", NULL);
-
-   /* Some silly clients still use this */
-   ret = avahi_string_list_add_printf(ret, "port.p2pj=%d", port);
-
-   if (priv->nickname)
-     ret = avahi_string_list_add_printf(ret, "nick=%s", priv->nickname);
-   if (priv->first_name)
-     ret = avahi_string_list_add_printf(ret, "1st=%s", priv->first_name);
-   if (priv->last_name)
-     ret = avahi_string_list_add_printf(ret, "last=%s", priv->last_name);
-   if (priv->email)
-     ret = avahi_string_list_add_printf(ret, "email=%s", priv->email);
-   if (self->jid)
-     ret = avahi_string_list_add_printf (ret, "jid=%s", self->jid);
-
-#ifdef ENABLE_OLPC
-  if (self->olpc_color)
-    ret = avahi_string_list_add_printf (ret, "olpc-color=%s",
-         self->olpc_color);
-  if (self->olpc_key)
-    {
-      uint8_t *key = (uint8_t *) self->olpc_key->data;
-      size_t key_len = self->olpc_key->len;
-      guint i = 0;
-
-      while (key_len > 0)
-        {
-          size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
-          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
-
-          ret = avahi_string_list_add_pair_arbitrary (ret, name, key, step);
-          key += step;
-          key_len -= step;
-          i++;
-        }
-    }
-#endif
-
-   ret = avahi_string_list_add_printf(ret, "status=%s",
-       salut_presence_status_txt_names[self->status]);
-   if (self->status_message)
-     ret = avahi_string_list_add_printf(ret, "msg=%s", self->status_message);
-
-   return ret;
-}
-
-static void
-_avahi_presence_group_established(GaEntryGroup *group,
-                                  GaEntryGroupState state,
-                                  gpointer data) {
-  SalutSelf *self = SALUT_SELF(data);
-  g_signal_emit(self, signals[ESTABLISHED], 0, NULL);
-}
-
-static void
-_avahi_presence_group_failed(GaEntryGroup *group,
-                             GaEntryGroupState state,
-                             gpointer data) {
-  printf("FAILED\n");
-}
-
 /* Start announcing our presence on the network */
 gboolean
 salut_self_announce (SalutSelf *self,
                      gint port,
                      GError **error)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  AvahiStringList *txt_record = NULL;
-
-  priv->presence_group = ga_entry_group_new();
-
-  g_signal_connect(priv->presence_group,
-                   "state-changed::established",
-                   G_CALLBACK(_avahi_presence_group_established), self);
-  g_signal_connect(priv->presence_group,
-                   "state-changed::collision",
-                   G_CALLBACK(_avahi_presence_group_failed), self);
-  g_signal_connect(priv->presence_group,
-                   "state-changed::failure",
-                   G_CALLBACK(_avahi_presence_group_failed), self);
-
-  if (!ga_entry_group_attach(priv->presence_group,
-                                      priv->client, error)) {
-    goto error;
-  };
-
-  self->name = g_strdup_printf("%s@%s", priv->published_name,
-                       avahi_client_get_host_name(priv->client->avahi_client));
-  txt_record = create_txt_record(self, port);
-
-  if ((priv->presence =
-          ga_entry_group_add_service_strlist(priv->presence_group,
-                                                      self->name,
-                                                      SALUT_DNSSD_PRESENCE,
-                                                      port,
-                                                      error,
-                                                      txt_record)) == NULL) {
-    goto error;
-  }
-
-  if (!ga_entry_group_commit(priv->presence_group, error)) {
-    goto error;
-  }
-
-  avahi_string_list_free(txt_record);
-  return TRUE;
-
-error:
-  avahi_string_list_free(txt_record);
-  return FALSE;
+  return SALUT_SELF_GET_CLASS (self)->announce (self, port, error);
 }
-
 
 gboolean
 salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
                         const gchar *message, GError **error) {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
   g_assert(status >= 0 && status < SALUT_PRESENCE_NR_PRESENCES);
 
@@ -550,42 +620,29 @@ salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
   g_free(self->status_message);
   self->status_message = g_strdup(message);
 
-  ga_entry_group_service_freeze(priv->presence);
-  ga_entry_group_service_set(priv->presence, "status",
-                               salut_presence_status_txt_names[self->status],
-                               NULL);
-  if (self->status_message) {
-    ga_entry_group_service_set(priv->presence, "msg",
-                                        self->status_message, NULL);
-  } else {
-    ga_entry_group_service_remove_key(priv->presence, "msg", NULL);
-  }
-  return ga_entry_group_service_thaw(priv->presence, error);
+  return SALUT_SELF_GET_CLASS (self)->set_presence (self, error);
 }
 
 const gchar *
 salut_self_get_alias(SalutSelf *self) {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  if (priv->alias == NULL) {
+  if (self->alias == NULL) {
     return self->name;
   }
-  return priv->alias;
+  return self->alias;
 }
 
 gboolean
 salut_self_set_alias (SalutSelf *self, const gchar *alias, GError **error)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   gboolean ret;
   GError *err = NULL;
 
-  g_free (priv->alias);
-  g_free (priv->nickname);
-  priv->alias = g_strdup (alias);
-  priv->nickname = g_strdup (alias);
+  g_free (self->alias);
+  g_free (self->nickname);
+  self->alias = g_strdup (alias);
+  self->nickname = g_strdup (alias);
 
-  ret = ga_entry_group_service_set (priv->presence, "nick",
-      priv->alias, &err);
+  ret = SALUT_SELF_GET_CLASS (self)->set_alias (self, &err);
   if (!ret)
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
@@ -594,44 +651,12 @@ salut_self_set_alias (SalutSelf *self, const gchar *alias, GError **error)
   return ret;
 }
 
-static gboolean
-salut_self_publish_avatar(SalutSelf *self, guint8 *data,
-                          gsize size, GError **error) {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  gchar *name;
-  gboolean ret;
-  gboolean is_new = FALSE;
-  name = g_strdup_printf("%s." SALUT_DNSSD_PRESENCE ".local", self->name);
-
-  if (priv->avatar_group == NULL) {
-    priv->avatar_group = ga_entry_group_new();
-    ga_entry_group_attach(priv->avatar_group, priv->client, NULL);
-    is_new = TRUE;
-  }
-
-  ret = ga_entry_group_add_record(priv->avatar_group,
-                                           is_new ? 0 : AVAHI_PUBLISH_UPDATE,
-                                           name, 0xA, 120, data, size, error);
-  g_free(name);
-
-  if (is_new) {
-    ga_entry_group_commit(priv->avatar_group, error);
-  }
-
-
-  return ret;
-}
-
 static void
-salut_self_remove_avatar(SalutSelf *self) {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-
+salut_self_remove_avatar(SalutSelf *self)
+{
   DEBUG("Removing avatar");
-  ga_entry_group_service_remove_key(priv->presence, "phsh", NULL);
-  if (priv->avatar_group) {
-    g_object_unref(priv->avatar_group);
-    priv->avatar_group = NULL;
-  }
+
+  SALUT_SELF_GET_CLASS (self)->remove_avatar (self);
 }
 
 gboolean
@@ -639,7 +664,6 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
                       gsize size, GError **error) {
   gboolean ret = TRUE;
   GError *err = NULL;
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
 
   g_free(self->avatar_token);
   self->avatar_token = NULL;
@@ -655,19 +679,7 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
     return TRUE;
   }
 
-
-  ret = salut_self_publish_avatar(self, data, size, &err);
-
-  if (ret) {
-    self->avatar = g_memdup(data, size);
-    self->avatar_size = size;
-    if (size > 0) {
-      self->avatar_token = sha1_hex(data, size);
-    }
-    ret = ga_entry_group_service_set(priv->presence, "phsh",
-                                              self->avatar_token,
-                                              &err);
-  }
+  ret = SALUT_SELF_GET_CLASS (self)->set_avatar (self, data, size, error);
 
   if (!ret) {
     salut_self_remove_avatar(self);
@@ -727,6 +739,8 @@ announce_activity (SalutSelf *self,
                    SalutOLPCActivity *activity,
                    GError **error)
 {
+  return TRUE;
+#if 0
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   const gchar *room_name;
   gchar *name;
@@ -743,7 +757,7 @@ announce_activity (SalutSelf *self,
   if (!ga_entry_group_attach (activity->group, priv->client, error))
     return FALSE;
 
-  name = g_strdup_printf ("%s:%s@%s", room_name, priv->published_name,
+  name = g_strdup_printf ("%s:%s@%s", room_name, self->published_name,
       avahi_client_get_host_name (priv->client->avahi_client));
 
   txt_record = avahi_string_list_new ("txtvers=0", NULL);
@@ -770,6 +784,7 @@ announce_activity (SalutSelf *self,
     return FALSE;
 
   return TRUE;
+#endif
 }
 
 static gboolean
@@ -851,7 +866,7 @@ revoke_invitations (SalutSelf *self,
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GibberXmppStanza *msg;
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+      (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
   TpIntSetIter iter = TP_INTSET_ITER_INIT (tp_handle_set_peek (
         activity->invited));
 
@@ -860,7 +875,7 @@ revoke_invitations (SalutSelf *self,
 
   msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
       GIBBER_STANZA_SUB_TYPE_NONE,
-      priv->connection->name, NULL,
+      self->connection->name, NULL,
       GIBBER_NODE, "uninvite",
         GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
         GIBBER_NODE_ATTRIBUTE, "room", tp_handle_inspect (activity->room_repo,
@@ -919,6 +934,7 @@ revoke_invitations (SalutSelf *self,
   g_object_unref (msg);
 }
 
+#if 0
 static SalutOLPCActivity *
 salut_self_add_olpc_activity (SalutSelf *self,
                               const gchar *activity_id,
@@ -963,6 +979,7 @@ salut_self_add_olpc_activity (SalutSelf *self,
       activity);
   return activity;
 }
+#endif
 
 static gboolean
 update_activity (SalutOLPCActivity *activity,
@@ -1016,6 +1033,8 @@ struct _set_olpc_activities_ctx
 static void
 _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
 {
+  /* FIXME: reimplement using the activity mgr */
+#if 0
   struct _set_olpc_activities_ctx *data = user_data;
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (data->self);
   SalutOLPCActivity *activity;
@@ -1090,6 +1109,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
           return;
         }
     }
+#endif
 }
 
 static gboolean
@@ -1139,7 +1159,6 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
                                       GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  gboolean ret;
   GError *err = NULL;
   const gchar *room_name;
 
@@ -1180,21 +1199,15 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
   if (room != 0)
     tp_handle_ref (priv->room_repo, room);
 
-  ga_entry_group_service_freeze(priv->presence);
-
-  ga_entry_group_service_set (priv->presence,
-      "olpc-current-activity", self->olpc_cur_act, NULL);
-
-  ga_entry_group_service_set (priv->presence,
-      "olpc-current-activity-room", room_name, NULL);
-
-  ret = ga_entry_group_service_thaw(priv->presence, &err);
-  if (!ret)
+  if (!SALUT_SELF_GET_CLASS (self)->update_current_activity (self, room_name,
+        &err))
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
       g_error_free (err);
+      return FALSE;
     }
-  return ret;
+
+  return TRUE;
 }
 
 gboolean
@@ -1306,7 +1319,6 @@ send_olpc_activity_properties_changes_msg (SalutSelf *self,
                                            SalutOLPCActivity *activity,
                                            GError **error)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GHashTable *properties;
   GValue *activity_id_val;
   GibberXmppStanza *stanza;
@@ -1341,7 +1353,7 @@ send_olpc_activity_properties_changes_msg (SalutSelf *self,
 
   stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
       GIBBER_STANZA_SUB_TYPE_GROUPCHAT,
-      priv->connection->name, muc_name,
+      self->connection->name, muc_name,
       GIBBER_NODE, "properties",
         GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
       GIBBER_NODE_END, GIBBER_STANZA_END);
@@ -1500,76 +1512,37 @@ salut_self_set_olpc_properties (SalutSelf *self,
                                 const gchar *jid,
                                 GError **error)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GError *err = NULL;
 
-  ga_entry_group_service_freeze(priv->presence);
   if (key != NULL)
     {
-      size_t key_len = key->len;
-      const guint8 *key_data = (const guint8 *) key->data;
-      guint i;
-      guint to_remove;
-
       if (self->olpc_key == NULL)
         {
-          to_remove = 0;
           self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
               key->len);
         }
       else
         {
-          to_remove = (self->olpc_key->len + KEY_SEGMENT_SIZE - 1) /
-                      KEY_SEGMENT_SIZE;
           g_array_remove_range (self->olpc_key, 0, self->olpc_key->len);
         }
+
       g_array_append_vals (self->olpc_key, key->data, key->len);
-
-      i = 0;
-      while (key_len > 0)
-        {
-          size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
-          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
-
-          ga_entry_group_service_set_arbitrary (priv->presence, name,
-              key_data, step, NULL);
-          g_free (name);
-
-          key_data += step;
-          key_len -= step;
-          i++;
-        }
-
-      /* if the new key is shorter than the old, clean up any stray segments */
-      while (i < to_remove)
-        {
-          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
-
-          ga_entry_group_service_remove_key (priv->presence, name,
-              NULL);
-          g_free (name);
-
-          i++;
-        }
     }
+
   if (color != NULL)
     {
       g_free (self->olpc_color);
       self->olpc_color = g_strdup (color);
-
-      ga_entry_group_service_set (priv->presence, "olpc-color",
-          color, NULL);
     }
+
   if (jid != NULL)
     {
       g_free (self->jid);
       self->jid = g_strdup (jid);
-
-      ga_entry_group_service_set (priv->presence, "jid",
-          jid, NULL);
     }
 
-  if (!ga_entry_group_service_thaw(priv->presence, &err))
+  if (!SALUT_SELF_GET_CLASS (self)->set_olpc_properties (self, key, color, jid,
+        &err))
     {
       g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
       g_error_free(err);
@@ -1682,7 +1655,7 @@ contact_manager_contact_change_cb (SalutContactManager *mgr,
   SalutSelf *self = SALUT_SELF (user_data);
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION (priv->connection), TP_HANDLE_TYPE_CONTACT);
+      TP_BASE_CONNECTION (self->connection), TP_HANDLE_TYPE_CONTACT);
   TpHandle handle;
   remove_from_invited_ctx data;
 
@@ -1696,3 +1669,9 @@ contact_manager_contact_change_cb (SalutContactManager *mgr,
   salut_contact_foreach_olpc_activity (contact, remove_from_invited, &data);
 }
 #endif /* ENABLE_OLPC */
+
+void
+salut_self_established (SalutSelf *self)
+{
+  g_signal_emit (self, signals[ESTABLISHED], 0, NULL);
+}
