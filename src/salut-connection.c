@@ -794,28 +794,17 @@ static void
 discovery_client_running (SalutConnection *self)
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
-      (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
   gint port;
 
-  priv->self = salut_self_new (self,
-      /* HACK */
-                              SALUT_AVAHI_DISCOVERY_CLIENT (priv->discovery_client)->avahi_client,
-                              room_repo,
-                              priv->nickname,
-                              priv->first_name,
-                              priv->last_name,
-                              priv->jid,
-                              priv->email,
-                              priv->published_name,
+  priv->self = salut_discovery_client_create_self (priv->discovery_client,
+      self, priv->nickname, priv->first_name, priv->last_name, priv->jid,
+      priv->email, priv->published_name,
 #ifdef ENABLE_OLPC
-                              priv->olpc_key,
-                              priv->olpc_color
+      priv->olpc_key, priv->olpc_color
 #else
-                              NULL, NULL
+      NULL, NULL
 #endif
-                              );
-
+      );
 
   g_signal_connect(priv->self, "established",
                    G_CALLBACK(_self_established_cb), self);
