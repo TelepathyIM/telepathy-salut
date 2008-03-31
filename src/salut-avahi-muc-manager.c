@@ -26,6 +26,7 @@
 #include "salut-avahi-muc-manager.h"
 
 #include <avahi-gobject/ga-service-browser.h>
+#include <avahi-gobject/ga-service-resolver.h>
 
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-namespaces.h>
