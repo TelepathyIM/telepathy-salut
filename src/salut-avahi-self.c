@@ -345,6 +345,7 @@ salut_avahi_self_set_avatar (SalutSelf *_self,
       _self->avatar_token, error);
 }
 
+#ifdef ENABLE_OLPC
 static gboolean
 salut_avahi_self_update_current_activity (SalutSelf *_self,
                                           const gchar *room_name,
@@ -433,8 +434,9 @@ salut_avahi_self_set_olpc_properties (SalutSelf *_self,
           jid, NULL);
     }
 
-  return !ga_entry_group_service_thaw(priv->presence, error);
+  return ga_entry_group_service_thaw (priv->presence, error);
 }
+#endif
 
 static void salut_avahi_self_dispose (GObject *object);
 
@@ -460,9 +462,11 @@ salut_avahi_self_class_init (
   self_class->set_alias = salut_avahi_self_set_alias;
   self_class->remove_avatar = salut_avahi_self_remove_avatar;
   self_class->set_avatar = salut_avahi_self_set_avatar;
+#ifdef ENABLE_OLPC
   self_class->update_current_activity =
     salut_avahi_self_update_current_activity;
   self_class->set_olpc_properties = salut_avahi_self_set_olpc_properties;
+#endif
 
   param_spec = g_param_spec_object (
       "discovery-client",

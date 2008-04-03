@@ -23,7 +23,6 @@
 #include "config.h"
 
 #include <glib-object.h>
-#include <avahi-gobject/ga-client.h>
 
 #include <telepathy-glib/handle-repo.h>
 
@@ -31,6 +30,9 @@
 
 #include "salut-connection.h"
 #include "salut-presence.h"
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity.h"
+#endif
 
 G_BEGIN_DECLS
 
@@ -117,20 +119,10 @@ const gchar *salut_self_get_alias (SalutSelf *self);
 gboolean salut_self_set_olpc_properties (SalutSelf *self,
     const GArray *key, const gchar *color, const gchar *jid, GError **error);
 
-gboolean salut_self_merge_olpc_activity_properties (SalutSelf *self,
-    TpHandle handle,
-    const gchar **color, const gchar **name, const gchar **type,
-    const gchar **tags, gboolean *is_private);
-
 gboolean salut_self_set_olpc_activity_properties (SalutSelf *self,
     TpHandle handle,
     const gchar *color, const gchar *name, const gchar *type,
     const gchar *tags, gboolean is_private, GError **error);
-
-gboolean salut_self_olpc_activity_properties_updated (SalutSelf *self,
-    TpHandle handle,
-    const gchar *color, const gchar *name, const gchar *type,
-    const gchar *tags, gboolean is_private);
 
 gboolean salut_self_set_olpc_activities (SalutSelf *self,
     GHashTable *act_id_to_room, GError **error);
@@ -139,7 +131,7 @@ gboolean salut_self_set_olpc_current_activity (SalutSelf *self,
     const gchar *id, TpHandle room, GError **error);
 
 typedef void (*SalutSelfOLPCActivityFunc)
-    (const gchar *id, TpHandle handle, gpointer user_data);
+  (SalutOlpcActivity *activity, gpointer user_data);
 
 void salut_self_foreach_olpc_activity (SalutSelf *self,
     SalutSelfOLPCActivityFunc foreach, gpointer user_data);

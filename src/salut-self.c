@@ -26,7 +26,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
-#include <avahi-gobject/ga-entry-group.h>
 
 #include "salut-self.h"
 
@@ -40,6 +39,11 @@
 #include "salut-util.h"
 #include "salut-muc-manager.h"
 #include "salut-xmpp-connection-manager.h"
+
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity.h"
+#include "salut-olpc-activity-manager.h"
+#endif
 
 #define DEBUG_FLAG DEBUG_SELF
 #include <debug.h>
@@ -75,92 +79,19 @@ static guint signals[LAST_SIGNAL] = {0};
 /* private structure */
 typedef struct _SalutSelfPrivate SalutSelfPrivate;
 
-#ifdef ENABLE_OLPC
-
-typedef struct
-{
-  TpHandleRepoIface *room_repo;
-  TpHandle room;
-  /* group and service can be NULL if the activity is private */
-  GaEntryGroup *group;
-  GaEntryGroupService *service;
-  SalutMucChannel *muc;
-  gchar *activity_id;
-  gchar *color;
-  gchar *name;
-  gchar *type;
-  gchar *tags;
-  gboolean is_private;
-  /* Handles of contacts we invited to join this activity */
-  TpHandleSet *invited;
-} SalutOLPCActivity;
-
-static void
-activity_free (SalutOLPCActivity *activity)
-{
-  if (activity == NULL)
-    return;
-
-  if (activity->room != 0)
-    tp_handle_unref (activity->room_repo, activity->room);
-  activity->room = 0;
-  activity->room_repo = NULL;
-
-  if (activity->group != NULL)
-    g_object_unref (activity->group);
-  activity->group = NULL;
-
-  if (activity->muc != NULL)
-    g_object_unref (activity->muc);
-  activity->muc = NULL;
-
-  g_free (activity->activity_id);
-  g_free (activity->color);
-  g_free (activity->name);
-  g_free (activity->type);
-  g_free (activity->tags);
-  tp_handle_set_destroy (activity->invited);
-
-  g_slice_free (SalutOLPCActivity, activity);
-}
-
-#if 0
-static SalutOLPCActivity *
-activity_new (TpHandleRepoIface *room_repo,
-              TpHandleRepoIface *contact_repo,
-              TpHandle room,
-              GError **error)
-{
-  SalutOLPCActivity *activity = g_slice_new0 (SalutOLPCActivity);
-
-  g_return_val_if_fail (room_repo != NULL, NULL);
-  g_return_val_if_fail (room != 0, NULL);
-
-  activity->room_repo = room_repo;
-  tp_handle_ref (room_repo, room);
-  activity->room = room;
-
-  activity->is_private = TRUE;
-  activity->invited = tp_handle_set_new (contact_repo);
-
-  return activity;
-}
-#endif
-
-#endif
-
 struct _SalutSelfPrivate
 {
-  SalutMucManager *muc_manager;
   SalutContactManager *contact_manager;
-  SalutXmppConnectionManager *xmpp_connection_manager;
   TpHandleRepoIface *room_repo;
+#ifdef ENABLE_OLPC
+  SalutOlpcActivityManager *olpc_activity_manager;
+#endif
 
   GIOChannel *listener;
   guint io_watch_in;
 
 #ifdef ENABLE_OLPC
-  /* handle owned by the SalutOLPCActivity -> SalutOLPCActivity */
+  /* room handle owned by the SalutOlpcActivity -> SalutOlpcActivity */
   GHashTable *olpc_activities;
 #endif
 
@@ -198,7 +129,7 @@ salut_self_init (SalutSelf *obj)
 
 #ifdef ENABLE_OLPC
   priv->olpc_activities = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-      NULL, (GDestroyNotify) activity_free);
+      NULL, (GDestroyNotify) g_object_unref);
 #endif
   priv->listener = NULL;
 }
@@ -255,7 +186,9 @@ salut_self_set_property (GObject *object,
                          GParamSpec *pspec)
 {
   SalutSelf *self = SALUT_SELF (object);
+#ifdef ENABLE_OLPC
   GArray *arr;
+#endif
 
   switch (property_id)
     {
@@ -328,12 +261,14 @@ salut_self_constructor (GType type,
   g_assert (self->connection != NULL);
   g_object_get (self->connection,
       "contact-manager", &(priv->contact_manager),
-      "muc-manager", &(priv->muc_manager),
-      "xmpp-connection-manager", &(priv->xmpp_connection_manager),
+#ifdef ENABLE_OLPC
+      "olpc-activity-manager", &(priv->olpc_activity_manager),
+#endif
       NULL);
   g_assert (priv->contact_manager != NULL);
-  g_assert (priv->muc_manager != NULL);
-  g_assert (priv->xmpp_connection_manager != NULL);
+#ifdef ENABLE_OLPC
+  g_assert (priv->olpc_activity_manager != NULL);
+#endif
 
   priv->room_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
@@ -541,19 +476,13 @@ salut_self_dispose (GObject *object)
       priv->contact_manager = NULL;
     }
 
-  if (priv->muc_manager != NULL)
-    {
-      g_object_unref (priv->muc_manager);
-      priv->muc_manager = NULL;
-    }
-
-  if (priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
-    }
-
 #ifdef ENABLE_OLPC
+  if (priv->olpc_activity_manager != NULL)
+    {
+      g_object_unref (priv->olpc_activity_manager);
+      priv->olpc_activity_manager = NULL;
+    }
+
   if (priv->olpc_activities != NULL)
     g_hash_table_destroy (priv->olpc_activities);
 
@@ -692,259 +621,14 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 
 #ifdef ENABLE_OLPC
 
-static gboolean
-activity_is_announced (SalutOLPCActivity *activity)
-{
-  g_return_val_if_fail (activity != NULL, FALSE);
-  return (activity->service != NULL && activity->group != NULL);
-}
-
-static gboolean
-update_activity_service (SalutOLPCActivity *activity,
-                         GError **error)
-{
-  GError *err = NULL;
-  g_return_val_if_fail (activity_is_announced (activity), FALSE);
-
-  ga_entry_group_service_freeze (activity->service);
-
-  if (activity->name != NULL)
-    ga_entry_group_service_set (activity->service, "name",
-        activity->name, NULL);
-
-  if (activity->color != NULL)
-    ga_entry_group_service_set (activity->service, "color",
-        activity->color, NULL);
-
-  if (activity->type != NULL)
-    ga_entry_group_service_set (activity->service, "type",
-        activity->type, NULL);
-
-  if (activity->tags != NULL)
-    ga_entry_group_service_set (activity->service, "tags",
-        activity->tags, NULL);
-
-  if (!ga_entry_group_service_thaw (activity->service, &err))
-    {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-      g_error_free (err);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-static gboolean
-announce_activity (SalutSelf *self,
-                   SalutOLPCActivity *activity,
-                   GError **error)
-{
-  return TRUE;
-#if 0
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  const gchar *room_name;
-  gchar *name;
-  AvahiStringList *txt_record;
-
-  g_return_val_if_fail (!activity_is_announced (activity), FALSE);
-  g_return_val_if_fail (!activity->is_private, FALSE);
-
-  room_name = tp_handle_inspect (priv->room_repo, activity->room);
-  /* caller should already have validated this */
-  g_return_val_if_fail (room_name != NULL, FALSE);
-
-  activity->group = ga_entry_group_new ();
-  if (!ga_entry_group_attach (activity->group, priv->client, error))
-    return FALSE;
-
-  name = g_strdup_printf ("%s:%s@%s", room_name, self->published_name,
-      avahi_client_get_host_name (priv->client->avahi_client));
-
-  txt_record = avahi_string_list_new ("txtvers=0", NULL);
-  txt_record = avahi_string_list_add_printf (txt_record, "room=%s", room_name);
-  if (activity->activity_id != NULL)
-    txt_record = avahi_string_list_add_printf (txt_record, "activity-id=%s",
-        activity->activity_id);
-
-  activity->service = ga_entry_group_add_service_strlist
-      (activity->group, name, SALUT_DNSSD_OLPC_ACTIVITY, 0, error, txt_record);
-
-  DEBUG ("announce activity %s", name);
-  g_free (name);
-  avahi_string_list_free (txt_record);
-
-  if (activity->service == NULL)
-    return FALSE;
-
-  if (!ga_entry_group_commit (activity->group, error))
-    return FALSE;
-
-  /* announce activities properties */
-  if (!update_activity_service (activity, error))
-    return FALSE;
-
-  return TRUE;
-#endif
-}
-
-static gboolean
-stop_announce_activity (SalutSelf *self,
-                        SalutOLPCActivity *activity,
-                        GError **error)
-{
-
-  g_return_val_if_fail (activity_is_announced (activity), FALSE);
-  g_return_val_if_fail (activity->is_private, FALSE);
-
-  g_object_unref (activity->group);
-  activity->group = NULL;
-  activity->service = NULL;
-
-  DEBUG ("stop announce activity %s", activity->activity_id);
-  return TRUE;
-}
-
-typedef struct
-{
-  SalutSelf *self;
-  SalutContact *contact;
-  GibberXmppStanza *msg;
-} pending_connection_for_uninvite_ctx;
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *connection,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  pending_connection_for_uninvite_ctx *ctx =
-    (pending_connection_for_uninvite_ctx *) user_data;
-
-  if (ctx->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
-
-  DEBUG ("got awaited connection with %s. Send uninvite", contact->name);
-
-  gibber_xmpp_connection_send (connection, ctx->msg, NULL);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, ctx);
-
-  g_slice_free (pending_connection_for_uninvite_ctx, ctx);
-}
-
-static void
-xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *connection,
-                                              SalutContact *contact,
-                                              GQuark domain,
-                                              gint code,
-                                              gchar *message,
-                                              gpointer user_data)
-{
-  pending_connection_for_uninvite_ctx *ctx =
-    (pending_connection_for_uninvite_ctx *) user_data;
-
-  if (ctx->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
-
-  DEBUG ("awaited connection with %s failed: %s. Can't send uninvite",
-    contact->name, message);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, ctx);
-
-  g_slice_free (pending_connection_for_uninvite_ctx, ctx);
-}
-
-static void
-revoke_invitations (SalutSelf *self,
-                    SalutOLPCActivity *activity)
-{
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  GibberXmppStanza *msg;
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
-  TpIntSetIter iter = TP_INTSET_ITER_INIT (tp_handle_set_peek (
-        activity->invited));
-
-  if (tp_handle_set_size (activity->invited) <= 0)
-    return;
-
-  msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
-      GIBBER_STANZA_SUB_TYPE_NONE,
-      self->connection->name, NULL,
-      GIBBER_NODE, "uninvite",
-        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
-        GIBBER_NODE_ATTRIBUTE, "room", tp_handle_inspect (activity->room_repo,
-          activity->room),
-        GIBBER_NODE_ATTRIBUTE, "id", activity->activity_id,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
-
-  DEBUG ("revoke invitations for activity %s", activity->activity_id);
-  while (tp_intset_iter_next (&iter))
-    {
-      TpHandle contact_handle;
-      SalutContact *contact;
-      SalutXmppConnectionManagerRequestConnectionResult request_result;
-      GibberXmppConnection *connection = NULL;
-      const gchar *to;
-
-      contact_handle = iter.element;
-      contact = salut_contact_manager_get_contact (priv->contact_manager,
-          contact_handle);
-      if (contact == NULL)
-        {
-          DEBUG ("Can't find contact %d", contact_handle);
-          continue;
-        }
-
-      to = tp_handle_inspect (contact_repo, contact_handle);
-      gibber_xmpp_node_set_attribute (msg->node, "to", to);
-
-      request_result = salut_xmpp_connection_manager_request_connection (
-          priv->xmpp_connection_manager, contact, &connection, NULL);
-
-      if (request_result ==
-          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
-        {
-          DEBUG ("request connection to %s failed", to);
-        }
-      else if (request_result ==
-          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-        {
-          DEBUG ("send uninvite to %s", to);
-          if (!gibber_xmpp_connection_send (connection, msg, NULL))
-            DEBUG ("can't send uninvite to %s", to);
-        }
-      else
-        {
-          pending_connection_for_uninvite_ctx *ctx;
-
-          ctx = g_slice_new (pending_connection_for_uninvite_ctx);
-          g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-              G_CALLBACK (xmpp_connection_manager_new_connection_cb), ctx);
-          g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
-              G_CALLBACK (xmpp_connection_manager_connection_failed_cb), ctx);
-        }
-    }
-
-  g_object_unref (msg);
-}
-
-#if 0
-static SalutOLPCActivity *
+static SalutOlpcActivity *
 salut_self_add_olpc_activity (SalutSelf *self,
                               const gchar *activity_id,
                               TpHandle room,
                               GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  SalutOLPCActivity *activity;
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+  SalutOlpcActivity *activity;
 
   g_return_val_if_fail (activity_id != NULL, NULL);
   g_return_val_if_fail (room != 0, NULL);
@@ -956,69 +640,22 @@ salut_self_add_olpc_activity (SalutSelf *self,
       return NULL;
     }
 
-  activity = activity_new (priv->room_repo, contact_repo, room, error);
-  if (activity == NULL)
-    return NULL;
+  activity = salut_olpc_activity_manager_ensure_activity_by_room (
+      priv->olpc_activity_manager, room);
 
-  activity->muc = salut_muc_manager_get_text_channel (priv->muc_manager, room);
-  if (activity->muc == NULL)
+  if (!salut_olpc_activity_joined (activity, error))
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-          "Can't find muc channel for room %s", tp_handle_inspect (
-            priv->room_repo, room));
-      activity_free (activity);
+      g_object_unref (activity);
       return NULL;
     }
 
-  activity->activity_id = g_strdup (activity_id);
-
-  tp_handle_ref (priv->room_repo, room);
-  activity->room = room;
+  salut_olpc_activity_update (activity, room, activity_id, NULL, NULL, NULL,
+      NULL, activity->is_private);
 
   g_hash_table_insert (priv->olpc_activities, GUINT_TO_POINTER (room),
       activity);
+
   return activity;
-}
-#endif
-
-static gboolean
-update_activity (SalutOLPCActivity *activity,
-                 const gchar *name,
-                 const gchar *type,
-                 const gchar *color,
-                 const gchar *tags)
-{
-  gboolean changed = FALSE;
-
-  if (name != NULL && tp_strdiff (activity->name, name))
-    {
-      g_free (activity->name);
-      activity->name = g_strdup (name);
-      changed = TRUE;
-    }
-
-  if (type != NULL && tp_strdiff (activity->type, type))
-    {
-      g_free (activity->type);
-      activity->type = g_strdup (type);
-      changed = TRUE;
-    }
-
-  if (color != NULL && tp_strdiff (activity->color, color))
-    {
-      g_free (activity->color);
-      activity->color = g_strdup (color);
-      changed = TRUE;
-    }
-
-  if (tags != NULL && tp_strdiff (activity->tags, tags))
-    {
-      g_free (activity->tags);
-      activity->tags = g_strdup (tags);
-      changed = TRUE;
-    }
-
-  return changed;
 }
 
 struct _set_olpc_activities_ctx
@@ -1033,12 +670,10 @@ struct _set_olpc_activities_ctx
 static void
 _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
 {
-  /* FIXME: reimplement using the activity mgr */
-#if 0
   struct _set_olpc_activities_ctx *data = user_data;
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (data->self);
-  SalutOLPCActivity *activity;
-  gboolean need_update = FALSE;
+  SalutOlpcActivity *activity;
+  const gchar *id = (const gchar *) value;
+  TpHandle room = GPOINTER_TO_UINT (key);
 
   if (*(data->error) != NULL)
     {
@@ -1049,73 +684,25 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
   activity = g_hash_table_lookup (data->olpc_activities, key);
   if (activity == NULL)
     {
-      gboolean is_private = TRUE;
-      const gchar *color = NULL, *name = NULL, *type = NULL, *tags = NULL;
-
       /* add the activity service if it's not in data->olpc_activities */
-      activity = salut_self_add_olpc_activity (data->self, value,
-          GPOINTER_TO_UINT (key), data->error);
+      activity = salut_self_add_olpc_activity (data->self, id, room,
+          data->error);
 
       if (activity == NULL)
         return;
-
-      if (salut_contact_manager_merge_olpc_activity_properties (
-          priv->contact_manager, GPOINTER_TO_UINT (key), &color, &name, &type,
-          &tags, &is_private))
-        {
-          update_activity (activity, name, type, color, tags);
-          activity->is_private = is_private;
-        }
     }
-  /* activity was already known */
-  else if (tp_strdiff (value, activity->activity_id))
+  else
     {
-      /* if the user is claiming that the activity ID of a room has changed,
-       * believe them... */
-
-      g_free (activity->activity_id);
-      activity->activity_id = g_strdup (value);
-      need_update = TRUE;
+      /* activity was already known */
+      salut_olpc_activity_update (activity, room, id, NULL, NULL, NULL,
+          NULL, activity->is_private);
     }
-
-  if (activity->is_private)
-    /* activity is private, no need to announce or update it */
-    return;
-
-  if (!activity_is_announced (activity))
-    {
-      GError *e;
-
-      if (!announce_activity (data->self, activity, &e))
-        {
-          DEBUG ("can't announce activity: %s", e->message);
-          g_set_error (data->error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-              e->message);
-          g_error_free (e);
-          g_hash_table_remove (data->olpc_activities, key);
-          return;
-        }
-    }
-  else if (need_update)
-    {
-      GError *e;
-
-      if (!ga_entry_group_service_set (activity->service,
-            "activity-id", value, &e))
-        {
-          g_set_error (data->error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-              e->message);
-          g_error_free (e);
-          return;
-        }
-    }
-#endif
 }
 
 static gboolean
 _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 {
-  SalutOLPCActivity *activity = (SalutOLPCActivity *) value;
+  SalutOlpcActivity *activity = (SalutOlpcActivity *) value;
   struct _set_olpc_activities_ctx *data = user_data;
   gboolean remove;
 
@@ -1124,7 +711,7 @@ _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 
   if (remove)
     {
-      revoke_invitations (data->self, activity);
+      salut_olpc_activity_revoke_invitations (activity);
     }
 
   return remove;
@@ -1211,222 +798,6 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
 }
 
 gboolean
-salut_self_merge_olpc_activity_properties (SalutSelf *self,
-                                           TpHandle handle,
-                                           const gchar **color,
-                                           const gchar **name,
-                                           const gchar **type,
-                                           const gchar **tags,
-                                           gboolean *is_private)
-{
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
-      GUINT_TO_POINTER (handle));
-
-  if (activity == NULL)
-    return FALSE;
-
-  if (activity->color != NULL && color != NULL)
-    *color = activity->color;
-  if (activity->name != NULL && name != NULL)
-    *name = activity->name;
-  if (activity->type != NULL && type != NULL)
-    *type = activity->type;
-  if (activity->tags != NULL && tags != NULL)
-    *tags = activity->tags;
-  *is_private = activity->is_private;
-  return TRUE;
-}
-
-typedef struct
-{
-  SalutSelf *self;
-  SalutOLPCActivity *activity;
-} foreach_resend_invite_ctx;
-
-static void
-resend_invite_foreach (TpHandleSet *set,
-                       TpHandle handle,
-                       gpointer user_data)
-{
-  GError *error = NULL;
-  foreach_resend_invite_ctx *ctx = (foreach_resend_invite_ctx *) user_data;
-
-  if (!salut_muc_channel_send_invitation (ctx->activity->muc, handle,
-        "OLPC activity properties update", &error))
-    {
-      DEBUG ("failed to re-invite contact %d to activity %s", handle,
-          ctx->activity->activity_id);
-    }
-}
-
-static void
-resend_invite (SalutSelf *self,
-               SalutOLPCActivity *activity)
-{
-  foreach_resend_invite_ctx ctx;
-
-  /* Resend pending invitations so contacts will know about new properties */
-  ctx.self = self;
-  ctx.activity = activity;
-  tp_handle_set_foreach (activity->invited, resend_invite_foreach, &ctx);
-}
-
-/* FIXME: we should share this code with salut-connection.c */
-static GHashTable *
-create_properties_table (SalutOLPCActivity *activity)
-{
-  GHashTable *properties;
-  GValue *val;
-
-  properties = g_hash_table_new_full (g_str_hash, g_str_equal,
-      NULL, (GDestroyNotify) tp_g_value_slice_free);
-
-  if (activity->color != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, activity->color);
-      g_hash_table_insert (properties, "color", val);
-    }
-  if (activity->name != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, activity->name);
-      g_hash_table_insert (properties, "name", val);
-    }
-  if (activity->type != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, activity->type);
-      g_hash_table_insert (properties, "type", val);
-    }
-  if (activity->tags != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, activity->tags);
-      g_hash_table_insert (properties, "tags", val);
-    }
-
-  val = tp_g_value_slice_new (G_TYPE_BOOLEAN);
-  g_value_set_boolean (val, activity->is_private);
-  g_hash_table_insert (properties, "private", val);
-
-  return properties;
-}
-
-static gboolean
-send_olpc_activity_properties_changes_msg (SalutSelf *self,
-                                           SalutOLPCActivity *activity,
-                                           GError **error)
-{
-  GHashTable *properties;
-  GValue *activity_id_val;
-  GibberXmppStanza *stanza;
-  GibberXmppNode *properties_node;
-  gchar *muc_name;
-  GibberMucConnection *muc_connection;
-  gboolean result;
-  GError *err = NULL;
-
-  g_assert (activity->muc != NULL);
-
-  g_object_get (activity->muc,
-      "name", &muc_name,
-      "muc-connection", &muc_connection,
-      NULL);
-
-  if (muc_connection->state != GIBBER_MUC_CONNECTION_CONNECTED)
-    {
-      DEBUG ("Muc connection not connected yet. Drop activity change message");
-      g_object_unref (muc_connection);
-      g_free (muc_name);
-      return TRUE;
-    }
-
-  properties = create_properties_table (activity);
-
-  /* add the activity id */
-  activity_id_val = g_slice_new0 (GValue);
-  g_value_init (activity_id_val, G_TYPE_STRING);
-  g_value_set_static_string (activity_id_val, activity->activity_id);
-  g_hash_table_insert (properties, "id", activity_id_val);
-
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
-      GIBBER_STANZA_SUB_TYPE_GROUPCHAT,
-      self->connection->name, muc_name,
-      GIBBER_NODE, "properties",
-        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
-
-  properties_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
-      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
-
-  salut_gibber_xmpp_node_add_children_from_properties (properties_node,
-      properties, "property");
-
-  result = gibber_muc_connection_send (muc_connection, stanza, &err);
-  if (!result)
-    {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-      g_error_free (err);
-    }
-
-  g_object_unref (stanza);
-  g_object_unref (muc_connection);
-  g_free (muc_name);
-  g_hash_table_destroy (properties);
-
-  return result;
-}
-
-static gboolean
-notify_activity_properties_changes (SalutSelf *self,
-                                    SalutOLPCActivity *activity,
-                                    GError **error)
-{
-  if (!send_olpc_activity_properties_changes_msg (self, activity, error))
-    return FALSE;
-
-  resend_invite (self, activity);
-
-  return TRUE;
-}
-
-static gboolean
-update_activity_privacy (SalutSelf *self,
-                         SalutOLPCActivity *activity,
-                         gboolean is_private,
-                         gboolean *updated,
-                         GError **error)
-{
-  if (activity->is_private == is_private)
-    return TRUE;
-
-  activity->is_private = is_private;
-  if (updated != NULL)
-    *updated = TRUE;
-
-  if (!is_private)
-    {
-      /* activity becomes public */
-      GError *err = NULL;
-
-      DEBUG ("activity becomes public. Announce it");
-      if (!announce_activity (self, activity, &err))
-        {
-          g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-          g_error_free (err);
-          return FALSE;
-        }
-      return TRUE;
-    }
-  else
-    {
-      return stop_announce_activity (self, activity, error);
-    }
-}
-
-gboolean
 salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          TpHandle handle,
                                          const gchar *color,
@@ -1437,9 +808,10 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
+  SalutOlpcActivity *activity;
+
+  activity = g_hash_table_lookup (priv->olpc_activities,
       GUINT_TO_POINTER (handle));
-  gboolean updated;
 
   if (activity == NULL)
     {
@@ -1450,59 +822,10 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
       return FALSE;
     }
 
-  updated = update_activity (activity, name, type, color, tags);
-
-  if (!update_activity_privacy (self, activity, is_private, &updated, error))
-    return FALSE;
-
-  if (!updated)
-    return TRUE;
-
-  if (activity_is_announced (activity))
-    {
-      if (!send_olpc_activity_properties_changes_msg (self, activity, error))
-        return FALSE;
-
-      return update_activity_service (activity, error);
-    }
-  else
-    {
-      return notify_activity_properties_changes (self, activity, error);
-    }
+  salut_olpc_activity_update (activity, handle, activity->id,
+      name, type, color, tags, is_private);
 
   return TRUE;
-}
-
-/* return TRUE if we have updated properties */
-gboolean
-salut_self_olpc_activity_properties_updated (SalutSelf *self,
-                                             TpHandle handle,
-                                             const gchar *color,
-                                             const gchar *name,
-                                             const gchar *type,
-                                             const gchar *tags,
-                                             gboolean is_private)
-{
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  SalutOLPCActivity *activity = g_hash_table_lookup (priv->olpc_activities,
-      GUINT_TO_POINTER (handle));
-  gboolean updated;
-
-  if (activity == NULL)
-    {
-      /* We are not in this activity. Nothing to update */
-      return FALSE;
-    }
-
-  updated = update_activity (activity, name, type, color, tags);
-
-  if (!update_activity_privacy (self, activity, is_private, &updated, NULL))
-    return FALSE;
-
-  if (updated && activity_is_announced (activity))
-    update_activity_service (activity, NULL);
-
-  return updated;
 }
 
 gboolean
@@ -1544,8 +867,8 @@ salut_self_set_olpc_properties (SalutSelf *self,
   if (!SALUT_SELF_GET_CLASS (self)->set_olpc_properties (self, key, color, jid,
         &err))
     {
-      g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-      g_error_free(err);
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free (err);
       return FALSE;
     }
   return TRUE;
@@ -1561,11 +884,10 @@ static void
 foreach_olpc_activity (gpointer key, gpointer value, gpointer user_data)
 {
   foreach_olpc_activity_ctx *ctx = user_data;
-  SalutOLPCActivity *activity = value;
+  SalutOlpcActivity *activity = value;
 
-  DEBUG ("%s -> %u", activity->activity_id, GPOINTER_TO_UINT (key));
-  (ctx->foreach) (activity->activity_id, GPOINTER_TO_UINT (key),
-      ctx->user_data);
+  DEBUG ("%s -> %u", activity->id, GPOINTER_TO_UINT (key));
+  (ctx->foreach) (activity, ctx->user_data);
 }
 
 void
@@ -1591,33 +913,14 @@ salut_self_olpc_augment_invitation (SalutSelf *self,
                                     GibberXmppNode *invite_node)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  GibberXmppNode *properties_node;
-  GHashTable *properties;
-  SalutOLPCActivity *activity;
-  GValue *activity_id_val;
+  SalutOlpcActivity *activity;
 
   activity = g_hash_table_lookup (priv->olpc_activities,
       GUINT_TO_POINTER (room));
   if (activity == NULL)
     return;
 
-  properties = create_properties_table (activity);
-
-  properties_node = gibber_xmpp_node_add_child_ns (invite_node, "properties",
-      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
-
-  /* add the activity id */
-  activity_id_val = g_slice_new0 (GValue);
-  g_value_init (activity_id_val, G_TYPE_STRING);
-  g_value_set_static_string (activity_id_val, activity->activity_id);
-  g_hash_table_insert (properties, "id", activity_id_val);
-
-  salut_gibber_xmpp_node_add_children_from_properties (properties_node,
-      properties, "property");
-
-  tp_handle_set_add (activity->invited, contact);
-
-  g_hash_table_destroy (properties);
+  salut_olpc_activity_augment_invitation (activity, contact, invite_node);
 }
 
 typedef struct
@@ -1627,21 +930,20 @@ typedef struct
 } remove_from_invited_ctx;
 
 static void
-remove_from_invited (const gchar *activity_id,
-                     TpHandle room,
+remove_from_invited (SalutOlpcActivity *act,
                      gpointer user_data)
 {
-  SalutOLPCActivity *activity;
+  SalutOlpcActivity *activity;
   remove_from_invited_ctx *data = (remove_from_invited_ctx *) user_data;
 
   activity = g_hash_table_lookup (data->olpc_activities,
-      GUINT_TO_POINTER (room));
+      GUINT_TO_POINTER (act->room));
   if (activity == NULL)
     return;
 
-  if (tp_handle_set_remove (activity->invited, data->contact_handle))
+  if (salut_olpc_activity_remove_invited (activity, data->contact_handle))
     DEBUG ("contact %d joined activity %s. Remove it from the invited list",
-        data->contact_handle, activity->activity_id);
+        data->contact_handle, activity->id);
 }
 
 /* when a buddy changes his activity list, check if we invited him
