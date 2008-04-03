@@ -249,7 +249,25 @@ salut_avahi_contact_manager_dispose_contact (SalutContactManager *mgr,
     }
 }
 
-static void salut_avahi_contact_manager_dispose (GObject *object);
+static void
+salut_avahi_contact_manager_close_all (SalutContactManager *mgr)
+{
+  SalutAvahiContactManager *self = SALUT_AVAHI_CONTACT_MANAGER (mgr);
+  SalutAvahiContactManagerPrivate *priv =
+    SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE (self);
+
+  if (priv->presence_browser != NULL)
+    {
+      g_object_unref (priv->presence_browser);
+      priv->presence_browser = NULL;
+    }
+
+  if (priv->discovery_client != NULL)
+    {
+      g_object_unref (priv->discovery_client);
+      priv->discovery_client = NULL;
+    }
+}
 
 static void
 salut_avahi_contact_manager_class_init (
@@ -262,8 +280,6 @@ salut_avahi_contact_manager_class_init (
   g_type_class_add_private (salut_avahi_contact_manager_class,
       sizeof (SalutAvahiContactManagerPrivate));
 
-  object_class->dispose = salut_avahi_contact_manager_dispose;
-
   object_class->constructor = salut_avahi_contact_manager_constructor;
   object_class->get_property = salut_avahi_contact_manager_get_property;
   object_class->set_property = salut_avahi_contact_manager_set_property;
@@ -273,6 +289,7 @@ salut_avahi_contact_manager_class_init (
     salut_avahi_contact_manager_create_contact;
   contact_manager_class->dispose_contact =
     salut_avahi_contact_manager_dispose_contact;
+  contact_manager_class->close_all = salut_avahi_contact_manager_close_all;
 
   param_spec = g_param_spec_object (
       "discovery-client",
@@ -286,34 +303,6 @@ salut_avahi_contact_manager_class_init (
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_DISCOVERY_CLIENT,
       param_spec);
-}
-
-void
-salut_avahi_contact_manager_dispose (GObject *object)
-{
-  SalutAvahiContactManager *self = SALUT_AVAHI_CONTACT_MANAGER (object);
-  SalutAvahiContactManagerPrivate *priv =
-    SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE (self);
-
-  if (priv->dispose_has_run)
-    return;
-
-  priv->dispose_has_run = TRUE;
-
-  if (priv->presence_browser != NULL)
-    {
-      g_object_unref (priv->presence_browser);
-      priv->presence_browser = NULL;
-    }
-
-  if (priv->discovery_client != NULL)
-    {
-      g_object_unref (priv->discovery_client);
-      priv->discovery_client = NULL;
-    }
-
-  if (G_OBJECT_CLASS (salut_avahi_contact_manager_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_avahi_contact_manager_parent_class)->dispose (object);
 }
 
 SalutAvahiContactManager *

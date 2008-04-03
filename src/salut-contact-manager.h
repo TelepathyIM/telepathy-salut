@@ -22,7 +22,6 @@
 #define __SALUT_CONTACT_MANAGER_H__
 
 #include <glib-object.h>
-#include <avahi-gobject/ga-client.h>
 
 #include "salut-connection.h"
 #include "salut-contact.h"
@@ -43,6 +42,7 @@ struct _SalutContactManagerClass {
         const gchar *name);
     void (*dispose_contact) (SalutContactManager *self,
         SalutContact *contact);
+    void (*close_all) (SalutContactManager *self);
 };
 
 struct _SalutContactManager {

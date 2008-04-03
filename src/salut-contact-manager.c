@@ -336,6 +336,8 @@ salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
   SalutContactManagerPrivate *priv =
     SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
 
+  SALUT_CONTACT_MANAGER_GET_CLASS (mgr)->close_all (mgr);
+
   if (priv->channels) {
     g_hash_table_destroy(priv->channels);
     priv->channels = NULL;
