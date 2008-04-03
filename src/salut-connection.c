@@ -41,15 +41,18 @@
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-bytestream-manager.h"
+
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity-manager.h"
+#endif
+
 /*
 #include "salut-tubes-manager.h"
 */
 
 #include "salut-presence.h"
 #include "salut-discovery-client.h"
-/* HACK */
 #include "salut-avahi-discovery-client.h"
-#include "salut-avahi-muc-manager.h"
 
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/dbus.h>
@@ -133,6 +136,9 @@ enum {
   PROP_SELF,
   PROP_XCM,
   PROP_BYTESTREAM_MANAGER,
+#ifdef ENABLE_OLPC
+  PROP_OLPC_ACTIVITY_MANAGER,
+#endif
   LAST_PROP
 };
 
@@ -178,6 +184,10 @@ struct _SalutConnectionPrivate
 
   /* Bytestream manager */
   SalutBytestreamManager *bytestream_manager;
+
+#ifdef ENABLE_OLPC
+  SalutOlpcActivityManager *olpc_activity_manager;
+#endif
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
@@ -295,6 +305,11 @@ salut_connection_get_property (GObject *object,
     case PROP_BYTESTREAM_MANAGER:
       g_value_set_object (value, priv->bytestream_manager);
       break;
+#ifdef ENABLE_OLPC
+    case PROP_OLPC_ACTIVITY_MANAGER:
+      g_value_set_object (value, priv->olpc_activity_manager);
+      break;
+#endif
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -654,6 +669,19 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_BYTESTREAM_MANAGER,
       param_spec);
+
+#ifdef ENABLE_OLPC
+  param_spec = g_param_spec_object (
+      "olpc-activity-manager",
+      "SalutOlpcActivityManager object",
+      "The OLPC activity Manager associated with this Salut Connection",
+      SALUT_TYPE_OLPC_ACTIVITY_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_OLPC_ACTIVITY_MANAGER,
+      param_spec);
+#endif
 }
 
 void
@@ -676,6 +704,12 @@ salut_connection_dispose (GObject *object)
   salut_xmpp_connection_manager_remove_stanza_filter (
       priv->xmpp_connection_manager, NULL,
       uninvite_stanza_filter, uninvite_stanza_callback, self);
+
+  if (priv->olpc_activity_manager != NULL)
+    {
+      g_object_unref (priv->olpc_activity_manager);
+      priv->olpc_activity_manager = NULL;
+    }
 #endif
 
   if (priv->xmpp_connection_manager)
@@ -773,6 +807,14 @@ _self_established_cb(SalutSelf *s, gpointer data) {
       return;
     }
 
+#ifdef ENABLE_OLPC
+  if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, NULL))
+    {
+      /* XXX handle error */
+      return;
+    }
+#endif
+
   tp_base_connection_change_status(base,
       TP_CONNECTION_STATUS_CONNECTED,
       TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
@@ -824,9 +866,10 @@ discovery_client_running (SalutConnection *self)
     }
 
   /* Create the bytestream manager */
-  /* HACK */
+  /* FIXME: we should abstract this */
   priv->bytestream_manager = salut_bytestream_manager_new (self,
-    avahi_client_get_host_name_fqdn (SALUT_AVAHI_DISCOVERY_CLIENT(priv->discovery_client)->avahi_client->avahi_client));
+    avahi_client_get_host_name_fqdn (SALUT_AVAHI_DISCOVERY_CLIENT (
+        priv->discovery_client)->avahi_client->avahi_client));
 }
 
 static void
@@ -1437,7 +1480,8 @@ emit_properties_changed (SalutConnection *connection,
 }
 
 static void
-append_activity (const char *activity_id, TpHandle handle, gpointer user_data)
+append_activity (SalutOlpcActivity *activity,
+                 gpointer user_data)
 {
   GPtrArray *arr = user_data;
   GType type = ACTIVITY_PAIR_TYPE;
@@ -1448,8 +1492,8 @@ append_activity (const char *activity_id, TpHandle handle, gpointer user_data)
       dbus_g_type_specialized_construct (type));
 
   dbus_g_type_struct_set (&gvalue,
-      0, activity_id,
-      1, handle,
+      0, activity->id,
+      1, activity->room,
       G_MAXUINT);
   g_ptr_array_add (arr, g_value_get_boxed (&gvalue));
 }
@@ -1969,51 +2013,6 @@ salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-static GHashTable *
-create_properties_table (const gchar *color,
-                         const gchar *name,
-                         const gchar *type,
-                         const gchar *tags,
-                         gboolean is_private)
-{
-  GHashTable *properties;
-  GValue *val;
-
-  properties = g_hash_table_new_full (g_str_hash, g_str_equal,
-      NULL, (GDestroyNotify) tp_g_value_slice_free);
-
-  if (color != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, color);
-      g_hash_table_insert (properties, "color", val);
-    }
-  if (name != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, name);
-      g_hash_table_insert (properties, "name", val);
-    }
-  if (type != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, type);
-      g_hash_table_insert (properties, "type", val);
-    }
-  if (tags != NULL)
-    {
-      val = tp_g_value_slice_new (G_TYPE_STRING);
-      g_value_set_static_string (val, tags);
-      g_hash_table_insert (properties, "tags", val);
-    }
-
-  val = tp_g_value_slice_new (G_TYPE_BOOLEAN);
-  g_value_set_boolean (val, is_private);
-  g_hash_table_insert (properties, "private", val);
-
-  return properties;
-}
-
 static void
 salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
                                      TpHandle handle,
@@ -2025,34 +2024,24 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_ROOM);
   GHashTable *properties = NULL;
-  const gchar *color = NULL, *name = NULL, *type = NULL, *tags = NULL;
-  gboolean is_private;
   GError *error = NULL;
-  gboolean known = FALSE;
+  SalutOlpcActivity *activity;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   if (!tp_handle_is_valid(room_repo, handle, &error))
     goto error;
 
-  if (salut_contact_manager_merge_olpc_activity_properties
-      (priv->contact_manager, handle, &color, &name, &type, &tags,
-       &is_private))
-    known = TRUE;
-
-  /* Call this one second so it overwrites values from the first */
-  if (salut_self_merge_olpc_activity_properties (priv->self, handle, &color,
-        &name, &type, &tags, &is_private))
-    known = TRUE;
-
-  if (!known)
+  activity = salut_olpc_activity_manager_get_activity_by_room (
+      priv->olpc_activity_manager, handle);
+  if (activity == NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Activity unknown: %u", handle);
       goto error;
     }
 
-  properties = create_properties_table (color, name, type, tags, is_private);
+  properties = salut_olpc_activity_create_properties_table (activity);
 
   salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
   g_hash_table_destroy (properties);
@@ -2269,20 +2258,18 @@ error:
 typedef struct
 {
   SalutContact *inviter;
-  TpHandle room;
-  gchar *activity_id;
+  SalutOlpcActivity *activity;
 } muc_ready_ctx;
 
 static muc_ready_ctx *
 muc_ready_ctx_new (SalutContact *inviter,
-                   TpHandle room,
-                   const gchar *activity_id)
+                   SalutOlpcActivity *activity)
 {
   muc_ready_ctx *ctx = g_slice_new (muc_ready_ctx);
   ctx->inviter = inviter;
   g_object_ref (inviter);
-  ctx->room = room;
-  ctx->activity_id = g_strdup (activity_id);
+  ctx->activity = activity;
+  g_object_ref (activity);
   return ctx;
 }
 
@@ -2293,7 +2280,7 @@ muc_ready_ctx_free (muc_ready_ctx *ctx)
     return;
 
   g_object_unref (ctx->inviter);
-  g_free (ctx->activity_id);
+  g_object_unref (ctx->activity);
   g_slice_free (muc_ready_ctx, ctx);
 }
 
@@ -2302,8 +2289,7 @@ muc_ready_cb (SalutMucChannel *muc,
               muc_ready_ctx *ctx)
 {
   /* We joined the muc so have to forget about invites */
-  salut_contact_left_private_activity (ctx->inviter, ctx->room,
-      ctx->activity_id);
+  salut_contact_left_activity (ctx->inviter, ctx->activity);
 
   DEBUG ("forget invite received from %s", ctx->inviter->name);
   g_signal_handlers_disconnect_matched (muc, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
@@ -2334,6 +2320,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL, *tags = NULL;
   SalutContact *inviter;
+  SalutOlpcActivity *activity;
   SalutMucChannel *muc;
   muc_ready_ctx *ctx;
 
@@ -2355,17 +2342,15 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
         &activity_name, &activity_type, &tags, NULL, NULL))
     return;
 
-  salut_contact_manager_add_invited_olpc_activity (priv->contact_manager,
-      inviter, room, activity_id, color, activity_name, activity_type, tags);
-
-  /* FIXME: we shouldn't add it if the local user is already in the activity
-   * as, for now, we don't manage private activity membership (it's PS job) */
-  salut_contact_takes_part_in_olpc_activity (inviter, room, activity_id);
+  activity = salut_olpc_activity_manager_got_invitation (
+      priv->olpc_activity_manager,
+      room, inviter, activity_id, activity_name, activity_type,
+      color, tags);
 
   muc = salut_muc_manager_get_text_channel (priv->muc_manager, room);
   g_assert (muc != NULL);
 
-  ctx = muc_ready_ctx_new (inviter, room, activity_id);
+  ctx = muc_ready_ctx_new (inviter, activity);
   g_signal_connect (muc, "ready", G_CALLBACK (muc_ready_cb), ctx);
   g_signal_connect (muc, "closed", G_CALLBACK (muc_closed_cb), ctx);
 
@@ -2465,63 +2450,17 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
 
 #ifdef ENABLE_OLPC
 static void
-olpc_activity_properties_changed (SalutConnection *self,
-                                  TpHandle room,
-                                  const gchar *id,
-                                  const gchar *new_color,
-                                  const gchar *new_name,
-                                  const gchar *new_type,
-                                  const gchar *new_tags,
-                                  gboolean new_is_private)
+_olpc_activity_manager_activity_modified_cb (SalutOlpcActivityManager *mgr,
+                                             SalutOlpcActivity *activity,
+                                             SalutConnection *self)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GHashTable *properties;
-  const gchar *color, *name, *type, *tags;
-  gboolean is_private;
-  gboolean self_updated;
 
-  /* Update if needed */
-  self_updated = salut_self_olpc_activity_properties_updated (priv->self, room,
-        new_color, new_name, new_type, new_tags, new_is_private);
-
-  if (salut_self_merge_olpc_activity_properties (priv->self, room,
-        &color, &name, &type, &tags, &is_private))
-    {
-      /* SalutSelf know about this activity. Let's use its properties if
-       * something was updated */
-      if (!self_updated)
-        return;
-
-      properties = create_properties_table (color, name, type, tags,
-          is_private);
-    }
-  else
-    {
-      properties = create_properties_table (new_color, new_name, new_type,
-          new_tags, new_is_private);
-    }
-
+  properties = salut_olpc_activity_create_properties_table (activity);
   salut_svc_olpc_activity_properties_emit_activity_properties_changed (
-      self, room, properties);
+      self, activity->room, properties);
 
   g_hash_table_destroy (properties);
-}
-
-static void
-_contact_manager_olpc_activity_properties_change_cb (SalutContactManager *mgr,
-                                                     TpHandle room,
-                                                     const gchar *id,
-                                                     const gchar *new_color,
-                                                     const gchar *new_name,
-                                                     const gchar *new_type,
-                                                     const gchar *new_tags,
-                                                     gboolean new_is_private,
-                                                     gpointer user_data)
-{
-  SalutConnection *self = SALUT_CONNECTION (user_data);
-
-  olpc_activity_properties_changed (self, room, id, new_color,
-      new_name, new_type, new_tags, new_is_private);
 }
 
 gboolean
@@ -2530,16 +2469,26 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
                                           TpHandle sender,
                                           GibberXmppStanza *stanza)
 {
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GibberXmppNode *props_node;
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL, *tags = NULL;
   gboolean is_private = FALSE;
+  SalutOlpcActivity *activity;
 
   props_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
   if (props_node == NULL)
     return FALSE;
+
+  activity = salut_olpc_activity_manager_get_activity_by_room (
+      priv->olpc_activity_manager, room);
+  if (activity == NULL)
+    {
+      DEBUG ("no activity in room %d", room);
+      return FALSE;
+    }
 
   properties = salut_gibber_xmpp_node_extract_properties (props_node,
       "property");
@@ -2548,8 +2497,8 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
         &activity_name, &activity_type, &tags, &is_private, NULL))
     return TRUE;
 
-  olpc_activity_properties_changed (self, room, activity_id,
-      color, activity_name, activity_type, tags, is_private);
+  salut_olpc_activity_update (activity, room, activity_id, activity_name,
+      activity_type, color, tags, is_private);
 
   g_hash_table_destroy (properties);
 
@@ -2575,11 +2524,13 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
                           gpointer user_data)
 {
   SalutConnection *self = SALUT_CONNECTION (user_data);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
       (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
   GibberXmppNode *node;
   TpHandle room_handle;
   const gchar *room, *activity_id;
+  SalutOlpcActivity *activity;
 
   node = gibber_xmpp_node_get_child_ns (stanza->node, "uninvite",
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
@@ -2607,7 +2558,13 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
     }
 
   DEBUG ("received uninvite from %s", contact->name);
-  salut_contact_left_private_activity (contact, room_handle, activity_id);
+
+  activity = salut_olpc_activity_manager_get_activity_by_room (
+      priv->olpc_activity_manager, room_handle);
+  if (activity == NULL)
+    return;
+
+  salut_contact_left_activity (contact, activity);
 }
 
 #endif
@@ -2623,10 +2580,6 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
       priv->discovery_client, self);
   g_signal_connect (priv->contact_manager, "contact-change",
       G_CALLBACK (_contact_manager_contact_change_cb), self);
-#ifdef ENABLE_OLPC
-  g_signal_connect (priv->contact_manager, "activity-properties-change",
-      G_CALLBACK (_contact_manager_olpc_activity_properties_change_cb), self);
-#endif
 
   /* Create the XMPP connection manager */
   priv->xmpp_connection_manager = salut_xmpp_connection_manager_new (self,
@@ -2636,6 +2589,13 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   salut_xmpp_connection_manager_add_stanza_filter (
     priv->xmpp_connection_manager, NULL,
     uninvite_stanza_filter, uninvite_stanza_callback, self);
+
+  /* create the OLPC activity manager */
+  priv->olpc_activity_manager =
+    salut_discovery_client_create_olpc_activity_manager (priv->discovery_client,
+        self);
+  g_signal_connect (priv->olpc_activity_manager, "activity-modified",
+      G_CALLBACK (_olpc_activity_manager_activity_modified_cb), self);
 #endif
 
   priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
@@ -2685,7 +2645,7 @@ salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
       TP_CONNECTION_STATUS_REASON_REQUESTED);
   */
 
-  g_signal_connect(priv->discovery_client, "state-changed",
+  g_signal_connect (priv->discovery_client, "state-changed",
       G_CALLBACK (_discovery_client_state_changed_cb), self);
 
   if (!salut_discovery_client_start (priv->discovery_client, &client_error))
