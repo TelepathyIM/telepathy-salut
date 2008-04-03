@@ -54,6 +54,7 @@ salut_discovery_client_create_contact_manager (SalutDiscoveryClient *self,
   return virtual_method (self, connection);
 }
 
+#ifdef ENABLE_OLPC
 SalutOlpcActivityManager *
 salut_discovery_client_create_olpc_activity_manager (SalutDiscoveryClient *self,
                                                      SalutConnection *connection)
@@ -64,6 +65,7 @@ salut_discovery_client_create_olpc_activity_manager (SalutDiscoveryClient *self,
   g_assert (virtual_method != NULL);
   return virtual_method (self, connection);
 }
+#endif
 
 SalutSelf *
 salut_discovery_client_create_self (SalutDiscoveryClient *self,

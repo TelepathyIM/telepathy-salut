@@ -38,8 +38,10 @@
 
 #include "salut-avahi-muc-manager.h"
 #include "salut-avahi-contact-manager.h"
-#include "salut-avahi-olpc-activity-manager.h"
 #include "salut-avahi-self.h"
+#ifdef ENABLE_OLPC
+#include "salut-avahi-olpc-activity-manager.h"
+#endif
 
 #include "signals-marshal.h"
 
@@ -282,6 +284,7 @@ salut_avahi_discovery_client_create_contact_manager (
         self));
 }
 
+#ifdef ENABLE_OLPC
 /*
  * salut_avahi_discovery_client_create_olpc_activity_manager
  *
@@ -298,6 +301,7 @@ salut_avahi_discovery_client_create_olpc_activity_manager (
   return SALUT_OLPC_ACTIVITY_MANAGER (salut_avahi_olpc_activity_manager_new (
         connection, self));
 }
+#endif
 
 /*
  * salut_avahi_discovery_client_create_self
@@ -332,7 +336,9 @@ discovery_client_init (gpointer g_iface,
   klass->create_muc_manager = salut_avahi_discovery_client_create_muc_manager;
   klass->create_contact_manager =
     salut_avahi_discovery_client_create_contact_manager;
+#ifdef ENABLE_OLPC
   klass->create_olpc_activity_manager =
     salut_avahi_discovery_client_create_olpc_activity_manager;
+#endif
   klass->create_self = salut_avahi_discovery_client_create_self;
 }

@@ -24,8 +24,10 @@
 
 #include "salut-muc-manager.h"
 #include "salut-contact-manager.h"
-#include "salut-olpc-activity-manager.h"
 #include "salut-self.h"
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity-manager.h"
+#endif
 
 G_BEGIN_DECLS
 
@@ -50,8 +52,10 @@ struct _SalutDiscoveryClientClass
       SalutConnection *connection, SalutXmppConnectionManager *xcm);
   SalutContactManager * (*create_contact_manager) (SalutDiscoveryClient *clt,
       SalutConnection *connection);
+#ifdef ENABLE_OLPC
   SalutOlpcActivityManager * (*create_olpc_activity_manager) (
       SalutDiscoveryClient *clt, SalutConnection *connection);
+#endif
   SalutSelf * (*create_self) (SalutDiscoveryClient *clt, SalutConnection *conn,
       const gchar *nickname, const gchar *first_name, const gchar *last_name,
       const gchar *jid, const gchar *email, const gchar *published_name,
@@ -82,8 +86,10 @@ SalutMucManager * salut_discovery_client_create_muc_manager (
 SalutContactManager * salut_discovery_client_create_contact_manager (
     SalutDiscoveryClient *clt, SalutConnection *connection);
 
+#ifdef ENABLE_OLPC
 SalutOlpcActivityManager * salut_discovery_client_create_olpc_activity_manager (
     SalutDiscoveryClient *clt, SalutConnection *connection);
+#endif
 
 SalutSelf * salut_discovery_client_create_self (
     SalutDiscoveryClient *clt, SalutConnection *connection,
