@@ -56,6 +56,10 @@ CORE_SOURCES =                                          \
     salut-avahi-muc-channel.c                           \
     salut-avahi-contact-manager.h                       \
     salut-avahi-contact-manager.c                       \
+    salut-avahi-contact.h                               \
+    salut-avahi-contact.c                               \
+    salut-avahi-self.h                                  \
+    salut-avahi-self.c                                  \
     tube-iface.h                                        \
     tube-iface.c                                        \
     sha1/sha1-util.h                                    \
@@ -77,6 +81,17 @@ if ENABLE_DBUS_TUBES
     salut-tubes-channel.c
 endif
 
+if ENABLE_OLPC
+  CORE_SOURCES +=                                       \
+    salut-olpc-activity.h                               \
+    salut-olpc-activity.c                               \
+    salut-avahi-olpc-activity.h                         \
+    salut-avahi-olpc-activity.c                         \
+    salut-olpc-activity-manager.h                       \
+    salut-olpc-activity-manager.c                       \
+    salut-avahi-olpc-activity-manager.h                 \
+    salut-avahi-olpc-activity-manager.c
+endif
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES)
 
