@@ -50,9 +50,6 @@ enum
     FOUND,
     LOST,
     CONTACT_CHANGE,
-#ifdef ENABLE_OLPC
-    ACTIVITY_CHANGE,
-#endif
     LAST_SIGNAL
 };
 
@@ -64,34 +61,6 @@ typedef struct {
   gpointer user_data;
 } AvatarRequest;
 
-#ifdef ENABLE_OLPC
-typedef struct {
-  char *activity_id;
-  TpHandle room;
-  TpHandleRepoIface *room_repo;
-} SalutContactActivity;
-
-static void
-activity_free (SalutContactActivity *activity)
-{
-  //avahi_free (activity->activity_id);
-  if (activity->room != 0)
-    {
-      tp_handle_unref (activity->room_repo, activity->room);
-    }
-  g_slice_free (SalutContactActivity, activity);
-}
-
-static SalutContactActivity *
-activity_new (TpHandleRepoIface *room_repo)
-{
-  SalutContactActivity *activity = g_slice_new0 (SalutContactActivity);
-
-  activity->room_repo = room_repo;
-  return activity;
-}
-#endif
-
 /* private structure */
 typedef struct _SalutContactPrivate SalutContactPrivate;
 
@@ -101,10 +70,8 @@ struct _SalutContactPrivate
   gchar *alias;
   GList *avatar_requests;
 #ifdef ENABLE_OLPC
-  /* mDNS instance name -> SalutContactActivity */
-  GHashTable *olpc_announced_activities;
-  /* activity id -> SalutContactActivity */
-  GHashTable *olpc_private_activities;
+   /* room handle owned by the SalutOlpcActivity -> SalutOlpcActivity */
+  GHashTable *olpc_activities;
 #endif
 };
 
@@ -155,10 +122,8 @@ salut_contact_init (SalutContact *obj)
   obj->olpc_cur_act_room = 0;
   obj->olpc_ip4 = NULL;
   obj->olpc_ip6 = NULL;
-  priv->olpc_announced_activities = g_hash_table_new_full (g_str_hash,
-      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
-  priv->olpc_private_activities = g_hash_table_new_full (g_str_hash,
-      g_str_equal, (GDestroyNotify) g_free, (GDestroyNotify) activity_free);
+  priv->olpc_activities = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) g_object_unref);
 #endif
   obj->found = FALSE;
   priv->alias = NULL;
@@ -276,17 +241,18 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_NAME,
       param_spec);
+}
 
 #ifdef ENABLE_OLPC
-  signals[ACTIVITY_CHANGE] = g_signal_new("activity-change",
-      G_OBJECT_CLASS_TYPE (salut_contact_class),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_signals_marshal_VOID__STRING_UINT_STRING_STRING_STRING_STRING_STRING,
-      G_TYPE_NONE, 7,
-      G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING, G_TYPE_STRING,
-      G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
-#endif
+static void
+disconnect_activity_signal_foreach (TpHandle room,
+                                    SalutOlpcActivity *activity,
+                                    SalutContact *self)
+{
+  g_signal_handlers_disconnect_matched (activity, G_SIGNAL_MATCH_DATA, 0, 0,
+      NULL, NULL, self);
 }
+#endif
 
 void
 salut_contact_dispose (GObject *object)
@@ -313,8 +279,9 @@ salut_contact_dispose (GObject *object)
       self->olpc_cur_act_room = 0;
     }
 
-  g_hash_table_destroy (priv->olpc_announced_activities);
-  g_hash_table_destroy (priv->olpc_private_activities);
+  g_hash_table_foreach (priv->olpc_activities,
+      (GHFunc) disconnect_activity_signal_foreach, self);
+  g_hash_table_destroy (priv->olpc_activities);
 #endif
 
   salut_contact_avatar_request_flush(self, NULL, 0);
@@ -377,10 +344,14 @@ static void
 foreach_olpc_activity (gpointer key, gpointer value, gpointer user_data)
 {
   foreach_olpc_activity_ctx *ctx = user_data;
-  SalutContactActivity *activity = value;
+  SalutOlpcActivity *activity = value;
 
-  DEBUG ("%s => %u", activity->activity_id, activity->room);
-  (ctx->foreach) (activity->activity_id, activity->room, ctx->user_data);
+  /* ignore activity without ID */
+  if (activity->id == NULL)
+    return;
+
+  DEBUG ("%s => %u", activity->id, activity->room);
+  (ctx->foreach) (activity, ctx->user_data);
 }
 
 void
@@ -393,91 +364,10 @@ salut_contact_foreach_olpc_activity (SalutContact *self,
 
   DEBUG ("called");
 
-  g_hash_table_foreach (priv->olpc_announced_activities, foreach_olpc_activity,
-      &ctx);
-  g_hash_table_foreach (priv->olpc_private_activities, foreach_olpc_activity,
+  g_hash_table_foreach (priv->olpc_activities, foreach_olpc_activity,
       &ctx);
 
   DEBUG ("end");
-}
-
-static gboolean
-activity_has_id (gpointer key,
-                 gpointer value,
-                 gpointer user_data)
-{
-  SalutContactActivity *activity = value;
-  const gchar *activity_id = user_data;
-
-  return (!tp_strdiff (activity->activity_id, activity_id));
-}
-
-void
-salut_contact_takes_part_in_olpc_activity (SalutContact *self,
-                                           TpHandle room,
-                                           const gchar *activity_id)
-{
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-  SalutContactActivity *activity;
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
-
-  activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
-  if (activity != NULL)
-    {
-      DEBUG_CONTACT (self,
-          "activity is already in contact's private activities list");
-      return;
-    }
-
-  /* TODO: maybe we should add a hash that maps activity ID => activity for
-   * announced activities */
-  activity = g_hash_table_find (priv->olpc_announced_activities,
-      activity_has_id, (gchar *) activity_id);
-  if (activity != NULL)
-    {
-      DEBUG_CONTACT (self,
-          "activity is already in contact's announced activities list");
-      return;
-    }
-
-  DEBUG_CONTACT (self, "added in activity %s as he just invited us",
-      activity_id);
-
-  activity = activity_new (room_repo);
-  g_hash_table_insert (priv->olpc_private_activities,
-      g_strdup (activity_id), activity);
-
-  activity->activity_id = g_strdup (activity_id);
-  activity->room = room;
-  tp_handle_ref (room_repo, activity->room);
-
-  g_signal_emit (self, signals[CONTACT_CHANGE], 0,
-      SALUT_CONTACT_OLPC_ACTIVITIES);
-}
-
-void
-salut_contact_left_private_activity (SalutContact *self,
-                                     TpHandle room,
-                                     const gchar *activity_id)
-{
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-  SalutContactActivity *activity;
-
-  activity = g_hash_table_lookup (priv->olpc_private_activities, activity_id);
-  if (activity == NULL)
-    return;
-
-  if (activity->room != room)
-    {
-      DEBUG ("bad room handle: %d", room);
-      return;
-    }
-
-  g_hash_table_remove (priv->olpc_private_activities, activity_id);
-
-  g_signal_emit (self, signals[CONTACT_CHANGE], 0,
-      SALUT_CONTACT_OLPC_ACTIVITIES);
 }
 
 #endif
@@ -719,10 +609,6 @@ salut_contact_change (SalutContact *self,
           self->olpc_cur_act = g_strdup (current_act_id);
           SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
         }
-      else
-        {
-          tp_handle_unref (room_repo, current_act_room);
-        }
     }
 
   /* OLPC key */
@@ -786,3 +672,65 @@ salut_contact_lost (SalutContact *self)
       SALUT_CONTACT_STATUS_CHANGED);
   g_signal_emit(self, signals[LOST], 0);
 }
+
+#ifdef ENABLE_OLPC
+static void
+activity_valid_cb (SalutOlpcActivity *activity,
+                   SalutContact *self)
+{
+  /* Now we can emit the ActivitiesChanged signal */
+  DEBUG ("activity in room %d (%s) is now valid", activity->room, activity->id);
+  g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+      SALUT_CONTACT_OLPC_ACTIVITIES);
+}
+
+gboolean
+salut_contact_joined_activity (SalutContact *self,
+                               SalutOlpcActivity *activity)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  if (g_hash_table_lookup (priv->olpc_activities,
+        GUINT_TO_POINTER (activity->room)) != NULL)
+    return FALSE;
+
+  DEBUG_CONTACT (self, "joined activity %s", activity->id);
+  g_hash_table_insert (priv->olpc_activities, GUINT_TO_POINTER (activity->room),
+      activity);
+  g_object_ref (activity);
+
+  if (activity->id == NULL)
+    {
+      /* we can't emit the ActivitiesChanged signal right now as we don't have
+       * the activity ID. Thanks OLPC interface */
+      DEBUG ("activity in room %d isn't valid yet", activity->room);
+      g_signal_connect (activity, "valid", G_CALLBACK (activity_valid_cb),
+          self);
+    }
+  else
+    {
+      g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+          SALUT_CONTACT_OLPC_ACTIVITIES);
+    }
+
+  return TRUE;
+}
+
+void
+salut_contact_left_activity (SalutContact *self,
+                             SalutOlpcActivity *activity)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  g_signal_handlers_disconnect_matched (activity, G_SIGNAL_MATCH_DATA, 0, 0,
+      NULL, NULL, self);
+
+  DEBUG_CONTACT (self, "left activity %s", activity->id);
+  if (!g_hash_table_remove (priv->olpc_activities,
+        GUINT_TO_POINTER (activity->room)))
+    return;
+
+  g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+      SALUT_CONTACT_OLPC_ACTIVITIES);
+}
+#endif

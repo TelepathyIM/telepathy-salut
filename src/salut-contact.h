@@ -29,6 +29,9 @@
 
 #include "salut-presence.h"
 #include "salut-connection.h"
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity.h"
+#endif
 
 G_BEGIN_DECLS
 
@@ -120,17 +123,16 @@ salut_contact_get_avatar(SalutContact *contact,
 
 #ifdef ENABLE_OLPC
 typedef void (*SalutContactOLPCActivityFunc)
-    (const gchar *id, TpHandle handle, gpointer user_data);
+    (SalutOlpcActivity *activity, gpointer user_data);
 
 void salut_contact_foreach_olpc_activity (SalutContact *self,
     SalutContactOLPCActivityFunc foreach, gpointer user_data);
 
-void salut_contact_takes_part_in_olpc_activity (SalutContact *self,
-    TpHandle room, const gchar *activity_id);
+gboolean salut_contact_joined_activity (SalutContact *self,
+    SalutOlpcActivity *activity);
 
-void salut_contact_left_private_activity (SalutContact *self, TpHandle room,
-    const gchar *activity_id);
-
+void salut_contact_left_activity (SalutContact *self,
+    SalutOlpcActivity *activity);
 #endif
 
 /* restricted methods */
