@@ -712,8 +712,13 @@ contact_resolved_cb (GaServiceResolver *resolver,
 #endif
 
   salut_contact_change (contact, status, status_msg, nick, first, last,
-      avatar_token, jid, olpc_color, current_act_id, current_act_room, olpc_key,
-      ip4_addr, ip6_addr);
+      avatar_token, jid,
+#ifdef ENABLE_OLPC
+      olpc_color, current_act_id, current_act_room, olpc_key, ip4_addr, ip6_addr
+#else
+      NULL, NULL, 0, NULL, NULL, NULL
+#endif
+      );
 
   avahi_free (status_msg);
   avahi_free (nick);
