@@ -553,6 +553,18 @@ salut_olpc_activity_joined (SalutOlpcActivity *self,
   return TRUE;
 }
 
+void
+salut_olpc_activity_left (SalutOlpcActivity *self)
+{
+  SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
+
+  if (priv->muc == NULL)
+    return;
+
+  g_object_unref (priv->muc);
+  priv->muc = NULL;
+}
+
 typedef struct
 {
   SalutOlpcActivity *self;

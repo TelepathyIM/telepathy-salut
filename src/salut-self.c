@@ -711,6 +711,7 @@ _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 
   if (remove)
     {
+      salut_olpc_activity_left (activity);
       salut_olpc_activity_revoke_invitations (activity);
     }
 

@@ -82,6 +82,8 @@ gboolean salut_olpc_activity_update (SalutOlpcActivity *activity,
 gboolean salut_olpc_activity_joined (SalutOlpcActivity *activity,
     GError **error);
 
+void salut_olpc_activity_left (SalutOlpcActivity *activity);
+
 void salut_olpc_activity_revoke_invitations (SalutOlpcActivity *activity);
 
 GHashTable * salut_olpc_activity_create_properties_table (
