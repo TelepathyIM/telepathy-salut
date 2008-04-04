@@ -489,7 +489,6 @@ salut_olpc_activity_update (SalutOlpcActivity *self,
       self->is_private = is_private;
       changed = TRUE;
 
-      /* FIXME: do we still need these function as public ? */
       if (is_private)
         {
           DEBUG ("activity is not public anymore. Stop to announce it");

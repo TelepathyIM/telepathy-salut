@@ -34,11 +34,10 @@ typedef struct _SalutOlpcActivityClass SalutOlpcActivityClass;
 struct _SalutOlpcActivityClass {
     GObjectClass parent_class;
 
-    /* public abstract methods */
+    /* private abstract methods */
     gboolean (*announce) (SalutOlpcActivity *activity, GError **error);
     void (*stop_announce) (SalutOlpcActivity *activity);
 
-    /* private abstract methods */
     gboolean (*update) (SalutOlpcActivity *activity, GError **error);
 };
 

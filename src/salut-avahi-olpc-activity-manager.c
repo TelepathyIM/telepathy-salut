@@ -178,8 +178,6 @@ browser_found (GaServiceBrowser *browser,
       return;
     }
 
-  /* FIXME: maybe we could just use salut_olpc_activity_manager_get_activity_by_room
-   * and so the hash table could be private ? */
   activity = salut_olpc_activity_manager_ensure_activity_by_room (mgr,
       room);
 

@@ -552,5 +552,4 @@ salut_avahi_olpc_activity_remove_service (SalutAvahiOlpcActivity *self,
 
   priv->resolvers = g_slist_remove (priv->resolvers, resolver);
   g_object_unref (resolver);
-  /* FIXME: what should we do when there is no more resolver ? */
 }
