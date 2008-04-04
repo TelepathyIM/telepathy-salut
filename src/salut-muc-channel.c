@@ -338,6 +338,9 @@ salut_muc_channel_constructor (GType type, guint n_props,
       NULL);
   g_assert (priv->muc_manager != NULL);
 
+  /* no need to keep a ref on the muc manager as it keeps a ref on us */
+  g_object_unref (priv->muc_manager);
+
   /* Connect to the bus */
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object(bus, priv->object_path, obj);
@@ -804,12 +807,6 @@ salut_muc_channel_dispose (GObject *object)
     {
       g_hash_table_destroy (priv->senders);
       priv->senders = NULL;
-    }
-
-  if (priv->muc_manager != NULL)
-    {
-      g_object_unref (priv->muc_manager);
-      priv->muc_manager = NULL;
     }
 
   /* release any references held by the object here */
