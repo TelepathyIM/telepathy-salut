@@ -249,8 +249,7 @@ browser_removed (GaServiceBrowser *browser,
       return;
     }
 
-  activity = g_hash_table_lookup (mgr->activities_by_room,
-      GUINT_TO_POINTER (room));
+  activity = salut_olpc_activity_manager_get_activity_by_room (mgr, room);
   if (activity == NULL)
     {
       return;

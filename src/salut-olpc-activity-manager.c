@@ -53,6 +53,9 @@ typedef struct _SalutOlpcActivityManagerPrivate SalutOlpcActivityManagerPrivate;
 
 struct _SalutOlpcActivityManagerPrivate
 {
+  /* TpHandle (owned by the activity) => SalutOlpcActivity */
+  GHashTable *activities_by_room;
+
   gboolean dispose_has_run;
 };
 
@@ -61,10 +64,11 @@ struct _SalutOlpcActivityManagerPrivate
 static void
 salut_olpc_activity_manager_init (SalutOlpcActivityManager *self)
 {
-   /* room handle owned by the SalutOlpcActivity -> SalutOlpcActivity.
-    * We just keep a weak reference on the activity object so we'll remove
+  SalutOlpcActivityManagerPrivate *priv =
+    SALUT_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (self);
+   /* We just keep a weak reference on the activity object so we'll remove
     * it from the hash when no one is using anymore */
-  self->activities_by_room = g_hash_table_new_full (g_direct_hash,
+  priv->activities_by_room = g_hash_table_new_full (g_direct_hash,
       g_direct_equal, NULL, NULL);
 }
 
@@ -174,8 +178,10 @@ activity_finalized_cb (gpointer data,
                        GObject *activity)
 {
   SalutOlpcActivityManager *self = SALUT_OLPC_ACTIVITY_MANAGER (data);
+  SalutOlpcActivityManagerPrivate *priv =
+    SALUT_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (self);
 
-  g_hash_table_foreach_remove (self->activities_by_room,
+  g_hash_table_foreach_remove (priv->activities_by_room,
       remove_activity_foreach, activity);
 }
 
@@ -204,12 +210,12 @@ salut_olpc_activity_manager_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  if (self->activities_by_room != NULL)
+  if (priv->activities_by_room != NULL)
     {
-      g_hash_table_foreach_remove (self->activities_by_room,
+      g_hash_table_foreach_remove (priv->activities_by_room,
           dispose_activity_foreach, self);
-      g_hash_table_destroy (self->activities_by_room);
-      self->activities_by_room = NULL;
+      g_hash_table_destroy (priv->activities_by_room);
+      priv->activities_by_room = NULL;
     }
 
   if (G_OBJECT_CLASS (salut_olpc_activity_manager_parent_class)->dispose)
@@ -235,7 +241,9 @@ SalutOlpcActivity *
 salut_olpc_activity_manager_get_activity_by_room (SalutOlpcActivityManager *self,
                                                   TpHandle room)
 {
-  return g_hash_table_lookup (self->activities_by_room,
+  SalutOlpcActivityManagerPrivate *priv =
+    SALUT_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (self);
+  return g_hash_table_lookup (priv->activities_by_room,
       GUINT_TO_POINTER (room));
 }
 
@@ -245,8 +253,10 @@ salut_olpc_activity_manager_ensure_activity_by_room (
     TpHandle room)
 {
   SalutOlpcActivity *activity;
+  SalutOlpcActivityManagerPrivate *priv =
+    SALUT_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (self);
 
-  activity = g_hash_table_lookup (self->activities_by_room,
+  activity = g_hash_table_lookup (priv->activities_by_room,
       GUINT_TO_POINTER (room));
 
   if (activity != NULL)
@@ -272,9 +282,11 @@ salut_olpc_activity_manager_create_activity (SalutOlpcActivityManager *self,
                                              TpHandle room)
 {
   SalutOlpcActivity *activity;
+  SalutOlpcActivityManagerPrivate *priv =
+    SALUT_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (self);
 
   g_assert (room != 0);
-  g_assert (g_hash_table_lookup (self->activities_by_room, GUINT_TO_POINTER (
+  g_assert (g_hash_table_lookup (priv->activities_by_room, GUINT_TO_POINTER (
         room)) == NULL);
 
   activity = SALUT_OLPC_ACTIVITY_MANAGER_GET_CLASS (self)->create_activity (
@@ -282,7 +294,7 @@ salut_olpc_activity_manager_create_activity (SalutOlpcActivityManager *self,
   salut_olpc_activity_update (activity, room, NULL, NULL, NULL, NULL, NULL,
       TRUE);
 
-  g_hash_table_insert (self->activities_by_room, GUINT_TO_POINTER (room),
+  g_hash_table_insert (priv->activities_by_room, GUINT_TO_POINTER (room),
       activity);
 
   g_signal_connect (activity, "modified", G_CALLBACK (activity_modified_cb),

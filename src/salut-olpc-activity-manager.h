@@ -48,8 +48,6 @@ struct _SalutOlpcActivityManager {
 
     /* private */
     SalutConnection *connection;
-    /* TpHandle (owned by the activity) => SalutOlpcActivity */
-    GHashTable *activities_by_room;
 };
 
 GType salut_olpc_activity_manager_get_type(void);
