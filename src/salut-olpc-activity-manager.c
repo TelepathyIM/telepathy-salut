@@ -325,12 +325,10 @@ salut_olpc_activity_manager_got_invitation (SalutOlpcActivityManager *self,
    * as, for now, we don't manage private activity membership (it's PS job) */
 
   /* add the inviter to the activity */
+  salut_contact_joined_activity (inviter, activity);
 
-  if (salut_contact_joined_activity (inviter, activity))
-    {
-      /* contact reffed the activity */
-      g_object_unref (activity);
-    }
+  /* contact reffed the activity if it didn't hold a ref on it yet */
+  g_object_unref (activity);
 
   return activity;
 }
