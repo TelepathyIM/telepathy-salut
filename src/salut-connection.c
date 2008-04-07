@@ -661,12 +661,9 @@ salut_connection_dispose (GObject *object)
 {
   SalutConnection *self = SALUT_CONNECTION (object);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  DBusGProxy *bus_proxy;
-
 
   if (priv->dispose_has_run)
     return;
-  bus_proxy = tp_get_bus_proxy ();
 
   priv->dispose_has_run = TRUE;
 
