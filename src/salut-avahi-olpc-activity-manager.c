@@ -192,7 +192,6 @@ browser_found (GaServiceBrowser *browser,
       contact_name);
   salut_olpc_activity_manager_contact_joined (mgr, contact, activity);
 
-  /* the contact reffed the activity */
   g_object_unref (activity);
   tp_handle_unref (room_repo, room);
   g_free (contact_name);
@@ -239,13 +238,14 @@ browser_removed (GaServiceBrowser *browser,
     }
 
   contact_handle = tp_handle_lookup (contact_repo, contact_name, NULL, &error);
-  g_free (contact_name);
   if (contact_handle == 0)
     {
       DEBUG ("Invalid contact name %s: %s", contact_name, error->message);
       g_error_free (error);
+      g_free (contact_name);
       return;
     }
+  g_free (contact_name);
 
   activity = salut_olpc_activity_manager_get_activity_by_room (mgr, room);
   if (activity == NULL)
@@ -267,6 +267,7 @@ browser_removed (GaServiceBrowser *browser,
     return;
 
   salut_olpc_activity_manager_contact_left (mgr, contact, activity);
+  g_object_unref (contact);
 }
 
 static void
