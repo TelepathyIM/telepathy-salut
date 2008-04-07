@@ -212,7 +212,6 @@ salut_muc_channel_set_property (GObject     *object,
       break;
    case PROP_XMPP_CONNECTION_MANAGER:
       priv->xmpp_connection_manager = g_value_get_object (value);
-      g_object_ref (priv->xmpp_connection_manager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -790,12 +789,6 @@ salut_muc_channel_dispose (GObject *object)
     g_object_unref(priv->muc_connection);
     priv->muc_connection = NULL;
   }
-
-  if (priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
-    }
 
   if (priv->timeout != 0)
     {
