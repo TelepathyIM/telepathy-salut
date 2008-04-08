@@ -204,6 +204,8 @@ salut_olpc_activity_dispose (GObject *object)
 
   if (priv->muc != NULL)
     {
+      g_signal_handlers_disconnect_matched (priv->muc, G_SIGNAL_MATCH_DATA,
+          0, 0, NULL, NULL, self);
       g_object_unref (priv->muc);
       priv->muc = NULL;
     }
@@ -521,6 +523,16 @@ salut_olpc_activity_update (SalutOlpcActivity *self,
   return changed;
 }
 
+static void
+muc_channel_closed_cb (SalutMucChannel *chan,
+                       SalutOlpcActivity *self)
+{
+  SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
+
+  g_object_unref (priv->muc);
+  priv->muc = NULL;
+}
+
 gboolean
 salut_olpc_activity_joined (SalutOlpcActivity *self,
                             GError **error)
@@ -550,6 +562,9 @@ salut_olpc_activity_joined (SalutOlpcActivity *self,
       return FALSE;
     }
 
+  g_signal_connect (priv->muc, "closed", G_CALLBACK (muc_channel_closed_cb),
+      self);
+
   return TRUE;
 }
 
@@ -562,6 +577,8 @@ salut_olpc_activity_left (SalutOlpcActivity *self)
     return;
 
   g_object_unref (priv->muc);
+  g_signal_handlers_disconnect_matched (priv->muc, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, self);
   priv->muc = NULL;
 }
 
