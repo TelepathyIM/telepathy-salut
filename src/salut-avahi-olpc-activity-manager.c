@@ -237,19 +237,22 @@ browser_removed (GaServiceBrowser *browser,
       return;
     }
 
-  contact_handle = tp_handle_lookup (contact_repo, contact_name, NULL, &error);
+  contact_handle = tp_handle_ensure (contact_repo, contact_name, NULL, &error);
   if (contact_handle == 0)
     {
       DEBUG ("Invalid contact name %s: %s", contact_name, error->message);
       g_error_free (error);
       g_free (contact_name);
+      tp_handle_unref (room_repo, room);
       return;
     }
   g_free (contact_name);
 
   activity = salut_olpc_activity_manager_get_activity_by_room (mgr, room);
+  tp_handle_unref (room_repo, room);
   if (activity == NULL)
     {
+      tp_handle_unref (contact_repo, contact_handle);
       return;
     }
 
@@ -262,6 +265,7 @@ browser_removed (GaServiceBrowser *browser,
 
   contact = salut_contact_manager_get_contact (contact_manager,
       contact_handle);
+  tp_handle_unref (contact_repo, contact_handle);
   g_object_unref (contact_manager);
   if (contact == NULL)
     return;
