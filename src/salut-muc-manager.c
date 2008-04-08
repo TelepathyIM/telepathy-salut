@@ -264,6 +264,14 @@ salut_muc_manager_finalize (GObject *object)
   G_OBJECT_CLASS (salut_muc_manager_parent_class)->finalize (object);
 }
 
+static void
+closed_channel_foreach (TpHandle handle,
+                        SalutMucChannel *channel,
+                        SalutMucManager *self)
+{
+  salut_muc_channel_emit_closed (channel);
+}
+
 /* Channel Factory interface */
 
 static void
@@ -275,6 +283,7 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
     {
       GHashTable *tmp = priv->text_channels;
       priv->text_channels = NULL;
+      g_hash_table_foreach (tmp, (GHFunc) closed_channel_foreach, mgr);
       g_hash_table_destroy(tmp);
   }
 

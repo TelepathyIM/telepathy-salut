@@ -1109,6 +1109,12 @@ salut_muc_channel_disconnected(GibberTransport *transport,
   tp_svc_channel_emit_closed(self);
 }
 
+void
+salut_muc_channel_emit_closed (SalutMucChannel *self)
+{
+  tp_svc_channel_emit_closed (self);
+}
+
 /* channel interfaces */
 /**
  * salut_muc_channel_get_interfaces

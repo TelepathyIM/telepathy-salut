@@ -87,6 +87,8 @@ gboolean salut_muc_channel_publish_service (SalutMucChannel *self);
 gboolean salut_muc_channel_add_member (GObject *iface, TpHandle handle,
     const gchar *message, GError **error);
 
+void salut_muc_channel_emit_closed (SalutMucChannel *chan);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_MUC_CHANNEL_H__*/
