@@ -725,6 +725,8 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
           g_signal_connect (xmpp_connection_manager, "connection-failed",
               G_CALLBACK (xmpp_connection_manager_connection_failed_cb), ctx);
         }
+
+      g_object_unref (contact);
     }
 
   g_object_unref (msg);
