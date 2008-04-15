@@ -41,6 +41,14 @@
 #include "tube-iface.h"
 #include "sha1/sha1-util.h"
 
+/* When we receive D-Bus messages to be delivered to the application and the
+ * application is not yet connected to the D-Bus tube, theses D-Bus messages
+ * are queued and delivered when the application connects to the D-Bus tube.
+ *
+ * If the application never connects, there is a risk that the contact sends
+ * too many messages and eat all the memory. To avoid this, there is an
+ * arbitrary limit on the queue size set to 4MB. */
+#define MAX_QUEUE_SIZE (4096*1024)
 
 static void
 tube_iface_init (gpointer g_iface, gpointer iface_data);
@@ -105,6 +113,11 @@ struct _SalutTubeDBusPrivate
   DBusServer *dbus_srv;
   /* the connection to dbus_srv from a local client, or NULL */
   DBusConnection *dbus_conn;
+  /* the queue of D-Bus messages to be delivered to a local client when it
+   * will connect */
+  GSList *dbus_msg_queue;
+  /* current size of the queue in bytes. The maximum is MAX_QUEUE_SIZE */
+  unsigned long dbus_msg_queue_size;
   /* mapping of contact handle -> D-Bus name (NULL for 1-1 D-Bus tubes) */
   GHashTable *dbus_names;
 
@@ -259,6 +272,8 @@ new_connection_cb (DBusServer *server,
 {
   SalutTubeDBus *tube = SALUT_TUBE_DBUS (data);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);
+  guint32 serial;
+  GSList *i;
 
   if (priv->dbus_conn != NULL)
     /* we already have a connection; drop this new one */
@@ -271,6 +286,25 @@ new_connection_cb (DBusServer *server,
   dbus_connection_setup_with_g_main (conn, NULL);
   dbus_connection_add_filter (conn, filter_cb, tube, NULL);
   priv->dbus_conn = conn;
+
+  /* We may have received messages to deliver before the local connection is
+   * established. Theses messages are kept in the dbus_msg_queue list and are
+   * delivered as soon as we get the connection. */
+  DEBUG ("%u messages in the queue (%lu bytes)",
+         g_slist_length (priv->dbus_msg_queue), priv->dbus_msg_queue_size);
+  priv->dbus_msg_queue = g_slist_reverse (priv->dbus_msg_queue);
+  for (i = priv->dbus_msg_queue; i != NULL; i = g_slist_delete_link (i, i))
+    {
+      DBusMessage *msg = i->data;
+      DEBUG ("delivering queued message from '%s' to '%s' on the "
+             "new connection",
+             dbus_message_get_sender (msg),
+             dbus_message_get_destination (msg));
+      dbus_connection_send (priv->dbus_conn, msg, &serial);
+      dbus_message_unref (msg);
+    }
+  priv->dbus_msg_queue = NULL;
+  priv->dbus_msg_queue_size = 0;
 }
 
 static void
@@ -428,6 +462,18 @@ salut_tube_dbus_dispose (GObject *object)
           DEBUG ("unlink of %s failed: %s", priv->socket_path,
               g_strerror (errno));
         }
+    }
+
+  if (priv->dbus_msg_queue != NULL)
+    {
+      GSList *i;
+      for (i = priv->dbus_msg_queue; i != NULL; i = g_slist_delete_link (i, i))
+        {
+          DBusMessage *msg = i->data;
+          dbus_message_unref (msg);
+        }
+      priv->dbus_msg_queue = NULL;
+      priv->dbus_msg_queue_size = 0;
     }
 
   g_free (priv->dbus_srv_addr);
@@ -833,12 +879,6 @@ message_received (SalutTubeDBus *tube,
   DBusError error = {0,};
   guint32 serial;
 
-  if (!priv->dbus_conn)
-    {
-      DEBUG ("no D-Bus connection");
-      return;
-    }
-
   msg = dbus_message_demarshal (data, len, &error);
 
   if (msg == NULL)
@@ -878,6 +918,32 @@ message_received (SalutTubeDBus *tube,
           goto unref;
         }
     }
+
+  if (!priv->dbus_conn)
+    {
+      DEBUG ("no D-Bus connection: queuing the message");
+
+      /* If the application never connects to the private dbus connection, we
+       * don't want to eat all the memory. Only queue MAX_QUEUE_SIZE bytes. If
+       * there are more messages, drop them. */
+      if (priv->dbus_msg_queue_size + len > MAX_QUEUE_SIZE)
+        {
+          DEBUG ("D-Bus message queue size limit reached (%u bytes). "
+                 "Ignore this message.",
+                 MAX_QUEUE_SIZE);
+          goto unref;
+        }
+
+      priv->dbus_msg_queue = g_slist_prepend (priv->dbus_msg_queue, msg);
+      priv->dbus_msg_queue_size += len;
+
+      /* returns without unref the message */
+      return;
+    }
+
+  DEBUG ("delivering message from '%s' to '%s'",
+         dbus_message_get_sender (msg),
+         dbus_message_get_destination (msg));
 
   /* XXX: what do do if this returns FALSE? */
   dbus_connection_send (priv->dbus_conn, msg, &serial);
