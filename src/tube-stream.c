@@ -280,7 +280,7 @@ bytestream_write_blocked_cb (GibberBytestreamIface *bytestream,
       DEBUG ("bytestream unblocked, restart to read data from the tube socket");
     }
 
-  gibber_transport_block (transport, blocked);
+  gibber_transport_block_receiving (transport, blocked);
 }
 
 static void

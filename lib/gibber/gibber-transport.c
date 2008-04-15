@@ -261,12 +261,12 @@ gibber_transport_emit_buffer_empty (GibberTransport *transport)
 }
 
 void
-gibber_transport_block (GibberTransport *transport,
-                        gboolean block)
+gibber_transport_block_receiving (GibberTransport *transport,
+                                  gboolean block)
 {
   GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
 
-  g_assert (cls->block != NULL);
-  cls->block (transport, block);
+  g_assert (cls->block_receiving != NULL);
+  cls->block_receiving (transport, block);
 }
 

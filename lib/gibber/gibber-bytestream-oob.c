@@ -1180,7 +1180,7 @@ gibber_bytestream_oob_block_read (GibberBytestreamOOB *self,
   priv->read_blocked = block;
 
   DEBUG ("%s the transport bytestream", block ? "block": "unblock");
-  gibber_transport_block (priv->transport, block);
+  gibber_transport_block_receiving (priv->transport, block);
 }
 
 static void

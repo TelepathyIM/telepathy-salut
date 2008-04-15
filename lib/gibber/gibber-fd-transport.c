@@ -50,7 +50,7 @@ static void _do_disconnect(GibberFdTransport *self);
 static gboolean gibber_fd_transport_buffer_is_empty (
     GibberTransport *transport);
 
-static void gibber_fd_transport_block (GibberTransport *transport,
+static void gibber_fd_transport_block_receiving (GibberTransport *transport,
     gboolean block);
 
 G_DEFINE_TYPE(GibberFdTransport, gibber_fd_transport, GIBBER_TYPE_TRANSPORT)
@@ -111,7 +111,7 @@ gibber_fd_transport_class_init (GibberFdTransportClass *gibber_fd_transport_clas
   transport_class->disconnect = gibber_fd_transport_disconnect;
   transport_class->get_sockaddr = gibber_fd_transport_get_sockaddr;
   transport_class->buffer_is_empty = gibber_fd_transport_buffer_is_empty;
-  transport_class->block = gibber_fd_transport_block;
+  transport_class->block_receiving = gibber_fd_transport_block_receiving;
 
   gibber_fd_transport_class->read = gibber_fd_transport_read;
   gibber_fd_transport_class->write = gibber_fd_transport_write;
@@ -396,21 +396,21 @@ gibber_fd_transport_buffer_is_empty (GibberTransport *transport)
 }
 
 static void
-gibber_fd_transport_block (GibberTransport *transport,
-                           gboolean block)
+gibber_fd_transport_block_receiving (GibberTransport *transport,
+                                     gboolean block)
 {
   GibberFdTransport *self = GIBBER_FD_TRANSPORT (transport);
   GibberFdTransportPrivate *priv = GIBBER_FD_TRANSPORT_GET_PRIVATE (self);
 
   if (block && priv->watch_in != 0)
     {
-      DEBUG ("block the transport");
+      DEBUG ("block receiving from the transport");
       g_source_remove (priv->watch_in);
       priv->watch_in = 0;
     }
   else if (!block && priv->watch_in == 0)
     {
-      DEBUG ("unblock the transport");
+      DEBUG ("unblock receiving from the transport");
       priv->watch_in = g_io_add_watch (priv->channel, G_IO_IN,
           _channel_io_in, self);
     }
