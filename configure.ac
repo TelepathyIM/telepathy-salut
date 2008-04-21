@@ -126,15 +126,10 @@ AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for telepathy-glib
-PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.5.14])
+PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.6.1])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
-
-AC_CHECK_LIB(telepathy-glib, tp_debug_set_flags,
-  [ AC_DEFINE(HAVE_TP_DEBUG_SET_FLAGS, [],
-    [Define if tp_debug_set_flags() function is provided by telepathy-glib]) ],
-  [], [$TELEPATHY_GLIB_LIBS])
 
 dnl Check for OpenSSL
 AC_ARG_ENABLE(ssl,
