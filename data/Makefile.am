@@ -4,11 +4,11 @@ managerdir = $(datadir)/telepathy/managers
 manager_DATA = salut.manager
 
 servicedir = $(datadir)/dbus-1/services
-service_DATA = salut.service.in
+service_DATA = org.freedesktop.Telepathy.ConnectionManager.salut.service
 
 org.freedesktop.Telepathy.ConnectionManager.salut.service: salut.service.in \
 		Makefile
-	@sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@
+	@sed -e "s|[@]libexecdir[@]|$(libexecdir)|" $< > $@
 
 CLEANFILES = $(service_DATA) $(manager_DATA)
 
