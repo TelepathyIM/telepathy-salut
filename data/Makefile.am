@@ -1,21 +1,16 @@
-# Telepathy manager file
+EXTRA_DIST = salut.service.in
+
 managerdir = $(datadir)/telepathy/managers
 manager_DATA = salut.manager
 
-# Dbus service file
-servicedir = $(DBUS_SERVICES_DIR)
-service_in_files = org.freedesktop.Telepathy.ConnectionManager.salut.service.in
-service_DATA = $(service_in_files:.service.in=.service)
+servicedir = $(datadir)/dbus-1/services
+service_DATA = salut.service.in
 
-BUILT_FILES = $(service_DATA) $(manager_DATA)
-
-CLEANFILES = $(BUILT_FILES)
-
-EXTRA_DIST = $(service_in_files)
-
-# Rule to make the service file with libexecdir expanded
-$(service_DATA): $(service_in_files) Makefile
+org.freedesktop.Telepathy.ConnectionManager.salut.service: salut.service.in \
+		Makefile
 	@sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@
+
+CLEANFILES = $(service_DATA) $(manager_DATA)
 
 $(manager_DATA): always-build
 	$(MAKE) -C ../src write-mgr-file
