@@ -13,7 +13,7 @@ elif automake-1.8 --version &>/dev/null && \
     export ACLOCAL
 fi
 
-autoreconf -i
+autoreconf -i -f
 
 run_configure=true
 for arg in $*; do
