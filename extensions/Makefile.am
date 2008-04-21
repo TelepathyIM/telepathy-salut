@@ -2,8 +2,6 @@ SUBDIRS = tools
 
 tools_dir = $(srcdir)/tools
 
-include _gen/spec-gen.am
-
 EXTRA_DIST = \
     Channel_Type_File_Transfer.xml \
     channel.xml \
