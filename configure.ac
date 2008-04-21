@@ -223,7 +223,7 @@ AC_OUTPUT( Makefile                       \
            m4/Makefile                    \
            data/Makefile                  \
            extensions/Makefile            \
-           extensions/tools/Makefile      \
+           tools/Makefile		  \
            tests/Makefile                 \
            tests/inputs/Makefile
 )

@@ -1,6 +1,4 @@
-SUBDIRS = tools
-
-tools_dir = $(srcdir)/tools
+tools_dir = $(top_srcdir)/tools
 
 EXTRA_DIST = \
     Channel_Type_File_Transfer.xml \
