@@ -1,4 +1,6 @@
 <!-- Stylesheet to extract C enumerations from the Telepathy spec.
+The master copy of this stylesheet is in telepathy-glib - please make any
+changes there.
 
 Copyright (C) 2006, 2007 Collabora Limited
 
@@ -74,7 +76,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
     <xsl:value-of select="tp:license"/>
     <xsl:value-of select="tp:docstring"/>
     <xsl:text>&#10; */&#10;&#10;</xsl:text>
-    <xsl:apply-templates select="node"/>
+    <xsl:apply-templates/>
   </xsl:template>
 
 </xsl:stylesheet>
