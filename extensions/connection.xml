@@ -2,7 +2,7 @@
   xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0"
   xmlns:xi="http://www.w3.org/2001/XInclude">
 
-<tp:title>Salut-specific extensions to the Telepathy interfaces</tp:title>
+<tp:title>Salut-specific extensions to Connection interfaces</tp:title>
 
 <tp:copyright>Copyright (C) 2007 Collabora Limited</tp:copyright>
 
@@ -22,7 +22,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
 </tp:license>
 
-<xi:include href="channel.xml"/>
-<xi:include href="connection.xml"/>
+<xi:include href="OLPC_Buddy_Info.xml"/>
+<xi:include href="OLPC_Activity_Properties.xml"/>
 
 </tp:spec>
