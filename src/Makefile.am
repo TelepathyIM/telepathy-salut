@@ -27,6 +27,8 @@ CORE_SOURCES =                                          \
     salut-muc-manager.h                                 \
     salut-muc-channel.c                                 \
     salut-muc-channel.h                                 \
+    salut-tubes-manager.c                               \
+    salut-tubes-manager.h                               \
     salut-contact.h                                     \
     salut-contact.c                                     \
     salut-self.h                                        \

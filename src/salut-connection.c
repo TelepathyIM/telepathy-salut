@@ -44,9 +44,7 @@
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-bytestream-manager.h"
-/*
 #include "salut-tubes-manager.h"
-*/
 
 #include "salut-presence.h"
 
@@ -172,8 +170,7 @@ struct _SalutConnectionPrivate
   SalutMucManager *muc_manager;
 
   /* Tubes channel manager */
-  /* XXX disabled while private tubes aren't implemented */
-  /* SalutTubesManager *tubes_manager; */
+  SalutTubesManager *tubes_manager;
 
   /* Bytestream manager */
   SalutBytestreamManager *bytestream_manager;
@@ -2608,7 +2605,7 @@ static GPtrArray*
 salut_connection_create_channel_factories(TpBaseConnection *base) {
   SalutConnection *self = SALUT_CONNECTION(base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  GPtrArray *factories = g_ptr_array_sized_new(3);
+  GPtrArray *factories = g_ptr_array_sized_new(4);
 
   /* Create the contact manager */
   priv->contact_manager = salut_contact_manager_new (self);
@@ -2635,16 +2632,12 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   priv->muc_manager = salut_muc_manager_new (self,
       priv->xmpp_connection_manager);
 
-  /*
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
-  */
 
-  g_ptr_array_add(factories, priv->contact_manager);
-  g_ptr_array_add(factories, priv->im_manager);
-  g_ptr_array_add(factories, priv->muc_manager);
-  /*
+  g_ptr_array_add (factories, priv->contact_manager);
+  g_ptr_array_add (factories, priv->im_manager);
+  g_ptr_array_add (factories, priv->muc_manager);
   g_ptr_array_add (factories, priv->tubes_manager);
-  */
 
   return factories;
 }
