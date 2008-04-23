@@ -37,6 +37,7 @@
 #include "salut-muc-manager.h"
 #include "salut-muc-channel.h"
 #include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-iq-helper.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-factory-iface.h>
 
@@ -59,6 +60,8 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
 enum
 {
   PROP_CONNECTION = 1,
+  PROP_CONTACT_MANAGER = 2,
+  PROP_XMPP_CONNECTION_MANAGER = 3,
   LAST_PROPERTY
 };
 
@@ -67,6 +70,8 @@ typedef struct _SalutTubesManagerPrivate \
 struct _SalutTubesManagerPrivate
 {
   SalutConnection *conn;
+  SalutContactManager *contact_manager;
+  SalutXmppConnectionManager *xmpp_connection_manager;
 
   GHashTable *channels;
 
@@ -89,6 +94,63 @@ salut_tubes_manager_init (SalutTubesManager *self)
 
   priv->conn = NULL;
   priv->dispose_has_run = FALSE;
+}
+
+/* Filter for 1-1 tube request (XEP-proto-tubes)
+ * http://telepathy.freedesktop.org/xmpp/tubes.html */
+static gboolean
+iq_tube_request_filter (SalutXmppConnectionManager *xcm,
+                        GibberXmppConnection *conn,
+                        GibberXmppStanza *stanza,
+                        SalutContact *contact,
+                        gpointer user_data)
+{
+  GibberStanzaType type;
+  GibberStanzaSubType sub_type;
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
+  if (type != GIBBER_STANZA_TYPE_IQ)
+    return FALSE;
+
+  if (sub_type != GIBBER_STANZA_SUB_TYPE_SET)
+    return FALSE;
+
+  return (gibber_xmpp_node_get_child_ns (stanza->node, "tube",
+        GIBBER_TELEPATHY_NS_TUBES) != NULL) ||
+         (gibber_xmpp_node_get_child_ns (stanza->node, "close",
+                 GIBBER_TELEPATHY_NS_TUBES) != NULL);
+}
+
+static void
+iq_tube_request_cb (SalutXmppConnectionManager *xcm,
+                    GibberXmppConnection *conn,
+                    GibberXmppStanza *stanza,
+                    SalutContact *contact,
+                    gpointer user_data)
+{
+  /*
+  SalutTubesManager *self = SALUT_TUBES_MANAGER (user_data);
+  SalutTubesManagerPrivate *priv =
+    SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  */
+  GibberXmppNode *tube, *close;
+  GibberXmppStanza *reply;
+
+  /* after this point, the message is for us, so in all cases we either handle
+   * it or send an error reply */
+
+  tube = gibber_xmpp_node_get_child_ns (stanza->node, "tube", GIBBER_TELEPATHY_NS_TUBES);
+  close = gibber_xmpp_node_get_child_ns (stanza->node, "close", GIBBER_TELEPATHY_NS_TUBES);
+
+  DEBUG ("received a tube request: tube=%p close=%p", tube, close);
+
+  reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_FEATURE_NOT_IMPLEMENTED,
+      "Implementation not finished yet...");
+  gibber_xmpp_connection_send (conn, reply, NULL);
+
+  g_object_unref (reply);
+
+  return;
 }
 
 static GObject *
@@ -145,6 +207,12 @@ salut_tubes_manager_get_property (GObject *object,
       case PROP_CONNECTION:
         g_value_set_object (value, priv->conn);
         break;
+      case PROP_CONTACT_MANAGER:
+        g_value_set_object (value, priv->contact_manager);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -165,6 +233,14 @@ salut_tubes_manager_set_property (GObject *object,
     {
       case PROP_CONNECTION:
         priv->conn = g_value_get_object (value);
+        break;
+      case PROP_CONTACT_MANAGER:
+        priv->contact_manager = g_value_get_object (value);
+        g_object_ref (priv->contact_manager);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -201,6 +277,33 @@ salut_tubes_manager_class_init (
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
+  param_spec = g_param_spec_object (
+      "contact-manager",
+      "SalutContactManager object",
+      "Salut Contact Manager associated with the Salut Connection of this "
+      "manager",
+      SALUT_TYPE_CONTACT_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "Salut Xmpp Connection Manager associated with the Salut Connection of this "
+      "manager",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
+      param_spec);
 }
 
 
@@ -242,11 +345,16 @@ new_tubes_channel (SalutTubesManager *fac,
   TpBaseConnection *conn;
   SalutTubesChannel *chan;
   char *object_path;
+  SalutContact *contact;
 
   g_assert (SALUT_IS_TUBES_MANAGER (fac));
 
   priv = SALUT_TUBES_MANAGER_GET_PRIVATE (fac);
   conn = (TpBaseConnection *) priv->conn;
+
+  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
+  if (contact == NULL)
+    return NULL;
 
   object_path = g_strdup_printf ("%s/TubesChannel%u", conn->object_path,
       handle);
@@ -256,6 +364,8 @@ new_tubes_channel (SalutTubesManager *fac,
                        "object-path", object_path,
                        "handle", handle,
                        "handle-type", TP_HANDLE_TYPE_CONTACT,
+                       "contact", contact,
+                       "xmpp-connection-manager", priv->xmpp_connection_manager,
                        NULL);
 
   DEBUG ("object path %s", object_path);
@@ -422,14 +532,33 @@ salut_tubes_manager_handle_tube_request (
 SalutTubesManager *
 salut_tubes_manager_new (
     SalutConnection *conn,
-    SalutContactManager *contact_manager)
+    SalutContactManager *contact_manager,
+    SalutXmppConnectionManager *xmpp_connection_manager)
 {
-  g_return_val_if_fail (SALUT_IS_CONNECTION (conn), NULL);
+  SalutTubesManager *ret = NULL;
+  SalutTubesManagerPrivate *priv;
 
-  return g_object_new (
+  g_return_val_if_fail (SALUT_IS_CONNECTION (conn), NULL);
+  g_return_val_if_fail (SALUT_IS_CONTACT_MANAGER (contact_manager), NULL);
+  g_return_val_if_fail (
+      SALUT_IS_XMPP_CONNECTION_MANAGER (xmpp_connection_manager), NULL);
+
+  ret = g_object_new (
       SALUT_TYPE_TUBES_MANAGER,
       "connection", conn,
+      "contact-manager", contact_manager,
+      "xmpp-connection-manager", xmpp_connection_manager,
       NULL);
+
+  priv = SALUT_TUBES_MANAGER_GET_PRIVATE (ret);
+
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      iq_tube_request_filter, iq_tube_request_cb, ret);
+
+  priv->conn = conn;
+
+  return ret;
 }
 
 static void

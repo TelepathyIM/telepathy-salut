@@ -44,6 +44,7 @@
 #include "salut-connection.h"
 #include "salut-contact.h"
 #include "salut-muc-channel.h"
+#include "salut-xmpp-connection-manager.h"
 #include "tube-iface.h"
 #include "tube-dbus.h"
 #include "tube-stream.h"
@@ -75,6 +76,47 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
 );
 
+static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn,
+    SalutContact *contact,
+    gpointer user_data);
+
+static void
+xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn,
+    SalutContact *contact,
+    gpointer user_data);
+
+static void
+xmpp_connection_manager_connection_closing_cb (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn,
+    SalutContact *contact,
+    gpointer user_data);
+
+static gboolean
+message_stanza_filter (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
+static void
+message_stanza_callback (SalutXmppConnectionManager *mgr,
+    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    SalutContact *contact, gpointer user_data);
+
+static void
+_send_channel_iq_tubes (SalutTubesChannel *self);
+
+/* Channel state */
+typedef enum
+{
+  CHANNEL_NOT_CONNECTED = 0,
+  CHANNEL_CONNECTING,
+  CHANNEL_CONNECTED,
+  CHANNEL_CLOSING,
+} ChannelState;
+
+/* properties */
 enum
 {
   PROP_OBJECT_PATH = 1,
@@ -83,6 +125,10 @@ enum
   PROP_HANDLE,
   PROP_CONNECTION,
   PROP_MUC,
+
+  /* only for 1-1 tubes */
+  PROP_CONTACT,
+  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -97,6 +143,13 @@ struct _SalutTubesChannelPrivate
   TpHandleType handle_type;
   TpHandleType self_handle;
   GibberMucConnection *muc_connection;
+
+  /* In case of 1-1 tube channel, we need to send <iq> stanza to the contact
+   * on a Xmpp connection */
+  SalutContact *contact;
+  GibberXmppConnection *xmpp_connection;
+  SalutXmppConnectionManager *xmpp_connection_manager;
+  ChannelState state;
 
   GHashTable *tubes;
 
@@ -129,6 +182,11 @@ salut_tubes_channel_init (SalutTubesChannel *self)
 
   priv->tubes = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, (GDestroyNotify) g_object_unref);
+
+  priv->contact = NULL;
+  priv->xmpp_connection = NULL;
+  priv->state = CHANNEL_NOT_CONNECTED;
+  priv->xmpp_connection_manager = NULL;
 
   priv->dispose_has_run = FALSE;
   priv->closed = FALSE;
@@ -190,6 +248,9 @@ salut_tubes_channel_constructor (GType type,
 
   DEBUG ("Registering at '%s'", priv->object_path);
 
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
+
   return obj;
 }
 
@@ -221,6 +282,12 @@ salut_tubes_channel_get_property (GObject *object,
         break;
       case PROP_MUC:
         g_value_set_object (value, chan->muc);
+        break;
+      case PROP_CONTACT:
+        g_value_set_object (value, priv->contact);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        g_value_set_object (value, priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -264,9 +331,220 @@ salut_tubes_channel_set_property (GObject *object,
       case PROP_MUC:
         chan->muc = g_value_get_object (value);
         break;
+      case PROP_CONTACT:
+        priv->contact = g_value_get_object (value);
+        g_object_ref (priv->contact);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
+    }
+}
+
+static gboolean
+message_stanza_filter (SalutXmppConnectionManager *mgr,
+                       GibberXmppConnection *conn,
+                       GibberXmppStanza *stanza,
+                       SalutContact *contact,
+                       gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  GibberStanzaType type;
+  GibberStanzaSubType sub_type;
+
+  if (priv->contact != contact)
+    return FALSE;
+
+  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
+  if (type != GIBBER_STANZA_TYPE_IQ)
+    return FALSE;
+
+  if (sub_type != GIBBER_STANZA_SUB_TYPE_SET)
+    return FALSE;
+
+  if (gibber_xmpp_node_get_child_ns (stanza->node, "tube",
+        GIBBER_TELEPATHY_NS_TUBES) != NULL)
+    return TRUE;
+
+  if (gibber_xmpp_node_get_child_ns (stanza->node, "close",
+        GIBBER_TELEPATHY_NS_TUBES) != NULL)
+    return TRUE;
+
+  return FALSE;
+}
+
+static void
+message_stanza_callback (SalutXmppConnectionManager *mgr,
+                         GibberXmppConnection *conn,
+                         GibberXmppStanza *stanza,
+                         SalutContact *contact,
+                         gpointer user_data)
+{
+  printf("Message stanza received, but the code to handle it is not written "
+         "yet !!\n"); /* TODO */
+}
+
+static void
+_initialise_connection (SalutTubesChannel *self)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  DEBUG ("called.");
+
+  g_assert (priv->xmpp_connection != NULL);
+  g_assert (
+     (priv->xmpp_connection->stream_flags &
+       ~(GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN
+         |GIBBER_XMPP_CONNECTION_CLOSE_SENT)) == 0);
+
+
+  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
+      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+  g_signal_connect (priv->xmpp_connection_manager, "connection-closed",
+      G_CALLBACK (xmpp_connection_manager_connection_closed_cb), self);
+  g_signal_connect (priv->xmpp_connection_manager, "connection-closing",
+      G_CALLBACK (xmpp_connection_manager_connection_closing_cb), self);
+
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, priv->xmpp_connection,
+      message_stanza_filter, message_stanza_callback, self);
+
+  if (priv->xmpp_connection->stream_flags
+        & GIBBER_XMPP_CONNECTION_CLOSE_SENT) {
+    priv->state = CHANNEL_CLOSING;
+    DEBUG ("priv->state = CHANNEL_CLOSING");
+  } else {
+    priv->state = CHANNEL_CONNECTED;
+    DEBUG ("priv->state = CHANNEL_CONNECTED");
+    _send_channel_iq_tubes (self);
+  }
+}
+
+static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+                                           GibberXmppConnection *conn,
+                                           SalutContact *contact,
+                                           gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  if (contact != priv->contact)
+    /* This new connection is not for this channel */
+    return;
+
+  DEBUG ("pending connection fully open");
+
+  priv->xmpp_connection = conn;
+  g_object_ref (priv->xmpp_connection);
+  _initialise_connection (self);
+}
+
+static void
+connection_disconnected (SalutTubesChannel *self)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->xmpp_connection != NULL)
+    {
+      DEBUG ("connection closed. Remove filters");
+
+      salut_xmpp_connection_manager_remove_stanza_filter (
+          priv->xmpp_connection_manager, priv->xmpp_connection,
+          message_stanza_filter, message_stanza_callback, self);
+
+      g_object_unref (priv->xmpp_connection);
+      priv->xmpp_connection = NULL;
+    }
+
+  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
+      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
+  priv->state = CHANNEL_NOT_CONNECTED;
+
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
+
+  /* If some tubes in remote-pending state, reopen the xmpp connection?
+  if (g_queue_get_length(priv->out_queue) > 0) {
+    _setup_connection(self);
+  }
+  */
+}
+
+static void
+xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
+                                              GibberXmppConnection *conn,
+                                              SalutContact *contact,
+                                              gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->contact != contact)
+    return;
+
+  g_assert (priv->xmpp_connection == conn);
+  connection_disconnected (self);
+}
+
+static void
+xmpp_connection_manager_connection_closing_cb (SalutXmppConnectionManager *mgr,
+                                               GibberXmppConnection *conn,
+                                               SalutContact *contact,
+                                               gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->contact != contact)
+    return;
+
+  DEBUG ("connection closing");
+  g_assert (priv->xmpp_connection == conn);
+  priv->state = CHANNEL_CLOSING;
+}
+
+static void
+_setup_connection (SalutTubesChannel *self)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  SalutXmppConnectionManagerRequestConnectionResult result;
+  GibberXmppConnection *conn = NULL;
+
+  DEBUG ("called. state=%d", priv->state);
+
+  if (priv->state == CHANNEL_CONNECTING)
+    return;
+
+  g_assert (priv->xmpp_connection == NULL);
+
+  result = salut_xmpp_connection_manager_request_connection (
+      priv->xmpp_connection_manager, priv->contact, &conn, NULL);
+
+  if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+    {
+      DEBUG ("connection done.");
+      priv->xmpp_connection = conn;
+      g_object_ref (priv->xmpp_connection);
+      _initialise_connection (self);
+    }
+  else if (result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
+    {
+      DEBUG ("Requested connection pending");
+      priv->state = CHANNEL_CONNECTING;
+      return;
+    }
+  else
+    {
+      priv->state = CHANNEL_NOT_CONNECTED;
+      return;
     }
 }
 
@@ -1471,6 +1749,97 @@ stream_tube_new_connection_cb (SalutTubeIface *tube,
       tube_id, contact);
 }
 
+static void
+_send_channel_iq_tube (gpointer key,
+                       gpointer value,
+                       gpointer user_data)
+{
+  SalutTubeIface *tube = (SalutTubeIface *) value;
+  guint tube_id = GPOINTER_TO_UINT(key);
+  TpHandle initiator;
+  gchar *service;
+  GHashTable *parameters;
+  TpTubeState state;
+  TpTubeType type;
+
+  g_object_get (tube,
+                "type", &type,
+                "initiator", &initiator,
+                "service", &service,
+                "parameters", &parameters,
+                "state", &state,
+                NULL);
+
+  DEBUG ("called for tube id %d", tube_id);
+  if (state == TP_TUBE_STATE_REMOTE_PENDING)
+    {
+      DEBUG ("Tube in remote pending state");
+
+      /*
+      GibberXmppStanza *stanza, *reply;
+      const gchar *jid_from, *jid_to;
+      TpHandleRepoIface *contact_repo;
+
+      contact_repo = tp_base_connection_get_handles (
+         (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+      jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
+      jid_to = tp_handle_inspect (contact_repo, priv->handle);
+
+      stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+          GIBBER_STANZA_SUB_TYPE_SET,
+          jid_from, jid_to,
+          GIBBER_NODE, "tube",
+            GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+            GIBBER_NODE_ATTRIBUTE, "type", "stream",
+            GIBBER_NODE_ATTRIBUTE, "service", service,
+            GIBBER_NODE, "parameters",
+              GIBBER_NODE, "parameter",
+                GIBBER_NODE_ATTRIBUTE, "name", "path",
+                GIBBER_NODE_ATTRIBUTE, "type", "str",
+                GIBBER_NODE_TEXT, "/poetry/for-juliet/",
+              GIBBER_NODE_END,
+            GIBBER_NODE_END,
+            GIBBER_NODE, "transport",
+              GIBBER_NODE, "candidate",
+                GIBBER_NODE_ATTRIBUTE, "ip", "127.0.0.1",
+                GIBBER_NODE_ATTRIBUTE, "port", "13540",
+              GIBBER_NODE_END,
+            GIBBER_NODE_END,
+          GIBBER_NODE_END,
+          GIBBER_STANZA_END);
+
+      if (!gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
+          NULL, NULL, NULL))
+        {
+          printf("ERROR\n");
+        }
+    */
+    }
+
+  g_free (service);
+  g_hash_table_unref (parameters);
+}
+
+static void
+_send_channel_iq_tubes (SalutTubesChannel *self)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  DEBUG ("called. state=%d", priv->state);
+
+  if (priv->state != CHANNEL_CONNECTED)
+    {
+      /* TODO: do not connect if nothing to send... */
+      _setup_connection (self);
+      return;
+    }
+
+  g_hash_table_foreach (priv->tubes, _send_channel_iq_tube, NULL);
+
+}
+
+
 /**
  * salut_tubes_channel_offer_stream_tube
  *
@@ -1532,6 +1901,11 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
       "access-control", access_control,
       "access-control-param", access_control_param,
       NULL);
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      _send_channel_iq_tubes (self);
+    }
 
   g_signal_connect (tube, "new-connection",
       G_CALLBACK (stream_tube_new_connection_cb), self);
@@ -1808,6 +2182,30 @@ salut_tubes_channel_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_MUC, param_spec);
+
+  param_spec = g_param_spec_object (
+      "contact",
+      "SalutContact object",
+      "Salut Contact to which this channel is dedicated in case of 1-1 tube",
+      SALUT_TYPE_CONTACT,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTACT, param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "Salut XMPP Connection manager used for this tube channel in case of "
+          "1-1 tube",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
+      param_spec);
 }
 
 void
