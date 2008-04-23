@@ -11,7 +11,8 @@ EXTRA_DIST = \
     glib-gtypes-generator.py \
     glib-signals-marshal-gen.py \
     identity.xsl \
-    libglibcodegen.py
+    libglibcodegen.py \
+    xep.xsl
 
 glib-client-marshaller-gen.py: libglibcodegen.py
 	touch $@
@@ -26,6 +27,13 @@ glib-interfaces-generator.xsl: c-interfaces-generator.xsl
 	touch $@
 glib-interfaces-body-generator.xsl: c-interfaces-generator.xsl
 	touch $@
+
+maintainer-update-from-xmpp.org:
+	set -e; \
+	uri=svn://svn.xmpp.org:7938/xmpp/trunk/extensions/xep.xsl; \
+	svn info $$uri; \
+	svn cat $$uri > xep.xsl.tmp
+	mv xep.xsl.tmp xep.xsl
 
 TELEPATHY_GLIB_SRCDIR = $(top_srcdir)/../telepathy-glib
 maintainer-update-from-telepathy-glib:
