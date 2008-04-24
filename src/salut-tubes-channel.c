@@ -2251,6 +2251,37 @@ salut_tubes_channel_dispose (GObject *object)
       priv->muc_connection = NULL;
     }
 
+  if (priv->iq_helper != NULL)
+    {
+      g_object_unref (priv->iq_helper);
+      priv->iq_helper = NULL;
+    }
+
+  if (priv->xmpp_connection != NULL)
+    {
+      salut_xmpp_connection_manager_remove_stanza_filter (
+          priv->xmpp_connection_manager, priv->xmpp_connection,
+          message_stanza_filter, message_stanza_callback, self);
+
+      g_object_unref (priv->xmpp_connection);
+      priv->xmpp_connection = NULL;
+    }
+
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
+
+  if (priv->contact != NULL)
+    {
+      g_object_unref (priv->contact);
+      priv->contact = NULL;
+    }
+
   priv->dispose_has_run = TRUE;
 
   tp_handle_unref (handle_repo, priv->handle);
