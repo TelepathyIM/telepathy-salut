@@ -121,6 +121,39 @@ iq_tube_request_filter (SalutXmppConnectionManager *xcm,
                  GIBBER_TELEPATHY_NS_TUBES) != NULL);
 }
 
+static gboolean
+iq_tube_request_parse (GibberXmppStanza *stanza,
+                       const gchar **from,
+                       const gchar **tube_type,
+                       const gchar **id)
+{
+  GibberXmppNode *iq;
+  GibberXmppNode *tube;
+
+  iq = stanza->node;
+
+  *from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  if (*from == NULL)
+    {
+      DEBUG ("got a message without a from field");
+      return FALSE;
+    }
+
+  tube = gibber_xmpp_node_get_child_ns (iq, "tube",
+      GIBBER_TELEPATHY_NS_TUBES);
+  if (tube == NULL)
+    {
+      DEBUG ("The <iq> does not have a <tube>");
+      return FALSE;
+    }
+
+  *id = gibber_xmpp_node_get_attribute (iq, "id");
+
+  *tube_type = "";
+
+  return TRUE;
+}
+
 static void
 iq_tube_request_cb (SalutXmppConnectionManager *xcm,
                     GibberXmppConnection *conn,
@@ -133,19 +166,36 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   SalutTubesManagerPrivate *priv =
     SALUT_TUBES_MANAGER_GET_PRIVATE (self);
   */
-  GibberXmppNode *tube, *close;
+  GibberXmppNode *close;
   GibberXmppStanza *reply;
+  const gchar *from, *tube_type, *id;
 
   /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
 
-  tube = gibber_xmpp_node_get_child_ns (stanza->node, "tube", GIBBER_TELEPATHY_NS_TUBES);
-  close = gibber_xmpp_node_get_child_ns (stanza->node, "close", GIBBER_TELEPATHY_NS_TUBES);
+  close = gibber_xmpp_node_get_child_ns (stanza->node, "close",
+      GIBBER_TELEPATHY_NS_TUBES);
+  if (close != NULL)
+    {
+      DEBUG ("received a close tube request. Not implemented.");
+      return;
+    }
 
-  DEBUG ("received a tube request: tube=%p close=%p", tube, close);
+  if (!iq_tube_request_parse (stanza, &from, &tube_type, &id))
+    {
+      GibberXmppStanza *reply;
 
-  reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_FEATURE_NOT_IMPLEMENTED,
-      "Implementation not finished yet...");
+      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
+          "failed to parse SI request");
+      gibber_xmpp_connection_send (conn, reply, NULL);
+
+      g_object_unref (reply);
+      return;
+    }
+
+  DEBUG ("received a tube request of type %s, id %s", tube_type, id);
+
+  reply = gibber_iq_helper_new_result_reply (stanza);
   gibber_xmpp_connection_send (conn, reply, NULL);
 
   g_object_unref (reply);
