@@ -2605,7 +2605,7 @@ static GPtrArray*
 salut_connection_create_channel_factories(TpBaseConnection *base) {
   SalutConnection *self = SALUT_CONNECTION(base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  GPtrArray *factories = g_ptr_array_sized_new(4);
+  GPtrArray *factories = g_ptr_array_sized_new (4);
 
   /* Create the contact manager */
   priv->contact_manager = salut_contact_manager_new (self);
