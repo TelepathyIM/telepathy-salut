@@ -37,6 +37,7 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
+#include <gibber/gibber-iq-helper.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
@@ -150,6 +151,7 @@ struct _SalutTubesChannelPrivate
   GibberXmppConnection *xmpp_connection;
   SalutXmppConnectionManager *xmpp_connection_manager;
   ChannelState state;
+  GibberIqHelper *iq_helper;
 
   GHashTable *tubes;
 
@@ -1750,10 +1752,24 @@ stream_tube_new_connection_cb (SalutTubeIface *tube,
 }
 
 static void
+iq_reply_cb (GibberIqHelper *helper,
+            GibberXmppStanza *sent_stanza,
+            GibberXmppStanza *reply_stanza,
+            GObject *object,
+            gpointer user_data)
+{
+  DEBUG ("Got a IQ reply :-)");
+}
+
+
+static void
 _send_channel_iq_tube (gpointer key,
                        gpointer value,
                        gpointer user_data)
 {
+  SalutTubesChannel *self = (SalutTubesChannel *) user_data;
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
   SalutTubeIface *tube = (SalutTubeIface *) value;
   guint tube_id = GPOINTER_TO_UINT(key);
   TpHandle initiator;
@@ -1773,10 +1789,11 @@ _send_channel_iq_tube (gpointer key,
   DEBUG ("called for tube id %d", tube_id);
   if (state == TP_TUBE_STATE_REMOTE_PENDING)
     {
+      GError *error = NULL;
+
       DEBUG ("Tube in remote pending state");
 
-      /*
-      GibberXmppStanza *stanza, *reply;
+      GibberXmppStanza *stanza;
       const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo;
 
@@ -1809,12 +1826,18 @@ _send_channel_iq_tube (gpointer key,
           GIBBER_NODE_END,
           GIBBER_STANZA_END);
 
-      if (!gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
-          NULL, NULL, NULL))
+      if (priv->iq_helper == NULL)
         {
-          printf("ERROR\n");
+          priv->iq_helper = gibber_iq_helper_new (priv->xmpp_connection);
+          g_assert (priv->iq_helper);
         }
-    */
+
+      if (!gibber_iq_helper_send_with_reply (priv->iq_helper, stanza,
+          iq_reply_cb, G_OBJECT(self), self, &error))
+        {
+          DEBUG ("ERROR: '%s'", error->message);
+          g_error_free (error);
+        }
     }
 
   g_free (service);
@@ -1835,7 +1858,7 @@ _send_channel_iq_tubes (SalutTubesChannel *self)
       return;
     }
 
-  g_hash_table_foreach (priv->tubes, _send_channel_iq_tube, NULL);
+  g_hash_table_foreach (priv->tubes, _send_channel_iq_tube, self);
 
 }
 
