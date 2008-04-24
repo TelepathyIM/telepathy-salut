@@ -1787,7 +1787,7 @@ _send_channel_iq_tube (gpointer key,
                 NULL);
 
   DEBUG ("called for tube id %d", tube_id);
-  if (state == TP_TUBE_STATE_REMOTE_PENDING)
+  if (salut_tube_iface_offer_needed(tube))
     {
       GError *error = NULL;
 

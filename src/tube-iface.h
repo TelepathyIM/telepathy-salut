@@ -33,6 +33,7 @@ struct _SalutTubeIfaceClass {
   GTypeInterface parent;
 
   gboolean (*accept) (SalutTubeIface *tube, GError **error);
+  gboolean (*offer_needed) (SalutTubeIface *tube);
   void (*close) (SalutTubeIface *tube);
   void (*add_bytestream) (SalutTubeIface *tube,
       GibberBytestreamIface *bytestream);
@@ -50,6 +51,10 @@ GType salut_tube_iface_get_type (void);
 #define SALUT_TUBE_IFACE_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_INTERFACE ((obj), SALUT_TYPE_TUBE_IFACE,\
                               SalutTubeIfaceClass))
+
+/* return TRUE if the <iq> to offer the tube has never been sent */
+gboolean
+salut_tube_iface_offer_needed (SalutTubeIface *tube);
 
 gboolean
 salut_tube_iface_accept (SalutTubeIface *tube, GError **error);

@@ -1210,6 +1210,7 @@ tube_iface_init (gpointer g_iface,
   SalutTubeIfaceClass *klass = (SalutTubeIfaceClass *) g_iface;
 
   klass->accept = salut_tube_dbus_accept;
+  klass->offer_needed = NULL;
   klass->close = salut_tube_dbus_close;
   klass->add_bytestream = salut_tube_dbus_add_bytestream;
 }

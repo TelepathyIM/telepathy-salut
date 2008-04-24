@@ -131,6 +131,8 @@ struct _SalutTubeStreamPrivate
   guint listen_io_channel_source_id;
   gboolean closed;
 
+  gboolean offer_needed;
+
   gboolean dispose_has_run;
 };
 
@@ -815,6 +817,7 @@ salut_tube_stream_init (SalutTubeStream *self)
   priv->access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
   priv->access_control_param = NULL;
   priv->closed = FALSE;
+  priv->offer_needed = FALSE;
 
   priv->dispose_has_run = FALSE;
 }
@@ -1096,6 +1099,7 @@ salut_tube_stream_constructor (GType type,
       if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
         {
           /* Private tube */
+          priv->offer_needed = TRUE;
           priv->state = TP_TUBE_STATE_REMOTE_PENDING;
         }
       else
@@ -1302,6 +1306,20 @@ salut_tube_stream_accept (SalutTubeIface *tube,
   priv->state = TP_TUBE_STATE_OPEN;
   g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
   return TRUE;
+}
+
+/**
+ * salut_tube_stream_offer_needed
+ *
+ * Implements salut_tube_iface_offer_needed on SalutTubeIface
+ */
+static gboolean
+salut_tube_stream_offer_needed (SalutTubeIface *tube)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  return priv->offer_needed;
 }
 
 /**
@@ -1611,6 +1629,7 @@ tube_iface_init (gpointer g_iface,
   SalutTubeIfaceClass *klass = (SalutTubeIfaceClass *) g_iface;
 
   klass->accept = salut_tube_stream_accept;
+  klass->offer_needed = salut_tube_stream_offer_needed;
   klass->close = salut_tube_stream_close;
   klass->add_bytestream = salut_tube_stream_add_bytestream;
 }
