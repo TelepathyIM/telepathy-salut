@@ -387,7 +387,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
                          SalutContact *contact,
                          gpointer user_data)
 {
-  printf("Message stanza received, but the code to handle it is not written "
+  DEBUG ("Message stanza received, but the code to handle it is not written "
          "yet !!\n"); /* TODO */
 }
 
@@ -473,8 +473,8 @@ connection_disconnected (SalutTubesChannel *self)
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
 
   /* If some tubes in remote-pending state, reopen the xmpp connection?
-  if (g_queue_get_length(priv->out_queue) > 0) {
-    _setup_connection(self);
+  if (g_queue_get_length (priv->out_queue) > 0) {
+    _setup_connection (self);
   }
   */
 }
@@ -1458,7 +1458,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   base = (TpBaseConnection*) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
-    && !tp_handle_set_is_member(TP_GROUP_MIXIN(self->muc)->members,
+    && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,
         priv->self_handle))
     {
       GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
@@ -1771,7 +1771,7 @@ _send_channel_iq_tube (gpointer key,
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
   SalutTubeIface *tube = (SalutTubeIface *) value;
-  guint tube_id = GPOINTER_TO_UINT(key);
+  guint tube_id = GPOINTER_TO_UINT (key);
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
@@ -1891,7 +1891,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   base = (TpBaseConnection*) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
-    && !tp_handle_set_is_member(TP_GROUP_MIXIN(self->muc)->members,
+    && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,
         priv->self_handle))
     {
       GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
