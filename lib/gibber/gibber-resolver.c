@@ -720,7 +720,6 @@ gibber_resolver_gai_error_to_g_error (int error)
 
   switch (error) {
     case EAI_BADFLAGS:
-    case EAI_ADDRFAMILY:
     case EAI_SOCKTYPE:
     case EAI_FAMILY:
     case EAI_SERVICE:
@@ -731,7 +730,6 @@ gibber_resolver_gai_error_to_g_error (int error)
       code = GIBBER_RESOLVER_ERROR_RESOLVE_TEMPORARY_FAILURE;
       break;
     case EAI_FAIL:
-    case EAI_NODATA:
     case EAI_NONAME:
       code = GIBBER_RESOLVER_ERROR_RESOLVE_FAILURE;
       break;
