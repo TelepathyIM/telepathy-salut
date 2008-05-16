@@ -921,6 +921,28 @@ tubes_muc_message_received (SalutTubesChannel *self,
   g_hash_table_destroy (old_dbus_tubes);
 }
 
+/* 1-1 message */
+void
+tubes_message_received (SalutTubesChannel *self,
+                        const gchar *service,
+                        TpTubeType tube_type,
+                        TpHandle initiator_handle,
+                        GHashTable *parameters,
+                        guint tube_id)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  SalutTubeIface *tube;
+
+  /* do we already know this tube? */
+  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+  if (tube == NULL)
+    {
+      tube = create_new_tube (self, tube_type, initiator_handle, service,
+        parameters, tube_id, NULL);
+    }
+}
+
 static void
 muc_connection_new_senders_cb (GibberMucConnection *conn,
                                GArray *senders,
@@ -1761,6 +1783,8 @@ iq_reply_cb (GibberIqHelper *helper,
              gpointer user_data)
 {
   /*
+  SalutTubeIface *tube = (SalutTubeIface *) user_data;
+
   SalutTubesChannel *self = (SalutTubesChannel *) user_data;
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   */
@@ -1812,6 +1836,8 @@ _send_channel_iq_tube (gpointer key,
       const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo;
 
+      gchar *tube_id_str = g_strdup_printf ("%d", tube_id);
+
       contact_repo = tp_base_connection_get_handles (
          (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
@@ -1825,6 +1851,7 @@ _send_channel_iq_tube (gpointer key,
             GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
             GIBBER_NODE_ATTRIBUTE, "type", "stream",
             GIBBER_NODE_ATTRIBUTE, "service", service,
+            GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
             GIBBER_NODE, "parameters",
               GIBBER_NODE, "parameter",
                 GIBBER_NODE_ATTRIBUTE, "name", "path",
@@ -1848,11 +1875,13 @@ _send_channel_iq_tube (gpointer key,
         }
 
       if (!gibber_iq_helper_send_with_reply (priv->iq_helper, stanza,
-          iq_reply_cb, G_OBJECT(self), self, &error))
+          iq_reply_cb, G_OBJECT(self), tube, &error))
         {
           DEBUG ("ERROR: '%s'", error->message);
           g_error_free (error);
         }
+
+      g_free (tube_id_str);
     }
 
   g_free (service);

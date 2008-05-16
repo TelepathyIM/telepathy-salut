@@ -36,6 +36,7 @@
 #include "salut-tubes-channel.h"
 #include "salut-muc-manager.h"
 #include "salut-muc-channel.h"
+#include "salut-util.h"
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-iq-helper.h>
 #include <telepathy-glib/interfaces.h>
@@ -121,36 +122,100 @@ iq_tube_request_filter (SalutXmppConnectionManager *xcm,
                  GIBBER_TELEPATHY_NS_TUBES) != NULL);
 }
 
+/* similar to the same function in salut-tubes-channel.c but extract
+ * information from a 1-1 <iq> message */
 static gboolean
-iq_tube_request_parse (GibberXmppStanza *stanza,
-                       const gchar **from,
-                       const gchar **tube_type,
-                       const gchar **id)
+extract_tube_information (TpHandleRepoIface *contact_repo,
+                          GibberXmppStanza *stanza,
+                          TpTubeType *type,
+                          TpHandle *initiator_handle,
+                          const gchar **service,
+                          GHashTable **parameters,
+                          guint *tube_id)
 {
   GibberXmppNode *iq;
-  GibberXmppNode *tube;
+  GibberXmppNode *tube_node;
 
   iq = stanza->node;
 
-  *from = gibber_xmpp_node_get_attribute (stanza->node, "from");
-  if (*from == NULL)
+  if (initiator_handle != NULL)
     {
-      DEBUG ("got a message without a from field");
-      return FALSE;
+      const gchar *from;
+      from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+      if (from == NULL)
+        {
+          DEBUG ("got a message without a from field");
+          return FALSE;
+        }
+      *initiator_handle = tp_handle_ensure (contact_repo, from, NULL,
+          NULL);
+
+      if (*initiator_handle == 0)
+        {
+          DEBUG ("invalid initiator ID %s", from);
+          return FALSE;
+        }
     }
 
-  tube = gibber_xmpp_node_get_child_ns (iq, "tube",
+  tube_node = gibber_xmpp_node_get_child_ns (iq, "tube",
       GIBBER_TELEPATHY_NS_TUBES);
-  if (tube == NULL)
+  if (tube_node == NULL)
     {
       DEBUG ("The <iq> does not have a <tube>");
       return FALSE;
     }
 
-  *id = gibber_xmpp_node_get_attribute (iq, "id");
+  if (type != NULL)
+    {
+      const gchar *tube_type;
 
-  *tube_type = "";
+      tube_type = gibber_xmpp_node_get_attribute (tube_node, "type");
+      if (g_str_equal (tube_type, "stream"))
+        *type = TP_TUBE_TYPE_STREAM;
+      else if (g_str_equal (tube_type, "dbus"))
+        *type = TP_TUBE_TYPE_DBUS;
+      else
+        {
+          DEBUG ("The <iq><tube> does not have a correct type=.");
+          return FALSE;
+        }
+    }
 
+  if (service != NULL)
+    {
+      *service = gibber_xmpp_node_get_attribute (tube_node, "service");
+    }
+
+  if (parameters != NULL)
+    {
+      GibberXmppNode *node;
+
+      node = gibber_xmpp_node_get_child (tube_node, "parameters");
+      *parameters = salut_gibber_xmpp_node_extract_properties (node,
+          "parameter");
+    }
+
+  if (tube_id != NULL)
+    {
+      const gchar *str;
+      gchar *endptr;
+      long int tmp;
+
+      str = gibber_xmpp_node_get_attribute (tube_node, "id");
+      if (str == NULL)
+        {
+          DEBUG ("no tube id in SI request");
+          return FALSE;
+        }
+
+      tmp = strtol (str, &endptr, 10);
+      if (!endptr || *endptr)
+        {
+          DEBUG ("tube id is not numeric: %s", str);
+          return FALSE;
+        }
+      *tube_id = (int) tmp;
+    }
   return TRUE;
 }
 
@@ -161,14 +226,22 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
                     SalutContact *contact,
                     gpointer user_data)
 {
-  /*
   SalutTubesManager *self = SALUT_TUBES_MANAGER (user_data);
-  SalutTubesManagerPrivate *priv =
-    SALUT_TUBES_MANAGER_GET_PRIVATE (self);
-  */
+  SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
   GibberXmppNode *close;
   GibberXmppStanza *reply;
-  const gchar *from, *tube_type, *id;
+
+  /* tube informations */
+  const gchar *service;
+  TpTubeType tube_type;
+  TpHandle initiator_handle;
+  GHashTable *parameters;
+  guint tube_id;
+
+  SalutTubesChannel *chan;
 
   /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
@@ -181,7 +254,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
       return;
     }
 
-  if (!iq_tube_request_parse (stanza, &from, &tube_type, &id))
+  if (!extract_tube_information (contact_repo, stanza, &tube_type,
+          &initiator_handle, &service, &parameters, &tube_id))
     {
       GibberXmppStanza *reply;
 
@@ -193,7 +267,19 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
       return;
     }
 
-  DEBUG ("received a tube request of type %s, id %s", tube_type, id);
+  DEBUG ("received a tube request of type %d, tube_id %d", tube_type, tube_id);
+
+  chan = g_hash_table_lookup (priv->channels,
+      GUINT_TO_POINTER (initiator_handle));
+  if (chan == NULL)
+    {
+      chan = new_tubes_channel (self, initiator_handle);
+      tp_channel_factory_iface_emit_new_channel (self,
+          (TpChannelIface *) chan, NULL);
+    }
+
+  tubes_message_received (chan, service, tube_type, initiator_handle,
+      parameters, tube_id);
 
   reply = gibber_iq_helper_new_result_reply (stanza);
   gibber_xmpp_connection_send (conn, reply, NULL);
