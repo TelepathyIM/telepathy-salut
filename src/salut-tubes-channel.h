@@ -68,8 +68,8 @@ void salut_tubes_channel_close (SalutTubesChannel *channel);
 void salut_tubes_channel_bytestream_offered (SalutTubesChannel *chanel,
     GibberBytestreamIface *bytestream, GibberXmppStanza *msg);
 
-void tubes_message_received (SalutTubesChannel *channel, const gchar *sender,
-    GibberXmppStanza *stanza);
+void tubes_muc_message_received (SalutTubesChannel *channel,
+    const gchar *sender, GibberXmppStanza *stanza);
 
 G_END_DECLS
 

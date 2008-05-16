@@ -1178,7 +1178,7 @@ salut_muc_channel_received_stanza(GibberMucConnection *conn,
           priv->handle);
       g_assert (tubes_chan != NULL);
 
-      tubes_message_received (tubes_chan, sender, stanza);
+      tubes_muc_message_received (tubes_chan, sender, stanza);
 
       g_object_unref (tubes_chan);
     }

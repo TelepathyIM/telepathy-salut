@@ -755,10 +755,11 @@ emit_d_bus_names_changed_foreach (gpointer key,
     }
 }
 
+/* MUC message */
 void
-tubes_message_received (SalutTubesChannel *self,
-                        const gchar *sender,
-                        GibberXmppStanza *stanza)
+tubes_muc_message_received (SalutTubesChannel *self,
+                            const gchar *sender,
+                            GibberXmppStanza *stanza)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
@@ -1155,6 +1156,7 @@ create_new_tube (SalutTubesChannel *self,
   return tube;
 }
 
+/* tube_node is a MUC <message> */
 static gboolean
 extract_tube_information (SalutTubesChannel *self,
                           GibberXmppNode *tube_node,
