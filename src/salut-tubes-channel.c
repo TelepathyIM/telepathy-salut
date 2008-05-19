@@ -1829,6 +1829,8 @@ _send_channel_iq_tube (gpointer key,
   if (salut_tube_iface_offer_needed(tube))
     {
       GError *error = NULL;
+      GibberXmppNode *parameters_node;
+      const char *tube_type_str;
 
       DEBUG ("Tube in remote pending state");
 
@@ -1844,21 +1846,27 @@ _send_channel_iq_tube (gpointer key,
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
       jid_to = tp_handle_inspect (contact_repo, priv->handle);
 
+      switch (type)
+        {
+          case TP_TUBE_TYPE_DBUS:
+            tube_type_str = "dbus";
+            break;
+
+          case TP_TUBE_TYPE_STREAM:
+            tube_type_str = "stream";
+            break;
+          default:
+            g_assert_not_reached ();
+        }
+
       stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
           GIBBER_STANZA_SUB_TYPE_SET,
           jid_from, jid_to,
           GIBBER_NODE, "tube",
             GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
-            GIBBER_NODE_ATTRIBUTE, "type", "stream",
+            GIBBER_NODE_ATTRIBUTE, "type", tube_type_str,
             GIBBER_NODE_ATTRIBUTE, "service", service,
             GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
-            GIBBER_NODE, "parameters",
-              GIBBER_NODE, "parameter",
-                GIBBER_NODE_ATTRIBUTE, "name", "path",
-                GIBBER_NODE_ATTRIBUTE, "type", "str",
-                GIBBER_NODE_TEXT, "/poetry/for-juliet/",
-              GIBBER_NODE_END,
-            GIBBER_NODE_END,
             GIBBER_NODE, "transport",
               GIBBER_NODE, "candidate",
                 GIBBER_NODE_ATTRIBUTE, "ip", "127.0.0.1",
@@ -1867,6 +1875,10 @@ _send_channel_iq_tube (gpointer key,
             GIBBER_NODE_END,
           GIBBER_NODE_END,
           GIBBER_STANZA_END);
+
+      parameters_node = gibber_xmpp_node_add_child (stanza->node, "parameters");
+      salut_gibber_xmpp_node_add_children_from_properties (parameters_node,
+          parameters, "parameter");
 
       if (priv->iq_helper == NULL)
         {
