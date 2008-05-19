@@ -67,6 +67,10 @@ SalutTubesManager * salut_tubes_manager_new (
     SalutContactManager *contact_manager,
     SalutXmppConnectionManager *xmpp_connection_manager);
 
+void salut_tubes_manager_handle_si_stream_request (SalutTubesManager *self,
+    GibberBytestreamIface *bytestream, TpHandle contact_handle,
+    const gchar *stream_id, GibberXmppStanza *msg);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_TUBES_MANAGER_H__ */

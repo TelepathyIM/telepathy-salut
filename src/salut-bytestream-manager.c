@@ -32,6 +32,7 @@
 
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
+#include "salut-tubes-manager.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM_MGR
 #include "debug.h"
@@ -379,11 +380,8 @@ si_request_cb (SalutXmppConnectionManager *xcm,
    *  - a muc tube extra bytestream offer
    */
 
-  /* TODO: implement 1-1 tubes */
-
-  node = gibber_xmpp_node_get_child_ns (si, "muc-stream",
-        GIBBER_TELEPATHY_NS_TUBES);
-  if (node != NULL)
+  if ((node = gibber_xmpp_node_get_child_ns (si, "muc-stream",
+          GIBBER_TELEPATHY_NS_TUBES)))
     {
       const gchar *muc;
       TpHandle room_handle;
@@ -411,6 +409,20 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       salut_muc_manager_handle_si_stream_request (muc_mgr,
           bytestream, room_handle, stream_id, stanza);
       g_object_unref (muc_mgr);
+    }
+  else if ((node = gibber_xmpp_node_get_child_ns (si, "stream",
+          GIBBER_TELEPATHY_NS_TUBES)))
+    {
+      SalutTubesManager *tubes_mgr;
+
+      g_object_get (priv->connection, "tubes-manager", &tubes_mgr, NULL);
+      g_assert (tubes_mgr != NULL);
+
+      /* The SI request is an extra bytestream for a 1-1 tube */
+      salut_tubes_manager_handle_si_stream_request (
+          tubes_mgr, bytestream, peer_handle, stream_id, stanza);
+
+      g_object_unref (tubes_mgr);
     }
   else
     {
