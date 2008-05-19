@@ -126,6 +126,7 @@ enum {
   PROP_PUBLISHED_NAME,
   PROP_IM_MANAGER,
   PROP_MUC_MANAGER,
+  PROP_TUBES_MANAGER,
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
@@ -274,6 +275,9 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_MUC_MANAGER:
       g_value_set_object (value, priv->muc_manager);
+      break;
+    case PROP_TUBES_MANAGER:
+      g_value_set_object (value, priv->tubes_manager);
       break;
     case PROP_CONTACT_MANAGER:
       g_value_set_object (value, priv->contact_manager);
@@ -600,6 +604,17 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_MUC_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "tubes-manager",
+      "SalutTubesManager object",
+      "The Salut Tubes Manager associated with this Salut Connection",
+      SALUT_TYPE_TUBES_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TUBES_MANAGER,
       param_spec);
 
   param_spec = g_param_spec_object (
