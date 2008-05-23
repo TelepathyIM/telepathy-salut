@@ -5,22 +5,22 @@ CLEANFILES += valgrind.*.log
 # if the test fails, run it again at at least debug level 2
 %.check: %
 	@$(TESTS_ENVIRONMENT)					\
-	$* ||							\
+	./$* ||							\
 	$(TESTS_ENVIRONMENT)					\
 	GIBBER_DEBUG=all					\
-	$*
+	./$*
 
 # run any given test in a loop
 %.torture: %
 	@for i in `seq 1 $(LOOPS)`; do				\
 	$(TESTS_ENVIRONMENT)					\
-	$*; done
+	./$*; done
 
 # run any given test in an infinite loop
 %.forever: %
 	@while true; do						\
 	$(TESTS_ENVIRONMENT)					\
-	$* || break; done
+	./$* || break; done
 
 # valgrind any given test by running make test.valgrind
 %.valgrind: %
