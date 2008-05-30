@@ -593,7 +593,7 @@ salut_contact_change (SalutContact *self,
          self->olpc_cur_act_room = 0;
          SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
        }
-  }
+    }
   else
     {
       DEBUG ("Current activity %s, room handle %d", current_act_id,
@@ -621,9 +621,10 @@ salut_contact_change (SalutContact *self,
                 {
                   g_array_free (self->olpc_key, TRUE);
                 }
-              self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
-                  olpc_key->len);
-              g_array_append_vals (self->olpc_key, olpc_key->data, olpc_key->len);
+              self->olpc_key = g_array_sized_new (FALSE, FALSE,
+                sizeof (guint8), olpc_key->len);
+              g_array_append_vals (self->olpc_key, olpc_key->data,
+                olpc_key->len);
               SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
             }
     }
