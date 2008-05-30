@@ -197,6 +197,9 @@ browser_removed (GaServiceBrowser *browser,
     {
       salut_avahi_contact_remove_service (SALUT_AVAHI_CONTACT (contact),
           interface, protocol, name, type, domain);
+      if (!salut_avahi_contact_has_services (SALUT_AVAHI_CONTACT (contact)))
+         g_object_unref (contact);
+
     }
   else
     {

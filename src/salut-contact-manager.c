@@ -273,8 +273,6 @@ contact_lost_cb(SalutContact *contact, gpointer userdata) {
 
   tp_intset_destroy(to_add);
   tp_intset_destroy(to_rem);
-  /* FIXME: the contact was reffed in the the avahi-mgr */
-  g_object_unref(contact);
 }
 
 static gboolean
