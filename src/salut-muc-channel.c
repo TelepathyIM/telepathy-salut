@@ -1233,9 +1233,19 @@ salut_muc_channel_send (TpSvcChannelTypeText *channel,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(channel);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   GError *error = NULL;
+  GibberXmppStanza *stanza;
 
-  GibberXmppStanza *stanza =
-      text_helper_create_message_groupchat (self->connection->name,
+  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY)
+    {
+      GError ierror = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        "Invalid message type" };
+
+      dbus_g_method_return_error (context, &ierror);
+
+      return;
+    }
+
+  stanza = text_helper_create_message_groupchat (self->connection->name,
           priv->muc_name, type, text, &error);
 
   if (stanza == NULL) {

@@ -113,6 +113,9 @@ text_helper_create_message (const gchar *from,
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
         gibber_xmpp_node_set_attribute (stanza->node, "type", "normal");
         break;
+      default:
+        g_assert_not_reached ();
+        break;
     }
 
   return stanza;
@@ -140,6 +143,9 @@ text_helper_create_message_groupchat (const gchar *from,
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
         gibber_xmpp_node_set_attribute (stanza->node, "type", "normal");
+        break;
+      default:
+        g_assert_not_reached ();
         break;
     }
 
