@@ -59,7 +59,7 @@ static void
 salut_avahi_olpc_activity_manager_init (SalutAvahiOlpcActivityManager *self)
 {
   SalutAvahiOlpcActivityManagerPrivate *priv =
-    SALUT_AVAHI_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (obj);
+    SALUT_AVAHI_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (self);
 
   priv->browser = ga_service_browser_new (SALUT_DNSSD_OLPC_ACTIVITY);
 }
