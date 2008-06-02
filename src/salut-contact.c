@@ -328,12 +328,15 @@ static void
 purge_cached_avatar (SalutContact *self,
                     const gchar *token)
 {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
   g_free (self->avatar_token);
   self->avatar_token = g_strdup (token);
 
-  /* the avatar token has changed, restart retrieving the avatar just to be
-   * sure */
-  SALUT_CONTACT_GET_CLASS (self)->retrieve_avatar (self);
+  /* the avatar token has changed, restart retrieving the avatar if we were
+   * retrieving it */
+  if (priv->avatar_requests != NULL)
+    SALUT_CONTACT_GET_CLASS (self)->retrieve_avatar (self);
 }
 
 #ifdef ENABLE_OLPC
@@ -423,6 +426,7 @@ salut_contact_get_avatar(SalutContact *contact,
                          gpointer user_data) {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
   AvatarRequest *request;
+  gboolean retrieve;
 
   g_assert(contact != NULL);
 
@@ -436,9 +440,11 @@ salut_contact_get_avatar(SalutContact *contact,
   request = g_slice_new0(AvatarRequest);
   request->callback = callback;
   request->user_data = user_data;
+  retrieve = (priv->avatar_requests == NULL);
   priv->avatar_requests = g_list_append(priv->avatar_requests, request);
 
-  SALUT_CONTACT_GET_CLASS (contact)->retrieve_avatar (contact);
+  if (retrieve)
+    SALUT_CONTACT_GET_CLASS (contact)->retrieve_avatar (contact);
 }
 
 static void
