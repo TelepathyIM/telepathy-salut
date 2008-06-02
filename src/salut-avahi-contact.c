@@ -309,8 +309,8 @@ salut_contact_avatar_found (GaRecordBrowser *browser,
 
   if (rdata_size <= 0)
     salut_avahi_contact_avatar_request_flush (self, NULL, 0);
-
-  salut_avahi_contact_avatar_request_flush (self, rdata, rdata_size);
+  else
+    salut_avahi_contact_avatar_request_flush (self, rdata, rdata_size);
 }
 
 static void
