@@ -78,7 +78,6 @@ struct _SalutContact {
 
     /* private */
     SalutConnection *connection;
-    gboolean found;
 };
 
 GType salut_contact_get_type(void);
@@ -136,17 +135,34 @@ void salut_contact_left_activity (SalutContact *self,
 #endif
 
 /* restricted methods */
-void salut_contact_change (SalutContact *self, gint status,
-    const gchar *status_msg, const gchar *nick, const gchar *first,
-    const gchar *last, const gchar *avatar_token, const gchar *jid,
-    const gchar *olpc_color, const gchar *current_act_id,
-    TpHandle current_act_room, GArray *olpc_key, const gchar *ip4_addr,
-    const gchar *ip6_addr);
+void salut_contact_change_alias (SalutContact *self, const gchar *alias);
+void salut_contact_change_status (SalutContact *self, SalutPresenceId);
+void salut_contact_change_status_message (SalutContact *self,
+  const gchar *message);
+void salut_contact_change_avatar_token (SalutContact *self,
+  const gchar *avatar_token);
+void salut_contact_change_jid (SalutContact *self, gchar *jid);
 
-void salut_contact_avatar_request_flush (SalutContact *contact, guint8 *data,
+#ifdef ENABLE_OLPC
+void salut_contact_change_olpc_color (SalutContact *self,
+  const gchar *olpc_color);
+void salut_contact_change_olpc_key (SalutContact *self, GArray *olpc_key);
+void salut_contact_change_ipv4_addr (SalutContact *self,
+  const gchar *ipv4_addr);
+void salut_contact_change_ipv6_addr (SalutContact *self,
+  const gchar *ipv4_addr);
+void salut_contact_change_current_activity (SalutContact *self,
+  const gchar *current_activity_id, const gchar *current_activity_room);
+#endif
+
+void salut_contact_avatar_request_flush (SalutContact *self, guint8 *data,
     gsize size);
 
-void salut_contact_lost (SalutContact *contact);
+void salut_contact_found (SalutContact *self);
+void salut_contact_lost (SalutContact *self);
+
+void salut_contact_freeze (SalutContact *self);
+void salut_contact_thaw (SalutContact *self);
 
 G_END_DECLS
 

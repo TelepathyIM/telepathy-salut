@@ -447,7 +447,7 @@ contact_drop_resolver (SalutAvahiContact *self,
 
   g_object_unref (resolver);
 
-  if (resolvers_left == 0 && contact->found)
+  if (resolvers_left == 0)
     {
       salut_contact_lost (contact);
     }
@@ -516,6 +516,41 @@ find_resolver (SalutAvahiContact *contact,
 }
 
 static void
+update_alias (SalutAvahiContact *self, const gchar *nick, const gchar *first,
+  const gchar *last)
+{
+  if (nick != NULL && *nick != '\0')
+    {
+      salut_contact_change_alias (SALUT_CONTACT (self), nick);
+      return;
+    }
+
+  if (first != NULL && *first != '\0' && last != NULL && *last != '\0')
+    {
+      gchar *s = g_strdup_printf ("%s %s", first, last);
+
+      salut_contact_change_alias (SALUT_CONTACT (self), s);
+
+      g_free (s);
+      return;
+    }
+
+  if (first != NULL && *first != '\0')
+    {
+      salut_contact_change_alias (SALUT_CONTACT (self), first);
+      return;
+    }
+
+  if (last != NULL && *last != '\0')
+    {
+      salut_contact_change_alias (SALUT_CONTACT (self), last);
+      return;
+    }
+
+  salut_contact_change_alias (SALUT_CONTACT (self), NULL);
+}
+
+static void
 contact_resolved_cb (GaServiceResolver *resolver,
                      AvahiIfIndex interface,
                      AvahiProtocol protocol,
@@ -532,24 +567,9 @@ contact_resolved_cb (GaServiceResolver *resolver,
   SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
   SalutContact *contact = SALUT_CONTACT (self);
   AvahiStringList *t;
-  gint status = -1;
-  gchar *status_msg = NULL;
   gchar *nick = NULL;
   gchar *first = NULL;
   gchar *last = NULL;
-  gchar *avatar_token = NULL;
-  gchar *jid = NULL;
-#ifdef ENABLE_OLPC
-  gchar *olpc_color = NULL;
-  AvahiStringList *act_link, *room_link;
-  gchar *current_act_id = NULL;
-  TpHandle current_act_room = 0;
-  GArray *olpc_key = NULL;
-  gchar *ip4_addr = NULL;
-  gchar *ip6_addr = NULL;
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) contact->connection, TP_HANDLE_TYPE_ROOM);
-#endif
 
   DEBUG_RESOLVER (self, resolver, "contact %s resolved", contact->name);
 
@@ -560,7 +580,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
       priv->presence_resolver_failed_timer = 0;
     }
 
-#define SET_CHANGE(x) changes |= x
+  salut_contact_freeze (contact);
 
   /* status */
   if ((t = avahi_string_list_find(txt, "status")) != NULL)
@@ -571,7 +591,10 @@ contact_resolved_cb (GaServiceResolver *resolver,
 
       for (i = 0; i < SALUT_PRESENCE_NR_PRESENCES ; i++) {
         if (!strcmp(value, salut_presence_status_txt_names[i]))
-          status = i;
+          {
+            salut_contact_change_status (contact, i);
+            break;
+          }
       }
 
       avahi_free(value);
@@ -580,7 +603,12 @@ contact_resolved_cb (GaServiceResolver *resolver,
   /* status message */
   if ((t = avahi_string_list_find(txt, "msg")) != NULL)
     {
+      gchar *status_msg;
+
       avahi_string_list_get_pair (t, NULL, &status_msg, NULL);
+      salut_contact_change_status_message (contact, status_msg);
+
+      avahi_free (status_msg);
     }
 
   /* nick */
@@ -590,10 +618,10 @@ contact_resolved_cb (GaServiceResolver *resolver,
     }
 
   /* first name */
-    if ((t = avahi_string_list_find(txt, "1st")) != NULL)
-      {
-        avahi_string_list_get_pair (t, NULL, &first, NULL);
-      }
+  if ((t = avahi_string_list_find(txt, "1st")) != NULL)
+    {
+      avahi_string_list_get_pair (t, NULL, &first, NULL);
+    }
 
   /* last name */
   if ((t = avahi_string_list_find(txt, "last")) != NULL)
@@ -601,63 +629,67 @@ contact_resolved_cb (GaServiceResolver *resolver,
       avahi_string_list_get_pair (t, NULL, &last, NULL);
     }
 
+  update_alias (self, nick, first, last);
+
   if ((t = avahi_string_list_find(txt, "phsh")) != NULL)
     {
+      gchar *avatar_token;
+
       avahi_string_list_get_pair(t, NULL, &avatar_token, NULL);
+      salut_contact_change_avatar_token (contact, avatar_token);
+
+      avahi_free (avatar_token);
     }
 
   /* jid */
   t = avahi_string_list_find(txt, "jid");
   if (t != NULL)
     {
+      gchar *jid;
+
       avahi_string_list_get_pair (t, NULL, &jid, NULL);
+#ifdef ENABLE_OLPC
+      salut_contact_change_jid (contact, jid);
+#endif
+
+      avahi_free(jid);
     }
 
 #ifdef ENABLE_OLPC
   /* OLPC color */
   if ((t = avahi_string_list_find (txt, "olpc-color")) != NULL)
     {
+      gchar *olpc_color;
+
       avahi_string_list_get_pair (t, NULL, &olpc_color, NULL);
+
+      salut_contact_change_olpc_color (contact, olpc_color);
+      avahi_free(olpc_color);
     }
 
   /* current activity */
-  act_link = avahi_string_list_find (txt, "olpc-current-activity");
-  room_link = avahi_string_list_find (txt, "olpc-current-activity-room");
-
-  if (act_link != NULL)
+  if ((t = avahi_string_list_find (txt, "olpc-current-activity")) != NULL)
     {
-      avahi_string_list_get_pair (act_link, NULL, &current_act_id, NULL);
-      if (current_act_id == NULL || *current_act_id == '\0')
+      gchar *activity_id;
+      gchar *room_id = NULL;
+      AvahiStringList *room;
+
+      avahi_string_list_get_pair (t, NULL, &activity_id, NULL);
+      room = avahi_string_list_find (txt, "olpc-current-activity-room");
+
+      if (room != NULL)
         {
-          DEBUG ("No current activity; ignoring current activity room, if any");
-          avahi_free (current_act_id);
-          current_act_id = NULL;
+          avahi_string_list_get_pair (room, NULL, &room_id, NULL);
         }
+
+      salut_contact_change_current_activity (contact, room_id,
+        activity_id);
+      avahi_free (room_id);
+      avahi_free (activity_id);
     }
-
-  if (current_act_id != NULL && room_link != NULL)
+  else
     {
-      char *room_value;
-
-      avahi_string_list_get_pair (room_link, NULL, &room_value, NULL);
-      if (room_value == NULL || *room_value == '\0')
-        {
-          current_act_room = 0;
-        }
-      else
-        {
-          current_act_room = tp_handle_ensure (room_repo, room_value,
-              NULL, NULL);
-        }
-      avahi_free (room_value);
-
-      if (current_act_room == 0)
-        {
-          DEBUG ("Invalid room \"%s\" for current activity \"%s\": "
-              "ignoring", room_value, current_act_id);
-          avahi_free (current_act_id);
-          current_act_id = NULL;
-        }
+      salut_contact_change_current_activity (contact, NULL, NULL);
     }
 
   /* OLPC key */
@@ -665,6 +697,8 @@ contact_resolved_cb (GaServiceResolver *resolver,
     {
       guint i = 0;
       gchar *name = NULL;
+      GArray *olpc_key;
+
       /* FIXME: how big are OLPC keys anyway? */
       olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8), 512);
 
@@ -683,6 +717,9 @@ contact_resolved_cb (GaServiceResolver *resolver,
           t = avahi_string_list_find (txt, name);
         }
       g_free (name);
+
+      salut_contact_change_olpc_key (contact, olpc_key);
+      g_array_free (olpc_key, TRUE);
     }
 
   /* address */
@@ -695,46 +732,25 @@ contact_resolved_cb (GaServiceResolver *resolver,
           switch (address->proto)
             {
               case AVAHI_PROTO_INET:
-                ip4_addr = saddr;
+                salut_contact_change_ipv4_addr (contact, saddr);
                 break;
               case AVAHI_PROTO_INET6:
-                ip6_addr = saddr;
+                salut_contact_change_ipv6_addr (contact, saddr);
                 break;
               default:
                 break;
             }
         }
-      else
-        {
-          g_free (saddr);
-        }
+      g_free (saddr);
     }
 #endif
 
-  salut_contact_change (contact, status, status_msg, nick, first, last,
-      avatar_token, jid,
-#ifdef ENABLE_OLPC
-      olpc_color, current_act_id, current_act_room, olpc_key, ip4_addr, ip6_addr
-#else
-      NULL, NULL, 0, NULL, NULL, NULL
-#endif
-      );
+  salut_contact_found (contact);
+  salut_contact_thaw (contact);
 
-  avahi_free (status_msg);
   avahi_free (nick);
   avahi_free (first);
   avahi_free (last);
-  avahi_free (jid);
-#ifdef ENABLE_OLPC
-  avahi_free (olpc_color);
-  avahi_free (current_act_id);
-  g_free (ip4_addr);
-  g_free (ip6_addr);
-  if (olpc_key != NULL)
-    g_array_free (olpc_key, TRUE);
-  if (current_act_room != 0)
-    tp_handle_unref (room_repo, current_act_room);
-#endif
 }
 
 static gboolean

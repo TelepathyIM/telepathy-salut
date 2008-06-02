@@ -73,6 +73,9 @@ struct _SalutContactPrivate
    /* room handle owned by the SalutOlpcActivity -> SalutOlpcActivity */
   GHashTable *olpc_activities;
 #endif
+  gboolean found;
+  gboolean frozen;
+  guint pending_changes;
 };
 
 #define SALUT_CONTACT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT, SalutContactPrivate))
@@ -125,7 +128,7 @@ salut_contact_init (SalutContact *obj)
   priv->olpc_activities = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, (GDestroyNotify) g_object_unref);
 #endif
-  obj->found = FALSE;
+  priv->found = FALSE;
   priv->alias = NULL;
 }
 
@@ -438,240 +441,252 @@ salut_contact_get_avatar(SalutContact *contact,
   SALUT_CONTACT_GET_CLASS (contact)->retrieve_avatar (contact);
 }
 
-/* valid is true if this was a valid alias
- * returned value is true if the contacts alias actually changed */
-static gboolean
-update_alias (SalutContact *self,
-              const gchar *new,
-              gboolean *valid)
+static void
+salut_contact_change (SalutContact *self, guint changes)
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
 
-  if (new == NULL || *new == '\0')
-    {
-      *valid = FALSE;
-      return FALSE;
-    }
+  priv->pending_changes |= changes;
 
-  *valid = TRUE;
-  if (tp_strdiff (priv->alias, new))
+  if (!priv->frozen && priv->pending_changes != 0)
     {
-      g_free (priv->alias);
-      priv->alias = g_strdup (new);
-      return TRUE;
+      g_signal_emit (self, signals[CONTACT_CHANGE], 0,
+        priv->pending_changes);
+      priv->pending_changes = 0;
+      return;
     }
-
-  return FALSE;
 }
 
 void
-salut_contact_change (SalutContact *self,
-                      gint status,
-                      const gchar *status_msg,
-                      const gchar *nick,
-                      const gchar *first,
-                      const gchar *last,
-                      const gchar *avatar_token,
-                      const gchar *jid,
-                      const gchar *olpc_color,
-                      const gchar *current_act_id,
-                      TpHandle current_act_room,
-                      GArray *olpc_key,
-                      const gchar *ip4_addr,
-                      const gchar *ip6_addr)
+salut_contact_change_alias (SalutContact *self, const gchar *alias)
 {
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
-  gboolean alias_seen = FALSE;
-  gint changes = 0;
-#ifdef ENABLE_OLPC
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
-#endif
 
-#define SET_CHANGE(x) changes |= x
+  if (tp_strdiff (priv->alias, alias))
+    {
+      g_free (priv->alias);
+      priv->alias = g_strdup (alias);
+      salut_contact_change (self, SALUT_CONTACT_ALIAS_CHANGED);
+    }
+}
 
-  /* status */
+void
+salut_contact_change_status (SalutContact *self, SalutPresenceId status)
+{
   if (status != self->status && status < SALUT_PRESENCE_NR_PRESENCES)
     {
-      SET_CHANGE (SALUT_CONTACT_STATUS_CHANGED);
       self->status = status;
+      salut_contact_change(self, SALUT_CONTACT_STATUS_CHANGED);
     }
+}
 
-  /* status message */
-  if (status_msg != NULL && tp_strdiff (self->status_message, status_msg))
+void
+salut_contact_change_status_message (SalutContact *self, const gchar *message)
+{
+  if (tp_strdiff (self->status_message, message))
     {
-      SET_CHANGE (SALUT_CONTACT_STATUS_CHANGED);
       g_free (self->status_message);
-      self->status_message = g_strdup (status_msg);
+      self->status_message = g_strdup (message);
+      salut_contact_change(self, SALUT_CONTACT_STATUS_CHANGED);
     }
-  else if (status_msg == NULL && self->status_message != NULL)
-    {
-      SET_CHANGE (SALUT_CONTACT_STATUS_CHANGED);
-      g_free (self->status_message);
-      self->status_message = NULL;
-    }
+}
 
-  /* alias */
-  if (update_alias (self, nick, &alias_seen))
-    SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
-
-  if (!alias_seen)
-    {
-      /* Fallback to trying 1st + last as alias */
-      if (first != NULL && last != NULL)
-        {
-          gchar *alias = NULL;
-
-          alias = g_strdup_printf ("%s %s", first, last);
-
-          if (update_alias (self, alias, &alias_seen))
-            SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
-          g_free (alias);
-        }
-      else if (first != NULL)
-        {
-          if (update_alias (self, first, &alias_seen))
-            SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
-        }
-      else if (last != NULL)
-        {
-          if (update_alias (self, last, &alias_seen))
-            SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
-        }
-    }
-
-  if (!alias_seen && priv->alias != NULL)
-    {
-      /* No alias anymore ? */
-      g_free (priv->alias);
-      priv->alias = NULL;
-      SET_CHANGE (SALUT_CONTACT_ALIAS_CHANGED);
-    }
-
-  /* avatar token */
-  if (avatar_token != NULL && tp_strdiff (self->avatar_token, avatar_token))
+void
+salut_contact_change_avatar_token (SalutContact *self,
+    const gchar *avatar_token)
+{
+  if (tp_strdiff (self->avatar_token, avatar_token))
     {
       /* Purge the cache */
       purge_cached_avatar (self, avatar_token);
-      SET_CHANGE (SALUT_CONTACT_AVATAR_CHANGED);
+      salut_contact_change (self, SALUT_CONTACT_AVATAR_CHANGED);
     }
-  else if (avatar_token == NULL && self->avatar_token != NULL)
-    {
-      purge_cached_avatar (self, NULL);
-      SET_CHANGE (SALUT_CONTACT_AVATAR_CHANGED);
-    }
+}
 
-  /* jid */
-  if (jid != NULL && tp_strdiff (self->jid, jid))
+void
+salut_contact_change_jid (SalutContact *self, gchar *jid)
+{
+  if (tp_strdiff (self->jid, jid))
     {
       g_free (self->jid);
       self->jid = g_strdup (jid);
 #ifdef ENABLE_OLPC
-      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+      salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
 #endif
     }
+}
 
-#ifdef  ENABLE_OLPC
-  /* OLPC color */
-  if (olpc_color != NULL && tp_strdiff (self->olpc_color, olpc_color))
+#ifdef ENABLE_OLPC
+void
+salut_contact_change_olpc_color (SalutContact *self, const gchar *olpc_color)
+{
+  if (tp_strdiff (self->olpc_color, olpc_color))
     {
       g_free (self->olpc_color);
       self->olpc_color = g_strdup (olpc_color);
-      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+      salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
     }
+}
 
-  /* current activity */
- if (current_act_id == NULL || current_act_room == 0)
-   {
-     DEBUG ("Unsetting current activity");
-     if (self->olpc_cur_act != NULL || self->olpc_cur_act_room != 0)
-       {
-         g_free (self->olpc_cur_act);
-         if (self->olpc_cur_act_room != 0)
-           tp_handle_unref (room_repo, self->olpc_cur_act_room);
-         self->olpc_cur_act = NULL;
-         self->olpc_cur_act_room = 0;
-         SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
-       }
-    }
-  else
-    {
-      DEBUG ("Current activity %s, room handle %d", current_act_id,
-          current_act_room);
-      if (tp_strdiff (self->olpc_cur_act, current_act_id) ||
-          self->olpc_cur_act_room != current_act_room)
-        {
-          g_free (self->olpc_cur_act);
-          if (self->olpc_cur_act_room != 0)
-            tp_handle_unref (room_repo, self->olpc_cur_act_room);
-          self->olpc_cur_act_room = current_act_room;
-          tp_handle_ref (room_repo, current_act_room);
-          self->olpc_cur_act = g_strdup (current_act_id);
-          SET_CHANGE (SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
-        }
-    }
-
-  /* OLPC key */
+void
+salut_contact_change_olpc_key (SalutContact *self, GArray *olpc_key)
+{
   if (olpc_key != NULL)
     {
       if (self->olpc_key == NULL || self->olpc_key->len != olpc_key->len ||
           memcmp (self->olpc_key->data, olpc_key->data, olpc_key->len) != 0)
+        {
+          if (self->olpc_key != NULL)
             {
-              if (self->olpc_key != NULL)
-                {
-                  g_array_free (self->olpc_key, TRUE);
-                }
-              self->olpc_key = g_array_sized_new (FALSE, FALSE,
-                sizeof (guint8), olpc_key->len);
-              g_array_append_vals (self->olpc_key, olpc_key->data,
-                olpc_key->len);
-              SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+              g_array_free (self->olpc_key, TRUE);
             }
+            self->olpc_key = g_array_sized_new (FALSE, FALSE,
+                sizeof (guint8), olpc_key->len);
+            g_array_append_vals (self->olpc_key, olpc_key->data,
+                olpc_key->len);
+            salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
+        }
     }
+}
 
-  /* address */
-  if (ip4_addr != NULL && tp_strdiff (ip4_addr, self->olpc_ip4))
+void
+salut_contact_change_ipv4_addr (SalutContact *self, const gchar *ipv4_addr)
+{
+  if (tp_strdiff (ipv4_addr, self->olpc_ip4))
     {
       g_free (self->olpc_ip4);
-      self->olpc_ip4 = g_strdup (ip4_addr);
-      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+      self->olpc_ip4 = g_strdup (ipv4_addr);
+      salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
     }
 
-  if (ip6_addr != NULL && tp_strdiff (ip6_addr, self->olpc_ip4))
+}
+
+void
+salut_contact_change_ipv6_addr (SalutContact *self, const gchar *ipv6_addr)
+{
+  if (tp_strdiff (ipv6_addr, self->olpc_ip6))
     {
       g_free (self->olpc_ip6);
-      self->olpc_ip6 = g_strdup (ip6_addr);
-      SET_CHANGE (SALUT_CONTACT_OLPC_PROPERTIES);
+      self->olpc_ip6 = g_strdup (ipv6_addr);
+      salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
     }
+}
+
+void
+salut_contact_change_current_activity (SalutContact *self,
+  const gchar *current_activity_id, const gchar *current_activity_room)
+{
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+    ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
+  TpHandle room_handle = 0;
+
+  if (current_activity_room != NULL && *current_activity_room != '\0')
+    {
+      room_handle = tp_handle_ensure (room_repo, current_activity_room,
+        NULL, NULL);
+      if (room_handle == 0)
+        {
+          DEBUG ("Invalid room \"%s\" for current activity \"%s\": "
+              "ignoring", current_activity_room, current_activity_id);
+        }
+    }
+
+  if (current_activity_id == NULL || room_handle == 0)
+    {
+      DEBUG ("Unsetting current activity");
+      if (self->olpc_cur_act != NULL || self->olpc_cur_act_room != 0)
+        {
+          g_free (self->olpc_cur_act);
+          if (self->olpc_cur_act_room != 0)
+            tp_handle_unref (room_repo, self->olpc_cur_act_room);
+          self->olpc_cur_act = NULL;
+          self->olpc_cur_act_room = 0;
+           salut_contact_change (self, SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
+        }
+      if (room_handle != 0)
+        {
+          /* tp_handle_ensure gave us a ref */
+          tp_handle_unref (room_repo, room_handle);
+        }
+
+     }
+   else
+     {
+       DEBUG ("Current activity %s, room handle %d", current_activity_id,
+           room_handle);
+       if (tp_strdiff (self->olpc_cur_act, current_activity_id) ||
+           self->olpc_cur_act_room != room_handle)
+         {
+           g_free (self->olpc_cur_act);
+           if (self->olpc_cur_act_room != 0)
+             tp_handle_unref (room_repo, self->olpc_cur_act_room);
+           self->olpc_cur_act_room = room_handle;
+           self->olpc_cur_act = g_strdup (current_activity_id);
+           salut_contact_change (self, SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
+         }
+       else
+         {
+           /* tp_handle_ensure gave us a ref */
+           tp_handle_unref (room_repo, room_handle);
+         }
+     }
+}
+
 #endif
 
-  if (!self->found)
-    {
-      g_signal_emit (self, signals[FOUND], 0);
-      /* Initially force updates of everything */
-      SET_CHANGE (0xff);
-      self->found = TRUE;
-    }
+void
+salut_contact_found (SalutContact *self)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  if (priv->found)
+    return;
 
-  if (changes != 0)
-    {
-      g_signal_emit (self, signals[CONTACT_CHANGE], 0, changes);
-    }
+  priv->found = TRUE;
+  g_signal_emit (self, signals[FOUND], 0);
+  /* When found everything changes */
+  g_signal_emit (self, signals[CONTACT_CHANGE], 0, 0xff);
+  priv->pending_changes = 0;
 }
 
 void
 salut_contact_lost (SalutContact *self)
 {
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
   self->status = SALUT_PRESENCE_OFFLINE;
   g_free (self->status_message);
   self->status_message = NULL;
 
+  if (!priv->found)
+    return;
+
   DEBUG_CONTACT (self, "disappeared from the local link");
 
-  self->found = FALSE;
+  priv->found = FALSE;
   g_signal_emit (self, signals[CONTACT_CHANGE], 0,
       SALUT_CONTACT_STATUS_CHANGED);
   g_signal_emit(self, signals[LOST], 0);
+}
+
+void
+salut_contact_freeze (SalutContact *self)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  priv->frozen = TRUE;
+}
+
+void
+salut_contact_thaw (SalutContact *self)
+{
+  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+
+  if (!priv->frozen)
+    return;
+
+  priv->frozen = FALSE;
+  /* Triggers the emission of the changed signal */
+  salut_contact_change (self, 0);
 }
 
 #ifdef ENABLE_OLPC
