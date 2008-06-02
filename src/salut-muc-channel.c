@@ -320,6 +320,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
   tp_text_mixin_set_message_types(obj,
                                TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
                                TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
+                               TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE,
                                G_MAXUINT);
 
   g_object_get (self->connection, "self", &(priv->self), NULL);
@@ -1235,7 +1236,7 @@ salut_muc_channel_send (TpSvcChannelTypeText *channel,
   GError *error = NULL;
   GibberXmppStanza *stanza;
 
-  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY)
+  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
     {
       GError ierror = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
         "Invalid message type" };
