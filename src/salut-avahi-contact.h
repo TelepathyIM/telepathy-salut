@@ -60,7 +60,7 @@ SalutAvahiContact *
 salut_avahi_contact_new (SalutConnection *connection, const gchar *name,
     SalutAvahiDiscoveryClient *discovery_client);
 
-void salut_avahi_contact_add_service (SalutAvahiContact *contact,
+gboolean salut_avahi_contact_add_service (SalutAvahiContact *contact,
     AvahiIfIndex interface, AvahiProtocol protocol, const char *name,
     const char *type, const char *domain);
 

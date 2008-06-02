@@ -784,7 +784,7 @@ contact_failed_cb (GaServiceResolver *resolver,
       self);
 }
 
-void
+gboolean
 salut_avahi_contact_add_service (SalutAvahiContact *self,
                                  AvahiIfIndex interface,
                                  AvahiProtocol protocol,
@@ -798,7 +798,7 @@ salut_avahi_contact_add_service (SalutAvahiContact *self,
 
   resolver = find_resolver (self, interface, protocol, name, type, domain);
   if (resolver != NULL)
-    return;
+    return TRUE;
 
   resolver = ga_service_resolver_new (interface, protocol, name, type, domain,
       protocol, 0);
@@ -811,12 +811,15 @@ salut_avahi_contact_add_service (SalutAvahiContact *self,
   if (!ga_service_resolver_attach (resolver,
         priv->discovery_client->avahi_client, &error))
     {
-      g_warning ("Failed to attach resolver: %s", error->message);
+      DEBUG_CONTACT(self, "Failed to attach resolver: %s", error->message);
       g_error_free (error);
+      return FALSE;
     }
 
   DEBUG_RESOLVER (self, resolver, "added");
   priv->resolvers = g_slist_prepend (priv->resolvers, resolver);
+
+  return TRUE;
 }
 
 void
