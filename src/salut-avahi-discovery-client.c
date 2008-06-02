@@ -158,23 +158,6 @@ salut_avahi_discovery_client_get_property (GObject *object,
     }
 }
 
-static GObject *
-salut_avahi_discovery_client_constructor (GType type,
-                                          guint n_props,
-                                          GObjectConstructParam *props)
-{
-  GObject *obj;
-  SalutAvahiDiscoveryClientPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_avahi_discovery_client_parent_class)->
-           constructor (type, n_props, props);
-
-  priv = SALUT_AVAHI_DISCOVERY_CLIENT_GET_PRIVATE (SALUT_AVAHI_DISCOVERY_CLIENT
-      (obj));
-
-  return obj;
-}
-
 static void
 salut_avahi_discovery_client_class_init (
     SalutAvahiDiscoveryClientClass *salut_avahi_discovery_client_class)
@@ -188,7 +171,6 @@ salut_avahi_discovery_client_class_init (
   object_class->dispose = salut_avahi_discovery_client_dispose;
 
   object_class->get_property = salut_avahi_discovery_client_get_property;
-  object_class->constructor = salut_avahi_discovery_client_constructor;
 
   g_object_class_override_property (object_class, PROP_STATE,
       "state");

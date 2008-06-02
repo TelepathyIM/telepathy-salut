@@ -114,19 +114,6 @@ salut_contact_manager_set_property (GObject *object,
     }
 }
 
-static GObject *
-salut_contact_manager_constructor (GType type,
-                                   guint n_props,
-                                   GObjectConstructParam *props)
-{
-  GObject *obj;
-
-  obj = G_OBJECT_CLASS (salut_contact_manager_parent_class)->
-    constructor (type, n_props, props);
-
-  return obj;
-}
-
 static void
 salut_contact_manager_init (SalutContactManager *obj)
 {
@@ -149,7 +136,6 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
 
   g_type_class_add_private (salut_contact_manager_class, sizeof (SalutContactManagerPrivate));
 
-  object_class->constructor = salut_contact_manager_constructor;
   object_class->get_property = salut_contact_manager_get_property;
   object_class->set_property = salut_contact_manager_set_property;
 

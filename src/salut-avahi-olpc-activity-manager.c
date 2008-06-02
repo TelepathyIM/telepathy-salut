@@ -58,6 +58,10 @@ struct _SalutAvahiOlpcActivityManagerPrivate
 static void
 salut_avahi_olpc_activity_manager_init (SalutAvahiOlpcActivityManager *self)
 {
+  SalutAvahiOlpcActivityManagerPrivate *priv =
+    SALUT_AVAHI_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (obj);
+
+  priv->browser = ga_service_browser_new (SALUT_DNSSD_OLPC_ACTIVITY);
 }
 
 static void
@@ -99,24 +103,6 @@ salut_avahi_olpc_activity_manager_set_property (GObject *object,
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
     }
-}
-
-static GObject *
-salut_avahi_olpc_activity_manager_constructor (GType type,
-                                               guint n_props,
-                                               GObjectConstructParam *props)
-{
-  GObject *obj;
-  SalutAvahiOlpcActivityManagerPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_avahi_olpc_activity_manager_parent_class)->
-    constructor (type, n_props, props);
-
-  priv = SALUT_AVAHI_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (obj);
-
-  priv->browser = ga_service_browser_new (SALUT_DNSSD_OLPC_ACTIVITY);
-
-  return obj;
 }
 
 static gboolean
@@ -336,7 +322,6 @@ salut_avahi_olpc_activity_manager_class_init (SalutAvahiOlpcActivityManagerClass
   object_class->get_property = salut_avahi_olpc_activity_manager_get_property;
   object_class->set_property = salut_avahi_olpc_activity_manager_set_property;
 
-  object_class->constructor = salut_avahi_olpc_activity_manager_constructor;
   object_class->dispose = salut_avahi_olpc_activity_manager_dispose;
 
   activity_manager_class->start = salut_avahi_olpc_activity_manager_start;

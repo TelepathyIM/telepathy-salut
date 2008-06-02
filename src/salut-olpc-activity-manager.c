@@ -110,22 +110,6 @@ salut_olpc_activity_manager_set_property (GObject *object,
     }
 }
 
-static GObject *
-salut_olpc_activity_manager_constructor (GType type,
-                                         guint n_props,
-                                         GObjectConstructParam *props)
-{
-  GObject *obj;
-  SalutOlpcActivityManagerPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_olpc_activity_manager_parent_class)->
-    constructor (type, n_props, props);
-
-  priv = SALUT_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (obj);
-
-  return obj;
-}
-
 static void salut_olpc_activity_manager_dispose (GObject *object);
 static void salut_olpc_activity_manager_finalize (GObject *object);
 
@@ -141,7 +125,6 @@ salut_olpc_activity_manager_class_init (SalutOlpcActivityManagerClass *salut_olp
   object_class->get_property = salut_olpc_activity_manager_get_property;
   object_class->set_property = salut_olpc_activity_manager_set_property;
 
-  object_class->constructor = salut_olpc_activity_manager_constructor;
   object_class->dispose = salut_olpc_activity_manager_dispose;
   object_class->finalize = salut_olpc_activity_manager_finalize;
 

@@ -107,19 +107,6 @@ salut_avahi_olpc_activity_set_property (GObject *object,
     }
 }
 
-static GObject *
-salut_avahi_olpc_activity_constructor (GType type,
-                                       guint n_props,
-                                       GObjectConstructParam *props)
-{
-  GObject *obj;
-
-  obj = G_OBJECT_CLASS (salut_avahi_olpc_activity_parent_class)->
-    constructor (type, n_props, props);
-
-  return obj;
-}
-
 static gboolean
 activity_is_announced (SalutAvahiOlpcActivity *self)
 {
@@ -266,7 +253,6 @@ salut_avahi_olpc_activity_class_init (
   object_class->get_property = salut_avahi_olpc_activity_get_property;
   object_class->set_property = salut_avahi_olpc_activity_set_property;
 
-  object_class->constructor = salut_avahi_olpc_activity_constructor;
   object_class->dispose = salut_avahi_olpc_activity_dispose;
   object_class->finalize = salut_avahi_olpc_activity_finalize;
 

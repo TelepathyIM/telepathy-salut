@@ -102,24 +102,6 @@ salut_avahi_self_set_property (GObject *object,
   }
 }
 
-static GObject *
-salut_avahi_self_constructor (GType type,
-                              guint n_props,
-                              GObjectConstructParam *props)
-{
-  GObject *obj;
-  SalutAvahiSelf *self;
-  SalutAvahiSelfPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_avahi_self_parent_class)->
-    constructor (type, n_props, props);
-
-  self = SALUT_AVAHI_SELF (obj);
-  priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
-
-  return obj;
-}
-
 static void
 salut_avahi_self_init (SalutAvahiSelf *self)
 {
@@ -453,7 +435,6 @@ salut_avahi_self_class_init (
 
   object_class->dispose = salut_avahi_self_dispose;
 
-  object_class->constructor = salut_avahi_self_constructor;
   object_class->get_property = salut_avahi_self_get_property;
   object_class->set_property = salut_avahi_self_set_property;
 
