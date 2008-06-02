@@ -69,7 +69,7 @@ struct _SalutAvahiMucManagerPrivate
 };
 
 #define SALUT_AVAHI_MUC_MANAGER_GET_PRIVATE(obj) \
-    ((SalutAvahiMucManagerPrivate *) (SalutAvahiMucManager *)obj->priv)
+    ((SalutAvahiMucManagerPrivate *) ((SalutAvahiMucManager *)obj)->priv)
 
 static void
 room_resolver_removed (gpointer data)

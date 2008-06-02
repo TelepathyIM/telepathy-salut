@@ -77,7 +77,7 @@ struct _SalutRoomlistChannelPrivate
 };
 
 #define SALUT_ROOMLIST_CHANNEL_GET_PRIVATE(obj) \
-    ((SalutRoomlistChannelPrivate *) ((SalutRoomlistChannel *)obj->priv))
+    ((SalutRoomlistChannelPrivate *) ((SalutRoomlistChannel *)obj)->priv)
 
 static void
 salut_roomlist_channel_init (SalutRoomlistChannel *self)

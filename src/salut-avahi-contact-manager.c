@@ -55,7 +55,8 @@ struct _SalutAvahiContactManagerPrivate
 };
 
 #define SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE(obj) \
-    ((SalutAvahiContactManagerPrivate *) (SalutAvahiContactManager *)obj->priv)
+    ((SalutAvahiContactManagerPrivate *) \
+      ((SalutAvahiContactManager *)obj)->priv)
 
 
 static void

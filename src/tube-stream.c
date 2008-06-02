@@ -136,7 +136,7 @@ struct _SalutTubeStreamPrivate
 };
 
 #define SALUT_TUBE_STREAM_GET_PRIVATE(obj) \
-    ((SalutTubeStreamPrivate *) obj->priv)
+    ((SalutTubeStreamPrivate *) ((SalutTubeStream *)obj)->priv)
 
 static void data_received_cb (GibberBytestreamIface *ibb, TpHandle sender,
     GString *data, gpointer user_data);

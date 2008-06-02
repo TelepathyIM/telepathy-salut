@@ -61,7 +61,7 @@ struct _SalutBytestreamManagerPrivate
 };
 
 #define SALUT_BYTESTREAM_MANAGER_GET_PRIVATE(obj) \
-    ((SalutBytestreamManagerPrivate *) obj->priv)
+    ((SalutBytestreamManagerPrivate *) ((SalutBytestreamManager *)obj)->priv)
 
 static void
 salut_bytestream_manager_init (SalutBytestreamManager *self)
