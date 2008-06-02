@@ -322,7 +322,10 @@ salut_avahi_contact_retrieve_avatar (SalutContact *contact)
   GError *error = NULL;
 
   if (priv->record_browser != NULL)
-    return;
+    {
+      g_object_unref(priv->record_browser);
+      priv->record_browser = NULL;
+    }
 
   name = g_strdup_printf ("%s." SALUT_DNSSD_PRESENCE ".local", contact->name);
   priv->record_browser = ga_record_browser_new (name, 0xA);
