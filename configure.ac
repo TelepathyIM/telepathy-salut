@@ -47,6 +47,20 @@ ifelse(salut_nano_version, 0,
     ])
 AC_SUBST(ERROR_CFLAGS)
 
+ifelse(salut_nano_version, 0,
+    [ # Salut is version x.y.z - disable coding style checks by default
+AC_ARG_ENABLE(coding-style-checks,
+  AC_HELP_STRING([--enable-coding-style-checks],
+                 [check coding style using grep]),
+    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=no] )
+    ],
+    [ # Salut is version x.y.z.1 - enable coding style checks by default
+AC_ARG_ENABLE(coding-style-checks,
+  AC_HELP_STRING([--disable-coding-style-checks],
+                 [don't check coding style using grep]),
+    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=yes])
+    ])
+
 dnl Check for code generation tools
 XSLTPROC=
 AC_CHECK_PROGS([XSLTPROC], [xsltproc])

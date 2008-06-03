@@ -1,6 +1,10 @@
 EXTRA_DIST = \
     c-constants-generator.xsl \
     c-interfaces-generator.xsl \
+    check-coding-style.mk \
+    check-c-style.sh \
+    check-misc.sh \
+    check-whitespace.sh \
     doc-generator.xsl \
     glib-client-marshaller-gen.py \
     glib-errors-enum-body.xsl \

@@ -43,11 +43,11 @@ struct _SalutBytestreamManager {
 };
 
 
-GType salut_bytestream_manager_get_type(void);
+GType salut_bytestream_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_BYTESTREAM_MANAGER \
-  (salut_bytestream_manager_get_type())
+  (salut_bytestream_manager_get_type ())
 #define SALUT_BYTESTREAM_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_BYTESTREAM_MANAGER, \
                               SalutBytestreamManager))

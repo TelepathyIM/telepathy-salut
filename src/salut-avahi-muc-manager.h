@@ -42,21 +42,24 @@ struct _SalutAvahiMucManager {
     gpointer priv;
 };
 
-GType salut_avahi_muc_manager_get_type(void);
+GType salut_avahi_muc_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_AVAHI_MUC_MANAGER \
-  (salut_avahi_muc_manager_get_type())
+  (salut_avahi_muc_manager_get_type ())
 #define SALUT_AVAHI_MUC_MANAGER(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_MUC_MANAGER, SalutAvahiMucManager))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_MUC_MANAGER, \
+   SalutAvahiMucManager))
 #define SALUT_AVAHI_MUC_MANAGER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_AVAHI_MUC_MANAGER, SalutAvahiMucManagerClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_AVAHI_MUC_MANAGER,  \
+   SalutAvahiMucManagerClass))
 #define SALUT_IS_AVAHI_MUC_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_AVAHI_MUC_MANAGER))
 #define SALUT_IS_AVAHI_MUC_MANAGER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_AVAHI_MUC_MANAGER))
 #define SALUT_AVAHI_MUC_MANAGER_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_AVAHI_MUC_MANAGER, SalutAvahiMucManagerClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_AVAHI_MUC_MANAGER, \
+   SalutAvahiMucManagerClass))
 
 SalutAvahiMucManager *
 salut_avahi_muc_manager_new (SalutConnection *connection,

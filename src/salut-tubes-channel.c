@@ -1178,7 +1178,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   base = (TpBaseConnection*) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
-    && !tp_handle_set_is_member(TP_GROUP_MIXIN(self->muc)->members,
+    && !tp_handle_set_is_member (TP_GROUP_MIXIN(self->muc)->members,
         priv->self_handle))
     {
       GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
@@ -1499,7 +1499,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   base = (TpBaseConnection*) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
-    && !tp_handle_set_is_member(TP_GROUP_MIXIN(self->muc)->members,
+    && !tp_handle_set_is_member (TP_GROUP_MIXIN(self->muc)->members,
         priv->self_handle))
     {
       GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,

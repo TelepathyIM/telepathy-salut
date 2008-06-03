@@ -43,11 +43,11 @@ struct _SalutAvahiSelf {
 };
 
 
-GType salut_avahi_self_get_type(void);
+GType salut_avahi_self_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_AVAHI_SELF \
-  (salut_avahi_self_get_type())
+  (salut_avahi_self_get_type ())
 #define SALUT_AVAHI_SELF(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_SELF, SalutAvahiSelf))
 #define SALUT_AVAHI_SELF_CLASS(klass) \

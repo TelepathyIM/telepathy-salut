@@ -57,11 +57,11 @@ struct _SalutMucManager {
     GObject parent;
 };
 
-GType salut_muc_manager_get_type(void);
+GType salut_muc_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_MUC_MANAGER \
-  (salut_muc_manager_get_type())
+  (salut_muc_manager_get_type ())
 #define SALUT_MUC_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_MUC_MANAGER, SalutMucManager))
 #define SALUT_MUC_MANAGER_CLASS(klass) \

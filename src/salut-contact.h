@@ -80,11 +80,11 @@ struct _SalutContact {
     SalutConnection *connection;
 };
 
-GType salut_contact_get_type(void);
+GType salut_contact_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_CONTACT \
-  (salut_contact_get_type())
+  (salut_contact_get_type ())
 #define SALUT_CONTACT(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONTACT, SalutContact))
 #define SALUT_CONTACT_CLASS(klass) \
@@ -101,24 +101,20 @@ typedef struct {
 } salut_contact_address_t;
 
 /* Returns an array of addresses on which the contact can be found */
-GArray *
-salut_contact_get_addresses(SalutContact *contact);
+GArray * salut_contact_get_addresses (SalutContact *contact);
 
-gboolean
-salut_contact_has_address(SalutContact *contact,
-                           struct sockaddr_storage *address);
-const gchar *
-salut_contact_get_alias(SalutContact *contact);
+gboolean salut_contact_has_address (SalutContact *contact,
+                                   struct sockaddr_storage *address);
+const gchar * salut_contact_get_alias (SalutContact *contact);
 
 typedef void (*salut_contact_get_avatar_callback)(SalutContact *contact,
                                                   guint8 *avatar,
                                                   gsize size,
                                                   gpointer user_data);
 
-void
-salut_contact_get_avatar(SalutContact *contact,
-                         salut_contact_get_avatar_callback callback,
-                         gpointer user_data1);
+void salut_contact_get_avatar (SalutContact *contact,
+                               salut_contact_get_avatar_callback callback,
+                               gpointer user_data1);
 
 #ifdef ENABLE_OLPC
 typedef void (*SalutContactOLPCActivityFunc)

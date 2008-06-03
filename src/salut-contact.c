@@ -194,30 +194,30 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
   object_class->dispose = salut_contact_dispose;
   object_class->finalize = salut_contact_finalize;
 
-  signals[FOUND] = g_signal_new("found",
-                                G_OBJECT_CLASS_TYPE(salut_contact_class),
-                                G_SIGNAL_RUN_LAST,
-                                0,
-                                NULL, NULL,
-                                g_cclosure_marshal_VOID__VOID,
-                                G_TYPE_NONE, 0);
+  signals[FOUND] = g_signal_new ("found",
+      G_OBJECT_CLASS_TYPE(salut_contact_class),
+      G_SIGNAL_RUN_LAST,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__VOID,
+      G_TYPE_NONE, 0);
 
-  signals[CONTACT_CHANGE] = g_signal_new("contact-change",
-                                G_OBJECT_CLASS_TYPE(salut_contact_class),
-                                G_SIGNAL_RUN_LAST,
-                                0,
-                                NULL, NULL,
-                                g_cclosure_marshal_VOID__INT,
-                                G_TYPE_NONE, 1,
-                                G_TYPE_INT);
+  signals[CONTACT_CHANGE] = g_signal_new ("contact-change",
+      G_OBJECT_CLASS_TYPE(salut_contact_class),
+      G_SIGNAL_RUN_LAST,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__INT,
+      G_TYPE_NONE, 1,
+      G_TYPE_INT);
 
-  signals[LOST] = g_signal_new("lost",
-                                G_OBJECT_CLASS_TYPE(salut_contact_class),
-                                G_SIGNAL_RUN_LAST,
-                                0,
-                                NULL, NULL,
-                                g_cclosure_marshal_VOID__VOID,
-                                G_TYPE_NONE, 0);
+  signals[LOST] = g_signal_new ("lost",
+      G_OBJECT_CLASS_TYPE(salut_contact_class),
+      G_SIGNAL_RUN_LAST,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__VOID,
+      G_TYPE_NONE, 0);
 
   param_spec = g_param_spec_object (
       "connection",
@@ -287,7 +287,7 @@ salut_contact_dispose (GObject *object)
   g_hash_table_destroy (priv->olpc_activities);
 #endif
 
-  salut_contact_avatar_request_flush(self, NULL, 0);
+  salut_contact_avatar_request_flush (self, NULL, 0);
 
   /* release any references held by the object here */
 
@@ -299,15 +299,16 @@ salut_contact_dispose (GObject *object)
 }
 
 void
-salut_contact_finalize (GObject *object) {
+salut_contact_finalize (GObject *object)
+{
   SalutContact *self = SALUT_CONTACT (object);
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
-  g_free(self->name);
-  g_free(self->status_message);
-  g_free(priv->alias);
-  g_free(self->avatar_token);
+  g_free (self->name);
+  g_free (self->status_message);
+  g_free (priv->alias);
+  g_free (self->avatar_token);
   g_free (self->jid);
 
 #ifdef ENABLE_OLPC
@@ -392,11 +393,13 @@ salut_contact_has_address (SalutContact *self,
 }
 
 const gchar *
-salut_contact_get_alias(SalutContact *contact) {
+salut_contact_get_alias (SalutContact *contact)
+{
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
-  if (priv->alias == NULL) {
-    return contact->name;
-  }
+  if (priv->alias == NULL)
+    {
+      return contact->name;
+    }
   return priv->alias;
 }
 
@@ -412,36 +415,37 @@ salut_contact_avatar_request_flush (SalutContact *contact,
   liststart = priv->avatar_requests;
   priv->avatar_requests = NULL;
 
-  for (list = liststart; list != NULL; list = g_list_next(list)) {
+  for (list = liststart; list != NULL; list = g_list_next (list)) {
     request = (AvatarRequest *)list->data;
-    request->callback(contact, data, size, request->user_data);
-    g_slice_free(AvatarRequest, request);
+    request->callback (contact, data, size, request->user_data);
+    g_slice_free (AvatarRequest, request);
   }
-  g_list_free(liststart);
+  g_list_free (liststart);
 }
 
 void
-salut_contact_get_avatar(SalutContact *contact,
-                         salut_contact_get_avatar_callback callback,
-                         gpointer user_data) {
+salut_contact_get_avatar (SalutContact *contact,
+    salut_contact_get_avatar_callback callback, gpointer user_data)
+{
   SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
   AvatarRequest *request;
   gboolean retrieve;
 
-  g_assert(contact != NULL);
+  g_assert (contact != NULL);
 
-  if (contact->avatar_token == NULL) {
-    DEBUG("Avatar requestes for a contact without one (%s)", contact->name);
-    callback(contact, NULL, 0, user_data);
-    return;
-  }
+  if (contact->avatar_token == NULL)
+    {
+      DEBUG ("Avatar requestes for a contact without one (%s)", contact->name);
+      callback (contact, NULL, 0, user_data);
+      return;
+    }
 
-  DEBUG("Requesting avatar for: %s", contact->name);
-  request = g_slice_new0(AvatarRequest);
+  DEBUG ("Requesting avatar for: %s", contact->name);
+  request = g_slice_new0 (AvatarRequest);
   request->callback = callback;
   request->user_data = user_data;
   retrieve = (priv->avatar_requests == NULL);
-  priv->avatar_requests = g_list_append(priv->avatar_requests, request);
+  priv->avatar_requests = g_list_append (priv->avatar_requests, request);
 
   if (retrieve)
     SALUT_CONTACT_GET_CLASS (contact)->retrieve_avatar (contact);
@@ -482,7 +486,7 @@ salut_contact_change_status (SalutContact *self, SalutPresenceId status)
   if (status != self->status && status < SALUT_PRESENCE_NR_PRESENCES)
     {
       self->status = status;
-      salut_contact_change(self, SALUT_CONTACT_STATUS_CHANGED);
+      salut_contact_change (self, SALUT_CONTACT_STATUS_CHANGED);
     }
 }
 
@@ -493,7 +497,7 @@ salut_contact_change_status_message (SalutContact *self, const gchar *message)
     {
       g_free (self->status_message);
       self->status_message = g_strdup (message);
-      salut_contact_change(self, SALUT_CONTACT_STATUS_CHANGED);
+      salut_contact_change (self, SALUT_CONTACT_STATUS_CHANGED);
     }
 }
 
@@ -671,7 +675,7 @@ salut_contact_lost (SalutContact *self)
   priv->found = FALSE;
   g_signal_emit (self, signals[CONTACT_CHANGE], 0,
       SALUT_CONTACT_STATUS_CHANGED);
-  g_signal_emit(self, signals[LOST], 0);
+  g_signal_emit (self, signals[LOST], 0);
 }
 
 void

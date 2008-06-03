@@ -45,7 +45,7 @@ void debug (DebugFlags flag, const gchar *format, ...)
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...) \
-  debug(DEBUG_FLAG, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
+  debug (DEBUG_FLAG, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
 
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)
 

@@ -31,7 +31,7 @@
 #include <telepathy-glib/util.h>
 
 static void
-channel_iface_init(gpointer g_iface, gpointer iface_data);
+channel_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
   G_TYPE_OBJECT,
@@ -88,29 +88,30 @@ salut_contact_channel_constructor (GType type, guint n_props,
 
   /* Parent constructor chain */
   obj = G_OBJECT_CLASS(salut_contact_channel_parent_class)->
-        constructor(type, n_props, props);
+        constructor (type, n_props, props);
 
   priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE (SALUT_CONTACT_CHANNEL (obj));
 
   /* Connect to the bus */
   bus = tp_get_bus ();
-  dbus_g_connection_register_g_object(bus, priv->object_path, obj);
+  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
 
   /* Ref our handle */
   base_conn = TP_BASE_CONNECTION(priv->conn);
 
-  handle_repo = tp_base_connection_get_handles(base_conn, TP_HANDLE_TYPE_LIST);
-  contact_repo = tp_base_connection_get_handles(base_conn,
+  handle_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_LIST);
+  contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
 
-  tp_handle_ref(handle_repo, priv->handle);
+  tp_handle_ref (handle_repo, priv->handle);
 
   /* Impossible to add/remove/rescind on any of our lists */
-  tp_group_mixin_init(obj,
-      G_STRUCT_OFFSET(SalutContactChannel, group),
+  tp_group_mixin_init (obj,
+      G_STRUCT_OFFSET (SalutContactChannel, group),
       contact_repo, base_conn->self_handle);
 
-  tp_group_mixin_change_flags(obj, 0, 0);
+  tp_group_mixin_change_flags (obj, 0, 0);
   return obj;
 }
 
@@ -171,13 +172,13 @@ salut_contact_channel_set_property (GObject     *object,
       priv->conn = g_value_get_object (value);
       break;
     case PROP_HANDLE_TYPE:
-      g_assert(g_value_get_uint(value) == 0
-               || g_value_get_uint(value) == TP_HANDLE_TYPE_LIST);
+      g_assert (g_value_get_uint (value) == 0
+               || g_value_get_uint (value) == TP_HANDLE_TYPE_LIST);
       break;
     case PROP_CHANNEL_TYPE:
-      tmp = g_value_get_string(value);
-      g_assert(tmp == NULL
-               || !tp_strdiff(g_value_get_string(value),
+      tmp = g_value_get_string (value);
+      g_assert (tmp == NULL
+               || !tp_strdiff (g_value_get_string (value),
                        TP_IFACE_CHANNEL_TYPE_CONTACT_LIST));
       break;
     default:
@@ -212,14 +213,17 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
-  g_object_class_override_property (object_class, PROP_OBJECT_PATH, "object-path");
-  g_object_class_override_property (object_class, PROP_CHANNEL_TYPE, "channel-type");
-  g_object_class_override_property (object_class, PROP_HANDLE_TYPE, "handle-type");
+  g_object_class_override_property (object_class, PROP_OBJECT_PATH,
+      "object-path");
+  g_object_class_override_property (object_class, PROP_CHANNEL_TYPE,
+      "channel-type");
+  g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
+      "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
-  tp_group_mixin_class_init(object_class,
-    G_STRUCT_OFFSET(SalutContactChannelClass, group_class),
-    NULL, NULL);
+  tp_group_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutContactChannelClass, group_class),
+      NULL, NULL);
 }
 
 void
@@ -236,9 +240,9 @@ salut_contact_channel_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  tp_svc_channel_emit_closed(TP_SVC_CHANNEL(object));
+  tp_svc_channel_emit_closed (TP_SVC_CHANNEL (object));
 
-  tp_handle_unref(handle_repo, priv->handle);
+  tp_handle_unref (handle_repo, priv->handle);
 
 
   /* release any references held by the object here */
@@ -254,9 +258,9 @@ salut_contact_channel_finalize (GObject *object)
   SalutContactChannelPrivate *priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
-  g_free(priv->object_path);
+  g_free (priv->object_path);
 
-  tp_group_mixin_finalize(object);
+  tp_group_mixin_finalize (object);
 
   G_OBJECT_CLASS (salut_contact_channel_parent_class)->finalize (object);
 }
@@ -275,9 +279,9 @@ salut_contact_channel_finalize (GObject *object)
  */
 static void
 salut_contact_channel_get_channel_type (TpSvcChannel *iface,
-                                        DBusGMethodInvocation *context)
+    DBusGMethodInvocation *context)
 {
-  tp_svc_channel_return_from_get_channel_type(context,
+  tp_svc_channel_return_from_get_channel_type (context,
       TP_IFACE_CHANNEL_TYPE_CONTACT_LIST);
 }
 
@@ -328,14 +332,14 @@ salut_contact_channel_get_interfaces (TpSvcChannel *iface,
 
 
 static void
-channel_iface_init(gpointer g_iface, gpointer iface_data)
+channel_iface_init (gpointer g_iface, gpointer iface_data)
 {
   TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_implement_##x (\
     klass, salut_contact_channel_##x)
-  IMPLEMENT(get_channel_type);
-  IMPLEMENT(get_handle);
-  IMPLEMENT(get_interfaces);
+  IMPLEMENT (get_channel_type);
+  IMPLEMENT (get_handle);
+  IMPLEMENT (get_interfaces);
 #undef IMPLEMENT
 }

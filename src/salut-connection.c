@@ -763,9 +763,8 @@ salut_connection_finalize (GObject *object)
 }
 
 void
-_contact_manager_contact_status_changed(SalutConnection *self,
-                                        SalutContact *contact,
-                                        TpHandle handle)
+_contact_manager_contact_status_changed (SalutConnection *self,
+    SalutContact *contact, TpHandle handle)
 {
   TpPresenceStatus ps = { contact->status,
     make_presence_opt_args (contact->status, contact->status_message) };
@@ -778,24 +777,24 @@ _contact_manager_contact_status_changed(SalutConnection *self,
 }
 
 static void
-_self_established_cb(SalutSelf *s, gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
+_self_established_cb (SalutSelf *s, gpointer data)
+{
+  SalutConnection *self = SALUT_CONNECTION (data);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
+      TP_BASE_CONNECTION (self), TP_HANDLE_TYPE_CONTACT);
 
 
-  g_free(self->name);
-  self->name = g_strdup(s->name);
+  g_free (self->name);
+  self->name = g_strdup (s->name);
 
-  base->self_handle = tp_handle_ensure(handle_repo, self->name, NULL, NULL);
+  base->self_handle = tp_handle_ensure (handle_repo, self->name, NULL, NULL);
 
   if (!salut_contact_manager_start (priv->contact_manager, NULL))
     {
       /* FIXME handle error */
-      tp_base_connection_change_status(
-          TP_BASE_CONNECTION(base),
+      tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
           TP_CONNECTION_STATUS_CONNECTING,
           TP_CONNECTION_STATUS_REASON_REQUESTED);
       return;
@@ -815,27 +814,26 @@ _self_established_cb(SalutSelf *s, gpointer data) {
     }
 #endif
 
-  tp_base_connection_change_status(base,
-      TP_CONNECTION_STATUS_CONNECTED,
+  tp_base_connection_change_status (base, TP_CONNECTION_STATUS_CONNECTED,
       TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 
 static void
-_self_failed_cb(SalutSelf *s, GError *error, gpointer data) {
-  SalutConnection *self = SALUT_CONNECTION(data);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+_self_failed_cb (SalutSelf *s, GError *error, gpointer data)
+{
+  SalutConnection *self = SALUT_CONNECTION (data);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
 
   /* FIXME better error handling */
-  tp_base_connection_change_status(base,
-     TP_CONNECTION_STATUS_DISCONNECTED,
+  tp_base_connection_change_status (base, TP_CONNECTION_STATUS_DISCONNECTED,
      TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 static void
 discovery_client_running (SalutConnection *self)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   gint port;
 
   priv->self = salut_discovery_client_create_self (priv->discovery_client,
@@ -848,18 +846,18 @@ discovery_client_running (SalutConnection *self)
 #endif
       );
 
-  g_signal_connect(priv->self, "established",
-                   G_CALLBACK(_self_established_cb), self);
-  g_signal_connect(priv->self, "failure",
-                   G_CALLBACK(_self_failed_cb), self);
+  g_signal_connect (priv->self, "established",
+                    G_CALLBACK(_self_established_cb), self);
+  g_signal_connect (priv->self, "failure",
+                    G_CALLBACK(_self_failed_cb), self);
 
   port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager,
       NULL);
 
   if (port == -1 || !salut_self_announce (priv->self, port, NULL))
     {
-      tp_base_connection_change_status(
-            TP_BASE_CONNECTION(self),
+      tp_base_connection_change_status (
+            TP_BASE_CONNECTION (self),
             TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
@@ -879,7 +877,7 @@ _discovery_client_state_changed_cb (SalutDiscoveryClient *client,
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
-  g_assert(client == priv->discovery_client);
+  g_assert (client == priv->discovery_client);
 
   if (state == SALUT_DISCOVERY_CLIENT_STATE_CONNECTED)
     {
@@ -889,20 +887,22 @@ _discovery_client_state_changed_cb (SalutDiscoveryClient *client,
     {
       /* FIXME better error messages */
       /* FIXME instead of full disconnect we could handle the avahi restart */
-      tp_base_connection_change_status(TP_BASE_CONNECTION (self),
+      tp_base_connection_change_status (TP_BASE_CONNECTION (self),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
     }
 }
 /* public functions */
 static void
-_salut_connection_disconnect(SalutConnection *self) {
+_salut_connection_disconnect (SalutConnection *self)
+{
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
-  if (priv->self) {
-    g_object_unref(priv->self);
-    priv->self = NULL;
-  }
+  if (priv->self)
+    {
+      g_object_unref (priv->self);
+      priv->self = NULL;
+    }
 
   if (priv->discovery_client != NULL)
     {
@@ -924,12 +924,13 @@ _salut_connection_disconnect(SalutConnection *self) {
  */
 void
 salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
-                                  DBusGMethodInvocation *context)
+    DBusGMethodInvocation *context)
 {
   /* Aliases are set by the contacts
    * Actually we concat the first and lastname property */
 
-  tp_svc_connection_interface_aliasing_return_from_get_alias_flags (context, 0);
+  tp_svc_connection_interface_aliasing_return_from_get_alias_flags (context,
+      0);
 }
 
 /**
@@ -941,57 +942,64 @@ salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
  */
 void
 salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
-                                  const GArray *contacts,
-                                  DBusGMethodInvocation *context)
+    const GArray *contacts, DBusGMethodInvocation *context)
 {
-  SalutConnection *self = SALUT_CONNECTION(iface);
+  SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
   int i;
   const gchar **aliases;
   GError *error = NULL;
   TpHandleRepoIface *contact_handles =
-      tp_base_connection_get_handles(base, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
 
-  DEBUG("Alias requested");
+  DEBUG ("Alias requested");
 
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED(base, context);
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  if (!tp_handles_are_valid(contact_handles, contacts, FALSE, &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-
-  aliases = g_new0(const gchar *, contacts->len + 1);
-  for (i = 0; i < contacts->len; i++) {
-    TpHandle handle = g_array_index (contacts, TpHandle, i);
-    SalutContact *contact;
-    if (handle == TP_BASE_CONNECTION(self)->self_handle) {
-      aliases[i] = salut_self_get_alias(priv->self);
-    } else {
-      contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
-      if (contact == NULL) {
-        DEBUG("RequestAliases called for offline contact");
-        aliases[i] = "";
-      } else {
-        aliases[i] = salut_contact_get_alias(contact);
-        g_object_unref(contact);
-      }
+  if (!tp_handles_are_valid (contact_handles, contacts, FALSE, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
     }
-  }
 
-  tp_svc_connection_interface_aliasing_return_from_request_aliases(
-    context, aliases);
+  aliases = g_new0 (const gchar *, contacts->len + 1);
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      SalutContact *contact;
+      if (handle == TP_BASE_CONNECTION (self)->self_handle)
+        {
+          aliases[i] = salut_self_get_alias (priv->self);
+        }
+      else
+        {
+          contact = salut_contact_manager_get_contact (priv->contact_manager,
+            handle);
+          if (contact == NULL)
+            {
+              DEBUG ("RequestAliases called for offline contact");
+              aliases[i] = "";
+            }
+          else
+            {
+              aliases[i] = salut_contact_get_alias (contact);
+              g_object_unref (contact);
+          }
+        }
+    }
 
-  g_free(aliases);
+  tp_svc_connection_interface_aliasing_return_from_request_aliases (context,
+    aliases);
+
+  g_free (aliases);
   return;
 }
 
 static void
 salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
-                              GHashTable *aliases,
-                              DBusGMethodInvocation *context)
+    GHashTable *aliases, DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
@@ -1013,43 +1021,41 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
 
   DEBUG("Setting my alias to: %s", alias);
 
-  if (!salut_self_set_alias (priv->self, alias, &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
+  if (!salut_self_set_alias (priv->self, alias, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
   tp_svc_connection_interface_aliasing_return_from_set_aliases (context);
 }
 
 void
-_contact_manager_contact_alias_changed(SalutConnection *self,
-                                       SalutContact *contact,
-                                       TpHandle handle) {
+_contact_manager_contact_alias_changed  (SalutConnection *self,
+    SalutContact *contact, TpHandle handle)
+{
   GPtrArray *aliases;
   GValue entry = {0, };
 
-  g_value_init(&entry, SALUT_TP_ALIAS_PAIR_TYPE);
-  g_value_take_boxed(&entry,
-                 dbus_g_type_specialized_construct(SALUT_TP_ALIAS_PAIR_TYPE));
+  g_value_init (&entry, SALUT_TP_ALIAS_PAIR_TYPE);
+  g_value_take_boxed (&entry,
+      dbus_g_type_specialized_construct (SALUT_TP_ALIAS_PAIR_TYPE));
 
-  dbus_g_type_struct_set(&entry,
-                         0, handle,
-                         1, salut_contact_get_alias(contact),
-                         G_MAXUINT);
-  aliases = g_ptr_array_sized_new(1);
-  g_ptr_array_add(aliases, g_value_get_boxed(&entry));
+  dbus_g_type_struct_set (&entry,
+      0, handle, 1, salut_contact_get_alias (contact), G_MAXUINT);
+  aliases = g_ptr_array_sized_new (1);
+  g_ptr_array_add (aliases, g_value_get_boxed (&entry));
 
   DEBUG("Emitting AliasesChanged");
 
-  tp_svc_connection_interface_aliasing_emit_aliases_changed(self,
-      aliases);
+  tp_svc_connection_interface_aliasing_emit_aliases_changed (self, aliases);
 
-  g_value_unset(&entry);
-  g_ptr_array_free(aliases, TRUE);
+  g_value_unset (&entry);
+  g_ptr_array_free (aliases, TRUE);
 }
 
 static void
-salut_connection_aliasing_service_iface_init(gpointer g_iface,
+salut_connection_aliasing_service_iface_init (gpointer g_iface,
     gpointer iface_data)
 {
   TpSvcConnectionInterfaceAliasingClass *klass =
@@ -1057,117 +1063,124 @@ salut_connection_aliasing_service_iface_init(gpointer g_iface,
 
 #define IMPLEMENT(x) tp_svc_connection_interface_aliasing_implement_##x \
     (klass, salut_connection_##x)
-  IMPLEMENT(get_alias_flags);
-  IMPLEMENT(request_aliases);
-  IMPLEMENT(set_aliases);
+  IMPLEMENT (get_alias_flags);
+  IMPLEMENT (request_aliases);
+  IMPLEMENT (set_aliases);
 #undef IMPLEMENT
 }
 
 /* Avatar service implementation */
 void
-_contact_manager_contact_avatar_changed(SalutConnection *self,
-                                        SalutContact *contact,
-                                        TpHandle handle) {
-
-  tp_svc_connection_interface_avatars_emit_avatar_updated(self,
+_contact_manager_contact_avatar_changed (SalutConnection *self,
+    SalutContact *contact, TpHandle handle)
+{
+  tp_svc_connection_interface_avatars_emit_avatar_updated (self,
       (guint)handle, contact->avatar_token);
 }
 
 static void
-salut_connection_clear_avatar(TpSvcConnectionInterfaceAvatars *iface,
-                              DBusGMethodInvocation *context) {
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *iface,
+    DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GError *error = NULL;
   TpBaseConnection *base = (TpBaseConnection *) self;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  if (!salut_self_set_avatar(priv->self, NULL, 0, &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
-  tp_svc_connection_interface_avatars_return_from_clear_avatar(context);
+  if (!salut_self_set_avatar (priv->self, NULL, 0, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+  tp_svc_connection_interface_avatars_return_from_clear_avatar (context);
 }
 
 static void
-salut_connection_set_avatar(TpSvcConnectionInterfaceAvatars *iface,
-                            const GArray *avatar,
-                            const gchar *mime_type,
-                            DBusGMethodInvocation *context) {
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars *iface,
+    const GArray *avatar, const gchar *mime_type,
+    DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GError *error = NULL;
   TpBaseConnection *base = (TpBaseConnection *) self;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  if (!salut_self_set_avatar(priv->self, (guint8 *)avatar->data,
-                             avatar->len, &error)) {
-    dbus_g_method_return_error(context, error);
-    g_error_free(error);
-    return;
-  }
+  if (!salut_self_set_avatar (priv->self, (guint8 *)avatar->data,
+                             avatar->len, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
 
   tp_svc_connection_interface_avatars_emit_avatar_updated (self,
       base->self_handle, priv->self->avatar_token);
-  tp_svc_connection_interface_avatars_return_from_set_avatar(
-     context, priv->self->avatar_token);
+  tp_svc_connection_interface_avatars_return_from_set_avatar (context,
+      priv->self->avatar_token);
 }
 
 
 static void
-salut_connection_get_avatar_tokens(TpSvcConnectionInterfaceAvatars *iface,
-                                   const GArray *contacts,
-                                   DBusGMethodInvocation *context) {
+salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
+    const GArray *contacts, DBusGMethodInvocation *context)
+{
   int i;
   gchar **ret;
   GError *err = NULL;
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      base, TP_HANDLE_TYPE_CONTACT);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_CONTACT);
 
-  if (!tp_handles_are_valid(handle_repo, contacts, FALSE, &err)) {
-    dbus_g_method_return_error(context, err);
-    g_error_free(err);
-    return;
-  }
+  if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
+    {
+      dbus_g_method_return_error (context, err);
+      g_error_free (err);
+      return;
+    }
 
   ret = g_new0(gchar *, contacts->len + 1);
 
-  for (i = 0; i < contacts->len ; i++) {
-    TpHandle handle = g_array_index(contacts, TpHandle, i);
-    if (base->self_handle == handle) {
-      ret[i] = priv->self->avatar_token;
-    } else {
-      SalutContact *contact;
-      contact =
-         salut_contact_manager_get_contact(priv->contact_manager, handle);
-      if (contact != NULL) {
-        ret[i] = contact->avatar_token;
-        g_object_unref(contact);
-      }
+  for (i = 0; i < contacts->len ; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      if (base->self_handle == handle)
+        {
+          ret[i] = priv->self->avatar_token;
+        }
+      else
+        {
+           SalutContact *contact;
+           contact = salut_contact_manager_get_contact (priv->contact_manager,
+               handle);
+           if (contact != NULL)
+             {
+               ret[i] = contact->avatar_token;
+               g_object_unref (contact);
+             }
+         }
+      if (ret[i] == NULL)
+        ret[i] = "";
     }
-    if (ret[i] == NULL)
-      ret[i] = "";
-  }
 
-  tp_svc_connection_interface_avatars_return_from_get_avatar_tokens(context,
-    (const gchar **)ret);
+  tp_svc_connection_interface_avatars_return_from_get_avatar_tokens (context,
+      (const gchar **)ret);
 
-  g_free(ret);
+  g_free (ret);
 }
 
 static void
-salut_connection_get_known_avatar_tokens(
-    TpSvcConnectionInterfaceAvatars *iface,
-    const GArray *contacts,
+salut_connection_get_known_avatar_tokens (
+    TpSvcConnectionInterfaceAvatars *iface, const GArray *contacts,
     DBusGMethodInvocation *context)
 {
   int i;
@@ -1279,7 +1292,7 @@ salut_connection_request_avatars (
 
            if (priv->self->avatar != NULL)
              {
-               arr = g_array_sized_new (FALSE, FALSE, sizeof(guint8),
+               arr = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
                  priv->self->avatar_size);
                arr = g_array_append_vals (arr, priv->self->avatar,
                  priv->self->avatar_size);
@@ -1307,98 +1320,104 @@ salut_connection_request_avatars (
 }
 
 static void
-_request_avatar_cb(SalutContact *contact, guint8 *avatar, gsize size,
-                   gpointer user_data) {
+_request_avatar_cb (SalutContact *contact, guint8 *avatar, gsize size,
+                   gpointer user_data)
+{
   DBusGMethodInvocation *context = (DBusGMethodInvocation *) user_data;
 
   GError *err = NULL;
   GArray *arr;
 
-  if (size == 0) {
-    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                      "Unable to get avatar");
-    dbus_g_method_return_error(context, err);
-    g_error_free(err);
-    return;
+  if (size == 0)
+    {
+      err = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                         "Unable to get avatar");
+      dbus_g_method_return_error (context, err);
+      g_error_free (err);
+      return;
   }
 
-  arr = g_array_sized_new(FALSE, FALSE, sizeof(guint8), size);
-  arr = g_array_append_vals(arr, avatar, size);
-  tp_svc_connection_interface_avatars_return_from_request_avatar(
-    context, arr, "");
-  g_array_free(arr, TRUE);
+  arr = g_array_sized_new (FALSE, FALSE, sizeof (guint8), size);
+  arr = g_array_append_vals (arr, avatar, size);
+  tp_svc_connection_interface_avatars_return_from_request_avatar (context,
+      arr, "");
+  g_array_free (arr, TRUE);
 }
 
 static void
-salut_connection_request_avatar(TpSvcConnectionInterfaceAvatars *iface,
-                                guint handle,
-                                DBusGMethodInvocation *context) {
-  SalutConnection *self = SALUT_CONNECTION(iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  TpBaseConnection *base = TP_BASE_CONNECTION(self);
+salut_connection_request_avatar (TpSvcConnectionInterfaceAvatars *iface,
+    guint handle, DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
   SalutContact *contact;
   GError *err = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
-      base, TP_HANDLE_TYPE_CONTACT);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_CONTACT);
 
-  if (!tp_handle_is_valid(handle_repo, handle, &err)) {
-    dbus_g_method_return_error(context, err);
-    g_error_free(err);
-    return;
-  }
-
-  if (handle == base->self_handle) {
-    _request_avatar_cb(NULL, priv->self->avatar,
-        priv->self->avatar_size, context);
-    return;
-  }
-
-  contact = salut_contact_manager_get_contact(priv->contact_manager, handle);
-  if (contact == NULL || contact->avatar_token == NULL) {
-    err = g_error_new(TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                      "No known avatar");
-    dbus_g_method_return_error(context, err);
-    g_error_free(err);
-    if (contact != NULL) {
-      g_object_unref(contact);
+  if (!tp_handle_is_valid (handle_repo, handle, &err))
+    {
+      dbus_g_method_return_error (context, err);
+      g_error_free (err);
+      return;
     }
-    return;
-  }
-  salut_contact_get_avatar(contact, _request_avatar_cb, context);
-  g_object_unref(contact);
+
+  if (handle == base->self_handle)
+    {
+      _request_avatar_cb (NULL, priv->self->avatar, priv->self->avatar_size,
+        context);
+      return;
+    }
+
+  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
+  if (contact == NULL || contact->avatar_token == NULL)
+    {
+      err = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "No known avatar");
+      dbus_g_method_return_error (context, err);
+      g_error_free (err);
+      if (contact != NULL)
+        {
+          g_object_unref (contact);
+        }
+      return;
+    }
+  salut_contact_get_avatar (contact, _request_avatar_cb, context);
+  g_object_unref (contact);
 }
 
 static void
-salut_connection_get_avatar_requirements(TpSvcConnectionInterfaceAvatars *iface,
-                                         DBusGMethodInvocation *context) {
+salut_connection_get_avatar_requirements (
+    TpSvcConnectionInterfaceAvatars *iface, DBusGMethodInvocation *context)
+{
   const gchar *mimetypes [] = {
     "image/png",
     "image/jpeg",
     NULL };
 
-  tp_svc_connection_interface_avatars_return_from_get_avatar_requirements(
+  tp_svc_connection_interface_avatars_return_from_get_avatar_requirements (
       context, mimetypes, 0, 0, 0, 0, 0xffff);
 }
 
 static void
-salut_connection_avatar_service_iface_init(gpointer g_iface,
+salut_connection_avatar_service_iface_init (gpointer g_iface,
     gpointer iface_data)
 {
-TpSvcConnectionInterfaceAvatarsClass *klass =
-   (TpSvcConnectionInterfaceAvatarsClass *) g_iface;
+  TpSvcConnectionInterfaceAvatarsClass *klass =
+       (TpSvcConnectionInterfaceAvatarsClass *) g_iface;
 
 #define IMPLEMENT(x) tp_svc_connection_interface_avatars_implement_##x \
     (klass, salut_connection_##x)
-  IMPLEMENT(get_avatar_requirements);
-  IMPLEMENT(get_avatar_tokens);
-  IMPLEMENT(get_known_avatar_tokens);
-  IMPLEMENT(request_avatar);
-  IMPLEMENT(request_avatars);
-  IMPLEMENT(set_avatar);
-  IMPLEMENT(clear_avatar);
+  IMPLEMENT (get_avatar_requirements);
+  IMPLEMENT (get_avatar_tokens);
+  IMPLEMENT (get_known_avatar_tokens);
+  IMPLEMENT (request_avatar);
+  IMPLEMENT (request_avatars);
+  IMPLEMENT (set_avatar);
+  IMPLEMENT (clear_avatar);
 #undef IMPLEMENT
 }
 
@@ -1412,11 +1431,8 @@ new_gvalue (GType type)
 }
 
 static GHashTable *
-get_properties_hash (const GArray *key,
-                     const gchar *color,
-                     const gchar *jid,
-                     const gchar *ip4,
-                     const gchar *ip6)
+get_properties_hash (const GArray *key, const gchar *color, const gchar *jid,
+  const gchar *ip4, const gchar *ip6)
 {
   GHashTable *properties;
   GValue *gvalue;
@@ -2029,7 +2045,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  if (!tp_handle_is_valid(room_repo, handle, &error))
+  if (!tp_handle_is_valid (room_repo, handle, &error))
     goto error;
 
   activity = salut_olpc_activity_manager_get_activity_by_room (
@@ -2392,7 +2408,7 @@ handle_normalize_require_nonempty (TpHandleRepoIface *repo,
 
 /* Connection baseclass function implementations */
 static void
-salut_connection_create_handle_repos(TpBaseConnection *self,
+salut_connection_create_handle_repos (TpBaseConnection *self,
     TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES])
 {
   static const char *list_handle_strings[] = {
@@ -2413,27 +2429,30 @@ salut_connection_create_handle_repos(TpBaseConnection *self,
 }
 
 void
-_contact_manager_contact_change_cb(SalutContactManager *mgr,
-                                   SalutContact *contact,
-                                   int changes, gpointer data) {
+_contact_manager_contact_change_cb (SalutContactManager *mgr,
+    SalutContact *contact, int changes, gpointer data)
+{
   SalutConnection *self = SALUT_CONNECTION(data);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
   TpHandle handle;
 
-  handle = tp_handle_lookup(handle_repo, contact->name, NULL, NULL);
+  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
 
-  if (changes & SALUT_CONTACT_ALIAS_CHANGED) {
-    _contact_manager_contact_alias_changed(self, contact, handle);
-  }
+  if (changes & SALUT_CONTACT_ALIAS_CHANGED)
+    {
+      _contact_manager_contact_alias_changed (self, contact, handle);
+    }
 
-  if (changes & SALUT_CONTACT_STATUS_CHANGED) {
-    _contact_manager_contact_status_changed(self, contact, handle);
-  }
+  if (changes & SALUT_CONTACT_STATUS_CHANGED)
+    {
+      _contact_manager_contact_status_changed (self, contact, handle);
+    }
 
-  if (changes & SALUT_CONTACT_AVATAR_CHANGED) {
-    _contact_manager_contact_avatar_changed(self, contact, handle);
-  }
+  if (changes & SALUT_CONTACT_AVATAR_CHANGED)
+    {
+      _contact_manager_contact_avatar_changed (self, contact, handle);
+    }
 
 #ifdef ENABLE_OLPC
   if (changes & SALUT_CONTACT_OLPC_PROPERTIES)
@@ -2451,8 +2470,7 @@ _contact_manager_contact_change_cb(SalutContactManager *mgr,
 #ifdef ENABLE_OLPC
 static void
 _olpc_activity_manager_activity_modified_cb (SalutOlpcActivityManager *mgr,
-                                             SalutOlpcActivity *activity,
-                                             SalutConnection *self)
+  SalutOlpcActivity *activity, SalutConnection *self)
 {
   GHashTable *properties;
 
@@ -2465,9 +2483,7 @@ _olpc_activity_manager_activity_modified_cb (SalutOlpcActivityManager *mgr,
 
 gboolean
 salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
-                                          TpHandle room,
-                                          TpHandle sender,
-                                          GibberXmppStanza *stanza)
+    TpHandle room, TpHandle sender, GibberXmppStanza *stanza)
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GibberXmppNode *props_node;
@@ -2479,11 +2495,13 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
 
   props_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+
   if (props_node == NULL)
     return FALSE;
 
   activity = salut_olpc_activity_manager_get_activity_by_room (
       priv->olpc_activity_manager, room);
+
   if (activity == NULL)
     {
       DEBUG ("no activity in room %d", room);
@@ -2507,10 +2525,8 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
 
 static gboolean
 uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
-                        GibberXmppConnection *conn,
-                        GibberXmppStanza *stanza,
-                        SalutContact *contact,
-                        gpointer user_data)
+  GibberXmppConnection *conn, GibberXmppStanza *stanza, SalutContact *contact,
+  gpointer user_data)
 {
   return (gibber_xmpp_node_get_child_ns (stanza->node, "uninvite",
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS) != NULL);
@@ -2518,14 +2534,12 @@ uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
 
 static void
 uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
-                          GibberXmppConnection *conn,
-                          GibberXmppStanza *stanza,
-                          SalutContact *contact,
-                          gpointer user_data)
+  GibberXmppConnection *conn, GibberXmppStanza *stanza, SalutContact *contact,
+  gpointer user_data)
 {
   SalutConnection *self = SALUT_CONNECTION (user_data);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles(
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
   GibberXmppNode *node;
   TpHandle room_handle;
@@ -2561,6 +2575,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
 
   activity = salut_olpc_activity_manager_get_activity_by_room (
       priv->olpc_activity_manager, room_handle);
+
   if (activity == NULL)
     return;
 
@@ -2570,10 +2585,11 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
 #endif
 
 static GPtrArray*
-salut_connection_create_channel_factories(TpBaseConnection *base) {
-  SalutConnection *self = SALUT_CONNECTION(base);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
-  GPtrArray *factories = g_ptr_array_sized_new(3);
+salut_connection_create_channel_factories (TpBaseConnection *base)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  GPtrArray *factories = g_ptr_array_sized_new (3);
 
   /* Create the contact manager */
   priv->contact_manager = salut_discovery_client_create_contact_manager (
@@ -2592,8 +2608,8 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
 
   /* create the OLPC activity manager */
   priv->olpc_activity_manager =
-    salut_discovery_client_create_olpc_activity_manager (priv->discovery_client,
-        self);
+      salut_discovery_client_create_olpc_activity_manager (
+          priv->discovery_client, self);
   g_signal_connect (priv->olpc_activity_manager, "activity-modified",
       G_CALLBACK (_olpc_activity_manager_activity_modified_cb), self);
 #endif
@@ -2608,9 +2624,9 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
   */
 
-  g_ptr_array_add(factories, priv->contact_manager);
-  g_ptr_array_add(factories, priv->im_manager);
-  g_ptr_array_add(factories, priv->muc_manager);
+  g_ptr_array_add (factories, priv->contact_manager);
+  g_ptr_array_add (factories, priv->im_manager);
+  g_ptr_array_add (factories, priv->muc_manager);
   /*
   g_ptr_array_add (factories, priv->tubes_manager);
   */
@@ -2619,31 +2635,27 @@ salut_connection_create_channel_factories(TpBaseConnection *base) {
 }
 
 static gchar *
-salut_connection_get_unique_connection_name(TpBaseConnection *base) {
-  SalutConnection *self = SALUT_CONNECTION(base);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+salut_connection_get_unique_connection_name (TpBaseConnection *base)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
 
-  return g_strdup(priv->published_name);
+  return g_strdup (priv->published_name);
 }
 
 static void
-salut_connection_shut_down(TpBaseConnection *self) {
-  _salut_connection_disconnect(SALUT_CONNECTION(self));
-  tp_base_connection_finish_shutdown(self);
+salut_connection_shut_down (TpBaseConnection *self)
+{
+  _salut_connection_disconnect (SALUT_CONNECTION (self));
+  tp_base_connection_finish_shutdown (self);
 }
 
 static gboolean
-salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
-  SalutConnection *self = SALUT_CONNECTION(base);
+salut_connection_start_connecting (TpBaseConnection *base, GError **error)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GError *client_error = NULL;
-
-/*
-  tp_base_connection_change_status(
-      TP_BASE_CONNECTION(base),
-      TP_CONNECTION_STATUS_CONNECTING,
-      TP_CONNECTION_STATUS_REASON_REQUESTED);
-  */
 
   g_signal_connect (priv->discovery_client, "state-changed",
       G_CALLBACK (_discovery_client_state_changed_cb), self);
@@ -2660,8 +2672,8 @@ salut_connection_start_connecting(TpBaseConnection *base, GError **error) {
   return TRUE;
 
 error:
-  tp_base_connection_change_status(
-        TP_BASE_CONNECTION(base),
+  tp_base_connection_change_status (
+        TP_BASE_CONNECTION (base),
         TP_CONNECTION_STATUS_DISCONNECTED,
         TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
   return FALSE;

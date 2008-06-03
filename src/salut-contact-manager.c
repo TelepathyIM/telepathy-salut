@@ -36,14 +36,14 @@
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include "debug.h"
 
-static void salut_contact_manager_factory_iface_init(gpointer *g_iface,
+static void salut_contact_manager_factory_iface_init (gpointer *g_iface,
     gpointer *iface_data);
 
 static SalutContactChannel *salut_contact_manager_get_channel
     (SalutContactManager *mgr, TpHandle handle, gboolean *created);
 
 static void
-_contact_finalized_cb(gpointer data, GObject *old_object);
+_contact_finalized_cb (gpointer data, GObject *old_object);
 
 G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
     G_TYPE_OBJECT,
@@ -155,7 +155,7 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
   g_object_class_install_property (object_class, PROP_CONNECTION,
       param_spec);
 
-  signals[CONTACT_CHANGE] = g_signal_new("contact-change",
+  signals[CONTACT_CHANGE] = g_signal_new ("contact-change",
       G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
       G_SIGNAL_RUN_LAST,
       0,
@@ -167,13 +167,14 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
 }
 
 static gboolean
-dispose_contact(gpointer key, gpointer value, gpointer object) {
+dispose_contact (gpointer key, gpointer value, gpointer object)
+{
   SalutContact *contact = SALUT_CONTACT(value);
   SalutContactManager *self = SALUT_CONTACT_MANAGER (object);
 
-  g_object_weak_unref(G_OBJECT(contact), _contact_finalized_cb, object);
-  g_signal_handlers_disconnect_matched(contact, G_SIGNAL_MATCH_DATA,
-                                       0, 0, NULL, NULL, object);
+  g_object_weak_unref (G_OBJECT(contact), _contact_finalized_cb, object);
+  g_signal_handlers_disconnect_matched (contact, G_SIGNAL_MATCH_DATA,
+      0, 0, NULL, NULL, object);
 
   SALUT_CONTACT_MANAGER_GET_CLASS (self)->dispose_contact (self, contact);
   return TRUE;
@@ -211,64 +212,73 @@ salut_contact_manager_finalize (GObject *object)
 }
 
 static void
-change_all_groups(SalutContactManager *mgr, TpIntSet *add, TpIntSet *rem) {
+change_all_groups (SalutContactManager *mgr, TpIntSet *add, TpIntSet *rem)
+{
   TpHandle i;
   SalutContactChannel *c;
-  TpIntSet *empty = tp_intset_new();
-  for (i = LIST_HANDLE_FIRST; i <= LIST_HANDLE_LAST; i++) {
-    c = salut_contact_manager_get_channel(mgr, i, NULL);
-    tp_group_mixin_change_members(G_OBJECT(c),
-                                  "", add, rem,
-                                  empty, empty, 0, 0);
-  }
-  tp_intset_destroy(empty);
+  TpIntSet *empty = tp_intset_new ();
+
+  for (i = LIST_HANDLE_FIRST; i <= LIST_HANDLE_LAST; i++)
+    {
+      c = salut_contact_manager_get_channel (mgr, i, NULL);
+      tp_group_mixin_change_members (G_OBJECT(c),
+                                     "", add, rem,
+                                     empty, empty, 0, 0);
+    }
+  tp_intset_destroy (empty);
 }
 
 static void
-contact_found_cb(SalutContact *contact, gpointer userdata) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
-  TpIntSet *to_add = tp_intset_new();
-  TpIntSet *to_rem = tp_intset_new();
+contact_found_cb (SalutContact *contact, gpointer userdata)
+{
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (userdata);
+  TpIntSet *to_add = tp_intset_new ();
+  TpIntSet *to_rem = tp_intset_new ();
 
-  tp_intset_add(to_add, contact->handle);
-  change_all_groups(mgr, to_add, to_rem);
-  tp_intset_destroy(to_add);
-  tp_intset_destroy(to_rem);
+  tp_intset_add (to_add, contact->handle);
+  change_all_groups (mgr, to_add, to_rem);
+  tp_intset_destroy (to_add);
+  tp_intset_destroy (to_rem);
 }
 
 static void
-contact_change_cb(SalutContact *contact, gint changes, gpointer userdata) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
+contact_change_cb (SalutContact *contact, gint changes, gpointer userdata)
+{
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (userdata);
 
   DEBUG("Emitting contact changes for %s: %d", contact->name, changes);
 
-  g_signal_emit(mgr, signals[CONTACT_CHANGE], 0, contact, changes);
+  g_signal_emit (mgr, signals[CONTACT_CHANGE], 0, contact, changes);
 }
 
 static void
-contact_lost_cb(SalutContact *contact, gpointer userdata) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(userdata);
+contact_lost_cb (SalutContact *contact, gpointer userdata)
+{
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (userdata);
 
-  TpIntSet *to_add = tp_intset_new();
-  TpIntSet *to_rem = tp_intset_new();
+  TpIntSet *to_add = tp_intset_new ();
+  TpIntSet *to_rem = tp_intset_new ();
 
   DEBUG("Removing %s from contacts", contact->name);
 
-  tp_intset_add(to_rem, contact->handle);
-  change_all_groups(mgr, to_add, to_rem);
+  tp_intset_add (to_rem, contact->handle);
+  change_all_groups (mgr, to_add, to_rem);
 
-  tp_intset_destroy(to_add);
-  tp_intset_destroy(to_rem);
+  tp_intset_destroy (to_add);
+  tp_intset_destroy (to_rem);
 }
 
 static gboolean
-_contact_remove_finalized(gpointer key, gpointer value, gpointer data) {
+_contact_remove_finalized (gpointer key, gpointer value, gpointer data)
+{
   return data == value;
 }
 
 static void
-_contact_finalized_cb(gpointer data, GObject *old_object) {
+_contact_finalized_cb (gpointer data, GObject *old_object)
+{
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(data);
+
   g_hash_table_foreach_remove (mgr->contacts, _contact_remove_finalized,
       old_object);
 }
@@ -315,36 +325,41 @@ salut_contact_manager_ensure_contact (SalutContactManager *self,
 }
 
 static void
-salut_contact_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(iface);
+salut_contact_manager_factory_iface_close_all (TpChannelFactoryIface *iface)
+{
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (iface);
   SalutContactManagerPrivate *priv =
-    SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
+    SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
 
   SALUT_CONTACT_MANAGER_GET_CLASS (mgr)->close_all (mgr);
 
-  if (priv->channels) {
-    g_hash_table_destroy(priv->channels);
-    priv->channels = NULL;
-  }
+  if (priv->channels)
+    {
+      g_hash_table_destroy (priv->channels);
+      priv->channels = NULL;
+    }
 
-  if (mgr->contacts) {
-    g_hash_table_foreach_remove (mgr->contacts, dispose_contact, mgr);
-    g_hash_table_destroy (mgr->contacts);
-    mgr->contacts = NULL;
-  }
+  if (mgr->contacts)
+    {
+      g_hash_table_foreach_remove (mgr->contacts, dispose_contact, mgr);
+      g_hash_table_destroy (mgr->contacts);
+      mgr->contacts = NULL;
+    }
 }
 
 static void
-salut_contact_manager_factory_iface_connecting(TpChannelFactoryIface *iface) {
+salut_contact_manager_factory_iface_connecting (TpChannelFactoryIface *iface)
+{
 }
 
 static void
-salut_contact_manager_factory_iface_connected(TpChannelFactoryIface *iface) {
-
+salut_contact_manager_factory_iface_connected (TpChannelFactoryIface *iface)
+{
 }
 
 static void
-salut_contact_manager_factory_iface_disconnected(TpChannelFactoryIface *iface) {
+salut_contact_manager_factory_iface_disconnected (TpChannelFactoryIface *iface)
+{
 }
 
 struct foreach_data {
@@ -353,46 +368,43 @@ struct foreach_data {
 };
 
 static void
-salut_contact_manager_iface_foreach_one(gpointer key,
-                                        gpointer value,
-                                        gpointer data)  {
+salut_contact_manager_iface_foreach_one (gpointer key, gpointer value,
+    gpointer data)
+{
   TpChannelIface *chan = TP_CHANNEL_IFACE(value);
   struct foreach_data *f = (struct foreach_data *) data;
 
-  f->func(chan, f->data);
+  f->func (chan, f->data);
 }
 
 static void
-salut_contact_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
-                                            TpChannelFunc func, gpointer data) {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(iface);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE(mgr);
+salut_contact_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
+    TpChannelFunc func, gpointer data)
+{
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (iface);
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
   struct foreach_data f;
   f.func = func;
   f.data = data;
 
-  g_hash_table_foreach(priv->channels,
-                       salut_contact_manager_iface_foreach_one,
-                       &f);
-
+  g_hash_table_foreach (priv->channels,
+                        salut_contact_manager_iface_foreach_one, &f);
 }
 
 static TpChannelFactoryRequestStatus
-salut_contact_manager_factory_iface_request(TpChannelFactoryIface *iface,
-                                             const gchar *chan_type,
-                                             TpHandleType handle_type,
-                                             guint handle,
-                                             gpointer request,
-                                             TpChannelIface **ret,
-                                             GError **error) {
+salut_contact_manager_factory_iface_request (TpChannelFactoryIface *iface,
+    const gchar *chan_type, TpHandleType handle_type,
+    guint handle, gpointer request,
+    TpChannelIface **ret, GError **error)
+{
   SalutContactManager *mgr = SALUT_CONTACT_MANAGER(iface);
   SalutContactChannel *chan;
   gboolean created;
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_LIST);
 
   /* We only support contact list channels */
-  if (tp_strdiff(chan_type, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST)) {
+  if (tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST)) {
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
   }
 
@@ -402,32 +414,33 @@ salut_contact_manager_factory_iface_request(TpChannelFactoryIface *iface,
   }
 
   /* Most be a valid list handle */
-  if (!tp_handle_is_valid(handle_repo, handle, NULL)) {
+  if (!tp_handle_is_valid (handle_repo, handle, NULL)) {
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
   }
 
-  chan = salut_contact_manager_get_channel(mgr, handle, &created);
-  *ret = TP_CHANNEL_IFACE(chan);
+  chan = salut_contact_manager_get_channel (mgr, handle, &created);
+  *ret = TP_CHANNEL_IFACE (chan);
   return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED
                  : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
 }
 
-static void salut_contact_manager_factory_iface_init(gpointer *g_iface,
-                                                     gpointer *iface_data) {
-   TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
+static void salut_contact_manager_factory_iface_init (gpointer *g_iface,
+    gpointer *iface_data)
+{
+  TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
 
-   klass->close_all = salut_contact_manager_factory_iface_close_all;
-   klass->connecting = salut_contact_manager_factory_iface_connecting;
-   klass->connected = salut_contact_manager_factory_iface_connected;
-   klass->disconnected = salut_contact_manager_factory_iface_disconnected;
-   klass->foreach = salut_contact_manager_factory_iface_foreach;
-   klass->request = salut_contact_manager_factory_iface_request;
+  klass->close_all = salut_contact_manager_factory_iface_close_all;
+  klass->connecting = salut_contact_manager_factory_iface_connecting;
+  klass->connected = salut_contact_manager_factory_iface_connected;
+  klass->disconnected = salut_contact_manager_factory_iface_disconnected;
+  klass->foreach = salut_contact_manager_factory_iface_foreach;
+  klass->request = salut_contact_manager_factory_iface_request;
 }
 
 /* private functions */
 static SalutContactChannel *
 salut_contact_manager_new_channel (SalutContactManager *mgr,
-                                   TpHandle handle)
+    TpHandle handle)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_conn = (TpBaseConnection *) (mgr->connection);
@@ -459,8 +472,7 @@ salut_contact_manager_new_channel (SalutContactManager *mgr,
 
 static SalutContactChannel *
 salut_contact_manager_get_channel (SalutContactManager *mgr,
-                                   TpHandle handle,
-                                   gboolean *created)
+    TpHandle handle, gboolean *created)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
   SalutContactChannel *chan;
@@ -481,48 +493,49 @@ salut_contact_manager_get_channel (SalutContactManager *mgr,
 /* public functions */
 gboolean
 salut_contact_manager_start (SalutContactManager *self,
-                             GError **error)
+    GError **error)
 {
   return SALUT_CONTACT_MANAGER_GET_CLASS (self)->start (self, error);
 }
 
 SalutContact *
-salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle) {
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle)
+{
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_CONTACT);
-  const char *name = tp_handle_inspect(handle_repo, handle);
+  const char *name = tp_handle_inspect (handle_repo, handle);
   SalutContact *ret;
 
-  g_return_val_if_fail(name, NULL);
+  g_return_val_if_fail (name, NULL);
 
-  DEBUG("Getting contact for: %s", name);
-  ret =  g_hash_table_lookup(mgr->contacts, name);
+  DEBUG ("Getting contact for: %s", name);
+  ret = g_hash_table_lookup (mgr->contacts, name);
 
-  if (ret != NULL) {
-    g_object_ref(ret);
-  } else {
-    DEBUG("Failed to get contact for %s", name);
-  }
+  if (ret != NULL)
+    g_object_ref (ret);
+  else
+    DEBUG ("Failed to get contact for %s", name);
 
   return ret;
 }
 
 static void
-_find_by_address(gpointer key, gpointer value, gpointer user_data) {
+_find_by_address (gpointer key, gpointer value, gpointer user_data) {
   struct sockaddr_storage *address =
     (struct sockaddr_storage *)((gpointer *)user_data)[0];
   GList **list = (GList **)((gpointer *)user_data)[1];
-  SalutContact *contact = SALUT_CONTACT(value);
-  if (salut_contact_has_address(contact, address)) {
-    g_object_ref(contact);
-    *list = g_list_append(*list, contact);
+  SalutContact *contact = SALUT_CONTACT (value);
+
+  if (salut_contact_has_address (contact, address)) {
+    g_object_ref (contact);
+    *list = g_list_append (*list, contact);
   }
 }
 
 /* FIXME function name is just too long */
 GList *
-salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
-                                               struct sockaddr_storage *address)
+salut_contact_manager_find_contacts_by_address (SalutContactManager *mgr,
+    struct sockaddr_storage *address)
 {
   GList *list = NULL;
   gpointer data[2];

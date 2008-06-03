@@ -45,7 +45,7 @@ GType salut_im_channel_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_IM_CHANNEL \
-  (salut_im_channel_get_type())
+  (salut_im_channel_get_type ())
 #define SALUT_IM_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_IM_CHANNEL, SalutImChannel))
 #define SALUT_IM_CHANNEL_CLASS(klass) \

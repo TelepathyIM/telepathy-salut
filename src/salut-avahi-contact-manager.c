@@ -199,7 +199,7 @@ browser_failed (GaServiceBrowser *browser,
                 SalutAvahiContactManager *self)
 {
   /* FIXME proper error handling */
-  g_warning("browser failed -> %s", error->message);
+  g_warning ("browser failed -> %s", error->message);
 }
 
 static gboolean
@@ -212,12 +212,12 @@ salut_avahi_contact_manager_start (SalutContactManager *mgr,
 
   g_signal_connect (priv->presence_browser, "new-service",
       G_CALLBACK (browser_found), mgr);
-  g_signal_connect(priv->presence_browser, "removed-service",
+  g_signal_connect (priv->presence_browser, "removed-service",
       G_CALLBACK (browser_removed), mgr);
   g_signal_connect (priv->presence_browser, "failure",
       G_CALLBACK (browser_failed), mgr);
 
-  if (!ga_service_browser_attach(priv->presence_browser,
+  if (!ga_service_browser_attach (priv->presence_browser,
         priv->discovery_client->avahi_client, error))
     {
       DEBUG ("browser attach failed");

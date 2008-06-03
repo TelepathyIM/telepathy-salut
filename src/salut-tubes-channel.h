@@ -48,7 +48,7 @@ GType salut_tubes_channel_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_TUBES_CHANNEL \
-  (salut_tubes_channel_get_type())
+  (salut_tubes_channel_get_type ())
 #define SALUT_TUBES_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_TUBES_CHANNEL, \
                               SalutTubesChannel))

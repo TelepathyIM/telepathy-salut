@@ -53,8 +53,9 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
     SalutContact *contact, gpointer user_data);
 
 
-static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
-                                                     gpointer *iface_data);
+static void salut_muc_manager_factory_iface_init (gpointer *g_iface,
+    gpointer *iface_data);
+
 G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
                         G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
@@ -95,8 +96,8 @@ salut_muc_manager_init (SalutMucManager *obj)
   priv->connection = NULL;
 
   /* allocate any data required by the object here */
-  priv->text_channels = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-                                         NULL, g_object_unref);
+  priv->text_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+                                               NULL, g_object_unref);
 
 #ifdef ENABLE_DBUS_TUBES
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
@@ -108,9 +109,7 @@ salut_muc_manager_init (SalutMucManager *obj)
 
 static void
 salut_muc_manager_get_property (GObject *object,
-                                guint property_id,
-                                GValue *value,
-                                GParamSpec *pspec)
+    guint property_id, GValue *value, GParamSpec *pspec)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (object);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -275,16 +274,16 @@ closed_channel_foreach (TpHandle handle,
 /* Channel Factory interface */
 
 static void
-salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
-  SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
+salut_muc_manager_factory_iface_close_all (TpChannelFactoryIface *iface) {
+  SalutMucManager *mgr = SALUT_MUC_MANAGER (iface);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
 
   if (priv->text_channels)
     {
       GHashTable *tmp = priv->text_channels;
       priv->text_channels = NULL;
       g_hash_table_foreach (tmp, (GHFunc) closed_channel_foreach, mgr);
-      g_hash_table_destroy(tmp);
+      g_hash_table_destroy (tmp);
   }
 
 #ifdef ENABLE_DBUS_TUBES
@@ -306,15 +305,18 @@ salut_muc_manager_factory_iface_close_all(TpChannelFactoryIface *iface) {
 }
 
 static void
-salut_muc_manager_factory_iface_connecting(TpChannelFactoryIface *iface) {
+salut_muc_manager_factory_iface_connecting (TpChannelFactoryIface *iface)
+{
 }
 
 static void
-salut_muc_manager_factory_iface_connected(TpChannelFactoryIface *iface) {
+salut_muc_manager_factory_iface_connected (TpChannelFactoryIface *iface)
+{
 }
 
 static void
-salut_muc_manager_factory_iface_disconnected(TpChannelFactoryIface *iface) {
+salut_muc_manager_factory_iface_disconnected (TpChannelFactoryIface *iface)
+{
   /* FIMXE close all channels ? */
 }
 
@@ -324,13 +326,14 @@ struct foreach_data {
 };
 
 static void
-salut_muc_manager_iface_foreach_one(gpointer key,
-                                    gpointer value,
-                                    gpointer data) {
-  TpChannelIface *chan = TP_CHANNEL_IFACE(value);
+salut_muc_manager_iface_foreach_one (gpointer key,
+                                     gpointer value,
+                                     gpointer data)
+{
+  TpChannelIface *chan = TP_CHANNEL_IFACE (value);
   struct foreach_data *f = (struct foreach_data *) data;
 
-  f->func(chan, f->data);
+  f->func (chan, f->data);
 }
 
 static void
@@ -343,15 +346,15 @@ salut_muc_manager_iface_foreach_one_list (TpChannelIface *chan,
 }
 
 static void
-salut_muc_manager_factory_iface_foreach(TpChannelFactoryIface *iface,
-                                        TpChannelFunc func, gpointer data) {
+salut_muc_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
+                                         TpChannelFunc func, gpointer data) {
   SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   struct foreach_data f;
   f.func = func;
   f.data = data;
 
-  g_hash_table_foreach(priv->text_channels,
+  g_hash_table_foreach (priv->text_channels,
       salut_muc_manager_iface_foreach_one, &f);
 #ifdef ENABLE_DBUS_TUBES
   g_hash_table_foreach (priv->tubes_channels,
@@ -372,7 +375,7 @@ muc_channel_closed_cb (SalutMucChannel *chan,
 
   if (priv->text_channels)
     {
-      g_object_get(chan, "handle", &handle, NULL);
+      g_object_get (chan, "handle", &handle, NULL);
       DEBUG ("Removing channel with handle %u", handle);
 
 #ifdef ENABLE_DBUS_TUBES
@@ -766,8 +769,8 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
   return status;
 }
 
-static void salut_muc_manager_factory_iface_init(gpointer *g_iface,
-                                                     gpointer *iface_data) {
+static void salut_muc_manager_factory_iface_init (gpointer *g_iface,
+                                                  gpointer *iface_data) {
    TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
 
    klass->close_all = salut_muc_manager_factory_iface_close_all;
@@ -897,7 +900,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
     }
 
   /* FIXME handle properly */
-  g_assert(chan != NULL);
+  g_assert (chan != NULL);
 
   inviter_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
 

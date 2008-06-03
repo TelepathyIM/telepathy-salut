@@ -45,11 +45,11 @@ struct _SalutAvahiContactManager {
 };
 
 
-GType salut_avahi_contact_manager_get_type(void);
+GType salut_avahi_contact_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_AVAHI_CONTACT_MANAGER \
-  (salut_avahi_contact_manager_get_type())
+  (salut_avahi_contact_manager_get_type ())
 #define SALUT_AVAHI_CONTACT_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_CONTACT_MANAGER, SalutAvahiContactManager))
 #define SALUT_AVAHI_CONTACT_MANAGER_CLASS(klass) \

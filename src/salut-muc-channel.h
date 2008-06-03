@@ -55,15 +55,16 @@ struct _SalutMucChannel {
     SalutConnection *connection;
 };
 
-GType salut_muc_channel_get_type(void);
+GType salut_muc_channel_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_MUC_CHANNEL \
-  (salut_muc_channel_get_type())
+  (salut_muc_channel_get_type ())
 #define SALUT_MUC_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_MUC_CHANNEL, SalutMucChannel))
 #define SALUT_MUC_CHANNEL_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_MUC_CHANNEL, \
+   SalutMucChannelClass))
 #define SALUT_IS_MUC_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_MUC_CHANNEL))
 #define SALUT_IS_MUC_CHANNEL_CLASS(klass) \
@@ -72,7 +73,7 @@ GType salut_muc_channel_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelClass))
 
 gboolean
-salut_muc_channel_invited(SalutMucChannel *self,
+salut_muc_channel_invited (SalutMucChannel *self,
                           TpHandle invitor, const gchar *message,
                           GError **error);
 

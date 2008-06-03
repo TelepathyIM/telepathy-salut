@@ -348,7 +348,7 @@ salut_avahi_muc_manager_get_rooms (SalutMucManager *mgr)
   return rooms;
 }
 
-static SalutMucChannel * 
+static SalutMucChannel *
 salut_avahi_muc_manager_create_muc_channel (
     SalutMucManager *mgr,
     SalutConnection *connection,

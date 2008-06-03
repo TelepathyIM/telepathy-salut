@@ -46,11 +46,11 @@ struct _SalutAvahiMucChannel
   gpointer priv;
 };
 
-GType salut_avahi_muc_channel_get_type(void);
+GType salut_avahi_muc_channel_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_AVAHI_MUC_CHANNEL \
-  (salut_avahi_muc_channel_get_type())
+  (salut_avahi_muc_channel_get_type ())
 #define SALUT_AVAHI_MUC_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_MUC_CHANNEL, SalutAvahiMucChannel))
 #define SALUT_AVAHI_MUC_CHANNEL_CLASS(klass) \

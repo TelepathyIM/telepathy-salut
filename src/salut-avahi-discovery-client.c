@@ -225,9 +225,9 @@ salut_avahi_discovery_client_start (SalutDiscoveryClient *client,
 
   self->avahi_client = ga_client_new (GA_CLIENT_FLAG_NO_FAIL);
 
-  g_signal_connect(self->avahi_client, "state-changed::running",
+  g_signal_connect (self->avahi_client, "state-changed::running",
       G_CALLBACK (_ga_client_running_cb), self);
-  g_signal_connect(self->avahi_client, "state-changed::failure",
+  g_signal_connect (self->avahi_client, "state-changed::failure",
       G_CALLBACK (_ga_client_failure_cb), self);
 
   change_state (self, SALUT_DISCOVERY_CLIENT_STATE_CONNECTING);

@@ -53,11 +53,11 @@ struct _SalutConnection {
   gpointer priv;
 };
 
-GType salut_connection_get_type(void);
+GType salut_connection_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_CONNECTION \
-  (salut_connection_get_type())
+  (salut_connection_get_type ())
 #define SALUT_CONNECTION(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONNECTION, SalutConnection))
 #define SALUT_CONNECTION_CLASS(klass) \

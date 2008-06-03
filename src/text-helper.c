@@ -40,24 +40,23 @@
 #include "text-helper.h"
 
 static void
-add_text(GibberXmppStanza *stanza, const gchar *text) {
+add_text (GibberXmppStanza *stanza, const gchar *text)
+{
   GibberXmppNode *htmlnode;
 
-  gibber_xmpp_node_add_child_with_content(stanza->node, "body", text);
+  gibber_xmpp_node_add_child_with_content (stanza->node, "body", text);
 
   /* Add plain xhtml-im node */
-  htmlnode = gibber_xmpp_node_add_child_ns(stanza->node, "html",
-                 GIBBER_XMPP_NS_XHTML_IM);
-  gibber_xmpp_node_add_child_with_content_ns(htmlnode,
-      "body", text, GIBBER_W3C_NS_XHTML);
+  htmlnode = gibber_xmpp_node_add_child_ns (stanza->node, "html",
+      GIBBER_XMPP_NS_XHTML_IM);
+  gibber_xmpp_node_add_child_with_content_ns (htmlnode, "body", text,
+      GIBBER_W3C_NS_XHTML);
 }
 
 GibberXmppStanza *
 create_message_stanza (const gchar *from,
-                       const gchar *to,
-                       TpChannelTextMessageType type,
-                       const gchar *text,
-                       GError **error)
+  const gchar *to, TpChannelTextMessageType type, const gchar *text,
+  GError **error)
 {
   GibberXmppStanza *stanza;
 

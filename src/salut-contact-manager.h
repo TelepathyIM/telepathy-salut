@@ -54,11 +54,11 @@ struct _SalutContactManager {
 };
 
 
-GType salut_contact_manager_get_type(void);
+GType salut_contact_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_CONTACT_MANAGER \
-  (salut_contact_manager_get_type())
+  (salut_contact_manager_get_type ())
 #define SALUT_CONTACT_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONTACT_MANAGER, SalutContactManager))
 #define SALUT_CONTACT_MANAGER_CLASS(klass) \
@@ -73,11 +73,11 @@ GType salut_contact_manager_get_type(void);
 gboolean salut_contact_manager_start (SalutContactManager *mgr, GError **error);
 
 SalutContact *
-salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle);
+salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle);
 
 GList *
-salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
-                                              struct sockaddr_storage *address);
+salut_contact_manager_find_contacts_by_address (SalutContactManager *mgr,
+    struct sockaddr_storage *address);
 
 SalutContact * salut_contact_manager_ensure_contact (SalutContactManager *mgr,
     const gchar *name);

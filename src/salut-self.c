@@ -495,11 +495,12 @@ salut_self_dispose (GObject *object)
 
   priv->room_repo = NULL;
 
-  if (priv->listener) {
-    g_io_channel_unref(priv->listener);
-    g_source_remove(priv->io_watch_in);
-    priv->listener = NULL;
-  }
+  if (priv->listener)
+    {
+      g_io_channel_unref (priv->listener);
+      g_source_remove (priv->io_watch_in);
+      priv->listener = NULL;
+    }
 
   if (G_OBJECT_CLASS (salut_self_parent_class)->dispose)
     G_OBJECT_CLASS (salut_self_parent_class)->dispose (object);
@@ -540,23 +541,26 @@ salut_self_announce (SalutSelf *self,
 }
 
 gboolean
-salut_self_set_presence(SalutSelf *self, SalutPresenceId status,
-                        const gchar *message, GError **error) {
+salut_self_set_presence (SalutSelf *self, SalutPresenceId status,
+    const gchar *message, GError **error)
+{
 
-  g_assert(status >= 0 && status < SALUT_PRESENCE_NR_PRESENCES);
+  g_assert (status >= 0 && status < SALUT_PRESENCE_NR_PRESENCES);
 
   self->status = status;
-  g_free(self->status_message);
-  self->status_message = g_strdup(message);
+  g_free (self->status_message);
+  self->status_message = g_strdup (message);
 
   return SALUT_SELF_GET_CLASS (self)->set_presence (self, error);
 }
 
 const gchar *
-salut_self_get_alias(SalutSelf *self) {
-  if (self->alias == NULL) {
-    return self->name;
-  }
+salut_self_get_alias (SalutSelf *self)
+{
+  if (self->alias == NULL)
+    {
+      return self->name;
+    }
   return self->alias;
 }
 
@@ -581,40 +585,43 @@ salut_self_set_alias (SalutSelf *self, const gchar *alias, GError **error)
 }
 
 static void
-salut_self_remove_avatar(SalutSelf *self)
+salut_self_remove_avatar (SalutSelf *self)
 {
-  DEBUG("Removing avatar");
+  DEBUG ("Removing avatar");
 
   SALUT_SELF_GET_CLASS (self)->remove_avatar (self);
 }
 
 gboolean
-salut_self_set_avatar(SalutSelf *self, guint8 *data,
-                      gsize size, GError **error) {
+salut_self_set_avatar (SalutSelf *self, guint8 *data,
+    gsize size, GError **error)
+{
   gboolean ret = TRUE;
   GError *err = NULL;
 
-  g_free(self->avatar_token);
+  g_free (self->avatar_token);
   self->avatar_token = NULL;
 
-  g_free(self->avatar);
+  g_free (self->avatar);
   self->avatar = NULL;
 
   self->avatar_size = 0;
 
-  if (size == 0) {
-    self->avatar_token = g_strdup("");
-    salut_self_remove_avatar (self);
-    return TRUE;
-  }
+  if (size == 0)
+    {
+      self->avatar_token = g_strdup ("");
+      salut_self_remove_avatar (self);
+      return TRUE;
+    }
 
   ret = SALUT_SELF_GET_CLASS (self)->set_avatar (self, data, size, error);
 
-  if (!ret) {
-    salut_self_remove_avatar(self);
-    g_set_error(error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-    g_error_free(err);
-  }
+  if (!ret)
+    {
+      salut_self_remove_avatar (self);
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_error_free (err);
+    }
 
   return ret;
 }
@@ -622,10 +629,8 @@ salut_self_set_avatar(SalutSelf *self, guint8 *data,
 #ifdef ENABLE_OLPC
 
 static SalutOlpcActivity *
-salut_self_add_olpc_activity (SalutSelf *self,
-                              const gchar *activity_id,
-                              TpHandle room,
-                              GError **error)
+salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
+    TpHandle room, GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOlpcActivity *activity;
@@ -957,7 +962,7 @@ contact_manager_contact_change_cb (SalutContactManager *mgr,
 {
   SalutSelf *self = SALUT_SELF (user_data);
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles(
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (self->connection), TP_HANDLE_TYPE_CONTACT);
   TpHandle handle;
   remove_from_invited_ctx data;

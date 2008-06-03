@@ -588,25 +588,25 @@ contact_resolved_cb (GaServiceResolver *resolver,
   salut_contact_freeze (contact);
 
   /* status */
-  if ((t = avahi_string_list_find(txt, "status")) != NULL)
+  if ((t = avahi_string_list_find (txt, "status")) != NULL)
     {
       guint i;
       char *value;
-      avahi_string_list_get_pair(t, NULL, &value, NULL);
+      avahi_string_list_get_pair (t, NULL, &value, NULL);
 
       for (i = 0; i < SALUT_PRESENCE_NR_PRESENCES ; i++) {
-        if (!strcmp(value, salut_presence_status_txt_names[i]))
+        if (!strcmp (value, salut_presence_status_txt_names[i]))
           {
             salut_contact_change_status (contact, i);
             break;
           }
       }
 
-      avahi_free(value);
+      avahi_free (value);
     }
 
   /* status message */
-  if ((t = avahi_string_list_find(txt, "msg")) != NULL)
+  if ((t = avahi_string_list_find (txt, "msg")) != NULL)
     {
       gchar *status_msg;
 
@@ -617,37 +617,37 @@ contact_resolved_cb (GaServiceResolver *resolver,
     }
 
   /* nick */
-  if ((t = avahi_string_list_find(txt, "nick")) != NULL)
+  if ((t = avahi_string_list_find (txt, "nick")) != NULL)
     {
       avahi_string_list_get_pair (t, NULL, &nick, NULL);
     }
 
   /* first name */
-  if ((t = avahi_string_list_find(txt, "1st")) != NULL)
+  if ((t = avahi_string_list_find (txt, "1st")) != NULL)
     {
       avahi_string_list_get_pair (t, NULL, &first, NULL);
     }
 
   /* last name */
-  if ((t = avahi_string_list_find(txt, "last")) != NULL)
+  if ((t = avahi_string_list_find (txt, "last")) != NULL)
     {
       avahi_string_list_get_pair (t, NULL, &last, NULL);
     }
 
   update_alias (self, nick, first, last);
 
-  if ((t = avahi_string_list_find(txt, "phsh")) != NULL)
+  if ((t = avahi_string_list_find (txt, "phsh")) != NULL)
     {
       gchar *avatar_token;
 
-      avahi_string_list_get_pair(t, NULL, &avatar_token, NULL);
+      avahi_string_list_get_pair (t, NULL, &avatar_token, NULL);
       salut_contact_change_avatar_token (contact, avatar_token);
 
       avahi_free (avatar_token);
     }
 
   /* jid */
-  t = avahi_string_list_find(txt, "jid");
+  t = avahi_string_list_find (txt, "jid");
   if (t != NULL)
     {
       gchar *jid;
@@ -657,7 +657,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
       salut_contact_change_jid (contact, jid);
 #endif
 
-      avahi_free(jid);
+      avahi_free (jid);
     }
 
 #ifdef ENABLE_OLPC
@@ -669,7 +669,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
       avahi_string_list_get_pair (t, NULL, &olpc_color, NULL);
 
       salut_contact_change_olpc_color (contact, olpc_color);
-      avahi_free(olpc_color);
+      avahi_free (olpc_color);
     }
 
   /* current activity */

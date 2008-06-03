@@ -40,11 +40,11 @@ struct _SalutAvahiContact {
     gpointer priv;
 };
 
-GType salut_avahi_contact_get_type(void);
+GType salut_avahi_contact_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_AVAHI_CONTACT \
-  (salut_avahi_contact_get_type())
+  (salut_avahi_contact_get_type ())
 #define SALUT_AVAHI_CONTACT(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_CONTACT, SalutAvahiContact))
 #define SALUT_AVAHI_CONTACT_CLASS(klass) \

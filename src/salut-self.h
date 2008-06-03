@@ -85,11 +85,11 @@ struct _SalutSelf {
     gchar *alias;
 };
 
-GType salut_self_get_type(void);
+GType salut_self_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_SELF \
-  (salut_self_get_type())
+  (salut_self_get_type ())
 #define SALUT_SELF(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_SELF, SalutSelf))
 #define SALUT_SELF_CLASS(klass) \

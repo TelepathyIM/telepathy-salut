@@ -266,7 +266,7 @@ salut_avahi_self_remove_avatar (SalutSelf *_self)
   SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
 
   ga_entry_group_service_remove_key (priv->presence, "phsh", NULL);
-  if (priv->avatar_group != NULL) 
+  if (priv->avatar_group != NULL)
     {
       g_object_unref (priv->avatar_group);
       priv->avatar_group = NULL;

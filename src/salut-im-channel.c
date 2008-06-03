@@ -602,9 +602,10 @@ connection_disconnected (SalutImChannel *self)
   g_signal_connect (priv->xmpp_connection_manager, "new-connection",
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
 
-  if (g_queue_get_length(priv->out_queue) > 0) {
-    _setup_connection(self);
-  }
+  if (g_queue_get_length (priv->out_queue) > 0)
+    {
+      _setup_connection (self);
+    }
 }
 
 static void

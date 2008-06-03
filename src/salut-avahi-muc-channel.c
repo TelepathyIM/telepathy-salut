@@ -306,7 +306,7 @@ salut_avahi_muc_channel_class_init (
       param_spec);
 
   /* FIXME: This is an ugly workaround. See fd.o #15092 */
-  tp_group_mixin_class_init(object_class,
+  tp_group_mixin_class_init (object_class,
     G_STRUCT_OFFSET (SalutMucChannelClass, group_class),
     salut_muc_channel_add_member, NULL);
 }

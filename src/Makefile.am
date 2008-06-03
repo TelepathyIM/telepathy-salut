@@ -62,10 +62,6 @@ CORE_SOURCES =                                          \
     salut-avahi-self.c                                  \
     tube-iface.h                                        \
     tube-iface.c                                        \
-    sha1/sha1-util.h                                    \
-    sha1/sha1-util.c                                    \
-    sha1/sha1.h                                         \
-    sha1/sha1.c                                         \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
@@ -93,7 +89,14 @@ if ENABLE_OLPC
     salut-avahi-olpc-activity-manager.c
 endif
 
-libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES)
+SHA1_SOURCES =                                          \
+    sha1/sha1-util.h                                    \
+    sha1/sha1-util.c                                    \
+    sha1/sha1.h                                         \
+    sha1/sha1.c
+
+libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
+    $(SHA1_SOURCES)
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
@@ -101,7 +104,16 @@ write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
                        -ltelepathy-glib
 telepathy_salut_SOURCES = \
-    salut.c 
+    salut.c
+
+# Coding style checks
+check_c_sources = \
+    $(telepathy_salut_SOURCES) \
+    $(CORE_SOURCES) \
+    $(write_mgr_file_SOURCES)
+
+include $(top_srcdir)/tools/check-coding-style.mk
+check-local: check-coding-style
 
 # TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
 telepathy_salut_LDADD = libsalut-convenience.la \

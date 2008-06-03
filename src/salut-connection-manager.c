@@ -70,8 +70,8 @@ static const TpCMParamSpec salut_params[] = {
   {NULL, NULL, 0, 0, NULL, 0}
 };
 
-static void *salut_params_new(void);
-static void salut_params_free(void *params);
+static void *salut_params_new (void);
+static void salut_params_free (void *params);
 
 const TpCMProtocolSpec salut_protocols[] = {
   {"local-xmpp", salut_params, salut_params_new, salut_params_free },
@@ -79,11 +79,11 @@ const TpCMProtocolSpec salut_protocols[] = {
 };
 
 static TpBaseConnection *
-salut_connection_manager_new_connection(TpBaseConnectionManager *self,
-                                        const gchar *proto,
-                                        TpIntSet *params_present,
-                                        void *parsed_params,
-                                        GError **error);
+salut_connection_manager_new_connection (TpBaseConnectionManager *self,
+                                         const gchar *proto,
+                                         TpIntSet *params_present,
+                                         void *parsed_params,
+                                         GError **error);
 
 
 G_DEFINE_TYPE(SalutConnectionManager, salut_connection_manager,
@@ -95,7 +95,8 @@ salut_connection_manager_init (SalutConnectionManager *obj)
 }
 
 static void
-salut_connection_manager_class_init (SalutConnectionManagerClass *salut_connection_manager_class)
+salut_connection_manager_class_init (
+    SalutConnectionManagerClass *salut_connection_manager_class)
 {
   TpBaseConnectionManagerClass *base_cm_class =
     TP_BASE_CONNECTION_MANAGER_CLASS(salut_connection_manager_class);
@@ -106,55 +107,55 @@ salut_connection_manager_class_init (SalutConnectionManagerClass *salut_connecti
 
 }
 
-static void *salut_params_new(void) {
+static void *salut_params_new (void) {
   return g_slice_new0(SalutParams);
 };
 
-static void salut_params_free(void *params) {
+static void salut_params_free (void *params)
+{
   SalutParams *p = (SalutParams *)params;
 
-  g_free(p->nickname);
-  g_free(p->first_name);
-  g_free(p->last_name);
-  g_free(p->email);
-  g_free(p->jid);
+  g_free (p->nickname);
+  g_free (p->first_name);
+  g_free (p->last_name);
+  g_free (p->email);
+  g_free (p->jid);
   g_free (p->published_name);
 
-  g_slice_free(SalutParams, params);
+  g_slice_free (SalutParams, params);
 };
 
 #define SET_PROPERTY_IF_PARAM_SET(prop, param, member) \
-  if (tp_intset_is_member(params_present, param)) \
+  if (tp_intset_is_member (params_present, param)) \
     { \
       g_object_set (conn, prop, member, NULL); \
     }
 
 static TpBaseConnection *
-salut_connection_manager_new_connection(TpBaseConnectionManager *self,
-                                        const gchar *proto,
-                                        TpIntSet *params_present,
-                                        void *parsed_params,
-                                        GError **error) {
+salut_connection_manager_new_connection (TpBaseConnectionManager *self,
+                                         const gchar *proto,
+                                         TpIntSet *params_present,
+                                         void *parsed_params,
+                                         GError **error)
+{
   SalutConnection *conn;
   SalutParams *params = (SalutParams *)parsed_params;
 
-  g_assert(!tp_strdiff(proto, "local-xmpp"));
+  g_assert (!tp_strdiff (proto, "local-xmpp"));
 
-  conn = g_object_new(SALUT_TYPE_CONNECTION,
-                      "protocol", proto,
-                      NULL);
+  conn = g_object_new (SALUT_TYPE_CONNECTION, "protocol", proto, NULL);
 
-  SET_PROPERTY_IF_PARAM_SET("nickname", SALUT_PARAM_NICKNAME,
+  SET_PROPERTY_IF_PARAM_SET ("nickname", SALUT_PARAM_NICKNAME,
                               params->nickname);
-  SET_PROPERTY_IF_PARAM_SET("first-name", SALUT_PARAM_FIRST_NAME,
+  SET_PROPERTY_IF_PARAM_SET ("first-name", SALUT_PARAM_FIRST_NAME,
                               params->first_name);
-  SET_PROPERTY_IF_PARAM_SET("last-name", SALUT_PARAM_LAST_NAME,
+  SET_PROPERTY_IF_PARAM_SET ("last-name", SALUT_PARAM_LAST_NAME,
                               params->last_name);
-  SET_PROPERTY_IF_PARAM_SET("jid", SALUT_PARAM_EMAIL, params->jid);
-  SET_PROPERTY_IF_PARAM_SET("email", SALUT_PARAM_JID, params->email);
-  SET_PROPERTY_IF_PARAM_SET("published-name", SALUT_PARAM_PUBLISHED_NAME,
-                            params->published_name);
+  SET_PROPERTY_IF_PARAM_SET ("jid", SALUT_PARAM_EMAIL, params->jid);
+  SET_PROPERTY_IF_PARAM_SET ("email", SALUT_PARAM_JID, params->email);
+  SET_PROPERTY_IF_PARAM_SET ("published-name", SALUT_PARAM_PUBLISHED_NAME,
+                             params->published_name);
 
-  return TP_BASE_CONNECTION(conn);
+  return TP_BASE_CONNECTION (conn);
 }
 
