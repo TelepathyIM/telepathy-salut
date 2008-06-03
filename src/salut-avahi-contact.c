@@ -323,7 +323,7 @@ salut_avahi_contact_retrieve_avatar (SalutContact *contact)
 
   if (priv->record_browser != NULL)
     {
-      g_object_unref(priv->record_browser);
+      g_object_unref (priv->record_browser);
       priv->record_browser = NULL;
     }
 
@@ -519,8 +519,10 @@ find_resolver (SalutAvahiContact *contact,
 }
 
 static void
-update_alias (SalutAvahiContact *self, const gchar *nick, const gchar *first,
-  const gchar *last)
+update_alias (SalutAvahiContact *self,
+              const gchar *nick,
+              const gchar *first,
+              const gchar *last)
 {
   if (nick != NULL && *nick != '\0')
     {
