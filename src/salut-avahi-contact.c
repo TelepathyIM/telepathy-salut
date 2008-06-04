@@ -328,6 +328,12 @@ salut_avahi_contact_retrieve_avatar (SalutContact *contact)
       priv->record_browser = NULL;
     }
 
+  if (contact->avatar_token == NULL)
+    {
+      salut_avahi_contact_avatar_request_flush (self, NULL, 0);
+      return;
+    }
+
   name = g_strdup_printf ("%s." SALUT_DNSSD_PRESENCE ".local", contact->name);
   priv->record_browser = ga_record_browser_new (name, 0xA);
   g_free (name);
