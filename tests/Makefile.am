@@ -29,6 +29,7 @@ telepathy_salut_debug_SOURCES = \
 
 telepathy_salut_debug_LDADD = \
     $(top_builddir)/src/libsalut-convenience.la \
+    $(top_builddir)/src/libsalut-backend-dummy.la \
     $(top_builddir)/lib/gibber/libgibber.la \
     $(top_builddir)/extensions/libsalut-extensions.la \
     -ltelepathy-glib
@@ -88,6 +89,7 @@ check_main_LDADD = \
     @CHECK_LIBS@ \
     $(top_builddir)/lib/gibber/libgibber.la \
     $(top_builddir)/src/libsalut-convenience.la \
+    $(top_builddir)/src/libsalut-backend-avahi.la \
     $(AM_LDFLAGS)
 
 check_main_CFLAGS = \

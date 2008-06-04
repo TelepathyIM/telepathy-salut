@@ -253,9 +253,7 @@ salut_connection_init (SalutConnection *obj)
   priv->contact_manager = NULL;
   priv->xmpp_connection_manager = NULL;
 
-  /* FIXME: make this configurable */
-  priv->discovery_client = SALUT_DISCOVERY_CLIENT (
-      salut_avahi_discovery_client_new ());
+  priv->discovery_client = salut_discovery_client_new ();
 }
 
 static void
@@ -864,10 +862,13 @@ discovery_client_running (SalutConnection *self)
     }
 
   /* Create the bytestream manager */
-  /* FIXME: we should abstract this */
+  /* FIXME:
+   * abstract this */
+  /*
   priv->bytestream_manager = salut_bytestream_manager_new (self,
     avahi_client_get_host_name_fqdn (SALUT_AVAHI_DISCOVERY_CLIENT (
         priv->discovery_client)->avahi_client->avahi_client));
+        */
 }
 
 static void
