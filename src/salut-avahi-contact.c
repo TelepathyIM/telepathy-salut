@@ -38,7 +38,8 @@
 #include "debug.h"
 
 #define DEBUG_CONTACT(contact, format, ...) G_STMT_START {      \
-  DEBUG ("Contact %s: " format, SALUT_CONTACT (contact)->name, ##__VA_ARGS__);  \
+  DEBUG ("Contact %s: " format, \
+    SALUT_CONTACT (contact)->name, ##__VA_ARGS__);  \
 } G_STMT_END
 
 #define DEBUG_RESOLVER(contact, resolver, format, ...) G_STMT_START {       \
@@ -524,13 +525,15 @@ update_alias (SalutAvahiContact *self,
               const gchar *first,
               const gchar *last)
 {
-  if (nick != NULL && *nick != '\0')
+#define STREMPTY(x) (x != NULL && *x != '\0')
+
+  if (!STREMPTY(nick))
     {
       salut_contact_change_alias (SALUT_CONTACT (self), nick);
       return;
     }
 
-  if (first != NULL && *first != '\0' && last != NULL && *last != '\0')
+  if (!STREMPTY(first) && STREMPTY(last))
     {
       gchar *s = g_strdup_printf ("%s %s", first, last);
 
@@ -540,19 +543,21 @@ update_alias (SalutAvahiContact *self,
       return;
     }
 
-  if (first != NULL && *first != '\0')
+  if (!STREMPTY(first))
     {
       salut_contact_change_alias (SALUT_CONTACT (self), first);
       return;
     }
 
-  if (last != NULL && *last != '\0')
+  if (!STREMPTY(last))
     {
       salut_contact_change_alias (SALUT_CONTACT (self), last);
       return;
     }
 
   salut_contact_change_alias (SALUT_CONTACT (self), NULL);
+
+#undef STREMPTY
 }
 
 static void
