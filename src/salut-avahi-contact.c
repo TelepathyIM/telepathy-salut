@@ -525,7 +525,7 @@ update_alias (SalutAvahiContact *self,
               const gchar *first,
               const gchar *last)
 {
-#define STREMPTY(x) (x != NULL && *x != '\0')
+#define STREMPTY(x) (x == NULL || *x == '\0')
 
   if (!STREMPTY(nick))
     {
@@ -533,7 +533,7 @@ update_alias (SalutAvahiContact *self,
       return;
     }
 
-  if (!STREMPTY(first) && STREMPTY(last))
+  if (!STREMPTY(first) && !STREMPTY(last))
     {
       gchar *s = g_strdup_printf ("%s %s", first, last);
 
