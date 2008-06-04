@@ -42,11 +42,11 @@ struct _SalutAvahiOlpcActivityManager {
     SalutOlpcActivityManager parent;
 };
 
-GType salut_avahi_olpc_activity_manager_get_type(void);
+GType salut_avahi_olpc_activity_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER \
-  (salut_avahi_olpc_activity_manager_get_type())
+  (salut_avahi_olpc_activity_manager_get_type ())
 #define SALUT_AVAHI_OLPC_ACTIVITY_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER, \
    SalutAvahiOlpcActivityManager))

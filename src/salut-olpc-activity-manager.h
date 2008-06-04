@@ -50,11 +50,11 @@ struct _SalutOlpcActivityManager {
     SalutConnection *connection;
 };
 
-GType salut_olpc_activity_manager_get_type(void);
+GType salut_olpc_activity_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_OLPC_ACTIVITY_MANAGER \
-  (salut_olpc_activity_manager_get_type())
+  (salut_olpc_activity_manager_get_type ())
 #define SALUT_OLPC_ACTIVITY_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_OLPC_ACTIVITY_MANAGER, SalutOlpcActivityManager))
 #define SALUT_OLPC_ACTIVITY_MANAGER_CLASS(klass) \
