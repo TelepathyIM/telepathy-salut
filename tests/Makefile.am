@@ -101,6 +101,18 @@ AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @DBUS_CFLAGS@ \
 
 AM_LDFLAGS = @GLIB_LIBS@
 
+# Coding style checks
+check_c_sources = \
+    $(test_xmpp_connection_SOURCES) \
+    $(test_r_multicast_transport_io_SOURCES)
+
+if HAVE_CHECK
+    check_c_sources += $(check_main_SOURCES)
+endif
+
+include $(top_srcdir)/tools/check-coding-style.mk
+check-local: check-coding-style
+
 clean-local:
 	-rm -rf outputs
 	-rm -f sasl-test.db

@@ -6,7 +6,7 @@
 #include <check.h>
 
 #define COMPARE(x) G_STMT_START { \
-  fail_unless(a->x == b->x); \
+  fail_unless (a->x == b->x); \
 } G_STMT_END
 
 typedef struct {
@@ -45,7 +45,7 @@ START_TEST (test_r_multicast_packet_diff)
     };
 
   diff_testcase *c = cases + _i;
-  gint32 result = gibber_r_multicast_packet_diff(c->a, c->b);
+  gint32 result = gibber_r_multicast_packet_diff (c->a, c->b);
   fail_unless (c->result == result);
 }
 END_TEST
@@ -80,7 +80,7 @@ START_TEST (test_data_packet)
           senders[i].sender_id, senders[i].packet_id, NULL);
     }
 
-  gibber_r_multicast_packet_add_payload(a, (guint8 *) payload,
+  gibber_r_multicast_packet_add_payload (a, (guint8 *) payload,
       strlen (payload));
 
   data = gibber_r_multicast_packet_get_raw_data (a, &len);

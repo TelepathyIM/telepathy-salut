@@ -38,7 +38,7 @@ START_TEST (test_build_with_html_message)
   GibberXmppNode *node;
   const gchar *value;
 
-  g_type_init();
+  g_type_init ();
   gibber_debug_set_flags_from_env ();
 
   stanza = gibber_xmpp_stanza_build (

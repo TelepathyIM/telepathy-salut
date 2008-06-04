@@ -30,7 +30,7 @@ START_TEST (test_language)
   /* Unit test are not examples of how to use an API! Don't rely on the
    * following in your applications! (or better yet, don't give invalid input)
    * */
-  fail_unless_critical(lang = gibber_xmpp_node_get_language (NULL));
+  fail_unless_critical (lang = gibber_xmpp_node_get_language (NULL));
   fail_unless (lang == NULL);
 
   node = gibber_xmpp_node_new ("test");
@@ -39,7 +39,7 @@ START_TEST (test_language)
 
   gibber_xmpp_node_set_language (node, "en");
   lang = gibber_xmpp_node_get_language (node);
-  fail_unless (strcmp(lang, "en") == 0);
+  fail_unless (strcmp (lang, "en") == 0);
 
   gibber_xmpp_node_set_language (node, NULL);
   lang = gibber_xmpp_node_get_language (node);
@@ -47,7 +47,7 @@ START_TEST (test_language)
 
   gibber_xmpp_node_set_language_n (node, "en-US", 2);
   lang = gibber_xmpp_node_get_language (node);
-  fail_unless (strcmp(lang, "en") == 0);
+  fail_unless (strcmp (lang, "en") == 0);
 
   gibber_xmpp_node_set_language_n (node, NULL, 2);
   lang = gibber_xmpp_node_get_language (node);
@@ -69,7 +69,7 @@ START_TEST (test_namespace)
 
   gibber_xmpp_node_set_ns (node, "foo");
   ns = gibber_xmpp_node_get_ns (node);
-  fail_unless (strcmp(ns, "foo") == 0);
+  fail_unless (strcmp (ns, "foo") == 0);
 
   gibber_xmpp_node_set_ns (node, NULL);
   ns = gibber_xmpp_node_get_ns (node);
@@ -96,21 +96,21 @@ START_TEST (test_attribute)
   attribute = gibber_xmpp_node_get_attribute_ns (node, "foo", "bar");
   fail_unless (attribute == NULL);
 
-  gibber_xmpp_node_set_attribute(node, "foo", "baz");
+  gibber_xmpp_node_set_attribute (node, "foo", "baz");
 
   attribute = gibber_xmpp_node_get_attribute (node, "foo");
-  fail_unless (strcmp(attribute, "baz") == 0);
+  fail_unless (strcmp ( attribute, "baz") == 0);
 
   attribute = gibber_xmpp_node_get_attribute_ns (node, "foo", "bar");
   fail_unless (attribute == NULL);
 
-  gibber_xmpp_node_set_attribute_ns(node, "foobar", "barbaz", "bar");
+  gibber_xmpp_node_set_attribute_ns (node, "foobar", "barbaz", "bar");
 
   attribute = gibber_xmpp_node_get_attribute (node, "foobar");
-  fail_unless (strcmp(attribute, "barbaz") == 0);
+  fail_unless (strcmp (attribute, "barbaz") == 0);
 
   attribute = gibber_xmpp_node_get_attribute_ns (node, "foobar", "bar");
-  fail_unless (strcmp(attribute, "barbaz") == 0);
+  fail_unless (strcmp (attribute, "barbaz") == 0);
 
   attribute = gibber_xmpp_node_get_attribute_ns (node, "barfoo", "bar");
   fail_unless (attribute == NULL);
@@ -131,7 +131,7 @@ START_TEST (test_child)
   gibber_xmpp_node_add_child (node, "foo");
   child = gibber_xmpp_node_get_child (node, "foo");
   fail_if (child == NULL);
-  fail_unless (strcmp(child->name, "foo") == 0);
+  fail_unless (strcmp (child->name, "foo") == 0);
 
   child = gibber_xmpp_node_get_child_ns (node, "foo", "bar");
   fail_unless (child == NULL);
@@ -141,12 +141,12 @@ START_TEST (test_child)
   fail_unless (child == NULL);
   child = gibber_xmpp_node_get_child_ns (node, "foobar", "bar");
   fail_if (child == NULL);
-  fail_unless (strcmp(child->name, "foobar") == 0);
+  fail_unless (strcmp (child->name, "foobar") == 0);
 
   gibber_xmpp_node_add_child_with_content (node, "foo2", "blah");
   child = gibber_xmpp_node_get_child (node, "foo2");
   fail_if (child->content == NULL);
-  fail_unless (strcmp(child->content, "blah") == 0);
+  fail_unless (strcmp (child->content, "blah") == 0);
 
   gibber_xmpp_node_free (node);
 }

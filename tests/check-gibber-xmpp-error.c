@@ -106,7 +106,7 @@ START_TEST (test_message_get_xmpp_error)
   for (xmpp_error = 1; xmpp_error < NUM_XMPP_ERRORS; xmpp_error++)
     {
       GibberXmppStanza *stanza;
-      GError *error;
+      GError *error = NULL;
 
       stanza = gibber_xmpp_stanza_build (
           GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,

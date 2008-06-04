@@ -27,7 +27,7 @@ class TestMesh(Mesh):
     value = int(data.rstrip())
     if (node in self.nodes[0:3]):
       if (self.nodes.index(node) == (value  + 1) % 3):
-        reactor.callLater(0.1, 
+        reactor.callLater(0.1,
             (lambda: node.pushInput( str(value + 1) +  "\n")))
     else:
       print node.name + " - " + sender + " - " + data.rstrip()

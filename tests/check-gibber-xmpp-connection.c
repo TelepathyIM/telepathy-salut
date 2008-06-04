@@ -55,24 +55,26 @@ START_TEST (test_instantiation)
   GibberXmppConnection *connection;
   TestTransport *transport;
 
-  transport = test_transport_new(NULL, NULL);
-  connection = gibber_xmpp_connection_new(GIBBER_TRANSPORT(transport));
+  transport = test_transport_new (NULL, NULL);
+  connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT(transport));
 
   fail_if (connection == NULL);
 
-  connection = gibber_xmpp_connection_new(NULL);
+  connection = gibber_xmpp_connection_new (NULL);
 
   fail_if (connection == NULL);
 }
 END_TEST
 
 void
-parse_error_cb (GibberXmppConnection *connection, gpointer user_data) {
+parse_error_cb (GibberXmppConnection *connection, gpointer user_data)
+{
   gboolean *parse_error_found = user_data;
   *parse_error_found = TRUE;
 }
 
-START_TEST (test_simple_message) {
+START_TEST (test_simple_message)
+{
   GibberXmppConnection *connection;
   TestTransport *transport;
   gchar *chunk;
@@ -81,12 +83,15 @@ START_TEST (test_simple_message) {
   const gchar *srcdir;
   gchar *file;
 
-  srcdir = g_getenv("srcdir");
-  if (srcdir == NULL) {
-    file = g_strdup("inputs/simple-message.input");
-  } else {
-    file = g_strdup_printf("%s/inputs/simple-message.input", srcdir);
-  }
+  srcdir = g_getenv ("srcdir");
+  if (srcdir == NULL)
+    {
+      file = g_strdup ("inputs/simple-message.input");
+    }
+  else
+    {
+      file = g_strdup_printf ("%s/inputs/simple-message.input", srcdir);
+    }
 
   FileChunker *fc = file_chunker_new (file, 10);
   fail_if (fc == NULL);
@@ -95,11 +100,13 @@ START_TEST (test_simple_message) {
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT(transport));
 
   g_signal_connect (connection, "parse-error",
-                    G_CALLBACK(parse_error_cb), &parse_error_found);
+      G_CALLBACK(parse_error_cb), &parse_error_found);
 
-  while (!parse_error_found && file_chunker_get_chunk (fc, &chunk, &chunk_length)) {
-    test_transport_write (transport, (guint8*)chunk, chunk_length);
-  }
+  while (!parse_error_found &&
+      file_chunker_get_chunk (fc, &chunk, &chunk_length))
+    {
+      test_transport_write (transport, (guint8*)chunk, chunk_length);
+    }
 
   fail_if (parse_error_found);
 

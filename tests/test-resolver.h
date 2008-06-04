@@ -37,11 +37,11 @@ struct _TestResolver {
     GibberResolver parent;
 };
 
-GType test_resolver_get_type(void);
+GType test_resolver_get_type (void);
 
 /* TYPE MACROS */
 #define TEST_TYPE_RESOLVER \
-  (test_resolver_get_type())
+  (test_resolver_get_type ())
 #define TEST_RESOLVER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), TEST_TYPE_RESOLVER, TestResolver))
 #define TEST_RESOLVER_CLASS(klass) \
