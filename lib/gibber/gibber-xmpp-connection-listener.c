@@ -150,7 +150,7 @@ try_listening_on_port (GibberXmppConnectionListener *self,
   struct addrinfo req, *ans = NULL;
   #define BACKLOG 5
 
-  memset (&req, 0, sizeof(req));
+  memset (&req, 0, sizeof (req));
   req.ai_flags = AI_PASSIVE;
   req.ai_family = AF_UNSPEC;
   req.ai_socktype = SOCK_STREAM;
@@ -217,7 +217,7 @@ try_listening_on_port (GibberXmppConnectionListener *self,
 
 error:
   if (fd > 0)
-    close(fd);
+    close (fd);
 
   if (ans != NULL)
     freeaddrinfo (ans);

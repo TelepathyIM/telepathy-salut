@@ -38,39 +38,41 @@ struct _GibberXmppWriter {
     GObject parent;
 };
 
-GType gibber_xmpp_writer_get_type(void);
+GType gibber_xmpp_writer_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_XMPP_WRITER \
-  (gibber_xmpp_writer_get_type())
+  (gibber_xmpp_writer_get_type ())
 #define GIBBER_XMPP_WRITER(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_WRITER, GibberXmppWriter))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_WRITER, \
+  GibberXmppWriter))
 #define GIBBER_XMPP_WRITER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_WRITER, GibberXmppWriterClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_WRITER, \
+   GibberXmppWriterClass))
 #define GIBBER_IS_XMPP_WRITER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_XMPP_WRITER))
 #define GIBBER_IS_XMPP_WRITER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_XMPP_WRITER))
 #define GIBBER_XMPP_WRITER_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_WRITER, GibberXmppWriterClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_WRITER, \
+   GibberXmppWriterClass))
 
 
-GibberXmppWriter *gibber_xmpp_writer_new(void);
-GibberXmppWriter *gibber_xmpp_writer_new_no_stream(void);
+GibberXmppWriter *gibber_xmpp_writer_new (void);
+GibberXmppWriter *gibber_xmpp_writer_new_no_stream (void);
 
-void gibber_xmpp_writer_stream_open(GibberXmppWriter *writer, 
-                                   const gchar *to, const gchar *from,  
-                                   const gchar *version,
-                                   const guint8 **data, gsize *length);
-void gibber_xmpp_writer_stream_close(GibberXmppWriter *writer,
-                                   const guint8 **data, gsize *length);
+void gibber_xmpp_writer_stream_open (GibberXmppWriter *writer,
+    const gchar *to, const gchar *from, const gchar *version,
+    const guint8 **data, gsize *length);
 
-gboolean gibber_xmpp_writer_write_stanza(GibberXmppWriter *writer, 
-                                        GibberXmppStanza *stanza,
-                                        const guint8 **data, gsize *length,
-                                        GError **error);
+void gibber_xmpp_writer_stream_close (GibberXmppWriter *writer,
+    const guint8 **data, gsize *length);
 
-void gibber_xmpp_writer_flush(GibberXmppWriter *writer);
+gboolean gibber_xmpp_writer_write_stanza (GibberXmppWriter *writer,
+    GibberXmppStanza *stanza, const guint8 **data, gsize *length,
+    GError **error);
+
+void gibber_xmpp_writer_flush (GibberXmppWriter *writer);
 
 G_END_DECLS
 

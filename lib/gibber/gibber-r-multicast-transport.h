@@ -44,35 +44,34 @@ typedef struct {
   guint16 stream_id;
 } GibberRMulticastBuffer;
 
-GType gibber_r_multicast_transport_get_type(void);
+GType gibber_r_multicast_transport_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_R_MULTICAST_TRANSPORT \
-  (gibber_r_multicast_transport_get_type())
+  (gibber_r_multicast_transport_get_type ())
 #define GIBBER_R_MULTICAST_TRANSPORT(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransport))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, \
+   GibberRMulticastTransport))
 #define GIBBER_R_MULTICAST_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_R_MULTICAST_TRANSPORT, \
+   GibberRMulticastTransportClass))
 #define GIBBER_IS_R_MULTICAST_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT))
 #define GIBBER_IS_R_MULTICAST_TRANSPORT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_R_MULTICAST_TRANSPORT))
 #define GIBBER_R_MULTICAST_TRANSPORT_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, GibberRMulticastTransportClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_TRANSPORT, \
+   GibberRMulticastTransportClass))
 
-GibberRMulticastTransport *
-gibber_r_multicast_transport_new(GibberRMulticastCausalTransport *transport);
+GibberRMulticastTransport * gibber_r_multicast_transport_new (
+    GibberRMulticastCausalTransport *transport);
 
-gboolean
-gibber_r_multicast_transport_connect(GibberRMulticastTransport *transport,
-                                     GError **error);
+gboolean gibber_r_multicast_transport_connect (
+    GibberRMulticastTransport *transport, GError **error);
 
-gboolean
-gibber_r_multicast_transport_send(GibberRMulticastTransport *transport,
-                                  guint16 stream_id,
-                                  const guint8 *data,
-                                  gsize size,
-                                  GError **error);
+gboolean gibber_r_multicast_transport_send (
+    GibberRMulticastTransport *transport, guint16 stream_id,
+    const guint8 *data, gsize size, GError **error);
 
 G_END_DECLS
 

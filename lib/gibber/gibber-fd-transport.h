@@ -48,7 +48,7 @@ struct _GibberFdTransportClass {
         GIOChannel *channel, GError **error);
     /* Called when something needs to be written*/
     GibberFdIOResult (*write) (GibberFdTransport *fd_transport,
-        GIOChannel *channel, const guint8 *data, int len, 
+        GIOChannel *channel, const guint8 *data, int len,
         gsize *written, GError **error);
 };
 
@@ -57,24 +57,27 @@ struct _GibberFdTransport {
     int fd;
 };
 
-GType gibber_fd_transport_get_type(void);
+GType gibber_fd_transport_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_FD_TRANSPORT \
-  (gibber_fd_transport_get_type())
+  (gibber_fd_transport_get_type ())
 #define GIBBER_FD_TRANSPORT(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_FD_TRANSPORT, GibberFdTransport))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_FD_TRANSPORT, \
+   GibberFdTransport))
 #define GIBBER_FD_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_FD_TRANSPORT, GibberFdTransportClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_FD_TRANSPORT, \
+   GibberFdTransportClass))
 #define GIBBER_IS_FD_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_FD_TRANSPORT))
 #define GIBBER_IS_FD_TRANSPORT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_FD_TRANSPORT))
 #define GIBBER_FD_TRANSPORT_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_FD_TRANSPORT, GibberFdTransportClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_FD_TRANSPORT, \
+   GibberFdTransportClass))
 
 void
-gibber_fd_transport_set_fd(GibberFdTransport *fd_transport, int fd);
+gibber_fd_transport_set_fd (GibberFdTransport *fd_transport, int fd);
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_FD_TRANSPORT_H__*/

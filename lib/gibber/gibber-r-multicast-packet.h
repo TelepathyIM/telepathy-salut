@@ -27,7 +27,7 @@ G_BEGIN_DECLS
 
 GQuark gibber_r_multicast_packet_error_quark (void);
 #define GIBBER_R_MULTICAST_PACKET_ERROR \
-  gibber_r_multicast_packet_error_quark()
+  gibber_r_multicast_packet_error_quark ()
 
 typedef enum {
   GIBBER_R_MULTICAST_PACKET_ERROR_PARSE_ERROR
@@ -155,11 +155,11 @@ struct _GibberRMulticastPacket {
     } data;
 };
 
-GType gibber_r_multicast_packet_get_type(void);
+GType gibber_r_multicast_packet_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_R_MULTICAST_PACKET \
-  (gibber_r_multicast_packet_get_type())
+  (gibber_r_multicast_packet_get_type ())
 #define GIBBER_R_MULTICAST_PACKET(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_R_MULTICAST_PACKET, GibberRMulticastPacket))
 #define GIBBER_R_MULTICAST_PACKET_CLASS(klass) \
@@ -178,9 +178,7 @@ GibberRMulticastPacket * gibber_r_multicast_packet_new (
 /* Add depend if packet type is PACKET_TYPE_DATA otherwise add sender info if
  * PACKET_TYPE_SESSION */
 gboolean gibber_r_multicast_packet_add_sender_info (
-    GibberRMulticastPacket *packet,
-    guint32 receiver_id,
-    guint32 packet_id,
+    GibberRMulticastPacket *packet, guint32 receiver_id, guint32 packet_id,
     GError **error);
 
 void gibber_r_multicast_packet_set_packet_id (GibberRMulticastPacket *packet,

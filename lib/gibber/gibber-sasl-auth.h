@@ -30,12 +30,12 @@ G_BEGIN_DECLS
 
 GQuark gibber_sasl_auth_error_quark (void);
 #define GIBBER_SASL_AUTH_ERROR \
-  gibber_sasl_auth_error_quark()
+  gibber_sasl_auth_error_quark ()
 
 typedef enum
 {
   /* Failed to initialize our sasl support */
-  GIBBER_SASL_AUTH_ERROR_INIT_FAILED, 
+  GIBBER_SASL_AUTH_ERROR_INIT_FAILED,
   /* Server doesn't support sasl (no mechanisms) */
   GIBBER_SASL_AUTH_ERROR_SASL_NOT_SUPPORTED,
   /* Server doesn't support any mechanisms that we support */
@@ -61,11 +61,11 @@ struct _GibberSaslAuth {
     GObject parent;
 };
 
-GType gibber_sasl_auth_get_type(void);
+GType gibber_sasl_auth_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_SASL_AUTH \
-  (gibber_sasl_auth_get_type())
+  (gibber_sasl_auth_get_type ())
 #define GIBBER_SASL_AUTH(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_SASL_AUTH, GibberSaslAuth))
 #define GIBBER_SASL_AUTH_CLASS(klass) \
@@ -77,18 +77,15 @@ GType gibber_sasl_auth_get_type(void);
 #define GIBBER_SASL_AUTH_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_SASL_AUTH, GibberSaslAuthClass))
 
-GibberSaslAuth *gibber_sasl_auth_new(void);
+GibberSaslAuth *gibber_sasl_auth_new (void);
 
 
 /* Initiate sasl auth. features should containt the stream features stanza as
- * receiver from the server */ 
-gboolean 
-gibber_sasl_auth_authenticate(GibberSaslAuth *sasl,
-                              const gchar *server,
-                              GibberXmppConnection *connection,
-                              GibberXmppStanza *features,
-                              gboolean allow_plain,
-                              GError **error);
+ * receiver from the server */
+gboolean gibber_sasl_auth_authenticate (GibberSaslAuth *sasl,
+    const gchar *server, GibberXmppConnection *connection,
+    GibberXmppStanza *features, gboolean allow_plain, GError **error);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_SASL_AUTH_H__*/

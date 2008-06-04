@@ -73,7 +73,7 @@ gibber_ll_transport_class_init (GibberLLTransportClass *gibber_ll_transport_clas
 {
   GObjectClass *object_class = G_OBJECT_CLASS (gibber_ll_transport_class);
 
-  g_type_class_add_private (gibber_ll_transport_class, 
+  g_type_class_add_private (gibber_ll_transport_class,
                             sizeof (GibberLLTransportPrivate));
 
   object_class->dispose = gibber_ll_transport_dispose;
@@ -102,98 +102,110 @@ gibber_ll_transport_finalize (GObject *object)
 }
 
 GibberLLTransport *
-gibber_ll_transport_new(void) {
-  return g_object_new(GIBBER_TYPE_LL_TRANSPORT, NULL);
+gibber_ll_transport_new (void)
+{
+  return g_object_new (GIBBER_TYPE_LL_TRANSPORT, NULL);
 }
 
 void
-gibber_ll_transport_open_fd(GibberLLTransport *transport, int fd) {
+gibber_ll_transport_open_fd (GibberLLTransport *transport, int fd)
+{
   GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
 
   priv->incoming = TRUE;
 
-  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
-                            GIBBER_TRANSPORT_CONNECTING);
-  gibber_fd_transport_set_fd(GIBBER_FD_TRANSPORT(transport), fd);
+  gibber_transport_set_state (GIBBER_TRANSPORT (transport),
+      GIBBER_TRANSPORT_CONNECTING);
+  gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd);
 }
 
 gboolean
-gibber_ll_transport_open_sockaddr(GibberLLTransport *transport,
-                                  struct sockaddr_storage *addr,
-                                  GError **error) {
+gibber_ll_transport_open_sockaddr (GibberLLTransport *transport,
+    struct sockaddr_storage *addr, GError **error)
+{
   GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
   int fd;
   int ret;
 
-  g_assert(!priv->incoming);
+  g_assert (!priv->incoming);
 
-  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
-                            GIBBER_TRANSPORT_CONNECTING);
-  if (getnameinfo((struct sockaddr *)addr, sizeof(struct sockaddr_storage),
-      host, NI_MAXHOST, port, NI_MAXSERV, 
+  gibber_transport_set_state (GIBBER_TRANSPORT(transport),
+      GIBBER_TRANSPORT_CONNECTING);
+
+  if (getnameinfo ((struct sockaddr *)addr, sizeof (struct sockaddr_storage),
+      host, NI_MAXHOST, port, NI_MAXSERV,
       NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
     DEBUG("Trying to connect to %s port %s", host, port);
   } else {
     DEBUG("Connecting..");
   }
 
-  fd = socket(addr->ss_family, SOCK_STREAM, 0);
-  if (fd < 0) {
-    g_set_error (error, GIBBER_LL_TRANSPORT_ERROR,
-        GIBBER_LL_TRANSPORT_ERROR_FAILED,
-        "Getting socket failed: %s", g_strerror (errno));
-    DEBUG("Getting socket failed: %s", strerror(errno));
-    goto failed;
-  } 
+  fd = socket (addr->ss_family, SOCK_STREAM, 0);
+  if (fd < 0)
+    {
+      g_set_error (error, GIBBER_LL_TRANSPORT_ERROR,
+          GIBBER_LL_TRANSPORT_ERROR_FAILED,
+          "Getting socket failed: %s", g_strerror (errno));
+      DEBUG("Getting socket failed: %s", strerror(errno));
+      goto failed;
+    }
 
-  ret = connect(fd, (struct sockaddr *)addr, sizeof(struct sockaddr_storage));
-  if (ret < 0) {
-    g_set_error (error, GIBBER_LL_TRANSPORT_ERROR,
-        GIBBER_LL_TRANSPORT_ERROR_CONNECT_FAILED,
-        "Connect failed: %s", g_strerror (errno));
-    DEBUG("Connecting failed: %s", strerror(errno));
-    goto failed;
-  }
+  ret = connect (fd, (struct sockaddr *)addr,
+      sizeof (struct sockaddr_storage));
+  if (ret < 0)
+    {
+      g_set_error (error, GIBBER_LL_TRANSPORT_ERROR,
+          GIBBER_LL_TRANSPORT_ERROR_CONNECT_FAILED,
+          "Connect failed: %s", g_strerror (errno));
+      DEBUG("Connecting failed: %s", strerror (errno));
+      goto failed;
+    }
 
-  gibber_fd_transport_set_fd(GIBBER_FD_TRANSPORT(transport), fd);
+  gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd);
   return TRUE;
 
 failed:
-  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
-                            GIBBER_TRANSPORT_DISCONNECTED);
-  if (fd >= 0) {
-    close(fd);
-  }
+  gibber_transport_set_state (GIBBER_TRANSPORT (transport),
+      GIBBER_TRANSPORT_DISCONNECTED);
+  if (fd >= 0)
+    {
+      close (fd);
+    }
   return FALSE;
 }
 
 gboolean
-gibber_ll_transport_is_incoming(GibberLLTransport *transport) {
+gibber_ll_transport_is_incoming (GibberLLTransport *transport)
+{
   GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
   return priv->incoming;
 }
 
 void
-gibber_ll_transport_set_incoming(GibberLLTransport *transport, 
-                                 gboolean incoming) {
+gibber_ll_transport_set_incoming (GibberLLTransport *transport,
+    gboolean incoming)
+{
   GibberLLTransportPrivate *priv = GIBBER_LL_TRANSPORT_GET_PRIVATE (transport);
-  g_assert(GIBBER_TRANSPORT(transport)->state == GIBBER_TRANSPORT_DISCONNECTED);
+  g_assert (
+    GIBBER_TRANSPORT (transport)->state == GIBBER_TRANSPORT_DISCONNECTED);
   priv->incoming = incoming;
 }
 
 gboolean
-gibber_ll_transport_get_address(GibberLLTransport *transport, 
-                                struct sockaddr_storage *addr,
-                                socklen_t *len) {
-  GibberFdTransport *fd_transport = GIBBER_FD_TRANSPORT(transport);
+gibber_ll_transport_get_address (GibberLLTransport *transport,
+    struct sockaddr_storage *addr, socklen_t *len)
+{
+  GibberFdTransport *fd_transport = GIBBER_FD_TRANSPORT (transport);
   gboolean success = FALSE;
 
-  g_assert(fd_transport->fd >= 0);
-  g_assert(*len == sizeof(struct sockaddr_storage));
+  g_assert (fd_transport->fd >= 0);
+  g_assert (*len == sizeof (struct sockaddr_storage));
 
-  success = (getpeername(fd_transport->fd, (struct sockaddr *) addr, len) == 0);
+  success = (getpeername (fd_transport->fd, (struct sockaddr *)
+      addr, len) == 0);
+
   gibber_normalize_address (addr);
 
   return success;

@@ -55,7 +55,7 @@ void gibber_debug (DebugFlags flag,
                    ...)
 {
   if (G_UNLIKELY(!initialized))
-    gibber_debug_set_flags_from_env();
+    gibber_debug_set_flags_from_env ();
   if (flag & flags)
     {
       va_list args;
@@ -72,7 +72,7 @@ gibber_debug_stanza (DebugFlags flag,
                      ...)
 {
   if (G_UNLIKELY(!initialized))
-    gibber_debug_set_flags_from_env();
+    gibber_debug_set_flags_from_env ();
   if (flag & flags)
     {
       va_list args;

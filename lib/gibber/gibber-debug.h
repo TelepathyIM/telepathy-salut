@@ -62,10 +62,10 @@ void gibber_debug_stanza (DebugFlags flag, GibberXmppStanza *stanza,
 #ifdef DEBUG_FLAG
 
 #define DEBUG(format, ...) \
-  gibber_debug(DEBUG_FLAG, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
+  gibber_debug (DEBUG_FLAG, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
 
 #define DEBUG_STANZA(stanza, format, ...) \
-  gibber_debug_stanza(DEBUG_FLAG, stanza, "%s: " format, G_STRFUNC,\
+  gibber_debug_stanza (DEBUG_FLAG, stanza, "%s: " format, G_STRFUNC,\
       ##__VA_ARGS__)
 
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)

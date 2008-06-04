@@ -26,7 +26,7 @@ G_BEGIN_DECLS
 
 GQuark gibber_xmpp_connection_listener_error_quark (void);
 #define GIBBER_XMPP_CONNECTION_LISTENER_ERROR \
-  gibber_xmpp_connection_listener_error_quark()
+  gibber_xmpp_connection_listener_error_quark ()
 
 typedef enum
 {
@@ -36,7 +36,8 @@ typedef enum
 } GibberXmppConnectionListenerError;
 
 typedef struct _GibberXmppConnectionListener GibberXmppConnectionListener;
-typedef struct _GibberXmppConnectionListenerClass GibberXmppConnectionListenerClass;
+typedef struct _GibberXmppConnectionListenerClass
+    GibberXmppConnectionListenerClass;
 
 struct _GibberXmppConnectionListenerClass {
   GObjectClass parent_class;

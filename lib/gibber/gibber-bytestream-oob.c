@@ -273,7 +273,7 @@ connect_to_url (GibberBytestreamOOB *self,
    * client */
   if (!gibber_transport_get_sockaddr (
       GIBBER_TRANSPORT (priv->xmpp_connection->transport),
-      &addr, &len)) 
+      &addr, &len))
     {
       /* I'm too lazy to create more specific errors for this  as it should
        * never happen while using salut anyway.. */
@@ -1007,7 +1007,7 @@ start_listen_for_connection (GibberBytestreamOOB *self)
   socklen_t len;
   #define BACKLOG 1
 
-  memset (&req, 0, sizeof(req));
+  memset (&req, 0, sizeof (req));
   req.ai_flags = AI_PASSIVE;
   req.ai_family = AF_UNSPEC;
   req.ai_socktype = SOCK_STREAM;
@@ -1086,7 +1086,7 @@ start_listen_for_connection (GibberBytestreamOOB *self)
 
 error:
   if (fd > 0)
-    close(fd);
+    close (fd);
 
   if (ans != NULL)
     freeaddrinfo (ans);

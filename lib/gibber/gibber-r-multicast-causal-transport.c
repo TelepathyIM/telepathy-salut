@@ -119,12 +119,12 @@ struct _GibberRMulticastCausalTransportPrivate
    GibberRMulticastCausalTransportPrivate))
 
 static guint32
-_random_nonzero_uint(void)
+_random_nonzero_uint (void)
 {
   guint32 result;
 
   do {
-    result = g_random_int ();
+      result = g_random_int ();
   } while (result == 0);
 
   return result;
@@ -218,8 +218,7 @@ gibber_r_multicast_causal_transport_class_init (
   object_class->dispose = gibber_r_multicast_causal_transport_dispose;
   object_class->finalize = gibber_r_multicast_causal_transport_finalize;
 
-  signals[SENDER_FAILED] =
-    g_signal_new ("sender-failed",
+  signals[SENDER_FAILED] = g_signal_new ("sender-failed",
         G_OBJECT_CLASS_TYPE (gibber_r_multicast_causal_transport_class),
         G_SIGNAL_RUN_LAST,
         0,
@@ -227,8 +226,7 @@ gibber_r_multicast_causal_transport_class_init (
         g_cclosure_marshal_VOID__OBJECT,
         G_TYPE_NONE, 1, GIBBER_TYPE_R_MULTICAST_SENDER);
 
-  signals[RECEIVED_CONTROL_PACKET] =
-    g_signal_new ("received-control-packet",
+  signals[RECEIVED_CONTROL_PACKET] = g_signal_new ("received-control-packet",
         G_OBJECT_CLASS_TYPE (gibber_r_multicast_causal_transport_class),
         G_SIGNAL_RUN_LAST,
         0,
@@ -237,8 +235,7 @@ gibber_r_multicast_causal_transport_class_init (
         G_TYPE_NONE, 2, GIBBER_TYPE_R_MULTICAST_SENDER,
         GIBBER_TYPE_R_MULTICAST_PACKET);
 
-  signals[RECEIVED_FOREIGN_PACKET] =
-    g_signal_new ("received-foreign-packet",
+  signals[RECEIVED_FOREIGN_PACKET] = g_signal_new ("received-foreign-packet",
         G_OBJECT_CLASS_TYPE (gibber_r_multicast_causal_transport_class),
         G_SIGNAL_RUN_LAST,
         0,
@@ -255,13 +252,13 @@ gibber_r_multicast_causal_transport_class_init (
       "The underlying Transport", GIBBER_TYPE_TRANSPORT,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_TRANSPORT, param_spec);
+  g_object_class_install_property (object_class, PROP_TRANSPORT, param_spec);
 
-  param_spec = g_param_spec_string("name", "name",
+  param_spec = g_param_spec_string ("name", "name",
       "The name to use on the protocol", NULL,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property(object_class, PROP_NAME, param_spec);
+  g_object_class_install_property (object_class, PROP_NAME, param_spec);
 
   transport_class->send = gibber_r_multicast_causal_transport_do_send;
   transport_class->disconnect = gibber_r_multicast_causal_transport_disconnect;
@@ -279,18 +276,20 @@ gibber_r_multicast_causal_transport_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
-  if (priv->transport != NULL) {
-    g_object_unref (priv->transport);
-    priv->transport = NULL;
-  }
+  if (priv->transport != NULL)
+    {
+      g_object_unref (priv->transport);
+      priv->transport = NULL;
+    }
 
-  if (priv->timer != 0) {
-    g_source_remove (priv->timer);
-  }
+  if (priv->timer != 0)
+    {
+      g_source_remove (priv->timer);
+    }
 
   if (priv->keepalive_timer != 0)
     {
-      g_source_remove(priv->keepalive_timer);
+      g_source_remove (priv->keepalive_timer);
     }
 
   if (priv->self != NULL)
@@ -337,12 +336,12 @@ sendout_packet (GibberRMulticastCausalTransport *transport,
 
   if (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet)
       && (packet->depends->len != 0
-          || g_hash_table_size(priv->sender_group->senders) == 0))
+          || g_hash_table_size (priv->sender_group->senders) == 0))
     schedule_keepalive_message (transport);
 
-  rawdata = gibber_r_multicast_packet_get_raw_data(packet, &rawsize);
-  return gibber_transport_send(GIBBER_TRANSPORT(priv->transport),
-                               rawdata, rawsize, error);
+  rawdata = gibber_r_multicast_packet_get_raw_data (packet, &rawsize);
+  return gibber_transport_send (GIBBER_TRANSPORT(priv->transport),
+      rawdata, rawsize, error);
 }
 
 static gchar *
@@ -355,12 +354,12 @@ g_array_uint32_to_str (GArray *array)
     return g_strdup (" { } ");
   }
 
-  str= g_string_sized_new(4 + 10 * array->len);
+  str= g_string_sized_new (4 + 10 * array->len);
   str = g_string_append (str, " {");
   for (i = 0; i < array->len; i++)
-  {
-    g_string_append_printf (str, " %x,", g_array_index (array, guint32, i));
-  }
+    {
+      g_string_append_printf (str, " %x,", g_array_index (array, guint32, i));
+    }
   g_string_truncate (str, str->len - 1);
   g_string_append (str, " }");
 
@@ -368,9 +367,7 @@ g_array_uint32_to_str (GArray *array)
 }
 
 static void
-add_sender_info (gpointer key,
-                 gpointer value,
-                 gpointer user_data)
+add_sender_info (gpointer key, gpointer value, gpointer user_data)
 {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
   GibberRMulticastPacket *packet = GIBBER_R_MULTICAST_PACKET (user_data);
@@ -416,7 +413,7 @@ schedule_session_message (GibberRMulticastCausalTransport *transport)
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
 
   if (priv->timer != 0)
-    g_source_remove(priv->timer);
+    g_source_remove (priv->timer);
 
   priv->timer =
       g_timeout_add (
@@ -625,7 +622,7 @@ sender_failed_cb (GibberRMulticastSender *sender,
   GibberRMulticastCausalTransport *self =
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (user_data);
 
-  g_signal_emit(self, signals[SENDER_FAILED], 0, sender);
+  g_signal_emit (self, signals[SENDER_FAILED], 0, sender);
 }
 
 GibberRMulticastSender *
@@ -729,7 +726,7 @@ handle_session_message (GibberRMulticastCausalTransport *self,
             == packet->depends->len)
     {
       DEBUG_TRANSPORT (self, "Rescheduling session message");
-      schedule_session_message(self);
+      schedule_session_message (self);
     }
 }
 
@@ -944,10 +941,10 @@ r_multicast_receive (GibberTransport *transport,
     }
 
   if (error != NULL)
-    g_error_free(error);
+    g_error_free (error);
 
   if (packet != NULL)
-    g_object_unref(packet);
+    g_object_unref (packet);
 }
 
 GibberRMulticastCausalTransport *
@@ -1056,7 +1053,7 @@ schedule_keepalive_message (GibberRMulticastCausalTransport *transport)
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
 
   if (priv->keepalive_timer != 0)
-    g_source_remove(priv->keepalive_timer);
+    g_source_remove (priv->keepalive_timer);
 
   priv->keepalive_timer =
       g_timeout_add (KEEPALIVE_TIMEOUT, send_keepalive_cb, transport);
@@ -1126,10 +1123,8 @@ gibber_r_multicast_causal_transport_send (
 }
 
 static gboolean
-gibber_r_multicast_causal_transport_do_send(GibberTransport *transport,
-                                            const guint8 *data,
-                                            gsize size,
-                                            GError **error)
+gibber_r_multicast_causal_transport_do_send (GibberTransport *transport,
+    const guint8 *data, gsize size, GError **error)
 {
   return gibber_r_multicast_causal_transport_send (
      GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (transport),
@@ -1149,7 +1144,7 @@ reconnect (GibberRMulticastCausalTransport *self)
   priv->packet_id = g_random_int ();
   priv->resetting = FALSE;
 
-  g_assert(gibber_r_multicast_causal_transport_connect (self, FALSE, NULL));
+  g_assert (gibber_r_multicast_causal_transport_connect (self, FALSE, NULL));
 }
 
 static void
@@ -1160,7 +1155,7 @@ disconnect_done (GibberRMulticastCausalTransport *self)
 
   if (priv->timer != 0)
     {
-      g_source_remove(priv->timer);
+      g_source_remove (priv->timer);
     }
 
   gibber_transport_disconnect (GIBBER_TRANSPORT (priv->transport));
@@ -1226,12 +1221,12 @@ do_disconnect (GibberRMulticastCausalTransport *transport)
 
   if (priv->timer != 0)
     {
-      g_source_remove(priv->timer);
+      g_source_remove (priv->timer);
     }
 
   if (priv->keepalive_timer != 0)
     {
-      g_source_remove(priv->keepalive_timer);
+      g_source_remove (priv->keepalive_timer);
     }
 
   gibber_transport_set_state (GIBBER_TRANSPORT (self),
@@ -1357,10 +1352,10 @@ gibber_r_multicast_causal_transport_send_join (
     GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (transport);
   GibberRMulticastPacket *packet;
 
-  packet = gibber_r_multicast_packet_new(PACKET_TYPE_JOIN,
+  packet = gibber_r_multicast_packet_new (PACKET_TYPE_JOIN,
       priv->self->id, priv->transport->max_packet_size);
 
-  gibber_r_multicast_packet_set_packet_id(packet, priv->packet_id++);
+  gibber_r_multicast_packet_set_packet_id (packet, priv->packet_id++);
   add_packet_depends (transport, packet);
   gibber_r_multicast_packet_join_add_failures (packet, failures, NULL);
 

@@ -153,7 +153,7 @@ gibber_xmpp_stanza_finalize (GObject *object)
   GibberXmppStanza *self = GIBBER_XMPP_STANZA (object);
 
   /* free any data held directly by the object here */
-  gibber_xmpp_node_free(self->node);
+  gibber_xmpp_node_free (self->node);
 
   G_OBJECT_CLASS (gibber_xmpp_stanza_parent_class)->finalize (object);
 }
@@ -164,8 +164,8 @@ gibber_xmpp_stanza_new (const gchar *name)
 {
   GibberXmppStanza *result;
 
-  result = GIBBER_XMPP_STANZA(g_object_new(GIBBER_TYPE_XMPP_STANZA, NULL));
-  result->node = gibber_xmpp_node_new(name); 
+  result = GIBBER_XMPP_STANZA (g_object_new (GIBBER_TYPE_XMPP_STANZA, NULL));
+  result->node = gibber_xmpp_node_new (name);
 
   return result;
 }

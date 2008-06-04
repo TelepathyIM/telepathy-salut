@@ -30,7 +30,7 @@ G_BEGIN_DECLS
 
 GQuark gibber_resolver_error_quark (void);
 #define GIBBER_RESOLVER_ERROR \
-  gibber_resolver_error_quark()
+  gibber_resolver_error_quark ()
 
 typedef enum {
   /* Invalid or unsupported arguments */
@@ -71,11 +71,11 @@ struct _GibberResolver {
   GObject parent;
 };
 
-GType gibber_resolver_get_type(void);
+GType gibber_resolver_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_RESOLVER \
-  (gibber_resolver_get_type())
+  (gibber_resolver_get_type ())
 #define GIBBER_RESOLVER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_RESOLVER, GibberResolver))
 #define GIBBER_RESOLVER_CLASS(klass) \

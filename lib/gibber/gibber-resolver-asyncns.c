@@ -28,7 +28,7 @@
 
 #include "gibber-resolver-asyncns.h"
 
-G_DEFINE_TYPE(GibberResolverAsyncns, gibber_resolver_asyncns, 
+G_DEFINE_TYPE(GibberResolverAsyncns, gibber_resolver_asyncns,
   GIBBER_TYPE_RESOLVER)
 
 /* private structure */
@@ -194,7 +194,7 @@ gibber_resolver_syncns_srv_done (GibberResolverAsyncns *self,
     }
   else
    {
-     /* FIXME libasyncns actually returns -errno, but that's normally 
+     /* FIXME libasyncns actually returns -errno, but that's normally
       * unusefull... libasyncns should be fixed here.. */
      error = gibber_resolver_h_error_to_g_error (-ret);
    }

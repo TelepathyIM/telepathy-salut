@@ -37,29 +37,30 @@ struct _GibberTCPTransport {
     GibberFdTransport parent;
 };
 
-GType gibber_tcp_transport_get_type(void);
+GType gibber_tcp_transport_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_TCP_TRANSPORT \
-  (gibber_tcp_transport_get_type())
+  (gibber_tcp_transport_get_type ())
 #define GIBBER_TCP_TRANSPORT(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_TCP_TRANSPORT, GibberTCPTransport))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_TCP_TRANSPORT, \
+   GibberTCPTransport))
 #define GIBBER_TCP_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_TCP_TRANSPORT, GibberTCPTransportClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_TCP_TRANSPORT, \
+   GibberTCPTransportClass))
 #define GIBBER_IS_TCP_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_TCP_TRANSPORT))
 #define GIBBER_IS_TCP_TRANSPORT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_TCP_TRANSPORT))
 #define GIBBER_TCP_TRANSPORT_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_TCP_TRANSPORT, GibberTCPTransportClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_TCP_TRANSPORT, \
+   GibberTCPTransportClass))
 
 GibberTCPTransport *
-gibber_tcp_transport_new();
+gibber_tcp_transport_new ();
 
-void
-gibber_tcp_transport_connect(GibberTCPTransport *tcp_transport,
-                             const gchar *host, const gchar *port); 
-    
+void gibber_tcp_transport_connect (GibberTCPTransport *tcp_transport,
+    const gchar *host, const gchar *port);
 
 G_END_DECLS
 

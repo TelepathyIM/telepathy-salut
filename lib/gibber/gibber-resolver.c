@@ -534,7 +534,7 @@ weight_sort_srv_list (GList *srv_list)
 }
 
 static void
-cut_list(GList *link)
+cut_list (GList *link)
 {
   if (link->prev != NULL)
     link->prev->next = NULL;
@@ -664,7 +664,7 @@ gibber_resolver_res_query_to_list (guchar *answer, int length)
   int qdcount;
   int ancount;
   int len;
-  const unsigned char *pos = answer + sizeof(HEADER);
+  const unsigned char *pos = answer + sizeof (HEADER);
   unsigned char *end = answer + length;
   HEADER *head = (HEADER *)answer;
   char name[256];
@@ -698,7 +698,7 @@ gibber_resolver_res_query_to_list (guchar *answer, int length)
        NS_GET16 (pref, pos);
        NS_GET16 (weight, pos);
        NS_GET16 (port, pos);
-       len = dn_expand(answer, end, pos, name, 255);
+       len = dn_expand (answer, end, pos, name, 255);
 
        list = g_list_prepend (list,
          gibber_resolver_srv_record_new (name, port, pref, weight));

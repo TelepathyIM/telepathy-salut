@@ -30,7 +30,7 @@ G_BEGIN_DECLS
 
 GQuark gibber_muc_connection_error_quark (void);
 #define GIBBER_MUC_CONNECTION_ERROR \
-  gibber_muc_connection_error_quark()
+  gibber_muc_connection_error_quark ()
 
 typedef enum
 {
@@ -63,53 +63,49 @@ struct _GibberMucConnection {
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_MUC_CONNECTION \
-  (gibber_muc_connection_get_type())
+  (gibber_muc_connection_get_type ())
 #define GIBBER_MUC_CONNECTION(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_MUC_CONNECTION, GibberMucConnection))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_MUC_CONNECTION, \
+   GibberMucConnection))
 #define GIBBER_MUC_CONNECTION_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_MUC_CONNECTION, GibberMucConnectionClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_MUC_CONNECTION, \
+   GibberMucConnectionClass))
 #define GIBBER_IS_MUC_CONNECTION(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_MUC_CONNECTION))
 #define GIBBER_IS_MUC_CONNECTION_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_MUC_CONNECTION))
 #define GIBBER_MUC_CONNECTION_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_MUC_CONNECTION, GibberMucConnectionClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_MUC_CONNECTION, \
+   GibberMucConnectionClass))
 
-const gchar **
-gibber_muc_connection_get_protocols(void);
+const gchar ** gibber_muc_connection_get_protocols (void);
 
-const gchar **
-gibber_muc_connection_get_required_parameters(const gchar *protocol);
+const gchar ** gibber_muc_connection_get_required_parameters (
+    const gchar *protocol);
 
-GibberMucConnection *
-gibber_muc_connection_new(const gchar *name, 
-                         const gchar *protocol,
-                         GHashTable *parameters,
-                         GError **error);
+GibberMucConnection * gibber_muc_connection_new (const gchar *name,
+    const gchar *protocol, GHashTable *parameters, GError **error);
 
-gboolean
-gibber_muc_connection_connect(GibberMucConnection *connection, GError **error);
+gboolean gibber_muc_connection_connect (GibberMucConnection *connection,
+    GError **error);
 
-void
-gibber_muc_connection_disconnect(GibberMucConnection *connection);
+void gibber_muc_connection_disconnect (GibberMucConnection *connection);
 
-const gchar *
-gibber_muc_connection_get_protocol(GibberMucConnection *connection);
+const gchar * gibber_muc_connection_get_protocol (
+    GibberMucConnection *connection);
 
 /* Current parameters of the transport. str -> str */
-const GHashTable *
-gibber_muc_connection_get_parameters(GibberMucConnection *connection);
+const GHashTable * gibber_muc_connection_get_parameters (
+    GibberMucConnection *connection);
 
-GType gibber_muc_connection_get_type(void);
+GType gibber_muc_connection_get_type (void);
+
+gboolean gibber_muc_connection_send (GibberMucConnection *connection,
+    GibberXmppStanza *stanza, GError **error);
 
 gboolean
-gibber_muc_connection_send(GibberMucConnection *connection,
-                          GibberXmppStanza *stanza, GError **error);
-
-gboolean
-gibber_muc_connection_send_raw(GibberMucConnection *connection,
-                               guint16 stream_id, const guint8 *data,
-                               gsize size, GError **error);
+gibber_muc_connection_send_raw (GibberMucConnection *connection,
+    guint16 stream_id, const guint8 *data, gsize size, GError **error);
 
 guint16 gibber_muc_connection_new_stream (GibberMucConnection *connection);
 
