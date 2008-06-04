@@ -56,11 +56,11 @@ struct _SalutOlpcActivity {
     SalutConnection *connection;
 };
 
-GType salut_olpc_activity_get_type(void);
+GType salut_olpc_activity_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_OLPC_ACTIVITY \
-  (salut_olpc_activity_get_type())
+  (salut_olpc_activity_get_type ())
 #define SALUT_OLPC_ACTIVITY(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_OLPC_ACTIVITY, SalutOlpcActivity))
 #define SALUT_OLPC_ACTIVITY_CLASS(klass) \

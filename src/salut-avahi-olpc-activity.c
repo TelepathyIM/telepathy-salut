@@ -342,7 +342,7 @@ compare_resolver (GaServiceResolver *resolver,
   gchar *domain;
   gint result;
 
-  g_object_get(resolver,
+  g_object_get (resolver,
       "interface", &interface,
       "protocol", &protocol,
       "name", &name,

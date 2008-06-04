@@ -48,9 +48,11 @@ GType salut_avahi_olpc_activity_manager_get_type(void);
 #define SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER \
   (salut_avahi_olpc_activity_manager_get_type())
 #define SALUT_AVAHI_OLPC_ACTIVITY_MANAGER(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER, SalutAvahiOlpcActivityManager))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER, \
+   SalutAvahiOlpcActivityManager))
 #define SALUT_AVAHI_OLPC_ACTIVITY_MANAGER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER, SalutAvahiOlpcActivityManagerClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER, \
+   SalutAvahiOlpcActivityManagerClass))
 #define SALUT_IS_AVAHI_OLPC_ACTIVITY_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_AVAHI_OLPC_ACTIVITY_MANAGER))
 #define SALUT_IS_AVAHI_OLPC_ACTIVITY_MANAGER_CLASS(klass) \
