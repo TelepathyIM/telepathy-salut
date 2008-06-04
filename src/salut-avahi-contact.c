@@ -569,7 +569,7 @@ update_alias (SalutAvahiContact *self,
 
 /* Returned string needs to be freed with avahi_free ! */
 static char *
-salut_avahi_contact_get_keyval_with_size (AvahiStringList *txt,
+_avahi_txt_get_keyval_with_size (AvahiStringList *txt,
     const gchar *key, gsize *size)
 {
   AvahiStringList *t;
@@ -585,9 +585,9 @@ salut_avahi_contact_get_keyval_with_size (AvahiStringList *txt,
 }
 
 static char *
-salut_avahi_contact_get_keyval (AvahiStringList *txt, const gchar *key)
+_avahi_txt_get_keyval (AvahiStringList *txt, const gchar *key)
 {
-  return salut_avahi_contact_get_keyval_with_size (txt, key, NULL);
+  return _avahi_txt_get_keyval_with_size (txt, key, NULL);
 }
 
 static void
@@ -627,7 +627,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
 
   /* status */
 
-  if ((s = salut_avahi_contact_get_keyval (txt, "status")) != NULL)
+  if ((s = _avahi_txt_get_keyval (txt, "status")) != NULL)
     {
       int i;
       for (i = 0; i < SALUT_PRESENCE_NR_PRESENCES ; i++)
@@ -642,14 +642,14 @@ contact_resolved_cb (GaServiceResolver *resolver,
     }
 
   /* status message */
-  s = salut_avahi_contact_get_keyval (txt, "msg");
+  s = _avahi_txt_get_keyval (txt, "msg");
   salut_contact_change_status_message (contact, s);
   avahi_free (s);
 
   /* nick */
-  nick = salut_avahi_contact_get_keyval (txt, "nick");
-  first = salut_avahi_contact_get_keyval (txt, "1st");
-  last = salut_avahi_contact_get_keyval (txt, "last");
+  nick = _avahi_txt_get_keyval (txt, "nick");
+  first = _avahi_txt_get_keyval (txt, "1st");
+  last = _avahi_txt_get_keyval (txt, "last");
 
   update_alias (self, nick, first, last);
   avahi_free (nick);
@@ -657,31 +657,31 @@ contact_resolved_cb (GaServiceResolver *resolver,
   avahi_free (last);
 
   /* avatar token */
-  s = salut_avahi_contact_get_keyval (txt, "phsh");
+  s = _avahi_txt_get_keyval (txt, "phsh");
   salut_contact_change_avatar_token (contact, s);
   avahi_free (s);
 
   /* jid */
 #ifdef ENABLE_OLPC
-  s = salut_avahi_contact_get_keyval (txt, "jid");
+  s = _avahi_txt_get_keyval (txt, "jid");
   salut_contact_change_jid (contact, s);
   avahi_free (s);
 
   /* OLPC color */
-  s = salut_avahi_contact_get_keyval (txt, "olpc-color");
+  s = _avahi_txt_get_keyval (txt, "olpc-color");
   salut_contact_change_olpc_color (contact, s);
   avahi_free (s);
 
   /* current activity */
-  activity_id = salut_avahi_contact_get_keyval (txt, "olpc-current-activity");
-  room_id = salut_avahi_contact_get_keyval (txt, "olpc-current-activity-room");
+  activity_id = _avahi_txt_get_keyval (txt, "olpc-current-activity");
+  room_id = _avahi_txt_get_keyval (txt, "olpc-current-activity-room");
 
   salut_contact_change_current_activity (contact, room_id, activity_id);
   avahi_free (activity_id);
   avahi_free (room_id);
 
   /* OLPC key */
-  olpc_key_part = salut_avahi_contact_get_keyval_with_size (txt,
+  olpc_key_part = _avahi_txt_get_keyval_with_size (txt,
       "olpc-key-part0", &size);
 
   if (olpc_key_part != NULL)
@@ -700,7 +700,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
 
           i++;
           name = g_strdup_printf ("olpc-key-part%u", i);
-          olpc_key_part = salut_avahi_contact_get_keyval_with_size (txt, name,
+          olpc_key_part = _avahi_txt_get_keyval_with_size (txt, name,
               &size);
           g_free (name);
         }
