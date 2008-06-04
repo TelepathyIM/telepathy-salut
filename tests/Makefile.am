@@ -21,6 +21,17 @@ check_SCRIPTS = run-xmpp-connection-test.sh
 
 EXTRA_DIST = simplemeshtest.py mesh.py $(check_SCRIPTS)
 
+noinst_PROGRAMS = \
+        telepathy-salut-debug
+
+telepathy_salut_debug_SOURCES = \
+    salut-debug.c
+
+telepathy_salut_debug_LDADD = \
+    $(top_builddir)/src/libsalut-convenience.la \
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(top_builddir)/extensions/libsalut-extensions.la \
+    -ltelepathy-glib
 
 test_xmpp_connection_SOURCES = \
     test-xmpp-connection.c     \
@@ -96,10 +107,12 @@ endif
 endif
 
 AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @DBUS_CFLAGS@ \
+    @TELEPATHY_GLIB_CFLAGS@ \
+    -I $(top_srcdir) -I $(top_builddir) \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib \
     -I $(top_srcdir)/src -I $(top_builddir)/src
 
-AM_LDFLAGS = @GLIB_LIBS@
+AM_LDFLAGS = @GLIB_LIBS@ @TELEPATHY_GLIB_LIBS@
 
 # Coding style checks
 check_c_sources = \
