@@ -264,15 +264,9 @@ salut_connection_constructor (GType type,
                               GObjectConstructParam *props)
 {
   GObject *obj;
-  SalutConnectionPrivate *priv;
 
   obj = G_OBJECT_CLASS (salut_connection_parent_class)->
            constructor (type, n_props, props);
-
-  priv = SALUT_CONNECTION_GET_PRIVATE (SALUT_CONNECTION (obj));
-
-  priv->discovery_client = g_object_new (priv->backend_type,
-      NULL);
 
   return obj;
 }
@@ -2628,6 +2622,11 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   SalutConnection *self = SALUT_CONNECTION (base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GPtrArray *factories = g_ptr_array_sized_new (3);
+
+  /* Create the backend object */
+  priv->discovery_client = g_object_new (priv->backend_type,
+      NULL);
+  g_assert (priv->discovery_client != NULL);
 
   /* Create the contact manager */
   priv->contact_manager = salut_discovery_client_create_contact_manager (
