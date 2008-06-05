@@ -185,17 +185,6 @@ salut_avahi_discovery_client_class_init (
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
-SalutDiscoveryClient *
-salut_discovery_client_new (void)
-{
-  SalutDiscoveryClient *ret;
-
-  DEBUG ("create Avahi client");
-  ret = g_object_new (SALUT_TYPE_AVAHI_DISCOVERY_CLIENT, NULL);
-
-  return ret;
-}
-
 static void
 _ga_client_running_cb (GaClient *c,
                        GaClientState state,

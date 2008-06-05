@@ -35,6 +35,8 @@ struct _SalutConnectionManagerClass {
 
 struct _SalutConnectionManager {
   TpBaseConnectionManager parent;
+
+  gpointer priv;
 };
 
 extern const TpCMProtocolSpec salut_protocols[];

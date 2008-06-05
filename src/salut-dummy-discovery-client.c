@@ -112,17 +112,6 @@ salut_dummy_discovery_client_class_init (
   object_class->dispose = salut_dummy_discovery_client_dispose;
 }
 
-SalutDiscoveryClient *
-salut_discovery_client_new (void)
-{
-  SalutDiscoveryClient *ret;
-
-  DEBUG ("create Dummy client");
-  ret = g_object_new (SALUT_TYPE_DUMMY_DISCOVERY_CLIENT, NULL);
-
-  return ret;
-}
-
 /*
  * salut_dummy_discovery_client_create_self
  *

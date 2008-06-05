@@ -64,8 +64,6 @@ GType salut_avahi_discovery_client_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_AVAHI_DISCOVERY_CLIENT,\
                               SalutAvahiDiscoveryClientClass))
 
-SalutDiscoveryClient * salut_discovery_client_new (void);
-
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_AVAHI_DISCOVERY_CLIENT_H__ */

@@ -6,13 +6,16 @@
 #include <telepathy-glib/debug.h>
 
 #include "salut-connection-manager.h"
+#include "salut-dummy-discovery-client.h"
 #include "debug.h"
 
 static TpBaseConnectionManager *
 salut_create_connection_manager (void)
 {
   return TP_BASE_CONNECTION_MANAGER (
-      g_object_new (SALUT_TYPE_CONNECTION_MANAGER, NULL));
+      g_object_new (SALUT_TYPE_CONNECTION_MANAGER,
+                    "backend-type", SALUT_TYPE_DUMMY_DISCOVERY_CLIENT,
+                    NULL));
 }
 
 int

@@ -60,9 +60,6 @@ GType salut_dummy_discovery_client_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_DUMMY_DISCOVERY_CLIENT,\
                               SalutDummyDiscoveryClientClass))
 
-SalutDiscoveryClient * salut_discovery_client_new (void);
-
-
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_DUMMY_DISCOVERY_CLIENT_H__ */

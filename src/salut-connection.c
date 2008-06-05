@@ -139,6 +139,7 @@ enum {
 #ifdef ENABLE_OLPC
   PROP_OLPC_ACTIVITY_MANAGER,
 #endif
+  PROP_BACKEND,
   LAST_PROP
 };
 
@@ -188,6 +189,9 @@ struct _SalutConnectionPrivate
 #ifdef ENABLE_OLPC
   SalutOlpcActivityManager *olpc_activity_manager;
 #endif
+
+  /* Backend type: avahi or dummy */
+  GType backend_type;
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
@@ -252,8 +256,25 @@ salut_connection_init (SalutConnection *obj)
 
   priv->contact_manager = NULL;
   priv->xmpp_connection_manager = NULL;
+}
 
-  priv->discovery_client = salut_discovery_client_new ();
+static GObject *
+salut_connection_constructor (GType type,
+                              guint n_props,
+                              GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutConnectionPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_connection_parent_class)->
+           constructor (type, n_props, props);
+
+  priv = SALUT_CONNECTION_GET_PRIVATE (SALUT_CONNECTION (obj));
+
+  priv->discovery_client = g_object_new (priv->backend_type,
+      NULL);
+
+  return obj;
 }
 
 static void
@@ -308,6 +329,9 @@ salut_connection_get_property (GObject *object,
       g_value_set_object (value, priv->olpc_activity_manager);
       break;
 #endif
+    case PROP_BACKEND:
+      g_value_set_gtype (value, priv->backend_type);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -347,6 +371,9 @@ salut_connection_set_property (GObject *object,
     case PROP_PUBLISHED_NAME:
       g_free (priv->published_name);
       priv->published_name = g_value_dup_string (value);
+      break;
+    case PROP_BACKEND:
+      priv->backend_type = g_value_get_gtype (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -550,6 +577,8 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   g_type_class_add_private (salut_connection_class,
       sizeof (SalutConnectionPrivate));
 
+  object_class->constructor = salut_connection_constructor;
+
   object_class->dispose = salut_connection_dispose;
   object_class->finalize = salut_connection_finalize;
 
@@ -680,6 +709,19 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   g_object_class_install_property (object_class, PROP_OLPC_ACTIVITY_MANAGER,
       param_spec);
 #endif
+
+  param_spec = g_param_spec_gtype (
+      "backend-type",
+      "backend type",
+      "a G_TYPE_GTYPE of the backend to use",
+      G_TYPE_NONE,
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_BACKEND,
+      param_spec);
+
 }
 
 void
