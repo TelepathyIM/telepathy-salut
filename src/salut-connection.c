@@ -368,6 +368,10 @@ salut_connection_set_property (GObject *object,
       break;
     case PROP_BACKEND:
       priv->backend_type = g_value_get_gtype (value);
+      /* Create the backend object */
+      priv->discovery_client = g_object_new (priv->backend_type,
+          NULL);
+      g_assert (priv->discovery_client != NULL);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -2623,11 +2627,6 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   SalutConnection *self = SALUT_CONNECTION (base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   GPtrArray *factories = g_ptr_array_sized_new (3);
-
-  /* Create the backend object */
-  priv->discovery_client = g_object_new (priv->backend_type,
-      NULL);
-  g_assert (priv->discovery_client != NULL);
 
   /* Create the contact manager */
   priv->contact_manager = salut_discovery_client_create_contact_manager (
