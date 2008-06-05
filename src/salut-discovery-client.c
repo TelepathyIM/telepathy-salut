@@ -88,6 +88,17 @@ salut_discovery_client_create_self (SalutDiscoveryClient *self,
       jid, email, published_name, olpc_key, olpc_color);
 }
 
+const gchar *
+salut_discovery_client_get_host_name_fqdn (
+    SalutDiscoveryClient *self)
+{
+  const gchar * (*virtual_method)( SalutDiscoveryClient *) =
+      SALUT_DISCOVERY_CLIENT_GET_CLASS (self)->get_host_name_fqdn;
+  g_assert (virtual_method != NULL);
+  return virtual_method (self);
+}
+
+
 static void
 salut_discovery_client_base_init (gpointer klass)
 {

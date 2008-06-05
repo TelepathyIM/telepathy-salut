@@ -904,13 +904,8 @@ discovery_client_running (SalutConnection *self)
     }
 
   /* Create the bytestream manager */
-  /* FIXME:
-   * abstract this */
-  /*
   priv->bytestream_manager = salut_bytestream_manager_new (self,
-    avahi_client_get_host_name_fqdn (SALUT_AVAHI_DISCOVERY_CLIENT (
-        priv->discovery_client)->avahi_client->avahi_client));
-        */
+    salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
 }
 
 static void

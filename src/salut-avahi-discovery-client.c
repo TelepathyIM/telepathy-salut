@@ -298,6 +298,13 @@ salut_avahi_discovery_client_create_self (SalutDiscoveryClient *client,
       last_name, jid, email, published_name, olpc_key, olpc_color));
 }
 
+static const gchar *
+salut_avahi_discovery_client_get_host_name_fqdn (SalutDiscoveryClient *clt)
+{
+  return avahi_client_get_host_name_fqdn (
+        SALUT_AVAHI_DISCOVERY_CLIENT (clt)->avahi_client->avahi_client);
+}
+
 static void
 discovery_client_init (gpointer g_iface,
                        gpointer iface_data)
@@ -313,4 +320,5 @@ discovery_client_init (gpointer g_iface,
     salut_avahi_discovery_client_create_olpc_activity_manager;
 #endif
   klass->create_self = salut_avahi_discovery_client_create_self;
+  klass->get_host_name_fqdn = salut_avahi_discovery_client_get_host_name_fqdn;
 }

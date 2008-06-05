@@ -60,6 +60,8 @@ struct _SalutDiscoveryClientClass
       const gchar *nickname, const gchar *first_name, const gchar *last_name,
       const gchar *jid, const gchar *email, const gchar *published_name,
       const GArray *olpc_key, const gchar *olpc_color);
+
+  const gchar * (*get_host_name_fqdn) (SalutDiscoveryClient *clt);
 };
 
 GType salut_discovery_client_get_type (void);
@@ -96,6 +98,9 @@ SalutSelf * salut_discovery_client_create_self (
     const gchar *nickname, const gchar *first_name, const gchar *last_name,
     const gchar *jid, const gchar *email, const gchar *published_name,
     const GArray *olpc_key, const gchar *olpc_color);
+
+const gchar * salut_discovery_client_get_host_name_fqdn (
+    SalutDiscoveryClient *clt);
 
 G_END_DECLS
 
