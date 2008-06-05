@@ -118,6 +118,7 @@ AM_LDFLAGS = @GLIB_LIBS@ @TELEPATHY_GLIB_LIBS@
 
 # Coding style checks
 check_c_sources = \
+    $(telepathy_salut_debug_SOURCES) \
     $(test_xmpp_connection_SOURCES) \
     $(test_r_multicast_transport_io_SOURCES)
 
