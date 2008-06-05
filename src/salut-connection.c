@@ -709,6 +709,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "backend type",
       "a G_TYPE_GTYPE of the backend to use",
       G_TYPE_NONE,
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
