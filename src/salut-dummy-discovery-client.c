@@ -19,22 +19,8 @@
 
 #include "salut-dummy-discovery-client.h"
 
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#include <glib.h>
-
 #define DEBUG_FLAG DEBUG_DISCOVERY
 #include "debug.h"
-
-#include "signals-marshal.h"
 
 static void
 discovery_client_init (gpointer g_iface, gpointer iface_data);

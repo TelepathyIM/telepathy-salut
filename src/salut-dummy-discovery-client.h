@@ -22,8 +22,6 @@
 
 #include <glib-object.h>
 
-#include <netdb.h>
-
 #include "salut-discovery-client.h"
 
 G_BEGIN_DECLS
