@@ -18,35 +18,34 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <dbus/dbus-glib.h>
+#include "salut-im-channel.h"
+
+#include <errno.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <errno.h>
 #include <string.h>
+#include <sys/socket.h>
+
+#include <dbus/dbus-glib.h>
+#include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/text-mixin.h>
+
+#include <gibber/gibber-linklocal-transport.h>
+#include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-xmpp-stanza.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
-
-#include "salut-im-channel.h"
-#include "signals-marshal.h"
-
 #include "salut-connection.h"
 #include "salut-contact.h"
-#include "text-helper.h"
 #include "salut-xmpp-connection-manager.h"
-
-#include <gibber/gibber-linklocal-transport.h>
-#include <gibber/gibber-xmpp-connection.h>
-#include <gibber/gibber-xmpp-stanza.h>
-#include <gibber/gibber-namespaces.h>
-
-#include <telepathy-glib/text-mixin.h>
-#include <telepathy-glib/channel-iface.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/svc-generic.h>
+#include "signals-marshal.h"
+#include "text-helper.h"
 
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void text_iface_init (gpointer g_iface, gpointer iface_data);
