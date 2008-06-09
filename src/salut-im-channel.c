@@ -1,6 +1,6 @@
 /*
  * salut-im-channel.c - Source for SalutImChannel
- * Copyright (C) 2005-2007 Collabora Ltd.
+ * Copyright (C) 2005-2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
  *
  * This library is free software; you can redistribute it and/or
