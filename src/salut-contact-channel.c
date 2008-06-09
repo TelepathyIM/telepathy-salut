@@ -1,7 +1,7 @@
 /*
  * salut-contact-channel.c - Source for SalutContactChannel
- * Copyright (C) 2005 Collabora Ltd.
- * Copyright (C) 2005 Nokia Corporation
+ * Copyright (C) 2005-2008 Collabora Ltd.
+ * Copyright (C) 2005-2008 Nokia Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,17 +18,18 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <dbus/dbus-glib.h>
+#include "salut-contact-channel.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "salut-connection.h"
-#include "salut-contact-channel.h"
-
-#include <telepathy-glib/dbus.h>
+#include <dbus/dbus-glib.h>
 #include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/util.h>
+
+#include "salut-connection.h"
 
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data);
