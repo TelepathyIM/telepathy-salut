@@ -62,6 +62,10 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 );
 
+static const gchar *salut_im_channel_interfaces[] = {
+    NULL
+};
+
 static gboolean message_stanza_filter (SalutXmppConnectionManager *mgr,
     GibberXmppConnection *conn, GibberXmppStanza *stanza,
     SalutContact *contact, gpointer user_data);
@@ -89,6 +93,7 @@ enum
   PROP_CONTACT,
   PROP_CONNECTION,
   PROP_XMPP_CONNECTION_MANAGER,
+  PROP_INTERFACES,
   LAST_PROPERTY
 };
 
@@ -223,6 +228,9 @@ salut_im_channel_get_property (GObject *object,
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
+      case PROP_INTERFACES:
+        g_value_set_static_boxed (value, salut_im_channel_interfaces);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -383,6 +391,13 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
+
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   tp_text_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutImChannelClass, text_class));
@@ -917,9 +932,8 @@ static void
 salut_im_channel_get_interfaces (TpSvcChannel *iface,
                                  DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+  tp_svc_channel_return_from_get_interfaces (context,
+      salut_im_channel_interfaces);
 }
 
 static void
