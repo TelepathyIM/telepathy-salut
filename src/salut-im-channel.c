@@ -47,19 +47,14 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 
-static void
-channel_iface_init (gpointer g_iface, gpointer iface_data);
-static void
-text_iface_init (gpointer g_iface, gpointer iface_data);
+static void channel_iface_init (gpointer g_iface, gpointer iface_data);
+static void text_iface_init (gpointer g_iface, gpointer iface_data);
 
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *conn,
-                                           SalutContact *contact,
-                                           gpointer user_data);
+static void xmpp_connection_manager_new_connection_cb (
+    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
+    SalutContact *contact, gpointer user_data);
 
-static void
-_setup_connection (SalutImChannel *self);
+static void _setup_connection (SalutImChannel *self);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
@@ -67,13 +62,11 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 );
 
-static gboolean
-message_stanza_filter (SalutXmppConnectionManager *mgr,
+static gboolean message_stanza_filter (SalutXmppConnectionManager *mgr,
     GibberXmppConnection *conn, GibberXmppStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
-static void
-message_stanza_callback (SalutXmppConnectionManager *mgr,
+static void message_stanza_callback (SalutXmppConnectionManager *mgr,
     GibberXmppConnection *conn, GibberXmppStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
