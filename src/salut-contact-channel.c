@@ -27,6 +27,7 @@
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/util.h>
 
 #include "salut-connection.h"
@@ -36,6 +37,8 @@ channel_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
   G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
@@ -200,6 +203,21 @@ salut_contact_channel_set_property (GObject     *object,
 static void
 salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channel_class)
 {
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { NULL }
+  };
   GObjectClass *object_class = G_OBJECT_CLASS (salut_contact_channel_class);
   GParamSpec *param_spec;
 
@@ -238,6 +256,10 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+
+  salut_contact_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutContactChannelClass, dbus_props_class));
 
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutContactChannelClass, group_class),
