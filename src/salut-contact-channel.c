@@ -43,6 +43,11 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_CONTACT_LIST, NULL);
 )
 
+static const gchar *salut_contact_channel_interfaces[] = {
+    TP_IFACE_CHANNEL_INTERFACE_GROUP,
+    NULL
+};
+
 /* properties */
 enum
 {
@@ -51,6 +56,7 @@ enum
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
   PROP_CONNECTION,
+  PROP_INTERFACES,
   LAST_PROPERTY
 };
 
@@ -144,6 +150,9 @@ salut_contact_channel_get_property (GObject    *object,
     case PROP_CONNECTION:
       g_value_set_object (value, priv->conn);
       break;
+      case PROP_INTERFACES:
+        g_value_set_static_boxed (value, salut_contact_channel_interfaces);
+        break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -213,6 +222,13 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   g_object_class_override_property (object_class, PROP_OBJECT_PATH,
       "object-path");
@@ -325,10 +341,10 @@ salut_contact_channel_get_handle (TpSvcChannel *iface,
  */
 static void
 salut_contact_channel_get_interfaces (TpSvcChannel *iface,
-                                       DBusGMethodInvocation *context) {
-  const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP, NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+                                      DBusGMethodInvocation *context)
+{
+  tp_svc_channel_return_from_get_interfaces (context,
+      salut_contact_channel_interfaces);
 }
 
 
