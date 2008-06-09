@@ -46,6 +46,7 @@
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/svc-generic.h>
 
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void text_iface_init (gpointer g_iface, gpointer iface_data);
@@ -57,6 +58,8 @@ static void xmpp_connection_manager_new_connection_cb (
 static void _setup_connection (SalutImChannel *self);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
@@ -336,6 +339,21 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_im_channel_class);
   GParamSpec *param_spec;
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { NULL }
+  };
 
   g_type_class_add_private (salut_im_channel_class,
       sizeof (SalutImChannelPrivate));
@@ -401,6 +419,10 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
 
   tp_text_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutImChannelClass, text_class));
+
+  salut_im_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutImChannelClass, dbus_props_class));
 }
 
 void
