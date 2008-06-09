@@ -264,6 +264,7 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutContactChannelClass, group_class),
       NULL, NULL);
+  tp_group_mixin_init_dbus_properties (object_class);
 }
 
 void
