@@ -354,6 +354,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       SALUT_TYPE_CONTACT,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTACT, param_spec);
@@ -365,6 +366,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
@@ -376,6 +378,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
