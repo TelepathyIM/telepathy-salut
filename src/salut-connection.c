@@ -60,6 +60,7 @@
 #include <telepathy-glib/handle-repo-static.h>
 #include <telepathy-glib/handle-repo.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
 
 #include <gibber/gibber-namespaces.h>
 
@@ -102,6 +103,10 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
        tp_presence_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_DBUS_PROPERTIES,
+       tp_dbus_properties_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+       tp_presence_mixin_simple_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
 #ifdef ENABLE_OLPC
@@ -412,7 +417,7 @@ static gboolean
 is_presence_status_available (GObject *obj,
                               guint index)
 {
-  return (index >= 0 && index < SALUT_PRESENCE_NR_PRESENCES);
+  return (index >= 0 && index < SALUT_PRESENCE_OFFLINE);
 }
 
 static GHashTable *
@@ -562,6 +567,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   static const gchar *interfaces [] = {
     TP_IFACE_CONNECTION_INTERFACE_ALIASING,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
 #ifdef ENABLE_OLPC
     SALUT_IFACE_OLPC_BUDDY_INFO,
@@ -592,10 +598,15 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_start_connecting;
   tp_connection_class->interfaces_always_present = interfaces;
 
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
+
   tp_presence_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, presence_mixin),
       is_presence_status_available, get_contact_statuses, set_own_status,
       presence_statuses);
+
+  tp_presence_mixin_simple_init_dbus_properties (object_class);
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,

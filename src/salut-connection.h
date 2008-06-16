@@ -28,6 +28,7 @@
 
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/presence-mixin.h>
 #include <telepathy-glib/svc-connection.h>
 
@@ -40,6 +41,7 @@ typedef struct _SalutConnectionClass SalutConnectionClass;
 
 struct _SalutConnectionClass {
   TpBaseConnectionClass parent_class;
+  TpDBusPropertiesMixinClass properties_mixin;
   TpPresenceMixinClass presence_mixin;
 };
 
