@@ -333,7 +333,7 @@ salut_roomlist_channel_add_room (SalutRoomlistChannel *self,
 
   /* handle-name */
   g_value_init (&handle_name, G_TYPE_STRING);
-  g_value_set_string (&handle_name, room_name);
+  g_value_take_string (&handle_name, (gchar *) room_name);
   g_hash_table_insert (keys, "handle-name", &handle_name);
 
   g_value_init (&room, SALUT_TP_TYPE_ROOM_STRUCT);
