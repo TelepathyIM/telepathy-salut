@@ -3,6 +3,8 @@ SUBDIRS=examples
 noinst_LTLIBRARIES = libgibber.la
 
 BUILT_SOURCES = \
+  gibber-file-transfer-enumtypes.c \
+  gibber-file-transfer-enumtypes.h \
   signals-marshal.list \
   signals-marshal.h \
   signals-marshal.c
@@ -56,6 +58,10 @@ HANDWRITTEN_SOURCES =             \
   gibber-namespaces.h             \
   gibber-iq-helper.c              \
   gibber-iq-helper.h              \
+  gibber-file-transfer.c          \
+  gibber-file-transfer.h          \
+  gibber-oob-file-transfer.c      \
+  gibber-oob-file-transfer.h      \
   gibber-xmpp-connection-listener.c \
   gibber-xmpp-connection-listener.h \
   gibber-xmpp-error.h             \
@@ -105,7 +111,7 @@ signals-marshal.c: signals-marshal.list
 	glib-genmarshal --body --prefix=_gibber_signals_marshal $< > $@
 
 
-AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@
+AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @LIBSOUP_CFLAGS@
 
 if HAVE_LIBSSL
   AM_CFLAGS += @LIBSSL_CFLAGS@
@@ -115,7 +121,7 @@ if HAVE_LIBASYNCNS
   AM_CFLAGS += @LIBASYNCNS_CFLAGS@
 endif
 
-AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @RESOLV_LIBS@
+AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @RESOLV_LIBS@ @LIBSOUP_LIBS@
 
 if HAVE_LIBSSL
   AM_LDFLAGS += @LIBSSL_LIBS@
@@ -124,3 +130,21 @@ endif
 if HAVE_LIBASYNCNS
   AM_LDFLAGS += @LIBASYNCNS_LIBS@
 endif
+
+# rules for making the glib enum objects
+%-enumtypes.h: %.h Makefile.in
+	glib-mkenums \
+		--fhead "#ifndef __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n#define __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
+		--fprod "/* enumerations from \"@filename@\" */\n" \
+		--vhead "GType @enum_name@_get_type (void);\n#define $(shell echo $* | tr [:lower:]- [:upper:]_ | sed 's/_.*//')_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"         \
+		--ftail "G_END_DECLS\n\n#endif /* __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__ */" \
+		$< > $@
+
+%-enumtypes.c: %.h Makefile.in
+	glib-mkenums \
+		--fhead "#include <$*.h>" \
+		--fprod "\n/* enumerations from \"@filename@\" */" \
+		--vhead "GType\n@enum_name@_get_type (void)\n{\n  static GType etype = 0;\n  if (etype == 0) {\n    static const G@Type@Value values[] = {"     \
+		--vprod "      { @VALUENAME@, \"@VALUENAME@\", \"@VALUENAME@\" }," \
+		--vtail "      { 0, NULL, NULL }\n    };\n    etype = g_@type@_register_static (\"@EnumName@\", values);\n  }\n  return etype;\n}\n" \
+		$< > $@

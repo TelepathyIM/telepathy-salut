@@ -37,6 +37,7 @@
 #include "salut-contact-channel.h"
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
+#include "salut-ft-manager.h"
 #include "salut-contact.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
@@ -186,6 +187,9 @@ struct _SalutConnectionPrivate
 
   /* MUC channel manager */
   SalutMucManager *muc_manager;
+
+  /* FT channel manager */
+  SalutFtManager *ft_manager;
 
   /* Tubes channel manager */
   /* XXX disabled while private tubes aren't implemented */
@@ -2817,11 +2821,15 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   priv->muc_manager = salut_discovery_client_create_muc_manager (
       priv->discovery_client, self, priv->xmpp_connection_manager);
 
+  priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
+
   /*
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
   */
 
   g_ptr_array_add (factories, priv->muc_manager);
+  g_ptr_array_add (factories, priv->ft_manager);
   /*
   g_ptr_array_add (factories, priv->tubes_manager);
   */

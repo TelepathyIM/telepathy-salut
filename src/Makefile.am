@@ -26,6 +26,10 @@ CORE_SOURCES =                                          \
     salut-muc-manager.c                                 \
     salut-muc-manager.h                                 \
     salut-muc-channel.c                                 \
+    salut-ft-manager.c                                  \
+    salut-ft-manager.h                                  \
+    salut-ft-channel.c                                  \
+    salut-ft-channel.h                                  \
     salut-muc-channel.h                                 \
     salut-contact.h                                     \
     salut-contact.c                                     \
@@ -53,7 +57,9 @@ CORE_SOURCES =                                          \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
-    debug.h
+    debug.h                                             \
+    file-transfer-mixin.c                               \
+    file-transfer-mixin.h
 
 if ENABLE_DBUS_TUBES
   CORE_SOURCES +=                                       \

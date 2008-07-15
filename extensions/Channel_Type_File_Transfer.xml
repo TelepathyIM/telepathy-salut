@@ -12,7 +12,7 @@ version 2.1 of the License, or (at your option) any later version.
 This library is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+Library General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
@@ -59,6 +59,34 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
         <tp:docstring>
           The file transfer is for an outgoing file, i.e. a file offered
           by this client.
+        </tp:docstring>
+      </tp:enumvalue>
+    </tp:enum>
+
+    <tp:enum name="FileTransfer_CloseReason">
+      <tp:enumvalue suffix="Success" value="0">
+        <tp:docstring>
+          The file transfer was completed successfully.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="LocalStopped" value="1">
+        <tp:docstring>
+          The file transfer was closed by the local user.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="RemoteStopped" value="2">
+        <tp:docstring>
+          The file transfer was closed by the remote user.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="LocalError" value="3">
+        <tp:docstring>
+          The file transfer was closed because of a local error.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="RemoteError" value="4">
+        <tp:docstring>
+          The file transfer was closed because of a remote error.
         </tp:docstring>
       </tp:enumvalue>
     </tp:enum>
@@ -126,6 +154,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
           FileTransfer_Direction enum.
         </tp:docstring>
       </arg>
+      <arg name="state" type="u">
+        <tp:docstring>
+          The new file transfer's state.
+        </tp:docstring>
+      </arg>
       <arg name="filename" type="s">
         <tp:docstring>
           The filename of the file that is to be transmitted, for displaying.
@@ -134,11 +167,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
       <arg name="information" type="a{sv}">
         <tp:docstring>
           The new file's additional information.
-        </tp:docstring>
-      </arg>
-      <arg name="state" type="u">
-        <tp:docstring>
-          The new file transfer's state.
         </tp:docstring>
       </arg>
     </signal>
@@ -180,6 +208,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
           The ID of the file transfer to close.
         </tp:docstring>
       </arg>
+      <arg direction="in" name="reason" type="u">
+        <tp:docstring>
+          The reason why the file transfer is being closed; see the
+          FileTransfer_CloseReason enumeration.
+        </tp:docstring>
+      </arg>
     </method>
 
     <signal name="FileTransferClosed">
@@ -191,6 +225,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
       <arg name="id" type="u">
         <tp:docstring>
           The ID of the file transfer that was closed.
+        </tp:docstring>
+      </arg>
+      <arg name="reason" type="u">
+        <tp:docstring>
+          The reason why the file transfer was closed; see the
+          FileTransfer_CloseReason enumeration.
         </tp:docstring>
       </arg>
     </signal>

@@ -22,6 +22,7 @@ int
 main (int argc, char **argv)
 {
   g_type_init ();
+  g_thread_init (NULL);
   g_set_prgname ("telepathy-salut");
 
   tp_debug_divert_messages (g_getenv ("SALUT_LOGFILE"));

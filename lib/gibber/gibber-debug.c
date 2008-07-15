@@ -20,6 +20,7 @@ static GDebugKey keys[] = {
   { "rmulticast-sender", DEBUG_RMULTICAST_SENDER },
   { "muc-connection",    DEBUG_MUC_CONNECTION    },
   { "bytestream",        DEBUG_BYTESTREAM        },
+  { "ft",                DEBUG_FILE_TRANSFER     },
   { "all",               ~0                      },
   { 0, },
 };

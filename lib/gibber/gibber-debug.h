@@ -24,6 +24,7 @@ typedef enum
   DEBUG_RMULTICAST_SENDER = 1 << 7,
   DEBUG_MUC_CONNECTION    = 1 << 8,
   DEBUG_BYTESTREAM        = 1 << 9,
+  DEBUG_FILE_TRANSFER     = 1 << 10,
 } DebugFlags;
 
 #define DEBUG_XMPP (DEBUG_XMPP_READER | DEBUG_XMPP_WRITER)

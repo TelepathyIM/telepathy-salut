@@ -30,6 +30,7 @@ typedef enum
   DEBUG_XCM            = 1 << 15,
   DEBUG_DISCOVERY      = 1 << 16,
   DEBUG_OLPC_ACTIVITY  = 1 << 17,
+  DEBUG_FT             = 1 << 18,
 } DebugFlags;
 
 void debug_set_flags_from_env ();
