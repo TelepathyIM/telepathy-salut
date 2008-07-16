@@ -93,6 +93,8 @@ struct _SalutFileChannelPrivate {
   SalutConnection *connection;
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberXmppConnection *xmpp_connection;
+  GibberFileTransfer *ft;
+  gchar *local_unix_path;
   /* hash table used to convert from string id to numerical id */
   GHashTable *name_to_id;
 };
@@ -442,27 +444,6 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
 #undef IMPLEMENT
 }
 
-static GibberFileTransfer *
-get_file_transfer (SalutFileChannel *self,
-                   guint id,
-                   GError **error)
-{
-  GibberFileTransfer *ft;
-
-  ft = tp_file_transfer_mixin_get_user_data (G_OBJECT (self), id);
-  if (ft != NULL)
-    {
-      return ft;
-    }
-  else
-    {
-      DEBUG ("Invalid transfer id %u", id);
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "Invalid transfer id %u", id);
-      return NULL;
-    }
-}
-
 static void
 error_cb (GibberFileTransfer *ft,
           guint domain,
@@ -492,7 +473,7 @@ remote_accepted_cb (GibberFileTransfer *ft,
 }
 
 static gboolean
-setup_local_socket (SalutFileChannel *self, guint id);
+setup_local_socket (SalutFileChannel *self);
 
 static void
 send_file_offer (SalutFileChannel *self,
@@ -530,7 +511,7 @@ send_file_offer (SalutFileChannel *self,
       GINT_TO_POINTER (id));
   tp_file_transfer_mixin_set_user_data (G_OBJECT (self), id, ft);
 
-  setup_local_socket (self, id);
+  setup_local_socket (self);
 
   val = g_hash_table_lookup (information, "size");
   if (val != NULL)
@@ -608,15 +589,17 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
  */
 static void
 salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
-                                guint id,
+                                guint address_type,
+                                guint access_control,
+                                GValue *access_control_param,
                                 DBusGMethodInvocation *context)
 {
   SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
-  GibberFileTransfer *ft;
   GError *error = NULL;
   GValue *out_address = { 0 };
+  GibberFileTransfer *ft;
 
-  ft = get_file_transfer (self, id, &error);
+  ft = self->priv->ft;
   if (ft == NULL)
     {
       dbus_g_method_return_error (context, error);
@@ -625,15 +608,10 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 
-  setup_local_socket (self, id);
+  setup_local_socket (self);
 
-  if (!tp_file_transfer_mixin_set_state (G_OBJECT (self), id,
-        TP_FILE_TRANSFER_STATE_OPEN, &error))
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-      return;
-    }
+  salut_svc_channel_type_file_emit_file_transfer_state_changed (iface,
+        SALUT_FILE_TRANSFER_STATE_OPEN, SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_value_init (out_address, G_TYPE_STRING);
 
@@ -652,14 +630,46 @@ file_transfer_iface_init (gpointer g_iface,
         (salut_svc_channel_type_file_accept_file_impl) salut_file_channel_accept_file);
 }
 
+static void
+create_socket_path (SalutFileChannel *self)
+{
+  gint fd;
+  gchar *tmp_path = NULL;
+
+  while (tmp_path == NULL)
+    {
+      fd = g_file_open_tmp ("tp-ft-XXXXXX", &tmp_path, NULL);
+      close (fd);
+      g_unlink (tmp_path);
+      if (g_mkdir (tmp_path, 0700) < 0)
+        {
+          g_free (tmp_path);
+          tmp_path = NULL;
+        }
+    }
+
+  self->priv->local_unix_path = tmp_path;
+}
+
+static gchar *
+get_local_unix_socket_path (SalutFileChannel *self)
+{
+  gchar *path;
+
+  if (self->priv->local_unix_path == NULL)
+    create_socket_path (self);
+
+  /* TODO: perhaps this ought to be more random */
+  path = g_build_filename (self->priv->local_unix_path, "tp-ft", NULL);
+
+  return path;
+}
 
 /*
- * Return a GIOChannel for the unix socket returned by
- * GetLocalUnixSocketPath().
+ * Return a GIOChannel for the local unix socket path.
  */
 static GIOChannel *
-get_socket_channel (SalutFileChannel *self,
-                    guint id)
+get_socket_channel (SalutFileChannel *self)
 {
   gint fd;
   gchar *path;
@@ -667,12 +677,7 @@ get_socket_channel (SalutFileChannel *self,
   struct sockaddr_un addr;
   GIOChannel *io_channel;
 
-  if (!tp_file_transfer_mixin_get_local_unix_socket_path (G_OBJECT (self), id,
-        &path, NULL))
-    {
-      DEBUG ("Impossible to get the socket path");
-      return NULL;
-    }
+  path = get_local_unix_socket_path (self);
 
   fd = socket (PF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
@@ -709,11 +714,6 @@ get_socket_channel (SalutFileChannel *self,
   return io_channel;
 }
 
-typedef struct {
-  SalutFileChannel *self;
-  guint id;
-} LocalSocketWatchData;
-
 /*
  * Some client is connecting to the Unix socket.
  */
@@ -722,9 +722,7 @@ accept_local_socket_connection (GIOChannel *source,
                                 GIOCondition condition,
                                 gpointer user_data)
 {
-  LocalSocketWatchData *watch_data = user_data;
   GibberFileTransfer *ft;
-
   int new_fd;
   struct sockaddr_un addr;
   socklen_t addrlen;
@@ -734,7 +732,8 @@ accept_local_socket_connection (GIOChannel *source,
     {
       DEBUG ("Client connected to local socket");
 
-      ft = get_file_transfer (watch_data->self, watch_data->id, NULL);
+      ft = (GibberFileTransfer *) user_data;
+
       if (ft == NULL)
         return FALSE;
 
@@ -760,28 +759,22 @@ accept_local_socket_connection (GIOChannel *source,
       g_io_channel_unref (channel);
     }
 
-  g_free (watch_data);
-
   return FALSE;
 }
 
 static gboolean
-setup_local_socket (SalutFileChannel *self, guint id)
+setup_local_socket (SalutFileChannel *self)
 {
   GIOChannel *io_channel;
-  LocalSocketWatchData *watch_data;
 
-  io_channel = get_socket_channel (self, id);
+  io_channel = get_socket_channel (self);
   if (io_channel == NULL)
     {
       return FALSE;
     }
 
-  watch_data = g_new0 (LocalSocketWatchData, 1);
-  watch_data->self = self;
-  watch_data->id = id;
   g_io_add_watch (io_channel, G_IO_IN | G_IO_HUP,
-      accept_local_socket_connection, watch_data);
+      accept_local_socket_connection, self->priv->ft);
   g_io_channel_unref (io_channel);
 
   return TRUE;
