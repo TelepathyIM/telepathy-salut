@@ -47,7 +47,6 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 
-
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void
@@ -56,7 +55,7 @@ file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
 G_DEFINE_TYPE_WITH_CODE (SalutFtChannel, salut_ft_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE,
                            file_transfer_iface_init);
 );
 
@@ -136,7 +135,7 @@ salut_ft_channel_get_property (GObject    *object,
         g_value_set_string (value, self->priv->object_path);
         break;
       case PROP_CHANNEL_TYPE:
-        g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+        g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_FILE);
         break;
       case PROP_HANDLE_TYPE:
         g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
@@ -192,7 +191,7 @@ salut_ft_channel_set_property (GObject *object,
         tmp = g_value_get_string (value);
         g_assert (tmp == NULL
                   || !tp_strdiff (g_value_get_string (value),
-                         TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER));
+                         SALUT_IFACE_CHANNEL_TYPE_FILE));
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         self->priv->xmpp_connection_manager = g_value_get_object (value);
@@ -248,9 +247,6 @@ static void
 salut_ft_channel_dispose (GObject *object);
 static void
 salut_ft_channel_finalize (GObject *object);
-static gboolean
-do_close_file_transfer (SalutFtChannel *self, guint id,
-    SalutFileTransferCloseReason reason, GError **error);
 
 static void
 salut_ft_channel_class_init (SalutFtChannelClass *salut_ft_channel_class)
@@ -398,7 +394,7 @@ salut_ft_channel_get_channel_type (TpSvcChannel *iface,
                                    DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_channel_type (context,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+      SALUT_IFACE_CHANNEL_TYPE_FILE);
 }
 
 /**
@@ -474,26 +470,12 @@ error_cb (GibberFileTransfer *ft,
           const gchar *message,
           SalutFtChannel *self)
 {
-  guint id;
-  guint reason;
-
-  if (code == GIBBER_FILE_TRANSFER_ERROR_NOT_ACCEPTABLE)
-    reason = SALUT_FILETRANSFER_CLOSEREASON_REMOTESTOPPED;
-  else
-    reason = SALUT_FILETRANSFER_CLOSEREASON_REMOTEERROR;
-
-  id = GPOINTER_TO_INT (g_hash_table_lookup (self->priv->name_to_id, ft->id));
-  do_close_file_transfer (self, id, reason, NULL);
 }
 
 static void
 ft_finished_cb (GibberFileTransfer *ft,
                 SalutFtChannel *self)
 {
-  guint id;
-
-  id = GPOINTER_TO_INT (g_hash_table_lookup (self->priv->name_to_id, ft->id));
-  do_close_file_transfer (self, id, SALUT_FILETRANSFER_CLOSEREASON_SUCCESS, NULL);
 }
 
 static void
@@ -527,8 +509,6 @@ send_file_offer (SalutFtChannel *self,
         &val, NULL))
     {
       DEBUG ("Invalid transfer id %u", id);
-      do_close_file_transfer (self, id,
-          SALUT_FILETRANSFER_CLOSEREASON_LOCALERROR, NULL);
       return;
     }
   val_array = g_value_get_boxed (val);
@@ -557,8 +537,6 @@ send_file_offer (SalutFtChannel *self,
     ft->size = g_value_get_uint64 (val);
 
   gibber_file_transfer_offer (ft);
-
-  tp_file_transfer_mixin_emit_new_file_transfer (G_OBJECT (self), id, NULL);
 }
 
 /* passed as user_data to the callbacl for the "new-connection" signal
@@ -592,79 +570,6 @@ value_free (GValue *value)
   g_free (value);
 }
 
-static gboolean
-dup_hash_table_cb (gpointer key,
-                   gpointer value,
-                   gpointer user_data)
-{
-  GHashTable *dest = user_data;
-
-  g_hash_table_insert (dest, key, value);
-  return TRUE;
-}
-
-/**
- * salut_ft_channel_offer_file
- *
- * Implements DBus method OfferFile
- * on interface org.freedesktop.Telepathy.Channel.Type.FileTransfer
- */
-static void
-salut_ft_channel_offer_file (SalutSvcChannelTypeFileTransfer *channel,
-                             const gchar *filename,
-                             GHashTable *information,
-                             DBusGMethodInvocation *context)
-{
-  SalutFtChannel *self = SALUT_FT_CHANNEL (channel);
-  TpBaseConnection *base_connection =
-      TP_BASE_CONNECTION (self->priv->connection);
-  GHashTable *information_dup;
-  guint id;
-  GibberXmppConnection *connection = NULL;
-  SalutXmppConnectionManagerRequestConnectionResult request_result;
-  GError *error = NULL;
-
-  /* FIXME dbus calls g_hash_table_destroy() instead of g_hash_table_unref()
-   * so we have to copy the hash table, see freedesktop bug #11396
-   * (https://bugs.freedesktop.org/show_bug.cgi?id=11396) */
-  information_dup = g_hash_table_new_full (g_str_hash, g_str_equal,
-      (GDestroyNotify) g_free, (GDestroyNotify) value_free);
-  g_hash_table_foreach_steal (information, dup_hash_table_cb, information_dup);
-
-  id = tp_file_transfer_mixin_add_transfer (G_OBJECT (channel),
-      base_connection->self_handle, TP_FILE_TRANSFER_DIRECTION_OUTGOING,
-      TP_FILE_TRANSFER_STATE_REMOTE_PENDING, filename, information_dup, NULL);
-
-  request_result = salut_xmpp_connection_manager_request_connection (
-      self->priv->xmpp_connection_manager, self->priv->contact, &connection,
-      &error);
-
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      self->priv->xmpp_connection = connection;
-      send_file_offer (self, id);
-    }
-  else if (request_result ==
-           SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
-    {
-      NewConnectionData *data = g_new0 (NewConnectionData, 1);
-      data->self = self;
-      data->id = id;
-      g_signal_connect (self->priv->xmpp_connection_manager, "new-connection",
-          G_CALLBACK (xmpp_connection_manager_new_connection_cb), data);
-    }
-  else
-    {
-      DEBUG ("Request connection failed");
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-      return;
-    }
-
-  salut_svc_channel_type_file_transfer_return_from_offer_file (context, id);
-}
-
 void
 salut_ft_channel_received_file_offer (SalutFtChannel *self,
                                       GibberXmppStanza *stanza,
@@ -693,24 +598,23 @@ salut_ft_channel_received_file_offer (SalutFtChannel *self,
 
   g_hash_table_insert (self->priv->name_to_id, (gchar *) ft->id,
       GINT_TO_POINTER (id));
-
-  tp_file_transfer_mixin_emit_new_file_transfer (G_OBJECT (self), id, NULL);
 }
 
 /**
  * salut_ft_channel_accept_file
  *
  * Implements D-Bus method AcceptFile
- * on interface org.freedesktop.Telepathy.Channel.Type.FileTransfer
+ * on interface org.freedesktop.Telepathy.Channel.Type.File
  */
 static void
-salut_ft_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
+salut_ft_channel_accept_file (SalutSvcChannelTypeFile *iface,
                               guint id,
                               DBusGMethodInvocation *context)
 {
   SalutFtChannel *self = SALUT_FT_CHANNEL (iface);
   GibberFileTransfer *ft;
   GError *error = NULL;
+  GValue *out_address = { 0 };
 
   ft = get_file_transfer (self, id, &error);
   if (ft == NULL)
@@ -731,87 +635,21 @@ salut_ft_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
       return;
     }
 
-  salut_svc_channel_type_file_transfer_return_from_accept_file (context);
-}
+  g_value_init (out_address, G_TYPE_STRING);
 
-/**
- * salut_ft_channel_close_file_transfer
- *
- * Implements D-Bus method CloseFileTransfer
- * on interface org.freedesktop.Telepathy.Channel.Type.FileTransfer
- */
-static void
-salut_ft_channel_close_file_transfer (SalutSvcChannelTypeFileTransfer *iface,
-                                      guint id,
-                                      SalutFileTransferCloseReason reason,
-                                      DBusGMethodInvocation *context)
-{
-  SalutFtChannel *self = SALUT_FT_CHANNEL (iface);
-  GibberFileTransfer *ft;
-  GError *error = NULL;
-
-  ft = get_file_transfer (self, id, &error);
-  if (ft == NULL)
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-    }
-
-  gibber_file_transfer_cancel (ft, 406);
-
-  /* FIXME use the reason argument when added to the file transfer spec
-   * and check that the passed in argument is not
-   * SALUT_FILETRANSFER_CLOSEREASON_SUCCESS or REMOTEERROR/REMOTESTOPPED as
-   * it doesn't make sense. */
-  if (do_close_file_transfer (self, id,
-        SALUT_FILETRANSFER_CLOSEREASON_LOCALSTOPPED, &error))
-    {
-      salut_svc_channel_type_file_transfer_return_from_close_file_transfer (
-          context);
-    }
-  else
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-    }
-}
-
-static gboolean
-do_close_file_transfer (SalutFtChannel *self,
-                        guint id,
-                        SalutFileTransferCloseReason reason,
-                        GError **error)
-{
-  /* reason is not used at the moment */
-  GibberFileTransfer *ft;
-
-  ft = get_file_transfer (self, id, error);
-  if (ft == NULL)
-    return FALSE;
-
-  g_hash_table_remove (self->priv->name_to_id, ft->id);
-  g_object_unref (ft);
-
-  DEBUG ("Closing file transfer %u with reason %d", id, reason);
-
-  return tp_file_transfer_mixin_close_file_transfer (G_OBJECT (self), id,
-      reason, error);
+  salut_svc_channel_type_file_return_from_accept_file (context, out_address);
 }
 
 static void
 file_transfer_iface_init (gpointer g_iface,
                           gpointer iface_data)
 {
-  SalutSvcChannelTypeFileTransferClass *klass =
-      (SalutSvcChannelTypeFileTransferClass *)g_iface;
+  SalutSvcChannelTypeFileClass *klass =
+      (SalutSvcChannelTypeFileClass *)g_iface;
 
   tp_file_transfer_mixin_iface_init (g_iface, iface_data);
-#define IMPLEMENT(x) salut_svc_channel_type_file_transfer_implement_##x (\
-    klass, salut_ft_channel_##x)
-  IMPLEMENT (offer_file);
-  IMPLEMENT (accept_file);
-  IMPLEMENT (close_file_transfer);
-#undef IMPLEMENT
+  salut_svc_channel_type_file_implement_accept_file (klass,
+        (salut_svc_channel_type_file_accept_file_impl) salut_ft_channel_accept_file);
 }
 
 
@@ -936,8 +774,6 @@ setup_local_socket (SalutFtChannel *self, guint id)
   io_channel = get_socket_channel (self, id);
   if (io_channel == NULL)
     {
-      do_close_file_transfer (self, id,
-          SALUT_FILETRANSFER_CLOSEREASON_LOCALERROR, NULL);
       return FALSE;
     }
 

@@ -1,0 +1,354 @@
+<?xml version="1.0" ?>
+<node name="/Channel_Type_File" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+  <tp:copyright>
+    Copyright (C) 2008 Collabora Limited
+  </tp:copyright>
+  <tp:license xmlns="http://www.w3.org/1999/xhtml">
+    <p>This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.</p>
+
+<p>This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Library General Public License for more details.</p>
+
+<p>You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</p>
+  </tp:license>
+  <interface name="org.freedesktop.Telepathy.Channel.Type.File.DRAFT"
+    tp:causes-havoc="experimental">
+    <tp:requires interface="org.freedesktop.Telepathy.Channel"/>
+    <tp:docstring>
+      <p>A channel type for files offered for transferring.
+      The actual transmission of the data is done by reading or writing
+      a socket, the type of socket (local Unix, IPv4, etc.) when the File
+      channel is created.</p>
+
+      <p>The File channel type may be requested for handles of type
+      HANDLE_TYPE_CONTACT.</p>
+    </tp:docstring>
+
+    <property name="ContentType" type="s" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>The file's MIME type. This cannot change once the channel has
+        been created.</p>
+
+        <p>This property is mandatory. Protocols which do not have a
+        content-type property with file transfers should set this value to
+        application/octet-stream.</p>
+      </tp:docstring>
+    </property>
+
+    <property name="Filename" type="s" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>The name of the file on the sender's side. This is therefore given
+        as a suggested filename for the receiver. This cannot change
+        once the channel has been created.</p>
+
+        <p>If this property is an empty string, then its value is unspecified.</p>
+      </tp:docstring>
+    </property>
+
+    <property name="Size" type="t" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>The size of the file. If this property is set, then the file
+        transfer is guaranteed to be this size. This cannot change once
+        the channel has been created.</p>
+
+        <p>If this property is UINT64_MAX, then its value is unspecified.</p>
+      </tp:docstring>
+    </property>
+
+    <property name="EstimatedSize" type="t" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>An estimate of the size of the file. This property should be used
+        when the protocol doesn't allow exact file sizes (For example, accurate
+        to the nearest megabyte). This property should not be set if the Size
+        property can, or has, been set. This cannot change once the channel
+        has been created.</p>
+
+        <p>If this property is UINT64_MAX, then its value is unspecified.</p>
+      </tp:docstring>
+    </property>
+
+    <property name="ContentMD5" type="s" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>MD5 digest of the file as a string of 32 ASCII hex digits, which
+        SHOULD be lower-case if they are letters. This cannot change once
+        the channel has been created.</p>
+
+        <p>If this property is an empty string, then its value is unspecified.</p>
+      </tp:docstring>
+    </property>
+
+    <property name="Description" type="s" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>Description of the file transfer. This cannot change once the
+        channel has been created.</p>
+
+        <p>If this property is an empty string, then its value is unspecified.</p>
+      </tp:docstring>
+    </property>
+
+    <property name="AvailableSocketTypes" type="a{uau}"
+      tp:type="Supported_Socket_Map" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>A mapping from address types (members of Socket_Address_Type) to
+        arrays of access-control type (members of Socket_Access_Control)
+        that the connection manager supports for sockets with that
+        address type. For simplicity, if a CM supports offering a
+        particular type of file transfer, it is assumed to support accepting
+        it.</p>
+
+        <p>A typical value for a host that supports only Unix sockets:</p>
+
+        <pre>
+          {
+            Socket_Address_Type_Unix:
+              [Socket_Access_Control_Localhost, Socket_Access_Control_Credentials]
+            Socket_Address_Type_Abstract_Unix:
+              [Socket_Access_Control_Localhost, Socket_Access_Control_Credentials]
+          }
+        </pre>
+      </tp:docstring>
+    </property>
+
+    <property name="TransferredBytes" type="t" access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>The number of bytes that have been transferred at the time of
+        requesting the property. This will be updated as the file transfer
+        continues.</p>
+      </tp:docstring>
+    </property>
+
+    <tp:enum name="File_Transfer_State">
+      <tp:enumvalue suffix="Local_Pending" value="0">
+        <tp:docstring>
+          The file transfer is waiting to be accepted/closed locally.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Remote_Pending" value="1">
+        <tp:docstring>
+          The file transfer is waiting to be accepted/closed remotely.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Open" value="2">
+        <tp:docstring>
+          The file transfer is open for traffic.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Completed" value="3">
+        <tp:docstring>
+          The file transfer has been completed successfully.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Canceled" value="4">
+        <tp:docstring>
+          The file transfer has been canceled.
+        </tp:docstring>
+      </tp:enumvalue>
+    </tp:enum>
+
+    <tp:enum name="File_Transfer_State_Change_Reason">
+      <tp:enumvalue suffix="None" value="0">
+        <tp:docstring>
+          No reason was specified.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Local_Stopped" value="1">
+        <tp:docstring>
+          The file transfer was canceled by the local user.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Remote_Stopped" value="2">
+        <tp:docstring>
+          The file transfer was canceled by the remote user.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Local_Error" value="3">
+        <tp:docstring>
+          The file transfer was canceled because of a local error.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Remote_Error" value="4">
+        <tp:docstring>
+          The file transfer was canceled because of a remote error.
+        </tp:docstring>
+      </tp:enumvalue>
+    </tp:enum>
+
+    <!-- Taken from org.freedesktop.Telepathy.Channel.Type.Tubes -->
+    <tp:enum name="Socket_Address_Type" type="u">
+      <tp:enumvalue suffix="Unix" value="0">
+        <tp:docstring>
+          A Unix socket. The variant contains a byte-array, signature 'ay',
+          containing the path of the socket.
+        </tp:docstring>
+      </tp:enumvalue>
+
+      <tp:enumvalue suffix="Abstract_Unix" value="1">
+        <tp:docstring>
+          An abstract Unix socket. The variant contains a byte-array,
+          signature 'ay', containing the path of the socket including the
+          leading null byte.
+        </tp:docstring>
+      </tp:enumvalue>
+
+      <tp:enumvalue suffix="IPv4" value="2">
+        <tp:docstring>
+          An IPv4 socket. The variant contains a Socket_Address_IPv4,
+          i.e. a structure with signature (sq)
+          in which the string is an IPv4 dotted-quad address literal
+          (and must not be a DNS name), while the 16-bit unsigned integer is
+          the port number.
+        </tp:docstring>
+      </tp:enumvalue>
+
+      <tp:enumvalue suffix="IPv6" value="3">
+        <tp:docstring>
+          An IPv6 socket. The variant contains a Socket_Address_IPv6,
+          i.e. a structure with signature (sq)
+          in which the string is an IPv6 address literal as specified in
+          RFC2373 (and must not be a DNS name), while the 16-bit unsigned
+          integer is the port number.
+        </tp:docstring>
+      </tp:enumvalue>
+
+    </tp:enum>
+
+    <!-- Taken from org.freedesktop.Telepathy.Channel.Type.Tubes -->
+    <tp:enum name="Socket_Access_Control" type="u">
+      <tp:enumvalue suffix="Localhost" value="0">
+        <tp:docstring>
+          The IP or Unix socket can be accessed by any local user (e.g.
+          a Unix socket that accepts all local connections, or an IP socket
+          listening on 127.0.0.1 (or ::1) or rejecting connections not from
+          that address). The associated variant must be ignored.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Port" value="1">
+        <tp:docstring>
+          May only be used on IP sockets. The associated variant must contain
+          a struct Socket_Address_IPv4 (or Socket_Address_IPv6)
+          containing the string form of an IP address of the appropriate
+          version, and a port number. The socket can only be accessed if the
+          connecting process has that address and port number; all other
+          connections will be rejected.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Netmask" value="2">
+        <tp:docstring>
+          May only be used on IP sockets. The associated variant must contain
+          a struct Socket_Netmask_IPv4 (or Socket_Netmask_IPv6) with
+          signature (sy), containing the string form of an
+          IP address of the appropriate version, and a prefix length "n".
+          The socket can only be accessed if the first n bits of the
+          connecting address match the first n bits of the given address.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Credentials" value="3">
+        <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+          <p>The connecting process must send a single zero (NUL) byte when
+            it first connects, which is not considered to be part of the data
+            stream. If the operating system uses sendmsg() with SCM_CREDS or
+            SCM_CREDENTIALS to pass credentials over sockets, the connecting
+            process must do so if possible; if not, it must still send the
+            byte.</p>
+
+          <p>The listening process will disconnect the connection unless it
+            can determine by OS-specific means that the connecting process
+            has the same user ID as the listening process.</p>
+
+          <p>The associated variant must be ignored.</p>
+        </tp:docstring>
+      </tp:enumvalue>
+    </tp:enum>
+
+    <!-- Taken from org.freedesktop.Telepathy.Channel.Type.Tubes -->
+    <tp:mapping name="Supported_Socket_Map">
+      <tp:docstring>The supported socket address and access-control types
+        for tubes. See GetAvailableStreamTubeTypes.</tp:docstring>
+      <tp:member name="Address_Type" type="u" tp:type="Socket_Address_Type"/>
+      <tp:member name="Access_Control" type="au"
+        tp:type="Socket_Access_Control[]"/>
+    </tp:mapping>
+
+    <method name="AcceptFile">
+      <tp:docstring>
+        Accept a file transfer that's in the "local pending" state. The file 
+        transfer becomes open after this method is called.
+      </tp:docstring>
+      <arg direction="in" name="address_type" type="u" tp:type="Socket_Address_Type">
+        <tp:docstring>
+          The type of address the connection manager should listen on.
+        </tp:docstring>
+      </arg>
+      <arg direction="in" name="access_control" type="u" tp:type="Socket_Access_Control">
+        <tp:docstring>
+          The type of access control the connection manager should apply to
+          the socket.
+        </tp:docstring>
+      </arg>
+      <arg direction="in" name="access_control_param" type="v">
+        <tp:docstring>
+          A parameter for the access control type, to be interpreted as
+          specified in the documentation for the Socket_Access_Control enum.
+        </tp:docstring>
+      </arg>
+      <arg direction="out" name="address" type="v">
+        <tp:docstring>
+          The address on which the connection manager will listen for
+          connections for this file transfer.
+        </tp:docstring>
+      </arg>
+
+      <tp:possible-errors>
+        <tp:error name="org.freedesktop.Telepathy.Error.NotImplemented">
+          <tp:docstring>
+            The given address type or access-control mechanism is not supported.
+          </tp:docstring>
+        </tp:error>
+        <tp:error name="org.freedesktop.Telepathy.Error.NetworkError"/>
+        <tp:error name="org.freedesktop.Telepathy.Error.InvalidArgument"/>
+      </tp:possible-errors>
+    </method>
+
+    <signal name="FileTransferStateChanged">
+      <tp:docstring>
+        Emitted when the state of a file transfer changes.
+      </tp:docstring>
+      <arg name="state" type="u" tp:type="File_Transfer_State">
+        <tp:docstring>
+          The new state of the file transfer; see the File_Transfer_State enumeration.
+        </tp:docstring>
+      </arg>
+      <arg name="reason" type="u" tp:type="File_Transfer_State_Change_Reason">
+        <tp:docstring>
+          The reason for the state change; see the File_Transfer_State_Change_Reason
+          enumeration.
+          The value will always be File_Transfer_State_Change_Reason_None, except
+          when changing state to canceled.
+        </tp:docstring>
+      </arg>
+    </signal>
+
+    <signal name="TransferredBytesChanged">
+      <tp:docstring>
+        Emitted when the number of transferred bytes changes. This will not change
+        with every single byte change. Instead, the most frequent this signal will
+        be emmitted is once a second. This should be sufficient, and the
+        TransferredBytes property should not be polled.
+      </tp:docstring>
+      <arg name="count" type="t">
+        <tp:docstring>
+          The number of already transferred bytes.
+        </tp:docstring>
+      </arg>
+    </signal>
+  </interface>
+
+</node>
+<!-- vim:set sw=2 sts=2 et ft=xml: -->

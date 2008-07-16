@@ -23,7 +23,7 @@
  * SECTION:file-transfer-mixin
  * @title: TpFileTransferMixin
  * @short_description: a mixin implementation of the file transfer channel type
- * @see_also: #SalutSvcChannelTypeFileTransfer
+ * @see_also: #SalutSvcChannelTypeFile
  *
  * This mixin can be added to a channel GObject class to implement the file
  * transfer channel type in a general way. It implements the list of transfers
@@ -265,7 +265,7 @@ tp_file_transfer_mixin_set_state (GObject *obj,
   if (transfer != NULL)
     {
       transfer->state = state;
-      salut_svc_channel_type_file_transfer_emit_file_transfer_state_changed (
+      salut_svc_channel_type_file_emit_file_transfer_state_changed (
               obj, id, state);
       return TRUE;
     }
@@ -381,42 +381,6 @@ tp_file_transfer_mixin_add_transfer (GObject *obj,
   return id;
 }
 
-/**
- * tp_file_transfer_mixin_emit_new_file_transfer:
- *
- * @obj: An object with the file transfer mixin
- * @id: The ID of the file transfer
- *
- * Emit NewFileTransfer for the file transfer with ID @id.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean
-tp_file_transfer_mixin_emit_new_file_transfer (GObject *obj,
-                                               guint id,
-                                               GError **error)
-{
-  TpFileTransferMixin *mixin = TP_FILE_TRANSFER_MIXIN (obj);
-  _Transfer *transfer;
-
-  transfer = g_hash_table_lookup (mixin->priv->transfers, GINT_TO_POINTER (id));
-  if (transfer == NULL)
-    {
-      DEBUG ("invalid transfer id %u", id);
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                   "invalid transfer id %u", id);
-      return FALSE;
-    }
-
-  DEBUG ("emitting NewFileTransfer for id %u", id);
-
-  salut_svc_channel_type_file_transfer_emit_new_file_transfer (obj, id,
-          transfer->initiator, transfer->direction, transfer->state,
-          transfer->filename, transfer->information);
-
-  return TRUE;
-}
-
 static GValue *
 get_file_transfer (guint id,
                    _Transfer *transfer)
@@ -509,27 +473,6 @@ tp_file_transfer_mixin_list_file_transfers (GObject *obj,
 }
 
 static void
-tp_file_transfer_mixin_list_file_transfers_async (SalutSvcChannelTypeFileTransfer *iface,
-                                                  DBusGMethodInvocation *context)
-{
-  GPtrArray *ret;
-  GError *error = NULL;
-
-  if (tp_file_transfer_mixin_list_file_transfers (G_OBJECT (iface), &ret,
-      &error))
-    {
-      salut_svc_channel_type_file_transfer_return_from_list_file_transfers (
-          context, ret);
-      g_ptr_array_free (ret, TRUE);
-    }
-  else
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-    }
-}
-
-static void
 create_socket_path (TpFileTransferMixin *mixin)
 {
   gint fd;
@@ -596,79 +539,9 @@ tp_file_transfer_mixin_get_local_unix_socket_path (GObject *obj,
   return TRUE;
 }
 
-static void
-tp_file_transfer_mixin_get_local_unix_socket_path_async (SalutSvcChannelTypeFileTransfer *iface,
-                                                         guint id,
-                                                         DBusGMethodInvocation *context)
-{
-  GError *error = NULL;
-  gchar *path;
-
-  if (tp_file_transfer_mixin_get_local_unix_socket_path (G_OBJECT (iface), id, &path,
-      &error))
-    {
-      salut_svc_channel_type_file_transfer_return_from_get_local_unix_socket_path (
-          context, path);
-      g_free (path);
-    }
-  else
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-    }
-}
-
-/**
- * tp_file_transfer_mixin_close_file_transfer:
- *
- * @obj: An object with this mixin
- * @id: The ID of the file transfer to close
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred.
- *
- * Close the file transfer with ID @id and emit FileTransferClosed.
- * Call this function from your implementation of the CloseFileTransfer
- * method on interface org.freedesktop.Telepathy.Channel.Type.FileTransfer.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
-gboolean
-tp_file_transfer_mixin_close_file_transfer (GObject *obj,
-                                            guint id,
-                                            SalutFileTransferCloseReason reason,
-                                            GError **error)
-{
-  TpFileTransferMixin *mixin = TP_FILE_TRANSFER_MIXIN (obj);
-  _Transfer *transfer;
-
-  transfer = g_hash_table_lookup (mixin->priv->transfers,
-                                  GINT_TO_POINTER (id));
-  if (transfer != NULL)
-    {
-      if (mixin->priv->local_path != NULL)
-        {
-          gchar *local_socket;
-          local_socket = get_local_unix_socket_path (mixin, id);
-          g_unlink (local_socket);
-          g_free (local_socket);
-        }
-      g_hash_table_remove (mixin->priv->transfers, GINT_TO_POINTER (id));
-      salut_svc_channel_type_file_transfer_emit_file_transfer_closed (obj,
-          id, reason);
-      return TRUE;
-    }
-  else
-    {
-      DEBUG ("invalid transfer id %u", id);
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-          "invalid transfer id %u", id);
-      return FALSE;
-    }
-}
-
 /**
  * tp_file_transfer_mixin_iface_init:
- * @g_iface: A pointer to the #SalutSvcChannelTypeFileTransferClass in an object
+ * @g_iface: A pointer to the #SalutSvcChannelTypeFileClass in an object
  * class
  * @iface_data: Ignored
  *
@@ -684,13 +557,4 @@ tp_file_transfer_mixin_close_file_transfer (GObject *obj,
 void
 tp_file_transfer_mixin_iface_init (gpointer g_iface, gpointer iface_data)
 {
-  SalutSvcChannelTypeFileTransferClass *klass =
-      (SalutSvcChannelTypeFileTransferClass *)g_iface;
-
-#define IMPLEMENT(x) salut_svc_channel_type_file_transfer_implement_##x (klass,\
-    tp_file_transfer_mixin_##x##_async)
-  IMPLEMENT (list_file_transfers);
-  IMPLEMENT (get_local_unix_socket_path);
-  /* OfferFile, AcceptFile and CloseFileTransfer not implemented here */
-#undef IMPLEMENT
 }

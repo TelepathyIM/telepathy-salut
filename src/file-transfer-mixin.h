@@ -28,6 +28,7 @@
 
 #include <extensions/_gen/svc.h>
 #include <extensions/_gen/enums.h>
+#include <extensions/_gen/interfaces.h>
 
 G_BEGIN_DECLS
 
@@ -114,16 +115,12 @@ TpFileTransferState tp_file_transfer_mixin_get_state (GObject *obj, guint id,
 guint tp_file_transfer_mixin_add_transfer (GObject *obj, TpHandle initiator,
     TpFileTransferDirection direction, TpFileTransferState state,
     const char *filename, GHashTable *information, gpointer user_data);
-gboolean tp_file_transfer_mixin_emit_new_file_transfer (GObject *obj, guint id,
-    GError **error);
 gboolean tp_file_transfer_mixin_get_file_transfer (GObject *obj, guint id,
     GValue **ret, GError **error);
 gboolean tp_file_transfer_mixin_list_file_transfers (GObject *obj,
     GPtrArray **ret, GError **error);
 gboolean tp_file_transfer_mixin_get_local_unix_socket_path (GObject *obj,
     guint id, gchar **ret, GError **error);
-gboolean tp_file_transfer_mixin_close_file_transfer (GObject *obj, guint id,
-    SalutFileTransferCloseReason reason, GError **error);
 
 G_END_DECLS
 
