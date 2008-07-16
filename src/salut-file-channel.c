@@ -1,5 +1,5 @@
 /*
- * salut-file-channel.c - Source for SalutFtChannel
+ * salut-file-channel.c - Source for SalutFileChannel
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
  * Copyright (C) 2005, 2007 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
@@ -52,7 +52,7 @@ channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void
 file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
 
-G_DEFINE_TYPE_WITH_CODE (SalutFtChannel, salut_ft_channel, G_TYPE_OBJECT,
+G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE,
@@ -84,7 +84,7 @@ enum
 };
 
 /* private structure */
-struct _SalutFtChannelPrivate {
+struct _SalutFileChannelPrivate {
   gboolean dispose_has_run;
   gboolean closed;
   gchar *object_path;
@@ -98,7 +98,7 @@ struct _SalutFtChannelPrivate {
 };
 
 static void
-salut_ft_channel_do_close (SalutFtChannel *self)
+salut_file_channel_do_close (SalutFileChannel *self)
 {
   if (self->priv->closed)
     return;
@@ -109,10 +109,10 @@ salut_ft_channel_do_close (SalutFtChannel *self)
 }
 
 static void
-salut_ft_channel_init (SalutFtChannel *obj)
+salut_file_channel_init (SalutFileChannel *obj)
 {
-  obj->priv = G_TYPE_INSTANCE_GET_PRIVATE (obj, SALUT_TYPE_FT_CHANNEL,
-      SalutFtChannelPrivate);
+  obj->priv = G_TYPE_INSTANCE_GET_PRIVATE (obj, SALUT_TYPE_FILE_CHANNEL,
+      SalutFileChannelPrivate);
 
   /* allocate any data required by the object here */
   obj->priv->object_path = NULL;
@@ -122,12 +122,12 @@ salut_ft_channel_init (SalutFtChannel *obj)
 }
 
 static void
-salut_ft_channel_get_property (GObject    *object,
-                               guint       property_id,
-                               GValue     *value,
-                               GParamSpec *pspec)
+salut_file_channel_get_property (GObject    *object,
+                                 guint       property_id,
+                                 GValue     *value,
+                                 GParamSpec *pspec)
 {
-  SalutFtChannel *self = SALUT_FT_CHANNEL (object);
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
 
   switch (property_id)
     {
@@ -159,12 +159,12 @@ salut_ft_channel_get_property (GObject    *object,
 }
 
 static void
-salut_ft_channel_set_property (GObject *object,
-                               guint property_id,
-                               const GValue *value,
-                               GParamSpec *pspec)
+salut_file_channel_set_property (GObject *object,
+                                 guint property_id,
+                                 const GValue *value,
+                                 GParamSpec *pspec)
 {
-  SalutFtChannel *self = SALUT_FT_CHANNEL (object);
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
   const gchar *tmp;
 
   switch (property_id)
@@ -204,20 +204,20 @@ salut_ft_channel_set_property (GObject *object,
 }
 
 static GObject *
-salut_ft_channel_constructor (GType type, guint n_props,
-                              GObjectConstructParam *props)
+salut_file_channel_constructor (GType type, guint n_props,
+                                GObjectConstructParam *props)
 {
   GObject *obj;
-  SalutFtChannel *self;
+  SalutFileChannel *self;
   DBusGConnection *bus;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
 
   /* Parent constructor chain */
-  obj = G_OBJECT_CLASS (salut_ft_channel_parent_class)->
+  obj = G_OBJECT_CLASS (salut_file_channel_parent_class)->
           constructor (type, n_props, props);
 
-  self = SALUT_FT_CHANNEL (obj);
+  self = SALUT_FILE_CHANNEL (obj);
 
   /* Ref our handle */
   base_conn = TP_BASE_CONNECTION (self->priv->connection);
@@ -229,7 +229,7 @@ salut_ft_channel_constructor (GType type, guint n_props,
 
   /* Initialize file transfer mixin */
   tp_file_transfer_mixin_init (obj,
-      G_STRUCT_OFFSET (SalutFtChannel, file_transfer), contact_repo);
+      G_STRUCT_OFFSET (SalutFileChannel, file_transfer), contact_repo);
 
   /* Initialize the hash table used to convert from the id name
    * to the numerical id. */
@@ -244,25 +244,25 @@ salut_ft_channel_constructor (GType type, guint n_props,
 }
 
 static void
-salut_ft_channel_dispose (GObject *object);
+salut_file_channel_dispose (GObject *object);
 static void
-salut_ft_channel_finalize (GObject *object);
+salut_file_channel_finalize (GObject *object);
 
 static void
-salut_ft_channel_class_init (SalutFtChannelClass *salut_ft_channel_class)
+salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_ft_channel_class);
+  GObjectClass *object_class = G_OBJECT_CLASS (salut_file_channel_class);
   GParamSpec *param_spec;
 
-  g_type_class_add_private (salut_ft_channel_class,
-      sizeof (SalutFtChannelPrivate));
+  g_type_class_add_private (salut_file_channel_class,
+      sizeof (SalutFileChannelPrivate));
 
-  object_class->dispose = salut_ft_channel_dispose;
-  object_class->finalize = salut_ft_channel_finalize;
+  object_class->dispose = salut_file_channel_dispose;
+  object_class->finalize = salut_file_channel_finalize;
 
-  object_class->constructor = salut_ft_channel_constructor;
-  object_class->get_property = salut_ft_channel_get_property;
-  object_class->set_property = salut_ft_channel_set_property;
+  object_class->constructor = salut_file_channel_constructor;
+  object_class->get_property = salut_file_channel_get_property;
+  object_class->set_property = salut_file_channel_set_property;
 
   g_object_class_override_property (object_class, PROP_OBJECT_PATH,
                                     "object-path");
@@ -298,7 +298,7 @@ salut_ft_channel_class_init (SalutFtChannelClass *salut_ft_channel_class)
   param_spec = g_param_spec_object (
       "xmpp-connection-manager",
       "SalutXmppConnectionManager object",
-      "Salut XMPP Connection manager used for this FT channel",
+      "Salut XMPP Connection manager used for this file channel",
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
@@ -308,14 +308,14 @@ salut_ft_channel_class_init (SalutFtChannelClass *salut_ft_channel_class)
       param_spec);
 
   tp_file_transfer_mixin_class_init (object_class,
-                                     G_STRUCT_OFFSET (SalutFtChannelClass,
+                                     G_STRUCT_OFFSET (SalutFileChannelClass,
                                                       file_transfer_class));
 }
 
 void
-salut_ft_channel_dispose (GObject *object)
+salut_file_channel_dispose (GObject *object)
 {
-  SalutFtChannel *self = SALUT_FT_CHANNEL (object);
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
@@ -329,7 +329,7 @@ salut_ft_channel_dispose (GObject *object)
 
   g_hash_table_unref (self->priv->name_to_id);
 
-  salut_ft_channel_do_close (self);
+  salut_file_channel_do_close (self);
 
   if (self->priv->contact)
     {
@@ -351,76 +351,76 @@ salut_ft_channel_dispose (GObject *object)
 
   /* release any references held by the object here */
 
-  if (G_OBJECT_CLASS (salut_ft_channel_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_ft_channel_parent_class)->dispose (object);
+  if (G_OBJECT_CLASS (salut_file_channel_parent_class)->dispose)
+    G_OBJECT_CLASS (salut_file_channel_parent_class)->dispose (object);
 }
 
 static void
-salut_ft_channel_finalize (GObject *object)
+salut_file_channel_finalize (GObject *object)
 {
-  SalutFtChannel *self = SALUT_FT_CHANNEL (object);
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
 
   /* free any data held directly by the object here */
   g_free (self->priv->object_path);
 
   tp_file_transfer_mixin_finalize (G_OBJECT (self));
 
-  G_OBJECT_CLASS (salut_ft_channel_parent_class)->finalize (object);
+  G_OBJECT_CLASS (salut_file_channel_parent_class)->finalize (object);
 }
 
 
 /**
- * salut_ft_channel_close
+ * salut_file_channel_close
  *
  * Implements DBus method Close
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_ft_channel_close (TpSvcChannel *iface,
-                        DBusGMethodInvocation *context)
+salut_file_channel_close (TpSvcChannel *iface,
+                          DBusGMethodInvocation *context)
 {
-  salut_ft_channel_do_close (SALUT_FT_CHANNEL (iface));
+  salut_file_channel_do_close (SALUT_FILE_CHANNEL (iface));
   tp_svc_channel_return_from_close (context);
 }
 
 /**
- * salut_ft_channel_get_channel_type
+ * salut_file_channel_get_channel_type
  *
  * Implements DBus method GetChannelType
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_ft_channel_get_channel_type (TpSvcChannel *iface,
-                                   DBusGMethodInvocation *context)
+salut_file_channel_get_channel_type (TpSvcChannel *iface,
+                                     DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_channel_type (context,
       SALUT_IFACE_CHANNEL_TYPE_FILE);
 }
 
 /**
- * salut_ft_channel_get_handle
+ * salut_file_channel_get_handle
  *
  * Implements DBus method GetHandle
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_ft_channel_get_handle (TpSvcChannel *iface,
-                             DBusGMethodInvocation *context)
+salut_file_channel_get_handle (TpSvcChannel *iface,
+                               DBusGMethodInvocation *context)
 {
-  SalutFtChannel *self = SALUT_FT_CHANNEL (iface);
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
 
   tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_CONTACT,
                                          self->priv->handle);
 }
 
 /**
- * salut_ft_channel_get_interfaces
+ * salut_file_channel_get_interfaces
  *
  * Implements DBus method GetInterfaces
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_ft_channel_get_interfaces (TpSvcChannel *iface,
+salut_file_channel_get_interfaces (TpSvcChannel *iface,
                                  DBusGMethodInvocation *context)
 {
   const char *interfaces[] = { NULL };
@@ -434,7 +434,7 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
   TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_implement_##x (\
-    klass, salut_ft_channel_##x)
+    klass, salut_file_channel_##x)
   IMPLEMENT (close);
   IMPLEMENT (get_channel_type);
   IMPLEMENT (get_handle);
@@ -443,7 +443,7 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
 }
 
 static GibberFileTransfer *
-get_file_transfer (SalutFtChannel *self,
+get_file_transfer (SalutFileChannel *self,
                    guint id,
                    GError **error)
 {
@@ -468,19 +468,19 @@ error_cb (GibberFileTransfer *ft,
           guint domain,
           gint code,
           const gchar *message,
-          SalutFtChannel *self)
+          SalutFileChannel *self)
 {
 }
 
 static void
 ft_finished_cb (GibberFileTransfer *ft,
-                SalutFtChannel *self)
+                SalutFileChannel *self)
 {
 }
 
 static void
 remote_accepted_cb (GibberFileTransfer *ft,
-                    SalutFtChannel *self)
+                    SalutFileChannel *self)
 {
   guint id;
 
@@ -492,10 +492,10 @@ remote_accepted_cb (GibberFileTransfer *ft,
 }
 
 static gboolean
-setup_local_socket (SalutFtChannel *self, guint id);
+setup_local_socket (SalutFileChannel *self, guint id);
 
 static void
-send_file_offer (SalutFtChannel *self,
+send_file_offer (SalutFileChannel *self,
                  guint id)
 {
   GValue *val;
@@ -542,7 +542,7 @@ send_file_offer (SalutFtChannel *self,
 /* passed as user_data to the callbacl for the "new-connection" signal
  * emitted by the SalutXmppConnectionManager */
 typedef struct {
-  SalutFtChannel *self;
+  SalutFileChannel *self;
   guint id;
 } NewConnectionData;
 
@@ -571,9 +571,9 @@ value_free (GValue *value)
 }
 
 void
-salut_ft_channel_received_file_offer (SalutFtChannel *self,
-                                      GibberXmppStanza *stanza,
-                                      GibberXmppConnection *conn)
+salut_file_channel_received_file_offer (SalutFileChannel *self,
+                                        GibberXmppStanza *stanza,
+                                        GibberXmppConnection *conn)
 {
   GibberFileTransfer *ft;
   GHashTable *information;
@@ -601,17 +601,17 @@ salut_ft_channel_received_file_offer (SalutFtChannel *self,
 }
 
 /**
- * salut_ft_channel_accept_file
+ * salut_file_channel_accept_file
  *
  * Implements D-Bus method AcceptFile
  * on interface org.freedesktop.Telepathy.Channel.Type.File
  */
 static void
-salut_ft_channel_accept_file (SalutSvcChannelTypeFile *iface,
-                              guint id,
-                              DBusGMethodInvocation *context)
+salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
+                                guint id,
+                                DBusGMethodInvocation *context)
 {
-  SalutFtChannel *self = SALUT_FT_CHANNEL (iface);
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
   GibberFileTransfer *ft;
   GError *error = NULL;
   GValue *out_address = { 0 };
@@ -649,7 +649,7 @@ file_transfer_iface_init (gpointer g_iface,
 
   tp_file_transfer_mixin_iface_init (g_iface, iface_data);
   salut_svc_channel_type_file_implement_accept_file (klass,
-        (salut_svc_channel_type_file_accept_file_impl) salut_ft_channel_accept_file);
+        (salut_svc_channel_type_file_accept_file_impl) salut_file_channel_accept_file);
 }
 
 
@@ -658,7 +658,7 @@ file_transfer_iface_init (gpointer g_iface,
  * GetLocalUnixSocketPath().
  */
 static GIOChannel *
-get_socket_channel (SalutFtChannel *self,
+get_socket_channel (SalutFileChannel *self,
                     guint id)
 {
   gint fd;
@@ -710,7 +710,7 @@ get_socket_channel (SalutFtChannel *self,
 }
 
 typedef struct {
-  SalutFtChannel *self;
+  SalutFileChannel *self;
   guint id;
 } LocalSocketWatchData;
 
@@ -766,7 +766,7 @@ accept_local_socket_connection (GIOChannel *source,
 }
 
 static gboolean
-setup_local_socket (SalutFtChannel *self, guint id)
+setup_local_socket (SalutFileChannel *self, guint id)
 {
   GIOChannel *io_channel;
   LocalSocketWatchData *watch_data;
