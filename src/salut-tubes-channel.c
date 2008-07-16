@@ -1782,22 +1782,18 @@ iq_reply_cb (GibberIqHelper *helper,
              GObject *object,
              gpointer user_data)
 {
-  /*
   SalutTubeIface *tube = (SalutTubeIface *) user_data;
-
-  SalutTubesChannel *self = (SalutTubesChannel *) user_data;
-  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  */
   GibberStanzaSubType sub_type;
 
   gibber_xmpp_stanza_get_type_info (reply_stanza, NULL, &sub_type);
   if (sub_type != GIBBER_STANZA_SUB_TYPE_RESULT)
     {
       DEBUG ("tube offer declined declined");
+      salut_tube_iface_close (tube);
       return;
     }
 
-  DEBUG ("Got a IQ reply :-)");
+  DEBUG ("tube offered successfully");
 }
 
 
