@@ -57,9 +57,7 @@ CORE_SOURCES =                                          \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
-    debug.h                                             \
-    file-transfer-mixin.c                               \
-    file-transfer-mixin.h
+    debug.h
 
 if ENABLE_DBUS_TUBES
   CORE_SOURCES +=                                       \

@@ -229,10 +229,6 @@ salut_file_channel_constructor (GType type, guint n_props,
 
   tp_handle_ref (contact_repo, self->priv->handle);
 
-  /* Initialize file transfer mixin */
-  tp_file_transfer_mixin_init (obj,
-      G_STRUCT_OFFSET (SalutFileChannel, file_transfer), contact_repo);
-
   /* Initialize the hash table used to convert from the id name
    * to the numerical id. */
   self->priv->name_to_id = g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -309,9 +305,6 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
-  tp_file_transfer_mixin_class_init (object_class,
-                                     G_STRUCT_OFFSET (SalutFileChannelClass,
-                                                      file_transfer_class));
 }
 
 void
@@ -364,8 +357,6 @@ salut_file_channel_finalize (GObject *object)
 
   /* free any data held directly by the object here */
   g_free (self->priv->object_path);
-
-  tp_file_transfer_mixin_finalize (G_OBJECT (self));
 
   G_OBJECT_CLASS (salut_file_channel_parent_class)->finalize (object);
 }
@@ -466,8 +457,7 @@ remote_accepted_cb (GibberFileTransfer *ft,
   guint id;
 
   id = GPOINTER_TO_INT (g_hash_table_lookup (self->priv->name_to_id, ft->id));
-  tp_file_transfer_mixin_set_state (G_OBJECT (self), id,
-    TP_FILE_TRANSFER_STATE_OPEN, NULL);
+  /* TODO from mixin: set state */
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 }
@@ -485,13 +475,7 @@ send_file_offer (SalutFileChannel *self,
   const gchar *filename;
   GHashTable *information;
 
-  /* retrieve the file name and the additional information */
-  if (!tp_file_transfer_mixin_get_file_transfer (G_OBJECT (self), id,
-        &val, NULL))
-    {
-      DEBUG ("Invalid transfer id %u", id);
-      return;
-    }
+  /* TODO from mixin: retrieve the file name and the additional information */
   val_array = g_value_get_boxed (val);
   g_free (val);
   filename = g_value_get_string (g_value_array_get_nth (val_array, 4));
@@ -509,7 +493,7 @@ send_file_offer (SalutFileChannel *self,
 
   g_hash_table_insert (self->priv->name_to_id, (gchar *) ft->id,
       GINT_TO_POINTER (id));
-  tp_file_transfer_mixin_set_user_data (G_OBJECT (self), id, ft);
+  /* TODO from mixin: set user data */
 
   setup_local_socket (self);
 
@@ -572,10 +556,12 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
   g_value_set_uint64 (val, ft->size);
   g_hash_table_insert (information, g_strdup ("size"), val);
 
-  id = tp_file_transfer_mixin_add_transfer (G_OBJECT (self),
-      self->priv->handle, TP_FILE_TRANSFER_DIRECTION_INCOMING,
-      TP_FILE_TRANSFER_STATE_LOCAL_PENDING, ft->filename,
-      information, ft);
+  /* TODO from mixin: add transfer */
+
+  /* this is a horrible horrible assignment of id to let it compile! It doesn't
+   * much matter as ids aren't being used anymore.
+   */
+  id = 1;
 
   g_hash_table_insert (self->priv->name_to_id, (gchar *) ft->id,
       GINT_TO_POINTER (id));
@@ -625,7 +611,6 @@ file_transfer_iface_init (gpointer g_iface,
   SalutSvcChannelTypeFileClass *klass =
       (SalutSvcChannelTypeFileClass *)g_iface;
 
-  tp_file_transfer_mixin_iface_init (g_iface, iface_data);
   salut_svc_channel_type_file_implement_accept_file (klass,
         (salut_svc_channel_type_file_accept_file_impl) salut_file_channel_accept_file);
 }

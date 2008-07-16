@@ -26,6 +26,8 @@
 #include <salut-connection.h>
 #include <salut-im-manager.h>
 
+#include <extensions/_gen/interfaces.h>
+
 G_BEGIN_DECLS
 
 typedef struct _SalutFtManager SalutFtManager;

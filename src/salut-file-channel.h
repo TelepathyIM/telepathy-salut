@@ -25,8 +25,10 @@
 #include <gibber/gibber-file-transfer.h>
 
 #include <telepathy-glib/text-mixin.h>
-#include "file-transfer-mixin.h"
 
+#include <extensions/_gen/svc.h>
+#include <extensions/_gen/interfaces.h>
+#include <extensions/_gen/enums.h>
 
 G_BEGIN_DECLS
 
@@ -37,13 +39,11 @@ typedef struct _SalutFileChannelPrivate SalutFileChannelPrivate;
 struct _SalutFileChannelClass {
     GObjectClass parent_class;
     TpTextMixinClass text_class;
-    TpFileTransferMixinClass file_transfer_class;
 };
 
 struct _SalutFileChannel {
     GObject parent;
     TpTextMixin text;
-    TpFileTransferMixin file_transfer;
 
     SalutFileChannelPrivate *priv;
 };
