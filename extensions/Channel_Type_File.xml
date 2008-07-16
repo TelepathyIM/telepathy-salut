@@ -31,6 +31,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       HANDLE_TYPE_CONTACT.</p>
     </tp:docstring>
 
+    <property name="State" type="u" tp:type="File_Transfer_State"
+      access="readwrite">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>The state of the file transfer as described by the
+        File_Transfer_State enum.</p>
+      </tp:docstring>
+    </property>
+
     <property name="ContentType" type="s" access="read">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>The file's MIME type. This cannot change once the channel has
