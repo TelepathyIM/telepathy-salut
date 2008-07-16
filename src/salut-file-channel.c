@@ -1,5 +1,5 @@
 /*
- * salut-ft-channel.c - Source for SalutFtChannel
+ * salut-file-channel.c - Source for SalutFtChannel
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
  * Copyright (C) 2005, 2007 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
@@ -32,7 +32,7 @@
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
 
-#include "salut-ft-channel.h"
+#include "salut-file-channel.h"
 #include "signals-marshal.h"
 
 #include "salut-connection.h"

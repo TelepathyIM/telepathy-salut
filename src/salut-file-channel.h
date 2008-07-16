@@ -1,5 +1,5 @@
 /*
- * salut-ft-channel.h - Header for SalutFtChannel
+ * salut-file-channel.h - Header for SalutFtChannel
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
  * Copyright (C) 2005, 2007 Collabora Ltd.
  *
