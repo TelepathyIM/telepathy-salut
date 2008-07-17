@@ -668,9 +668,10 @@ remote_accepted_cb (GibberFileTransfer *ft,
                     SalutFileChannel *self)
 {
   guint id;
+  SalutFileChannelClass *class = SALUT_FILE_CHANNEL_CLASS (self);
 
   id = GPOINTER_TO_INT (g_hash_table_lookup (self->priv->name_to_id, ft->id));
-  /* TODO from mixin: set state */
+  g_object_set_data (G_OBJECT (class), "state", (gpointer) SALUT_FILE_TRANSFER_STATE_OPEN);
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 }
@@ -780,6 +781,19 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
       GINT_TO_POINTER (id));
 }
 
+static void
+salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
+                              SalutFileTransferState state,
+                              SalutFileTransferStateChangeReason reason)
+{
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
+  SalutFileChannelClass *klass = SALUT_FILE_CHANNEL_CLASS (self);
+
+  g_object_set_data (G_OBJECT (klass), "state", (gpointer) state);
+  salut_svc_channel_type_file_emit_file_transfer_state_changed (iface,
+      state, reason);
+}
+
 /**
  * salut_file_channel_accept_file
  *
@@ -809,8 +823,8 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
 
   setup_local_socket (self);
 
-  salut_svc_channel_type_file_emit_file_transfer_state_changed (iface,
-        SALUT_FILE_TRANSFER_STATE_OPEN, SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+  salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
+        SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_value_init (out_address, G_TYPE_STRING);
 
