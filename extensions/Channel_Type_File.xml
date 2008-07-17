@@ -31,6 +31,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       HANDLE_TYPE_CONTACT.</p>
     </tp:docstring>
 
+    <property name="Direction" type="u" tp:type="File_Transfer_Direction"
+      access="read">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>The direction of the file transfer.</p>
+
+        <p>This property should become useless with the new request API.</p>
+      </tp:docstring>
+    </property>
+
     <property name="State" type="u" tp:type="File_Transfer_State"
       access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
@@ -131,6 +140,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         continues.</p>
       </tp:docstring>
     </property>
+
+    <tp:enum name="File_Transfer_Direction">
+      <tp:enumvalue suffix="Incoming" value="0">
+        <tp:docstring>
+          The file transfer is incoming.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Outgoing" value="1">
+        <tp:docstring>
+          The file transfer is outgoing.
+        </tp:docstring>
+      </tp:enumvalue>
+    </tp:enum>
 
     <tp:enum name="File_Transfer_State">
       <tp:enumvalue suffix="Local_Pending" value="0">
