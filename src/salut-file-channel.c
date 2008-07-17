@@ -46,6 +46,7 @@
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/svc-generic.h>
 
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data);
@@ -54,6 +55,8 @@ file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+                           tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE,
                            file_transfer_iface_init);
@@ -80,6 +83,7 @@ enum
   PROP_CONTACT,
   PROP_CONNECTION,
   PROP_XMPP_CONNECTION_MANAGER,
+  PROP_INTERFACES,
   LAST_PROPERTY
 };
 
@@ -252,6 +256,40 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   GObjectClass *object_class = G_OBJECT_CLASS (salut_file_channel_class);
   GParamSpec *param_spec;
 
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+    { "TargetHandleType", "handle-type", NULL },
+    { "TargetHandle", "handle", NULL },
+    { "ChannelType", "channel-type", NULL },
+    { "Interfaces", "interfaces", NULL },
+    { NULL }
+  };
+
+  static TpDBusPropertiesMixinPropImpl file_props[] = {
+    { "State", "state", "state" },
+    { "ContentType", "content-type", NULL },
+    { "Filename", "filename", NULL },
+    { "Size", "size", NULL },
+    { "EstimatedSize", "estimated-size", NULL },
+    { "ContentMD5", "content-md5", NULL },
+    { "Description", "description", NULL },
+    { "AvailableSocketTypes", "available-socket-types", NULL },
+    { NULL }
+  };
+
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+    { TP_IFACE_CHANNEL,
+      tp_dbus_properties_mixin_getter_gobject_properties,
+      NULL,
+      channel_props
+    },
+    { SALUT_IFACE_CHANNEL_TYPE_FILE,
+      tp_dbus_properties_mixin_getter_gobject_properties,
+      tp_dbus_properties_mixin_setter_gobject_properties,
+      file_props
+    },
+    { NULL }
+  };
+
   g_type_class_add_private (salut_file_channel_class,
       sizeof (SalutFileChannelPrivate));
 
@@ -305,6 +343,100 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
+  param_spec = g_param_spec_object (
+      "state",
+      "SalutFileTransferState state",
+      "State of the file transfer in this channel",
+      G_TYPE_UINT,
+      G_PARAM_CONSTRUCT |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_string (
+      "content-type",
+      "gchar *content-type",
+      "ContentType of the file",
+      "",
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_string (
+      "filename",
+      "gchar *filename",
+      "Name of the file",
+      "",
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_uint (
+      "size",
+      "guint size",
+      "Size of the file in bytes",
+      0,
+      G_MAXUINT,
+      0,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_uint (
+      "estimated-size",
+      "guint estimated-size",
+      "Estimated size of the file in bytes",
+      0,
+      G_MAXUINT,
+      0,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_string (
+      "content-md5",
+      "gchar *content-md5",
+      "md5sum of the file contents",
+      "",
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_string (
+      "description",
+      "gchar *description",
+      "Description of the file",
+      "",
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_pointer (
+      "available-socket-types",
+      "SalutSupportedSocketMap available-socket-types",
+      "Available socket types",
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  salut_file_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutFileChannelClass, dbus_props_class));
 }
 
 void

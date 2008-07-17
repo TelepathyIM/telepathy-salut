@@ -39,6 +39,7 @@ typedef struct _SalutFileChannelPrivate SalutFileChannelPrivate;
 struct _SalutFileChannelClass {
     GObjectClass parent_class;
     TpTextMixinClass text_class;
+    TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutFileChannel {
