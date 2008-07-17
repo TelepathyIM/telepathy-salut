@@ -83,7 +83,16 @@ enum
   PROP_CONTACT,
   PROP_CONNECTION,
   PROP_XMPP_CONNECTION_MANAGER,
-  PROP_INTERFACES,
+  PROP_DIRECTION,
+  PROP_STATE,
+  PROP_CONTENT_TYPE,
+  PROP_FILENAME,
+  PROP_SIZE,
+  PROP_ESTIMATED_SIZE,
+  PROP_CONTENT_MD5,
+  PROP_DESCRIPTION,
+  PROP_AVAILABLE_SOCKET_TYPES,
+  PROP_TRANSFERRED_BYTES,
   LAST_PROPERTY
 };
 
@@ -101,6 +110,19 @@ struct _SalutFileChannelPrivate {
   gchar *local_unix_path;
   /* hash table used to convert from string id to numerical id */
   GHashTable *name_to_id;
+
+  /* properties */
+  SalutFileTransferDirection direction;
+  SalutFileTransferState state;
+  gchar *content_type;
+  gchar *filename;
+  guint size;
+  guint estimated_size;
+  gchar *content_md5;
+  gchar *description;
+  gpointer available_socket_types;
+  guint transferred_bytes;
+
 };
 
 static void
@@ -158,6 +180,36 @@ salut_file_channel_get_property (GObject    *object,
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, self->priv->xmpp_connection_manager);
         break;
+      case PROP_DIRECTION:
+        g_value_set_uint (value, self->priv->direction);
+        break;
+      case PROP_STATE:
+        g_value_set_uint (value, self->priv->state);
+        break;
+      case PROP_CONTENT_TYPE:
+        g_value_set_string (value, self->priv->content_type);
+        break;
+      case PROP_FILENAME:
+        g_value_set_string (value, self->priv->filename);
+        break;
+      case PROP_SIZE:
+        g_value_set_uint (value, self->priv->size);
+        break;
+      case PROP_ESTIMATED_SIZE:
+        g_value_set_uint (value, self->priv->estimated_size);
+        break;
+      case PROP_CONTENT_MD5:
+        g_value_set_string (value, self->priv->content_md5);
+        break;
+      case PROP_DESCRIPTION:
+        g_value_set_string (value, self->priv->description);
+        break;
+      case PROP_AVAILABLE_SOCKET_TYPES:
+        g_value_set_pointer (value, self->priv->available_socket_types);
+        break;
+      case PROP_TRANSFERRED_BYTES:
+        g_value_set_uint (value, self->priv->transferred_bytes);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -202,6 +254,21 @@ salut_file_channel_set_property (GObject *object,
       case PROP_XMPP_CONNECTION_MANAGER:
         self->priv->xmpp_connection_manager = g_value_get_object (value);
         g_object_ref (self->priv->xmpp_connection_manager);
+        break;
+      case PROP_STATE:
+        self->priv->state = g_value_get_uint (value);
+        break;
+      case PROP_TRANSFERRED_BYTES:
+        self->priv->state = g_value_get_uint (value);
+        break;
+      case PROP_DIRECTION:
+      case PROP_CONTENT_TYPE:
+      case PROP_FILENAME:
+      case PROP_SIZE:
+      case PROP_ESTIMATED_SIZE:
+      case PROP_CONTENT_MD5:
+      case PROP_DESCRIPTION:
+      case PROP_AVAILABLE_SOCKET_TYPES:
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -343,16 +410,18 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
-  param_spec = g_param_spec_object (
+  param_spec = g_param_spec_uint (
       "state",
       "SalutFileTransferState state",
       "State of the file transfer in this channel",
-      G_TYPE_UINT,
+      0,
+      G_MAXUINT,
+      0,
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_STATE, param_spec);
 
   param_spec = g_param_spec_string (
       "content-type",
@@ -360,10 +429,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "ContentType of the file",
       "",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READABLE |
+      G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_CONTENT_TYPE, param_spec);
 
   param_spec = g_param_spec_string (
       "filename",
@@ -371,10 +440,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "Name of the file",
       "",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READABLE |
+      G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_FILENAME, param_spec);
 
   param_spec = g_param_spec_uint (
       "size",
@@ -384,10 +453,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_MAXUINT,
       0,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READABLE |
+      G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_SIZE, param_spec);
 
   param_spec = g_param_spec_uint (
       "estimated-size",
@@ -397,10 +466,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_MAXUINT,
       0,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READABLE |
+      G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_ESTIMATED_SIZE, param_spec);
 
   param_spec = g_param_spec_string (
       "content-md5",
@@ -408,10 +477,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "md5sum of the file contents",
       "",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READABLE |
+      G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_CONTENT_MD5, param_spec);
 
   param_spec = g_param_spec_string (
       "description",
@@ -419,20 +488,32 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "Description of the file",
       "",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READABLE |
+      G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_DESCRIPTION, param_spec);
 
   param_spec = g_param_spec_pointer (
       "available-socket-types",
       "SalutSupportedSocketMap available-socket-types",
       "Available socket types",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READABLE |
+      G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+  g_object_class_install_property (object_class, PROP_AVAILABLE_SOCKET_TYPES, param_spec);
+
+  param_spec = g_param_spec_uint (
+      "transferred-bytes",
+      "guint transferred-bytes",
+      "Bytes transferred",
+      0,
+      G_MAXUINT,
+      0,
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TRANSFERRED_BYTES, param_spec);
 
   salut_file_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
