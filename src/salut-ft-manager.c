@@ -297,6 +297,7 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
                        "object-path", path,
                        "handle", handle,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
+                       "direction", SALUT_FILE_TRANSFER_DIRECTION_OUTGOING,
                        NULL);
   g_object_unref (contact);
   g_free (path);

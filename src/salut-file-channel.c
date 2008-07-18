@@ -262,6 +262,9 @@ salut_file_channel_set_property (GObject *object,
         self->priv->state = g_value_get_uint (value);
         break;
       case PROP_DIRECTION:
+        /* TODO: the new request API will remove the need for this property */
+        self->priv->direction = g_value_get_uint (value);
+        break;
       case PROP_CONTENT_TYPE:
         /* This should not be writeable with the new request API */
         self->priv->content_type = g_value_dup_string (value);
@@ -355,6 +358,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   };
 
   static TpDBusPropertiesMixinPropImpl file_props[] = {
+    { "Direction", "direction", NULL },
     { "State", "state", "state" },
     { "ContentType", "content-type", NULL },
     { "Filename", "filename", NULL },
@@ -432,6 +436,19 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
+
+  param_spec = g_param_spec_uint (
+      "direction",
+      "SalutFileTransferDirection direction",
+      "Direction of the file transfer",
+      0,
+      G_MAXUINT,
+      0,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_DIRECTION, param_spec);
 
   param_spec = g_param_spec_uint (
       "state",
