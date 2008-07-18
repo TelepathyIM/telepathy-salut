@@ -48,7 +48,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
-    <property name="ContentType" type="s" access="read">
+    <property name="ContentType" type="s" access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>The file's MIME type. This cannot change once the channel has
         been created.</p>
@@ -59,7 +59,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
-    <property name="Filename" type="s" access="read">
+    <property name="Filename" type="s" access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>The name of the file on the sender's side. This is therefore given
         as a suggested filename for the receiver. This cannot change
@@ -69,7 +69,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
-    <property name="Size" type="t" access="read">
+    <property name="Size" type="t" access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>The size of the file. If this property is set, then the file
         transfer is guaranteed to be this size. This cannot change once
@@ -79,7 +79,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
-    <property name="EstimatedSize" type="t" access="read">
+    <property name="EstimatedSize" type="t" access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>An estimate of the size of the file. This property should be used
         when the protocol doesn't allow exact file sizes (For example, accurate
@@ -91,7 +91,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
-    <property name="ContentMD5" type="s" access="read">
+    <property name="ContentMD5" type="s" access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>MD5 digest of the file as a string of 32 ASCII hex digits, which
         SHOULD be lower-case if they are letters. This cannot change once
@@ -101,7 +101,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
-    <property name="Description" type="s" access="read">
+    <property name="Description" type="s" access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>Description of the file transfer. This cannot change once the
         channel has been created.</p>

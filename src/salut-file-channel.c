@@ -360,12 +360,12 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   static TpDBusPropertiesMixinPropImpl file_props[] = {
     { "Direction", "direction", NULL },
     { "State", "state", "state" },
-    { "ContentType", "content-type", NULL },
-    { "Filename", "filename", NULL },
-    { "Size", "size", NULL },
-    { "EstimatedSize", "estimated-size", NULL },
-    { "ContentMD5", "content-md5", NULL },
-    { "Description", "description", NULL },
+    { "ContentType", "content-type", "content-type" },
+    { "Filename", "filename", "filename" },
+    { "Size", "size", "size" },
+    { "EstimatedSize", "estimated-size", "estimated-size" },
+    { "ContentMD5", "content-md5", "content-md5" },
+    { "Description", "description", "description" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
     { NULL }
   };
