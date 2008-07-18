@@ -120,7 +120,7 @@ struct _SalutFileChannelPrivate {
   guint estimated_size;
   gchar *content_md5;
   gchar *description;
-  gpointer available_socket_types;
+  GHashTable *available_socket_types;
   guint transferred_bytes;
 
 };
@@ -205,7 +205,7 @@ salut_file_channel_get_property (GObject    *object,
         g_value_set_string (value, self->priv->description);
         break;
       case PROP_AVAILABLE_SOCKET_TYPES:
-        g_value_set_pointer (value, self->priv->available_socket_types);
+        g_value_set_boxed (value, self->priv->available_socket_types);
         break;
       case PROP_TRANSFERRED_BYTES:
         g_value_set_uint (value, self->priv->transferred_bytes);
@@ -263,12 +263,32 @@ salut_file_channel_set_property (GObject *object,
         break;
       case PROP_DIRECTION:
       case PROP_CONTENT_TYPE:
+        /* This should not be writeable with the new request API */
+        self->priv->content_type = g_value_dup_string (value);
+        break;
       case PROP_FILENAME:
+        /* This should not be writeable with the new request API */
+        self->priv->filename = g_value_dup_string (value);
+        break;
       case PROP_SIZE:
+        /* This should not be writeable with the new request API */
+        self->priv->size = g_value_get_uint (value);
+        break;
       case PROP_ESTIMATED_SIZE:
+        /* This should not be writeable with the new request API */
+        self->priv->estimated_size = g_value_get_uint (value);
+        break;
       case PROP_CONTENT_MD5:
+        /* This should not be writeable with the new request API */
+        self->priv->content_md5 = g_value_dup_string (value);
+        break;
       case PROP_DESCRIPTION:
+        /* This should not be writeable with the new request API */
+        self->priv->description = g_value_dup_string (value);
+        break;
       case PROP_AVAILABLE_SOCKET_TYPES:
+        /* This should not be writeable with the new request API */
+        self->priv->available_socket_types = g_value_get_boxed (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -308,6 +328,9 @@ salut_file_channel_constructor (GType type, guint n_props,
   /* Connect to the bus */
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object (bus, self->priv->object_path, obj);
+
+  /* Initialise the available socket types hash table*/
+  self->priv->available_socket_types = g_hash_table_new (g_int_hash, g_int_equal);
 
   return obj;
 }
@@ -428,7 +451,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "gchar *content-type",
       "ContentType of the file",
       "",
-      G_PARAM_CONSTRUCT_ONLY |
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -439,7 +465,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "gchar *filename",
       "Name of the file",
       "",
-      G_PARAM_CONSTRUCT_ONLY |
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -452,7 +481,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       0,
       G_MAXUINT,
       0,
-      G_PARAM_CONSTRUCT_ONLY |
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -465,7 +497,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       0,
       G_MAXUINT,
       0,
-      G_PARAM_CONSTRUCT_ONLY |
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -476,7 +511,10 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "gchar *content-md5",
       "md5sum of the file contents",
       "",
-      G_PARAM_CONSTRUCT_ONLY |
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -487,17 +525,24 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "gchar *description",
       "Description of the file",
       "",
-      G_PARAM_CONSTRUCT_ONLY |
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_DESCRIPTION, param_spec);
 
-  param_spec = g_param_spec_pointer (
+  param_spec = g_param_spec_boxed (
       "available-socket-types",
       "SalutSupportedSocketMap available-socket-types",
       "Available socket types",
-      G_PARAM_CONSTRUCT_ONLY |
+      dbus_g_type_get_map ("GHashTable", G_TYPE_UINT, DBUS_TYPE_G_UINT_ARRAY),
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
