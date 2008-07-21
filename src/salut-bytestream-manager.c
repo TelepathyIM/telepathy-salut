@@ -133,8 +133,8 @@ streaminit_parse_request (GibberXmppStanza *stanza,
     }
 
   *mime_type = gibber_xmpp_node_get_attribute (si, "mime-type");
-  /* if no mime_type is defined, XEP-0095 says to assume "binary/octect-stream"
-   * which is presumably a typo for "application/octet-stream" */
+  /* if no mime_type is defined, XEP-0095 says to assume
+   * "application/octet-stream" */
 
   *profile = gibber_xmpp_node_get_attribute (si, "profile");
   if (*profile == NULL)
@@ -635,7 +635,7 @@ salut_bytestream_manager_make_stream_init_iq (const gchar *from,
         GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_SI,
         GIBBER_NODE_ATTRIBUTE, "id", stream_id,
         GIBBER_NODE_ATTRIBUTE, "profile", profile,
-        GIBBER_NODE_ATTRIBUTE, "mime-type", "binary/octect-stream",
+        GIBBER_NODE_ATTRIBUTE, "mime-type", "application/octet-stream",
         GIBBER_NODE, "feature",
           GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_FEATURENEG,
           GIBBER_NODE, "x",
