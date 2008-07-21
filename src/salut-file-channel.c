@@ -73,6 +73,8 @@ enum
 static guint signals[LAST_SIGNAL] = {0};
 */
 
+const char *salut_file_channel_interfaces[] = { NULL };
+
 /* properties */
 enum
 {
@@ -82,6 +84,7 @@ enum
   PROP_HANDLE,
   PROP_CONTACT,
   PROP_CONNECTION,
+  PROP_INTERFACES,
   PROP_XMPP_CONNECTION_MANAGER,
   PROP_DIRECTION,
   PROP_STATE,
@@ -176,6 +179,9 @@ salut_file_channel_get_property (GObject    *object,
         break;
       case PROP_CONNECTION:
         g_value_set_object (value, self->priv->connection);
+        break;
+      case PROP_INTERFACES:
+        g_value_set_boxed (value, salut_file_channel_interfaces);
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, self->priv->xmpp_connection_manager);
@@ -424,6 +430,13 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class,
                                    PROP_CONNECTION, param_spec);
+
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   param_spec = g_param_spec_object (
       "xmpp-connection-manager",
@@ -689,11 +702,9 @@ salut_file_channel_get_handle (TpSvcChannel *iface,
  */
 static void
 salut_file_channel_get_interfaces (TpSvcChannel *iface,
-                                 DBusGMethodInvocation *context)
+                                   DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+  tp_svc_channel_return_from_get_interfaces (context, salut_file_channel_interfaces);
 }
 
 static void
