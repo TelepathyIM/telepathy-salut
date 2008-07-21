@@ -119,12 +119,12 @@ struct _SalutFileChannelPrivate {
   SalutFileTransferState state;
   gchar *content_type;
   gchar *filename;
-  guint size;
-  guint estimated_size;
+  guint64 size;
+  guint64 estimated_size;
   gchar *content_md5;
   gchar *description;
   GHashTable *available_socket_types;
-  guint transferred_bytes;
+  guint64 transferred_bytes;
 
 };
 
@@ -265,7 +265,7 @@ salut_file_channel_set_property (GObject *object,
         self->priv->state = g_value_get_uint (value);
         break;
       case PROP_TRANSFERRED_BYTES:
-        self->priv->state = g_value_get_uint (value);
+        self->priv->state = g_value_get_uint64 (value);
         break;
       case PROP_DIRECTION:
         /* TODO: the new request API will remove the need for this property */
@@ -281,11 +281,11 @@ salut_file_channel_set_property (GObject *object,
         break;
       case PROP_SIZE:
         /* This should not be writeable with the new request API */
-        self->priv->size = g_value_get_uint (value);
+        self->priv->size = g_value_get_uint64 (value);
         break;
       case PROP_ESTIMATED_SIZE:
         /* This should not be writeable with the new request API */
-        self->priv->estimated_size = g_value_get_uint (value);
+        self->priv->estimated_size = g_value_get_uint64 (value);
         break;
       case PROP_CONTENT_MD5:
         /* This should not be writeable with the new request API */
@@ -456,7 +456,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "Direction of the file transfer",
       0,
       G_MAXUINT,
-      0,
+      SALUT_FILE_TRANSFER_DIRECTION_OUTGOING,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -469,7 +469,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "State of the file transfer in this channel",
       0,
       G_MAXUINT,
-      0,
+      SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING,
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -504,13 +504,13 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_FILENAME, param_spec);
 
-  param_spec = g_param_spec_uint (
+  param_spec = g_param_spec_uint64 (
       "size",
       "guint size",
       "Size of the file in bytes",
       0,
-      G_MAXUINT,
-      0,
+      G_MAXUINT64,
+      G_MAXUINT64,
       /* TODO: change this to CONSTRUCT_ONLY when
        * the new request API is used.
        */
@@ -520,13 +520,13 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_SIZE, param_spec);
 
-  param_spec = g_param_spec_uint (
+  param_spec = g_param_spec_uint64 (
       "estimated-size",
       "guint estimated-size",
       "Estimated size of the file in bytes",
       0,
-      G_MAXUINT,
-      0,
+      G_MAXUINT64,
+      G_MAXUINT64,
       /* TODO: change this to CONSTRUCT_ONLY when
        * the new request API is used.
        */
@@ -578,12 +578,12 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_AVAILABLE_SOCKET_TYPES, param_spec);
 
-  param_spec = g_param_spec_uint (
+  param_spec = g_param_spec_uint64 (
       "transferred-bytes",
       "guint transferred-bytes",
       "Bytes transferred",
       0,
-      G_MAXUINT,
+      G_MAXUINT64,
       0,
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
