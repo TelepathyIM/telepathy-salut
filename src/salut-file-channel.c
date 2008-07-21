@@ -823,12 +823,45 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 }
 
 static void
-value_free (GValue *value)
+salut_file_channel_check_and_send (SalutFileChannel *channel)
 {
-  if (!value)
+  GibberXmppConnection *connection = NULL;
+  SalutXmppConnectionManagerRequestConnectionResult request_result;
+  GError *error = NULL;
+
+  if (G_STR_EMPTY (channel->priv->content_type))
     return;
-  g_value_unset (value);
-  g_free (value);
+
+  if (G_STR_EMPTY (channel->priv->filename))
+    return;
+
+  if (channel->priv->size == 0 && channel->priv->estimated_size == 0)
+    return;
+
+  if (G_STR_EMPTY (channel->priv->content_md5))
+    return;
+
+  DEBUG ("Starting sending file transfer");
+
+  request_result = salut_xmpp_connection_manager_request_connection (
+    channel->priv->xmpp_connection_manager, channel->priv->contact, &connection,
+    &error);
+
+  if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+    {
+      channel->priv->xmpp_connection = connection;
+      send_file_offer (channel);
+    }
+  else if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
+    {
+      g_signal_connect (channel->priv->xmpp_connection_manager, "new-connection",
+                        G_CALLBACK (xmpp_connection_manager_new_connection_cb), channel);
+    }
+  else
+    {
+      DEBUG ("Request connection failed");
+      g_error_free (error);
+    }
 }
 
 void
