@@ -62,6 +62,8 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
                            file_transfer_iface_init);
 );
 
+#define G_STR_EMPTY(x) ((x) == NULL || (x)[0] == '\0')
+
 /* signal enum */
 /*
 enum
