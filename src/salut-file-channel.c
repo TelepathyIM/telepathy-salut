@@ -837,30 +837,16 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
                                         GibberXmppConnection *conn)
 {
   GibberFileTransfer *ft;
-  GHashTable *information;
-  guint id;
 
   ft = gibber_file_transfer_new_from_stanza (stanza, conn);
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
 
   DEBUG ("Received file offer with id '%s'", ft->id);
 
-  information = g_hash_table_new_full (g_str_hash, g_str_equal,
-      (GDestroyNotify) g_free, (GDestroyNotify) value_free);
-  GValue *val = g_new0 (GValue, 1);
-  g_value_init (val, G_TYPE_UINT64);
-  g_value_set_uint64 (val, ft->size);
-  g_hash_table_insert (information, g_strdup ("size"), val);
+  self->priv->ft = ft;
 
-  /* TODO from mixin: add transfer */
-
-  /* this is a horrible horrible assignment of id to let it compile! It doesn't
-   * much matter as ids aren't being used anymore.
-   */
-  id = 1;
-
-  g_hash_table_insert (self->priv->name_to_id, (gchar *) ft->id,
-      GINT_TO_POINTER (id));
+  self->priv->filename = ft->filename;
+  self->priv->size = ft->size;
 }
 
 static void
