@@ -114,8 +114,6 @@ struct _SalutFileChannelPrivate {
   GibberXmppConnection *xmpp_connection;
   GibberFileTransfer *ft;
   gchar *local_unix_path;
-  /* hash table used to convert from string id to numerical id */
-  GHashTable *name_to_id;
 
   /* properties */
   SalutFileTransferDirection direction;
@@ -347,11 +345,6 @@ salut_file_channel_constructor (GType type, guint n_props,
       TP_HANDLE_TYPE_CONTACT);
 
   tp_handle_ref (contact_repo, self->priv->handle);
-
-  /* Initialize the hash table used to convert from the id name
-   * to the numerical id. */
-  self->priv->name_to_id = g_hash_table_new_full (g_str_hash, g_str_equal,
-      NULL, NULL);
 
   /* Connect to the bus */
   bus = tp_get_bus ();
@@ -640,8 +633,6 @@ salut_file_channel_dispose (GObject *object)
   self->priv->dispose_has_run = TRUE;
 
   tp_handle_unref (handle_repo, self->priv->handle);
-
-  g_hash_table_unref (self->priv->name_to_id);
 
   salut_file_channel_do_close (self);
 
