@@ -113,7 +113,6 @@ struct _SalutFileChannelPrivate {
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberXmppConnection *xmpp_connection;
   GibberFileTransfer *ft;
-  gchar *local_unix_path;
 
   /* properties */
   SalutFileTransferDirection direction;
@@ -921,7 +920,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
         SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_value_init (&out_address, G_TYPE_STRING);
-  g_value_set_string (&out_address, g_build_filename (self->priv->local_unix_path, "tp-ft", NULL));
+  g_value_set_string (&out_address, g_build_filename (self->priv->socket_path, "tp-ft", NULL));
 
   salut_svc_channel_type_file_return_from_accept_file (context, &out_address);
 }
@@ -937,9 +936,10 @@ file_transfer_iface_init (gpointer g_iface,
         (salut_svc_channel_type_file_accept_file_impl) salut_file_channel_accept_file);
 }
 
-static void
-create_socket_path (SalutFileChannel *self)
+static const gchar *
+get_local_unix_socket_path (SalutFileChannel *self)
 {
+  gchar *path;
   gint fd;
   gchar *tmp_path = NULL;
 
@@ -955,19 +955,11 @@ create_socket_path (SalutFileChannel *self)
         }
     }
 
-  self->priv->local_unix_path = tmp_path;
-}
-
-static gchar *
-get_local_unix_socket_path (SalutFileChannel *self)
-{
-  gchar *path;
-
-  if (self->priv->local_unix_path == NULL)
-    create_socket_path (self);
-
   /* TODO: perhaps this ought to be more random */
-  path = g_build_filename (self->priv->local_unix_path, "tp-ft", NULL);
+  path = g_build_filename (tmp_path, "tp-ft", NULL);
+  g_free (tmp_path);
+
+  self->priv->socket_path = path;
 
   return path;
 }
@@ -979,19 +971,17 @@ static GIOChannel *
 get_socket_channel (SalutFileChannel *self)
 {
   gint fd;
-  gchar *path;
+  const gchar *path;
   size_t path_len;
   struct sockaddr_un addr;
   GIOChannel *io_channel;
 
   path = get_local_unix_socket_path (self);
-  self->priv->socket_path = g_strdup (path);
 
   fd = socket (PF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
     {
       DEBUG("socket() failed");
-      g_free (path);
       return NULL;
     }
 
@@ -1000,7 +990,6 @@ get_socket_channel (SalutFileChannel *self)
   path_len = strlen (path);
   strncpy (addr.sun_path, path, path_len);
   g_unlink (path);
-  g_free (path);
 
   if (bind (fd, (struct sockaddr*) &addr,
         G_STRUCT_OFFSET (struct sockaddr_un, sun_path) + path_len) < 0)
