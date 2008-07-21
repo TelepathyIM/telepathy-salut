@@ -235,6 +235,9 @@ gibber_iq_helper_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  g_signal_handlers_disconnect_by_func (priv->xmpp_connection,
+      xmpp_connection_received_stanza_cb, self);
+
   if (priv->xmpp_connection != NULL)
     {
       g_object_unref (priv->xmpp_connection);
@@ -252,6 +255,7 @@ gibber_iq_helper_finalize (GObject *object)
   GibberIqHelperPrivate *priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);
 
   g_hash_table_destroy (priv->id_handlers);
+  priv->id_handlers = NULL;
 
   G_OBJECT_CLASS (gibber_iq_helper_parent_class)->finalize (object);
 }
