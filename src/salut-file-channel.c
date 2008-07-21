@@ -920,7 +920,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
         SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_value_init (&out_address, G_TYPE_STRING);
-  g_value_set_string (&out_address, g_build_filename (self->priv->socket_path, "tp-ft", NULL));
+  g_value_set_string (&out_address, self->priv->socket_path);
 
   salut_svc_channel_type_file_return_from_accept_file (context, &out_address);
 }
