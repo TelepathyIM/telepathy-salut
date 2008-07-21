@@ -282,8 +282,6 @@ salut_file_channel_set_property (GObject *object,
         self->priv->transferred_bytes = g_value_get_uint64 (value);
         break;
       case PROP_DIRECTION:
-        /* TODO: the new request API will remove the need for this property */
-        self->priv->direction = g_value_get_uint (value);
         break;
       case PROP_CONTENT_TYPE:
         /* This should not be writeable with the new request API */
@@ -478,7 +476,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "Direction of the file transfer",
       0,
       G_MAXUINT,
-      SALUT_FILE_TRANSFER_DIRECTION_OUTGOING,
+      0,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -491,7 +489,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "State of the file transfer in this channel",
       0,
       G_MAXUINT,
-      SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING,
+      0,
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
