@@ -203,10 +203,10 @@ salut_file_channel_get_property (GObject    *object,
         g_value_set_string (value, self->priv->filename);
         break;
       case PROP_SIZE:
-        g_value_set_uint (value, self->priv->size);
+        g_value_set_uint64 (value, self->priv->size);
         break;
       case PROP_ESTIMATED_SIZE:
-        g_value_set_uint (value, self->priv->estimated_size);
+        g_value_set_uint64 (value, self->priv->estimated_size);
         break;
       case PROP_CONTENT_MD5:
         g_value_set_string (value, self->priv->content_md5);
