@@ -1,7 +1,7 @@
 /*
  * salut-file-channel.c - Source for SalutFileChannel
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
- * Copyright (C) 2005, 2007 Collabora Ltd.
+ * Copyright (C) 2005, 2007, 2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
  *
  * This library is free software; you can redistribute it and/or
