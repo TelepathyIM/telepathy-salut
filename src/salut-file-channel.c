@@ -816,7 +816,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 {
   SalutFileChannel *channel = user_data;
 
-  data->self->priv->xmpp_connection = g_object_ref (connection);
+  channel->priv->xmpp_connection = g_object_ref (connection);
   g_signal_handlers_disconnect_by_func (mgr,
                                         xmpp_connection_manager_new_connection_cb, user_data);
   send_file_offer (channel);
