@@ -794,9 +794,9 @@ send_file_offer (SalutFileChannel *self,
   information = g_value_get_boxed (g_value_array_get_nth (val_array, 5));
 
   ft = g_object_new (GIBBER_TYPE_OOB_FILE_TRANSFER,
-      "self-jid", self->priv->connection->name,
-      "peer-jid", self->priv->contact->name,
-      "filename", filename,
+      "self-id", self->priv->connection->name,
+      "peer-id", self->priv->contact->name,
+      "filename", self->priv->filename,
       "connection", self->priv->xmpp_connection,
       NULL);
   g_signal_connect (ft, "remote-accepted",
