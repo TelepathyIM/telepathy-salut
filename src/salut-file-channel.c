@@ -958,6 +958,7 @@ get_socket_channel (SalutFileChannel *self)
   GIOChannel *io_channel;
 
   path = get_local_unix_socket_path (self);
+  self->priv->socket_path = g_strdup (path);
 
   fd = socket (PF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
