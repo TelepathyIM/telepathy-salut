@@ -141,6 +141,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
+    <property name="SocketPath" type="s" access="readwrite">
+      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
+        <p>Path to the UNIX socket in use.</p>
+
+	<p>If this is an empty string, its value is undefined.</p>
+      </tp:docstring>
+    </property>
+
     <tp:enum name="File_Transfer_Direction">
       <tp:enumvalue suffix="Incoming" value="0">
         <tp:docstring>

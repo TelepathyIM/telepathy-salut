@@ -98,6 +98,7 @@ enum
   PROP_DESCRIPTION,
   PROP_AVAILABLE_SOCKET_TYPES,
   PROP_TRANSFERRED_BYTES,
+  PROP_SOCKET_PATH,
   LAST_PROPERTY
 };
 
@@ -127,6 +128,7 @@ struct _SalutFileChannelPrivate {
   gchar *description;
   GHashTable *available_socket_types;
   guint64 transferred_bytes;
+  gchar *socket_path;
 
 };
 
@@ -216,7 +218,10 @@ salut_file_channel_get_property (GObject    *object,
         g_value_set_boxed (value, self->priv->available_socket_types);
         break;
       case PROP_TRANSFERRED_BYTES:
-        g_value_set_uint (value, self->priv->transferred_bytes);
+        g_value_set_uint64 (value, self->priv->transferred_bytes);
+        break;
+      case PROP_SOCKET_PATH:
+        g_value_set_string (value, self->priv->socket_path);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -301,6 +306,9 @@ salut_file_channel_set_property (GObject *object,
         /* This should not be writeable with the new request API */
         self->priv->available_socket_types = g_value_get_boxed (value);
         break;
+      case PROP_SOCKET_PATH:
+        self->priv->socket_path = g_value_dup_string (value);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -375,6 +383,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
     { "ContentMD5", "content-md5", "content-md5" },
     { "Description", "description", "description" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
+    { "SocketPath", "socket-path", "socket-path" },
     { NULL }
   };
 
@@ -591,6 +600,17 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TRANSFERRED_BYTES, param_spec);
+
+  param_spec = g_param_spec_string (
+      "socket-path",
+      "gchar *socket-path",
+      "UNIX socket path",
+      "",
+      G_PARAM_CONSTRUCT |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_SOCKET_PATH, param_spec);
 
   salut_file_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
