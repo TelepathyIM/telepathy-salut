@@ -156,6 +156,10 @@ salut_file_channel_init (SalutFileChannel *obj)
   obj->priv->contact = NULL;
 }
 
+static void salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
+                                          SalutFileTransferState state,
+                                          SalutFileTransferStateChangeReason reason);
+
 static void
 salut_file_channel_get_property (GObject    *object,
                                  guint       property_id,
