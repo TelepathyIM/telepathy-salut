@@ -1884,12 +1884,6 @@ _send_channel_iq_tube (gpointer key,
             GIBBER_NODE_ATTRIBUTE, "type", tube_type_str,
             GIBBER_NODE_ATTRIBUTE, "service", service,
             GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
-            GIBBER_NODE, "transport",
-              GIBBER_NODE, "candidate",
-                GIBBER_NODE_ATTRIBUTE, "ip", "127.0.0.1",
-                GIBBER_NODE_ATTRIBUTE, "port", "13540",
-              GIBBER_NODE_END,
-            GIBBER_NODE_END,
           GIBBER_NODE_END,
           GIBBER_STANZA_END);
 
