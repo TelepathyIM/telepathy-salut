@@ -41,7 +41,7 @@ static void
 salut_ft_manager_factory_iface_init (gpointer *g_iface, gpointer *iface_data);
 
 static SalutFileChannel *
-salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle);
+salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle, gboolean incoming);
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
@@ -116,7 +116,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
 
   chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
   if (chan == NULL)
-    chan = salut_ft_manager_new_channel (self, handle);
+    chan = salut_ft_manager_new_channel (self, handle, TRUE);
 
   salut_file_channel_received_file_offer (chan, stanza, conn);
 }
@@ -267,7 +267,8 @@ file_channel_closed_cb (SalutFileChannel *chan, gpointer user_data)
 
 static SalutFileChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr,
-                              TpHandle handle)
+                              TpHandle handle,
+                              gboolean incoming)
 {
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
@@ -277,6 +278,7 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   SalutContact *contact;
   const gchar *name;
   gchar *path = NULL;
+  guint direction, state;
 
   g_assert (g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle))
             == NULL);
@@ -288,6 +290,9 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
       return NULL;
     }
 
+  state = incoming ? SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING : SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING;
+  direction = incoming ? SALUT_FILE_TRANSFER_DIRECTION_INCOMING : SALUT_FILE_TRANSFER_DIRECTION_OUTGOING;
+
   name = tp_handle_inspect (handle_repo, handle);
   path = g_strdup_printf ("%s/FileChannel/%u",
                          base_connection->object_path, handle);
@@ -297,7 +302,8 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
                        "object-path", path,
                        "handle", handle,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
-                       "direction", SALUT_FILE_TRANSFER_DIRECTION_OUTGOING,
+                       "direction", direction,
+                       "state", state,
                        NULL);
   g_object_unref (contact);
   g_free (path);
@@ -355,7 +361,7 @@ salut_ft_manager_factory_iface_request (TpChannelFactoryIface *iface,
   chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
   if (chan == NULL)
     {
-      chan = salut_ft_manager_new_channel (mgr, handle);
+      chan = salut_ft_manager_new_channel (mgr, handle, FALSE);
       created = TRUE;
     }
   *ret = TP_CHANNEL_IFACE (chan);
