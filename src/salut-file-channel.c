@@ -156,6 +156,7 @@ salut_file_channel_init (SalutFileChannel *obj)
   obj->priv->contact = NULL;
 }
 
+static void salut_file_channel_check_and_send (SalutFileChannel *channel);
 static void salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
                                           SalutFileTransferState state,
                                           SalutFileTransferStateChangeReason reason);
@@ -319,6 +320,10 @@ salut_file_channel_set_property (GObject *object,
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
     }
+
+  if (self->priv->direction == SALUT_FILE_TRANSFER_DIRECTION_OUTGOING)
+    salut_file_channel_check_and_send (SALUT_FILE_CHANNEL (object));
+
 }
 
 static GObject *
