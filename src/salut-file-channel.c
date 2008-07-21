@@ -808,20 +808,13 @@ send_file_offer (SalutFileChannel *self)
   gibber_file_transfer_offer (ft);
 }
 
-/* passed as user_data to the callbacl for the "new-connection" signal
- * emitted by the SalutXmppConnectionManager */
-typedef struct {
-  SalutFileChannel *self;
-  guint id;
-} NewConnectionData;
-
 static void
 xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
                                            GibberXmppConnection *connection,
                                            SalutContact *contact,
                                            gpointer user_data)
 {
-  NewConnectionData *data = user_data;
+  SalutFileChannel *channel = user_data;
 
   data->self->priv->xmpp_connection = g_object_ref (connection);
   g_signal_handlers_disconnect_by_func (mgr,
