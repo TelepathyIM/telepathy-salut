@@ -38,6 +38,7 @@
 #include <gibber/gibber-bytestream-iface.h>
 #include <gibber/gibber-transport.h>
 #include <gibber/gibber-fd-transport.h>
+#include <gibber/gibber-iq-helper.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
 
@@ -48,6 +49,7 @@
 #include "tube-iface.h"
 #include "salut-bytestream-manager.h"
 #include "salut-contact-manager.h"
+#include "salut-xmpp-connection-manager.h"
 
 static void
 tube_iface_init (gpointer g_iface, gpointer iface_data);
@@ -88,6 +90,7 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_CONNECTION = 1,
+  PROP_CHANNEL,
   PROP_HANDLE,
   PROP_HANDLE_TYPE,
   PROP_SELF_HANDLE,
@@ -101,6 +104,7 @@ enum
   PROP_ADDRESS,
   PROP_ACCESS_CONTROL,
   PROP_ACCESS_CONTROL_PARAM,
+  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -130,6 +134,10 @@ struct _SalutTubeStreamPrivate
   GIOChannel *listen_io_channel;
   guint listen_io_channel_source_id;
   gboolean closed;
+
+  /* we need to send an iq stanza to close the tube */
+  GibberIqHelper *iq_helper;
+  SalutXmppConnectionManager *xmpp_connection_manager;
 
   gboolean offer_needed;
 
@@ -915,6 +923,12 @@ salut_tube_stream_dispose (GObject *object)
       priv->listen_io_channel = NULL;
     }
 
+  if (priv->iq_helper != NULL)
+    {
+      g_object_unref (priv->iq_helper);
+      priv->iq_helper = NULL;
+    }
+
   priv->dispose_has_run = TRUE;
 
   if (G_OBJECT_CLASS (salut_tube_stream_parent_class)->dispose)
@@ -998,6 +1012,9 @@ salut_tube_stream_get_property (GObject *object,
       case PROP_ACCESS_CONTROL_PARAM:
         g_value_set_pointer (value, priv->access_control_param);
         break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -1064,6 +1081,10 @@ salut_tube_stream_set_property (GObject *object,
             priv->access_control_param = tp_g_value_slice_dup (
                 g_value_get_pointer (value));
           }
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1204,6 +1225,31 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL_PARAM,
       param_spec);
 
+  param_spec = g_param_spec_object (
+      "channel",
+      "SalutTubesChannel object",
+      "Salut Tubes Channel associated with this stream tube object",
+      SALUT_TYPE_TUBES_CHANNEL,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CHANNEL,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "Salut XMPP Connection manager used for this tube channel in case of "
+          "1-1 tube",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
+      param_spec);
+
   signals[OPENED] =
     g_signal_new ("opened",
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
@@ -1262,6 +1308,7 @@ data_received_cb (GibberBytestreamIface *bytestream,
 
 SalutTubeStream *
 salut_tube_stream_new (SalutConnection *conn,
+                        SalutXmppConnectionManager *xmpp_connection_manager,
                         TpHandle handle,
                         TpHandleType handle_type,
                         TpHandle self_handle,
@@ -1272,6 +1319,7 @@ salut_tube_stream_new (SalutConnection *conn,
 {
   return g_object_new (SALUT_TYPE_TUBE_STREAM,
       "connection", conn,
+      "xmpp-connection-manager", xmpp_connection_manager,
       "handle", handle,
       "handle-type", handle_type,
       "self-handle", self_handle,
@@ -1322,6 +1370,15 @@ salut_tube_stream_offer_needed (SalutTubeIface *tube)
   return priv->offer_needed;
 }
 
+static void
+iq_close_reply_cb (GibberIqHelper *helper,
+                   GibberXmppStanza *sent_stanza,
+                   GibberXmppStanza *reply_stanza,
+                   GObject *object,
+                   gpointer user_data)
+{
+}
+
 /**
  * salut_tube_stream_close
  *
@@ -1342,43 +1399,63 @@ salut_tube_stream_close (SalutTubeIface *tube)
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      /* TODO: implement 1-1 tube */
-#if 0
-      LmMessage *msg;
-      const gchar *jid;
+      GibberXmppStanza *stanza;
+      const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
-      gchar *id_str;
+      gchar *tube_id_str;
+      GError *error = NULL;
 
-      jid = tp_handle_inspect (contact_repo, priv->handle);
-      id_str = g_strdup_printf ("%u", priv->id);
+      jid_to = tp_handle_inspect (contact_repo, priv->handle);
+      jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
+      tube_id_str = g_strdup_printf ("%u", priv->id);
 
-      /* Send the close message */
-      msg = lm_message_build (jid, LM_MESSAGE_TYPE_MESSAGE,
-          '(', "close", "",
-            '@', "xmlns", NS_TUBES,
-            '@', "tube", id_str,
-          ')',
-          '(', "amp", "",
-            '@', "xmlns", NS_AMP,
-            '(', "rule", "",
-              '@', "condition", "deliver-at",
-              '@', "value", "stored",
-              '@', "action", "error",
-            ')',
-            '(', "rule", "",
-              '@', "condition", "match-resource",
-              '@', "value", "exact",
-              '@', "action", "error",
-            ')',
-          ')',
-          NULL);
-      g_free (id_str);
+      stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+          GIBBER_STANZA_SUB_TYPE_SET,
+          jid_from, jid_to,
+          GIBBER_NODE, "close",
+            GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+            GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
+          GIBBER_NODE_END,
+          GIBBER_STANZA_END);
 
-      _salut_connection_send (priv->conn, msg, NULL);
+      if (priv->iq_helper == NULL)
+        {
+          SalutXmppConnectionManagerRequestConnectionResult result;
+          SalutContactManager *contact_mgr;
+          SalutContact *contact;
+          GibberXmppConnection *xmpp_connection = NULL;
 
-      lm_message_unref (msg);
-#endif
+          g_object_get (priv->conn, "contact-manager", &contact_mgr, NULL);
+          g_assert (contact_mgr != NULL);
+
+          contact = salut_contact_manager_get_contact (contact_mgr,
+              priv->handle);
+
+          result = salut_xmpp_connection_manager_request_connection (
+              priv->xmpp_connection_manager, contact, &xmpp_connection, NULL);
+
+          if (result ==
+              SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+            {
+              priv->iq_helper = gibber_iq_helper_new (xmpp_connection);
+              g_assert (priv->iq_helper);
+            }
+        }
+
+      if (priv->iq_helper != NULL)
+        {
+          if (!gibber_iq_helper_send_with_reply (priv->iq_helper, stanza,
+              iq_close_reply_cb, G_OBJECT(self), tube, &error))
+            {
+              DEBUG ("ERROR: '%s'", error->message);
+              g_error_free (error);
+            }
+        }
+
+      g_free (tube_id_str);
+
+      g_object_unref (stanza);
     }
 
   g_signal_emit (G_OBJECT (self), signals[CLOSED], 0);

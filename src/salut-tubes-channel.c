@@ -943,6 +943,27 @@ tubes_message_received (SalutTubesChannel *self,
     }
 }
 
+void tubes_message_close_received (SalutTubesChannel *self,
+                                   TpHandle initiator_handle,
+                                   guint tube_id)
+{
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  SalutTubeIface *tube;
+
+  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+
+  if (tube)
+    {
+      DEBUG ("received a tube close message");
+      salut_tube_iface_close (tube);
+    }
+  else
+    {
+      DEBUG ("received a tube close message on a non existant tube");
+    }
+}
+
 static void
 muc_connection_new_senders_cb (GibberMucConnection *conn,
                                GArray *senders,
@@ -1142,8 +1163,8 @@ create_new_tube (SalutTubesChannel *self,
       break;
     case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
-          priv->handle, priv->handle_type, priv->self_handle, initiator,
-          service, parameters, tube_id));
+          priv->xmpp_connection_manager, priv->handle, priv->handle_type,
+          priv->self_handle, initiator, service, parameters, tube_id));
       break;
     default:
       g_assert_not_reached ();
@@ -1889,6 +1910,7 @@ _send_channel_iq_tube (gpointer key,
           g_error_free (error);
         }
 
+      g_object_unref (stanza);
       g_free (tube_id_str);
     }
 

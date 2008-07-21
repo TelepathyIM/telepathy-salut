@@ -127,6 +127,7 @@ iq_tube_request_filter (SalutXmppConnectionManager *xcm,
 static gboolean
 extract_tube_information (TpHandleRepoIface *contact_repo,
                           GibberXmppStanza *stanza,
+                          gboolean *close,
                           TpTubeType *type,
                           TpHandle *initiator_handle,
                           const gchar **service,
@@ -134,7 +135,8 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
                           guint *tube_id)
 {
   GibberXmppNode *iq;
-  GibberXmppNode *tube_node;
+  GibberXmppNode *tube_node, *close_node, *node;
+  gboolean _close;
 
   iq = stanza->node;
 
@@ -159,13 +161,35 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
 
   tube_node = gibber_xmpp_node_get_child_ns (iq, "tube",
       GIBBER_TELEPATHY_NS_TUBES);
-  if (tube_node == NULL)
+  close_node = gibber_xmpp_node_get_child_ns (iq, "close",
+      GIBBER_TELEPATHY_NS_TUBES);
+
+  if (tube_node == NULL && close_node == NULL)
     {
-      DEBUG ("The <iq> does not have a <tube>");
+      DEBUG ("The <iq> does not have a <tube> nor a <close>");
       return FALSE;
     }
+  if (tube_node != NULL && close_node != NULL)
+    {
+      DEBUG ("The <iq> has both a <tube> nor a <close>");
+      return FALSE;
+    }
+  if (tube_node != NULL)
+    {
+      node = tube_node;
+    }
+  else
+    {
+      node = close_node;
+    }
 
-  if (type != NULL)
+  _close = close_node != NULL;
+  if (close != NULL)
+    {
+      *close = _close;
+    }
+
+  if (!_close && type != NULL)
     {
       const gchar *tube_type;
 
@@ -181,12 +205,12 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
         }
     }
 
-  if (service != NULL)
+  if (!_close && service != NULL)
     {
       *service = gibber_xmpp_node_get_attribute (tube_node, "service");
     }
 
-  if (parameters != NULL)
+  if (!_close && parameters != NULL)
     {
       GibberXmppNode *node;
 
@@ -201,10 +225,10 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       gchar *endptr;
       long int tmp;
 
-      str = gibber_xmpp_node_get_attribute (tube_node, "id");
+      str = gibber_xmpp_node_get_attribute (node, "id");
       if (str == NULL)
         {
-          DEBUG ("no tube id in SI request");
+          DEBUG ("no tube id in tube request");
           return FALSE;
         }
 
@@ -231,55 +255,57 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
-  GibberXmppNode *close;
   GibberXmppStanza *reply;
 
   /* tube informations */
-  const gchar *service;
-  TpTubeType tube_type;
+  const gchar *service = NULL;
+  TpTubeType tube_type = TP_TUBE_TYPE_DBUS;
   TpHandle initiator_handle;
-  GHashTable *parameters;
+  GHashTable *parameters = NULL;
   guint tube_id;
+  gboolean close;
 
   SalutTubesChannel *chan;
 
   /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
 
-  close = gibber_xmpp_node_get_child_ns (stanza->node, "close",
-      GIBBER_TELEPATHY_NS_TUBES);
-  if (close != NULL)
-    {
-      DEBUG ("received a close tube request. Not implemented.");
-      return;
-    }
-
-  if (!extract_tube_information (contact_repo, stanza, &tube_type,
+  if (!extract_tube_information (contact_repo, stanza, &close, &tube_type,
           &initiator_handle, &service, &parameters, &tube_id))
     {
       GibberXmppStanza *reply;
 
       reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
-          "failed to parse SI request");
+          "failed to parse tube request");
       gibber_xmpp_connection_send (conn, reply, NULL);
 
       g_object_unref (reply);
       return;
     }
 
-  DEBUG ("received a tube request of type %d, tube_id %d", tube_type, tube_id);
+  DEBUG ("received a tube request, tube_id %d", tube_id);
 
   chan = g_hash_table_lookup (priv->channels,
       GUINT_TO_POINTER (initiator_handle));
-  if (chan == NULL)
-    {
-      chan = new_tubes_channel (self, initiator_handle);
-      tp_channel_factory_iface_emit_new_channel (self,
-          (TpChannelIface *) chan, NULL);
-    }
+  if (close)
+  {
+    if (chan != NULL)
+      {
+        tubes_message_close_received (chan, initiator_handle, tube_id);
+      }
+  }
+  else
+  {
+    if (chan == NULL)
+      {
+        chan = new_tubes_channel (self, initiator_handle);
+        tp_channel_factory_iface_emit_new_channel (self,
+            (TpChannelIface *) chan, NULL);
+      }
 
-  tubes_message_received (chan, service, tube_type, initiator_handle,
-      parameters, tube_id);
+    tubes_message_received (chan, service, tube_type, initiator_handle,
+        parameters, tube_id);
+  }
 
   reply = gibber_iq_helper_new_result_reply (stanza);
   gibber_xmpp_connection_send (conn, reply, NULL);

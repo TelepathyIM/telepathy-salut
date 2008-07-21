@@ -75,6 +75,9 @@ void tubes_message_received (SalutTubesChannel *self,
     const gchar *service, TpTubeType tube_type, TpHandle initiator_handle,
     GHashTable *parameters, guint tube_id);
 
+void tubes_message_close_received (SalutTubesChannel *self,
+    TpHandle initiator_handle, guint tube_id);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_TUBES_CHANNEL_H__*/
