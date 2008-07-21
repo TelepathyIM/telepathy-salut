@@ -95,16 +95,6 @@ xmpp_connection_manager_connection_closing_cb (SalutXmppConnectionManager *mgr,
     SalutContact *contact,
     gpointer user_data);
 
-static gboolean
-message_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
-    SalutContact *contact, gpointer user_data);
-
-static void
-message_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
-    SalutContact *contact, gpointer user_data);
-
 static void
 _send_channel_iq_tubes (SalutTubesChannel *self);
 
@@ -347,50 +337,6 @@ salut_tubes_channel_set_property (GObject *object,
     }
 }
 
-static gboolean
-message_stanza_filter (SalutXmppConnectionManager *mgr,
-                       GibberXmppConnection *conn,
-                       GibberXmppStanza *stanza,
-                       SalutContact *contact,
-                       gpointer user_data)
-{
-  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
-  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  GibberStanzaType type;
-  GibberStanzaSubType sub_type;
-
-  if (priv->contact != contact)
-    return FALSE;
-
-  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
-  if (type != GIBBER_STANZA_TYPE_IQ)
-    return FALSE;
-
-  if (sub_type != GIBBER_STANZA_SUB_TYPE_SET)
-    return FALSE;
-
-  if (gibber_xmpp_node_get_child_ns (stanza->node, "tube",
-        GIBBER_TELEPATHY_NS_TUBES) != NULL)
-    return TRUE;
-
-  if (gibber_xmpp_node_get_child_ns (stanza->node, "close",
-        GIBBER_TELEPATHY_NS_TUBES) != NULL)
-    return TRUE;
-
-  return FALSE;
-}
-
-static void
-message_stanza_callback (SalutXmppConnectionManager *mgr,
-                         GibberXmppConnection *conn,
-                         GibberXmppStanza *stanza,
-                         SalutContact *contact,
-                         gpointer user_data)
-{
-  DEBUG ("Message stanza received, but the code to handle it is not written "
-         "yet !!\n"); /* TODO */
-}
-
 static void
 _initialise_connection (SalutTubesChannel *self)
 {
@@ -411,10 +357,6 @@ _initialise_connection (SalutTubesChannel *self)
       G_CALLBACK (xmpp_connection_manager_connection_closed_cb), self);
   g_signal_connect (priv->xmpp_connection_manager, "connection-closing",
       G_CALLBACK (xmpp_connection_manager_connection_closing_cb), self);
-
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, priv->xmpp_connection,
-      message_stanza_filter, message_stanza_callback, self);
 
   if (priv->xmpp_connection->stream_flags
         & GIBBER_XMPP_CONNECTION_CLOSE_SENT) {
@@ -454,11 +396,7 @@ connection_disconnected (SalutTubesChannel *self)
 
   if (priv->xmpp_connection != NULL)
     {
-      DEBUG ("connection closed. Remove filters");
-
-      salut_xmpp_connection_manager_remove_stanza_filter (
-          priv->xmpp_connection_manager, priv->xmpp_connection,
-          message_stanza_filter, message_stanza_callback, self);
+      DEBUG ("connection closed.");
 
       g_object_unref (priv->xmpp_connection);
       priv->xmpp_connection = NULL;
@@ -2327,10 +2265,6 @@ salut_tubes_channel_dispose (GObject *object)
 
   if (priv->xmpp_connection != NULL)
     {
-      salut_xmpp_connection_manager_remove_stanza_filter (
-          priv->xmpp_connection_manager, priv->xmpp_connection,
-          message_stanza_filter, message_stanza_callback, self);
-
       g_object_unref (priv->xmpp_connection);
       priv->xmpp_connection = NULL;
     }
