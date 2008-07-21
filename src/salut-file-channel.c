@@ -274,7 +274,7 @@ salut_file_channel_set_property (GObject *object,
                                       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
       case PROP_TRANSFERRED_BYTES:
-        self->priv->state = g_value_get_uint64 (value);
+        self->priv->transferred_bytes = g_value_get_uint64 (value);
         break;
       case PROP_DIRECTION:
         /* TODO: the new request API will remove the need for this property */
