@@ -855,9 +855,8 @@ salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
                               SalutFileTransferStateChangeReason reason)
 {
   SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
-  SalutFileChannelClass *klass = SALUT_FILE_CHANNEL_CLASS (self);
 
-  g_object_set_data (G_OBJECT (klass), "state", (gpointer) state);
+  self->priv->state = state;
   salut_svc_channel_type_file_emit_file_transfer_state_changed (iface,
       state, reason);
 }
