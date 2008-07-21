@@ -782,20 +782,9 @@ static gboolean
 setup_local_socket (SalutFileChannel *self);
 
 static void
-send_file_offer (SalutFileChannel *self,
-                 guint id)
+send_file_offer (SalutFileChannel *self)
 {
-  GValue *val;
-  GValueArray *val_array;
   GibberFileTransfer *ft;
-  const gchar *filename;
-  GHashTable *information;
-
-  /* TODO from mixin: retrieve the file name and the additional information */
-  val_array = g_value_get_boxed (val);
-  g_free (val);
-  filename = g_value_get_string (g_value_array_get_nth (val_array, 4));
-  information = g_value_get_boxed (g_value_array_get_nth (val_array, 5));
 
   ft = g_object_new (GIBBER_TYPE_OOB_FILE_TRANSFER,
       "self-id", self->priv->connection->name,
@@ -807,15 +796,14 @@ send_file_offer (SalutFileChannel *self,
       G_CALLBACK (remote_accepted_cb), self);
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
 
-  g_hash_table_insert (self->priv->name_to_id, (gchar *) ft->id,
-      GINT_TO_POINTER (id));
-  /* TODO from mixin: set user data */
+  self->priv->ft = ft;
 
   setup_local_socket (self);
 
-  val = g_hash_table_lookup (information, "size");
-  if (val != NULL)
-    ft->size = g_value_get_uint64 (val);
+  if (self->priv->size != G_MAXUINT64)
+    ft->size = self->priv->size;
+  else
+    ft->size = self->priv->estimated_size;
 
   gibber_file_transfer_offer (ft);
 }
@@ -837,9 +825,8 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 
   data->self->priv->xmpp_connection = g_object_ref (connection);
   g_signal_handlers_disconnect_by_func (mgr,
-      xmpp_connection_manager_new_connection_cb, user_data);
-  send_file_offer (data->self, data->id);
-  g_free (data);
+                                        xmpp_connection_manager_new_connection_cb, user_data);
+  send_file_offer (channel);
 }
 
 static void
