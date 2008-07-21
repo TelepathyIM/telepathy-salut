@@ -269,7 +269,9 @@ salut_file_channel_set_property (GObject *object,
         g_object_ref (self->priv->xmpp_connection_manager);
         break;
       case PROP_STATE:
-        self->priv->state = g_value_get_uint (value);
+        salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (object),
+                                      g_value_get_uint (value),
+                                      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
       case PROP_TRANSFERRED_BYTES:
         self->priv->state = g_value_get_uint64 (value);
@@ -756,17 +758,18 @@ static void
 ft_finished_cb (GibberFileTransfer *ft,
                 SalutFileChannel *self)
 {
+  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
+                                SALUT_FILE_TRANSFER_STATE_COMPLETED,
+                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 }
 
 static void
 remote_accepted_cb (GibberFileTransfer *ft,
                     SalutFileChannel *self)
 {
-  guint id;
-  SalutFileChannelClass *class = SALUT_FILE_CHANNEL_CLASS (self);
-
-  id = GPOINTER_TO_INT (g_hash_table_lookup (self->priv->name_to_id, ft->id));
-  g_object_set_data (G_OBJECT (class), "state", (gpointer) SALUT_FILE_TRANSFER_STATE_OPEN);
+  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
+                                SALUT_FILE_TRANSFER_STATE_OPEN,
+                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 }
