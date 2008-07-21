@@ -877,7 +877,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
 {
   SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
   GError *error = NULL;
-  GValue *out_address = { 0 };
+  GValue out_address = { 0 };
   GibberFileTransfer *ft;
 
   ft = self->priv->ft;
@@ -894,9 +894,10 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
   salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
         SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
-  g_value_init (out_address, G_TYPE_STRING);
+  g_value_init (&out_address, G_TYPE_STRING);
+  g_value_set_string (&out_address, g_build_filename (self->priv->local_unix_path, "tp-ft", NULL));
 
-  salut_svc_channel_type_file_return_from_accept_file (context, out_address);
+  salut_svc_channel_type_file_return_from_accept_file (context, &out_address);
 }
 
 static void
