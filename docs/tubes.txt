@@ -1,0 +1,17 @@
+Implementation of tubes in telepathy-salut
+==========================================
+
+- Stream tubes and D-Bus tubes in a chatroom
+
+Implemented. The XMPP spec is available on:
+http://telepathy.freedesktop.org/xmpp/tubes.html
+
+- 1-1 stream tubes
+
+Implemented. The XMPP spec is not finalized. The current code uses
+stream-initiation (XEP-0095).
+
+- 1-1 D-Bus tubes
+
+Not tested, work in progress.
+
