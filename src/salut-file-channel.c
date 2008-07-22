@@ -279,6 +279,7 @@ salut_file_channel_set_property (GObject *object,
         self->priv->transferred_bytes = g_value_get_uint64 (value);
         break;
       case PROP_DIRECTION:
+        self->priv->direction = g_value_get_uint (value);
         break;
       case PROP_CONTENT_TYPE:
         /* This should not be writeable with the new request API */
