@@ -351,6 +351,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         </tp:error>
         <tp:error name="org.freedesktop.Telepathy.Error.NetworkError"/>
         <tp:error name="org.freedesktop.Telepathy.Error.InvalidArgument"/>
+        <tp:error name="org.freedesktop.Telepathy.Error.NotAvailable">
+          <tp:docstring>
+          The file transfer is not in the "local pending" state, which is the only
+          state this method makes sense.
+          </tp:docstring>
+        </tp:error>
       </tp:possible-errors>
     </method>
 
