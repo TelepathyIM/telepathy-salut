@@ -912,6 +912,13 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
       g_error_free (error);
     }
 
+  /* TODO: check whether we actually are in the local pending state */
+
+  if (address_type != SALUT_SOCKET_ADDRESS_TYPE_UNIX)
+    {
+      /* TODO fail here. we only support unix sockets so far */
+    }
+
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 
   setup_local_socket (self);
