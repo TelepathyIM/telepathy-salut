@@ -238,8 +238,8 @@ AC_SUBST(AVAHI_LIBS)
 
 dnl Check for libsoup
 PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.2])
-AC_SUBST(AVAHI_CFLAGS)
-AC_SUBST(AVAHI_LIBS)
+AC_SUBST(LIBSOUP_CFLAGS)
+AC_SUBST(LIBSOUP_LIBS)
 
 dnl glibc backtrace functions
 AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
