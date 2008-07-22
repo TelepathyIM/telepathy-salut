@@ -913,11 +913,20 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
       g_error_free (error);
     }
 
-  /* TODO: check whether we actually are in the local pending state */
+  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+        "State is not local pending; cannot accept file");
+      dbus_g_method_return_error (context, error);
+      return;
+    }
 
   if (address_type != SALUT_SOCKET_ADDRESS_TYPE_UNIX)
     {
-      /* TODO fail here. we only support unix sockets so far */
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+        "Address type %u not implemented", address_type);
+      dbus_g_method_return_error (context, error);
+      return;
     }
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
