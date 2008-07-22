@@ -66,7 +66,7 @@ struct _SalutFtManagerPrivate
   SalutConnection *connection;
   SalutXmppConnectionManager *xmpp_connection_manager;
   SalutContactManager *contact_manager;
-  GHashTable *channels;
+  GList *channels;
 };
 
 #define SALUT_FT_MANAGER_GET_PRIVATE(o) \
@@ -82,8 +82,7 @@ salut_ft_manager_init (SalutFtManager *obj)
   priv->connection = NULL;
 
   /* allocate any data required by the object here */
-  priv->channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-                                          NULL, g_object_unref);
+  priv->channels = g_list_alloc ();
 }
 
 static gboolean
@@ -114,10 +113,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
-  if (chan == NULL)
-    chan = salut_ft_manager_new_channel (self, handle, TRUE);
-
+  chan = salut_ft_manager_new_channel (self, handle, TRUE);
   salut_file_channel_received_file_offer (chan, stanza, conn);
 }
 
@@ -141,7 +137,6 @@ salut_ft_manager_dispose (GObject *object)
 {
   SalutFtManager *self = SALUT_FT_MANAGER (object);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
-  GHashTable *t;
 
   if (priv->dispose_has_run)
     return;
@@ -165,11 +160,7 @@ salut_ft_manager_dispose (GObject *object)
     }
 
   if (priv->channels)
-    {
-      t = priv->channels;
-      priv->channels = NULL;
-      g_hash_table_destroy (t);
-    }
+    g_list_free (priv->channels);
 
   /* release any references held by the object here */
 
@@ -193,16 +184,11 @@ salut_ft_manager_finalize (GObject *object)
 static void
 salut_ft_manager_factory_iface_close_all (TpChannelFactoryIface *iface)
 {
-  GHashTable *t;
   SalutFtManager *mgr = SALUT_FT_MANAGER (iface);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (mgr);
 
   if (priv->channels)
-    {
-      t = priv->channels;
-      priv->channels = NULL;
-      g_hash_table_destroy (t);
-    }
+    g_list_free (priv->channels);
 }
 
 static void
@@ -247,7 +233,7 @@ salut_ft_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
   f.func = func;
   f.data = data;
 
-  g_hash_table_foreach (priv->channels, salut_ft_manager_iface_foreach_one, &f);
+  g_list_foreach (priv->channels, (GFunc) salut_ft_manager_iface_foreach_one, &f);
 }
 
 static void
@@ -261,7 +247,7 @@ file_channel_closed_cb (SalutFileChannel *chan, gpointer user_data)
     {
       g_object_get (chan, "handle", &handle, NULL);
       DEBUG ("Removing channel with handle %d", handle);
-      g_hash_table_remove (priv->channels, GINT_TO_POINTER (handle));
+      priv->channels = g_list_remove (priv->channels, chan);
     }
 }
 
@@ -280,8 +266,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   gchar *path = NULL;
   guint direction, state;
 
-  g_assert (g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle))
-            == NULL);
   DEBUG ("Requested channel for handle: %d", handle);
 
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
@@ -307,7 +291,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
                        NULL);
   g_object_unref (contact);
   g_free (path);
-  g_hash_table_insert (priv->channels, GINT_TO_POINTER (handle), chan);
   tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
       NULL);
   g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), mgr);
@@ -327,7 +310,6 @@ salut_ft_manager_factory_iface_request (TpChannelFactoryIface *iface,
   SalutFtManager *mgr = SALUT_FT_MANAGER (iface);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (mgr);
   SalutFileChannel *chan;
-  gboolean created = FALSE;
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
@@ -358,16 +340,10 @@ salut_ft_manager_factory_iface_request (TpChannelFactoryIface *iface,
        return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
     }
 
-  chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
-  if (chan == NULL)
-    {
-      chan = salut_ft_manager_new_channel (mgr, handle, FALSE);
-      created = TRUE;
-    }
+  chan = salut_ft_manager_new_channel (mgr, handle, FALSE);
   *ret = TP_CHANNEL_IFACE (chan);
 
-  return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED
-                 : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+  return TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
 }
 
 static void salut_ft_manager_factory_iface_init (gpointer *g_iface,
