@@ -143,6 +143,7 @@ struct _SalutTubesChannelPrivate
   ChannelState state;
   GibberIqHelper *iq_helper;
 
+  /* guint tube_id -> SalutTubeDBus tube */
   GHashTable *tubes;
 
   gboolean closed;
