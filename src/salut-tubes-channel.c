@@ -1782,7 +1782,7 @@ _send_channel_iq_tube (gpointer key,
                 NULL);
 
   DEBUG ("called for tube id %d", tube_id);
-  if (salut_tube_iface_offer_needed(tube))
+  if (salut_tube_iface_offer_needed (tube))
     {
       GError *error = NULL;
       GibberXmppNode *parameters_node;
