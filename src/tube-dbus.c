@@ -1033,8 +1033,7 @@ salut_tube_dbus_new (SalutConnection *conn,
                      TpHandle initiator,
                      const gchar *service,
                      GHashTable *parameters,
-                     guint id,
-                     GibberBytestreamIface *bytestream)
+                     guint id)
 {
   SalutTubeDBus *tube = g_object_new (SALUT_TYPE_TUBE_DBUS,
       "connection", conn,
@@ -1047,9 +1046,6 @@ salut_tube_dbus_new (SalutConnection *conn,
       "parameters", parameters,
       "id", id,
       NULL);
-
-  if (bytestream != NULL)
-    g_object_set (tube, "bytestream", bytestream, NULL);
 
   return tube;
 }
