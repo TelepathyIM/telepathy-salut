@@ -372,7 +372,7 @@ start_stream_initiation (SalutTubeStream *self,
   struct _extra_bytestream_negotiate_cb_data *data;
   SalutContact *contact;
   SalutContactManager *contact_mgr;
-  SalutSiBytestreamManager *bytestream_mgr;
+  SalutSiBytestreamManager *si_bytestream_mgr;
 
   contact_repo = tp_base_connection_get_handles (
      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -391,6 +391,7 @@ start_stream_initiation (SalutTubeStream *self,
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
+      g_assert_not_reached ();
       node = gibber_xmpp_node_add_child (si_node, "stream");
     }
   else
@@ -412,10 +413,10 @@ start_stream_initiation (SalutTubeStream *self,
   data->fd = fd;
 
   g_object_get (priv->conn,
-      "bytestream-manager", &bytestream_mgr,
+      "si-bytestream-manager", &si_bytestream_mgr,
       "contact-manager", &contact_mgr,
       NULL);
-  g_assert (bytestream_mgr != NULL);
+  g_assert (si_bytestream_mgr != NULL);
   g_assert (contact_mgr != NULL);
 
   contact = salut_contact_manager_get_contact (contact_mgr, priv->initiator);
@@ -428,7 +429,7 @@ start_stream_initiation (SalutTubeStream *self,
   else
     {
       result = salut_si_bytestream_manager_negotiate_stream (
-        bytestream_mgr,
+        si_bytestream_mgr,
         contact,
         msg,
         stream_id,
@@ -439,7 +440,7 @@ start_stream_initiation (SalutTubeStream *self,
       g_object_unref (contact);
     }
 
-  g_object_unref (bytestream_mgr);
+  g_object_unref (si_bytestream_mgr);
   g_object_unref (contact_mgr);
   g_object_unref (msg);
   g_free (stream_id);
@@ -499,10 +500,25 @@ listen_cb (GIOChannel *source,
 
   DEBUG ("request new bytestream");
 
-  if (!start_stream_initiation (self, fd, NULL))
+  /* Streams in MUC tubes are established with stream initiation (XEP-0095).
+   * We use SalutSiBytestreamManager.
+   *
+   * Streams in P2P tubes are established directly with a TCP connection. We
+   * use SalutDirectBytestreamManager.
+   */
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      DEBUG ("closing new client connection");
+      /* TODO: To be implemented */
+      DEBUG ("SalutDirectBytestreamManager to be implemented");
       close (fd);
+    }
+  else
+    {
+      if (!start_stream_initiation (self, fd, NULL))
+        {
+          DEBUG ("closing new client connection");
+          close (fd);
+        }
     }
 
   return TRUE;

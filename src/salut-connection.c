@@ -44,6 +44,7 @@
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-si-bytestream-manager.h"
+#include "salut-direct-bytestream-manager.h"
 
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity-manager.h"
@@ -136,6 +137,7 @@ enum {
   PROP_SELF,
   PROP_XCM,
   PROP_SI_BYTESTREAM_MANAGER,
+  PROP_DIRECT_BYTESTREAM_MANAGER,
 #ifdef ENABLE_OLPC
   PROP_OLPC_ACTIVITY_MANAGER,
 #endif
@@ -182,8 +184,11 @@ struct _SalutConnectionPrivate
   /* Tubes channel manager */
   SalutTubesManager *tubes_manager;
 
-  /* Bytestream manager */
+  /* Bytestream manager for stream initiation (XEP-0095) */
   SalutSiBytestreamManager *si_bytestream_manager;
+
+  /* Bytestream manager for p2p tubes */
+  SalutDirectBytestreamManager *direct_bytestream_manager;
 
 #ifdef ENABLE_OLPC
   SalutOlpcActivityManager *olpc_activity_manager;
@@ -306,6 +311,17 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_SI_BYTESTREAM_MANAGER:
       g_value_set_object (value, priv->si_bytestream_manager);
+      break;
+    case PROP_DIRECT_BYTESTREAM_MANAGER:
+      g_value_set_object (value, priv->direct_bytestream_manager);
+      break;
+#ifdef ENABLE_OLPC
+    case PROP_OLPC_ACTIVITY_MANAGER:
+      g_value_set_object (value, priv->olpc_activity_manager);
+      break;
+#endif
+    case PROP_BACKEND:
+      g_value_set_gtype (value, priv->backend_type);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -668,15 +684,53 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
-      "bytestream-manager",
+      "si-bytestream-manager",
       "SalutSiBytestreamManager object",
-      "The Salut Bytestream Manager associated with this Salut Connection",
+      "The Salut SI Bytestream Manager associated with this Salut Connection",
       SALUT_TYPE_SI_BYTESTREAM_MANAGER,
       G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_SI_BYTESTREAM_MANAGER,
       param_spec);
+
+  param_spec = g_param_spec_object (
+      "direct-bytestream-manager",
+      "SalutDirectBytestreamManager object",
+      "The Salut Direct Bytestream Manager associated with this Salut Connection",
+      SALUT_TYPE_SI_BYTESTREAM_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_DIRECT_BYTESTREAM_MANAGER,
+      param_spec);
+
+#ifdef ENABLE_OLPC
+  param_spec = g_param_spec_object (
+      "olpc-activity-manager",
+      "SalutOlpcActivityManager object",
+      "The OLPC activity Manager associated with this Salut Connection",
+      SALUT_TYPE_OLPC_ACTIVITY_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_OLPC_ACTIVITY_MANAGER,
+      param_spec);
+#endif
+
+  param_spec = g_param_spec_gtype (
+      "backend-type",
+      "backend type",
+      "a G_TYPE_GTYPE of the backend to use",
+      G_TYPE_NONE,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_BACKEND,
+      param_spec);
+
 }
 
 void
@@ -716,6 +770,12 @@ salut_connection_dispose (GObject *object)
     {
       g_object_unref (priv->si_bytestream_manager);
       priv->si_bytestream_manager = NULL;
+    }
+
+  if (priv->direct_bytestream_manager != NULL)
+    {
+      g_object_unref (priv->direct_bytestream_manager);
+      priv->direct_bytestream_manager = NULL;
     }
 
   /* release any references held by the object here */
@@ -871,6 +931,8 @@ _ga_client_running_cb(GaClient *c,
 
   /* Create the bytestream manager */
   priv->si_bytestream_manager = salut_si_bytestream_manager_new (self,
+    salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
+  priv->direct_bytestream_manager = salut_direct_bytestream_manager_new (self,
     salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
 }
 
