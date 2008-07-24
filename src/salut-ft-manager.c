@@ -213,10 +213,11 @@ struct foreach_data {
 };
 
 static void
-salut_ft_manager_iface_foreach_one (gpointer key,
-                                    gpointer value,
+salut_ft_manager_iface_foreach_one (gpointer value,
                                     gpointer data)
 {
+  if (!value)
+    return;
   TpChannelIface *chan = TP_CHANNEL_IFACE (value);
   struct foreach_data *f = (struct foreach_data *) data;
 
@@ -294,6 +295,8 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
       NULL);
   g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), mgr);
+
+  priv->channels = g_list_append (priv->channels, chan);
 
   return chan;
 }
