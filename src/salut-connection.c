@@ -135,7 +135,11 @@ enum {
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
-  PROP_BYTESTREAM_MANAGER,
+  PROP_SI_BYTESTREAM_MANAGER,
+#ifdef ENABLE_OLPC
+  PROP_OLPC_ACTIVITY_MANAGER,
+#endif
+  PROP_BACKEND,
   LAST_PROP
 };
 
@@ -179,7 +183,14 @@ struct _SalutConnectionPrivate
   SalutTubesManager *tubes_manager;
 
   /* Bytestream manager */
-  SalutBytestreamManager *bytestream_manager;
+  SalutSiBytestreamManager *si_bytestream_manager;
+
+#ifdef ENABLE_OLPC
+  SalutOlpcActivityManager *olpc_activity_manager;
+#endif
+
+  /* Backend type: avahi or dummy */
+  GType backend_type;
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
@@ -293,8 +304,8 @@ salut_connection_get_property (GObject *object,
     case PROP_XCM:
       g_value_set_object (value, priv->xmpp_connection_manager);
       break;
-    case PROP_BYTESTREAM_MANAGER:
-      g_value_set_object (value, priv->bytestream_manager);
+    case PROP_SI_BYTESTREAM_MANAGER:
+      g_value_set_object (value, priv->si_bytestream_manager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -658,13 +669,13 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   param_spec = g_param_spec_object (
       "bytestream-manager",
-      "SalutBytestreamManager object",
+      "SalutSiBytestreamManager object",
       "The Salut Bytestream Manager associated with this Salut Connection",
-      SALUT_TYPE_BYTESTREAM_MANAGER,
+      SALUT_TYPE_SI_BYTESTREAM_MANAGER,
       G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_BYTESTREAM_MANAGER,
+  g_object_class_install_property (object_class, PROP_SI_BYTESTREAM_MANAGER,
       param_spec);
 }
 
@@ -701,10 +712,10 @@ salut_connection_dispose (GObject *object)
     priv->avahi_client = NULL;
   }
 
-  if (priv->bytestream_manager != NULL)
+  if (priv->si_bytestream_manager != NULL)
     {
-      g_object_unref (priv->bytestream_manager);
-      priv->bytestream_manager = NULL;
+      g_object_unref (priv->si_bytestream_manager);
+      priv->si_bytestream_manager = NULL;
     }
 
   /* release any references held by the object here */
@@ -859,8 +870,8 @@ _ga_client_running_cb(GaClient *c,
     }
 
   /* Create the bytestream manager */
-  priv->bytestream_manager = salut_bytestream_manager_new (self,
-    avahi_client_get_host_name_fqdn (priv->avahi_client->avahi_client));
+  priv->si_bytestream_manager = salut_si_bytestream_manager_new (self,
+    salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
 }
 
 /* public functions */

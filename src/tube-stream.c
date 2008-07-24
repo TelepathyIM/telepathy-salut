@@ -372,7 +372,7 @@ start_stream_initiation (SalutTubeStream *self,
   struct _extra_bytestream_negotiate_cb_data *data;
   SalutContact *contact;
   SalutContactManager *contact_mgr;
-  SalutBytestreamManager *bytestream_mgr;
+  SalutSiBytestreamManager *bytestream_mgr;
 
   contact_repo = tp_base_connection_get_handles (
      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -381,7 +381,7 @@ start_stream_initiation (SalutTubeStream *self,
 
   stream_id = generate_stream_id (self);
 
-  msg = salut_bytestream_manager_make_stream_init_iq (priv->conn->name, jid,
+  msg = salut_si_bytestream_manager_make_stream_init_iq (priv->conn->name, jid,
       stream_id, GIBBER_TELEPATHY_NS_TUBES);
 
   si_node = gibber_xmpp_node_get_child_ns (msg->node, "si", GIBBER_XMPP_NS_SI);
@@ -427,7 +427,7 @@ start_stream_initiation (SalutTubeStream *self,
     }
   else
     {
-      result = salut_bytestream_manager_negotiate_stream (
+      result = salut_si_bytestream_manager_negotiate_stream (
         bytestream_mgr,
         contact,
         msg,

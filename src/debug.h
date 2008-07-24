@@ -27,7 +27,7 @@ typedef enum
   DEBUG_MUC_CONNECTION = 1 << 8,
   DEBUG_CONNECTION     = 1 << 9,
   DEBUG_IM             = 1 << 10,
-  DEBUG_BYTESTREAM_MGR = 1 << 11,
+  DEBUG_SI_BYTESTREAM_MGR = 1 << 11,
   DEBUG_NET            = 1 << 12,
   DEBUG_SELF           = 1 << 13,
   DEBUG_TUBES          = 1 << 14,
