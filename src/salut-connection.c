@@ -43,7 +43,12 @@
 #include "salut-contact.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
-#include "salut-bytestream-manager.h"
+#include "salut-si-bytestream-manager.h"
+
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity-manager.h"
+#endif
+
 #include "salut-tubes-manager.h"
 
 #include "salut-presence.h"

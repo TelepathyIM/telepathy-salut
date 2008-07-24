@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "salut-bytestream-manager.h"
+#include "salut-si-bytestream-manager.h"
 
 #include <stdio.h>
 #include <stdlib.h>

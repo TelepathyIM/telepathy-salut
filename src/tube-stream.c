@@ -47,7 +47,7 @@
 #include "extensions/extensions.h"
 #include "salut-connection.h"
 #include "tube-iface.h"
-#include "salut-bytestream-manager.h"
+#include "salut-si-bytestream-manager.h"
 #include "salut-contact-manager.h"
 #include "salut-xmpp-connection-manager.h"
 
