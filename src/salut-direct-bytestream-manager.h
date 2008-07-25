@@ -66,4 +66,9 @@ SalutDirectBytestreamManager *
 salut_direct_bytestream_manager_new (SalutConnection *connection,
     const gchar *host_name_fqdn);
 
+void
+salut_direct_new_listening_stream (SalutDirectBytestreamManager *self,
+    SalutContact *contact, GibberXmppConnection *connection);
+
+
 #endif /* #ifndef __SALUT_DIRECT_BYTESTREAM_MANAGER_H__*/

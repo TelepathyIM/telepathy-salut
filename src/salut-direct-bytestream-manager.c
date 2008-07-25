@@ -27,6 +27,7 @@
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 #include <gibber/gibber-iq-helper.h>
+#include <gibber/gibber-bytestream-direct.h>
 
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
@@ -237,6 +238,22 @@ salut_direct_bytestream_manager_new (SalutConnection *conn,
       SALUT_TYPE_DIRECT_BYTESTREAM_MANAGER,
       "connection", conn,
       "host-name-fqdn", host_name_fqdn,
+      NULL);
+}
+
+void
+salut_direct_new_listening_stream (SalutDirectBytestreamManager *self,
+                                   SalutContact *contact,
+                                   GibberXmppConnection *connection)
+{
+  SalutDirectBytestreamManagerPrivate *priv;
+  priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+
+  g_object_new (GIBBER_TYPE_BYTESTREAM_DIRECT,
+      "xmpp-connection", connection,
+      "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
+      "self-id", priv->connection->name,
+      "peer-id", contact->name,
       NULL);
 }
 
