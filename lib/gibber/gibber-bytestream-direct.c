@@ -287,6 +287,7 @@ gibber_bytestream_direct_send (GibberBytestreamIface *bytestream,
                             guint len,
                             const gchar *str)
 {
+  DEBUG ("not implemented");
   return TRUE;
 }
 
@@ -301,6 +302,7 @@ gibber_bytestream_direct_accept (GibberBytestreamIface *bytestream,
                               GibberBytestreamAugmentSiAcceptReply func,
                               gpointer user_data)
 {
+  DEBUG ("not implemented");
 }
 
 /*
@@ -312,6 +314,7 @@ static void
 gibber_bytestream_direct_close (GibberBytestreamIface *bytestream,
                              GError *error)
 {
+  DEBUG ("not implemented");
 }
 
 /*
@@ -322,6 +325,7 @@ gibber_bytestream_direct_close (GibberBytestreamIface *bytestream,
 static gboolean
 gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
 {
+  DEBUG ("not implemented");
   return FALSE;
 }
 
