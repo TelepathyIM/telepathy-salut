@@ -308,8 +308,6 @@ struct _extra_bytestream_negotiate_cb_data
 
 static void
 extra_bytestream_negotiate_cb (GibberBytestreamIface *bytestream,
-                               const gchar *stream_id,
-                               GibberXmppStanza *msg,
                                gpointer user_data)
 {
   struct _extra_bytestream_negotiate_cb_data *data =
