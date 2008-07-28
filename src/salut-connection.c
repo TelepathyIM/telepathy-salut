@@ -698,7 +698,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "direct-bytestream-manager",
       "SalutDirectBytestreamManager object",
       "The Salut Direct Bytestream Manager associated with this Salut Connection",
-      SALUT_TYPE_SI_BYTESTREAM_MANAGER,
+      SALUT_TYPE_DIRECT_BYTESTREAM_MANAGER,
       G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
