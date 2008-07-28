@@ -43,7 +43,7 @@ struct _SalutDirectBytestreamManager {
 };
 
 
-GType salut_Direct_bytestream_manager_get_type (void);
+GType salut_direct_bytestream_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_DIRECT_BYTESTREAM_MANAGER \
