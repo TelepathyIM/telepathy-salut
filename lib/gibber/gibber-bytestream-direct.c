@@ -53,12 +53,12 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum
 {
-  PROP_XMPP_CONNECTION = 1,
-  PROP_SELF_ID,
+  PROP_SELF_ID = 1,
   PROP_PEER_ID,
   PROP_STREAM_ID,
   PROP_STREAM_INIT_ID,
   PROP_STATE,
+  PROP_PROTOCOL,
   LAST_PROPERTY
 };
 
@@ -133,9 +133,6 @@ gibber_bytestream_direct_get_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_XMPP_CONNECTION:
-        g_value_set_object (value, priv->xmpp_connection);
-        break;
       case PROP_SELF_ID:
         g_value_set_string (value, priv->self_id);
         break;
@@ -150,6 +147,9 @@ gibber_bytestream_direct_get_property (GObject *object,
         break;
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
+        break;
+      case PROP_PROTOCOL:
+        g_value_set_string (value, (const gchar *)"");
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -168,14 +168,6 @@ gibber_bytestream_direct_set_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_XMPP_CONNECTION:
-        priv->xmpp_connection = g_value_get_object (value);
-        /*
-        if (priv->xmpp_connection != NULL)
-          g_signal_connect (priv->xmpp_connection, "received-stanza",
-              G_CALLBACK (xmpp_connection_received_stanza_cb), self);
-              */
-        break;
       case PROP_SELF_ID:
         g_free (priv->self_id);
         priv->self_id = g_value_dup_string (value);
@@ -218,7 +210,6 @@ gibber_bytestream_direct_constructor (GType type,
 
   priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (GIBBER_BYTESTREAM_DIRECT (obj));
 
-  g_assert (priv->xmpp_connection != NULL);
   g_assert (priv->stream_init_id != NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
@@ -251,20 +242,8 @@ gibber_bytestream_direct_class_init (
       "stream-id");
   g_object_class_override_property (object_class, PROP_STATE,
       "state");
-
-  param_spec = g_param_spec_object (
-      "xmpp-connection",
-      "GibberXmppConnection object",
-      "Gibber XMPP connection object used for communication by this "
-      "bytestream if it's a private one",
-      GIBBER_TYPE_XMPP_CONNECTION,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
-      param_spec);
+  g_object_class_override_property (object_class, PROP_PROTOCOL,
+      "protocol");
 
   param_spec = g_param_spec_string (
       "stream-init-id",
