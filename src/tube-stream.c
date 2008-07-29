@@ -48,6 +48,7 @@
 #include "salut-connection.h"
 #include "tube-iface.h"
 #include "salut-si-bytestream-manager.h"
+#include "salut-direct-bytestream-manager.h"
 #include "salut-contact-manager.h"
 #include "salut-xmpp-connection-manager.h"
 
@@ -90,7 +91,7 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_CONNECTION = 1,
-  PROP_CHANNEL,
+  //PROP_CHANNEL,
   PROP_HANDLE,
   PROP_HANDLE_TYPE,
   PROP_SELF_HANDLE,
@@ -116,12 +117,17 @@ struct _SalutTubeStreamPrivate
   TpHandleType handle_type;
   TpHandle self_handle;
   guint id;
+
+  /* Bytestreams for MUC (using stream initiation) */
+
   /* (GibberTransport *) -> (GibberBytestreamIface *) */
   GHashTable *transport_to_bytestream;
   /* (GibberBytestreamIface *) -> (GibberTransport *) */
   GHashTable *bytestream_to_transport;
   /* (GibberBytestreamIface *) -> int */
   GHashTable *bytestream_to_fd;
+
+
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
@@ -303,6 +309,7 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
 struct _extra_bytestream_negotiate_cb_data
 {
   SalutTubeStream *self;
+  /* file descriptor of the connection from the local application */
   gint fd;
 };
 
@@ -447,6 +454,79 @@ start_stream_initiation (SalutTubeStream *self,
   return result;
 }
 
+static gboolean
+start_stream_direct (SalutTubeStream *self,
+                     gint fd,
+                     GError **error)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpHandleRepoIface *contact_repo;
+  const gchar *jid;
+  gboolean result;
+  struct _extra_bytestream_negotiate_cb_data *data;
+  SalutContact *contact;
+  SalutContactManager *contact_mgr;
+  SalutDirectBytestreamManager *direct_bytestream_mgr;
+
+  g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
+
+  contact_repo = tp_base_connection_get_handles (
+     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+  jid = tp_handle_inspect (contact_repo, priv->initiator);
+
+  data = g_slice_new (struct _extra_bytestream_negotiate_cb_data);
+  data->self = self;
+  data->fd = fd;
+
+  g_object_get (priv->conn,
+      "direct-bytestream-manager", &direct_bytestream_mgr,
+      "contact-manager", &contact_mgr,
+      NULL);
+  g_assert (direct_bytestream_mgr != NULL);
+  g_assert (contact_mgr != NULL);
+
+  contact = salut_contact_manager_get_contact (contact_mgr, priv->initiator);
+  if (contact == NULL)
+    {
+      result = FALSE;
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+          "can't find contact with handle %d", priv->initiator);
+    }
+  else
+    {
+      GibberBytestreamIface *bytestream;
+      bytestream = salut_direct_bytestream_manager_new_stream (
+          direct_bytestream_mgr,
+          contact);
+
+      if (bytestream == NULL)
+        {
+          DEBUG ("initiator refused new bytestream");
+
+          close (fd);
+        }
+      else
+        {
+          DEBUG ("extra bytestream accepted");
+
+          g_hash_table_insert (priv->bytestream_to_fd,
+              g_object_ref (bytestream), GUINT_TO_POINTER (fd));
+
+          g_signal_connect (bytestream, "state-changed",
+              G_CALLBACK (extra_bytestream_state_changed_cb), self);
+        }
+
+      g_object_unref (contact);
+    }
+
+  g_object_unref (direct_bytestream_mgr);
+  g_object_unref (contact_mgr);
+
+  return result;
+}
+
+/* callback for listening connections from the local application */
 gboolean
 listen_cb (GIOChannel *source,
            GIOCondition condition,
@@ -506,9 +586,11 @@ listen_cb (GIOChannel *source,
    */
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      /* TODO: To be implemented */
-      DEBUG ("SalutDirectBytestreamManager to be implemented");
-      close (fd);
+      if (!start_stream_direct (self, fd, NULL))
+        {
+          DEBUG ("closing new client connection");
+          close (fd);
+        }
     }
   else
     {
@@ -1239,6 +1321,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL_PARAM,
       param_spec);
 
+  /*
   param_spec = g_param_spec_object (
       "channel",
       "SalutTubesChannel object",
@@ -1250,6 +1333,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CHANNEL,
       param_spec);
+   */
 
   param_spec = g_param_spec_object (
       "xmpp-connection-manager",

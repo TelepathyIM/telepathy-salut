@@ -66,9 +66,15 @@ SalutDirectBytestreamManager *
 salut_direct_bytestream_manager_new (SalutConnection *connection,
     const gchar *host_name_fqdn);
 
+/* To be used on the CM-initiator side, to receive connections from the remote
+ * CM */
 void
 salut_direct_new_listening_stream (SalutDirectBytestreamManager *self,
     SalutContact *contact, GibberXmppConnection *connection);
 
+/* To be used on the CM-receptor side, to make a new connection */
+GibberBytestreamIface *
+salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
+    SalutContact *contact);
 
 #endif /* #ifndef __SALUT_DIRECT_BYTESTREAM_MANAGER_H__*/

@@ -46,6 +46,7 @@
 #include "salut-contact.h"
 #include "salut-muc-channel.h"
 #include "salut-xmpp-connection-manager.h"
+#include "salut-direct-bytestream-manager.h"
 #include "tube-iface.h"
 #include "tube-dbus.h"
 #include "tube-stream.h"
@@ -1795,6 +1796,20 @@ _send_channel_iq_tube (gpointer key,
 
       gchar *tube_id_str = g_strdup_printf ("%d", tube_id);
 
+      /* listen for future connections from the remote CM before sending the
+       * iq */
+      SalutDirectBytestreamManager *direct_bytestream_mgr;
+      g_assert (priv->conn != NULL);
+      g_object_get (priv->conn,
+          "direct-bytestream-manager", &direct_bytestream_mgr,
+          NULL);
+      g_assert (direct_bytestream_mgr != NULL);
+
+      salut_direct_new_listening_stream (direct_bytestream_mgr, priv->contact,
+          priv->xmpp_connection);
+      g_object_unref (direct_bytestream_mgr);
+
+
       contact_repo = tp_base_connection_get_handles (
          (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
@@ -1865,7 +1880,6 @@ _send_channel_iq_tubes (SalutTubesChannel *self)
     }
 
   g_hash_table_foreach (priv->tubes, _send_channel_iq_tube, self);
-
 }
 
 
