@@ -385,6 +385,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
     { "ContentMD5", "content-md5", "content-md5" },
     { "Description", "description", "description" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
+    { "TransferredBytes", "transferred-bytes", "transferred-bytes" },
     { "SocketPath", "socket-path", "socket-path" },
     { NULL }
   };
