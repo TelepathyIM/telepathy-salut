@@ -836,7 +836,7 @@ salut_file_channel_check_and_send (SalutFileChannel *channel)
       return;
     }
 
-  if (channel->priv->size == 0 && channel->priv->estimated_size == 0)
+  if (channel->priv->size == G_MAXUINT64 && channel->priv->estimated_size == G_MAXUINT64)
     {
       DEBUG ("Size property not present; not starting file transfer");
       return;
