@@ -275,6 +275,8 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
       return NULL;
     }
 
+  DEBUG ("%s channel requested", incoming ? "Incoming" : "Outgoing");
+
   state = incoming ? SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING : SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING;
   direction = incoming ? SALUT_FILE_TRANSFER_DIRECTION_INCOMING : SALUT_FILE_TRANSFER_DIRECTION_OUTGOING;
 

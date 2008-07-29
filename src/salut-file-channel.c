@@ -825,16 +825,28 @@ salut_file_channel_check_and_send (SalutFileChannel *channel)
   GError *error = NULL;
 
   if (G_STR_EMPTY (channel->priv->content_type))
-    return;
+    {
+      DEBUG ("ContentType not present; not starting file transfer");
+      return;
+    }
 
   if (G_STR_EMPTY (channel->priv->filename))
-    return;
+    {
+      DEBUG ("Filename property not present; not starting file transfer");
+      return;
+    }
 
   if (channel->priv->size == 0 && channel->priv->estimated_size == 0)
-    return;
+    {
+      DEBUG ("Size property not present; not starting file transfer");
+      return;
+    }
 
   if (G_STR_EMPTY (channel->priv->content_md5))
-    return;
+    {
+      DEBUG ("ContentMD5 property not present; not starting file transfer");
+      return;
+    }
 
   DEBUG ("Starting sending file transfer");
 
