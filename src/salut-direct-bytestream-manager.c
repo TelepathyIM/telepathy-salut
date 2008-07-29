@@ -60,13 +60,6 @@ struct _SalutDirectBytestreamManagerPrivate
   SalutXmppConnectionManager *xmpp_connection_manager;
   gchar *host_name_fqdn;
 
-  /* (GibberTransport *) -> (GibberBytestreamIface *) */
-  GHashTable *transport_to_bytestream;
-  /* (GibberBytestreamIface *) -> (GibberTransport *) */
-  GHashTable *bytestream_to_transport;
-  /* (GibberBytestreamIface *) -> int */
-  GHashTable *bytestream_to_fd;
-
   /* guint id -> guint listener_watch
    * When used by stream tubes, the id is the tube_id */
   GHashTable *listener_watchs;
