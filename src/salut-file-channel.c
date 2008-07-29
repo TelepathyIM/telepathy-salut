@@ -64,6 +64,8 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
 
 #define G_STR_EMPTY(x) ((x) == NULL || (x)[0] == '\0')
 
+#define SALUT_UNDEFINED_FILE_SIZE G_MAXUINT64
+
 /* signal enum */
 /*
 enum
@@ -524,7 +526,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "Size of the file in bytes",
       0,
       G_MAXUINT64,
-      G_MAXUINT64,
+      SALUT_UNDEFINED_FILE_SIZE,
       /* TODO: change this to CONSTRUCT_ONLY when
        * the new request API is used.
        */
@@ -540,7 +542,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "Estimated size of the file in bytes",
       0,
       G_MAXUINT64,
-      G_MAXUINT64,
+      SALUT_UNDEFINED_FILE_SIZE,
       /* TODO: change this to CONSTRUCT_ONLY when
        * the new request API is used.
        */
@@ -795,7 +797,7 @@ send_file_offer (SalutFileChannel *self)
 
   setup_local_socket (self);
 
-  if (self->priv->size != G_MAXUINT64)
+  if (self->priv->size != SALUT_UNDEFINED_FILE_SIZE)
     ft->size = self->priv->size;
   else
     ft->size = self->priv->estimated_size;
@@ -836,7 +838,7 @@ salut_file_channel_check_and_send (SalutFileChannel *channel)
       return;
     }
 
-  if (channel->priv->size == G_MAXUINT64 && channel->priv->estimated_size == G_MAXUINT64)
+  if (channel->priv->size == SALUT_UNDEFINED_FILE_SIZE && channel->priv->estimated_size == SALUT_UNDEFINED_FILE_SIZE)
     {
       DEBUG ("Size property not present; not starting file transfer");
       return;
