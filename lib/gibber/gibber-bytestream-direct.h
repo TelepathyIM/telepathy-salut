@@ -21,12 +21,17 @@
 #define __GIBBER_BYTESTREAM_DIRECT_H__
 
 #include <glib-object.h>
+#include <netdb.h>
 #include "gibber-bytestream-iface.h"
 
 G_BEGIN_DECLS
 
 typedef struct _GibberBytestreamDirect GibberBytestreamDirect;
 typedef struct _GibberBytestreamDirectClass GibberBytestreamDirectClass;
+
+typedef gboolean (* GibberBytestreamDirectCheckAddrFunc) (
+    GibberBytestreamDirect *bytestream, struct sockaddr_storage *addr,
+    socklen_t addrlen, gpointer user_data);
 
 struct _GibberBytestreamDirectClass {
   GObjectClass parent_class;
@@ -56,6 +61,10 @@ GType gibber_bytestream_direct_get_type (void);
 #define GIBBER_BYTESTREAM_DIRECT_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_BYTESTREAM_DIRECT,\
                               GibberBytestreamDirectClass))
+
+void gibber_bytestream_direct_set_check_addr_func (
+    GibberBytestreamDirect *bytestream,
+    GibberBytestreamDirectCheckAddrFunc func, gpointer user_data);
 
 G_END_DECLS
 
