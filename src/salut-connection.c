@@ -106,7 +106,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_DBUS_PROPERTIES,
        tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
-       tp_presence_mixin_simple_iface_init);
+       tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
 #ifdef ENABLE_OLPC
@@ -606,7 +606,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       is_presence_status_available, get_contact_statuses, set_own_status,
       presence_statuses);
 
-  tp_presence_mixin_simple_init_dbus_properties (object_class);
+  tp_presence_mixin_simple_presence_init_dbus_properties (object_class);
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
