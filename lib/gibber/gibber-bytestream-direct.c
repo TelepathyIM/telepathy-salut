@@ -91,9 +91,6 @@ struct _GibberBytestreamDirectPrivate
   gboolean write_blocked;
   gboolean read_blocked;
 
-  guint16 seq;
-  guint16 last_seq_recv;
-
   GibberBytestreamDirectCheckAddrFunc check_addr_func;
   gpointer check_addr_func_data;
 
