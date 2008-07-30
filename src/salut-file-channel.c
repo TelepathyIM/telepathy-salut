@@ -762,6 +762,9 @@ ft_finished_cb (GibberFileTransfer *ft,
   salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
                                 SALUT_FILE_TRANSFER_STATE_COMPLETED,
                                 SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+
+  salut_xmpp_connection_manager_release_connection (self->priv->xmpp_connection_manager,
+                                                    self->priv->xmpp_connection);
 }
 
 static void
