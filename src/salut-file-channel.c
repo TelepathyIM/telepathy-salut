@@ -814,6 +814,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   SalutFileChannel *channel = user_data;
 
   channel->priv->xmpp_connection = g_object_ref (connection);
+  salut_xmpp_connection_manager_take_connection (mgr, connection);
   g_signal_handlers_disconnect_by_func (mgr,
                                         xmpp_connection_manager_new_connection_cb, user_data);
   send_file_offer (channel);
@@ -880,6 +881,7 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
 {
   GibberFileTransfer *ft;
 
+  salut_xmpp_connection_manager_take_connection (self->priv->xmpp_connection_manager , conn);
   ft = gibber_file_transfer_new_from_stanza (stanza, conn);
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
 
