@@ -62,6 +62,11 @@ enum
   PROP_STREAM_ID,
   PROP_STREAM_INIT_ID,
   PROP_STATE,
+
+  /* relevent only on recipient side to connect to the initiator */
+  PROP_HOST,
+  PROP_PORT,
+
   PROP_PROTOCOL,
   LAST_PROPERTY
 };
@@ -77,6 +82,7 @@ struct _GibberBytestreamDirectPrivate
   GibberBytestreamState state;
 
   gchar *host;
+  guint portnum;
 
   /* Are we the recipient of this bytestream?
    * If not we are the sender */
@@ -164,6 +170,12 @@ gibber_bytestream_direct_get_property (GObject *object,
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
         break;
+      case PROP_HOST:
+        g_value_set_string (value, priv->host);
+        break;
+      case PROP_PORT:
+        g_value_set_uint (value, priv->portnum);
+        break;
       case PROP_PROTOCOL:
         g_value_set_string (value, (const gchar *)"");
         break;
@@ -206,6 +218,13 @@ gibber_bytestream_direct_set_property (GObject *object,
               priv->state = g_value_get_uint (value);
               g_signal_emit (object, signals[STATE_CHANGED], 0, priv->state);
             }
+        break;
+      case PROP_HOST:
+        g_free (priv->host);
+        priv->host = g_value_dup_string (value);
+        break;
+      case PROP_PORT:
+        priv->portnum = g_value_get_uint (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -272,6 +291,34 @@ gibber_bytestream_direct_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
+      param_spec);
+
+  param_spec = g_param_spec_string (
+      "host",
+      "host",
+      "IP address for the recipient to connect on the initiator",
+      "",
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_HOST,
+      param_spec);
+
+  param_spec = g_param_spec_uint (
+      "port",
+      "port",
+      "port for the recipient to connect on the initiator",
+      0,
+      G_MAXUINT32,
+      0,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_PORT,
       param_spec);
 
   signals[DATA_RECEIVED] =
