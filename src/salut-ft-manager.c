@@ -267,6 +267,9 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   gchar *path = NULL;
   guint direction, state;
 
+  /* Increasing guint to make sure object paths are random */
+  static guint id = 0;
+
   DEBUG ("Requested channel for handle: %d", handle);
 
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
@@ -281,8 +284,11 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   direction = incoming ? SALUT_FILE_TRANSFER_DIRECTION_INCOMING : SALUT_FILE_TRANSFER_DIRECTION_OUTGOING;
 
   name = tp_handle_inspect (handle_repo, handle);
-  path = g_strdup_printf ("%s/FileChannel/%u",
-                         base_connection->object_path, handle);
+  path = g_strdup_printf ("%s/FileChannel/%u/%u",
+                         base_connection->object_path, handle, id++);
+
+  DEBUG ("Object path of file channel is %s", path);
+
   chan = g_object_new (SALUT_TYPE_FILE_CHANNEL,
                        "connection", priv->connection,
                        "contact", contact,
