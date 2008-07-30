@@ -66,6 +66,13 @@ void gibber_bytestream_direct_set_check_addr_func (
     GibberBytestreamDirect *bytestream,
     GibberBytestreamDirectCheckAddrFunc func, gpointer user_data);
 
+gboolean
+gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
+                                        int listen_fd);
+void
+gibber_bytestream_direct_block_read (GibberBytestreamDirect *self,
+                                     gboolean block);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_BYTESTREAM_DIRECT_H__ */
