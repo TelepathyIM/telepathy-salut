@@ -23,6 +23,7 @@
 #include <glib-object.h>
 #include "salut-xmpp-connection-manager.h"
 #include "salut-contact.h"
+#include "tube-iface.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-bytestream-iface.h>
@@ -67,14 +68,18 @@ salut_direct_bytestream_manager_new (SalutConnection *connection,
     const gchar *host_name_fqdn);
 
 /* To be used on the CM-initiator side, to receive connections from the remote
- * CM */
-void
+ * CM
+ *
+ * return: port
+ * */
+int
 salut_direct_new_listening_stream (SalutDirectBytestreamManager *self,
-    SalutContact *contact, GibberXmppConnection *connection);
+    SalutContact *contact, GibberXmppConnection *connection,
+    SalutTubeIface *tube);
 
 /* To be used on the CM-receptor side, to make a new connection */
 GibberBytestreamIface *
 salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
-    SalutContact *contact);
+    SalutContact *contact, int portnum);
 
 #endif /* #ifndef __SALUT_DIRECT_BYTESTREAM_MANAGER_H__*/

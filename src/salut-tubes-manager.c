@@ -132,7 +132,8 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
                           TpHandle *initiator_handle,
                           const gchar **service,
                           GHashTable **parameters,
-                          guint *tube_id)
+                          guint *tube_id,
+                          guint *portnum)
 {
   GibberXmppNode *iq;
   GibberXmppNode *tube_node, *close_node, *node;
@@ -219,6 +220,36 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
           "parameter");
     }
 
+  if (!_close && portnum != NULL)
+    {
+      GibberXmppNode *node;
+      const gchar *str;
+      gchar *endptr;
+      long int tmp;
+
+      node = gibber_xmpp_node_get_child (tube_node, "transport");
+      if (node == NULL)
+        {
+          DEBUG ("no transport to connect to in the tube request");
+          return FALSE;
+        }
+
+      str = gibber_xmpp_node_get_attribute (node, "port");
+      if (str == NULL)
+        {
+          DEBUG ("no port to connect to in the tube request");
+          return FALSE;
+        }
+
+      tmp = strtol (str, &endptr, 10);
+      if (!endptr || *endptr)
+        {
+          DEBUG ("port is not numeric: %s", str);
+          return FALSE;
+        }
+      *portnum = (int) tmp;
+    }
+
   if (tube_id != NULL)
     {
       const gchar *str;
@@ -263,6 +294,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   TpHandle initiator_handle;
   GHashTable *parameters = NULL;
   guint tube_id;
+  guint portnum = 0;
   gboolean close;
 
   SalutTubesChannel *chan;
@@ -271,7 +303,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
    * it or send an error reply */
 
   if (!extract_tube_information (contact_repo, stanza, &close, &tube_type,
-          &initiator_handle, &service, &parameters, &tube_id))
+          &initiator_handle, &service, &parameters, &tube_id, &portnum))
     {
       GibberXmppStanza *reply;
 
@@ -304,7 +336,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
       }
 
     tubes_message_received (chan, service, tube_type, initiator_handle,
-        parameters, tube_id);
+        parameters, tube_id, portnum);
   }
 
   reply = gibber_iq_helper_new_result_reply (stanza);

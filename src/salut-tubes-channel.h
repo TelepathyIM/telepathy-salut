@@ -73,7 +73,7 @@ void tubes_muc_message_received (SalutTubesChannel *channel,
 
 void tubes_message_received (SalutTubesChannel *self,
     const gchar *service, TpTubeType tube_type, TpHandle initiator_handle,
-    GHashTable *parameters, guint tube_id);
+    GHashTable *parameters, guint tube_id, guint portnum);
 
 void tubes_message_close_received (SalutTubesChannel *self,
     TpHandle initiator_handle, guint tube_id);

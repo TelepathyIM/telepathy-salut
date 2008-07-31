@@ -164,7 +164,7 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
     const gchar **service, GHashTable **parameters, guint *tube_id);
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
     TpTubeType type, TpHandle initiator, const gchar *service,
-    GHashTable *parameters, guint tube_id);
+    GHashTable *parameters, guint tube_id, guint portnum);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -791,7 +791,7 @@ tubes_muc_message_received (SalutTubesChannel *self,
                 }
 
               tube = create_new_tube (self, type, initiator_handle,
-                  service, parameters, tube_id);
+                  service, parameters, tube_id, 0);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -868,7 +868,8 @@ tubes_message_received (SalutTubesChannel *self,
                         TpTubeType tube_type,
                         TpHandle initiator_handle,
                         GHashTable *parameters,
-                        guint tube_id)
+                        guint tube_id,
+                        guint portnum)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
@@ -879,7 +880,7 @@ tubes_message_received (SalutTubesChannel *self,
   if (tube == NULL)
     {
       tube = create_new_tube (self, tube_type, initiator_handle, service,
-        parameters, tube_id);
+        parameters, tube_id, portnum);
     }
 }
 
@@ -1046,6 +1047,7 @@ tube_closed_cb (SalutTubeIface *tube,
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   guint tube_id;
 
+  DEBUG ("Called. closed=%d", priv->closed);
   if (priv->closed)
     return;
 
@@ -1083,7 +1085,8 @@ create_new_tube (SalutTubesChannel *self,
                  TpHandle initiator,
                  const gchar *service,
                  GHashTable *parameters,
-                 guint tube_id)
+                 guint tube_id,
+                 guint portnum)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
@@ -1103,7 +1106,8 @@ create_new_tube (SalutTubesChannel *self,
     case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
           priv->xmpp_connection_manager, priv->handle, priv->handle_type,
-          priv->self_handle, initiator, service, parameters, tube_id));
+          priv->self_handle, initiator, service, parameters, tube_id,
+          portnum));
       break;
     default:
       g_assert_not_reached ();
@@ -1459,7 +1463,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      service, parameters_copied, tube_id);
+      service, parameters_copied, tube_id, 0);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 }
@@ -1795,6 +1799,8 @@ _send_channel_iq_tube (gpointer key,
       TpHandleRepoIface *contact_repo;
 
       gchar *tube_id_str = g_strdup_printf ("%d", tube_id);
+      int port;
+      gchar *port_str;
 
       /* listen for future connections from the remote CM before sending the
        * iq */
@@ -1805,8 +1811,8 @@ _send_channel_iq_tube (gpointer key,
           NULL);
       g_assert (direct_bytestream_mgr != NULL);
 
-      salut_direct_new_listening_stream (direct_bytestream_mgr, priv->contact,
-          priv->xmpp_connection);
+      port = salut_direct_new_listening_stream (direct_bytestream_mgr,
+          priv->contact, priv->xmpp_connection, tube);
       g_object_unref (direct_bytestream_mgr);
 
 
@@ -1829,6 +1835,8 @@ _send_channel_iq_tube (gpointer key,
             g_assert_not_reached ();
         }
 
+      port_str = g_strdup_printf ("%d", port);
+
       stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
           GIBBER_STANZA_SUB_TYPE_SET,
           jid_from, jid_to,
@@ -1837,6 +1845,10 @@ _send_channel_iq_tube (gpointer key,
             GIBBER_NODE_ATTRIBUTE, "type", tube_type_str,
             GIBBER_NODE_ATTRIBUTE, "service", service,
             GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
+            GIBBER_NODE, "transport",
+              GIBBER_NODE_ATTRIBUTE, "ip", "127.0.0.1", /* FIXME */
+              GIBBER_NODE_ATTRIBUTE, "port", port_str,
+            GIBBER_NODE_END,
           GIBBER_NODE_END,
           GIBBER_STANZA_END);
 
@@ -1859,6 +1871,7 @@ _send_channel_iq_tube (gpointer key,
 
       g_object_unref (stanza);
       g_free (tube_id_str);
+      g_free (port_str);
     }
 
   g_free (service);
@@ -1936,7 +1949,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
-      service, parameters_copied, tube_id);
+      service, parameters_copied, tube_id, 0);
 
   g_object_set (tube,
       "address-type", address_type,

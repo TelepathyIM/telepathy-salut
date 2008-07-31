@@ -610,7 +610,8 @@ gibber_bytestream_direct_accept (GibberBytestreamIface *bytestream,
                               GibberBytestreamAugmentSiAcceptReply func,
                               gpointer user_data)
 {
-  DEBUG ("not implemented");
+  /* nothing to do */
+  DEBUG ("Called.");
 }
 
 /*
@@ -622,7 +623,25 @@ static void
 gibber_bytestream_direct_close (GibberBytestreamIface *bytestream,
                              GError *error)
 {
-  DEBUG ("not implemented");
+  GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (bytestream);
+  GibberBytestreamDirectPrivate *priv =
+      GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+
+  if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSED)
+     /* bytestream already closed, do nothing */
+     return;
+
+  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
+  if (priv->transport != NULL &&
+      !gibber_transport_buffer_is_empty (priv->transport))
+    {
+      DEBUG ("Wait transport buffer is empty before close the bytestream");
+    }
+  else
+    {
+      DEBUG ("Transport buffer is empty, we can close the bytestream");
+      bytestream_closed (self);
+    }
 }
 
 /*

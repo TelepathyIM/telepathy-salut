@@ -35,6 +35,7 @@
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
 #include "salut-tubes-manager.h"
+#include "tube-iface.h"
 
 #define DEBUG_FLAG DEBUG_DIRECT_BYTESTREAM_MGR
 #include "debug.h"
@@ -226,7 +227,7 @@ salut_direct_bytestream_manager_class_init (
   param_spec = g_param_spec_string (
       "host-name-fqdn",
       "host name FQDN",
-      "The FQDN host name that will be used by OOB bytestreams",
+      "The FQDN host name that will be used by direct bytestreams",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
@@ -250,27 +251,12 @@ salut_direct_bytestream_manager_new (SalutConnection *conn,
       NULL);
 }
 
-/* transport between the 2 CM, called on the initiator's side */
-static void
-set_transport (SalutDirectBytestreamManager *self,
-               GibberTransport *transport)
+struct _listener_io_in_cb_data
 {
-  //SalutDirectBytestreamManagerPrivate *priv =
-  //    SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
-
-  /* the transport_handler is called when something is received in the
-   * transport */
-  //gibber_transport_set_handler (transport, transport_handler, self);
-
-  /*
-  g_signal_connect (transport, "connected",
-      G_CALLBACK (transport_connected_cb), self);
-  g_signal_connect (transport, "disconnected",
-      G_CALLBACK (transport_disconnected_cb), self);
-  g_signal_connect (priv->transport, "buffer-empty",
-      G_CALLBACK (transport_buffer_empty_cb), self);
-      */
-}
+  SalutDirectBytestreamManager *mgr;
+  SalutTubeIface *tube;
+  SalutContact *contact;
+};
 
 /* callback when receiving a connection from the remote CM */
 static gboolean
@@ -278,33 +264,25 @@ listener_io_in_cb (GIOChannel *source,
                    GIOCondition condition,
                    gpointer user_data)
 {
-  SalutDirectBytestreamManager *self = SALUT_DIRECT_BYTESTREAM_MANAGER
-      (user_data);
-  int listen_fd, fd, ret;
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  struct sockaddr_storage addr;
-  socklen_t addrlen = sizeof (struct sockaddr_storage);
-  GibberLLTransport *ll_transport;
+  struct _listener_io_in_cb_data *data = user_data;
+  SalutDirectBytestreamManagerPrivate *priv;
+  GibberBytestreamIface *bytestream;
+  int listen_fd;
 
   listen_fd = g_io_channel_unix_get_fd (source);
-  fd = accept (listen_fd, (struct sockaddr *) &addr, &addrlen);
-  gibber_normalize_address (&addr);
 
-  ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
-      host, NI_MAXHOST, port, NI_MAXSERV,
-      NI_NUMERICHOST | NI_NUMERICSERV);
+  DEBUG ("Called. listen_fd=%d", listen_fd);
 
-  /* check_addr_func */
+  priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (data->mgr);
 
-  if (ret == 0)
-    DEBUG("New connection from %s port %s", host, port);
-  else
-    DEBUG("New connection..");
+  bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_DIRECT,
+      "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
+      "self-id", priv->connection->name,
+      "peer-id", data->contact->name,
+      NULL);
 
-  ll_transport = gibber_ll_transport_new ();
-  set_transport (self, GIBBER_TRANSPORT (ll_transport));
-  gibber_ll_transport_open_fd (ll_transport, fd);
+  salut_tube_iface_add_bytestream (data->tube, bytestream);
+  gibber_bytestream_direct_accept_socket (bytestream, listen_fd);
 
   return FALSE;
 }
@@ -317,10 +295,12 @@ listener_io_in_cb (GIOChannel *source,
  */
 static int
 start_listen_for_connection (SalutDirectBytestreamManager *self,
-                             gpointer id)
+                             SalutContact *contact,
+                             SalutTubeIface *tube)
 {
   SalutDirectBytestreamManagerPrivate *priv;
   priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  struct _listener_io_in_cb_data *data;
   GIOChannel *listener;
   guint *listener_watch;
   int port;
@@ -401,14 +381,19 @@ start_listen_for_connection (SalutDirectBytestreamManager *self,
 
   DEBUG ("listen on %s:%d", priv->host_name_fqdn, port);
 
+  data = g_slice_new (struct _listener_io_in_cb_data);
+  data->mgr = self;
+  data->tube = tube;
+  data->contact = contact,
+
   listener = g_io_channel_unix_new (fd);
   g_io_channel_set_close_on_unref (listener, TRUE);
   listener_watch = g_malloc (sizeof (*listener_watch));
   *listener_watch = g_io_add_watch (listener, G_IO_IN,
-      listener_io_in_cb, self);
+      listener_io_in_cb, data);
 
-  /* add id->listener_watch in priv->listener_watchs */
-  g_hash_table_insert (priv->listener_watchs, id, listener_watch);
+  /* add tube->listener_watch in priv->listener_watchs */
+  g_hash_table_insert (priv->listener_watchs, tube, listener_watch);
 
   freeaddrinfo (ans);
   return port;
@@ -422,23 +407,24 @@ error:
   return -1;
 }
 
-void
+int
 salut_direct_new_listening_stream (SalutDirectBytestreamManager *self,
                                    SalutContact *contact,
-                                   GibberXmppConnection *connection)
+                                   GibberXmppConnection *connection,
+                                   SalutTubeIface *tube)
 {
   SalutDirectBytestreamManagerPrivate *priv;
   priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
 
   DEBUG ("salut_direct_new_listening_stream: Called.");
 
-  start_listen_for_connection (self, NULL);
-
+  return start_listen_for_connection (self, contact, tube);
 }
 
 GibberBytestreamIface *
 salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
-                                            SalutContact *contact)
+                                            SalutContact *contact,
+                                            int portnum)
 {
   GibberBytestreamIface *bytestream;
   SalutDirectBytestreamManagerPrivate *priv;
@@ -447,17 +433,13 @@ salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
 
   bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_DIRECT,
       "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
+      "self-id", priv->connection->name,
+      "peer-id", contact->name,
+      "host", "127.0.0.1", /* FIXME! */
+      "port", portnum,
       NULL);
 
   g_assert (bytestream != NULL);
-
-  /* Let's start the initiation of the stream */
-  if (!gibber_bytestream_iface_initiate (bytestream))
-    {
-      /* Initiation failed. */
-      gibber_bytestream_iface_close (bytestream, NULL);
-      bytestream = NULL;
-    }
 
   return bytestream;
 }

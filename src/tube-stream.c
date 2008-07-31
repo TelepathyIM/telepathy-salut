@@ -36,6 +36,8 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-bytestream-iface.h>
+#include <gibber/gibber-bytestream-oob.h>
+#include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-transport.h>
 #include <gibber/gibber-fd-transport.h>
 #include <gibber/gibber-iq-helper.h>
@@ -106,6 +108,7 @@ enum
   PROP_ACCESS_CONTROL,
   PROP_ACCESS_CONTROL_PARAM,
   PROP_XMPP_CONNECTION_MANAGER,
+  PROP_PORT,
   LAST_PROPERTY
 };
 
@@ -117,8 +120,13 @@ struct _SalutTubeStreamPrivate
   TpHandleType handle_type;
   TpHandle self_handle;
   guint id;
+  guint port;
 
-  /* Bytestreams for MUC (using stream initiation) */
+  /* Bytestreams for MUC tubes (using stream initiation) or 1-1 tubes (using
+   * direct TCP connections). One tube can have several bytestreams. The
+   * mapping between the tube bytestream and the transport to the local
+   * application is stored in the transport_to_bytestream and
+   * bytestream_to_transport fields. */
 
   /* (GibberTransport *) -> (GibberBytestreamIface *) */
   GHashTable *transport_to_bytestream;
@@ -263,6 +271,8 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  DEBUG ("Called.");
 
   if (state == GIBBER_BYTESTREAM_STATE_OPEN)
     {
@@ -454,6 +464,7 @@ start_stream_initiation (SalutTubeStream *self,
   return result;
 }
 
+/* start a new stream in a tube from the recipient side */
 static gboolean
 start_stream_direct (SalutTubeStream *self,
                      gint fd,
@@ -469,6 +480,8 @@ start_stream_direct (SalutTubeStream *self,
   SalutDirectBytestreamManager *direct_bytestream_mgr;
 
   g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
+
+  DEBUG ("Called.");
 
   contact_repo = tp_base_connection_get_handles (
      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -498,23 +511,35 @@ start_stream_direct (SalutTubeStream *self,
       GibberBytestreamIface *bytestream;
       bytestream = salut_direct_bytestream_manager_new_stream (
           direct_bytestream_mgr,
-          contact);
+          contact, priv->port);
 
       if (bytestream == NULL)
         {
           DEBUG ("initiator refused new bytestream");
+          result = FALSE;
 
           close (fd);
         }
       else
         {
           DEBUG ("extra bytestream accepted");
+          result = TRUE;
 
           g_hash_table_insert (priv->bytestream_to_fd,
               g_object_ref (bytestream), GUINT_TO_POINTER (fd));
 
           g_signal_connect (bytestream, "state-changed",
               G_CALLBACK (extra_bytestream_state_changed_cb), self);
+
+          /* Let's start the initiation of the stream */
+          if (!gibber_bytestream_iface_initiate (bytestream))
+            {
+              /* Initiation failed. */
+              gibber_bytestream_iface_close (bytestream, NULL);
+              result = FALSE;
+              close (fd);
+            }
+
         }
 
       g_object_unref (contact);
@@ -612,6 +637,8 @@ new_connection_to_socket (SalutTubeStream *self,
   int fd;
   SockAddr addr;
   socklen_t len;
+
+  DEBUG ("Called.");
 
   g_assert (priv->initiator == priv->self_handle);
 
@@ -1111,6 +1138,9 @@ salut_tube_stream_get_property (GObject *object,
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, priv->xmpp_connection_manager);
         break;
+      case PROP_PORT:
+        g_value_set_uint (value, priv->port);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -1181,6 +1211,9 @@ salut_tube_stream_set_property (GObject *object,
       case PROP_XMPP_CONNECTION_MANAGER:
         priv->xmpp_connection_manager = g_value_get_object (value);
         g_object_ref (priv->xmpp_connection_manager);
+        break;
+      case PROP_PORT:
+        priv->port = g_value_get_uint (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1348,6 +1381,20 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
+  param_spec = g_param_spec_uint (
+      "port",
+      "port on the initiator's CM",
+      "New stream in this tube will connect to the initiator's CM on this port"
+      " in case of 1-1 tube",
+      0,
+      G_MAXUINT32,
+      0,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_PORT, param_spec);
+
   signals[OPENED] =
     g_signal_new ("opened",
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
@@ -1402,6 +1449,24 @@ data_received_cb (GibberBytestreamIface *bytestream,
     DEBUG ("sending failed: %s", error->message);
     g_error_free (error);
   }
+
+  if (!gibber_transport_buffer_is_empty (transport))
+    {
+      /* We >don't want to send more data while the buffer isn't empty */
+      /* FIXME: Should we move this as bytestream-iface method? */
+      if (GIBBER_IS_BYTESTREAM_OOB (bytestream))
+          {
+            DEBUG ("tube buffer isn't empty. Block the bytestream");
+            gibber_bytestream_oob_block_read (
+              GIBBER_BYTESTREAM_OOB (bytestream), TRUE);
+          }
+      else if (GIBBER_IS_BYTESTREAM_DIRECT (bytestream))
+          {
+            DEBUG ("tube buffer isn't empty. Block the bytestream");
+            gibber_bytestream_direct_block_read (
+              GIBBER_BYTESTREAM_DIRECT (bytestream), TRUE);
+          }
+    }
 }
 
 SalutTubeStream *
@@ -1413,7 +1478,8 @@ salut_tube_stream_new (SalutConnection *conn,
                         TpHandle initiator,
                         const gchar *service,
                         GHashTable *parameters,
-                        guint id)
+                        guint id,
+                        guint portnum)
 {
   return g_object_new (SALUT_TYPE_TUBE_STREAM,
       "connection", conn,
@@ -1425,6 +1491,7 @@ salut_tube_stream_new (SalutConnection *conn,
       "service", service,
       "parameters", parameters,
       "id", id,
+      "port", portnum,
       NULL);
 }
 
@@ -1577,6 +1644,8 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  DEBUG ("Called.");
 
   if (priv->initiator != priv->self_handle)
     {
