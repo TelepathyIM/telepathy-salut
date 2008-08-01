@@ -1056,6 +1056,7 @@ tube_closed_cb (SalutTubeIface *tube,
     {
       DEBUG ("Can't find tube having this id: %d", tube_id);
     }
+
   DEBUG ("tube %d removed", tube_id);
 
   /* Emit the DBusNamesChanged signal */
@@ -1760,6 +1761,13 @@ iq_reply_cb (GibberIqHelper *helper,
   DEBUG ("tube offered successfully");
 }
 
+static void
+_new_connection_cb (GibberBytestreamIface *bytestream, gpointer user_data)
+{
+  SalutTubeIface *tube = user_data;
+
+  salut_tube_iface_add_bytestream (tube, bytestream);
+}
 
 static void
 _send_channel_iq_tube (gpointer key,
@@ -1811,8 +1819,8 @@ _send_channel_iq_tube (gpointer key,
           NULL);
       g_assert (direct_bytestream_mgr != NULL);
 
-      port = salut_direct_new_listening_stream (direct_bytestream_mgr,
-          priv->contact, priv->xmpp_connection, tube);
+      port = salut_direct_bytestream_manager_listen (direct_bytestream_mgr,
+          priv->contact, _new_connection_cb, tube);
       g_object_unref (direct_bytestream_mgr);
 
 

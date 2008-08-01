@@ -1621,6 +1621,20 @@ salut_tube_stream_close (SalutTubeIface *tube)
       g_free (tube_id_str);
 
       g_object_unref (stanza);
+
+      if (priv->initiator == priv->self_handle)
+        {
+          SalutDirectBytestreamManager *direct_bytestream_mgr;
+          g_assert (priv->conn != NULL);
+          g_object_get (priv->conn,
+              "direct-bytestream-manager", &direct_bytestream_mgr,
+              NULL);
+          g_assert (direct_bytestream_mgr != NULL);
+
+          salut_direct_bytestream_manager_stop_listen (direct_bytestream_mgr, tube);
+          g_object_unref (direct_bytestream_mgr);
+        }
+
     }
 
   g_signal_emit (G_OBJECT (self), signals[CLOSED], 0);

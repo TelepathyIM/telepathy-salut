@@ -33,6 +33,9 @@ G_BEGIN_DECLS
 typedef struct _SalutDirectBytestreamManager SalutDirectBytestreamManager;
 typedef struct _SalutDirectBytestreamManagerClass SalutDirectBytestreamManagerClass;
 
+typedef void (* SalutDirectBytestreamManagerNewConnectionFunc) (
+    GibberBytestreamIface *bytestream, gpointer user_data);
+
 struct _SalutDirectBytestreamManagerClass {
     GObjectClass parent_class;
 };
@@ -67,15 +70,13 @@ SalutDirectBytestreamManager *
 salut_direct_bytestream_manager_new (SalutConnection *connection,
     const gchar *host_name_fqdn);
 
-/* To be used on the CM-initiator side, to receive connections from the remote
- * CM
- *
- * return: port
- * */
-int
-salut_direct_new_listening_stream (SalutDirectBytestreamManager *self,
-    SalutContact *contact, GibberXmppConnection *connection,
-    SalutTubeIface *tube);
+int salut_direct_bytestream_manager_listen (SalutDirectBytestreamManager *self,
+    SalutContact *contact,
+    SalutDirectBytestreamManagerNewConnectionFunc new_connection_cb,
+    gpointer id);
+
+void salut_direct_bytestream_manager_stop_listen (
+    SalutDirectBytestreamManager *self, gpointer id);
 
 /* To be used on the CM-receptor side, to make a new connection */
 GibberBytestreamIface *
