@@ -277,6 +277,11 @@ http_client_finished_chunks_cb (SoupMessage *msg,
   if (gibber_file_transfer_send_stanza (GIBBER_FILE_TRANSFER (self), stanza,
         &error))
     {
+      /* Send one last TransferredBytes signal. This will definitely get
+       * through, even if it has been < 1s since the last emission, so that
+       * clients will show 100% for sure.
+       */
+      transferred_chunk (self, 0);
       g_signal_emit_by_name (self, "finished");
     }
   else

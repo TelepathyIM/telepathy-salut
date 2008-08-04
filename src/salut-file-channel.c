@@ -923,7 +923,11 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel
 
   g_get_current_time (&timeval);
 
-  if (timeval.tv_sec >= self->priv->last_transferred_bytes_emitted + 1)
+  /* Only emit the TransferredBytes signal if it has been one second since its
+   * last emission, OR if the transfer has finished.
+   */
+  if (timeval.tv_sec >= (self->priv->last_transferred_bytes_emitted + 1)
+      || self->priv->transferred_bytes == self->priv->size)
     {
       salut_svc_channel_type_file_emit_transferred_bytes_changed (iface,
           self->priv->transferred_bytes);
