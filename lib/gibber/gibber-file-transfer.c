@@ -40,6 +40,7 @@ enum
   REMOTE_ACCEPTED,
   FINISHED,
   ERROR,
+  TRANSFERRED_CHUNK,
   LAST_SIGNAL
 };
 
@@ -248,6 +249,13 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
       0, NULL, NULL,
       _gibber_signals_marshal_VOID__UINT_INT_STRING,
       G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
+
+  signals[TRANSFERRED_CHUNK] = g_signal_new ("transferred-chunk",
+      G_OBJECT_CLASS_TYPE (gibber_file_transfer_class),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+      0, NULL, NULL,
+      _gibber_signals_marshal_VOID__UINT64,
+      G_TYPE_NONE, 1, G_TYPE_UINT64);
 }
 
 static void

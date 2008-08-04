@@ -210,6 +210,13 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
   return GIBBER_FILE_TRANSFER (self);
 }
 
+static void
+transferred_chunk (GibberOobFileTransfer *self,
+                guint64 bytes_read)
+{
+  g_signal_emit_by_name (self, "transferred-chunk", bytes_read);
+}
+
 /*
  * Data received from the HTTP server.
  */
@@ -222,6 +229,7 @@ http_client_chunk_cb (SoupMessage *msg,
   /* FIXME make async */
   g_io_channel_write_chars (self->priv->channel, msg->response.body,
       msg->response.length, NULL, NULL);
+  transferred_chunk (self, (guint64) msg->response.length);
 }
 
 /*
@@ -405,6 +413,7 @@ input_channel_readable_cb (GIOChannel *source,
               buff, bytes_read);
           soup_message_io_unpause (self->priv->msg);
           DEBUG("Data available, writing a %d bytes chunk", bytes_read);
+          transferred_chunk (self, (guint64) bytes_read);
           return FALSE;
         case G_IO_STATUS_AGAIN:
           DEBUG("Data available, try again");

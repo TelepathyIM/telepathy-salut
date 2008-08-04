@@ -778,8 +778,8 @@ remote_accepted_cb (GibberFileTransfer *ft,
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 }
 
-static gboolean
-setup_local_socket (SalutFileChannel *self);
+static gboolean setup_local_socket (SalutFileChannel *self);
+static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel *self);
 
 static void
 send_file_offer (SalutFileChannel *self)
@@ -797,6 +797,8 @@ send_file_offer (SalutFileChannel *self)
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
 
   self->priv->ft = ft;
+
+  g_signal_connect (ft, "transferred-chunk", G_CALLBACK (ft_transferred_chunk_cb), self);
 
   setup_local_socket (self);
 
@@ -908,6 +910,17 @@ salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
       state, reason);
 }
 
+static void
+ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel *self)
+{
+  SalutSvcChannelTypeFile *iface = SALUT_SVC_CHANNEL_TYPE_FILE (self);
+
+  self->priv->transferred_bytes += count;
+
+  salut_svc_channel_type_file_emit_transferred_bytes_changed (iface,
+      self->priv->transferred_bytes);
+}
+
 /**
  * salut_file_channel_accept_file
  *
@@ -950,6 +963,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
     }
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
+  g_signal_connect (ft, "transferred-chunk", G_CALLBACK (ft_transferred_chunk_cb), self);
 
   setup_local_socket (self);
 
