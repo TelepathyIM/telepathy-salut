@@ -115,6 +115,7 @@ struct _SalutFileChannelPrivate {
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberXmppConnection *xmpp_connection;
   GibberFileTransfer *ft;
+  glong last_transferred_bytes_emitted;
 
   /* properties */
   SalutFileTransferDirection direction;
@@ -354,6 +355,8 @@ salut_file_channel_constructor (GType type, guint n_props,
 
   /* Initialise the available socket types hash table*/
   self->priv->available_socket_types = g_hash_table_new (g_int_hash, g_int_equal);
+
+  self->priv->last_transferred_bytes_emitted = 0;
 
   return obj;
 }
@@ -914,11 +917,18 @@ static void
 ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel *self)
 {
   SalutSvcChannelTypeFile *iface = SALUT_SVC_CHANNEL_TYPE_FILE (self);
+  GTimeVal timeval;
 
   self->priv->transferred_bytes += count;
 
-  salut_svc_channel_type_file_emit_transferred_bytes_changed (iface,
-      self->priv->transferred_bytes);
+  g_get_current_time (&timeval);
+
+  if (timeval.tv_sec >= self->priv->last_transferred_bytes_emitted + 1)
+    {
+      salut_svc_channel_type_file_emit_transferred_bytes_changed (iface,
+          self->priv->transferred_bytes);
+      self->priv->last_transferred_bytes_emitted = timeval.tv_sec;
+    }
 }
 
 /**
