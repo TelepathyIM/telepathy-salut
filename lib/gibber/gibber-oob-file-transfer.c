@@ -257,7 +257,8 @@ http_client_finished_chunks_cb (SoupMessage *msg,
   /* Is the transfer actually incomplete? */
   if (GIBBER_FILE_TRANSFER (self)->size > self->priv->transferred_bytes)
     {
-      DEBUG ("File transfer incomplete");
+      DEBUG ("File transfer incomplete (size is %llu and only got %llu)",
+          GIBBER_FILE_TRANSFER (self)->size, self->priv->transferred_bytes);
       g_signal_emit_by_name (self, "canceled");
       return;
     }
