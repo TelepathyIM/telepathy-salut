@@ -41,6 +41,7 @@ enum
   FINISHED,
   ERROR,
   TRANSFERRED_CHUNK,
+  CANCELED,
   LAST_SIGNAL
 };
 
@@ -256,6 +257,13 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
       0, NULL, NULL,
       _gibber_signals_marshal_VOID__UINT64,
       G_TYPE_NONE, 1, G_TYPE_UINT64);
+
+  signals[CANCELED] = g_signal_new ("canceled",
+      G_OBJECT_CLASS_TYPE (gibber_file_transfer_class),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+      0, NULL, NULL,
+      g_cclosure_marshal_VOID__VOID,
+      G_TYPE_NONE, 0);
 }
 
 static void
