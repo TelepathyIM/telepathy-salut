@@ -941,6 +941,18 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel
     }
 }
 
+static void
+ft_remote_canceled_cb (GibberFileTransfer *ft,
+                       SalutFileChannel *self)
+{
+  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
+                                SALUT_FILE_TRANSFER_STATE_CANCELED,
+                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
+
+  salut_xmpp_connection_manager_release_connection (self->priv->xmpp_connection_manager,
+                                                    self->priv->xmpp_connection);
+}
+
 /**
  * salut_file_channel_accept_file
  *
@@ -984,6 +996,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
   g_signal_connect (ft, "transferred-chunk", G_CALLBACK (ft_transferred_chunk_cb), self);
+  g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
 
   setup_local_socket (self);
 
