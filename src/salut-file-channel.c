@@ -691,9 +691,13 @@ salut_file_channel_close (TpSvcChannel *iface,
   SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
 
   if (self->priv->state != SALUT_FILE_TRANSFER_STATE_COMPLETED)
-    salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (iface),
-        SALUT_FILE_TRANSFER_STATE_CANCELED,
-        SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
+    {
+      gibber_file_transfer_cancel (self->priv->ft, 406);
+      salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (iface),
+          SALUT_FILE_TRANSFER_STATE_CANCELED,
+          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
+    }
+
   salut_file_channel_do_close (SALUT_FILE_CHANNEL (iface));
   tp_svc_channel_return_from_close (context);
 }
