@@ -54,6 +54,8 @@ struct _GibberOobFileTransferPrivate
   GIOChannel *channel;
   /* Current number of transferred bytes */
   guint64 transferred_bytes;
+  /* whether the transfer has been cancelled */
+  gboolean cancelled;
 };
 
 static void
@@ -230,6 +232,10 @@ http_client_chunk_cb (SoupMessage *msg,
                       gpointer user_data)
 {
   GibberOobFileTransfer *self = user_data;
+
+  /* Don't write anything if it's been cancelled */
+  if (self->priv->cancelled)
+    return;
 
   /* FIXME make async */
   g_io_channel_write_chars (self->priv->channel, msg->response.body,
@@ -561,8 +567,8 @@ http_server_wrote_chunk_cb (SoupMessage *msg,
 {
   GibberOobFileTransfer *self = user_data;
 
-  DEBUG("Chunk written, adding a watch to get more input");
-  if (self->priv->channel)
+  DEBUG("Chunk written, adding a watch to get more input (%s)", self->priv->cancelled ? "cancelled" : "not cancelled");
+  if (self->priv->channel && !self->priv->cancelled)
     {
       g_io_add_watch (self->priv->channel, G_IO_IN | G_IO_HUP,
           input_channel_readable_cb, self);
@@ -592,6 +598,9 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   GibberXmppNode *query;
   GibberXmppNode *error_node;
   GibberXmppNode *error_desc;
+
+  if (self->priv->cancelled)
+    return;
 
   stanza = gibber_xmpp_stanza_new ("iq");
   gibber_xmpp_node_set_attribute (stanza->node, "type", "error");
@@ -623,6 +632,9 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
     }
 
   gibber_file_transfer_send_stanza (ft, stanza, NULL);
+
+  self->priv->cancelled = TRUE;
+  g_signal_emit_by_name (self, "canceled");
 }
 
 static void
