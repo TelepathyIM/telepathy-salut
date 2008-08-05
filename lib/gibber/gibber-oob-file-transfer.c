@@ -52,6 +52,8 @@ struct _GibberOobFileTransferPrivate
   gchar *url;
   /* Input/output channel */
   GIOChannel *channel;
+  /* Current number of transferred bytes */
+  guint64 transferred_bytes;
 };
 
 static void
@@ -205,6 +207,8 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
 
   self->priv->url = url;
 
+  self->priv->transferred_bytes = 0;
+
   g_free (filename);
 
   return GIBBER_FILE_TRANSFER (self);
@@ -215,6 +219,7 @@ transferred_chunk (GibberOobFileTransfer *self,
                 guint64 bytes_read)
 {
   g_signal_emit_by_name (self, "transferred-chunk", bytes_read);
+  self->priv->transferred_bytes += bytes_read;
 }
 
 /*
@@ -246,9 +251,18 @@ http_client_finished_chunks_cb (SoupMessage *msg,
   /* disconnect from the "got_chunk" signal */
   g_signal_handlers_disconnect_by_func (msg, http_client_chunk_cb, user_data);
 
-  DEBUG("Finished HTTP chunked file transfer");
   g_io_channel_unref (self->priv->channel);
   self->priv->channel = NULL;
+
+  /* Is the transfer actually incomplete? */
+  if (GIBBER_FILE_TRANSFER (self)->size > self->priv->transferred_bytes)
+    {
+      DEBUG ("File transfer incomplete");
+      g_signal_emit_by_name (self, "canceled");
+      return;
+    }
+
+  DEBUG ("Finished HTTP chunked file transfer");
 
   if (msg->status_code != 200)
     {
