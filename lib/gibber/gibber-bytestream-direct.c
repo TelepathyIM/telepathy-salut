@@ -60,14 +60,14 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum
 {
-  PROP_SELF_ID = 1,
+  PROP_XMPP_CONNECTION = 1,
+  PROP_SELF_ID,
   PROP_PEER_ID,
   PROP_STREAM_ID,
   PROP_STREAM_INIT_ID,
   PROP_STATE,
 
   /* relevent only on recipient side to connect to the initiator */
-  PROP_HOST,
   PROP_PORT,
 
   PROP_PROTOCOL,
@@ -84,7 +84,6 @@ struct _GibberBytestreamDirectPrivate
   gchar *stream_init_id;
   GibberBytestreamState state;
 
-  gchar *host;
   guint portnum;
 
   /* Are we the recipient of this bytestream?
@@ -155,6 +154,9 @@ gibber_bytestream_direct_get_property (GObject *object,
 
   switch (property_id)
     {
+      case PROP_XMPP_CONNECTION:
+        g_value_set_object (value, priv->xmpp_connection);
+        break;
       case PROP_SELF_ID:
         g_value_set_string (value, priv->self_id);
         break;
@@ -169,9 +171,6 @@ gibber_bytestream_direct_get_property (GObject *object,
         break;
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
-        break;
-      case PROP_HOST:
-        g_value_set_string (value, priv->host);
         break;
       case PROP_PORT:
         g_value_set_uint (value, priv->portnum);
@@ -196,6 +195,13 @@ gibber_bytestream_direct_set_property (GObject *object,
 
   switch (property_id)
     {
+      case PROP_XMPP_CONNECTION:
+        if (g_value_get_object (value) != NULL)
+          {
+            priv->xmpp_connection = g_value_get_object (value);
+            g_object_ref (priv->xmpp_connection);
+          }
+        break;
       case PROP_SELF_ID:
         g_free (priv->self_id);
         priv->self_id = g_value_dup_string (value);
@@ -213,17 +219,11 @@ gibber_bytestream_direct_set_property (GObject *object,
         priv->stream_init_id = g_value_dup_string (value);
         break;
       case PROP_STATE:
-        DEBUG ("Set PROP_STATE");
         if (priv->state != g_value_get_uint (value))
             {
               priv->state = g_value_get_uint (value);
-              DEBUG ("Emit STATE_CHANGED");
               g_signal_emit (object, signals[STATE_CHANGED], 0, priv->state);
             }
-        break;
-      case PROP_HOST:
-        g_free (priv->host);
-        priv->host = g_value_dup_string (value);
         break;
       case PROP_PORT:
         priv->portnum = g_value_get_uint (value);
@@ -282,6 +282,20 @@ gibber_bytestream_direct_class_init (
   g_object_class_override_property (object_class, PROP_PROTOCOL,
       "protocol");
 
+  param_spec = g_param_spec_object (
+      "xmpp-connection",
+      "GibberXmppConnection object",
+      "Gibber XMPP connection object used to find the IP address to connect "
+      "in this bytestream if it's a private one",
+      GIBBER_TYPE_XMPP_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
+      param_spec);
+
   param_spec = g_param_spec_string (
       "stream-init-id",
       "stream init ID",
@@ -293,19 +307,6 @@ gibber_bytestream_direct_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
-      param_spec);
-
-  param_spec = g_param_spec_string (
-      "host",
-      "host",
-      "IP address for the recipient to connect on the initiator",
-      "",
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_HOST,
       param_spec);
 
   param_spec = g_param_spec_uint (
@@ -655,20 +656,41 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (bytestream);
   GibberLLTransport *ll_transport;
-  struct sockaddr_in server;
+  /* never cast addr but type-punning to avoid strict-aliasing issues
+   * (see -fstrict-aliasing in man gcc) */
+  union {
+    struct sockaddr_storage storage;
+    struct sockaddr_in6 in6;
+  } addr;
+  socklen_t len;
   GibberBytestreamDirectPrivate *priv =
       GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
 
   DEBUG ("Called.");
 
-  server.sin_addr.s_addr = inet_addr ("127.0.0.1");
-  server.sin_family = AF_INET;
-  server.sin_port = g_htons ((guint16) priv->portnum);
+  /* FIXME, this is very specific to salut and won't work with a normal xmpp
+   * client */
+  g_assert (priv->xmpp_connection != NULL);
+  g_assert (priv->xmpp_connection->transport != NULL);
+  if (!gibber_transport_get_sockaddr (
+      GIBBER_TRANSPORT (priv->xmpp_connection->transport),
+      &addr.storage, &len))
+    {
+      /* I'm too lazy to create more specific errors for this  as it should
+       * never happen while using salut anyway.. */
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+          "Unsable get socket address for the control connection" };
+      DEBUG ("Could not get socket address for the control connection" );
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+      return FALSE;
+    }
+
+  addr.in6.sin6_port = g_htons ((guint16) priv->portnum);
 
   ll_transport = gibber_ll_transport_new ();
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
   gibber_ll_transport_open_sockaddr (ll_transport,
-      (struct sockaddr_storage *) &server, NULL);
+      &addr.storage, NULL);
 
   return TRUE;
 }

@@ -544,7 +544,7 @@ start_stream_direct (SalutTubeStream *self,
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo;
   const gchar *jid;
-  gboolean result;
+  gboolean ret;
   struct _extra_bytestream_negotiate_cb_data *data;
   SalutContact *contact;
   SalutContactManager *contact_mgr;
@@ -573,28 +573,37 @@ start_stream_direct (SalutTubeStream *self,
   contact = salut_contact_manager_get_contact (contact_mgr, priv->initiator);
   if (contact == NULL)
     {
-      result = FALSE;
+      ret = FALSE;
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           "can't find contact with handle %d", priv->initiator);
     }
   else
     {
       GibberBytestreamIface *bytestream;
+      GibberXmppConnection *xmpp_connection = NULL;
+      SalutXmppConnectionManagerRequestConnectionResult result;
+
+      DEBUG ("Called, will request a connection");
+      result = salut_xmpp_connection_manager_request_connection (
+          priv->xmpp_connection_manager, contact, &xmpp_connection, NULL);
+      g_assert (result ==
+          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE);
+
       bytestream = salut_direct_bytestream_manager_new_stream (
-          direct_bytestream_mgr,
+          direct_bytestream_mgr, xmpp_connection,
           contact, priv->port);
 
       if (bytestream == NULL)
         {
           DEBUG ("initiator refused new bytestream");
-          result = FALSE;
+          ret = FALSE;
 
           close (fd);
         }
       else
         {
           DEBUG ("extra bytestream accepted");
-          result = TRUE;
+          ret = TRUE;
 
           g_hash_table_insert (priv->bytestream_to_fd,
               g_object_ref (bytestream), GUINT_TO_POINTER (fd));
@@ -607,7 +616,7 @@ start_stream_direct (SalutTubeStream *self,
             {
               /* Initiation failed. */
               gibber_bytestream_iface_close (bytestream, NULL);
-              result = FALSE;
+              ret = FALSE;
               close (fd);
             }
 
@@ -619,7 +628,7 @@ start_stream_direct (SalutTubeStream *self,
   g_object_unref (direct_bytestream_mgr);
   g_object_unref (contact_mgr);
 
-  return result;
+  return ret;
 }
 
 /* callback for listening connections from the local application */

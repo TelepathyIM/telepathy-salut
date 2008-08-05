@@ -471,6 +471,7 @@ void salut_direct_bytestream_manager_stop_listen (
 
 GibberBytestreamIface *
 salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
+                                            GibberXmppConnection *connection,
                                             SalutContact *contact,
                                             int portnum)
 {
@@ -480,10 +481,10 @@ salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
   priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
 
   bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_DIRECT,
+      "xmpp-connection", connection,
       "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
       "self-id", priv->connection->name,
       "peer-id", contact->name,
-      "host", "127.0.0.1", /* FIXME! */
       "port", portnum,
       NULL);
 
