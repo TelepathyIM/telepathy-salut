@@ -781,6 +781,19 @@ ft_finished_cb (GibberFileTransfer *ft,
 }
 
 static void
+ft_remote_canceled_cb (GibberFileTransfer *ft,
+                       SalutFileChannel *self)
+{
+  gibber_file_transfer_cancel (ft, 406);
+  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
+                                SALUT_FILE_TRANSFER_STATE_CANCELED,
+                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
+
+  salut_xmpp_connection_manager_release_connection (self->priv->xmpp_connection_manager,
+                                                    self->priv->xmpp_connection);
+}
+
+static void
 remote_accepted_cb (GibberFileTransfer *ft,
                     SalutFileChannel *self)
 {
@@ -789,6 +802,7 @@ remote_accepted_cb (GibberFileTransfer *ft,
                                 SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
+  g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
 }
 
 static gboolean setup_local_socket (SalutFileChannel *self);
@@ -943,18 +957,6 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel
           self->priv->transferred_bytes);
       self->priv->last_transferred_bytes_emitted = timeval.tv_sec;
     }
-}
-
-static void
-ft_remote_canceled_cb (GibberFileTransfer *ft,
-                       SalutFileChannel *self)
-{
-  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
-                                SALUT_FILE_TRANSFER_STATE_CANCELED,
-                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
-
-  salut_xmpp_connection_manager_release_connection (self->priv->xmpp_connection_manager,
-                                                    self->priv->xmpp_connection);
 }
 
 /**
