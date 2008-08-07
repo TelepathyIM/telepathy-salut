@@ -24,7 +24,7 @@ main (int argc, char **argv)
   g_type_init ();
   g_set_prgname ("telepathy-salut");
 
-  debug_set_log_file_from_env ();
+  tp_debug_divert_messages (g_getenv ("SALUT_LOGFILE"));
   debug_set_flags_from_env ();
 
   if (g_getenv ("SALUT_PERSIST"))

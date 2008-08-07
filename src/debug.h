@@ -8,10 +8,6 @@
 
 #include <gibber/gibber-xmpp-stanza.h>
 
-G_BEGIN_DECLS
-
-void debug_set_log_file_from_env (void);
-
 #ifdef ENABLE_DEBUG
 
 typedef enum
