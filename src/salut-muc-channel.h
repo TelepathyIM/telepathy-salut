@@ -40,6 +40,7 @@ struct _SalutMucChannelClass {
   GObjectClass parent_class;
   TpGroupMixinClass group_class;
   TpTextMixinClass text_class;
+  TpDBusPropertiesMixinClass dbus_props_class;
 
   /* Virtual method */
   gboolean (*publish_service) (SalutMucChannel *self,
