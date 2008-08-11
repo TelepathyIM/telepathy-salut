@@ -802,6 +802,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
       salut_muc_channel_add_member, NULL);
+  tp_group_mixin_init_dbus_properties (object_class);
 }
 
 void
