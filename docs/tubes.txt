@@ -8,135 +8,49 @@ http://telepathy.freedesktop.org/xmpp/tubes.html
 
 - 1-1 D-Bus tubes
 
-Not tested, work in progress.
+Not tested
 
 - 1-1 stream tubes
 
-Implemented. The XMPP spec is not finalized. The current code uses
-stream-initiation (XEP-0095).
+Implemented. The XMPP spec is the following.
 
 Initiator to receptor: offer the tube:
   <iq type="set"
       from="alban_test01@alban-hp"
       to="alban_test02@alban-hp"
-      id="264209854163">
+      id="8849419577">
     <tube type="stream"
           service="TicTacTube"
-          id="958316872"
-          xmlns="http://telepathy.freedesktop.org/xmpp/tubes"/>
-      <parameters/>
+          id="364091438"
+          xmlns="http://telepathy.freedesktop.org/xmpp/tubes">
+      <transport port="47246"/>
+    </tube>
+    <parameters/>
   </iq>
 
 Receptor to initiator: acknowledgment of the offer
   <iq type="result"
       from="alban_test02@alban-hp"
       to="alban_test01@alban-hp"
-      id="264209854163"/>
+      id="8849419577"/>
 
 This acknowledgment should be used to accept the tube. However the current code
 ignores the acknowledgment. The tube will be accepted on the initiator side
 when the first stream will be requested by the receptor. Gabble has a similar
 problem, see https://bugs.freedesktop.org/show_bug.cgi?id=16595
 
-Receptor to initiator: Request first stream in the stream tube with SI:
-  <iq type="set"
-      from="alban_test02@alban-hp"
-      to="alban_test01@alban-hp"
-      id="305185523299">
-    <si id="1216653628-2482728629"
-        profile="http://telepathy.freedesktop.org/xmpp/tubes"
-        mime-type="application/octet-stream"
-        xmlns="http://jabber.org/protocol/si">
-      <feature xmlns="http://jabber.org/protocol/feature-neg">
-        <x type="form" xmlns="jabber:x:data">
-          <field var="stream-method"
-                 type="list-single">
-            <option>
-              <value>jabber:iq:oob</value>
-            </option>
-            <option>
-              <value>http://jabber.org/protocol/ibb</value>
-            </option>
-          </field>
-        </x>
-      </feature>
-      <stream tube="958316872"
-              xmlns="http://telepathy.freedesktop.org/xmpp/tubes"/>
-    </si>
-  </iq>
+The id of the iq stanza should be stored to reply later when the application
+runs AcceptStreamTube or CloseTube.
 
-Initiator to receptor: accept the stream (SI):
-  <iq type="result"
-      from="alban_test01@alban-hp"
-      to="alban_test02@alban-hp"
-      id="305185523299">
-    <si xmlns="http://jabber.org/protocol/si">
-      <feature xmlns="http://jabber.org/protocol/feature-neg">
-        <x type="submit"
-           xmlns="jabber:x:data">
-          <field var="stream-method">
-            <value>jabber:iq:oob</value>
-          </field>
-        </x>
-      </feature>
-      <tube xmlns="http://telepathy.freedesktop.org/xmpp/tubes"/>
-    </si>
-  </iq>
-
-Receptor to initiator: gives the x-tcp address
-  <iq type="set"
-      from="alban_test02@alban-hp"
-      to="alban_test01@alban-hp"
-      id="273187360243">
-    <query sid="1216654309-3452169159"
-           xmlns="jabber:iq:oob">
-      <url>x-tcp://alban-hp.local:41651</url>
-    </query>
-  </iq>
 
 -- Tube is used --
 
 Receptor to initiator: close the tube
 
-  <iq type="set"
-      from="alban_test02@alban-hp"
-      to="alban_test01@alban-hp"
-      id="36867237061">
-    <close id="958316872"
-           xmlns="http://telepathy.freedesktop.org/xmpp/tubes"/>
-  </iq>
+Initiator to receptor: acknowledges the close request
 
-Initiator to receptor: acknowledges the x-tcp address (why so late?)
 
-  <iq type="result"
-      from="alban_test01@alban-hp"
-      to="alban_test02@alban-hp"
-      id="34466104096"/>
-
-Initiator to receptor: closes the tube, again
-
-  <iq type="set"
-      from="alban_test01@alban-hp"
-      to="alban_test02@alban-hp"
-      id="40963238067">
-    <close id="958316872"
-           xmlns="http://telepathy.freedesktop.org/xmpp/tubes"/>
-  </iq>
-
-Receptor to initiator: acknowledges the close request
-
-  <iq type="result"
-      from="alban_test01@alban-hp"
-      to="alban_test02@alban-hp"
-      id="36867237061"/>
-
-Receptor to initiator: acknowledgmes the close request, again
-
-<iq type="result"
-    from="alban_test02@alban-hp"
-    to="alban_test01@alban-hp"
-    id="40963238067"/>
-
-Note that the close message is sent twice. Gabble does the same. See bug
+Note that the close message is sent twice. This must be fixed. Gabble has the
+same bug:
 https://bugs.freedesktop.org/show_bug.cgi?id=16797
 
