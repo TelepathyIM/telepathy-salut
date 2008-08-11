@@ -61,6 +61,11 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 )
 
+static const char *salut_muc_channel_interfaces[] = {
+  TP_IFACE_CHANNEL_INTERFACE_GROUP,
+  NULL
+};
+
 /* signal enum */
 enum
 {
@@ -83,6 +88,7 @@ enum
   PROP_NAME,
   PROP_CREATOR,
   PROP_XMPP_CONNECTION_MANAGER,
+  PROP_INTERFACES,
   LAST_PROPERTY
 };
 
@@ -160,6 +166,9 @@ salut_muc_channel_get_property (GObject    *object,
       break;
     case PROP_XMPP_CONNECTION_MANAGER:
       g_value_set_object (value, priv->xmpp_connection_manager);
+      break;
+    case PROP_INTERFACES:
+      g_value_set_static_boxed (value, salut_muc_channel_interfaces);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -738,6 +747,14 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_install_property (object_class,
       PROP_CREATOR, param_spec);
 
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+
   signals[READY] = g_signal_new (
         "ready",
         G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
@@ -1135,9 +1152,8 @@ static void
 salut_muc_channel_get_interfaces (TpSvcChannel *iface,
     DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP,  NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+  tp_svc_channel_return_from_get_interfaces (context,
+    salut_muc_channel_interfaces);
 }
 
 
