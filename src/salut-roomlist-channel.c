@@ -51,6 +51,8 @@ G_DEFINE_TYPE_WITH_CODE (SalutRoomlistChannel, salut_roomlist_channel,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL)
     );
 
+static const char *salut_roomlist_channel_interfaces[] = { NULL };
+
 /* properties */
 enum
 {
@@ -59,6 +61,7 @@ enum
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
   PROP_CONNECTION,
+  PROP_INTERFACES,
   LAST_PROPERTY
 };
 
@@ -134,6 +137,9 @@ salut_roomlist_channel_get_property (GObject *object,
       break;
     case PROP_CONNECTION:
       g_value_set_object (value, priv->connection);
+      break;
+    case PROP_INTERFACES:
+      g_value_set_static_boxed (value, salut_roomlist_channel_interfaces);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -455,9 +461,8 @@ static void
 salut_roomlist_channel_get_interfaces (TpSvcChannel *iface,
                                        DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+  tp_svc_channel_return_from_get_interfaces (context,
+    salut_roomlist_channel_interfaces);
 }
 
 
