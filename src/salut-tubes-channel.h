@@ -34,6 +34,7 @@ typedef struct _SalutTubesChannelClass SalutTubesChannelClass;
 
 struct _SalutTubesChannelClass {
     GObjectClass parent_class;
+    TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutTubesChannel {
