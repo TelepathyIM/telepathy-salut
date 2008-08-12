@@ -340,14 +340,6 @@ salut_connection_get_property (GObject *object,
     case PROP_BACKEND:
       g_value_set_gtype (value, priv->backend_type);
       break;
-#ifdef ENABLE_OLPC
-    case PROP_OLPC_ACTIVITY_MANAGER:
-      g_value_set_object (value, priv->olpc_activity_manager);
-      break;
-#endif
-    case PROP_BACKEND:
-      g_value_set_gtype (value, priv->backend_type);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
