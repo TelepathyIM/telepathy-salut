@@ -50,12 +50,10 @@ CORE_SOURCES =                                          \
     salut-roomlist-channel.c                            \
     salut-xmpp-connection-manager.h                     \
     salut-xmpp-connection-manager.c                     \
+    salut-discovery-client.h                            \
+    salut-discovery-client.c                            \
     tube-iface.h                                        \
     tube-iface.c                                        \
-    sha1/sha1-util.h                                    \
-    sha1/sha1-util.c                                    \
-    sha1/sha1.h                                         \
-    sha1/sha1.c                                         \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
@@ -71,24 +69,79 @@ if ENABLE_DBUS_TUBES
     salut-tubes-channel.c
 endif
 
+if ENABLE_OLPC
+  CORE_SOURCES +=                                       \
+    salut-olpc-activity.h                               \
+    salut-olpc-activity.c                               \
+    salut-avahi-olpc-activity.h                         \
+    salut-avahi-olpc-activity.c                         \
+    salut-olpc-activity-manager.h                       \
+    salut-olpc-activity-manager.c                       \
+    salut-avahi-olpc-activity-manager.h                 \
+    salut-avahi-olpc-activity-manager.c
+endif
 
-libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES)
+AVAHI_BACKEND_SOURCES = 				\
+    salut-avahi-discovery-client.h                      \
+    salut-avahi-discovery-client.c                      \
+    salut-avahi-muc-manager.h                           \
+    salut-avahi-muc-manager.c                           \
+    salut-avahi-muc-channel.h                           \
+    salut-avahi-muc-channel.c                           \
+    salut-avahi-contact-manager.h                       \
+    salut-avahi-contact-manager.c                       \
+    salut-avahi-contact.h                               \
+    salut-avahi-contact.c                               \
+    salut-avahi-self.h                                  \
+    salut-avahi-self.c
+
+DUMMY_BACKEND_SOURCES = 				\
+    salut-dummy-discovery-client.h                      \
+    salut-dummy-discovery-client.c
+
+SHA1_SOURCES =                                          \
+    sha1/sha1-util.h                                    \
+    sha1/sha1-util.c                                    \
+    sha1/sha1.h                                         \
+    sha1/sha1.c
+
+libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
+    $(SHA1_SOURCES)
+
+libsalut_backend_avahi_la_SOURCES = $(AVAHI_BACKEND_SOURCES)
+
+libsalut_backend_dummy_la_SOURCES = $(DUMMY_BACKEND_SOURCES)
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
+		       libsalut-backend-avahi.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
                        -ltelepathy-glib
 telepathy_salut_SOURCES = \
-    salut.c 
+    salut.c
+
+# Coding style checks
+check_c_sources = \
+    $(telepathy_salut_SOURCES) \
+    $(CORE_SOURCES) \
+    $(AVAHI_BACKEND_SOURCES) \
+    $(DUMMY_BACKEND_SOURCES) \
+    $(write_mgr_file_SOURCES)
+
+include $(top_srcdir)/tools/check-coding-style.mk
+check-local: check-coding-style
 
 # TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
 telepathy_salut_LDADD = libsalut-convenience.la \
+			libsalut-backend-avahi.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         $(top_builddir)/extensions/libsalut-extensions.la \
                         -ltelepathy-glib
 
-noinst_LTLIBRARIES = libsalut-convenience.la
+noinst_LTLIBRARIES = libsalut-convenience.la \
+		     libsalut-backend-avahi.la \
+		     libsalut-backend-dummy.la
 
 AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @DBUS_CFLAGS@ \
   @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
@@ -108,10 +161,10 @@ $(top_builddir)/lib/gibber/libgibber.la:
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
 
-signals-marshal.list: $(CORE_SOURCES) Makefile.am
+signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) Makefile.am
 	( cd $(srcdir) && \
 	sed -n -e 's/.*salut_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
-		$(CORE_SOURCES) ) \
+		$(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) ) \
 		| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
 	if cmp -s $@.tmp $@; then \
 		rm $@.tmp; \

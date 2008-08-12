@@ -28,7 +28,7 @@ G_BEGIN_DECLS
 
 GQuark gibber_multicast_transport_error_quark (void);
 #define GIBBER_MULTICAST_TRANSPORT_ERROR \
-  gibber_multicast_transport_error_quark()
+  gibber_multicast_transport_error_quark ()
 
 typedef enum
 {
@@ -50,33 +50,35 @@ struct _GibberMulticastTransport {
     GibberTransport parent;
 };
 
-GibberMulticastTransport *
-gibber_multicast_transport_new();
+GibberMulticastTransport * gibber_multicast_transport_new ();
 
-gboolean
-gibber_multicast_transport_connect(GibberMulticastTransport *mtransport,
-                                   const gchar *address, const gchar *port);
+gboolean gibber_multicast_transport_connect (
+  GibberMulticastTransport *mtransport, const gchar *address,
+  const gchar *port);
 
 gsize
-gibber_multicast_transport_get_max_packet_size(
-    GibberMulticastTransport *mtransport);
+gibber_multicast_transport_get_max_packet_size (
+  GibberMulticastTransport *mtransport);
 
-GType gibber_multicast_transport_get_type(void);
+GType gibber_multicast_transport_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_MULTICAST_TRANSPORT \
-  (gibber_multicast_transport_get_type())
+  (gibber_multicast_transport_get_type ())
 #define GIBBER_MULTICAST_TRANSPORT(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_MULTICAST_TRANSPORT, GibberMulticastTransport))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_MULTICAST_TRANSPORT, \
+   GibberMulticastTransport))
 #define GIBBER_MULTICAST_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_MULTICAST_TRANSPORT, GibberMulticastTransportClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_MULTICAST_TRANSPORT, \
+   GibberMulticastTransportClass))
 #define GIBBER_IS_MULTICAST_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_MULTICAST_TRANSPORT))
 #define GIBBER_IS_MULTICAST_TRANSPORT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_MULTICAST_TRANSPORT))
 #define GIBBER_MULTICAST_TRANSPORT_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_MULTICAST_TRANSPORT, GibberMulticastTransportClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_MULTICAST_TRANSPORT, \
+   GibberMulticastTransportClass))
 
 
-G_END_DECLS 
+G_END_DECLS
 #endif /* #ifndef __GIBBER_MULTICAST_TRANSPORT_H__*/

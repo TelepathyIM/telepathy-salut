@@ -74,7 +74,7 @@ gibber_transport_class_init (GibberTransportClass *gibber_transport_class)
   object_class->dispose = gibber_transport_dispose;
   object_class->finalize = gibber_transport_finalize;
 
-  signals[BUFFER_EMPTY] = 
+  signals[BUFFER_EMPTY] =
     g_signal_new ("buffer-empty",
                   G_OBJECT_CLASS_TYPE (gibber_transport_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
@@ -83,7 +83,7 @@ gibber_transport_class_init (GibberTransportClass *gibber_transport_class)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  signals[CONNECTED] = 
+  signals[CONNECTED] =
     g_signal_new ("connected",
                   G_OBJECT_CLASS_TYPE (gibber_transport_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
@@ -153,81 +153,93 @@ gibber_transport_finalize (GObject *object)
 }
 
 void
-gibber_transport_received_data(GibberTransport *transport, 
-                                    const guint8 *data, gsize length) {
+gibber_transport_received_data (GibberTransport *transport,
+    const guint8 *data, gsize length)
+{
   GibberBuffer buffer;
   buffer.length = length;
   buffer.data = data;
 
-  gibber_transport_received_data_custom(transport, &buffer);
+  gibber_transport_received_data_custom (transport, &buffer);
 }
 
 void
-gibber_transport_received_data_custom(GibberTransport *transport, 
-                                      GibberBuffer *buffer) {
-  if (G_UNLIKELY(transport->handler == NULL)) {
-    DEBUG("No handler for transport, dropping data!");
-  } else {
-    transport->handler(transport, buffer, transport->user_data);
-  }
-}
-
-void
-gibber_transport_set_state(GibberTransport *transport,
-                          GibberTransportState state) {
-  if (state != transport->state) {
-    transport->state = state;
-
-    switch (state) {
-      case GIBBER_TRANSPORT_DISCONNECTED:
-        g_signal_emit(transport, signals[DISCONNECTED], 0);
-        break;
-      case GIBBER_TRANSPORT_CONNECTING:
-        g_signal_emit(transport, signals[CONNECTING], 0);
-        break;
-      case GIBBER_TRANSPORT_CONNECTED:
-        g_signal_emit(transport, signals[CONNECTED], 0);
-        break;
-      case GIBBER_TRANSPORT_DISCONNECTING:
-        g_signal_emit(transport, signals[DISCONNECTING], 0);
-        break;
+gibber_transport_received_data_custom (GibberTransport *transport,
+    GibberBuffer *buffer)
+{
+  if (G_UNLIKELY (transport->handler == NULL))
+    {
+      DEBUG("No handler for transport, dropping data!");
     }
-  }
+  else
+    {
+      transport->handler (transport, buffer, transport->user_data);
+    }
+}
+
+void
+gibber_transport_set_state (GibberTransport *transport,
+    GibberTransportState state)
+{
+  if (state != transport->state)
+    {
+      transport->state = state;
+
+      switch (state)
+        {
+          case GIBBER_TRANSPORT_DISCONNECTED:
+            g_signal_emit (transport, signals[DISCONNECTED], 0);
+            break;
+          case GIBBER_TRANSPORT_CONNECTING:
+            g_signal_emit (transport, signals[CONNECTING], 0);
+            break;
+          case GIBBER_TRANSPORT_CONNECTED:
+            g_signal_emit (transport, signals[CONNECTED], 0);
+            break;
+          case GIBBER_TRANSPORT_DISCONNECTING:
+            g_signal_emit (transport, signals[DISCONNECTING], 0);
+            break;
+        }
+    }
 }
 
 GibberTransportState
-gibber_transport_get_state(GibberTransport *transport) {
+gibber_transport_get_state (GibberTransport *transport)
+{
   return transport->state;
 }
 
-void 
-gibber_transport_emit_error(GibberTransport *transport, GError *error) {
-  DEBUG("Transport error: %s", error->message);
-  g_signal_emit(transport, signals[ERROR], 0, 
-                error->domain, error->code, error->message);
+void
+gibber_transport_emit_error (GibberTransport *transport, GError *error)
+{
+  DEBUG ("Transport error: %s", error->message);
+  g_signal_emit (transport, signals[ERROR], 0,
+      error->domain, error->code, error->message);
 }
 
-gboolean 
-gibber_transport_send(GibberTransport *transport, const guint8 *data, gsize size, 
-                     GError **error) {
-  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS(transport);
+gboolean
+gibber_transport_send (GibberTransport *transport, const guint8 *data,
+  gsize size, GError **error)
+{
+  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
 
-  g_assert(transport->state == GIBBER_TRANSPORT_CONNECTED);
+  g_assert (transport->state == GIBBER_TRANSPORT_CONNECTED);
 
-  return cls->send(transport, data, size, error);
+  return cls->send (transport, data, size, error);
 }
 
 void
-gibber_transport_disconnect(GibberTransport *transport) {
-  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS(transport);
-  return cls->disconnect(transport);
+gibber_transport_disconnect (GibberTransport *transport)
+{
+  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
+  return cls->disconnect (transport);
 }
 
 void
-gibber_transport_set_handler(GibberTransport *transport,
-                             GibberHandlerFunc func,
-                             gpointer user_data) {
-  g_assert(transport->handler == NULL || func == NULL);
+gibber_transport_set_handler (GibberTransport *transport,
+    GibberHandlerFunc func, gpointer user_data)
+{
+  g_assert (transport->handler == NULL || func == NULL);
 
   transport->handler = func;
   transport->user_data = user_data;
@@ -237,7 +249,7 @@ gboolean
 gibber_transport_get_sockaddr (GibberTransport *transport,
    struct sockaddr_storage *addr, socklen_t *len)
 {
-  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS(transport);
+  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
 
   if (cls->get_sockaddr != NULL)
     return cls->get_sockaddr (transport, addr, len);
@@ -259,3 +271,14 @@ gibber_transport_emit_buffer_empty (GibberTransport *transport)
 {
   g_signal_emit (transport, signals[BUFFER_EMPTY], 0);
 }
+
+void
+gibber_transport_block_receiving (GibberTransport *transport,
+                                  gboolean block)
+{
+  GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
+
+  g_assert (cls->block_receiving != NULL);
+  cls->block_receiving (transport, block);
+}
+

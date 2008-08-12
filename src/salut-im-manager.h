@@ -40,11 +40,11 @@ struct _SalutImManager {
 };
 
 
-GType salut_im_manager_get_type(void);
+GType salut_im_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_IM_MANAGER \
-  (salut_im_manager_get_type())
+  (salut_im_manager_get_type ())
 #define SALUT_IM_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_IM_MANAGER, SalutImManager))
 #define SALUT_IM_MANAGER_CLASS(klass) \

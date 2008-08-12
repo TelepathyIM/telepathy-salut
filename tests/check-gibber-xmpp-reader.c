@@ -15,8 +15,8 @@ struct _ReceivedStanzaEvent {
 };
 
 static void received_stanza_cb (GibberXmppReader *reader,
-                                GibberXmppStanza *stanza,
-                                gpointer user_data) {
+    GibberXmppStanza *stanza, gpointer user_data)
+{
   GQueue *events_queue = (GQueue *)user_data;
 
   fail_if (reader == NULL);
@@ -58,15 +58,18 @@ START_TEST (test_simple_message)
   received_stanzas = g_queue_new ();
 
   reader = gibber_xmpp_reader_new ();
-  g_signal_connect(reader, "received-stanza",
-                   G_CALLBACK(received_stanza_cb), received_stanzas);
+  g_signal_connect (reader, "received-stanza",
+      G_CALLBACK (received_stanza_cb), received_stanzas);
 
-  srcdir = g_getenv("srcdir");
-  if (srcdir == NULL) {
-    file = g_strdup("inputs/simple-message.input");
-  } else {
-    file = g_strdup_printf("%s/inputs/simple-message.input", srcdir);
-  }
+  srcdir = g_getenv ("srcdir");
+  if (srcdir == NULL)
+    {
+      file = g_strdup ("inputs/simple-message.input");
+    }
+  else
+    {
+      file = g_strdup_printf ("%s/inputs/simple-message.input", srcdir);
+    }
 
   fail_unless (g_file_get_contents (file, &data, &length, NULL));
   g_free (file);

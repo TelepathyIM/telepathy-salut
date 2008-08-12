@@ -23,7 +23,6 @@
 #include "config.h"
 
 #include <glib-object.h>
-#include <avahi-gobject/ga-client.h>
 
 #include <telepathy-glib/handle-repo.h>
 
@@ -31,6 +30,9 @@
 
 #include "salut-connection.h"
 #include "salut-presence.h"
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity.h"
+#endif
 
 G_BEGIN_DECLS
 
@@ -39,6 +41,22 @@ typedef struct _SalutSelfClass SalutSelfClass;
 
 struct _SalutSelfClass {
     GObjectClass parent_class;
+
+    /* public abstract methods */
+    gboolean (*announce) (SalutSelf *self, gint port, GError **error);
+    gboolean (*set_presence) (SalutSelf *self, GError **error);
+    gboolean (*set_alias) (SalutSelf *self, GError **error);
+    gboolean (*set_avatar) (SalutSelf *self, guint8 *data, gsize size,
+        GError **error);
+#ifdef ENABLE_OLPC
+    gboolean (*set_olpc_properties) (SalutSelf *self, const GArray *key,
+          const gchar *color, const gchar *jid, GError **error);
+#endif
+
+    /* private abstract methods */
+    void (*remove_avatar) (SalutSelf *self);
+    gboolean (*update_current_activity) (SalutSelf *self,
+        const gchar *room_name, GError **error);
 };
 
 struct _SalutSelf {
@@ -56,13 +74,22 @@ struct _SalutSelf {
     TpHandle olpc_cur_act_room;
     gchar *olpc_color;
 #endif
+
+    /* private */
+    SalutConnection *connection;
+    gchar *nickname;
+    gchar *first_name;
+    gchar *last_name;
+    gchar *email;
+    gchar *published_name;
+    gchar *alias;
 };
 
-GType salut_self_get_type(void);
+GType salut_self_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_SELF \
-  (salut_self_get_type())
+  (salut_self_get_type ())
 #define SALUT_SELF(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_SELF, SalutSelf))
 #define SALUT_SELF_CLASS(klass) \
@@ -73,13 +100,6 @@ GType salut_self_get_type(void);
   (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_SELF))
 #define SALUT_SELF_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_SELF, SalutSelfClass))
-
-SalutSelf *salut_self_new (SalutConnection *conn, GaClient *client,
-    TpHandleRepoIface *room_repo, const gchar *nickname,
-    const gchar *first_name, const gchar *last_name, const gchar *jid,
-    const gchar *email, const gchar *published_name,
-    const GArray *olpc_key,
-    const gchar *olpc_color);
 
 /* Start announcing our presence on the network */
 gboolean salut_self_announce (SalutSelf *self, gint port, GError **error);
@@ -99,20 +119,10 @@ const gchar *salut_self_get_alias (SalutSelf *self);
 gboolean salut_self_set_olpc_properties (SalutSelf *self,
     const GArray *key, const gchar *color, const gchar *jid, GError **error);
 
-gboolean salut_self_merge_olpc_activity_properties (SalutSelf *self,
-    TpHandle handle,
-    const gchar **color, const gchar **name, const gchar **type,
-    const gchar **tags, gboolean *is_private);
-
 gboolean salut_self_set_olpc_activity_properties (SalutSelf *self,
     TpHandle handle,
     const gchar *color, const gchar *name, const gchar *type,
     const gchar *tags, gboolean is_private, GError **error);
-
-gboolean salut_self_olpc_activity_properties_updated (SalutSelf *self,
-    TpHandle handle,
-    const gchar *color, const gchar *name, const gchar *type,
-    const gchar *tags, gboolean is_private);
 
 gboolean salut_self_set_olpc_activities (SalutSelf *self,
     GHashTable *act_id_to_room, GError **error);
@@ -121,7 +131,7 @@ gboolean salut_self_set_olpc_current_activity (SalutSelf *self,
     const gchar *id, TpHandle room, GError **error);
 
 typedef void (*SalutSelfOLPCActivityFunc)
-    (const gchar *id, TpHandle handle, gpointer user_data);
+  (SalutOlpcActivity *activity, gpointer user_data);
 
 void salut_self_foreach_olpc_activity (SalutSelf *self,
     SalutSelfOLPCActivityFunc foreach, gpointer user_data);
@@ -129,6 +139,9 @@ void salut_self_foreach_olpc_activity (SalutSelf *self,
 void salut_self_olpc_augment_invitation (SalutSelf *self,
     TpHandle room, TpHandle contact, GibberXmppNode *invite_node);
 #endif
+
+/* protected methods */
+void salut_self_established (SalutSelf *self);
 
 G_END_DECLS
 

@@ -33,7 +33,7 @@ GQuark gibber_ssl_transport_error_quark (void);
 typedef enum
 {
   /* Connection error */
-  GIBBER_SSL_TRANSPORT_ERROR_CONNECTION_OPEN, 
+  GIBBER_SSL_TRANSPORT_ERROR_CONNECTION_OPEN,
 } GibberSSLTransportError;
 
 typedef struct _GibberSSLTransport GibberSSLTransport;
@@ -68,7 +68,7 @@ GibberSSLTransport *
 gibber_ssl_transport_new(GibberTransport *transport);
 
 gboolean
-gibber_ssl_transport_connect(GibberSSLTransport *ssl, 
+gibber_ssl_transport_connect(GibberSSLTransport *ssl,
                              const gchar *server, GError **error);
 
 G_END_DECLS

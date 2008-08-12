@@ -27,14 +27,13 @@
 
 #include <telepathy-glib/handle-repo.h>
 
-#include <avahi-gobject/ga-service-resolver.h>
-#include <avahi-gobject/ga-enums.h>
-
 #include "salut-presence.h"
 #include "salut-connection.h"
+#ifdef ENABLE_OLPC
+#include "salut-olpc-activity.h"
+#endif
 
 G_BEGIN_DECLS
-
 
 #define  SALUT_CONTACT_ALIAS_CHANGED  0x1
 #define  SALUT_CONTACT_STATUS_CHANGED 0x2
@@ -50,6 +49,14 @@ typedef struct _SalutContactClass SalutContactClass;
 
 struct _SalutContactClass {
     GObjectClass parent_class;
+
+    /* public abstract methods */
+    GArray * (*get_addresses) (SalutContact *contact);
+    gboolean (*has_address) (SalutContact *contact,
+        struct sockaddr_storage *address);
+
+    /* private abstract methods */
+    void (*retrieve_avatar) (SalutContact *contact);
 };
 
 struct _SalutContact {
@@ -68,13 +75,16 @@ struct _SalutContact {
     gchar *olpc_ip4;
     gchar *olpc_ip6;
 #endif /* ENABLE_OLPC */
+
+    /* private */
+    SalutConnection *connection;
 };
 
-GType salut_contact_get_type(void);
+GType salut_contact_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_CONTACT \
-  (salut_contact_get_type())
+  (salut_contact_get_type ())
 #define SALUT_CONTACT(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONTACT, SalutContact))
 #define SALUT_CONTACT_CLASS(klass) \
@@ -86,62 +96,69 @@ GType salut_contact_get_type(void);
 #define SALUT_CONTACT_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT, SalutContactClass))
 
-SalutContact *salut_contact_new (GaClient *client,
-    SalutConnection *conn, const gchar *name);
-
-void
-salut_contact_add_service(SalutContact *contact,
-                          AvahiIfIndex interface, AvahiProtocol protocol,
-                          const char *name, const char *type,
-                          const char *domain);
-
-void
-salut_contact_remove_service(SalutContact *contact,
-                          AvahiIfIndex interface, AvahiProtocol protocol,
-                          const char *name, const char *type,
-                          const char *domain);
-
 typedef struct {
   struct sockaddr_storage address;
 } salut_contact_address_t;
 
 /* Returns an array of addresses on which the contact can be found */
-GArray *
-salut_contact_get_addresses(SalutContact *contact);
+GArray * salut_contact_get_addresses (SalutContact *contact);
 
-gboolean
-salut_contact_has_address(SalutContact *contact,
-                           struct sockaddr_storage *address);
-const gchar *
-salut_contact_get_alias(SalutContact *contact);
-
-gboolean
-salut_contact_has_services(SalutContact *contact);
+gboolean salut_contact_has_address (SalutContact *contact,
+                                   struct sockaddr_storage *address);
+const gchar * salut_contact_get_alias (SalutContact *contact);
 
 typedef void (*salut_contact_get_avatar_callback)(SalutContact *contact,
                                                   guint8 *avatar,
                                                   gsize size,
                                                   gpointer user_data);
 
-void
-salut_contact_get_avatar(SalutContact *contact,
-                         salut_contact_get_avatar_callback callback,
-                         gpointer user_data1);
+void salut_contact_get_avatar (SalutContact *contact,
+                               salut_contact_get_avatar_callback callback,
+                               gpointer user_data1);
 
 #ifdef ENABLE_OLPC
 typedef void (*SalutContactOLPCActivityFunc)
-    (const gchar *id, TpHandle handle, gpointer user_data);
+    (SalutOlpcActivity *activity, gpointer user_data);
 
 void salut_contact_foreach_olpc_activity (SalutContact *self,
     SalutContactOLPCActivityFunc foreach, gpointer user_data);
 
-void salut_contact_takes_part_in_olpc_activity (SalutContact *self,
-    TpHandle room, const gchar *activity_id);
+gboolean salut_contact_joined_activity (SalutContact *self,
+    SalutOlpcActivity *activity);
 
-void salut_contact_left_private_activity (SalutContact *self, TpHandle room,
-    const gchar *activity_id);
-
+void salut_contact_left_activity (SalutContact *self,
+    SalutOlpcActivity *activity);
 #endif
+
+/* restricted methods */
+void salut_contact_change_alias (SalutContact *self, const gchar *alias);
+void salut_contact_change_status (SalutContact *self, SalutPresenceId);
+void salut_contact_change_status_message (SalutContact *self,
+  const gchar *message);
+void salut_contact_change_avatar_token (SalutContact *self,
+  const gchar *avatar_token);
+void salut_contact_change_jid (SalutContact *self, gchar *jid);
+
+#ifdef ENABLE_OLPC
+void salut_contact_change_olpc_color (SalutContact *self,
+  const gchar *olpc_color);
+void salut_contact_change_olpc_key (SalutContact *self, GArray *olpc_key);
+void salut_contact_change_ipv4_addr (SalutContact *self,
+  const gchar *ipv4_addr);
+void salut_contact_change_ipv6_addr (SalutContact *self,
+  const gchar *ipv4_addr);
+void salut_contact_change_current_activity (SalutContact *self,
+  const gchar *current_activity_id, const gchar *current_activity_room);
+#endif
+
+void salut_contact_avatar_request_flush (SalutContact *self, guint8 *data,
+    gsize size);
+
+void salut_contact_found (SalutContact *self);
+void salut_contact_lost (SalutContact *self);
+
+void salut_contact_freeze (SalutContact *self);
+void salut_contact_thaw (SalutContact *self);
 
 G_END_DECLS
 

@@ -313,7 +313,9 @@ salut_im_channel_constructor (GType type,
       contact_repo);
 
   tp_text_mixin_set_message_types (obj, TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
-      TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION, G_MAXUINT);
+      TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
+      TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE,
+      G_MAXUINT);
 
   /* Connect to the bus */
   bus = tp_get_bus ();
@@ -600,9 +602,10 @@ connection_disconnected (SalutImChannel *self)
   g_signal_connect (priv->xmpp_connection_manager, "new-connection",
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
 
-  if (g_queue_get_length(priv->out_queue) > 0) {
-    _setup_connection(self);
-  }
+  if (g_queue_get_length (priv->out_queue) > 0)
+    {
+      _setup_connection (self);
+    }
 }
 
 static void
@@ -958,9 +961,20 @@ salut_im_channel_send (TpSvcChannelTypeText *channel,
   SalutImChannel *self = SALUT_IM_CHANNEL (channel);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GError *error = NULL;
+  GibberXmppStanza *stanza;
 
-  GibberXmppStanza *stanza = text_helper_create_message (
-      priv->connection->name, priv->contact->name, type, text, &error);
+  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
+    {
+      GError ierror = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        "Invalid message type" };
+
+      dbus_g_method_return_error (context, &ierror);
+
+      return;
+    }
+
+  stanza = text_helper_create_message (priv->connection->name,
+    priv->contact->name, type, text, &error);
 
   if (stanza == NULL)
     {

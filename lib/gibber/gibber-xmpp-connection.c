@@ -34,9 +34,8 @@
 
 #define XMPP_STREAM_NAMESPACE "http://etherx.jabber.org/streams"
 
-static void _xmpp_connection_received_data(GibberTransport *transport,
-                                           GibberBuffer *buffer,
-                                           gpointer user_data);
+static void _xmpp_connection_received_data (GibberTransport *transport,
+    GibberBuffer *buffer, gpointer user_data);
 
 G_DEFINE_TYPE(GibberXmppConnection, gibber_xmpp_connection, G_TYPE_OBJECT)
 
@@ -52,18 +51,15 @@ enum
 
 static guint signals[LAST_SIGNAL] = {0};
 
-static void 
-_reader_stream_opened_cb(GibberXmppReader *reader, 
-                         const gchar *to, const gchar *from,
-                         const gchar *version,
-                         gpointer user_data);
+static void _reader_stream_opened_cb (GibberXmppReader *reader,
+    const gchar *to, const gchar *from, const gchar *version,
+    gpointer user_data);
 
-static void 
-_reader_stream_closed_cb(GibberXmppReader *reader, gpointer user_data);
+static void _reader_stream_closed_cb (GibberXmppReader *reader,
+    gpointer user_data);
 
-static void _reader_received_stanza_cb(GibberXmppReader *reader, 
-                                       GibberXmppStanza *stanza,
-                                       gpointer user_data);
+static void _reader_received_stanza_cb (GibberXmppReader *reader,
+    GibberXmppStanza *stanza, gpointer user_data);
 
 /* private structure */
 typedef struct _GibberXmppConnectionPrivate GibberXmppConnectionPrivate;
@@ -76,30 +72,31 @@ struct _GibberXmppConnectionPrivate
   guint last_id;
 };
 
-#define GIBBER_XMPP_CONNECTION_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_CONNECTION, GibberXmppConnectionPrivate))
+#define GIBBER_XMPP_CONNECTION_GET_PRIVATE(o)  \
+    (G_TYPE_INSTANCE_GET_PRIVATE ((o), GIBBER_TYPE_XMPP_CONNECTION, \
+    GibberXmppConnectionPrivate))
 
 static GObject *
-gibber_xmpp_connection_constructor(GType type,
-                                   guint n_props,
-                                   GObjectConstructParam *props)
+gibber_xmpp_connection_constructor (GType type,
+    guint n_props, GObjectConstructParam *props)
 {
   GObject *obj;
   GibberXmppConnectionPrivate *priv;
-  
-  obj = G_OBJECT_CLASS(gibber_xmpp_connection_parent_class)->
-        constructor(type, n_props, props);
+
+  obj = G_OBJECT_CLASS (gibber_xmpp_connection_parent_class)->
+        constructor (type, n_props, props);
 
   priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (obj);
 
-  priv->writer = gibber_xmpp_writer_new();
-  priv->reader = gibber_xmpp_reader_new();
+  priv->writer = gibber_xmpp_writer_new ();
+  priv->reader = gibber_xmpp_reader_new ();
 
-  g_signal_connect(priv->reader, "stream-opened", 
-                   G_CALLBACK(_reader_stream_opened_cb), obj);
-  g_signal_connect(priv->reader, "stream-closed", 
-                   G_CALLBACK(_reader_stream_closed_cb), obj);
-  g_signal_connect(priv->reader, "received-stanza", 
-                    G_CALLBACK(_reader_received_stanza_cb), obj);
+  g_signal_connect (priv->reader, "stream-opened",
+      G_CALLBACK (_reader_stream_opened_cb), obj);
+  g_signal_connect (priv->reader, "stream-closed",
+      G_CALLBACK (_reader_stream_closed_cb), obj);
+  g_signal_connect (priv->reader, "received-stanza",
+      G_CALLBACK (_reader_received_stanza_cb), obj);
 
   return obj;
 }
@@ -116,75 +113,80 @@ static void gibber_xmpp_connection_dispose (GObject *object);
 static void gibber_xmpp_connection_finalize (GObject *object);
 
 static void
-gibber_xmpp_connection_class_init (GibberXmppConnectionClass *gibber_xmpp_connection_class)
+gibber_xmpp_connection_class_init (
+    GibberXmppConnectionClass *gibber_xmpp_connection_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (gibber_xmpp_connection_class);
 
-  g_type_class_add_private (gibber_xmpp_connection_class, sizeof (GibberXmppConnectionPrivate));
+  g_type_class_add_private (gibber_xmpp_connection_class,
+      sizeof (GibberXmppConnectionPrivate));
 
   object_class->dispose = gibber_xmpp_connection_dispose;
   object_class->finalize = gibber_xmpp_connection_finalize;
 
   object_class->constructor = gibber_xmpp_connection_constructor;
 
-  signals[STREAM_OPENED] = 
-    g_signal_new("stream-opened", 
-                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
-                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                 0,
-                 NULL, NULL,
-                 _gibber_signals_marshal_VOID__STRING_STRING_STRING,
-                 G_TYPE_NONE, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
-  signals[STREAM_CLOSED] = 
-    g_signal_new("stream-closed", 
-                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
-                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__VOID,
-                 G_TYPE_NONE, 0);
-  signals[RECEIVED_STANZA] = 
-    g_signal_new("received-stanza", 
-                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
-                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__OBJECT,
-                 G_TYPE_NONE, 1, GIBBER_TYPE_XMPP_STANZA);
-  signals[PARSE_ERROR] = 
-    g_signal_new("parse-error", 
-                 G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
-                 G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                 0,
-                 NULL, NULL,
-                 g_cclosure_marshal_VOID__VOID,
-                 G_TYPE_NONE, 0);
+  signals[STREAM_OPENED] = g_signal_new ("stream-opened",
+      G_OBJECT_CLASS_TYPE (gibber_xmpp_connection_class),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+      0,
+      NULL, NULL,
+      _gibber_signals_marshal_VOID__STRING_STRING_STRING,
+      G_TYPE_NONE, 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+
+  signals[STREAM_CLOSED] = g_signal_new ("stream-closed",
+       G_OBJECT_CLASS_TYPE (gibber_xmpp_connection_class),
+       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+       0,
+       NULL, NULL,
+       g_cclosure_marshal_VOID__VOID,
+       G_TYPE_NONE, 0);
+
+  signals[RECEIVED_STANZA] = g_signal_new ("received-stanza",
+      G_OBJECT_CLASS_TYPE (gibber_xmpp_connection_class),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__OBJECT,
+      G_TYPE_NONE, 1, GIBBER_TYPE_XMPP_STANZA);
+
+  signals[PARSE_ERROR] = g_signal_new ("parse-error",
+      G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__VOID,
+      G_TYPE_NONE, 0);
 }
 
 void
 gibber_xmpp_connection_dispose (GObject *object)
 {
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (object);
-  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
+  GibberXmppConnectionPrivate *priv =
+      GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
 
   priv->dispose_has_run = TRUE;
-  if (self->transport != NULL) {
-    g_object_unref(self->transport);
-    self->transport = NULL;
-  }
+  if (self->transport != NULL)
+    {
+      g_object_unref (self->transport);
+      self->transport = NULL;
+    }
 
-  if (priv->reader != NULL) {
-    g_object_unref(priv->reader);
-    priv->reader = NULL;
-  }
+  if (priv->reader != NULL)
+    {
+      g_object_unref (priv->reader);
+      priv->reader = NULL;
+    }
 
-  if (priv->writer != NULL) {
-    g_object_unref(priv->writer);
-    priv->writer = NULL;
-  }
+  if (priv->writer != NULL)
+    {
+      g_object_unref (priv->writer);
+      priv->writer = NULL;
+    }
 
   /* release any references held by the object here */
 
@@ -193,102 +195,111 @@ gibber_xmpp_connection_dispose (GObject *object)
 }
 
 void
-gibber_xmpp_connection_finalize (GObject *object) {
+gibber_xmpp_connection_finalize (GObject *object)
+{
   G_OBJECT_CLASS (gibber_xmpp_connection_parent_class)->finalize (object);
 }
 
 
 
 static GibberXmppConnection *
-new_connection(GibberTransport *transport, gboolean stream)  {
+new_connection (GibberTransport *transport, gboolean stream)
+{
   GibberXmppConnection * result;
 
-  result = g_object_new(GIBBER_TYPE_XMPP_CONNECTION, NULL);
+  result = g_object_new (GIBBER_TYPE_XMPP_CONNECTION, NULL);
 
-  if (transport != NULL) {
-    gibber_xmpp_connection_engage(result, transport);
-  }
+  if (transport != NULL)
+    {
+      gibber_xmpp_connection_engage (result, transport);
+    }
 
   return result;
 }
 
 GibberXmppConnection *
-gibber_xmpp_connection_new(GibberTransport *transport) { 
-  return new_connection(transport, TRUE);
+gibber_xmpp_connection_new (GibberTransport *transport)
+{
+  return new_connection (transport, TRUE);
 }
 
 GibberXmppConnection *
-gibber_xmpp_connection_new_no_stream(GibberTransport *transport) {
-  return new_connection(transport, FALSE);
+gibber_xmpp_connection_new_no_stream (GibberTransport *transport)
+{
+  return new_connection (transport, FALSE);
 }
 
-void 
-gibber_xmpp_connection_open(GibberXmppConnection *connection,
-                            const gchar *to, const gchar *from,
-                            const gchar *version) {
-  GibberXmppConnectionPrivate *priv = 
+void
+gibber_xmpp_connection_open (GibberXmppConnection *connection,
+    const gchar *to, const gchar *from, const gchar *version)
+{
+  GibberXmppConnectionPrivate *priv =
     GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
 
-  g_assert((connection->stream_flags & GIBBER_XMPP_CONNECTION_STREAM_SENT)
+  g_assert ((connection->stream_flags & GIBBER_XMPP_CONNECTION_STREAM_SENT)
       == 0);
 
-  gibber_xmpp_writer_stream_open(priv->writer, to, from,
-                                  version, &data, &length);
+  gibber_xmpp_writer_stream_open (priv->writer, to, from, version, &data,
+      &length);
   connection->stream_flags |= GIBBER_XMPP_CONNECTION_STREAM_SENT;
-  gibber_transport_send(connection->transport, data, length, NULL);
+  gibber_transport_send (connection->transport, data, length, NULL);
 }
 
 void
-gibber_xmpp_connection_restart(GibberXmppConnection *connection) {
+gibber_xmpp_connection_restart (GibberXmppConnection *connection)
+{
   GibberXmppConnectionPrivate *priv =
     GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
 
-  g_assert(connection->stream_flags
+  g_assert (connection->stream_flags
       & GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN);
-  gibber_xmpp_reader_reset(priv->reader);
+  gibber_xmpp_reader_reset (priv->reader);
   connection->stream_flags = 0;
 }
 
-void 
-gibber_xmpp_connection_close(GibberXmppConnection *connection) {
-  GibberXmppConnectionPrivate *priv = 
+void
+gibber_xmpp_connection_close (GibberXmppConnection *connection)
+{
+  GibberXmppConnectionPrivate *priv =
     GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
 
   connection->stream_flags |= GIBBER_XMPP_CONNECTION_CLOSE_SENT;
 
-  gibber_xmpp_writer_stream_close(priv->writer, &data, &length);
-  gibber_transport_send(connection->transport, data, length, NULL);
+  gibber_xmpp_writer_stream_close (priv->writer, &data, &length);
+  gibber_transport_send (connection->transport, data, length, NULL);
 }
 
-void 
-gibber_xmpp_connection_engage(GibberXmppConnection *connection, 
-    GibberTransport *transport) {
-  g_assert(connection->transport == NULL);
+void
+gibber_xmpp_connection_engage (GibberXmppConnection *connection,
+    GibberTransport *transport)
+{
+  g_assert (connection->transport == NULL);
 
-  connection->transport = g_object_ref(transport);
-  gibber_transport_set_handler(transport,
-                               _xmpp_connection_received_data,
-                               connection);
+  connection->transport = g_object_ref (transport);
+  gibber_transport_set_handler (transport, _xmpp_connection_received_data,
+      connection);
 }
 
-void 
-gibber_xmpp_connection_disengage(GibberXmppConnection *connection) {
-  g_assert(connection->transport != NULL);
+void
+gibber_xmpp_connection_disengage (GibberXmppConnection *connection)
+{
+  g_assert (connection->transport != NULL);
 
-  gibber_transport_set_handler(connection->transport, NULL, NULL);
+  gibber_transport_set_handler (connection->transport, NULL, NULL);
 
-  g_object_unref(connection->transport);
+  g_object_unref (connection->transport);
   connection->transport = NULL;
 }
 
 gboolean
-gibber_xmpp_connection_send(GibberXmppConnection *connection, 
-                                GibberXmppStanza *stanza, GError **error) {
-  GibberXmppConnectionPrivate *priv = 
+gibber_xmpp_connection_send (GibberXmppConnection *connection,
+    GibberXmppStanza *stanza, GError **error)
+{
+  GibberXmppConnectionPrivate *priv =
     GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
   const guint8 *data;
   gsize length;
@@ -302,61 +313,66 @@ gibber_xmpp_connection_send(GibberXmppConnection *connection,
       g_free (tmp);
     }
 
-  if (!gibber_xmpp_writer_write_stanza(priv->writer, stanza,
-                                      &data, &length, error)) {
-    return FALSE;
-  }
+  if (!gibber_xmpp_writer_write_stanza (priv->writer, stanza,
+      &data, &length, error))
+    {
+      return FALSE;
+    }
 
-  return gibber_transport_send(connection->transport, data, length, error);
+  return gibber_transport_send (connection->transport, data, length, error);
 }
 
-static void _xmpp_connection_received_data(GibberTransport *transport,
-                                           GibberBuffer *buffer,
-                                           gpointer user_data) {
+static void
+_xmpp_connection_received_data (GibberTransport *transport,
+    GibberBuffer *buffer, gpointer user_data)
+{
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
-  GibberXmppConnectionPrivate *priv = GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
+  GibberXmppConnectionPrivate *priv =
+      GIBBER_XMPP_CONNECTION_GET_PRIVATE (self);
   gboolean ret;
   GError *error = NULL;
 
-  g_assert(buffer->length > 0);
+  g_assert (buffer->length > 0);
 
   /* Ensure we're not disposed inside while running the reader is busy */
-  g_object_ref(self);
-  ret = gibber_xmpp_reader_push(priv->reader, buffer->data, 
-                                buffer->length, &error);
-  if (!ret) {
-    g_signal_emit(self, signals[PARSE_ERROR], 0); 
-  }
-  g_object_unref(self);
+  g_object_ref (self);
+  ret = gibber_xmpp_reader_push (priv->reader, buffer->data, buffer->length,
+      &error);
+
+  if (!ret)
+    {
+      g_signal_emit (self, signals[PARSE_ERROR], 0);
+    }
+  g_object_unref (self);
 }
 
-static void 
-_reader_stream_opened_cb(GibberXmppReader *reader, 
-                         const gchar *to, const gchar *from, 
-                         const gchar *version,
-                         gpointer user_data) {
+static void
+_reader_stream_opened_cb (GibberXmppReader *reader, const gchar *to,
+    const gchar *from, const gchar *version, gpointer user_data)
+{
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
 
   self->stream_flags |= GIBBER_XMPP_CONNECTION_STREAM_RECEIVED;
 
-  g_signal_emit(self, signals[STREAM_OPENED], 0, to, from, version);
+  g_signal_emit (self, signals[STREAM_OPENED], 0, to, from, version);
 }
 
-static void 
-_reader_stream_closed_cb(GibberXmppReader *reader, 
-                         gpointer user_data) {
+static void
+_reader_stream_closed_cb (GibberXmppReader *reader, gpointer user_data)
+{
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
 
   self->stream_flags |= GIBBER_XMPP_CONNECTION_CLOSE_RECEIVED;
 
-  g_signal_emit(self, signals[STREAM_CLOSED], 0);
+  g_signal_emit (self, signals[STREAM_CLOSED], 0);
 }
 
-static void 
-_reader_received_stanza_cb(GibberXmppReader *reader, GibberXmppStanza *stanza,
-                 gpointer user_data) {
+static void
+_reader_received_stanza_cb (GibberXmppReader *reader, GibberXmppStanza *stanza,
+    gpointer user_data)
+{
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);
-  g_signal_emit(self, signals[RECEIVED_STANZA], 0, stanza);
+  g_signal_emit (self, signals[RECEIVED_STANZA], 0, stanza);
 }
 
 gchar *

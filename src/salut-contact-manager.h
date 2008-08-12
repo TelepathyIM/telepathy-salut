@@ -22,7 +22,6 @@
 #define __SALUT_CONTACT_MANAGER_H__
 
 #include <glib-object.h>
-#include <avahi-gobject/ga-client.h>
 
 #include "salut-connection.h"
 #include "salut-contact.h"
@@ -34,18 +33,32 @@ typedef struct _SalutContactManagerClass SalutContactManagerClass;
 
 struct _SalutContactManagerClass {
     GObjectClass parent_class;
+
+    /* public abstract methods */
+    gboolean (*start) (SalutContactManager *self, GError **error);
+
+    /* private abstract methods */
+    SalutContact * (*create_contact) (SalutContactManager *self,
+        const gchar *name);
+    void (*dispose_contact) (SalutContactManager *self,
+        SalutContact *contact);
+    void (*close_all) (SalutContactManager *self);
 };
 
 struct _SalutContactManager {
     GObject parent;
+
+    /* private */
+    SalutConnection *connection;
+    GHashTable *contacts;
 };
 
 
-GType salut_contact_manager_get_type(void);
+GType salut_contact_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_CONTACT_MANAGER \
-  (salut_contact_manager_get_type())
+  (salut_contact_manager_get_type ())
 #define SALUT_CONTACT_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONTACT_MANAGER, SalutContactManager))
 #define SALUT_CONTACT_MANAGER_CLASS(klass) \
@@ -57,35 +70,20 @@ GType salut_contact_manager_get_type(void);
 #define SALUT_CONTACT_MANAGER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONTACT_MANAGER, SalutContactManagerClass))
 
-SalutContactManager *
-salut_contact_manager_new(SalutConnection *connection);
-
-gboolean salut_contact_manager_start(SalutContactManager *mgr,
-                                     GaClient *client,
-                                     GError **error);
-
+gboolean salut_contact_manager_start (SalutContactManager *mgr, GError **error);
 
 SalutContact *
-salut_contact_manager_get_contact(SalutContactManager *mgr, TpHandle handle);
+salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle);
 
 GList *
-salut_contact_manager_find_contacts_by_address(SalutContactManager *mgr,
-                                              struct sockaddr_storage *address);
-
-#ifdef ENABLE_OLPC
-gboolean salut_contact_manager_merge_olpc_activity_properties
-  (SalutContactManager *self, TpHandle handle, const gchar **color,
-   const gchar **name, const gchar **type, const gchar **tags,
-   gboolean *is_private);
-
-void
-salut_contact_manager_add_invited_olpc_activity (SalutContactManager *self,
-    SalutContact *invitor, TpHandle room, const gchar *activity_id,
-    const gchar *color, const gchar *activity_name,
-    const gchar *activity_type, const gchar *tags);
-#endif
+salut_contact_manager_find_contacts_by_address (SalutContactManager *mgr,
+    struct sockaddr_storage *address);
 
 SalutContact * salut_contact_manager_ensure_contact (SalutContactManager *mgr,
     const gchar *name);
+
+/* restricted methods */
+void salut_contact_manager_contact_created (SalutContactManager *self,
+    SalutContact *contact);
 
 #endif /* #ifndef __SALUT_CONTACT_MANAGER_H__*/

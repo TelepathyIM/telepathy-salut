@@ -16,16 +16,16 @@ make_gibber_suite (void)
 {
     Suite *s = suite_create ("Gibber");
 
-    suite_add_tcase (s, make_gibber_xmpp_node_tcase());
-    suite_add_tcase (s, make_gibber_xmpp_reader_tcase());
-    suite_add_tcase (s, make_gibber_xmpp_connection_tcase());
+    suite_add_tcase (s, make_gibber_xmpp_node_tcase ());
+    suite_add_tcase (s, make_gibber_xmpp_reader_tcase ());
+    suite_add_tcase (s, make_gibber_xmpp_connection_tcase ());
 #ifdef HAVE_LIBSASL2
-    suite_add_tcase (s, make_gibber_sasl_auth_tcase());
+    suite_add_tcase (s, make_gibber_sasl_auth_tcase ());
 #endif
-    suite_add_tcase (s, make_gibber_resolver_tcase());
-    suite_add_tcase (s, make_gibber_r_multicast_packet_tcase());
-    suite_add_tcase (s, make_gibber_r_multicast_sender_tcase());
-    suite_add_tcase (s, make_gibber_r_multicast_causal_transport_tcase());
+    suite_add_tcase (s, make_gibber_resolver_tcase ());
+    suite_add_tcase (s, make_gibber_r_multicast_packet_tcase ());
+    suite_add_tcase (s, make_gibber_r_multicast_sender_tcase ());
+    suite_add_tcase (s, make_gibber_r_multicast_causal_transport_tcase ());
     suite_add_tcase (s, make_gibber_xmpp_stanza_tcase ());
     suite_add_tcase (s, make_gibber_iq_helper_tcase ());
     suite_add_tcase (s, make_gibber_xmpp_connection_listener_tcase ());

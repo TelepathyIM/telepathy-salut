@@ -26,6 +26,11 @@
 #include <telepathy-glib/text-mixin.h>
 #include <telepathy-glib/group-mixin.h>
 
+#include <gibber/gibber-muc-connection.h>
+
+#include "salut-connection.h"
+#include "salut-xmpp-connection-manager.h"
+
 G_BEGIN_DECLS
 
 typedef struct _SalutMucChannel SalutMucChannel;
@@ -35,23 +40,31 @@ struct _SalutMucChannelClass {
   GObjectClass parent_class;
   TpGroupMixinClass group_class;
   TpTextMixinClass text_class;
+
+  /* Virtual method */
+  gboolean (*publish_service) (SalutMucChannel *self,
+      GibberMucConnection *muc_connection, const gchar *muc_name);
 };
 
 struct _SalutMucChannel {
     GObject parent;
     TpGroupMixin group;
     TpTextMixin text;
+
+    /* private */
+    SalutConnection *connection;
 };
 
-GType salut_muc_channel_get_type(void);
+GType salut_muc_channel_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_MUC_CHANNEL \
-  (salut_muc_channel_get_type())
+  (salut_muc_channel_get_type ())
 #define SALUT_MUC_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_MUC_CHANNEL, SalutMucChannel))
 #define SALUT_MUC_CHANNEL_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_MUC_CHANNEL, \
+   SalutMucChannelClass))
 #define SALUT_IS_MUC_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_MUC_CHANNEL))
 #define SALUT_IS_MUC_CHANNEL_CLASS(klass) \
@@ -60,7 +73,7 @@ GType salut_muc_channel_get_type(void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelClass))
 
 gboolean
-salut_muc_channel_invited(SalutMucChannel *self,
+salut_muc_channel_invited (SalutMucChannel *self,
                           TpHandle invitor, const gchar *message,
                           GError **error);
 
@@ -70,6 +83,12 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
 
 gboolean salut_muc_channel_publish_service (SalutMucChannel *self);
 
+/* FIXME: This is an ugly workaround. See fd.o #15092
+ * We shouldn't export this function */
+gboolean salut_muc_channel_add_member (GObject *iface, TpHandle handle,
+    const gchar *message, GError **error);
+
+void salut_muc_channel_emit_closed (SalutMucChannel *chan);
 
 G_END_DECLS
 

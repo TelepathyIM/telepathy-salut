@@ -13,39 +13,6 @@
 
 #include "debug.h"
 
-void
-debug_set_log_file_from_env (void)
-{
-  const gchar *output_file;
-  int out;
-
-  output_file = g_getenv ("SALUT_LOGFILE");
-  if (output_file == NULL)
-    return;
-
-  out = g_open (output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-  if (out == -1)
-    {
-      g_warning ("Can't open logfile '%s': %s", output_file,
-          g_strerror (errno));
-      return;
-    }
-
-  if (dup2 (out, STDOUT_FILENO) == -1)
-    {
-      g_warning ("Error when duplicating stdout file descriptor: %s",
-          g_strerror (errno));
-      return;
-    }
-
-  if (dup2 (out, STDERR_FILENO) == -1)
-    {
-      g_warning ("Error when duplicating stderr file descriptor: %s",
-          g_strerror (errno));
-      return;
-    }
-}
-
 #ifdef ENABLE_DEBUG
 
 static DebugFlags flags = 0;
@@ -83,11 +50,7 @@ void debug_set_flags_from_env ()
 
   flags_string = g_getenv ("SALUT_DEBUG");
 
-#ifdef HAVE_TP_DEBUG_SET_FLAGS
-      tp_debug_set_flags (flags_string);
-#else
-      tp_debug_set_flags_from_string (flags_string);
-#endif
+  tp_debug_set_flags (flags_string);
 
   if (flags_string) {
     debug_set_flags (g_parse_debug_string (flags_string, keys, nkeys));

@@ -55,6 +55,7 @@ struct _GibberTransportClass {
     gboolean (*get_sockaddr) (GibberTransport *transport,
         struct sockaddr_storage *addr, socklen_t *len);
     gboolean (*buffer_is_empty) (GibberTransport *transport);
+    void (*block_receiving) (GibberTransport *transport, gboolean block);
 };
 
 struct _GibberTransport {
@@ -69,56 +70,55 @@ struct _GibberTransport {
     gpointer user_data;
 };
 
-GType gibber_transport_get_type(void);
+GType gibber_transport_get_type (void);
 
 /* TYPE MACROS */
-#define GIBBER_TYPE_TRANSPORT \
-  (gibber_transport_get_type())
+#define GIBBER_TYPE_TRANSPORT  (gibber_transport_get_type ())
 #define GIBBER_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_TRANSPORT, GibberTransport))
 #define GIBBER_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_TRANSPORT, GibberTransportClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_TRANSPORT, \
+   GibberTransportClass))
 #define GIBBER_IS_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_TRANSPORT))
 #define GIBBER_IS_TRANSPORT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_TRANSPORT))
 #define GIBBER_TRANSPORT_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_TRANSPORT, GibberTransportClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_TRANSPORT, \
+   GibberTransportClass))
 
 /* Utility functions for the classes based on GibberTransport   */
-void gibber_transport_received_data(GibberTransport *transport,  
-                                   const guint8 *data, 
-                                   gsize length);
+void gibber_transport_received_data (GibberTransport *transport,
+    const guint8 *data, gsize length);
 
-void gibber_transport_received_data_custom(GibberTransport *transport,
-                                           GibberBuffer *buffer);
+void gibber_transport_received_data_custom (GibberTransport *transport,
+    GibberBuffer *buffer);
 
-void gibber_transport_set_state(GibberTransport *transport, 
-                               GibberTransportState state);
+void gibber_transport_set_state (GibberTransport *transport,
+    GibberTransportState state);
 
-GibberTransportState gibber_transport_get_state(GibberTransport *transport);
+GibberTransportState gibber_transport_get_state (GibberTransport *transport);
 
 void gibber_transport_emit_error (GibberTransport *transport, GError *error);
 
 /* Public api */
-gboolean gibber_transport_send(GibberTransport *transport, 
-                              const guint8 *data, 
-                              gsize size, 
-                              GError **error); 
-void gibber_transport_disconnect(GibberTransport *transport);
+gboolean gibber_transport_send (GibberTransport *transport, const guint8 *data,
+    gsize size, GError **error);
 
-void gibber_transport_set_handler(GibberTransport *transport,
-                                  GibberHandlerFunc func,
-                                  gpointer user_data);
+void gibber_transport_disconnect (GibberTransport *transport);
+
+void gibber_transport_set_handler (GibberTransport *transport,
+    GibberHandlerFunc func, gpointer user_data);
 
 gboolean gibber_transport_get_sockaddr (GibberTransport *transport,
     struct sockaddr_storage *addr, socklen_t *len);
 
-gboolean
-gibber_transport_buffer_is_empty (GibberTransport *transport);
+gboolean gibber_transport_buffer_is_empty (GibberTransport *transport);
 
-void
-gibber_transport_emit_buffer_empty (GibberTransport *transport);
+void gibber_transport_emit_buffer_empty (GibberTransport *transport);
+
+void gibber_transport_block_receiving (GibberTransport *transport,
+    gboolean block);
 
 G_END_DECLS
 

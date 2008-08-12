@@ -54,47 +54,45 @@ struct _GibberXmppConnection {
     guint8 stream_flags;
 };
 
-GType gibber_xmpp_connection_get_type(void);
+GType gibber_xmpp_connection_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_XMPP_CONNECTION \
-  (gibber_xmpp_connection_get_type())
+  (gibber_xmpp_connection_get_type ())
 #define GIBBER_XMPP_CONNECTION(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_CONNECTION, GibberXmppConnection))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_CONNECTION, \
+   GibberXmppConnection))
 #define GIBBER_XMPP_CONNECTION_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_CONNECTION, GibberXmppConnectionClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_CONNECTION, \
+   GibberXmppConnectionClass))
 #define GIBBER_IS_XMPP_CONNECTION(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_XMPP_CONNECTION))
 #define GIBBER_IS_XMPP_CONNECTION_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_XMPP_CONNECTION))
 #define GIBBER_XMPP_CONNECTION_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_CONNECTION, GibberXmppConnectionClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_CONNECTION, \
+   GibberXmppConnectionClass))
 
+GibberXmppConnection *gibber_xmpp_connection_new (GibberTransport *transport);
 
-
-GibberXmppConnection *gibber_xmpp_connection_new(GibberTransport *transport); 
-
-void gibber_xmpp_connection_open(GibberXmppConnection *connection,
-                                const gchar *to, const gchar *from,
-                                const gchar *version);
+void gibber_xmpp_connection_open (GibberXmppConnection *connection,
+  const gchar *to, const gchar *from, const gchar *version);
 
 /* Prepare the connection for a reopen from the other side, for example after
  * successfull SASL authentication */
-void gibber_xmpp_connection_restart(GibberXmppConnection *connection);
+void gibber_xmpp_connection_restart (GibberXmppConnection *connection);
 
-void gibber_xmpp_connection_close(GibberXmppConnection *connection);
+void gibber_xmpp_connection_close (GibberXmppConnection *connection);
 
-void gibber_xmpp_connection_engage(GibberXmppConnection *connection,
-                                   GibberTransport *transport);
+void gibber_xmpp_connection_engage (GibberXmppConnection *connection,
+    GibberTransport *transport);
 
-void gibber_xmpp_connection_disengage(GibberXmppConnection *connection);
+void gibber_xmpp_connection_disengage (GibberXmppConnection *connection);
 
-gboolean gibber_xmpp_connection_send(GibberXmppConnection *connection, 
-                                    GibberXmppStanza *stanza, 
-                                    GError **error);
+gboolean gibber_xmpp_connection_send (GibberXmppConnection *connection,
+  GibberXmppStanza *stanza, GError **error);
 
-gchar *
-gibber_xmpp_connection_new_id (GibberXmppConnection *connection);
+gchar * gibber_xmpp_connection_new_id (GibberXmppConnection *connection);
 
 G_END_DECLS
 

@@ -35,15 +35,17 @@ struct _SalutConnectionManagerClass {
 
 struct _SalutConnectionManager {
   TpBaseConnectionManager parent;
+
+  gpointer priv;
 };
 
 extern const TpCMProtocolSpec salut_protocols[];
 
-GType salut_connection_manager_get_type(void);
+GType salut_connection_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_CONNECTION_MANAGER \
-  (salut_connection_manager_get_type())
+  (salut_connection_manager_get_type ())
 #define SALUT_CONNECTION_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONNECTION_MANAGER, SalutConnectionManager))
 #define SALUT_CONNECTION_MANAGER_CLASS(klass) \

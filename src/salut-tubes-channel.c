@@ -152,7 +152,7 @@ struct _SalutTubesChannelPrivate
 };
 
 #define SALUT_TUBES_CHANNEL_GET_PRIVATE(obj) \
-  ((SalutTubesChannelPrivate *) obj->priv)
+  ((SalutTubesChannelPrivate *) ((SalutTubesChannel *)obj)->priv)
 
 static gboolean update_tubes_info (SalutTubesChannel *self);
 static void muc_connection_lost_senders_cb (GibberMucConnection *conn,

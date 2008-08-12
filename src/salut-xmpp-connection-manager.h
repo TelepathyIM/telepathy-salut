@@ -33,7 +33,7 @@ G_BEGIN_DECLS
 
 GQuark salut_xmpp_connection_error_quark (void);
 #define SALUT_XMPP_CONNECTION_MANAGER_ERROR \
-  salut_xmpp_connection_error_quark()
+  salut_xmpp_connection_error_quark ()
 
 typedef enum
 {
@@ -60,11 +60,11 @@ struct _SalutXmppConnectionManager
 };
 
 
-GType salut_xmpp_connection_manager_get_type(void);
+GType salut_xmpp_connection_manager_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_XMPP_CONNECTION_MANAGER \
-  (salut_xmpp_connection_manager_get_type())
+  (salut_xmpp_connection_manager_get_type ())
 #define SALUT_XMPP_CONNECTION_MANAGER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_XMPP_CONNECTION_MANAGER, \
                               SalutXmppConnectionManager))
@@ -94,12 +94,10 @@ typedef void (* SalutXmppConnectionManagerStanzaCallbackFunc) (
     SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
     GibberXmppStanza *stanza, SalutContact *contact, gpointer user_data);
 
-SalutXmppConnectionManager *
-salut_xmpp_connection_manager_new (SalutConnection *connection,
-    SalutContactManager *contact_manager);
+SalutXmppConnectionManager * salut_xmpp_connection_manager_new (
+    SalutConnection *connection, SalutContactManager *contact_manager);
 
-int
-salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager,
+int salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *manager,
     GError **error);
 
 SalutXmppConnectionManagerRequestConnectionResult
@@ -107,30 +105,23 @@ salut_xmpp_connection_manager_request_connection (
     SalutXmppConnectionManager *manager, SalutContact *contact,
     GibberXmppConnection **conn, GError **error);
 
-void
-salut_xmpp_connection_manager_release_connection (
+void salut_xmpp_connection_manager_release_connection (
+  SalutXmppConnectionManager *manager, GibberXmppConnection *connection);
+
+void salut_xmpp_connection_manager_take_connection (
     SalutXmppConnectionManager *manager, GibberXmppConnection *connection);
 
-void
-salut_xmpp_connection_manager_take_connection (
+void salut_xmpp_connection_manager_reset_connection_timer (
     SalutXmppConnectionManager *manager, GibberXmppConnection *connection);
 
-void
-salut_xmpp_connection_manager_reset_connection_timer (
-    SalutXmppConnectionManager *manager, GibberXmppConnection *connection);
-
-gboolean
-salut_xmpp_connection_manager_add_stanza_filter (
-    SalutXmppConnectionManager *manager,
-    GibberXmppConnection *conn,
+gboolean salut_xmpp_connection_manager_add_stanza_filter (
+    SalutXmppConnectionManager *manager, GibberXmppConnection *conn,
     SalutXmppConnectionManagerStanzaFilterFunc filter,
     SalutXmppConnectionManagerStanzaCallbackFunc callback,
     gpointer user_data);
 
-void
-salut_xmpp_connection_manager_remove_stanza_filter (
-    SalutXmppConnectionManager *manager,
-    GibberXmppConnection *conn,
+void salut_xmpp_connection_manager_remove_stanza_filter (
+    SalutXmppConnectionManager *manager, GibberXmppConnection *conn,
     SalutXmppConnectionManagerStanzaFilterFunc filter,
     SalutXmppConnectionManagerStanzaCallbackFunc callback,
     gpointer user_data);

@@ -1,6 +1,6 @@
 /*
  * tube-stream.c - Source for SalutTubeStream
- * Copyright (C) 2007 Ltd.
+ * Copyright (C) 2007-2008 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -159,7 +159,7 @@ struct _SalutTubeStreamPrivate
 };
 
 #define SALUT_TUBE_STREAM_GET_PRIVATE(obj) \
-    ((SalutTubeStreamPrivate *) obj->priv)
+    ((SalutTubeStreamPrivate *) ((SalutTubeStream *)obj)->priv)
 
 static void data_received_cb (GibberBytestreamIface *ibb, TpHandle sender,
     GString *data, gpointer user_data);
@@ -215,24 +215,6 @@ transport_disconnected_cb (GibberTransport *transport,
   DEBUG ("transport disconnected. close the extra bytestream");
 
   gibber_bytestream_iface_close (bytestream, NULL);
-}
-
-static void
-add_transport (SalutTubeStream *self,
-               GibberTransport *transport,
-               GibberBytestreamIface *bytestream)
-{
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  gibber_transport_set_handler (transport, transport_handler, self);
-
-  g_hash_table_insert (priv->transport_to_bytestream,
-      g_object_ref (transport), g_object_ref (bytestream));
-  g_hash_table_insert (priv->bytestream_to_transport,
-      g_object_ref (bytestream), g_object_ref (transport));
-
-  g_signal_connect (transport, "disconnected",
-      G_CALLBACK (transport_disconnected_cb), self);
 }
 
 static void
@@ -354,6 +336,8 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
 
       g_signal_connect (bytestream, "data-received",
           G_CALLBACK (data_received_cb), self);
+      g_signal_connect (bytestream, "write-blocked",
+          G_CALLBACK (bytestream_write_blocked_cb), self);
 
       fd = GPOINTER_TO_INT (g_hash_table_lookup (priv->bytestream_to_fd,
             bytestream));
@@ -380,8 +364,6 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
           else
             {
               DEBUG ("Wait buffer is empty before disconnect the transport");
-              g_signal_connect (transport, "buffer-empty",
-                  G_CALLBACK (transport_buffer_empty_cb), self);
             }
         }
     }
@@ -738,7 +720,7 @@ new_connection_to_socket (SalutTubeStream *self,
 
       addr.un.sun_family = PF_UNIX;
       strncpy (addr.un.sun_path, array->data, sizeof (addr.un.sun_path) - 1);
-      addr.un.sun_path[sizeof (addr.un.sun_path)] = '\0';
+      addr.un.sun_path[sizeof (addr.un.sun_path) - 1] = '\0';
       len = sizeof (addr.un);
 
       DEBUG ("Will try to connect to socket: %s", (const gchar *) array->data);

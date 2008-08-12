@@ -47,7 +47,7 @@ GType gibber_iq_helper_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_IQ_HELPER \
-  (gibber_iq_helper_get_type())
+  (gibber_iq_helper_get_type ())
 #define GIBBER_IQ_HELPER(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_IQ_HELPER, GibberIqHelper))
 #define GIBBER_IQ_HELPER_CLASS(klass) \

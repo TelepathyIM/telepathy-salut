@@ -137,7 +137,7 @@ gibber_iq_helper_constructor (GType type,
   GibberIqHelperPrivate *priv;
 
   obj = G_OBJECT_CLASS(gibber_iq_helper_parent_class)->
-        constructor(type, n_props, props);
+        constructor (type, n_props, props);
 
   self = GIBBER_IQ_HELPER (obj);
   priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);

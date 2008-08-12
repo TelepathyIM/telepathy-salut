@@ -9,7 +9,7 @@ AC_PREREQ([2.59])
 
 m4_define([salut_major_version], [0])
 m4_define([salut_minor_version], [3])
-m4_define([salut_micro_version], [2])
+m4_define([salut_micro_version], [3])
 m4_define([salut_nano_version], [1])
 
 # Some magic
@@ -23,7 +23,7 @@ AC_INIT([Telepathy Salut], [salut_version],
 
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([1.8 tar-ustar -Wno-portability])
+AM_INIT_AUTOMAKE([1.8 -Wno-portability])
 AM_PROG_LIBTOOL
 AM_CONFIG_HEADER(config.h)
 
@@ -31,6 +31,7 @@ dnl check for tools
 AC_PROG_CC
 AC_PROG_CC_STDC
 AM_PROG_AS
+AM_PROG_MKDIR_P
 
 dnl add common command line switches
 SALUT_ARG_DEBUG
@@ -45,6 +46,20 @@ ifelse(salut_nano_version, 0,
     [AS_COMPILER_FLAG(-Werror,ERROR_CFLAGS="$ERROR_CFLAGS -Werror",ERROR_CFLAGS="$ERROR_CFLAGS")
     ])
 AC_SUBST(ERROR_CFLAGS)
+
+ifelse(salut_nano_version, 0,
+    [ # Salut is version x.y.z - disable coding style checks by default
+AC_ARG_ENABLE(coding-style-checks,
+  AC_HELP_STRING([--enable-coding-style-checks],
+                 [check coding style using grep]),
+    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=no] )
+    ],
+    [ # Salut is version x.y.z.1 - enable coding style checks by default
+AC_ARG_ENABLE(coding-style-checks,
+  AC_HELP_STRING([--disable-coding-style-checks],
+                 [don't check coding style using grep]),
+    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=yes])
+    ])
 
 dnl Check for code generation tools
 XSLTPROC=
@@ -126,15 +141,10 @@ AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for telepathy-glib
-PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.5.14])
+PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.13])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
-
-AC_CHECK_LIB(telepathy-glib, tp_debug_set_flags,
-  [ AC_DEFINE(HAVE_TP_DEBUG_SET_FLAGS, [],
-    [Define if tp_debug_set_flags() function is provided by telepathy-glib]) ],
-  [], [$TELEPATHY_GLIB_LIBS])
 
 dnl Check for OpenSSL
 AC_ARG_ENABLE(ssl,
@@ -185,12 +195,6 @@ AC_SUBST(LIBASYNCNS_CFLAGS)
 AC_SUBST(LIBASYNCNS_LIBS)
 AM_CONDITIONAL(HAVE_LIBASYNCNS, test "x$HAVE_LIBASYNCNS" = "xyes")
 
-
-AS_AC_EXPAND(DATADIR, $datadir)
-DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
-AC_SUBST(DBUS_SERVICES_DIR)
-AC_DEFINE_UNQUOTED(DBUS_SERVICES_DIR, "$DBUS_SERVICES_DIR", [DBus services directory])
-
 dnl Check for Avahi
 PKG_CHECK_MODULES(AVAHI, [ avahi-gobject ])
 AC_SUBST(AVAHI_CFLAGS)
@@ -233,7 +237,7 @@ AC_OUTPUT( Makefile                       \
            m4/Makefile                    \
            data/Makefile                  \
            extensions/Makefile            \
-           extensions/tools/Makefile      \
+           tools/Makefile		  \
            tests/Makefile                 \
            tests/inputs/Makefile
 )

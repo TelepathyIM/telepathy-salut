@@ -86,21 +86,24 @@ struct _GibberRMulticastSender {
     guint32 next_input_packet;
 };
 
-GType gibber_r_multicast_sender_get_type(void);
+GType gibber_r_multicast_sender_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_R_MULTICAST_SENDER \
-  (gibber_r_multicast_sender_get_type())
+  (gibber_r_multicast_sender_get_type ())
 #define GIBBER_R_MULTICAST_SENDER(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSender))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_R_MULTICAST_SENDER, \
+   GibberRMulticastSender))
 #define GIBBER_R_MULTICAST_SENDER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_R_MULTICAST_SENDER, \
+   GibberRMulticastSenderClass))
 #define GIBBER_IS_R_MULTICAST_SENDER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_R_MULTICAST_SENDER))
 #define GIBBER_IS_R_MULTICAST_SENDER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_R_MULTICAST_SENDER))
 #define GIBBER_R_MULTICAST_SENDER_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_SENDER, GibberRMulticastSenderClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_R_MULTICAST_SENDER, \
+   GibberRMulticastSenderClass))
 
 GibberRMulticastSenderGroup *gibber_r_multicast_sender_group_new (void);
 
@@ -144,22 +147,20 @@ void gibber_r_multicast_sender_hold_data (GibberRMulticastSender *sender,
 /* Stop holding back data of the sender */
 void gibber_r_multicast_sender_release_data (GibberRMulticastSender *sender);
 
-void
-gibber_r_multicast_sender_push(GibberRMulticastSender *sender,
-                               GibberRMulticastPacket *packet);
+void gibber_r_multicast_sender_push (GibberRMulticastSender *sender,
+     GibberRMulticastPacket *packet);
 
 void
-gibber_r_multicast_senders_updated(GibberRMulticastSender *sender);
+gibber_r_multicast_senders_updated (GibberRMulticastSender *sender);
 
 /* Returns TRUE if we were up to dated */
-gboolean
-gibber_r_multicast_sender_seen(GibberRMulticastSender *sender, guint32 id);
+gboolean gibber_r_multicast_sender_seen (GibberRMulticastSender *sender,
+    guint32 id);
 
-gboolean
-gibber_r_multicast_sender_repair_request(GibberRMulticastSender *sender,
-                                         guint32 id);
+gboolean gibber_r_multicast_sender_repair_request (
+    GibberRMulticastSender *sender, guint32 id);
 
-void gibber_r_multicast_sender_whois_push(GibberRMulticastSender *sender,
+void gibber_r_multicast_sender_whois_push (GibberRMulticastSender *sender,
     const GibberRMulticastPacket *packet);
 
 void gibber_r_multicast_sender_set_packet_repeat (

@@ -25,13 +25,12 @@
 #include "test-transport.h"
 
 static gboolean
-test_transport_send(GibberTransport *transport, const guint8 *data, gsize size,
-                                                GError **error);
-void
-test_transport_disconnect(GibberTransport *transport);
+test_transport_send (GibberTransport *transport, const guint8 *data,
+  gsize size, GError **error);
 
+void test_transport_disconnect (GibberTransport *transport);
 
-G_DEFINE_TYPE(TestTransport, test_transport, GIBBER_TYPE_TRANSPORT)
+G_DEFINE_TYPE (TestTransport, test_transport, GIBBER_TYPE_TRANSPORT)
 
 /* private structure */
 typedef struct _TestTransportPrivate TestTransportPrivate;
@@ -47,7 +46,8 @@ struct _TestTransportPrivate
   gboolean echoing;
 };
 
-#define TEST_TRANSPORT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), TEST_TYPE_TRANSPORT, TestTransportPrivate))
+#define TEST_TRANSPORT_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), \
+  TEST_TYPE_TRANSPORT, TestTransportPrivate))
 
 static void
 test_transport_init (TestTransport *obj)
@@ -56,7 +56,7 @@ test_transport_init (TestTransport *obj)
 
   /* allocate any data required by the object here */
   priv->send = NULL;
-  priv->buffers = g_queue_new();
+  priv->buffers = g_queue_new ();
   priv->send_id = 0;
 }
 
@@ -67,7 +67,7 @@ static void
 test_transport_class_init (TestTransportClass *test_transport_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (test_transport_class);
-  GibberTransportClass *transport_class = 
+  GibberTransportClass *transport_class =
     GIBBER_TRANSPORT_CLASS(test_transport_class);
 
   g_type_class_add_private (test_transport_class, sizeof (TestTransportPrivate));
@@ -88,8 +88,8 @@ test_transport_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
-  if (priv->send_id != 0) 
-    g_source_remove(priv->send_id);
+  if (priv->send_id != 0)
+    g_source_remove (priv->send_id);
 
   priv->dispose_has_run = TRUE;
 
@@ -100,8 +100,9 @@ test_transport_dispose (GObject *object)
 }
 
 static void
-free_array(gpointer data, gpointer user_data) {
-  g_array_free((GArray *)data, TRUE);
+free_array (gpointer data, gpointer user_data)
+{
+  g_array_free ((GArray *)data, TRUE);
 }
 
 void
@@ -111,38 +112,40 @@ test_transport_finalize (GObject *object)
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
 
   /* free any data held directly by the object here */
-  g_queue_foreach(priv->buffers, free_array, NULL);
-  g_queue_free(priv->buffers);
+  g_queue_foreach (priv->buffers, free_array, NULL);
+  g_queue_free (priv->buffers);
   G_OBJECT_CLASS (test_transport_parent_class)->finalize (object);
 }
 
 static gboolean
-send_data(gpointer data) {
+send_data (gpointer data)
+{
   TestTransport *self = TEST_TRANSPORT (data);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
   GArray *arr;
 
-  g_assert(priv->send != NULL);
+  g_assert (priv->send != NULL);
 
-  arr = (GArray *)g_queue_pop_head(priv->buffers);
+  arr = (GArray *)g_queue_pop_head (priv->buffers);
 
-  priv->send(GIBBER_TRANSPORT(self), 
-             (guint8 *)arr->data, arr->len,
-             NULL, priv->user_data);
+  priv->send (GIBBER_TRANSPORT (self),
+      (guint8 *)arr->data, arr->len, NULL, priv->user_data);
 
   g_array_free (arr, TRUE);
 
-  if (g_queue_is_empty(priv->buffers)) {
-    priv->send_id = 0;
-    return FALSE;
-  }
+  if (g_queue_is_empty (priv->buffers))
+    {
+      priv->send_id = 0;
+      return FALSE;
+    }
 
   return TRUE;
 }
 
 static gboolean
-test_transport_send(GibberTransport *transport,
-                    const guint8 *data, gsize size, GError **error) {
+test_transport_send (GibberTransport *transport,
+    const guint8 *data, gsize size, GError **error)
+{
   TestTransport *self = TEST_TRANSPORT (transport);
   TestTransportPrivate *priv = TEST_TRANSPORT_GET_PRIVATE (self);
 
@@ -150,40 +153,43 @@ test_transport_send(GibberTransport *transport,
 
   if (priv->echoing)
     {
-      test_transport_write(self, data, size);
+      test_transport_write (self, data, size);
     }
 
-  arr = g_array_sized_new(FALSE, TRUE, sizeof(guint8), size);
-  g_array_append_vals(arr, data, size);
+  arr = g_array_sized_new (FALSE, TRUE, sizeof (guint8), size);
+  g_array_append_vals (arr, data, size);
 
-  g_queue_push_tail(priv->buffers, arr);
+  g_queue_push_tail (priv->buffers, arr);
 
-  if (priv->send_id == 0) {
-    priv->send_id = g_idle_add(send_data, transport);
-  }
+  if (priv->send_id == 0)
+    {
+      priv->send_id = g_idle_add (send_data, transport);
+    }
 
   return TRUE;
 }
 
 void
-test_transport_disconnect(GibberTransport *transport) {
-  gibber_transport_set_state(GIBBER_TRANSPORT(transport), 
-                            GIBBER_TRANSPORT_DISCONNECTED);
+test_transport_disconnect (GibberTransport *transport)
+{
+  gibber_transport_set_state (GIBBER_TRANSPORT(transport),
+      GIBBER_TRANSPORT_DISCONNECTED);
 }
 
 
 TestTransport *
-test_transport_new(test_transport_send_hook send, gpointer user_data) {
+test_transport_new (test_transport_send_hook send, gpointer user_data)
+{
   TestTransport *self;
   TestTransportPrivate *priv;
 
-  self = g_object_new(TEST_TYPE_TRANSPORT, NULL);
+  self = g_object_new (TEST_TYPE_TRANSPORT, NULL);
   priv  = TEST_TRANSPORT_GET_PRIVATE (self);
   priv->send = send;
   priv->user_data = user_data;
 
-  gibber_transport_set_state(GIBBER_TRANSPORT(self),
-                            GIBBER_TRANSPORT_CONNECTED);
+  gibber_transport_set_state (GIBBER_TRANSPORT(self),
+      GIBBER_TRANSPORT_CONNECTED);
 
   return self;
 }
@@ -196,7 +202,8 @@ test_transport_set_echoing (TestTransport *transport, gboolean echo)
 }
 
 
-void 
-test_transport_write(TestTransport *transport, const guint8 *buf, gsize size) {
-  gibber_transport_received_data(GIBBER_TRANSPORT(transport), buf, size);
+void
+test_transport_write (TestTransport *transport, const guint8 *buf, gsize size)
+{
+  gibber_transport_received_data (GIBBER_TRANSPORT (transport), buf, size);
 }

@@ -39,11 +39,11 @@ struct _SalutContactChannel {
     TpGroupMixin group;
 };
 
-GType salut_contact_channel_get_type(void);
+GType salut_contact_channel_get_type (void);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_CONTACT_CHANNEL \
-  (salut_contact_channel_get_type())
+  (salut_contact_channel_get_type ())
 #define SALUT_CONTACT_CHANNEL(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONTACT_CHANNEL, SalutContactChannel))
 #define SALUT_CONTACT_CHANNEL_CLASS(klass) \

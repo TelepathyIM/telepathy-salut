@@ -48,45 +48,40 @@ struct _GibberLLTransport {
     GibberFdTransport parent;
 };
 
-GType gibber_ll_transport_get_type(void);
+GType gibber_ll_transport_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_LL_TRANSPORT \
-  (gibber_ll_transport_get_type())
+  (gibber_ll_transport_get_type ())
 #define GIBBER_LL_TRANSPORT(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_LL_TRANSPORT, GibberLLTransport))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_LL_TRANSPORT, \
+   GibberLLTransport))
 #define GIBBER_LL_TRANSPORT_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_LL_TRANSPORT, GibberLLTransportClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_LL_TRANSPORT,  \
+   GibberLLTransportClass))
 #define GIBBER_IS_LL_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_LL_TRANSPORT))
 #define GIBBER_IS_LL_TRANSPORT_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_LL_TRANSPORT))
 #define GIBBER_LL_TRANSPORT_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_LL_TRANSPORT, GibberLLTransportClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_LL_TRANSPORT, \
+   GibberLLTransportClass))
 
-GibberLLTransport *
-gibber_ll_transport_new(void);
+GibberLLTransport * gibber_ll_transport_new (void);
 
-void
-gibber_ll_transport_open_fd(GibberLLTransport *connection, int fd);
+void gibber_ll_transport_open_fd (GibberLLTransport *connection, int fd);
 
-gboolean
-gibber_ll_transport_open_sockaddr(GibberLLTransport *connection,
-                                  struct sockaddr_storage *addr,
-                                  GError **error);
+gboolean gibber_ll_transport_open_sockaddr (GibberLLTransport *connection,
+    struct sockaddr_storage *addr, GError **error);
 
-gboolean
-gibber_ll_transport_is_incoming(GibberLLTransport *connection);
+gboolean gibber_ll_transport_is_incoming (GibberLLTransport *connection);
 
-void
-gibber_ll_transport_set_incoming(GibberLLTransport *connetion,
-                                 gboolean incoming);
+void gibber_ll_transport_set_incoming (GibberLLTransport *connetion,
+    gboolean incoming);
 
 
-gboolean
-gibber_ll_transport_get_address(GibberLLTransport *connection, 
-                                struct sockaddr_storage *addr,
-                                socklen_t *len);
+gboolean gibber_ll_transport_get_address (GibberLLTransport *connection,
+    struct sockaddr_storage *addr, socklen_t *len);
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_LL_TRANSPORT_H__*/

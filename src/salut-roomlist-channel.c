@@ -77,7 +77,7 @@ struct _SalutRoomlistChannelPrivate
 };
 
 #define SALUT_ROOMLIST_CHANNEL_GET_PRIVATE(obj) \
-    ((SalutRoomlistChannelPrivate *) ((SalutRoomlistChannel *)obj->priv))
+    ((SalutRoomlistChannelPrivate *) ((SalutRoomlistChannel *)obj)->priv)
 
 static void
 salut_roomlist_channel_init (SalutRoomlistChannel *self)
@@ -323,12 +323,18 @@ salut_roomlist_channel_add_room (SalutRoomlistChannel *self,
   GValue room = {0,};
   TpHandle handle;
   GHashTable *keys;
+  GValue handle_name = {0,};
 
   handle = tp_handle_ensure (room_repo, room_name, NULL, NULL);
   if (handle == 0)
     return;
 
   keys = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
+
+  /* handle-name */
+  g_value_init (&handle_name, G_TYPE_STRING);
+  g_value_take_string (&handle_name, (gchar *) room_name);
+  g_hash_table_insert (keys, "handle-name", &handle_name);
 
   g_value_init (&room, SALUT_TP_TYPE_ROOM_STRUCT);
   g_value_take_boxed (&room,

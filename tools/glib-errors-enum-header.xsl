@@ -1,3 +1,24 @@
+<!-- Stylesheet to extract GLib error enumerations from the Telepathy spec.
+The master copy of this stylesheet is in telepathy-glib - please make any
+changes there.
+
+Copyright (C) 2006, 2007 Collabora Limited
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+-->
+
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0"
   exclude-result-prefixes="tp">
@@ -9,13 +30,13 @@
  * <xsl:value-of select="translate(tp:docstring, '&#13;&#10;', '')"/>
   </xsl:template>
 
-  <xsl:template match="tp:error">
+  <xsl:template match="tp:error" mode="enum">
 <xsl:text>    TP_ERROR_</xsl:text><xsl:value-of select="translate(@name, 'abcdefghijklmnopqrstuvwxyz .', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ__')"/>,
 </xsl:template>
 
   <xsl:template match="text()"/>
 
-  <xsl:template match="/tp:errors">/* Generated from the Telepathy spec
+  <xsl:template match="//tp:errors">/* Generated from the Telepathy spec
 
 <xsl:for-each select="tp:copyright">
 <xsl:value-of select="."/><xsl:text>
@@ -42,7 +63,7 @@ GType tp_error_get_type (void);
  * Enumerated type representing the Telepathy D-Bus errors.
  */
 typedef enum {
-<xsl:apply-templates select="tp:error"/>} TpError;
+<xsl:apply-templates select="tp:error" mode="enum"/>} TpError;
 
 G_END_DECLS
 </xsl:template>

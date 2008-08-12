@@ -63,11 +63,13 @@ HANDWRITTEN_SOURCES =             \
   gibber-xmpp-error.h             \
   gibber-xmpp-error.c             \
   gibber-util.h                   \
-  gibber-util.c                   \
+  gibber-util.c
+
+MD5_SOURCES =                     \
   libmd5-rfc/md5.c                \
   libmd5-rfc/md5.h
 
-libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES)
+libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES) $(MD5_SOURCES)
 
 if HAVE_LIBSSL
 libgibber_la_SOURCES +=     \
@@ -80,6 +82,13 @@ libgibber_la_SOURCES +=       \
   gibber-resolver-asyncns.c   \
   gibber-resolver-asyncns.h
 endif
+
+# Coding style checks
+check_c_sources = \
+    $(HANDWRITTEN_SOURCES)
+
+include $(top_srcdir)/tools/check-coding-style.mk
+check-local: check-coding-style
 
 CLEANFILES=$(BUILT_SOURCES)
 dist-hook:

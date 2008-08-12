@@ -36,7 +36,8 @@ recv_t receivers[] = {
 };
 
 GibberRMulticastPacket *
-generate_packet(guint32 serial) {
+generate_packet (guint32 serial)
+{
   GibberRMulticastPacket *p;
   guint8 flags = 0;
   gint total = 1;
@@ -63,37 +64,38 @@ generate_packet(guint32 serial) {
        break;
     }
 
-  p = gibber_r_multicast_packet_new(PACKET_TYPE_DATA, SENDER, 1500);
+  p = gibber_r_multicast_packet_new (PACKET_TYPE_DATA, SENDER, 1500);
 
   gibber_r_multicast_packet_set_packet_id (p, serial);
-  gibber_r_multicast_packet_set_data_info(p, stream_id, flags, total * 11);
+  gibber_r_multicast_packet_set_data_info (p, stream_id, flags, total * 11);
 
-  for (i = 0 ; receivers[i].receiver_id != 0; i++) {
-    gibber_r_multicast_packet_add_sender_info(p,
-        receivers[i].receiver_id, receivers[i].packet_id, NULL);
-  }
+  for (i = 0 ; receivers[i].receiver_id != 0; i++)
+    {
+      gibber_r_multicast_packet_add_sender_info (p,
+          receivers[i].receiver_id, receivers[i].packet_id, NULL);
+    }
 
-  payload = g_strdup_printf("%010d\n", serial);
-  gibber_r_multicast_packet_add_payload(p, (guint8 *)payload, strlen(payload));
-  g_free(payload);
+  payload = g_strdup_printf ("%010d\n", serial);
+  gibber_r_multicast_packet_add_payload (p, (guint8 *)payload,
+      strlen (payload));
+
+  g_free (payload);
   return p;
 }
 
 void
-data_received_cb(GibberRMulticastSender *sender,
-                 guint8 stream_id,
-                 guint8 *data,
-                 gsize size,
-                 gpointer user_data) {
+data_received_cb (GibberRMulticastSender *sender, guint8 stream_id,
+    guint8 *data, gsize size, gpointer user_data)
+{
   gchar *str;
   gchar **lines;
   int i;
 
-  str = g_strndup((const gchar *)data, size);
+  str = g_strndup ((const gchar *)data, size);
 
-  lines = g_strsplit(str, "\n", 0);
+  lines = g_strsplit (str, "\n", 0);
   for (i = 0 ; lines[i] != NULL && *lines[i] != '\0'; i++) {
-    guint32 v = atoi(lines[i]);
+    guint32 v = atoi (lines[i]);
 
     fail_unless (v == expected);
     fail_unless ((v % G_MAXUINT8) - i == stream_id);
@@ -105,54 +107,58 @@ data_received_cb(GibberRMulticastSender *sender,
 
   if (expected == serial_offset + NR_PACKETS
       || expected == serial_offset + NR_PACKETS + EXTRA_SEEN) {
-    g_main_loop_quit((GMainLoop *)user_data);
+    g_main_loop_quit ((GMainLoop *)user_data);
   }
 
-  g_strfreev(lines);
-  g_free(str);
+  g_strfreev (lines);
+  g_free (str);
 
 }
 
 void
-repair_request_cb(GibberRMulticastSender *sender, guint id, gpointer data) {
+repair_request_cb (GibberRMulticastSender *sender, guint id, gpointer data)
+{
   GibberRMulticastPacket *p;
 
-  fail_unless (gibber_r_multicast_packet_diff(serial_offset, id) >= 0
-               || gibber_r_multicast_packet_diff(id,
+  fail_unless (gibber_r_multicast_packet_diff (serial_offset, id) >= 0
+               || gibber_r_multicast_packet_diff (id,
                   serial_offset + NR_PACKETS + EXTRA_SEEN) < 0);
 
-  p = generate_packet(id);
-  gibber_r_multicast_sender_push(sender, p);
-  g_object_unref(p);
+  p = generate_packet (id);
+  gibber_r_multicast_sender_push (sender, p);
+  g_object_unref (p);
 }
 
 void
-repair_message_cb(GibberRMulticastSender *sender,
-                  GibberRMulticastPacket *packet,
-                  gpointer user_data) {
+repair_message_cb (GibberRMulticastSender *sender,
+    GibberRMulticastPacket *packet, gpointer user_data)
+{
 
-  fail_unless(packet->type == PACKET_TYPE_DATA);
+  fail_unless (packet->type == PACKET_TYPE_DATA);
   fail_unless (packet->packet_id == REPAIR_PACKET + serial_offset);
 
-  g_main_loop_quit((GMainLoop *)user_data);
+  g_main_loop_quit ((GMainLoop *)user_data);
 }
 
 static gboolean
-add_packet(gpointer data) {
+add_packet (gpointer data)
+{
   static guint32 i = 0;
-  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER(data);
+  GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (data);
   GibberRMulticastPacket *p;
 
-  if (i == NR_PACKETS) {
-    i = 0;
-    return FALSE;
-  }
+  if (i == NR_PACKETS)
+    {
+      i = 0;
+      return FALSE;
+    }
 
-  if (i % 5 != 3) {
-    p = generate_packet(i + serial_offset);
-    gibber_r_multicast_sender_push(sender, p);
-    g_object_unref(p);
-  }
+  if (i % 5 != 3)
+    {
+      p = generate_packet (i + serial_offset);
+      gibber_r_multicast_sender_push (sender, p);
+      g_object_unref (p);
+    }
 
   i++;
   return TRUE;
@@ -161,7 +167,8 @@ add_packet(gpointer data) {
 
 #define NUMBER_OF_TESTS 3
 
-START_TEST (test_sender) {
+START_TEST (test_sender)
+{
   GibberRMulticastSender *s;
   GibberRMulticastSenderGroup *group;
   test_t tests[NUMBER_OF_TESTS] = {
@@ -171,47 +178,52 @@ START_TEST (test_sender) {
   };
   int i;
 
-  g_type_init();
+  g_type_init ();
   group = gibber_r_multicast_sender_group_new ();
-  loop = g_main_loop_new(NULL, FALSE);
+  loop = g_main_loop_new (NULL, FALSE);
 
   serial_offset = tests[_i].serial_offset;
   expected = serial_offset;
 
-  for (i = 0 ; receivers[i].receiver_id != 0; i++) {
-    s = gibber_r_multicast_sender_new(receivers[i].receiver_id,
-        receivers[i].name, group);
-    gibber_r_multicast_sender_update_start(s, receivers[i].packet_id);
-    gibber_r_multicast_sender_seen(s, receivers[i].packet_id + 1);
-    gibber_r_multicast_sender_group_add (group, s);
-  }
-  s = gibber_r_multicast_sender_new(SENDER, SENDER_NAME, group);
-  g_signal_connect(s, "received-data", G_CALLBACK(data_received_cb), loop);
-  g_signal_connect(s, "repair-request", G_CALLBACK(repair_request_cb), loop);
+  for (i = 0 ; receivers[i].receiver_id != 0; i++)
+    {
+      s = gibber_r_multicast_sender_new (receivers[i].receiver_id,
+          receivers[i].name, group);
+      gibber_r_multicast_sender_update_start (s, receivers[i].packet_id);
+      gibber_r_multicast_sender_seen (s, receivers[i].packet_id + 1);
+      gibber_r_multicast_sender_group_add (group, s);
+    }
 
-  gibber_r_multicast_sender_update_start(s, serial_offset);
-  gibber_r_multicast_sender_set_data_start(s, serial_offset);
+  s = gibber_r_multicast_sender_new (SENDER, SENDER_NAME, group);
+  g_signal_connect (s, "received-data", G_CALLBACK(data_received_cb), loop);
+  g_signal_connect (s, "repair-request", G_CALLBACK(repair_request_cb), loop);
 
-  if (tests[_i].test_seen) {
-    gibber_r_multicast_sender_seen(s, serial_offset);
-  } else {
-   gibber_r_multicast_sender_repair_request(s, serial_offset);
-  }
+  gibber_r_multicast_sender_update_start (s, serial_offset);
+  gibber_r_multicast_sender_set_data_start (s, serial_offset);
 
-  g_timeout_add(10, add_packet, s);
+  if (tests[_i].test_seen)
+    {
+      gibber_r_multicast_sender_seen (s, serial_offset);
+    }
+  else
+    {
+     gibber_r_multicast_sender_repair_request (s, serial_offset);
+    }
 
-  g_main_loop_run(loop);
+  g_timeout_add (10, add_packet, s);
+
+  g_main_loop_run (loop);
 
   /* tell the sender we've seen some extra pakcets */
-  gibber_r_multicast_sender_seen(s, serial_offset + NR_PACKETS + EXTRA_SEEN);
-  g_main_loop_run(loop);
+  gibber_r_multicast_sender_seen (s, serial_offset + NR_PACKETS + EXTRA_SEEN);
+  g_main_loop_run (loop);
 
   /* Ask for a repair */
-  g_signal_connect(s, "repair-message", G_CALLBACK(repair_message_cb), loop);
+  g_signal_connect (s, "repair-message", G_CALLBACK (repair_message_cb), loop);
 
-  gibber_r_multicast_sender_repair_request(s, serial_offset + REPAIR_PACKET);
+  gibber_r_multicast_sender_repair_request (s, serial_offset + REPAIR_PACKET);
 
-  g_main_loop_run(loop);
+  g_main_loop_run (loop);
 
   gibber_r_multicast_sender_group_free (group);
 } END_TEST
@@ -263,14 +275,16 @@ typedef struct {
 static void h_next_test_step (h_data_t *d);
 
 static gboolean
-h_find_sender (gpointer key, gpointer value, gpointer user_data) {
+h_find_sender (gpointer key, gpointer value, gpointer user_data)
+{
   GibberRMulticastSender *s = GIBBER_R_MULTICAST_SENDER (value);
 
   return strcmp (s->name, (gchar *)user_data) == 0;
 }
 
 static gboolean
-h_idle_next_step (gpointer user_data) {
+h_idle_next_step (gpointer user_data)
+{
   h_data_t *d = (h_data_t *)user_data;
   h_expect_t *e = &(d->expectation[d->test_step]);
   GibberRMulticastSender *s;
@@ -290,7 +304,7 @@ h_idle_next_step (gpointer user_data) {
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_hold_data (s, e->hold_id);
-      h_next_test_step(d);
+      h_next_test_step (d);
       break;
     case UNHOLD:
       s = g_hash_table_find (d->group->senders,
@@ -298,7 +312,7 @@ h_idle_next_step (gpointer user_data) {
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_release_data (s);
-      h_next_test_step(d);
+      h_next_test_step (d);
       break;
     case DONE:
       /* And there was great rejoice */
@@ -310,7 +324,8 @@ h_idle_next_step (gpointer user_data) {
 }
 
 static void
-h_next_test_step (h_data_t *d) {
+h_next_test_step (h_data_t *d)
+{
   GibberRMulticastSender *s;
   h_expect_t *e = &(d->expectation[d->test_step]);
 
@@ -323,7 +338,7 @@ h_next_test_step (h_data_t *d) {
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_release_data (s);
-      h_next_test_step(d);
+      h_next_test_step (d);
       break;
     case START_DATA:
       s = g_hash_table_find (d->group->senders,
@@ -331,15 +346,15 @@ h_next_test_step (h_data_t *d) {
       fail_unless (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_set_data_start (s, e->hold_id);
-      h_next_test_step(d);
+      h_next_test_step (d);
       break;
     case FAIL:
       s = g_hash_table_find (d->group->senders,
           h_find_sender, e->expected_node);
       fail_unless (s != NULL);
       d->test_step++;
-      gibber_r_multicast_sender_set_failed(s);
-      h_next_test_step(d);
+      gibber_r_multicast_sender_set_failed (s);
+      h_next_test_step (d);
       break;
     case HOLD:
     case UNHOLD:
@@ -353,7 +368,8 @@ h_next_test_step (h_data_t *d) {
 
 static void
 h_received_data_cb (GibberRMulticastSender *sender, guint16 stream_id,
-    guint8 *data, gsize size, gpointer user_data) {
+    guint8 *data, gsize size, gpointer user_data)
+{
   h_data_t *d = (h_data_t *) user_data;
 
   fail_unless (d->expectation[d->test_step].type == EXPECT);
@@ -363,12 +379,13 @@ h_received_data_cb (GibberRMulticastSender *sender, guint16 stream_id,
   fail_unless (d->expectation[d->test_step].data_stream_id == stream_id);
 
   d->test_step++;
-  h_next_test_step(d);
+  h_next_test_step (d);
 }
 
 static void
 h_received_control_packet_cb (GibberRMulticastSender *sender,
-    GibberRMulticastPacket *packet, gpointer user_data) {
+    GibberRMulticastPacket *packet, gpointer user_data)
+{
   h_data_t *d = (h_data_t *) user_data;
 
   fail_unless (d->expectation[d->test_step].type == EXPECT);
@@ -377,7 +394,7 @@ h_received_control_packet_cb (GibberRMulticastSender *sender,
     strcmp (d->expectation[d->test_step].expected_node, sender->name) == 0);
 
   d->test_step++;
-  h_next_test_step(d);
+  h_next_test_step (d);
 }
 
 h_setup_t h_setup0[] =  {
@@ -556,8 +573,8 @@ START_TEST (test_holding) {
   h_data_t data = { 0, NULL, test->expectation };
   int i;
 
-  g_type_init();
-  loop = g_main_loop_new(NULL, FALSE);
+  g_type_init ();
+  loop = g_main_loop_new (NULL, FALSE);
 
   group = gibber_r_multicast_sender_group_new ();
   data.group = group;

@@ -34,7 +34,7 @@ check_helper_log_critical_func (const gchar *log_damain,
 
   if (!expecting_critical)
     {
-      fail("Unexpected critical message: %s\n", message);
+      fail ("Unexpected critical message: %s\n", message);
     }
 
   g_assert (log_level & G_LOG_LEVEL_CRITICAL);

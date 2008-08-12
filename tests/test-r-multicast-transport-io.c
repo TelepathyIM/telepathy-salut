@@ -16,26 +16,28 @@ GibberRMulticastCausalTransport *rmc;
 gulong rmc_connected_handler = 0;
 
 void
-received_data(GibberTransport *transport, GibberBuffer *buffer,
-              gpointer user_data) {
+received_data (GibberTransport *transport, GibberBuffer *buffer,
+    gpointer user_data)
+{
   GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *)buffer;
   gchar *b64;
 
-  b64 = g_base64_encode((guchar *)buffer->data, buffer->length);
-  printf("OUTPUT:%s:%s\n", rmbuffer->sender, b64);
-  fflush(stdout);
-  g_free(b64);
+  b64 = g_base64_encode ((guchar *) buffer->data, buffer->length);
+  printf ("OUTPUT:%s:%s\n", rmbuffer->sender, b64);
+  fflush (stdout);
+  g_free (b64);
 }
 
 gboolean
-send_hook(GibberTransport *transport, const guint8 *data,
-          gsize length, GError **error, gpointer user_data) {
+send_hook (GibberTransport *transport, const guint8 *data, gsize length,
+    GError **error, gpointer user_data)
+{
   gchar *b64;
 
-  b64 = g_base64_encode((guchar *)data, length);
-  printf("SEND:%s\n", b64);
-  fflush(stdout);
-  g_free(b64);
+  b64 = g_base64_encode ((guchar *)data, length);
+  printf ("SEND:%s\n", b64);
+  fflush (stdout);
+  g_free (b64);
 
   return TRUE;
 }
@@ -45,7 +47,7 @@ fail_node (gchar *name)
 {
   GibberRMulticastSender *sender;
 
-  name = g_strstrip(name);
+  name = g_strstrip (name);
 
   sender = gibber_r_multicast_causal_transport_get_sender_by_name (rmc, name);
   g_assert (sender != NULL);
@@ -54,7 +56,8 @@ fail_node (gchar *name)
 }
 
 gboolean
-got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
+got_input (GIOChannel *source, GIOCondition condition, gpointer user_data)
+{
   GIOStatus s;
   gchar *buffer;
   gsize len;
@@ -63,52 +66,67 @@ got_input(GIOChannel *source, GIOCondition condition, gpointer user_data) {
   guchar *b64;
   gsize size;
 
-  s = g_io_channel_read_line(source, &buffer, &len, NULL, NULL);
-  g_assert( s == G_IO_STATUS_NORMAL);
+  s = g_io_channel_read_line (source, &buffer, &len, NULL, NULL);
+  g_assert (s == G_IO_STATUS_NORMAL);
 
-  if (g_str_has_prefix(buffer, "INPUT:")) {
-    packet = FALSE;
-    p = buffer + strlen("INPUT:");
-  } else if (g_str_has_prefix(buffer, "RECV:")) {
-    packet = TRUE;
-    p = buffer + strlen("RECV:");
-  } else if (strcmp (buffer, "DISCONNECT\n") == 0) {
-    gibber_transport_disconnect (GIBBER_TRANSPORT(rm));
-    goto out;
-  } else if (g_str_has_prefix(buffer, "FAIL:")) {
-    /* this will modify our buffer */
-    fail_node (buffer + strlen("FAIL:"));
-    goto out;
-  } else {
-    g_assert_not_reached();
-  }
+  if (g_str_has_prefix (buffer, "INPUT:"))
+    {
+      packet = FALSE;
+      p = buffer + strlen ("INPUT:");
+    }
+  else if (g_str_has_prefix (buffer, "RECV:"))
+    {
+      packet = TRUE;
+      p = buffer + strlen ("RECV:");
+    }
+  else if (strcmp (buffer, "DISCONNECT\n") == 0)
+    {
+      gibber_transport_disconnect (GIBBER_TRANSPORT(rm));
+      goto out;
+    }
+  else if (g_str_has_prefix (buffer, "FAIL:"))
+    {
+      /* this will modify our buffer */
+      fail_node (buffer + strlen ("FAIL:"));
+      goto out;
+    }
+  else
+    {
+      g_assert_not_reached ();
+    }
 
-  b64 = g_base64_decode(p, &size);
+  b64 = g_base64_decode (p, &size);
 
-  if (packet)  {
-    test_transport_write(t, b64, size);
-  } else {
-    g_assert(gibber_transport_send(GIBBER_TRANSPORT(rm), b64, size, NULL));
-  }
+  if (packet)
+    {
+      test_transport_write (t, b64, size);
+    }
+  else
+    {
+      g_assert (gibber_transport_send (GIBBER_TRANSPORT (rm),
+          b64, size, NULL));
+    }
 
-  g_free(b64);
+  g_free (b64);
 out:
-  g_free(buffer);
+  g_free (buffer);
 
   return TRUE;
 }
 
 gboolean
-got_error(GIOChannel *source, GIOCondition condition, gpointer user_data) {
-  g_main_loop_quit(loop);
-  fprintf(stderr, "error");
-  fflush(stderr);
+got_error (GIOChannel *source, GIOCondition condition, gpointer user_data)
+{
+  g_main_loop_quit (loop);
+  fprintf (stderr, "error");
+  fflush (stderr);
   return TRUE;
 }
 
 static void
-new_senders_cb(GibberRMulticastTransport *transport,
-              GArray *names, gpointer user_data) {
+new_senders_cb (GibberRMulticastTransport *transport,
+    GArray *names, gpointer user_data)
+{
   int i;
   GString *str = g_string_new ("NEWNODES:");
 
@@ -116,14 +134,15 @@ new_senders_cb(GibberRMulticastTransport *transport,
     {
       g_string_append_printf (str, "%s ", g_array_index (names, gchar *, i));
     }
-  printf("%s\n", str->str);
+  printf ("%s\n", str->str);
   g_string_free (str, TRUE);
-  fflush(stdout);
+  fflush (stdout);
 }
 
 static void
-lost_senders_cb(GibberRMulticastTransport *transport,
-               GArray *names, gpointer user_data) {
+lost_senders_cb (GibberRMulticastTransport *transport,
+    GArray *names, gpointer user_data)
+{
   int i;
   GString *str = g_string_new ("LOSTNODES:");
 
@@ -131,76 +150,77 @@ lost_senders_cb(GibberRMulticastTransport *transport,
     {
       g_string_append_printf (str, "%s ", g_array_index (names, gchar *, i));
     }
-  printf("%s\n", str->str);
+  printf ("%s\n", str->str);
   g_string_free (str, TRUE);
-  fflush(stdout);
+  fflush (stdout);
 }
 
 static void
-rm_connected (GibberRMulticastTransport *transport, gpointer user_data) {
-  printf("CONNECTED:\n");
-  fflush(stdout);
+rm_connected (GibberRMulticastTransport *transport, gpointer user_data)
+{
+  printf ("CONNECTED:\n");
+  fflush (stdout);
 }
 
 static void
-rm_disconnected (GibberRMulticastTransport *transport, gpointer user_data) {
-  printf("DISCONNECTED:\n");
-  fflush(stdout);
+rm_disconnected (GibberRMulticastTransport *transport, gpointer user_data)
+{
+  printf ("DISCONNECTED:\n");
+  fflush (stdout);
   g_main_loop_quit (loop);
 }
 
 static void
-rmc_connected (GibberRMulticastTransport *transport, gpointer user_data) {
-  g_assert(gibber_r_multicast_transport_connect(rm, NULL));
+rmc_connected (GibberRMulticastTransport *transport, gpointer user_data)
+{
+  g_assert (gibber_r_multicast_transport_connect (rm, NULL));
   g_signal_handler_disconnect (transport, rmc_connected_handler);
 }
 
 int
-main(int argc, char **argv){ 
+main (int argc, char **argv)
+{
   GIOChannel *io;
 
-  g_assert(argc == 2);
+  g_assert (argc == 2);
 
-  g_type_init();
+  g_type_init ();
 
-  printf("Starting process %d for %s\n", getpid(), argv[1]);
+  printf ("Starting process %d for %s\n", getpid (), argv[1]);
 
-  loop = g_main_loop_new(NULL, FALSE);
+  loop = g_main_loop_new (NULL, FALSE);
 
-  t = test_transport_new(send_hook, argv[1]);
-  GIBBER_TRANSPORT(t)->max_packet_size = 1500;
+  t = test_transport_new (send_hook, argv[1]);
+  GIBBER_TRANSPORT (t)->max_packet_size = 1500;
   test_transport_set_echoing (t, TRUE);
 
-  rmc = gibber_r_multicast_causal_transport_new(GIBBER_TRANSPORT(t), argv[1]);
+  rmc = gibber_r_multicast_causal_transport_new (GIBBER_TRANSPORT (t),
+      argv[1]);
   g_object_unref (t);
 
-  rm = gibber_r_multicast_transport_new(rmc);
-  gibber_transport_set_handler(GIBBER_TRANSPORT(rm), received_data, argv[1]);
+  rm = gibber_r_multicast_transport_new (rmc);
+  gibber_transport_set_handler (GIBBER_TRANSPORT (rm), received_data, argv[1]);
   g_object_unref (rmc);
 
-  g_signal_connect(rm, "new-senders",
-      G_CALLBACK(new_senders_cb), NULL);
+  g_signal_connect (rm, "new-senders", G_CALLBACK (new_senders_cb), NULL);
 
-  g_signal_connect(rm, "lost-senders",
-      G_CALLBACK(lost_senders_cb), NULL);
+  g_signal_connect (rm, "lost-senders", G_CALLBACK (lost_senders_cb), NULL);
 
-  rmc_connected_handler = g_signal_connect(rmc, "connected",
-    G_CALLBACK(rmc_connected), NULL);
+  rmc_connected_handler = g_signal_connect (rmc, "connected",
+    G_CALLBACK (rmc_connected), NULL);
 
-  g_signal_connect(rm, "connected",
-    G_CALLBACK(rm_connected), NULL);
+  g_signal_connect (rm, "connected", G_CALLBACK (rm_connected), NULL);
 
-  g_signal_connect(rm, "disconnected",
-    G_CALLBACK(rm_disconnected), NULL);
+  g_signal_connect (rm, "disconnected", G_CALLBACK (rm_disconnected), NULL);
 
   /* test transport starts out connected */
-  g_assert(gibber_r_multicast_causal_transport_connect(rmc, FALSE, NULL));
+  g_assert (gibber_r_multicast_causal_transport_connect (rmc, FALSE, NULL));
 
-  io = g_io_channel_unix_new(STDIN_FILENO);
+  io = g_io_channel_unix_new (STDIN_FILENO);
   g_io_add_watch (io,  G_IO_IN, got_input, NULL);
   g_io_add_watch (io,  G_IO_HUP|G_IO_ERR, got_error, NULL);
 
-  g_main_loop_run(loop);
+  g_main_loop_run (loop);
 
   return 0;
 }

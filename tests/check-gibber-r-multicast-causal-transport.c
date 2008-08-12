@@ -122,7 +122,7 @@ depends_send_hook (GibberTransport *transport,
 
       fail_unless (senders[i].name != NULL);
 
-      reply = gibber_r_multicast_packet_new(PACKET_TYPE_WHOIS_REPLY,
+      reply = gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REPLY,
           senders[i].sender_id, transport->max_packet_size);
 
       gibber_r_multicast_packet_set_whois_reply_info (reply,
@@ -475,10 +475,10 @@ id_generation_conflict_send_hook (GibberTransport *transport,
 
             fail_unless (test->id == packet->data.whois_request.sender_id);
 
-            reply = gibber_r_multicast_packet_new(PACKET_TYPE_WHOIS_REQUEST,
+            reply = gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REQUEST,
               0, transport->max_packet_size);
 
-            gibber_r_multicast_packet_set_whois_request_info(reply, test->id);
+            gibber_r_multicast_packet_set_whois_request_info (reply, test->id);
 
             pdata = gibber_r_multicast_packet_get_raw_data (reply, &psize);
             test_transport_write (TEST_TRANSPORT(transport), pdata, psize);

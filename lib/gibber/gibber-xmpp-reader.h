@@ -36,30 +36,32 @@ struct _GibberXmppReader {
     GObject parent;
 };
 
-GType gibber_xmpp_reader_get_type(void);
+GType gibber_xmpp_reader_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_XMPP_READER \
-  (gibber_xmpp_reader_get_type())
+  (gibber_xmpp_reader_get_type ())
 #define GIBBER_XMPP_READER(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_READER, GibberXmppReader))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_READER, \
+   GibberXmppReader))
 #define GIBBER_XMPP_READER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_READER, GibberXmppReaderClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_READER,  \
+   GibberXmppReaderClass))
 #define GIBBER_IS_XMPP_READER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_XMPP_READER))
 #define GIBBER_IS_XMPP_READER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_XMPP_READER))
 #define GIBBER_XMPP_READER_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_READER, GibberXmppReaderClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_READER, \
+   GibberXmppReaderClass))
 
 
-GibberXmppReader * gibber_xmpp_reader_new(void);
-GibberXmppReader * gibber_xmpp_reader_new_no_stream(void);
-void gibber_xmpp_reader_reset(GibberXmppReader *reader);
+GibberXmppReader * gibber_xmpp_reader_new (void);
+GibberXmppReader * gibber_xmpp_reader_new_no_stream (void);
+void gibber_xmpp_reader_reset (GibberXmppReader *reader);
 
-gboolean gibber_xmpp_reader_push(GibberXmppReader *reader, 
-                                const guint8 *data, gsize length,
-                                GError **error);
+gboolean gibber_xmpp_reader_push (GibberXmppReader *reader,
+    const guint8 *data, gsize length, GError **error);
 
 G_END_DECLS
 

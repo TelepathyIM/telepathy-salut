@@ -38,11 +38,11 @@ struct _TestTransport {
     GibberTransport parent;
 };
 
-GType test_transport_get_type(void);
+GType test_transport_get_type (void);
 
 /* TYPE MACROS */
 #define TEST_TYPE_TRANSPORT \
-  (test_transport_get_type())
+  (test_transport_get_type ())
 #define TEST_TRANSPORT(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), TEST_TYPE_TRANSPORT, TestTransport))
 #define TEST_TRANSPORT_CLASS(klass) \
@@ -59,13 +59,13 @@ typedef gboolean (*test_transport_send_hook)(GibberTransport *transport,
                                              gsize length,
                                              GError **error,
                                              gpointer user_data);
-TestTransport *test_transport_new(test_transport_send_hook send,
+TestTransport *test_transport_new (test_transport_send_hook send,
     gpointer user_data);
 
 void test_transport_set_echoing (TestTransport *transport,
     gboolean echo);
 
-void test_transport_write(TestTransport *transport,
+void test_transport_write (TestTransport *transport,
                           const guint8 *buf, gsize size);
 
 G_END_DECLS

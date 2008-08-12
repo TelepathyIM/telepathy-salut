@@ -88,7 +88,7 @@ static void gibber_ssl_transport_dispose (GObject *object);
 static void gibber_ssl_transport_finalize (GObject *object);
 
 static gboolean
-ssl_transport_send(GibberTransport *transport, 
+ssl_transport_send(GibberTransport *transport,
                         const guint8 *data, gsize size,
                         GError **error);
 static void
@@ -144,7 +144,7 @@ gibber_ssl_transport_finalize (GObject *object)
   priv->cst = NULL;
 #endif
 
-  if (priv->ssl_ctx != NULL) 
+  if (priv->ssl_ctx != NULL)
     SSL_CTX_free(priv->ssl_ctx);
   priv->ssl_ctx = NULL;
 
@@ -162,7 +162,7 @@ ssl_verify_cb (int preverify_ok, X509_STORE_CTX *x509_ctx)
 
 
 static gboolean
-ssl_base_initialize(GibberSSLTransport *ssl, GError **error) 
+ssl_base_initialize(GibberSSLTransport *ssl, GError **error)
 {
   GibberSSLTransportPrivate *priv = GIBBER_SSL_TRANSPORT_GET_PRIVATE(ssl);
   static gboolean initialized = FALSE;
@@ -211,7 +211,7 @@ ssl_writeout(GibberSSLTransport *ssl, GError **error) {
   char *pp;
   gboolean ret = TRUE;
 
-  output = BIO_get_mem_data(priv->wbio, &pp); 
+  output = BIO_get_mem_data(priv->wbio, &pp);
   DEBUG("%ld bytes in output bio", output);
   if (output > 0 ) {
     int discard;
@@ -222,7 +222,7 @@ ssl_writeout(GibberSSLTransport *ssl, GError **error) {
 }
 
 static void
-ssl_resume_connect(GibberSSLTransport *ssl) 
+ssl_resume_connect(GibberSSLTransport *ssl)
 {
   GibberSSLTransportPrivate *priv = GIBBER_SSL_TRANSPORT_GET_PRIVATE(ssl);
   gint ret;
@@ -237,12 +237,12 @@ ssl_resume_connect(GibberSSLTransport *ssl)
          DEBUG("More data needed for ssl connection");
          break;
       default:
-         DEBUG("Unhandled error: %d", error); 
+         DEBUG("Unhandled error: %d", error);
          g_assert_not_reached();
     }
   } else if (ret == 1) {
     DEBUG("SSL Connection made");
-    gibber_transport_set_state(GIBBER_TRANSPORT(ssl), 
+    gibber_transport_set_state(GIBBER_TRANSPORT(ssl),
                                GIBBER_TRANSPORT_CONNECTED);
   }
   ssl_writeout(ssl, NULL);
@@ -251,22 +251,22 @@ ssl_resume_connect(GibberSSLTransport *ssl)
 
 #define BUFSIZE 1024
 static void
-ssl_read_input(GibberSSLTransport *ssl) 
+ssl_read_input(GibberSSLTransport *ssl)
 {
   GibberSSLTransportPrivate *priv = GIBBER_SSL_TRANSPORT_GET_PRIVATE(ssl);
   guint8 buffer[1024];
   gint len;
 
   while (BIO_ctrl_pending(priv->rbio) > 0) {
-    len = SSL_read(priv->ssl, buffer, BUFSIZE); 
+    len = SSL_read(priv->ssl, buffer, BUFSIZE);
     g_assert(len > 0);
     gibber_transport_received_data(GIBBER_TRANSPORT(ssl), buffer, len);
   }
 }
 
 static void
-ssl_handle_read(GibberTransport *transport, GibberBuffer *buffer, 
-    gpointer user_data) 
+ssl_handle_read(GibberTransport *transport, GibberBuffer *buffer,
+    gpointer user_data)
 {
   GibberSSLTransport *ssl = GIBBER_SSL_TRANSPORT(user_data);
   GibberSSLTransportPrivate *priv = GIBBER_SSL_TRANSPORT_GET_PRIVATE(ssl);
@@ -283,7 +283,7 @@ ssl_handle_read(GibberTransport *transport, GibberBuffer *buffer,
     case GIBBER_TRANSPORT_CONNECTED:
       ssl_read_input(ssl);
       break;
-    default: 
+    default:
       g_assert_not_reached();
       break;
   }
@@ -311,7 +311,7 @@ GibberSSLTransport *
 gibber_ssl_transport_new(GibberTransport *transport) {
   GibberSSLTransport *ssl;
   GibberSSLTransportPrivate *priv;
-  
+ 
   ssl = g_object_new(GIBBER_TYPE_SSL_TRANSPORT, NULL);
 
   priv = GIBBER_SSL_TRANSPORT_GET_PRIVATE (ssl);
@@ -333,7 +333,7 @@ gibber_ssl_transport_new(GibberTransport *transport) {
 
 
 gboolean
-gibber_ssl_transport_connect(GibberSSLTransport *ssl, 
+gibber_ssl_transport_connect(GibberSSLTransport *ssl,
                              const gchar *server,
                              GError **error) {
   GibberSSLTransportPrivate *priv = GIBBER_SSL_TRANSPORT_GET_PRIVATE(ssl);
@@ -346,7 +346,7 @@ gibber_ssl_transport_connect(GibberSSLTransport *ssl,
   priv->ssl = SSL_new(priv->ssl_ctx);
   if (priv->ssl == NULL) {
     fprintf(stderr, "SSL_new() == NULL\n");
-    g_set_error(error, GIBBER_SSL_TRANSPORT_ERROR, 
+    g_set_error(error, GIBBER_SSL_TRANSPORT_ERROR,
       GIBBER_SSL_TRANSPORT_ERROR_CONNECTION_OPEN,
       "SSL_new()");
     return FALSE;
@@ -358,7 +358,7 @@ gibber_ssl_transport_connect(GibberSSLTransport *ssl,
    //                          BIO_NOCLOSE);
   if (priv->rbio == NULL || priv->wbio == NULL) {
     fprintf(stderr, "BIO_new_socket() failed\n");
-    g_set_error(error, GIBBER_SSL_TRANSPORT_ERROR, 
+    g_set_error(error, GIBBER_SSL_TRANSPORT_ERROR,
         GIBBER_SSL_TRANSPORT_ERROR_CONNECTION_OPEN,
         "BIO_new_socket()");
     return FALSE;
@@ -368,17 +368,17 @@ gibber_ssl_transport_connect(GibberSSLTransport *ssl,
 
   SSL_set_bio(priv->ssl, priv->rbio, priv->wbio);
 
-  gibber_transport_set_state(GIBBER_TRANSPORT(ssl), 
+  gibber_transport_set_state(GIBBER_TRANSPORT(ssl),
       GIBBER_TRANSPORT_CONNECTING);
 
   ssl_resume_connect(ssl);
 
   /* Startup connection */
-  return TRUE; 
+  return TRUE;
 }
 
 static gboolean
-ssl_transport_send(GibberTransport *transport, 
+ssl_transport_send(GibberTransport *transport,
                         const guint8 *data, gsize size,
                         GError **error) {
   GibberSSLTransport *ssl = GIBBER_SSL_TRANSPORT(transport);
@@ -724,7 +724,7 @@ _lm_ssl_send (LmSSL *ssl, const gchar *str, gint len)
 	return ssl_ret;
 }
 
-void 
+void
 _lm_ssl_close (LmSSL *ssl)
 {
 	SSL_shutdown(ssl->ssl);

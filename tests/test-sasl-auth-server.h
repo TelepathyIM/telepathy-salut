@@ -44,27 +44,29 @@ struct _TestSaslAuthServer {
     GObject parent;
 };
 
-GType test_sasl_auth_server_get_type(void);
+GType test_sasl_auth_server_get_type (void);
 
 /* TYPE MACROS */
 #define TEST_TYPE_SASL_AUTH_SERVER \
-  (test_sasl_auth_server_get_type())
+  (test_sasl_auth_server_get_type ())
 #define TEST_SASL_AUTH_SERVER(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), TEST_TYPE_SASL_AUTH_SERVER, TestSaslAuthServer))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), TEST_TYPE_SASL_AUTH_SERVER, \
+   TestSaslAuthServer))
 #define TEST_SASL_AUTH_SERVER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), TEST_TYPE_SASL_AUTH_SERVER, TestSaslAuthServerClass))
+  (G_TYPE_CHECK_CLASS_CAST((klass), TEST_TYPE_SASL_AUTH_SERVER, \
+   TestSaslAuthServerClass))
 #define TEST_IS_SASL_AUTH_SERVER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj), TEST_TYPE_SASL_AUTH_SERVER))
 #define TEST_IS_SASL_AUTH_SERVER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass), TEST_TYPE_SASL_AUTH_SERVER))
 #define TEST_SASL_AUTH_SERVER_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), TEST_TYPE_SASL_AUTH_SERVER, TestSaslAuthServerClass))
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), TEST_TYPE_SASL_AUTH_SERVER, \
+   TestSaslAuthServerClass))
 
 
-TestSaslAuthServer *
-test_sasl_auth_server_new(GibberTransport *transport, gchar *mech,
-                          const gchar *user, const gchar *password,
-                          ServerProblem problem);
+TestSaslAuthServer * test_sasl_auth_server_new (GibberTransport *transport,
+    gchar *mech, const gchar *user, const gchar *password,
+    ServerProblem problem);
 
 G_END_DECLS
 

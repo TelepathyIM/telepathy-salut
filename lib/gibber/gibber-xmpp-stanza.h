@@ -38,13 +38,14 @@ struct _GibberXmppStanza {
     GibberXmppNode *node;
 };
 
-GType gibber_xmpp_stanza_get_type(void);
+GType gibber_xmpp_stanza_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_XMPP_STANZA \
-  (gibber_xmpp_stanza_get_type())
+  (gibber_xmpp_stanza_get_type ())
 #define GIBBER_XMPP_STANZA(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_STANZA, GibberXmppStanza))
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_STANZA, \
+   GibberXmppStanza))
 #define GIBBER_XMPP_STANZA_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_STANZA, GibberXmppStanzaClass))
 #define GIBBER_IS_XMPP_STANZA(obj) \
@@ -105,15 +106,13 @@ typedef enum
   GIBBER_STANZA_END
 } GibberBuildTag;
 
-GibberXmppStanza *
-gibber_xmpp_stanza_new(const gchar *name);
+GibberXmppStanza * gibber_xmpp_stanza_new (const gchar *name);
 
-GibberXmppStanza *
-gibber_xmpp_stanza_build (GibberStanzaType type, GibberStanzaSubType sub_type,
-    const gchar *from, const gchar *to, guint spec, ...);
+GibberXmppStanza * gibber_xmpp_stanza_build (GibberStanzaType type,
+    GibberStanzaSubType sub_type, const gchar *from, const gchar *to,
+    guint spec, ...);
 
-void
-gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
+void gibber_xmpp_stanza_get_type_info (GibberXmppStanza *stanza,
     GibberStanzaType *type, GibberStanzaSubType *sub_type);
 
 G_END_DECLS
