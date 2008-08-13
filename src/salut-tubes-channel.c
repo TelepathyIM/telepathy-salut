@@ -1852,6 +1852,8 @@ salut_tubes_channel_class_init (
   salut_tubes_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutTubesChannelClass, dbus_props_class));
+
+  tp_external_group_mixin_init_dbus_properties (object_class);
 }
 
 void
