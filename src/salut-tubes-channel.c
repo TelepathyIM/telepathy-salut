@@ -80,6 +80,9 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
 
 static const char *salut_tubes_channel_interfaces[] = {
   TP_IFACE_CHANNEL_INTERFACE_GROUP,
+  /* If more interfaces are added, either keep Group as the first, or change
+   * the implementations of salut_tubes_channel_get_interfaces () and
+   * salut_tubes_channel_get_property () too */
   NULL
 };
 
