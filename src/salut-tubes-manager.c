@@ -683,6 +683,12 @@ salut_tubes_manager_iface_request (TpChannelFactoryIface *iface,
     {
       status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
       chan = new_tubes_channel (fac, handle);
+      if (chan == NULL)
+        {
+          DEBUG ("Cannot create a tubes channel with handle %u",
+              handle);
+          return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+        }
       tp_channel_factory_iface_emit_new_channel (fac, (TpChannelIface *)chan,
           request);
     }
