@@ -65,6 +65,7 @@ enum
   PROP_HANDLE,
   PROP_CONNECTION,
   PROP_INTERFACES,
+  PROP_TARGET_ID,
   LAST_PROPERTY
 };
 
@@ -144,6 +145,9 @@ salut_roomlist_channel_get_property (GObject *object,
     case PROP_INTERFACES:
       g_value_set_static_boxed (value, salut_roomlist_channel_interfaces);
       break;
+    case PROP_TARGET_ID:
+      g_value_set_static_string (value, "");
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -205,6 +209,7 @@ salut_roomlist_channel_class_init (
   static TpDBusPropertiesMixinPropImpl channel_props[] = {
       { "TargetHandleType", "handle-type", NULL },
       { "TargetHandle", "handle", NULL },
+      { "TargetID", "target-id", NULL },
       { "ChannelType", "channel-type", NULL },
       { "Interfaces", "interfaces", NULL },
       { NULL }
@@ -237,6 +242,13 @@ salut_roomlist_channel_class_init (
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE,
       "handle");
+
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_object ("connection", "SalutConnection object",
                                     "Salut connection object that owns this "
