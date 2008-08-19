@@ -233,6 +233,9 @@ salut_connection_shut_down (TpBaseConnection *self);
 static gboolean
 salut_connection_start_connecting (TpBaseConnection *self, GError **error);
 
+static void salut_connection_avatars_fill_contact_attributes (GObject *obj,
+    const GArray *contacts, GHashTable *attributes_hash);
+
 static void
 salut_connection_init (SalutConnection *obj)
 {
@@ -280,6 +283,10 @@ salut_connection_constructor (GType type,
 
   tp_base_connection_register_with_contacts_mixin (TP_BASE_CONNECTION (obj));
   tp_presence_mixin_simple_presence_register_with_contacts_mixin (obj);
+
+  tp_contacts_mixin_add_contact_attributes_iface (obj,
+      TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+      salut_connection_avatars_fill_contact_attributes);
 
   return obj;
 }
@@ -1298,6 +1305,53 @@ salut_connection_get_known_avatar_tokens (
 
   g_hash_table_destroy (ret);
 }
+
+static void
+salut_connection_avatars_fill_contact_attributes (GObject *obj,
+    const GArray *contacts, GHashTable *attributes_hash)
+{
+  guint i;
+  SalutConnection *self = SALUT_CONNECTION (obj);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (base);
+
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      gchar *tokens = NULL;
+
+      if (base->self_handle == handle)
+        {
+          tokens = g_strdup (priv->self->avatar_token);
+        }
+      else
+        {
+          SalutContact *contact = salut_contact_manager_get_contact (
+              priv->contact_manager, handle);
+          if (contact != NULL)
+            {
+              if (contact->avatar_token != NULL)
+                tokens = g_strdup (contact->avatar_token);
+              else
+                /* We always know the tokens, if it's unset then it's "" */
+                tokens = g_strdup ("");
+
+              g_object_unref (contact);
+            }
+        }
+
+      if (tokens != NULL)
+        {
+          GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
+
+          g_value_take_string (val, tokens);
+
+          tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS"/token", val);
+        }
+    }
+}
+
 
 static void
 _request_avatars_cb (SalutContact *contact, guint8 *avatar, gsize size,
