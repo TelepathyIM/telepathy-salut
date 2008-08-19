@@ -488,7 +488,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "State of the file transfer in this channel",
       0,
       G_MAXUINT,
-      G_MAXUINT,
+      0,
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
