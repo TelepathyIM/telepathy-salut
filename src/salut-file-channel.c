@@ -77,7 +77,7 @@ enum
 static guint signals[LAST_SIGNAL] = {0};
 */
 
-const char *salut_file_channel_interfaces[] = { NULL };
+static const char *salut_file_channel_interfaces[] = { NULL };
 
 /* properties */
 enum
