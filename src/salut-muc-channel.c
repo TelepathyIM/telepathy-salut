@@ -104,7 +104,6 @@ struct _SalutMucChannelPrivate
   gboolean dispose_has_run;
   gchar *object_path;
   TpHandle handle;
-  SalutConnection *connection;
   SalutSelf *self;
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberMucConnection *muc_connection;
