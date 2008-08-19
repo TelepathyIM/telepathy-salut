@@ -1054,7 +1054,7 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
           if (contact == NULL)
             {
               DEBUG ("RequestAliases called for offline contact");
-              aliases[i] = "";
+              aliases[i] = tp_handle_inspect (contact_handles, handle);
             }
           else
             {
