@@ -1007,6 +1007,39 @@ salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
       0);
 }
 
+static const gchar *
+salut_connection_get_alias (SalutConnection *self, TpHandle handle)
+{
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+    TP_HANDLE_TYPE_CONTACT);
+  const gchar *alias;
+
+  if (handle == base->self_handle)
+    {
+      alias = salut_self_get_alias (priv->self);
+    }
+  else
+    {
+      SalutContact *contact;
+       contact = salut_contact_manager_get_contact (priv->contact_manager,
+         handle);
+
+       if (contact == NULL)
+         {
+           alias = tp_handle_inspect (handle_repo, handle);
+         }
+       else
+         {
+           alias = salut_contact_get_alias (contact);
+           g_object_unref (contact);
+         }
+    }
+
+  return alias;
+}
+
 /**
  * salut_connection_request_aliases
  *
@@ -1019,7 +1052,6 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
     const GArray *contacts, DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   int i;
   const gchar **aliases;
@@ -1042,26 +1074,8 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
   for (i = 0; i < contacts->len; i++)
     {
       TpHandle handle = g_array_index (contacts, TpHandle, i);
-      SalutContact *contact;
-      if (handle == TP_BASE_CONNECTION (self)->self_handle)
-        {
-          aliases[i] = salut_self_get_alias (priv->self);
-        }
-      else
-        {
-          contact = salut_contact_manager_get_contact (priv->contact_manager,
-            handle);
-          if (contact == NULL)
-            {
-              DEBUG ("RequestAliases called for offline contact");
-              aliases[i] = tp_handle_inspect (contact_handles, handle);
-            }
-          else
-            {
-              aliases[i] = salut_contact_get_alias (contact);
-              g_object_unref (contact);
-          }
-        }
+
+      aliases[i] = salut_connection_get_alias (self, handle);
     }
 
   tp_svc_connection_interface_aliasing_return_from_request_aliases (context,
@@ -1072,43 +1086,52 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
 }
 
 static void
+salut_connection_get_aliases (TpSvcConnectionInterfaceAliasing *iface,
+    const GArray *contacts, DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+    TP_HANDLE_TYPE_CONTACT);
+  guint i;
+  GError *error = NULL;
+  GHashTable *result = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+    NULL, NULL);
+
+  if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+
+      g_hash_table_insert (result, GUINT_TO_POINTER (handle),
+        (gchar *)salut_connection_get_alias (self, handle));
+    }
+
+   tp_svc_connection_interface_aliasing_return_from_get_aliases (context,
+       result);
+
+   g_hash_table_destroy (result);
+}
+
+static void
 salut_connection_aliasing_fill_contact_attributes (GObject *obj,
     const GArray *contacts, GHashTable *attributes_hash)
 {
-  guint i;
   SalutConnection *self = SALUT_CONNECTION (obj);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpBaseConnection *base = TP_BASE_CONNECTION (base);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
-    TP_HANDLE_TYPE_CONTACT);
+  guint i;
 
   for (i = 0; i < contacts->len; i++)
     {
       TpHandle handle = g_array_index (contacts, TpHandle, i);
       GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
-      gchar *alias;
 
-      if (handle == base->self_handle)
-        {
-          g_value_set_string (val, salut_self_get_alias (priv->self));
-        }
-      else
-        {
-          SalutContact *contact;
-           contact = salut_contact_manager_get_contact (priv->contact_manager,
-             handle);
-
-           if (contact == NULL)
-             {
-               g_value_set_static_string (val,
-                 tp_handle_inspect (handle_repo, handle));
-             }
-           else
-             {
-               g_value_set_string (val, salut_contact_get_alias (contact));
-               g_object_unref (contact);
-             }
-        }
+      g_value_set_string (val, salut_connection_get_alias (self, handle));
 
       tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
          TP_IFACE_CONNECTION_INTERFACE_ALIASING"/alias", val);
@@ -1183,6 +1206,7 @@ salut_connection_aliasing_service_iface_init (gpointer g_iface,
     (klass, salut_connection_##x)
   IMPLEMENT (get_alias_flags);
   IMPLEMENT (request_aliases);
+  IMPLEMENT (get_aliases);
   IMPLEMENT (set_aliases);
 #undef IMPLEMENT
 }
