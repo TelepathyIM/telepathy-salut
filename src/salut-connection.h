@@ -28,6 +28,7 @@
 
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/contacts-mixin.h>
 #include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/presence-mixin.h>
 #include <telepathy-glib/svc-connection.h>
@@ -43,11 +44,13 @@ struct _SalutConnectionClass {
   TpBaseConnectionClass parent_class;
   TpDBusPropertiesMixinClass properties_mixin;
   TpPresenceMixinClass presence_mixin;
+  TpContactsMixinClass contacts_mixin;
 };
 
 struct _SalutConnection {
   TpBaseConnection parent;
   TpPresenceMixin presence_mixin;
+  TpContactsMixin contacts_mixin;
 
   /* Our name on the network */
   gchar *name;

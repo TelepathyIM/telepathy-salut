@@ -105,6 +105,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        tp_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_DBUS_PROPERTIES,
        tp_dbus_properties_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
+       tp_contacts_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
        tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
@@ -272,6 +274,12 @@ salut_connection_constructor (GType type,
 
   obj = G_OBJECT_CLASS (salut_connection_parent_class)->
            constructor (type, n_props, props);
+
+  tp_contacts_mixin_init (obj,
+      G_STRUCT_OFFSET (SalutConnection, contacts_mixin));
+
+  tp_base_connection_register_with_contacts_mixin (TP_BASE_CONNECTION (obj));
+  tp_presence_mixin_simple_presence_register_with_contacts_mixin (obj);
 
   return obj;
 }
@@ -607,6 +615,9 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       presence_statuses);
 
   tp_presence_mixin_simple_presence_init_dbus_properties (object_class);
+
+  tp_contacts_mixin_class_init (object_class,
+        G_STRUCT_OFFSET (SalutConnectionClass, contacts_mixin));
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
