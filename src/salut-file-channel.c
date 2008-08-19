@@ -95,7 +95,6 @@ enum
   PROP_CONTENT_TYPE,
   PROP_FILENAME,
   PROP_SIZE,
-  PROP_ESTIMATED_SIZE,
   PROP_CONTENT_MD5,
   PROP_DESCRIPTION,
   PROP_AVAILABLE_SOCKET_TYPES,
@@ -123,7 +122,6 @@ struct _SalutFileChannelPrivate {
   gchar *content_type;
   gchar *filename;
   guint64 size;
-  guint64 estimated_size;
   gchar *content_md5;
   gchar *description;
   GHashTable *available_socket_types;
@@ -210,9 +208,6 @@ salut_file_channel_get_property (GObject    *object,
       case PROP_SIZE:
         g_value_set_uint64 (value, self->priv->size);
         break;
-      case PROP_ESTIMATED_SIZE:
-        g_value_set_uint64 (value, self->priv->estimated_size);
-        break;
       case PROP_CONTENT_MD5:
         g_value_set_string (value, self->priv->content_md5);
         break;
@@ -295,10 +290,6 @@ salut_file_channel_set_property (GObject *object,
       case PROP_SIZE:
         /* This should not be writeable with the new request API */
         self->priv->size = g_value_get_uint64 (value);
-        break;
-      case PROP_ESTIMATED_SIZE:
-        /* This should not be writeable with the new request API */
-        self->priv->estimated_size = g_value_get_uint64 (value);
         break;
       case PROP_CONTENT_MD5:
         /* This should not be writeable with the new request API */
@@ -386,7 +377,6 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
     { "ContentType", "content-type", "content-type" },
     { "Filename", "filename", "filename" },
     { "Size", "size", "size" },
-    { "EstimatedSize", "estimated-size", "estimated-size" },
     { "ContentMD5", "content-md5", "content-md5" },
     { "Description", "description", "description" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
@@ -538,22 +528,6 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_SIZE, param_spec);
-
-  param_spec = g_param_spec_uint64 (
-      "estimated-size",
-      "guint estimated-size",
-      "Estimated size of the file in bytes",
-      0,
-      G_MAXUINT64,
-      SALUT_UNDEFINED_FILE_SIZE,
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
-      G_PARAM_CONSTRUCT |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_ESTIMATED_SIZE, param_spec);
 
   param_spec = g_param_spec_string (
       "content-md5",
@@ -829,10 +803,7 @@ send_file_offer (SalutFileChannel *self)
 
   setup_local_socket (self);
 
-  if (self->priv->size != SALUT_UNDEFINED_FILE_SIZE)
-    ft->size = self->priv->size;
-  else
-    ft->size = self->priv->estimated_size;
+  ft->size = self->priv->size;
 
   gibber_file_transfer_offer (ft);
 }
@@ -871,7 +842,7 @@ salut_file_channel_check_and_send (SalutFileChannel *channel)
       return;
     }
 
-  if (channel->priv->size == SALUT_UNDEFINED_FILE_SIZE && channel->priv->estimated_size == SALUT_UNDEFINED_FILE_SIZE)
+  if (channel->priv->size == SALUT_UNDEFINED_FILE_SIZE)
     {
       DEBUG ("Size property not present; not starting file transfer");
       return;
