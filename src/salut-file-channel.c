@@ -420,41 +420,41 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   object_class->set_property = salut_file_channel_set_property;
 
   g_object_class_override_property (object_class, PROP_OBJECT_PATH,
-                                    "object-path");
+      "object-path");
   g_object_class_override_property (object_class, PROP_CHANNEL_TYPE,
-                                    "channel-type");
+      "channel-type");
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
-                                    "handle-type");
+      "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
   param_spec = g_param_spec_object ("contact",
-                                    "SalutContact object",
-                                    "Salut Contact to which this channel"
-                                    "is dedicated",
-                                    SALUT_TYPE_CONTACT,
-                                    G_PARAM_CONSTRUCT_ONLY |
-                                    G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
+      "SalutContact object",
+      "Salut Contact to which this channel is dedicated",
+      SALUT_TYPE_CONTACT,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTACT, param_spec);
 
   param_spec = g_param_spec_object ("connection",
-                                    "SalutConnection object",
-                                    "Salut Connection that owns the"
-                                    "connection for this IM channel",
-                                    SALUT_TYPE_CONNECTION,
-                                    G_PARAM_CONSTRUCT_ONLY |
-                                    G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class,
-                                   PROP_CONNECTION, param_spec);
+      "SalutConnection object",
+      "Salut Connection that owns the"
+      "connection for this IM channel",
+      SALUT_TYPE_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
   param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
       "Additional Channel.Interface.* interfaces",
       G_TYPE_STRV,
       G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB |
+      G_PARAM_STATIC_NAME);
   g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   param_spec = g_param_spec_object (
