@@ -1012,7 +1012,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base,
     TP_HANDLE_TYPE_CONTACT);
   const gchar *alias;
 
@@ -1028,7 +1028,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
 
        if (contact == NULL)
          {
-           alias = tp_handle_inspect (handle_repo, handle);
+           alias = tp_handle_inspect (contact_repo, handle);
          }
        else
          {
@@ -1091,14 +1091,14 @@ salut_connection_get_aliases (TpSvcConnectionInterfaceAliasing *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base,
     TP_HANDLE_TYPE_CONTACT);
   guint i;
   GError *error = NULL;
   GHashTable *result = g_hash_table_new_full (g_direct_hash, g_direct_equal,
     NULL, NULL);
 
-  if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &error))
+  if (!tp_handles_are_valid (contact_repo, contacts, FALSE, &error))
     {
       dbus_g_method_return_error (context, error);
       g_error_free (error);
