@@ -95,6 +95,7 @@ enum
   PROP_CONNECTION,
   PROP_MUC,
   PROP_INTERFACES,
+  PROP_TARGET_ID,
   LAST_PROPERTY
 };
 
@@ -239,6 +240,14 @@ salut_tubes_channel_get_property (GObject *object,
           g_value_set_static_boxed (value, salut_tubes_channel_interfaces);
         else
           g_value_set_static_boxed (value, salut_tubes_channel_interfaces + 1);
+        break;
+      case PROP_TARGET_ID:
+        {
+           TpHandleRepoIface *repo = tp_base_connection_get_handles (
+             (TpBaseConnection *) priv->conn, priv->handle_type);
+
+           g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+        }
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1786,6 +1795,7 @@ salut_tubes_channel_class_init (
   static TpDBusPropertiesMixinPropImpl channel_props[] = {
       { "TargetHandleType", "handle-type", NULL },
       { "TargetHandle", "handle", NULL },
+      { "TargetID", "target-id", NULL },
       { "ChannelType", "channel-type", NULL },
       { "Interfaces", "interfaces", NULL },
       { NULL }
@@ -1817,6 +1827,13 @@ salut_tubes_channel_class_init (
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_object (
       "connection",
