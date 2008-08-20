@@ -27,21 +27,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       a socket, the type of socket (local Unix, IPv4, etc.) when the File
       channel is created.</p>
 
+      <p>The Telepathy client should connect to the socket or address that
+      the connection manager has set up and provided back to the clients
+      through the two methods.</p>
+
+      <p>If something goes wrong with the transfer, you should call Close
+      on the channel.</p>
+
       <p>The File channel type may be requested for handles of type
-      HANDLE_TYPE_CONTACT.</p>
+      HANDLE_TYPE_CONTACT. If the channel is requested for any other
+      handle type then the behviour is undefined.</p>
     </tp:docstring>
 
-    <property name="Direction" type="u" tp:type="File_Transfer_Direction"
-      access="read">
-      <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
-        <p>The direction of the file transfer.</p>
-
-        <p>This property should become useless with the new request API.</p>
-      </tp:docstring>
-    </property>
-
     <property name="State" type="u" tp:type="File_Transfer_State"
-      access="readwrite">
+      access="read">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>The state of the file transfer as described by the
         File_Transfer_State enum.</p>
@@ -53,7 +52,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         <p>The file's MIME type. This cannot change once the channel has
         been created.</p>
 
-        <p>This property is mandatory. Protocols which do not have a
+        <p>This property is mandatory when requesting the channel with the
+        CreateChannels requests method. Protocols which do not have a
         content-type property with file transfers should set this value to
         application/octet-stream.</p>
       </tp:docstring>
@@ -65,7 +65,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         as a suggested filename for the receiver. This cannot change
         once the channel has been created.</p>
 
-        <p>If this property is an empty string, then its value is unspecified.</p>
+        <p>This property should be the basename of the file being sent. For example,
+        if the sender sends the file /home/user/monkey.pdf then this property should
+        be set to monkey.pdf.</p>
+
+        <p>This property is mandatory when requesting the channel with the
+        CreateChannels requests method. This property cannot be empty and
+        must be set to a sensible value.</p>
       </tp:docstring>
     </property>
 
@@ -75,29 +81,41 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         transfer is guaranteed to be this size. This cannot change once
         the channel has been created.</p>
 
-        <p>If this property is UINT64_MAX, then its value is unspecified.</p>
+        <p>When you are creating a channel with this property, its value
+        MUST be accurate and in bytes. However, when receiving a file, this
+        property still must be in bytes but might not be entirely accurate
+        to the byte.</p>
+
+        <p>This property is mandatory when requesting the channel with the
+        CreateChannels requests method. If this property is UINT64_MAX,
+        then its value is unspecified.</p>
       </tp:docstring>
     </property>
 
-    <property name="EstimatedSize" type="t" access="readwrite">
+    <property name="ContentHashType" type="u" tp:type="File_Hash_Type"
+      access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
-        <p>An estimate of the size of the file. This property should be used
-        when the protocol doesn't allow exact file sizes (For example, accurate
-        to the nearest megabyte). This property should not be set if the Size
-        property can, or has, been set. This cannot change once the channel
-        has been created.</p>
+        <p>The type of the ContentHash property from values of the
+        File_Hash_Type enum.</p>
 
-        <p>If this property is UINT64_MAX, then its value is unspecified.</p>
+        <p>This property is optional when requesting the channel with the
+        CreateChannels requests method. However, if you wish to include the
+        ContentHash property you MUST also include this property. If you
+        omit this property from a CreateChannels method call then its value
+        will be assumed to be File_Hash_Type_None.</p>
       </tp:docstring>
     </property>
 
-    <property name="ContentMD5" type="s" access="readwrite">
+    <property name="ContentHash" type="s" access="readwrite">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
-        <p>MD5 digest of the file as a string of 32 ASCII hex digits, which
-        SHOULD be lower-case if they are letters. This cannot change once
-        the channel has been created.</p>
+        <p>Hash of the contents of the file transfer, of type described
+        in the value of the ContentHashType property.</p>
 
-        <p>If this property is an empty string, then its value is unspecified.</p>
+        <p>This property is optional when requesting the channel with the
+        CreateChannels requests method. Its value MUST correspond to the
+        appropriate type of the ContentHashType property. If the
+        ContentHashType property is not set, or set to File_Hash_Type_None,
+        then this property will not even be looked at.</p>
       </tp:docstring>
     </property>
 
@@ -106,7 +124,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         <p>Description of the file transfer. This cannot change once the
         channel has been created.</p>
 
-        <p>If this property is an empty string, then its value is unspecified.</p>
+        <p>This property is optional when requesting the channel with the
+        CreateChannel requests method. If this property is an empty string,
+        then its value is unspecified.</p>
       </tp:docstring>
     </property>
 
@@ -141,56 +161,68 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:docstring>
     </property>
 
-    <property name="SocketPath" type="s" access="readwrite">
+    <property name="InitialOffset" type="t" access="read">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
-        <p>Path to the UNIX socket in use.</p>
+        <p>The offset from the beginning of the file that the transfer should
+        start from. This should be checked by the receiver after the transfer
+        changes state from Accepted to Open.</p>
 
-        <p>If this is an empty string, its value is undefined.</p>
+        <p>Before setting the State property to Open, the connection manager
+        MUST set the InitialOffset property. If there is no offset then this
+        value MUST be set to 0.</p>
+
+        <p>This property MUST NOT change after the state of the transfer has
+        changed to Open.</p>
       </tp:docstring>
     </property>
 
-    <tp:enum name="File_Transfer_Direction">
-      <tp:enumvalue suffix="Incoming" value="0">
+    <tp:enum name="File_Transfer_State" type="u">
+      <tp:enumvalue suffix="None" value="0">
         <tp:docstring>
-          The file transfer is incoming.
+          The file transfer is currently not set up correctly.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Outgoing" value="1">
+      <tp:enumvalue suffix="Not_Offered" value="1">
         <tp:docstring>
-          The file transfer is outgoing.
+          The file transfer is waiting for the local user to offer the file
+          as a transfer.
         </tp:docstring>
       </tp:enumvalue>
-    </tp:enum>
-
-    <tp:enum name="File_Transfer_State">
-      <tp:enumvalue suffix="Local_Pending" value="0">
+      <tp:enumvalue suffix="Accepted" value="2">
+        <tp:docstring>
+          The file transfer has been accepted locally, but not currently open.
+          The transfer should now wait for the state to change to open and
+          check the offset value.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="Local_Pending" value="3">
         <tp:docstring>
           The file transfer is waiting to be accepted/closed locally.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Remote_Pending" value="1">
+      <tp:enumvalue suffix="Remote_Pending" value="4">
         <tp:docstring>
           The file transfer is waiting to be accepted/closed remotely.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Open" value="2">
+      <tp:enumvalue suffix="Open" value="5">
         <tp:docstring>
           The file transfer is open for traffic.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Completed" value="3">
+      <tp:enumvalue suffix="Completed" value="6">
         <tp:docstring>
           The file transfer has been completed successfully.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Canceled" value="4">
+      <tp:enumvalue suffix="Canceled" value="7">
         <tp:docstring>
           The file transfer has been canceled.
         </tp:docstring>
       </tp:enumvalue>
     </tp:enum>
 
-    <tp:enum name="File_Transfer_State_Change_Reason">
+    <tp:enum name="File_Transfer_State_Change_Reason" type="u">
       <tp:enumvalue suffix="None" value="0">
         <tp:docstring>
           No reason was specified.
@@ -218,10 +250,92 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       </tp:enumvalue>
     </tp:enum>
 
+    <tp:enum name="File_Hash_Type" type="u">
+      <tp:enumvalue suffix="None" value="0">
+        <tp:docstring>
+          No hash.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="MD5" value="1">
+        <tp:docstring>
+          MD5 digest as a string of 32 ASCII hex digits, which SHOULD be
+          lower-case if they are letters.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="SHA1" value="2">
+        <tp:docstring>
+          SHA1 digest as a string of ASCII hex digits, which SHOULD be
+          lower-case if they are letters.
+        </tp:docstring>
+      </tp:enumvalue>
+      <tp:enumvalue suffix="SHA256" value="3">
+        <tp:docstring>
+          SHA1 digest as a string of ASCII hex digits, which SHOULD be
+          lower-case if they are letters.
+        </tp:docstring>
+      </tp:enumvalue>
+    </tp:enum>
+
     <method name="AcceptFile">
       <tp:docstring>
-        Accept a file transfer that's in the "local pending" state. The file 
-        transfer becomes open after this method is called.
+        Accept a file transfer that's in the "local pending" state. The file
+        transfer's state becomes accepted after this method is called. At this
+        point, the receiver must wait for the state to change to open. When this
+        happens, the InitialOffset property should be read to find from where the
+        file is actually being sent.
+      </tp:docstring>
+      <arg direction="in" name="address_type" type="u" tp:type="Socket_Address_Type">
+        <tp:docstring>
+          The type of address the connection manager should listen on.
+        </tp:docstring>
+      </arg>
+      <arg direction="in" name="access_control" type="u" tp:type="Socket_Access_Control">
+        <tp:docstring>
+          The type of access control the connection manager should apply to
+          the socket.
+        </tp:docstring>
+      </arg>
+      <arg direction="in" name="access_control_param" type="v">
+        <tp:docstring>
+          A parameter for the access control type, to be interpreted as
+          specified in the documentation for the Socket_Access_Control enum.
+        </tp:docstring>
+      </arg>
+      <arg direction="in" name="offset" type="t">
+        <tp:docstring>
+          The offset in bytes of wthere the file tranfer should start from.
+          The offset is taken from the beginning of the file. Values of zero
+          will start the transfer from the beginning of the file.
+        </tp:docstring>
+      </arg>
+      <arg direction="out" name="address" type="v">
+        <tp:docstring>
+          The address on which the connection manager will listen for
+          connections for this file transfer.
+        </tp:docstring>
+      </arg>
+
+      <tp:possible-errors>
+        <tp:error name="org.freedesktop.Telepathy.Error.NotImplemented">
+          <tp:docstring>
+            The given address type or access-control mechanism is not supported.
+          </tp:docstring>
+        </tp:error>
+        <tp:error name="org.freedesktop.Telepathy.Error.NetworkError"/>
+        <tp:error name="org.freedesktop.Telepathy.Error.InvalidArgument"/>
+        <tp:error name="org.freedesktop.Telepathy.Error.NotAvailable">
+          <tp:docstring>
+          The file transfer is not in the "local pending" state, which is the only
+          state this method makes sense.
+          </tp:docstring>
+        </tp:error>
+      </tp:possible-errors>
+    </method>
+
+    <method name="OfferFile">
+      <tp:docstring>
+        Offer a file transfer that's in the "not offered" state. The file transfer
+        becomes remote pending after this method is called.
       </tp:docstring>
       <arg direction="in" name="address_type" type="u" tp:type="Socket_Address_Type">
         <tp:docstring>
@@ -257,8 +371,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         <tp:error name="org.freedesktop.Telepathy.Error.InvalidArgument"/>
         <tp:error name="org.freedesktop.Telepathy.Error.NotAvailable">
           <tp:docstring>
-          The file transfer is not in the "local pending" state, which is the only
-          state this method makes sense.
+            The file transfer is not in the "not offered" state, or there isn't
+            enough information for the transfer to start.
           </tp:docstring>
         </tp:error>
       </tp:possible-errors>
@@ -285,10 +399,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
 
     <signal name="TransferredBytesChanged">
       <tp:docstring>
-        Emitted when the number of transferred bytes changes. This will not change
-        with every single byte change. Instead, the most frequent this signal will
-        be emmitted is once a second. This should be sufficient, and the
-        TransferredBytes property should not be polled.
+        Emitted when the number of transferred bytes changes. This will not be
+        signalled with every single byte change. Instead, the most frequent
+        this signal will be emitted is once a second. This should be
+        sufficient, and the TransferredBytes property should not be polled.
       </tp:docstring>
       <arg name="count" type="t">
         <tp:docstring>
