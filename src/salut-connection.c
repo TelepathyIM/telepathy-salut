@@ -1110,7 +1110,7 @@ salut_connection_get_aliases (TpSvcConnectionInterfaceAliasing *iface,
       TpHandle handle = g_array_index (contacts, TpHandle, i);
 
       g_hash_table_insert (result, GUINT_TO_POINTER (handle),
-        (gchar *)salut_connection_get_alias (self, handle));
+        (gchar *) salut_connection_get_alias (self, handle));
     }
 
    tp_svc_connection_interface_aliasing_return_from_get_aliases (context,
@@ -1302,6 +1302,7 @@ salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
       else
         {
            SalutContact *contact;
+
            contact = salut_contact_manager_get_contact (priv->contact_manager,
                handle);
            if (contact != NULL)
@@ -1393,11 +1394,11 @@ salut_connection_avatars_fill_contact_attributes (GObject *obj,
   for (i = 0; i < contacts->len; i++)
     {
       TpHandle handle = g_array_index (contacts, TpHandle, i);
-      gchar *tokens = NULL;
+      gchar *token = NULL;
 
       if (base->self_handle == handle)
         {
-          tokens = g_strdup (priv->self->avatar_token);
+          token = g_strdup (priv->self->avatar_token);
         }
       else
         {
@@ -1406,20 +1407,20 @@ salut_connection_avatars_fill_contact_attributes (GObject *obj,
           if (contact != NULL)
             {
               if (contact->avatar_token != NULL)
-                tokens = g_strdup (contact->avatar_token);
+                token = g_strdup (contact->avatar_token);
               else
                 /* We always know the tokens, if it's unset then it's "" */
-                tokens = g_strdup ("");
+                token = g_strdup ("");
 
               g_object_unref (contact);
             }
         }
 
-      if (tokens != NULL)
+      if (token != NULL)
         {
           GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
 
-          g_value_take_string (val, tokens);
+          g_value_take_string (val, token);
 
           tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
             TP_IFACE_CONNECTION_INTERFACE_AVATARS"/token", val);
