@@ -1023,18 +1023,18 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
   else
     {
       SalutContact *contact;
-       contact = salut_contact_manager_get_contact (priv->contact_manager,
-         handle);
+      contact = salut_contact_manager_get_contact (priv->contact_manager,
+        handle);
 
-       if (contact == NULL)
-         {
-           alias = tp_handle_inspect (contact_repo, handle);
-         }
-       else
-         {
-           alias = salut_contact_get_alias (contact);
-           g_object_unref (contact);
-         }
+      if (contact == NULL)
+        {
+          alias = tp_handle_inspect (contact_repo, handle);
+        }
+      else
+        {
+          alias = salut_contact_get_alias (contact);
+          g_object_unref (contact);
+        }
     }
 
   return alias;
