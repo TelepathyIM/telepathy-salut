@@ -4,7 +4,10 @@ SUBDIRS = tools extensions lib src data m4 tests docs
 
 dist-hook:
 	chmod u+w ${distdir}/ChangeLog
-	if test -d _darcs; then darcs changes >${distdir}/ChangeLog; fi
+	if test -d ${top_srcdir}/.git; then \
+		git log --stat > ${distdir}/ChangeLog || \
+		git log > ${distdir}/ChangeLog; \
+	fi
 
 valgrind:
 	cd tests && $(MAKE) valgrind
