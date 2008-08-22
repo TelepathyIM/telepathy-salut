@@ -60,7 +60,7 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum
 {
-  PROP_XMPP_CONNECTION = 1,
+  PROP_ADDRESSES = 1,
   PROP_SELF_ID,
   PROP_PEER_ID,
   PROP_STREAM_ID,
@@ -76,7 +76,7 @@ enum
 typedef struct _GibberBytestreamDirectPrivate GibberBytestreamDirectPrivate;
 struct _GibberBytestreamDirectPrivate
 {
-  GibberXmppConnection *xmpp_connection;
+  GArray *addresses;
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
@@ -139,6 +139,9 @@ gibber_bytestream_direct_finalize (GObject *object)
   g_free (priv->self_id);
   g_free (priv->peer_id);
 
+  if (priv->addresses != NULL)
+    g_array_free (priv->addresses, TRUE);
+
   G_OBJECT_CLASS (gibber_bytestream_direct_parent_class)->finalize (object);
 }
 
@@ -154,8 +157,8 @@ gibber_bytestream_direct_get_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_XMPP_CONNECTION:
-        g_value_set_object (value, priv->xmpp_connection);
+      case PROP_ADDRESSES:
+        g_value_set_pointer (value, priv->addresses);
         break;
       case PROP_SELF_ID:
         g_value_set_string (value, priv->self_id);
@@ -195,12 +198,8 @@ gibber_bytestream_direct_set_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_XMPP_CONNECTION:
-        if (g_value_get_object (value) != NULL)
-          {
-            priv->xmpp_connection = g_value_get_object (value);
-            g_object_ref (priv->xmpp_connection);
-          }
+      case PROP_ADDRESSES:
+        priv->addresses = g_value_get_pointer (value);
         break;
       case PROP_SELF_ID:
         g_free (priv->self_id);
@@ -277,18 +276,17 @@ gibber_bytestream_direct_class_init (
   g_object_class_override_property (object_class, PROP_PROTOCOL,
       "protocol");
 
-  param_spec = g_param_spec_object (
-      "xmpp-connection",
-      "GibberXmppConnection object",
-      "Gibber XMPP connection object used to find the IP address to connect "
-      "in this bytestream if it's a private one",
-      GIBBER_TYPE_XMPP_CONNECTION,
+  param_spec = g_param_spec_pointer (
+      "addresses",
+      "Array of addresses",
+      "GArray of struct sockaddr_storage used to find the IP address to "
+      "connect in this bytestream if it's a private one",
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
+  g_object_class_install_property (object_class, PROP_ADDRESSES,
       param_spec);
 
   param_spec = g_param_spec_uint (
@@ -647,28 +645,22 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
     struct sockaddr_storage storage;
     struct sockaddr_in6 in6;
   } addr;
-  socklen_t len;
   GibberBytestreamDirectPrivate *priv =
       GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
 
   DEBUG ("Called.");
 
-  /* FIXME, this is very specific to salut and won't work with a normal xmpp
-   * client */
-  g_assert (priv->xmpp_connection != NULL);
-  g_assert (priv->xmpp_connection->transport != NULL);
-  if (!gibber_transport_get_sockaddr (
-      GIBBER_TRANSPORT (priv->xmpp_connection->transport),
-      &addr.storage, &len))
+  if (priv->addresses->len < 1)
     {
-      /* I'm too lazy to create more specific errors for this  as it should
-       * never happen while using salut anyway.. */
       GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
-          "Unsable get socket address for the control connection" };
-      DEBUG ("Could not get socket address for the control connection" );
+          "Unsable get socket address for this contact" };
+      DEBUG ("Could not get socket address for this contact" );
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
       return FALSE;
     }
+
+  /* Use the first address for now */
+  addr.storage = g_array_index (priv->addresses, struct sockaddr_storage, 0);
 
   addr.in6.sin6_port = g_htons ((guint16) priv->portnum);
 

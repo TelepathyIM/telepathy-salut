@@ -481,7 +481,7 @@ salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
   priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
 
   bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_DIRECT,
-      "xmpp-connection", connection,
+      "addresses", salut_contact_get_addresses (contact),
       "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
       "self-id", priv->connection->name,
       "peer-id", contact->name,
