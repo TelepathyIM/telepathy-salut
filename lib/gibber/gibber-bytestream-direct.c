@@ -176,6 +176,8 @@ gibber_bytestream_direct_get_property (GObject *object,
         g_value_set_uint (value, priv->portnum);
         break;
       case PROP_PROTOCOL:
+        /* this property is not used because direct bytestream are not
+         * negociated on XMPP */
         g_value_set_string (value, (const gchar *)"");
         break;
       default:
