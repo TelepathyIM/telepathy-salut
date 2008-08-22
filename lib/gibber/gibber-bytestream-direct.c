@@ -430,6 +430,7 @@ bytestream_closed (GibberBytestreamDirect *self)
 
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSED, NULL);
 }
+
 static void
 transport_buffer_empty_cb (GibberTransport *transport,
                            GibberBytestreamDirect *self)
