@@ -916,7 +916,7 @@ tubes_message_close_received (SalutTubesChannel *self,
     }
   else
     {
-      DEBUG ("received a tube close message on a non existant tube");
+      DEBUG ("received a tube close message on a non existent tube");
     }
 }
 
