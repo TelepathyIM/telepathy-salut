@@ -138,10 +138,11 @@ struct _SalutTubesChannelPrivate
   TpHandle handle;
   TpHandleType handle_type;
   TpHandleType self_handle;
+
+  /* Used for MUC tubes channel only */
   GibberMucConnection *muc_connection;
 
-  /* In case of 1-1 tube channel, we need to send <iq> stanza to the contact
-   * on a Xmpp connection */
+  /* Used for 1-1 tubes channel */
   SalutContact *contact;
   GibberXmppConnection *xmpp_connection;
   SalutXmppConnectionManager *xmpp_connection_manager;
