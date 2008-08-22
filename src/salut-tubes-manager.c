@@ -295,10 +295,10 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   GibberXmppStanza *reply;
 
   /* tube informations */
-  const gchar *service = NULL;
-  TpTubeType tube_type = TP_TUBE_TYPE_DBUS;
+  const gchar *service;
+  TpTubeType tube_type;
   TpHandle initiator_handle;
-  GHashTable *parameters = NULL;
+  GHashTable *parameters;
   guint tube_id;
   guint portnum = 0;
   gboolean close;
