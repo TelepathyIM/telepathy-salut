@@ -456,21 +456,15 @@ start_stream_initiation (SalutTubeStream *self,
 
   id_str = g_strdup_printf ("%u", priv->id);
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      g_assert_not_reached ();
-      node = gibber_xmpp_node_add_child (si_node, "stream");
-    }
-  else
-    {
-      TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-          (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_ROOM);
+  g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
 
-      /* FIXME: this needs standardizing */
-      node = gibber_xmpp_node_add_child (si_node, "muc-stream");
-      gibber_xmpp_node_set_attribute (node, "muc", tp_handle_inspect (
-            room_repo, priv->handle));
-    }
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
+      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_ROOM);
+
+  /* FIXME: this needs standardizing */
+  node = gibber_xmpp_node_add_child (si_node, "muc-stream");
+  gibber_xmpp_node_set_attribute (node, "muc", tp_handle_inspect (
+        room_repo, priv->handle));
 
   gibber_xmpp_node_set_ns (node, GIBBER_TELEPATHY_NS_TUBES);
   gibber_xmpp_node_set_attribute (node, "tube", id_str);
