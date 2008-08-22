@@ -308,30 +308,30 @@ gibber_bytestream_direct_class_init (
 
   signals[DATA_RECEIVED] =
     g_signal_new ("data-received",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_direct_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  _gibber_signals_marshal_VOID__STRING_POINTER,
-                  G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
+        G_OBJECT_CLASS_TYPE (gibber_bytestream_direct_class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+        0,
+        NULL, NULL,
+        _gibber_signals_marshal_VOID__STRING_POINTER,
+        G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
 
   signals[STATE_CHANGED] =
     g_signal_new ("state-changed",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_direct_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__UINT,
-                  G_TYPE_NONE, 1, G_TYPE_UINT);
+        G_OBJECT_CLASS_TYPE (gibber_bytestream_direct_class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+        0,
+        NULL, NULL,
+        g_cclosure_marshal_VOID__UINT,
+        G_TYPE_NONE, 1, G_TYPE_UINT);
 
   signals[WRITE_BLOCKED] =
     g_signal_new ("write-blocked",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_direct_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__BOOLEAN,
-                  G_TYPE_NONE, 1, G_TYPE_BOOLEAN);
+        G_OBJECT_CLASS_TYPE (gibber_bytestream_direct_class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+        0,
+        NULL, NULL,
+        g_cclosure_marshal_VOID__BOOLEAN,
+        G_TYPE_NONE, 1, G_TYPE_BOOLEAN);
 }
 
 void
