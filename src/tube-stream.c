@@ -562,18 +562,9 @@ start_stream_direct (SalutTubeStream *self,
   else
     {
       GibberBytestreamIface *bytestream;
-      GibberXmppConnection *xmpp_connection = NULL;
-      SalutXmppConnectionManagerRequestConnectionResult result;
-
-      DEBUG ("Called, will request a connection");
-      result = salut_xmpp_connection_manager_request_connection (
-          priv->xmpp_connection_manager, contact, &xmpp_connection, NULL);
-      g_assert (result ==
-          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE);
 
       bytestream = salut_direct_bytestream_manager_new_stream (
-          direct_bytestream_mgr, xmpp_connection,
-          contact, priv->port);
+          direct_bytestream_mgr, contact, priv->port);
 
       if (bytestream == NULL)
         {
