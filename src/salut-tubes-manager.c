@@ -221,13 +221,14 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       const gchar *tube_type;
 
       tube_type = gibber_xmpp_node_get_attribute (tube_node, "type");
-      if (g_str_equal (tube_type, "stream"))
+      if (!tp_strdiff (tube_type, "stream"))
         *type = TP_TUBE_TYPE_STREAM;
-      else if (g_str_equal (tube_type, "dbus"))
+      else if (!tp_strdiff (tube_type, "dbus"))
         *type = TP_TUBE_TYPE_DBUS;
       else
         {
-          DEBUG ("The <iq><tube> does not have a correct type=.");
+          DEBUG ("The <iq><tube> does not have a correct type: '%s'.",
+              tube_type);
           return FALSE;
         }
     }
