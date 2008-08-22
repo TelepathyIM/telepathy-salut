@@ -265,7 +265,7 @@ listener_io_in_cb (GIOChannel *source,
 
   gibber_bytestream_direct_accept_socket (bytestream, listen_fd);
 
-  return FALSE;
+  return TRUE;
 }
 
 
@@ -425,12 +425,8 @@ void salut_direct_bytestream_manager_stop_listen (
     {
       GSource* source = g_main_context_find_source_by_id (NULL,
           listener->listen_io_channel_source_id);
-
-      /* FIXME: why source is already destroyed here!? */
-      if (source != NULL)
-        {
-          g_source_destroy (source);
-        }
+      g_assert (source != NULL);
+      g_source_destroy (source);
       listener->listen_io_channel_source_id = 0;
     }
   
