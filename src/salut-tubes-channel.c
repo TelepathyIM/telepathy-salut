@@ -898,7 +898,8 @@ tubes_message_received (SalutTubesChannel *self,
     }
 }
 
-void tubes_message_close_received (SalutTubesChannel *self,
+void
+tubes_message_close_received (SalutTubesChannel *self,
                                    TpHandle initiator_handle,
                                    guint tube_id)
 {
