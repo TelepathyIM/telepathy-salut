@@ -370,7 +370,6 @@ _initialise_connection (SalutTubesChannel *self)
        ~(GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN
          |GIBBER_XMPP_CONNECTION_CLOSE_SENT)) == 0);
 
-
   g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
   g_signal_connect (priv->xmpp_connection_manager, "connection-closed",
