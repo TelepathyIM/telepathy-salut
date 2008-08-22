@@ -37,6 +37,7 @@
 
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
@@ -54,12 +55,19 @@ static void channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void text_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
         tp_group_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 )
+
+static const char *salut_muc_channel_interfaces[] = {
+  TP_IFACE_CHANNEL_INTERFACE_GROUP,
+  NULL
+};
 
 /* signal enum */
 enum
@@ -83,6 +91,8 @@ enum
   PROP_NAME,
   PROP_CREATOR,
   PROP_XMPP_CONNECTION_MANAGER,
+  PROP_INTERFACES,
+  PROP_TARGET_ID,
   LAST_PROPERTY
 };
 
@@ -94,7 +104,6 @@ struct _SalutMucChannelPrivate
   gboolean dispose_has_run;
   gchar *object_path;
   TpHandle handle;
-  SalutConnection *connection;
   SalutSelf *self;
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberMucConnection *muc_connection;
@@ -160,6 +169,17 @@ salut_muc_channel_get_property (GObject    *object,
       break;
     case PROP_XMPP_CONNECTION_MANAGER:
       g_value_set_object (value, priv->xmpp_connection_manager);
+      break;
+    case PROP_INTERFACES:
+      g_value_set_static_boxed (value, salut_muc_channel_interfaces);
+      break;
+    case PROP_TARGET_ID:
+      {
+         TpHandleRepoIface *repo = tp_base_connection_get_handles (
+           (TpBaseConnection *) chan->connection, TP_HANDLE_TYPE_ROOM);
+
+         g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+      }
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -663,8 +683,25 @@ static void
 salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_muc_channel_class);
   GParamSpec *param_spec;
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "TargetID", "target-id", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { NULL }
+  };
 
-  g_type_class_add_private (salut_muc_channel_class, sizeof (SalutMucChannelPrivate));
+  g_type_class_add_private (salut_muc_channel_class,
+      sizeof (SalutMucChannelPrivate));
 
   object_class->dispose = salut_muc_channel_dispose;
   object_class->finalize = salut_muc_channel_finalize;
@@ -680,6 +717,13 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
                                     "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_string ("name",
                                     "Name of the muc group",
@@ -738,6 +782,14 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_install_property (object_class,
       PROP_CREATOR, param_spec);
 
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+
   signals[READY] = g_signal_new (
         "ready",
         G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
@@ -756,12 +808,17 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
         g_cclosure_marshal_VOID__POINTER,
         G_TYPE_NONE, 1, G_TYPE_POINTER);
 
+  salut_muc_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutMucChannelClass, dbus_props_class));
+
   tp_text_mixin_class_init (object_class,
       G_STRUCT_OFFSET(SalutMucChannelClass, text_class));
 
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
       salut_muc_channel_add_member, NULL);
+  tp_group_mixin_init_dbus_properties (object_class);
 }
 
 void
@@ -1135,9 +1192,8 @@ static void
 salut_muc_channel_get_interfaces (TpSvcChannel *iface,
     DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP,  NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+  tp_svc_channel_return_from_get_interfaces (context,
+    salut_muc_channel_interfaces);
 }
 
 

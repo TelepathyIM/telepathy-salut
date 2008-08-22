@@ -1,6 +1,6 @@
 /*
  * salut-im-channel.c - Source for SalutImChannel
- * Copyright (C) 2005-2007 Collabora Ltd.
+ * Copyright (C) 2005-2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -18,62 +18,61 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <dbus/dbus-glib.h>
+#include "salut-im-channel.h"
+
+#include <errno.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <errno.h>
 #include <string.h>
+#include <sys/socket.h>
+
+#include <dbus/dbus-glib.h>
+#include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/text-mixin.h>
+
+#include <gibber/gibber-linklocal-transport.h>
+#include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-xmpp-connection.h>
+#include <gibber/gibber-xmpp-stanza.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
-
-#include "salut-im-channel.h"
-#include "signals-marshal.h"
-
 #include "salut-connection.h"
 #include "salut-contact.h"
-#include "text-helper.h"
 #include "salut-xmpp-connection-manager.h"
+#include "signals-marshal.h"
+#include "text-helper.h"
 
-#include <gibber/gibber-linklocal-transport.h>
-#include <gibber/gibber-xmpp-connection.h>
-#include <gibber/gibber-xmpp-stanza.h>
-#include <gibber/gibber-namespaces.h>
+static void channel_iface_init (gpointer g_iface, gpointer iface_data);
+static void text_iface_init (gpointer g_iface, gpointer iface_data);
 
-#include <telepathy-glib/text-mixin.h>
-#include <telepathy-glib/channel-iface.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/dbus.h>
+static void xmpp_connection_manager_new_connection_cb (
+    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
+    SalutContact *contact, gpointer user_data);
 
-static void
-channel_iface_init (gpointer g_iface, gpointer iface_data);
-static void
-text_iface_init (gpointer g_iface, gpointer iface_data);
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *conn,
-                                           SalutContact *contact,
-                                           gpointer user_data);
-
-static void
-_setup_connection (SalutImChannel *self);
+static void _setup_connection (SalutImChannel *self);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 );
 
-static gboolean
-message_stanza_filter (SalutXmppConnectionManager *mgr,
+static const gchar *salut_im_channel_interfaces[] = {
+    NULL
+};
+
+static gboolean message_stanza_filter (SalutXmppConnectionManager *mgr,
     GibberXmppConnection *conn, GibberXmppStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
-static void
-message_stanza_callback (SalutXmppConnectionManager *mgr,
+static void message_stanza_callback (SalutXmppConnectionManager *mgr,
     GibberXmppConnection *conn, GibberXmppStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
@@ -96,6 +95,8 @@ enum
   PROP_CONTACT,
   PROP_CONNECTION,
   PROP_XMPP_CONNECTION_MANAGER,
+  PROP_INTERFACES,
+  PROP_TARGET_ID,
   LAST_PROPERTY
 };
 
@@ -231,6 +232,17 @@ salut_im_channel_get_property (GObject *object,
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, priv->xmpp_connection_manager);
         break;
+      case PROP_INTERFACES:
+        g_value_set_static_boxed (value, salut_im_channel_interfaces);
+        break;
+      case PROP_TARGET_ID:
+        {
+           TpHandleRepoIface *repo = tp_base_connection_get_handles (
+             (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+
+           g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+        }
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -335,6 +347,22 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_im_channel_class);
   GParamSpec *param_spec;
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "TargetID", "target-id", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { NULL }
+  };
 
   g_type_class_add_private (salut_im_channel_class,
       sizeof (SalutImChannelPrivate));
@@ -354,6 +382,13 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
   param_spec = g_param_spec_object (
       "contact",
       "SalutContact object",
@@ -361,6 +396,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       SALUT_TYPE_CONTACT,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTACT, param_spec);
@@ -372,6 +408,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
@@ -383,13 +420,25 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
   tp_text_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutImChannelClass, text_class));
+
+  salut_im_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutImChannelClass, dbus_props_class));
 }
 
 void
@@ -921,9 +970,8 @@ static void
 salut_im_channel_get_interfaces (TpSvcChannel *iface,
                                  DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+  tp_svc_channel_return_from_get_interfaces (context,
+      salut_im_channel_interfaces);
 }
 
 static void

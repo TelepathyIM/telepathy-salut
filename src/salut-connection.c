@@ -104,6 +104,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        tp_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_DBUS_PROPERTIES,
        tp_dbus_properties_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
+       tp_contacts_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
        tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
@@ -234,6 +236,12 @@ salut_connection_shut_down (TpBaseConnection *self);
 static gboolean
 salut_connection_start_connecting (TpBaseConnection *self, GError **error);
 
+static void salut_connection_avatars_fill_contact_attributes (GObject *obj,
+    const GArray *contacts, GHashTable *attributes_hash);
+
+static void salut_connection_aliasing_fill_contact_attributes (GObject *obj,
+    const GArray *contacts, GHashTable *attributes_hash);
+
 static void
 salut_connection_init (SalutConnection *obj)
 {
@@ -275,6 +283,20 @@ salut_connection_constructor (GType type,
 
   obj = G_OBJECT_CLASS (salut_connection_parent_class)->
            constructor (type, n_props, props);
+
+  tp_contacts_mixin_init (obj,
+      G_STRUCT_OFFSET (SalutConnection, contacts_mixin));
+
+  tp_base_connection_register_with_contacts_mixin (TP_BASE_CONNECTION (obj));
+  tp_presence_mixin_simple_presence_register_with_contacts_mixin (obj);
+
+  tp_contacts_mixin_add_contact_attributes_iface (obj,
+      TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+      salut_connection_avatars_fill_contact_attributes);
+
+  tp_contacts_mixin_add_contact_attributes_iface (obj,
+      TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+      salut_connection_aliasing_fill_contact_attributes);
 
   return obj;
 }
@@ -575,9 +597,10 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   GParamSpec *param_spec;
   static const gchar *interfaces [] = {
     TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
-    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
 #ifdef ENABLE_OLPC
     SALUT_IFACE_OLPC_BUDDY_INFO,
     SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
@@ -616,6 +639,9 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       presence_statuses);
 
   tp_presence_mixin_simple_presence_init_dbus_properties (object_class);
+
+  tp_contacts_mixin_class_init (object_class,
+        G_STRUCT_OFFSET (SalutConnectionClass, contacts_mixin));
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
@@ -1020,6 +1046,39 @@ salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
       0);
 }
 
+static const gchar *
+salut_connection_get_alias (SalutConnection *self, TpHandle handle)
+{
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base,
+    TP_HANDLE_TYPE_CONTACT);
+  const gchar *alias;
+
+  if (handle == base->self_handle)
+    {
+      alias = salut_self_get_alias (priv->self);
+    }
+  else
+    {
+      SalutContact *contact;
+      contact = salut_contact_manager_get_contact (priv->contact_manager,
+        handle);
+
+      if (contact == NULL)
+        {
+          alias = tp_handle_inspect (contact_repo, handle);
+        }
+      else
+        {
+          alias = salut_contact_get_alias (contact);
+          g_object_unref (contact);
+        }
+    }
+
+  return alias;
+}
+
 /**
  * salut_connection_request_aliases
  *
@@ -1032,7 +1091,6 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
     const GArray *contacts, DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   int i;
   const gchar **aliases;
@@ -1055,26 +1113,8 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
   for (i = 0; i < contacts->len; i++)
     {
       TpHandle handle = g_array_index (contacts, TpHandle, i);
-      SalutContact *contact;
-      if (handle == TP_BASE_CONNECTION (self)->self_handle)
-        {
-          aliases[i] = salut_self_get_alias (priv->self);
-        }
-      else
-        {
-          contact = salut_contact_manager_get_contact (priv->contact_manager,
-            handle);
-          if (contact == NULL)
-            {
-              DEBUG ("RequestAliases called for offline contact");
-              aliases[i] = "";
-            }
-          else
-            {
-              aliases[i] = salut_contact_get_alias (contact);
-              g_object_unref (contact);
-          }
-        }
+
+      aliases[i] = salut_connection_get_alias (self, handle);
     }
 
   tp_svc_connection_interface_aliasing_return_from_request_aliases (context,
@@ -1082,6 +1122,59 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
 
   g_free (aliases);
   return;
+}
+
+static void
+salut_connection_get_aliases (TpSvcConnectionInterfaceAliasing *iface,
+    const GArray *contacts, DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base,
+    TP_HANDLE_TYPE_CONTACT);
+  guint i;
+  GError *error = NULL;
+  GHashTable *result = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+    NULL, NULL);
+
+  if (!tp_handles_are_valid (contact_repo, contacts, FALSE, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+
+      g_hash_table_insert (result, GUINT_TO_POINTER (handle),
+        (gchar *) salut_connection_get_alias (self, handle));
+    }
+
+   tp_svc_connection_interface_aliasing_return_from_get_aliases (context,
+       result);
+
+   g_hash_table_destroy (result);
+}
+
+static void
+salut_connection_aliasing_fill_contact_attributes (GObject *obj,
+    const GArray *contacts, GHashTable *attributes_hash)
+{
+  SalutConnection *self = SALUT_CONNECTION (obj);
+  guint i;
+
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
+
+      g_value_set_string (val, salut_connection_get_alias (self, handle));
+
+      tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
+         TP_IFACE_CONNECTION_INTERFACE_ALIASING"/alias", val);
+    }
 }
 
 static void
@@ -1152,6 +1245,7 @@ salut_connection_aliasing_service_iface_init (gpointer g_iface,
     (klass, salut_connection_##x)
   IMPLEMENT (get_alias_flags);
   IMPLEMENT (request_aliases);
+  IMPLEMENT (get_aliases);
   IMPLEMENT (set_aliases);
 #undef IMPLEMENT
 }
@@ -1247,6 +1341,7 @@ salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
       else
         {
            SalutContact *contact;
+
            contact = salut_contact_manager_get_contact (priv->contact_manager,
                handle);
            if (contact != NULL)
@@ -1325,6 +1420,53 @@ salut_connection_get_known_avatar_tokens (
 
   g_hash_table_destroy (ret);
 }
+
+static void
+salut_connection_avatars_fill_contact_attributes (GObject *obj,
+    const GArray *contacts, GHashTable *attributes_hash)
+{
+  guint i;
+  SalutConnection *self = SALUT_CONNECTION (obj);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      gchar *token = NULL;
+
+      if (base->self_handle == handle)
+        {
+          token = g_strdup (priv->self->avatar_token);
+        }
+      else
+        {
+          SalutContact *contact = salut_contact_manager_get_contact (
+              priv->contact_manager, handle);
+          if (contact != NULL)
+            {
+              if (contact->avatar_token != NULL)
+                token = g_strdup (contact->avatar_token);
+              else
+                /* We always know the tokens, if it's unset then it's "" */
+                token = g_strdup ("");
+
+              g_object_unref (contact);
+            }
+        }
+
+      if (token != NULL)
+        {
+          GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
+
+          g_value_take_string (val, token);
+
+          tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS"/token", val);
+        }
+    }
+}
+
 
 static void
 _request_avatars_cb (SalutContact *contact, guint8 *avatar, gsize size,

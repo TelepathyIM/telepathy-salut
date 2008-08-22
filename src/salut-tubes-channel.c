@@ -31,6 +31,7 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/svc-channel.h>
+#include <telepathy-glib/svc-generic.h>
 
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-bytestream-muc.h>
@@ -71,6 +72,8 @@ static void
 tubes_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TUBES, tubes_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
@@ -109,6 +112,14 @@ typedef enum
 } ChannelState;
 
 /* properties */
+static const char *salut_tubes_channel_interfaces[] = {
+  TP_IFACE_CHANNEL_INTERFACE_GROUP,
+  /* If more interfaces are added, either keep Group as the first, or change
+   * the implementations of salut_tubes_channel_get_interfaces () and
+   * salut_tubes_channel_get_property () too */
+  NULL
+};
+
 enum
 {
   PROP_OBJECT_PATH = 1,
@@ -117,6 +128,8 @@ enum
   PROP_HANDLE,
   PROP_CONNECTION,
   PROP_MUC,
+  PROP_INTERFACES,
+  PROP_TARGET_ID,
 
   /* only for 1-1 tubes */
   PROP_CONTACT,
@@ -282,6 +295,19 @@ salut_tubes_channel_get_property (GObject *object,
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, priv->xmpp_connection_manager);
+      case PROP_INTERFACES:
+        if (chan->muc)
+          g_value_set_static_boxed (value, salut_tubes_channel_interfaces);
+        else
+          g_value_set_static_boxed (value, salut_tubes_channel_interfaces + 1);
+        break;
+      case PROP_TARGET_ID:
+        {
+           TpHandleRepoIface *repo = tp_base_connection_get_handles (
+             (TpBaseConnection *) priv->conn, priv->handle_type);
+
+           g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+        }
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -2202,6 +2228,22 @@ salut_tubes_channel_class_init (
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_tubes_channel_class);
   GParamSpec *param_spec;
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "TargetID", "target-id", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { NULL }
+  };
 
   g_type_class_add_private (salut_tubes_channel_class,
       sizeof (SalutTubesChannelPrivate));
@@ -2221,6 +2263,13 @@ salut_tubes_channel_class_init (
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_object (
       "connection",
@@ -2269,6 +2318,18 @@ salut_tubes_channel_class_init (
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  salut_tubes_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutTubesChannelClass, dbus_props_class));
+
+  tp_external_group_mixin_init_dbus_properties (object_class);
 }
 
 void
@@ -2443,19 +2504,18 @@ static void
 salut_tubes_channel_get_interfaces (TpSvcChannel *iface,
                                     DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = {
-      TP_IFACE_CHANNEL_INTERFACE_GROUP,
-      NULL };
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
 
   if (self->muc)
     {
-      tp_svc_channel_return_from_get_interfaces (context, interfaces);
+      tp_svc_channel_return_from_get_interfaces (context,
+        salut_tubes_channel_interfaces);
     }
   else
     {
       /* only show the NULL */
-      tp_svc_channel_return_from_get_interfaces (context, interfaces + 1);
+      tp_svc_channel_return_from_get_interfaces (context,
+        salut_tubes_channel_interfaces + 1);
     }
 }
 

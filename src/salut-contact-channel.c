@@ -1,7 +1,7 @@
 /*
  * salut-contact-channel.c - Source for SalutContactChannel
- * Copyright (C) 2005 Collabora Ltd.
- * Copyright (C) 2005 Nokia Corporation
+ * Copyright (C) 2005-2008 Collabora Ltd.
+ * Copyright (C) 2005-2008 Nokia Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,29 +18,38 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <dbus/dbus-glib.h>
+#include "salut-contact-channel.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "salut-connection.h"
-#include "salut-contact-channel.h"
-
-#include <telepathy-glib/dbus.h>
+#include <dbus/dbus-glib.h>
 #include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/util.h>
+
+#include "salut-connection.h"
 
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
   G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
       tp_group_mixin_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_CONTACT_LIST, NULL);
 )
+
+static const gchar *salut_contact_channel_interfaces[] = {
+    TP_IFACE_CHANNEL_INTERFACE_GROUP,
+    NULL
+};
 
 /* properties */
 enum
@@ -50,6 +59,8 @@ enum
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
   PROP_CONNECTION,
+  PROP_INTERFACES,
+  PROP_TARGET_ID,
   LAST_PROPERTY
 };
 
@@ -143,6 +154,17 @@ salut_contact_channel_get_property (GObject    *object,
     case PROP_CONNECTION:
       g_value_set_object (value, priv->conn);
       break;
+      case PROP_INTERFACES:
+        g_value_set_static_boxed (value, salut_contact_channel_interfaces);
+        break;
+    case PROP_TARGET_ID:
+      {
+         TpHandleRepoIface *repo = tp_base_connection_get_handles (
+           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_LIST);
+
+         g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+      }
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -190,6 +212,22 @@ salut_contact_channel_set_property (GObject     *object,
 static void
 salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channel_class)
 {
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "TargetID", "target-id", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { NULL }
+  };
   GObjectClass *object_class = G_OBJECT_CLASS (salut_contact_channel_class);
   GParamSpec *param_spec;
 
@@ -209,9 +247,17 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
                                     SALUT_TYPE_CONNECTION,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
+                                    G_PARAM_STATIC_NAME |
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   g_object_class_override_property (object_class, PROP_OBJECT_PATH,
       "object-path");
@@ -221,9 +267,21 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  salut_contact_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutContactChannelClass, dbus_props_class));
+
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutContactChannelClass, group_class),
       NULL, NULL);
+  tp_group_mixin_init_dbus_properties (object_class);
 }
 
 void
@@ -324,10 +382,10 @@ salut_contact_channel_get_handle (TpSvcChannel *iface,
  */
 static void
 salut_contact_channel_get_interfaces (TpSvcChannel *iface,
-                                       DBusGMethodInvocation *context) {
-  const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP, NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+                                      DBusGMethodInvocation *context)
+{
+  tp_svc_channel_return_from_get_interfaces (context,
+      salut_contact_channel_interfaces);
 }
 
 

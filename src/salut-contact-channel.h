@@ -31,7 +31,9 @@ typedef struct _SalutContactChannelClass SalutContactChannelClass;
 
 struct _SalutContactChannelClass {
     GObjectClass parent_class;
+
     TpGroupMixinClass group_class;
+    TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutContactChannel {

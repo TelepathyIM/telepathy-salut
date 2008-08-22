@@ -9,7 +9,7 @@ AC_PREREQ([2.59])
 
 m4_define([salut_major_version], [0])
 m4_define([salut_minor_version], [3])
-m4_define([salut_micro_version], [3])
+m4_define([salut_micro_version], [4])
 m4_define([salut_nano_version], [1])
 
 # Some magic
@@ -141,7 +141,7 @@ AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for telepathy-glib
-PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.13])
+PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.14])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)

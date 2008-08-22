@@ -31,6 +31,7 @@ typedef struct _SalutRoomlistChannelClass SalutRoomlistChannelClass;
 
 struct _SalutRoomlistChannelClass {
     GObjectClass parent_class;
+    TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutRoomlistChannel {

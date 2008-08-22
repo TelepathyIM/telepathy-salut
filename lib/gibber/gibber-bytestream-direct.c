@@ -144,9 +144,9 @@ gibber_bytestream_direct_finalize (GObject *object)
 
 static void
 gibber_bytestream_direct_get_property (GObject *object,
-                                    guint property_id,
-                                    GValue *value,
-                                    GParamSpec *pspec)
+                                       guint property_id,
+                                       GValue *value,
+                                       GParamSpec *pspec)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (object);
   GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
@@ -185,9 +185,9 @@ gibber_bytestream_direct_get_property (GObject *object,
 
 static void
 gibber_bytestream_direct_set_property (GObject *object,
-                                    guint property_id,
-                                    const GValue *value,
-                                    GParamSpec *pspec)
+                                       guint property_id,
+                                       const GValue *value,
+                                       GParamSpec *pspec)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (object);
   GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
@@ -232,8 +232,8 @@ gibber_bytestream_direct_set_property (GObject *object,
 
 static GObject *
 gibber_bytestream_direct_constructor (GType type,
-                                   guint n_props,
-                                   GObjectConstructParam *props)
+                                      guint n_props,
+                                      GObjectConstructParam *props)
 {
   GObject *obj;
   GibberBytestreamDirectPrivate *priv;

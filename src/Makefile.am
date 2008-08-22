@@ -69,17 +69,6 @@ if ENABLE_DBUS_TUBES
     salut-tubes-channel.c
 endif
 
-if ENABLE_OLPC
-  CORE_SOURCES +=                                       \
-    salut-olpc-activity.h                               \
-    salut-olpc-activity.c                               \
-    salut-avahi-olpc-activity.h                         \
-    salut-avahi-olpc-activity.c                         \
-    salut-olpc-activity-manager.h                       \
-    salut-olpc-activity-manager.c                       \
-    salut-avahi-olpc-activity-manager.h                 \
-    salut-avahi-olpc-activity-manager.c
-endif
 
 AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.h                      \
@@ -94,6 +83,20 @@ AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-contact.c                               \
     salut-avahi-self.h                                  \
     salut-avahi-self.c
+
+if ENABLE_OLPC
+  CORE_SOURCES +=                                       \
+    salut-olpc-activity.h                               \
+    salut-olpc-activity.c                               \
+    salut-olpc-activity-manager.h                       \
+    salut-olpc-activity-manager.c
+
+  AVAHI_BACKEND_SOURCES +=                              \
+    salut-avahi-olpc-activity-manager.h                 \
+    salut-avahi-olpc-activity-manager.c                 \
+    salut-avahi-olpc-activity.h                         \
+    salut-avahi-olpc-activity.c
+endif
 
 DUMMY_BACKEND_SOURCES = 				\
     salut-dummy-discovery-client.h                      \

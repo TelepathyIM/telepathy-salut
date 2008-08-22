@@ -71,7 +71,7 @@ Hacking
 =======
 
 The current version of telepathy-salut is always available from:
-  <http://darcs.collabora.co.uk/darcs/telepathy-salut/>
+  <http://git.collabora.co.uk/?p=telepathy-salut.git>
 
 Proposed patches awaiting review can usually be found in Merge Monkey:
   <http://monkey.collabora.co.uk/>

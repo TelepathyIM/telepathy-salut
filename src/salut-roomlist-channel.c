@@ -30,6 +30,7 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/svc-channel.h>
+#include <telepathy-glib/svc-generic.h>
 
 #define DEBUG_FLAG DEBUG_ROOMLIST
 #include "debug.h"
@@ -45,11 +46,15 @@ static void roomlist_iface_init (gpointer, gpointer);
 
 G_DEFINE_TYPE_WITH_CODE (SalutRoomlistChannel, salut_roomlist_channel,
     G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_ROOM_LIST,
       roomlist_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL)
     );
+
+static const char *salut_roomlist_channel_interfaces[] = { NULL };
 
 /* properties */
 enum
@@ -59,6 +64,8 @@ enum
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
   PROP_CONNECTION,
+  PROP_INTERFACES,
+  PROP_TARGET_ID,
   LAST_PROPERTY
 };
 
@@ -135,6 +142,12 @@ salut_roomlist_channel_get_property (GObject *object,
     case PROP_CONNECTION:
       g_value_set_object (value, priv->connection);
       break;
+    case PROP_INTERFACES:
+      g_value_set_static_boxed (value, salut_roomlist_channel_interfaces);
+      break;
+    case PROP_TARGET_ID:
+      g_value_set_static_string (value, "");
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -193,6 +206,22 @@ salut_roomlist_channel_class_init (
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_roomlist_channel_class);
   GParamSpec *param_spec;
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "TargetID", "target-id", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { NULL }
+  };
 
   g_type_class_add_private (salut_roomlist_channel_class,
       sizeof (SalutRoomlistChannelPrivate));
@@ -214,6 +243,20 @@ salut_roomlist_channel_class_init (
   g_object_class_override_property (object_class, PROP_HANDLE,
       "handle");
 
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
   param_spec = g_param_spec_object ("connection", "SalutConnection object",
                                     "Salut connection object that owns this "
                                     "room list channel object.",
@@ -223,6 +266,11 @@ salut_roomlist_channel_class_init (
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+  salut_roomlist_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutRoomlistChannelClass, dbus_props_class));
+
 }
 
 static void
@@ -455,9 +503,8 @@ static void
 salut_roomlist_channel_get_interfaces (TpSvcChannel *iface,
                                        DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+  tp_svc_channel_return_from_get_interfaces (context,
+    salut_roomlist_channel_interfaces);
 }
 
 
