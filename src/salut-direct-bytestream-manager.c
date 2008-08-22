@@ -47,7 +47,6 @@ G_DEFINE_TYPE (SalutDirectBytestreamManager, salut_direct_bytestream_manager,
 enum
 {
   PROP_CONNECTION = 1,
-  PROP_HOST_NAME_FQDN,
   LAST_PROPERTY
 };
 
@@ -59,7 +58,6 @@ struct _SalutDirectBytestreamManagerPrivate
   SalutConnection *connection;
   SalutImManager *im_manager;
   SalutXmppConnectionManager *xmpp_connection_manager;
-  gchar *host_name_fqdn;
 
   /* guint id -> guint listener_watch
    * When used by stream tubes, the id is the tube_id */
@@ -123,12 +121,6 @@ salut_direct_bytestream_manager_dispose (GObject *object)
 void
 salut_direct_bytestream_manager_finalize (GObject *object)
 {
-  SalutDirectBytestreamManager *self = SALUT_DIRECT_BYTESTREAM_MANAGER (object);
-  SalutDirectBytestreamManagerPrivate *priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (
-      self);
-
-  g_free (priv->host_name_fqdn);
-
   if (G_OBJECT_CLASS (salut_direct_bytestream_manager_parent_class)->finalize)
     G_OBJECT_CLASS (salut_direct_bytestream_manager_parent_class)->finalize
         (object);
@@ -148,9 +140,6 @@ salut_direct_bytestream_manager_get_property (GObject *object,
     {
       case PROP_CONNECTION:
         g_value_set_object (value, priv->connection);
-        break;
-      case PROP_HOST_NAME_FQDN:
-        g_value_set_string (value, priv->host_name_fqdn);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -172,10 +161,6 @@ salut_direct_bytestream_manager_set_property (GObject *object,
     {
       case PROP_CONNECTION:
         priv->connection = g_value_get_object (value);
-        break;
-      case PROP_HOST_NAME_FQDN:
-        g_free (priv->host_name_fqdn);
-        priv->host_name_fqdn = g_value_dup_string (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -205,7 +190,6 @@ salut_direct_bytestream_manager_constructor (GType type,
       NULL);
   g_assert (priv->im_manager != NULL);
   g_assert (priv->xmpp_connection_manager != NULL);
-  g_assert (priv->host_name_fqdn != NULL);
 
   priv->listeners = g_hash_table_new (NULL, NULL);
 
@@ -241,31 +225,16 @@ salut_direct_bytestream_manager_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
-
-  param_spec = g_param_spec_string (
-      "host-name-fqdn",
-      "host name FQDN",
-      "The FQDN host name that will be used by direct bytestreams",
-      NULL,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_HOST_NAME_FQDN,
-      param_spec);
 }
 
 SalutDirectBytestreamManager *
-salut_direct_bytestream_manager_new (SalutConnection *conn,
-                              const gchar *host_name_fqdn)
+salut_direct_bytestream_manager_new (SalutConnection *conn)
 {
   g_return_val_if_fail (SALUT_IS_CONNECTION (conn), NULL);
 
   return g_object_new (
       SALUT_TYPE_DIRECT_BYTESTREAM_MANAGER,
       "connection", conn,
-      "host-name-fqdn", host_name_fqdn,
       NULL);
 }
 
@@ -402,7 +371,7 @@ salut_direct_bytestream_manager_listen (SalutDirectBytestreamManager *self,
       goto error;
     }
 
-  DEBUG ("listen on %s:%d", priv->host_name_fqdn, port);
+  DEBUG ("listen on port %d", port);
 
   data = g_slice_new0 (struct _listener_io_in_cb_data);
   data->mgr = self;

@@ -979,8 +979,7 @@ discovery_client_running (SalutConnection *self)
   /* Create the bytestream manager */
   priv->si_bytestream_manager = salut_si_bytestream_manager_new (self,
     salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
-  priv->direct_bytestream_manager = salut_direct_bytestream_manager_new (self,
-    salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
+  priv->direct_bytestream_manager = salut_direct_bytestream_manager_new (self);
 }
 
 static void

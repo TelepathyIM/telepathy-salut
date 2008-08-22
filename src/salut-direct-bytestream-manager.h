@@ -67,8 +67,7 @@ GType salut_direct_bytestream_manager_get_type (void);
                               SalutDirectBytestreamManagerClass))
 
 SalutDirectBytestreamManager *
-salut_direct_bytestream_manager_new (SalutConnection *connection,
-    const gchar *host_name_fqdn);
+salut_direct_bytestream_manager_new (SalutConnection *connection);
 
 int salut_direct_bytestream_manager_listen (SalutDirectBytestreamManager *self,
     SalutContact *contact,
