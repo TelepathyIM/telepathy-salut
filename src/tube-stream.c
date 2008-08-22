@@ -519,15 +519,13 @@ start_stream_direct (SalutTubeStream *self,
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo;
   const gchar *jid;
-  gboolean ret;
   struct _extra_bytestream_negotiate_cb_data *data;
   SalutContact *contact;
   SalutContactManager *contact_mgr;
   SalutDirectBytestreamManager *direct_bytestream_mgr;
+  GibberBytestreamIface *bytestream;
 
   g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
-
-  DEBUG ("Called.");
 
   contact_repo = tp_base_connection_get_handles (
      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -548,53 +546,57 @@ start_stream_direct (SalutTubeStream *self,
   contact = salut_contact_manager_get_contact (contact_mgr, priv->initiator);
   if (contact == NULL)
     {
-      ret = FALSE;
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           "can't find contact with handle %d", priv->initiator);
+
+      g_object_unref (direct_bytestream_mgr);
+      g_object_unref (contact_mgr);
+
+      return FALSE;
     }
-  else
+
+  bytestream = salut_direct_bytestream_manager_new_stream (
+      direct_bytestream_mgr, contact, priv->port);
+
+  if (bytestream == NULL)
     {
-      GibberBytestreamIface *bytestream;
-
-      bytestream = salut_direct_bytestream_manager_new_stream (
-          direct_bytestream_mgr, contact, priv->port);
-
-      if (bytestream == NULL)
-        {
-          DEBUG ("initiator refused new bytestream");
-          ret = FALSE;
-
-          close (fd);
-        }
-      else
-        {
-          DEBUG ("extra bytestream accepted");
-          ret = TRUE;
-
-          g_hash_table_insert (priv->bytestream_to_fd,
-              g_object_ref (bytestream), GUINT_TO_POINTER (fd));
-
-          g_signal_connect (bytestream, "state-changed",
-              G_CALLBACK (extra_bytestream_state_changed_cb), self);
-
-          /* Let's start the initiation of the stream */
-          if (!gibber_bytestream_iface_initiate (bytestream))
-            {
-              /* Initiation failed. */
-              gibber_bytestream_iface_close (bytestream, NULL);
-              ret = FALSE;
-              close (fd);
-            }
-
-        }
+      DEBUG ("initiator refused new bytestream");
+      close (fd);
 
       g_object_unref (contact);
+      g_object_unref (direct_bytestream_mgr);
+      g_object_unref (contact_mgr);
+
+      return FALSE;
     }
 
+  DEBUG ("extra bytestream accepted");
+
+  g_hash_table_insert (priv->bytestream_to_fd,
+      g_object_ref (bytestream), GUINT_TO_POINTER (fd));
+
+  g_signal_connect (bytestream, "state-changed",
+      G_CALLBACK (extra_bytestream_state_changed_cb), self);
+
+  /* Let's start the initiation of the stream */
+  if (!gibber_bytestream_iface_initiate (bytestream))
+    {
+      /* Initiation failed. */
+      gibber_bytestream_iface_close (bytestream, NULL);
+      close (fd);
+
+      g_object_unref (contact);
+      g_object_unref (direct_bytestream_mgr);
+      g_object_unref (contact_mgr);
+
+      return FALSE;
+    }
+
+  g_object_unref (contact);
   g_object_unref (direct_bytestream_mgr);
   g_object_unref (contact_mgr);
 
-  return ret;
+  return TRUE;
 }
 
 /* callback for listening connections from the local application */
