@@ -704,37 +704,6 @@ salut_tubes_manager_iface_request (TpChannelFactoryIface *iface,
   return status;
 }
 
-void
-salut_tubes_manager_handle_tube_request (
-    SalutTubesManager *self,
-    GibberBytestreamIface *bytestream,
-    TpHandle handle,
-    const gchar *stream_id,
-    GibberXmppStanza *msg)
-{
-  SalutTubesManagerPrivate *priv =
-    SALUT_TUBES_MANAGER_GET_PRIVATE (self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-              (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
-  SalutTubesChannel *chan;
-
-  DEBUG ("contact#%u stream %s", handle, stream_id);
-  g_return_if_fail (tp_handle_is_valid (contact_repo, handle, NULL));
-
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
-  if (chan == NULL)
-    {
-      chan = new_tubes_channel (self, handle);
-      tp_channel_factory_iface_emit_new_channel (self,
-          (TpChannelIface *) chan, NULL);
-
-      /* FIXME: Should we close the channel if the request is not properly
-       * handled by the newly created channel ? */
-    }
-
-  salut_tubes_channel_bytestream_offered (chan, bytestream, msg);
-}
-
 void salut_tubes_manager_handle_si_stream_request (SalutTubesManager *self,
     GibberBytestreamIface *bytestream, TpHandle contact_handle,
     const gchar *stream_id, GibberXmppStanza *msg)
