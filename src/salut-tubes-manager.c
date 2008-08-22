@@ -184,70 +184,10 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       node = close_node;
     }
 
-  _close = close_node != NULL;
+  _close = (close_node != NULL);
   if (close != NULL)
     {
       *close = _close;
-    }
-
-  if (!_close && type != NULL)
-    {
-      const gchar *tube_type;
-
-      tube_type = gibber_xmpp_node_get_attribute (tube_node, "type");
-      if (g_str_equal (tube_type, "stream"))
-        *type = TP_TUBE_TYPE_STREAM;
-      else if (g_str_equal (tube_type, "dbus"))
-        *type = TP_TUBE_TYPE_DBUS;
-      else
-        {
-          DEBUG ("The <iq><tube> does not have a correct type=.");
-          return FALSE;
-        }
-    }
-
-  if (!_close && service != NULL)
-    {
-      *service = gibber_xmpp_node_get_attribute (tube_node, "service");
-    }
-
-  if (!_close && parameters != NULL)
-    {
-      GibberXmppNode *node;
-
-      node = gibber_xmpp_node_get_child (tube_node, "parameters");
-      *parameters = salut_gibber_xmpp_node_extract_properties (node,
-          "parameter");
-    }
-
-  if (!_close && portnum != NULL)
-    {
-      GibberXmppNode *node;
-      const gchar *str;
-      gchar *endptr;
-      long int tmp;
-
-      node = gibber_xmpp_node_get_child (tube_node, "transport");
-      if (node == NULL)
-        {
-          DEBUG ("no transport to connect to in the tube request");
-          return FALSE;
-        }
-
-      str = gibber_xmpp_node_get_attribute (node, "port");
-      if (str == NULL)
-        {
-          DEBUG ("no port to connect to in the tube request");
-          return FALSE;
-        }
-
-      tmp = strtol (str, &endptr, 10);
-      if (!endptr || *endptr)
-        {
-          DEBUG ("port is not numeric: %s", str);
-          return FALSE;
-        }
-      *portnum = (int) tmp;
     }
 
   if (tube_id != NULL)
@@ -271,6 +211,71 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
         }
       *tube_id = (int) tmp;
     }
+
+  /* next fields are not in the close stanza */
+  if (_close)
+    return TRUE;
+
+  if (type != NULL)
+    {
+      const gchar *tube_type;
+
+      tube_type = gibber_xmpp_node_get_attribute (tube_node, "type");
+      if (g_str_equal (tube_type, "stream"))
+        *type = TP_TUBE_TYPE_STREAM;
+      else if (g_str_equal (tube_type, "dbus"))
+        *type = TP_TUBE_TYPE_DBUS;
+      else
+        {
+          DEBUG ("The <iq><tube> does not have a correct type=.");
+          return FALSE;
+        }
+    }
+
+  if (service != NULL)
+    {
+      *service = gibber_xmpp_node_get_attribute (tube_node, "service");
+    }
+
+  if (parameters != NULL)
+    {
+      GibberXmppNode *parameters_node;
+
+      parameters_node = gibber_xmpp_node_get_child (tube_node, "parameters");
+      *parameters = salut_gibber_xmpp_node_extract_properties (parameters_node,
+          "parameter");
+    }
+
+  if (portnum != NULL)
+    {
+      GibberXmppNode *transport_node;
+      const gchar *str;
+      gchar *endptr;
+      long int tmp;
+
+      transport_node = gibber_xmpp_node_get_child (tube_node, "transport");
+      if (transport_node == NULL)
+        {
+          DEBUG ("no transport to connect to in the tube request");
+          return FALSE;
+        }
+
+      str = gibber_xmpp_node_get_attribute (transport_node, "port");
+      if (str == NULL)
+        {
+          DEBUG ("no port to connect to in the tube request");
+          return FALSE;
+        }
+
+      tmp = strtol (str, &endptr, 10);
+      if (!endptr || *endptr)
+        {
+          DEBUG ("port is not numeric: %s", str);
+          return FALSE;
+        }
+      *portnum = (int) tmp;
+    }
+
   return TRUE;
 }
 
