@@ -54,8 +54,7 @@
 #include "salut-contact-manager.h"
 #include "salut-xmpp-connection-manager.h"
 
-static void
-tube_iface_init (gpointer g_iface, gpointer iface_data);
+static void tube_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init));

@@ -66,10 +66,8 @@
     (dbus_g_type_get_struct ("GValueArray", \
       G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
 
-static void
-channel_iface_init (gpointer g_iface, gpointer iface_data);
-static void
-tubes_iface_init (gpointer g_iface, gpointer iface_data);
+static void channel_iface_init (gpointer g_iface, gpointer iface_data);
+static void tubes_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
@@ -81,26 +79,19 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
 );
 
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn,
-    SalutContact *contact,
-    gpointer user_data);
+static void xmpp_connection_manager_new_connection_cb (
+    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
+    SalutContact *contact, gpointer user_data);
 
-static void
-xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn,
-    SalutContact *contact,
-    gpointer user_data);
+static void xmpp_connection_manager_connection_closed_cb (
+    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
+    SalutContact *contact, gpointer user_data);
 
-static void
-xmpp_connection_manager_connection_closing_cb (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn,
-    SalutContact *contact,
-    gpointer user_data);
+static void xmpp_connection_manager_connection_closing_cb (
+    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
+    SalutContact *contact, gpointer user_data);
 
-static void
-_send_channel_iq_tubes (SalutTubesChannel *self);
+static void _send_channel_iq_tubes (SalutTubesChannel *self);
 
 /* Channel state */
 typedef enum
