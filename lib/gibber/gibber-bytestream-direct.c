@@ -64,7 +64,6 @@ enum
   PROP_SELF_ID,
   PROP_PEER_ID,
   PROP_STREAM_ID,
-  PROP_STREAM_INIT_ID,
   PROP_STATE,
 
   /* relevent only on recipient side to connect to the initiator */
@@ -81,7 +80,6 @@ struct _GibberBytestreamDirectPrivate
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
-  gchar *stream_init_id;
   GibberBytestreamState state;
 
   guint portnum;
@@ -136,7 +134,6 @@ gibber_bytestream_direct_finalize (GObject *object)
   GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
 
   g_free (priv->stream_id);
-  g_free (priv->stream_init_id);
   g_free (priv->self_id);
   g_free (priv->peer_id);
 
@@ -165,9 +162,6 @@ gibber_bytestream_direct_get_property (GObject *object,
         break;
       case PROP_STREAM_ID:
         g_value_set_string (value, priv->stream_id);
-        break;
-      case PROP_STREAM_INIT_ID:
-        g_value_set_string (value, priv->stream_init_id);
         break;
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
@@ -216,10 +210,6 @@ gibber_bytestream_direct_set_property (GObject *object,
         g_free (priv->stream_id);
         priv->stream_id = g_value_dup_string (value);
         break;
-      case PROP_STREAM_INIT_ID:
-        g_free (priv->stream_init_id);
-        priv->stream_init_id = g_value_dup_string (value);
-        break;
       case PROP_STATE:
         if (priv->state != g_value_get_uint (value))
             {
@@ -249,7 +239,6 @@ gibber_bytestream_direct_constructor (GType type,
 
   priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (GIBBER_BYTESTREAM_DIRECT (obj));
 
-  g_assert (priv->stream_init_id != NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
 
@@ -296,19 +285,6 @@ gibber_bytestream_direct_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
-      param_spec);
-
-  param_spec = g_param_spec_string (
-      "stream-init-id",
-      "stream init ID",
-      "the iq ID of the SI request, if any",
-      "",
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
       param_spec);
 
   param_spec = g_param_spec_uint (
