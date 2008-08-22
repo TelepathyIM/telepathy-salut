@@ -321,7 +321,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
       return;
     }
 
-  DEBUG ("received a tube request, tube_id %d", tube_id);
+  DEBUG ("received a tube request, tube id %d", tube_id);
 
   chan = g_hash_table_lookup (priv->channels,
       GUINT_TO_POINTER (initiator_handle));
@@ -510,7 +510,7 @@ salut_tubes_manager_class_init (
 /**
  * tubes_channel_closed_cb:
  *
- * Signal callback for when an Tubes channel is closed. Removes the references
+ * Signal callback for when a Tubes channel is closed. Removes the references
  * that TubesManager holds to them.
  */
 static void
