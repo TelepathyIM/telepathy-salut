@@ -358,13 +358,14 @@ salut_tubes_channel_set_property (GObject *object,
 }
 
 static void
-_initialise_connection (SalutTubesChannel *self)
+_initialise_connection (SalutTubesChannel *self, GibberXmppConnection *conn)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
-  DEBUG ("called.");
+  g_assert (conn != NULL);
+  priv->xmpp_connection = conn;
+  g_object_ref (priv->xmpp_connection);
 
-  g_assert (priv->xmpp_connection != NULL);
   g_assert (
      (priv->xmpp_connection->stream_flags &
        ~(GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN
@@ -403,9 +404,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 
   DEBUG ("pending connection fully open");
 
-  priv->xmpp_connection = conn;
-  g_object_ref (priv->xmpp_connection);
-  _initialise_connection (self);
+  _initialise_connection (self, conn);
 }
 
 static void
@@ -489,9 +488,7 @@ _setup_connection (SalutTubesChannel *self)
   if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
       DEBUG ("connection done.");
-      priv->xmpp_connection = conn;
-      g_object_ref (priv->xmpp_connection);
-      _initialise_connection (self);
+      _initialise_connection (self, conn);
     }
   else if (result ==
       SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
