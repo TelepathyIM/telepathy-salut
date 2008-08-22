@@ -1814,16 +1814,14 @@ _send_channel_iq_tube (gpointer key,
       GError *error = NULL;
       GibberXmppNode *parameters_node;
       const char *tube_type_str;
-
-      DEBUG ("Tube in remote pending state");
-
       GibberXmppStanza *stanza;
       const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo;
-
-      gchar *tube_id_str = g_strdup_printf ("%d", tube_id);
+      gchar *tube_id_str;
       int port;
       gchar *port_str;
+
+      DEBUG ("Tube in remote pending state");
 
       /* listen for future connections from the remote CM before sending the
        * iq */
@@ -1859,6 +1857,7 @@ _send_channel_iq_tube (gpointer key,
         }
 
       port_str = g_strdup_printf ("%d", port);
+      tube_id_str = g_strdup_printf ("%d", tube_id);
 
       stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
           GIBBER_STANZA_SUB_TYPE_SET,
