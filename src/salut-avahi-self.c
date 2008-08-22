@@ -249,6 +249,33 @@ salut_avahi_self_set_presence (SalutSelf *_self,
 }
 
 static gboolean
+salut_avahi_self_set_caps (SalutSelf *_self,
+                           GError **error)
+{
+  SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
+  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+
+  ga_entry_group_service_freeze (priv->presence);
+
+  if (_self->node == NULL)
+      ga_entry_group_service_remove_key (priv->presence, "node", NULL);
+  else
+      ga_entry_group_service_set (priv->presence, "node", _self->node, NULL);
+
+  if (_self->hash == NULL)
+      ga_entry_group_service_remove_key (priv->presence, "hash", NULL);
+  else
+      ga_entry_group_service_set (priv->presence, "hash", _self->hash, NULL);
+
+  if (_self->ver == NULL)
+      ga_entry_group_service_remove_key (priv->presence, "ver", NULL);
+  else
+      ga_entry_group_service_set (priv->presence, "ver", _self->ver, NULL);
+
+  return ga_entry_group_service_thaw (priv->presence, error);
+}
+
+static gboolean
 salut_avahi_self_set_alias (SalutSelf *_self,
                             GError **error)
 {
@@ -440,6 +467,7 @@ salut_avahi_self_class_init (
 
   self_class->announce = salut_avahi_self_announce;
   self_class->set_presence = salut_avahi_self_set_presence;
+  self_class->set_caps = salut_avahi_self_set_caps;
   self_class->set_alias = salut_avahi_self_set_alias;
   self_class->remove_avatar = salut_avahi_self_remove_avatar;
   self_class->set_avatar = salut_avahi_self_set_avatar;

@@ -45,6 +45,7 @@ struct _SalutSelfClass {
     /* public abstract methods */
     gboolean (*announce) (SalutSelf *self, gint port, GError **error);
     gboolean (*set_presence) (SalutSelf *self, GError **error);
+    gboolean (*set_caps) (SalutSelf *self, GError **error);
     gboolean (*set_alias) (SalutSelf *self, GError **error);
     gboolean (*set_avatar) (SalutSelf *self, guint8 *data, gsize size,
         GError **error);
@@ -74,6 +75,9 @@ struct _SalutSelf {
     TpHandle olpc_cur_act_room;
     gchar *olpc_color;
 #endif
+    gchar *node;
+    gchar *hash;
+    gchar *ver;
 
     /* private */
     SalutConnection *connection;
@@ -106,6 +110,9 @@ gboolean salut_self_announce (SalutSelf *self, gint port, GError **error);
 
 gboolean salut_self_set_presence (SalutSelf *self,
     SalutPresenceId status, const gchar *message, GError **error);
+
+gboolean salut_self_set_caps (SalutSelf *self, const gchar *node,
+    const gchar *hash, const gchar *ver, GError **error);
 
 gboolean salut_self_set_avatar (SalutSelf *self, guint8 *data,
     gsize size, GError **error);
