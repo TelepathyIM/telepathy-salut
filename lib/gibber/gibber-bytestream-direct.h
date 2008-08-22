@@ -68,10 +68,11 @@ void gibber_bytestream_direct_set_check_addr_func (
 
 gboolean
 gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
-                                        int listen_fd);
+    int listen_fd);
+
 void
 gibber_bytestream_direct_block_read (GibberBytestreamDirect *self,
-                                     gboolean block);
+    gboolean block);
 
 G_END_DECLS
 
