@@ -113,7 +113,8 @@ static void
 gibber_bytestream_direct_dispose (GObject *object)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (object);
-  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
+      (self);
 
   if (priv->dispose_has_run)
     return;
@@ -131,7 +132,8 @@ static void
 gibber_bytestream_direct_finalize (GObject *object)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (object);
-  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
+      (self);
 
   g_free (priv->stream_id);
   g_free (priv->self_id);
@@ -147,7 +149,8 @@ gibber_bytestream_direct_get_property (GObject *object,
                                     GParamSpec *pspec)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (object);
-  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
+      (self);
 
   switch (property_id)
     {
@@ -187,7 +190,8 @@ gibber_bytestream_direct_set_property (GObject *object,
                                     GParamSpec *pspec)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (object);
-  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
+      (self);
 
   switch (property_id)
     {
@@ -430,7 +434,8 @@ static void
 transport_buffer_empty_cb (GibberTransport *transport,
                            GibberBytestreamDirect *self)
 {
-  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
+      (self);
 
   if (priv->state == GIBBER_BYTESTREAM_STATE_CLOSING)
     {
@@ -449,7 +454,8 @@ static void
 set_transport (GibberBytestreamDirect *self,
                GibberTransport *transport)
 {
-  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  GibberBytestreamDirectPrivate *priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE
+      (self);
 
   g_assert (priv->transport == NULL);
 
