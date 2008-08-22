@@ -92,7 +92,6 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_CONNECTION = 1,
-  //PROP_CHANNEL,
   PROP_HANDLE,
   PROP_HANDLE_TYPE,
   PROP_SELF_HANDLE,
@@ -1401,20 +1400,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL_PARAM,
       param_spec);
-
-  /*
-  param_spec = g_param_spec_object (
-      "channel",
-      "SalutTubesChannel object",
-      "Salut Tubes Channel associated with this stream tube object",
-      SALUT_TYPE_TUBES_CHANNEL,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CHANNEL,
-      param_spec);
-   */
 
   param_spec = g_param_spec_object (
       "xmpp-connection-manager",
