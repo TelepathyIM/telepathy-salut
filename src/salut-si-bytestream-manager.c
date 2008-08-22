@@ -375,10 +375,8 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       goto out;
     }
 
-  /* A Tubes SI request can be:
-   *  - a 1-1 new tube offer
-   *  - a 1-1 tube extra bytestream offer
-   *  - a muc tube extra bytestream offer
+  /* A Tubes SI request can only be a muc tube extra bytestream offer.
+   * We don't use SI for 1-1 tubes
    */
 
   if ((node = gibber_xmpp_node_get_child_ns (si, "muc-stream",
@@ -410,20 +408,6 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       salut_muc_manager_handle_si_stream_request (muc_mgr,
           bytestream, room_handle, stream_id, stanza);
       g_object_unref (muc_mgr);
-    }
-  else if ((node = gibber_xmpp_node_get_child_ns (si, "stream",
-          GIBBER_TELEPATHY_NS_TUBES)))
-    {
-      SalutTubesManager *tubes_mgr;
-
-      g_object_get (priv->connection, "tubes-manager", &tubes_mgr, NULL);
-      g_assert (tubes_mgr != NULL);
-
-      /* The SI request is an extra bytestream for a 1-1 tube */
-      salut_tubes_manager_handle_si_stream_request (
-          tubes_mgr, bytestream, peer_handle, stream_id, stanza);
-
-      g_object_unref (tubes_mgr);
     }
   else
     {

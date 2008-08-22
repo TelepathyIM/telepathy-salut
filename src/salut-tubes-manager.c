@@ -704,34 +704,6 @@ salut_tubes_manager_iface_request (TpChannelFactoryIface *iface,
   return status;
 }
 
-void salut_tubes_manager_handle_si_stream_request (SalutTubesManager *self,
-    GibberBytestreamIface *bytestream, TpHandle contact_handle,
-    const gchar *stream_id, GibberXmppStanza *msg)
-{
-  SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-     (TpBaseConnection*) &priv->conn->parent, TP_HANDLE_TYPE_CONTACT);
-  SalutTubesChannel *chan = NULL;
-
-  g_return_if_fail (tp_handle_is_valid (contact_repo, contact_handle, NULL));
-
-#ifdef ENABLE_DBUS_TUBES
-  chan = g_hash_table_lookup (priv->channels,
-      GUINT_TO_POINTER (contact_handle));
-#endif
-  if (chan == NULL)
-    {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
-          "No tubes channel available for this contact" };
-
-      DEBUG ("tubes channel doesn't exist for contact %d", contact_handle);
-      gibber_bytestream_iface_close (bytestream, &e);
-      return;
-    }
-
-  salut_tubes_channel_bytestream_offered (chan, bytestream, msg);
-}
-
 SalutTubesManager *
 salut_tubes_manager_new (
     SalutConnection *conn,

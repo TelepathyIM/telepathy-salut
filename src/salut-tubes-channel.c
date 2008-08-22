@@ -2508,8 +2508,7 @@ salut_tubes_channel_get_interfaces (TpSvcChannel *iface,
 }
 
 /* Called when we receive a SI request,
- * via either salut_muc_manager_handle_si_stream_request or
- * salut_tubes_manager_handle_si_stream_request
+ * via salut_muc_manager_handle_si_stream_request
  */
 void
 salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
