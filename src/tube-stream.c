@@ -1661,7 +1661,8 @@ salut_tube_stream_close (SalutTubeIface *tube)
           if (!gibber_iq_helper_send_with_reply (priv->iq_helper, stanza,
               iq_close_reply_cb, G_OBJECT(self), tube, &error))
             {
-              DEBUG ("ERROR: '%s'", error->message);
+              DEBUG ("ERROR: Failed to send the close iq stanza: '%s'",
+                  error->message);
               g_error_free (error);
             }
         }
