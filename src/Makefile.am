@@ -15,6 +15,10 @@ libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
 CORE_SOURCES =                                          \
+    channel-manager.c                                   \
+    channel-manager.h                                   \
+    exportable-channel.c                                \
+    exportable-channel.h                                \
     salut-connection-manager.c                          \
     salut-connection-manager.h                          \
     salut-contact-manager.c                             \
