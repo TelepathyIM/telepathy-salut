@@ -156,7 +156,6 @@ salut_file_channel_init (SalutFileChannel *obj)
   obj->priv->contact = NULL;
 }
 
-static void salut_file_channel_check_and_send (SalutFileChannel *channel);
 static void salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
                                           SalutFileTransferState state,
                                           SalutFileTransferStateChangeReason reason);
@@ -818,8 +817,6 @@ send_file_offer (SalutFileChannel *self)
 
   g_signal_connect (ft, "transferred-chunk", G_CALLBACK (ft_transferred_chunk_cb), self);
 
-  setup_local_socket (self);
-
   ft->size = self->priv->size;
 
   gibber_file_transfer_offer (ft);
@@ -838,60 +835,6 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   g_signal_handlers_disconnect_by_func (mgr,
                                         xmpp_connection_manager_new_connection_cb, user_data);
   send_file_offer (channel);
-}
-
-static void
-salut_file_channel_check_and_send (SalutFileChannel *channel)
-{
-  GibberXmppConnection *connection = NULL;
-  SalutXmppConnectionManagerRequestConnectionResult request_result;
-  GError *error = NULL;
-
-  if (G_STR_EMPTY (channel->priv->content_type))
-    {
-      DEBUG ("ContentType not present; not starting file transfer");
-      return;
-    }
-
-  if (G_STR_EMPTY (channel->priv->filename))
-    {
-      DEBUG ("Filename property not present; not starting file transfer");
-      return;
-    }
-
-  if (channel->priv->size == SALUT_UNDEFINED_FILE_SIZE)
-    {
-      DEBUG ("Size property not present; not starting file transfer");
-      return;
-    }
-
-  if (G_STR_EMPTY (channel->priv->content_md5))
-    {
-      DEBUG ("ContentMD5 property not present; not starting file transfer");
-      return;
-    }
-
-  DEBUG ("Starting sending file transfer");
-
-  request_result = salut_xmpp_connection_manager_request_connection (
-    channel->priv->xmpp_connection_manager, channel->priv->contact, &connection,
-    &error);
-
-  if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      channel->priv->xmpp_connection = connection;
-      send_file_offer (channel);
-    }
-  else if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
-    {
-      g_signal_connect (channel->priv->xmpp_connection_manager, "new-connection",
-                        G_CALLBACK (xmpp_connection_manager_new_connection_cb), channel);
-    }
-  else
-    {
-      DEBUG ("Request connection failed");
-      g_error_free (error);
-    }
 }
 
 void
@@ -957,7 +900,8 @@ static void
 salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
                                 guint address_type,
                                 guint access_control,
-                                GValue *access_control_param,
+                                const GValue *access_control_param,
+                                guint64 offset,
                                 DBusGMethodInvocation *context)
 {
   SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
@@ -994,13 +938,119 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
 
   setup_local_socket (self);
 
-  salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
+  DEBUG ("local socket %s", self->priv->socket_path);
+
+  salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_ACCEPTED,
         SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_value_init (&out_address, G_TYPE_STRING);
   g_value_set_string (&out_address, self->priv->socket_path);
 
   salut_svc_channel_type_file_return_from_accept_file (context, &out_address);
+
+  self->priv->initial_offset = 0;
+  salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+}
+
+/**
+ * salut_file_channel_offer_file
+ *
+ * Implements D-Bus method OfferFile
+ * on interface org.freedesktop.Telepathy.Channel.Type.File
+ */
+static void
+salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
+                               guint address_type,
+                               guint access_control,
+                               const GValue *access_control_param,
+                               DBusGMethodInvocation *context)
+{
+  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
+  GibberXmppConnection *connection = NULL;
+  SalutXmppConnectionManagerRequestConnectionResult request_result;
+  GError *error = NULL;
+  SalutFileChannel *channel = SALUT_FILE_CHANNEL (iface);
+  GValue out_address = { 0 };
+
+  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_NOT_OFFERED)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "State is not not offered; cannot offer file");
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  if (address_type != TP_SOCKET_ADDRESS_TYPE_UNIX)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+        "Address type %u not implemented", address_type);
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  if (G_STR_EMPTY (channel->priv->content_type))
+    {
+      DEBUG ("ContentType property not set");
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+        "ContentType property not set");
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  if (G_STR_EMPTY (channel->priv->filename))
+    {
+      DEBUG ("Filename property not set");
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+        "Filename property not set");
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  if (channel->priv->size == SALUT_UNDEFINED_FILE_SIZE)
+    {
+      DEBUG ("Size property not set");
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+        "Size property not set");
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  DEBUG ("Offering file transfer");
+
+  request_result = salut_xmpp_connection_manager_request_connection (
+      channel->priv->xmpp_connection_manager, channel->priv->contact,
+      &connection, &error);
+
+  if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+    {
+      channel->priv->xmpp_connection = connection;
+      send_file_offer (channel);
+    }
+  else if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
+    {
+      g_signal_connect (channel->priv->xmpp_connection_manager, "new-connection",
+                        G_CALLBACK (xmpp_connection_manager_new_connection_cb), channel);
+    }
+  else
+    {
+      DEBUG ("Request connection failed");
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+        "Request connection failed");
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  setup_local_socket(self);
+
+  g_value_init (&out_address, G_TYPE_STRING);
+  g_value_set_string (&out_address, channel->priv->socket_path);
+
+  salut_file_channel_set_state (iface,
+      SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING,
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+
+  salut_svc_channel_type_file_return_from_offer_file (context, &out_address);
 }
 
 static void
@@ -1010,8 +1060,11 @@ file_transfer_iface_init (gpointer g_iface,
   SalutSvcChannelTypeFileClass *klass =
       (SalutSvcChannelTypeFileClass *)g_iface;
 
-  salut_svc_channel_type_file_implement_accept_file (klass,
-        (salut_svc_channel_type_file_accept_file_impl) salut_file_channel_accept_file);
+#define IMPLEMENT(x) salut_svc_channel_type_file_implement_##x (\
+    klass, salut_file_channel_##x)
+  IMPLEMENT (accept_file);
+  IMPLEMENT (offer_file);
+#undef IMPLEMENT
 }
 
 static const gchar *
