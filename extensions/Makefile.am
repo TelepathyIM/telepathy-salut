@@ -11,6 +11,7 @@ EXTRA_DIST = \
 noinst_LTLIBRARIES = libsalut-extensions.la
 
 libsalut_extensions_la_SOURCES = \
+    extensions.c \
     extensions.h
 
 nodist_libsalut_extensions_la_SOURCES = \
