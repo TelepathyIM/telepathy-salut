@@ -17,6 +17,8 @@ noinst_PROGRAMS = write-mgr-file
 CORE_SOURCES =                                          \
     channel-manager.c                                   \
     channel-manager.h                                   \
+    conn-requests.c                                     \
+    conn-requests.h                                     \
     exportable-channel.c                                \
     exportable-channel.h                                \
     salut-connection-manager.c                          \
