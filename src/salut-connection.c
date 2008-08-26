@@ -32,6 +32,7 @@
 
 #include "salut-connection.h"
 
+#include "conn-requests.h"
 #include "salut-util.h"
 #include "salut-contact-manager.h"
 #include "salut-contact-channel.h"
@@ -99,6 +100,8 @@ salut_connection_avatar_service_iface_init (gpointer g_iface,
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION,
+      salut_conn_requests_conn_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
@@ -111,6 +114,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CONNECTION_INTERFACE_REQUESTS,
+       salut_conn_requests_iface_init);
 #ifdef ENABLE_OLPC
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
@@ -294,6 +299,8 @@ salut_connection_constructor (GType type,
   tp_contacts_mixin_add_contact_attributes_iface (obj,
       TP_IFACE_CONNECTION_INTERFACE_ALIASING,
       salut_connection_aliasing_fill_contact_attributes);
+
+  salut_conn_requests_init (SALUT_CONNECTION (obj));
 
   return obj;
 }
@@ -2821,7 +2828,10 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   g_ptr_array_add (factories, priv->tubes_manager);
   */
 
-  return factories;
+  /* Temporary hack for requestotron support */
+  self->channel_managers = g_ptr_array_sized_new (0);
+  self->channel_factories = factories;
+  return g_ptr_array_sized_new (0);
 }
 
 static gchar *
