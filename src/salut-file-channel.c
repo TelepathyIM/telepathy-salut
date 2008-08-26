@@ -924,7 +924,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
       return;
     }
 
-  if (address_type != SALUT_SOCKET_ADDRESS_TYPE_UNIX)
+  if (address_type != TP_SOCKET_ADDRESS_TYPE_UNIX)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
         "Address type %u not implemented", address_type);
