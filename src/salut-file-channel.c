@@ -1160,10 +1160,9 @@ accept_local_socket_connection (GIOChannel *source,
     {
       DEBUG ("Client connected to local socket");
 
-      ft = (GibberFileTransfer *) user_data;
+      ft = ((SalutFileChannel *) user_data)->priv->ft;
 
-      if (ft == NULL)
-        return FALSE;
+      g_assert (ft != NULL);
 
       addrlen = sizeof (addr);
       new_fd = accept (g_io_channel_unix_get_fd (source),
@@ -1202,7 +1201,7 @@ setup_local_socket (SalutFileChannel *self)
     }
 
   g_io_add_watch (io_channel, G_IO_IN | G_IO_HUP,
-      accept_local_socket_connection, self->priv->ft);
+      accept_local_socket_connection, self);
   g_io_channel_unref (io_channel);
 
   return TRUE;
