@@ -53,7 +53,7 @@ tests/check-main
 tests/outputs
 tests/sasl-test.db
 tests/test-xmpp-connection
-tests/test-r-multicast-(packet|sender|transport-io)$
+tests/test-r-multicast-{packet,sender,transport-io}
 
 tools/libglibcodegen.pyc
 
