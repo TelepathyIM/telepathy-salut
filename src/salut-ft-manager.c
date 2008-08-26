@@ -265,7 +265,7 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   SalutContact *contact;
   const gchar *name;
   gchar *path = NULL;
-  guint direction, state;
+  guint state;
 
   /* Increasing guint to make sure object paths are random */
   static guint id = 0;
@@ -280,8 +280,10 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
   DEBUG ("%s channel requested", incoming ? "Incoming" : "Outgoing");
 
-  state = incoming ? SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING : SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING;
-  direction = incoming ? SALUT_FILE_TRANSFER_DIRECTION_INCOMING : SALUT_FILE_TRANSFER_DIRECTION_OUTGOING;
+  if (incoming)
+    state = SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING;
+  else
+    state = SALUT_FILE_TRANSFER_STATE_NOT_OFFERED;
 
   name = tp_handle_inspect (handle_repo, handle);
   path = g_strdup_printf ("%s/FileChannel/%u/%u",
@@ -295,9 +297,10 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
                        "object-path", path,
                        "handle", handle,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
-                       "direction", direction,
+                       "incoming", incoming,
                        "state", state,
                        NULL);
+
   g_object_unref (contact);
   g_free (path);
   tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
