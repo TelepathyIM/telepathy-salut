@@ -54,6 +54,8 @@
 #include "salut-discovery-client.h"
 #include "salut-avahi-discovery-client.h"
 
+#include <extensions/extensions.h>
+
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
@@ -75,8 +77,6 @@
 #define ACTIVITY_PAIR_TYPE \
   (dbus_g_type_get_struct ("GValueArray", G_TYPE_STRING, G_TYPE_UINT, \
       G_TYPE_INVALID))
-
-#include <extensions/extensions.h>
 
 static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
