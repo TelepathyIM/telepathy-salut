@@ -274,11 +274,8 @@ salut_file_channel_set_property (GObject *object,
         break;
       case PROP_STATE:
         salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (object),
-                                      g_value_get_uint (value),
-                                      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
-        break;
-      case PROP_TRANSFERRED_BYTES:
-        self->priv->transferred_bytes = g_value_get_uint64 (value);
+            g_value_get_uint (value),
+            SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
       case PROP_INCOMING:
         self->priv->incoming = g_value_get_boolean (value);
@@ -308,7 +305,6 @@ salut_file_channel_set_property (GObject *object,
         self->priv->description = g_value_dup_string (value);
         break;
       case PROP_AVAILABLE_SOCKET_TYPES:
-        /* This should not be writeable with the new request API */
         self->priv->available_socket_types = g_value_get_boxed (value);
         break;
       default:
@@ -345,7 +341,7 @@ salut_file_channel_constructor (GType type, guint n_props,
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object (bus, self->priv->object_path, obj);
 
-  /* Initialise the available socket types hash table*/
+  /* Initialise the available socket types hash table */
   self->priv->available_socket_types = g_hash_table_new (g_int_hash, g_int_equal);
 
   self->priv->last_transferred_bytes_emitted = 0;
@@ -588,7 +584,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
 
   param_spec = g_param_spec_uint64 (
       "transferred-bytes",
-      "guint transferred-bytes",
+      "guint64 transferred-bytes",
       "Bytes transferred",
       0,
       G_MAXUINT64,
@@ -738,7 +734,7 @@ salut_file_channel_get_interfaces (TpSvcChannel *iface,
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data)
 {
-  TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
+  TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_implement_##x (\
     klass, salut_file_channel_##x)
@@ -763,11 +759,12 @@ ft_finished_cb (GibberFileTransfer *ft,
                 SalutFileChannel *self)
 {
   salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
-                                SALUT_FILE_TRANSFER_STATE_COMPLETED,
-                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+      SALUT_FILE_TRANSFER_STATE_COMPLETED,
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
-  salut_xmpp_connection_manager_release_connection (self->priv->xmpp_connection_manager,
-                                                    self->priv->xmpp_connection);
+  salut_xmpp_connection_manager_release_connection (
+      self->priv->xmpp_connection_manager,
+      self->priv->xmpp_connection);
 }
 
 static void
@@ -776,11 +773,12 @@ ft_remote_canceled_cb (GibberFileTransfer *ft,
 {
   gibber_file_transfer_cancel (ft, 406);
   salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
-                                SALUT_FILE_TRANSFER_STATE_CANCELED,
-                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
+      SALUT_FILE_TRANSFER_STATE_CANCELED,
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
 
-  salut_xmpp_connection_manager_release_connection (self->priv->xmpp_connection_manager,
-                                                    self->priv->xmpp_connection);
+  salut_xmpp_connection_manager_release_connection (
+      self->priv->xmpp_connection_manager,
+      self->priv->xmpp_connection);
 }
 
 static void
@@ -788,8 +786,8 @@ remote_accepted_cb (GibberFileTransfer *ft,
                     SalutFileChannel *self)
 {
   salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
-                                SALUT_FILE_TRANSFER_STATE_OPEN,
-                                SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+      SALUT_FILE_TRANSFER_STATE_OPEN,
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
   g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);

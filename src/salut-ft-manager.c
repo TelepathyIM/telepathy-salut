@@ -274,9 +274,7 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
-    {
-      return NULL;
-    }
+    return NULL;
 
   DEBUG ("%s channel requested", incoming ? "Incoming" : "Outgoing");
 
