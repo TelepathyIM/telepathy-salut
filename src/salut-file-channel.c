@@ -95,7 +95,8 @@ enum
   PROP_CONTENT_TYPE,
   PROP_FILENAME,
   PROP_SIZE,
-  PROP_CONTENT_MD5,
+  PROP_CONTENT_HASH_TYPE,
+  PROP_CONTENT_HASH,
   PROP_DESCRIPTION,
   PROP_AVAILABLE_SOCKET_TYPES,
   PROP_TRANSFERRED_BYTES,
@@ -122,7 +123,8 @@ struct _SalutFileChannelPrivate {
   gchar *content_type;
   gchar *filename;
   guint64 size;
-  gchar *content_md5;
+  SalutFileHashType content_hash_type;
+  gchar *content_hash;
   gchar *description;
   GHashTable *available_socket_types;
   guint64 transferred_bytes;
@@ -208,8 +210,11 @@ salut_file_channel_get_property (GObject    *object,
       case PROP_SIZE:
         g_value_set_uint64 (value, self->priv->size);
         break;
-      case PROP_CONTENT_MD5:
-        g_value_set_string (value, self->priv->content_md5);
+      case PROP_CONTENT_HASH_TYPE:
+        g_value_set_uint (value, self->priv->content_hash_type);
+        break;
+      case PROP_CONTENT_HASH:
+        g_value_set_string (value, self->priv->content_hash);
         break;
       case PROP_DESCRIPTION:
         g_value_set_string (value, self->priv->description);
@@ -291,9 +296,13 @@ salut_file_channel_set_property (GObject *object,
         /* This should not be writeable with the new request API */
         self->priv->size = g_value_get_uint64 (value);
         break;
-      case PROP_CONTENT_MD5:
+      case PROP_CONTENT_HASH_TYPE:
         /* This should not be writeable with the new request API */
-        self->priv->content_md5 = g_value_dup_string (value);
+        self->priv->content_hash_type = g_value_get_uint (value);
+        break;
+      case PROP_CONTENT_HASH:
+        /* This should not be writeable with the new request API */
+        self->priv->content_hash = g_value_dup_string (value);
         break;
       case PROP_DESCRIPTION:
         /* This should not be writeable with the new request API */
@@ -372,7 +381,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
     { "ContentType", "content-type", "content-type" },
     { "Filename", "filename", "filename" },
     { "Size", "size", "size" },
-    { "ContentMD5", "content-md5", "content-md5" },
+    { "ContentHashType", "content-hash-type", "content-hash-type" },
+    { "ContentHash", "content-hash", "content-hash" },
     { "Description", "description", "description" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
     { "TransferredBytes", "transferred-bytes", "transferred-bytes" },
@@ -522,10 +532,26 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_SIZE, param_spec);
 
+  param_spec = g_param_spec_uint (
+      "content-hash-type",
+      "SalutFileHashType content-hash-type",
+      "Hash type",
+      0,
+      G_MAXUINT,
+      SALUT_FILE_HASH_TYPE_NONE,
+      /* TODO: change this to CONSTRUCT_ONLY when
+       * the new request API is used.
+       */
+      G_PARAM_CONSTRUCT |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTENT_HASH_TYPE, param_spec);
+
   param_spec = g_param_spec_string (
-      "content-md5",
-      "gchar *content-md5",
-      "md5sum of the file contents",
+      "content-hash",
+      "gchar *content-hash",
+      "Hash of the file contents",
       "",
       /* TODO: change this to CONSTRUCT_ONLY when
        * the new request API is used.
@@ -534,7 +560,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CONTENT_MD5, param_spec);
+  g_object_class_install_property (object_class, PROP_CONTENT_HASH, param_spec);
 
   param_spec = g_param_spec_string (
       "description",
