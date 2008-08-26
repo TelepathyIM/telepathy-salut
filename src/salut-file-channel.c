@@ -100,7 +100,7 @@ enum
   PROP_DESCRIPTION,
   PROP_AVAILABLE_SOCKET_TYPES,
   PROP_TRANSFERRED_BYTES,
-  PROP_SOCKET_PATH,
+  PROP_INITIAL_OFFSET,
   LAST_PROPERTY
 };
 
@@ -116,6 +116,7 @@ struct _SalutFileChannelPrivate {
   GibberXmppConnection *xmpp_connection;
   GibberFileTransfer *ft;
   glong last_transferred_bytes_emitted;
+  gchar *socket_path;
   gboolean incoming;
 
   /* properties */
@@ -128,8 +129,7 @@ struct _SalutFileChannelPrivate {
   gchar *description;
   GHashTable *available_socket_types;
   guint64 transferred_bytes;
-  gchar *socket_path;
-
+  guint64 initial_offset;
 };
 
 static void
@@ -225,8 +225,8 @@ salut_file_channel_get_property (GObject    *object,
       case PROP_TRANSFERRED_BYTES:
         g_value_set_uint64 (value, self->priv->transferred_bytes);
         break;
-      case PROP_SOCKET_PATH:
-        g_value_set_string (value, self->priv->socket_path);
+      case PROP_INITIAL_OFFSET:
+        g_value_set_uint64 (value, self->priv->initial_offset);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -312,9 +312,6 @@ salut_file_channel_set_property (GObject *object,
         /* This should not be writeable with the new request API */
         self->priv->available_socket_types = g_value_get_boxed (value);
         break;
-      case PROP_SOCKET_PATH:
-        self->priv->socket_path = g_value_dup_string (value);
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -385,8 +382,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
     { "ContentHash", "content-hash", "content-hash" },
     { "Description", "description", "description" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
-    { "TransferredBytes", "transferred-bytes", "transferred-bytes" },
-    { "SocketPath", "socket-path", "socket-path" },
+    { "TransferredBytes", "transferred-bytes", NULL },
+    { "InitialOffset", "initial-offset", NULL },
     { NULL }
   };
 
@@ -602,16 +599,17 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TRANSFERRED_BYTES, param_spec);
 
-  param_spec = g_param_spec_string (
-      "socket-path",
-      "gchar *socket-path",
-      "UNIX socket path",
-      "",
-      G_PARAM_CONSTRUCT |
+  param_spec = g_param_spec_uint64 (
+      "initial-offset",
+      "guint64 initial_offset",
+      "Offset set at the beginning of the transfer",
+      0,
+      G_MAXUINT64,
+      0,
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_SOCKET_PATH, param_spec);
+  g_object_class_install_property (object_class, PROP_INITIAL_OFFSET, param_spec);
 
   salut_file_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
