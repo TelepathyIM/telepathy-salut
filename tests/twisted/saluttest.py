@@ -67,12 +67,10 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
 
     bus = dbus.SessionBus()
     conn = make_connection(bus, queue.append, params)
-    (stream, port) = make_stream(queue.append, protocol=protocol)
-
     error = None
 
     try:
-        fun(queue, bus, conn, stream)
+        fun(queue, bus, conn)
     except Exception, e:
         import traceback
         traceback.print_exc()
@@ -81,15 +79,13 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
     try:
         if colourer:
           sys.stdout = colourer.fh
-        d = port.stopListening()
-        if error is None:
-            d.addBoth((lambda *args: reactor.crash()))
-        else:
-            # please ignore the POSIX behind the curtain
-            d.addBoth((lambda *args: os._exit(1)))
 
-        conn.Disconnect()
-        # second call destroys object
+        if error is None:
+          reactor.stop()
+        else:
+          # please ignore the POSIX behind the curtain
+          os._exit(1)
+
         conn.Disconnect()
     except dbus.DBusException, e:
         pass
