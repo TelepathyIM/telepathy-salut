@@ -16,6 +16,7 @@ import dbus
 
 def make_connection(bus, event_func, params=None):
     default_params = {
+        'published-name': 'testsuite',
         'first-name': 'test',
         'last-name': 'suite',
         }
