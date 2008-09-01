@@ -60,8 +60,7 @@ void salut_channel_manager_foreach_channel (SalutChannelManager *manager,
 typedef void (*SalutChannelManagerChannelClassFunc) (
     SalutChannelManager *manager,
     GHashTable *fixed_properties,
-    const gchar * const *required_properties,
-    const gchar * const *optional_properties,
+    const gchar * const *allowed_properties,
     gpointer user_data);
 
 typedef void (*SalutChannelManagerForeachChannelClassFunc) (

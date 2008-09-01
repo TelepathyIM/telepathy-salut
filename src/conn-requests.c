@@ -837,29 +837,12 @@ conn_requests_get_channel_details (SalutConnection *self)
 static void
 get_requestables_foreach (SalutChannelManager *manager,
                           GHashTable *fixed_properties,
-                          const gchar * const *required_properties,
-                          const gchar * const *optional_properties,
+                          const gchar * const *allowed_properties,
                           gpointer user_data)
 {
   GPtrArray *details = user_data;
-  GValueArray *requestable = g_value_array_new (3);
+  GValueArray *requestable = g_value_array_new (2);
   GValue *value;
-  GPtrArray *allowed;
-  const gchar * const *iter;
-
-  allowed = g_ptr_array_new ();
-
-  for (iter = required_properties;
-       iter != NULL && *iter != NULL;
-       iter++)
-    g_ptr_array_add (allowed, g_strdup (*iter));
-
-  for (iter = optional_properties;
-       iter != NULL && *iter != NULL;
-       iter++)
-    g_ptr_array_add (allowed, g_strdup (*iter));
-
-  g_ptr_array_add (allowed, NULL);
 
   g_value_array_append (requestable, NULL);
   value = g_value_array_get_nth (requestable, 0);
@@ -869,7 +852,7 @@ get_requestables_foreach (SalutChannelManager *manager,
   g_value_array_append (requestable, NULL);
   value = g_value_array_get_nth (requestable, 1);
   g_value_init (value, G_TYPE_STRV);
-  g_value_take_boxed (value, g_ptr_array_free (allowed, FALSE));
+  g_value_take_boxed (value, allowed_properties);
 
   g_ptr_array_add (details, requestable);
 }
