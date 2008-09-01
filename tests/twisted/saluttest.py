@@ -16,11 +16,8 @@ import dbus
 
 def make_connection(bus, event_func, params=None):
     default_params = {
-        'account': 'test@localhost/Resource',
-        'password': 'pass',
-        'resource': 'Resource',
-        'server': 'localhost',
-        'port': dbus.UInt32(4242),
+        'first-name': 'test',
+        'last-name': 'suite',
         }
 
     if params:
