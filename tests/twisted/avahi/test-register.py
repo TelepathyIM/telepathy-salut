@@ -1,3 +1,7 @@
-import sys
+from saluttest import exec_test
 
-sys.exit(0)
+def test(q, bus, conn):
+    pass
+
+if __name__ == '__main__':
+    exec_test(test)
