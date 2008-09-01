@@ -78,6 +78,22 @@ if test -z "$PYTHON"; then
   AC_MSG_ERROR([Python is required to compile this package])
 fi
 
+# Check for a python >= 2.4 with twisted to run python tests
+AC_MSG_CHECKING([for Python >= 2.4 with Twisted and XMPP protocol support])
+for TEST_PYTHON in python2.4 python2.5 python; do
+  if $TEST_PYTHON -c "from sys import version_info; raise SystemExit(version_info < (2, 4, 0, 'final', 0))" >/dev/null 2>&1; then
+    if $TEST_PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor" >/dev/null 2>&1; then
+      AC_MSG_RESULT([$TEST_PYTHON])
+      AM_CONDITIONAL([WANT_TWISTED_TESTS], true)
+      break
+    else
+      TEST_PYTHON=false
+    fi
+  fi
+done
+AC_SUBST(TEST_PYTHON)
+AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
+
 dnl olpc specific code switch
 AC_ARG_ENABLE(olpc,
   AC_HELP_STRING([--enable-olpc],[compile with olpc specific code]),
@@ -239,7 +255,9 @@ AC_OUTPUT( Makefile                       \
            m4/Makefile                    \
            data/Makefile                  \
            extensions/Makefile            \
-           tools/Makefile		  \
+           tools/Makefile                 \
            tests/Makefile                 \
-           tests/inputs/Makefile
+           tests/inputs/Makefile          \
+           tests/twisted/Makefile         \
+           tests/twisted/tools/Makefile   \
 )
