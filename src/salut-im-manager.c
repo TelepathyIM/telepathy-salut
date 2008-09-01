@@ -37,8 +37,8 @@
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
 
-static void salut_im_manager_factory_iface_init (gpointer *g_iface,
-    gpointer *iface_data);
+static void salut_im_manager_factory_iface_init (gpointer g_iface,
+    gpointer iface_data);
 
 static SalutImChannel *
 salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle);
@@ -327,8 +327,8 @@ salut_im_manager_factory_iface_request (TpChannelFactoryIface *iface,
   return status;
 }
 
-static void salut_im_manager_factory_iface_init (gpointer *g_iface,
-                                                 gpointer *iface_data)
+static void salut_im_manager_factory_iface_init (gpointer g_iface,
+                                                 gpointer iface_data)
 {
    TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *) g_iface;
 
