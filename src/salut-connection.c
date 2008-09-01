@@ -589,6 +589,19 @@ set_own_status (GObject *obj,
 static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 {
+  static TpDBusPropertiesMixinPropImpl requests_props[] = {
+        { "Channels", NULL, NULL },
+        { "RequestableChannelClasses", NULL, NULL },
+        { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+        { SALUT_IFACE_CONNECTION_INTERFACE_REQUESTS,
+          salut_conn_requests_get_dbus_property,
+          NULL,
+          requests_props,
+        },
+        { NULL }
+  };
   GObjectClass *object_class = G_OBJECT_CLASS (salut_connection_class);
   TpBaseConnectionClass *tp_connection_class =
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
@@ -628,6 +641,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_start_connecting;
   tp_connection_class->interfaces_always_present = interfaces;
 
+  salut_connection_class->properties_mixin.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
 
