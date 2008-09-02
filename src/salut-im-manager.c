@@ -423,19 +423,3 @@ salut_im_manager_new (SalutConnection *connection,
 
   return ret;
 }
-
-SalutImChannel *
-salut_im_manager_get_channel_for_handle (SalutImManager *mgr,
-                                         TpHandle handle)
-{
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  SalutImChannel *chan;
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
-  if (chan == NULL)
-    chan = salut_im_manager_new_channel (mgr, handle);
-
-  if (chan != NULL)
-    g_object_ref (chan);
-
-  return chan;
-}

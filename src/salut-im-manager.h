@@ -63,8 +63,4 @@ salut_im_manager_new (SalutConnection *connection,
     SalutContactManager *contact_manager,
     SalutXmppConnectionManager *connection_manager);
 
-SalutImChannel *
-salut_im_manager_get_channel_for_handle (SalutImManager *mgr,
-    TpHandle handle);
-
 #endif /* #ifndef __SALUT_IM_MANAGER_H__*/
