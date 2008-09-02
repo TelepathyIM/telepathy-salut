@@ -43,6 +43,7 @@
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
+#include "exportable-channel.h"
 #include "salut-connection.h"
 #include "salut-contact.h"
 #include "salut-xmpp-connection-manager.h"
@@ -64,6 +65,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 );
 
@@ -104,6 +106,8 @@ enum
   PROP_INITIATOR_HANDLE,
   PROP_INITIATOR_ID,
   PROP_REQUESTED,
+  PROP_CHANNEL_PROPERTIES,
+  PROP_CHANNEL_DESTROYED,
   LAST_PROPERTY
 };
 
@@ -268,6 +272,24 @@ salut_im_channel_get_property (GObject *object,
       case PROP_REQUESTED:
         g_value_set_boolean (value, (priv->initiator == base_conn->self_handle));
         break;
+      case PROP_CHANNEL_DESTROYED:
+        /* TODO: this should be FALSE if there are still pending messages, so
+         *       the channel manager can respawn the channel.
+         */
+        g_value_set_boolean (value, TRUE);
+        break;
+      case PROP_CHANNEL_PROPERTIES:
+        g_value_set_boxed (value,
+            salut_tp_dbus_properties_mixin_make_properties_hash (object,
+                TP_IFACE_CHANNEL, "TargetHandle",
+                TP_IFACE_CHANNEL, "TargetHandleType",
+                TP_IFACE_CHANNEL, "ChannelType",
+                TP_IFACE_CHANNEL, "TargetID",
+                SALUT_IFACE_CHANNEL_FUTURE, "InitiatorHandle",
+                SALUT_IFACE_CHANNEL_FUTURE, "InitiatorID",
+                SALUT_IFACE_CHANNEL_FUTURE, "Requested",
+                NULL));
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -424,6 +446,10 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+      "channel-destroyed");
+  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+      "channel-properties");
 
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
