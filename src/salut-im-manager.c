@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "channel-manager.h"
 #include "salut-im-channel.h"
 #include "salut-im-manager.h"
 #include "salut-contact.h"
@@ -39,6 +40,8 @@
 
 static void salut_im_manager_factory_iface_init (gpointer g_iface,
     gpointer iface_data);
+static void salut_im_manager_channel_manager_iface_init (gpointer g_iface,
+    gpointer iface_data);
 
 static SalutImChannel *
 salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle,
@@ -46,7 +49,9 @@ salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle,
 
 G_DEFINE_TYPE_WITH_CODE (SalutImManager, salut_im_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
-      salut_im_manager_factory_iface_init));
+      salut_im_manager_factory_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CHANNEL_MANAGER,
+      salut_im_manager_channel_manager_iface_init));
 
 /* private structure */
 typedef struct _SalutImManagerPrivate SalutImManagerPrivate;
@@ -341,6 +346,21 @@ static void salut_im_manager_factory_iface_init (gpointer g_iface,
    klass->foreach = salut_im_manager_factory_iface_foreach;
    klass->request = salut_im_manager_factory_iface_request;
 }
+
+static void
+salut_im_manager_channel_manager_iface_init (gpointer g_iface,
+                                             gpointer iface_data)
+{
+/*
+  SalutChannelManagerIface *iface = g_iface;
+
+  iface->foreach_channel = salut_im_manager_foreach_channel;
+  iface->foreach_channel_class = salut_im_manager_foreach_channel_class;
+  iface->create_channel = salut_im_manager_create_channel;
+  iface->request_channel = salut_im_manager_request_channel;
+*/
+}
+
 
 /* private functions */
 static void
