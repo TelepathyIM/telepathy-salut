@@ -103,3 +103,71 @@ class AvahiListener:
           event.interface, event.protocol, event.name, event.stype,
           event.domain, event.protocol, 0)
 
+class AvahiAnnouncer:
+    def __init__(self, name, type, port, txt):
+        self.name = name
+        self.type = type
+        self.port = port
+        self.txt = txt
+
+        self.bus = dbus.SystemBus()
+        self.server = dbus.Interface(self.bus.get_object(avahi.DBUS_NAME,
+            avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
+
+        entry_path = self.server.EntryGroupNew()
+        entry_obj = self.bus.get_object(avahi.DBUS_NAME, entry_path)
+        entry = dbus.Interface(entry_obj,
+            avahi.DBUS_INTERFACE_ENTRY_GROUP)
+
+        entry.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+            dbus.UInt32(0), name, type, get_domain_name(), get_host_name_fqdn(),
+            port, avahi.dict_to_txt_array(txt))
+        entry.Commit()
+
+        self.entry = entry
+
+    def update(self, txt):
+      self.txt.update(txt)
+
+      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+        dbus.UInt32(0), self.name, self.type, get_domain_name(), 
+        avahi.dict_to_txt_array(self.txt))
+
+
+if __name__ == '__main__':
+    from twisted.internet import reactor
+
+    txtdict = { "test0": "0", "test1": "1" }
+
+    a = AvahiAnnouncer("test", "_test._tcp", 1234, txtdict)
+
+    q = servicetest.IteratingEventQueue()
+    # Set verboseness if needed for debugging
+    # q.verbose = True
+
+    l = AvahiListener(q)
+    l.listen_for_service("_test._tcp")
+
+    while True:
+      e = q.expect ('service-added', stype='_test._tcp')
+      # Only care about services we announced ourselves
+      if e.flags & (avahi.LOOKUP_RESULT_LOCAL|avahi.LOOKUP_RESULT_OUR_OWN):
+          break
+
+    assert "test" == e.name[0:len("test")]
+
+    s = l.resolver_for_service(e)
+    e = q.expect('service-resolved', service = s)
+    for (key, val ) in txtdict.iteritems():
+        v = txt_get_key(e.txt, key)
+        assert v == val, (key, val, v)
+
+    txtdict["test1"] = "2"
+    txtdict["test2"] = "2"
+
+    a.update(txtdict)
+
+    e = q.expect('service-resolved', service = s)
+    for (key, val ) in txtdict.iteritems():
+        v = txt_get_key(e.txt, key)
+        assert v == val, (key, val, v)
