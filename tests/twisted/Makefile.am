@@ -1,5 +1,6 @@
 TWISTED_TESTS = \
-	avahi/test-register.py
+	avahi/test-register.py \
+	avahi/test-aliases.py
 
 TESTS =
 
