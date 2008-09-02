@@ -264,6 +264,8 @@ salut_im_manager_iface_foreach_one (gpointer key,
   TpChannelIface *chan = TP_CHANNEL_IFACE (value);
   struct foreach_data *f = (struct foreach_data *) data;
 
+  g_assert (SALUT_IS_EXPORTABLE_CHANNEL (chan));
+
   f->func (chan, f->data);
 }
 
@@ -347,14 +349,25 @@ static void salut_im_manager_factory_iface_init (gpointer g_iface,
    klass->request = salut_im_manager_factory_iface_request;
 }
 
+void
+salut_im_manager_foreach_channel (SalutChannelManager *manager,
+                                  SalutExportableChannelFunc func,
+                                  gpointer user_data)
+{
+  g_assert (TP_IS_CHANNEL_FACTORY_IFACE (manager));
+
+  salut_im_manager_factory_iface_foreach (TP_CHANNEL_FACTORY_IFACE (manager),
+    (TpChannelFunc) func, user_data);
+}
+
 static void
 salut_im_manager_channel_manager_iface_init (gpointer g_iface,
                                              gpointer iface_data)
 {
-/*
   SalutChannelManagerIface *iface = g_iface;
 
   iface->foreach_channel = salut_im_manager_foreach_channel;
+/*
   iface->foreach_channel_class = salut_im_manager_foreach_channel_class;
   iface->create_channel = salut_im_manager_create_channel;
   iface->request_channel = salut_im_manager_request_channel;
