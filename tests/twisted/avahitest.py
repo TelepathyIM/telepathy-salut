@@ -8,11 +8,20 @@ import dbus
 import dbus.glib
 import avahi
 
-def get_host_name():
+def get_server():
   bus = dbus.SystemBus()
   server = dbus.Interface(bus.get_object(avahi.DBUS_NAME,
             avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
-  return server.GetHostName()
+  return server
+
+def get_host_name():
+  return get_server().GetHostName()
+
+def get_host_name_fqdn():
+  return get_server().GetHostNameFqdn()
+
+def get_domain_name():
+  return get_server().GetDomainName()
 
 def txt_get_key(txt, key):
   for x in txt:
