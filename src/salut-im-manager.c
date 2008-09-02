@@ -41,7 +41,8 @@ static void salut_im_manager_factory_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 static SalutImChannel *
-salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle);
+salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle,
+    TpHandle initiator);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImManager, salut_im_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
@@ -134,7 +135,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
-  chan = salut_im_manager_new_channel (self, handle);
+  chan = salut_im_manager_new_channel (self, handle, handle);
   salut_im_channel_add_connection (chan, conn);
   salut_im_channel_received_stanza (chan, stanza);
 }
@@ -316,7 +317,8 @@ salut_im_manager_factory_iface_request (TpChannelFactoryIface *iface,
     }
   else
     {
-      chan = salut_im_manager_new_channel (mgr, handle);
+      chan = salut_im_manager_new_channel (mgr, handle,
+          base_connection->self_handle);
       if (chan == NULL)
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
 
@@ -359,7 +361,8 @@ im_channel_closed_cb (SalutImChannel *chan,
 
 static SalutImChannel *
 salut_im_manager_new_channel (SalutImManager *mgr,
-                              TpHandle handle)
+                              TpHandle handle,
+                              TpHandle initiator)
 {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
@@ -386,6 +389,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
       "contact", contact,
       "object-path", path,
       "handle", handle,
+      "initiator-handle", initiator,
       "xmpp-connection-manager", priv->xmpp_connection_manager,
       NULL);
   g_object_unref (contact);
