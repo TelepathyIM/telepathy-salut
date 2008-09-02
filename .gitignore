@@ -9,6 +9,7 @@ cscope.out
 *.o
 *.lo
 *.la
+*.loT
 
 Makefile
 Makefile.in
