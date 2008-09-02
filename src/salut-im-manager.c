@@ -360,6 +360,35 @@ salut_im_manager_foreach_channel (SalutChannelManager *manager,
     (TpChannelFunc) func, user_data);
 }
 
+static const gchar * const im_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    NULL
+};
+
+static void
+salut_im_manager_foreach_channel_class (SalutChannelManager *manager,
+    SalutChannelManagerChannelClassFunc func,
+    gpointer user_data)
+{
+  GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+  GValue *value;
+
+  value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TEXT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
+      value);
+
+  value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+      value);
+
+  func (manager, table, im_channel_allowed_properties, user_data);
+
+  g_hash_table_destroy (table);
+}
+
 static void
 salut_im_manager_channel_manager_iface_init (gpointer g_iface,
                                              gpointer iface_data)
@@ -367,8 +396,8 @@ salut_im_manager_channel_manager_iface_init (gpointer g_iface,
   SalutChannelManagerIface *iface = g_iface;
 
   iface->foreach_channel = salut_im_manager_foreach_channel;
-/*
   iface->foreach_channel_class = salut_im_manager_foreach_channel_class;
+/*
   iface->create_channel = salut_im_manager_create_channel;
   iface->request_channel = salut_im_manager_request_channel;
 */
