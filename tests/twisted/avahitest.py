@@ -33,14 +33,26 @@ def txt_get_key(txt, key):
   return None
 
 class AvahiService:
-    def __init__(self, event_queue, bus, server,
-        interface, protocol, name, type, domain, aprotocol, flags):
+    def __init__(self, event_queue, bus, server, interface, protocol, name,
+        type, domain, aprotocol, flags):
 
         self.event_queue = event_queue
+        self.server = server
+        self.bus = bus
+        self.interface = interface
+        self.protocol = protocol
+        self.name = name
+        self.type = type
+        self.domain = domain
+        self.aprotocol = aprotocol
+        self.flags = flags
 
-        resolver_path = server.ServiceResolverNew(interface,
-            protocol, name, type, domain, aprotocol, flags)
-        resolver_obj = bus.get_object(avahi.DBUS_NAME, resolver_path)
+    def resolve(self):
+        resolver_path = self.server.ServiceResolverNew(self.interface,
+            self.protocol, self.name, self.type, self.domain,
+            self.aprotocol, self.flags)
+
+        resolver_obj = self.bus.get_object(avahi.DBUS_NAME, resolver_path)
         resolver = dbus.Interface(resolver_obj,
             avahi.DBUS_INTERFACE_SERVICE_RESOLVER)
 
@@ -73,9 +85,14 @@ class AvahiListener:
     def _service_added_cb(self, interface, protocol, name, stype, domain,
         flags):
 
-        e = Event ('service-added',
+        service = AvahiService(self.event_queue, self.bus, self.server,
+          interface, protocol, name, stype,
+          domain, protocol, 0)
+
+        e = Event ('service-added', service = service,
           interface=interface, protocol=protocol, name=name, stype=stype,
           domain=domain, flags=flags)
+
         self.event_queue.append(e)
 
     def _service_removed_cb(self, interface, protocol, name, stype, domain,
@@ -97,11 +114,6 @@ class AvahiListener:
         browser.connect_to_signal('ItemRemoved', self._service_removed_cb)
 
         self.browsers.append(browser)
-
-    def resolver_for_service(self, event):
-        return AvahiService(self.event_queue, self.bus, self.server,
-          event.interface, event.protocol, event.name, event.stype,
-          event.domain, event.protocol, 0)
 
 class AvahiAnnouncer:
     def __init__(self, name, type, port, txt):
@@ -156,7 +168,9 @@ if __name__ == '__main__':
 
     assert "test" == e.name[0:len("test")]
 
-    s = l.resolver_for_service(e)
+    s = e.service
+    s.resolve()
+
     e = q.expect('service-resolved', service = s)
     for (key, val ) in txtdict.iteritems():
         v = txt_get_key(e.txt, key)

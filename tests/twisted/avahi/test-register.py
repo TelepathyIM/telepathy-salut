@@ -11,15 +11,15 @@ FIRST_NAME="lastname"
 LAST_NAME="lastname"
 
 def test(q, bus, conn):
-    a = AvahiListener(q)
-    a.listen_for_service("_presence._tcp")
+    AvahiListener(q).listen_for_service("_presence._tcp")
 
     conn.Connect()
 
     e = q.expect('service-added',
       name=PUBLISHED_NAME + "@" + avahitest.get_host_name())
 
-    service = a.resolver_for_service(e)
+    service = e.service
+    service.resolve()
 
     e = q.expect('service-resolved', service = service)
 
