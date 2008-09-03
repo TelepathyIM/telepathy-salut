@@ -1027,6 +1027,7 @@ conn_requests_requestotron (SalutConnection *self,
           "Not implemented" };
 
       dbus_g_method_return_error (context, &e);
+      request->context = NULL;
       g_ptr_array_remove (self->channel_requests, request);
       channel_request_free (request);
     }
