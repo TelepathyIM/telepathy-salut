@@ -852,7 +852,7 @@ get_requestables_foreach (SalutChannelManager *manager,
   g_value_array_append (requestable, NULL);
   value = g_value_array_get_nth (requestable, 1);
   g_value_init (value, G_TYPE_STRV);
-  g_value_take_boxed (value, allowed_properties);
+  g_value_set_boxed (value, allowed_properties);
 
   g_ptr_array_add (details, requestable);
 }
