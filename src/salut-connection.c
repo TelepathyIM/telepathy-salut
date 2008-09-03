@@ -830,6 +830,8 @@ salut_connection_dispose (GObject *object)
       priv->bytestream_manager = NULL;
     }
 
+  salut_conn_requests_dispose (self);
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_connection_parent_class)->dispose)
     G_OBJECT_CLASS (salut_connection_parent_class)->dispose (object);
