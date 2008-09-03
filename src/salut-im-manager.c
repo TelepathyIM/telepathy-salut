@@ -419,13 +419,20 @@ salut_im_manager_new_channel (SalutImManager *mgr,
 
   g_assert (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle))
       == NULL);
-  DEBUG ("Requested channel for handle: %u", handle);
+
+  name = tp_handle_inspect (handle_repo, handle);
+  DEBUG ("Requested channel for handle: %u (%s)", handle, name);
 
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
-    return NULL;
+    {
+      gchar *message = g_strdup_printf ("%s is not online", name);
+      salut_channel_manager_emit_request_failed (mgr, request, TP_ERRORS,
+          TP_ERROR_NOT_AVAILABLE, message);
+      g_free (message);
+      return NULL;
+    }
 
-  name = tp_handle_inspect (handle_repo, handle);
   path = g_strdup_printf ("%s/IMChannel/%u",
       base_connection->object_path, handle);
   chan = g_object_new (SALUT_TYPE_IM_CHANNEL,
