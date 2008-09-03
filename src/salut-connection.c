@@ -32,6 +32,7 @@
 
 #include "salut-connection.h"
 
+#include "channel-manager.h"
 #include "conn-requests.h"
 #include "salut-util.h"
 #include "salut-contact-manager.h"
@@ -2836,14 +2837,15 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   */
 
   g_ptr_array_add (factories, priv->contact_manager);
-  g_ptr_array_add (factories, priv->im_manager);
   g_ptr_array_add (factories, priv->muc_manager);
   /*
   g_ptr_array_add (factories, priv->tubes_manager);
   */
 
+  self->channel_managers = g_ptr_array_sized_new (1);
+  g_ptr_array_add (self->channel_managers, priv->im_manager);
+
   /* Temporary hack for requestotron support */
-  self->channel_managers = g_ptr_array_sized_new (0);
   self->channel_factories = factories;
   return g_ptr_array_sized_new (0);
 }
