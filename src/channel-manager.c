@@ -24,6 +24,8 @@
 #include "channel-manager.h"
 
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/errors.h>
+#include <telepathy-glib/util.h>
 
 #include "exportable-channel.h"
 #include "signals-marshal.h"
@@ -415,4 +417,30 @@ salut_channel_manager_request_channel (SalutChannelManager *manager,
     return method (manager, request_token, request_properties);
   else
     return FALSE;
+}
+
+
+gboolean
+salut_channel_manager_asv_has_unknown_properties (GHashTable *properties,
+                                                  const gchar * const *fixed,
+                                                  const gchar * const *allowed,
+                                                  GError **error)
+{
+  GHashTableIter iter;
+  gpointer key;
+  const gchar *property_name;
+
+  g_hash_table_iter_init (&iter, properties);
+  while (g_hash_table_iter_next (&iter, &key, NULL))
+    {
+      property_name = key;
+      if (!tp_strv_contains (fixed, property_name) &&
+          !tp_strv_contains (allowed, property_name))
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+              "Request contained unknown property '%s'", property_name);
+          return TRUE;
+        }
+    }
+  return FALSE;
 }
