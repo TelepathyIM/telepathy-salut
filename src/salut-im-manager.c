@@ -420,6 +420,14 @@ salut_im_manager_requestotron (SalutImManager *self,
   if (!tp_handle_is_valid (contact_repo, handle, &error))
     goto error;
 
+  /* Don't support opening a channel to our self handle */
+  if (handle == base_conn->self_handle)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Can't open a text channel to yourself");
+      goto error;
+    }
+
   /* TODO: fail if there are any other properties. */
 
   channel = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
