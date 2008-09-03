@@ -246,8 +246,16 @@ salut_im_manager_foreach_channel (SalutChannelManager *iface,
       &f);
 }
 
+static const gchar * const im_channel_fixed_properties[] = {
+    TP_IFACE_CHANNEL ".ChannelType",
+    TP_IFACE_CHANNEL ".TargetHandleType",
+    NULL
+};
+
+
 static const gchar * const im_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
     NULL
 };
 
@@ -262,12 +270,12 @@ salut_im_manager_foreach_channel_class (SalutChannelManager *manager,
 
   value = tp_g_value_slice_new (G_TYPE_STRING);
   g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TEXT);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
+  g_hash_table_insert (table, (gchar *)im_channel_fixed_properties[0],
       value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
   g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+  g_hash_table_insert (table, (gchar *)im_channel_fixed_properties[1],
       value);
 
   func (manager, table, im_channel_allowed_properties, user_data);
@@ -305,8 +313,12 @@ salut_im_manager_requestotron (SalutImManager *self,
     goto error;
 
   /* Check if there are any other properties that we don't understand */
-  if (g_hash_table_size (request_properties) > 3)
-    return FALSE;
+  if (salut_channel_manager_asv_has_unknown_properties (request_properties,
+          im_channel_fixed_properties, im_channel_allowed_properties,
+          &error))
+    {
+      goto error;
+    }
 
   /* Don't support opening a channel to our self handle */
   if (handle == base_conn->self_handle)
