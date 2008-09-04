@@ -94,6 +94,20 @@ done
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
+dnl enable avahi tests
+AC_ARG_ENABLE(avahi-tests,
+  AC_HELP_STRING([ --enable-avahi-tests],
+    [Enable tests that use the system avahi ]),
+    enable_avahi_tests=$enableval, enable_avahi_tests=no)
+
+if test x$enable_avahi_tests = xyes; then
+  if test false == "$TEST_PYTHON"; then
+    AC_MSG_ERROR(
+      [Python with twisted support is needed for avahi twisted tests])
+  fi
+fi
+AM_CONDITIONAL(WANT_TWISTED_AVAHI_TESTS, test "x$enable_avahi_tests" = "xyes")
+
 dnl olpc specific code switch
 AC_ARG_ENABLE(olpc,
   AC_HELP_STRING([--enable-olpc],[compile with olpc specific code]),
