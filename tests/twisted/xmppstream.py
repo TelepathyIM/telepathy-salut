@@ -7,7 +7,7 @@ import servicetest
 from servicetest import Event, EventPattern
 import twisted
 from twisted.words.xish import domish, xpath, xmlstream
-from twisted.internet.protocol import Factory
+from twisted.internet.protocol import Factory, ClientFactory
 from twisted.internet import reactor
 
 NS_STREAMS = 'http://etherx.jabber.org/streams'
@@ -142,7 +142,19 @@ class OutgoingXmppStream(BaseXmlStream):
         self.addObserver(xmlstream.STREAM_CONNECTED_EVENT, self.connected)
 
     def connected (self, stream):
+        e = Event('connection-result', succeeded = True)
+        self.event(e)
+
         self.send_header()
+
+class OutgoingXmppFactory(ClientFactory):
+    def __init__(self, event_function):
+        self.event_func = event_function
+
+    def clientConnectionFailed(self, connector, reason):
+        ClientFactory.clientConnectionFailed(self, connector, reason)
+        e = Event('connection-result', succeeded = False, reason = reason)
+        self.event_func(e)
 
 def connect_to_stream(queue, name, remote_name, host, port, protocol = None):
     if protocol == None:
@@ -150,7 +162,7 @@ def connect_to_stream(queue, name, remote_name, host, port, protocol = None):
 
     p = protocol(queue.append, name, remote_name)
 
-    factory = twisted.internet.protocol.ClientFactory()
+    factory = OutgoingXmppFactory(queue.append)
     factory.protocol = lambda *args: p
     reactor.connectTCP(host, port, factory)
 
