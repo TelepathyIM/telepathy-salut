@@ -53,8 +53,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
     SalutContact *contact, gpointer user_data);
 
 
-static void salut_muc_manager_factory_iface_init (gpointer *g_iface,
-    gpointer *iface_data);
+static void salut_muc_manager_factory_iface_init (gpointer g_iface,
+    gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
                         G_TYPE_OBJECT,
@@ -769,8 +769,8 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
   return status;
 }
 
-static void salut_muc_manager_factory_iface_init (gpointer *g_iface,
-                                                  gpointer *iface_data) {
+static void salut_muc_manager_factory_iface_init (gpointer g_iface,
+                                                  gpointer iface_data) {
    TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
 
    klass->close_all = salut_muc_manager_factory_iface_close_all;

@@ -241,8 +241,8 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
   object_class->dispose = salut_contact_channel_dispose;
   object_class->finalize = salut_contact_channel_finalize;
 
-  param_spec = g_param_spec_object ("connection", "GabbleConnection object",
-                                    "Gabble connection object that owns this "
+  param_spec = g_param_spec_object ("connection", "SalutConnection object",
+                                    "Salut connection object that owns this "
                                     "Roster channel object.",
                                     SALUT_TYPE_CONNECTION,
                                     G_PARAM_CONSTRUCT_ONLY |

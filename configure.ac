@@ -189,7 +189,9 @@ PKG_CHECK_MODULES(LIBASYNCNS, [libasyncns >= 0.3],
   [ HAVE_LIBASYNCNS="yes"
     AC_DEFINE(HAVE_LIBASYNCNS, 1, [Define if asyncns support is available])
   ],
-  [ AC_WARN(libasyncns not found: Resolving will be synchronous!) ] )
+  [ AC_MSG_NOTICE(libasyncns not found: Resolving will be synchronous!)
+    AC_MSG_NOTICE((Salut does not make DNS lookups, so this does not matter.))
+  ] )
 
 AC_SUBST(LIBASYNCNS_CFLAGS)
 AC_SUBST(LIBASYNCNS_LIBS)
