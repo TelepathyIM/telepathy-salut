@@ -32,8 +32,6 @@
 
 #include "salut-connection.h"
 
-#include "channel-manager.h"
-#include "conn-requests.h"
 #include "salut-util.h"
 #include "salut-contact-manager.h"
 #include "salut-contact-channel.h"
@@ -58,6 +56,7 @@
 
 #include <extensions/extensions.h>
 
+#include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
@@ -101,8 +100,6 @@ salut_connection_avatar_service_iface_init (gpointer g_iface,
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION,
-      salut_conn_requests_conn_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
@@ -115,8 +112,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CONNECTION_INTERFACE_REQUESTS,
-       salut_conn_requests_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_REQUESTS,
+       tp_base_connection_requests_iface_init);
 #ifdef ENABLE_OLPC
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
@@ -230,6 +227,9 @@ salut_connection_create_handle_repos (TpBaseConnection *self,
 static GPtrArray *
 salut_connection_create_channel_factories (TpBaseConnection *self);
 
+static GPtrArray *
+salut_connection_create_channel_managers (TpBaseConnection *self);
+
 static gchar *
 salut_connection_get_unique_connection_name (TpBaseConnection *self);
 
@@ -300,8 +300,6 @@ salut_connection_constructor (GType type,
   tp_contacts_mixin_add_contact_attributes_iface (obj,
       TP_IFACE_CONNECTION_INTERFACE_ALIASING,
       salut_connection_aliasing_fill_contact_attributes);
-
-  salut_conn_requests_init (SALUT_CONNECTION (obj));
 
   return obj;
 }
@@ -590,19 +588,6 @@ set_own_status (GObject *obj,
 static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 {
-  static TpDBusPropertiesMixinPropImpl requests_props[] = {
-        { "Channels", NULL, NULL },
-        { "RequestableChannelClasses", NULL, NULL },
-        { NULL }
-  };
-  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-        { SALUT_IFACE_CONNECTION_INTERFACE_REQUESTS,
-          salut_conn_requests_get_dbus_property,
-          NULL,
-          requests_props,
-        },
-        { NULL }
-  };
   GObjectClass *object_class = G_OBJECT_CLASS (salut_connection_class);
   TpBaseConnectionClass *tp_connection_class =
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
@@ -613,6 +598,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
     TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
 #ifdef ENABLE_OLPC
     SALUT_IFACE_OLPC_BUDDY_INFO,
     SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
@@ -634,6 +620,8 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_create_handle_repos;
   tp_connection_class->create_channel_factories =
       salut_connection_create_channel_factories;
+  tp_connection_class->create_channel_managers =
+      salut_connection_create_channel_managers;
   tp_connection_class->get_unique_connection_name =
       salut_connection_get_unique_connection_name;
   tp_connection_class->shut_down =
@@ -642,9 +630,11 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_start_connecting;
   tp_connection_class->interfaces_always_present = interfaces;
 
-  salut_connection_class->properties_mixin.interfaces = prop_interfaces;
+  salut_connection_class->properties_mixin.interfaces = NULL;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
+
+  tp_base_connection_register_requests_dbus_properties (object_class);
 
   tp_presence_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, presence_mixin),
@@ -829,8 +819,6 @@ salut_connection_dispose (GObject *object)
       g_object_unref (priv->bytestream_manager);
       priv->bytestream_manager = NULL;
     }
-
-  salut_conn_requests_dispose (self);
 
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_connection_parent_class)->dispose)
@@ -2828,9 +2816,6 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       G_CALLBACK (_olpc_activity_manager_activity_modified_cb), self);
 #endif
 
-  priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
-
   priv->muc_manager = salut_discovery_client_create_muc_manager (
       priv->discovery_client, self, priv->xmpp_connection_manager);
 
@@ -2844,13 +2829,29 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   g_ptr_array_add (factories, priv->tubes_manager);
   */
 
-  self->channel_managers = g_ptr_array_sized_new (1);
-  g_ptr_array_add (self->channel_managers, priv->im_manager);
-
-  /* Temporary hack for requestotron support */
-  self->channel_factories = factories;
-  return g_ptr_array_sized_new (0);
+  return factories;
 }
+
+
+static GPtrArray *
+salut_connection_create_channel_managers (TpBaseConnection *base)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  GPtrArray *managers = g_ptr_array_sized_new (1);
+
+  /* FIXME: The second and third arguments depend on create_channel_factories
+   *        being called before this; should telepathy-glib guarantee that or
+   *        should we be defensive?
+   */
+  priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
+
+  g_ptr_array_add (managers, priv->im_manager);
+
+  return managers;
+}
+
 
 static gchar *
 salut_connection_get_unique_connection_name (TpBaseConnection *base)

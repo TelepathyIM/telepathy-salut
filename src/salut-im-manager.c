@@ -21,8 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "channel-manager.h"
-#include "exportable-channel.h"
 #include "salut-im-channel.h"
 #include "salut-im-manager.h"
 #include "salut-contact.h"
@@ -33,6 +31,7 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 
+#include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 
@@ -47,7 +46,7 @@ salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle,
     TpHandle initiator, gpointer request);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImManager, salut_im_manager, G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CHANNEL_MANAGER,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       salut_im_manager_channel_manager_iface_init));
 
 /* private structure */
@@ -215,7 +214,7 @@ salut_im_manager_finalize (GObject *object)
 
 struct foreach_data
 {
-  SalutExportableChannelFunc func;
+  TpExportableChannelFunc func;
   gpointer data;
 };
 
@@ -224,15 +223,15 @@ salut_im_manager_iface_foreach_one (gpointer key,
                                     gpointer value,
                                     gpointer data)
 {
-  SalutExportableChannel *chan = SALUT_EXPORTABLE_CHANNEL (value);
+  TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
   struct foreach_data *f = (struct foreach_data *) data;
 
   f->func (chan, f->data);
 }
 
 void
-salut_im_manager_foreach_channel (SalutChannelManager *iface,
-                                  SalutExportableChannelFunc func,
+salut_im_manager_foreach_channel (TpChannelManager *iface,
+                                  TpExportableChannelFunc func,
                                   gpointer user_data)
 {
   SalutImManager *mgr = SALUT_IM_MANAGER (iface);
@@ -260,8 +259,8 @@ static const gchar * const im_channel_allowed_properties[] = {
 };
 
 static void
-salut_im_manager_foreach_channel_class (SalutChannelManager *manager,
-    SalutChannelManagerChannelClassFunc func,
+salut_im_manager_foreach_channel_class (TpChannelManager *manager,
+    TpChannelManagerChannelClassFunc func,
     gpointer user_data)
 {
   GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -296,7 +295,7 @@ salut_im_manager_requestotron (SalutImManager *self,
       base_conn, TP_HANDLE_TYPE_CONTACT);
   TpHandle handle;
   GError *error = NULL;
-  SalutExportableChannel *channel;
+  TpExportableChannel *channel;
 
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"), TP_IFACE_CHANNEL_TYPE_TEXT))
@@ -313,7 +312,7 @@ salut_im_manager_requestotron (SalutImManager *self,
     goto error;
 
   /* Check if there are any other properties that we don't understand */
-  if (salut_channel_manager_asv_has_unknown_properties (request_properties,
+  if (tp_channel_manager_asv_has_unknown_properties (request_properties,
           im_channel_fixed_properties, im_channel_allowed_properties,
           &error))
     {
@@ -344,12 +343,12 @@ salut_im_manager_requestotron (SalutImManager *self,
       goto error;
     }
 
-  salut_channel_manager_emit_request_already_satisfied (self, request_token,
+  tp_channel_manager_emit_request_already_satisfied (self, request_token,
       channel);
   return TRUE;
 
 error:
-  salut_channel_manager_emit_request_failed (self, request_token,
+  tp_channel_manager_emit_request_failed (self, request_token,
       error->domain, error->code, error->message);
   g_error_free (error);
   return TRUE;
@@ -357,7 +356,7 @@ error:
 
 
 static gboolean
-salut_im_manager_create_channel (SalutChannelManager *manager,
+salut_im_manager_create_channel (TpChannelManager *manager,
                                  gpointer request_token,
                                  GHashTable *request_properties)
 {
@@ -369,7 +368,7 @@ salut_im_manager_create_channel (SalutChannelManager *manager,
 
 
 static gboolean
-salut_im_manager_request_channel (SalutChannelManager *manager,
+salut_im_manager_request_channel (TpChannelManager *manager,
                                   gpointer request_token,
                                   GHashTable *request_properties)
 {
@@ -384,7 +383,7 @@ static void
 salut_im_manager_channel_manager_iface_init (gpointer g_iface,
                                              gpointer iface_data)
 {
-  SalutChannelManagerIface *iface = g_iface;
+  TpChannelManagerIface *iface = g_iface;
 
   iface->foreach_channel = salut_im_manager_foreach_channel;
   iface->foreach_channel_class = salut_im_manager_foreach_channel_class;
@@ -402,8 +401,8 @@ im_channel_closed_cb (SalutImChannel *chan,
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
   TpHandle handle;
 
-  salut_channel_manager_emit_channel_closed_for_object (self,
-    SALUT_EXPORTABLE_CHANNEL (chan));
+  tp_channel_manager_emit_channel_closed_for_object (self,
+    TP_EXPORTABLE_CHANNEL (chan));
 
   if (priv->channels)
     {
@@ -439,7 +438,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   if (contact == NULL)
     {
       gchar *message = g_strdup_printf ("%s is not online", name);
-      salut_channel_manager_emit_request_failed (mgr, request, TP_ERRORS,
+      tp_channel_manager_emit_request_failed (mgr, request, TP_ERRORS,
           TP_ERROR_NOT_AVAILABLE, message);
       g_free (message);
       return NULL;
@@ -462,7 +461,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   if (request != NULL)
     requests = g_slist_prepend (requests, request);
 
-  salut_channel_manager_emit_new_channel (mgr, SALUT_EXPORTABLE_CHANNEL (chan),
+  tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (chan),
     requests);
 
   g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), mgr);

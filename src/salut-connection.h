@@ -55,12 +55,6 @@ struct _SalutConnection {
   /* Our name on the network */
   gchar *name;
 
-  /* temporary, for requestotron support */
-  GPtrArray *channel_factories;
-  GPtrArray *channel_managers;
-  GPtrArray *channel_requests;
-  gboolean has_tried_connection;
-
   gpointer priv;
 };
 
