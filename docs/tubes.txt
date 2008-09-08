@@ -5,14 +5,16 @@ Implementation of tubes in telepathy-salut
 
 Implemented. The XMPP spec is available on:
 http://telepathy.freedesktop.org/xmpp/tubes.html
+This XMPP spec is generated from the telepathy-gabble source code.
 
 - 1-1 D-Bus tubes
 
-Not tested
+Not implemented
 
 - 1-1 stream tubes
 
-Implemented. The XMPP spec is the following.
+Implemented. The XMPP spec is considered as experimental. It may change before
+being considered final.
 
 Initiator to receptor: offer the tube:
   <iq type="set"
