@@ -169,7 +169,8 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
     const gchar **service, GHashTable **parameters, guint *tube_id);
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
     TpTubeType type, TpHandle initiator, const gchar *service,
-    GHashTable *parameters, guint tube_id, guint portnum);
+    GHashTable *parameters, guint tube_id, guint portnum,
+    GibberIqHelperRequestStanza *iq_req);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -805,7 +806,7 @@ tubes_muc_message_received (SalutTubesChannel *self,
                 }
 
               tube = create_new_tube (self, type, initiator_handle,
-                  service, parameters, tube_id, 0);
+                  service, parameters, tube_id, 0, NULL);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -883,7 +884,8 @@ tubes_message_received (SalutTubesChannel *self,
                         TpHandle initiator_handle,
                         GHashTable *parameters,
                         guint tube_id,
-                        guint portnum)
+                        guint portnum,
+                        GibberIqHelperRequestStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
@@ -894,7 +896,7 @@ tubes_message_received (SalutTubesChannel *self,
   if (tube == NULL)
     {
       tube = create_new_tube (self, tube_type, initiator_handle, service,
-        parameters, tube_id, portnum);
+        parameters, tube_id, portnum, iq_req);
     }
 }
 
@@ -1102,7 +1104,8 @@ create_new_tube (SalutTubesChannel *self,
                  const gchar *service,
                  GHashTable *parameters,
                  guint tube_id,
-                 guint portnum)
+                 guint portnum,
+                 GibberIqHelperRequestStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
@@ -1123,7 +1126,7 @@ create_new_tube (SalutTubesChannel *self,
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
           priv->xmpp_connection_manager, priv->handle, priv->handle_type,
           priv->self_handle, initiator, service, parameters, tube_id,
-          portnum));
+          portnum, iq_req));
       break;
     default:
       g_assert_not_reached ();
@@ -1479,7 +1482,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      service, parameters_copied, tube_id, 0);
+      service, parameters_copied, tube_id, 0, NULL);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 }
@@ -1974,7 +1977,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
-      service, parameters_copied, tube_id, 0);
+      service, parameters_copied, tube_id, 0, NULL);
 
   g_object_set (tube,
       "address-type", address_type,

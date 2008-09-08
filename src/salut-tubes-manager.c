@@ -292,8 +292,6 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
-  GibberXmppStanza *reply;
-
   /* tube informations */
   const gchar *service;
   TpTubeType tube_type;
@@ -343,14 +341,9 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
       }
 
     tubes_message_received (chan, service, tube_type, initiator_handle,
-        parameters, tube_id, portnum);
+        parameters, tube_id, portnum,
+        gibber_iq_helper_get_request_stanza (stanza));
   }
-
-  reply = gibber_iq_helper_new_result_reply (
-      gibber_iq_helper_get_request_stanza (stanza));
-  gibber_xmpp_connection_send (conn, reply, NULL);
-
-  g_object_unref (reply);
 
   return;
 }
