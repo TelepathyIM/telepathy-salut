@@ -254,7 +254,8 @@ START_TEST (test_new_result_reply)
       NULL, NULL, NULL);
   fail_unless (result);
 
-  reply = gibber_iq_helper_new_result_reply (stanza);
+  reply = gibber_iq_helper_new_result_reply
+    (gibber_iq_helper_get_request_stanza (stanza));
   fail_unless (reply != NULL);
   fail_unless (strcmp (reply->node->name, "iq") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (reply->node, "type"),
@@ -293,8 +294,9 @@ START_TEST (test_new_error_reply)
       NULL, NULL, NULL);
   fail_unless (result);
 
-  reply = gibber_iq_helper_new_error_reply (stanza,
-      XMPP_ERROR_BAD_REQUEST, "test");
+  reply = gibber_iq_helper_new_error_reply
+      (gibber_iq_helper_get_request_stanza (stanza),
+       XMPP_ERROR_BAD_REQUEST, "test");
   fail_unless (reply != NULL);
   fail_unless (strcmp (reply->node->name, "iq") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (reply->node, "type"),
@@ -352,7 +354,8 @@ START_TEST (test_send_with_object_living)
       object, NULL, NULL);
   fail_unless (result);
 
-  reply = gibber_iq_helper_new_result_reply (stanza);
+  reply = gibber_iq_helper_new_result_reply
+      (gibber_iq_helper_get_request_stanza (stanza));
   fail_unless (reply != NULL);
   result = gibber_xmpp_connection_send (xmpp_connection, reply, NULL);
   fail_unless (result);
@@ -394,7 +397,8 @@ START_TEST (test_send_with_object_destroyed)
 
   g_object_unref (object);
 
-  reply = gibber_iq_helper_new_result_reply (stanza);
+  reply = gibber_iq_helper_new_result_reply
+      (gibber_iq_helper_get_request_stanza (stanza));
   fail_unless (reply != NULL);
   result = gibber_xmpp_connection_send (xmpp_connection, reply, NULL);
   fail_unless (result);

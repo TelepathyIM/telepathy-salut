@@ -313,7 +313,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
     {
       GibberXmppStanza *reply;
 
-      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
+      reply = gibber_iq_helper_new_error_reply (
+          gibber_iq_helper_get_request_stanza (stanza), XMPP_ERROR_BAD_REQUEST,
           "failed to parse tube request");
       gibber_xmpp_connection_send (conn, reply, NULL);
 
@@ -345,7 +346,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
         parameters, tube_id, portnum);
   }
 
-  reply = gibber_iq_helper_new_result_reply (stanza);
+  reply = gibber_iq_helper_new_result_reply (
+      gibber_iq_helper_get_request_stanza (stanza));
   gibber_xmpp_connection_send (conn, reply, NULL);
 
   g_object_unref (reply);

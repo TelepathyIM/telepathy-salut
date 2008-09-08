@@ -31,6 +31,8 @@ G_BEGIN_DECLS
 typedef struct _GibberIqHelper GibberIqHelper;
 typedef struct _GibberIqHelperClass GibberIqHelperClass;
 
+typedef struct _GibberIqHelperRequestStanza GibberIqHelperRequestStanza;
+
 struct _GibberIqHelperClass
 {
     GObjectClass parent_class;
@@ -75,11 +77,15 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *helper,
     GibberXmppStanza *iq, GibberIqHelperStanzaReplyFunc reply_func,
     GObject *object, gpointer user_data, GError **error);
 
-GibberXmppStanza *
-gibber_iq_helper_new_result_reply (GibberXmppStanza *iq);
+GibberIqHelperRequestStanza *
+gibber_iq_helper_get_request_stanza (GibberXmppStanza *iq);
 
 GibberXmppStanza *
-gibber_iq_helper_new_error_reply (GibberXmppStanza *iq, GibberXmppError error,
+gibber_iq_helper_new_result_reply (GibberIqHelperRequestStanza *iq);
+
+GibberXmppStanza *
+gibber_iq_helper_new_error_reply (GibberIqHelperRequestStanza *iq,
+    GibberXmppError error,
     const gchar *errmsg);
 
 G_END_DECLS

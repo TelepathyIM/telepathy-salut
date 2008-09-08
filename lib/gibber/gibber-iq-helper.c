@@ -50,6 +50,13 @@ struct _GibberIqHelperPrivate
 #define GIBBER_IQ_HELPER_GET_PRIVATE(obj) \
   ((GibberIqHelperPrivate *) ((GibberIqHelper *)obj)->priv)
 
+struct _GibberIqHelperRequestStanza
+{
+  gchar *from;
+  gchar *to;
+  gchar *id;
+};
+
 static void
 reply_handler_object_destroy_notify_cb (gpointer _data, GObject *object);
 
@@ -347,15 +354,35 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
 }
 
 static GibberXmppStanza *
-new_reply (GibberXmppStanza *iq,
+new_reply (GibberIqHelperRequestStanza *iq,
            GibberStanzaSubType sub_type)
 {
   GibberXmppStanza *reply;
-  const gchar *id;
-  const gchar *iq_from, *iq_to;
 
   g_return_val_if_fail (sub_type == GIBBER_STANZA_SUB_TYPE_RESULT ||
       sub_type == GIBBER_STANZA_SUB_TYPE_ERROR, NULL);
+
+  reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+      sub_type,
+      iq->to, iq->from,
+      GIBBER_NODE_ATTRIBUTE, "id", iq->id,
+      GIBBER_STANZA_END);
+
+  g_free (iq->from);
+  g_free (iq->to);
+  g_free (iq->id);
+  g_free (iq);
+
+  return reply;
+}
+
+GibberIqHelperRequestStanza *
+gibber_iq_helper_get_request_stanza (GibberXmppStanza *iq)
+{
+  GibberIqHelperRequestStanza *req;
+  const gchar *id;
+  const gchar *iq_from, *iq_to;
+
   g_return_val_if_fail (strcmp (iq->node->name, "iq") == 0, NULL);
 
   id = gibber_xmpp_node_get_attribute (iq->node, "id");
@@ -364,23 +391,21 @@ new_reply (GibberXmppStanza *iq,
   iq_from = gibber_xmpp_node_get_attribute (iq->node, "from");
   iq_to = gibber_xmpp_node_get_attribute (iq->node, "to");
 
-  reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      sub_type,
-      iq_to, iq_from,
-      GIBBER_NODE_ATTRIBUTE, "id", id,
-      GIBBER_STANZA_END);
-
-  return reply;
+  req = g_new0 (GibberIqHelperRequestStanza, 1);
+  req->to = g_strdup (iq_to);
+  req->from = g_strdup (iq_from);
+  req->id = g_strdup (id);
+  return req;
 }
 
 GibberXmppStanza *
-gibber_iq_helper_new_result_reply (GibberXmppStanza *iq)
+gibber_iq_helper_new_result_reply (GibberIqHelperRequestStanza *iq)
 {
   return new_reply (iq, GIBBER_STANZA_SUB_TYPE_RESULT);
 }
 
 GibberXmppStanza *
-gibber_iq_helper_new_error_reply (GibberXmppStanza *iq,
+gibber_iq_helper_new_error_reply (GibberIqHelperRequestStanza *iq,
                                   GibberXmppError error,
                                   const gchar *errmsg)
 {
@@ -388,8 +413,5 @@ gibber_iq_helper_new_error_reply (GibberXmppStanza *iq,
 
   stanza = new_reply (iq, GIBBER_STANZA_SUB_TYPE_ERROR);
   gibber_xmpp_error_to_node (error, stanza->node, errmsg);
-
-  /* TODO: Would be cool to copy <iq> children as in Gabble */
-
   return stanza;
 }
