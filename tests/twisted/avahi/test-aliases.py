@@ -4,10 +4,6 @@ from avahitest import get_host_name
 
 import time
 
-PUBLISHED_NAME="test-register"
-FIRST_NAME="lastname"
-LAST_NAME="lastname"
-
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
 
