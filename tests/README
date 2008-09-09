@@ -1,0 +1,44 @@
+== C tests ==
+
+To run all C tests (assuming the current directory is $top_srcdir):
+
+  make -C tests check-TESTS
+
+To run an individual test:
+
+  make -C tests check-TESTS TESTS=test-handles
+
+To run tests under Valgrind:
+
+  make -C tests check-valgrind
+
+To run an individual test under Valgrind:
+
+  make -C tests check-valgrind TESTS=test-handles
+
+== Twisted tests ==
+
+To run Twisted tests:
+
+  make -C checks/twisted check-twisted
+
+To run an individual Twisted test:
+
+  make -C tests/twisted check-twisted TWISTED_TESTS=test-connect.py
+
+or:
+
+  cd tests/twisted
+  sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
+        -- python test-connect.py
+
+To run with debug information:
+
+  make -C tests/twisted check-twisted TWISTED_TESTS=test-connect.py \
+        CHECK_TWISTED_VERBOSE=1
+
+or:
+
+  cd tests/twisted
+  sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
+        -- python test-connect.py -v
