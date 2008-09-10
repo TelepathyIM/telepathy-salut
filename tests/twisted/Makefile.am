@@ -5,7 +5,8 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
-	avahi/test-text-channel.py
+	avahi/test-text-channel.py \
+	avahi/test-tube.py
 
 TESTS =
 
@@ -37,7 +38,8 @@ EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
 	saluttest.py \
-	servicetest.py
+	servicetest.py \
+        trivialstream.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc
 
