@@ -1,6 +1,7 @@
 
 """
-Infrastructure code testing CM by pretending to be a Jabber server.
+Infrastructure code for testing. Implements incoming and outgoing xml/xmpp
+streams
 """
 
 import servicetest
