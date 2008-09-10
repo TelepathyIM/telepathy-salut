@@ -1880,7 +1880,8 @@ _send_channel_iq_tube (gpointer key,
           GIBBER_NODE_END,
           GIBBER_STANZA_END);
 
-      parameters_node = gibber_xmpp_node_add_child (stanza->node, "parameters");
+      parameters_node = gibber_xmpp_node_add_child (
+          gibber_xmpp_node_get_child (stanza->node, "tube"), "parameters");
       salut_gibber_xmpp_node_add_children_from_properties (parameters_node,
           parameters, "parameter");
 
