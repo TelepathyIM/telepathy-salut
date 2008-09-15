@@ -142,7 +142,7 @@ class AvahiRecordAnnouncer:
         self.entry = entry
 
 class AvahiAnnouncer:
-    def __init__(self, name, type, port, txt):
+    def __init__(self, name, type, port, txt, hostname = get_host_name_fqdn()):
         self.name = name
         self.type = type
         self.port = port
@@ -158,7 +158,7 @@ class AvahiAnnouncer:
             avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
         entry.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
-            dbus.UInt32(0), name, type, get_domain_name(), get_host_name_fqdn(),
+            dbus.UInt32(0), name, type, get_domain_name(), hostname,
             port, avahi.dict_to_txt_array(txt))
         entry.Commit()
 
