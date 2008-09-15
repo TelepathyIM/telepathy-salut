@@ -116,6 +116,31 @@ class AvahiListener:
         self.browsers.append(browser)
         return self
 
+class AvahiRecordAnnouncer:
+    def __init__(self, name, clazz, type, data):
+        self.name = name
+        self.clazz = clazz
+        self.type = type
+        self.data = data
+
+        self.bus = dbus.SystemBus()
+        self.server = dbus.Interface(self.bus.get_object(avahi.DBUS_NAME,
+            avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
+
+        entry_path = self.server.EntryGroupNew()
+        entry_obj = self.bus.get_object(avahi.DBUS_NAME, entry_path)
+        entry = dbus.Interface(entry_obj,
+            avahi.DBUS_INTERFACE_ENTRY_GROUP)
+
+        print data
+
+        entry.AddRecord(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+            dbus.UInt32(0), name, clazz, type, 120, data)
+
+        entry.Commit()
+
+        self.entry = entry
+
 class AvahiAnnouncer:
     def __init__(self, name, type, port, txt):
         self.name = name
