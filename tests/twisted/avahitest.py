@@ -114,6 +114,7 @@ class AvahiListener:
         browser.connect_to_signal('ItemRemoved', self._service_removed_cb)
 
         self.browsers.append(browser)
+        return self
 
 class AvahiAnnouncer:
     def __init__(self, name, type, port, txt):
