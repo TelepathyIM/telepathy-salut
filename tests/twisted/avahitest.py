@@ -111,7 +111,7 @@ class AvahiListener:
             avahi.DBUS_INTERFACE_SERVICE_BROWSER)
 
         browser.connect_to_signal('ItemNew', self._service_added_cb)
-        browser.connect_to_signal('ItemRemoved', self._service_removed_cb)
+        browser.connect_to_signal('ItemRemove', self._service_removed_cb)
 
         self.browsers.append(browser)
         return self
