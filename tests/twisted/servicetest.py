@@ -410,7 +410,9 @@ def make_connection(bus, event_func, name, proto, params):
             (name, tp_name_prefix + '.Connection.Interface.' + name)
             for name in ['Aliasing', 'Avatars', 'Capabilities', 'Contacts',
               'Presence']] +
-        [('Peer', 'org.freedesktop.DBus.Peer')]))
+        [  ('ActivityProperties', 'org.laptop.Telepathy.ActivityProperties'),
+           ('BuddyInfo', 'org.laptop.Telepathy.BuddyInfo'),
+           ('Peer', 'org.freedesktop.DBus.Peer')]))
 
     bus.add_signal_receiver(
         lambda *args, **kw:
