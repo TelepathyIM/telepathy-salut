@@ -1,0 +1,38 @@
+== C tests ==
+
+To run all C tests (assuming the current directory is $top_srcdir):
+
+  make -C tests check-TESTS
+
+To run tests under Valgrind:
+
+  make -C tests check-valgrind
+
+== Twisted tests ==
+
+To run tests using the system avahi, configure with --enable-avahi-tests
+
+To run Twisted tests:
+
+  make -C tests/twisted/check-twisted
+
+To run an individual Twisted test:
+
+  make -C tests/twisted check-twisted TWISTED_TESTS=avahi/test-aliases.py
+
+or:
+
+  cd tests/twisted
+  sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
+        -- python avahi/test-aliases.py
+
+To run with debug information:
+
+  make -C tests/twisted check-twisted TWISTED_TESTS=avahi/test-aliases.py \
+        CHECK_TWISTED_VERBOSE=1
+
+or:
+
+  cd tests/twisted
+  sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
+        -- python avahi/test-aliases.py -v

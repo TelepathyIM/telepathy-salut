@@ -133,7 +133,7 @@ clean-local:
 	-rm -rf outputs
 	-rm -f sasl-test.db
 
-SUBDIRS = inputs
+SUBDIRS = inputs twisted
 
 $(check_SCRIPTS): always-run
 	chmod +x $(srcdir)/$@
