@@ -132,8 +132,6 @@ class AvahiRecordAnnouncer:
         entry = dbus.Interface(entry_obj,
             avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
-        print data
-
         entry.AddRecord(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
             dbus.UInt32(0), name, clazz, type, 120, data)
 
