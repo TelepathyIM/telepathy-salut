@@ -61,7 +61,7 @@ def activity_listener_hook(q, event):
 def announce_address(hostname, address):
     "Announce IN A record, address is assume to be ipv4"
 
-    data = reduce (lambda x, y:  (x << 8) + int(y), address.split("."), 0)
+    data = reduce (lambda x, y: (x << 8) + int(y), address.split("."), 0)
     ndata = socket.htonl(data)
     rdata = [ (ndata >> (24 - x)) & 0xff for x in xrange(0, 32, 8)]
 
@@ -114,7 +114,7 @@ def test(q, bus, conn):
       if e.args[0] == handle and e.args[1] != []:
           assert len(e.args[1]) == 1
           assert e.args[1][0][0] == ACTIVITY_ID
-          activity_handle =  e.args[1][0][1]
+          activity_handle = e.args[1][0][1]
           break
 
     act_properties = conn.ActivityProperties.GetProperties(activity_handle)
@@ -127,7 +127,7 @@ def test(q, bus, conn):
         HT_ROOM, activity_handle, True)
 
     q.expect('dbus-signal', signal='MembersChanged', path=room_channel,
-        args =  [u'', [1L], [], [], [], 1L, 0L])
+        args = [u'', [1L], [], [], [], 1L, 0L])
 
     # Make it public that we joined the activity
     joined_activity = True
