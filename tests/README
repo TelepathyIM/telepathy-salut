@@ -14,7 +14,7 @@ To run tests using the system avahi, configure with --enable-avahi-tests
 
 To run Twisted tests:
 
-  make -C tests/twisted/check-twisted
+  make -C tests/twisted check-twisted
 
 To run an individual Twisted test:
 
