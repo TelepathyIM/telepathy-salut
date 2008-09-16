@@ -567,8 +567,12 @@ salut_olpc_activity_joined (SalutOlpcActivity *self,
       return FALSE;
     }
 
-  /* This might fail but that doesn't prevent us from joining the activity.. */
-  salut_olpc_activity_announce (self, NULL);
+  if (!self->is_private)
+    {
+      /* This might fail but that doesn't prevent us from joining the
+       * activity.. */
+      salut_olpc_activity_announce (self, NULL);
+    }
 
   g_signal_connect (priv->muc, "closed", G_CALLBACK (muc_channel_closed_cb),
       self);
