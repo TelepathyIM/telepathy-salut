@@ -5,7 +5,8 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
-	avahi/test-text-channel.py
+	avahi/test-text-channel.py \
+	avahi/test-olpc-activity-announcements.py
 
 TESTS =
 

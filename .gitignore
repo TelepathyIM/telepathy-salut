@@ -9,12 +9,14 @@ cscope.out
 *.o
 *.lo
 *.la
+*.loT
+*.pyc
 
 Makefile
 Makefile.in
 INSTALL
 aclocal.m4
-autom4te.cache/
+autom4te.cache
 config.guess
 config.h
 config.h.in
@@ -43,7 +45,7 @@ docs/xep.xsl
 docs/clique.html
 docs/telepathy-salut.8
 
-extensions/_gen/
+extensions/_gen
 extensions/extensions.html
 
 lib/gibber/examples/test_{ssl,tcp}
@@ -54,6 +56,11 @@ tests/outputs
 tests/sasl-test.db
 tests/test-xmpp-connection
 tests/test-r-multicast-{packet,sender,transport-io}
+tests/test-r-multicast-transport-io
+tests/twisted/tools/exec-with-log.sh
+tests/twisted/tools/salut-testing.log
+tests/twisted/tools/tmp-session-bus.conf
+tests/twisted/tools/org.freedesktop.Telepathy.ConnectionManager.salut.service
 
 tools/libglibcodegen.pyc
 

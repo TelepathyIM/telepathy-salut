@@ -36,8 +36,8 @@
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include "debug.h"
 
-static void salut_contact_manager_factory_iface_init (gpointer *g_iface,
-    gpointer *iface_data);
+static void salut_contact_manager_factory_iface_init (gpointer g_iface,
+    gpointer iface_data);
 
 static SalutContactChannel *salut_contact_manager_get_channel
     (SalutContactManager *mgr, TpHandle handle, gboolean *created);
@@ -424,8 +424,8 @@ salut_contact_manager_factory_iface_request (TpChannelFactoryIface *iface,
                  : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
 }
 
-static void salut_contact_manager_factory_iface_init (gpointer *g_iface,
-    gpointer *iface_data)
+static void salut_contact_manager_factory_iface_init (gpointer g_iface,
+    gpointer iface_data)
 {
   TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
 

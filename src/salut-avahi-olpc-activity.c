@@ -125,7 +125,12 @@ update_activity_service (SalutAvahiOlpcActivity *self,
       self);
   GError *err = NULL;
 
-  g_return_val_if_fail (activity_is_announced (self), FALSE);
+  if (!activity_is_announced (self))
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        "Trying to update an activity that's not announced");
+      return FALSE;
+    }
 
   ga_entry_group_service_freeze (priv->service);
 
@@ -217,7 +222,10 @@ salut_avahi_olpc_activity_stop_announce (SalutOlpcActivity *activity)
   SalutAvahiOlpcActivityPrivate *priv = SALUT_AVAHI_OLPC_ACTIVITY_GET_PRIVATE (
       self);
 
-  g_return_if_fail (activity_is_announced (self));
+  /* Announcing the activity could have failed, so check if we're actually
+   * announcing it */
+  if (!activity_is_announced (self))
+    return;
 
   g_object_unref (priv->group);
   priv->group = NULL;

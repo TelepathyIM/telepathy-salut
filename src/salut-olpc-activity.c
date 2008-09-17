@@ -374,6 +374,7 @@ resend_invite (SalutOlpcActivity *self)
 static void
 activity_changed (SalutOlpcActivity *self)
 {
+  SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
   GError *error = NULL;
 
   if (!send_properties_change_msg (self, &error))
@@ -383,7 +384,7 @@ activity_changed (SalutOlpcActivity *self)
       error = NULL;
     }
 
-  if (!self->is_private)
+  if (!self->is_private && priv->muc != NULL)
     {
       /* update announcement */
       if (!SALUT_OLPC_ACTIVITY_GET_CLASS (self)->update (self, &error))
@@ -430,6 +431,7 @@ salut_olpc_activity_update (SalutOlpcActivity *self,
                             const gchar *tags,
                             gboolean is_private)
 {
+  SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
   TpBaseConnection *base_conn = (TpBaseConnection *) (self->connection);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_ROOM);
@@ -491,19 +493,22 @@ salut_olpc_activity_update (SalutOlpcActivity *self,
       self->is_private = is_private;
       changed = TRUE;
 
-      if (is_private)
+      if (priv->muc != NULL)
         {
-          DEBUG ("activity is not public anymore. Stop to announce it");
-          salut_olpc_activity_stop_announce (self);
-        }
-      else
-        {
-          DEBUG ("activity becomes public. Announce it");
-          if (!salut_olpc_activity_announce (self, &error))
+          if (is_private)
             {
-              DEBUG ("activity announce failed: %s", error->message);
-              g_error_free (error);
-              error = NULL;
+              DEBUG ("activity is not public anymore. Stop to announce it");
+              salut_olpc_activity_stop_announce (self);
+            }
+          else
+            {
+              DEBUG ("activity becomes public. Announce it");
+             if (!salut_olpc_activity_announce (self, &error))
+               {
+                 DEBUG ("activity announce failed: %s", error->message);
+                 g_error_free (error);
+                  error = NULL;
+               }
             }
         }
     }
@@ -562,6 +567,13 @@ salut_olpc_activity_joined (SalutOlpcActivity *self,
       return FALSE;
     }
 
+  if (!self->is_private)
+    {
+      /* This might fail but that doesn't prevent us from joining the
+       * activity.. */
+      salut_olpc_activity_announce (self, NULL);
+    }
+
   g_signal_connect (priv->muc, "closed", G_CALLBACK (muc_channel_closed_cb),
       self);
 
@@ -575,6 +587,9 @@ salut_olpc_activity_left (SalutOlpcActivity *self)
 
   if (priv->muc == NULL)
     return;
+
+  if (!self->is_private)
+    salut_olpc_activity_stop_announce (self);
 
   g_object_unref (priv->muc);
   g_signal_handlers_disconnect_matched (priv->muc, G_SIGNAL_MATCH_DATA,
