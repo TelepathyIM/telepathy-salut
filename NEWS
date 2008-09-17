@@ -1,3 +1,19 @@
+telepathy-salut 0.3.5 (2008-09-17)
+==================================
+The "Please don't flood my network" release.
+
+This release fixes an annoying bug causing Salut announcing all the OLPC
+activities which are present on the network. You should consider upgrading
+if they are OLPC XO's running on your network.
+
+Enhancements:
+
+* Add a test framework
+
+Fixes:
+
+* Only announce OLPC activity we actually joined (dev.laptop.org #8441)
+
 telepathy-salut 0.3.4 (2008-08-20)
 ==================================
 The "a ball of hair" release.
