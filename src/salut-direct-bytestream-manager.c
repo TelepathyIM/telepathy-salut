@@ -429,7 +429,7 @@ void salut_direct_bytestream_manager_stop_listen (
       g_source_destroy (source);
       listener->listen_io_channel_source_id = 0;
     }
-  
+
   g_slice_free (struct _listener_io_in_cb_data, listener->data);
   g_slice_free (SalutDirectBytestreamManagerListener, listener);
 }
