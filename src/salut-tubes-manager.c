@@ -431,11 +431,9 @@ salut_tubes_manager_set_property (GObject *object,
         break;
       case PROP_CONTACT_MANAGER:
         priv->contact_manager = g_value_get_object (value);
-        g_object_ref (priv->contact_manager);
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         priv->xmpp_connection_manager = g_value_get_object (value);
-        g_object_ref (priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
