@@ -934,7 +934,13 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
       G_CALLBACK (ft_transferred_chunk_cb), self);
   g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
 
-  setup_local_socket (self);
+  if (!setup_local_socket(self))
+    {
+      DEBUG ("Could not set up local socket");
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Could not set up local socket");
+      dbus_g_method_return_error (context);
+    }
 
   DEBUG ("local socket %s", self->priv->socket_path);
 
@@ -1042,7 +1048,13 @@ salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
       return;
     }
 
-  setup_local_socket(self);
+  if (!setup_local_socket(self))
+    {
+      DEBUG ("Could not set up local socket");
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Could not set up local socket");
+      dbus_g_method_return_error (context);
+    }
 
   g_value_init (&out_address, G_TYPE_STRING);
   g_value_set_string (&out_address, channel->priv->socket_path);
