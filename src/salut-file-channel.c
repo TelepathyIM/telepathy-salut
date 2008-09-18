@@ -356,7 +356,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   };
 
   static TpDBusPropertiesMixinPropImpl file_props[] = {
-    { "State", "state", "state" },
+    { "State", "state", NULL },
     { "ContentType", "content-type", "content-type" },
     { "Filename", "filename", "filename" },
     { "Size", "size", "size" },
@@ -461,7 +461,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       0,
       G_MAXUINT,
       0,
-      G_PARAM_CONSTRUCT |
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
