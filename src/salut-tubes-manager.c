@@ -363,6 +363,10 @@ salut_tubes_manager_constructor (GType type,
   self = SALUT_TUBES_MANAGER (obj);
   priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
 
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      iq_tube_request_filter, iq_tube_request_cb, self);
+
   return obj;
 }
 
@@ -703,30 +707,17 @@ salut_tubes_manager_new (
     SalutContactManager *contact_manager,
     SalutXmppConnectionManager *xmpp_connection_manager)
 {
-  SalutTubesManager *ret = NULL;
-  SalutTubesManagerPrivate *priv;
-
   g_return_val_if_fail (SALUT_IS_CONNECTION (conn), NULL);
   g_return_val_if_fail (SALUT_IS_CONTACT_MANAGER (contact_manager), NULL);
   g_return_val_if_fail (
       SALUT_IS_XMPP_CONNECTION_MANAGER (xmpp_connection_manager), NULL);
 
-  ret = g_object_new (
+  return g_object_new (
       SALUT_TYPE_TUBES_MANAGER,
       "connection", conn,
       "contact-manager", contact_manager,
       "xmpp-connection-manager", xmpp_connection_manager,
       NULL);
-
-  priv = SALUT_TUBES_MANAGER_GET_PRIVATE (ret);
-
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      iq_tube_request_filter, iq_tube_request_cb, ret);
-
-  priv->conn = conn;
-
-  return ret;
 }
 
 static void
