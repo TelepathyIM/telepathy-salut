@@ -589,6 +589,9 @@ gibber_oob_file_transfer_send (GibberFileTransfer *ft,
   g_io_channel_ref (src);
   g_signal_connect (self->priv->msg, "wrote-chunk",
       G_CALLBACK (http_server_wrote_chunk_cb), self);
+
+  /* The transfer only starts because an initial chunk has been sent, so call
+   * the callback.*/
   http_server_wrote_chunk_cb (self->priv->msg, self);
 }
 
