@@ -746,7 +746,7 @@ escape_filename (const gchar *unescaped)
         {
           *q++ = '%'; /* means hex coming */
           *q++ = hex[c >> 4];
-          *q++ = hex[c & 15];
+          *q++ = hex[c & 0xff];
         }
       else
         {
