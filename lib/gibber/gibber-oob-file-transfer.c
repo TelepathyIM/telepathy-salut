@@ -349,7 +349,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   GibberFdTransport *transport;
 
   /* local host name */
-  gchar host_name[50];
+  gchar host_name[NI_MAXHOST];
   struct sockaddr name_addr;
   socklen_t name_addr_len = sizeof (name_addr);
 
