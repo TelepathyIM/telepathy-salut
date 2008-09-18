@@ -1192,9 +1192,6 @@ accept_local_socket_connection (GIOChannel *source,
       if (ft->direction == GIBBER_FILE_TRANSFER_DIRECTION_INCOMING)
         gibber_file_transfer_receive (ft, channel);
       else
-        /* FIXME what to do if the chat client connects to the
-         * local socket before receiving the "remote-accepted"
-         * signal? */
         gibber_file_transfer_send (ft, channel);
       g_io_channel_unref (channel);
     }
