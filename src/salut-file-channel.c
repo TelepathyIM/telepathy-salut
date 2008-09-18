@@ -648,6 +648,7 @@ salut_file_channel_finalize (GObject *object)
 
   /* free any data held directly by the object here */
   g_free (self->priv->object_path);
+  g_free (self->priv->filename);
 
   G_OBJECT_CLASS (salut_file_channel_parent_class)->finalize (object);
 }
@@ -846,7 +847,7 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
 
   self->priv->ft = ft;
 
-  self->priv->filename = ft->filename;
+  self->priv->filename = g_strdup (ft->filename);
   self->priv->size = ft->size;
 }
 
