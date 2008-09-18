@@ -1143,7 +1143,7 @@ get_socket_channel (SalutFileChannel *self)
       return NULL;
     }
 
-  if (listen (fd, 5) < 0)
+  if (listen (fd, 1) < 0)
     {
       DEBUG ("listen failed");
       close (fd);
