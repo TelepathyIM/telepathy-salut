@@ -79,7 +79,7 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
           sys.stdout = colourer.fh
 
         if error is None:
-          reactor.stop()
+          reactor.callLater(0, reactor.stop)
         else:
           # please ignore the POSIX behind the curtain
           os._exit(1)
