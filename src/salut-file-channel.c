@@ -62,7 +62,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
                            file_transfer_iface_init);
 );
 
-#define G_STR_EMPTY(x) ((x) == NULL || (x)[0] == '\0')
+#define CHECK_STR_EMPTY(x) ((x) == NULL || (x)[0] == '\0')
 
 #define SALUT_UNDEFINED_FILE_SIZE G_MAXUINT64
 
@@ -987,7 +987,7 @@ salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
       return;
     }
 
-  if (G_STR_EMPTY (channel->priv->content_type))
+  if (CHECK_STR_EMPTY (channel->priv->content_type))
     {
       DEBUG ("ContentType property not set");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
@@ -996,7 +996,7 @@ salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
       return;
     }
 
-  if (G_STR_EMPTY (channel->priv->filename))
+  if (CHECK_STR_EMPTY (channel->priv->filename))
     {
       DEBUG ("Filename property not set");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
