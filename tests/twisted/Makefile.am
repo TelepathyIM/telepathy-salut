@@ -5,7 +5,9 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
-	avahi/test-text-channel.py \
+	avahi/test-text-channel.py
+
+TWISTED_AVAHI_OLPC_TESTS = \
 	avahi/test-olpc-activity-announcements.py
 
 TESTS =
@@ -15,6 +17,10 @@ TESTS_ENVIRONMENT = \
 
 if WANT_TWISTED_TESTS
   TWISTED_TESTS += $(TWISTED_BASIC_TESTS)
+endif
+
+if ENABLE_OLPC
+  TWISTED_AVAHI_TESTS += $(TWISTED_AVAHI_OLPC_TESTS)
 endif
 
 if WANT_TWISTED_AVAHI_TESTS
