@@ -146,8 +146,7 @@ salut_file_channel_init (SalutFileChannel *obj)
 }
 
 static void salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
-                                          SalutFileTransferState state,
-                                          SalutFileTransferStateChangeReason reason);
+    SalutFileTransferState state, SalutFileTransferStateChangeReason reason);
 
 static void
 salut_file_channel_get_property (GObject    *object,
@@ -329,7 +328,8 @@ salut_file_channel_constructor (GType type, guint n_props,
   dbus_g_connection_register_g_object (bus, self->priv->object_path, obj);
 
   /* Initialise the available socket types hash table */
-  self->priv->available_socket_types = g_hash_table_new (g_int_hash, g_int_equal);
+  self->priv->available_socket_types = g_hash_table_new (g_int_hash,
+      g_int_equal);
 
   self->priv->last_transferred_bytes_emitted = 0;
 
@@ -479,7 +479,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CONTENT_TYPE, param_spec);
+  g_object_class_install_property (object_class, PROP_CONTENT_TYPE,
+      param_spec);
 
   param_spec = g_param_spec_string (
       "filename",
@@ -525,7 +526,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CONTENT_HASH_TYPE, param_spec);
+  g_object_class_install_property (object_class, PROP_CONTENT_HASH_TYPE,
+      param_spec);
 
   param_spec = g_param_spec_string (
       "content-hash",
@@ -539,7 +541,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CONTENT_HASH, param_spec);
+  g_object_class_install_property (object_class, PROP_CONTENT_HASH,
+      param_spec);
 
   param_spec = g_param_spec_string (
       "description",
@@ -563,7 +566,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_AVAILABLE_SOCKET_TYPES, param_spec);
+  g_object_class_install_property (object_class, PROP_AVAILABLE_SOCKET_TYPES,
+      param_spec);
 
   param_spec = g_param_spec_uint64 (
       "transferred-bytes",
@@ -575,7 +579,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_TRANSFERRED_BYTES, param_spec);
+  g_object_class_install_property (object_class, PROP_TRANSFERRED_BYTES,
+      param_spec);
 
   param_spec = g_param_spec_uint64 (
       "initial-offset",
@@ -587,7 +592,8 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INITIAL_OFFSET, param_spec);
+  g_object_class_install_property (object_class, PROP_INITIAL_OFFSET,
+      param_spec);
 
   salut_file_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
@@ -711,7 +717,8 @@ static void
 salut_file_channel_get_interfaces (TpSvcChannel *iface,
                                    DBusGMethodInvocation *context)
 {
-  tp_svc_channel_return_from_get_interfaces (context, salut_file_channel_interfaces);
+  tp_svc_channel_return_from_get_interfaces (context,
+      salut_file_channel_interfaces);
 }
 
 static void
@@ -777,7 +784,8 @@ remote_accepted_cb (GibberFileTransfer *ft,
 }
 
 static gboolean setup_local_socket (SalutFileChannel *self);
-static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel *self);
+static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count,
+    SalutFileChannel *self);
 
 static void
 send_file_offer (SalutFileChannel *self)
@@ -796,7 +804,8 @@ send_file_offer (SalutFileChannel *self)
 
   self->priv->ft = ft;
 
-  g_signal_connect (ft, "transferred-chunk", G_CALLBACK (ft_transferred_chunk_cb), self);
+  g_signal_connect (ft, "transferred-chunk",
+      G_CALLBACK (ft_transferred_chunk_cb), self);
 
   ft->size = self->priv->size;
 
@@ -814,7 +823,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   channel->priv->xmpp_connection = g_object_ref (connection);
   salut_xmpp_connection_manager_take_connection (mgr, connection);
   g_signal_handlers_disconnect_by_func (mgr,
-                                        xmpp_connection_manager_new_connection_cb, user_data);
+      xmpp_connection_manager_new_connection_cb, user_data);
   send_file_offer (channel);
 }
 
@@ -825,7 +834,8 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
 {
   GibberFileTransfer *ft;
 
-  salut_xmpp_connection_manager_take_connection (self->priv->xmpp_connection_manager , conn);
+  salut_xmpp_connection_manager_take_connection (
+      self->priv->xmpp_connection_manager , conn);
   ft = gibber_file_transfer_new_from_stanza (stanza, conn);
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
 
@@ -850,7 +860,9 @@ salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
 }
 
 static void
-ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count, SalutFileChannel *self)
+ft_transferred_chunk_cb (GibberFileTransfer *ft,
+                         guint64 count,
+                         SalutFileChannel *self)
 {
   SalutSvcChannelTypeFile *iface = SALUT_SVC_CHANNEL_TYPE_FILE (self);
   GTimeVal timeval;
@@ -914,7 +926,8 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
     }
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
-  g_signal_connect (ft, "transferred-chunk", G_CALLBACK (ft_transferred_chunk_cb), self);
+  g_signal_connect (ft, "transferred-chunk",
+      G_CALLBACK (ft_transferred_chunk_cb), self);
   g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
 
   setup_local_socket (self);
@@ -1003,15 +1016,18 @@ salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
       channel->priv->xmpp_connection_manager, channel->priv->contact,
       &connection, &error);
 
-  if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+  if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
       channel->priv->xmpp_connection = connection;
       send_file_offer (channel);
     }
-  else if (request_result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
+  else if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
     {
-      g_signal_connect (channel->priv->xmpp_connection_manager, "new-connection",
-                        G_CALLBACK (xmpp_connection_manager_new_connection_cb), channel);
+      g_signal_connect (channel->priv->xmpp_connection_manager,
+          "new-connection",
+          G_CALLBACK (xmpp_connection_manager_new_connection_cb), channel);
     }
   else
     {
