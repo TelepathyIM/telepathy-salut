@@ -572,7 +572,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       0,
       G_MAXUINT64,
       0,
-      G_PARAM_READWRITE |
+      G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TRANSFERRED_BYTES, param_spec);
