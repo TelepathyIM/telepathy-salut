@@ -197,6 +197,7 @@ class BaseEventQueue:
 
     Implement the wait() method to have something that works.
     """
+    hooks = []
 
     def __init__(self, timeout=None):
         self.verbose = False
@@ -209,6 +210,13 @@ class BaseEventQueue:
     def log(self, s):
         if self.verbose:
             print s
+
+    def hook(self, func, type, **kw):
+        self.hooks.append( (EventPattern(type, **kw), func))
+
+    def check_hooks(self, event):
+        map (lambda x: x[1](self, event),
+            filter (lambda x: x[0].match(event), self.hooks))
 
     def expect(self, type, **kw):
         pattern = EventPattern(type, **kw)
@@ -281,7 +289,9 @@ class IteratingEventQueue(BaseEventQueue):
 
         if self.events:
             delayed_call.cancel()
-            return self.events.pop(0)
+            e = self.events.pop(0)
+            self.check_hooks(e)
+            return e
         else:
             raise TimeoutError
 
@@ -400,7 +410,9 @@ def make_connection(bus, event_func, name, proto, params):
             (name, tp_name_prefix + '.Connection.Interface.' + name)
             for name in ['Aliasing', 'Avatars', 'Capabilities', 'Contacts',
               'Presence']] +
-        [('Peer', 'org.freedesktop.DBus.Peer')]))
+        [  ('ActivityProperties', 'org.laptop.Telepathy.ActivityProperties'),
+           ('BuddyInfo', 'org.laptop.Telepathy.BuddyInfo'),
+           ('Peer', 'org.freedesktop.DBus.Peer')]))
 
     bus.add_signal_receiver(
         lambda *args, **kw:

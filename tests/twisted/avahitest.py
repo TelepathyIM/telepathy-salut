@@ -111,12 +111,36 @@ class AvahiListener:
             avahi.DBUS_INTERFACE_SERVICE_BROWSER)
 
         browser.connect_to_signal('ItemNew', self._service_added_cb)
-        browser.connect_to_signal('ItemRemoved', self._service_removed_cb)
+        browser.connect_to_signal('ItemRemove', self._service_removed_cb)
 
         self.browsers.append(browser)
+        return self
+
+class AvahiRecordAnnouncer:
+    def __init__(self, name, clazz, type, data):
+        self.name = name
+        self.clazz = clazz
+        self.type = type
+        self.data = data
+
+        self.bus = dbus.SystemBus()
+        self.server = dbus.Interface(self.bus.get_object(avahi.DBUS_NAME,
+            avahi.DBUS_PATH_SERVER), avahi.DBUS_INTERFACE_SERVER)
+
+        entry_path = self.server.EntryGroupNew()
+        entry_obj = self.bus.get_object(avahi.DBUS_NAME, entry_path)
+        entry = dbus.Interface(entry_obj,
+            avahi.DBUS_INTERFACE_ENTRY_GROUP)
+
+        entry.AddRecord(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+            dbus.UInt32(0), name, clazz, type, 120, data)
+
+        entry.Commit()
+
+        self.entry = entry
 
 class AvahiAnnouncer:
-    def __init__(self, name, type, port, txt):
+    def __init__(self, name, type, port, txt, hostname = get_host_name_fqdn()):
         self.name = name
         self.type = type
         self.port = port
@@ -132,7 +156,7 @@ class AvahiAnnouncer:
             avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
         entry.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
-            dbus.UInt32(0), name, type, get_domain_name(), get_host_name_fqdn(),
+            dbus.UInt32(0), name, type, get_domain_name(), hostname,
             port, avahi.dict_to_txt_array(txt))
         entry.Commit()
 
@@ -142,13 +166,13 @@ class AvahiAnnouncer:
       self.txt.update(txt)
 
       self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
-        dbus.UInt32(0), self.name, self.type, get_domain_name(), 
+        dbus.UInt32(0), self.name, self.type, get_domain_name(),
         avahi.dict_to_txt_array(self.txt))
 
     def set(self, txt):
       self.txt = txt
       self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
-        dbus.UInt32(0), self.name, self.type, get_domain_name(), 
+        dbus.UInt32(0), self.name, self.type, get_domain_name(),
         avahi.dict_to_txt_array(self.txt))
 
 
