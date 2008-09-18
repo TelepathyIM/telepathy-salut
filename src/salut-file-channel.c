@@ -1169,13 +1169,13 @@ accept_local_socket_connection (GIOChannel *source,
   socklen_t addrlen;
   GIOChannel *channel;
 
+  ft = SALUT_FILE_CHANNEL (user_data)->priv->ft;
+
+  g_assert (ft != NULL);
+
   if (condition & G_IO_IN)
     {
       DEBUG ("Client connected to local socket");
-
-      ft = ((SalutFileChannel *) user_data)->priv->ft;
-
-      g_assert (ft != NULL);
 
       addrlen = sizeof (addr);
       new_fd = accept (g_io_channel_unix_get_fd (source),
