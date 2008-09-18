@@ -241,8 +241,7 @@ salut_file_channel_set_property (GObject *object,
         self->priv->handle = g_value_get_uint (value);
         break;
       case PROP_CONTACT:
-        self->priv->contact = g_value_get_object (value);
-        g_object_ref (self->priv->contact);
+        self->priv->contact = g_value_dup_object (value);
         break;
       case PROP_CONNECTION:
         self->priv->connection = g_value_get_object (value);
@@ -258,8 +257,7 @@ salut_file_channel_set_property (GObject *object,
                          SALUT_IFACE_CHANNEL_TYPE_FILE));
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
-        self->priv->xmpp_connection_manager = g_value_get_object (value);
-        g_object_ref (self->priv->xmpp_connection_manager);
+        self->priv->xmpp_connection_manager = g_value_dup_object (value);
         break;
       case PROP_STATE:
         salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (object),
