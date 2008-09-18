@@ -560,11 +560,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       "SalutSupportedSocketMap available-socket-types",
       "Available socket types",
       dbus_g_type_get_map ("GHashTable", G_TYPE_UINT, DBUS_TYPE_G_UINT_ARRAY),
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
-      G_PARAM_CONSTRUCT |
-      G_PARAM_READWRITE |
+      G_PARAM_READABLE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_AVAILABLE_SOCKET_TYPES, param_spec);
