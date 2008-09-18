@@ -35,7 +35,8 @@
 #include "gibber-debug.h"
 
 
-G_DEFINE_TYPE(GibberOobFileTransfer, gibber_oob_file_transfer, GIBBER_TYPE_FILE_TRANSFER)
+G_DEFINE_TYPE(GibberOobFileTransfer, gibber_oob_file_transfer,
+    GIBBER_TYPE_FILE_TRANSFER)
 
 /* private structure */
 struct _GibberOobFileTransferPrivate
@@ -77,7 +78,8 @@ static void gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
     GibberXmppStanza *stanza);
 
 static void
-gibber_oob_file_transfer_class_init (GibberOobFileTransferClass *gibber_oob_file_transfer_class)
+gibber_oob_file_transfer_class_init (
+    GibberOobFileTransferClass *gibber_oob_file_transfer_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (gibber_oob_file_transfer_class);
   GibberFileTransferClass *ft_class =
@@ -567,7 +569,8 @@ http_server_wrote_chunk_cb (SoupMessage *msg,
 {
   GibberOobFileTransfer *self = user_data;
 
-  DEBUG("Chunk written, adding a watch to get more input (%s)", self->priv->cancelled ? "cancelled" : "not cancelled");
+  DEBUG("Chunk written, adding a watch to get more input (%s)",
+      self->priv->cancelled ? "cancelled" : "not cancelled");
   if (self->priv->channel && !self->priv->cancelled)
     {
       g_io_add_watch (self->priv->channel, G_IO_IN | G_IO_HUP,
