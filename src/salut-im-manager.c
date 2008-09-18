@@ -157,8 +157,8 @@ salut_im_manager_get_property (GObject *object,
                                GValue *value,
                                GParamSpec *pspec)
 {
-  SalutImManager *fac = SALUT_IM_MANAGER (object);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (fac);
+  SalutImManager *self = SALUT_IM_MANAGER (object);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
 
   switch (property_id)
     {
@@ -183,8 +183,8 @@ salut_im_manager_set_property (GObject *object,
                                const GValue *value,
                                GParamSpec *pspec)
 {
-  SalutImManager *fac = SALUT_IM_MANAGER (object);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (fac);
+  SalutImManager *self = SALUT_IM_MANAGER (object);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
 
   switch (property_id)
     {
@@ -533,15 +533,11 @@ salut_im_manager_new (SalutConnection *connection,
                       SalutContactManager *contact_manager,
                       SalutXmppConnectionManager *xmpp_connection_manager)
 {
-  SalutImManager *ret;
-
-  ret = g_object_new (SALUT_TYPE_IM_MANAGER,
+  return = g_object_new (SALUT_TYPE_IM_MANAGER,
       "connection", connection,
       "contact-manager", contact_manager,
       "xmpp-connection-manager", xmpp_connection_manager,
       NULL);
-
-  return ret;
 }
 
 SalutImChannel *
