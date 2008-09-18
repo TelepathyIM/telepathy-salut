@@ -837,6 +837,9 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
   salut_xmpp_connection_manager_take_connection (
       self->priv->xmpp_connection_manager , conn);
   ft = gibber_file_transfer_new_from_stanza (stanza, conn);
+
+  g_return_if_fail (ft);
+
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
 
   DEBUG ("Received file offer with id '%s'", ft->id);
