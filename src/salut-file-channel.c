@@ -66,17 +66,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
 
 #define SALUT_UNDEFINED_FILE_SIZE G_MAXUINT64
 
-/* signal enum */
-/*
-enum
-{
-    RECEIVED_STANZA,
-    LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
-*/
-
 static const char *salut_file_channel_interfaces[] = { NULL };
 
 /* properties */
