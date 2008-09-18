@@ -47,6 +47,15 @@ G_DEFINE_TYPE_WITH_CODE (SalutImManager, salut_im_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
       salut_im_manager_factory_iface_init));
 
+/* properties */
+enum
+{
+  PROP_CONNECTION = 1,
+  PROP_CONTACT_MANAGER,
+  PROP_XMPP_CONNECTION_MANAGER,
+  LAST_PROPERTY
+};
+
 /* private structure */
 typedef struct _SalutImManagerPrivate SalutImManagerPrivate;
 
@@ -143,15 +152,135 @@ static void salut_im_manager_dispose (GObject *object);
 static void salut_im_manager_finalize (GObject *object);
 
 static void
+salut_im_manager_get_property (GObject *object,
+                               guint property_id,
+                               GValue *value,
+                               GParamSpec *pspec)
+{
+  SalutImManager *fac = SALUT_IM_MANAGER (object);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (fac);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        g_value_set_object (value, priv->connection);
+        break;
+      case PROP_CONTACT_MANAGER:
+        g_value_set_object (value, priv->contact_manager);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+salut_im_manager_set_property (GObject *object,
+                               guint property_id,
+                               const GValue *value,
+                               GParamSpec *pspec)
+{
+  SalutImManager *fac = SALUT_IM_MANAGER (object);
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (fac);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        priv->connection = g_value_get_object (value);
+        break;
+      case PROP_CONTACT_MANAGER:
+        priv->contact_manager = g_value_get_object (value);
+        g_object_ref (priv->contact_manager);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static GObject *
+salut_im_manager_constructor (GType type,
+                              guint n_props,
+                              GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutImManager *self;
+  SalutImManagerPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_im_manager_parent_class)->
+           constructor (type, n_props, props);
+
+  self = SALUT_IM_MANAGER (obj);
+  priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
+
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      message_stanza_filter, message_stanza_callback, self);
+
+  return obj;
+}
+
+static void
 salut_im_manager_class_init (SalutImManagerClass *salut_im_manager_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_im_manager_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (salut_im_manager_class,
       sizeof (SalutImManagerPrivate));
 
+  object_class->constructor = salut_im_manager_constructor;
   object_class->dispose = salut_im_manager_dispose;
   object_class->finalize = salut_im_manager_finalize;
+  object_class->get_property = salut_im_manager_get_property;
+  object_class->set_property = salut_im_manager_set_property;
+
+  param_spec = g_param_spec_object (
+      "connection",
+      "SalutConnection object",
+      "Salut connection object that owns this text channel factory object.",
+      SALUT_TYPE_CONNECTION,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+  param_spec = g_param_spec_object (
+      "contact-manager",
+      "SalutContactManager object",
+      "Salut Contact Manager associated with the Salut Connection of this "
+      "manager",
+      SALUT_TYPE_CONTACT_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "Salut Xmpp Connection Manager associated with the Salut Connection "
+      "of this manager",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
+      param_spec);
 }
 
 void
@@ -404,22 +533,13 @@ salut_im_manager_new (SalutConnection *connection,
                       SalutContactManager *contact_manager,
                       SalutXmppConnectionManager *xmpp_connection_manager)
 {
-  SalutImManager *ret = NULL;
-  SalutImManagerPrivate *priv;
+  SalutImManager *ret;
 
-  ret = g_object_new (SALUT_TYPE_IM_MANAGER, NULL);
-  priv = SALUT_IM_MANAGER_GET_PRIVATE (ret);
-
-  priv->contact_manager = contact_manager;
-  g_object_ref (contact_manager);
-  priv->xmpp_connection_manager = xmpp_connection_manager;
-  g_object_ref (xmpp_connection_manager);
-
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      message_stanza_filter, message_stanza_callback, ret);
-
-  priv->connection = connection;
+  ret = g_object_new (SALUT_TYPE_IM_MANAGER,
+      "connection", connection,
+      "contact-manager", contact_manager,
+      "xmpp-connection-manager", xmpp_connection_manager,
+      NULL);
 
   return ret;
 }
