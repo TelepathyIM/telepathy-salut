@@ -166,6 +166,7 @@ salut_contact_set_property (GObject *object,
     {
       case PROP_CONNECTION:
         self->connection = g_value_get_object (value);
+        g_object_ref (self->connection);
         break;
       case PROP_NAME:
         self->name = g_value_dup_string (value);
@@ -293,6 +294,12 @@ salut_contact_dispose (GObject *object)
 
   if (self->handle != 0)
     tp_handle_unref (contact_repo, self->handle);
+
+  if (self->connection != NULL)
+    {
+      g_object_unref (self->connection);
+      self->connection = NULL;
+    }
 
   if (G_OBJECT_CLASS (salut_contact_parent_class)->dispose)
     G_OBJECT_CLASS (salut_contact_parent_class)->dispose (object);
