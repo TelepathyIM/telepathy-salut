@@ -112,8 +112,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_REQUESTS,
-       tp_base_connection_requests_iface_init);
 #ifdef ENABLE_OLPC
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
@@ -633,8 +631,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   salut_connection_class->properties_mixin.interfaces = NULL;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
-
-  tp_base_connection_register_requests_dbus_properties (object_class);
 
   tp_presence_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, presence_mixin),
