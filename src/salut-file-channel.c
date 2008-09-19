@@ -939,7 +939,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
       DEBUG ("Could not set up local socket");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Could not set up local socket");
-      dbus_g_method_return_error (context);
+      dbus_g_method_return_error (context, error);
     }
 
   DEBUG ("local socket %s", self->priv->socket_path);
@@ -1053,7 +1053,7 @@ salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
       DEBUG ("Could not set up local socket");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Could not set up local socket");
-      dbus_g_method_return_error (context);
+      dbus_g_method_return_error (context, error);
     }
 
   g_value_init (&out_address, G_TYPE_STRING);
