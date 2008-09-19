@@ -1083,25 +1083,26 @@ file_transfer_iface_init (gpointer g_iface,
 static const gchar *
 get_local_unix_socket_path (SalutFileChannel *self)
 {
-  gchar *path;
-  gint fd;
-  gchar *tmp_path = NULL;
+  gchar *path = NULL;
+  gint32 random;
+  gchar *random_str;
+  struct stat buf;
 
-  while (tmp_path == NULL)
+  while (TRUE)
     {
-      fd = g_file_open_tmp ("tp-ft-XXXXXX", &tmp_path, NULL);
-      close (fd);
-      g_unlink (tmp_path);
-      if (g_mkdir (tmp_path, 0700) < 0)
-        {
-          g_free (tmp_path);
-          tmp_path = NULL;
-        }
+      random = g_random_int_range (0, G_MAXINT32);
+      random_str = g_strdup_printf ("tp-ft-%i", random);
+      path = g_build_filename (g_get_tmp_dir (), random_str, NULL);
+      g_free (random_str);
+
+      if (g_stat (path, &buf) != 0)
+        break;
+
+      g_free (path);
     }
 
-  /* TODO: perhaps this ought to be more random */
-  path = g_build_filename (tmp_path, "tp-ft", NULL);
-  g_free (tmp_path);
+  if (self->priv->socket_path)
+    g_free (self->priv->socket_path);
 
   self->priv->socket_path = path;
 
