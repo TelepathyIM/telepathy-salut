@@ -165,8 +165,7 @@ salut_contact_set_property (GObject *object,
   switch (property_id)
     {
       case PROP_CONNECTION:
-        self->connection = g_value_get_object (value);
-        g_object_ref (self->connection);
+        self->connection = g_value_dup_object (value);
         break;
       case PROP_NAME:
         self->name = g_value_dup_string (value);
