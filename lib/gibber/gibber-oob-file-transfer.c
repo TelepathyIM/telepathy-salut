@@ -211,7 +211,8 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
 
   size = gibber_xmpp_node_get_attribute (url_node, "size");
   if (size != NULL)
-    GIBBER_FILE_TRANSFER (self)->size = g_ascii_strtoull (size, NULL, 0);
+    gibber_file_transfer_set_size (GIBBER_FILE_TRANSFER (self),
+      g_ascii_strtoull (size, NULL, 0));
 
   self->priv->url = url;
 
@@ -259,6 +260,7 @@ http_client_finished_chunks_cb (SoupMessage *msg,
   GibberOobFileTransfer *self = user_data;
   GibberXmppStanza *stanza;
   GError *error = NULL;
+  guint64 size;
 
   /* disconnect from the "got_chunk" signal */
   g_signal_handlers_disconnect_by_func (msg, http_client_chunk_cb, user_data);
@@ -266,11 +268,13 @@ http_client_finished_chunks_cb (SoupMessage *msg,
   g_io_channel_unref (self->priv->channel);
   self->priv->channel = NULL;
 
+  size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
+
   /* Is the transfer actually incomplete? */
-  if (GIBBER_FILE_TRANSFER (self)->size > self->priv->transferred_bytes)
+  if (size > self->priv->transferred_bytes)
     {
       DEBUG ("File transfer incomplete (size is %llu and only got %llu)",
-          GIBBER_FILE_TRANSFER (self)->size, self->priv->transferred_bytes);
+          size, self->priv->transferred_bytes);
       g_signal_emit_by_name (self, "canceled");
       return;
     }
@@ -367,6 +371,8 @@ create_transfer_offer (GibberOobFileTransfer *self,
   gchar *url;
   gchar *served_name;
 
+  guint64 size;
+
   g_object_get (GIBBER_FILE_TRANSFER (self), "connection", &connection, NULL);
   transport = GIBBER_FD_TRANSPORT (connection->transport);
   if (transport == NULL)
@@ -403,11 +409,14 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   url_node = gibber_xmpp_node_add_child_with_content (query_node, "url", url);
   gibber_xmpp_node_set_attribute (url_node, "type", "file");
+
+  size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
+
   /* FIXME 0 could be a valid size */
-  if (GIBBER_FILE_TRANSFER (self)->size > 0)
+  if (size > 0)
     {
       gchar *size_str = g_strdup_printf ("%" G_GUINT64_FORMAT,
-          GIBBER_FILE_TRANSFER (self)->size);
+          size);
       gibber_xmpp_node_set_attribute (url_node, "size", size_str);
       g_free (size_str);
     }

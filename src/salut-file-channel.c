@@ -808,7 +808,7 @@ send_file_offer (SalutFileChannel *self)
   g_signal_connect (ft, "transferred-chunk",
       G_CALLBACK (ft_transferred_chunk_cb), self);
 
-  ft->size = self->priv->size;
+  gibber_file_transfer_set_size (ft, self->priv->size);
 
   gibber_file_transfer_offer (ft);
 }
@@ -848,7 +848,7 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
   self->priv->ft = ft;
 
   self->priv->filename = g_strdup (ft->filename);
-  self->priv->size = ft->size;
+  self->priv->size = gibber_file_transfer_get_size (ft);
 }
 
 static void

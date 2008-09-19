@@ -79,8 +79,6 @@ struct _GibberFileTransfer
   gchar *filename;
 
   GibberFileTransferDirection direction;
-
-  guint64 size;
 };
 
 GType gibber_file_transfer_get_type(void);
@@ -112,7 +110,6 @@ void gibber_file_transfer_send (GibberFileTransfer *self, GIOChannel *src);
 void gibber_file_transfer_receive (GibberFileTransfer *self, GIOChannel *dest);
 void gibber_file_transfer_cancel (GibberFileTransfer *self, guint error_code);
 
-
 /* these functions should only be used by backends */
 /* FIXME move to a private header if gibber becomes a public library */
 
@@ -121,6 +118,8 @@ gboolean gibber_file_transfer_send_stanza (GibberFileTransfer *self,
 
 void gibber_file_transfer_emit_error (GibberFileTransfer *self, GError *error);
 
+void gibber_file_transfer_set_size (GibberFileTransfer *self, guint64 size);
+guint64 gibber_file_transfer_get_size (GibberFileTransfer *self);
 
 G_END_DECLS
 

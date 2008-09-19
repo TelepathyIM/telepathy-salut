@@ -63,6 +63,8 @@ enum
 struct _GibberFileTransferPrivate
 {
   GibberXmppConnection *connection;
+
+  guint64 size;
 };
 
 
@@ -370,6 +372,19 @@ gibber_file_transfer_emit_error (GibberFileTransfer *self,
   DEBUG("File transfer error: %s", error->message);
   g_signal_emit(self, signals[ERROR], 0, error->domain, error->code,
       error->message);
+}
+
+void
+gibber_file_transfer_set_size (GibberFileTransfer *self,
+                               guint64 size)
+{
+  self->priv->size = size;
+}
+
+guint64
+gibber_file_transfer_get_size (GibberFileTransfer *self)
+{
+  return self->priv->size;
 }
 
 gboolean
