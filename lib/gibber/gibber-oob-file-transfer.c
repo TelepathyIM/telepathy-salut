@@ -34,6 +34,10 @@
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
 #include "gibber-debug.h"
 
+enum {
+  NOT_FOUND = 404,
+  NOT_ACCEPTABLE = 406
+};
 
 G_DEFINE_TYPE(GibberOobFileTransfer, gibber_oob_file_transfer,
     GIBBER_TYPE_FILE_TRANSFER)
@@ -604,6 +608,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   GibberXmppNode *query;
   GibberXmppNode *error_node;
   GibberXmppNode *error_desc;
+  gchar *code_string;
 
   if (self->priv->cancelled)
     return;
@@ -619,16 +624,18 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   gibber_xmpp_node_add_child_with_content (query, "url", self->priv->url);
 
   error_node = gibber_xmpp_node_add_child (stanza->node, "error");
+  code_string = g_strdup_printf ("%d", error_code);
+
   switch (error_code)
     {
-      case 404:
-        gibber_xmpp_node_set_attribute (error_node, "code", "404");
+      case NOT_FOUND:
+        gibber_xmpp_node_set_attribute (error_node, "code", code_string);
         gibber_xmpp_node_set_attribute (error_node, "type", "cancel");
         error_desc = gibber_xmpp_node_add_child_ns (error_node, "not-found",
             GIBBER_XMPP_NS_STANZAS);
         break;
-      case 406:
-        gibber_xmpp_node_set_attribute (error_node, "code", "406");
+      case NOT_ACCEPTABLE:
+        gibber_xmpp_node_set_attribute (error_node, "code", code_string);
         gibber_xmpp_node_set_attribute (error_node, "type", "modify");
         error_desc = gibber_xmpp_node_add_child_ns (error_node,
             "not-acceptable", GIBBER_XMPP_NS_STANZAS);
@@ -636,6 +643,8 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
       default:
         g_assert_not_reached ();
     }
+
+  g_free (code_string);
 
   gibber_file_transfer_send_stanza (ft, stanza, NULL);
 
