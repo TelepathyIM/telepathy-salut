@@ -845,6 +845,8 @@ salut_connection_finalize (GObject *object)
   g_free (priv->olpc_color);
 #endif
 
+  tp_contacts_mixin_finalize (G_OBJECT(self));
+
   DEBUG("Finalizing connection");
 
   G_OBJECT_CLASS (salut_connection_parent_class)->finalize (object);
