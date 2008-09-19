@@ -547,8 +547,19 @@ connection_transport_disconnected_cb (GibberLLTransport *transport,
   DEBUG ("Connection transport disconnected");
   data.self = self;
   data.transport = transport;
+
+  /* remove_connection_having_transport() will unref GibberXmppConnection (the
+   * key of the hash) and unref SalutContact (the value of the hash). If
+   * SalutContact is freed at this step, this will unref SalutConnection, and
+   * may unref and free this SalutXmppConnectionManager. We don't want
+   * SalutXmppConnectionManager to be freed while we are still in the foreach
+   * loop. Hence the ref and unref of priv->connection, in order to free
+   * everything after the foreach loop.
+   *  */
+  g_object_ref (priv->connection);
   g_hash_table_foreach_remove (priv->connections,
       remove_connection_having_transport, &data);
+  g_object_unref (priv->connection);
 }
 
 static void
@@ -1300,7 +1311,8 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
            * open it */
           DEBUG ("waiting for remote contact (%s) open the connection",
               contact->name);
-          g_hash_table_insert (priv->outgoing_pending_connections, connection,
+          g_hash_table_insert (priv->outgoing_pending_connections,
+              g_object_ref (connection),
               g_object_ref (contact));
 
           add_outgoing_timeout (self, connection, contact);
