@@ -2,6 +2,7 @@
  * salut-ft-manager.h - Header for SalutFtManager
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
  * Copyright (C) 2006, 2008 Collabora Ltd.
+ *   @author: Jonny Lamb <jonny.lamb@collabora.co.uk>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
