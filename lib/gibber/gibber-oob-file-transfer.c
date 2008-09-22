@@ -757,6 +757,9 @@ escape_filename (const gchar *unescaped)
         unacceptable++;
     }
 
+  if (unacceptable == 0)
+    return g_strdup (unescaped);
+
   result = g_malloc (p - unescaped + unacceptable * 2 + 1);
 
   for (q = result, p = unescaped; *p != '\0'; p++)
