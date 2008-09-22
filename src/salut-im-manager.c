@@ -68,6 +68,7 @@ struct _SalutImManagerPrivate
   SalutXmppConnectionManager *xmpp_connection_manager;
   GHashTable *channels;
   GHashTable *pending_connections;
+  gulong status_changed_id;
   gboolean dispose_has_run;
 };
 
@@ -150,6 +151,40 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   salut_im_channel_received_stanza (chan, stanza);
 }
 
+static void
+salut_im_factory_close_all (SalutImManager *self)
+{
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
+
+  if (priv->channels != NULL)
+    {
+      GHashTable *tmp = priv->channels;
+
+      DEBUG ("closing channels");
+      priv->channels = NULL;
+      g_hash_table_destroy (tmp);
+    }
+
+  if (priv->status_changed_id != 0)
+    {
+      g_signal_handler_disconnect (priv->connection, priv->status_changed_id);
+      priv->status_changed_id = 0;
+    }
+}
+
+static void
+connection_status_changed_cb (SalutConnection *conn,
+                              guint status,
+                              guint reason,
+                              SalutImManager *self)
+{
+  if (status == TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+      salut_im_factory_close_all (self);
+    }
+}
+
+
 static void salut_im_manager_dispose (GObject *object);
 static void salut_im_manager_finalize (GObject *object);
 
@@ -224,6 +259,9 @@ salut_im_manager_constructor (GType type,
       priv->xmpp_connection_manager, NULL,
       message_stanza_filter, message_stanza_callback, self);
 
+  priv->status_changed_id = g_signal_connect (priv->connection,
+      "status-changed", (GCallback) connection_status_changed_cb, self);
+
   return obj;
 }
 
@@ -288,7 +326,6 @@ salut_im_manager_dispose (GObject *object)
 {
   SalutImManager *self = SALUT_IM_MANAGER (object);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
-  GHashTable *t;
 
   if (priv->dispose_has_run)
     return;
@@ -311,12 +348,7 @@ salut_im_manager_dispose (GObject *object)
       priv->xmpp_connection_manager = NULL;
     }
 
-  if (priv->channels)
-    {
-      t = priv->channels;
-      priv->channels = NULL;
-      g_hash_table_destroy (t);
-    }
+  salut_im_factory_close_all (self);
 
   if (priv->pending_connections)
     {
