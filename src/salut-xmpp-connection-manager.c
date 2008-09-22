@@ -102,6 +102,7 @@ struct _SalutXmppConnectionManagerPrivate
    * be allowed to request a new connection with the contact */
   /* GibberXmppConnection * -> SalutContact */
   GHashTable *connections_waiting_close;
+  gulong status_changed_id;
 
   gboolean dispose_has_run;
 };
@@ -850,17 +851,11 @@ disconnect_signals_foreach (gpointer key,
       0, 0, NULL, NULL, self);
 }
 
-void
-salut_xmpp_connection_manager_dispose (GObject *object)
+static void
+salut_xmpp_manager_close_all (SalutXmppConnectionManager *self)
 {
-  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (object);
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
-
-  if (priv->dispose_has_run)
-    return;
-
-  priv->dispose_has_run = TRUE;
 
   /* Disconnect signals from all connections */
   g_hash_table_foreach (priv->connections, disconnect_signals_foreach, self);
@@ -899,12 +894,6 @@ salut_xmpp_connection_manager_dispose (GObject *object)
       priv->outgoing_pending_connections = NULL;
     }
 
-  if (priv->stanza_filters != NULL)
-    {
-      g_hash_table_destroy (priv->stanza_filters);
-      priv->stanza_filters = NULL;
-    }
-
   if (priv->connection_timers != NULL)
     {
       g_hash_table_destroy (priv->connection_timers);
@@ -925,6 +914,65 @@ salut_xmpp_connection_manager_dispose (GObject *object)
 
   free_stanza_filters_list (priv->all_connection_filters);
   priv->all_connection_filters = NULL;
+
+  if (priv->status_changed_id != 0)
+    {
+      g_signal_handler_disconnect (priv->connection, priv->status_changed_id);
+      priv->status_changed_id = 0;
+    }
+}
+
+static void
+connection_status_changed_cb (SalutConnection *conn,
+                              guint status,
+                              guint reason,
+                              SalutXmppConnectionManager *self)
+{
+  if (status == TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+      salut_xmpp_manager_close_all (self);
+    }
+}
+
+static GObject *
+salut_xmpp_connection_manager_constructor (GType type,
+                                           guint n_props,
+                                           GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutXmppConnectionManager *self;
+  SalutXmppConnectionManagerPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_xmpp_connection_manager_parent_class)->
+           constructor (type, n_props, props);
+
+  self = SALUT_XMPP_CONNECTION_MANAGER (obj);
+  priv = SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  priv->status_changed_id = g_signal_connect (priv->connection,
+      "status-changed", (GCallback) connection_status_changed_cb, self);
+
+  return obj;
+}
+
+void
+salut_xmpp_connection_manager_dispose (GObject *object)
+{
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (object);
+  SalutXmppConnectionManagerPrivate *priv =
+    SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+
+  if (priv->dispose_has_run)
+    return;
+
+  priv->dispose_has_run = TRUE;
+
+  if (priv->stanza_filters != NULL)
+    {
+      g_hash_table_destroy (priv->stanza_filters);
+      priv->stanza_filters = NULL;
+    }
+
 
   if (G_OBJECT_CLASS (salut_xmpp_connection_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_xmpp_connection_manager_parent_class)->dispose (
@@ -991,6 +1039,7 @@ salut_xmpp_connection_manager_class_init (
   g_type_class_add_private (salut_xmpp_connection_manager_class,
       sizeof (SalutXmppConnectionManagerPrivate));
 
+  object_class->constructor = salut_xmpp_connection_manager_constructor;
   object_class->dispose = salut_xmpp_connection_manager_dispose;
 
   object_class->get_property = salut_xmpp_connection_manager_get_property;
