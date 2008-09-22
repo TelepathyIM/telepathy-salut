@@ -430,22 +430,6 @@ def make_connection(bus, event_func, name, proto, params):
         byte_arrays=True
         )
 
-    bus.add_signal_receiver(
-        lambda *args, **kw:
-            event_func(
-                Event('dbus-name-owner-changed',
-                    name=map(unwrap, args)[0],
-                    old_owner=map(unwrap, args)[1],
-                    new_owner=map(unwrap, args)[2])),
-        "NameOwnerChanged",       # signal name
-        "org.freedesktop.DBus", #interface
-        "org.freedesktop.DBus",
-        path_keyword='path',
-        member_keyword='member',
-        interface_keyword='interface',
-        byte_arrays=True
-        )
-
     return conn
 
 def make_channel_proxy(conn, path, iface):

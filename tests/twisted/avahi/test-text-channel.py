@@ -94,13 +94,6 @@ def test(q, bus, conn):
     assert e.args[3] == TEXT_MESSAGE_TYPE_NORMAL
     assert e.args[5] == OUTGOING_MESSAGE
 
-    conn.Disconnect()
-    #q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
-    print "go"
-    e = q.expect('dbus-name-owner-changed',
-            name='org.freedesktop.Telepathy.Connection.salut.local_xmpp.testsuite')
-    print "done"
-
 
 if __name__ == '__main__':
     exec_test(test)
