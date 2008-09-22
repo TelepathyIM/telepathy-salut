@@ -744,7 +744,8 @@ gibber_resolver_gai_error_to_g_error (int error)
       code = GIBBER_RESOLVER_ERROR_UNKNOWN;
   }
 
-  return g_error_new (GIBBER_RESOLVER_ERROR, code, gai_strerror (error));
+  return g_error_new_literal (GIBBER_RESOLVER_ERROR, code,
+      gai_strerror (error));
 }
 
 GError *
@@ -775,7 +776,7 @@ gibber_resolver_h_error_to_g_error (int error)
       message = "Unknown error";
   }
 
-  return g_error_new (GIBBER_RESOLVER_ERROR, code, message);
+  return g_error_new_literal (GIBBER_RESOLVER_ERROR, code, message);
 }
 
 

@@ -569,7 +569,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   if (connection == NULL)
     {
       DEBUG ("get connection failed: %s", connection_error->message);
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+      *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           connection_error->message);
       g_error_free (connection_error);
       return NULL;
@@ -579,7 +579,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   if (!gibber_muc_connection_connect (connection, &connection_error))
     {
       DEBUG ("Connect failed: %s", connection_error->message);
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+      *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           connection_error->message);
       g_error_free (connection_error);
       g_object_unref (connection);

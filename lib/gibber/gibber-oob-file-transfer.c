@@ -290,8 +290,8 @@ http_client_finished_chunks_cb (SoupMessage *msg,
         reason_phrase = msg->reason_phrase;
       else
         reason_phrase = "Unknown HTTP error";
-      g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
-          GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND, reason_phrase);
+      error = g_error_new_literal (GIBBER_FILE_TRANSFER_ERROR,
+        GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND, reason_phrase);
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
       return;
     }
