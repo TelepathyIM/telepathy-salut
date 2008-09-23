@@ -238,6 +238,46 @@ salut_direct_bytestream_manager_new (SalutConnection *conn)
       NULL);
 }
 
+static gboolean
+check_bytestream_direct_peer_addr (GibberBytestreamDirect *bytestream,
+                                   struct sockaddr_storage *addr,
+                                   socklen_t addrlen,
+                                   gpointer user_data)
+{
+  SalutDirectBytestreamManager *self =
+    SALUT_DIRECT_BYTESTREAM_MANAGER (user_data);
+  SalutDirectBytestreamManagerPrivate *priv =
+    SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+  SalutContactManager *contact_mgr;
+  SalutContact *contact;
+  gchar *peer;
+  gboolean result;
+
+  g_object_get (bytestream, "peer-id", &peer, NULL);
+  g_assert (peer != NULL);
+
+  handle = tp_handle_lookup (contact_repo, peer, NULL, NULL);
+  g_assert (handle != 0);
+  g_free (peer);
+
+  g_object_get (priv->connection, "contact-manager", &contact_mgr, NULL);
+  g_assert (contact_mgr != NULL);
+
+  contact = salut_contact_manager_get_contact (contact_mgr, handle);
+  g_object_unref (contact_mgr);
+  if (contact == NULL)
+    return FALSE;
+
+  result = salut_contact_has_address (contact, addr);
+  g_object_unref (contact);
+
+  return result;
+}
+
+
 /* callback when receiving a connection from the remote CM */
 static gboolean
 listener_io_in_cb (GIOChannel *source,
@@ -258,6 +298,10 @@ listener_io_in_cb (GIOChannel *source,
       "self-id", priv->connection->name,
       "peer-id", data->contact->name,
       NULL);
+
+  gibber_bytestream_direct_set_check_addr_func (
+      GIBBER_BYTESTREAM_DIRECT (bytestream), check_bytestream_direct_peer_addr,
+      data->mgr);
 
   /* call this before accepting the socket, in order to let the opportunity to
    * register a callback for the "new-connection" bytestream's signal. */

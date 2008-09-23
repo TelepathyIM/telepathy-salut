@@ -118,8 +118,19 @@ def test(q, bus, conn):
                       'u': ('uint', '123'),
                      }, params
 
+    # find the right host/IP address because Salut checks it
+    self_handle = conn.GetSelfHandle()
+    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    AvahiListener(q).listen_for_service("_presence._tcp")
+    e = q.expect('service-added', name = self_handle_name,
+        protocol = avahi.PROTO_INET)
+    service = e.service
+    service.resolve()
+    e = q.expect('service-resolved', service = service)
+    host_name = e.host_name
+
     client = ClientCreator(reactor, ClientGreeter)
-    client.connectTCP("localhost", port).addCallback(client_connected_cb)
+    client.connectTCP(host_name, port).addCallback(client_connected_cb)
 
     e = q.expect('client-connected')
     client_transport = e.transport
