@@ -31,6 +31,7 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/exportable-channel.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-generic.h>
 
@@ -43,6 +44,7 @@
 
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
+#include "extensions/extensions.h"
 #include "salut-util.h"
 #include "salut-connection.h"
 #include "salut-contact.h"
@@ -974,15 +976,69 @@ salut_tubes_channel_message_close_received (SalutTubesChannel *self,
     }
 }
 
+static gint
+generate_tube_id (void)
+{
+  return g_random_int_range (0, G_MAXINT);
+}
+
 SalutTubeIface *
 salut_tubes_channel_tube_request (SalutTubesChannel *self,
                                   gpointer request_token,
                                   GHashTable *request_properties,
                                   gboolean require_new)
 {
-  /* FIXME: not implemented yet */
-  g_assert_not_reached ();
-  return NULL;
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  SalutTubeIface *tube;
+  const gchar *channel_type;
+  const gchar *service;
+  GHashTable *parameters = NULL;
+  guint tube_id;
+  TpTubeType type;
+
+  tube_id = generate_tube_id ();
+
+  channel_type = tp_asv_get_string (request_properties,
+            TP_IFACE_CHANNEL ".ChannelType");
+
+  if (! tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      type = TP_TUBE_TYPE_STREAM;
+      service = tp_asv_get_string (request_properties,
+                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+
+    }
+  else if (! tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      type = TP_TUBE_TYPE_DBUS;
+      service = tp_asv_get_string (request_properties,
+                SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+    }
+  else
+    g_assert_not_reached ();
+
+  parameters = tp_asv_get_boxed (request_properties,
+               SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
+               TP_HASH_TYPE_STRING_VARIANT_MAP);
+  if (parameters == NULL)
+    {
+      /* If it is not included in the request, the connection manager MUST
+       * consider the property to be empty. */
+      parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+          (GDestroyNotify) tp_g_value_slice_free);
+    }
+
+  /* if the service property is missing, the requestotron rejects the request
+   */
+  g_assert (service != NULL);
+
+  DEBUG ("Request a tube channel with type='%s' and service='%s'",
+      channel_type, service);
+
+  tube = create_new_tube (self, type, priv->self_handle, service,
+      parameters, tube_id, 0, NULL);
+
+  return tube;
 }
 
 static void
@@ -1477,12 +1533,6 @@ update_tubes_info (SalutTubesChannel *self)
 
   g_object_unref (msg);
   return TRUE;
-}
-
-static gint
-generate_tube_id (void)
-{
-  return g_random_int_range (0, G_MAXINT);
 }
 
 /**
