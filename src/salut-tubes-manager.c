@@ -28,6 +28,14 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
+#include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-iq-helper.h>
+#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/channel-factory-iface.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/gtypes.h>
+#include <telepathy-glib/util.h>
+
 #define DEBUG_FLAG DEBUG_TUBES
 
 #include "debug.h"
@@ -39,12 +47,6 @@
 #include "salut-util.h"
 #include "tube-iface.h"
 
-#include <gibber/gibber-namespaces.h>
-#include <gibber/gibber-iq-helper.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/channel-factory-iface.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/util.h>
 
 static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
     TpHandle handle, TpHandle initiator, gpointer request_token);
