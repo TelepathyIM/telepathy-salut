@@ -27,6 +27,7 @@
 #include <gibber/gibber-iq-helper.h>
 
 #include "salut-muc-channel.h"
+#include "tube-iface.h"
 
 G_BEGIN_DECLS
 
@@ -80,6 +81,10 @@ void salut_tubes_channel_message_received (SalutTubesChannel *self,
 
 void salut_tubes_channel_message_close_received (SalutTubesChannel *self,
     TpHandle initiator_handle, guint tube_id);
+
+SalutTubeIface *salut_tubes_channel_tube_request (SalutTubesChannel *self,
+    gpointer request_token, GHashTable *request_properties,
+    gboolean require_new);
 
 G_END_DECLS
 

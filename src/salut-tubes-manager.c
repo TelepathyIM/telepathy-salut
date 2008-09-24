@@ -37,13 +37,17 @@
 #include "salut-muc-manager.h"
 #include "salut-muc-channel.h"
 #include "salut-util.h"
+#include "tube-iface.h"
+
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-iq-helper.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-factory-iface.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/util.h>
 
 static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
-    TpHandle handle, TpHandle initiator);
+    TpHandle handle, TpHandle initiator, gpointer request_token);
 
 static void tubes_channel_closed_cb (SalutTubesChannel *chan,
     gpointer user_data);
@@ -54,7 +58,7 @@ static void salut_tubes_manager_iface_init (gpointer g_iface,
 G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     salut_tubes_manager,
     G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
         salut_tubes_manager_iface_init));
 
 /* properties */
@@ -71,6 +75,7 @@ typedef struct _SalutTubesManagerPrivate \
 struct _SalutTubesManagerPrivate
 {
   SalutConnection *conn;
+  gulong status_changed_id;
   SalutContactManager *contact_manager;
   SalutXmppConnectionManager *xmpp_connection_manager;
 
@@ -348,7 +353,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   {
     if (chan == NULL)
       {
-        chan = new_tubes_channel (self, initiator_handle, initiator_handle);
+        chan = new_tubes_channel (self, initiator_handle, initiator_handle,
+            NULL);
         tp_channel_factory_iface_emit_new_channel (self,
             (TpChannelIface *) chan, NULL);
       }
@@ -358,6 +364,43 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
 
     g_hash_table_destroy (parameters);
   }
+}
+
+static void
+salut_tubes_manager_close_all (SalutTubesManager *self)
+{
+  SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  GHashTable *tmp;
+
+  DEBUG ("closing 1-1 tubes channels");
+
+  if (priv->status_changed_id != 0)
+    {
+      g_signal_handler_disconnect (priv->conn,
+          priv->status_changed_id);
+      priv->status_changed_id = 0;
+    }
+
+  if (priv->channels != NULL)
+    {
+      tmp = priv->channels;
+      priv->channels = NULL;
+      g_hash_table_destroy (tmp);
+    }
+}
+
+static void
+connection_status_changed_cb (SalutConnection *conn,
+                              guint status,
+                              guint reason,
+                              SalutTubesManager *self)
+{
+  switch (status)
+    {
+    case TP_CONNECTION_STATUS_DISCONNECTED:
+      salut_tubes_manager_close_all (self);
+      break;
+    }
 }
 
 static GObject *
@@ -379,6 +422,9 @@ salut_tubes_manager_constructor (GType type,
       priv->xmpp_connection_manager, NULL,
       iq_tube_request_filter, iq_tube_request_cb, self);
 
+  priv->status_changed_id = g_signal_connect (priv->conn,
+      "status-changed", (GCallback) connection_status_changed_cb, obj);
+
   return obj;
 }
 
@@ -395,8 +441,7 @@ salut_tubes_manager_dispose (GObject *object)
   DEBUG ("dispose called");
   priv->dispose_has_run = TRUE;
 
-  tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
-  g_assert (priv->channels == NULL);
+  salut_tubes_manager_close_all (fac);
 
   salut_xmpp_connection_manager_remove_stanza_filter (
       priv->xmpp_connection_manager, NULL,
@@ -565,13 +610,15 @@ tubes_channel_closed_cb (SalutTubesChannel *chan,
 static SalutTubesChannel *
 new_tubes_channel (SalutTubesManager *fac,
                    TpHandle handle,
-                   TpHandle initiator)
+                   TpHandle initiator,
+                   gpointer request_token)
 {
   SalutTubesManagerPrivate *priv;
   TpBaseConnection *conn;
   SalutTubesChannel *chan;
   char *object_path;
   SalutContact *contact;
+  GSList *request_tokens;
 
   g_assert (SALUT_IS_TUBES_MANAGER (fac));
 
@@ -604,48 +651,22 @@ new_tubes_channel (SalutTubesManager *fac,
   g_object_unref (contact);
   g_free (object_path);
 
+  if (request_token != NULL)
+    request_tokens = g_slist_prepend (NULL, request_token);
+  else
+    request_tokens = NULL;
+
+  tp_channel_manager_emit_new_channel (fac,
+      TP_EXPORTABLE_CHANNEL (chan), request_tokens);
+
+  g_slist_free (request_tokens);
+
   return chan;
-}
-
-static void
-salut_tubes_manager_iface_close_all (TpChannelFactoryIface *iface)
-{
-  SalutTubesManager *fac = SALUT_TUBES_MANAGER (iface);
-  SalutTubesManagerPrivate *priv =
-    SALUT_TUBES_MANAGER_GET_PRIVATE (fac);
-  GHashTable *tmp;
-
-  DEBUG ("closing 1-1 tubes channels");
-
-  if (priv->channels == NULL)
-    return;
-
-  tmp = priv->channels;
-  priv->channels = NULL;
-  g_hash_table_destroy (tmp);
-}
-
-static void
-salut_tubes_manager_iface_connecting (TpChannelFactoryIface *iface)
-{
-  /* nothing to do */
-}
-
-static void
-salut_tubes_manager_iface_connected (TpChannelFactoryIface *iface)
-{
-  /* nothing to do */
-}
-
-static void
-salut_tubes_manager_iface_disconnected (TpChannelFactoryIface *iface)
-{
-  /* nothing to do */
 }
 
 struct _ForeachData
 {
-  TpChannelFunc foreach;
+  TpExportableChannelFunc foreach;
   gpointer user_data;
 };
 
@@ -655,17 +676,17 @@ _foreach_slave (gpointer key,
                 gpointer user_data)
 {
   struct _ForeachData *data = (struct _ForeachData *) user_data;
-  TpChannelIface *chan = TP_CHANNEL_IFACE (value);
+  TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
 
   data->foreach (chan, data->user_data);
 }
 
 static void
-salut_tubes_manager_iface_foreach (TpChannelFactoryIface *iface,
-                                    TpChannelFunc foreach,
-                                    gpointer user_data)
+salut_tubes_manager_foreach_channel (TpChannelManager *manager,
+                                     TpExportableChannelFunc foreach,
+                                     gpointer user_data)
 {
-  SalutTubesManager *fac = SALUT_TUBES_MANAGER (iface);
+  SalutTubesManager *fac = SALUT_TUBES_MANAGER (manager);
   SalutTubesManagerPrivate *priv =
     SALUT_TUBES_MANAGER_GET_PRIVATE (fac);
   struct _ForeachData data;
@@ -676,61 +697,283 @@ salut_tubes_manager_iface_foreach (TpChannelFactoryIface *iface,
   g_hash_table_foreach (priv->channels, _foreach_slave, &data);
 }
 
-static TpChannelFactoryRequestStatus
-salut_tubes_manager_iface_request (TpChannelFactoryIface *iface,
-                                    const gchar *chan_type,
-                                    TpHandleType handle_type,
-                                    guint handle,
-                                    gpointer request,
-                                    TpChannelIface **ret,
-                                    GError **error)
+static const gchar * const tubes_channel_fixed_properties[] = {
+    TP_IFACE_CHANNEL ".ChannelType",
+    TP_IFACE_CHANNEL ".TargetHandleType",
+    NULL
+};
+
+static const gchar * const old_tubes_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    NULL
+};
+static const gchar * const stream_tube_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
+    SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
+    NULL
+};
+static const gchar * const dbus_tube_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
+    SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
+    NULL
+};
+
+static void
+salut_tubes_manager_foreach_channel_class (
+    TpChannelManager *manager,
+    TpChannelManagerChannelClassFunc func,
+    gpointer user_data)
 {
-  SalutTubesManager *fac = SALUT_TUBES_MANAGER (iface);
-  SalutTubesManagerPrivate *priv =
-    SALUT_TUBES_MANAGER_GET_PRIVATE (fac);
-  TpHandleRepoIface *contacts_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
-  SalutTubesChannel *chan;
-  TpChannelFactoryRequestStatus status;
+  GHashTable *table;
+  GValue *value;
 
-  if (tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TUBES))
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
+  /* 1-1 Channel.Type.Tubes */
+  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+      (GDestroyNotify) tp_g_value_slice_free);
 
-  if (handle_type != TP_HANDLE_TYPE_CONTACT)
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+  value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TUBES);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
+      value);
 
-  if (!tp_handle_is_valid (contacts_repo, handle, NULL))
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+  value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+      value);
+
+  func (manager, table, old_tubes_channel_allowed_properties, user_data);
+
+  g_hash_table_destroy (table);
+
+  /* 1-1 Channel.Type.StreamTube */
+  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
+      value);
+
+  value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+      value);
+
+  func (manager, table, stream_tube_channel_allowed_properties, user_data);
+
+  /* 1-1 Channel.Type.DBusTube */
+  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
+      value);
+
+  value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+      value);
+
+  func (manager, table, dbus_tube_channel_allowed_properties, user_data);
+
+  g_hash_table_destroy (table);
+}
+
+static gboolean
+salut_tubes_manager_requestotron (SalutTubesManager *self,
+                                  gpointer request_token,
+                                  GHashTable *request_properties,
+                                  gboolean require_new)
+{
+  SalutTubesManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+      SALUT_TYPE_TUBES_MANAGER, SalutTubesManagerPrivate);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+  GError *error = NULL;
+  const gchar *channel_type;
+  SalutTubesChannel *channel;
+
+  DEBUG ("Called.");
+  if (tp_asv_get_uint32 (request_properties,
+        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+    return FALSE;
+
+  channel_type = tp_asv_get_string (request_properties,
+            TP_IFACE_CHANNEL ".ChannelType");
+
+  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
+      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
+      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    return FALSE;
+
+  if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
+    {
+      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+              tubes_channel_fixed_properties,
+              old_tubes_channel_allowed_properties,
+              &error))
+        goto error;
+    }
+  else if (! tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      const gchar *service;
+
+      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+              tubes_channel_fixed_properties,
+              stream_tube_channel_allowed_properties,
+              &error))
+        goto error;
+
+      /* "Service" is a mandatory, not-fixed property */
+      service = tp_asv_get_string (request_properties,
+                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+      if (service == NULL)
+        {
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+              "Request missed a mandatory property '%s'",
+              SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+          goto error;
+        }
+    }
+  else if (! tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      const gchar *service;
+
+      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+              tubes_channel_fixed_properties,
+              dbus_tube_channel_allowed_properties,
+              &error))
+        goto error;
+
+      /* "ServiceName" is a mandatory, not-fixed property */
+      service = tp_asv_get_string (request_properties,
+                SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+      if (service == NULL)
+        {
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+              "Request missed a mandatory property '%s'",
+              SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+          goto error;
+        }
+    }
+
+  handle = tp_asv_get_uint32 (request_properties,
+      TP_IFACE_CHANNEL ".TargetHandle", NULL);
+
+  if (!tp_handle_is_valid (contact_repo, handle, &error))
+    goto error;
 
   /* Don't support opening a channel to our self handle */
-  if (handle == ((TpBaseConnection *) priv->conn)->self_handle)
+  if (handle == base_conn->self_handle)
     {
-     g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-         "Can't open a channel to your self handle");
-     return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Can't open a channel to your self handle");
+      goto error;
     }
 
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
+  channel = g_hash_table_lookup (priv->channels,
+      GUINT_TO_POINTER (handle));
 
-  status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
-  if (chan == NULL)
+  if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
-      status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-      chan = new_tubes_channel (fac, handle,
-          ((TpBaseConnection *) priv->conn)->self_handle);
-      if (chan == NULL)
+      if (channel == NULL)
         {
-          DEBUG ("Cannot create a tubes channel with handle %u",
-              handle);
-          return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+          channel = new_tubes_channel (self, handle, base_conn->self_handle,
+              request_token);
+          return TRUE;
         }
-      tp_channel_factory_iface_emit_new_channel (fac, (TpChannelIface *) chan,
-          request);
+
+      if (require_new)
+        {
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+              "Already chatting with contact #%u in another channel", handle);
+          DEBUG ("Already chatting with contact #%u in another channel",
+              handle);
+          goto error;
+        }
+
+      tp_channel_manager_emit_request_already_satisfied (self,
+          request_token, TP_EXPORTABLE_CHANNEL (channel));
+      return TRUE;
+    }
+  else
+    {
+      gboolean channel_was_existing = (channel != NULL);
+      SalutTubeIface *new_channel;
+
+      if (channel == NULL)
+        {
+          /* Don't give the request_token to new_tubes_channel() because we
+           * must emit NewChannels with 2 channels together */
+          channel = new_tubes_channel (self, handle, base_conn->self_handle,
+              NULL);
+        }
+      g_assert (channel != NULL);
+
+      new_channel = salut_tubes_channel_tube_request (channel, request_token,
+          request_properties, require_new);
+      if (new_channel != NULL)
+        {
+          GHashTable *channels;
+          GSList *request_tokens;
+
+          channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+              NULL, NULL);
+          if (!channel_was_existing)
+            g_hash_table_insert (channels, channel, NULL);
+
+          if (request_token != NULL)
+            request_tokens = g_slist_prepend (NULL, request_token);
+          else
+            request_tokens = NULL;
+
+          g_hash_table_insert (channels, new_channel, request_tokens);
+          tp_channel_manager_emit_new_channels (self, channels);
+
+          g_hash_table_destroy (channels);
+          g_slist_free (request_tokens);
+        }
+      else
+        {
+          tp_channel_manager_emit_request_already_satisfied (self,
+              request_token, TP_EXPORTABLE_CHANNEL (channel));
+        }
+
+      return TRUE;
     }
 
-  g_assert (chan);
-  *ret = TP_CHANNEL_IFACE (chan);
-  return status;
+error:
+  tp_channel_manager_emit_request_failed (self, request_token,
+      error->domain, error->code, error->message);
+  g_error_free (error);
+  return TRUE;
+}
+
+static gboolean
+salut_tubes_manager_create_channel (TpChannelManager *manager,
+                                    gpointer request_token,
+                                    GHashTable *request_properties)
+{
+  SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
+
+  return salut_tubes_manager_requestotron (self, request_token,
+      request_properties, TRUE);
+}
+
+static gboolean
+salut_tubes_manager_request_channel (TpChannelManager *manager,
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
+{
+  SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
+
+  return salut_tubes_manager_requestotron (self, request_token,
+      request_properties, FALSE);
 }
 
 SalutTubesManager *
@@ -756,12 +999,19 @@ static void
 salut_tubes_manager_iface_init (gpointer g_iface,
                                  gpointer iface_data)
 {
-  TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *) g_iface;
+  TpChannelManagerIface *iface = (TpChannelManagerIface *) g_iface;
 
-  klass->close_all = salut_tubes_manager_iface_close_all;
-  klass->connecting = salut_tubes_manager_iface_connecting;
-  klass->connected = salut_tubes_manager_iface_connected;
-  klass->disconnected = salut_tubes_manager_iface_disconnected;
+  iface->foreach_channel = salut_tubes_manager_foreach_channel;
+  iface->foreach_channel_class = salut_tubes_manager_foreach_channel_class;
+  iface->create_channel = salut_tubes_manager_create_channel;
+  iface->request_channel = salut_tubes_manager_request_channel;
+
+  /* old style code (factory manager)
+  klass->close_all = salut_tubes_manager_close_all;
+  klass->connecting = NULL;
+  klass->connected = NULL;
+  klass->disconnected = NULL;
   klass->foreach = salut_tubes_manager_iface_foreach;
   klass->request = salut_tubes_manager_iface_request;
+   */
 }

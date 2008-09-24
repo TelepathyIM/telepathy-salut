@@ -974,6 +974,17 @@ salut_tubes_channel_message_close_received (SalutTubesChannel *self,
     }
 }
 
+SalutTubeIface *
+salut_tubes_channel_tube_request (SalutTubesChannel *self,
+                                  gpointer request_token,
+                                  GHashTable *request_properties,
+                                  gboolean require_new)
+{
+  /* FIXME: not implemented yet */
+  g_assert_not_reached ();
+  return NULL;
+}
+
 static void
 muc_connection_new_senders_cb (GibberMucConnection *conn,
                                GArray *senders,
