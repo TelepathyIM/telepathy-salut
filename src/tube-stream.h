@@ -61,6 +61,7 @@ GType salut_tube_stream_get_type (void);
                               SalutTubeStreamClass))
 
 SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
+    SalutTubesChannel *tubes_channel,
     SalutXmppConnectionManager *xmpp_connection_manager, TpHandle handle,
     TpHandleType handle_type, TpHandle self_handle, TpHandle initiator,
     const gchar *service, GHashTable *parameters, guint id, guint portnum,

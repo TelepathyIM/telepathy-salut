@@ -20,6 +20,7 @@
 #include "tube-iface.h"
 
 #include "salut-connection.h"
+#include "salut-tubes-channel.h"
 
 #include <glib.h>
 
@@ -96,6 +97,18 @@ salut_tube_iface_base_init (gpointer klass)
           SALUT_TYPE_CONNECTION,
           G_PARAM_CONSTRUCT_ONLY |
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      g_object_interface_install_property (klass, param_spec);
+
+      param_spec = g_param_spec_object (
+          "tubes-channel",
+          "SalutTubesChannel object",
+          "Salut tubes object that implements the old interface.",
+          SALUT_TYPE_TUBES_CHANNEL,
+          G_PARAM_CONSTRUCT_ONLY |
+          G_PARAM_READWRITE |
+          G_PARAM_STATIC_NAME |
+          G_PARAM_STATIC_NICK |
+          G_PARAM_STATIC_BLURB);
       g_object_interface_install_property (klass, param_spec);
 
      param_spec = g_param_spec_uint (

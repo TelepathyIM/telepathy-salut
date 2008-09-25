@@ -70,6 +70,7 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_CONNECTION = 1,
+  PROP_TUBES_CHANNEL,
   PROP_HANDLE,
   PROP_HANDLE_TYPE,
   PROP_SELF_HANDLE,
@@ -92,6 +93,7 @@ typedef struct _SalutTubeDBusPrivate SalutTubeDBusPrivate;
 struct _SalutTubeDBusPrivate
 {
   SalutConnection *conn;
+  SalutTubesChannel *tubes_channel;
   TpHandle handle;
   TpHandleType handle_type;
   TpHandle self_handle;
@@ -534,6 +536,9 @@ salut_tube_dbus_get_property (GObject *object,
       case PROP_CONNECTION:
         g_value_set_object (value, priv->conn);
         break;
+      case PROP_TUBES_CHANNEL:
+        g_value_set_object (value, priv->tubes_channel);
+        break;
       case PROP_HANDLE:
         g_value_set_uint (value, priv->handle);
         break;
@@ -598,6 +603,9 @@ salut_tube_dbus_set_property (GObject *object,
     {
       case PROP_CONNECTION:
         priv->conn = g_value_get_object (value);
+        break;
+      case PROP_TUBES_CHANNEL:
+        priv->tubes_channel = g_value_get_object (value);
         break;
       case PROP_HANDLE:
         priv->handle = g_value_get_uint (value);
@@ -760,6 +768,8 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 
   g_object_class_override_property (object_class, PROP_CONNECTION,
     "connection");
+  g_object_class_override_property (object_class, PROP_TUBES_CHANNEL,
+    "tubes-channel");
   g_object_class_override_property (object_class, PROP_HANDLE,
     "handle");
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
@@ -1074,6 +1084,7 @@ data_received_cb (GibberBytestreamIface *stream,
 
 SalutTubeDBus *
 salut_tube_dbus_new (SalutConnection *conn,
+                     SalutTubesChannel *tubes_channel,
                      TpHandle handle,
                      TpHandleType handle_type,
                      TpHandle self_handle,
@@ -1085,6 +1096,7 @@ salut_tube_dbus_new (SalutConnection *conn,
 {
   SalutTubeDBus *tube = g_object_new (SALUT_TYPE_TUBE_DBUS,
       "connection", conn,
+      "tubes-channel", tubes_channel,
       "handle", handle,
       "handle-type", handle_type,
       "self-handle", self_handle,

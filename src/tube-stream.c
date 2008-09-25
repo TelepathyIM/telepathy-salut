@@ -86,6 +86,7 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_CONNECTION = 1,
+  PROP_TUBES_CHANNEL,
   PROP_HANDLE,
   PROP_HANDLE_TYPE,
   PROP_SELF_HANDLE,
@@ -109,6 +110,7 @@ typedef struct _SalutTubeStreamPrivate SalutTubeStreamPrivate;
 struct _SalutTubeStreamPrivate
 {
   SalutConnection *conn;
+  SalutTubesChannel *tubes_channel;
   TpHandle handle;
   TpHandleType handle_type;
   TpHandle self_handle;
@@ -959,6 +961,9 @@ salut_tube_stream_get_property (GObject *object,
 
   switch (property_id)
     {
+      case PROP_TUBES_CHANNEL:
+        g_value_set_object (value, priv->tubes_channel);
+        break;
       case PROP_CONNECTION:
         g_value_set_object (value, priv->conn);
         break;
@@ -1027,6 +1032,9 @@ salut_tube_stream_set_property (GObject *object,
 
   switch (property_id)
     {
+      case PROP_TUBES_CHANNEL:
+        priv->tubes_channel = g_value_get_object (value);
+        break;
       case PROP_CONNECTION:
         priv->conn = g_value_get_object (value);
         break;
@@ -1249,6 +1257,8 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 
   g_object_class_override_property (object_class, PROP_CONNECTION,
     "connection");
+  g_object_class_override_property (object_class, PROP_TUBES_CHANNEL,
+    "tubes-channel");
   g_object_class_override_property (object_class, PROP_HANDLE,
     "handle");
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
@@ -1416,19 +1426,21 @@ data_received_cb (GibberBytestreamIface *bytestream,
 
 SalutTubeStream *
 salut_tube_stream_new (SalutConnection *conn,
-                        SalutXmppConnectionManager *xmpp_connection_manager,
-                        TpHandle handle,
-                        TpHandleType handle_type,
-                        TpHandle self_handle,
-                        TpHandle initiator,
-                        const gchar *service,
-                        GHashTable *parameters,
-                        guint id,
-                        guint portnum,
-                        GibberXmppStanza *iq_req)
+                       SalutTubesChannel *tubes_channel,
+                       SalutXmppConnectionManager *xmpp_connection_manager,
+                       TpHandle handle,
+                       TpHandleType handle_type,
+                       TpHandle self_handle,
+                       TpHandle initiator,
+                       const gchar *service,
+                       GHashTable *parameters,
+                       guint id,
+                       guint portnum,
+                       GibberXmppStanza *iq_req)
 {
   return g_object_new (SALUT_TYPE_TUBE_STREAM,
       "connection", conn,
+      "tubes-channel", tubes_channel,
       "xmpp-connection-manager", xmpp_connection_manager,
       "handle", handle,
       "handle-type", handle_type,

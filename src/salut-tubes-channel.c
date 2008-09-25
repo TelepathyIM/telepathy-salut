@@ -1234,12 +1234,12 @@ create_new_tube (SalutTubesChannel *self,
   switch (type)
     {
     case TP_TUBE_TYPE_DBUS:
-      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
+      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn, self,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
           initiator, service, parameters, tube_id));
       break;
     case TP_TUBE_TYPE_STREAM:
-      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
+      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, self,
           priv->xmpp_connection_manager, priv->handle, priv->handle_type,
           priv->self_handle, initiator, service, parameters, tube_id,
           portnum, iq_req));
