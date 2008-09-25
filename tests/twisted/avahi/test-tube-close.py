@@ -38,7 +38,7 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
     basic_txt = { "txtvers": "1", "status": "avail" }
 
-    contact_name = PUBLISHED_NAME + get_host_name()
+    contact_name = PUBLISHED_NAME + "@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
 
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
