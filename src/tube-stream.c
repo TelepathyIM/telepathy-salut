@@ -34,6 +34,16 @@
 #include <glib/gstdio.h>
 #include <telepathy-glib/gtypes.h>
 
+#include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/exportable-channel.h>
+#include <telepathy-glib/gtypes.h>
+#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-channel.h>
+#include <telepathy-glib/svc-generic.h>
+
+#include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-bytestream-iface.h>
 #include <gibber/gibber-bytestream-oob.h>
@@ -54,12 +64,34 @@
 #include "tube-iface.h"
 #include "salut-si-bytestream-manager.h"
 #include "salut-contact-manager.h"
+#include "salut-tubes-channel.h"
 #include "salut-xmpp-connection-manager.h"
 
 static void tube_iface_init (gpointer g_iface, gpointer iface_data);
+static void channel_iface_init (gpointer g_iface, gpointer iface_data);
+static void streamtube_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream, G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init));
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+      tp_dbus_properties_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_STREAM_TUBE,
+      streamtube_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_INTERFACE_TUBE,
+      NULL);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL));
+
+static const gchar *salut_tube_stream_interfaces[] = {
+    TP_IFACE_CHANNEL_INTERFACE_GROUP,
+    /* If more interfaces are added, either keep Tube as the first, or change
+     * the implementations of salut_tube_stream_get_interfaces () and
+     * salut_tube_stream_get_property () too */
+    SALUT_IFACE_CHANNEL_INTERFACE_TUBE,
+    NULL
+};
+
 
 /* Linux glibc bits/socket.h suggests that struct sockaddr_storage is
  * not guaranteed to be big enough for AF_UNIX addresses */
@@ -87,6 +119,7 @@ enum
 {
   PROP_CONNECTION = 1,
   PROP_TUBES_CHANNEL,
+  PROP_INTERFACES,
   PROP_HANDLE,
   PROP_HANDLE_TYPE,
   PROP_SELF_HANDLE,
@@ -103,6 +136,11 @@ enum
   PROP_XMPP_CONNECTION_MANAGER,
   PROP_PORT,
   PROP_IQ_REQ,
+  PROP_CHANNEL_DESTROYED,
+  PROP_CHANNEL_PROPERTIES,
+  PROP_OBJECT_PATH,
+  PROP_CHANNEL_TYPE,
+  PROP_TARGET_ID,
   LAST_PROPERTY
 };
 
@@ -118,6 +156,7 @@ struct _SalutTubeStreamPrivate
   guint port;
   GibberXmppConnection *xmpp_connection;
   GibberXmppStanza *iq_req;
+  gchar *object_path;
 
   /* Bytestreams for MUC tubes (using stream initiation) or 1-1 tubes (using
    * direct TCP connections). One tube can have several bytestreams. The
@@ -144,7 +183,7 @@ struct _SalutTubeStreamPrivate
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
-  TpTubeState state;
+  SalutTubeChannelState state;
 
   TpSocketAddressType address_type;
   GValue *address;
@@ -958,6 +997,7 @@ salut_tube_stream_get_property (GObject *object,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (object);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
 
   switch (property_id)
     {
@@ -966,6 +1006,24 @@ salut_tube_stream_get_property (GObject *object,
         break;
       case PROP_CONNECTION:
         g_value_set_object (value, priv->conn);
+        break;
+      case PROP_OBJECT_PATH:
+        g_value_set_string (value, priv->object_path);
+        break;
+      case PROP_INTERFACES:
+        if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+          {
+            /* MUC tubes */
+            g_value_set_boxed (value, salut_tube_stream_interfaces);
+          }
+        else
+          {
+            /* 1-1 tubes - omit the Group interface */
+            g_value_set_boxed (value, salut_tube_stream_interfaces + 1);
+          }
+        break;
+      case PROP_CHANNEL_TYPE:
+        g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE);
         break;
       case PROP_HANDLE:
         g_value_set_uint (value, priv->handle);
@@ -1015,6 +1073,27 @@ salut_tube_stream_get_property (GObject *object,
       case PROP_IQ_REQ:
         g_value_set_pointer (value, priv->iq_req);
         break;
+      case PROP_CHANNEL_DESTROYED:
+        g_value_set_boolean (value, priv->closed);
+        break;
+      case PROP_CHANNEL_PROPERTIES:
+        g_value_take_boxed (value,
+            tp_dbus_properties_mixin_make_properties_hash (object,
+                TP_IFACE_CHANNEL, "TargetHandle",
+                TP_IFACE_CHANNEL, "TargetHandleType",
+                TP_IFACE_CHANNEL, "ChannelType",
+                TP_IFACE_CHANNEL, "TargetID",
+                NULL));
+        break;
+      case PROP_TARGET_ID:
+          {
+            TpHandleRepoIface *repo = tp_base_connection_get_handles (
+                base_conn, priv->handle_type);
+
+            g_value_set_string (value,
+                tp_handle_inspect (repo, priv->handle));
+          }
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -1038,6 +1117,14 @@ salut_tube_stream_set_property (GObject *object,
       case PROP_CONNECTION:
         priv->conn = g_value_get_object (value);
         break;
+      case PROP_OBJECT_PATH:
+        g_free (priv->object_path);
+        priv->object_path = g_value_dup_string (value);
+        break;
+      case PROP_CHANNEL_TYPE:
+      /* this property is writable in the interface, but not actually
+       * meaningfully changeable on this channel, so we do nothing */
+      break;
       case PROP_HANDLE:
         priv->handle = g_value_get_uint (value);
         break;
@@ -1061,6 +1148,11 @@ salut_tube_stream_set_property (GObject *object,
         if (priv->parameters != NULL)
           g_hash_table_destroy (priv->parameters);
         priv->parameters = g_value_dup_boxed (value);
+        break;
+      case PROP_STATE:
+        priv->state = g_value_get_uint (value);
+        if (priv->state == SALUT_TUBE_CHANNEL_STATE_OPEN)
+          g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
         break;
       case PROP_ADDRESS_TYPE:
         g_assert (g_value_get_uint (value) == TP_SOCKET_ADDRESS_TYPE_UNIX ||
@@ -1190,6 +1282,7 @@ salut_tube_stream_constructor (GType type,
   GObject *obj;
   SalutTubeStreamPrivate *priv;
   TpHandleRepoIface *contact_repo;
+  DBusGConnection *bus;
 
   obj = G_OBJECT_CLASS (salut_tube_stream_parent_class)->
            constructor (type, n_props, props);
@@ -1210,18 +1303,20 @@ salut_tube_stream_constructor (GType type,
       if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
         {
           /* Private tube */
-          priv->offer_needed = TRUE;
-          priv->state = TP_TUBE_STATE_REMOTE_PENDING;
+          g_assert (priv->state == SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED ||
+              priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING);
+          if (priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING)
+            priv->offer_needed = TRUE;
         }
       else
         {
           /* Muc tube */
-          priv->state = TP_TUBE_STATE_OPEN;
+          g_assert (priv->state == SALUT_TUBE_CHANNEL_STATE_OPEN);
         }
     }
   else
     {
-      priv->state = TP_TUBE_STATE_LOCAL_PENDING;
+      g_assert (priv->state == SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING);
     }
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
@@ -1236,12 +1331,88 @@ salut_tube_stream_constructor (GType type,
       g_assert (priv->xmpp_connection_manager == NULL);
     }
 
+  bus = tp_get_bus ();
+  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+
+  DEBUG ("Registering at '%s'", priv->object_path);
+
   return obj;
 }
+
+static gboolean
+tube_iface_props_setter (GObject *object,
+                         GQuark interface,
+                         GQuark name,
+                         const GValue *value,
+                         gpointer setter_data,
+                         GError **error)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (object);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  g_return_val_if_fail (interface == SALUT_IFACE_QUARK_CHANNEL_INTERFACE_TUBE,
+      FALSE);
+
+  if (name != g_quark_from_static_string ("Parameters"))
+    {
+      g_object_set_property (object, setter_data, value);
+      return TRUE;
+    }
+
+  if (priv->state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
+  {
+    g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+        "Can change parameters only if the tube is not offered");
+    return FALSE;
+  }
+
+  priv->parameters = g_value_dup_boxed (value);
+
+  return TRUE;
+}
+
 
 static void
 salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 {
+  static TpDBusPropertiesMixinPropImpl channel_props[] = {
+      { "TargetHandleType", "handle-type", NULL },
+      { "TargetHandle", "handle", NULL },
+      { "ChannelType", "channel-type", NULL },
+      { "TargetID", "target-id", NULL },
+      { "Interfaces", "interfaces", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinPropImpl stream_tube_props[] = {
+      { "Service", "service", NULL },
+      /*{ "AvailableStreamTubeTypes", NULL, NULL },*/
+      { NULL }
+  };
+  static TpDBusPropertiesMixinPropImpl tube_iface_props[] = {
+      { "Initiator", "initiator", NULL },
+      { "Parameters", "parameters", "parameters" },
+      { "Status", "state", NULL },
+      { NULL }
+  };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+      { TP_IFACE_CHANNEL,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        channel_props,
+      },
+      { SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        stream_tube_props,
+      },
+      { SALUT_IFACE_CHANNEL_INTERFACE_TUBE,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        tube_iface_props_setter,
+        tube_iface_props,
+      },
+      { NULL }
+  };
+
   GObjectClass *object_class = G_OBJECT_CLASS (salut_tube_stream_class);
   GParamSpec *param_spec;
 
@@ -1277,6 +1448,23 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
     "parameters");
   g_object_class_override_property (object_class, PROP_STATE,
     "state");
+
+  g_object_class_override_property (object_class, PROP_OBJECT_PATH,
+      "object-path");
+  g_object_class_override_property (object_class, PROP_CHANNEL_TYPE,
+      "channel-type");
+
+  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+      "channel-destroyed");
+  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+      "channel-properties");
+
+  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+      "Additional Channel.Interface.* interfaces",
+      G_TYPE_STRV,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   param_spec = g_param_spec_uint (
       "address-type",
@@ -1316,6 +1504,13 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL_PARAM,
       param_spec);
+
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting the target handle",
+      NULL,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_object (
       "xmpp-connection-manager",
@@ -1381,6 +1576,10 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   NULL, NULL,
                   salut_signals_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
+
+  salut_tube_stream_class->dbus_props_class.interfaces = prop_interfaces;
+  tp_dbus_properties_mixin_class_init (object_class,
+      G_STRUCT_OFFSET (SalutTubeStreamClass, dbus_props_class));
 }
 
 static void
@@ -1432,26 +1631,39 @@ salut_tube_stream_new (SalutConnection *conn,
                        TpHandleType handle_type,
                        TpHandle self_handle,
                        TpHandle initiator,
+                       SalutTubeChannelState initial_state,
                        const gchar *service,
                        GHashTable *parameters,
                        guint id,
                        guint portnum,
                        GibberXmppStanza *iq_req)
 {
-  return g_object_new (SALUT_TYPE_TUBE_STREAM,
+  SalutTubeStream *obj;
+  char *object_path;
+
+  object_path = g_strdup_printf ("%s/StreamTubeChannel_%u_%u",
+      conn->parent.object_path, handle, id);
+
+  obj = g_object_new (SALUT_TYPE_TUBE_STREAM,
       "connection", conn,
       "tubes-channel", tubes_channel,
+      "object-path", object_path,
       "xmpp-connection-manager", xmpp_connection_manager,
       "handle", handle,
       "handle-type", handle_type,
       "self-handle", self_handle,
       "initiator", initiator,
+      "state", initial_state,
       "service", service,
       "parameters", parameters,
       "id", id,
       "port", portnum,
       "iq-req", iq_req,
       NULL);
+
+  g_free (object_path);
+
+  return obj;
 }
 
 static void
@@ -1502,7 +1714,7 @@ salut_tube_stream_accept (SalutTubeIface *tube,
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GibberXmppStanza *reply;
 
-  if (priv->state != TP_TUBE_STATE_LOCAL_PENDING)
+  if (priv->state != SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     return TRUE;
 
   if (!tube_stream_open (self, error))
@@ -1526,7 +1738,7 @@ salut_tube_stream_accept (SalutTubeIface *tube,
         }
     }
 
-  priv->state = TP_TUBE_STATE_OPEN;
+  priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
   g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
   return TRUE;
 }
@@ -1559,8 +1771,11 @@ salut_tube_stream_offer_needed (SalutTubeIface *tube)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  gboolean ret = priv->offer_needed;
 
-  return priv->offer_needed;
+  priv->offer_needed = FALSE;
+
+  return ret;
 }
 
 /* callback for listening connections from the contact's CM */
@@ -1753,10 +1968,10 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
-      if (priv->state == TP_TUBE_STATE_REMOTE_PENDING)
+      if (priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING)
         {
           DEBUG ("Received first connection. Tube is now open");
-          priv->state = TP_TUBE_STATE_OPEN;
+          priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
           g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
         }
 
@@ -1956,6 +2171,231 @@ salut_tube_stream_check_params (TpSocketAddressType address_type,
 }
 
 static void
+stream_tube_new_connection_cb (SalutTubesChannel *self,
+                               guint contact,
+                               gpointer user_data)
+{
+  salut_svc_channel_type_stream_tube_emit_stream_tube_new_connection (
+      self, contact);
+}
+
+/**
+ * salut_tube_stream_offer_stream_tube
+ *
+ * Implements D-Bus method OfferStreamTube
+ * on org.freedesktop.Telepathy.Channel.Type.StreamTube
+ */
+static void
+salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
+                                     guint address_type,
+                                     const GValue *address,
+                                     guint access_control,
+                                     const GValue *access_control_param,
+                                     DBusGMethodInvocation *context)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GError *error = NULL;
+
+  if (priv->state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Tube is not in the not offered state");
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  if (!salut_tube_stream_check_params (address_type, address,
+        access_control, access_control_param, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  g_assert (address_type == TP_SOCKET_ADDRESS_TYPE_UNIX ||
+      address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 ||
+      address_type == TP_SOCKET_ADDRESS_TYPE_IPV6);
+  g_assert (priv->address == NULL);
+  priv->address_type = address_type;
+  priv->address = tp_g_value_slice_dup (address);
+  g_assert (priv->access_control == TP_SOCKET_ACCESS_CONTROL_LOCALHOST);
+  priv->access_control = access_control;
+  g_assert (priv->access_control_param == NULL);
+  priv->access_control_param = tp_g_value_slice_dup (access_control_param);
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      salut_tubes_channel_send_iq_offer (priv->tubes_channel);
+
+      salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
+          self, SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING);
+    }
+
+  g_signal_connect (self, "new-connection",
+      G_CALLBACK (stream_tube_new_connection_cb), self);
+
+  salut_svc_channel_type_stream_tube_return_from_offer_stream_tube (context);
+}
+
+/**
+ * salut_tube_stream_accept_stream_tube
+ *
+ * Implements D-Bus method AcceptStreamTube
+ * on org.freedesktop.Telepathy.Channel.Type.StreamTube
+ */
+static void
+salut_tube_stream_accept_stream_tube (SalutSvcChannelTypeStreamTube *iface,
+                                      guint address_type,
+                                      guint access_control,
+                                      const GValue *access_control_param,
+                                      DBusGMethodInvocation *context)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GError *error = NULL;
+
+  if (address_type != TP_SOCKET_ADDRESS_TYPE_UNIX &&
+      address_type != TP_SOCKET_ADDRESS_TYPE_IPV4 &&
+      address_type != TP_SOCKET_ADDRESS_TYPE_IPV6)
+    {
+      error = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Address type %d not implemented", address_type);
+
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  if (access_control != TP_SOCKET_ACCESS_CONTROL_LOCALHOST)
+    {
+      GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Unix sockets only support localhost control access" };
+
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
+  if (priv->state != SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING)
+    {
+      GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Tube is not in the local pending state" };
+
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
+  if (!salut_tube_stream_accept (SALUT_TUBE_IFACE (self), &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+#if 0
+  /* TODO: add a property "muc" and set it at initialization */
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+    salut_muc_channel_send_presence (self->muc, NULL);
+#endif
+
+  salut_svc_channel_type_stream_tube_return_from_accept_stream_tube (context,
+      priv->address);
+}
+
+/**
+ * salut_tube_stream_get_stream_tube_socket_address
+ *
+ * Implements D-Bus method GetStreamTubeSocketAddress
+ * on org.freedesktop.Telepathy.Channel.Type.StreamTube
+ */
+static void
+salut_tube_stream_get_stream_tube_socket_address (
+    SalutSvcChannelTypeStreamTube *iface,
+    DBusGMethodInvocation *context)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  salut_svc_channel_type_stream_tube_return_from_get_stream_tube_socket_address
+      (context, priv->address_type, priv->address);
+}
+
+/**
+ * salut_tube_stream_close_async:
+ *
+ * Implements D-Bus method Close
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_stream_close_async (TpSvcChannel *iface,
+                               DBusGMethodInvocation *context)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
+
+  tp_svc_channel_emit_closed (self);
+  tp_svc_channel_return_from_close (context);
+}
+
+/**
+ * salut_tube_stream_get_channel_type
+ *
+ * Implements D-Bus method GetChannelType
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_stream_get_channel_type (TpSvcChannel *iface,
+                                    DBusGMethodInvocation *context)
+{
+  tp_svc_channel_return_from_get_channel_type (context,
+      SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+}
+
+/**
+ * salut_tube_stream_get_handle
+ *
+ * Implements D-Bus method GetHandle
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_stream_get_handle (TpSvcChannel *iface,
+                              DBusGMethodInvocation *context)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  tp_svc_channel_return_from_get_handle (context, priv->handle_type,
+      priv->handle);
+}
+
+/**
+ * salut_tube_stream_get_interfaces
+ *
+ * Implements D-Bus method GetInterfaces
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_stream_get_interfaces (TpSvcChannel *iface,
+                                  DBusGMethodInvocation *context)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      /* omit the Group interface */
+      tp_svc_channel_return_from_get_interfaces (context,
+          salut_tube_stream_interfaces + 1);
+    }
+  else
+    {
+      tp_svc_channel_return_from_get_interfaces (context,
+          salut_tube_stream_interfaces);
+    }
+}
+
+
+static void
 tube_iface_init (gpointer g_iface,
                  gpointer iface_data)
 {
@@ -1967,4 +2407,34 @@ tube_iface_init (gpointer g_iface,
   klass->listen = salut_tube_stream_listen;
   klass->close = salut_tube_stream_close;
   klass->add_bytestream = salut_tube_stream_add_bytestream;
+}
+
+static void
+streamtube_iface_init (gpointer g_iface,
+                       gpointer iface_data)
+{
+  SalutSvcChannelTypeStreamTubeClass *klass =
+      (SalutSvcChannelTypeStreamTubeClass *) g_iface;
+
+#define IMPLEMENT(x) salut_svc_channel_type_stream_tube_implement_##x (\
+    klass, salut_tube_stream_##x)
+  IMPLEMENT(offer_stream_tube);
+  IMPLEMENT(accept_stream_tube);
+  IMPLEMENT(get_stream_tube_socket_address);
+#undef IMPLEMENT
+}
+
+static void
+channel_iface_init (gpointer g_iface,
+                    gpointer iface_data)
+{
+  TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
+
+#define IMPLEMENT(x, suffix) tp_svc_channel_implement_##x (\
+    klass, salut_tube_stream_##x##suffix)
+  IMPLEMENT(close,_async);
+  IMPLEMENT(get_channel_type,);
+  IMPLEMENT(get_handle,);
+  IMPLEMENT(get_interfaces,);
+#undef IMPLEMENT
 }

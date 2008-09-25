@@ -66,6 +66,9 @@ GType salut_tubes_channel_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_TUBES_CHANNEL, \
                               SalutTubesChannelClass))
 
+void salut_tubes_channel_foreach (SalutTubesChannel *self,
+    TpExportableChannelFunc foreach, gpointer user_data);
+
 void salut_tubes_channel_close (SalutTubesChannel *channel);
 
 void salut_tubes_channel_bytestream_offered (SalutTubesChannel *chanel,

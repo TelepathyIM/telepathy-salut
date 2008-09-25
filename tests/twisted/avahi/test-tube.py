@@ -8,7 +8,8 @@ import errno
 import string
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, Event
+from servicetest import make_channel_proxy, Event, EventPattern, call_async, \
+         tp_name_prefix
 
 from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
@@ -33,9 +34,108 @@ sample_parameters = dbus.Dictionary({
 
 test_string = "This string travels on a tube !"
 
-print "FIXME: test-tube.py disabled because 1-1 tubes are disabled for now"
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
+def check_conn_properties(q, bus, conn, channel_list=None):
+    properties = conn.GetAll(
+            'org.freedesktop.Telepathy.Connection.Interface.Requests',
+            dbus_interface='org.freedesktop.DBus.Properties')
+
+    if channel_list == None:
+        assert properties.get('Channels') == [], properties['Channels']
+    else:
+        for i in channel_list:
+            assert i in properties['Channels'], \
+                (i, properties['Channels'])
+
+    assert ({'org.freedesktop.Telepathy.Channel.ChannelType':
+                'org.freedesktop.Telepathy.Channel.Type.Tubes',
+             'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
+             },
+             ['org.freedesktop.Telepathy.Channel.TargetHandle',
+             ]
+            ) in properties.get('RequestableChannelClasses'),\
+                     properties['RequestableChannelClasses']
+    assert ({'org.freedesktop.Telepathy.Channel.ChannelType':
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+             'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
+             },
+             ['org.freedesktop.Telepathy.Channel.TargetHandle',
+              'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters',
+              'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service',
+             ]
+            ) in properties.get('RequestableChannelClasses'),\
+                     properties['RequestableChannelClasses']
+
+def check_channel_properties(q, bus, conn, channel, channel_type,
+        contact_handle, contact_id, state=None):
+    # Exercise basic Channel Properties from spec 0.17.7
+    # on the channel of type channel_type
+    channel_props = channel.GetAll(
+            'org.freedesktop.Telepathy.Channel',
+            dbus_interface='org.freedesktop.DBus.Properties')
+    assert channel_props.get('TargetHandle') == contact_handle,\
+            (channel_props.get('TargetHandle'), contact_handle)
+    assert channel_props.get('TargetHandleType') == 1,\
+            channel_props.get('TargetHandleType')
+    assert channel_props.get('ChannelType') == \
+            'org.freedesktop.Telepathy.Channel.Type.' + channel_type,\
+            channel_props.get('ChannelType')
+    assert 'Interfaces' in channel_props, channel_props
+    assert 'org.freedesktop.Telepathy.Channel.Interface.Group' not in \
+            channel_props['Interfaces'], \
+            channel_props['Interfaces']
+    assert channel_props['TargetID'] == contact_id
+
+    if channel_type == "Tubes":
+        assert state is None
+    else:
+        assert state is not None
+        tube_props = channel.GetAll(
+                'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT',
+                dbus_interface='org.freedesktop.DBus.Properties')
+        assert tube_props['Status'] == state
+        # no strict check but at least check the properties exist
+        assert tube_props['Parameters'] is not None
+        assert tube_props['Initiator'] is not None
+
+    self_handle = conn.GetSelfHandle()
+
+    ## Exercise FUTURE properties
+    ## on the channel of type channel_type
+    #future_props = channel.GetAll(
+    #        'org.freedesktop.Telepathy.Channel.FUTURE',
+    #        dbus_interface='org.freedesktop.DBus.Properties')
+    #assert future_props['Requested'] == True
+    #assert future_props['InitiatorID'] == 'test@localhost'
+    #assert future_props['InitiatorHandle'] == self_handle
+
+
+def check_NewChannel_signal(old_sig, channel_type, chan_path, contact_handle):
+    assert old_sig[0] == chan_path
+    assert old_sig[1] == tp_name_prefix + '.Channel.Type.' + channel_type
+    assert old_sig[2] == 1         # contact handle
+    assert old_sig[3] == contact_handle
+    assert old_sig[4] == True      # suppress handler
+
+def check_NewChannels_signal(new_sig, channel_type, chan_path, contact_handle,
+        contact_id, initiator_handle):
+    assert len(new_sig) == 1
+    assert len(new_sig[0]) == 1        # one channel
+    assert len(new_sig[0][0]) == 2     # two struct members
+    assert new_sig[0][0][0] == chan_path
+    emitted_props = new_sig[0][0][1]
+
+    assert emitted_props[tp_name_prefix + '.Channel.ChannelType'] ==\
+            tp_name_prefix + '.Channel.Type.' + channel_type
+    assert emitted_props[tp_name_prefix + '.Channel.TargetHandleType'] == 1
+    assert emitted_props[tp_name_prefix + '.Channel.TargetHandle'] ==\
+            contact_handle
+    assert emitted_props[tp_name_prefix + '.Channel.TargetID'] == \
+            contact_id
+    #assert emitted_props[tp_name_prefix + '.Channel.FUTURE.Requested'] == True
+    #assert emitted_props[tp_name_prefix + '.Channel.FUTURE.InitiatorHandle'] \
+    #        == initiator_handle
+    #assert emitted_props[tp_name_prefix + '.Channel.FUTURE.InitiatorID'] == \
+    #        'test@localhost'
 
 def test(q, bus, conn):
 
@@ -67,11 +167,14 @@ def test(q, bus, conn):
             raise
     l = reactor.listenUNIX(server_socket_address, factory)
 
+
+    check_conn_properties(q, bus, conn)
+
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
     basic_txt = { "txtvers": "1", "status": "avail" }
 
-    contact_name = PUBLISHED_NAME + get_host_name()
+    contact_name = PUBLISHED_NAME + "@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
 
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
@@ -90,9 +193,106 @@ def test(q, bus, conn):
             if name == contact_name:
                 handle = h
 
-    t = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT, handle,
-        True)
-    tubes_channel = make_channel_proxy(conn, t, "Channel.Type.Tubes")
+    # old requestotron
+    call_async(q, conn, 'RequestChannel',
+            CHANNEL_TYPE_TUBES, HT_CONTACT, handle, True);
+
+    ret, old_sig, new_sig = q.expect_many(
+        EventPattern('dbus-return', method='RequestChannel'),
+        EventPattern('dbus-signal', signal='NewChannel'),
+        EventPattern('dbus-signal', signal='NewChannels'),
+        )
+
+    assert len(ret.value) == 1
+    chan_path = ret.value[0]
+
+    check_NewChannel_signal(old_sig.args, "Tubes", chan_path, handle)
+    check_NewChannels_signal(new_sig.args, "Tubes", chan_path,
+            handle, contact_name, conn.GetSelfHandle())
+    old_tubes_channel_properties = new_sig.args[0][0]
+
+    check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
+
+    # new requestotron
+    requestotron = dbus.Interface(conn,
+            'org.freedesktop.Telepathy.Connection.Interface.Requests')
+
+    # Try to CreateChannel with unknown properties
+    # Salut must return an error
+    call_async(q, requestotron, 'CreateChannel',
+            {'org.freedesktop.Telepathy.Channel.ChannelType':
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+             'org.freedesktop.Telepathy.Channel.TargetHandleType':
+                1,
+             'org.freedesktop.Telepathy.Channel.TargetHandle':
+                handle,
+             'this.property.does.not.exist':
+                'this.value.should.not.exist'
+            });
+    ret = q.expect_many(EventPattern('dbus-error', method='CreateChannel'))
+    # CreateChannel failed, we expect no new channel
+    check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
+
+    # Try to CreateChannel with missing properties ("Service")
+    # Salut must return an error
+    call_async(q, requestotron, 'CreateChannel',
+            {'org.freedesktop.Telepathy.Channel.ChannelType':
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+             'org.freedesktop.Telepathy.Channel.TargetHandleType':
+                1,
+             'org.freedesktop.Telepathy.Channel.TargetHandle':
+                handle
+            });
+    ret = q.expect_many(EventPattern('dbus-error', method='CreateChannel'))
+    # CreateChannel failed, we expect no new channel
+    check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
+
+    # Try to CreateChannel with correct properties
+    # Salut must succeed
+    call_async(q, requestotron, 'CreateChannel',
+            {'org.freedesktop.Telepathy.Channel.ChannelType':
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+             'org.freedesktop.Telepathy.Channel.TargetHandleType':
+                1,
+             'org.freedesktop.Telepathy.Channel.TargetHandle':
+                handle,
+             'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
+                "newecho",
+             'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters':
+                dbus.Dictionary({'foo': 'bar'}, signature='sv'),
+            });
+    ret, old_sig, new_sig = q.expect_many(
+        EventPattern('dbus-return', method='CreateChannel'),
+        EventPattern('dbus-signal', signal='NewChannel'),
+        EventPattern('dbus-signal', signal='NewChannels'),
+        )
+
+    assert len(ret.value) == 2 # CreateChannel returns 2 values: o, a{sv}
+    new_chan_path = ret.value[0]
+    new_chan_prop_asv = ret.value[1]
+    assert new_chan_path.find("StreamTube") != -1, new_chan_path
+    assert new_chan_path.find("SITubesChannel") == -1, new_chan_path
+    # The path of the Channel.Type.Tubes object MUST be different to the path
+    # of the Channel.Type.StreamTube object !
+    assert chan_path != new_chan_path
+
+    check_NewChannel_signal(old_sig.args, "StreamTube.DRAFT", \
+            new_chan_path, handle)
+    check_NewChannels_signal(new_sig.args, "StreamTube.DRAFT", new_chan_path, \
+            handle, contact_name, conn.GetSelfHandle())
+    stream_tube_channel_properties = new_sig.args[0][0]
+
+    check_conn_properties(q, bus, conn,
+            [old_tubes_channel_properties, stream_tube_channel_properties])
+
+    # continue
+    tubes_channel = make_channel_proxy(conn, chan_path, "Channel.Type.Tubes")
+    tube_channel = make_channel_proxy(conn, new_chan_path,
+            "Channel.Type.StreamTube.DRAFT")
+    check_channel_properties(q, bus, conn, tubes_channel, "Tubes", handle,
+            contact_name)
+    check_channel_properties(q, bus, conn, tube_channel, "StreamTube.DRAFT",
+            handle, contact_name, 3)
 
     tube_id = tubes_channel.OfferStreamTube("http", sample_parameters,
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
@@ -102,7 +302,8 @@ def test(q, bus, conn):
     iq_tube = xpath.queryForNodes('/iq/tube', e.stanza)[0]
     transport = xpath.queryForNodes('/iq/tube/transport', e.stanza)[0]
     assert iq_tube.attributes['type'] == 'stream'
-    assert iq_tube.attributes['service'] == 'http'
+    assert iq_tube.attributes['service'] == 'http', \
+        iq_tube.attributes['service']
     assert iq_tube.attributes['id'] is not None
     port = transport.attributes['port']
     assert port is not None
@@ -146,8 +347,9 @@ def test(q, bus, conn):
     e = q.expect('client-data-received')
     assert e.data == string.swapcase(test_string)
 
-    # Close the tube propertly
-    tubes_channel.CloseTube(tube_id)
+    # Close the tubes propertly
+    for i in tubes_channel.ListTubes():
+        tubes_channel.CloseTube(i[0])
     conn.Disconnect()
 
 if __name__ == '__main__':

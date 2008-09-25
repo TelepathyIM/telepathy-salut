@@ -79,7 +79,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TUBES, tubes_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
         tp_external_group_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
 );
 
@@ -176,7 +175,8 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
     GibberXmppNode *tube_node, TpTubeType *type, TpHandle *initiator_handle,
     const gchar **service, GHashTable **parameters, guint *tube_id);
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
-    TpTubeType type, TpHandle initiator, const gchar *service,
+    TpTubeType type, TpHandle initiator, SalutTubeChannelState initial_state,
+    const gchar *service,
     GHashTable *parameters, guint tube_id, guint portnum,
     GibberXmppStanza *iq_req);
 
@@ -857,7 +857,8 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                 }
 
               tube = create_new_tube (self, type, initiator_handle,
-                  service, parameters, id, 0, NULL);
+                  SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING, service, parameters,
+                  tube_id, 0, NULL);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -947,7 +948,8 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
   if (tube == NULL)
     {
-      tube = create_new_tube (self, tube_type, initiator_handle, service,
+      tube = create_new_tube (self, tube_type, initiator_handle,
+        SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING, service,
         parameters, tube_id, portnum, iq_req);
     }
 }
@@ -1033,7 +1035,8 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
   DEBUG ("Request a tube channel with type='%s' and service='%s'",
       channel_type, service);
 
-  tube = create_new_tube (self, type, priv->self_handle, service,
+  tube = create_new_tube (self, type, priv->self_handle,
+      SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED, service,
       parameters, tube_id, 0, NULL);
 
   return tube;
@@ -1102,7 +1105,7 @@ copy_tube_in_ptr_array (gpointer key,
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
-  TpTubeState state;
+  SalutTubeChannelState state;
   TpTubeType type;
   GPtrArray *array = (GPtrArray *) user_data;
   GValue entry = {0,};
@@ -1217,6 +1220,7 @@ static SalutTubeIface *
 create_new_tube (SalutTubesChannel *self,
                  TpTubeType type,
                  TpHandle initiator,
+                 SalutTubeChannelState initial_state,
                  const gchar *service,
                  GHashTable *parameters,
                  guint tube_id,
@@ -1225,7 +1229,7 @@ create_new_tube (SalutTubesChannel *self,
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
-  TpTubeState state;
+  SalutTubeChannelState state;
   GibberMucConnection *muc_connection = NULL;
 
   if (self->muc != NULL)
@@ -1241,8 +1245,8 @@ create_new_tube (SalutTubesChannel *self,
     case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, self,
           priv->xmpp_connection_manager, priv->handle, priv->handle_type,
-          priv->self_handle, initiator, service, parameters, tube_id,
-          portnum, iq_req));
+          priv->self_handle, initiator, initial_state, service, parameters,
+          tube_id, portnum, iq_req));
       break;
     default:
       g_assert_not_reached ();
@@ -1460,7 +1464,7 @@ publish_tubes_in_node (gpointer key,
     (struct _i_hate_g_hash_table_foreach *) user_data;
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (
       data->self);
-  TpTubeState state;
+  SalutTubeChannelState state;
   GibberXmppNode *tube_node;
   TpTubeType type;
   TpHandle initiator;
@@ -1550,6 +1554,8 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   TpBaseConnection *base;
   guint tube_id;
   SalutTubeIface *tube;
+  GHashTable *parameters_copied;
+  SalutTubeChannelState initial_state;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1569,8 +1575,14 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
 
   tube_id = generate_tube_id ();
 
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+    initial_state = SALUT_TUBE_CHANNEL_STATE_OPEN;
+  else
+    initial_state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
+
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      service, parameters, tube_id, 0, NULL);
+      initial_state, service, parameters_copied,
+      tube_id, 0, NULL);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 }
@@ -1589,7 +1601,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
   SalutTubeIface *tube;
-  TpTubeState state;
+  SalutTubeChannelState state;
   TpTubeType type;
   gchar *addr;
 
@@ -1694,7 +1706,7 @@ salut_tubes_channel_get_d_bus_tube_address (TpSvcChannelTypeTubes *iface,
   SalutTubeIface *tube;
   gchar *addr;
   TpTubeType type;
-  TpTubeState state;
+  SalutTubeChannelState state;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1774,7 +1786,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
   GHashTable *names;
   GPtrArray *ret;
   TpTubeType type;
-  TpTubeState state;
+  SalutTubeChannelState state;
   guint i;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
@@ -1882,7 +1894,7 @@ send_channel_iq_tube (gpointer key,
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
-  TpTubeState state;
+  SalutTubeChannelState state;
   TpTubeType type;
 
   g_object_get (tube,
@@ -2027,6 +2039,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   guint tube_id;
   SalutTubeIface *tube;
   GError *error = NULL;
+  SalutTubeChannelState initial_state;
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   base = (TpBaseConnection *) priv->conn;
@@ -2052,8 +2065,13 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 
   tube_id = generate_tube_id ();
 
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+    initial_state = SALUT_TUBE_CHANNEL_STATE_OPEN;
+  else
+    initial_state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
+
   tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
-      service, parameters, tube_id, 0, NULL);
+      initial_state, service, parameters, tube_id, 0, NULL);
 
   g_object_set (tube,
       "address-type", address_type,
@@ -2091,7 +2109,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
   SalutTubeIface *tube;
-  TpTubeState state;
+  SalutTubeChannelState state;
   TpTubeType type;
   GValue *address;
   GError *error = NULL;
@@ -2195,7 +2213,7 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
   SalutTubesChannelPrivate *priv  = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
   TpTubeType type;
-  TpTubeState state;
+  SalutTubeChannelState state;
   GValue *address;
   TpSocketAddressType address_type;
 
@@ -2503,6 +2521,36 @@ emit_tube_closed_signal (gpointer key,
 
   tp_svc_channel_type_tubes_emit_tube_closed (self, id);
 }
+
+struct _ForeachData
+{
+  TpExportableChannelFunc foreach;
+  gpointer user_data;
+};
+
+static void
+foreach_slave (gpointer key,
+               gpointer value,
+               gpointer user_data)
+{
+  SalutTubeIface *tube = SALUT_TUBE_IFACE (value);
+  struct _ForeachData *data = (struct _ForeachData *) user_data;
+
+  data->foreach (TP_EXPORTABLE_CHANNEL (tube), data->user_data);
+}
+
+void salut_tubes_channel_foreach (SalutTubesChannel *self,
+    TpExportableChannelFunc foreach, gpointer user_data)
+{
+  struct _ForeachData data;
+  SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+
+  data.user_data = user_data;
+  data.foreach = foreach;
+
+  g_hash_table_foreach (priv->tubes, foreach_slave, &data);
+}
+
 
 void
 salut_tubes_channel_close (SalutTubesChannel *self)

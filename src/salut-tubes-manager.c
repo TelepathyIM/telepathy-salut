@@ -680,7 +680,13 @@ _foreach_slave (gpointer key,
   struct _ForeachData *data = (struct _ForeachData *) user_data;
   TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
 
+  /* Add channels of type Channel.Type.Tubes */
   data->foreach (chan, data->user_data);
+
+  /* Add channels of type Channel.Type.{Stream|DBus}Tube which live in the
+   * SalutTubesChannel object */
+  salut_tubes_channel_foreach (SALUT_TUBES_CHANNEL (chan), data->foreach,
+      data->user_data);
 }
 
 static void

@@ -19,6 +19,8 @@
 
 #include "tube-iface.h"
 
+#include <telepathy-glib/gtypes.h>
+
 #include "salut-connection.h"
 #include "salut-tubes-channel.h"
 
@@ -180,7 +182,7 @@ salut_tube_iface_base_init (gpointer klass)
           "parameters",
           "parameters GHashTable",
           "GHashTable containing parameters of this DBUS tube object.",
-          G_TYPE_HASH_TABLE,
+          TP_HASH_TYPE_STRING_VARIANT_MAP,
           G_PARAM_CONSTRUCT_ONLY |
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);

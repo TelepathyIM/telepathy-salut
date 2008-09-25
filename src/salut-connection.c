@@ -2838,8 +2838,6 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       G_CALLBACK (_olpc_activity_manager_activity_modified_cb), self);
 #endif
 
-  g_ptr_array_add (factories, priv->contact_manager);
-
   return factories;
 }
 
