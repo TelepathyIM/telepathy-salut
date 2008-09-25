@@ -1346,7 +1346,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   g_object_class_install_property (object_class, PROP_IQ_REQ, param_spec);
 
   signals[OPENED] =
-    g_signal_new ("opened",
+    g_signal_new ("tube-opened",
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
@@ -1355,7 +1355,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_TYPE_NONE, 0);
 
   signals[NEW_CONNECTION] =
-    g_signal_new ("new-connection",
+    g_signal_new ("tube-new-connection",
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
@@ -1364,7 +1364,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 
   signals[CLOSED] =
-    g_signal_new ("closed",
+    g_signal_new ("tube-closed",
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,

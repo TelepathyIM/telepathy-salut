@@ -1270,8 +1270,8 @@ create_new_tube (SalutTubesChannel *self,
       add_yourself_in_dbus_names (self, tube_id);
     }
 
-  g_signal_connect (tube, "opened", G_CALLBACK (tube_opened_cb), self);
-  g_signal_connect (tube, "closed", G_CALLBACK (tube_closed_cb), self);
+  g_signal_connect (tube, "tube-opened", G_CALLBACK (tube_opened_cb), self);
+  g_signal_connect (tube, "tube-closed", G_CALLBACK (tube_closed_cb), self);
 
   if (muc_connection != NULL)
     g_object_unref (muc_connection);
@@ -2056,7 +2056,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
       send_channel_iq_tubes (self);
     }
 
-  g_signal_connect (tube, "new-connection",
+  g_signal_connect (tube, "tube-new-connection",
       G_CALLBACK (stream_tube_new_connection_cb), self);
 
   tp_svc_channel_type_tubes_return_from_offer_stream_tube (context,
