@@ -95,8 +95,6 @@ static void xmpp_connection_manager_connection_closing_cb (
     SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
     SalutContact *contact, gpointer user_data);
 
-static void send_channel_iq_tubes (SalutTubesChannel *self);
-
 /* Channel state */
 typedef enum
 {
@@ -437,7 +435,7 @@ initialise_connection (SalutTubesChannel *self, GibberXmppConnection *conn)
   } else {
     priv->state = CHANNEL_CONNECTED;
     DEBUG ("priv->state = CHANNEL_CONNECTED");
-    send_channel_iq_tubes (self);
+    salut_tubes_channel_send_iq_offer (self);
   }
 }
 
@@ -1978,8 +1976,21 @@ send_channel_iq_tube (gpointer key,
   g_hash_table_unref (parameters);
 }
 
-static void
-send_channel_iq_tubes (SalutTubesChannel *self)
+/**
+ * Send iq offer(s) for all tubes in this channel to the remote contact in iq
+ * stanza(s). If the XmppConnection is not established, try to establish it,
+ * and the offer will be sent later asynchronously.
+ *
+ * Iq stanzas are sent only when the tube has not been offered yet. It asks
+ * each tube whether it is really needed with salut_tube_iface_offer_needed()
+ *
+ * This is called when the client offer the tube, either via the old
+ * Channel.Type.Tubes interface, or the new Channel.Type.{Stream,DBus}Tube
+ * interface. This is also called when the XmppConnection is established in
+ * case a tube was offered while the XmppConnection was not established.
+ */
+void
+salut_tubes_channel_send_iq_offer (SalutTubesChannel *self)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
@@ -2053,7 +2064,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      send_channel_iq_tubes (self);
+      salut_tubes_channel_send_iq_offer (self);
     }
 
   g_signal_connect (tube, "tube-new-connection",

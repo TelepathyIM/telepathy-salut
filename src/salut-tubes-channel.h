@@ -86,6 +86,8 @@ SalutTubeIface *salut_tubes_channel_tube_request (SalutTubesChannel *self,
     gpointer request_token, GHashTable *request_properties,
     gboolean require_new);
 
+void salut_tubes_channel_send_iq_offer (SalutTubesChannel *self);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_TUBES_CHANNEL_H__*/
