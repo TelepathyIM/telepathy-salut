@@ -30,6 +30,8 @@
 #include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/util.h>
 
+#include "extensions/extensions.h"
+
 #include "salut-connection.h"
 
 static void
@@ -41,6 +43,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
       tp_dbus_properties_mixin_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
+  G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
+  G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
       tp_group_mixin_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_CONTACT_LIST, NULL);
@@ -61,6 +65,11 @@ enum
   PROP_CONNECTION,
   PROP_INTERFACES,
   PROP_TARGET_ID,
+  PROP_CHANNEL_PROPERTIES,
+  PROP_CHANNEL_DESTROYED,
+  PROP_INITIATOR_HANDLE,
+  PROP_INITIATOR_ID,
+  PROP_REQUESTED,
   LAST_PROPERTY
 };
 
@@ -72,6 +81,7 @@ struct _SalutContactChannelPrivate
   SalutConnection *conn;
   gchar *object_path;
   TpHandle handle;
+  gboolean requested;
   gboolean dispose_has_run;
 };
 
@@ -165,6 +175,30 @@ salut_contact_channel_get_property (GObject    *object,
          g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
       }
       break;
+    case PROP_CHANNEL_PROPERTIES:
+      g_value_take_boxed (value,
+          tp_dbus_properties_mixin_make_properties_hash (object,
+              TP_IFACE_CHANNEL, "TargetHandle",
+              TP_IFACE_CHANNEL, "TargetHandleType",
+              TP_IFACE_CHANNEL, "ChannelType",
+              TP_IFACE_CHANNEL, "TargetID",
+              SALUT_IFACE_CHANNEL_FUTURE, "InitiatorHandle",
+              SALUT_IFACE_CHANNEL_FUTURE, "InitiatorID",
+              SALUT_IFACE_CHANNEL_FUTURE, "Requested",
+              NULL));
+      break;
+    case PROP_CHANNEL_DESTROYED:
+      g_value_set_boolean (value, TRUE);
+      break;
+    case PROP_INITIATOR_HANDLE:
+      g_value_set_uint (value, 0);
+      break;
+    case PROP_INITIATOR_ID:
+      g_value_set_static_string (value, "");
+      break;
+    case PROP_REQUESTED:
+      g_value_set_boolean (value, priv->requested);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -203,6 +237,9 @@ salut_contact_channel_set_property (GObject     *object,
                || !tp_strdiff (g_value_get_string (value),
                        TP_IFACE_CHANNEL_TYPE_CONTACT_LIST));
       break;
+    case PROP_REQUESTED:
+      priv->requested = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -220,11 +257,22 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
       { "Interfaces", "interfaces", NULL },
       { NULL }
   };
+  static TpDBusPropertiesMixinPropImpl future_props[] = {
+      { "Requested", "requested", NULL },
+      { "InitiatorHandle", "initiator-handle", NULL },
+      { "InitiatorID", "initiator-id", NULL },
+      { NULL }
+  };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
       { TP_IFACE_CHANNEL,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         channel_props,
+      },
+      { SALUT_IFACE_CHANNEL_FUTURE,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        future_props,
       },
       { NULL }
   };
@@ -267,12 +315,40 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
+  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+      "channel-properties");
+  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+      "channel-destroyed");
+
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
       NULL,
       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  param_spec = g_param_spec_boolean ("requested", "Requested?",
+      "True if this channel was requested by the local user",
+      FALSE,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+  param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+      "Always 0 on contact list channels",
+      0, G_MAXUINT32, 0,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+      param_spec);
+
+  param_spec = g_param_spec_string ("initiator-id", "Initiator JID",
+      "Always the empty string on contact list channels",
+      NULL,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+      param_spec);
 
   salut_contact_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
