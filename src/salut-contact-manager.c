@@ -30,6 +30,7 @@
 #include "salut-contact.h"
 #include "salut-presence-enumtypes.h"
 
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 
@@ -38,15 +39,20 @@
 
 static void salut_contact_manager_factory_iface_init (gpointer g_iface,
     gpointer iface_data);
+static void salut_contact_manager_manager_iface_init (gpointer g_iface,
+    gpointer iface_data);
 
 static SalutContactChannel *salut_contact_manager_get_channel
-    (SalutContactManager *mgr, TpHandle handle, gboolean *created);
+    (SalutContactManager *mgr, TpHandle handle, gpointer request_token,
+    gboolean *created);
 
 static void
 _contact_finalized_cb (gpointer data, GObject *old_object);
 
 G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
     G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
+      salut_contact_manager_manager_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
       salut_contact_manager_factory_iface_init));
 
@@ -220,7 +226,7 @@ change_all_groups (SalutContactManager *mgr, TpIntSet *add, TpIntSet *rem)
 
   for (i = LIST_HANDLE_FIRST; i <= LIST_HANDLE_LAST; i++)
     {
-      c = salut_contact_manager_get_channel (mgr, i, NULL);
+      c = salut_contact_manager_get_channel (mgr, i, NULL, NULL);
       tp_group_mixin_change_members (G_OBJECT(c),
                                      "", add, rem,
                                      empty, empty, 0, 0);
@@ -418,7 +424,7 @@ salut_contact_manager_factory_iface_request (TpChannelFactoryIface *iface,
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
   }
 
-  chan = salut_contact_manager_get_channel (mgr, handle, &created);
+  chan = salut_contact_manager_get_channel (mgr, handle, NULL, &created);
   *ret = TP_CHANNEL_IFACE (chan);
   return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED
                  : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
@@ -437,9 +443,179 @@ static void salut_contact_manager_factory_iface_init (gpointer g_iface,
   klass->request = salut_contact_manager_factory_iface_request;
 }
 
+
+struct foreach_channel_data {
+  TpExportableChannelFunc func;
+  gpointer data;
+};
+
+static void
+salut_contact_manager_foreach_one (gpointer key,
+    gpointer value,
+    gpointer data)
+{
+  TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
+  struct foreach_channel_data *f = data;
+
+  f->func (chan, f->data);
+}
+
+static void
+salut_contact_manager_foreach_channel (TpChannelManager *iface,
+    TpExportableChannelFunc func,
+    gpointer data)
+{
+  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (iface);
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
+  struct foreach_channel_data f;
+  f.func = func;
+  f.data = data;
+
+  g_hash_table_foreach (priv->channels,
+                        salut_contact_manager_foreach_one, &f);
+}
+
+static const gchar * const list_channel_fixed_properties[] = {
+    TP_IFACE_CHANNEL ".ChannelType",
+    TP_IFACE_CHANNEL ".TargetHandleType",
+    NULL
+};
+
+static const gchar * const list_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    NULL
+};
+
+static void
+salut_contact_manager_foreach_channel_class (TpChannelManager *manager,
+    TpChannelManagerChannelClassFunc func,
+    gpointer user_data)
+{
+  GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+  GValue *value, *handle_type_value;
+
+  value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType", value);
+
+  handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_LIST);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+      handle_type_value);
+
+  func (manager, table, list_channel_allowed_properties, user_data);
+
+  g_hash_table_destroy (table);
+}
+
+static gboolean
+salut_contact_manager_request (SalutContactManager *self,
+    gpointer request_token,
+    GHashTable *request_properties,
+    gboolean require_new)
+{
+  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
+      TP_BASE_CONNECTION (self->connection), TP_HANDLE_TYPE_LIST);
+  TpHandleType handle_type;
+  TpHandle handle;
+  SalutContactChannel *channel;
+  gboolean created;
+
+  if (tp_strdiff (tp_asv_get_string (request_properties,
+          TP_IFACE_CHANNEL ".ChannelType"),
+        TP_IFACE_CHANNEL_TYPE_CONTACT_LIST))
+    return FALSE;
+
+  handle_type = tp_asv_get_uint32 (request_properties,
+      TP_IFACE_CHANNEL ".TargetHandleType", NULL);
+
+  if (handle_type != TP_HANDLE_TYPE_LIST)
+    return FALSE;
+
+  handle = tp_asv_get_uint32 (request_properties,
+      TP_IFACE_CHANNEL ".TargetHandle", NULL);
+  g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
+
+  channel = salut_contact_manager_get_channel (self, handle, request_token,
+      &created);
+
+  if (created)
+    {
+      /* Do nothing; salut_contact_manager_new_channel emits the new-channel
+       * signal
+       */
+    }
+  else
+    {
+      if (require_new)
+        {
+          GError *error = NULL;
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+            "Contact list channel #%u already exists", handle);
+          tp_channel_manager_emit_request_failed (self, request_token,
+              error->domain, error->code, error->message);
+          g_error_free (error);
+        }
+      else
+        {
+          tp_channel_manager_emit_request_already_satisfied (self, request_token,
+              TP_EXPORTABLE_CHANNEL (channel));
+        }
+    }
+  return TRUE;
+}
+
+static gboolean
+salut_contact_manager_request_channel (TpChannelManager *manager,
+    gpointer request_token,
+    GHashTable *request_properties)
+{
+  SalutContactManager *self = SALUT_CONTACT_MANAGER (manager);
+
+  return salut_contact_manager_request (self, request_token,
+      request_properties, FALSE);
+}
+
+static gboolean
+salut_contact_manager_create_channel (TpChannelManager *manager,
+    gpointer request_token,
+    GHashTable *request_properties)
+{
+  SalutContactManager *self = SALUT_CONTACT_MANAGER (manager);
+
+  return salut_contact_manager_request (self, request_token,
+      request_properties, TRUE);
+}
+
+static gboolean
+salut_contact_manager_ensure_channel (TpChannelManager *manager,
+    gpointer request_token,
+    GHashTable *request_properties)
+{
+  SalutContactManager *self = SALUT_CONTACT_MANAGER (manager);
+
+  return salut_contact_manager_request (self, request_token,
+      request_properties, FALSE);
+}
+
+static void
+salut_contact_manager_manager_iface_init (gpointer g_iface,
+    gpointer iface_data)
+{
+  TpChannelManagerIface *iface = g_iface;
+
+  iface->foreach_channel = salut_contact_manager_foreach_channel;
+  iface->foreach_channel_class = salut_contact_manager_foreach_channel_class;
+  iface->request_channel = salut_contact_manager_request_channel;
+  iface->create_channel = salut_contact_manager_create_channel;
+  iface->ensure_channel = salut_contact_manager_ensure_channel;
+}
+
 /* private functions */
 static SalutContactChannel *
 salut_contact_manager_new_channel (SalutContactManager *mgr,
+    gpointer request_token,
     TpHandle handle)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
@@ -449,6 +625,7 @@ salut_contact_manager_new_channel (SalutContactManager *mgr,
   SalutContactChannel *chan;
   const gchar *name;
   gchar *path;
+  GSList *requests = NULL;
 
   g_assert (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle))
              == NULL);
@@ -461,18 +638,27 @@ salut_contact_manager_new_channel (SalutContactManager *mgr,
       "connection", mgr->connection,
       "object-path", path,
       "handle", handle,
+      "requested", (request_token != NULL),
       NULL);
   g_free (path);
   g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);
   tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
       NULL);
 
+  if (request_token != NULL)
+    requests = g_slist_prepend (requests, request_token);
+
+  tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (chan),
+      requests);
+
+  g_slist_free (requests);
+
   return chan;
 }
 
 static SalutContactChannel *
 salut_contact_manager_get_channel (SalutContactManager *mgr,
-    TpHandle handle, gboolean *created)
+    TpHandle handle, gpointer request_token, gboolean *created)
 {
   SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
   SalutContactChannel *chan;
@@ -484,7 +670,7 @@ salut_contact_manager_get_channel (SalutContactManager *mgr,
     }
   if (chan == NULL)
     {
-      chan = salut_contact_manager_new_channel (mgr, handle);
+      chan = salut_contact_manager_new_channel (mgr, request_token, handle);
     }
 
   return chan;
