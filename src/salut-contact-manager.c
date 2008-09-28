@@ -432,6 +432,7 @@ static const gchar * const list_channel_fixed_properties[] = {
 
 static const gchar * const list_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
     NULL
 };
 
@@ -470,6 +471,7 @@ salut_contact_manager_request (SalutContactManager *self,
   TpHandle handle;
   SalutContactChannel *channel;
   gboolean created;
+  GError *error = NULL;
 
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"),
@@ -486,6 +488,14 @@ salut_contact_manager_request (SalutContactManager *self,
       TP_IFACE_CHANNEL ".TargetHandle", NULL);
   g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
 
+  /* Check if there are any other properties that we don't understand */
+  if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+          list_channel_fixed_properties, list_channel_allowed_properties,
+          &error))
+    {
+      goto error;
+    }
+
   channel = salut_contact_manager_get_channel (self, handle, request_token,
       &created);
 
@@ -499,20 +509,23 @@ salut_contact_manager_request (SalutContactManager *self,
     {
       if (require_new)
         {
-          GError *error = NULL;
           g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
             "Contact list channel #%u already exists", handle);
-          tp_channel_manager_emit_request_failed (self, request_token,
-              error->domain, error->code, error->message);
-          g_error_free (error);
+          goto error;
         }
       else
         {
-          tp_channel_manager_emit_request_already_satisfied (self, request_token,
-              TP_EXPORTABLE_CHANNEL (channel));
+          tp_channel_manager_emit_request_already_satisfied (self,
+              request_token, TP_EXPORTABLE_CHANNEL (channel));
         }
     }
   return TRUE;
+
+error:
+  tp_channel_manager_emit_request_failed (self, request_token,
+      error->domain, error->code, error->message);
+  g_error_free (error);
+  return FALSE;
 }
 
 static gboolean
