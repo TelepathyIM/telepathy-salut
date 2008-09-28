@@ -46,6 +46,8 @@ static SalutContactChannel *salut_contact_manager_get_channel
     (SalutContactManager *mgr, TpHandle handle, gpointer request_token,
     gboolean *created);
 
+static void salut_contact_manager_close_all (SalutContactManager *mgr);
+
 static void
 _contact_finalized_cb (gpointer data, GObject *old_object);
 
@@ -77,6 +79,7 @@ typedef struct _SalutContactManagerPrivate SalutContactManagerPrivate;
 struct _SalutContactManagerPrivate
 {
   GHashTable *channels;
+  gulong status_changed_id;
   gboolean dispose_has_run;
 };
 
@@ -131,6 +134,8 @@ salut_contact_manager_init (SalutContactManager *obj)
   obj->contacts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 }
 
+static GObject *salut_contact_manager_constructor (GType type,
+    guint n_props, GObjectConstructParam *props);
 static void salut_contact_manager_dispose (GObject *object);
 static void salut_contact_manager_finalize (GObject *object);
 
@@ -145,6 +150,7 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
   object_class->get_property = salut_contact_manager_get_property;
   object_class->set_property = salut_contact_manager_set_property;
 
+  object_class->constructor = salut_contact_manager_constructor;
   object_class->dispose = salut_contact_manager_dispose;
   object_class->finalize = salut_contact_manager_finalize;
 
@@ -170,6 +176,39 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
       G_TYPE_NONE, 2,
       SALUT_TYPE_CONTACT,
       G_TYPE_INT);
+}
+
+static void
+connection_status_changed_cb (SalutConnection *conn,
+                              guint status,
+                              guint reason,
+                              SalutContactManager *self)
+{
+  if (status == TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+      salut_contact_manager_close_all (self);
+    }
+}
+
+static GObject *
+salut_contact_manager_constructor (GType type,
+    guint n_props,
+    GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutContactManager *self;
+  SalutContactManagerPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_contact_manager_parent_class)->
+           constructor (type, n_props, props);
+
+  self = SALUT_CONTACT_MANAGER (obj);
+  priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+
+  priv->status_changed_id = g_signal_connect (self->connection,
+      "status-changed", (GCallback) connection_status_changed_cb, self);
+
+  return obj;
 }
 
 static gboolean
@@ -200,7 +239,7 @@ salut_contact_manager_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
   /* release any references held by the object here */
-  tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
+  salut_contact_manager_close_all (self);
 
   if (G_OBJECT_CLASS (salut_contact_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_contact_manager_parent_class)->dispose (object);
@@ -331,9 +370,8 @@ salut_contact_manager_ensure_contact (SalutContactManager *self,
 }
 
 static void
-salut_contact_manager_factory_iface_close_all (TpChannelFactoryIface *iface)
+salut_contact_manager_close_all (SalutContactManager *mgr)
 {
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (iface);
   SalutContactManagerPrivate *priv =
     SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
 
@@ -350,6 +388,12 @@ salut_contact_manager_factory_iface_close_all (TpChannelFactoryIface *iface)
       g_hash_table_foreach_remove (mgr->contacts, dispose_contact, mgr);
       g_hash_table_destroy (mgr->contacts);
       mgr->contacts = NULL;
+    }
+
+  if (priv->status_changed_id != 0)
+    {
+      g_signal_handler_disconnect (mgr->connection, priv->status_changed_id);
+      priv->status_changed_id = 0;
     }
 }
 
@@ -435,7 +479,7 @@ static void salut_contact_manager_factory_iface_init (gpointer g_iface,
 {
   TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
 
-  klass->close_all = salut_contact_manager_factory_iface_close_all;
+  klass->close_all = (TpChannelFactoryIfaceProc) salut_contact_manager_close_all;
   klass->connecting = salut_contact_manager_factory_iface_connecting;
   klass->connected = salut_contact_manager_factory_iface_connected;
   klass->disconnected = salut_contact_manager_factory_iface_disconnected;
