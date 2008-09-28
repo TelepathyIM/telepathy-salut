@@ -623,6 +623,8 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (chan),
     requests);
 
+  g_slist_free (requests);
+
   g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), mgr);
 
   return chan;
