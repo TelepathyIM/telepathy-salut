@@ -31,14 +31,11 @@
 #include "salut-presence-enumtypes.h"
 
 #include <telepathy-glib/dbus.h>
-#include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include "debug.h"
 
-static void salut_contact_manager_factory_iface_init (gpointer g_iface,
-    gpointer iface_data);
 static void salut_contact_manager_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
 
@@ -54,9 +51,7 @@ _contact_finalized_cb (gpointer data, GObject *old_object);
 G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
     G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
-      salut_contact_manager_manager_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
-      salut_contact_manager_factory_iface_init));
+      salut_contact_manager_manager_iface_init));
 
 enum
 {
@@ -397,97 +392,7 @@ salut_contact_manager_close_all (SalutContactManager *mgr)
     }
 }
 
-static void
-salut_contact_manager_factory_iface_connecting (TpChannelFactoryIface *iface)
-{
-}
-
-static void
-salut_contact_manager_factory_iface_connected (TpChannelFactoryIface *iface)
-{
-}
-
-static void
-salut_contact_manager_factory_iface_disconnected (TpChannelFactoryIface *iface)
-{
-}
-
-struct foreach_data {
-  TpChannelFunc func;
-  gpointer data;
-};
-
-static void
-salut_contact_manager_iface_foreach_one (gpointer key, gpointer value,
-    gpointer data)
-{
-  TpChannelIface *chan = TP_CHANNEL_IFACE(value);
-  struct foreach_data *f = (struct foreach_data *) data;
-
-  f->func (chan, f->data);
-}
-
-static void
-salut_contact_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
-    TpChannelFunc func, gpointer data)
-{
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER (iface);
-  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (mgr);
-  struct foreach_data f;
-  f.func = func;
-  f.data = data;
-
-  g_hash_table_foreach (priv->channels,
-                        salut_contact_manager_iface_foreach_one, &f);
-}
-
-static TpChannelFactoryRequestStatus
-salut_contact_manager_factory_iface_request (TpChannelFactoryIface *iface,
-    const gchar *chan_type, TpHandleType handle_type,
-    guint handle, gpointer request,
-    TpChannelIface **ret, GError **error)
-{
-  SalutContactManager *mgr = SALUT_CONTACT_MANAGER(iface);
-  SalutContactChannel *chan;
-  gboolean created;
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
-      TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_LIST);
-
-  /* We only support contact list channels */
-  if (tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST)) {
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
-  }
-
-  /* And thus only support list handles */
-  if (handle_type != TP_HANDLE_TYPE_LIST) {
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-  }
-
-  /* Most be a valid list handle */
-  if (!tp_handle_is_valid (handle_repo, handle, NULL)) {
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
-  }
-
-  chan = salut_contact_manager_get_channel (mgr, handle, NULL, &created);
-  *ret = TP_CHANNEL_IFACE (chan);
-  return created ? TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED
-                 : TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
-}
-
-static void salut_contact_manager_factory_iface_init (gpointer g_iface,
-    gpointer iface_data)
-{
-  TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
-
-  klass->close_all = (TpChannelFactoryIfaceProc) salut_contact_manager_close_all;
-  klass->connecting = salut_contact_manager_factory_iface_connecting;
-  klass->connected = salut_contact_manager_factory_iface_connected;
-  klass->disconnected = salut_contact_manager_factory_iface_disconnected;
-  klass->foreach = salut_contact_manager_factory_iface_foreach;
-  klass->request = salut_contact_manager_factory_iface_request;
-}
-
-
+/* TpChannelManager implementation */
 struct foreach_channel_data {
   TpExportableChannelFunc func;
   gpointer data;
@@ -686,8 +591,6 @@ salut_contact_manager_new_channel (SalutContactManager *mgr,
       NULL);
   g_free (path);
   g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);
-  tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
-      NULL);
 
   if (request_token != NULL)
     requests = g_slist_prepend (requests, request_token);
