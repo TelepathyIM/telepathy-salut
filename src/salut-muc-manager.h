@@ -50,7 +50,8 @@ struct _SalutMucManagerClass {
     SalutMucChannel * (*create_muc_channel) (SalutMucManager *self,
         SalutConnection *connection, const gchar *path,
         GibberMucConnection *muc_connection, TpHandle handle,
-        const gchar *name, gboolean creator, SalutXmppConnectionManager *xcm);
+        const gchar *name, TpHandle initiator, gboolean creator,
+        SalutXmppConnectionManager *xcm);
 };
 
 struct _SalutMucManager {

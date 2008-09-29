@@ -441,6 +441,7 @@ static SalutMucChannel *
 salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
                                    TpHandle handle,
                                    GibberMucConnection *connection,
+                                   TpHandle initiator,
                                    gboolean new_connection)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
@@ -462,8 +463,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
       handle);
 
   chan = SALUT_MUC_MANAGER_GET_CLASS (mgr)->create_muc_channel (mgr,
-      priv->connection, path, connection, handle, name, new_connection,
-      priv->xmpp_connection_manager);
+      priv->connection, path, connection, handle, name, initiator,
+      new_connection, priv->xmpp_connection_manager);
   g_free (path);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
@@ -585,7 +586,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   DEBUG ("Connect succeeded");
 
   text_chan = salut_muc_manager_new_muc_channel (mgr, handle,
-      connection, params == NULL);
+      connection, base_connection->self_handle, params == NULL);
   r = salut_muc_channel_invited (text_chan,
         base_connection->self_handle, NULL, NULL);
   /* Inviting ourselves to a connected channel should always
@@ -878,6 +879,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   chan = g_hash_table_lookup (priv->text_channels,
       GINT_TO_POINTER (room_handle));
 
+  inviter_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
+
   if (chan == NULL)
     {
       connection = _get_connection (self, GIBBER_TELEPATHY_NS_CLIQUE,
@@ -896,13 +899,11 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
         }
       /* Need to create a new one */
       chan = salut_muc_manager_new_muc_channel (self, room_handle,
-          connection, FALSE);
+          connection, inviter_handle, FALSE);
     }
 
   /* FIXME handle properly */
   g_assert (chan != NULL);
-
-  inviter_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
 
 #ifdef ENABLE_OLPC
   salut_connection_olpc_observe_invitation (priv->connection, room_handle,
