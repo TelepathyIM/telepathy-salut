@@ -70,6 +70,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
 
 static const char *salut_muc_channel_interfaces[] = {
   TP_IFACE_CHANNEL_INTERFACE_GROUP,
+  SALUT_IFACE_CHANNEL_FUTURE,
   NULL
 };
 

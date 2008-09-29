@@ -52,6 +52,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
 
 static const gchar *salut_contact_channel_interfaces[] = {
     TP_IFACE_CHANNEL_INTERFACE_GROUP,
+    SALUT_IFACE_CHANNEL_FUTURE,
     NULL
 };
 
