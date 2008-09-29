@@ -108,7 +108,7 @@ struct _SalutTubesChannelPrivate
   gchar *object_path;
   TpHandle handle;
   TpHandleType handle_type;
-  TpHandleType self_handle;
+  TpHandle self_handle;
   GibberMucConnection *muc_connection;
 
   GHashTable *tubes;
