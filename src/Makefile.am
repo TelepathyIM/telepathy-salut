@@ -15,6 +15,14 @@ libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
 CORE_SOURCES =                                          \
+    base64.c                                            \
+    base64.h                                            \
+    salut-capabilities.c                                \
+    salut-capabilities.h                                \
+    salut-caps-channel-manager.c                        \
+    salut-caps-channel-manager.h                        \
+    salut-caps-hash.c                                   \
+    salut-caps-hash.h                                   \
     salut-connection-manager.c                          \
     salut-connection-manager.h                          \
     salut-contact-manager.c                             \

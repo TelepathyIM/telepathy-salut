@@ -75,6 +75,7 @@ struct _SalutSelf {
     TpHandle olpc_cur_act_room;
     gchar *olpc_color;
 #endif
+    GHashTable *per_channel_manager_caps;
     gchar *node;
     gchar *hash;
     gchar *ver;
