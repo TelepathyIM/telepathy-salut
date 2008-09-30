@@ -485,7 +485,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 static SalutTubesChannel *
 new_tubes_channel (SalutMucManager *self,
                    TpHandle room,
-                   SalutMucChannel *muc)
+                   SalutMucChannel *muc,
+                   TpHandle initiator)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *conn = (TpBaseConnection *) priv->connection;
@@ -506,6 +507,7 @@ new_tubes_channel (SalutMucManager *self,
       "handle", room,
       "handle-type", TP_HANDLE_TYPE_ROOM,
       "muc", muc,
+      "initiator-handle", initiator,
       NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
@@ -651,6 +653,7 @@ make_roomlist_channel (SalutMucManager *self,
 static SalutTubesChannel *
 create_tubes_channel (SalutMucManager *self,
                       TpHandle handle,
+                      TpHandle initiator,
                       GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -663,13 +666,14 @@ create_tubes_channel (SalutMucManager *self,
   if (text_chan == NULL)
     {
       DEBUG ("have to create the text channel before the tubes one");
+      /* FIXME: this channel will come out with Requested: True. */
       text_chan = salut_muc_manager_request_new_muc_channel (self,
           handle, error);
       if (text_chan == NULL)
         return NULL;
     }
 
-  tubes_chan = new_tubes_channel (self, handle, text_chan);
+  tubes_chan = new_tubes_channel (self, handle, text_chan, initiator);
   g_assert (tubes_chan != NULL);
 
   return tubes_chan;
@@ -752,7 +756,8 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
         }
       else
         {
-          tubes_chan = create_tubes_channel (mgr, handle, error);
+          tubes_chan = create_tubes_channel (mgr, handle,
+              base_connection->self_handle, error);
           if (tubes_chan == NULL)
             return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
 
@@ -975,7 +980,8 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
 
 SalutTubesChannel *
 salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
-                                        TpHandle handle)
+                                        TpHandle handle,
+                                        TpHandle actor)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutTubesChannel *tubes_chan;
@@ -988,7 +994,7 @@ salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
       return tubes_chan;
     }
 
-  tubes_chan = create_tubes_channel (self, handle, NULL);
+  tubes_chan = create_tubes_channel (self, handle, actor, NULL);
   g_assert (tubes_chan != NULL);
   g_object_ref (tubes_chan);
 
