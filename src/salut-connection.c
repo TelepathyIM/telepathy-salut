@@ -1767,6 +1767,7 @@ salut_connection_set_self_capabilities (
   guint i;
   GHashTable *save_caps;
   GError *error = NULL;
+  gchar *caps_hash;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1793,12 +1794,18 @@ salut_connection_set_self_capabilities (
         }
     }
 
-  if (!salut_self_set_caps (priv->self, "NODE", "HASH", "VER", &error))
+  /* XEP-0115 version 1.5 uses a verification string in the 'ver' attribute */
+  caps_hash = caps_hash_compute_from_self_presence (priv->self);
+
+  if (!salut_self_set_caps (priv->self, GIBBER_TELEPATHY_NS_CAPS, "sha-1",
+        caps_hash, &error))
     {
+      g_free (caps_hash);
       salut_presence_cache_free_cache_entry (save_caps);
       dbus_g_method_return_error (context, error);
       return;
     }
+  g_free (caps_hash);
 
   _emit_contact_capabilities_changed (self, base->self_handle,
                                       save_caps,
