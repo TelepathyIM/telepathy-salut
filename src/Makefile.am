@@ -41,6 +41,8 @@ CORE_SOURCES =                                          \
     salut-file-transfer-channel.c                       \
     salut-file-transfer-channel.h                       \
     salut-muc-channel.h                                 \
+    salut-presence-cache.c                              \
+    salut-presence-cache.h                              \
     salut-tubes-manager.c                               \
     salut-tubes-manager.h                               \
     salut-contact.h                                     \

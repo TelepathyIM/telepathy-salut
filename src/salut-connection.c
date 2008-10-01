@@ -30,42 +30,44 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
-#include "salut-connection.h"
+#include <telepathy-glib/channel-manager.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/handle-repo-dynamic.h>
+#include <telepathy-glib/handle-repo.h>
+#include <telepathy-glib/handle-repo-static.h>
+#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/util.h>
 
-#include "salut-util.h"
-#include "salut-contact-manager.h"
+#include <gibber/gibber-namespaces.h>
+
+#include "salut-avahi-discovery-client.h"
+#include "salut-caps-channel-manager.h"
+#include "salut-caps-hash.h"
+#include "salut-connection.h"
 #include "salut-contact-channel.h"
+#include "salut-contact.h"
+#include "salut-contact-manager.h"
+#include "salut-direct-bytestream-manager.h"
+#include "salut-discovery-client.h"
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
 #include "salut-ft-manager.h"
 #include "salut-contact.h"
 #include "salut-roomlist-manager.h"
+#include "salut-presence.h"
+#include "salut-presence-cache.h"
 #include "salut-self.h"
-#include "salut-xmpp-connection-manager.h"
 #include "salut-si-bytestream-manager.h"
+#include "salut-tubes-manager.h"
+#include "salut-util.h"
+#include "salut-xmpp-connection-manager.h"
 
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity-manager.h"
 #endif
 
-#include "salut-tubes-manager.h"
-
-#include "salut-presence.h"
-#include "salut-discovery-client.h"
-#include "salut-avahi-discovery-client.h"
-
 #include <extensions/extensions.h>
-
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/util.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/handle-repo-dynamic.h>
-#include <telepathy-glib/handle-repo-static.h>
-#include <telepathy-glib/handle-repo.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-generic.h>
-
-#include <gibber/gibber-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
@@ -97,6 +99,9 @@ static void
 salut_connection_avatar_service_iface_init (gpointer g_iface,
     gpointer iface_data);
 
+static void
+salut_conn_contact_caps_iface_init (gpointer, gpointer);
+
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
@@ -112,6 +117,9 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
+    G_IMPLEMENT_INTERFACE
+      (SALUT_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+      salut_conn_contact_caps_iface_init);
 #ifdef ENABLE_OLPC
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
@@ -1653,6 +1661,180 @@ salut_connection_avatar_service_iface_init (gpointer g_iface,
   IMPLEMENT (clear_avatar);
 #undef IMPLEMENT
 }
+
+static void
+salut_free_enhanced_contact_capabilities (GPtrArray *caps)
+{
+  guint i;
+
+  for (i = 0; i < caps->len; i++)
+    {
+      GValue monster = {0, };
+
+      g_value_init (&monster, SALUT_STRUCT_TYPE_ENHANCED_CONTACT_CAPABILITY);
+      g_value_take_boxed (&monster, g_ptr_array_index (caps, i));
+      g_value_unset (&monster);
+    }
+
+  g_ptr_array_free (caps, TRUE);
+}
+
+/**
+ * salut_connection_get_handle_contact_capabilities
+ *
+ * Add capabilities of handle to the given GPtrArray
+ */
+static void
+salut_connection_get_handle_contact_capabilities (SalutConnection *self,
+  TpHandle handle, GPtrArray *arr)
+{
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self);
+  TpChannelManagerIter iter;
+  TpChannelManager *manager;
+
+  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
+  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
+    {
+      /* all channel managers must implement the capability interface */
+      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
+
+      salut_caps_channel_manager_get_contact_capabilities (
+          SALUT_CAPS_CHANNEL_MANAGER (manager), self, handle, arr);
+    }
+}
+
+
+static void
+_emit_contact_capabilities_changed (SalutConnection *conn,
+                                    TpHandle handle,
+                                    GHashTable *old_caps,
+                                    GHashTable *new_caps)
+{
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+  TpChannelManagerIter iter;
+  TpChannelManager *manager;
+  GPtrArray *ret;
+  gboolean diff = FALSE;
+
+  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
+  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
+    {
+      gpointer per_channel_manager_caps_old = NULL;
+      gpointer per_channel_manager_caps_new = NULL;
+
+      /* all channel managers must implement the capability interface */
+      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
+
+      if (old_caps != NULL)
+        per_channel_manager_caps_old = g_hash_table_lookup (old_caps, manager);
+      if (new_caps != NULL)
+        per_channel_manager_caps_new = g_hash_table_lookup (new_caps, manager);
+
+      if (salut_caps_channel_manager_capabilities_diff (
+            SALUT_CAPS_CHANNEL_MANAGER (manager), handle,
+            per_channel_manager_caps_old, per_channel_manager_caps_new))
+        {
+          diff = TRUE;
+          break;
+        }
+    }
+
+  /* Don't emit the D-Bus signal if there is no change */
+  if (! diff)
+    return;
+
+  ret = g_ptr_array_new ();
+
+  salut_connection_get_handle_contact_capabilities (conn, handle, ret);
+  salut_svc_connection_interface_contact_capabilities_emit_contact_capabilities_changed (
+      conn, ret);
+
+  salut_free_enhanced_contact_capabilities (ret);
+}
+
+/**
+ * salut_connection_set_self_capabilities
+ *
+ * Implements D-Bus method SetSelfCapabilities
+ * on interface
+ * org.freedesktop.Telepathy.Connection.Interface.ContactCapabilities
+ *
+ * @error: Used to return a pointer to a GError detailing any error
+ *         that occurred, D-Bus will throw the error only if this
+ *         function returns FALSE.
+ *
+ * Returns: TRUE if successful, FALSE if an error was thrown.
+ */
+static void
+salut_connection_set_self_capabilities (
+    SalutSvcConnectionInterfaceContactCapabilities *iface,
+    const GPtrArray *caps,
+    DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  guint i;
+  GHashTable *save_caps;
+  GError *error = NULL;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+  /* reset the caps, and fill with the given parameter but keep a backup for
+   * diffing: we don't want to emit a signal if nothing has changed */
+  save_caps = priv->self->per_channel_manager_caps;
+  priv->self->per_channel_manager_caps = NULL;
+
+  for (i = 0; i < caps->len; i++)
+    {
+      GHashTable *cap_to_add = g_ptr_array_index (caps, i);
+      TpChannelManagerIter iter;
+      TpChannelManager *manager;
+
+      tp_base_connection_channel_manager_iter_init (&iter, base);
+      while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
+        {
+          /* all channel managers must implement the capability interface */
+          g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
+
+          salut_caps_channel_manager_add_capability (
+              SALUT_CAPS_CHANNEL_MANAGER (manager), self,
+              base->self_handle, cap_to_add);
+        }
+    }
+
+  if (!salut_self_set_caps (priv->self, "NODE", "HASH", "VER", &error))
+    {
+      salut_presence_cache_free_cache_entry (save_caps);
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  _emit_contact_capabilities_changed (self, base->self_handle,
+                                      save_caps,
+                                      priv->self->per_channel_manager_caps);
+  salut_presence_cache_free_cache_entry (save_caps);
+
+
+  salut_svc_connection_interface_contact_capabilities_return_from_set_self_capabilities
+      (context);
+}
+
+
+static void
+salut_conn_contact_caps_iface_init (gpointer g_iface, gpointer iface_data)
+{
+  SalutSvcConnectionInterfaceContactCapabilitiesClass *klass =
+    (SalutSvcConnectionInterfaceContactCapabilitiesClass *) g_iface;
+
+#define IMPLEMENT(x) \
+    salut_svc_connection_interface_contact_capabilities_implement_##x (\
+    klass, salut_connection_##x)
+  //IMPLEMENT(get_contact_capabilities);
+  IMPLEMENT(set_self_capabilities);
+#undef IMPLEMENT
+}
+
 
 #ifdef ENABLE_OLPC
 static GValue *
