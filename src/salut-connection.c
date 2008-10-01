@@ -1693,6 +1693,51 @@ salut_connection_get_handle_contact_capabilities (SalutConnection *self,
     }
 }
 
+/**
+ * salut_connection_get_contact_capabilities
+ *
+ * Implements D-Bus method GetContactCapabilities
+ * on interface
+ * org.freedesktop.Telepathy.Connection.Interface.ContactCapabilities
+ */
+static void
+salut_connection_get_contact_capabilities (
+    SalutSvcConnectionInterfaceContactCapabilities *iface,
+    const GArray *handles,
+    DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (base,
+      TP_HANDLE_TYPE_CONTACT);
+  guint i;
+  GPtrArray *ret;
+  GError *error = NULL;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+  if (!tp_handles_are_valid (contact_handles, handles, FALSE, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  ret = g_ptr_array_new ();
+
+  for (i = 0; i < handles->len; i++)
+    {
+      TpHandle handle = g_array_index (handles, TpHandle, i);
+
+      salut_connection_get_handle_contact_capabilities (self, handle, ret);
+    }
+
+  salut_svc_connection_interface_contact_capabilities_return_from_get_contact_capabilities
+      (context, ret);
+
+  salut_free_enhanced_contact_capabilities (ret);
+}
+
 
 static void
 _emit_contact_capabilities_changed (SalutConnection *conn,
@@ -1827,7 +1872,7 @@ salut_conn_contact_caps_iface_init (gpointer g_iface, gpointer iface_data)
 #define IMPLEMENT(x) \
     salut_svc_connection_interface_contact_capabilities_implement_##x (\
     klass, salut_connection_##x)
-  //IMPLEMENT(get_contact_capabilities);
+  IMPLEMENT(get_contact_capabilities);
   IMPLEMENT(set_self_capabilities);
 #undef IMPLEMENT
 }
