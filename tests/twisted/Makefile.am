@@ -26,6 +26,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-receive-file-decline.py \
 	avahi/test-receive-file-not-found.py \
 	avahi/test-caps-self.py \
+	avahi/test-caps-tubes.py \
 	avahi/test-text-channel.py \
 	avahi/test-ichat-composing.py \
 	avahi/test-ichat-incoming-msg.py \

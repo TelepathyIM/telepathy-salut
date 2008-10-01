@@ -16,6 +16,25 @@ from constants import *
 
 import dbus
 
+def make_result_iq(stream, iq):
+    result = IQ(stream, "result")
+    result["id"] = iq["id"]
+    query = iq.firstChildElement()
+
+    if query:
+        result.addElement((query.uri, query.name))
+
+    return result
+
+def sync_stream(q, stream):
+    """Used to ensure that Salut has processed all stanzas sent to it on this
+       stream."""
+
+    iq = IQ(stream, "get")
+    iq.addElement(('http://jabber.org/protocol/disco#info', 'query'))
+    stream.send(iq)
+    q.expect('stream-iq', query_ns='http://jabber.org/protocol/disco#info')
+
 def make_connection(bus, event_func, params=None):
     default_params = {
         'published-name': 'testsuite',
