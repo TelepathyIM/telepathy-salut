@@ -603,16 +603,6 @@ set_own_status (GObject *obj,
             err->message);
     }
 
-  /* HACK HACK!: for testing, the user can set the presence to avail/buzy to
-   * change the caps! */
-  ret = salut_self_set_caps (priv->self, "thenode", "thehash",
-      presence == SALUT_PRESENCE_AVAILABLE ? "ver_avail":"ver_notavail",
-      &err);
-  if (! ret)
-    {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
-    }
-
   return TRUE;
 }
 
