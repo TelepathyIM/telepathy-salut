@@ -40,6 +40,7 @@
 #include "debug.h"
 #include "extensions/extensions.h"
 #include "salut-connection.h"
+#include "salut-caps-channel-manager.h"
 #include "salut-tubes-channel.h"
 #include "salut-muc-manager.h"
 #include "salut-muc-channel.h"
@@ -61,7 +62,9 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     salut_tubes_manager,
     G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
-        salut_tubes_manager_iface_init));
+        salut_tubes_manager_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
+      NULL));
 
 /* properties */
 enum
