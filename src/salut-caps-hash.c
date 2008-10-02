@@ -54,6 +54,27 @@ struct _DataForm {
   GPtrArray *fields;
 };
 
+typedef struct _AllCapsData AllCapsData;
+
+struct _AllCapsData {
+  GPtrArray *features;
+  GPtrArray *identities;
+  GPtrArray *dataforms;
+};
+
+typedef struct _DataformParsingContext DataformParsingContext;
+
+struct _DataformParsingContext {
+    DataForm *form;
+};
+
+typedef struct _DataformFieldParsingContext DataformFieldParsingContext;
+
+struct _DataformFieldParsingContext {
+    DataformParsingContext *dataform_context;
+    DataFormField *field;
+};
+
 static void
 sha1_bin (const gchar *bytes,
           guint len,
@@ -196,6 +217,231 @@ caps_hash_compute (
   encoded = base64_encode (SHA1_HASH_SIZE, sha1, FALSE);
 
   return encoded;
+}
+
+/**
+ * parse FORM_TYPE values of a XEP-0128 dataform
+ *
+ * helper function for _parse_dataform_field
+ */
+static gboolean
+_parse_dataform_field_form_type (GibberXmppNode *value_node, gpointer user_data)
+{
+  DataformFieldParsingContext *dataform_field_context =
+    (DataformFieldParsingContext *) user_data;
+
+  if (tp_strdiff (value_node->name, "value"))
+    return TRUE;
+
+  /* If the stanza is correctly formed, there is only one
+   * FORM_TYPE and this check is useless. Otherwise, just
+   * use the first one */
+  if (dataform_field_context->dataform_context->form->form_type == NULL)
+    dataform_field_context->dataform_context->form->form_type =
+      g_strdup (value_node->content);
+
+  return TRUE;
+}
+
+
+/**
+ * parse values of a field of a XEP-0128 dataform
+ *
+ * helper function for _parse_caps_item
+ */
+static gboolean
+_parse_dataform_field_values (GibberXmppNode *value_node, gpointer user_data)
+{
+  DataformFieldParsingContext *dataform_field_context =
+    (DataformFieldParsingContext *) user_data;
+
+  if (tp_strdiff (value_node->name, "value"))
+    return TRUE;
+
+  g_ptr_array_add (dataform_field_context->field->values,
+      g_strdup (value_node->content));
+
+  return TRUE;
+}
+
+/**
+ * parse a field of a XEP-0128 dataform
+ *
+ * helper function for _parse_caps_item
+ */
+static gboolean
+_parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
+{
+  DataformParsingContext *dataform_context =
+    (DataformParsingContext *) user_data;
+  const gchar *var;
+
+  if (! g_str_equal (field_node->name, "field"))
+    return TRUE;
+
+  var = gibber_xmpp_node_get_attribute (field_node, "var");
+
+  if (NULL == var)
+    return TRUE;
+
+  if (g_str_equal (var, "FORM_TYPE"))
+    {
+      DataformFieldParsingContext *dataform_field_context;
+      dataform_field_context = g_slice_new0 (DataformFieldParsingContext);
+      dataform_field_context->dataform_context = dataform_context;
+      dataform_field_context->field = NULL;
+
+      gibber_xmpp_node_each_child (field_node,
+          _parse_dataform_field_form_type, dataform_field_context);
+
+      g_slice_free (DataformFieldParsingContext, dataform_field_context);
+    }
+  else
+    {
+      DataformFieldParsingContext *dataform_field_context;
+      DataFormField *field = NULL;
+
+      field = g_slice_new0 (DataFormField);
+      field->values = g_ptr_array_new ();
+      field->field_name = g_strdup (var);
+
+      dataform_field_context = g_slice_new0 (DataformFieldParsingContext);
+      dataform_field_context->dataform_context = dataform_context;
+      dataform_field_context->field = field;
+
+      gibber_xmpp_node_each_child (field_node,
+          _parse_dataform_field_values, dataform_field_context);
+
+      g_slice_free (DataformFieldParsingContext, dataform_field_context);
+
+      g_ptr_array_add (dataform_context->form->fields, (gpointer) field);
+    }
+
+  return TRUE;
+}
+
+/**
+ * parse a XEP-0128 dataform
+ *
+ * helper function for _parse_caps_item
+ */
+static DataForm *
+_parse_dataform (GibberXmppNode *node)
+{
+  DataForm *form;
+  DataformParsingContext *dataform_context;
+
+  form = g_slice_new0 (DataForm);
+  form->form_type = NULL;
+  form->fields = g_ptr_array_new ();
+
+  dataform_context = g_slice_new0 (DataformParsingContext);
+  dataform_context->form = form;
+
+  gibber_xmpp_node_each_child (node, _parse_dataform_field, dataform_context);
+
+  g_slice_free (DataformParsingContext, dataform_context);
+
+  /* this should not happen if the stanza is correctly formed. */
+  if (form->form_type == NULL)
+    form->form_type = g_strdup ("");
+
+  return form;
+}
+
+/**
+ * parse a XML child node from from a received GibberXmppStanza
+ *
+ * helper function for caps_hash_compute_from_stanza
+ */
+static gboolean
+_parse_caps_item (GibberXmppNode *node, gpointer user_data)
+{
+  AllCapsData *caps_data = (AllCapsData *) user_data;
+
+  if (g_str_equal (node->name, "identity"))
+    {
+      const gchar *category;
+      const gchar *name;
+      const gchar *type;
+      const gchar *xmllang;
+
+      category = gibber_xmpp_node_get_attribute (node, "category");
+      name = gibber_xmpp_node_get_attribute (node, "name");
+      type = gibber_xmpp_node_get_attribute (node, "type");
+      xmllang = gibber_xmpp_node_get_attribute (node, "xml:lang");
+
+      if (NULL == category)
+        return FALSE;
+      if (NULL == name)
+        name = "";
+      if (NULL == type)
+        type = "";
+      if (NULL == xmllang)
+        xmllang = "";
+
+      g_ptr_array_add (caps_data->identities,
+          g_strdup_printf ("%s/%s/%s/%s", category, type, xmllang, name));
+    }
+  else if (g_str_equal (node->name, "feature"))
+    {
+      const gchar *var;
+      var = gibber_xmpp_node_get_attribute (node, "var");
+
+      if (NULL == var)
+        return FALSE;
+
+      g_ptr_array_add (caps_data->features, g_strdup (var));
+    }
+  else if (g_str_equal (node->name, "x"))
+    {
+      const gchar *xmlns;
+      const gchar *type;
+
+      xmlns = gibber_xmpp_node_get_attribute (node, "xmlns");
+      type = gibber_xmpp_node_get_attribute (node, "type");
+
+      if (tp_strdiff (xmlns, "jabber:x:data"))
+        return FALSE;
+
+      if (tp_strdiff (type, "result"))
+        return FALSE;
+
+      g_ptr_array_add (caps_data->dataforms, (gpointer) _parse_dataform (node));
+    }
+
+  return TRUE;
+}
+
+
+/**
+ * Compute the hash as defined by the XEP-0115 from a received
+ * GibberXmppStanza
+ *
+ * Returns: the hash. The called must free the returned hash with g_free().
+ */
+gchar *
+caps_hash_compute_from_stanza (GibberXmppStanza *stanza)
+{
+  GibberXmppNode *node = stanza->node;
+  gchar *str;
+  AllCapsData *caps_data;
+
+  caps_data = g_slice_new0 (AllCapsData);
+  caps_data->features = g_ptr_array_new ();
+  caps_data->identities = g_ptr_array_new ();
+  caps_data->dataforms = g_ptr_array_new ();
+
+  gibber_xmpp_node_each_child (node, _parse_caps_item, caps_data);
+
+  str = caps_hash_compute (caps_data->features, caps_data->identities,
+      caps_data->dataforms);
+
+  salut_presence_free_xep0115_hash (caps_data->features,
+      caps_data->identities, caps_data->dataforms);
+  g_slice_free (AllCapsData, caps_data);
+
+  return str;
 }
 
 /**
