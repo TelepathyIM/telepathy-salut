@@ -49,6 +49,7 @@
 #include "salut-contact.h"
 #include "salut-contact-manager.h"
 #include "salut-direct-bytestream-manager.h"
+#include "salut-disco.h"
 #include "salut-discovery-client.h"
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
@@ -258,6 +259,10 @@ static void salut_connection_avatars_fill_contact_attributes (GObject *obj,
 static void salut_connection_aliasing_fill_contact_attributes (GObject *obj,
     const GArray *contacts, GHashTable *attributes_hash);
 
+static void connection_capabilities_update_cb (SalutPresenceCache *cache,
+    TpHandle handle, GHashTable *old_enhanced_caps,
+    GHashTable *new_enhanced_caps, gpointer user_data);
+
 static void
 salut_connection_init (SalutConnection *obj)
 {
@@ -296,9 +301,16 @@ salut_connection_constructor (GType type,
                               GObjectConstructParam *props)
 {
   GObject *obj;
+  SalutConnection *self;
 
   obj = G_OBJECT_CLASS (salut_connection_parent_class)->
            constructor (type, n_props, props);
+  self = SALUT_CONNECTION (obj);
+
+  self->disco = salut_disco_new (self);
+  self->presence_cache = salut_presence_cache_new (self);
+  g_signal_connect (self->presence_cache, "capabilities-update", G_CALLBACK
+      (connection_capabilities_update_cb), self);
 
   tp_contacts_mixin_init (obj,
       G_STRUCT_OFFSET (SalutConnection, contacts_mixin));
@@ -802,6 +814,12 @@ salut_connection_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
+
+  g_object_unref (self->disco);
+  self->disco = NULL;
+
+  g_object_unref (self->presence_cache);
+  self->presence_cache = NULL;
 
   if (priv->self) {
     g_object_unref (priv->self);
@@ -1785,6 +1803,20 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
       conn, ret);
 
   salut_free_enhanced_contact_capabilities (ret);
+}
+
+static void
+connection_capabilities_update_cb (SalutPresenceCache *cache,
+                                   TpHandle handle,
+                                   GHashTable *old_enhanced_caps,
+                                   GHashTable *new_enhanced_caps,
+                                   gpointer user_data)
+{
+  SalutConnection *conn = SALUT_CONNECTION (user_data);
+
+  if (old_enhanced_caps != NULL || new_enhanced_caps != NULL)
+    _emit_contact_capabilities_changed (conn, handle,
+        old_enhanced_caps, new_enhanced_caps);
 }
 
 /**

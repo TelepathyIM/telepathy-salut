@@ -27,6 +27,8 @@ CORE_SOURCES =                                          \
     salut-connection-manager.h                          \
     salut-contact-manager.c                             \
     salut-contact-manager.h                             \
+    salut-disco.c                                       \
+    salut-disco.h                                       \
     salut-im-manager.c                                  \
     salut-im-manager.h                                  \
     salut-im-channel.c                                  \

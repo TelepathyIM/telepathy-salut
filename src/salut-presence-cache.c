@@ -1,7 +1,7 @@
 /*
  * salut-presence-cache.c - Salut's contact presence cache
- * Copyright (C) 2005 Collabora Ltd.
- * Copyright (C) 2005 Nokia Corporation
+ * Copyright (C) 2005-2008 Collabora Ltd.
+ * Copyright (C) 2005-2008 Nokia Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,17 +25,630 @@
 #include <string.h>
 #include <glib.h>
 
-#define DEBUG_FLAG SALUT_DEBUG_PRESENCE
-
 #include <gibber/gibber-namespaces.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/intset.h>
 
-#define DEBUG_FLAG SALUT_DEBUG_PRESENCE
+#define DEBUG_FLAG DEBUG_PRESENCE
 
+#include "debug.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
-#include "debug.h"
+#include "salut-disco.h"
+#include "signals-marshal.h"
+
+G_DEFINE_TYPE (SalutPresenceCache, salut_presence_cache, G_TYPE_OBJECT);
+
+/* properties */
+enum
+{
+  PROP_CONNECTION = 1,
+  LAST_PROPERTY
+};
+
+/* signal enum */
+enum
+{
+  CAPABILITIES_UPDATE,
+  LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0 };
+
+#define SALUT_PRESENCE_CACHE_PRIV(account) ((account)->priv)
+
+struct _SalutPresenceCachePrivate
+{
+  SalutConnection *conn;
+
+  /* gchar *uri -> CapabilityInfo */
+  GHashTable *capabilities;
+
+  /* gchar *uri -> GSList* of DiscoWaiter* */
+  GHashTable *disco_pending;
+
+  guint caps_serial;
+
+  gboolean dispose_has_run;
+};
+
+typedef struct _DiscoWaiter DiscoWaiter;
+
+struct _DiscoWaiter
+{
+  SalutContact *contact;
+  gchar *hash;
+  gchar *ver;
+  /* if a discovery request fails, we will ask another contact */
+  gboolean disco_requested;
+};
+
+static DiscoWaiter *
+disco_waiter_new (SalutContact *contact,
+                  const gchar *hash,
+                  const gchar *ver)
+{
+  DiscoWaiter *waiter;
+
+  g_object_ref (contact);
+
+  waiter = g_slice_new0 (DiscoWaiter);
+  waiter->contact = contact;
+  waiter->hash = g_strdup (hash);
+  waiter->ver = g_strdup (ver);
+
+  DEBUG ("created waiter %p for contact %s", waiter, contact->name);
+
+  return waiter;
+}
+
+static void
+disco_waiter_free (DiscoWaiter *waiter)
+{
+  g_assert (NULL != waiter);
+
+  DEBUG ("freeing waiter %p for contact %s", waiter,
+      waiter->contact->name);
+
+  g_object_unref (waiter->contact);
+  g_free (waiter->hash);
+  g_free (waiter->ver);
+  g_slice_free (DiscoWaiter, waiter);
+}
+
+static void
+disco_waiter_list_free (GSList *list)
+{
+  GSList *i;
+
+  DEBUG ("list %p", list);
+
+  for (i = list; NULL != i; i = i->next)
+    disco_waiter_free ((DiscoWaiter *) i->data);
+
+  g_slist_free (list);
+}
+
+typedef struct _CapabilityInfo CapabilityInfo;
+
+struct _CapabilityInfo
+{
+  /* struct _CapabilityInfo can be allocated before receiving the contact's
+   * caps. In this case, caps_set is FALSE and set to TRUE when the caps are
+   * received */
+  gboolean caps_set;
+
+  /* key: SalutCapsChannelFactory -> value: gpointer
+   *
+   * The type of the value depends on the SalutCapsChannelFactory. It is an
+   * opaque pointer used by the channel manager to store the capabilities.
+   * Some channel manager do not need to store anything, in this case the
+   * value can just be NULL.
+   *
+   * Since the type of the value is not public, the value is allocated, copied
+   * and freed by helper functions on the SalutCapsChannelManager interface.
+   *
+   * For example:
+   *   * SalutPrivateTubesFactory -> TubesCapabilities
+   *
+   * At the moment, only SalutPrivateTubesFactory use this mechanism to store
+   * the list of supported tube types (example: stream tube for daap).
+   */
+  GHashTable *per_channel_manager_caps;
+
+  /* SalutContact -> NULL */
+  GHashTable *guys;
+};
+
+static CapabilityInfo *
+capability_info_get (SalutPresenceCache *cache, const gchar *uri)
+{
+  SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (cache);
+  CapabilityInfo *info = g_hash_table_lookup (priv->capabilities, uri);
+
+  if (NULL == info)
+    {
+      info = g_slice_new0 (CapabilityInfo);
+      info->caps_set = FALSE;
+      info->guys = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+          g_object_unref, NULL);
+      g_hash_table_insert (priv->capabilities, g_strdup (uri), info);
+    }
+
+  return info;
+}
+
+static void
+capability_info_free (CapabilityInfo *info)
+{
+  g_hash_table_destroy (info->guys);
+  g_slice_free (CapabilityInfo, info);
+}
+
+static void
+capability_info_recvd (SalutPresenceCache *cache, const gchar *node,
+        SalutContact *contact, GHashTable *per_channel_manager_caps)
+{
+  CapabilityInfo *info = capability_info_get (cache, node);
+  gpointer dummy_key, dummy_value;
+
+  if (! info->caps_set)
+    {
+      /* The caps are not valid because this is the first caps report and the
+       * caps were never set.
+       */
+      info->per_channel_manager_caps = per_channel_manager_caps;
+      info->caps_set = TRUE;
+    }
+
+  if (!g_hash_table_lookup_extended (info->guys, contact, &dummy_key,
+        &dummy_value))
+    {
+      g_hash_table_insert (info->guys, contact, NULL);
+    }
+}
+
+static void salut_presence_cache_init (SalutPresenceCache *presence_cache);
+static GObject * salut_presence_cache_constructor (GType type, guint n_props,
+    GObjectConstructParam *props);
+static void salut_presence_cache_dispose (GObject *object);
+static void salut_presence_cache_finalize (GObject *object);
+static void salut_presence_cache_set_property (GObject *object, guint
+    property_id, const GValue *value, GParamSpec *pspec);
+static void salut_presence_cache_get_property (GObject *object, guint
+    property_id, GValue *value, GParamSpec *pspec);
+
+static void
+salut_presence_cache_class_init (SalutPresenceCacheClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GParamSpec *param_spec;
+
+  g_type_class_add_private (object_class, sizeof (SalutPresenceCachePrivate));
+
+  object_class->constructor = salut_presence_cache_constructor;
+
+  object_class->dispose = salut_presence_cache_dispose;
+  object_class->finalize = salut_presence_cache_finalize;
+
+  object_class->get_property = salut_presence_cache_get_property;
+  object_class->set_property = salut_presence_cache_set_property;
+
+  param_spec = g_param_spec_object ("connection", "SalutConnection object",
+                                    "Salut connection object that owns this "
+                                    "presence cache.",
+                                    SALUT_TYPE_CONNECTION,
+                                    G_PARAM_CONSTRUCT_ONLY |
+                                    G_PARAM_READWRITE |
+                                    G_PARAM_STATIC_NICK |
+                                    G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class,
+                                   PROP_CONNECTION,
+                                   param_spec);
+
+  signals[CAPABILITIES_UPDATE] = g_signal_new (
+    "capabilities-update",
+    G_TYPE_FROM_CLASS (klass),
+    G_SIGNAL_RUN_LAST,
+    0,
+    NULL, NULL,
+    salut_signals_marshal_VOID__UINT_UINT_UINT_POINTER_POINTER, G_TYPE_NONE,
+    5, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_POINTER);
+}
+
+static void
+salut_presence_cache_init (SalutPresenceCache *cache)
+{
+  SalutPresenceCachePrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (cache,
+      SALUT_TYPE_PRESENCE_CACHE, SalutPresenceCachePrivate);
+
+  cache->priv = priv;
+
+  priv->capabilities = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+      (GDestroyNotify) capability_info_free);
+  priv->disco_pending = g_hash_table_new_full (g_str_hash, g_str_equal,
+    g_free, (GDestroyNotify) disco_waiter_list_free);
+  priv->caps_serial = 1;
+}
+
+static GObject *
+salut_presence_cache_constructor (GType type, guint n_props,
+                                   GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutPresenceCachePrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_presence_cache_parent_class)->
+           constructor (type, n_props, props);
+  priv = SALUT_PRESENCE_CACHE_PRIV (SALUT_PRESENCE_CACHE (obj));
+
+  return obj;
+}
+
+static void
+salut_presence_cache_dispose (GObject *object)
+{
+  SalutPresenceCache *self = SALUT_PRESENCE_CACHE (object);
+  SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (self);
+
+  if (priv->dispose_has_run)
+    return;
+
+  DEBUG ("dispose called");
+
+  priv->dispose_has_run = TRUE;
+
+  g_hash_table_destroy (priv->capabilities);
+  priv->capabilities = NULL;
+
+  g_hash_table_destroy (priv->disco_pending);
+  priv->disco_pending = NULL;
+
+  if (G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose)
+    G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose (object);
+}
+
+static void
+salut_presence_cache_finalize (GObject *object)
+{
+  DEBUG ("called with %p", object);
+
+  G_OBJECT_CLASS (salut_presence_cache_parent_class)->finalize (object);
+}
+
+static void
+salut_presence_cache_get_property (GObject    *object,
+                                    guint       property_id,
+                                    GValue     *value,
+                                    GParamSpec *pspec)
+{
+  SalutPresenceCache *cache = SALUT_PRESENCE_CACHE (object);
+  SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (cache);
+
+  switch (property_id) {
+    case PROP_CONNECTION:
+      g_value_set_object (value, priv->conn);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+salut_presence_cache_set_property (GObject     *object,
+                                    guint        property_id,
+                                    const GValue *value,
+                                    GParamSpec   *pspec)
+{
+  SalutPresenceCache *cache = SALUT_PRESENCE_CACHE (object);
+  SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (cache);
+
+  switch (property_id) {
+    case PROP_CONNECTION:
+      priv->conn = g_value_get_object (value);
+      break;
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+  }
+}
+
+static void
+_caps_disco_cb (SalutDisco *disco,
+                SalutDiscoRequest *request,
+                SalutContact *contact,
+                const gchar *node,
+                GibberXmppStanza *query_result,
+                GError *error,
+                gpointer user_data)
+{
+  GSList *waiters, *i;
+  DiscoWaiter *waiter_self;
+  SalutPresenceCache *cache;
+  SalutPresenceCachePrivate *priv;
+  TpHandleRepoIface *contact_repo;
+  GHashTable *per_channel_manager_caps;
+  gboolean bad_hash = FALSE;
+  TpBaseConnection *base_conn;
+  TpChannelManagerIter iter;
+  TpChannelManager *manager;
+
+  cache = SALUT_PRESENCE_CACHE (user_data);
+  priv = SALUT_PRESENCE_CACHE_PRIV (cache);
+  base_conn = TP_BASE_CONNECTION (priv->conn);
+  contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+  if (NULL == node)
+    {
+      g_warning ("got disco response with NULL node, ignoring");
+      return;
+    }
+
+  waiters = g_hash_table_lookup (priv->disco_pending, node);
+
+  if (NULL != error)
+    {
+      DiscoWaiter *waiter = NULL;
+
+      DEBUG ("disco query failed: %s", error->message);
+
+      for (i = waiters; NULL != i; i = i->next)
+        {
+          waiter = (DiscoWaiter *) i->data;
+
+          if (!waiter->disco_requested)
+            {
+              salut_disco_request (disco, SALUT_DISCO_TYPE_INFO,
+                  waiter->contact, node, _caps_disco_cb, cache,
+                  G_OBJECT(cache), NULL);
+              waiter->disco_requested = TRUE;
+              break;
+            }
+        }
+
+      if (NULL != i)
+        {
+          DEBUG ("sent a retry disco request to %s for URI %s",
+              contact->name, node);
+        }
+      else
+        {
+          /* The contact sends us an error and we don't have any other
+           * contacts to send the discovery request on the same node. We
+           * cannot get the caps for this node. */
+          DEBUG ("failed to find a suitable candidate to retry disco "
+              "request for URI %s", node);
+          g_hash_table_remove (priv->disco_pending, node);
+        }
+
+      goto OUT;
+    }
+
+  per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+
+  /* parsing for Connection.Interface.ContactCapabilities.DRAFT */
+  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
+  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
+    {
+      gpointer *factory_caps;
+
+      /* all channel managers must implement the capability interface */
+      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
+
+      factory_caps = salut_caps_channel_manager_parse_capabilities
+          (SALUT_CAPS_CHANNEL_MANAGER (manager), query_result);
+      if (factory_caps != NULL)
+        g_hash_table_insert (per_channel_manager_caps,
+            SALUT_CAPS_CHANNEL_MANAGER (manager), factory_caps);
+    }
+
+
+  waiter_self = NULL;
+  for (i = waiters; NULL != i;  i = i->next)
+    {
+      DiscoWaiter *waiter;
+
+      waiter = (DiscoWaiter *) i->data;
+      if (waiter->contact == contact)
+        {
+          waiter_self = waiter;
+          break;
+        }
+    }
+  if (NULL == waiter_self)
+    {
+      DEBUG ("Ignoring non requested disco reply");
+      salut_presence_cache_free_cache_entry (per_channel_manager_caps);
+      per_channel_manager_caps = NULL;
+      goto OUT;
+    }
+
+  /* Only 'sha-1' is mandatory to implement by XEP-0115. If the remote contact
+   * uses another hash algorithm, don't check the hash and fallback to the old
+   * method. The hash method is not included in the discovery request nor
+   * response but we saved it in disco_pending when we received the presence
+   * stanza. */
+  if (!tp_strdiff (waiter_self->hash, "sha-1"))
+    {
+      gchar *computed_hash;
+
+      computed_hash = caps_hash_compute_from_stanza (query_result);
+
+      if (!g_str_equal (waiter_self->ver, computed_hash))
+        bad_hash = TRUE;
+
+      if (!bad_hash)
+        {
+          capability_info_recvd (cache, node, contact,
+              per_channel_manager_caps);
+        }
+      else
+        {
+          /* The received reply does not match the */
+          g_warning ("The announced verification string '%s' does not match "
+              "our hash '%s'.", waiter_self->ver, computed_hash);
+          salut_presence_cache_free_cache_entry (per_channel_manager_caps);
+          per_channel_manager_caps = NULL;
+        }
+
+      g_free (computed_hash);
+    }
+  else
+    {
+      /* Do not allow tubes caps if the contact does not observe XEP-0115
+       * version 1.5: we don't need to bother being compatible with both version
+       * 1.3 and tubes caps */
+      salut_presence_cache_free_cache_entry (per_channel_manager_caps);
+      per_channel_manager_caps = NULL;
+    }
+
+  for (i = waiters; NULL != i;)
+    {
+      DiscoWaiter *waiter;
+
+      waiter = (DiscoWaiter *) i->data;
+
+      if (!bad_hash || waiter->contact == contact)
+        {
+          GSList *tmp;
+          gpointer key;
+          gpointer value;
+
+          if (!bad_hash)
+            {
+              GHashTable *save_enhanced_caps;
+              salut_presence_cache_copy_cache_entry (&save_enhanced_caps,
+                  waiter->contact->per_channel_manager_caps);
+
+              DEBUG ("setting caps for %s (thanks to %s)",
+                  waiter->contact->name, contact->name);
+              salut_contact_set_capabilities (waiter->contact,
+                  per_channel_manager_caps);
+              g_signal_emit (cache, signals[CAPABILITIES_UPDATE], 0,
+                contact, save_enhanced_caps,
+                waiter->contact->per_channel_manager_caps);
+              salut_presence_cache_free_cache_entry (save_enhanced_caps);
+            }
+
+          tmp = i;
+          i = i->next;
+
+          waiters = g_slist_delete_link (waiters, tmp);
+
+          if (!g_hash_table_lookup_extended (priv->disco_pending, node, &key,
+                &value))
+            g_assert_not_reached ();
+
+          g_hash_table_steal (priv->disco_pending, node);
+          g_hash_table_insert (priv->disco_pending, key, waiters);
+
+          disco_waiter_free (waiter);
+        }
+      else
+        {
+          /* if the possible trust, not counting this guy, is too low,
+           * we have been poisoned and reset our trust meters - disco
+           * anybody we still haven't to be able to get more trusted replies */
+
+          if (!waiter->disco_requested)
+            {
+              salut_disco_request (disco, SALUT_DISCO_TYPE_INFO,
+                  waiter->contact, node, _caps_disco_cb, cache,
+                  G_OBJECT(cache), NULL);
+              waiter->disco_requested = TRUE;
+            }
+
+          i = i->next;
+        }
+    }
+
+  if (!bad_hash)
+    g_hash_table_remove (priv->disco_pending, node);
+
+OUT:
+  g_object_unref (contact);
+}
+
+
+void
+salut_presence_cache_process_caps (SalutPresenceCache *self,
+                                   SalutContact *contact,
+                                   const gchar *hash,
+                                   const gchar *node,
+                                   const gchar *ver)
+{
+  gchar *uri = g_strdup_printf ("%s#%s", node, ver);
+  CapabilityInfo *info;
+  SalutPresenceCachePrivate *priv;
+  TpHandleRepoIface *contact_repo;
+
+  priv = SALUT_PRESENCE_CACHE_PRIV (self);
+  contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  info = capability_info_get (self, uri);
+
+  if (info->caps_set)
+    {
+      /* we already have enough trust for this node; apply the cached value to
+       * the contact */
+      DEBUG ("enough trust for URI %s, setting caps for %s",
+          uri, contact->name);
+
+      salut_contact_set_capabilities (contact, info->per_channel_manager_caps);
+    }
+  else
+    {
+      /* Append the contact to the list of such contacts waiting for
+       * capabilities for this uri, and send a disco request if we don't
+       * have enough possible trust yet */
+
+      GSList *waiters;
+      DiscoWaiter *waiter;
+      gpointer key;
+      gpointer value = NULL;
+
+      /* If the URI is in the hash table, steal it and its value; we can
+       * reuse the same URI for the following insertion. Otherwise, make a
+       * copy of the URI for use as a key.
+       */
+      if (g_hash_table_lookup_extended (priv->disco_pending, uri, &key,
+            &value))
+        {
+          g_hash_table_steal (priv->disco_pending, key);
+        }
+      else
+        {
+          key = g_strdup (uri);
+        }
+
+      waiters = (GSList *) value;
+      waiter = disco_waiter_new (contact, hash, ver);
+      waiters = g_slist_prepend (waiters, waiter);
+      g_hash_table_insert (priv->disco_pending, key, waiters);
+
+
+      if (!value)
+        {
+          /* Nobody was asked for this uri so far. Do it now. */
+          salut_disco_request (priv->conn->disco, SALUT_DISCO_TYPE_INFO,
+              contact, uri, _caps_disco_cb, self, G_OBJECT (self), NULL);
+          waiter->disco_requested = TRUE;
+        }
+    }
+}
+
+SalutPresenceCache *
+salut_presence_cache_new (SalutConnection *conn)
+{
+  return g_object_new (SALUT_TYPE_PRESENCE_CACHE,
+                       "connection", conn,
+                       NULL);
+}
+
+
+/* helper functions */
 
 static void
 free_caps_helper (gpointer key, gpointer value, gpointer user_data)

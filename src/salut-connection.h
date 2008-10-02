@@ -35,7 +35,11 @@
 
 #include <gibber/gibber-xmpp-stanza.h>
 
+
 G_BEGIN_DECLS
+
+typedef struct _SalutPresenceCache SalutPresenceCache;
+typedef struct _SalutDisco SalutDisco;
 
 typedef struct _SalutConnection SalutConnection;
 typedef struct _SalutConnectionClass SalutConnectionClass;
@@ -51,6 +55,9 @@ struct _SalutConnection {
   TpBaseConnection parent;
   TpPresenceMixin presence_mixin;
   TpContactsMixin contacts_mixin;
+
+  SalutPresenceCache *presence_cache;
+  SalutDisco *disco;
 
   /* Our name on the network */
   gchar *name;

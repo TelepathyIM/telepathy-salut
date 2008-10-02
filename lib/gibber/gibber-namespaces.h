@@ -11,6 +11,12 @@
 #define GIBBER_XMPP_NS_SASL_AUTH \
   (const gchar *)"urn:ietf:params:xml:ns:xmpp-sasl"
 
+#define NS_DISCO_INFO \
+  (const gchar *)"http://jabber.org/protocol/disco#info"
+
+#define NS_DISCO_ITEMS \
+  (const gchar *)"http://jabber.org/protocol/disco#items"
+
 #define GIBBER_XMPP_NS_XHTML_IM \
   (const gchar *)"http://jabber.org/protocol/xhtml-im"
 

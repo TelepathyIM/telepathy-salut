@@ -22,8 +22,57 @@
 #define __SALUT_PRESENCE_CACHE_H__
 
 #include <glib.h>
+#include <glib-object.h>
+
+#include "salut-connection.h"
+#include "salut-contact.h"
 
 G_BEGIN_DECLS
+
+#define SALUT_TYPE_PRESENCE_CACHE salut_presence_cache_get_type ()
+
+#define SALUT_PRESENCE_CACHE(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST ((obj), \
+  SALUT_TYPE_PRESENCE_CACHE, SalutPresenceCache))
+
+#define SALUT_PRESENCE_CACHE_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_CAST ((klass), \
+  SALUT_TYPE_PRESENCE_CACHE, SalutPresenceCacheClass))
+
+#define SALUT_IS_PRESENCE_CACHE(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE ((obj), \
+  SALUT_TYPE_PRESENCE_CACHE))
+
+#define SALUT_IS_PRESENCE_CACHE_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_TYPE ((klass), \
+  SALUT_TYPE_PRESENCE_CACHE))
+
+#define SALUT_PRESENCE_CACHE_GET_CLASS(obj) \
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), \
+  SALUT_TYPE_PRESENCE_CACHE, SalutPresenceCacheClass))
+
+
+typedef struct _SalutPresenceCachePrivate SalutPresenceCachePrivate;
+
+struct _SalutPresenceCache {
+    GObject parent;
+    SalutPresenceCachePrivate *priv;
+};
+
+typedef struct _SalutPresenceCacheClass SalutPresenceCacheClass;
+
+struct _SalutPresenceCacheClass {
+    GObjectClass parent_class;
+};
+
+GType salut_presence_cache_get_type (void);
+
+SalutPresenceCache *salut_presence_cache_new (SalutConnection *conn);
+
+void salut_presence_cache_process_caps (SalutPresenceCache *self,
+    SalutContact *contact, const gchar *hash, const gchar *node,
+    const gchar *ver);
+
 
 /* loop on CapabilityInfo::per_channel_manager_caps and call
  * salut_caps_channel_manager_free_capabilities */
