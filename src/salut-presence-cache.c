@@ -252,8 +252,8 @@ salut_presence_cache_class_init (SalutPresenceCacheClass *klass)
     G_SIGNAL_RUN_LAST,
     0,
     NULL, NULL,
-    salut_signals_marshal_VOID__POINTER_POINTER_POINTER, G_TYPE_NONE,
-    3, G_TYPE_POINTER, G_TYPE_POINTER, G_TYPE_POINTER);
+    salut_signals_marshal_VOID__UINT_POINTER_POINTER, G_TYPE_NONE,
+    3, G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_POINTER);
 }
 
 static void
@@ -527,7 +527,7 @@ _caps_disco_cb (SalutDisco *disco,
               salut_contact_set_capabilities (waiter->contact,
                   per_channel_manager_caps);
               g_signal_emit (cache, signals[CAPABILITIES_UPDATE], 0,
-                contact, save_enhanced_caps,
+                contact->handle, save_enhanced_caps,
                 waiter->contact->per_channel_manager_caps);
               salut_presence_cache_free_cache_entry (save_enhanced_caps);
             }
@@ -593,10 +593,21 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
     {
       /* we already have enough trust for this node; apply the cached value to
        * the contact */
-      DEBUG ("enough trust for URI %s, setting caps for %s",
-          uri, contact->name);
+      GHashTable *save_enhanced_caps;
 
+      DEBUG ("setting caps for %s (URI %s is in the cache)",
+          contact->name, uri);
+
+      salut_presence_cache_copy_cache_entry (&save_enhanced_caps,
+          contact->per_channel_manager_caps);
+
+      DEBUG ("setting caps for %s (thanks to %s)",
+          contact->name, contact->name);
       salut_contact_set_capabilities (contact, info->per_channel_manager_caps);
+      g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0,
+          contact->handle, save_enhanced_caps,
+          contact->per_channel_manager_caps);
+      salut_presence_cache_free_cache_entry (save_enhanced_caps);
     }
   else
     {
