@@ -205,8 +205,9 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     conn_contacts_iface = dbus.Interface(conn, contacts_iface)
 
     # send presence with no tube cap
+    ver = 'JpaYgiKL0y4fUOCTwN3WLGpaftM='
     basic_txt = { "txtvers": "1", "status": "avail",
-        "node": client, "ver": 'JpaYgiKL0y4fUOCTwN3WLGpaftM=', "hash": "sha-1"}
+        "node": client, "ver": ver, "hash": "sha-1"}
     contact_name = "test-caps-tube@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
@@ -216,16 +217,16 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     incoming = e.connection
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming, to=contact,
+    event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
-        client + '#' + c['ver']
+        client + '#' + ver, (query_node.attributes['node'], client, ver)
 
     # send good reply
-    result = make_result_iq(stream, event.stanza)
+    result = make_result_iq(event.stanza)
     query = result.firstChildElement()
-    query['node'] = client + '#' + c['ver']
+    query['node'] = client + '#' + ver
 
     feature = query.addElement('feature')
     feature['var'] = 'http://jabber.org/protocol/jingle'
@@ -233,10 +234,10 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     feature['var'] = 'http://jabber.org/protocol/jingle/description/audio'
     feature = query.addElement('feature')
     feature['var'] = 'http://www.google.com/transport/p2p'
-    stream.send(result)
+    incoming.send(result)
 
     # no change in ContactCapabilities, so no signal ContactCapabilitiesChanged
-    sync_stream(q, stream)
+    sync_stream(q, incoming)
 
     # no special capabilities
     basic_caps = [(contact_handle, text_fixed_properties,
@@ -261,7 +262,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     stream.send(presence)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming, to=contact,
+    event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
@@ -306,7 +307,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     stream.send(presence)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming, to=contact,
+    event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
@@ -351,7 +352,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     stream.send(presence)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming, to=contact,
+    event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
@@ -402,7 +403,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     stream.send(presence)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming, to=contact,
+    event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
