@@ -1412,7 +1412,9 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
   SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
   SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *base = (TpBaseConnection *) conn;
-  GHashTable *per_channel_manager_caps;
+  /* if the GHashTable is not allocated, we want to do it and update the
+   * pointer in SalutSelf or SalutContact. Hence the type "GHashTable **" */
+  GHashTable **per_channel_manager_caps;
   TubesCapabilities *caps;
   const gchar *channel_type;
 
@@ -1433,7 +1435,7 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
     {
       SalutSelf *salut_self;
       g_object_get (conn, "self", &salut_self, NULL);
-      per_channel_manager_caps = salut_self->per_channel_manager_caps;
+      per_channel_manager_caps = &salut_self->per_channel_manager_caps;
     }
   else
     {
@@ -1443,13 +1445,13 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
       if (contact == NULL)
         return;
 
-      per_channel_manager_caps = contact->per_channel_manager_caps;
+      per_channel_manager_caps = &contact->per_channel_manager_caps;
     }
 
-  if (per_channel_manager_caps == NULL)
-    per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+  if (*per_channel_manager_caps == NULL)
+    *per_channel_manager_caps = g_hash_table_new (NULL, NULL);
 
-  caps = g_hash_table_lookup (per_channel_manager_caps, manager);
+  caps = g_hash_table_lookup (*per_channel_manager_caps, manager);
   if (caps == NULL)
     {
       caps = g_new0 (TubesCapabilities, 1);
@@ -1457,7 +1459,7 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
           g_free, g_free);
       caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
           g_free, g_free);
-      g_hash_table_insert (per_channel_manager_caps, manager, caps);
+      g_hash_table_insert (*per_channel_manager_caps, manager, caps);
     }
 
   if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
