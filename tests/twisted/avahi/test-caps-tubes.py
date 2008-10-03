@@ -150,20 +150,16 @@ def presence_add_caps(presence, ver, client, hash=None):
         c['hash'] = hash
     return presence
 
-def receive_presence_and_ask_caps(q, stream):
-    # receive presence stanza
-    event_stream, event_dbus = q.expect_many(
-            EventPattern('stream-presence'),
+def receive_presence_and_ask_caps(q, stream, service):
+    event_avahi, event_dbus = q.expect_many(
+            EventPattern('service-resolved', service=service),
             EventPattern('dbus-signal', signal='ContactCapabilitiesChanged')
         )
     signaled_caps = event_dbus.args[0]
 
-    c_nodes = xpath.queryForNodes('/presence/c', event_stream.stanza)
-    assert c_nodes is not None
-    assert len(c_nodes) == 1
-    hash = c_nodes[0].attributes['hash']
-    ver = c_nodes[0].attributes['ver']
-    node = c_nodes[0].attributes['node']
+    hash = txt_get_key(event_avahi.txt, "hash")
+    ver = txt_get_key(event_avahi.txt, "ver")
+    node = txt_get_key(event_avahi.txt, "node")
     assert hash == 'sha-1'
 
     # ask caps
@@ -206,11 +202,12 @@ def test_tube_caps_from_contact(q, bus, conn, service,
 
     # send presence with no tube cap
     ver = 'JpaYgiKL0y4fUOCTwN3WLGpaftM='
-    basic_txt = { "txtvers": "1", "status": "avail",
+    txt_record = { "txtvers": "1", "status": "avail",
         "node": client, "ver": ver, "hash": "sha-1"}
     contact_name = "test-caps-tube@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
-    announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
+    announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
+            txt_record)
 
     # this is the first presence, Salut connects to the contact
     e = q.expect('incoming-connection', listener = listener)
@@ -254,27 +251,23 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # send presence with 1 stream tube cap
-    presence = make_presence(contact, None, 'hello')
-    c = presence.addElement(('http://jabber.org/protocol/caps', 'c'))
-    c['node'] = client
-    c['ver'] = 'njTWnNVMGeDjS8+4TkMuMX6Z/Ug='
-    c['hash'] = 'sha-1'
-    stream.send(presence)
+    txt_record['ver'] = 'njTWnNVMGeDjS8+4TkMuMX6Z/Ug='
+    announcer.update(txt_record)
 
     # Salut looks up our capabilities
     event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
-        client + '#' + c['ver']
+        client + '#' + txt_record['ver']
 
     # send good reply
-    result = make_result_iq(stream, event.stanza)
+    result = make_result_iq(event.stanza)
     query = result.firstChildElement()
-    query['node'] = client + '#' + c['ver']
+    query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
     feature['var'] = ns_tubes + '/stream/daap'
-    stream.send(result)
+    incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
     signaled_caps = event.args[0]
@@ -299,27 +292,23 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # send presence with 1 D-Bus tube cap
-    presence = make_presence(contact, None, 'hello')
-    c = presence.addElement(('http://jabber.org/protocol/caps', 'c'))
-    c['node'] = client
-    c['ver'] = '8/mwj7yF0K23YT6GurBXI1X4hd4='
-    c['hash'] = 'sha-1'
-    stream.send(presence)
+    txt_record['ver'] = '8/mwj7yF0K23YT6GurBXI1X4hd4='
+    announcer.update(txt_record)
 
     # Salut looks up our capabilities
     event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
-        client + '#' + c['ver']
+        client + '#' + txt_record['ver']
 
     # send good reply
-    result = make_result_iq(stream, event.stanza)
+    result = make_result_iq(event.stanza)
     query = result.firstChildElement()
-    query['node'] = client + '#' + c['ver']
+    query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
     feature['var'] = ns_tubes + '/dbus/com.example.Xiangqi'
-    stream.send(result)
+    incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
     signaled_caps = event.args[0]
@@ -344,29 +333,25 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    presence = make_presence(contact, None, 'hello')
-    c = presence.addElement(('http://jabber.org/protocol/caps', 'c'))
-    c['node'] = client
-    c['ver'] = 'moS31cvk2kf9Zka4gb6ncj2VJCo='
-    c['hash'] = 'sha-1'
-    stream.send(presence)
+    txt_record['ver'] = 'moS31cvk2kf9Zka4gb6ncj2VJCo='
+    announcer.update(txt_record)
 
     # Salut looks up our capabilities
     event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
-        client + '#' + c['ver']
+        client + '#' + txt_record['ver']
 
     # send good reply
-    result = make_result_iq(stream, event.stanza)
+    result = make_result_iq(event.stanza)
     query = result.firstChildElement()
-    query['node'] = client + '#' + c['ver']
+    query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
     feature['var'] = ns_tubes + '/dbus/com.example.Xiangqi'
     feature = query.addElement('feature')
     feature['var'] = ns_tubes + '/stream/daap'
-    stream.send(result)
+    incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
     signaled_caps = event.args[0]
@@ -395,24 +380,20 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # send presence with 4 tube caps
-    presence = make_presence(contact, None, 'hello')
-    c = presence.addElement(('http://jabber.org/protocol/caps', 'c'))
-    c['node'] = client
-    c['ver'] = '4uwiaJY110AjLEFSIeu4/mVJ8wc='
-    c['hash'] = 'sha-1'
-    stream.send(presence)
+    txt_record['ver'] = '4uwiaJY110AjLEFSIeu4/mVJ8wc='
+    announcer.update(txt_record)
 
     # Salut looks up our capabilities
     event = q.expect('stream-iq', connection = incoming,
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
-        client + '#' + c['ver']
+        client + '#' + txt_record['ver']
 
     # send good reply
-    result = make_result_iq(stream, event.stanza)
+    result = make_result_iq(event.stanza)
     query = result.firstChildElement()
-    query['node'] = client + '#' + c['ver']
+    query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
     feature['var'] = ns_tubes + '/dbus/com.example.Xiangqi'
     feature = query.addElement('feature')
@@ -421,7 +402,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     feature['var'] = ns_tubes + '/stream/daap'
     feature = query.addElement('feature')
     feature['var'] = ns_tubes + '/stream/http'
-    stream.send(result)
+    incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
     signaled_caps = event.args[0]
@@ -459,12 +440,8 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    presence = make_presence(contact, None, 'hello')
-    c = presence.addElement(('http://jabber.org/protocol/caps', 'c'))
-    c['node'] = client
-    c['ver'] = 'moS31cvk2kf9Zka4gb6ncj2VJCo='
-    c['hash'] = 'sha-1'
-    stream.send(presence)
+    txt_record['ver'] = 'moS31cvk2kf9Zka4gb6ncj2VJCo='
+    announcer.update(txt_record)
 
     # Salut does not look up our capabilities because of the cache
 
@@ -514,6 +491,27 @@ def test_tube_caps_to_contact(q, bus, conn, service):
         (1, xiangqi_fixed_properties, xiangqi_allowed_properties),
         (1, go_fixed_properties, go_allowed_properties)]
 
+    # send presence with no cap info
+    ver = 'JpaYgiKL0y4fUOCTwN3WLGpaftM='
+    txt_record = { "txtvers": "1", "status": "avail"}
+    contact_name = "test-caps-tube2@" + get_host_name()
+    listener, port = setup_stream_listener(q, contact_name)
+    announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
+            txt_record)
+
+    # initialise a connection (Salut does not do it because there is no caps
+    # here)
+    self_handle = conn.GetSelfHandle()
+    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    service.resolve()
+    e = q.expect('service-resolved', service = service)
+    outbound = connect_to_stream(q, contact_name,
+        self_handle_name, str(e.pt), e.port)
+    e = q.expect('connection-result')
+    assert e.succeeded, e.reason
+    e = q.expect('stream-opened', connection = outbound)
+
+
     conn_caps_iface = dbus.Interface(conn, caps_iface)
     conn_contacts_iface = dbus.Interface(conn, contacts_iface)
 
@@ -539,14 +537,15 @@ def test_tube_caps_to_contact(q, bus, conn, service):
             [1][caps_iface + '/caps']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
-    sync_stream(q, stream)
+    sync_stream(q, outbound)
 
     # Advertise daap
     ret_caps = conn_caps_iface.SetSelfCapabilities(
         [daap_fixed_properties])
 
     # Expect Salut to reply with the correct caps
-    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, stream)
+    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
+            service)
     assert caps_contain(event, ns_tubes) == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
@@ -574,7 +573,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
         [xiangqi_fixed_properties])
 
     # Expect Salut to reply with the correct caps
-    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, stream)
+    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
+            service)
     assert caps_contain(event, ns_tubes) == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/daap') == False, caps_str
     assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
@@ -602,7 +602,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
         [daap_fixed_properties, xiangqi_fixed_properties])
 
     # Expect Salut to reply with the correct caps
-    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, stream)
+    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
+            service)
     assert caps_contain(event, ns_tubes) == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
@@ -634,7 +635,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
          go_fixed_properties, xiangqi_fixed_properties])
 
     # Expect Salut to reply with the correct caps
-    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, stream)
+    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
+            service)
     assert caps_contain(event, ns_tubes) == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/http') == True, caps_str
@@ -671,7 +673,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
         [daap_fixed_properties, xiangqi_fixed_properties])
 
     # Expect Salut to reply with the correct caps
-    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, stream)
+    event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
+service)
     assert caps_contain(event, ns_tubes) == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
     assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
