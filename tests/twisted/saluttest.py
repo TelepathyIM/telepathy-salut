@@ -13,11 +13,12 @@ import servicetest
 import twisted
 from twisted.internet import reactor
 from constants import *
+from twisted.words.protocols.jabber.client import IQ
 
 import dbus
 
-def make_result_iq(stream, iq):
-    result = IQ(stream, "result")
+def make_result_iq(iq):
+    result = IQ(None, "result")
     result["id"] = iq["id"]
     query = iq.firstChildElement()
 
@@ -26,13 +27,13 @@ def make_result_iq(stream, iq):
 
     return result
 
-def sync_stream(q, stream):
+def sync_stream(q, xmpp_connection):
     """Used to ensure that Salut has processed all stanzas sent to it on this
-       stream."""
+       xmpp_connection."""
 
-    iq = IQ(stream, "get")
+    iq = IQ(None, "get")
     iq.addElement(('http://jabber.org/protocol/disco#info', 'query'))
-    stream.send(iq)
+    xmpp_connection.send(iq)
     q.expect('stream-iq', query_ns='http://jabber.org/protocol/disco#info')
 
 def make_connection(bus, event_func, params=None):
