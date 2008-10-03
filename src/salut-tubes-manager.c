@@ -40,10 +40,12 @@
 #include "debug.h"
 #include "extensions/extensions.h"
 #include "salut-connection.h"
+#include "salut-capabilities.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-tubes-channel.h"
 #include "salut-muc-manager.h"
 #include "salut-muc-channel.h"
+#include "salut-self.h"
 #include "salut-util.h"
 #include "tube-iface.h"
 
@@ -57,6 +59,7 @@ static void tubes_channel_closed_cb (SalutTubesChannel *chan,
 
 static void salut_tubes_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
+static void caps_channel_manager_iface_init (gpointer, gpointer);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     salut_tubes_manager,
@@ -64,7 +67,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
         salut_tubes_manager_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
-      NULL));
+      caps_channel_manager_iface_init));
 
 /* properties */
 enum
@@ -91,6 +94,35 @@ struct _SalutTubesManagerPrivate
 
 #define SALUT_TUBES_MANAGER_GET_PRIVATE(obj) \
     ((SalutTubesManagerPrivate *) obj->priv)
+
+typedef struct _TubesCapabilities TubesCapabilities;
+struct _TubesCapabilities
+{
+  /* Stores the list of tubes supported by a contact. We use a hash table. The
+   * key is the service name and the value is NULL.
+   *
+   * It can also be used to store the list of tubes that Salut advertises to
+   * support when Salut replies to XEP-0115 Entity Capabilities requests. In
+   * this case, a Feature structure is associated with each tube type in order
+   * to be returned by salut_private_tubes_factory_get_feature_list().
+   *
+   * So the value of the hash table is either NULL (if the variable is related
+   * to a contact handle), either a Feature structure (if the variable is
+   * related to the self_handle).
+   */
+
+  /* gchar *Service -> NULL
+   *  or
+   * gchar *Service -> Feature *feature
+   */
+  GHashTable *stream_tube_caps;
+
+  /* gchar *ServiceName -> NULL
+   *  or
+   * gchar *ServiceName -> Feature *feature
+   */
+  GHashTable *dbus_tube_caps;
+};
 
 static void
 salut_tubes_manager_init (SalutTubesManager *self)
@@ -1028,4 +1060,441 @@ salut_tubes_manager_iface_init (gpointer g_iface,
   iface->foreach_channel_class = salut_tubes_manager_foreach_channel_class;
   iface->create_channel = salut_tubes_manager_create_channel;
   iface->request_channel = salut_tubes_manager_request_channel;
+}
+
+static void
+add_service_to_array (gchar *service,
+                      GPtrArray *arr,
+                      TpTubeType type,
+                      TpHandle handle)
+{
+  GValue monster = {0, };
+  GHashTable *fixed_properties;
+  GValue *channel_type_value;
+  GValue *target_handle_type_value;
+  gchar *tube_allowed_properties[] =
+      {
+        TP_IFACE_CHANNEL ".TargetHandle",
+        NULL
+      };
+
+  g_assert (type == TP_TUBE_TYPE_STREAM || type == TP_TUBE_TYPE_DBUS);
+
+  g_value_init (&monster, SALUT_STRUCT_TYPE_ENHANCED_CONTACT_CAPABILITY);
+  g_value_take_boxed (&monster,
+      dbus_g_type_specialized_construct (
+        SALUT_STRUCT_TYPE_ENHANCED_CONTACT_CAPABILITY));
+
+  fixed_properties = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  if (type == TP_TUBE_TYPE_STREAM)
+    g_value_set_static_string (channel_type_value,
+        SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+  else
+    g_value_set_static_string (channel_type_value,
+        SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
+      channel_type_value);
+
+  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties,
+      TP_IFACE_CHANNEL ".TargetHandleType", target_handle_type_value);
+
+  target_handle_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_string (target_handle_type_value, service);
+  if (type == TP_TUBE_TYPE_STREAM)
+    g_hash_table_insert (fixed_properties,
+        SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
+        target_handle_type_value);
+  else
+    g_hash_table_insert (fixed_properties,
+        SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
+        target_handle_type_value);
+
+  dbus_g_type_struct_set (&monster,
+      0, handle,
+      1, fixed_properties,
+      2, tube_allowed_properties,
+      G_MAXUINT);
+
+  g_hash_table_destroy (fixed_properties);
+
+  g_ptr_array_add (arr, g_value_get_boxed (&monster));
+}
+
+static void
+salut_private_tubes_factory_get_contact_caps (
+    SalutCapsChannelManager *manager,
+    SalutConnection *conn,
+    TpHandle handle,
+    GPtrArray *arr)
+{
+  SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
+  SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) conn;
+  TubesCapabilities *caps;
+  GHashTable *stream_tube_caps;
+  GHashTable *dbus_tube_caps;
+  GHashTableIter tube_caps_iter;
+  gchar *service;
+  GHashTable *per_channel_manager_caps;
+
+  g_assert (handle != 0);
+
+  if (handle == base->self_handle)
+    {
+      SalutSelf *salut_self;
+      g_object_get (conn, "self", &salut_self, NULL);
+      per_channel_manager_caps = salut_self->per_channel_manager_caps;
+    }
+  else
+    {
+      SalutContact *contact = salut_contact_manager_get_contact (
+          priv->contact_manager, handle);
+
+      if (contact == NULL)
+        return;
+
+      per_channel_manager_caps = contact->per_channel_manager_caps;
+    }
+
+  if (per_channel_manager_caps == NULL)
+    return;
+
+  caps = g_hash_table_lookup (per_channel_manager_caps, manager);
+  if (caps == NULL)
+    return;
+
+  stream_tube_caps = caps->stream_tube_caps;
+  dbus_tube_caps = caps->dbus_tube_caps;
+
+  if (stream_tube_caps != NULL)
+    {
+      g_hash_table_iter_init (&tube_caps_iter, stream_tube_caps);
+      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+            NULL))
+        {
+          add_service_to_array (service, arr, TP_TUBE_TYPE_STREAM, handle);
+        }
+    }
+
+  if (dbus_tube_caps != NULL)
+    {
+      g_hash_table_iter_init (&tube_caps_iter, dbus_tube_caps);
+      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+            NULL))
+        {
+          add_service_to_array (service, arr, TP_TUBE_TYPE_DBUS, handle);
+        }
+    }
+}
+
+static void
+salut_private_tubes_factory_get_feature_list (
+    SalutCapsChannelManager *manager,
+    gpointer specific_caps,
+    GSList **features)
+{
+  TubesCapabilities *caps = specific_caps;
+  GHashTableIter iter;
+  gchar *service;
+  Feature *feat;
+
+  g_hash_table_iter_init (&iter, caps->stream_tube_caps);
+  while (g_hash_table_iter_next (&iter, (gpointer *) &service,
+        (gpointer *) &feat))
+    {
+      *features = g_slist_append (*features, (gpointer) feat);
+    }
+
+  g_hash_table_iter_init (&iter, caps->dbus_tube_caps);
+  while (g_hash_table_iter_next (&iter, (gpointer *) &service,
+        (gpointer *) &feat))
+    {
+      *features = g_slist_append (*features, (gpointer) feat);
+    }
+}
+
+static gboolean
+_parse_caps_item (GibberXmppNode *node, gpointer user_data)
+{
+  TubesCapabilities *caps = (TubesCapabilities *) user_data;
+  const gchar *var;
+
+  if (0 != strcmp (node->name, "feature"))
+    return TRUE;
+
+  var = gibber_xmpp_node_get_attribute (node, "var");
+
+  if (NULL == var)
+    return TRUE;
+
+  if (g_str_has_prefix (var, GIBBER_TELEPATHY_NS_TUBES "/"))
+    {
+      /* http://telepathy.freedesktop.org/xmpp/tubes/$type/$service */
+      var += strlen (GIBBER_TELEPATHY_NS_TUBES "/");
+      if (g_str_has_prefix (var, "stream/"))
+        {
+          gchar *service;
+          var += strlen ("stream/");
+          service = g_strdup (var);
+          g_hash_table_insert (caps->stream_tube_caps, service, NULL);
+        }
+      else if (g_str_has_prefix (var, "dbus/"))
+        {
+          gchar *service;
+          var += strlen ("dbus/");
+          service = g_strdup (var);
+          g_hash_table_insert (caps->dbus_tube_caps, service, NULL);
+        }
+    }
+
+  return TRUE;
+}
+
+static gpointer
+salut_private_tubes_factory_parse_caps (
+    SalutCapsChannelManager *manager,
+    GibberXmppNode *node)
+{
+  TubesCapabilities *caps;
+
+  caps = g_new0 (TubesCapabilities, 1);
+  caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, g_free);
+  caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, g_free);
+
+  gibber_xmpp_node_each_child (node, _parse_caps_item, caps);
+
+  return caps;
+}
+
+static void
+salut_private_tubes_factory_free_caps (
+    SalutCapsChannelManager *manager,
+    gpointer data)
+{
+ TubesCapabilities *caps = data;
+ g_hash_table_destroy (caps->stream_tube_caps);
+ g_hash_table_destroy (caps->dbus_tube_caps);
+ g_free (caps);
+}
+
+static void
+copy_caps_helper (gpointer key, gpointer value, gpointer user_data)
+{
+  GHashTable *out = user_data;
+  gchar *str = key;
+
+  g_hash_table_insert (out, g_strdup (str), NULL);
+}
+
+static void
+salut_private_tubes_factory_copy_caps (
+    SalutCapsChannelManager *manager,
+    gpointer *specific_caps_out,
+    gpointer specific_caps_in)
+{
+  TubesCapabilities *caps_in = specific_caps_in;
+  TubesCapabilities *caps_out = g_new0 (TubesCapabilities, 1);
+
+  caps_out->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, g_free);
+  g_hash_table_foreach (caps_in->stream_tube_caps, copy_caps_helper,
+      caps_out->stream_tube_caps);
+
+  caps_out->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, g_free);
+  g_hash_table_foreach (caps_in->dbus_tube_caps, copy_caps_helper,
+      caps_out->dbus_tube_caps);
+
+  *specific_caps_out = caps_out;
+}
+
+static void
+salut_private_tubes_factory_update_caps (
+    SalutCapsChannelManager *manager,
+    gpointer *specific_caps_out,
+    gpointer specific_caps_in)
+{
+  TubesCapabilities *caps_out = (TubesCapabilities *) specific_caps_out;
+  TubesCapabilities *caps_in = (TubesCapabilities *) specific_caps_in;
+
+  if (caps_in == NULL)
+    return;
+
+  tp_g_hash_table_update (caps_out->stream_tube_caps,
+      caps_in->stream_tube_caps, (GBoxedCopyFunc) g_strdup, NULL);
+  tp_g_hash_table_update (caps_out->dbus_tube_caps,
+      caps_in->dbus_tube_caps, (GBoxedCopyFunc) g_strdup, NULL);
+}
+
+static gboolean
+salut_private_tubes_factory_caps_diff (
+    SalutCapsChannelManager *manager,
+    TpHandle handle,
+    gpointer specific_old_caps,
+    gpointer specific_new_caps)
+{
+  TubesCapabilities *old_caps = specific_old_caps;
+  TubesCapabilities *new_caps = specific_new_caps;
+  GHashTableIter tube_caps_iter;
+  gchar *service;
+
+  if (old_caps != NULL)
+    {
+      g_hash_table_iter_init (&tube_caps_iter, old_caps->stream_tube_caps);
+      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+            NULL))
+        {
+          gpointer key, value;
+          if (new_caps == NULL ||
+              !g_hash_table_lookup_extended (new_caps->stream_tube_caps,
+                  service, &key, &value))
+            {
+              return TRUE;
+            }
+        }
+      g_hash_table_iter_init (&tube_caps_iter, old_caps->dbus_tube_caps);
+      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+            NULL))
+        {
+          gpointer key, value;
+          if (new_caps == NULL ||
+              !g_hash_table_lookup_extended (new_caps->dbus_tube_caps,
+                  service, &key, &value))
+            {
+              return TRUE;
+            }
+        }
+    }
+
+  if (new_caps != NULL)
+    {
+      g_hash_table_iter_init (&tube_caps_iter, new_caps->stream_tube_caps);
+      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+            NULL))
+        {
+          gpointer key, value;
+          if (old_caps == NULL ||
+              !g_hash_table_lookup_extended (old_caps->stream_tube_caps,
+                  service, &key, &value))
+            {
+              return TRUE;
+            }
+        }
+      g_hash_table_iter_init (&tube_caps_iter, new_caps->dbus_tube_caps);
+      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+            NULL))
+        {
+          gpointer key, value;
+          if (old_caps == NULL ||
+              !g_hash_table_lookup_extended (old_caps->dbus_tube_caps,
+                  service, &key, &value))
+            {
+              return TRUE;
+            }
+        }
+    }
+  return FALSE;
+}
+
+static void
+salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
+                                      SalutConnection *conn,
+                                      TpHandle handle,
+                                      GHashTable *cap)
+{
+  SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
+  SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) conn;
+  GHashTable *per_channel_manager_caps;
+  TubesCapabilities *caps;
+  const gchar *channel_type;
+
+  channel_type = tp_asv_get_string (cap,
+            TP_IFACE_CHANNEL ".ChannelType");
+
+  /* this channel is not for this factory */
+  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
+      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
+      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    return;
+
+  if (tp_asv_get_uint32 (cap,
+        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+    return;
+
+  if (handle == base->self_handle)
+    {
+      SalutSelf *salut_self;
+      g_object_get (conn, "self", &salut_self, NULL);
+      per_channel_manager_caps = salut_self->per_channel_manager_caps;
+    }
+  else
+    {
+      SalutContact *contact = salut_contact_manager_get_contact (
+          priv->contact_manager, handle);
+
+      if (contact == NULL)
+        return;
+
+      per_channel_manager_caps = contact->per_channel_manager_caps;
+    }
+
+  if (per_channel_manager_caps == NULL)
+    per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+
+  caps = g_hash_table_lookup (per_channel_manager_caps, manager);
+  if (caps == NULL)
+    {
+      caps = g_new0 (TubesCapabilities, 1);
+      caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+          g_free, g_free);
+      caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+          g_free, g_free);
+      g_hash_table_insert (per_channel_manager_caps, manager, caps);
+    }
+
+  if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      Feature *feat = g_new0 (Feature, 1);
+      gchar *service = g_strdup (tp_asv_get_string (cap,
+          SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service"));
+      feat->feature_type = FEATURE_OPTIONAL;
+      feat->ns = g_strdup_printf ("%s/stream/%s", GIBBER_TELEPATHY_NS_TUBES,
+          service);
+      g_hash_table_insert (caps->stream_tube_caps, service, feat);
+    }
+  else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      Feature *feat = g_new0 (Feature, 1);
+      gchar *service = g_strdup (tp_asv_get_string (cap,
+          SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName"));
+      feat->feature_type = FEATURE_OPTIONAL;
+      feat->ns = g_strdup_printf ("%s/dbus/%s", GIBBER_TELEPATHY_NS_TUBES,
+          service);
+      g_hash_table_insert (caps->dbus_tube_caps, service, feat);
+    }
+}
+
+
+static void
+caps_channel_manager_iface_init (gpointer g_iface,
+                                 gpointer iface_data)
+{
+  SalutCapsChannelManagerIface *iface = g_iface;
+
+  iface->get_contact_caps = salut_private_tubes_factory_get_contact_caps;
+  iface->get_feature_list = salut_private_tubes_factory_get_feature_list;
+  iface->parse_caps = salut_private_tubes_factory_parse_caps;
+  iface->free_caps = salut_private_tubes_factory_free_caps;
+  iface->copy_caps = salut_private_tubes_factory_copy_caps;
+  iface->update_caps = salut_private_tubes_factory_update_caps;
+  iface->caps_diff = salut_private_tubes_factory_caps_diff;
+  iface->add_cap = salut_private_tubes_factory_add_cap;
 }
