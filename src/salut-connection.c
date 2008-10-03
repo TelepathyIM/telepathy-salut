@@ -259,6 +259,9 @@ static void salut_connection_avatars_fill_contact_attributes (GObject *obj,
 static void salut_connection_aliasing_fill_contact_attributes (GObject *obj,
     const GArray *contacts, GHashTable *attributes_hash);
 
+static void conn_contact_capabilities_fill_contact_attributes (GObject *obj,
+  const GArray *contacts, GHashTable *attributes_hash);
+
 static void connection_capabilities_update_cb (SalutPresenceCache *cache,
     TpHandle handle, GHashTable *old_enhanced_caps,
     GHashTable *new_enhanced_caps, gpointer user_data);
@@ -506,6 +509,10 @@ salut_connection_constructor (GType type,
   tp_contacts_mixin_add_contact_attributes_iface (obj,
       TP_IFACE_CONNECTION_INTERFACE_ALIASING,
       salut_connection_aliasing_fill_contact_attributes);
+
+  tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (self),
+      SALUT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+          conn_contact_capabilities_fill_contact_attributes);
 
   return obj;
 }
@@ -1377,6 +1384,66 @@ salut_connection_aliasing_fill_contact_attributes (GObject *obj,
     }
 }
 
+/**
+ * salut_connection_get_handle_contact_capabilities
+ *
+ * Add capabilities of handle to the given GPtrArray
+ */
+static void
+salut_connection_get_handle_contact_capabilities (SalutConnection *self,
+  TpHandle handle, GPtrArray *arr)
+{
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self);
+  TpChannelManagerIter iter;
+  TpChannelManager *manager;
+
+  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
+  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
+    {
+      /* all channel managers must implement the capability interface */
+      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
+
+      salut_caps_channel_manager_get_contact_capabilities (
+          SALUT_CAPS_CHANNEL_MANAGER (manager), self, handle, arr);
+    }
+}
+
+static void
+conn_contact_capabilities_fill_contact_attributes (GObject *obj,
+  const GArray *contacts, GHashTable *attributes_hash)
+{
+  SalutConnection *self = SALUT_CONNECTION (obj);
+  guint i;
+  GPtrArray *array = NULL;
+
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+
+      if (array == NULL)
+        array = g_ptr_array_new ();
+
+      salut_connection_get_handle_contact_capabilities (self, handle, array);
+
+      if (array->len > 0)
+        {
+          GValue *val =  tp_g_value_slice_new (
+            SALUT_ARRAY_TYPE_ENHANCED_CONTACT_CAPABILITY_LIST);
+
+          g_value_take_boxed (val, array);
+          tp_contacts_mixin_set_contact_attribute (attributes_hash,
+              handle,
+              SALUT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES"/caps",
+              val);
+
+          array = NULL;
+        }
+    }
+
+    if (array != NULL)
+      g_ptr_array_free (array, TRUE);
+}
+
 static void
 salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
     GHashTable *aliases, DBusGMethodInvocation *context)
@@ -1869,30 +1936,6 @@ salut_free_enhanced_contact_capabilities (GPtrArray *caps)
     }
 
   g_ptr_array_free (caps, TRUE);
-}
-
-/**
- * salut_connection_get_handle_contact_capabilities
- *
- * Add capabilities of handle to the given GPtrArray
- */
-static void
-salut_connection_get_handle_contact_capabilities (SalutConnection *self,
-  TpHandle handle, GPtrArray *arr)
-{
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self);
-  TpChannelManagerIter iter;
-  TpChannelManager *manager;
-
-  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
-  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
-    {
-      /* all channel managers must implement the capability interface */
-      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
-
-      salut_caps_channel_manager_get_contact_capabilities (
-          SALUT_CAPS_CHANNEL_MANAGER (manager), self, handle, arr);
-    }
 }
 
 /**
