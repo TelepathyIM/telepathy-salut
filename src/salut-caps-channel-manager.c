@@ -92,7 +92,7 @@ void salut_caps_channel_manager_get_feature_list (
 
 gpointer salut_caps_channel_manager_parse_capabilities (
     SalutCapsChannelManager *caps_manager,
-    GibberXmppStanza *child)
+    GibberXmppNode *child)
 {
   SalutCapsChannelManagerIface *iface =
     SALUT_CAPS_CHANNEL_MANAGER_GET_INTERFACE (caps_manager);

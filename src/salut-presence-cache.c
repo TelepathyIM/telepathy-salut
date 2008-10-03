@@ -55,7 +55,7 @@ enum
 
 static guint signals[LAST_SIGNAL] = { 0 };
 
-#define SALUT_PRESENCE_CACHE_PRIV(account) ((account)->priv)
+#define SALUT_PRESENCE_CACHE_PRIV(cache) ((cache)->priv)
 
 struct _SalutPresenceCachePrivate
 {
@@ -252,8 +252,8 @@ salut_presence_cache_class_init (SalutPresenceCacheClass *klass)
     G_SIGNAL_RUN_LAST,
     0,
     NULL, NULL,
-    salut_signals_marshal_VOID__UINT_UINT_UINT_POINTER_POINTER, G_TYPE_NONE,
-    5, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_POINTER);
+    salut_signals_marshal_VOID__POINTER_POINTER_POINTER, G_TYPE_NONE,
+    3, G_TYPE_POINTER, G_TYPE_POINTER, G_TYPE_POINTER);
 }
 
 static void
@@ -276,11 +276,9 @@ salut_presence_cache_constructor (GType type, guint n_props,
                                    GObjectConstructParam *props)
 {
   GObject *obj;
-  SalutPresenceCachePrivate *priv;
 
   obj = G_OBJECT_CLASS (salut_presence_cache_parent_class)->
            constructor (type, n_props, props);
-  priv = SALUT_PRESENCE_CACHE_PRIV (SALUT_PRESENCE_CACHE (obj));
 
   return obj;
 }
@@ -325,14 +323,15 @@ salut_presence_cache_get_property (GObject    *object,
   SalutPresenceCache *cache = SALUT_PRESENCE_CACHE (object);
   SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (cache);
 
-  switch (property_id) {
-    case PROP_CONNECTION:
-      g_value_set_object (value, priv->conn);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
-  }
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        g_value_set_object (value, priv->conn);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
 }
 
 static void
@@ -344,14 +343,15 @@ salut_presence_cache_set_property (GObject     *object,
   SalutPresenceCache *cache = SALUT_PRESENCE_CACHE (object);
   SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (cache);
 
-  switch (property_id) {
-    case PROP_CONNECTION:
-      priv->conn = g_value_get_object (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
-  }
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        priv->conn = g_value_get_object (value);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
 }
 
 static void
@@ -359,7 +359,7 @@ _caps_disco_cb (SalutDisco *disco,
                 SalutDiscoRequest *request,
                 SalutContact *contact,
                 const gchar *node,
-                GibberXmppStanza *query_result,
+                GibberXmppNode *query_result,
                 GError *error,
                 gpointer user_data)
 {
@@ -640,10 +640,10 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
 }
 
 SalutPresenceCache *
-salut_presence_cache_new (SalutConnection *conn)
+salut_presence_cache_new (SalutConnection *connection)
 {
   return g_object_new (SALUT_TYPE_PRESENCE_CACHE,
-                       "connection", conn,
+                       "connection", connection,
                        NULL);
 }
 

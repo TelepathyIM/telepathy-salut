@@ -68,7 +68,7 @@ typedef void (*SalutCapsChannelManagerGetFeatureListFunc) (
     GSList **features);
 
 typedef gpointer (*SalutCapsChannelManagerParseCapsFunc) (
-    SalutCapsChannelManager *manager, GibberXmppStanza *children);
+    SalutCapsChannelManager *manager, GibberXmppNode *children);
 
 typedef void (*SalutCapsChannelManagerFreeCapsFunc) (
     SalutCapsChannelManager *manager, gpointer specific_caps);
@@ -95,7 +95,7 @@ void salut_caps_channel_manager_get_feature_list (
     GSList **features);
 
 gpointer salut_caps_channel_manager_parse_capabilities (
-    SalutCapsChannelManager *manager, GibberXmppStanza *children);
+    SalutCapsChannelManager *manager, GibberXmppNode *children);
 
 void salut_caps_channel_manager_free_capabilities (SalutCapsChannelManager *manager,
     gpointer specific_caps);

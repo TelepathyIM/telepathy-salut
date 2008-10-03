@@ -421,9 +421,8 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
  * Returns: the hash. The called must free the returned hash with g_free().
  */
 gchar *
-caps_hash_compute_from_stanza (GibberXmppStanza *stanza)
+caps_hash_compute_from_stanza (GibberXmppNode *node)
 {
-  GibberXmppNode *node = stanza->node;
   gchar *str;
   AllCapsData *caps_data;
 

@@ -26,17 +26,17 @@
 
 #include <string.h>
 
-#define DBUS_API_SUBJECT_TO_CHANGE
-
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 #include <telepathy-glib/dbus.h>
+#include <gibber/gibber-iq-helper.h>
 #include <gibber/gibber-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_DISCO
 
 #include "debug.h"
 #include "salut-connection.h"
+#include "salut-xmpp-connection-manager.h"
 #include "signals-marshal.h"
 
 #define DEFAULT_REQUEST_TIMEOUT 20000
@@ -54,6 +54,7 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_CONNECTION = 1,
+  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -62,6 +63,9 @@ G_DEFINE_TYPE(SalutDisco, salut_disco, G_TYPE_OBJECT);
 struct _SalutDiscoPrivate
 {
   SalutConnection *connection;
+  SalutXmppConnectionManager *xmpp_connection_manager;
+
+  /* list of SalutDiscoRequest* */
   GList *requests;
   gboolean dispose_has_run;
 };
@@ -69,11 +73,19 @@ struct _SalutDiscoPrivate
 struct _SalutDiscoRequest
 {
   SalutDisco *disco;
-  guint timer_id;
 
+  /* The request cannot be sent immediately, we have to wait the
+   * XmppConnection to be established. Meanwhile, requested=FALSE. */
+  gboolean requested;
+
+  GibberIqHelper *iq_helper;
+  guint timer_id;
   SalutDiscoType type;
   SalutContact *contact;
+
+  /* uri as in XEP-0115 */
   gchar *node;
+
   SalutDiscoCb callback;
   gpointer user_data;
   GObject *bound_object;
@@ -107,148 +119,20 @@ static void salut_disco_get_property (GObject *object, guint property_id,
 static void salut_disco_dispose (GObject *object);
 static void salut_disco_finalize (GObject *object);
 
-static void
-salut_disco_class_init (SalutDiscoClass *salut_disco_class)
+static const char *
+disco_type_to_xmlns (SalutDiscoType type)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_disco_class);
-  GParamSpec *param_spec;
-
-  g_type_class_add_private (salut_disco_class, sizeof (SalutDiscoPrivate));
-
-  object_class->constructor = salut_disco_constructor;
-
-  object_class->get_property = salut_disco_get_property;
-  object_class->set_property = salut_disco_set_property;
-
-  object_class->dispose = salut_disco_dispose;
-  object_class->finalize = salut_disco_finalize;
-
-  param_spec = g_param_spec_object ("connection", "SalutConnection object",
-                                    "Salut connection object that owns this "
-                                    "XMPP Discovery object.",
-                                    SALUT_TYPE_CONNECTION,
-                                    G_PARAM_CONSTRUCT_ONLY |
-                                    G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
-
-  signals[ITEM_FOUND] =
-    g_signal_new ("item-found",
-                  G_OBJECT_CLASS_TYPE (salut_disco_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__POINTER,
-                  G_TYPE_NONE, 1, G_TYPE_POINTER);
-}
-
-static void
-salut_disco_get_property (GObject    *object,
-                                guint       property_id,
-                                GValue     *value,
-                                GParamSpec *pspec)
-{
-  SalutDisco *chan = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (chan);
-
-  switch (property_id) {
-    case PROP_CONNECTION:
-      g_value_set_object (value, priv->connection);
-      break;
+  switch (type) {
+    case SALUT_DISCO_TYPE_INFO:
+      return NS_DISCO_INFO;
+    case SALUT_DISCO_TYPE_ITEMS:
+      return NS_DISCO_ITEMS;
     default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
+      g_assert_not_reached ();
   }
+
+  return NULL;
 }
-
-static void
-salut_disco_set_property (GObject     *object,
-                           guint        property_id,
-                           const GValue *value,
-                           GParamSpec   *pspec)
-{
-  SalutDisco *chan = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (chan);
-
-  switch (property_id) {
-    case PROP_CONNECTION:
-      priv->connection = g_value_get_object (value);
-      break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
-      break;
-  }
-}
-
-static GObject *
-salut_disco_constructor (GType type, guint n_props,
-                          GObjectConstructParam *props)
-{
-  GObject *obj;
-  SalutDisco *disco;
-  SalutDiscoPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_disco_parent_class)-> constructor (type,
-      n_props, props);
-  disco = SALUT_DISCO (obj);
-  priv = SALUT_DISCO_GET_PRIVATE (disco);
-
-  return obj;
-}
-
-static void cancel_request (SalutDiscoRequest *request);
-
-static void
-salut_disco_dispose (GObject *object)
-{
-  SalutDisco *self = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
-
-  if (priv->dispose_has_run)
-    return;
-
-  priv->dispose_has_run = TRUE;
-
-  DEBUG ("dispose called");
-
-  /* cancel request removes the element from the list after cancelling */
-  while (priv->requests)
-    cancel_request (priv->requests->data);
-
-  if (G_OBJECT_CLASS (salut_disco_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_disco_parent_class)->dispose (object);
-}
-
-static void
-salut_disco_finalize (GObject *object)
-{
-  DEBUG ("called with %p", object);
-
-  G_OBJECT_CLASS (salut_disco_parent_class)->finalize (object);
-}
-
-/**
- * salut_disco_new:
- * @conn: The #SalutConnection to use for service discovery
- *
- * Creates an object to use for Jabber service discovery (DISCO)
- * There should be one of these per connection
- */
-SalutDisco *
-salut_disco_new (SalutConnection *conn)
-{
-  SalutDisco *disco;
-
-  g_return_val_if_fail (SALUT_IS_CONNECTION (conn), NULL);
-
-  disco = SALUT_DISCO (g_object_new (SALUT_TYPE_DISCO,
-        "connection", conn,
-        NULL));
-
-  return disco;
-}
-
 
 static void notify_delete_request (gpointer data, GObject *obj);
 
@@ -282,6 +166,309 @@ delete_request (SalutDiscoRequest *request)
   g_free (request->node);
   g_slice_free (SalutDiscoRequest, request);
 }
+
+static void
+notify_delete_request (gpointer data, GObject *obj)
+{
+  SalutDiscoRequest *request = (SalutDiscoRequest *) data;
+  request->bound_object = NULL;
+  delete_request (request);
+}
+
+static void
+request_reply_cb (GibberIqHelper *helper,
+                  GibberXmppStanza *sent_stanza,
+                  GibberXmppStanza *reply_stanza,
+                  GObject *object,
+                  gpointer user_data)
+{
+  SalutDiscoRequest *request = (SalutDiscoRequest *) user_data;
+  SalutDisco *disco = SALUT_DISCO (object);
+  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (disco);
+  GibberXmppNode *query_node;
+  GError *err = NULL;
+  GibberStanzaSubType sub_type;
+
+  g_assert (request);
+
+  if (!g_list_find (priv->requests, request))
+    return;
+
+  query_node = gibber_xmpp_node_get_child_ns (reply_stanza->node,
+      "query", disco_type_to_xmlns (request->type));
+
+  gibber_xmpp_stanza_get_type_info (reply_stanza, NULL, &sub_type);
+
+  if (sub_type == GIBBER_STANZA_SUB_TYPE_ERROR)
+    {
+      err = gibber_message_get_xmpp_error (reply_stanza);
+
+      if (err == NULL)
+        {
+          err = g_error_new (SALUT_DISCO_ERROR,
+                             SALUT_DISCO_ERROR_UNKNOWN,
+                             "an unknown error occurred");
+        }
+    }
+  else if (NULL == query_node)
+    {
+      err = g_error_new (SALUT_DISCO_ERROR, SALUT_DISCO_ERROR_UNKNOWN,
+          "disco response contained no <query> node");
+    }
+
+  request->callback (request->disco, request, request->contact, request->node,
+                     query_node, err, request->user_data);
+  delete_request (request);
+
+  if (err)
+    g_error_free (err);
+
+  return;
+}
+
+static void
+send_disco_request (SalutDisco *self,
+                    GibberXmppConnection *conn,
+                    SalutContact *contact,
+                    SalutDiscoRequest *request)
+{
+  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
+  GibberXmppStanza *stanza;
+  TpHandleRepoIface *contact_repo;
+  const gchar *jid_from, *jid_to;
+  GError *error;
+
+  contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection*) priv->connection, TP_HANDLE_TYPE_CONTACT);
+
+  jid_from = tp_handle_inspect (contact_repo, base_conn->self_handle);
+  jid_to = tp_handle_inspect (contact_repo, contact->handle);
+
+  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+      GIBBER_STANZA_SUB_TYPE_SET,
+      jid_from, jid_to,
+      GIBBER_NODE, "query",
+        GIBBER_NODE_XMLNS, disco_type_to_xmlns (request->type),
+        GIBBER_NODE_ATTRIBUTE, "node", request->node,
+      GIBBER_NODE_END,
+      GIBBER_STANZA_END);
+
+  request->requested = TRUE;
+
+  request->iq_helper = gibber_iq_helper_new (conn);
+  g_assert (request->iq_helper);
+
+  if (!gibber_iq_helper_send_with_reply (request->iq_helper, stanza,
+      request_reply_cb, G_OBJECT(self), request, &error))
+    {
+      DEBUG ("Failed to send caps request: '%s'", error->message);
+      g_error_free (error);
+    }
+
+  g_object_unref (stanza);
+}
+
+static void
+xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
+                                           GibberXmppConnection *conn,
+                                           SalutContact *contact,
+                                           gpointer user_data)
+{
+  SalutDisco *self = SALUT_DISCO (user_data);
+  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+  GList *req = priv->requests;
+
+  /* send all pending requests on this connection */
+  while (req != NULL)
+    {
+      SalutDiscoRequest *request = req->data;
+
+      if (request->contact == contact && !request->requested)
+        {
+          send_disco_request (self, conn, contact, request);
+        }
+      req = g_list_next (req);
+    }
+}
+
+static void
+salut_disco_class_init (SalutDiscoClass *salut_disco_class)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (salut_disco_class);
+  GParamSpec *param_spec;
+
+  g_type_class_add_private (salut_disco_class, sizeof (SalutDiscoPrivate));
+
+  object_class->constructor = salut_disco_constructor;
+
+  object_class->get_property = salut_disco_get_property;
+  object_class->set_property = salut_disco_set_property;
+
+  object_class->dispose = salut_disco_dispose;
+  object_class->finalize = salut_disco_finalize;
+
+  param_spec = g_param_spec_object ("connection", "SalutConnection object",
+                                    "Salut connection object that owns this "
+                                    "XMPP Discovery object.",
+                                    SALUT_TYPE_CONNECTION,
+                                    G_PARAM_CONSTRUCT_ONLY |
+                                    G_PARAM_READWRITE |
+                                    G_PARAM_STATIC_NICK |
+                                    G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "Salut XMPP Connection manager used for disco to send caps requests",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
+      param_spec);
+
+  signals[ITEM_FOUND] =
+    g_signal_new ("item-found",
+                  G_OBJECT_CLASS_TYPE (salut_disco_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  salut_signals_marshal_VOID__POINTER,
+                  G_TYPE_NONE, 1, G_TYPE_POINTER);
+}
+
+static void
+salut_disco_get_property (GObject    *object,
+                                guint       property_id,
+                                GValue     *value,
+                                GParamSpec *pspec)
+{
+  SalutDisco *chan = SALUT_DISCO (object);
+  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (chan);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        g_value_set_object (value, priv->connection);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+salut_disco_set_property (GObject     *object,
+                           guint        property_id,
+                           const GValue *value,
+                           GParamSpec   *pspec)
+{
+  SalutDisco *chan = SALUT_DISCO (object);
+  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (chan);
+
+  switch (property_id)
+    {
+      case PROP_CONNECTION:
+        priv->connection = g_value_get_object (value);
+        break;
+      case PROP_XMPP_CONNECTION_MANAGER:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static GObject *
+salut_disco_constructor (GType type, guint n_props,
+                          GObjectConstructParam *props)
+{
+  GObject *obj;
+  SalutDisco *disco;
+  SalutDiscoPrivate *priv;
+
+  obj = G_OBJECT_CLASS (salut_disco_parent_class)-> constructor (type,
+      n_props, props);
+  disco = SALUT_DISCO (obj);
+  priv = SALUT_DISCO_GET_PRIVATE (disco);
+
+  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
+
+  return obj;
+}
+
+static void cancel_request (SalutDiscoRequest *request);
+
+static void
+salut_disco_dispose (GObject *object)
+{
+  SalutDisco *self = SALUT_DISCO (object);
+  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+
+  if (priv->dispose_has_run)
+    return;
+
+  priv->dispose_has_run = TRUE;
+
+  DEBUG ("dispose called");
+
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
+
+  /* cancel request removes the element from the list after cancelling */
+  while (priv->requests)
+    cancel_request (priv->requests->data);
+
+  if (G_OBJECT_CLASS (salut_disco_parent_class)->dispose)
+    G_OBJECT_CLASS (salut_disco_parent_class)->dispose (object);
+}
+
+static void
+salut_disco_finalize (GObject *object)
+{
+  DEBUG ("called with %p", object);
+
+  G_OBJECT_CLASS (salut_disco_parent_class)->finalize (object);
+}
+
+/**
+ * salut_disco_new:
+ * @conn: The #SalutConnection to use for service discovery
+ *
+ * Creates an object to use for Jabber service discovery (DISCO)
+ * There should be one of these per connection
+ */
+SalutDisco *
+salut_disco_new (SalutConnection *connection, 
+                 SalutXmppConnectionManager *xmpp_connection_manager)
+{
+  SalutDisco *disco;
+
+  g_return_val_if_fail (SALUT_IS_CONNECTION (connection), NULL);
+
+  disco = SALUT_DISCO (g_object_new (SALUT_TYPE_DISCO,
+        "connection", connection,
+        "xmpp-connection-manager", xmpp_connection_manager,
+        NULL));
+
+  return disco;
+}
+
 
 //static gboolean
 //timeout_request (gpointer data)
@@ -339,76 +526,6 @@ cancel_request (SalutDiscoRequest *request)
   delete_request (request);
 }
 
-/*
-static const char *
-disco_type_to_xmlns (SalutDiscoType type)
-{
-  switch (type) {
-    case SALUT_DISCO_TYPE_INFO:
-      return NS_DISCO_INFO;
-    case SALUT_DISCO_TYPE_ITEMS:
-      return NS_DISCO_ITEMS;
-    default:
-      g_assert_not_reached ();
-  }
-
-  return NULL;
-}
-
-static LmHandlerResult
-request_reply_cb (SalutConnection *conn, LmMessage *sent_msg,
-                  LmMessage *reply_msg, GObject *object, gpointer user_data)
-{
-  SalutDiscoRequest *request = (SalutDiscoRequest *) user_data;
-  SalutDisco *disco = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (disco);
-  LmMessageNode *query_node;
-  GError *err = NULL;
-
-  g_assert (request);
-
-  if (!g_list_find (priv->requests, request))
-    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
-
-  query_node = lm_message_node_get_child_with_namespace (reply_msg->node,
-      "query", disco_type_to_xmlns (request->type));
-
-  if (lm_message_get_sub_type (reply_msg) == LM_MESSAGE_SUB_TYPE_ERROR)
-    {
-      err = salut_message_get_xmpp_error (reply_msg);
-
-      if (err == NULL)
-        {
-          err = g_error_new (SALUT_DISCO_ERROR,
-                             SALUT_DISCO_ERROR_UNKNOWN,
-                             "an unknown error occurred");
-        }
-    }
-  else if (NULL == query_node)
-    {
-      err = g_error_new (SALUT_DISCO_ERROR, SALUT_DISCO_ERROR_UNKNOWN,
-          "disco response contained no <query> node");
-    }
-
-  request->callback (request->disco, request, request->jid, request->node,
-                     query_node, err, request->user_data);
-  delete_request (request);
-
-  if (err)
-    g_error_free (err);
-
-  return LM_HANDLER_RESULT_REMOVE_MESSAGE;
-}
-*/
-
-static void
-notify_delete_request (gpointer data, GObject *obj)
-{
-  SalutDiscoRequest *request = (SalutDiscoRequest *) data;
-  request->bound_object = NULL;
-  delete_request (request);
-}
-
 /**
  * salut_disco_request:
  * @self: #SalutDisco object to use for request
@@ -433,11 +550,15 @@ salut_disco_request (SalutDisco *self, SalutDiscoType type,
 {
   SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
   SalutDiscoRequest *request;
-  //LmMessage *msg;
-  //LmMessageNode *lm_node;
+  SalutXmppConnectionManagerRequestConnectionResult result;
+  GibberXmppConnection *conn = NULL;
+
+  g_assert (node != NULL);
+  g_assert (strlen (node) > 0);
 
   request = g_slice_new0 (SalutDiscoRequest);
   request->disco = self;
+  request->requested = FALSE;
   request->type = type;
   request->contact = g_object_ref (contact);
   if (node)
@@ -453,34 +574,27 @@ salut_disco_request (SalutDisco *self, SalutDiscoType type,
            request, request->contact->name);
 
   priv->requests = g_list_prepend (priv->requests, request);
-  /*
-  msg = lm_message_new_with_sub_type (jid, LM_MESSAGE_TYPE_IQ,
-                                           LM_MESSAGE_SUB_TYPE_GET);
-  lm_node = lm_message_node_add_child (msg->node, "query", NULL);
 
-  lm_message_node_set_attribute (lm_node, "xmlns", disco_type_to_xmlns (type));
+  result = salut_xmpp_connection_manager_request_connection (
+      priv->xmpp_connection_manager, contact, &conn, NULL);
 
-  if (node)
+  if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
-      lm_message_node_set_attribute (lm_node, "node", node);
+      DEBUG ("connection done.");
+      send_disco_request (self, conn, contact, request);
+      return request;
     }
-
-  if (! _salut_connection_send_with_reply (priv->connection, msg,
-        request_reply_cb, G_OBJECT(self), request, error))
+  else if (result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
     {
-      delete_request (request);
-      lm_message_unref (msg);
-      return NULL;
+      DEBUG ("Requested connection pending");
+      return request;
     }
   else
     {
-      request->timer_id =
-          g_timeout_add (DEFAULT_REQUEST_TIMEOUT, timeout_request, request);
-      lm_message_unref (msg);
-      return request;
+      delete_request (request);
+      return NULL;
     }
-*/
-/**/ return NULL;
 }
 
 void

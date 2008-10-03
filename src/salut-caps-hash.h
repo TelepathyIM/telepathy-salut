@@ -26,7 +26,7 @@
 
 #include <gibber/gibber-xmpp-stanza.h>
 
-gchar *caps_hash_compute_from_stanza (GibberXmppStanza *stanza);
+gchar *caps_hash_compute_from_stanza (GibberXmppNode *node);
 gchar *caps_hash_compute_from_self_presence (SalutSelf *self);
 
 #endif /* __SALUT_CAPS_HASH_H__ */

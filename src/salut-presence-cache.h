@@ -26,6 +26,7 @@
 
 #include "salut-connection.h"
 #include "salut-contact.h"
+#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 
@@ -67,7 +68,7 @@ struct _SalutPresenceCacheClass {
 
 GType salut_presence_cache_get_type (void);
 
-SalutPresenceCache *salut_presence_cache_new (SalutConnection *conn);
+SalutPresenceCache *salut_presence_cache_new (SalutConnection *connection);
 
 void salut_presence_cache_process_caps (SalutPresenceCache *self,
     SalutContact *contact, const gchar *hash, const gchar *node,

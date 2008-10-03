@@ -26,9 +26,11 @@
 
 #include <glib-object.h>
 #include <gibber/gibber-xmpp-stanza.h>
+#include <gibber/gibber-xmpp-node.h>
 
 #include "salut-contact.h"
 #include "salut-connection.h"
+#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 
@@ -84,10 +86,11 @@ struct _SalutDisco {
 };
 
 typedef void (*SalutDiscoCb)(SalutDisco *self, SalutDiscoRequest *request,
-    SalutContact *contact, const gchar *node, GibberXmppStanza *query_result,
+    SalutContact *contact, const gchar *node, GibberXmppNode *query_result,
     GError* error, gpointer user_data);
 
-SalutDisco *salut_disco_new (SalutConnection *);
+SalutDisco *salut_disco_new (SalutConnection *connection,
+    SalutXmppConnectionManager *xmpp_connection_manager);
 
 SalutDiscoRequest *salut_disco_request (SalutDisco *self,
     SalutDiscoType type, SalutContact *contact, const char *node,
