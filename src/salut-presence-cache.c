@@ -572,6 +572,9 @@ OUT:
 }
 
 
+/* Called when the contact update its hash, node and ver txt records
+ * If theses variables are absent from the record, the parameters are NULL
+ */
 void
 salut_presence_cache_process_caps (SalutPresenceCache *self,
                                    SalutContact *contact,
@@ -579,31 +582,46 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
                                    const gchar *node,
                                    const gchar *ver)
 {
-  gchar *uri = g_strdup_printf ("%s#%s", node, ver);
-  CapabilityInfo *info;
+  gchar *uri;
   SalutPresenceCachePrivate *priv;
-  TpHandleRepoIface *contact_repo;
+  CapabilityInfo *info;
+  GHashTable *per_channel_manager_caps;
+  gboolean caps_set;
+
+  DEBUG ("Called for %s with '%s' '%s' '%s'",
+    contact->name, hash, node, ver);
 
   priv = SALUT_PRESENCE_CACHE_PRIV (self);
-  contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
-  info = capability_info_get (self, uri);
 
-  if (info->caps_set)
+  if (hash == NULL || node == NULL || ver == NULL ||
+      tp_strdiff (hash, "sha-1"))
     {
-      /* we already have enough trust for this node; apply the cached value to
-       * the contact */
+      /* if the contact does not support capabilities, we consider the default
+       * basic ones */
+      caps_set = TRUE;
+      per_channel_manager_caps = NULL;
+    }
+  else
+    {
+      uri = g_strdup_printf ("%s#%s", node, ver);
+      info = capability_info_get (self, uri);
+      caps_set = info->caps_set;
+      per_channel_manager_caps = info->per_channel_manager_caps;
+    }
+
+  if (caps_set)
+    {
+      /* we have a caps to apply on the contact */
       GHashTable *save_enhanced_caps;
 
-      DEBUG ("setting caps for %s (URI %s is in the cache)",
-          contact->name, uri);
+      DEBUG ("setting caps for %s", contact->name);
 
       salut_presence_cache_copy_cache_entry (&save_enhanced_caps,
           contact->per_channel_manager_caps);
 
       DEBUG ("setting caps for %s (thanks to %s)",
           contact->name, contact->name);
-      salut_contact_set_capabilities (contact, info->per_channel_manager_caps);
+      salut_contact_set_capabilities (contact, per_channel_manager_caps);
       g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0,
           contact->handle, save_enhanced_caps,
           contact->per_channel_manager_caps);
