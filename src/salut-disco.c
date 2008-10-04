@@ -237,7 +237,7 @@ send_disco_request (SalutDisco *self,
   GibberXmppStanza *stanza;
   TpHandleRepoIface *contact_repo;
   const gchar *jid_from, *jid_to;
-  GError *error;
+  GError *error = NULL;
 
   contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection*) priv->connection, TP_HANDLE_TYPE_CONTACT);
@@ -454,7 +454,7 @@ salut_disco_finalize (GObject *object)
  * There should be one of these per connection
  */
 SalutDisco *
-salut_disco_new (SalutConnection *connection, 
+salut_disco_new (SalutConnection *connection,
                  SalutXmppConnectionManager *xmpp_connection_manager)
 {
   SalutDisco *disco;
