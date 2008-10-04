@@ -429,21 +429,6 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
 
 
 static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *conn,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  SalutConnection *self = SALUT_CONNECTION (user_data);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, conn,
-      caps_req_stanza_filter, caps_req_stanza_callback, self);
-}
-
-
-static void
 salut_connection_init (SalutConnection *obj)
 {
   SalutConnectionPrivate *priv =
@@ -488,8 +473,10 @@ salut_connection_constructor (GType type,
   self = SALUT_CONNECTION (obj);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
 
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
+  /* receive discovery requests */
+  salut_xmpp_connection_manager_add_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      caps_req_stanza_filter, caps_req_stanza_callback, self);
 
   self->disco = salut_disco_new (self, priv->xmpp_connection_manager);
   self->presence_cache = salut_presence_cache_new (self);
@@ -1013,6 +1000,10 @@ salut_connection_dispose (GObject *object)
     g_object_unref (priv->self);
     priv->self = NULL;
   }
+
+  salut_xmpp_connection_manager_remove_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      caps_req_stanza_filter, caps_req_stanza_callback, self);
 
 #ifdef ENABLE_OLPC
   salut_xmpp_connection_manager_remove_stanza_filter (
