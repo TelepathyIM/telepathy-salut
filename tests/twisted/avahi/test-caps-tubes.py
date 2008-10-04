@@ -195,7 +195,7 @@ def caps_contain(event, cap):
     return var == cap
 
 def test_tube_caps_from_contact(q, bus, conn, service,
-        contact, contact_handle, client):
+        client):
 
     conn_caps_iface = dbus.Interface(conn, caps_iface)
     conn_contacts_iface = dbus.Interface(conn, contacts_iface)
@@ -219,6 +219,8 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
         client + '#' + ver, (query_node.attributes['node'], client, ver)
+
+    contact_handle = conn.RequestHandles(HT_CONTACT, [contact_name])[0]
 
     # send good reply
     result = make_result_iq(event.stanza)
@@ -726,7 +728,7 @@ def test(q, bus, conn):
     client = 'http://telepathy.freedesktop.org/fake-client'
 
     test_tube_caps_from_contact(q, bus, conn, service,
-            'bilbo1@foo.com/Foo', 2L, client)
+            client)
 
     test_tube_caps_to_contact(q, bus, conn, service)
 
