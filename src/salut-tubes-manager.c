@@ -124,6 +124,11 @@ struct _TubesCapabilities
   GHashTable *dbus_tube_caps;
 };
 
+const Feature tube_feature = {
+  ns: GIBBER_TELEPATHY_NS_TUBES,
+  feature_type: FEATURE_FIXED
+};
+
 static void
 salut_tubes_manager_init (SalutTubesManager *self)
 {
@@ -1202,6 +1207,9 @@ salut_private_tubes_factory_get_feature_list (
   GHashTableIter iter;
   gchar *service;
   Feature *feat;
+
+  g_assert (strlen (tube_feature.ns) > 3);
+  *features = g_slist_append (*features, (gpointer) &tube_feature);
 
   g_hash_table_iter_init (&iter, caps->stream_tube_caps);
   while (g_hash_table_iter_next (&iter, (gpointer *) &service,
