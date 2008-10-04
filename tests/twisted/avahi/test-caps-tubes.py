@@ -499,6 +499,14 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
             txt_record)
 
+    # Before opening a connection to Salut, wait Salut receives our presence
+    # via Avahi. Otherwise, Salut will not allow our connection. We may
+    # consider it is a bug in Salut, and we may want Salut to wait a few
+    # seconds in case Avahi was slow.
+    # See incoming_pending_connection_got_from(): if the SalutContact is not
+    # found in the table, we close the connection.
+    q.expect('dbus-signal', signal='PresencesChanged')
+
     # initialise a connection (Salut does not do it because there is no caps
     # here)
     self_handle = conn.GetSelfHandle()
