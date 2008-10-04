@@ -492,7 +492,6 @@ def test_tube_caps_to_contact(q, bus, conn, service):
         (1, go_fixed_properties, go_allowed_properties)]
 
     # send presence with no cap info
-    ver = 'JpaYgiKL0y4fUOCTwN3WLGpaftM='
     txt_record = { "txtvers": "1", "status": "avail"}
     contact_name = "test-caps-tube2@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
@@ -518,7 +517,6 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     e = q.expect('connection-result')
     assert e.succeeded, e.reason
     e = q.expect('stream-opened', connection = outbound)
-
 
     conn_caps_iface = dbus.Interface(conn, caps_iface)
     conn_contacts_iface = dbus.Interface(conn, contacts_iface)
