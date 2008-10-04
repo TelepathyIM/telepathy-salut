@@ -410,6 +410,10 @@ salut_tubes_manager_dispose (GObject *object)
       priv->xmpp_connection_manager = NULL;
     }
 
+  salut_xmpp_connection_manager_remove_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      iq_tube_request_filter, iq_tube_request_cb, object);
+
   if (G_OBJECT_CLASS (salut_tubes_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_tubes_manager_parent_class)->dispose (
         object);
