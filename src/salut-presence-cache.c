@@ -204,7 +204,7 @@ capability_info_recvd (SalutPresenceCache *cache, const gchar *node,
   if (!g_hash_table_lookup_extended (info->guys, contact, &dummy_key,
         &dummy_value))
     {
-      g_hash_table_insert (info->guys, contact, NULL);
+      g_hash_table_insert (info->guys, g_object_ref (contact), NULL);
     }
 }
 
@@ -423,7 +423,7 @@ _caps_disco_cb (SalutDisco *disco,
           g_hash_table_remove (priv->disco_pending, node);
         }
 
-      goto OUT;
+      return;
     }
 
   per_channel_manager_caps = g_hash_table_new (NULL, NULL);
@@ -462,7 +462,7 @@ _caps_disco_cb (SalutDisco *disco,
       DEBUG ("Ignoring non requested disco reply");
       salut_presence_cache_free_cache_entry (per_channel_manager_caps);
       per_channel_manager_caps = NULL;
-      goto OUT;
+      return;
     }
 
   /* Only 'sha-1' is mandatory to implement by XEP-0115. If the remote contact
@@ -566,9 +566,6 @@ _caps_disco_cb (SalutDisco *disco,
 
   if (!bad_hash)
     g_hash_table_remove (priv->disco_pending, node);
-
-OUT:
-  g_object_unref (contact);
 }
 
 
