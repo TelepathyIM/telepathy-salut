@@ -479,45 +479,6 @@ salut_disco_new (SalutConnection *connection,
   return disco;
 }
 
-
-//static gboolean
-//timeout_request (gpointer data)
-//{
-//  SalutDiscoRequest *request = (SalutDiscoRequest *) data;
-//  SalutDisco *disco;
-//  GError *err /* doesn't need initializing */;
-//  g_return_val_if_fail (data != NULL, FALSE);
-//
-//  err = g_error_new (SALUT_DISCO_ERROR, SALUT_DISCO_ERROR_TIMEOUT,
-//      "Request for %s on %s timed out",
-//      (request->type == SALUT_DISCO_TYPE_INFO)?"info":"items",
-//      request->jid);
-//
-//  /* Temporarily ref the disco object to avoid crashing if the callback
-//   * destroys us (as seen in test-disco-no-reply.py) */
-//  disco = g_object_ref (request->disco);
-//
-//  /* also, we're about to run the callback, so it's too late to cancel it -
-//   * avoid crashing if running the callback destroys the bound object */
-//  if (NULL != request->bound_object)
-//    {
-//      g_object_weak_unref (request->bound_object, notify_delete_request,
-//          request);
-//      request->bound_object = NULL;
-//    }
-//
-//  (request->callback)(request->disco, request, request->jid, request->node,
-//                      NULL, err, request->user_data);
-//  g_error_free (err);
-//
-//  request->timer_id = 0;
-//  delete_request (request);
-//
-//  g_object_unref (disco);
-//
-//  return FALSE;
-//}
-
 static void
 cancel_request (SalutDiscoRequest *request)
 {
