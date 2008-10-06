@@ -1165,10 +1165,6 @@ salut_private_tubes_factory_get_contact_caps (
       if (contact == NULL)
         return;
 
-      DEBUG ("contact %p ref_count == %d",
-          contact,
-          ((GObject *)contact)->ref_count);
-
       per_channel_manager_caps = contact->per_channel_manager_caps;
     }
 
@@ -1202,9 +1198,6 @@ salut_private_tubes_factory_get_contact_caps (
         }
     }
 
-  DEBUG ("contact %p ref_count == %d",
-      contact,
-      ((GObject *)contact)->ref_count);
   if (contact != NULL)
     g_object_unref (contact);
 }
