@@ -82,6 +82,7 @@ struct _SalutDiscoRequest
   guint timer_id;
   SalutDiscoType type;
   SalutContact *contact;
+  GibberXmppConnection *conn;
 
   /* uri as in XEP-0115 */
   gchar *node;
@@ -162,6 +163,14 @@ delete_request (SalutDiscoRequest *request)
       g_source_remove (request->timer_id);
     }
 
+  if (request->conn != NULL)
+    {
+      salut_xmpp_connection_manager_release_connection
+        (priv->xmpp_connection_manager, request->conn);
+    }
+  if (request->iq_helper != NULL)
+    g_object_unref (request->iq_helper);
+
   g_object_unref (request->contact);
   g_free (request->node);
   g_slice_free (SalutDiscoRequest, request);
@@ -222,8 +231,6 @@ request_reply_cb (GibberIqHelper *helper,
 
   if (err)
     g_error_free (err);
-
-  return;
 }
 
 static void
@@ -286,6 +293,9 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 
       if (request->contact == contact && !request->requested)
         {
+          request->conn = conn;
+          salut_xmpp_connection_manager_take_connection
+            (priv->xmpp_connection_manager, request->conn);
           send_disco_request (self, conn, contact, request);
         }
       req = g_list_next (req);
@@ -566,6 +576,8 @@ salut_disco_request (SalutDisco *self, SalutDiscoType type,
   request->callback = callback;
   request->user_data = user_data;
   request->bound_object = object;
+  request->conn = NULL;
+  request->iq_helper = NULL;
 
   if (NULL != object)
     g_object_weak_ref (object, notify_delete_request, request);
@@ -581,6 +593,7 @@ salut_disco_request (SalutDisco *self, SalutDiscoType type,
   if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
       DEBUG ("connection done.");
+      request->conn = conn;
       send_disco_request (self, conn, contact, request);
       return request;
     }
