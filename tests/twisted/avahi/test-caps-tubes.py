@@ -15,12 +15,11 @@ results.
 - 1 stream tube + 1 D-Bus tube caps, again, to test whether the caps cache
   works with tubes
 
-2. Test SetSelfCapabilities and test that a presence stanza is sent to the
-contacts, test that the D-Bus signal ContactCapabilitiesChanged is fired for
-the self handle, ask Salut for its caps with an iq request, check the reply
-is correct, and ask Salut for its caps using D-Bus method
-GetContactCapabilities. Also check that GetContactAttributes gives the same
-results.
+2. Test SetSelfCapabilities and test that the avahi txt record is updated test
+that the D-Bus signal ContactCapabilitiesChanged is fired for the self handle,
+ask Salut for its caps with an iq request, check the reply is correct, and ask
+Salut for its caps using D-Bus method GetContactCapabilities. Also check that
+GetContactAttributes gives the same results.
 
 - no tube cap at all
 - 1 stream tube cap
