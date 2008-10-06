@@ -700,6 +700,7 @@ new_tubes_channel (SalutTubesManager *fac,
                        "initiator-handle", initiator,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
                        NULL);
+  g_object_unref (contact);
 
   DEBUG ("object path %s", object_path);
 
@@ -1145,6 +1146,7 @@ salut_private_tubes_factory_get_contact_caps (
   GHashTable *dbus_tube_caps;
   GHashTableIter tube_caps_iter;
   gchar *service;
+  SalutContact *contact = NULL;
   GHashTable *per_channel_manager_caps;
 
   g_assert (handle != 0);
@@ -1157,11 +1159,15 @@ salut_private_tubes_factory_get_contact_caps (
     }
   else
     {
-      SalutContact *contact = salut_contact_manager_get_contact (
+      contact = salut_contact_manager_get_contact (
           priv->contact_manager, handle);
 
       if (contact == NULL)
         return;
+
+      DEBUG ("contact %p ref_count == %d",
+          contact,
+          ((GObject *)contact)->ref_count);
 
       per_channel_manager_caps = contact->per_channel_manager_caps;
     }
@@ -1195,6 +1201,12 @@ salut_private_tubes_factory_get_contact_caps (
           add_service_to_array (service, arr, TP_TUBE_TYPE_DBUS, handle);
         }
     }
+
+  DEBUG ("contact %p ref_count == %d",
+      contact,
+      ((GObject *)contact)->ref_count);
+  if (contact != NULL)
+    g_object_unref (contact);
 }
 
 static void
@@ -1425,6 +1437,7 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
   GHashTable **per_channel_manager_caps;
   TubesCapabilities *caps;
   const gchar *channel_type;
+  SalutContact *contact = NULL;
 
   channel_type = tp_asv_get_string (cap,
             TP_IFACE_CHANNEL ".ChannelType");
@@ -1447,7 +1460,7 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
     }
   else
     {
-      SalutContact *contact = salut_contact_manager_get_contact (
+      contact = salut_contact_manager_get_contact (
           priv->contact_manager, handle);
 
       if (contact == NULL)
@@ -1490,6 +1503,9 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
           service);
       g_hash_table_insert (caps->dbus_tube_caps, service, feat);
     }
+
+  if (contact != NULL)
+    g_object_unref (contact);
 }
 
 
