@@ -155,9 +155,6 @@ struct _CapabilityInfo
    * the list of supported tube types (example: stream tube for daap).
    */
   GHashTable *per_channel_manager_caps;
-
-  /* SalutContact -> NULL */
-  GHashTable *guys;
 };
 
 static CapabilityInfo *
@@ -170,8 +167,6 @@ capability_info_get (SalutPresenceCache *cache, const gchar *uri)
     {
       info = g_slice_new0 (CapabilityInfo);
       info->caps_set = FALSE;
-      info->guys = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-          g_object_unref, NULL);
       g_hash_table_insert (priv->capabilities, g_strdup (uri), info);
     }
 
@@ -181,7 +176,6 @@ capability_info_get (SalutPresenceCache *cache, const gchar *uri)
 static void
 capability_info_free (CapabilityInfo *info)
 {
-  g_hash_table_destroy (info->guys);
   g_slice_free (CapabilityInfo, info);
 }
 
@@ -190,7 +184,6 @@ capability_info_recvd (SalutPresenceCache *cache, const gchar *node,
         SalutContact *contact, GHashTable *per_channel_manager_caps)
 {
   CapabilityInfo *info = capability_info_get (cache, node);
-  gpointer dummy_key, dummy_value;
 
   if (! info->caps_set)
     {
@@ -199,12 +192,6 @@ capability_info_recvd (SalutPresenceCache *cache, const gchar *node,
        */
       info->per_channel_manager_caps = per_channel_manager_caps;
       info->caps_set = TRUE;
-    }
-
-  if (!g_hash_table_lookup_extended (info->guys, contact, &dummy_key,
-        &dummy_value))
-    {
-      g_hash_table_insert (info->guys, g_object_ref (contact), NULL);
     }
 }
 
