@@ -1947,7 +1947,7 @@ salut_connection_get_contact_capabilities (
   TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_CONTACT);
   guint i;
-  GPtrArray *ret;
+  GHashTable *ret;
   GError *error = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -1959,19 +1959,23 @@ salut_connection_get_contact_capabilities (
       return;
     }
 
-  ret = g_ptr_array_new ();
+  ret = g_hash_table_new_full (NULL, NULL, NULL,
+      (GDestroyNotify) salut_free_enhanced_contact_capabilities);
 
   for (i = 0; i < handles->len; i++)
     {
+      GPtrArray *arr = g_ptr_array_new ();
       TpHandle handle = g_array_index (handles, TpHandle, i);
 
-      salut_connection_get_handle_contact_capabilities (self, handle, ret);
+      salut_connection_get_handle_contact_capabilities (self, handle, arr);
+
+      g_hash_table_insert (ret, GINT_TO_POINTER (handle), arr);
     }
 
   salut_svc_connection_interface_contact_capabilities_return_from_get_contact_capabilities
       (context, ret);
 
-  salut_free_enhanced_contact_capabilities (ret);
+  g_hash_table_destroy (ret);
 }
 
 
@@ -2018,7 +2022,7 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
 
   salut_connection_get_handle_contact_capabilities (conn, handle, ret);
   salut_svc_connection_interface_contact_capabilities_emit_contact_capabilities_changed (
-      conn, ret);
+      conn, handle, ret);
 
   salut_free_enhanced_contact_capabilities (ret);
 }
