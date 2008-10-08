@@ -31,7 +31,7 @@ struct _Feature
     FEATURE_FIXED,
     FEATURE_OPTIONAL,
   } feature_type;
-  const gchar *ns;
+  gchar *ns;
 };
 
 /*

@@ -130,6 +130,20 @@ const Feature tube_feature = {
 };
 
 static void
+salut_private_tubes_factory_free_feat (gpointer data)
+{
+  Feature *feat = (Feature *)data;
+
+  if (feat == NULL)
+    return;
+
+  if (feat->ns != NULL)
+    g_free (feat->ns);
+
+  g_free (feat);
+}
+
+static void
 salut_tubes_manager_init (SalutTubesManager *self)
 {
   SalutTubesManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
@@ -1276,9 +1290,9 @@ salut_private_tubes_factory_parse_caps (
 
   caps = g_new0 (TubesCapabilities, 1);
   caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, g_free);
+      g_free, salut_private_tubes_factory_free_feat);
   caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, g_free);
+      g_free, salut_private_tubes_factory_free_feat);
 
   gibber_xmpp_node_each_child (node, _parse_caps_item, caps);
 
@@ -1315,12 +1329,12 @@ salut_private_tubes_factory_copy_caps (
   TubesCapabilities *caps_out = g_new0 (TubesCapabilities, 1);
 
   caps_out->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, g_free);
+      g_free, salut_private_tubes_factory_free_feat);
   g_hash_table_foreach (caps_in->stream_tube_caps, copy_caps_helper,
       caps_out->stream_tube_caps);
 
   caps_out->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, g_free);
+      g_free, salut_private_tubes_factory_free_feat);
   g_hash_table_foreach (caps_in->dbus_tube_caps, copy_caps_helper,
       caps_out->dbus_tube_caps);
 
@@ -1469,9 +1483,9 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
     {
       caps = g_new0 (TubesCapabilities, 1);
       caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          g_free, g_free);
+          g_free, salut_private_tubes_factory_free_feat);
       caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          g_free, g_free);
+          g_free, salut_private_tubes_factory_free_feat);
       g_hash_table_insert (*per_channel_manager_caps, manager, caps);
     }
 

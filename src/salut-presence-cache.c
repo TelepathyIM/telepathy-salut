@@ -176,6 +176,8 @@ capability_info_get (SalutPresenceCache *cache, const gchar *uri)
 static void
 capability_info_free (CapabilityInfo *info)
 {
+  salut_presence_cache_free_cache_entry (info->per_channel_manager_caps);
+  info->per_channel_manager_caps = NULL;
   g_slice_free (CapabilityInfo, info);
 }
 
