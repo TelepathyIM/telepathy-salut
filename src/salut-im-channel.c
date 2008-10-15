@@ -442,8 +442,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
       NULL,
-      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_boolean ("requested", "Requested?",
@@ -474,11 +473,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       "SalutContact object",
       "Salut Contact to which this channel is dedicated",
       SALUT_TYPE_CONTACT,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONTACT, param_spec);
 
   param_spec = g_param_spec_object (
@@ -486,11 +481,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       "SalutConnection object",
       "Salut Connection that owns the connection for this IM channel",
       SALUT_TYPE_CONNECTION,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
   param_spec = g_param_spec_object (
@@ -498,19 +489,14 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       "SalutXmppConnectionManager object",
       "Salut XMPP Connection manager used for this IM channel",
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
   param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
       "Additional Channel.Interface.* interfaces",
       G_TYPE_STRV,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   tp_text_mixin_class_init (object_class,
