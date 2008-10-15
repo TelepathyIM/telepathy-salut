@@ -22,9 +22,11 @@
 
 #include <glib.h>
 
-#include "sha1/sha1.h"
-
+/* Guarantees that the resulting hash is in lower-case */
 gchar *sha1_hex (const guint8 *bytes, guint len);
+
+/* A SHA1 digest is 20 bytes long */
+#define SHA1_HASH_SIZE 20
 void sha1_bin (const gchar *bytes, guint len, guchar out[SHA1_HASH_SIZE]);
 
 #endif /* #ifndef __SALUT_SHA1_UTIL__ */

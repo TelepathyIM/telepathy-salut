@@ -100,9 +100,7 @@ DUMMY_BACKEND_SOURCES = 				\
 
 SHA1_SOURCES =                                          \
     sha1/sha1-util.h                                    \
-    sha1/sha1-util.c                                    \
-    sha1/sha1.h                                         \
-    sha1/sha1.c
+    sha1/sha1-util.c
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
     $(SHA1_SOURCES)
