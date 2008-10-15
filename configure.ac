@@ -135,8 +135,8 @@ AC_C_BIGENDIAN
 dnl GTK docs
 GTK_DOC_CHECK
 
-dnl Check for Glib 
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.4, gobject-2.0 >= 2.4])
+dnl Check for Glib
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.16, gobject-2.0 >= 2.16])
 
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
@@ -175,7 +175,7 @@ AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for telepathy-glib
-PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.14])
+PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.17])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
