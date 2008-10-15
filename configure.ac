@@ -23,7 +23,7 @@ AC_INIT([Telepathy Salut], [salut_version],
 
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([1.8 -Wno-portability])
+AM_INIT_AUTOMAKE([1.9 -Wno-portability])
 AM_PROG_LIBTOOL
 AM_CONFIG_HEADER(config.h)
 
