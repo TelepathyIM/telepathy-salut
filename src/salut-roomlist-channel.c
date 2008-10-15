@@ -27,6 +27,7 @@
 #include "salut-connection.h"
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/enums.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/svc-channel.h>
@@ -34,12 +35,6 @@
 
 #define DEBUG_FLAG DEBUG_ROOMLIST
 #include "debug.h"
-
-#define SALUT_TP_TYPE_ROOM_STRUCT (dbus_g_type_get_struct ("GValueArray", \
-      G_TYPE_UINT, \
-      G_TYPE_STRING, \
-      dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE), \
-      G_TYPE_INVALID))
 
 static void channel_iface_init (gpointer, gpointer);
 static void roomlist_iface_init (gpointer, gpointer);
@@ -356,13 +351,13 @@ rooms_free (SalutRoomlistChannel *self)
       TpHandle handle;
 
       boxed = g_ptr_array_index (priv->rooms, i);
-      g_value_init (&room, SALUT_TP_TYPE_ROOM_STRUCT);
+      g_value_init (&room, TP_STRUCT_TYPE_ROOM_INFO);
       g_value_set_static_boxed (&room, boxed);
       dbus_g_type_struct_get (&room,
           0, &handle,
           G_MAXUINT);
 
-      g_boxed_free (SALUT_TP_TYPE_ROOM_STRUCT, boxed);
+      g_boxed_free (TP_STRUCT_TYPE_ROOM_INFO, boxed);
       tp_handle_unref (room_repo, handle);
     }
 
@@ -448,9 +443,9 @@ salut_roomlist_channel_add_room (SalutRoomlistChannel *self,
   g_value_take_string (&handle_name, (gchar *) room_name);
   g_hash_table_insert (keys, "handle-name", &handle_name);
 
-  g_value_init (&room, SALUT_TP_TYPE_ROOM_STRUCT);
+  g_value_init (&room, TP_STRUCT_TYPE_ROOM_INFO);
   g_value_take_boxed (&room,
-      dbus_g_type_specialized_construct (SALUT_TP_TYPE_ROOM_STRUCT));
+      dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ROOM_INFO));
   dbus_g_type_struct_set (&room,
       0, handle,
       1, "org.freedesktop.Telepathy.Channel.Type.Text",
@@ -485,7 +480,7 @@ salut_roomlist_channel_remove_room (SalutRoomlistChannel *self,
       TpHandle h;
 
       boxed = g_ptr_array_index (priv->rooms, i);
-      g_value_init (&room, SALUT_TP_TYPE_ROOM_STRUCT);
+      g_value_init (&room, TP_STRUCT_TYPE_ROOM_INFO);
       g_value_set_static_boxed (&room, boxed);
       dbus_g_type_struct_get (&room,
           0, &h,
@@ -493,7 +488,7 @@ salut_roomlist_channel_remove_room (SalutRoomlistChannel *self,
 
       if (handle == h)
         {
-          g_boxed_free (SALUT_TP_TYPE_ROOM_STRUCT, boxed);
+          g_boxed_free (TP_STRUCT_TYPE_ROOM_INFO, boxed);
           g_ptr_array_remove_index_fast (priv->rooms, i);
           tp_handle_unref (room_repo, handle);
           DEBUG ("remove %s", room_name);
