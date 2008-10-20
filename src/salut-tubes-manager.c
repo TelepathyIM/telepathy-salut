@@ -132,7 +132,7 @@ const Feature tube_feature = {
 static void
 salut_private_tubes_factory_free_feat (gpointer data)
 {
-  Feature *feat = (Feature *)data;
+  Feature *feat = (Feature *) data;
 
   if (feat == NULL)
     return;
@@ -1158,7 +1158,7 @@ salut_private_tubes_factory_get_contact_caps (
   GHashTable *stream_tube_caps;
   GHashTable *dbus_tube_caps;
   GHashTableIter tube_caps_iter;
-  gchar *service;
+  gpointer service;
   SalutContact *contact = NULL;
   GHashTable *per_channel_manager_caps;
 
@@ -1194,7 +1194,7 @@ salut_private_tubes_factory_get_contact_caps (
   if (stream_tube_caps != NULL)
     {
       g_hash_table_iter_init (&tube_caps_iter, stream_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+      while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
           add_service_to_array (service, arr, TP_TUBE_TYPE_STREAM, handle);
@@ -1204,7 +1204,7 @@ salut_private_tubes_factory_get_contact_caps (
   if (dbus_tube_caps != NULL)
     {
       g_hash_table_iter_init (&tube_caps_iter, dbus_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+      while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
           add_service_to_array (service, arr, TP_TUBE_TYPE_DBUS, handle);
@@ -1223,24 +1223,22 @@ salut_private_tubes_factory_get_feature_list (
 {
   TubesCapabilities *caps = specific_caps;
   GHashTableIter iter;
-  gchar *service;
-  Feature *feat;
+  gpointer service;
+  gpointer feat;
 
   g_assert (strlen (tube_feature.ns) > 3);
   *features = g_slist_append (*features, (gpointer) &tube_feature);
 
   g_hash_table_iter_init (&iter, caps->stream_tube_caps);
-  while (g_hash_table_iter_next (&iter, (gpointer *) &service,
-        (gpointer *) &feat))
+  while (g_hash_table_iter_next (&iter, &service, &feat))
     {
-      *features = g_slist_append (*features, (gpointer) feat);
+      *features = g_slist_append (*features, feat);
     }
 
   g_hash_table_iter_init (&iter, caps->dbus_tube_caps);
-  while (g_hash_table_iter_next (&iter, (gpointer *) &service,
-        (gpointer *) &feat))
+  while (g_hash_table_iter_next (&iter, &service, &feat))
     {
-      *features = g_slist_append (*features, (gpointer) feat);
+      *features = g_slist_append (*features, feat);
     }
 }
 
@@ -1369,12 +1367,12 @@ salut_private_tubes_factory_caps_diff (
   TubesCapabilities *old_caps = specific_old_caps;
   TubesCapabilities *new_caps = specific_new_caps;
   GHashTableIter tube_caps_iter;
-  gchar *service;
+  gpointer service;
 
   if (old_caps != NULL)
     {
       g_hash_table_iter_init (&tube_caps_iter, old_caps->stream_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+      while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
           gpointer key, value;
@@ -1386,7 +1384,7 @@ salut_private_tubes_factory_caps_diff (
             }
         }
       g_hash_table_iter_init (&tube_caps_iter, old_caps->dbus_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+      while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
           gpointer key, value;
@@ -1402,7 +1400,7 @@ salut_private_tubes_factory_caps_diff (
   if (new_caps != NULL)
     {
       g_hash_table_iter_init (&tube_caps_iter, new_caps->stream_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+      while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
           gpointer key, value;
@@ -1414,7 +1412,7 @@ salut_private_tubes_factory_caps_diff (
             }
         }
       g_hash_table_iter_init (&tube_caps_iter, new_caps->dbus_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, (gpointer *) &service,
+      while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
           gpointer key, value;

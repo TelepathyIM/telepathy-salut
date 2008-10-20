@@ -40,15 +40,16 @@ GSList *
 capabilities_get_features (GHashTable *per_channel_manager_caps)
 {
   GHashTableIter channel_manager_iter;
-  SalutCapsChannelManager *manager;
-  gpointer cap;
   GSList *features = NULL;
 
   if (per_channel_manager_caps != NULL)
     {
+      gpointer manager;
+      gpointer cap;
+
       g_hash_table_iter_init (&channel_manager_iter, per_channel_manager_caps);
       while (g_hash_table_iter_next (&channel_manager_iter,
-                 (gpointer *) &manager, &cap))
+            &manager, &cap))
         {
           salut_caps_channel_manager_get_feature_list (manager, cap,
               &features);
