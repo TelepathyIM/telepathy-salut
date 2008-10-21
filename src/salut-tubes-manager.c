@@ -43,7 +43,7 @@
 #include <telepathy-glib/channel-factory-iface.h>
 
 static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
-    TpHandle handle);
+    TpHandle handle, TpHandle initiator);
 
 static void tubes_channel_closed_cb (SalutTubesChannel *chan,
     gpointer user_data);
@@ -335,7 +335,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   {
     if (chan == NULL)
       {
-        chan = new_tubes_channel (self, initiator_handle);
+        chan = new_tubes_channel (self, initiator_handle, initiator_handle);
         tp_channel_factory_iface_emit_new_channel (self,
             (TpChannelIface *) chan, NULL);
       }
@@ -536,7 +536,8 @@ tubes_channel_closed_cb (SalutTubesChannel *chan,
  */
 static SalutTubesChannel *
 new_tubes_channel (SalutTubesManager *fac,
-                   TpHandle handle)
+                   TpHandle handle,
+                   TpHandle initiator)
 {
   SalutTubesManagerPrivate *priv;
   TpBaseConnection *conn;
@@ -562,6 +563,7 @@ new_tubes_channel (SalutTubesManager *fac,
                        "handle", handle,
                        "handle-type", TP_HANDLE_TYPE_CONTACT,
                        "contact", contact,
+                       "initiator-handle", initiator,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
                        NULL);
 
@@ -685,7 +687,8 @@ salut_tubes_manager_iface_request (TpChannelFactoryIface *iface,
   if (chan == NULL)
     {
       status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-      chan = new_tubes_channel (fac, handle);
+      chan = new_tubes_channel (fac, handle,
+          ((TpBaseConnection*) priv->conn)->self_handle);
       if (chan == NULL)
         {
           DEBUG ("Cannot create a tubes channel with handle %u",
