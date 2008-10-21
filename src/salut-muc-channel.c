@@ -101,6 +101,8 @@ enum
   PROP_REQUESTED,
   PROP_INITIATOR_HANDLE,
   PROP_INITIATOR_ID,
+  PROP_CHANNEL_PROPERTIES,
+  PROP_CHANNEL_DESTROYED,
   LAST_PROPERTY
 };
 
@@ -206,6 +208,24 @@ salut_muc_channel_get_property (GObject    *object,
       g_value_set_boolean (value,
           (priv->initiator == tp_base_connection_get_self_handle (base_conn)));
       break;
+      case PROP_CHANNEL_DESTROYED:
+        /* TODO: this should be FALSE if there are still pending messages, so
+         *       the channel manager can respawn the channel.
+         */
+        g_value_set_boolean (value, TRUE);
+        break;
+      case PROP_CHANNEL_PROPERTIES:
+        g_value_set_boxed (value,
+            tp_dbus_properties_mixin_make_properties_hash (object,
+                TP_IFACE_CHANNEL, "TargetHandle",
+                TP_IFACE_CHANNEL, "TargetHandleType",
+                TP_IFACE_CHANNEL, "ChannelType",
+                TP_IFACE_CHANNEL, "TargetID",
+                SALUT_IFACE_CHANNEL_FUTURE, "InitiatorHandle",
+                SALUT_IFACE_CHANNEL_FUTURE, "InitiatorID",
+                SALUT_IFACE_CHANNEL_FUTURE, "Requested",
+                NULL));
+        break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -756,6 +776,11 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
                                     "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+      "channel-destroyed");
+  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+      "channel-properties");
+
 
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
