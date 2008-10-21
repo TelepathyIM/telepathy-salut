@@ -356,6 +356,7 @@ salut_avahi_muc_manager_create_muc_channel (
     GibberMucConnection *muc_connection,
     TpHandle handle,
     const gchar *name,
+    TpHandle initiator,
     gboolean creator,
     SalutXmppConnectionManager *xcm)
 {
@@ -363,8 +364,8 @@ salut_avahi_muc_manager_create_muc_channel (
   SalutAvahiMucManagerPrivate *priv = SALUT_AVAHI_MUC_MANAGER_GET_PRIVATE (self);
 
   return SALUT_MUC_CHANNEL (salut_avahi_muc_channel_new (connection,
-        path, muc_connection, handle, name, priv->discovery_client, creator,
-        xcm));
+        path, muc_connection, handle, name, priv->discovery_client, initiator,
+        creator, xcm));
 }
 
 static void

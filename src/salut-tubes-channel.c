@@ -40,6 +40,8 @@
 #include <gibber/gibber-xmpp-error.h>
 #include <gibber/gibber-iq-helper.h>
 
+#include "extensions/extensions.h"
+
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
 #include "salut-util.h"
@@ -73,6 +75,8 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TUBES, tubes_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
         tp_external_group_mixin_iface_init);
@@ -108,6 +112,7 @@ static const char *salut_tubes_channel_interfaces[] = {
   /* If more interfaces are added, either keep Group as the first, or change
    * the implementations of salut_tubes_channel_get_interfaces () and
    * salut_tubes_channel_get_property () too */
+  SALUT_IFACE_CHANNEL_FUTURE,
   NULL
 };
 
@@ -121,10 +126,14 @@ enum
   PROP_MUC,
   PROP_INTERFACES,
   PROP_TARGET_ID,
+  PROP_REQUESTED,
+  PROP_INITIATOR_ID,
+  PROP_INITIATOR_HANDLE,
 
   /* only for 1-1 tubes */
   PROP_CONTACT,
   PROP_XMPP_CONNECTION_MANAGER,
+
   LAST_PROPERTY
 };
 
@@ -137,8 +146,8 @@ struct _SalutTubesChannelPrivate
   gchar *object_path;
   TpHandle handle;
   TpHandleType handle_type;
-  TpHandleType self_handle;
-
+  TpHandle self_handle;
+  TpHandle initiator;
   /* Used for MUC tubes channel only */
   GibberMucConnection *muc_connection;
 
@@ -302,6 +311,22 @@ salut_tubes_channel_get_property (GObject *object,
            g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
         }
         break;
+      case PROP_INITIATOR_HANDLE:
+        g_assert (priv->initiator != 0);
+        g_value_set_uint (value, priv->initiator);
+        break;
+      case PROP_INITIATOR_ID:
+        {
+          TpHandleRepoIface *repo = tp_base_connection_get_handles (
+              (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+          g_assert (priv->initiator != 0);
+          g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+        }
+        break;
+      case PROP_REQUESTED:
+        g_value_set_boolean (value, (priv->initiator != priv->self_handle));
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -351,6 +376,9 @@ salut_tubes_channel_set_property (GObject *object,
       case PROP_XMPP_CONNECTION_MANAGER:
         priv->xmpp_connection_manager = g_value_get_object (value);
         g_object_ref (priv->xmpp_connection_manager);
+      case PROP_INITIATOR_HANDLE:
+        priv->initiator = g_value_get_uint (value);
+        g_assert (priv->initiator != 0);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -2266,6 +2294,29 @@ salut_tubes_channel_class_init (
       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  param_spec = g_param_spec_boolean ("requested", "Requested?",
+      "True if this channel was requested by the local user",
+      FALSE,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+  param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+      "The contact which caused the Tubes channel to appear",
+      0, G_MAXUINT32, 0,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+      param_spec);
+
+  param_spec = g_param_spec_string ("initiator-id", "Initiator JID",
+      "The string obtained by inspecting this channel's initiator-handle",
+      NULL,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+      param_spec);
 
   param_spec = g_param_spec_object (
       "connection",

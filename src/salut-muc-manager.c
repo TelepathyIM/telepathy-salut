@@ -441,6 +441,7 @@ static SalutMucChannel *
 salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
                                    TpHandle handle,
                                    GibberMucConnection *connection,
+                                   TpHandle initiator,
                                    gboolean new_connection)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
@@ -462,8 +463,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
       handle);
 
   chan = SALUT_MUC_MANAGER_GET_CLASS (mgr)->create_muc_channel (mgr,
-      priv->connection, path, connection, handle, name, new_connection,
-      priv->xmpp_connection_manager);
+      priv->connection, path, connection, handle, name, initiator,
+      new_connection, priv->xmpp_connection_manager);
   g_free (path);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
@@ -484,7 +485,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 static SalutTubesChannel *
 new_tubes_channel (SalutMucManager *self,
                    TpHandle room,
-                   SalutMucChannel *muc)
+                   SalutMucChannel *muc,
+                   TpHandle initiator)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *conn = (TpBaseConnection *) priv->connection;
@@ -505,6 +507,7 @@ new_tubes_channel (SalutMucManager *self,
       "handle", room,
       "handle-type", TP_HANDLE_TYPE_ROOM,
       "muc", muc,
+      "initiator-handle", initiator,
       NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
@@ -585,7 +588,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   DEBUG ("Connect succeeded");
 
   text_chan = salut_muc_manager_new_muc_channel (mgr, handle,
-      connection, params == NULL);
+      connection, base_connection->self_handle, params == NULL);
   r = salut_muc_channel_invited (text_chan,
         base_connection->self_handle, NULL, NULL);
   /* Inviting ourselves to a connected channel should always
@@ -650,6 +653,7 @@ make_roomlist_channel (SalutMucManager *self,
 static SalutTubesChannel *
 create_tubes_channel (SalutMucManager *self,
                       TpHandle handle,
+                      TpHandle initiator,
                       GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -662,13 +666,14 @@ create_tubes_channel (SalutMucManager *self,
   if (text_chan == NULL)
     {
       DEBUG ("have to create the text channel before the tubes one");
+      /* FIXME: this channel will come out with Requested: True. */
       text_chan = salut_muc_manager_request_new_muc_channel (self,
           handle, error);
       if (text_chan == NULL)
         return NULL;
     }
 
-  tubes_chan = new_tubes_channel (self, handle, text_chan);
+  tubes_chan = new_tubes_channel (self, handle, text_chan, initiator);
   g_assert (tubes_chan != NULL);
 
   return tubes_chan;
@@ -751,7 +756,8 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
         }
       else
         {
-          tubes_chan = create_tubes_channel (mgr, handle, error);
+          tubes_chan = create_tubes_channel (mgr, handle,
+              base_connection->self_handle, error);
           if (tubes_chan == NULL)
             return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
 
@@ -878,6 +884,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   chan = g_hash_table_lookup (priv->text_channels,
       GINT_TO_POINTER (room_handle));
 
+  inviter_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
+
   if (chan == NULL)
     {
       connection = _get_connection (self, GIBBER_TELEPATHY_NS_CLIQUE,
@@ -896,13 +904,11 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
         }
       /* Need to create a new one */
       chan = salut_muc_manager_new_muc_channel (self, room_handle,
-          connection, FALSE);
+          connection, inviter_handle, FALSE);
     }
 
   /* FIXME handle properly */
   g_assert (chan != NULL);
-
-  inviter_handle = tp_handle_ensure (contact_repo, contact->name, NULL, NULL);
 
 #ifdef ENABLE_OLPC
   salut_connection_olpc_observe_invitation (priv->connection, room_handle,
@@ -974,7 +980,8 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
 
 SalutTubesChannel *
 salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
-                                        TpHandle handle)
+                                        TpHandle handle,
+                                        TpHandle actor)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutTubesChannel *tubes_chan;
@@ -987,7 +994,7 @@ salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
       return tubes_chan;
     }
 
-  tubes_chan = create_tubes_channel (self, handle, NULL);
+  tubes_chan = create_tubes_channel (self, handle, actor, NULL);
   g_assert (tubes_chan != NULL);
   g_object_ref (tubes_chan);
 

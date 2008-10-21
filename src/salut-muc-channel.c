@@ -44,6 +44,8 @@
 
 #include <gibber/gibber-muc-connection.h>
 
+#include "extensions/extensions.h"
+
 #include "salut-connection.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
@@ -58,6 +60,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CHANNEL, channel_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE(TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
         tp_group_mixin_iface_init);
@@ -66,6 +70,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
 
 static const char *salut_muc_channel_interfaces[] = {
   TP_IFACE_CHANNEL_INTERFACE_GROUP,
+  SALUT_IFACE_CHANNEL_FUTURE,
   NULL
 };
 
@@ -93,6 +98,9 @@ enum
   PROP_XMPP_CONNECTION_MANAGER,
   PROP_INTERFACES,
   PROP_TARGET_ID,
+  PROP_REQUESTED,
+  PROP_INITIATOR_HANDLE,
+  PROP_INITIATOR_ID,
   LAST_PROPERTY
 };
 
@@ -114,6 +122,7 @@ struct _SalutMucChannelPrivate
   /* (gchar *) -> (SalutContact *) */
   GHashTable *senders;
   SalutMucManager *muc_manager;
+  TpHandle initiator;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -141,6 +150,7 @@ salut_muc_channel_get_property (GObject    *object,
 {
   SalutMucChannel *chan = SALUT_MUC_CHANNEL (object);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (chan);
+  TpBaseConnection *base_conn = (TpBaseConnection *) chan->connection;
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
@@ -175,11 +185,26 @@ salut_muc_channel_get_property (GObject    *object,
       break;
     case PROP_TARGET_ID:
       {
-         TpHandleRepoIface *repo = tp_base_connection_get_handles (
-           (TpBaseConnection *) chan->connection, TP_HANDLE_TYPE_ROOM);
+        TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
+            TP_HANDLE_TYPE_ROOM);
 
-         g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+        g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
       }
+      break;
+    case PROP_INITIATOR_HANDLE:
+      g_value_set_uint (value, priv->initiator);
+      break;
+    case PROP_INITIATOR_ID:
+      {
+        TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
+            TP_HANDLE_TYPE_CONTACT);
+
+        g_value_set_string (value, tp_handle_inspect (repo, priv->initiator));
+      }
+      break;
+    case PROP_REQUESTED:
+      g_value_set_boolean (value,
+          (priv->initiator == tp_base_connection_get_self_handle (base_conn)));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -228,7 +253,10 @@ salut_muc_channel_set_property (GObject     *object,
     case PROP_CREATOR:
       priv->creator = g_value_get_boolean (value);
       break;
-   case PROP_XMPP_CONNECTION_MANAGER:
+    case PROP_INITIATOR_HANDLE:
+      priv->initiator = g_value_get_uint (value);
+      break;
+    case PROP_XMPP_CONNECTION_MANAGER:
       priv->xmpp_connection_manager = g_value_get_object (value);
       break;
     default:
@@ -691,11 +719,22 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
       { "Interfaces", "interfaces", NULL },
       { NULL }
   };
+  static TpDBusPropertiesMixinPropImpl future_props[] = {
+      { "Requested", "requested", NULL },
+      { "InitiatorHandle", "initiator-handle", NULL },
+      { "InitiatorID", "initiator-id", NULL },
+      { NULL }
+  };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
       { TP_IFACE_CHANNEL,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         channel_props,
+      },
+      { SALUT_IFACE_CHANNEL_FUTURE,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        future_props,
       },
       { NULL }
   };
@@ -724,6 +763,30 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  param_spec = g_param_spec_boolean ("requested", "Requested?",
+      "True if this channel was requested by the local user",
+      FALSE,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+  param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+      "The contact which invited us to the MUC, or ourselves if we joined of "
+      "our own accord",
+      0, G_MAXUINT32, 0,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+      param_spec);
+
+  param_spec = g_param_spec_string ("initiator-id", "Initiator JID",
+      "The string obtained by inspecting this channel's initiator-handle",
+      NULL,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+      param_spec);
 
   param_spec = g_param_spec_string ("name",
                                     "Name of the muc group",
@@ -1073,7 +1136,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
       SalutTubesChannel *tubes_chan;
 
       tubes_chan = salut_muc_manager_ensure_tubes_channel (priv->muc_manager,
-          priv->handle);
+          priv->handle, from_handle);
       g_assert (tubes_chan != NULL);
 
       tubes_muc_message_received (tubes_chan, sender, stanza);

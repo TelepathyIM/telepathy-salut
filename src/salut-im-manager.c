@@ -31,21 +31,23 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-namespaces.h>
 
-#include <telepathy-glib/channel-factory-iface.h>
+#include <telepathy-glib/channel-manager.h>
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
 
-static void salut_im_manager_factory_iface_init (gpointer g_iface,
+static void salut_im_manager_channel_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 static SalutImChannel *
-salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle);
+salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle,
+    TpHandle initiator, gpointer request);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImManager, salut_im_manager, G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
-      salut_im_manager_factory_iface_init));
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
+      salut_im_manager_channel_manager_iface_init));
 
 /* properties */
 enum
@@ -66,6 +68,7 @@ struct _SalutImManagerPrivate
   SalutXmppConnectionManager *xmpp_connection_manager;
   GHashTable *channels;
   GHashTable *pending_connections;
+  gulong status_changed_id;
   gboolean dispose_has_run;
 };
 
@@ -143,10 +146,44 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
-  chan = salut_im_manager_new_channel (self, handle);
+  chan = salut_im_manager_new_channel (self, handle, handle, NULL);
   salut_im_channel_add_connection (chan, conn);
   salut_im_channel_received_stanza (chan, stanza);
 }
+
+static void
+salut_im_factory_close_all (SalutImManager *self)
+{
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
+
+  if (priv->channels != NULL)
+    {
+      GHashTable *tmp = priv->channels;
+
+      DEBUG ("closing channels");
+      priv->channels = NULL;
+      g_hash_table_destroy (tmp);
+    }
+
+  if (priv->status_changed_id != 0)
+    {
+      g_signal_handler_disconnect (priv->connection, priv->status_changed_id);
+      priv->status_changed_id = 0;
+    }
+}
+
+static void
+connection_status_changed_cb (SalutConnection *conn,
+                              guint status,
+                              guint reason,
+                              SalutImManager *self)
+{
+  if (status == TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+      salut_im_factory_close_all (self);
+    }
+}
+
 
 static void salut_im_manager_dispose (GObject *object);
 static void salut_im_manager_finalize (GObject *object);
@@ -222,6 +259,9 @@ salut_im_manager_constructor (GType type,
       priv->xmpp_connection_manager, NULL,
       message_stanza_filter, message_stanza_callback, self);
 
+  priv->status_changed_id = g_signal_connect (priv->connection,
+      "status-changed", (GCallback) connection_status_changed_cb, self);
+
   return obj;
 }
 
@@ -286,7 +326,6 @@ salut_im_manager_dispose (GObject *object)
 {
   SalutImManager *self = SALUT_IM_MANAGER (object);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
-  GHashTable *t;
 
   if (priv->dispose_has_run)
     return;
@@ -309,21 +348,13 @@ salut_im_manager_dispose (GObject *object)
       priv->xmpp_connection_manager = NULL;
     }
 
-  if (priv->channels)
-    {
-      t = priv->channels;
-      priv->channels = NULL;
-      g_hash_table_destroy (t);
-    }
+  salut_im_factory_close_all (self);
 
   if (priv->pending_connections)
     {
       g_hash_table_destroy (priv->pending_connections);
       priv->pending_connections = NULL;
     }
-
-  /* release any references held by the object here */
-  tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
 
   if (G_OBJECT_CLASS (salut_im_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_im_manager_parent_class)->dispose (object);
@@ -340,40 +371,9 @@ salut_im_manager_finalize (GObject *object)
   G_OBJECT_CLASS (salut_im_manager_parent_class)->finalize (object);
 }
 
-static void
-salut_im_manager_factory_iface_close_all (TpChannelFactoryIface *iface)
-{
-  SalutImManager *mgr = SALUT_IM_MANAGER (iface);
-  SalutImManagerPrivate *priv =
-    SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-
-  if (priv->channels)
-    {
-      GHashTable *t = priv->channels;
-      priv->channels = NULL;
-      g_hash_table_destroy (t);
-    }
-}
-
-static void
-salut_im_manager_factory_iface_connecting (TpChannelFactoryIface *iface)
-{
-}
-
-static void
-salut_im_manager_factory_iface_connected (TpChannelFactoryIface *iface)
-{
-}
-
-static void
-salut_im_manager_factory_iface_disconnected (TpChannelFactoryIface *iface)
-{
-  /* FIMXE close all channels ? */
-}
-
 struct foreach_data
 {
-  TpChannelFunc func;
+  TpExportableChannelFunc func;
   gpointer data;
 };
 
@@ -382,90 +382,174 @@ salut_im_manager_iface_foreach_one (gpointer key,
                                     gpointer value,
                                     gpointer data)
 {
-  TpChannelIface *chan = TP_CHANNEL_IFACE (value);
+  TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
   struct foreach_data *f = (struct foreach_data *) data;
 
   f->func (chan, f->data);
 }
 
-static void
-salut_im_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
-                                        TpChannelFunc func,
-                                        gpointer data)
+void
+salut_im_manager_foreach_channel (TpChannelManager *iface,
+                                  TpExportableChannelFunc func,
+                                  gpointer user_data)
 {
   SalutImManager *mgr = SALUT_IM_MANAGER (iface);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
   struct foreach_data f;
+
   f.func = func;
-  f.data = data;
+  f.data = user_data;
 
   g_hash_table_foreach (priv->channels, salut_im_manager_iface_foreach_one,
       &f);
 }
 
-static TpChannelFactoryRequestStatus
-salut_im_manager_factory_iface_request (TpChannelFactoryIface *iface,
-                                        const gchar *chan_type,
-                                        TpHandleType handle_type,
-                                        guint handle,
-                                        gpointer request,
-                                        TpChannelIface **ret,
-                                        GError **error)
+static const gchar * const im_channel_fixed_properties[] = {
+    TP_IFACE_CHANNEL ".ChannelType",
+    TP_IFACE_CHANNEL ".TargetHandleType",
+    NULL
+};
+
+
+static const gchar * const im_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
+    NULL
+};
+
+static void
+salut_im_manager_foreach_channel_class (TpChannelManager *manager,
+    TpChannelManagerChannelClassFunc func,
+    gpointer user_data)
 {
-  SalutImManager *mgr = SALUT_IM_MANAGER (iface);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  SalutImChannel *chan;
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles
-      (base_connection, TP_HANDLE_TYPE_CONTACT);
-  TpChannelFactoryRequestStatus status;
+  GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+  GValue *value;
 
-  /* We only support text channels */
-  if (tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
+  value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TEXT);
+  g_hash_table_insert (table, (gchar *)im_channel_fixed_properties[0],
+      value);
 
-  /* And thus only support contact handles */
-  if (handle_type != TP_HANDLE_TYPE_CONTACT)
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+  value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (table, (gchar *)im_channel_fixed_properties[1],
+      value);
 
-  /* Most be a valid contact handle */
-  if (!tp_handle_is_valid (handle_repo, TP_HANDLE_TYPE_CONTACT, NULL))
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+  func (manager, table, im_channel_allowed_properties, user_data);
+
+  g_hash_table_destroy (table);
+}
+
+
+static gboolean
+salut_im_manager_requestotron (SalutImManager *self,
+                               gpointer request_token,
+                               GHashTable *request_properties,
+                               gboolean require_new)
+{
+  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_CONTACT);
+  TpHandle handle;
+  GError *error = NULL;
+  TpExportableChannel *channel;
+
+  if (tp_strdiff (tp_asv_get_string (request_properties,
+          TP_IFACE_CHANNEL ".ChannelType"), TP_IFACE_CHANNEL_TYPE_TEXT))
+    return FALSE;
+
+  if (tp_asv_get_uint32 (request_properties,
+        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+    return FALSE;
+
+  handle = tp_asv_get_uint32 (request_properties,
+      TP_IFACE_CHANNEL ".TargetHandle", NULL);
+
+  if (!tp_handle_is_valid (contact_repo, handle, &error))
+    goto error;
+
+  /* Check if there are any other properties that we don't understand */
+  if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+          im_channel_fixed_properties, im_channel_allowed_properties,
+          &error))
+    {
+      goto error;
+    }
 
   /* Don't support opening a channel to our self handle */
-  if (handle == base_connection->self_handle)
-     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
-
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
-  if (chan != NULL)
+  if (handle == base_conn->self_handle)
     {
-      status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
-    }
-  else
-    {
-      chan = salut_im_manager_new_channel (mgr, handle);
-      if (chan == NULL)
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-
-      status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Can't open a text channel to yourself");
+      goto error;
     }
 
-  *ret = TP_CHANNEL_IFACE (chan);
-  return status;
+  channel = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
+
+  if (channel == NULL)
+    {
+      salut_im_manager_new_channel (self, handle, base_conn->self_handle,
+          request_token);
+      return TRUE;
+    }
+
+  if (require_new)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Already chatting with contact #%u in another channel", handle);
+      goto error;
+    }
+
+  tp_channel_manager_emit_request_already_satisfied (self, request_token,
+      channel);
+  return TRUE;
+
+error:
+  tp_channel_manager_emit_request_failed (self, request_token,
+      error->domain, error->code, error->message);
+  g_error_free (error);
+  return TRUE;
 }
 
-static void salut_im_manager_factory_iface_init (gpointer g_iface,
-                                                 gpointer iface_data)
+
+static gboolean
+salut_im_manager_create_channel (TpChannelManager *manager,
+                                 gpointer request_token,
+                                 GHashTable *request_properties)
 {
-   TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *) g_iface;
+  SalutImManager *self = SALUT_IM_MANAGER (manager);
 
-   klass->close_all = salut_im_manager_factory_iface_close_all;
-   klass->connecting = salut_im_manager_factory_iface_connecting;
-   klass->connected = salut_im_manager_factory_iface_connected;
-   klass->disconnected = salut_im_manager_factory_iface_disconnected;
-   klass->foreach = salut_im_manager_factory_iface_foreach;
-   klass->request = salut_im_manager_factory_iface_request;
+  return salut_im_manager_requestotron (self, request_token,
+      request_properties, TRUE);
 }
+
+
+static gboolean
+salut_im_manager_request_channel (TpChannelManager *manager,
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
+{
+  SalutImManager *self = SALUT_IM_MANAGER (manager);
+
+  return salut_im_manager_requestotron (self, request_token,
+      request_properties, FALSE);
+}
+
+
+static void
+salut_im_manager_channel_manager_iface_init (gpointer g_iface,
+                                             gpointer iface_data)
+{
+  TpChannelManagerIface *iface = g_iface;
+
+  iface->foreach_channel = salut_im_manager_foreach_channel;
+  iface->foreach_channel_class = salut_im_manager_foreach_channel_class;
+  iface->create_channel = salut_im_manager_create_channel;
+  iface->request_channel = salut_im_manager_request_channel;
+}
+
 
 /* private functions */
 static void
@@ -475,6 +559,9 @@ im_channel_closed_cb (SalutImChannel *chan,
   SalutImManager *self = SALUT_IM_MANAGER (user_data);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
   TpHandle handle;
+
+  tp_channel_manager_emit_channel_closed_for_object (self,
+    TP_EXPORTABLE_CHANNEL (chan));
 
   if (priv->channels)
     {
@@ -486,7 +573,9 @@ im_channel_closed_cb (SalutImChannel *chan,
 
 static SalutImChannel *
 salut_im_manager_new_channel (SalutImManager *mgr,
-                              TpHandle handle)
+                              TpHandle handle,
+                              TpHandle initiator,
+                              gpointer request)
 {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
@@ -496,16 +585,24 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   SalutContact *contact;
   const gchar *name;
   gchar *path = NULL;
+  GSList *requests = NULL;
 
   g_assert (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle))
       == NULL);
-  DEBUG ("Requested channel for handle: %u", handle);
+
+  name = tp_handle_inspect (handle_repo, handle);
+  DEBUG ("Requested channel for handle: %u (%s)", handle, name);
 
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
-    return NULL;
+    {
+      gchar *message = g_strdup_printf ("%s is not online", name);
+      tp_channel_manager_emit_request_failed (mgr, request, TP_ERRORS,
+          TP_ERROR_NOT_AVAILABLE, message);
+      g_free (message);
+      return NULL;
+    }
 
-  name = tp_handle_inspect (handle_repo, handle);
   path = g_strdup_printf ("%s/IMChannel/%u",
       base_connection->object_path, handle);
   chan = g_object_new (SALUT_TYPE_IM_CHANNEL,
@@ -513,13 +610,21 @@ salut_im_manager_new_channel (SalutImManager *mgr,
       "contact", contact,
       "object-path", path,
       "handle", handle,
+      "initiator-handle", initiator,
       "xmpp-connection-manager", priv->xmpp_connection_manager,
       NULL);
   g_object_unref (contact);
   g_free (path);
   g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);
-  tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
-      NULL);
+
+  if (request != NULL)
+    requests = g_slist_prepend (requests, request);
+
+  tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (chan),
+    requests);
+
+  g_slist_free (requests);
+
   g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), mgr);
 
   return chan;
@@ -536,20 +641,4 @@ salut_im_manager_new (SalutConnection *connection,
       "contact-manager", contact_manager,
       "xmpp-connection-manager", xmpp_connection_manager,
       NULL);
-}
-
-SalutImChannel *
-salut_im_manager_get_channel_for_handle (SalutImManager *mgr,
-                                         TpHandle handle)
-{
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
-  SalutImChannel *chan;
-  chan = g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle));
-  if (chan == NULL)
-    chan = salut_im_manager_new_channel (mgr, handle);
-
-  if (chan != NULL)
-    g_object_ref (chan);
-
-  return chan;
 }

@@ -53,6 +53,9 @@
 #include "salut-discovery-client.h"
 #include "salut-avahi-discovery-client.h"
 
+#include <extensions/extensions.h>
+
+#include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
@@ -74,8 +77,6 @@
 #define ACTIVITY_PAIR_TYPE \
   (dbus_g_type_get_struct ("GValueArray", G_TYPE_STRING, G_TYPE_UINT, \
       G_TYPE_INVALID))
-
-#include <extensions/extensions.h>
 
 static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
@@ -226,6 +227,9 @@ salut_connection_create_handle_repos (TpBaseConnection *self,
 
 static GPtrArray *
 salut_connection_create_channel_factories (TpBaseConnection *self);
+
+static GPtrArray *
+salut_connection_create_channel_managers (TpBaseConnection *self);
 
 static gchar *
 salut_connection_get_unique_connection_name (TpBaseConnection *self);
@@ -601,6 +605,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
     TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
 #ifdef ENABLE_OLPC
     SALUT_IFACE_OLPC_BUDDY_INFO,
     SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
@@ -622,6 +627,8 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_create_handle_repos;
   tp_connection_class->create_channel_factories =
       salut_connection_create_channel_factories;
+  tp_connection_class->create_channel_managers =
+      salut_connection_create_channel_managers;
   tp_connection_class->get_unique_connection_name =
       salut_connection_get_unique_connection_name;
   tp_connection_class->shut_down =
@@ -630,6 +637,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_start_connecting;
   tp_connection_class->interfaces_always_present = interfaces;
 
+  salut_connection_class->properties_mixin.interfaces = NULL;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
 
@@ -2844,22 +2852,39 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       G_CALLBACK (_olpc_activity_manager_activity_modified_cb), self);
 #endif
 
-  priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
-
   priv->muc_manager = salut_discovery_client_create_muc_manager (
       priv->discovery_client, self, priv->xmpp_connection_manager);
 
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
-  g_ptr_array_add (factories, priv->contact_manager);
-  g_ptr_array_add (factories, priv->im_manager);
   g_ptr_array_add (factories, priv->muc_manager);
   g_ptr_array_add (factories, priv->tubes_manager);
 
   return factories;
 }
+
+
+static GPtrArray *
+salut_connection_create_channel_managers (TpBaseConnection *base)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  GPtrArray *managers = g_ptr_array_sized_new (1);
+
+  /* FIXME: The second and third arguments depend on create_channel_factories
+   *        being called before this; should telepathy-glib guarantee that or
+   *        should we be defensive?
+   */
+  priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
+
+  g_ptr_array_add (managers, priv->im_manager);
+  g_ptr_array_add (managers, priv->contact_manager);
+
+  return managers;
+}
+
 
 static gchar *
 salut_connection_get_unique_connection_name (TpBaseConnection *base)

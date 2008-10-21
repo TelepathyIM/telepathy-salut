@@ -11,6 +11,7 @@ EXTRA_DIST = \
 noinst_LTLIBRARIES = libsalut-extensions.la
 
 libsalut_extensions_la_SOURCES = \
+    extensions.c \
     extensions.h
 
 nodist_libsalut_extensions_la_SOURCES = \
@@ -18,6 +19,8 @@ nodist_libsalut_extensions_la_SOURCES = \
     _gen/signals-marshal.h \
     _gen/signals-marshal.list \
     _gen/enums.h \
+    _gen/gtypes.h \
+    _gen/gtypes-body.h \
     _gen/interfaces.h \
     _gen/interfaces-body.h \
     _gen/svc.h \
@@ -76,6 +79,11 @@ _gen/enums.h: _gen/all.xml $(tools_dir)/c-constants-generator.xsl
 		--stringparam mixed-case-prefix Salut \
 		$(tools_dir)/c-constants-generator.xsl \
 		$< > $@
+
+_gen/gtypes.h _gen/gtypes-body.h: _gen/all.xml \
+	$(tools_dir)/glib-gtypes-generator.py Makefile.am
+	$(PYTHON) $(tools_dir)/glib-gtypes-generator.py \
+		$< _gen/gtypes Salut
 
 _gen/interfaces.h: _gen/all.xml \
 	$(tools_dir)/glib-interfaces-generator.xsl \

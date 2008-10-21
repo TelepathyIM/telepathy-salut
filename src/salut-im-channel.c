@@ -30,6 +30,7 @@
 #include <dbus/dbus-glib.h>
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/exportable-channel.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/text-mixin.h>
@@ -38,6 +39,8 @@
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-xmpp-stanza.h>
+
+#include "extensions/extensions.h"
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -60,11 +63,14 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 );
 
 static const gchar *salut_im_channel_interfaces[] = {
+    SALUT_IFACE_CHANNEL_FUTURE,
     NULL
 };
 
@@ -97,6 +103,11 @@ enum
   PROP_XMPP_CONNECTION_MANAGER,
   PROP_INTERFACES,
   PROP_TARGET_ID,
+  PROP_INITIATOR_HANDLE,
+  PROP_INITIATOR_ID,
+  PROP_REQUESTED,
+  PROP_CHANNEL_PROPERTIES,
+  PROP_CHANNEL_DESTROYED,
   LAST_PROPERTY
 };
 
@@ -108,6 +119,7 @@ struct _SalutImChannelPrivate
   gboolean dispose_has_run;
   gchar *object_path;
   TpHandle handle;
+  TpHandle initiator;
   SalutContact *contact;
   SalutConnection *connection;
   GibberXmppConnection *xmpp_connection;
@@ -208,6 +220,7 @@ salut_im_channel_get_property (GObject *object,
 {
   SalutImChannel *chan = SALUT_IM_CHANNEL (object);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan);
+  TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
 
   switch (property_id)
     {
@@ -237,11 +250,45 @@ salut_im_channel_get_property (GObject *object,
         break;
       case PROP_TARGET_ID:
         {
-           TpHandleRepoIface *repo = tp_base_connection_get_handles (
-             (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+           TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
+             TP_HANDLE_TYPE_CONTACT);
 
            g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
         }
+        break;
+      case PROP_INITIATOR_HANDLE:
+        g_value_set_uint (value, priv->initiator);
+        break;
+      case PROP_INITIATOR_ID:
+          {
+            TpHandleRepoIface *repo = tp_base_connection_get_handles (
+                base_conn, TP_HANDLE_TYPE_CONTACT);
+
+            g_assert (priv->initiator != 0);
+            g_value_set_string (value,
+                tp_handle_inspect (repo, priv->initiator));
+          }
+        break;
+      case PROP_REQUESTED:
+        g_value_set_boolean (value, (priv->initiator == base_conn->self_handle));
+        break;
+      case PROP_CHANNEL_DESTROYED:
+        /* TODO: this should be FALSE if there are still pending messages, so
+         *       the channel manager can respawn the channel.
+         */
+        g_value_set_boolean (value, TRUE);
+        break;
+      case PROP_CHANNEL_PROPERTIES:
+        g_value_set_boxed (value,
+            tp_dbus_properties_mixin_make_properties_hash (object,
+                TP_IFACE_CHANNEL, "TargetHandle",
+                TP_IFACE_CHANNEL, "TargetHandleType",
+                TP_IFACE_CHANNEL, "ChannelType",
+                TP_IFACE_CHANNEL, "TargetID",
+                SALUT_IFACE_CHANNEL_FUTURE, "InitiatorHandle",
+                SALUT_IFACE_CHANNEL_FUTURE, "InitiatorID",
+                SALUT_IFACE_CHANNEL_FUTURE, "Requested",
+                NULL));
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -267,6 +314,10 @@ salut_im_channel_set_property (GObject *object,
         break;
       case PROP_HANDLE:
         priv->handle = g_value_get_uint (value);
+        break;
+      case PROP_INITIATOR_HANDLE:
+        priv->initiator = g_value_get_uint (value);
+        g_assert (priv->initiator != 0);
         break;
       case PROP_CONTACT:
         priv->contact = g_value_get_object (value);
@@ -312,13 +363,16 @@ salut_im_channel_constructor (GType type,
 
   priv = SALUT_IM_CHANNEL_GET_PRIVATE (SALUT_IM_CHANNEL (obj));
 
-  /* Ref our handle */
+  /* Ref our handle and initiator handle */
   base_conn = TP_BASE_CONNECTION (priv->connection);
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
 
   tp_handle_ref (contact_repo, priv->handle);
+
+  g_assert (priv->initiator != 0);
+  tp_handle_ref (contact_repo, priv->initiator);
 
   /* Initialize text mixin */
   tp_text_mixin_init (obj, G_STRUCT_OFFSET (SalutImChannel, text),
@@ -355,11 +409,22 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       { "Interfaces", "interfaces", NULL },
       { NULL }
   };
+  static TpDBusPropertiesMixinPropImpl future_props[] = {
+      { "Requested", "requested", NULL },
+      { "InitiatorHandle", "initiator-handle", NULL },
+      { "InitiatorID", "initiator-id", NULL },
+      { NULL }
+  };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
       { TP_IFACE_CHANNEL,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         channel_props,
+      },
+      { SALUT_IFACE_CHANNEL_FUTURE,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        future_props,
       },
       { NULL }
   };
@@ -381,6 +446,10 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+      "channel-destroyed");
+  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+      "channel-properties");
 
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
@@ -388,6 +457,29 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  param_spec = g_param_spec_boolean ("requested", "Requested?",
+      "True if this channel was requested by the local user",
+      FALSE,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+  param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+      "The contact who initiated the channel",
+      0, G_MAXUINT32, 0,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+      param_spec);
+
+  param_spec = g_param_spec_string ("initiator-id", "Initiator JID",
+      "The string obtained by inspecting the initiator-handle",
+      NULL,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+      param_spec);
 
   param_spec = g_param_spec_object (
       "contact",
@@ -459,6 +551,9 @@ salut_im_channel_dispose (GObject *object)
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
   tp_handle_unref (handle_repo, priv->handle);
+
+  if (priv->initiator != 0)
+    tp_handle_unref (handle_repo, priv->initiator);
 
   if (priv->state != CHANNEL_NOT_CONNECTED)
     salut_im_channel_do_close (self);
