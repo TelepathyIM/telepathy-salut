@@ -183,9 +183,9 @@ salut_contact_channel_get_property (GObject    *object,
               TP_IFACE_CHANNEL, "TargetHandleType",
               TP_IFACE_CHANNEL, "ChannelType",
               TP_IFACE_CHANNEL, "TargetID",
-              SALUT_IFACE_CHANNEL_FUTURE, "InitiatorHandle",
-              SALUT_IFACE_CHANNEL_FUTURE, "InitiatorID",
-              SALUT_IFACE_CHANNEL_FUTURE, "Requested",
+              TP_IFACE_CHANNEL, "InitiatorHandle",
+              TP_IFACE_CHANNEL, "InitiatorID",
+              TP_IFACE_CHANNEL, "Requested",
               NULL));
       break;
     case PROP_CHANNEL_DESTROYED:
@@ -256,9 +256,6 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
       { "TargetID", "target-id", NULL },
       { "ChannelType", "channel-type", NULL },
       { "Interfaces", "interfaces", NULL },
-      { NULL }
-  };
-  static TpDBusPropertiesMixinPropImpl future_props[] = {
       { "Requested", "requested", NULL },
       { "InitiatorHandle", "initiator-handle", NULL },
       { "InitiatorID", "initiator-id", NULL },
@@ -269,11 +266,6 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         channel_props,
-      },
-      { SALUT_IFACE_CHANNEL_FUTURE,
-        tp_dbus_properties_mixin_getter_gobject_properties,
-        NULL,
-        future_props,
       },
       { NULL }
   };
