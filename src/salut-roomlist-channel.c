@@ -355,8 +355,8 @@ salut_roomlist_channel_dispose (GObject *object)
 
   if (!priv->closed)
     {
-      tp_svc_channel_emit_closed ((TpSvcChannel *)object);
       priv->closed = TRUE;
+      tp_svc_channel_emit_closed ((TpSvcChannel *)object);
     }
 
   if (G_OBJECT_CLASS (salut_roomlist_channel_parent_class)->dispose)
