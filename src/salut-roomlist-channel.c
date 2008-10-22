@@ -67,6 +67,8 @@ enum
   PROP_CONNECTION,
   PROP_INTERFACES,
   PROP_TARGET_ID,
+  PROP_INITIATOR_HANDLE,
+  PROP_INITIATOR_ID,
   PROP_REQUESTED,
   PROP_CHANNEL_DESTROYED,
   PROP_CHANNEL_PROPERTIES,
@@ -129,6 +131,7 @@ salut_roomlist_channel_get_property (GObject *object,
   SalutRoomlistChannel *chan = SALUT_ROOMLIST_CHANNEL (object);
   SalutRoomlistChannelPrivate *priv =
     SALUT_ROOMLIST_CHANNEL_GET_PRIVATE (chan);
+  TpBaseConnection *conn = (TpBaseConnection *) priv->connection;
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
@@ -151,6 +154,19 @@ salut_roomlist_channel_get_property (GObject *object,
       break;
     case PROP_TARGET_ID:
       g_value_set_static_string (value, "");
+      break;
+    case PROP_INITIATOR_HANDLE:
+      /* Room listing is always initiated by the local user */
+      g_value_set_uint (value, conn->self_handle);
+      break;
+    case PROP_INITIATOR_ID:
+        {
+          TpHandleRepoIface *repo = tp_base_connection_get_handles (conn,
+              TP_HANDLE_TYPE_CONTACT);
+
+          g_value_set_string (value,
+              tp_handle_inspect (repo, conn->self_handle));
+        }
       break;
     case PROP_REQUESTED:
       g_value_set_boolean (value, TRUE);
@@ -233,6 +249,8 @@ salut_roomlist_channel_class_init (
       { "TargetHandleType", "handle-type", NULL },
       { "TargetHandle", "handle", NULL },
       { "TargetID", "target-id", NULL },
+      { "InitiatorHandle", "initiator-handle", NULL },
+      { "InitiatorID", "initiator-id", NULL },
       { "Requested", "requested", NULL },
       { "ChannelType", "channel-type", NULL },
       { "Interfaces", "interfaces", NULL },
@@ -282,6 +300,20 @@ salut_roomlist_channel_class_init (
       NULL,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+      "The contact who initiated the channel",
+      0, G_MAXUINT32, 0,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+      param_spec);
+
+  param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
+      "The string obtained by inspecting the initiator-handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+      param_spec);
 
   param_spec = g_param_spec_boolean ("requested", "Requested?",
       "True if this channel was requested by the local user",
