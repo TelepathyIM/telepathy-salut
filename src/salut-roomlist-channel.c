@@ -66,6 +66,7 @@ enum
   PROP_CONNECTION,
   PROP_INTERFACES,
   PROP_TARGET_ID,
+  PROP_REQUESTED,
   LAST_PROPERTY
 };
 
@@ -148,6 +149,9 @@ salut_roomlist_channel_get_property (GObject *object,
     case PROP_TARGET_ID:
       g_value_set_static_string (value, "");
       break;
+    case PROP_REQUESTED:
+      g_value_set_boolean (value, TRUE);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -210,6 +214,7 @@ salut_roomlist_channel_class_init (
       { "TargetHandleType", "handle-type", NULL },
       { "TargetHandle", "handle", NULL },
       { "TargetID", "target-id", NULL },
+      { "Requested", "requested", NULL },
       { "ChannelType", "channel-type", NULL },
       { "Interfaces", "interfaces", NULL },
       { NULL }
@@ -256,6 +261,13 @@ salut_roomlist_channel_class_init (
       G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  param_spec = g_param_spec_boolean ("requested", "Requested?",
+      "True if this channel was requested by the local user",
+      FALSE,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
 
   param_spec = g_param_spec_object ("connection", "SalutConnection object",
                                     "Salut connection object that owns this "
