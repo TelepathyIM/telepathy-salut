@@ -30,6 +30,7 @@
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/exportable-channel.h>
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-generic.h>
 
@@ -79,6 +80,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TUBES, tubes_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
         tp_external_group_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
 );
 
@@ -104,6 +106,8 @@ enum
   PROP_REQUESTED,
   PROP_INITIATOR_ID,
   PROP_INITIATOR_HANDLE,
+  PROP_CHANNEL_DESTROYED,
+  PROP_CHANNEL_PROPERTIES,
   LAST_PROPERTY
 };
 
@@ -273,6 +277,18 @@ salut_tubes_channel_get_property (GObject *object,
         break;
       case PROP_REQUESTED:
         g_value_set_boolean (value, (priv->initiator != priv->self_handle));
+        break;
+      case PROP_CHANNEL_DESTROYED:
+        g_value_set_boolean (value, priv->closed);
+        break;
+      case PROP_CHANNEL_PROPERTIES:
+        g_value_take_boxed (value,
+            tp_dbus_properties_mixin_make_properties_hash (object,
+                TP_IFACE_CHANNEL, "TargetHandle",
+                TP_IFACE_CHANNEL, "TargetHandleType",
+                TP_IFACE_CHANNEL, "ChannelType",
+                TP_IFACE_CHANNEL, "TargetID",
+                NULL));
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1856,6 +1872,11 @@ salut_tubes_channel_class_init (
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+
+  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+      "channel-destroyed");
+  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+      "channel-properties");
 
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
