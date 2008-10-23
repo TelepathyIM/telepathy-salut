@@ -41,8 +41,6 @@
 #include <gibber/gibber-xmpp-error.h>
 #include <gibber/gibber-iq-helper.h>
 
-#include "extensions/extensions.h"
-
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
 #include "salut-util.h"
@@ -76,7 +74,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesChannel, salut_tubes_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TUBES, tubes_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
@@ -114,7 +111,6 @@ static const char *salut_tubes_channel_interfaces[] = {
   /* If more interfaces are added, either keep Group as the first, or change
    * the implementations of salut_tubes_channel_get_interfaces () and
    * salut_tubes_channel_get_property () too */
-  SALUT_IFACE_CHANNEL_FUTURE,
   NULL
 };
 

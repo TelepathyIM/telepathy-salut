@@ -46,7 +46,6 @@
 
 #include "debug.h"
 #include "signals-marshal.h"
-#include "extensions/extensions.h"
 #include "salut-connection.h"
 #include "tube-iface.h"
 #include "salut-si-bytestream-manager.h"

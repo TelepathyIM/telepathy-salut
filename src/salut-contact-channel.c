@@ -30,8 +30,6 @@
 #include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/util.h>
 
-#include "extensions/extensions.h"
-
 #include "salut-connection.h"
 
 static void
@@ -43,7 +41,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
       tp_dbus_properties_mixin_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
-  G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
       tp_group_mixin_iface_init);
@@ -52,7 +49,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
 
 static const gchar *salut_contact_channel_interfaces[] = {
     TP_IFACE_CHANNEL_INTERFACE_GROUP,
-    SALUT_IFACE_CHANNEL_FUTURE,
     NULL
 };
 
@@ -183,9 +179,9 @@ salut_contact_channel_get_property (GObject    *object,
               TP_IFACE_CHANNEL, "TargetHandleType",
               TP_IFACE_CHANNEL, "ChannelType",
               TP_IFACE_CHANNEL, "TargetID",
-              SALUT_IFACE_CHANNEL_FUTURE, "InitiatorHandle",
-              SALUT_IFACE_CHANNEL_FUTURE, "InitiatorID",
-              SALUT_IFACE_CHANNEL_FUTURE, "Requested",
+              TP_IFACE_CHANNEL, "InitiatorHandle",
+              TP_IFACE_CHANNEL, "InitiatorID",
+              TP_IFACE_CHANNEL, "Requested",
               NULL));
       break;
     case PROP_CHANNEL_DESTROYED:
@@ -256,9 +252,6 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
       { "TargetID", "target-id", NULL },
       { "ChannelType", "channel-type", NULL },
       { "Interfaces", "interfaces", NULL },
-      { NULL }
-  };
-  static TpDBusPropertiesMixinPropImpl future_props[] = {
       { "Requested", "requested", NULL },
       { "InitiatorHandle", "initiator-handle", NULL },
       { "InitiatorID", "initiator-id", NULL },
@@ -269,11 +262,6 @@ salut_contact_channel_class_init (SalutContactChannelClass *salut_contact_channe
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         channel_props,
-      },
-      { SALUT_IFACE_CHANNEL_FUTURE,
-        tp_dbus_properties_mixin_getter_gobject_properties,
-        NULL,
-        future_props,
       },
       { NULL }
   };
