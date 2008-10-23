@@ -105,7 +105,7 @@ class AvahiListener:
 
     def listen_for_service(self, sname):
         browser_path = self.server.ServiceBrowserNew(avahi.IF_UNSPEC,
-            avahi.PROTO_UNSPEC, sname, "local", dbus.UInt32(0));
+            avahi.PROTO_INET, sname, "local", dbus.UInt32(0));
         browser_obj = self.bus.get_object(avahi.DBUS_NAME, browser_path)
         browser = dbus.Interface(browser_obj,
             avahi.DBUS_INTERFACE_SERVICE_BROWSER)
@@ -132,7 +132,7 @@ class AvahiRecordAnnouncer:
         entry = dbus.Interface(entry_obj,
             avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
-        entry.AddRecord(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+        entry.AddRecord(avahi.IF_UNSPEC, avahi.PROTO_INET,
             dbus.UInt32(0), name, clazz, type, 120, data)
 
         entry.Commit()
@@ -155,7 +155,7 @@ class AvahiAnnouncer:
         entry = dbus.Interface(entry_obj,
             avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
-        entry.AddService(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+        entry.AddService(avahi.IF_UNSPEC, avahi.PROTO_INET,
             dbus.UInt32(0), name, type, get_domain_name(), hostname,
             port, avahi.dict_to_txt_array(txt))
         entry.Commit()
@@ -165,13 +165,13 @@ class AvahiAnnouncer:
     def update(self, txt):
       self.txt.update(txt)
 
-      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_INET,
         dbus.UInt32(0), self.name, self.type, get_domain_name(),
         avahi.dict_to_txt_array(self.txt))
 
     def set(self, txt):
       self.txt = txt
-      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_UNSPEC,
+      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_INET,
         dbus.UInt32(0), self.name, self.type, get_domain_name(),
         avahi.dict_to_txt_array(self.txt))
 
