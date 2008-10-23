@@ -44,8 +44,6 @@
 
 #include <gibber/gibber-muc-connection.h>
 
-#include "extensions/extensions.h"
-
 #include "salut-connection.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
@@ -60,7 +58,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CHANNEL, channel_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE(TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
@@ -70,7 +67,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, G_TYPE_OBJECT,
 
 static const char *salut_muc_channel_interfaces[] = {
   TP_IFACE_CHANNEL_INTERFACE_GROUP,
-  SALUT_IFACE_CHANNEL_FUTURE,
   NULL
 };
 

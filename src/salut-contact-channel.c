@@ -30,8 +30,6 @@
 #include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/util.h>
 
-#include "extensions/extensions.h"
-
 #include "salut-connection.h"
 
 static void
@@ -43,7 +41,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
       tp_dbus_properties_mixin_iface_init);
   G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
-  G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
   G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
       tp_group_mixin_iface_init);
@@ -52,7 +49,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactChannel, salut_contact_channel,
 
 static const gchar *salut_contact_channel_interfaces[] = {
     TP_IFACE_CHANNEL_INTERFACE_GROUP,
-    SALUT_IFACE_CHANNEL_FUTURE,
     NULL
 };
 

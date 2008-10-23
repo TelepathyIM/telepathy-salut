@@ -40,8 +40,6 @@
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-xmpp-stanza.h>
 
-#include "extensions/extensions.h"
-
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
 #include "salut-connection.h"
@@ -63,14 +61,12 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_FUTURE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
 );
 
 static const gchar *salut_im_channel_interfaces[] = {
-    SALUT_IFACE_CHANNEL_FUTURE,
     NULL
 };
 
