@@ -538,6 +538,18 @@ salut_im_manager_request_channel (TpChannelManager *manager,
 }
 
 
+static gboolean
+salut_im_manager_ensure_channel (TpChannelManager *manager,
+                                 gpointer request_token,
+                                GHashTable *request_properties)
+{
+  SalutImManager *self = SALUT_IM_MANAGER (manager);
+
+  return salut_im_manager_requestotron (self, request_token,
+      request_properties, FALSE);
+}
+
+
 static void
 salut_im_manager_channel_manager_iface_init (gpointer g_iface,
                                              gpointer iface_data)
@@ -548,6 +560,7 @@ salut_im_manager_channel_manager_iface_init (gpointer g_iface,
   iface->foreach_channel_class = salut_im_manager_foreach_channel_class;
   iface->create_channel = salut_im_manager_create_channel;
   iface->request_channel = salut_im_manager_request_channel;
+  iface->ensure_channel = salut_im_manager_ensure_channel;
 }
 
 
