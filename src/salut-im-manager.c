@@ -428,12 +428,12 @@ salut_im_manager_foreach_channel_class (TpChannelManager *manager,
 
   value = tp_g_value_slice_new (G_TYPE_STRING);
   g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TEXT);
-  g_hash_table_insert (table, (gchar *)im_channel_fixed_properties[0],
+  g_hash_table_insert (table, (gchar *) im_channel_fixed_properties[0],
       value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
   g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table, (gchar *)im_channel_fixed_properties[1],
+  g_hash_table_insert (table, (gchar *) im_channel_fixed_properties[1],
       value);
 
   func (manager, table, im_channel_allowed_properties, user_data);
