@@ -36,7 +36,7 @@
 #include "salut-capabilities.h"
 #include "salut-caps-hash.h"
 #include "salut-self.h"
-#include "sha1/sha1.h"
+#include "sha1/sha1-util.h"
 
 typedef struct _DataFormField DataFormField;
 
@@ -74,18 +74,6 @@ struct _DataformFieldParsingContext {
     DataformParsingContext *dataform_context;
     DataFormField *field;
 };
-
-static void
-sha1_bin (const gchar *bytes,
-          guint len,
-          guchar out[SHA1_HASH_SIZE])
-{
-  SHA1Context sc;
-
-  SHA1Init (&sc);
-  SHA1Update (&sc, bytes, len);
-  SHA1Final (&sc, (uint8_t *) out);
-}
 
 static gint
 char_cmp (gconstpointer a, gconstpointer b)
