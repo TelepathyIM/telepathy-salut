@@ -273,8 +273,9 @@ http_client_finished_chunks_cb (SoupMessage *msg,
   /* Is the transfer actually incomplete? */
   if (size > self->priv->transferred_bytes)
     {
-      DEBUG ("File transfer incomplete (size is %llu and only got %llu)",
-          size, self->priv->transferred_bytes);
+      DEBUG ("File transfer incomplete (size is %"G_GUINT64_FORMAT
+             " and only got %"G_GUINT64_FORMAT")",
+             size, self->priv->transferred_bytes);
       g_signal_emit_by_name (self, "canceled");
       return;
     }
@@ -453,7 +454,8 @@ input_channel_readable_cb (GIOChannel *source,
           soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_SYSTEM_OWNED,
               buff, bytes_read);
           soup_message_io_unpause (self->priv->msg);
-          DEBUG("Data available, writing a %d bytes chunk", bytes_read);
+          DEBUG("Data available, writing a %"G_GSIZE_FORMAT" bytes chunk",
+              bytes_read);
           transferred_chunk (self, (guint64) bytes_read);
           return FALSE;
         case G_IO_STATUS_AGAIN:
