@@ -1,5 +1,5 @@
 /*
- * salut-file-transfer-channel.c - Source for SalutFileChannel
+ * salut-file-transfer-channel.c - Source for SalutFileTransferChannel
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
  * Copyright (C) 2005, 2007, 2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
@@ -54,7 +54,7 @@ channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void
 file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
 
-G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
+G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
                            tp_dbus_properties_mixin_iface_init);
@@ -67,7 +67,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
 
 #define SALUT_UNDEFINED_FILE_SIZE G_MAXUINT64
 
-static const char *salut_file_channel_interfaces[] = { NULL };
+static const char *salut_file_transfer_channel_interfaces[] = { NULL };
 
 /* properties */
 enum
@@ -95,7 +95,7 @@ enum
 };
 
 /* private structure */
-struct _SalutFileChannelPrivate {
+struct _SalutFileTransferChannelPrivate {
   gboolean dispose_has_run;
   gboolean closed;
   gchar *object_path;
@@ -123,7 +123,7 @@ struct _SalutFileChannelPrivate {
 };
 
 static void
-salut_file_channel_do_close (SalutFileChannel *self)
+salut_file_transfer_channel_do_close (SalutFileTransferChannel *self)
 {
   if (self->priv->closed)
     return;
@@ -134,10 +134,10 @@ salut_file_channel_do_close (SalutFileChannel *self)
 }
 
 static void
-salut_file_channel_init (SalutFileChannel *obj)
+salut_file_transfer_channel_init (SalutFileTransferChannel *obj)
 {
-  obj->priv = G_TYPE_INSTANCE_GET_PRIVATE (obj, SALUT_TYPE_FILE_CHANNEL,
-      SalutFileChannelPrivate);
+  obj->priv = G_TYPE_INSTANCE_GET_PRIVATE (obj, SALUT_TYPE_FILE_TRANSFER_CHANNEL,
+      SalutFileTransferChannelPrivate);
 
   /* allocate any data required by the object here */
   obj->priv->object_path = NULL;
@@ -146,16 +146,16 @@ salut_file_channel_init (SalutFileChannel *obj)
   obj->priv->contact = NULL;
 }
 
-static void salut_file_channel_set_state (SalutSvcChannelTypeFileTransfer *iface,
+static void salut_file_transfer_channel_set_state (SalutSvcChannelTypeFileTransfer *iface,
     SalutFileTransferState state, SalutFileTransferStateChangeReason reason);
 
 static void
-salut_file_channel_get_property (GObject    *object,
+salut_file_transfer_channel_get_property (GObject    *object,
                                  guint       property_id,
                                  GValue     *value,
                                  GParamSpec *pspec)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
 
   switch (property_id)
     {
@@ -179,7 +179,7 @@ salut_file_channel_get_property (GObject    *object,
         g_value_set_object (value, self->priv->connection);
         break;
       case PROP_INTERFACES:
-        g_value_set_boxed (value, salut_file_channel_interfaces);
+        g_value_set_boxed (value, salut_file_transfer_channel_interfaces);
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, self->priv->xmpp_connection_manager);
@@ -224,12 +224,12 @@ salut_file_channel_get_property (GObject    *object,
 }
 
 static void
-salut_file_channel_set_property (GObject *object,
+salut_file_transfer_channel_set_property (GObject *object,
                                  guint property_id,
                                  const GValue *value,
                                  GParamSpec *pspec)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
   const gchar *tmp;
 
   switch (property_id)
@@ -261,7 +261,7 @@ salut_file_channel_set_property (GObject *object,
         self->priv->xmpp_connection_manager = g_value_dup_object (value);
         break;
       case PROP_STATE:
-        salut_file_channel_set_state (
+        salut_file_transfer_channel_set_state (
             SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (object),
             g_value_get_uint (value),
             SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
@@ -303,20 +303,20 @@ salut_file_channel_set_property (GObject *object,
 }
 
 static GObject *
-salut_file_channel_constructor (GType type, guint n_props,
+salut_file_transfer_channel_constructor (GType type, guint n_props,
                                 GObjectConstructParam *props)
 {
   GObject *obj;
-  SalutFileChannel *self;
+  SalutFileTransferChannel *self;
   DBusGConnection *bus;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
 
   /* Parent constructor chain */
-  obj = G_OBJECT_CLASS (salut_file_channel_parent_class)->
+  obj = G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->
           constructor (type, n_props, props);
 
-  self = SALUT_FILE_CHANNEL (obj);
+  self = SALUT_FILE_TRANSFER_CHANNEL (obj);
 
   /* Ref our handle */
   base_conn = TP_BASE_CONNECTION (self->priv->connection);
@@ -340,14 +340,14 @@ salut_file_channel_constructor (GType type, guint n_props,
 }
 
 static void
-salut_file_channel_dispose (GObject *object);
+salut_file_transfer_channel_dispose (GObject *object);
 static void
-salut_file_channel_finalize (GObject *object);
+salut_file_transfer_channel_finalize (GObject *object);
 
 static void
-salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
+salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_file_transfer_channel_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_file_channel_class);
+  GObjectClass *object_class = G_OBJECT_CLASS (salut_file_transfer_channel_class);
   GParamSpec *param_spec;
 
   static TpDBusPropertiesMixinPropImpl channel_props[] = {
@@ -386,15 +386,15 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
     { NULL }
   };
 
-  g_type_class_add_private (salut_file_channel_class,
-      sizeof (SalutFileChannelPrivate));
+  g_type_class_add_private (salut_file_transfer_channel_class,
+      sizeof (SalutFileTransferChannelPrivate));
 
-  object_class->dispose = salut_file_channel_dispose;
-  object_class->finalize = salut_file_channel_finalize;
+  object_class->dispose = salut_file_transfer_channel_dispose;
+  object_class->finalize = salut_file_transfer_channel_finalize;
 
-  object_class->constructor = salut_file_channel_constructor;
-  object_class->get_property = salut_file_channel_get_property;
-  object_class->set_property = salut_file_channel_set_property;
+  object_class->constructor = salut_file_transfer_channel_constructor;
+  object_class->get_property = salut_file_transfer_channel_get_property;
+  object_class->set_property = salut_file_transfer_channel_set_property;
 
   g_object_class_override_property (object_class, PROP_OBJECT_PATH,
       "object-path");
@@ -598,15 +598,15 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
   g_object_class_install_property (object_class, PROP_INITIAL_OFFSET,
       param_spec);
 
-  salut_file_channel_class->dbus_props_class.interfaces = prop_interfaces;
+  salut_file_transfer_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
-      G_STRUCT_OFFSET (SalutFileChannelClass, dbus_props_class));
+      G_STRUCT_OFFSET (SalutFileTransferChannelClass, dbus_props_class));
 }
 
 void
-salut_file_channel_dispose (GObject *object)
+salut_file_transfer_channel_dispose (GObject *object)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
@@ -618,7 +618,7 @@ salut_file_channel_dispose (GObject *object)
 
   tp_handle_unref (handle_repo, self->priv->handle);
 
-  salut_file_channel_do_close (self);
+  salut_file_transfer_channel_do_close (self);
 
   if (self->priv->contact)
     {
@@ -640,55 +640,55 @@ salut_file_channel_dispose (GObject *object)
 
   /* release any references held by the object here */
 
-  if (G_OBJECT_CLASS (salut_file_channel_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_file_channel_parent_class)->dispose (object);
+  if (G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->dispose)
+    G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->dispose (object);
 }
 
 static void
-salut_file_channel_finalize (GObject *object)
+salut_file_transfer_channel_finalize (GObject *object)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (object);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
 
   /* free any data held directly by the object here */
   g_free (self->priv->object_path);
   g_free (self->priv->filename);
 
-  G_OBJECT_CLASS (salut_file_channel_parent_class)->finalize (object);
+  G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
 }
 
 
 /**
- * salut_file_channel_close
+ * salut_file_transfer_channel_close
  *
  * Implements DBus method Close
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_file_channel_close (TpSvcChannel *iface,
+salut_file_transfer_channel_close (TpSvcChannel *iface,
                           DBusGMethodInvocation *context)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
   if (self->priv->state != SALUT_FILE_TRANSFER_STATE_COMPLETED)
     {
       gibber_file_transfer_cancel (self->priv->ft, 406);
-      salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (iface),
+      salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (iface),
           SALUT_FILE_TRANSFER_STATE_CANCELLED,
           SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
     }
 
-  salut_file_channel_do_close (SALUT_FILE_CHANNEL (iface));
+  salut_file_transfer_channel_do_close (SALUT_FILE_TRANSFER_CHANNEL (iface));
   tp_svc_channel_return_from_close (context);
 }
 
 /**
- * salut_file_channel_get_channel_type
+ * salut_file_transfer_channel_get_channel_type
  *
  * Implements DBus method GetChannelType
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_file_channel_get_channel_type (TpSvcChannel *iface,
+salut_file_transfer_channel_get_channel_type (TpSvcChannel *iface,
                                      DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_channel_type (context,
@@ -696,33 +696,33 @@ salut_file_channel_get_channel_type (TpSvcChannel *iface,
 }
 
 /**
- * salut_file_channel_get_handle
+ * salut_file_transfer_channel_get_handle
  *
  * Implements DBus method GetHandle
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_file_channel_get_handle (TpSvcChannel *iface,
+salut_file_transfer_channel_get_handle (TpSvcChannel *iface,
                                DBusGMethodInvocation *context)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
   tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_CONTACT,
                                          self->priv->handle);
 }
 
 /**
- * salut_file_channel_get_interfaces
+ * salut_file_transfer_channel_get_interfaces
  *
  * Implements DBus method GetInterfaces
  * on interface org.freedesktop.Telepathy.Channel
  */
 static void
-salut_file_channel_get_interfaces (TpSvcChannel *iface,
+salut_file_transfer_channel_get_interfaces (TpSvcChannel *iface,
                                    DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_interfaces (context,
-      salut_file_channel_interfaces);
+      salut_file_transfer_channel_interfaces);
 }
 
 static void
@@ -731,7 +731,7 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
   TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_implement_##x (\
-    klass, salut_file_channel_##x)
+    klass, salut_file_transfer_channel_##x)
   IMPLEMENT (close);
   IMPLEMENT (get_channel_type);
   IMPLEMENT (get_handle);
@@ -744,15 +744,15 @@ error_cb (GibberFileTransfer *ft,
           guint domain,
           gint code,
           const gchar *message,
-          SalutFileChannel *self)
+          SalutFileTransferChannel *self)
 {
 }
 
 static void
 ft_finished_cb (GibberFileTransfer *ft,
-                SalutFileChannel *self)
+                SalutFileTransferChannel *self)
 {
-  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+  salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
       SALUT_FILE_TRANSFER_STATE_COMPLETED,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
@@ -763,10 +763,10 @@ ft_finished_cb (GibberFileTransfer *ft,
 
 static void
 ft_remote_canceled_cb (GibberFileTransfer *ft,
-                       SalutFileChannel *self)
+                       SalutFileTransferChannel *self)
 {
   gibber_file_transfer_cancel (ft, 406);
-  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+  salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
       SALUT_FILE_TRANSFER_STATE_CANCELLED,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
 
@@ -777,9 +777,9 @@ ft_remote_canceled_cb (GibberFileTransfer *ft,
 
 static void
 remote_accepted_cb (GibberFileTransfer *ft,
-                    SalutFileChannel *self)
+                    SalutFileTransferChannel *self)
 {
-  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+  salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
       SALUT_FILE_TRANSFER_STATE_OPEN,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
@@ -787,12 +787,12 @@ remote_accepted_cb (GibberFileTransfer *ft,
   g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
 }
 
-static gboolean setup_local_socket (SalutFileChannel *self);
+static gboolean setup_local_socket (SalutFileTransferChannel *self);
 static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count,
-    SalutFileChannel *self);
+    SalutFileTransferChannel *self);
 
 static void
-send_file_offer (SalutFileChannel *self)
+send_file_offer (SalutFileTransferChannel *self)
 {
   GibberFileTransfer *ft;
 
@@ -822,7 +822,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
                                            SalutContact *contact,
                                            gpointer user_data)
 {
-  SalutFileChannel *channel = user_data;
+  SalutFileTransferChannel *channel = user_data;
 
   channel->priv->xmpp_connection = g_object_ref (connection);
   salut_xmpp_connection_manager_take_connection (mgr, connection);
@@ -832,7 +832,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 }
 
 void
-salut_file_channel_received_file_offer (SalutFileChannel *self,
+salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
                                         GibberXmppStanza *stanza,
                                         GibberXmppConnection *conn)
 {
@@ -855,11 +855,11 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
 }
 
 static void
-salut_file_channel_set_state (SalutSvcChannelTypeFileTransfer *iface,
+salut_file_transfer_channel_set_state (SalutSvcChannelTypeFileTransfer *iface,
                               SalutFileTransferState state,
                               SalutFileTransferStateChangeReason reason)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
   self->priv->state = state;
   salut_svc_channel_type_file_transfer_emit_file_transfer_state_changed (iface,
@@ -869,7 +869,7 @@ salut_file_channel_set_state (SalutSvcChannelTypeFileTransfer *iface,
 static void
 ft_transferred_chunk_cb (GibberFileTransfer *ft,
                          guint64 count,
-                         SalutFileChannel *self)
+                         SalutFileTransferChannel *self)
 {
   SalutSvcChannelTypeFileTransfer *iface = SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self);
   GTimeVal timeval;
@@ -891,20 +891,20 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft,
 }
 
 /**
- * salut_file_channel_accept_file
+ * salut_file_transfer_channel_accept_file
  *
  * Implements D-Bus method AcceptFile
  * on interface org.freedesktop.Telepathy.Channel.Type.File
  */
 static void
-salut_file_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
+salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
                                 guint address_type,
                                 guint access_control,
                                 const GValue *access_control_param,
                                 guint64 offset,
                                 DBusGMethodInvocation *context)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GError *error = NULL;
   GValue out_address = { 0 };
   GibberFileTransfer *ft;
@@ -947,7 +947,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
 
   DEBUG ("local socket %s", self->priv->socket_path);
 
-  salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_ACCEPTED,
+  salut_file_transfer_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_ACCEPTED,
         SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_value_init (&out_address, G_TYPE_STRING);
@@ -957,28 +957,28 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
       &out_address);
 
   self->priv->initial_offset = 0;
-  salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
+  salut_file_transfer_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 }
 
 /**
- * salut_file_channel_offer_file
+ * salut_file_transfer_channel_offer_file
  *
  * Implements D-Bus method OfferFile
  * on interface org.freedesktop.Telepathy.Channel.Type.File
  */
 static void
-salut_file_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
+salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
                                guint address_type,
                                guint access_control,
                                const GValue *access_control_param,
                                DBusGMethodInvocation *context)
 {
-  SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GibberXmppConnection *connection = NULL;
   SalutXmppConnectionManagerRequestConnectionResult request_result;
   GError *error = NULL;
-  SalutFileChannel *channel = SALUT_FILE_CHANNEL (iface);
+  SalutFileTransferChannel *channel = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GValue out_address = { 0 };
 
   if (self->priv->state != SALUT_FILE_TRANSFER_STATE_NOT_OFFERED)
@@ -1063,7 +1063,7 @@ salut_file_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
   g_value_init (&out_address, G_TYPE_STRING);
   g_value_set_string (&out_address, channel->priv->socket_path);
 
-  salut_file_channel_set_state (iface,
+  salut_file_transfer_channel_set_state (iface,
       SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
@@ -1079,14 +1079,14 @@ file_transfer_iface_init (gpointer g_iface,
       (SalutSvcChannelTypeFileTransferClass *)g_iface;
 
 #define IMPLEMENT(x) salut_svc_channel_type_file_transfer_implement_##x (\
-    klass, salut_file_channel_##x)
+    klass, salut_file_transfer_channel_##x)
   IMPLEMENT (accept_file);
   IMPLEMENT (offer_file);
 #undef IMPLEMENT
 }
 
 static const gchar *
-get_local_unix_socket_path (SalutFileChannel *self)
+get_local_unix_socket_path (SalutFileTransferChannel *self)
 {
   gchar *path = NULL;
   gint32 random;
@@ -1118,7 +1118,7 @@ get_local_unix_socket_path (SalutFileChannel *self)
  * Return a GIOChannel for the local unix socket path.
  */
 static GIOChannel *
-get_socket_channel (SalutFileChannel *self)
+get_socket_channel (SalutFileTransferChannel *self)
 {
   gint fd;
   const gchar *path;
@@ -1175,7 +1175,7 @@ accept_local_socket_connection (GIOChannel *source,
   socklen_t addrlen;
   GIOChannel *channel;
 
-  ft = SALUT_FILE_CHANNEL (user_data)->priv->ft;
+  ft = SALUT_FILE_TRANSFER_CHANNEL (user_data)->priv->ft;
 
   g_assert (ft != NULL);
 
@@ -1206,7 +1206,7 @@ accept_local_socket_connection (GIOChannel *source,
 }
 
 static gboolean
-setup_local_socket (SalutFileChannel *self)
+setup_local_socket (SalutFileTransferChannel *self)
 {
   GIOChannel *io_channel;
 

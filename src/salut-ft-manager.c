@@ -41,7 +41,7 @@
 static void
 salut_ft_manager_factory_iface_init (gpointer *g_iface, gpointer *iface_data);
 
-static SalutFileChannel *
+static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle, gboolean incoming);
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
@@ -105,7 +105,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
 {
   SalutFtManager *self = SALUT_FT_MANAGER (user_data);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
-  SalutFileChannel *chan;
+  SalutFileTransferChannel *chan;
   TpHandle handle;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
@@ -115,7 +115,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   g_assert (handle != 0);
 
   chan = salut_ft_manager_new_channel (self, handle, TRUE);
-  salut_file_channel_received_file_offer (chan, stanza, conn);
+  salut_file_transfer_channel_received_file_offer (chan, stanza, conn);
 }
 
 static void salut_ft_manager_dispose (GObject *object);
@@ -239,7 +239,7 @@ salut_ft_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
 }
 
 static void
-file_channel_closed_cb (SalutFileChannel *chan, gpointer user_data)
+file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
 {
   SalutFtManager *self = SALUT_FT_MANAGER (user_data);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
@@ -253,7 +253,7 @@ file_channel_closed_cb (SalutFileChannel *chan, gpointer user_data)
     }
 }
 
-static SalutFileChannel *
+static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr,
                               TpHandle handle,
                               gboolean incoming)
@@ -262,7 +262,7 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
-  SalutFileChannel *chan;
+  SalutFileTransferChannel *chan;
   SalutContact *contact;
   const gchar *name;
   gchar *path = NULL;
@@ -285,12 +285,12 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
     state = SALUT_FILE_TRANSFER_STATE_NOT_OFFERED;
 
   name = tp_handle_inspect (handle_repo, handle);
-  path = g_strdup_printf ("%s/FileChannel/%u/%u",
+  path = g_strdup_printf ("%s/FileTransferChannel/%u/%u",
                          base_connection->object_path, handle, id++);
 
   DEBUG ("Object path of file channel is %s", path);
 
-  chan = g_object_new (SALUT_TYPE_FILE_CHANNEL,
+  chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
                        "connection", priv->connection,
                        "contact", contact,
                        "object-path", path,
@@ -322,7 +322,7 @@ salut_ft_manager_factory_iface_request (TpChannelFactoryIface *iface,
 {
   SalutFtManager *mgr = SALUT_FT_MANAGER (iface);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (mgr);
-  SalutFileChannel *chan;
+  SalutFileTransferChannel *chan;
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
