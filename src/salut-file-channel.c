@@ -59,7 +59,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileChannel, salut_file_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
                            tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE,
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
                            file_transfer_iface_init);
 );
 
@@ -146,7 +146,7 @@ salut_file_channel_init (SalutFileChannel *obj)
   obj->priv->contact = NULL;
 }
 
-static void salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
+static void salut_file_channel_set_state (SalutSvcChannelTypeFileTransfer *iface,
     SalutFileTransferState state, SalutFileTransferStateChangeReason reason);
 
 static void
@@ -163,7 +163,8 @@ salut_file_channel_get_property (GObject    *object,
         g_value_set_string (value, self->priv->object_path);
         break;
       case PROP_CHANNEL_TYPE:
-        g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_FILE);
+        g_value_set_static_string (value,
+            SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
         break;
       case PROP_HANDLE_TYPE:
         g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
@@ -254,13 +255,14 @@ salut_file_channel_set_property (GObject *object,
         tmp = g_value_get_string (value);
         g_assert (tmp == NULL
                   || !tp_strdiff (g_value_get_string (value),
-                         SALUT_IFACE_CHANNEL_TYPE_FILE));
+                         SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER));
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         self->priv->xmpp_connection_manager = g_value_dup_object (value);
         break;
       case PROP_STATE:
-        salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (object),
+        salut_file_channel_set_state (
+            SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (object),
             g_value_get_uint (value),
             SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
@@ -376,7 +378,7 @@ salut_file_channel_class_init (SalutFileChannelClass *salut_file_channel_class)
       NULL,
       channel_props
     },
-    { SALUT_IFACE_CHANNEL_TYPE_FILE,
+    { SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER,
       tp_dbus_properties_mixin_getter_gobject_properties,
       tp_dbus_properties_mixin_setter_gobject_properties,
       file_props
@@ -670,8 +672,8 @@ salut_file_channel_close (TpSvcChannel *iface,
   if (self->priv->state != SALUT_FILE_TRANSFER_STATE_COMPLETED)
     {
       gibber_file_transfer_cancel (self->priv->ft, 406);
-      salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (iface),
-          SALUT_FILE_TRANSFER_STATE_CANCELED,
+      salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (iface),
+          SALUT_FILE_TRANSFER_STATE_CANCELLED,
           SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
     }
 
@@ -690,7 +692,7 @@ salut_file_channel_get_channel_type (TpSvcChannel *iface,
                                      DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_channel_type (context,
-      SALUT_IFACE_CHANNEL_TYPE_FILE);
+      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
 }
 
 /**
@@ -750,7 +752,7 @@ static void
 ft_finished_cb (GibberFileTransfer *ft,
                 SalutFileChannel *self)
 {
-  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
+  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
       SALUT_FILE_TRANSFER_STATE_COMPLETED,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
@@ -764,8 +766,8 @@ ft_remote_canceled_cb (GibberFileTransfer *ft,
                        SalutFileChannel *self)
 {
   gibber_file_transfer_cancel (ft, 406);
-  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
-      SALUT_FILE_TRANSFER_STATE_CANCELED,
+  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+      SALUT_FILE_TRANSFER_STATE_CANCELLED,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
 
   salut_xmpp_connection_manager_release_connection (
@@ -777,7 +779,7 @@ static void
 remote_accepted_cb (GibberFileTransfer *ft,
                     SalutFileChannel *self)
 {
-  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE (self),
+  salut_file_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
       SALUT_FILE_TRANSFER_STATE_OPEN,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
@@ -853,14 +855,14 @@ salut_file_channel_received_file_offer (SalutFileChannel *self,
 }
 
 static void
-salut_file_channel_set_state (SalutSvcChannelTypeFile *iface,
+salut_file_channel_set_state (SalutSvcChannelTypeFileTransfer *iface,
                               SalutFileTransferState state,
                               SalutFileTransferStateChangeReason reason)
 {
   SalutFileChannel *self = SALUT_FILE_CHANNEL (iface);
 
   self->priv->state = state;
-  salut_svc_channel_type_file_emit_file_transfer_state_changed (iface,
+  salut_svc_channel_type_file_transfer_emit_file_transfer_state_changed (iface,
       state, reason);
 }
 
@@ -869,7 +871,7 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft,
                          guint64 count,
                          SalutFileChannel *self)
 {
-  SalutSvcChannelTypeFile *iface = SALUT_SVC_CHANNEL_TYPE_FILE (self);
+  SalutSvcChannelTypeFileTransfer *iface = SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self);
   GTimeVal timeval;
 
   self->priv->transferred_bytes += count;
@@ -882,8 +884,8 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft,
   if (timeval.tv_sec >= (self->priv->last_transferred_bytes_emitted + 1)
       || self->priv->transferred_bytes == self->priv->size)
     {
-      salut_svc_channel_type_file_emit_transferred_bytes_changed (iface,
-          self->priv->transferred_bytes);
+      salut_svc_channel_type_file_transfer_emit_transferred_bytes_changed (
+          iface, self->priv->transferred_bytes);
       self->priv->last_transferred_bytes_emitted = timeval.tv_sec;
     }
 }
@@ -895,7 +897,7 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft,
  * on interface org.freedesktop.Telepathy.Channel.Type.File
  */
 static void
-salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
+salut_file_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
                                 guint address_type,
                                 guint access_control,
                                 const GValue *access_control_param,
@@ -951,7 +953,8 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
   g_value_init (&out_address, G_TYPE_STRING);
   g_value_set_string (&out_address, self->priv->socket_path);
 
-  salut_svc_channel_type_file_return_from_accept_file (context, &out_address);
+  salut_svc_channel_type_file_transfer_return_from_accept_file (context,
+      &out_address);
 
   self->priv->initial_offset = 0;
   salut_file_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
@@ -965,7 +968,7 @@ salut_file_channel_accept_file (SalutSvcChannelTypeFile *iface,
  * on interface org.freedesktop.Telepathy.Channel.Type.File
  */
 static void
-salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
+salut_file_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
                                guint address_type,
                                guint access_control,
                                const GValue *access_control_param,
@@ -1064,17 +1067,18 @@ salut_file_channel_offer_file (SalutSvcChannelTypeFile *iface,
       SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
-  salut_svc_channel_type_file_return_from_offer_file (context, &out_address);
+  salut_svc_channel_type_file_transfer_return_from_offer_file (context,
+      &out_address);
 }
 
 static void
 file_transfer_iface_init (gpointer g_iface,
                           gpointer iface_data)
 {
-  SalutSvcChannelTypeFileClass *klass =
-      (SalutSvcChannelTypeFileClass *)g_iface;
+  SalutSvcChannelTypeFileTransferClass *klass =
+      (SalutSvcChannelTypeFileTransferClass *)g_iface;
 
-#define IMPLEMENT(x) salut_svc_channel_type_file_implement_##x (\
+#define IMPLEMENT(x) salut_svc_channel_type_file_transfer_implement_##x (\
     klass, salut_file_channel_##x)
   IMPLEMENT (accept_file);
   IMPLEMENT (offer_file);

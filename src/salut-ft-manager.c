@@ -330,7 +330,7 @@ salut_ft_manager_factory_iface_request (TpChannelFactoryIface *iface,
   DEBUG ("File transfer request");
 
   /* We only support file transfer channels */
-  if (tp_strdiff (chan_type, SALUT_IFACE_CHANNEL_TYPE_FILE))
+  if (tp_strdiff (chan_type, SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
     {
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
     }
