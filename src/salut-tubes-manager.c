@@ -573,6 +573,7 @@ new_tubes_channel (SalutTubesManager *fac,
 
   g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);
 
+  g_object_unref (contact);
   g_free (object_path);
 
   return chan;
