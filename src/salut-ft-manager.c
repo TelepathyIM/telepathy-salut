@@ -29,7 +29,7 @@
 #include "salut-ft-manager.h"
 #include "signals-marshal.h"
 
-#include "salut-file-channel.h"
+#include "salut-file-transfer-channel.h"
 #include "salut-contact-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>

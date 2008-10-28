@@ -1,5 +1,5 @@
 /*
- * salut-file-channel.h - Header for SalutFileChannel
+ * salut-file-transfer-channel.h - Header for SalutFileChannel
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
  * Copyright (C) 2005, 2007, 2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>

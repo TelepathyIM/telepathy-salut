@@ -1,5 +1,5 @@
 /*
- * salut-file-channel.c - Source for SalutFileChannel
+ * salut-file-transfer-channel.c - Source for SalutFileChannel
  * Copyright (C) 2007 Marco Barisione <marco@barisione.org>
  * Copyright (C) 2005, 2007, 2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
@@ -33,7 +33,7 @@
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
 
-#include "salut-file-channel.h"
+#include "salut-file-transfer-channel.h"
 #include "signals-marshal.h"
 
 #include "salut-connection.h"

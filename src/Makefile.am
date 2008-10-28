@@ -28,8 +28,8 @@ CORE_SOURCES =                                          \
     salut-muc-channel.c                                 \
     salut-ft-manager.c                                  \
     salut-ft-manager.h                                  \
-    salut-file-channel.c                                \
-    salut-file-channel.h                                \
+    salut-file-transfer-channel.c                       \
+    salut-file-transfer-channel.h                       \
     salut-muc-channel.h                                 \
     salut-contact.h                                     \
     salut-contact.c                                     \
