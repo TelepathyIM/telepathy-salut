@@ -58,6 +58,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel, 
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
                            tp_dbus_properties_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
                            file_transfer_iface_init);
@@ -73,14 +74,21 @@ static const char *salut_file_transfer_channel_interfaces[] = { NULL };
 enum
 {
   PROP_OBJECT_PATH = 1,
+
+   /* org.freedesktop.Telepathy.Channel D-Bus properties */
   PROP_CHANNEL_TYPE,
-  PROP_HANDLE_TYPE,
-  PROP_HANDLE,
-  PROP_CONTACT,
-  PROP_CONNECTION,
   PROP_INTERFACES,
-  PROP_XMPP_CONNECTION_MANAGER,
-  PROP_INCOMING,
+  PROP_HANDLE,
+  PROP_TARGET_ID,
+  PROP_HANDLE_TYPE,
+  PROP_REQUESTED,
+  PROP_INITIATOR_HANDLE,
+  PROP_INITIATOR_ID,
+
+  PROP_CHANNEL_DESTROYED,
+  PROP_CHANNEL_PROPERTIES,
+
+  /* org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties */
   PROP_STATE,
   PROP_CONTENT_TYPE,
   PROP_FILENAME,
@@ -88,9 +96,16 @@ enum
   PROP_CONTENT_HASH_TYPE,
   PROP_CONTENT_HASH,
   PROP_DESCRIPTION,
+  PROP_DATE,
   PROP_AVAILABLE_SOCKET_TYPES,
   PROP_TRANSFERRED_BYTES,
   PROP_INITIAL_OFFSET,
+
+  PROP_CONTACT,
+  PROP_CONNECTION,
+  PROP_XMPP_CONNECTION_MANAGER,
+  /* FIME: can wa remove incoming ? */
+  PROP_INCOMING,
   LAST_PROPERTY
 };
 
@@ -108,6 +123,7 @@ struct _SalutFileTransferChannelPrivate {
   glong last_transferred_bytes_emitted;
   gchar *socket_path;
   gboolean incoming;
+  TpHandle initiator;
 
   /* properties */
   SalutFileTransferState state;
@@ -120,6 +136,7 @@ struct _SalutFileTransferChannelPrivate {
   GHashTable *available_socket_types;
   guint64 transferred_bytes;
   guint64 initial_offset;
+  guint64 date;
 };
 
 static void
@@ -156,6 +173,7 @@ salut_file_transfer_channel_get_property (GObject    *object,
                                  GParamSpec *pspec)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
+  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->connection;
 
   switch (property_id)
     {
@@ -169,8 +187,34 @@ salut_file_transfer_channel_get_property (GObject    *object,
       case PROP_HANDLE_TYPE:
         g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
         break;
+      case PROP_TARGET_ID:
+        {
+           TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
+             TP_HANDLE_TYPE_CONTACT);
+
+           g_value_set_string (value, tp_handle_inspect (repo,
+                 self->priv->handle));
+        }
+        break;
       case PROP_HANDLE:
         g_value_set_uint (value, self->priv->handle);
+        break;
+      case PROP_REQUESTED:
+        g_value_set_boolean (value, (self->priv->initiator ==
+              base_conn->self_handle));
+        break;
+      case PROP_INITIATOR_HANDLE:
+        g_value_set_uint (value, self->priv->initiator);
+        break;
+      case PROP_INITIATOR_ID:
+          {
+            TpHandleRepoIface *repo = tp_base_connection_get_handles (
+                base_conn, TP_HANDLE_TYPE_CONTACT);
+
+            g_assert (self->priv->initiator != 0);
+            g_value_set_string (value,
+                tp_handle_inspect (repo, self->priv->initiator));
+          }
         break;
       case PROP_CONTACT:
         g_value_set_object (value, self->priv->contact);
@@ -217,6 +261,37 @@ salut_file_transfer_channel_get_property (GObject    *object,
       case PROP_INITIAL_OFFSET:
         g_value_set_uint64 (value, self->priv->initial_offset);
         break;
+      case PROP_DATE:
+        g_value_set_uint64 (value, self->priv->date);
+        break;
+     case PROP_CHANNEL_DESTROYED:
+        /* FIXME: what's the right value of this ? */
+        g_value_set_boolean (value, TRUE);
+        break;
+      case PROP_CHANNEL_PROPERTIES:
+        g_value_set_boxed (value,
+            tp_dbus_properties_mixin_make_properties_hash (object,
+                TP_IFACE_CHANNEL, "ChannelType",
+                TP_IFACE_CHANNEL, "Interfaces",
+                TP_IFACE_CHANNEL, "TargetHandle",
+                TP_IFACE_CHANNEL, "TargetID",
+                TP_IFACE_CHANNEL, "TargetHandleType",
+                TP_IFACE_CHANNEL, "Requested",
+                TP_IFACE_CHANNEL, "InitiatorHandle",
+                TP_IFACE_CHANNEL, "InitiatorID",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "State",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentType",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Filename",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Size",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHashType",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHash",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Description",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Date",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "AvailableSocketTypes",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "TransferredBytes",
+                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "InitialOffset",
+                NULL));
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -230,7 +305,6 @@ salut_file_transfer_channel_set_property (GObject *object,
                                  GParamSpec *pspec)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
-  const gchar *tmp;
 
   switch (property_id)
     {
@@ -252,10 +326,8 @@ salut_file_transfer_channel_set_property (GObject *object,
                   || g_value_get_uint (value) == TP_HANDLE_TYPE_CONTACT);
         break;
       case PROP_CHANNEL_TYPE:
-        tmp = g_value_get_string (value);
-        g_assert (tmp == NULL
-                  || !tp_strdiff (g_value_get_string (value),
-                         SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER));
+        /* these properties are writable in the interface, but not actually
+         * meaningfully changeable on this channel, so we do nothing */
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         self->priv->xmpp_connection_manager = g_value_dup_object (value);
@@ -271,6 +343,7 @@ salut_file_transfer_channel_set_property (GObject *object,
         break;
       case PROP_CONTENT_TYPE:
         /* This should not be writeable with the new request API */
+        /* FIXME: check */
         self->priv->content_type = g_value_dup_string (value);
         break;
       case PROP_FILENAME:
@@ -295,6 +368,16 @@ salut_file_transfer_channel_set_property (GObject *object,
         break;
       case PROP_AVAILABLE_SOCKET_TYPES:
         self->priv->available_socket_types = g_value_get_boxed (value);
+        break;
+      case PROP_INITIATOR_HANDLE:
+        self->priv->initiator = g_value_get_uint (value);
+        g_assert (self->priv->initiator != 0);
+        break;
+      case PROP_DATE:
+        self->priv->date = g_value_get_uint64 (value);
+        break;
+      case PROP_INITIAL_OFFSET:
+        self->priv->initial_offset = g_value_get_uint64 (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -333,6 +416,7 @@ salut_file_transfer_channel_constructor (GType type, guint n_props,
   /* Initialise the available socket types hash table */
   self->priv->available_socket_types = g_hash_table_new (g_int_hash,
       g_int_equal);
+  /* FIXME: fill this hash table */
 
   self->priv->last_transferred_bytes_emitted = 0;
 
@@ -353,8 +437,12 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
   static TpDBusPropertiesMixinPropImpl channel_props[] = {
     { "TargetHandleType", "handle-type", NULL },
     { "TargetHandle", "handle", NULL },
+    { "TargetID", "target-id", NULL },
     { "ChannelType", "channel-type", NULL },
     { "Interfaces", "interfaces", NULL },
+    { "Requested", "requested", NULL },
+    { "InitiatorHandle", "initiator-handle", NULL },
+    { "InitiatorID", "initiator-id", NULL },
     { NULL }
   };
 
@@ -366,9 +454,11 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
     { "ContentHashType", "content-hash-type", "content-hash-type" },
     { "ContentHash", "content-hash", "content-hash" },
     { "Description", "description", "description" },
+    { "Description", "date", "date" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
     { "TransferredBytes", "transferred-bytes", NULL },
     { "InitialOffset", "initial-offset", NULL },
+    { "Date", "date", "date" },
     { NULL }
   };
 
@@ -403,6 +493,39 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
   g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
       "handle-type");
   g_object_class_override_property (object_class, PROP_HANDLE, "handle");
+  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+      "channel-destroyed");
+  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+      "channel-properties");
+
+  param_spec = g_param_spec_string ("target-id", "Target JID",
+      "The string obtained by inspecting this channel's handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+  param_spec = g_param_spec_boolean ("requested", "Requested?",
+      "True if this channel was requested by the local user",
+      FALSE,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+ param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+      "The contact who initiated the channel",
+      0, G_MAXUINT32, 0,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+      param_spec);
+
+  param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
+      "The string obtained by inspecting the initiator-handle",
+      NULL,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+      param_spec);
 
   param_spec = g_param_spec_object ("contact",
       "SalutContact object",
@@ -596,6 +719,19 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_INITIAL_OFFSET,
+      param_spec);
+
+  param_spec = g_param_spec_uint64 (
+      "date",
+      "Epoch time",
+      "the last modification time of the file being transferred",
+      0,
+      G_MAXUINT64,
+      0,
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_DATE,
       param_spec);
 
   salut_file_transfer_channel_class->dbus_props_class.interfaces = prop_interfaces;
@@ -997,6 +1133,7 @@ salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
       return;
     }
 
+  /* FIXME: we should probably remove some of these tests */
   if (CHECK_STR_EMPTY (channel->priv->content_type))
     {
       DEBUG ("ContentType property not set");
