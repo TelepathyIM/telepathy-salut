@@ -104,8 +104,6 @@ enum
   PROP_CONTACT,
   PROP_CONNECTION,
   PROP_XMPP_CONNECTION_MANAGER,
-  /* FIME: can wa remove incoming ? */
-  PROP_INCOMING,
   LAST_PROPERTY
 };
 
@@ -122,7 +120,6 @@ struct _SalutFileTransferChannelPrivate {
   GibberFileTransfer *ft;
   glong last_transferred_bytes_emitted;
   gchar *socket_path;
-  gboolean incoming;
   TpHandle initiator;
 
   /* properties */
@@ -227,9 +224,6 @@ salut_file_transfer_channel_get_property (GObject    *object,
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, self->priv->xmpp_connection_manager);
-        break;
-      case PROP_INCOMING:
-        g_value_set_boolean (value, self->priv->incoming);
         break;
       case PROP_STATE:
         g_value_set_uint (value, self->priv->state);
@@ -337,9 +331,6 @@ salut_file_transfer_channel_set_property (GObject *object,
             SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (object),
             g_value_get_uint (value),
             SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
-        break;
-      case PROP_INCOMING:
-        self->priv->incoming = g_value_get_boolean (value);
         break;
       case PROP_CONTENT_TYPE:
         /* This should not be writeable with the new request API */
@@ -568,17 +559,6 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
-
-  param_spec = g_param_spec_boolean (
-      "incoming",
-      "incoming",
-      "Whether the transfer is incoming",
-      FALSE,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_INCOMING, param_spec);
 
   param_spec = g_param_spec_uint (
       "state",
