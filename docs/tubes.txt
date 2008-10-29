@@ -49,9 +49,19 @@ runs AcceptStreamTube or CloseTube.
 The receptor uses the port given by the iq stanza and the IP address used by the XMPP connection.
 
 Receptor to initiator: close the tube
+  <iq type="set"
+      from="alban_test02@alban-hp"
+      to="alban_test01@alban-hp"
+      id="67843">
+    <close id="364091438"
+           xmlns="http://telepathy.freedesktop.org/xmpp/tubes">
+  </iq>
 
 Initiator to receptor: acknowledges the close request
-
+  <iq type="result"
+      from="alban_test01@alban-hp"
+      to="alban_test02@alban-hp"
+      id="67843"/>
 
 Note that the close message is sent twice. This must be fixed. Gabble has the
 same bug:
