@@ -94,7 +94,7 @@ static void xmpp_connection_manager_connection_closing_cb (
     SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
     SalutContact *contact, gpointer user_data);
 
-static void _send_channel_iq_tubes (SalutTubesChannel *self);
+static void send_channel_iq_tubes (SalutTubesChannel *self);
 
 /* Channel state */
 typedef enum
@@ -403,7 +403,7 @@ salut_tubes_channel_set_property (GObject *object,
 }
 
 static void
-_initialise_connection (SalutTubesChannel *self, GibberXmppConnection *conn)
+initialise_connection (SalutTubesChannel *self, GibberXmppConnection *conn)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
@@ -430,7 +430,7 @@ _initialise_connection (SalutTubesChannel *self, GibberXmppConnection *conn)
   } else {
     priv->state = CHANNEL_CONNECTED;
     DEBUG ("priv->state = CHANNEL_CONNECTED");
-    _send_channel_iq_tubes (self);
+    send_channel_iq_tubes (self);
   }
 }
 
@@ -449,7 +449,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 
   DEBUG ("pending connection fully open");
 
-  _initialise_connection (self, conn);
+  initialise_connection (self, conn);
 }
 
 static void
@@ -475,7 +475,7 @@ connection_disconnected (SalutTubesChannel *self)
 
   /* If some tubes in remote-pending state, reopen the xmpp connection?
   if (g_queue_get_length (priv->out_queue) > 0) {
-    _setup_connection (self);
+    setup_connection (self);
   }
   */
 }
@@ -514,7 +514,7 @@ xmpp_connection_manager_connection_closing_cb (SalutXmppConnectionManager *mgr,
 }
 
 static void
-_setup_connection (SalutTubesChannel *self)
+setup_connection (SalutTubesChannel *self)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutXmppConnectionManagerRequestConnectionResult result;
@@ -533,7 +533,7 @@ _setup_connection (SalutTubesChannel *self)
   if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
       DEBUG ("connection done.");
-      _initialise_connection (self, conn);
+      initialise_connection (self, conn);
     }
   else if (result ==
       SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
@@ -706,7 +706,7 @@ add_in_old_dbus_tubes (gpointer key,
 }
 
 struct
-_emit_d_bus_names_changed_foreach_data
+emit_d_bus_names_changed_foreach_data
 {
   SalutTubesChannel *self;
   TpHandle contact;
@@ -719,8 +719,8 @@ emit_d_bus_names_changed_foreach (gpointer key,
 {
   guint tube_id = GPOINTER_TO_UINT (key);
   SalutTubeDBus *tube = SALUT_TUBE_DBUS (value);
-  struct _emit_d_bus_names_changed_foreach_data *data =
-    (struct _emit_d_bus_names_changed_foreach_data *) user_data;
+  struct emit_d_bus_names_changed_foreach_data *data =
+    (struct emit_d_bus_names_changed_foreach_data *) user_data;
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (
       data->self);
 
@@ -768,7 +768,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
   GSList *l;
   GHashTable *old_dbus_tubes;
   struct _add_in_old_dbus_tubes_data add_data;
-  struct _emit_d_bus_names_changed_foreach_data emit_data;
+  struct emit_d_bus_names_changed_foreach_data emit_data;
   GibberStanzaType type;
   GibberStanzaSubType sub_type;
 
@@ -993,7 +993,7 @@ muc_connection_lost_senders_cb (GibberMucConnection *conn,
       TpHandle contact;
       GHashTable *old_dbus_tubes;
       struct _add_in_old_dbus_tubes_data add_data;
-      struct _emit_d_bus_names_changed_foreach_data emit_data;
+      struct emit_d_bus_names_changed_foreach_data emit_data;
 
       sender = g_array_index (senders, gchar *, i);
 
@@ -1828,7 +1828,7 @@ iq_reply_cb (GibberIqHelper *helper,
 }
 
 static void
-_new_connection_cb (GibberBytestreamIface *bytestream, gpointer user_data)
+new_connection_cb (GibberBytestreamIface *bytestream, gpointer user_data)
 {
   SalutTubeIface *tube = user_data;
 
@@ -1836,7 +1836,7 @@ _new_connection_cb (GibberBytestreamIface *bytestream, gpointer user_data)
 }
 
 static void
-_send_channel_iq_tube (gpointer key,
+send_channel_iq_tube (gpointer key,
                        gpointer value,
                        gpointer user_data)
 {
@@ -1884,7 +1884,7 @@ _send_channel_iq_tube (gpointer key,
       g_assert (direct_bytestream_mgr != NULL);
 
       port = salut_direct_bytestream_manager_listen (direct_bytestream_mgr,
-          priv->contact, _new_connection_cb, tube);
+          priv->contact, new_connection_cb, tube);
       g_object_unref (direct_bytestream_mgr);
 
 
@@ -1952,7 +1952,7 @@ _send_channel_iq_tube (gpointer key,
 }
 
 static void
-_send_channel_iq_tubes (SalutTubesChannel *self)
+send_channel_iq_tubes (SalutTubesChannel *self)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
@@ -1961,11 +1961,11 @@ _send_channel_iq_tubes (SalutTubesChannel *self)
   if (priv->state != CHANNEL_CONNECTED)
     {
       /* TODO: do not connect if nothing to send... */
-      _setup_connection (self);
+      setup_connection (self);
       return;
     }
 
-  g_hash_table_foreach (priv->tubes, _send_channel_iq_tube, self);
+  g_hash_table_foreach (priv->tubes, send_channel_iq_tube, self);
 }
 
 
@@ -2033,7 +2033,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      _send_channel_iq_tubes (self);
+      send_channel_iq_tubes (self);
     }
 
   g_signal_connect (tube, "new-connection",
