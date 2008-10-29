@@ -185,24 +185,25 @@ def test(q, bus, conn):
     s.connect(address)
     s.send(FILE_DATA)
 
-    # FIXME: Why this is fired before TransferredBytesChanged?
-    e = q.expect('dbus-signal', signal='FileTransferStateChanged')
-    state, reason = e.args
+    state_changed_event, transferred_event = q.expect_many(
+        EventPattern('dbus-signal', signal='FileTransferStateChanged'),
+        EventPattern('dbus-signal', signal='TransferredBytesChanged'))
+
+    state, reason = state_changed_event.args
     assert state == FT_STATE_COMPLETED
     assert reason == FT_STATE_CHANGE_REASON_NONE
+
+    count = transferred_event.args[0]
+    while count < FILE_SIZE:
+        # Catch TransferredBytesChanged until we transfered all the data
+        e = q.expect('dbus-signal', signal='TransferredBytesChanged')
+        count = e.args[0]
 
     response = http.getresponse()
     assert (response.status, response.reason) == (200, 'OK')
     data = response.read(FILE_SIZE)
     # Did we received the right file?
     assert data == FILE_DATA
-
-    transfered = False
-    while not transfered:
-        e = q.expect('dbus-signal', signal='TransferredBytesChanged')
-        count = e.args[0]
-        if count == FILE_SIZE:
-            transfered = True
 
     channel.Close()
     q.expect('dbus-signal', signal='Closed')
