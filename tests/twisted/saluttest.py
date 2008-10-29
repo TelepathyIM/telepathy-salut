@@ -7,6 +7,7 @@ import base64
 import os
 import sha
 import sys
+import time
 
 import servicetest
 import twisted
@@ -87,6 +88,11 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
         conn.Disconnect()
     except dbus.DBusException, e:
         pass
+
+    if 'SALUT_TEST_REFDBG' in os.environ:
+        # we have to wait that Salut timeouts so the process is properly
+        # exited and refdbg can generates its report
+        time.sleep(5.5)
 
 def exec_test(fun, params=None, protocol=None, timeout=None):
   reactor.callWhenRunning (exec_test_deferred, fun, params, protocol, timeout)
