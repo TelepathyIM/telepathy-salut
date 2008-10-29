@@ -87,6 +87,26 @@ struct _SalutDirectBytestreamManagerListener
 #define SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE(obj) \
     ((SalutDirectBytestreamManagerPrivate *) ((SalutDirectBytestreamManager *)obj)->priv)
 
+void
+listener_free (gpointer data)
+{
+  SalutDirectBytestreamManagerListener *listener = data;
+
+  g_assert (listener != NULL);
+
+  if (listener->listen_io_channel_source_id != 0)
+    {
+      GSource* source = g_main_context_find_source_by_id (NULL,
+          listener->listen_io_channel_source_id);
+      g_assert (source != NULL);
+      g_source_destroy (source);
+      listener->listen_io_channel_source_id = 0;
+    }
+
+  g_slice_free (struct _listener_io_in_cb_data, listener->data);
+  g_slice_free (SalutDirectBytestreamManagerListener, listener);
+}
+
 static void
 salut_direct_bytestream_manager_init (SalutDirectBytestreamManager *self)
 {
@@ -191,7 +211,7 @@ salut_direct_bytestream_manager_constructor (GType type,
   g_assert (priv->im_manager != NULL);
   g_assert (priv->xmpp_connection_manager != NULL);
 
-  priv->listeners = g_hash_table_new (NULL, NULL);
+  priv->listeners = g_hash_table_new_full (NULL, NULL, NULL, listener_free);
 
   return obj;
 }
@@ -458,24 +478,10 @@ void salut_direct_bytestream_manager_stop_listen (
     SalutDirectBytestreamManager *self, gpointer id)
 {
   SalutDirectBytestreamManagerPrivate *priv;
-  SalutDirectBytestreamManagerListener *listener;
 
   priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
 
-  listener = g_hash_table_lookup (priv->listeners, id);
-  g_assert (listener != NULL);
-
-  if (listener->listen_io_channel_source_id != 0)
-    {
-      GSource* source = g_main_context_find_source_by_id (NULL,
-          listener->listen_io_channel_source_id);
-      g_assert (source != NULL);
-      g_source_destroy (source);
-      listener->listen_io_channel_source_id = 0;
-    }
-
-  g_slice_free (struct _listener_io_in_cb_data, listener->data);
-  g_slice_free (SalutDirectBytestreamManagerListener, listener);
+  g_hash_table_remove (priv->listeners, id);
 }
 
 GibberBytestreamIface *
