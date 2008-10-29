@@ -36,3 +36,16 @@ or:
   cd tests/twisted
   sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
         -- python avahi/test-aliases.py -v
+
+To debug an individual test you can set one of the following env variable:
+
+  * SALUT_TEST_VALGRIND : to run Salut inside valgrind. The report is
+    added to tools/gabble-testing.log.
+
+  * SALUT_TEST_REFDBG : to run Salut inside refdbg. The report is written
+    to tools/refdbg.log.
+
+  * SALUT_WRAPPER="nemiver" : to run Salut inside the graphical debugger
+    nemiver. You'll be able to set up breakpoints; then hit the "continue"
+    button to launch Salut.
+
