@@ -46,6 +46,7 @@ runs AcceptStreamTube or CloseTube.
 
 
 -- Tube is used --
+The receptor uses the port given by the iq stanza and the IP address used by the XMPP connection.
 
 Receptor to initiator: close the tube
 
