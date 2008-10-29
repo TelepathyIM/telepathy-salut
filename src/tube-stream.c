@@ -2331,9 +2331,7 @@ static void
 salut_tube_stream_close_async (TpSvcChannel *iface,
                                DBusGMethodInvocation *context)
 {
-  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
-
-  tp_svc_channel_emit_closed (self);
+  salut_tube_stream_close (SALUT_TUBE_IFACE (iface));
   tp_svc_channel_return_from_close (context);
 }
 
