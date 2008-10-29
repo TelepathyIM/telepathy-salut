@@ -297,6 +297,7 @@ salut_tubes_channel_get_property (GObject *object,
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
       case PROP_INTERFACES:
         if (chan->muc)
           g_value_set_static_boxed (value, salut_tubes_channel_interfaces);
