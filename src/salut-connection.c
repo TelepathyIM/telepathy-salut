@@ -2822,15 +2822,11 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   priv->muc_manager = salut_discovery_client_create_muc_manager (
       priv->discovery_client, self, priv->xmpp_connection_manager);
 
-  priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
-
   /*
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
   */
 
   g_ptr_array_add (factories, priv->muc_manager);
-  g_ptr_array_add (factories, priv->ft_manager);
   /*
   g_ptr_array_add (factories, priv->tubes_manager);
   */
@@ -2853,8 +2849,12 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
+  priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
+
   g_ptr_array_add (managers, priv->im_manager);
   g_ptr_array_add (managers, priv->contact_manager);
+  g_ptr_array_add (managers, priv->ft_manager);
 
   return managers;
 }
