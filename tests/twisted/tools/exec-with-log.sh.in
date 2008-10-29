@@ -10,6 +10,13 @@ if test -n "$SALUT_TEST_VALGRIND"; then
 	export G_DEBUG=gc-friendly
 	export G_SLICE=always-malloc
 	SALUT_WRAPPER="valgrind --leak-check=full --num-callers=20"
+elif test -n "$SALUT_TEST_REFDBG"; then
+        if test -z "$REFDBG_OPTIONS" ; then
+                export REFDBG_OPTIONS="btnum=10"
+        fi
+        if test -z "$SALUT_WRAPPER" ; then
+                SALUT_WRAPPER="refdbg"
+        fi
 fi
 
 exec $SALUT_WRAPPER @abs_top_builddir@/src/telepathy-salut
