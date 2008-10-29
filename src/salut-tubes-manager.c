@@ -328,7 +328,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   {
     if (chan != NULL)
       {
-        tubes_message_close_received (chan, initiator_handle, tube_id);
+        salut_tubes_channel_message_close_received (chan, initiator_handle,
+            tube_id);
       }
   }
   else
@@ -340,8 +341,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
             (TpChannelIface *) chan, NULL);
       }
 
-    tubes_message_received (chan, service, tube_type, initiator_handle,
-        parameters, tube_id, portnum,
+    salut_tubes_channel_message_received (chan, service, tube_type,
+        initiator_handle, parameters, tube_id, portnum,
         gibber_iq_helper_get_request_stanza (stanza));
   }
 

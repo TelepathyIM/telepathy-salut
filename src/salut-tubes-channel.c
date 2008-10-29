@@ -756,9 +756,9 @@ emit_d_bus_names_changed_foreach (gpointer key,
 
 /* MUC message */
 void
-tubes_muc_message_received (SalutTubesChannel *self,
-                            const gchar *sender,
-                            GibberXmppStanza *stanza)
+salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
+                                          const gchar *sender,
+                                          GibberXmppStanza *stanza)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
@@ -922,14 +922,14 @@ tubes_muc_message_received (SalutTubesChannel *self,
 
 /* 1-1 message */
 void
-tubes_message_received (SalutTubesChannel *self,
-                        const gchar *service,
-                        TpTubeType tube_type,
-                        TpHandle initiator_handle,
-                        GHashTable *parameters,
-                        guint tube_id,
-                        guint portnum,
-                        GibberIqHelperRequestStanza *iq_req)
+salut_tubes_channel_message_received (SalutTubesChannel *self,
+                                      const gchar *service,
+                                      TpTubeType tube_type,
+                                      TpHandle initiator_handle,
+                                      GHashTable *parameters,
+                                      guint tube_id,
+                                      guint portnum,
+                                      GibberIqHelperRequestStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
@@ -945,9 +945,9 @@ tubes_message_received (SalutTubesChannel *self,
 }
 
 void
-tubes_message_close_received (SalutTubesChannel *self,
-                                   TpHandle initiator_handle,
-                                   guint tube_id)
+salut_tubes_channel_message_close_received (SalutTubesChannel *self,
+                                            TpHandle initiator_handle,
+                                            guint tube_id)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
