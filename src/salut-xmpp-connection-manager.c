@@ -1360,8 +1360,9 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
            * open it */
           DEBUG ("waiting for remote contact (%s) open the connection",
               contact->name);
-          g_hash_table_insert (priv->outgoing_pending_connections,
-              g_object_ref (connection),
+          /* Don't ref connection, so it can be freed when removed from the
+           * hash table */
+          g_hash_table_insert (priv->outgoing_pending_connections, connection,
               g_object_ref (contact));
 
           add_outgoing_timeout (self, connection, contact);
