@@ -53,17 +53,13 @@ GType salut_tube_iface_get_type (void);
                               SalutTubeIfaceClass))
 
 /* return TRUE if the <iq> to offer the tube has never been sent */
-gboolean
-salut_tube_iface_offer_needed (SalutTubeIface *tube);
+gboolean salut_tube_iface_offer_needed (SalutTubeIface *tube);
 
-gboolean
-salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
+gboolean salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
 
-void
-salut_tube_iface_close (SalutTubeIface *tube);
+void salut_tube_iface_close (SalutTubeIface *tube);
 
-void
-salut_tube_iface_add_bytestream (SalutTubeIface *tube,
+void salut_tube_iface_add_bytestream (SalutTubeIface *tube,
     GibberBytestreamIface *bytestream);
 
 G_END_DECLS
