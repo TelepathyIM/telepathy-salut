@@ -371,7 +371,7 @@ new_reply (GibberIqHelperRequestStanza *iq,
   g_free (iq->from);
   g_free (iq->to);
   g_free (iq->id);
-  g_free (iq);
+  g_slice_free (GibberIqHelperRequestStanza, iq);
 
   return reply;
 }
@@ -391,7 +391,7 @@ gibber_iq_helper_get_request_stanza (GibberXmppStanza *iq)
   iq_from = gibber_xmpp_node_get_attribute (iq->node, "from");
   iq_to = gibber_xmpp_node_get_attribute (iq->node, "to");
 
-  req = g_new0 (GibberIqHelperRequestStanza, 1);
+  req = g_slice_new0 (GibberIqHelperRequestStanza);
   req->to = g_strdup (iq_to);
   req->from = g_strdup (iq_from);
   req->id = g_strdup (id);
