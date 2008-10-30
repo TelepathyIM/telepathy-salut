@@ -174,7 +174,7 @@ ssl_base_initialize(GibberSSLTransport *ssl, GError **error)
     initialized = TRUE;
   }
 
-  priv->ssl_method = TLSv1_client_method();
+  priv->ssl_method = SSLv23_client_method();
   if (priv->ssl_method == NULL) {
     fprintf(stderr, "TLSv1_client_method() == NULL\n");
     abort();

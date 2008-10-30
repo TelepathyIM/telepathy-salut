@@ -6,6 +6,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
 	avahi/test-text-channel.py \
+	avahi/test-ichat-composing.py \
 	avahi/test-tube.py \
 	avahi/test-tube-close.py
 
