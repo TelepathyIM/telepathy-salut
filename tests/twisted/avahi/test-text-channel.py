@@ -84,14 +84,15 @@ def test(q, bus, conn):
 
     # connected to salut, now send a message
     message = domish.Element(('', 'message'))
+    message['type'] = "chat"
     message.addElement('body', content=OUTGOING_MESSAGE)
 
     e.connection.send(message)
 
     e = q.expect('dbus-signal', signal='Received')
-    e.args[2] == handle
-    e.args[3] == TEXT_MESSAGE_TYPE_NORMAL
-    e.args[5] == OUTGOING_MESSAGE
+    assert e.args[2] == handle
+    assert e.args[3] == TEXT_MESSAGE_TYPE_NORMAL
+    assert e.args[5] == OUTGOING_MESSAGE
 
 
 if __name__ == '__main__':
