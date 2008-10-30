@@ -227,12 +227,16 @@ salut_tubes_channel_constructor (GType type,
     {
     case TP_HANDLE_TYPE_CONTACT:
       g_assert (self->muc == NULL);
+      g_assert (priv->xmpp_connection_manager != NULL);
       priv->self_handle = ((TpBaseConnection *)
           (priv->conn))->self_handle;
+      g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+          G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
       break;
 
     case TP_HANDLE_TYPE_ROOM:
       g_assert (self->muc != NULL);
+      g_assert (priv->xmpp_connection_manager == NULL);
       priv->self_handle = self->muc->group.self_handle;
       tp_external_group_mixin_init (obj, (GObject *) self->muc);
       g_object_get (self->muc,
@@ -255,9 +259,6 @@ salut_tubes_channel_constructor (GType type,
   dbus_g_connection_register_g_object (bus, priv->object_path, obj);
 
   DEBUG ("Registering at '%s'", priv->object_path);
-
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
 
   return obj;
 }
@@ -385,11 +386,15 @@ salut_tubes_channel_set_property (GObject *object,
         break;
       case PROP_CONTACT:
         priv->contact = g_value_get_object (value);
-        g_object_ref (priv->contact);
+        /* contact is set only for 1-1 tubes */
+        if (priv->contact != NULL)
+          g_object_ref (priv->contact);
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         priv->xmpp_connection_manager = g_value_get_object (value);
-        g_object_ref (priv->xmpp_connection_manager);
+        /* xmpp_connection_manager is set only for 1-1 tubes */
+        if (priv->contact != NULL)
+          g_object_ref (priv->xmpp_connection_manager);
         break;
       case PROP_INITIATOR_HANDLE:
         priv->initiator = g_value_get_uint (value);
