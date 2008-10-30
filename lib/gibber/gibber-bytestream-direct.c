@@ -595,11 +595,11 @@ gibber_bytestream_direct_send (GibberBytestreamIface *bytestream,
  */
 static void
 gibber_bytestream_direct_accept (GibberBytestreamIface *bytestream,
-                              GibberBytestreamAugmentSiAcceptReply func,
-                              gpointer user_data)
+                                 GibberBytestreamAugmentSiAcceptReply func,
+                                 gpointer user_data)
 {
-  /* nothing to do */
-  DEBUG ("Called.");
+  /* nothing to do: GibberBytestreamDirect don't use Stream Initiation, so it
+   * does not have to send any SI iq stanza to accept the bytestream */
 }
 
 /*
