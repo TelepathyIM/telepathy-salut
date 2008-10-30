@@ -522,10 +522,11 @@ gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
   return TRUE;
 }
 
-void
-gibber_bytestream_direct_block_read (GibberBytestreamDirect *self,
+static void
+gibber_bytestream_direct_block_read (GibberBytestreamIface *bytestream,
                                      gboolean block)
 {
+  GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (bytestream);
   GibberBytestreamDirectPrivate *priv =
       GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
 
@@ -689,4 +690,5 @@ bytestream_iface_init (gpointer g_iface,
   klass->send = gibber_bytestream_direct_send;
   klass->close = gibber_bytestream_direct_close;
   klass->accept = gibber_bytestream_direct_accept;
+  klass->block_read = gibber_bytestream_direct_block_read;
 }

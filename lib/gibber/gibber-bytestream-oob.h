@@ -69,9 +69,6 @@ void gibber_bytestream_oob_set_check_addr_func (
     GibberBytestreamOOB *bytestream, GibberBytestreamOOBCheckAddrFunc func,
     gpointer user_data);
 
-void gibber_bytestream_oob_block_read (GibberBytestreamOOB *bytestream,
-    gboolean block);
-
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_BYTESTREAM_OOB_H__ */

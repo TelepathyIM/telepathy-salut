@@ -1168,10 +1168,11 @@ gibber_bytestream_oob_set_check_addr_func (
   priv->check_addr_func_data = user_data;
 }
 
-void
-gibber_bytestream_oob_block_read (GibberBytestreamOOB *self,
+static void
+gibber_bytestream_oob_block_read (GibberBytestreamIface *bytestream,
                                   gboolean block)
 {
+  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (bytestream);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
 
   if (priv->read_blocked == block)
@@ -1193,4 +1194,5 @@ bytestream_iface_init (gpointer g_iface,
   klass->send = gibber_bytestream_oob_send;
   klass->close = gibber_bytestream_oob_close;
   klass->accept = gibber_bytestream_oob_accept;
+  klass->block_read = gibber_bytestream_oob_block_read;
 }

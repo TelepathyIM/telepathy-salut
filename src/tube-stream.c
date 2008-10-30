@@ -268,19 +268,8 @@ transport_buffer_empty_cb (GibberTransport *transport,
     }
 
   /* Buffer is empty so we can unblock the buffer if it was blocked */
-  /* FIXME: Should we move this as bytestream-iface method? */
-  if (GIBBER_IS_BYTESTREAM_OOB (bytestream))
-      {
-        DEBUG ("tube buffer isn't empty. Block the bytestream");
-        gibber_bytestream_oob_block_read (
-          GIBBER_BYTESTREAM_OOB (bytestream), FALSE);
-      }
-  else if (GIBBER_IS_BYTESTREAM_DIRECT (bytestream))
-      {
-        DEBUG ("tube buffer isn't empty. Block the bytestream");
-        gibber_bytestream_direct_block_read (
-          GIBBER_BYTESTREAM_DIRECT (bytestream), FALSE);
-      }
+  DEBUG ("tube buffer isn't empty. Block the bytestream");
+  gibber_bytestream_iface_block_read (bytestream, FALSE);
 }
 
 static void
@@ -1606,19 +1595,8 @@ data_received_cb (GibberBytestreamIface *bytestream,
   if (!gibber_transport_buffer_is_empty (transport))
     {
       /* We don't want to send more data while the buffer isn't empty */
-      /* FIXME: Should we move this as bytestream-iface method? */
-      if (GIBBER_IS_BYTESTREAM_OOB (bytestream))
-          {
-            DEBUG ("tube buffer isn't empty. Block the bytestream");
-            gibber_bytestream_oob_block_read (
-              GIBBER_BYTESTREAM_OOB (bytestream), TRUE);
-          }
-      else if (GIBBER_IS_BYTESTREAM_DIRECT (bytestream))
-          {
-            DEBUG ("tube buffer isn't empty. Block the bytestream");
-            gibber_bytestream_direct_block_read (
-              GIBBER_BYTESTREAM_DIRECT (bytestream), TRUE);
-          }
+      DEBUG ("tube buffer isn't empty. Block the bytestream");
+      gibber_bytestream_iface_block_read (bytestream, TRUE);
     }
 }
 
