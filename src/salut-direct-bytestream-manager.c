@@ -116,6 +116,8 @@ salut_direct_bytestream_manager_init (SalutDirectBytestreamManager *self)
 
   self->priv = priv;
 
+  priv->listeners = g_hash_table_new_full (NULL, NULL, NULL, listener_free);
+
   priv->dispose_has_run = FALSE;
 }
 
@@ -211,8 +213,6 @@ salut_direct_bytestream_manager_constructor (GType type,
       NULL);
   g_assert (priv->im_manager != NULL);
   g_assert (priv->xmpp_connection_manager != NULL);
-
-  priv->listeners = g_hash_table_new_full (NULL, NULL, NULL, listener_free);
 
   return obj;
 }
