@@ -64,10 +64,8 @@ def test(q, bus, conn):
     # connected to salut, now send a messages as composing part 
     # here be sillyness
     parts = OUTGOING_MESSAGE.split(" ")
-    print parts
 
     for x in xrange(1,len(parts)):
-        print ' '.join(parts[:x])
         message = domish.Element(('', 'message'))
         message.addElement('body', content=' '.join(parts[:x]))
         event = message.addElement('x', 'jabber:x:event')
