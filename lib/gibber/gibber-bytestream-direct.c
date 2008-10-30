@@ -609,7 +609,7 @@ gibber_bytestream_direct_accept (GibberBytestreamIface *bytestream,
  */
 static void
 gibber_bytestream_direct_close (GibberBytestreamIface *bytestream,
-                             GError *error)
+                                GError *error)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (bytestream);
   GibberBytestreamDirectPrivate *priv =
