@@ -89,6 +89,8 @@ START_TEST (test_simple_message)
   fail_unless (strcmp (gibber_xmpp_node_get_language (node), "en") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "to"),
                        "juliet@example.com") == 0);
+  fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "id"),
+                       "0") == 0);
 
   g_object_unref (event->stanza);
   g_free (event);
@@ -102,6 +104,8 @@ START_TEST (test_simple_message)
   fail_unless (strcmp (gibber_xmpp_node_get_language (node), "en") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "to"),
                        "juliet@example.com") == 0);
+  fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "id"),
+                       "1") == 0);
 
   g_free (data);
   g_queue_free (received_stanzas);
