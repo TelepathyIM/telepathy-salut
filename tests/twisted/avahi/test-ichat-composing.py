@@ -77,6 +77,8 @@ def test(q, bus, conn):
 
     message = domish.Element(('', 'message'))
     message.addElement('body', content=OUTGOING_MESSAGE)
+    event = message.addElement('x', 'jabber:x:event')
+    event.addElement('composing')
     xmpp_connection.send(message)
 
     e = q.expect('dbus-signal', signal='Received')
