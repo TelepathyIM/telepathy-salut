@@ -968,6 +968,13 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
 
   self->priv->filename = g_strdup (ft->filename);
   self->priv->size = gibber_file_transfer_get_size (ft);
+
+  /* FIXME: missing properties:
+     - content_type
+     - content_hash_type and content_hash
+     - date
+     - initial offset
+   */
 }
 
 static void
