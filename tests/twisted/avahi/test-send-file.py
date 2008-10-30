@@ -43,6 +43,7 @@ SOCKET_ACCESS_CONTROL_LOCALHOST = 0
 FILE_DATA = "That works!"
 FILE_SIZE = len(FILE_DATA)
 FILE_NAME = 'test.txt'
+FILE_CONTENT_TYPE = 'text/plain'
 FILE_DESCRIPTION = 'A nice file to test'
 FILE_HASH_TYPE = FILE_HASH_TYPE_MD5
 m = md5.new()
@@ -102,7 +103,7 @@ def test(q, bus, conn):
         tp_name_prefix + '.Channel.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
         tp_name_prefix + '.Channel.TargetHandleType': HT_CONTACT,
         tp_name_prefix + '.Channel.TargetHandle': handle,
-        ft_name_prefix + '.ContentType': 'application/octet-stream',
+        ft_name_prefix + '.ContentType': FILE_CONTENT_TYPE,
         ft_name_prefix + '.Filename': FILE_NAME,
         ft_name_prefix + '.Size': FILE_SIZE,
         ft_name_prefix + '.ContentHashType': FILE_HASH_TYPE,
@@ -124,7 +125,7 @@ def test(q, bus, conn):
 
     # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
     assert props[ft_name_prefix + '.State'] == FT_STATE_NOT_OFFERED
-    assert props[ft_name_prefix + '.ContentType'] == 'application/octet-stream'
+    assert props[ft_name_prefix + '.ContentType'] == FILE_CONTENT_TYPE
     assert props[ft_name_prefix + '.Filename'] == FILE_NAME
     assert props[ft_name_prefix + '.Size'] == FILE_SIZE
     assert props[ft_name_prefix + '.ContentHashType'] == FILE_HASH_TYPE
