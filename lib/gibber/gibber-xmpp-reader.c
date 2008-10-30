@@ -369,7 +369,7 @@ _end_element_ns (void *user_data, const xmlChar *localname,
     {
       g_assert (g_queue_get_length (priv->nodes) == 0);
       DEBUG ("Received stanza");
-      g_queue_push_head (priv->stanzas, priv->stanza);
+      g_queue_push_tail (priv->stanzas, priv->stanza);
       priv->stanza = NULL;
       priv->node = NULL;
     }
