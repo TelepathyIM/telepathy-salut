@@ -78,8 +78,7 @@ void salut_direct_bytestream_manager_stop_listen (
     SalutDirectBytestreamManager *self, gpointer id);
 
 /* To be used on the CM-receptor side, to make a new connection */
-GibberBytestreamIface *
-salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
-    SalutContact *contact, int portnum);
+GibberBytestreamIface * salut_direct_bytestream_manager_new_stream (
+    SalutDirectBytestreamManager *self, SalutContact *contact, int portnum);
 
 #endif /* #ifndef __SALUT_DIRECT_BYTESTREAM_MANAGER_H__*/
