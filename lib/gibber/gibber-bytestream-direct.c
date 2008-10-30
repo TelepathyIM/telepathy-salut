@@ -76,7 +76,11 @@ enum
 typedef struct _GibberBytestreamDirectPrivate GibberBytestreamDirectPrivate;
 struct _GibberBytestreamDirectPrivate
 {
+  /* A list of struct sockaddr_storage to try to connect to, if
+   * this GibberBytestreamDirect object is on the initiator side.
+   * GibberBytestreamDirect own theses structures and must free them. */
   GArray *addresses;
+
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
@@ -650,6 +654,7 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
 
   DEBUG ("Called.");
 
+  g_assert (priv->addresses != NULL);
   if (priv->addresses->len < 1)
     {
       GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
