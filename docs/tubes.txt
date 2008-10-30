@@ -36,13 +36,7 @@ Receptor to initiator: acknowledgment of the offer
       to="alban_test01@alban-hp"
       id="8849419577"/>
 
-This acknowledgment should be used to accept the tube. However the current code
-ignores the acknowledgment. The tube will be accepted on the initiator side
-when the first stream will be requested by the receptor. Gabble has a similar
-problem, see https://bugs.freedesktop.org/show_bug.cgi?id=16595
-
-The id of the iq stanza should be stored to reply later when the application
-runs AcceptStreamTube or CloseTube.
+This acknowledgment is used to accept the tube.
 
 
 -- Tube is used --
