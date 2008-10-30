@@ -545,8 +545,8 @@ gibber_bytestream_direct_block_read (GibberBytestreamDirect *self,
  */
 static gboolean
 gibber_bytestream_direct_send (GibberBytestreamIface *bytestream,
-                            guint len,
-                            const gchar *str)
+                               guint len,
+                               const gchar *str)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (bytestream);
   GibberBytestreamDirectPrivate *priv =
