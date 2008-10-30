@@ -664,7 +664,9 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
       return FALSE;
     }
 
-  /* Use the first address for now */
+  /* Use the first address for now
+   * FIXME: it should try the other addresses of the array if the first does
+   * not work. */
   addr.storage = g_array_index (priv->addresses, struct sockaddr_storage, 0);
 
   addr.in6.sin6_port = g_htons ((guint16) priv->portnum);
