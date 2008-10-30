@@ -345,8 +345,6 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
         initiator_handle, parameters, tube_id, portnum,
         gibber_iq_helper_get_request_stanza (stanza));
   }
-
-  return;
 }
 
 static GObject *
