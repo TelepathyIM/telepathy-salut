@@ -149,7 +149,7 @@ struct _SalutTubeStreamPrivate
   guint listen_io_channel_source_id;
   gboolean closed;
 
-  /* we need to send an iq stanza to close the tube */
+  /* we need to send an iq stanza to close the tube on 1-1 tube */
   GibberIqHelper *iq_helper;
   SalutXmppConnectionManager *xmpp_connection_manager;
 
@@ -1277,7 +1277,9 @@ salut_tube_stream_set_property (GObject *object,
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
         priv->xmpp_connection_manager = g_value_get_object (value);
-        g_object_ref (priv->xmpp_connection_manager);
+        /* xmpp_connection_manager is set only for 1-1 tubes */
+        if (priv->xmpp_connection_manager != NULL)
+          g_object_ref (priv->xmpp_connection_manager);
         break;
       case PROP_PORT:
         priv->port = g_value_get_uint (value);
@@ -1405,9 +1407,17 @@ salut_tube_stream_constructor (GType type,
       priv->state = TP_TUBE_STATE_LOCAL_PENDING;
     }
 
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
-  ensure_iq_helper (SALUT_TUBE_STREAM (obj));
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      g_assert (priv->xmpp_connection_manager != NULL);
+      g_signal_connect (priv->xmpp_connection_manager, "new-connection",
+          G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
+      ensure_iq_helper (SALUT_TUBE_STREAM (obj));
+    }
+  else
+    {
+      g_assert (priv->xmpp_connection_manager == NULL);
+    }
 
   return obj;
 }
@@ -1645,6 +1655,8 @@ ensure_iq_helper (SalutTubeStream *tube)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (tube);
 
+  g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
+
   if (priv->iq_helper == NULL)
     {
       SalutXmppConnectionManagerRequestConnectionResult result;
@@ -1657,6 +1669,7 @@ ensure_iq_helper (SalutTubeStream *tube)
       contact = salut_contact_manager_get_contact (contact_mgr,
           priv->handle);
 
+      g_assert (priv->xmpp_connection_manager != NULL);
       result = salut_xmpp_connection_manager_request_connection (
           priv->xmpp_connection_manager, contact, &priv->xmpp_connection, NULL);
 
@@ -1691,14 +1704,17 @@ salut_tube_stream_accept (SalutTubeIface *tube,
       return FALSE;
     }
 
-  ensure_iq_helper (self);
-
-  if (priv->xmpp_connection && priv->iq_helper)
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      reply = gibber_iq_helper_new_result_reply (priv->iq_req);
-      gibber_xmpp_connection_send (priv->xmpp_connection, reply, NULL);
+      ensure_iq_helper (self);
 
-      g_object_unref (reply);
+      if (priv->xmpp_connection && priv->iq_helper)
+        {
+          reply = gibber_iq_helper_new_result_reply (priv->iq_req);
+          gibber_xmpp_connection_send (priv->xmpp_connection, reply, NULL);
+
+          g_object_unref (reply);
+        }
     }
 
   priv->state = TP_TUBE_STATE_OPEN;
