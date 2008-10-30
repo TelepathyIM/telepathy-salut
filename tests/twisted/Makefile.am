@@ -6,6 +6,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
 	avahi/test-send-file.py \
+	avahi/test-receive-file.py \
 	avahi/test-text-channel.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
