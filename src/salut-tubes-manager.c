@@ -392,9 +392,9 @@ salut_tubes_manager_dispose (GObject *object)
 
 static void
 salut_tubes_manager_get_property (GObject *object,
-                                   guint property_id,
-                                   GValue *value,
-                                   GParamSpec *pspec)
+                                  guint property_id,
+                                  GValue *value,
+                                  GParamSpec *pspec)
 {
   SalutTubesManager *fac = SALUT_TUBES_MANAGER (object);
   SalutTubesManagerPrivate *priv =
@@ -419,9 +419,9 @@ salut_tubes_manager_get_property (GObject *object,
 
 static void
 salut_tubes_manager_set_property (GObject *object,
-                                   guint property_id,
-                                   const GValue *value,
-                                   GParamSpec *pspec)
+                                  guint property_id,
+                                  const GValue *value,
+                                  GParamSpec *pspec)
 {
   SalutTubesManager *fac = SALUT_TUBES_MANAGER (object);
   SalutTubesManagerPrivate *priv =
