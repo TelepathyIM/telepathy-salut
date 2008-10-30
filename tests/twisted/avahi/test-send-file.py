@@ -11,7 +11,7 @@ from avahitest import get_host_name
 from xmppstream import setup_stream_listener
 from servicetest import make_channel_proxy, EventPattern
 
-from twisted.words.xish import domish
+from twisted.words.xish import domish, xpath
 
 tp_name_prefix = 'org.freedesktop.Telepathy'
 ft_name_prefix = '%s.Channel.Type.FileTransfer.DRAFT' % tp_name_prefix
@@ -43,6 +43,7 @@ SOCKET_ACCESS_CONTROL_LOCALHOST = 0
 FILE_DATA = "That works!"
 FILE_SIZE = len(FILE_DATA)
 FILE_NAME = 'test.txt'
+FILE_DESCRIPTION = 'A nice file to test'
 FILE_HASH_TYPE = FILE_HASH_TYPE_MD5
 m = md5.new()
 m.update(FILE_DATA)
@@ -106,7 +107,7 @@ def test(q, bus, conn):
         ft_name_prefix + '.Size': FILE_SIZE,
         ft_name_prefix + '.ContentHashType': FILE_HASH_TYPE,
         ft_name_prefix + '.ContentHash': FILE_HASH,
-        ft_name_prefix + '.Description': 'A nice file to test',
+        ft_name_prefix + '.Description': FILE_DESCRIPTION,
         ft_name_prefix + '.Date':  1225278834,
         ft_name_prefix + '.InitialOffset': 0,
         })
@@ -128,7 +129,7 @@ def test(q, bus, conn):
     assert props[ft_name_prefix + '.Size'] == FILE_SIZE
     assert props[ft_name_prefix + '.ContentHashType'] == FILE_HASH_TYPE
     assert props[ft_name_prefix + '.ContentHash'] == FILE_HASH
-    assert props[ft_name_prefix + '.Description'] == 'A nice file to test'
+    assert props[ft_name_prefix + '.Description'] == FILE_DESCRIPTION
     assert props[ft_name_prefix + '.Date'] == 1225278834
     # FIXME
     assert props[ft_name_prefix + '.AvailableSocketTypes'] == {}
@@ -157,12 +158,12 @@ def test(q, bus, conn):
     assert iq['to'] == contact_name
     query = iq.firstChildElement()
     assert query.uri == 'jabber:iq:oob'
-    url_node = query.firstChildElement()
+    url_node = xpath.queryForNodes("/iq/query/url",  iq)[0]
     assert url_node['type'] == 'file'
     assert url_node['size'] == str(FILE_SIZE)
     url = url_node.children[0]
     assert url.endswith(FILE_NAME)
-    # FIXME: check <desc> node
+    # FIXME: Salut should send a <desc> node containing the description
 
     reply = domish.Element(('', 'iq'))
     reply['to'] = iq['from']
