@@ -158,9 +158,24 @@ text_helper_parse_incoming_message (GibberXmppStanza *stanza,
 {
   const gchar *type;
   GibberXmppNode *node;
+  GibberXmppNode *event;
 
   *from = gibber_xmpp_node_get_attribute (stanza->node, "from");
   type = gibber_xmpp_node_get_attribute (stanza->node, "type");
+  /* Work around iChats strange way of doing typing notification */
+  event = gibber_xmpp_node_get_child_ns (stanza->node, "x",
+    GIBBER_XMPP_NS_EVENT);
+
+  if (event != NULL)
+    {
+      /* If the event has a composing and an id child, this is a typing
+       * notification and it should be dropped */
+      if (gibber_xmpp_node_get_child (event, "composing") != NULL &&
+          gibber_xmpp_node_get_child (event, "id") != NULL)
+        {
+          return FALSE;
+        }
+    }
   /*
    * Parse body if it exists.
    */
