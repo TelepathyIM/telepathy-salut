@@ -59,8 +59,9 @@ struct _SalutDirectBytestreamManagerPrivate
   SalutImManager *im_manager;
   SalutXmppConnectionManager *xmpp_connection_manager;
 
-  /* guint id -> guint listener_watch
-   * When used by stream tubes, the id is the tube_id */
+  /* gpointer obj -> guint listener_watch
+   * obj: object requesting to listen
+   * When used by stream tubes, the obj is the SalutStreamTube */
   GHashTable *listeners;
 
   gboolean dispose_has_run;
@@ -78,7 +79,7 @@ typedef struct _SalutDirectBytestreamManagerListener
     SalutDirectBytestreamManagerListener;
 struct _SalutDirectBytestreamManagerListener
 {
-  gpointer id;
+  gpointer obj;
   GIOChannel *listen_io_channel;
   guint listen_io_channel_source_id;
   struct _listener_io_in_cb_data *data;
@@ -338,7 +339,8 @@ listener_io_in_cb (GIOChannel *source,
  * @self: the direct bytestream manager
  * @contact: the contact allowed to connect
  * @new_connection_cb: callback when a new connection comes
- * @id: opaquer pointer given to the callback
+ * @obj: opaquer pointer of the object requesting to listen given to the
+ * callback
  *
  * Listen on a random TCP port for incoming connections. Only connections from
  * the contact given as parameter will be accepted. A GibberBystreamDirect
@@ -353,7 +355,7 @@ int
 salut_direct_bytestream_manager_listen (SalutDirectBytestreamManager *self,
     SalutContact *contact,
     SalutDirectBytestreamManagerNewConnectionFunc new_connection_cb,
-    gpointer id)
+    gpointer obj)
 {
   SalutDirectBytestreamManagerPrivate *priv;
   priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
@@ -441,10 +443,10 @@ salut_direct_bytestream_manager_listen (SalutDirectBytestreamManager *self,
   data->mgr = self;
   data->contact = contact,
   data->cb = new_connection_cb;
-  data->user_data = id;
+  data->user_data = obj;
 
   listener = g_slice_new0 (SalutDirectBytestreamManagerListener);
-  listener->id = id;
+  listener->obj = obj;
   listener->data = data;
 
   listener->listen_io_channel = g_io_channel_unix_new (fd);
@@ -452,7 +454,7 @@ salut_direct_bytestream_manager_listen (SalutDirectBytestreamManager *self,
   listener->listen_io_channel_source_id = g_io_add_watch
       (listener->listen_io_channel, G_IO_IN, listener_io_in_cb, data);
 
-  g_hash_table_insert (priv->listeners, id, listener);
+  g_hash_table_insert (priv->listeners, obj, listener);
 
   freeaddrinfo (ans);
   return port;
@@ -469,19 +471,19 @@ error:
 /**
  * salut_direct_bytestream_manager_stop_listen:
  * @self: the direct bytestream manager
- * @id: opaquer pointer
+ * @obj: opaquer pointer of the object which requested to listen
  *
  * Stop to listen on a TCP port after a call to
  * salut_direct_bytestream_manager_listen.
  */
 void salut_direct_bytestream_manager_stop_listen (
-    SalutDirectBytestreamManager *self, gpointer id)
+    SalutDirectBytestreamManager *self, gpointer obj)
 {
   SalutDirectBytestreamManagerPrivate *priv;
 
   priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
 
-  g_hash_table_remove (priv->listeners, id);
+  g_hash_table_remove (priv->listeners, obj);
 }
 
 GibberBytestreamIface *

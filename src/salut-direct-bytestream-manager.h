@@ -72,10 +72,10 @@ salut_direct_bytestream_manager_new (SalutConnection *connection);
 int salut_direct_bytestream_manager_listen (SalutDirectBytestreamManager *self,
     SalutContact *contact,
     SalutDirectBytestreamManagerNewConnectionFunc new_connection_cb,
-    gpointer id);
+    gpointer obj);
 
 void salut_direct_bytestream_manager_stop_listen (
-    SalutDirectBytestreamManager *self, gpointer id);
+    SalutDirectBytestreamManager *self, gpointer obj);
 
 /* To be used on the CM-receptor side, to make a new connection */
 GibberBytestreamIface * salut_direct_bytestream_manager_new_stream (
