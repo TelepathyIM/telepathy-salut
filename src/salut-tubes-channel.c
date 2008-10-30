@@ -393,7 +393,7 @@ salut_tubes_channel_set_property (GObject *object,
       case PROP_XMPP_CONNECTION_MANAGER:
         priv->xmpp_connection_manager = g_value_get_object (value);
         /* xmpp_connection_manager is set only for 1-1 tubes */
-        if (priv->contact != NULL)
+        if (priv->xmpp_connection_manager != NULL)
           g_object_ref (priv->xmpp_connection_manager);
         break;
       case PROP_INITIATOR_HANDLE:
