@@ -577,7 +577,7 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       "content-type",
       "gchar *content-type",
       "ContentType of the file",
-      "",
+      "application/octet-stream",
       /* TODO: change this to CONSTRUCT_ONLY when
        * the new request API is used.
        */
