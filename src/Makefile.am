@@ -25,6 +25,8 @@ CORE_SOURCES =                                          \
     salut-im-channel.h                                  \
     salut-muc-manager.c                                 \
     salut-muc-manager.h                                 \
+    salut-roomlist-manager.c                            \
+    salut-roomlist-manager.h                            \
     salut-muc-channel.c                                 \
     salut-ft-manager.c                                  \
     salut-ft-manager.h                                  \
@@ -77,6 +79,8 @@ AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.c                      \
     salut-avahi-muc-manager.h                           \
     salut-avahi-muc-manager.c                           \
+    salut-avahi-roomlist-manager.h                      \
+    salut-avahi-roomlist-manager.c                      \
     salut-avahi-muc-channel.h                           \
     salut-avahi-muc-channel.c                           \
     salut-avahi-contact-manager.h                       \

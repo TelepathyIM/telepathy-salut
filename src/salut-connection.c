@@ -39,6 +39,7 @@
 #include "salut-muc-manager.h"
 #include "salut-ft-manager.h"
 #include "salut-contact.h"
+#include "salut-roomlist-manager.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-si-bytestream-manager.h"
@@ -140,6 +141,7 @@ enum {
   PROP_IM_MANAGER,
   PROP_MUC_MANAGER,
   PROP_TUBES_MANAGER,
+  PROP_ROOMLIST_MANAGER,
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
@@ -189,6 +191,9 @@ struct _SalutConnectionPrivate
 
   /* FT channel manager */
   SalutFtManager *ft_manager;
+
+  /* MUC channel manager */
+  SalutRoomlistManager *roomlist_manager;
 
   /* Tubes channel manager */
   SalutTubesManager *tubes_manager;
@@ -341,6 +346,9 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_TUBES_MANAGER:
       g_value_set_object (value, priv->tubes_manager);
+      break;
+    case PROP_ROOMLIST_MANAGER:
+      g_value_set_object (value, priv->roomlist_manager);
       break;
     case PROP_CONTACT_MANAGER:
       g_value_set_object (value, priv->contact_manager);
@@ -710,6 +718,17 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
+      "roomlist-manager",
+      "SalutRoomlistManager object",
+      "The Salut Roomlist Manager associated with this Salut Connection",
+      SALUT_TYPE_ROOMLIST_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_ROOMLIST_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
       "contact-manager",
       "SalutContactManager object",
       "The Salut Contact Manager associated with this Salut Connection",
@@ -887,7 +906,7 @@ _self_established_cb (SalutSelf *s, gpointer data)
       return;
   }
 
-  if (!salut_muc_manager_start (priv->muc_manager, NULL))
+  if (!salut_roomlist_manager_start (priv->roomlist_manager, NULL))
     {
       /* XXX handle error */
       return;
@@ -2845,9 +2864,13 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
+  priv->muc_manager = salut_discovery_client_create_muc_manager (
+      priv->discovery_client, self, priv->xmpp_connection_manager);
+
   g_ptr_array_add (managers, priv->im_manager);
   g_ptr_array_add (managers, priv->contact_manager);
   g_ptr_array_add (managers, priv->ft_manager);
+  g_ptr_array_add (managers, priv->muc_manager);
 
   return managers;
 }
