@@ -181,7 +181,7 @@ gibber_bytestream_direct_get_property (GObject *object,
         break;
       case PROP_PROTOCOL:
         /* this property is not used because direct bytestream are not
-         * negociated on XMPP */
+         * negociated on XMPP using SI */
         g_value_set_string (value, (const gchar *)"");
         break;
       default:
