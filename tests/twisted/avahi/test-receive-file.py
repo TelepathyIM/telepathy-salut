@@ -23,7 +23,7 @@ HT_CONTACT = 1
 HT_CONTACT_LIST = 3
 TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
 
-FT_STATE_NONE = 1
+FT_STATE_NONE = 0
 FT_STATE_NOT_OFFERED = 1
 FT_STATE_ACCEPTED = 2
 FT_STATE_LOCAL_PENDING = 3
@@ -177,7 +177,6 @@ def test(q, bus, conn):
     while read < FILE_SIZE:
         data += s.recv(FILE_SIZE - read)
         read = len(data)
-    print "xxxxxxxxxx", len(data), FILE_SIZE
     assert data == FILE_DATA
 
     e = q.expect('dbus-signal', signal='TransferredBytesChanged')
