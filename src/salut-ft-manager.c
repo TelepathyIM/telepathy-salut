@@ -44,10 +44,7 @@ channel_manager_iface_init (gpointer, gpointer);
 
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
-    const gchar *content_type, const gchar *filename, guint64 size,
-    SalutFileHashType content_hash_type, const gchar *content_hash,
-    const gchar *description, guint64 date, guint64 initial_offset,
-    gpointer request);
+    gboolean requested);
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
@@ -119,14 +116,13 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
-  /* FIXME: get content_type from the protocol */
-  /* FIXME: get filename from the protocol */
-  /* FIXME: get content_hash_type type and content_hash from the protocol */
-  /* FIXME: get date from the protocol */
-  /* FIXME: get initial offset from the protocol */
-  chan = salut_ft_manager_new_channel (self, handle, "application/octet-stream",
-      "test.txt", 1000, SALUT_FILE_HASH_TYPE_NONE, NULL, NULL, 0, 0, NULL);
+  chan = salut_ft_manager_new_channel (self, handle, FALSE);
+
+  /* This will set the extra properties on the ft channel */
   salut_file_transfer_channel_received_file_offer (chan, stanza, conn);
+
+  tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
+      NULL);
 }
 
 static void salut_ft_manager_dispose (GObject *object);
@@ -244,15 +240,7 @@ file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr,
                               TpHandle handle,
-                              const gchar *content_type,
-                              const gchar *filename,
-                              guint64 size,
-                              SalutFileHashType content_hash_type,
-                              const gchar *content_hash,
-                              const gchar *description,
-                              guint64 date,
-                              guint64 initial_offset,
-                              gpointer request)
+                              gboolean requested)
 {
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
@@ -263,7 +251,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   const gchar *name;
   gchar *path = NULL;
   guint state;
-  GSList *requests = NULL;
   TpHandle initiator;
 
   /* Increasing guint to make sure object paths are random */
@@ -275,9 +262,9 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   if (contact == NULL)
     return NULL;
 
-  DEBUG ("%s channel requested", request == NULL ? "Incoming" : "Outgoing");
+  DEBUG ("%s channel requested", requested ? "Outgoing" : "Incoming");
 
-  if (request == NULL)
+  if (!requested)
     {
       /* incoming channel */
       state = SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING;
@@ -304,26 +291,13 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
                        "initiator-handle", initiator,
                        "state", state,
-                       "content-type", content_type,
-                       "filename", filename,
-                       "size", size,
-                       "content-hash-type", content_hash_type,
-                       "content-hash", content_hash,
-                       "description", description,
-                       "date", date,
-                       "initial-offset", initial_offset,
                        NULL);
 
   g_object_unref (contact);
   g_free (path);
 
-  if (request != NULL)
-    requests = g_slist_prepend (requests, request);
-
-  tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (chan),
-      requests);
-
-  g_slist_free (requests);
+  /* Don't fire the new channel signal now so the caller of this function can
+   * set the extra properties on the ft channel. */
 
   g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), mgr);
 
@@ -349,6 +323,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   SalutFileHashType content_hash_type;
   GError *error = NULL;
   gboolean valid;
+  GSList *requests = NULL;
 
   DEBUG ("File transfer request");
 
@@ -440,9 +415,24 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   initial_offset = tp_asv_get_uint64 (request_properties,
       SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
 
-  chan = salut_ft_manager_new_channel (self, handle, content_type, filename,
-      size, content_hash_type, content_hash, description, date,
-      initial_offset, request_token);
+  chan = salut_ft_manager_new_channel (self, handle, TRUE);
+
+  g_object_set (chan,
+      "content-type", content_type,
+      "filename", filename,
+      "size", size,
+      "content-hash-type", content_hash_type,
+      "content-hash", content_hash,
+      "description", description,
+      "date", date,
+      "initial-offset", initial_offset,
+      NULL);
+
+  requests = g_slist_prepend (requests, request_token);
+  tp_channel_manager_emit_new_channel (manager, TP_EXPORTABLE_CHANNEL (chan),
+      requests);
+  g_slist_free (requests);
+
   return TRUE;
 
 error:
