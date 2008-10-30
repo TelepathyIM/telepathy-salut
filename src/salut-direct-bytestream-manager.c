@@ -148,9 +148,9 @@ salut_direct_bytestream_manager_finalize (GObject *object)
 
 static void
 salut_direct_bytestream_manager_get_property (GObject *object,
-                                          guint property_id,
-                                          GValue *value,
-                                          GParamSpec *pspec)
+                                              guint property_id,
+                                              GValue *value,
+                                              GParamSpec *pspec)
 {
   SalutDirectBytestreamManager *self = SALUT_DIRECT_BYTESTREAM_MANAGER (object);
   SalutDirectBytestreamManagerPrivate *priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (
@@ -169,9 +169,9 @@ salut_direct_bytestream_manager_get_property (GObject *object,
 
 static void
 salut_direct_bytestream_manager_set_property (GObject *object,
-                                          guint property_id,
-                                          const GValue *value,
-                                          GParamSpec *pspec)
+                                              guint property_id,
+                                              const GValue *value,
+                                              GParamSpec *pspec)
 {
   SalutDirectBytestreamManager *self = SALUT_DIRECT_BYTESTREAM_MANAGER (object);
   SalutDirectBytestreamManagerPrivate *priv = SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (
@@ -190,8 +190,8 @@ salut_direct_bytestream_manager_set_property (GObject *object,
 
 static GObject *
 salut_direct_bytestream_manager_constructor (GType type,
-                                      guint n_props,
-                                      GObjectConstructParam *props)
+                                             guint n_props,
+                                             GObjectConstructParam *props)
 {
   GObject *obj;
   SalutDirectBytestreamManager *self;
@@ -505,4 +505,3 @@ salut_direct_bytestream_manager_new_stream (SalutDirectBytestreamManager *self,
 
   return bytestream;
 }
-
