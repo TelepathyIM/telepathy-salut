@@ -275,7 +275,7 @@ salut_im_channel_get_property (GObject *object,
         g_value_set_boolean (value, TRUE);
         break;
       case PROP_CHANNEL_PROPERTIES:
-        g_value_set_boxed (value,
+        g_value_take_boxed (value,
             tp_dbus_properties_mixin_make_properties_hash (object,
                 TP_IFACE_CHANNEL, "TargetHandle",
                 TP_IFACE_CHANNEL, "TargetHandleType",
@@ -909,7 +909,6 @@ _send_message (SalutImChannel *self,
       case CHANNEL_NOT_CONNECTED:
       case CHANNEL_CONNECTING:
       case CHANNEL_CLOSING:
-        g_object_ref (stanza);
         msg = salut_im_channel_message_new (type, text, stanza);
         _send_channel_message (self, msg);
         break;
