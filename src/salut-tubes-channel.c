@@ -962,7 +962,7 @@ salut_tubes_channel_message_close_received (SalutTubesChannel *self,
   if (tube)
     {
       DEBUG ("received a tube close message");
-      salut_tube_iface_close (tube);
+      salut_tube_iface_close (tube, TRUE);
     }
   else
     {
@@ -1633,7 +1633,7 @@ salut_tubes_channel_close_tube (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  salut_tube_iface_close (tube);
+  salut_tube_iface_close (tube, FALSE);
 
   tp_svc_channel_type_tubes_return_from_close_tube (context);
 }
@@ -1820,7 +1820,7 @@ iq_reply_cb (GibberIqHelper *helper,
   if (sub_type != GIBBER_STANZA_SUB_TYPE_RESULT)
     {
       DEBUG ("tube offer declined declined");
-      salut_tube_iface_close (tube);
+      salut_tube_iface_close (tube, TRUE);
       return;
     }
 

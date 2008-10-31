@@ -34,7 +34,7 @@ struct _SalutTubeIfaceClass {
 
   gboolean (*accept) (SalutTubeIface *tube, GError **error);
   gboolean (*offer_needed) (SalutTubeIface *tube);
-  void (*close) (SalutTubeIface *tube);
+  void (*close) (SalutTubeIface *tube, gboolean local);
   void (*add_bytestream) (SalutTubeIface *tube,
       GibberBytestreamIface *bytestream);
 };
@@ -57,7 +57,7 @@ gboolean salut_tube_iface_offer_needed (SalutTubeIface *tube);
 
 gboolean salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
 
-void salut_tube_iface_close (SalutTubeIface *tube);
+void salut_tube_iface_close (SalutTubeIface *tube, gboolean closed_remotely);
 
 void salut_tube_iface_add_bytestream (SalutTubeIface *tube,
     GibberBytestreamIface *bytestream);

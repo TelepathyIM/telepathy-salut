@@ -1040,7 +1040,7 @@ salut_tube_stream_dispose (GObject *object)
   if (priv->dispose_has_run)
     return;
 
-  salut_tube_iface_close (SALUT_TUBE_IFACE (self));
+  salut_tube_iface_close (SALUT_TUBE_IFACE (self), FALSE);
 
   if (priv->initiator != priv->self_handle &&
       priv->address_type == TP_SOCKET_ADDRESS_TYPE_UNIX &&
@@ -1678,7 +1678,7 @@ salut_tube_stream_accept (SalutTubeIface *tube,
 
   if (!tube_stream_open (self, error))
     {
-      salut_tube_iface_close (SALUT_TUBE_IFACE (self));
+      salut_tube_iface_close (SALUT_TUBE_IFACE (self), FALSE);
       return FALSE;
     }
 
@@ -1729,7 +1729,7 @@ iq_close_reply_cb (GibberIqHelper *helper,
  * Implements salut_tube_iface_close on SalutTubeIface
  */
 static void
-salut_tube_stream_close (SalutTubeIface *tube)
+salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
@@ -1741,7 +1741,9 @@ salut_tube_stream_close (SalutTubeIface *tube)
   g_hash_table_foreach_remove (priv->transport_to_bytestream,
       close_each_extra_bytestream, self);
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  /* do not send the close stanza if the tube was closed due to the remote
+   * contact */
+  if (!closed_remotely && priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       GibberXmppStanza *stanza;
       const gchar *jid_from, *jid_to;
@@ -1779,7 +1781,10 @@ salut_tube_stream_close (SalutTubeIface *tube)
       g_free (tube_id_str);
 
       g_object_unref (stanza);
+    }
 
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
       if (priv->initiator == priv->self_handle)
         {
           SalutDirectBytestreamManager *direct_bytestream_mgr;
@@ -1792,7 +1797,6 @@ salut_tube_stream_close (SalutTubeIface *tube)
           salut_direct_bytestream_manager_stop_listen (direct_bytestream_mgr, tube);
           g_object_unref (direct_bytestream_mgr);
         }
-
     }
 
   g_signal_emit (G_OBJECT (self), signals[CLOSED], 0);

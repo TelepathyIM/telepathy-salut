@@ -57,7 +57,3 @@ Initiator to receptor: acknowledges the close request
       to="alban_test02@alban-hp"
       id="67843"/>
 
-Note that the close message is sent twice. This must be fixed. Gabble has the
-same bug:
-https://bugs.freedesktop.org/show_bug.cgi?id=16797
-
