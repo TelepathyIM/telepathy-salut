@@ -133,7 +133,8 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
                           const gchar **service,
                           GHashTable **parameters,
                           guint *tube_id,
-                          guint *portnum)
+                          guint *portnum,
+                          GError **error)
 {
   GibberXmppNode *iq;
   GibberXmppNode *tube_node, *close_node, *node;
@@ -147,7 +148,8 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       from = gibber_xmpp_node_get_attribute (stanza->node, "from");
       if (from == NULL)
         {
-          DEBUG ("got a message without a from field");
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "got a message without a from field");
           return FALSE;
         }
       *initiator_handle = tp_handle_ensure (contact_repo, from, NULL,
@@ -155,7 +157,8 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
 
       if (*initiator_handle == 0)
         {
-          DEBUG ("invalid initiator ID %s", from);
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "invalid initiator ID %s", from);
           return FALSE;
         }
     }
@@ -167,12 +170,14 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
 
   if (tube_node == NULL && close_node == NULL)
     {
-      DEBUG ("The <iq> does not have a <tube> nor a <close>");
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "The <iq> does not have a <tube> nor a <close>");
       return FALSE;
     }
   if (tube_node != NULL && close_node != NULL)
     {
-      DEBUG ("The <iq> has both a <tube> nor a <close>");
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "The <iq> has both a <tube> nor a <close>");
       return FALSE;
     }
   if (tube_node != NULL)
@@ -199,14 +204,16 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       str = gibber_xmpp_node_get_attribute (node, "id");
       if (str == NULL)
         {
-          DEBUG ("no tube id in tube request");
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "no tube id in tube request");
           return FALSE;
         }
 
       tmp = strtol (str, &endptr, 10);
       if (!endptr || *endptr)
         {
-          DEBUG ("tube id is not numeric: %s", str);
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "tube id is not numeric: %s", str);
           return FALSE;
         }
       *tube_id = (int) tmp;
@@ -227,8 +234,8 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
         *type = TP_TUBE_TYPE_DBUS;
       else
         {
-          DEBUG ("The <iq><tube> does not have a correct type: '%s'.",
-              tube_type);
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "The <iq><tube> does not have a correct type: '%s'", tube_type);
           return FALSE;
         }
     }
@@ -257,21 +264,24 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       transport_node = gibber_xmpp_node_get_child (tube_node, "transport");
       if (transport_node == NULL)
         {
-          DEBUG ("no transport to connect to in the tube request");
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "no transport to connect to in the tube request");
           return FALSE;
         }
 
       str = gibber_xmpp_node_get_attribute (transport_node, "port");
       if (str == NULL)
         {
-          DEBUG ("no port to connect to in the tube request");
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "no port to connect to in the tube request");
           return FALSE;
         }
 
       tmp = strtol (str, &endptr, 10);
       if (!endptr || *endptr)
         {
-          DEBUG ("port is not numeric: %s", str);
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "port is not numeric: %s", str);
           return FALSE;
         }
       *portnum = (int) tmp;
@@ -300,6 +310,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   guint tube_id;
   guint portnum = 0;
   gboolean close;
+  GError *error = NULL;
 
   SalutTubesChannel *chan;
 
@@ -307,15 +318,17 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
    * it or send an error reply */
 
   if (!extract_tube_information (contact_repo, stanza, &close, &tube_type,
-          &initiator_handle, &service, &parameters, &tube_id, &portnum))
+          &initiator_handle, &service, &parameters, &tube_id, &portnum,
+          &error))
     {
       GibberXmppStanza *reply;
 
       reply = gibber_iq_helper_new_error_reply (
           gibber_iq_helper_get_request_stanza (stanza), XMPP_ERROR_BAD_REQUEST,
-          "failed to parse tube request");
+          error->message);
       gibber_xmpp_connection_send (conn, reply, NULL);
 
+      g_error_free (error);
       g_object_unref (reply);
       return;
     }
