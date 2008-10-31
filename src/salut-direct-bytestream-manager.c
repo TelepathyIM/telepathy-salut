@@ -144,6 +144,13 @@ salut_direct_bytestream_manager_dispose (GObject *object)
 void
 salut_direct_bytestream_manager_finalize (GObject *object)
 {
+  SalutDirectBytestreamManager *self =
+    SALUT_DIRECT_BYTESTREAM_MANAGER (object);
+  SalutDirectBytestreamManagerPrivate *priv =
+    SALUT_DIRECT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+
+  g_hash_table_destroy (priv->listeners);
+
   if (G_OBJECT_CLASS (salut_direct_bytestream_manager_parent_class)->finalize)
     G_OBJECT_CLASS (salut_direct_bytestream_manager_parent_class)->finalize
         (object);
