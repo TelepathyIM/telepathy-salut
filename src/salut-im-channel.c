@@ -909,7 +909,6 @@ _send_message (SalutImChannel *self,
       case CHANNEL_NOT_CONNECTED:
       case CHANNEL_CONNECTING:
       case CHANNEL_CLOSING:
-        g_object_ref (stanza);
         msg = salut_im_channel_message_new (type, text, stanza);
         _send_channel_message (self, msg);
         break;
