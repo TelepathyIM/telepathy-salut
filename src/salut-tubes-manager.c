@@ -398,6 +398,18 @@ salut_tubes_manager_dispose (GObject *object)
   tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
   g_assert (priv->channels == NULL);
 
+  if (priv->contact_manager != NULL)
+    {
+      g_object_unref (priv->contact_manager);
+      priv->contact_manager = NULL;
+    }
+
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
+
   if (G_OBJECT_CLASS (salut_tubes_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_tubes_manager_parent_class)->dispose (
         object);
@@ -446,10 +458,10 @@ salut_tubes_manager_set_property (GObject *object,
         priv->conn = g_value_get_object (value);
         break;
       case PROP_CONTACT_MANAGER:
-        priv->contact_manager = g_value_get_object (value);
+        priv->contact_manager = g_value_dup_object (value);
         break;
       case PROP_XMPP_CONNECTION_MANAGER:
-        priv->xmpp_connection_manager = g_value_get_object (value);
+        priv->xmpp_connection_manager = g_value_dup_object (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
