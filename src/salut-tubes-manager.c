@@ -398,6 +398,10 @@ salut_tubes_manager_dispose (GObject *object)
   tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
   g_assert (priv->channels == NULL);
 
+  salut_xmpp_connection_manager_remove_stanza_filter (
+      priv->xmpp_connection_manager, NULL,
+      iq_tube_request_filter, iq_tube_request_cb, object);
+
   if (priv->contact_manager != NULL)
     {
       g_object_unref (priv->contact_manager);
@@ -409,10 +413,6 @@ salut_tubes_manager_dispose (GObject *object)
       g_object_unref (priv->xmpp_connection_manager);
       priv->xmpp_connection_manager = NULL;
     }
-
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      iq_tube_request_filter, iq_tube_request_cb, object);
 
   if (G_OBJECT_CLASS (salut_tubes_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_tubes_manager_parent_class)->dispose (
