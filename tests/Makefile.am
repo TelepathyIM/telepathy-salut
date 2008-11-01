@@ -82,7 +82,8 @@ check_main_SOURCES =                             \
     check-gibber-r-multicast-sender.c            \
     check-gibber-xmpp-stanza.c                   \
     check-gibber-iq-helper.c                     \
-    check-gibber-xmpp-connection-listener.c \
+    check-gibber-listener.c                      \
+    check-gibber-xmpp-connection-listener.c      \
     check-gibber-xmpp-error.c
 
 check_main_LDADD = \
