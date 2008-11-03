@@ -356,13 +356,6 @@ listen_tcp_af (GibberListener *listener, int port,
   /* There was an error at some point, but it was not fatal. ignore it */
   g_clear_error (error);
 
-  if (*error != NULL)
-    {
-      /* There was an error at some point, but not fatal */
-      g_error_free(*error);
-      *error = NULL;
-    }
-
   freeaddrinfo (ans);
 
   return TRUE;
