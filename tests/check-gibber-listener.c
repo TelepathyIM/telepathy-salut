@@ -95,7 +95,8 @@ START_TEST (test_tcp_listen)
       if (gibber_listener_listen_tcp (listener, port, &error))
         break;
 
-      fail_if (error->code != GIBBER_LISTENER_ERROR_ADDRESS_IN_USE);
+      fail_if (!g_error_matches (error, GIBBER_LISTENER_ERROR,
+            GIBBER_LISTENER_ERROR_ADDRESS_IN_USE));
       g_error_free (error);
       error = NULL;
     }
@@ -105,7 +106,8 @@ START_TEST (test_tcp_listen)
   listener2 = gibber_listener_new ();
   fail_if (listener2 == NULL);
   fail_if (gibber_listener_listen_tcp (listener2, port, &error));
-  fail_if (error->code != GIBBER_LISTENER_ERROR_ADDRESS_IN_USE);
+  fail_if (!g_error_matches (error, GIBBER_LISTENER_ERROR,
+        GIBBER_LISTENER_ERROR_ADDRESS_IN_USE));
   g_object_unref (listener2);
   g_error_free (error);
   error = NULL;
