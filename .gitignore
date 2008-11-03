@@ -112,6 +112,7 @@ tests/sasl-test.db
 tests/test-xmpp-connection
 tests/test-r-multicast-{packet,sender,transport-io}
 tests/test-r-multicast-transport-io
+tests/twisted/tools/core
 tests/twisted/tools/exec-with-log.sh
 tests/twisted/tools/salut-testing.log
 tests/twisted/tools/tmp-session-bus.conf
