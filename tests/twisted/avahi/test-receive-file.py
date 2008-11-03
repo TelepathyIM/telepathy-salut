@@ -34,6 +34,7 @@ FT_STATE_CANCELLED = 7
 
 FT_STATE_CHANGE_REASON_NONE = 0
 
+FILE_HASH_TYPE_NONE = 0
 FILE_HASH_TYPE_MD5 = 1
 
 SOCKET_ADDRESS_TYPE_UNIX = 0
@@ -136,12 +137,12 @@ def test(q, bus, conn):
     assert props[ft_name_prefix + '.ContentType'] == FILE_CONTENT_TYPE
     assert props[ft_name_prefix + '.Filename'] == FILE_NAME
     assert props[ft_name_prefix + '.Size'] == FILE_SIZE
-    # FIXME: How should we deal with the hash properties?
-    #assert props[ft_name_prefix + '.ContentHashType'] == FILE_HASH_TYPE
-    #assert props[ft_name_prefix + '.ContentHash'] == FILE_HASH
+    # FT's protocol doesn't allow us the send the hash info
+    assert props[ft_name_prefix + '.ContentHashType'] == FILE_HASH_TYPE_NONE
+    assert props[ft_name_prefix + '.ContentHash'] == ''
     assert props[ft_name_prefix + '.Description'] == FILE_DESCRIPTION
-    # FIXME: How should we deal with the Date property?
-    #assert props[ft_name_prefix + '.Date'] == 1225278834
+    # FT's protocol doesn't allow us the send the date info
+    assert props[ft_name_prefix + '.Date'] == 0
     assert props[ft_name_prefix + '.AvailableSocketTypes'] == \
         {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
     assert props[ft_name_prefix + '.TransferredBytes'] == 0

@@ -973,12 +973,6 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
   self->priv->description = g_strdup (ft->description);
   self->priv->content_type = g_strdup (ft->content_type);
 
-  /* FIXME: missing properties:
-     - content_hash_type and content_hash
-     - date
-     - initial offset
-   */
-
   return TRUE;
 }
 
