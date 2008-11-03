@@ -338,10 +338,9 @@ listen_tcp_af (GibberListener *listener, int port,
           gboolean fatal = !g_error_matches (terror, GIBBER_LISTENER_ERROR,
               GIBBER_LISTENER_ERROR_FAMILY_NOT_SUPPORTED);
 
-          if (error != NULL)
-            *error = terror;
-          else
-            g_error_free (terror);
+          /* let error always point to the last error */
+          g_clear_error (error);
+          g_propagate_error (error, terror);
 
           if (fatal)
               goto error;
@@ -352,6 +351,9 @@ listen_tcp_af (GibberListener *listener, int port,
   /* If all listeners failed, report the last error */
   if (priv->listeners == NULL)
     goto error;
+
+  /* There was an error at some point, but it was not fatal. ignore it */
+  g_clear_error (error);
 
   if (*error != NULL)
     {
