@@ -185,7 +185,8 @@ listener_io_in_cb (GIOChannel *source,
   else
     DEBUG("New connection..");
 
-  g_signal_emit (self, signals[NEW_CONNECTION], 0, transport, &addr, addrlen);
+  g_signal_emit (self, signals[NEW_CONNECTION], 0, transport, &addr,
+      (guint) addrlen);
 
   g_object_unref (transport);
   return TRUE;
