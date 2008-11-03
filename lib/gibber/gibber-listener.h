@@ -32,8 +32,16 @@ typedef enum
 {
   GIBBER_LISTENER_ERROR_ALREADY_LISTENING,
   GIBBER_LISTENER_ERROR_ADDRESS_IN_USE,
+  GIBBER_LISTENER_ERROR_FAMILY_NOT_SUPPORTED,
   GIBBER_LISTENER_ERROR_FAILED,
 } GibberListenerError;
+
+typedef enum
+{
+  GIBBER_AF_IPV4,
+  GIBBER_AF_IPV6,
+  GIBBER_AF_ANY
+} GibberAddressFamily;
 
 typedef struct _GibberListener GibberListener;
 typedef struct _GibberListenerClass GibberListenerClass;
@@ -73,10 +81,13 @@ gboolean gibber_listener_listen_tcp (GibberListener *listener,
   int port, GError **error);
 
 gboolean gibber_listener_listen_tcp_af (GibberListener *listener,
-  int port, int adress_family, GError **error);
+  int port, GibberAddressFamily family, GError **error);
+
+gboolean gibber_listener_listen_tcp_loopback (GibberListener *listener,
+  int port, GError **error);
 
 gboolean gibber_listener_listen_tcp_loopback_af (GibberListener *listener,
-  int port, int address_family, GError **error);
+  int port, GibberAddressFamily family, GError **error);
 
 gboolean gibber_listener_listen_socket (GibberListener *listener,
   gchar *path, gboolean abstract, GError **error);
