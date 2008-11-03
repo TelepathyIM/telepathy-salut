@@ -333,32 +333,22 @@ salut_file_transfer_channel_set_property (GObject *object,
             SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
       case PROP_CONTENT_TYPE:
-        /* This should not be writeable with the new request API */
-        /* FIXME: check */
         self->priv->content_type = g_value_dup_string (value);
         break;
       case PROP_FILENAME:
-        /* This should not be writeable with the new request API */
         self->priv->filename = g_value_dup_string (value);
         break;
       case PROP_SIZE:
-        /* This should not be writeable with the new request API */
         self->priv->size = g_value_get_uint64 (value);
         break;
       case PROP_CONTENT_HASH_TYPE:
-        /* This should not be writeable with the new request API */
         self->priv->content_hash_type = g_value_get_uint (value);
         break;
       case PROP_CONTENT_HASH:
-        /* This should not be writeable with the new request API */
         self->priv->content_hash = g_value_dup_string (value);
         break;
       case PROP_DESCRIPTION:
-        /* This should not be writeable with the new request API */
         self->priv->description = g_value_dup_string (value);
-        break;
-      case PROP_AVAILABLE_SOCKET_TYPES:
-        self->priv->available_socket_types = g_value_get_boxed (value);
         break;
       case PROP_INITIATOR_HANDLE:
         self->priv->initiator = g_value_get_uint (value);
@@ -588,14 +578,14 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_STATE, param_spec);
 
+  /* TODO: most of these properties should be construct only but
+   * then incoming FT stanza should be parsed before creating the
+   * channel object. */
   param_spec = g_param_spec_string (
       "content-type",
       "gchar *content-type",
       "ContentType of the file",
       "application/octet-stream",
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -608,9 +598,6 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       "gchar *filename",
       "Name of the file",
       "",
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -624,9 +611,6 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       0,
       G_MAXUINT64,
       SALUT_UNDEFINED_FILE_SIZE,
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -640,9 +624,6 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       0,
       G_MAXUINT,
       SALUT_FILE_HASH_TYPE_NONE,
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -655,9 +636,6 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       "gchar *content-hash",
       "Hash of the file contents",
       "",
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -670,9 +648,6 @@ salut_file_transfer_channel_class_init (SalutFileTransferChannelClass *salut_fil
       "gchar *description",
       "Description of the file",
       "",
-      /* TODO: change this to CONSTRUCT_ONLY when
-       * the new request API is used.
-       */
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
