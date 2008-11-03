@@ -1106,8 +1106,9 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
 
   DEBUG ("local socket %s", self->priv->socket_path);
 
-  salut_file_transfer_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_ACCEPTED,
-        SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+  salut_file_transfer_channel_set_state (iface,
+      SALUT_FILE_TRANSFER_STATE_ACCEPTED,
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
   g_value_init (&out_address, G_TYPE_STRING);
   g_value_set_string (&out_address, self->priv->socket_path);
@@ -1200,7 +1201,7 @@ salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
 
   salut_file_transfer_channel_set_state (iface,
       SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
   salut_svc_channel_type_file_transfer_return_from_offer_file (context,
       &out_address);

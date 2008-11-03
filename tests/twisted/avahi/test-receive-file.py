@@ -35,6 +35,7 @@ FT_STATE_COMPLETED = 6
 FT_STATE_CANCELLED = 7
 
 FT_STATE_CHANGE_REASON_NONE = 0
+FT_STATE_CHANGE_REASON_REQUESTED = 1
 
 FILE_HASH_TYPE_NONE = 0
 FILE_HASH_TYPE_MD5 = 1
@@ -159,8 +160,7 @@ def test(q, bus, conn):
     e = q.expect('dbus-signal', signal='FileTransferStateChanged')
     state, reason = e.args
     assert state == FT_STATE_ACCEPTED
-    # FIXME: shouldn't it be requested?
-    assert reason == FT_STATE_CHANGE_REASON_NONE
+    assert reason == FT_STATE_CHANGE_REASON_REQUESTED
 
     e = q.expect('dbus-signal', signal='FileTransferStateChanged')
     state, reason = e.args

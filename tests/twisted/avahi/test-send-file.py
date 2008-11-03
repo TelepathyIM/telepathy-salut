@@ -33,6 +33,7 @@ FT_STATE_COMPLETED = 6
 FT_STATE_CANCELLED = 7
 
 FT_STATE_CHANGE_REASON_NONE = 0
+FT_STATE_CHANGE_REASON_REQUESTED = 1
 
 FILE_HASH_TYPE_MD5 = 1
 
@@ -154,8 +155,7 @@ def test(q, bus, conn):
 
     state, reason = state_event.args
     assert state == FT_STATE_REMOTE_PENDING
-    # FIXME: shouldn't it REQUESTED ?
-    assert reason == FT_STATE_CHANGE_REASON_NONE
+    assert reason == FT_STATE_CHANGE_REASON_REQUESTED
 
     assert iq_event.iq_type == 'set'
     assert iq_event.connection == incoming
