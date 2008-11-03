@@ -13,6 +13,8 @@ from servicetest import make_channel_proxy, EventPattern
 
 from twisted.words.xish import domish, xpath
 
+from dbus import PROPERTIES_IFACE
+
 tp_name_prefix = 'org.freedesktop.Telepathy'
 ft_name_prefix = '%s.Channel.Type.FileTransfer.DRAFT' % tp_name_prefix
 
@@ -139,6 +141,8 @@ def test(q, bus, conn):
 
     channel = make_channel_proxy(conn, path, 'Channel')
     ft_channel = make_channel_proxy(conn, path, 'Channel.Type.FileTransfer.DRAFT')
+    ft_props = dbus.Interface(bus.get_object(conn.object.bus_name, path), PROPERTIES_IFACE)
+
     address = ft_channel.OfferFile(SOCKET_ADDRESS_TYPE_UNIX, SOCKET_ACCESS_CONTROL_LOCALHOST, "")
 
     conn_event, state_event, iq_event = q.expect_many(
@@ -185,6 +189,10 @@ def test(q, bus, conn):
     state, reason = e.args
     assert state == FT_STATE_OPEN
     assert reason == FT_STATE_CHANGE_REASON_NONE
+
+    offset = ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'InitialOffset')
+    # We don't support resume
+    assert offset == 0
 
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.connect(address)
