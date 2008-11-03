@@ -111,6 +111,7 @@ def test(q, bus, conn):
     url_node = query.addElement('url', content=url)
     url_node['type'] = 'file'
     url_node['size'] = str(FILE_SIZE)
+    url_node['mimeType'] = FILE_CONTENT_TYPE
     query.addElement('desc', content=FILE_DESCRIPTION)
     outbound.send(iq)
 
@@ -132,16 +133,13 @@ def test(q, bus, conn):
 
     # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
     assert props[ft_name_prefix + '.State'] == FT_STATE_LOCAL_PENDING
-    # The protocol doesn't allow us to send the content-type so use
-    # octet-stream as said in the spec.
-    assert props[ft_name_prefix + '.ContentType'] == 'application/octet-stream'
+    assert props[ft_name_prefix + '.ContentType'] == FILE_CONTENT_TYPE
     assert props[ft_name_prefix + '.Filename'] == FILE_NAME
     assert props[ft_name_prefix + '.Size'] == FILE_SIZE
     # FIXME: How should we deal with the hash properties?
     #assert props[ft_name_prefix + '.ContentHashType'] == FILE_HASH_TYPE
     #assert props[ft_name_prefix + '.ContentHash'] == FILE_HASH
-    # FIXME: Salut should parse the <desc> node and set the description
-    #assert props[ft_name_prefix + '.Description'] == FILE_DESCRIPTION
+    assert props[ft_name_prefix + '.Description'] == FILE_DESCRIPTION
     # FIXME: How should we deal with the Date property?
     #assert props[ft_name_prefix + '.Date'] == 1225278834
     assert props[ft_name_prefix + '.AvailableSocketTypes'] == \

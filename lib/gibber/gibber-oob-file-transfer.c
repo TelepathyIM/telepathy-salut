@@ -156,11 +156,14 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
   GibberOobFileTransfer *self;
   GibberXmppNode *query;
   GibberXmppNode *url_node;
+  GibberXmppNode *desc_node;
   const gchar *self_id;
   const gchar *peer_id;
   const gchar *type;
   const gchar *id;
   const gchar *size;
+  const gchar *description = NULL;
+  const gchar *content_type;
   gchar *url;
   gchar *filename;
 
@@ -199,7 +202,19 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
     }
   filename++; /* move after the last "/" */
   filename = unescape_filename (filename);
- 
+
+  desc_node = gibber_xmpp_node_get_child (query, "desc");
+  if (desc_node != NULL)
+    {
+      description = desc_node->content;
+    }
+
+  content_type = gibber_xmpp_node_get_attribute (url_node, "mimeType");
+  if (content_type == NULL)
+    {
+      content_type = "application/octet-stream";
+    }
+
   self = g_object_new (GIBBER_TYPE_OOB_FILE_TRANSFER,
       "id", id,
       "self-id", self_id,
@@ -207,6 +222,8 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
       "filename", filename,
       "connection", connection,
       "direction", GIBBER_FILE_TRANSFER_DIRECTION_INCOMING,
+      "description", description,
+      "content-type", content_type,
       NULL);
 
   size = gibber_xmpp_node_get_attribute (url_node, "size");
@@ -367,6 +384,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   GibberXmppStanza *stanza;
   GibberXmppNode *query_node;
   GibberXmppNode *url_node;
+  GibberXmppNode *desc_node;
 
   gchar *filename_escaped;
   gchar *url;
@@ -410,9 +428,11 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   url_node = gibber_xmpp_node_add_child_with_content (query_node, "url", url);
   gibber_xmpp_node_set_attribute (url_node, "type", "file");
+  gibber_xmpp_node_set_attribute (url_node, "mimeType",
+      GIBBER_FILE_TRANSFER (self)->content_type);
 
-  /* FIXME: iChat uses <query mimeType="..."> to send the mime type */
-  /* FIXME: We should send a <desc> node containing the description */
+  desc_node = gibber_xmpp_node_add_child_with_content (query_node, "desc",
+      GIBBER_FILE_TRANSFER (self)->description);
 
   size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
 

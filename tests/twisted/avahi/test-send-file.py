@@ -162,9 +162,12 @@ def test(q, bus, conn):
     url_node = xpath.queryForNodes("/iq/query/url",  iq)[0]
     assert url_node['type'] == 'file'
     assert url_node['size'] == str(FILE_SIZE)
+    assert url_node['mimeType'] == FILE_CONTENT_TYPE
     url = url_node.children[0]
     assert url.endswith(FILE_NAME)
-    # FIXME: Salut should send a <desc> node containing the description
+    desc_node = xpath.queryForNodes("/iq/query/desc",  iq)[0]
+    desc = desc_node.children[0]
+    assert desc == FILE_DESCRIPTION
 
     reply = domish.Element(('', 'iq'))
     reply['to'] = iq['from']

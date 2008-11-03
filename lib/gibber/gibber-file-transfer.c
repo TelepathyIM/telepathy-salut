@@ -56,6 +56,8 @@ enum
   PROP_FILENAME,
   PROP_DIRECTION,
   PROP_CONNECTION,
+  PROP_DESCRIPTION,
+  PROP_CONTENT_TYPE,
   LAST_PROPERTY
 };
 
@@ -115,6 +117,12 @@ gibber_file_transfer_get_property (GObject *object,
       case PROP_CONNECTION:
         g_value_set_object (value, self->priv->connection);
         break;
+      case PROP_DESCRIPTION:
+        g_value_set_string (value, self->description);
+        break;
+      case PROP_CONTENT_TYPE:
+        g_value_set_string (value, self->content_type);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -168,6 +176,12 @@ gibber_file_transfer_set_property (GObject *object,
         if (self->priv->connection != NULL)
           g_signal_connect (self->priv->connection, "received-stanza",
               G_CALLBACK (received_stanza_cb), self);
+        break;
+      case PROP_DESCRIPTION:
+        self->description = g_value_dup_string (value);
+        break;
+      case PROP_CONTENT_TYPE:
+        self->content_type = g_value_dup_string (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -232,6 +246,20 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
       G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
+  param_spec = g_param_spec_string ("description",
+      "Description",
+      "The description of the transferred file", "",
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_DESCRIPTION, param_spec);
+
+  param_spec = g_param_spec_string ("content-type",
+      "Content type",
+      "The content type of the transferred file", "application/octet-stream",
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTENT_TYPE, param_spec);
+
   signals[REMOTE_ACCEPTED] = g_signal_new ("remote-accepted",
       G_OBJECT_CLASS_TYPE (gibber_file_transfer_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
@@ -277,6 +305,8 @@ gibber_file_transfer_finalize (GObject *object)
   g_free (self->self_id);
   g_free (self->peer_id);
   g_free (self->filename);
+  g_free (self->description);
+  g_free (self->content_type);
 
   G_OBJECT_CLASS (gibber_file_transfer_parent_class)->finalize (object);
 }

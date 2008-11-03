@@ -909,6 +909,8 @@ send_file_offer (SalutFileTransferChannel *self)
       "peer-id", self->priv->contact->name,
       "filename", self->priv->filename,
       "connection", self->priv->xmpp_connection,
+      "description", self->priv->description,
+      "content-type", self->priv->content_type,
       NULL);
   g_signal_connect (ft, "remote-accepted",
       G_CALLBACK (remote_accepted_cb), self);
@@ -969,9 +971,10 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
 
   self->priv->filename = g_strdup (ft->filename);
   self->priv->size = gibber_file_transfer_get_size (ft);
+  self->priv->description = g_strdup (ft->description);
+  self->priv->content_type = g_strdup (ft->content_type);
 
   /* FIXME: missing properties:
-     - content_type
      - content_hash_type and content_hash
      - date
      - initial offset

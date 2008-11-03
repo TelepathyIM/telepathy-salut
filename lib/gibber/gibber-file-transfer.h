@@ -77,6 +77,8 @@ struct _GibberFileTransfer
   gchar *peer_id;
 
   gchar *filename;
+  gchar *description;
+  gchar *content_type;
 
   GibberFileTransferDirection direction;
 };
