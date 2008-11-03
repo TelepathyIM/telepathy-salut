@@ -348,7 +348,6 @@ listen_tcp_af (GibberListener *listener, int port,
         }
     }
 
-
   /* If all listeners failed, report the last error */
   if (priv->listeners == NULL)
     goto error;
