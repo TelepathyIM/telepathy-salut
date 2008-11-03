@@ -411,6 +411,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   url_node = gibber_xmpp_node_add_child_with_content (query_node, "url", url);
   gibber_xmpp_node_set_attribute (url_node, "type", "file");
 
+  /* FIXME: iChat uses <query mimeType="..."> to send the mime type */
   /* FIXME: We should send a <desc> node containing the description */
 
   size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));

@@ -958,6 +958,7 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
       self->priv->xmpp_connection_manager , conn);
   ft = gibber_file_transfer_new_from_stanza (stanza, conn);
 
+  /* FIXME: this can lead to a remotely triggered assertion */
   g_return_if_fail (ft);
 
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
