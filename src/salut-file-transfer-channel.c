@@ -1029,6 +1029,43 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft,
     }
 }
 
+static gboolean
+check_address_and_access_control (SalutFileTransferChannel *self,
+                                  TpSocketAddressType address_type,
+                                  TpSocketAccessControl access_control,
+                                  const GValue *access_control_param,
+                                  GError **error)
+{
+  GArray *access;
+  guint i;
+
+  /* Do we support this AddressType? */
+  access = g_hash_table_lookup (self->priv->available_socket_types,
+      GUINT_TO_POINTER (address_type));
+  if (access == NULL)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "AddressType %u is not implemented", address_type);
+      return FALSE;
+    }
+
+  /* Do we support this AccesControl? */
+  for (i = 0; i < access->len; i++)
+    {
+      TpSocketAccessControl control;
+
+      control = g_array_index (access, TpSocketAccessControl, i);
+      if (control == access_control)
+        return TRUE;
+    }
+
+  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      "AccesControl %u is not implemented with AddressType %u",
+      access_control, address_type);
+
+  return FALSE;
+}
+
 /**
  * salut_file_transfer_channel_accept_file
  *
@@ -1063,11 +1100,11 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
       return;
     }
 
-  if (address_type != TP_SOCKET_ADDRESS_TYPE_UNIX)
+  if (!check_address_and_access_control (self, address_type, access_control,
+        access_control_param, &error))
     {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-        "Address type %u not implemented", address_type);
       dbus_g_method_return_error (context, error);
+      g_error_free (error);
       return;
     }
 
@@ -1128,11 +1165,11 @@ salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
       return;
     }
 
-  if (address_type != TP_SOCKET_ADDRESS_TYPE_UNIX)
+  if (!check_address_and_access_control (self, address_type, access_control,
+        access_control_param, &error))
     {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-        "Address type %u not implemented", address_type);
       dbus_g_method_return_error (context, error);
+      g_error_free (error);
       return;
     }
 
