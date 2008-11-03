@@ -76,9 +76,11 @@ connect_to_port (int port, GMainLoop *loop)
 START_TEST (test_tcp_listen)
 {
   GibberListener *listener;
+  GibberListener *listener2;
   int port;
   GMainLoop *mainloop;
   GibberTransport *transport;
+  GError *error = NULL;
 
   mainloop = g_main_loop_new (NULL, FALSE);
 
@@ -90,7 +92,6 @@ START_TEST (test_tcp_listen)
 
   for (port = 5298; port < 5400; port++)
     {
-      GError *error = NULL;
       if (gibber_listener_listen_tcp (listener, port, &error))
         break;
 
@@ -99,6 +100,15 @@ START_TEST (test_tcp_listen)
       error = NULL;
     }
   fail_if (port >= 5400);
+
+  /* try a second listener on the same port */
+  listener2 = gibber_listener_new ();
+  fail_if (listener2 == NULL);
+  fail_if (gibber_listener_listen_tcp (listener2, port, &error));
+  fail_if (error->code != GIBBER_LISTENER_ERROR_ADDRESS_IN_USE);
+  g_object_unref (listener2);
+  g_error_free (error);
+  error = NULL;
 
   signalled = FALSE;
   transport = connect_to_port (port, mainloop);
