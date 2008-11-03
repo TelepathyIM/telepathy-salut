@@ -43,7 +43,7 @@ struct _GibberOobFileTransfer {
     GibberOobFileTransferPrivate *priv;
 };
 
-GType gibber_oob_file_transfer_get_type(void);
+GType gibber_oob_file_transfer_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_OOB_FILE_TRANSFER \

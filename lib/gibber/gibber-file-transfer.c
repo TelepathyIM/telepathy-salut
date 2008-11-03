@@ -395,12 +395,12 @@ gibber_file_transfer_cancel (GibberFileTransfer *self,
   cls->cancel (self, error_code);
 }
 
-void 
+void
 gibber_file_transfer_emit_error (GibberFileTransfer *self,
                                  GError *error)
 {
   DEBUG("File transfer error: %s", error->message);
-  g_signal_emit(self, signals[ERROR], 0, error->domain, error->code,
+  g_signal_emit (self, signals[ERROR], 0, error->domain, error->code,
       error->message);
 }
 

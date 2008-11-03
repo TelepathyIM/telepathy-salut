@@ -83,7 +83,7 @@ struct _GibberFileTransfer
   GibberFileTransferDirection direction;
 };
 
-GType gibber_file_transfer_get_type(void);
+GType gibber_file_transfer_get_type (void);
 
 /* TYPE MACROS */
 #define GIBBER_TYPE_FILE_TRANSFER \
