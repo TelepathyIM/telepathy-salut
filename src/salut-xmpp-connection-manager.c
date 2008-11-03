@@ -28,6 +28,7 @@
 #include "salut-contact.h"
 #include "salut-contact-manager.h"
 
+#include <gibber/gibber-listener.h>
 #include <gibber/gibber-xmpp-connection-listener.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-linklocal-transport.h>
@@ -1141,7 +1142,8 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
             &e))
         break;
 
-      if (e->code != GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE)
+      if (!g_error_matches (e, GIBBER_LISTENER_ERROR,
+            GIBBER_LISTENER_ERROR_ADDRESS_IN_USE))
         {
           g_propagate_error (error, e);
           return -1;

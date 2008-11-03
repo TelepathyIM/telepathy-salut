@@ -56,6 +56,8 @@ HANDWRITTEN_SOURCES =             \
   gibber-namespaces.h             \
   gibber-iq-helper.c              \
   gibber-iq-helper.h              \
+  gibber-listener.c               \
+  gibber-listener.h               \
   gibber-xmpp-connection-listener.c \
   gibber-xmpp-connection-listener.h \
   gibber-xmpp-error.h             \
