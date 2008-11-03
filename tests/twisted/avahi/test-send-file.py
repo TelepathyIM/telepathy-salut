@@ -132,8 +132,8 @@ def test(q, bus, conn):
     assert props[ft_name_prefix + '.ContentHash'] == FILE_HASH
     assert props[ft_name_prefix + '.Description'] == FILE_DESCRIPTION
     assert props[ft_name_prefix + '.Date'] == 1225278834
-    # FIXME
-    assert props[ft_name_prefix + '.AvailableSocketTypes'] == {}
+    assert props[ft_name_prefix + '.AvailableSocketTypes'] == \
+        {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
     assert props[ft_name_prefix + '.TransferredBytes'] == 0
     assert props[ft_name_prefix + '.InitialOffset'] == 0
 

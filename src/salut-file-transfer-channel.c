@@ -376,6 +376,12 @@ salut_file_transfer_channel_set_property (GObject *object,
     }
 }
 
+static void
+free_array (GArray *array)
+{
+  g_array_free (array, TRUE);
+}
+
 static GObject *
 salut_file_transfer_channel_constructor (GType type, guint n_props,
                                 GObjectConstructParam *props)
@@ -385,6 +391,8 @@ salut_file_transfer_channel_constructor (GType type, guint n_props,
   DBusGConnection *bus;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
+  GArray *unix_access;
+  TpSocketAccessControl access;
 
   /* Parent constructor chain */
   obj = G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->
@@ -405,9 +413,16 @@ salut_file_transfer_channel_constructor (GType type, guint n_props,
   dbus_g_connection_register_g_object (bus, self->priv->object_path, obj);
 
   /* Initialise the available socket types hash table */
-  self->priv->available_socket_types = g_hash_table_new (g_int_hash,
-      g_int_equal);
-  /* FIXME: fill this hash table */
+  self->priv->available_socket_types = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, NULL, (GDestroyNotify) free_array);
+
+  /* Socket_Address_Type_Unix */
+  unix_access = g_array_sized_new (FALSE, FALSE, sizeof (TpSocketAccessControl),
+      1);
+  access = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
+  g_array_append_val (unix_access, access);
+  g_hash_table_insert (self->priv->available_socket_types,
+      GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX), unix_access);
 
   self->priv->last_transferred_bytes_emitted = 0;
 
