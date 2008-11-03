@@ -1173,33 +1173,8 @@ salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
       return;
     }
 
-  /* FIXME: we should probably remove some of these tests */
-  if (CHECK_STR_EMPTY (channel->priv->content_type))
-    {
-      DEBUG ("ContentType property not set");
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "ContentType property not set");
-      dbus_g_method_return_error (context, error);
-      return;
-    }
-
-  if (CHECK_STR_EMPTY (channel->priv->filename))
-    {
-      DEBUG ("Filename property not set");
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "Filename property not set");
-      dbus_g_method_return_error (context, error);
-      return;
-    }
-
-  if (channel->priv->size == SALUT_UNDEFINED_FILE_SIZE)
-    {
-      DEBUG ("Size property not set");
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "Size property not set");
-      dbus_g_method_return_error (context, error);
-      return;
-    }
+  g_assert (!CHECK_STR_EMPTY (channel->priv->filename));
+  g_assert (channel->priv->size != SALUT_UNDEFINED_FILE_SIZE);
 
   DEBUG ("Offering file transfer");
 
