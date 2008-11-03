@@ -15,10 +15,10 @@ from twisted.words.xish import domish, xpath
 
 from dbus import PROPERTIES_IFACE
 
-tp_name_prefix = 'org.freedesktop.Telepathy'
-ft_name_prefix = '%s.Channel.Type.FileTransfer.DRAFT' % tp_name_prefix
-
+CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
+CHANNEL_INTERFACE ='org.freedesktop.Telepathy.Channel'
 CHANNEL_TYPE_FILE_TRANSFER = 'org.freedesktop.Telepathy.Channel.Type.FileTransfer.DRAFT'
+
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
 TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
@@ -79,65 +79,65 @@ def test(q, bus, conn):
             if name == contact_name:
                 handle = h
 
-    requests_iface = dbus.Interface(conn, tp_name_prefix + '.Connection.Interface.Requests')
+    requests_iface = dbus.Interface(conn, CONNECTION_INTERFACE_REQUESTS)
 
     # check if we can request FileTransfer channels
     properties = conn.GetAll(
         'org.freedesktop.Telepathy.Connection.Interface.Requests',
         dbus_interface='org.freedesktop.DBus.Properties')
 
-    assert ({tp_name_prefix + '.Channel.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
-             tp_name_prefix + '.Channel.TargetHandleType': HT_CONTACT},
-            [tp_name_prefix + '.Channel.TargetHandle',
-             tp_name_prefix + '.Channel.TargetID',
-             ft_name_prefix + '.ContentType',
-             ft_name_prefix + '.Filename',
-             ft_name_prefix + '.Size',
-             ft_name_prefix + '.ContentHashType',
-             ft_name_prefix + '.ContentHash',
-             ft_name_prefix + '.Description',
-             ft_name_prefix + '.Date',
-             ft_name_prefix + '.InitialOffset'],
+    assert ({CHANNEL_INTERFACE + '.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
+             CHANNEL_INTERFACE + '.TargetHandleType': HT_CONTACT},
+            [CHANNEL_INTERFACE + '.TargetHandle',
+             CHANNEL_INTERFACE + '.TargetID',
+             CHANNEL_TYPE_FILE_TRANSFER + '.ContentType',
+             CHANNEL_TYPE_FILE_TRANSFER + '.Filename',
+             CHANNEL_TYPE_FILE_TRANSFER + '.Size',
+             CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType',
+             CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash',
+             CHANNEL_TYPE_FILE_TRANSFER + '.Description',
+             CHANNEL_TYPE_FILE_TRANSFER + '.Date',
+             CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'],
          ) in properties.get('RequestableChannelClasses'),\
                  properties['RequestableChannelClasses']
 
     path, props = requests_iface.CreateChannel({
-        tp_name_prefix + '.Channel.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
-        tp_name_prefix + '.Channel.TargetHandleType': HT_CONTACT,
-        tp_name_prefix + '.Channel.TargetHandle': handle,
-        ft_name_prefix + '.ContentType': FILE_CONTENT_TYPE,
-        ft_name_prefix + '.Filename': FILE_NAME,
-        ft_name_prefix + '.Size': FILE_SIZE,
-        ft_name_prefix + '.ContentHashType': FILE_HASH_TYPE,
-        ft_name_prefix + '.ContentHash': FILE_HASH,
-        ft_name_prefix + '.Description': FILE_DESCRIPTION,
-        ft_name_prefix + '.Date':  1225278834,
-        ft_name_prefix + '.InitialOffset': 0,
+        CHANNEL_INTERFACE + '.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
+        CHANNEL_INTERFACE + '.TargetHandleType': HT_CONTACT,
+        CHANNEL_INTERFACE + '.TargetHandle': handle,
+        CHANNEL_TYPE_FILE_TRANSFER + '.ContentType': FILE_CONTENT_TYPE,
+        CHANNEL_TYPE_FILE_TRANSFER + '.Filename': FILE_NAME,
+        CHANNEL_TYPE_FILE_TRANSFER + '.Size': FILE_SIZE,
+        CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType': FILE_HASH_TYPE,
+        CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash': FILE_HASH,
+        CHANNEL_TYPE_FILE_TRANSFER + '.Description': FILE_DESCRIPTION,
+        CHANNEL_TYPE_FILE_TRANSFER + '.Date':  1225278834,
+        CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset': 0,
         })
 
     # org.freedesktop.Telepathy.Channel D-Bus properties
-    assert props[tp_name_prefix + '.Channel.ChannelType'] == CHANNEL_TYPE_FILE_TRANSFER
-    assert props[tp_name_prefix + '.Channel.Interfaces'] == []
-    assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-    assert props[tp_name_prefix + '.Channel.TargetID'] == contact_name
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_CONTACT
-    assert props[tp_name_prefix + '.Channel.Requested'] == True
-    assert props[tp_name_prefix + '.Channel.InitiatorHandle'] == self_handle
-    assert props[tp_name_prefix + '.Channel.InitiatorID'] == self_handle_name
+    assert props[CHANNEL_INTERFACE + '.ChannelType'] == CHANNEL_TYPE_FILE_TRANSFER
+    assert props[CHANNEL_INTERFACE + '.Interfaces'] == []
+    assert props[CHANNEL_INTERFACE + '.TargetHandle'] == handle
+    assert props[CHANNEL_INTERFACE + '.TargetID'] == contact_name
+    assert props[CHANNEL_INTERFACE + '.TargetHandleType'] == HT_CONTACT
+    assert props[CHANNEL_INTERFACE + '.Requested'] == True
+    assert props[CHANNEL_INTERFACE + '.InitiatorHandle'] == self_handle
+    assert props[CHANNEL_INTERFACE + '.InitiatorID'] == self_handle_name
 
     # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
-    assert props[ft_name_prefix + '.State'] == FT_STATE_NOT_OFFERED
-    assert props[ft_name_prefix + '.ContentType'] == FILE_CONTENT_TYPE
-    assert props[ft_name_prefix + '.Filename'] == FILE_NAME
-    assert props[ft_name_prefix + '.Size'] == FILE_SIZE
-    assert props[ft_name_prefix + '.ContentHashType'] == FILE_HASH_TYPE
-    assert props[ft_name_prefix + '.ContentHash'] == FILE_HASH
-    assert props[ft_name_prefix + '.Description'] == FILE_DESCRIPTION
-    assert props[ft_name_prefix + '.Date'] == 1225278834
-    assert props[ft_name_prefix + '.AvailableSocketTypes'] == \
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.State'] == FT_STATE_NOT_OFFERED
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentType'] == FILE_CONTENT_TYPE
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Filename'] == FILE_NAME
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Size'] == FILE_SIZE
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType'] == FILE_HASH_TYPE
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash'] == FILE_HASH
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Description'] == FILE_DESCRIPTION
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Date'] == 1225278834
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.AvailableSocketTypes'] == \
         {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
-    assert props[ft_name_prefix + '.TransferredBytes'] == 0
-    assert props[ft_name_prefix + '.InitialOffset'] == 0
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.TransferredBytes'] == 0
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'] == 0
 
     channel = make_channel_proxy(conn, path, 'Channel')
     ft_channel = make_channel_proxy(conn, path, 'Channel.Type.FileTransfer.DRAFT')

@@ -17,10 +17,10 @@ from twisted.words.xish import domish
 
 from dbus import PROPERTIES_IFACE
 
-tp_name_prefix = 'org.freedesktop.Telepathy'
-ft_name_prefix = '%s.Channel.Type.FileTransfer.DRAFT' % tp_name_prefix
-
+CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
+CHANNEL_INTERFACE ='org.freedesktop.Telepathy.Channel'
 CHANNEL_TYPE_FILE_TRANSFER = 'org.freedesktop.Telepathy.Channel.Type.FileTransfer.DRAFT'
+
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
 TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
@@ -82,7 +82,7 @@ def test(q, bus, conn):
             if name == contact_name:
                 handle = h
 
-    requests_iface = dbus.Interface(conn, tp_name_prefix + '.Connection.Interface.Requests')
+    requests_iface = dbus.Interface(conn, CONNECTION_INTERFACE_REQUESTS)
 
     # Create a connection to send the FT stanza
     AvahiListener(q).listen_for_service("_presence._tcp")
@@ -125,30 +125,30 @@ def test(q, bus, conn):
 
     # check channel properties
     # org.freedesktop.Telepathy.Channel D-Bus properties
-    assert props[tp_name_prefix + '.Channel.ChannelType'] == CHANNEL_TYPE_FILE_TRANSFER
-    assert props[tp_name_prefix + '.Channel.Interfaces'] == []
-    assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-    assert props[tp_name_prefix + '.Channel.TargetID'] == contact_name
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_CONTACT
-    assert props[tp_name_prefix + '.Channel.Requested'] == False
-    assert props[tp_name_prefix + '.Channel.InitiatorHandle'] == handle
-    assert props[tp_name_prefix + '.Channel.InitiatorID'] == contact_name
+    assert props[CHANNEL_INTERFACE + '.ChannelType'] == CHANNEL_TYPE_FILE_TRANSFER
+    assert props[CHANNEL_INTERFACE + '.Interfaces'] == []
+    assert props[CHANNEL_INTERFACE + '.TargetHandle'] == handle
+    assert props[CHANNEL_INTERFACE + '.TargetID'] == contact_name
+    assert props[CHANNEL_INTERFACE + '.TargetHandleType'] == HT_CONTACT
+    assert props[CHANNEL_INTERFACE + '.Requested'] == False
+    assert props[CHANNEL_INTERFACE + '.InitiatorHandle'] == handle
+    assert props[CHANNEL_INTERFACE + '.InitiatorID'] == contact_name
 
     # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
-    assert props[ft_name_prefix + '.State'] == FT_STATE_LOCAL_PENDING
-    assert props[ft_name_prefix + '.ContentType'] == FILE_CONTENT_TYPE
-    assert props[ft_name_prefix + '.Filename'] == FILE_NAME
-    assert props[ft_name_prefix + '.Size'] == FILE_SIZE
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.State'] == FT_STATE_LOCAL_PENDING
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentType'] == FILE_CONTENT_TYPE
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Filename'] == FILE_NAME
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Size'] == FILE_SIZE
     # FT's protocol doesn't allow us the send the hash info
-    assert props[ft_name_prefix + '.ContentHashType'] == FILE_HASH_TYPE_NONE
-    assert props[ft_name_prefix + '.ContentHash'] == ''
-    assert props[ft_name_prefix + '.Description'] == FILE_DESCRIPTION
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType'] == FILE_HASH_TYPE_NONE
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash'] == ''
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Description'] == FILE_DESCRIPTION
     # FT's protocol doesn't allow us the send the date info
-    assert props[ft_name_prefix + '.Date'] == 0
-    assert props[ft_name_prefix + '.AvailableSocketTypes'] == \
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Date'] == 0
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.AvailableSocketTypes'] == \
         {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
-    assert props[ft_name_prefix + '.TransferredBytes'] == 0
-    assert props[ft_name_prefix + '.InitialOffset'] == 0
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.TransferredBytes'] == 0
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'] == 0
 
     channel = make_channel_proxy(conn, path, 'Channel')
     ft_channel = make_channel_proxy(conn, path, 'Channel.Type.FileTransfer.DRAFT')
