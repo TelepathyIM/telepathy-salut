@@ -119,10 +119,11 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   chan = salut_ft_manager_new_channel (self, handle, FALSE);
 
   /* This will set the extra properties on the ft channel */
-  salut_file_transfer_channel_received_file_offer (chan, stanza, conn);
-
-  tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
-      NULL);
+  if (salut_file_transfer_channel_received_file_offer (chan, stanza, conn))
+    {
+      tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
+          NULL);
+    }
 }
 
 static void salut_ft_manager_dispose (GObject *object);

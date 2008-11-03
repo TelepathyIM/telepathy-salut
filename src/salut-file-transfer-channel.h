@@ -65,9 +65,9 @@ GType salut_file_transfer_channel_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_FILE_TRANSFER_CHANNEL, \
                               SalutFileTransferChannelClass))
 
-void
-salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
-    GibberXmppStanza *stanza, GibberXmppConnection *conn);
+gboolean salut_file_transfer_channel_received_file_offer (
+    SalutFileTransferChannel *self, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn);
 
 G_END_DECLS
 

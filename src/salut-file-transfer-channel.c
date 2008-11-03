@@ -43,6 +43,8 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
+#include <gibber/gibber-iq-helper.h>
+#include <gibber/gibber-xmpp-error.h>
 
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -937,7 +939,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   send_file_offer (channel);
 }
 
-void
+gboolean
 salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
                                         GibberXmppStanza *stanza,
                                         GibberXmppConnection *conn)
@@ -948,8 +950,16 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
       self->priv->xmpp_connection_manager , conn);
   ft = gibber_file_transfer_new_from_stanza (stanza, conn);
 
-  /* FIXME: this can lead to a remotely triggered assertion */
-  g_return_if_fail (ft);
+  if (ft == NULL)
+    {
+      /* Reply with an error */
+      GibberXmppStanza *reply;
+
+      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
+          "failed to parse file offer");
+      gibber_xmpp_connection_send (conn, reply, NULL);
+      return FALSE;
+    }
 
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
 
@@ -966,6 +976,8 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
      - date
      - initial offset
    */
+
+  return TRUE;
 }
 
 static void
