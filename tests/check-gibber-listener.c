@@ -65,10 +65,10 @@ connect_to_port (int port, GMainLoop *loop)
   g_snprintf (sport, 16, "%d", port);
 
   transport = gibber_tcp_transport_new ();
-  gibber_tcp_transport_connect (transport, "127.0.0.1", sport);
-
   g_signal_connect (transport, "disconnected",
     G_CALLBACK (disconnected_cb), loop);
+
+  gibber_tcp_transport_connect (transport, "127.0.0.1", sport);
 
   return GIBBER_TRANSPORT (transport);
 }
@@ -114,7 +114,7 @@ START_TEST (test_tcp_listen)
   signalled = FALSE;
   transport = connect_to_port (port, mainloop);
 
-  if (!signalled);
+  if (!signalled)
     g_main_loop_run (mainloop);
 
   fail_if (got_connection, "Connected while listening should have stopped");
