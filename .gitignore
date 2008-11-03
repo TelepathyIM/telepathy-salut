@@ -117,6 +117,7 @@ tests/twisted/tools/exec-with-log.sh
 tests/twisted/tools/salut-testing.log
 tests/twisted/tools/tmp-session-bus.conf
 tests/twisted/tools/org.freedesktop.Telepathy.ConnectionManager.salut.service
+tests/twisted/tools/refdbg.log
 
 tools/libglibcodegen.pyc
 

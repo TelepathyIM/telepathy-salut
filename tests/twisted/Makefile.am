@@ -8,6 +8,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-send-file.py \
 	avahi/test-receive-file.py \
 	avahi/test-text-channel.py
+	avahi/test-ichat-composing.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
 	avahi/test-olpc-activity-announcements.py
