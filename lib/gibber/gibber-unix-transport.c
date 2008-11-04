@@ -159,6 +159,9 @@ gibber_unix_transport_connect (GibberUnixTransport *transport,
   return TRUE;
 
 failed:
+  g_assert (error != NULL);
+  gibber_transport_emit_error (GIBBER_TRANSPORT(transport), *error);
+
   gibber_transport_set_state (GIBBER_TRANSPORT (transport),
       GIBBER_TRANSPORT_DISCONNECTED);
   return FALSE;
