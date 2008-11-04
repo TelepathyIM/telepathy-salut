@@ -85,7 +85,7 @@ salut_ft_manager_init (SalutFtManager *obj)
   priv->connection = NULL;
 
   /* allocate any data required by the object here */
-  priv->channels = g_list_alloc ();
+  priv->channels = NULL;
 }
 
 static gboolean
