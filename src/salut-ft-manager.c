@@ -146,6 +146,7 @@ salut_ft_manager_dispose (GObject *object)
 {
   SalutFtManager *self = SALUT_FT_MANAGER (object);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
+  GList *l;
 
   if (priv->dispose_has_run)
     return;
@@ -166,6 +167,14 @@ salut_ft_manager_dispose (GObject *object)
     {
       g_object_unref (priv->contact_manager);
       priv->contact_manager = NULL;
+    }
+
+  for (l = priv->channels; l != NULL; l = g_list_next (l))
+    {
+      SalutFileTransferChannel *chan = l->data;
+
+      g_signal_handlers_disconnect_matched (chan, G_SIGNAL_MATCH_DATA, 0, 0,
+          NULL, NULL, self);
     }
 
   if (priv->channels)
