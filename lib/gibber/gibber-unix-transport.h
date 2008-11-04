@@ -70,6 +70,9 @@ GType gibber_unix_transport_get_type (void);
 
 GibberUnixTransport * gibber_unix_transport_new (void);
 
+gboolean gibber_unix_transport_connect (GibberUnixTransport *transport,
+    const gchar *path, GError **error);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_UNIX_TRANSPORT_H__*/

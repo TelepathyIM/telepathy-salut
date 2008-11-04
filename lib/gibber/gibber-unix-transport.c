@@ -24,6 +24,9 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include "gibber-unix-transport.h"
 #include "gibber-util.h"
@@ -110,3 +113,54 @@ gibber_unix_transport_new (void)
 {
   return g_object_new (GIBBER_TYPE_UNIX_TRANSPORT, NULL);
 }
+
+gboolean
+gibber_unix_transport_connect (GibberUnixTransport *transport,
+                               const gchar *path,
+                               GError **error)
+{
+  union {
+      struct sockaddr_un un;
+      struct sockaddr addr;
+  } addr;
+  int fd;
+
+  gibber_transport_set_state (GIBBER_TRANSPORT (transport),
+      GIBBER_TRANSPORT_CONNECTING);
+
+  memset (&addr, 0, sizeof (addr));
+
+  fd = socket (PF_UNIX, SOCK_STREAM, 0);
+  if (fd == -1)
+    {
+      DEBUG ("Error creating socket: %s", g_strerror (errno));
+      g_set_error (error, GIBBER_UNIX_TRANSPORT_ERROR,
+          GIBBER_UNIX_TRANSPORT_ERROR_CONNECT_FAILED,
+          "Error creating socket: %s", g_strerror (errno));
+      goto failed;
+    }
+
+  addr.un.sun_family = PF_UNIX;
+  strncpy (addr.un.sun_path, path, sizeof (addr.un.sun_path) - 1);
+  addr.un.sun_path[sizeof (addr.un.sun_path) - 1] = '\0';
+
+  if (connect (fd, &addr.addr, sizeof (addr.un)) == -1)
+    {
+      g_set_error (error, GIBBER_UNIX_TRANSPORT_ERROR,
+          GIBBER_UNIX_TRANSPORT_ERROR_CONNECT_FAILED,
+          "Error connecting socket: %s", g_strerror (errno));
+      DEBUG ("Error connecting socket: %s", g_strerror (errno));
+      goto failed;
+    }
+  DEBUG ("Connected to socket");
+
+  gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd);
+
+  return TRUE;
+
+failed:
+  gibber_transport_set_state (GIBBER_TRANSPORT (transport),
+      GIBBER_TRANSPORT_DISCONNECTED);
+  return FALSE;
+}
+
