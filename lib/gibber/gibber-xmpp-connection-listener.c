@@ -33,6 +33,7 @@
 #include "gibber-xmpp-connection.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-util.h"
+#include "gibber-listener.h"
 
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"
@@ -55,9 +56,7 @@ typedef struct _GibberXmppConnectionListenerPrivate \
           GibberXmppConnectionListenerPrivate;
 struct _GibberXmppConnectionListenerPrivate
 {
-  GIOChannel *listener;
-  guint io_watch_in;
-  int port;
+  GibberListener *listener;
 
   gboolean dispose_has_run;
 };
@@ -101,9 +100,8 @@ gibber_xmpp_connection_listener_dispose (GObject *object)
 
   if (priv->listener != NULL)
     {
-      g_io_channel_unref (priv->listener);
+      g_object_unref (priv->listener);
       priv->listener = NULL;
-      g_source_remove (priv->io_watch_in);
     }
 
   G_OBJECT_CLASS (gibber_xmpp_connection_listener_parent_class)->dispose (
@@ -141,126 +139,20 @@ gibber_xmpp_connection_listener_new (void)
       NULL);
 }
 
-static int
-try_listening_on_port (GibberXmppConnectionListener *self,
-                       int port,
-                       GError **error)
-{
-  int fd = -1, ret, yes = 1;
-  struct addrinfo req, *ans = NULL;
-  #define BACKLOG 5
-
-  memset (&req, 0, sizeof (req));
-  req.ai_flags = AI_PASSIVE;
-  req.ai_family = AF_UNSPEC;
-  req.ai_socktype = SOCK_STREAM;
-  req.ai_protocol = IPPROTO_TCP;
-
-  ret = getaddrinfo (NULL, "0", &req, &ans);
-  if (ret != 0)
-    {
-      DEBUG ("getaddrinfo failed: %s", gai_strerror (ret));
-      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_FAILED,
-          "%s", gai_strerror (ret));
-      goto error;
-    }
-
-  ((struct sockaddr_in *) ans->ai_addr)->sin_port = ntohs (port);
-
-  fd = socket (ans->ai_family, ans->ai_socktype, ans->ai_protocol);
-  if (fd == -1)
-    {
-      DEBUG ("socket failed: %s", g_strerror (errno));
-      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_FAILED,
-          "%s", g_strerror (errno));
-      goto error;
-    }
-
-  ret = setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (int));
-  if (ret == -1)
-    {
-      DEBUG ("setsockopt failed: %s", g_strerror (errno));
-      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_FAILED,
-          "%s", g_strerror (errno));
-      goto error;
-    }
-
-  ret = bind (fd, ans->ai_addr, ans->ai_addrlen);
-  if (ret  < 0)
-    {
-      DEBUG ("bind failed: %s", g_strerror (errno));
-      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
-          errno == EADDRINUSE ?
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE :
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_FAILED,
-          "%s", g_strerror (errno));
-      goto error;
-    }
-
-  ret = listen (fd, BACKLOG);
-  if (ret == -1)
-    {
-      DEBUG ("listen failed: %s", g_strerror (errno));
-      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
-          errno == EADDRINUSE ?
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE :
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_FAILED,
-          "%s", g_strerror (errno));
-      goto error;
-    }
-
-  freeaddrinfo (ans);
-  return fd;
-
-error:
-  if (fd > 0)
-    close (fd);
-
-  if (ans != NULL)
-    freeaddrinfo (ans);
-  return -1;
-}
-
 static gboolean
-listener_io_in_cb (GIOChannel *source,
-                   GIOCondition condition,
+new_connection_cb (GibberListener *listener,
+                   GibberTransport *transport,
+                   struct sockaddr *address,
+                   socklen_t addrlen,
                    gpointer user_data)
 {
   GibberXmppConnectionListener *self =
     GIBBER_XMPP_CONNECTION_LISTENER (user_data);
-  int fd, nfd;
-  int ret;
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  struct sockaddr_storage addr;
-  socklen_t addrlen = sizeof (struct sockaddr_storage);
-  GibberLLTransport *transport;
   GibberXmppConnection *connection;
+  connection = gibber_xmpp_connection_new (transport);
 
-  fd = g_io_channel_unix_get_fd (source);
-  nfd = accept (fd, (struct sockaddr *) &addr, &addrlen);
-  gibber_normalize_address (&addr);
-
-  transport = gibber_ll_transport_new ();
-  gibber_ll_transport_open_fd (transport, nfd);
-
-  ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
-      host, NI_MAXHOST, port, NI_MAXSERV,
-      NI_NUMERICHOST | NI_NUMERICSERV);
-
-  if (ret == 0)
-    DEBUG("New connection from %s port %s", host, port);
-  else
-    DEBUG("New connection..");
-
-  connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT (transport));
-  /* Unref the transport, the xmpp connection own it now */
-  g_object_unref (transport);
-
-  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection, &addr, addrlen);
+  g_signal_emit (self, signals[NEW_CONNECTION], 0, connection,
+    address, addrlen);
 
   g_object_unref (connection);
   return TRUE;
@@ -273,27 +165,13 @@ gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self,
 {
   GibberXmppConnectionListenerPrivate *priv =
     GIBBER_XMPP_CONNECTION_LISTENER_GET_PRIVATE (self);
-  int fd;
 
-  if (priv->listener != NULL)
+  if (priv->listener == NULL)
     {
-      g_set_error (error, GIBBER_XMPP_CONNECTION_LISTENER_ERROR,
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ALREADY_LISTENING,
-          "already listening to port %d", port);
-      return FALSE;
+      priv->listener = gibber_listener_new();
+      g_signal_connect (priv->listener, "new-connection",
+        G_CALLBACK (new_connection_cb), self);
     }
 
-  DEBUG ("Trying to listen on port %d\n", port);
-  fd = try_listening_on_port (self, port, error);
-  if (fd < 0)
-    return FALSE;
-
-  DEBUG ("Listening on port %d", port);
-  priv->port = port;
-  priv->listener = g_io_channel_unix_new (fd);
-  g_io_channel_set_close_on_unref (priv->listener, TRUE);
-  priv->io_watch_in = g_io_add_watch (priv->listener, G_IO_IN,
-      listener_io_in_cb, self);
-
-  return TRUE;
+  return gibber_listener_listen_tcp (priv->listener, port, error);
 }
