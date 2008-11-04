@@ -20,6 +20,7 @@
  */
 
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,8 +28,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include <gibber/gibber-tcp-transport.h>
+#include <gibber/gibber-unix-transport.h>
 #include <gibber/gibber-listener.h>
 
 #include <check.h>
@@ -75,15 +78,45 @@ connect_to_port (int port, GMainLoop *loop)
 
 START_TEST (test_tcp_listen)
 {
+  GibberListener *listener_unix;
   GibberListener *listener;
   GibberListener *listener2;
+  GibberUnixTransport *unix_transport;
   int port;
+  int ret;
   GMainLoop *mainloop;
   GibberTransport *transport;
   GError *error = NULL;
+  gchar *path = "/tmp/check-gibber-listener-socket";
+
+  ret = unlink (path);
+  fail_if (ret == -1 && errno != ENOENT);
 
   mainloop = g_main_loop_new (NULL, FALSE);
 
+  /* unix socket tests */
+  listener_unix = gibber_listener_new ();
+  fail_if (listener_unix == NULL);
+
+  g_signal_connect (listener_unix, "new-connection",
+      G_CALLBACK (new_connection_cb), mainloop);
+
+  ret = gibber_listener_listen_socket (listener_unix, path, TRUE, &error);
+  fail_if (ret != TRUE);
+
+  unix_transport = gibber_unix_transport_new ();
+  ret = gibber_unix_transport_connect (unix_transport, path, &error);
+  fail_if (ret != TRUE);
+
+  if (!signalled)
+    g_main_loop_run (mainloop);
+
+  fail_if (!got_connection, "Failed to connect");
+
+  g_object_unref (listener_unix);
+  g_object_unref (unix_transport);
+
+  /* tcp socket tests */
   listener = gibber_listener_new ();
   fail_if (listener == NULL);
 

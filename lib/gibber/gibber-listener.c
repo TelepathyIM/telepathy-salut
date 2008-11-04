@@ -22,10 +22,12 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdio.h>
 
 #include <glib.h>
 
@@ -144,16 +146,6 @@ gibber_listener_new (void)
   return g_object_new (GIBBER_TYPE_LISTENER,
       NULL);
 }
-
-static gboolean
-unimplemented (GError **error)
-{
-  g_set_error (error, GIBBER_LISTENER_ERROR, GIBBER_LISTENER_ERROR_FAILED,
-    "Unimplemented");
-
-  return FALSE;
-}
-
 
 static gboolean
 listener_io_in_cb (GIOChannel *source,
@@ -399,6 +391,15 @@ gboolean
 gibber_listener_listen_socket (GibberListener *listener,
   gchar *path, gboolean abstract, GError **error)
 {
-  return unimplemented (error);
-}
+  struct sockaddr_un addr;
+  int ret;
 
+  memset (&addr, 0, sizeof (addr));
+  addr.sun_family = PF_UNIX;
+  snprintf (addr.sun_path, sizeof (addr.sun_path) - 1, "%s", path);
+
+  ret = add_listener (listener, AF_UNIX, SOCK_STREAM, 0,
+      (struct sockaddr *) &addr, sizeof (addr), error);
+
+  return ret;
+}
