@@ -123,6 +123,7 @@ struct _SalutFileTransferChannelPrivate {
   glong last_transferred_bytes_emitted;
   gchar *socket_path;
   TpHandle initiator;
+  gboolean remote_accepted;
 
   /* properties */
   SalutFileTransferState state;
@@ -886,9 +887,22 @@ static void
 remote_accepted_cb (GibberFileTransfer *ft,
                     SalutFileTransferChannel *self)
 {
-  salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-      SALUT_FILE_TRANSFER_STATE_OPEN,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+  self->priv->remote_accepted = TRUE;
+
+  if (self->priv->socket_path != NULL)
+    {
+      /* ProvideFile has already been called. Channel is Open */
+      salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+          SALUT_FILE_TRANSFER_STATE_OPEN,
+          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+    }
+  else
+    {
+      /* Client has to call ProvideFile to open the channel */
+      salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+          SALUT_FILE_TRANSFER_STATE_ACCEPTED,
+          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+    }
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
   g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
@@ -1215,9 +1229,14 @@ salut_file_transfer_channel_provide_file (SalutSvcChannelTypeFileTransfer *iface
   g_value_init (&out_address, G_TYPE_STRING);
   g_value_set_string (&out_address, channel->priv->socket_path);
 
-  salut_file_transfer_channel_set_state (iface,
-      SALUT_FILE_TRANSFER_STATE_PENDING,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
+  if (self->priv->remote_accepted)
+    {
+      /* Remote already accepted the file. Channel is Open.
+       * If not channel stay Pending. */
+      salut_file_transfer_channel_set_state (iface,
+          SALUT_FILE_TRANSFER_STATE_OPEN,
+          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
+    }
 
   salut_svc_channel_type_file_transfer_return_from_provide_file (context,
       &out_address);
