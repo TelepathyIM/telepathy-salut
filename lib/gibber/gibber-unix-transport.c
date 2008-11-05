@@ -35,9 +35,6 @@
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"
 
-/* Buffer size used for reading input */
-#define BUFSIZE 1024
-
 G_DEFINE_TYPE(GibberUnixTransport, gibber_unix_transport, \
     GIBBER_TYPE_FD_TRANSPORT)
 
