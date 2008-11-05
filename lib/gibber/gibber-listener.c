@@ -186,7 +186,7 @@ listener_io_in_cb (GIOChannel *source,
 
 static gboolean
 add_listener (GibberListener *self, int family, int type, int protocol,
-  struct sockaddr *address, socklen_t addrlen, GError **error)
+  struct sockaddr *address, socklen_t addrlen, int *port, GError **error)
 {
   #define BACKLOG 5
   int fd = -1, ret, yes = 1;
@@ -262,6 +262,22 @@ add_listener (GibberListener *self, int family, int type, int protocol,
 
   DEBUG ( "Listening on %s port %s...", name, portname);
 
+  if (port != NULL)
+    {
+      switch (((struct sockaddr *)&baddress)->sa_family)
+        {
+          case AF_INET:
+            *port = ((struct sockaddr_in *) &baddress)->sin_port;
+            break;
+          case AF_INET6:
+            *port = ((struct sockaddr_in6 *) &baddress)->sin6_port;
+            break;
+          default:
+            *port = 0;
+            break;
+        }
+    }
+
   l = g_slice_new(Listener);
 
   l->listener = g_io_channel_unix_new (fd);
@@ -279,6 +295,8 @@ error:
   return FALSE;
 }
 
+/* port: if 0, choose a random port
+ */
 static gboolean
 listen_tcp_af (GibberListener *listener, int port,
   GibberAddressFamily family, gboolean loopback, GError **error)
@@ -286,6 +304,7 @@ listen_tcp_af (GibberListener *listener, int port,
   struct addrinfo req, *ans = NULL, *a;
   GibberListenerPrivate *priv = listener->priv;
   int ret;
+  int new_port = 0;
   gchar sport[6];
 
   memset (&req, 0, sizeof (req));
@@ -324,8 +343,19 @@ listen_tcp_af (GibberListener *listener, int port,
       gboolean ret;
       GError *terror = NULL;
 
+      /* the caller let us choose a port and we are not in the first round */
+      if (port == 0 && new_port != 0)
+        {
+          if (a->ai_family == AF_INET)
+            ((struct sockaddr_in *) a->ai_addr)->sin_port = port;
+          else if (a->ai_family == AF_INET6)
+            ((struct sockaddr_in6 *) a->ai_addr)->sin6_port = port;
+          else
+            g_assert_not_reached ();
+        }
+
       ret = add_listener (listener, a->ai_family, a->ai_socktype,
-        a->ai_protocol, a->ai_addr, a->ai_addrlen, &terror);
+        a->ai_protocol, a->ai_addr, a->ai_addrlen, &new_port, &terror);
 
       if (ret == FALSE)
         {
@@ -399,7 +429,7 @@ gibber_listener_listen_socket (GibberListener *listener,
   snprintf (addr.sun_path, sizeof (addr.sun_path) - 1, "%s", path);
 
   ret = add_listener (listener, AF_UNIX, SOCK_STREAM, 0,
-      (struct sockaddr *) &addr, sizeof (addr), error);
+      (struct sockaddr *) &addr, sizeof (addr), NULL, error);
 
   return ret;
 }
