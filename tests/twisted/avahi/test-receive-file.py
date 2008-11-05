@@ -160,14 +160,15 @@ def test(q, bus, conn):
     assert state == FT_STATE_ACCEPTED
     assert reason == FT_STATE_CHANGE_REASON_REQUESTED
 
+    e = q.expect('dbus-signal', signal='InitialOffsetDefined')
+    offset = e.args[0]
+    # We don't support resume
+    assert offset == 0
+
     e = q.expect('dbus-signal', signal='FileTransferStateChanged')
     state, reason = e.args
     assert state == FT_STATE_OPEN
     assert reason == FT_STATE_CHANGE_REASON_NONE
-
-    offset = ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'InitialOffset')
-    # We don't support resume
-    assert offset == 0
 
     # Connect to Salut's socket
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

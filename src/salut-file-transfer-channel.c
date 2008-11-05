@@ -892,6 +892,9 @@ remote_accepted_cb (GibberFileTransfer *ft,
   if (self->priv->socket_path != NULL)
     {
       /* ProvideFile has already been called. Channel is Open */
+      salut_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
+          self->priv->initial_offset);
+
       salut_file_transfer_channel_set_state (SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
           SALUT_FILE_TRANSFER_STATE_OPEN,
           SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
@@ -1171,6 +1174,10 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
       &out_address);
 
   self->priv->initial_offset = 0;
+
+  salut_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
+      self->priv->initial_offset);
+
   salut_file_transfer_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 }
@@ -1233,6 +1240,9 @@ salut_file_transfer_channel_provide_file (SalutSvcChannelTypeFileTransfer *iface
     {
       /* Remote already accepted the file. Channel is Open.
        * If not channel stay Pending. */
+      salut_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
+          self->priv->initial_offset);
+
       salut_file_transfer_channel_set_state (iface,
           SALUT_FILE_TRANSFER_STATE_OPEN,
           SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);

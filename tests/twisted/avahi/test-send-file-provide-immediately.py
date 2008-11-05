@@ -175,15 +175,16 @@ def test(q, bus, conn):
     http = httplib.HTTPConnection(host)
     http.request('GET', file)
 
+    e = q.expect('dbus-signal', signal='InitialOffsetDefined')
+    offset = e.args[0]
+    # We don't support resume
+    assert offset == 0
+
     # Channel is open. We can start to send the file
     e = q.expect('dbus-signal', signal='FileTransferStateChanged')
     state, reason = e.args
     assert state == FT_STATE_OPEN
     assert reason == FT_STATE_CHANGE_REASON_NONE
-
-    offset = ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'InitialOffset')
-    # We don't support resume
-    assert offset == 0
 
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.connect(address)

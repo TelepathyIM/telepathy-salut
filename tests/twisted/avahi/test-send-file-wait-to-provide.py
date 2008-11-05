@@ -181,6 +181,11 @@ def test(q, bus, conn):
 
     address = ft_channel.ProvideFile(SOCKET_ADDRESS_TYPE_UNIX, SOCKET_ACCESS_CONTROL_LOCALHOST, "")
 
+    e = q.expect('dbus-signal', signal='InitialOffsetDefined')
+    offset = e.args[0]
+    # We don't support resume
+    assert offset == 0
+
     # Channel is open. We can start to send the file
     e = q.expect('dbus-signal', signal='FileTransferStateChanged')
     state, reason = e.args
