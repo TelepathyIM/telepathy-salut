@@ -1,7 +1,8 @@
 /*
  * gibber-linklocal-transport.c - Source for GibberLLTransport
- * Copyright (C) 2006 Collabora Ltd.
+ * Copyright (C) 2006, 2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
+ *   @author: Alban Crequy <alban.crequy@collabora.co.uk>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
