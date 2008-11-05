@@ -50,16 +50,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       channel_manager_iface_init));
 
-/* signal enum */
-/*
-enum
-{
-    LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
-*/
-
 /* private structure */
 typedef struct _SalutFtManagerPrivate SalutFtManagerPrivate;
 
@@ -293,14 +283,14 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   DEBUG ("Object path of file channel is %s", path);
 
   chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
-                       "connection", priv->connection,
-                       "contact", contact,
-                       "object-path", path,
-                       "handle", handle,
-                       "xmpp-connection-manager", priv->xmpp_connection_manager,
-                       "initiator-handle", initiator,
-                       "state", state,
-                       NULL);
+      "connection", priv->connection,
+      "contact", contact,
+      "object-path", path,
+      "handle", handle,
+      "xmpp-connection-manager", priv->xmpp_connection_manager,
+      "initiator-handle", initiator,
+      "state", state,
+      NULL);
 
   g_object_unref (contact);
   g_free (path);
