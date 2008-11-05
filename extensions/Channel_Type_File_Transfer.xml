@@ -27,25 +27,52 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       or writing to a socket. The type of the socket (local Unix, IPv4,
       etc.) is decided on when the file transfer is offered or accepted.</p>
 
+      <p>A socket approach is used to make the transfer less dependent on both
+      client and connection manager knowing the same protocols. As an example,
+      when browsing an SMB share in a file manager, one selects "Send file"
+      and chooses a contact. Instead of passing a URL which would then require
+      the connection manager to connect to the SMB share itself, the client
+      passes a stream from which the connection manager reads, requiring no
+      further connection to the share. It also allows connection managers to
+      be more restricted in their access to the system, allowing tighter
+      security policies with eg SElinux, or more flexible deployments which
+      cross user or system boundaries.</p>
+
+      <p>If the connection manager relies on a library using file path only for
+      file transfers, it can use the Socket_Address_Type_Local_Path
+      <tp:type>Socket_Address_Type</tp:type>. In that case the file will be
+      read and written directly by the CM.</p>
+
       <p>The Telepathy client should connect to the socket or address that
       the connection manager has set up and provided back to the clients
       through the two methods.</p>
 
       <ul><li>In order to send a file, one should request a FileTransfer
       channel for a contact, and fill the mandatory properties
-      (<tp:member-ref>Filename</tp:member-ref>, and
-      <tp:member-ref>Size</tp:member-ref>). After these are set, one should
-      call <tp:member-ref>OfferFile</tp:member-ref> to offer the transfer to
-      the contact.</li>
+      (<tp:member-ref>Filename</tp:member-ref>,
+      <tp:member-ref>Size</tp:member-ref> and <tp:member-ref>ContentType</tp:member-ref>).
+      After these are set, one should
+      call <tp:member-ref>ProvideFile</tp:member-ref> to configure the socket that
+      will be used to transfer the file.</li>
 
       <li>In order to receive an incoming file transfer, one should call
       <tp:member-ref>AcceptFile</tp:member-ref> and then wait until the state
       changes to Open. If the receiver is resuming a transfer then he or she
       should set a non-zero Offset argument when calling
-      <tp:member-ref>AcceptFile</tp:member-ref>. When the state changes to Open,
-      the receiver must check the <tp:member-ref>InitialOffset</tp:member-ref>
-      property for a difference in offset from the requested value in
-      AcceptFile.</li></ul>
+      <tp:member-ref>AcceptFile</tp:member-ref>.</li>
+
+    <li>Once the offset has been negotiated, the
+      <tp:member-ref>InitialOffsetDefined</tp:member-ref> signal
+      is emitted and the <tp:member-ref>InitialOffset</tp:member-ref> property
+      is defined. The <tp:member-ref>InitialOffsetDefined</tp:member-ref> signal MUST be emitted before the
+      channel becomes Open.
+      The receiver MUST check the value of
+      <tp:member-ref>InitialOffset</tp:member-ref> for a difference in offset
+      from the requested value in AcceptFile.</li>
+
+      <li>When the state changes to Open, Clients can start the transfer of the
+      file using the offset previously announced.
+      </li></ul>
 
       <p>If something goes wrong with the transfer,
       <tp:dbus-ref namespace="org.freedesktop.Telepathy">Channel.Close</tp:dbus-ref>
@@ -90,7 +117,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
 
         <p>This property is mandatory when requesting the channel with the
         <tp:dbus-ref namespace="org.freedesktop.Telepathy">Connection.Interface.Requests.CreateChannel</tp:dbus-ref>
-        method. This property cannot be empty and must be set to a sensible value.</p>
+        method. This property cannot be empty and MUST be set to a sensible value.</p>
       </tp:docstring>
     </property>
 
@@ -103,13 +130,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
 
         <p>When you are creating a channel with this property, its value
         MUST be accurate and in bytes. However, when receiving a file, this
-        property still must be in bytes but might not be entirely accurate
+        property still MUST be in bytes but might not be entirely accurate
         to the byte.</p>
 
         <p>This property is mandatory when requesting the channel with the
         <tp:dbus-ref namespace="org.freedesktop.Telepathy">Connection.Interface.Requests.CreateChannel</tp:dbus-ref>
-        method. If this property is UINT64_MAX, then its value is
-        unspecified.</p>
+        method. If this information isn't provided in the protocol, connection managers MUST set it
+        to UINT64_MAX.</p>
       </tp:docstring>
     </property>
 
@@ -151,8 +178,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
 
         <p>This property is optional when requesting the channel with the
         <tp:dbus-ref namespace="org.freedesktop.Telepathy">Connection.Interface.Requests.CreateChannel</tp:dbus-ref>
-        method. If this property is an empty string, then its value is
-        unspecified.</p>
+        method. If this property was not provided by the remote party, connection managers MUST set it to
+        the empty string.</p>
       </tp:docstring>
     </property>
 
@@ -205,9 +232,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       tp:name-for-bindings="Initial_Offset">
       <tp:docstring xmlns="http://www.w3.org/1999/xhtml">
         <p>The offset in bytes from where the file should be sent. This MUST
-        be checked by both the receiver and the sender after the state
+        be respected by both the receiver and the sender after the state
         becomes Open, but before any data is sent or received. Until the
-        state changes to Open, this property is undefined.</p>
+        <tp:member-ref>InitialOffsetDefined</tp:member-ref> signal
+        is emitted, this property is undefined.</p>
 
         <p>Before setting the <tp:member-ref>State</tp:member-ref> property to
         Open, the connection manager MUST set the InitialOffset property,
@@ -225,40 +253,32 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
           appear in the State property.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Not_Offered" value="1">
+      <tp:enumvalue suffix="Pending" value="1">
         <tp:docstring>
-          The transfer is waiting for the local client to call the OfferFile
-          method, in order to offer a file to be transferred.
+          The file transfer is waiting to be accepted/closed by the receiver.
+          The receiver has to call <tp:member-ref>AcceptFile</tp:member-ref>,
+          then wait for the state to change to Open and check the offset value.
         </tp:docstring>
       </tp:enumvalue>
       <tp:enumvalue suffix="Accepted" value="2">
         <tp:docstring>
-          The client has accepted the incoming file transfer, but the transfer
-          is not open. The client should now wait for the state to change to Open
+          The receiver has accepted the transfer. The sender now has to
+          call <tp:member-ref>ProvideFile</tp:member-ref> to actually start the transfer.
+          The receiver should now wait for the state to change to Open
           and check the offset value.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Local_Pending" value="3">
-        <tp:docstring>
-          The file transfer is waiting to be accepted/closed locally.
-        </tp:docstring>
-      </tp:enumvalue>
-      <tp:enumvalue suffix="Remote_Pending" value="4">
-        <tp:docstring>
-          The file transfer is waiting to be accepted/closed remotely.
-        </tp:docstring>
-      </tp:enumvalue>
-      <tp:enumvalue suffix="Open" value="5">
+      <tp:enumvalue suffix="Open" value="3">
         <tp:docstring>
           The file transfer is open for traffic.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Completed" value="6">
+      <tp:enumvalue suffix="Completed" value="4">
         <tp:docstring>
           The file transfer has been completed successfully.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Cancelled" value="7">
+      <tp:enumvalue suffix="Cancelled" value="5">
         <tp:docstring>
           The file transfer has been cancelled.
         </tp:docstring>
@@ -323,10 +343,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
 
     <method name="AcceptFile" tp:name-for-bindings="Accept_File">
       <tp:docstring>
-        Accept a file transfer that's in the Local_Pending state. The file
+        Accept a file transfer that's in the Pending state. The file
         transfer's state becomes Accepted after this method is called. At this
-        point, the receiver must wait for the state to change to Open, and then
-        <tp:member-ref>InitialOffset</tp:member-ref> should be checked in case
+        point, the receiver MUST wait for the state to change to Open, and then
+        <tp:member-ref>InitialOffset</tp:member-ref> should be respected in case
         its value differs from the offset that was specified as an argument
         to AcceptFile.
       </tp:docstring>
@@ -380,19 +400,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
           </tp:docstring>
         <tp:error name="org.freedesktop.Telepathy.Error.NotAvailable">
           <tp:docstring>
-            The file transfer is not in the Local_Pending state, there isn't
+            The file transfer is not in the Pending state, there isn't
             or there is a local error with acquiring a socket.
           </tp:docstring>
         </tp:error>
       </tp:possible-errors>
     </method>
 
-    <method name="OfferFile" tp:name-for-bindings="Offer_File">
+    <method name="ProvideFile" tp:name-for-bindings="Provide_File">
       <tp:docstring>
-        Offer a file transfer that's in the Not_Offered state. Open a socket
-        that the client can use to provide a file to the connection manager.
-        The channel MUST be in the Not_Offered state, and will change state
-        to Remote_Pending when this method is called.
+        Provide the file for an outgoing file transfer which has been offered.
+        Open a socket that the client can use to provide a file to the connection manager.
+        The channel MUST have been requested, and will change state
+        to Open when this method is called if its state was Accepted.
       </tp:docstring>
       <arg direction="in" name="Address_Type" type="u" tp:type="Socket_Address_Type">
         <tp:docstring>
@@ -431,9 +451,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
           </tp:docstring>
         <tp:error name="org.freedesktop.Telepathy.Error.NotAvailable">
           <tp:docstring>
-            The file transfer is not in the Not_Offered state, there isn't
-            enough information for the transfer to start, or a local error
-            with acquiring a socket.
+            Channel is not an outgoing transfer, ProvideFile has already been called,
+            or there was a local error acquiring the socket.
           </tp:docstring>
         </tp:error>
       </tp:possible-errors>
@@ -474,6 +493,22 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
         </tp:docstring>
       </arg>
     </signal>
+
+    <signal name="InitialOffsetDefined"
+      tp:name-for-bindings="Initial_Offset_Defined">
+      <tp:docstring>
+        Emitted when the value of the <tp:member-ref>InitialOffset</tp:member-ref>
+        property has been negotiated. This signal MUST be emitted before the channel
+        becomes Open and clients have to use this offset when transferring the
+        file.
+      </tp:docstring>
+      <arg name="InitialOffset" type="t">
+        <tp:docstring>
+          The value of the <tp:member-ref>InitialOffset</tp:member-ref> property.
+        </tp:docstring>
+      </arg>
+    </signal>
+
   </interface>
 
 </node>
