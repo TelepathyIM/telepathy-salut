@@ -1049,6 +1049,46 @@ check_address_and_access_control (SalutFileTransferChannel *self,
   return FALSE;
 }
 
+gboolean
+salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
+                                        GError **error)
+{
+  SalutXmppConnectionManagerRequestConnectionResult request_result;
+  GibberXmppConnection *connection = NULL;
+
+  g_assert (!CHECK_STR_EMPTY (self->priv->filename));
+  g_assert (self->priv->size != SALUT_UNDEFINED_FILE_SIZE);
+
+  DEBUG ("Offering file transfer");
+
+  request_result = salut_xmpp_connection_manager_request_connection (
+      self->priv->xmpp_connection_manager, self->priv->contact,
+      &connection, error);
+
+  if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
+    {
+      self->priv->xmpp_connection = connection;
+      send_file_offer (self);
+    }
+  else if (request_result ==
+      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
+    {
+      g_signal_connect (self->priv->xmpp_connection_manager,
+          "new-connection",
+          G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
+    }
+  else
+    {
+      DEBUG ("Request connection failed");
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+        "Request connection failed");
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
 /**
  * salut_file_transfer_channel_accept_file
  *
@@ -1075,10 +1115,10 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
       g_error_free (error);
     }
 
-  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING)
+  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_PENDING)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "State is not local pending; cannot accept file");
+        "State is not pending; cannot accept file");
       dbus_g_method_return_error (context, error);
       return;
     }
@@ -1122,29 +1162,36 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
 }
 
 /**
- * salut_file_transfer_channel_offer_file
+ * salut_file_transfer_channel_provide_file
  *
- * Implements D-Bus method OfferFile
+ * Implements D-Bus method ProvideFile
  * on interface org.freedesktop.Telepathy.Channel.Type.File
  */
 static void
-salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
+salut_file_transfer_channel_provide_file (SalutSvcChannelTypeFileTransfer *iface,
                                guint address_type,
                                guint access_control,
                                const GValue *access_control_param,
                                DBusGMethodInvocation *context)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
-  GibberXmppConnection *connection = NULL;
-  SalutXmppConnectionManagerRequestConnectionResult request_result;
-  GError *error = NULL;
+  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->connection;
   SalutFileTransferChannel *channel = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GValue out_address = { 0 };
+  GError *error = NULL;
 
-  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_NOT_OFFERED)
+  if (self->priv->initiator != base_conn->self_handle)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "State is not not offered; cannot offer file");
+          "Channel is not an outgoing transfer");
+      dbus_g_method_return_error (context, error);
+      return;
+    }
+
+  if (self->priv->socket_path != NULL)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "ProvideFile has already been called for this channel");
       dbus_g_method_return_error (context, error);
       return;
     }
@@ -1154,37 +1201,6 @@ salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
     {
       dbus_g_method_return_error (context, error);
       g_error_free (error);
-      return;
-    }
-
-  g_assert (!CHECK_STR_EMPTY (channel->priv->filename));
-  g_assert (channel->priv->size != SALUT_UNDEFINED_FILE_SIZE);
-
-  DEBUG ("Offering file transfer");
-
-  request_result = salut_xmpp_connection_manager_request_connection (
-      channel->priv->xmpp_connection_manager, channel->priv->contact,
-      &connection, &error);
-
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      channel->priv->xmpp_connection = connection;
-      send_file_offer (channel);
-    }
-  else if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
-    {
-      g_signal_connect (channel->priv->xmpp_connection_manager,
-          "new-connection",
-          G_CALLBACK (xmpp_connection_manager_new_connection_cb), channel);
-    }
-  else
-    {
-      DEBUG ("Request connection failed");
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-        "Request connection failed");
-      dbus_g_method_return_error (context, error);
       return;
     }
 
@@ -1200,10 +1216,10 @@ salut_file_transfer_channel_offer_file (SalutSvcChannelTypeFileTransfer *iface,
   g_value_set_string (&out_address, channel->priv->socket_path);
 
   salut_file_transfer_channel_set_state (iface,
-      SALUT_FILE_TRANSFER_STATE_REMOTE_PENDING,
+      SALUT_FILE_TRANSFER_STATE_PENDING,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
-  salut_svc_channel_type_file_transfer_return_from_offer_file (context,
+  salut_svc_channel_type_file_transfer_return_from_provide_file (context,
       &out_address);
 }
 
@@ -1217,7 +1233,7 @@ file_transfer_iface_init (gpointer g_iface,
 #define IMPLEMENT(x) salut_svc_channel_type_file_transfer_implement_##x (\
     klass, salut_file_transfer_channel_##x)
   IMPLEMENT (accept_file);
-  IMPLEMENT (offer_file);
+  IMPLEMENT (provide_file);
 #undef IMPLEMENT
 }
 
@@ -1264,6 +1280,8 @@ get_socket_channel (SalutFileTransferChannel *self)
 
   path = get_local_unix_socket_path (self);
 
+  /* FIXME: should use the socket type and access control chosen by
+   * the user. */
   fd = socket (PF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
     {

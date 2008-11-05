@@ -24,13 +24,11 @@ HT_CONTACT_LIST = 3
 TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
 
 FT_STATE_NONE = 0
-FT_STATE_NOT_OFFERED = 1
+FT_STATE_PENDING = 1
 FT_STATE_ACCEPTED = 2
-FT_STATE_LOCAL_PENDING = 3
-FT_STATE_REMOTE_PENDING = 4
-FT_STATE_OPEN = 5
-FT_STATE_COMPLETED = 6
-FT_STATE_CANCELLED = 7
+FT_STATE_OPEN = 3
+FT_STATE_COMPLETED = 4
+FT_STATE_CANCELLED = 5
 
 FT_STATE_CHANGE_REASON_NONE = 0
 FT_STATE_CHANGE_REASON_REQUESTED = 1
@@ -127,7 +125,7 @@ def test(q, bus, conn):
     assert props[CHANNEL_INTERFACE + '.InitiatorID'] == self_handle_name
 
     # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
-    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.State'] == FT_STATE_NOT_OFFERED
+    assert props[CHANNEL_TYPE_FILE_TRANSFER + '.State'] == FT_STATE_PENDING
     assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentType'] == FILE_CONTENT_TYPE
     assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Filename'] == FILE_NAME
     assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Size'] == FILE_SIZE
@@ -144,18 +142,11 @@ def test(q, bus, conn):
     ft_channel = make_channel_proxy(conn, path, 'Channel.Type.FileTransfer.DRAFT')
     ft_props = dbus.Interface(bus.get_object(conn.object.bus_name, path), PROPERTIES_IFACE)
 
-    address = ft_channel.OfferFile(SOCKET_ADDRESS_TYPE_UNIX, SOCKET_ACCESS_CONTROL_LOCALHOST, "")
-
-    conn_event, state_event, iq_event = q.expect_many(
+    conn_event, iq_event = q.expect_many(
         EventPattern('incoming-connection', listener = listener),
-        EventPattern('dbus-signal', signal='FileTransferStateChanged'),
         EventPattern('stream-iq'))
 
     incoming = conn_event.connection
-
-    state, reason = state_event.args
-    assert state == FT_STATE_REMOTE_PENDING
-    assert reason == FT_STATE_CHANGE_REASON_REQUESTED
 
     assert iq_event.iq_type == 'set'
     assert iq_event.connection == incoming
@@ -173,6 +164,7 @@ def test(q, bus, conn):
     desc = desc_node.children[0]
     assert desc == FILE_DESCRIPTION
 
+    # Accept transfer
     reply = domish.Element(('', 'iq'))
     reply['to'] = iq['from']
     reply['from'] = iq['to']
@@ -184,6 +176,8 @@ def test(q, bus, conn):
     _, host, file, _, _, _ = urlparse.urlparse(url)
     http = httplib.HTTPConnection(host)
     http.request('GET', file)
+
+    address = ft_channel.ProvideFile(SOCKET_ADDRESS_TYPE_UNIX, SOCKET_ACCESS_CONTROL_LOCALHOST, "")
 
     e = q.expect('dbus-signal', signal='FileTransferStateChanged')
     state, reason = e.args

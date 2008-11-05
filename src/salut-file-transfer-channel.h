@@ -69,6 +69,9 @@ gboolean salut_file_transfer_channel_received_file_offer (
     SalutFileTransferChannel *self, GibberXmppStanza *stanza,
     GibberXmppConnection *conn);
 
+gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
+    GError **error);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_FILE_TRANSFER_CHANNEL_H__*/

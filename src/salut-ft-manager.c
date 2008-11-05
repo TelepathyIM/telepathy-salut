@@ -274,16 +274,15 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
   DEBUG ("%s channel requested", requested ? "Outgoing" : "Incoming");
 
+  state = SALUT_FILE_TRANSFER_STATE_PENDING;
   if (!requested)
     {
       /* incoming channel */
-      state = SALUT_FILE_TRANSFER_STATE_LOCAL_PENDING;
       initiator = handle;
     }
   else
     {
       /* outgoing channel */
-      state = SALUT_FILE_TRANSFER_STATE_NOT_OFFERED;
       initiator = base_connection->self_handle;
     }
 
@@ -437,6 +436,11 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       "date", date,
       "initial-offset", initial_offset,
       NULL);
+
+  if (!salut_file_transfer_channel_offer_file (chan, &error))
+    {
+      /* FIXME */
+    }
 
   requests = g_slist_prepend (requests, request_token);
   tp_channel_manager_emit_new_channel (manager, TP_EXPORTABLE_CHANNEL (chan),
