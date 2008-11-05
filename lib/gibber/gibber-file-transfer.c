@@ -172,7 +172,7 @@ gibber_file_transfer_set_property (GObject *object,
         self->direction = g_value_get_enum (value);
         break;
       case PROP_CONNECTION:
-        self->priv->connection = g_value_get_object (value);
+        self->priv->connection = g_value_dup_object (value);
         if (self->priv->connection != NULL)
           g_signal_connect (self->priv->connection, "received-stanza",
               G_CALLBACK (received_stanza_cb), self);
@@ -190,6 +190,7 @@ gibber_file_transfer_set_property (GObject *object,
 }
 
 static void gibber_file_transfer_finalize (GObject *object);
+static void gibber_file_transfer_dispose (GObject *object);
 
 static void
 gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_class)
@@ -199,6 +200,7 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
 
   g_type_class_add_private (gibber_file_transfer_class, sizeof (GibberFileTransferPrivate));
 
+  object_class->dispose = gibber_file_transfer_dispose;
   object_class->finalize = gibber_file_transfer_finalize;
 
   object_class->get_property = gibber_file_transfer_get_property;
@@ -294,6 +296,20 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
       0, NULL, NULL,
       g_cclosure_marshal_VOID__VOID,
       G_TYPE_NONE, 0);
+}
+
+static void
+gibber_file_transfer_dispose (GObject *object)
+{
+  GibberFileTransfer *self = GIBBER_FILE_TRANSFER (object);
+
+  if (self->priv->connection != NULL)
+    {
+      g_object_unref (self->priv->connection);
+      self->priv->connection = NULL;
+    }
+
+  G_OBJECT_CLASS (gibber_file_transfer_parent_class)->dispose (object);
 }
 
 static void
