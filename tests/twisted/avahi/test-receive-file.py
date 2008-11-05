@@ -175,6 +175,9 @@ def test(q, bus, conn):
 
     httpd.handle_request()
 
+    # Receiver inform us he finished to download the file
+    q.expect('stream-iq', iq_type='result')
+
     # Read the file from Salut's socket
     data = ''
     read = 0
