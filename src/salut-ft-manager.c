@@ -429,7 +429,9 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
 
   if (!salut_file_transfer_channel_offer_file (chan, &error))
     {
-      /* FIXME */
+      /* Destroying the channel will emit the "closed" signal. */
+      g_object_unref (chan);
+      goto error;
     }
 
   requests = g_slist_prepend (requests, request_token);
