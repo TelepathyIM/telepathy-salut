@@ -164,25 +164,28 @@ def test(q, bus, conn):
     desc = desc_node.children[0]
     assert desc == FILE_DESCRIPTION
 
-    # Accept transfer
-    reply = domish.Element(('', 'iq'))
-    reply['to'] = iq['from']
-    reply['from'] = iq['to']
-    reply['type'] = 'result'
-    reply['id'] = iq['id']
-    incoming.send(reply)
+    # state is still Pending as remote didn't accept the transfer yet
+    state = ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'State')
+    assert state == FT_STATE_PENDING
 
     # Connect HTTP client to the CM and request the file
     _, host, file, _, _, _ = urlparse.urlparse(url)
     http = httplib.HTTPConnection(host)
     http.request('GET', file)
 
+    # Remote accepted the transfer
+    e = q.expect('dbus-signal', signal='FileTransferStateChanged')
+    state, reason = e.args
+    assert state == FT_STATE_ACCEPTED, state
+    assert reason == FT_STATE_CHANGE_REASON_NONE
+
     address = ft_channel.ProvideFile(SOCKET_ADDRESS_TYPE_UNIX, SOCKET_ACCESS_CONTROL_LOCALHOST, "")
 
+    # Channel is open. We can start to send the file
     e = q.expect('dbus-signal', signal='FileTransferStateChanged')
     state, reason = e.args
     assert state == FT_STATE_OPEN
-    assert reason == FT_STATE_CHANGE_REASON_NONE
+    assert reason == FT_STATE_CHANGE_REASON_REQUESTED
 
     offset = ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'InitialOffset')
     # We don't support resume
@@ -192,15 +195,9 @@ def test(q, bus, conn):
     s.connect(address)
     s.send(FILE_DATA)
 
-    state_changed_event, transferred_event = q.expect_many(
-        EventPattern('dbus-signal', signal='FileTransferStateChanged'),
-        EventPattern('dbus-signal', signal='TransferredBytesChanged'))
+    e = q.expect('dbus-signal', signal='TransferredBytesChanged')
 
-    state, reason = state_changed_event.args
-    assert state == FT_STATE_COMPLETED
-    assert reason == FT_STATE_CHANGE_REASON_NONE
-
-    count = transferred_event.args[0]
+    count = e.args[0]
     while count < FILE_SIZE:
         # Catch TransferredBytesChanged until we transfered all the data
         e = q.expect('dbus-signal', signal='TransferredBytesChanged')
@@ -211,6 +208,19 @@ def test(q, bus, conn):
     data = response.read(FILE_SIZE)
     # Did we received the right file?
     assert data == FILE_DATA
+
+    # Inform sender that we received all the file from the OOB transfer
+    reply = domish.Element(('', 'iq'))
+    reply['to'] = iq['from']
+    reply['from'] = iq['to']
+    reply['type'] = 'result'
+    reply['id'] = iq['id']
+    incoming.send(reply)
+
+    e = q.expect('dbus-signal', signal='FileTransferStateChanged')
+    state, reason = e.args
+    assert state == FT_STATE_COMPLETED
+    assert reason == FT_STATE_CHANGE_REASON_NONE
 
     channel.Close()
     q.expect('dbus-signal', signal='Closed')
