@@ -5,6 +5,7 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
+	avahi/test-send-file-provide-immediately.py \
 	avahi/test-send-file-wait-to-provide.py \
 	avahi/test-receive-file.py \
 	avahi/test-text-channel.py
