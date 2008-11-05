@@ -44,7 +44,7 @@ channel_manager_iface_init (gpointer, gpointer);
 
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
-    gboolean requested);
+    gboolean requested, GError **error);
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
@@ -106,7 +106,7 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
-  chan = salut_ft_manager_new_channel (self, handle, FALSE);
+  chan = salut_ft_manager_new_channel (self, handle, FALSE, NULL);
 
   /* This will set the extra properties on the ft channel */
   if (salut_file_transfer_channel_received_file_offer (chan, stanza, conn))
@@ -240,7 +240,8 @@ file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr,
                               TpHandle handle,
-                              gboolean requested)
+                              gboolean requested,
+                              GError **error)
 {
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
@@ -252,15 +253,20 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   gchar *path = NULL;
   guint state;
   TpHandle initiator;
-
   /* Increasing guint to make sure object paths are random */
   static guint id = 0;
 
   DEBUG ("Requested channel for handle: %d", handle);
 
+  name = tp_handle_inspect (handle_repo, handle);
+
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
-    return NULL;
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "%s is not online", name);
+      return NULL;
+    }
 
   DEBUG ("%s channel requested", requested ? "Outgoing" : "Incoming");
 
@@ -276,7 +282,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
       initiator = base_connection->self_handle;
     }
 
-  name = tp_handle_inspect (handle_repo, handle);
   path = g_strdup_printf ("%s/FileTransferChannel/%u/%u",
                          base_connection->object_path, handle, id++);
 
@@ -414,7 +419,11 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   initial_offset = tp_asv_get_uint64 (request_properties,
       SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
 
-  chan = salut_ft_manager_new_channel (self, handle, TRUE);
+  chan = salut_ft_manager_new_channel (self, handle, TRUE, &error);
+  if (chan == NULL)
+    {
+      goto error;
+    }
 
   g_object_set (chan,
       "content-type", content_type,
