@@ -743,7 +743,7 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
                                                 GibberXmppStanza *stanza,
                                                 gpointer userdata)
 {
-  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (conn);
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
   const gchar *from;
 
   /* If the identity wasn't clear from the stream opening we only wait to the
