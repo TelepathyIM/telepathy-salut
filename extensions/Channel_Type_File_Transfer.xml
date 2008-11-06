@@ -48,24 +48,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
       through the two methods.</p>
 
       <ul><li>In order to send a file, one should request a FileTransfer
-      channel for a contact, and fill the mandatory properties
+      channel for a contact, including at least the mandatory properties
       (<tp:member-ref>Filename</tp:member-ref>,
       <tp:member-ref>Size</tp:member-ref> and <tp:member-ref>ContentType</tp:member-ref>).
-      After these are set, one should
+      Then, one should
       call <tp:member-ref>ProvideFile</tp:member-ref> to configure the socket that
       will be used to transfer the file.</li>
 
       <li>In order to receive an incoming file transfer, one should call
       <tp:member-ref>AcceptFile</tp:member-ref> and then wait until the state
-      changes to Open. If the receiver is resuming a transfer then he or she
-      should set a non-zero Offset argument when calling
+      changes to Open. When the receiver wants to resume a transfer, the Offset
+      argument should be should be set to a non-zero value when calling
       <tp:member-ref>AcceptFile</tp:member-ref>.</li>
 
     <li>Once the offset has been negotiated, the
       <tp:member-ref>InitialOffsetDefined</tp:member-ref> signal
       is emitted and the <tp:member-ref>InitialOffset</tp:member-ref> property
-      is defined. The <tp:member-ref>InitialOffsetDefined</tp:member-ref> signal MUST be emitted before the
-      channel becomes Open.
+      is defined. The <tp:member-ref>InitialOffsetDefined</tp:member-ref>
+      signal is emitted before channel becomes Open.
       The receiver MUST check the value of
       <tp:member-ref>InitialOffset</tp:member-ref> for a difference in offset
       from the requested value in AcceptFile.</li>
@@ -296,22 +296,22 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
           The change in state was requested.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Local_Stopped" value="1">
+      <tp:enumvalue suffix="Local_Stopped" value="2">
         <tp:docstring>
           The file transfer was cancelled by the local user.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Remote_Stopped" value="2">
+      <tp:enumvalue suffix="Remote_Stopped" value="3">
         <tp:docstring>
           The file transfer was cancelled by the remote user.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Local_Error" value="3">
+      <tp:enumvalue suffix="Local_Error" value="4">
         <tp:docstring>
           The file transfer was cancelled because of a local error.
         </tp:docstring>
       </tp:enumvalue>
-      <tp:enumvalue suffix="Remote_Error" value="4">
+      <tp:enumvalue suffix="Remote_Error" value="5">
         <tp:docstring>
           The file transfer was cancelled because of a remote error.
         </tp:docstring>
@@ -344,9 +344,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
     <method name="AcceptFile" tp:name-for-bindings="Accept_File">
       <tp:docstring>
         Accept a file transfer that's in the Pending state. The file
-        transfer's state becomes Accepted after this method is called. At this
-        point, the receiver MUST wait for the state to change to Open, and then
-        <tp:member-ref>InitialOffset</tp:member-ref> should be respected in case
+        transfer's state becomes Accepted after this method is called.
+        At this point the client can connect to the socket. CM MUST emit
+        <tp:member-ref>InitialOffsetDefined</tp:member-ref> and change
+        the state to Open before writing to the socket.
+        Then <tp:member-ref>InitialOffset</tp:member-ref> should be respected in case
         its value differs from the offset that was specified as an argument
         to AcceptFile.
       </tp:docstring>
@@ -410,7 +412,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.</
     <method name="ProvideFile" tp:name-for-bindings="Provide_File">
       <tp:docstring>
         Provide the file for an outgoing file transfer which has been offered.
-        Open a socket that the client can use to provide a file to the connection manager.
+        Opens a socket that the client can use to provide a file to the connection manager.
         The channel MUST have been requested, and will change state
         to Open when this method is called if its state was Accepted.
       </tp:docstring>
