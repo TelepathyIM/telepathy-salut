@@ -869,6 +869,12 @@ error_cb (GibberFileTransfer *ft,
   if (domain == GIBBER_FILE_TRANSFER_ERROR && code ==
       GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND)
     {
+      if (receiver)
+        {
+          /* Inform the sender we weren't able to retrieve the file */
+          gibber_file_transfer_cancel (self->priv->ft, 404);
+        }
+
       salut_file_transfer_channel_set_state (
           SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
           SALUT_FILE_TRANSFER_STATE_CANCELLED,
