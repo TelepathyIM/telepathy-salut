@@ -41,6 +41,7 @@
 #include "gibber-util.h"
 #include "gibber-transport.h"
 #include "gibber-fd-transport.h"
+#include "gibber-listener.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -98,10 +99,9 @@ struct _GibberBytestreamIBBPrivate
    * If not we are the sender */
   gboolean recipient;
   GibberTransport *transport;
-  GIOChannel *listener;
-  guint listener_watch;
   gboolean write_blocked;
   gboolean read_blocked;
+  GibberListener *listener;
 
   GibberBytestreamOOBCheckAddrFunc check_addr_func;
   gpointer check_addr_func_data;
@@ -455,9 +455,7 @@ gibber_bytestream_oob_dispose (GObject *object)
 
   if (priv->listener != NULL)
     {
-      g_io_channel_unref (priv->listener);
-      priv->listener = NULL;
-      g_source_remove (priv->listener_watch);
+      g_object_unref (priv->listener);
     }
 
   if (priv->xmpp_connection != NULL)
@@ -953,144 +951,27 @@ make_oob_init_iq (const gchar *from,
       GIBBER_NODE_END, GIBBER_STANZA_END);
 }
 
-static gboolean
-listener_io_in_cb (GIOChannel *source,
-                   GIOCondition condition,
+static void
+new_connection_cb (GibberListener *listener,
+                   GibberTransport *transport,
+                   struct sockaddr_storage *addr,
+                   guint size,
                    gpointer user_data)
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  int listen_fd, fd, ret;
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  struct sockaddr_storage addr;
   socklen_t addrlen = sizeof (struct sockaddr_storage);
-  GibberLLTransport *ll_transport;
 
-  listen_fd = g_io_channel_unix_get_fd (source);
-  fd = accept (listen_fd, (struct sockaddr *) &addr, &addrlen);
-  gibber_normalize_address (&addr);
-
-  ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
-      host, NI_MAXHOST, port, NI_MAXSERV,
-      NI_NUMERICHOST | NI_NUMERICSERV);
-
-  if (priv->check_addr_func != NULL && !priv->check_addr_func (self, &addr,
+  if (priv->check_addr_func != NULL && !priv->check_addr_func (self, addr,
         addrlen, priv->check_addr_func_data))
     {
-      DEBUG ("connection from %s refused by the bytestream user", host);
-      return TRUE;
+      DEBUG ("connection refused by the bytestream user");
+      return;
     }
 
-  if (ret == 0)
-    DEBUG("New connection from %s port %s", host, port);
-  else
-    DEBUG("New connection..");
+  DEBUG("New connection..");
 
-  ll_transport = gibber_ll_transport_new ();
-  set_transport (self, GIBBER_TRANSPORT (ll_transport));
-  gibber_ll_transport_open_fd (ll_transport, fd);
-
-  return FALSE;
-}
-
-static int
-start_listen_for_connection (GibberBytestreamOOB *self)
-{
-  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  int port;
-  int fd = -1, ret, yes = 1;
-  struct addrinfo req, *ans = NULL;
-  struct sockaddr *addr;
-  struct sockaddr_in addr4;
-  struct sockaddr_in6 addr6;
-  socklen_t len;
-  #define BACKLOG 1
-
-  memset (&req, 0, sizeof (req));
-  req.ai_flags = AI_PASSIVE;
-  req.ai_family = AF_UNSPEC;
-  req.ai_socktype = SOCK_STREAM;
-  req.ai_protocol = IPPROTO_TCP;
-
-  ret = getaddrinfo (NULL, "0", &req, &ans);
-  if (ret != 0)
-    {
-      DEBUG ("getaddrinfo failed: %s", gai_strerror (ret));
-      goto error;
-    }
-
-  fd = socket (ans->ai_family, ans->ai_socktype, ans->ai_protocol);
-  if (fd == -1)
-    {
-      DEBUG ("socket failed: %s", g_strerror (errno));
-      goto error;
-    }
-
-  ret = setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (int));
-  if (ret == -1)
-    {
-      DEBUG ("setsockopt failed: %s", g_strerror (errno));
-      goto error;
-    }
-
-  ret = bind (fd, ans->ai_addr, ans->ai_addrlen);
-  if (ret  < 0)
-    {
-      DEBUG ("bind failed: %s", g_strerror (errno));
-      goto error;
-    }
-
-  if (ans->ai_family == AF_INET)
-    {
-      len = sizeof (struct sockaddr_in);
-      addr = (struct sockaddr *) &addr4;
-    }
-  else
-    {
-      len = sizeof (struct sockaddr_in6);
-      addr = (struct sockaddr *) &addr6;
-    }
-
-  if (getsockname (fd, addr, &len) == -1)
-  {
-    DEBUG ("getsockname failed: %s", g_strerror (errno));
-    goto error;
-  }
-
-  if (ans->ai_family == AF_INET)
-    {
-      port = ntohs (addr4.sin_port);
-    }
-  else
-    {
-      port = ntohs (addr6.sin6_port);
-    }
-
-  ret = listen (fd, BACKLOG);
-  if (ret == -1)
-    {
-      DEBUG ("listen failed: %s", g_strerror (errno));
-      goto error;
-    }
-
-  DEBUG ("listen on %s:%d", priv->host, port);
-
-  priv->listener = g_io_channel_unix_new (fd);
-  g_io_channel_set_close_on_unref (priv->listener, TRUE);
-  priv->listener_watch = g_io_add_watch (priv->listener, G_IO_IN,
-      listener_io_in_cb, self);
-
-  freeaddrinfo (ans);
-  return port;
-
-error:
-  if (fd > 0)
-    close (fd);
-
-  if (ans != NULL)
-    freeaddrinfo (ans);
-  return -1;
+  set_transport (self, transport);
 }
 
 /*
@@ -1119,8 +1000,15 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
 
   priv->recipient = FALSE;
 
-  port = start_listen_for_connection (self);
-  if (port == -1)
+  g_assert (priv->listener == NULL);
+  priv->listener = gibber_listener_new ();
+
+  g_signal_connect (gibber_listener_new, "new-connection",
+      G_CALLBACK (new_connection_cb), self);
+
+  port = gibber_listener_listen_tcp (priv->listener, 0, NULL);
+
+  if (port <= 0)
     {
       DEBUG ("can't listen for incoming connection");
       return FALSE;
