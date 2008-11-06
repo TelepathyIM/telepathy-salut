@@ -191,6 +191,10 @@ def test(q, bus, conn):
     assert state == FT_STATE_CANCELLED, state
     assert reason == FT_STATE_CHANGE_REASON_REMOTE_ERROR
 
+    transferred = ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'TransferredBytes')
+    # no byte has been transferred as the transfer failed
+    assert transferred == 0
+
     channel.Close()
     q.expect('dbus-signal', signal='Closed')
 
