@@ -919,7 +919,6 @@ remote_accepted_cb (GibberFileTransfer *ft,
     }
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
-  g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
 }
 
 static gboolean setup_local_socket (SalutFileTransferChannel *self);
@@ -943,6 +942,7 @@ send_file_offer (SalutFileTransferChannel *self)
   g_signal_connect (ft, "remote-accepted",
       G_CALLBACK (remote_accepted_cb), self);
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
+  g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
 
   self->priv->ft = ft;
 
