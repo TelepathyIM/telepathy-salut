@@ -65,6 +65,7 @@ struct _GibberListenerPrivate
 
   /* Don't allow to listen again if it is already listening */
   gboolean listening;
+  int port;
 
   gboolean dispose_has_run;
 };
@@ -122,6 +123,7 @@ gibber_listeners_clean_listeners (GibberListener *self)
 
   priv->listeners = NULL;
   priv->listening = FALSE;
+  priv->port = 0;
 }
 
 static void
@@ -205,7 +207,7 @@ listener_io_in_cb (GIOChannel *source,
 
 static gboolean
 add_listener (GibberListener *self, int family, int type, int protocol,
-  struct sockaddr *address, socklen_t addrlen, int *port, GError **error)
+  struct sockaddr *address, socklen_t addrlen, GError **error)
 {
   #define BACKLOG 5
   int fd = -1, ret, yes = 1;
@@ -286,20 +288,17 @@ add_listener (GibberListener *self, int family, int type, int protocol,
 
   DEBUG ( "Listening on %s port %s...", name, portname);
 
-  if (port != NULL)
+  switch (family)
     {
-      switch (family)
-        {
-          case AF_INET:
-            *port = g_ntohs (baddress.in.sin_port);
-            break;
-          case AF_INET6:
-            *port = g_ntohs (baddress.in6.sin6_port);
-            break;
-          default:
-            *port = 0;
-            break;
-        }
+      case AF_INET:
+        priv->port = g_ntohs (baddress.in.sin_port);
+        break;
+      case AF_INET6:
+        priv->port = g_ntohs (baddress.in6.sin6_port);
+        break;
+      default:
+        priv->port = 0;
+        break;
     }
 
   l = g_slice_new(Listener);
@@ -319,11 +318,11 @@ error:
   return FALSE;
 }
 
-/* port: if 0, choose a random port and set new_port
+/* port: if 0, choose a random port
  */
 static gboolean
 listen_tcp_af (GibberListener *listener, int port, GibberAddressFamily family,
-    gboolean loopback, int *new_port, GError **error)
+    gboolean loopback, GError **error)
 {
   GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (listener);
   struct addrinfo req, *ans = NULL, *a;
@@ -369,7 +368,7 @@ listen_tcp_af (GibberListener *listener, int port, GibberAddressFamily family,
       goto error;
     }
 
-  *new_port = 0;
+  priv->port = 0;
   for (a = ans ; a != NULL ; a = a->ai_next)
     {
       union {
@@ -384,18 +383,18 @@ listen_tcp_af (GibberListener *listener, int port, GibberAddressFamily family,
       addr.addr = a->ai_addr;
 
       /* the caller let us choose a port and we are not in the first round */
-      if (port == 0 && *new_port != 0)
+      if (port == 0 && priv->port != 0)
         {
           if (a->ai_family == AF_INET)
-            addr.in->sin_port = *new_port;
+            addr.in->sin_port = priv->port;
           else if (a->ai_family == AF_INET6)
-            addr.in6->sin6_port = *new_port;
+            addr.in6->sin6_port = priv->port;
           else
             g_assert_not_reached ();
         }
 
       ret = add_listener (listener, a->ai_family, a->ai_socktype,
-        a->ai_protocol, a->ai_addr, a->ai_addrlen, new_port, &terror);
+        a->ai_protocol, a->ai_addr, a->ai_addrlen, &terror);
 
       if (ret == FALSE)
         {
@@ -435,26 +434,20 @@ error:
   return FALSE;
 }
 
-int
+gboolean
 gibber_listener_listen_tcp (GibberListener *listener, int port, GError **error)
 {
   return gibber_listener_listen_tcp_af (listener, port, GIBBER_AF_ANY, error);
 }
 
-int
+gboolean
 gibber_listener_listen_tcp_af (GibberListener *listener, int port,
   GibberAddressFamily family, GError **error)
 {
-  int new_port = 0;
-  int ret = listen_tcp_af (listener, port, family, FALSE, &new_port, error);
-
-  if (ret == FALSE)
-    return 0;
-  else
-    return new_port;
+  return listen_tcp_af (listener, port, family, FALSE, error);
 }
 
-int
+gboolean
 gibber_listener_listen_tcp_loopback (GibberListener *listener,
   int port, GError **error)
 {
@@ -462,17 +455,11 @@ gibber_listener_listen_tcp_loopback (GibberListener *listener,
     GIBBER_AF_ANY, error);
 }
 
-int
+gboolean
 gibber_listener_listen_tcp_loopback_af (GibberListener *listener,
   int port, GibberAddressFamily family, GError **error)
 {
-  int new_port = 0;
-  int ret = listen_tcp_af (listener, port, family, TRUE, &new_port, error);
-
-  if (ret == FALSE)
-    return 0;
-  else
-    return new_port;
+  return listen_tcp_af (listener, port, family, TRUE, error);
 }
 
 gboolean
@@ -499,7 +486,7 @@ gibber_listener_listen_socket (GibberListener *listener,
   snprintf (addr.sun_path, sizeof (addr.sun_path) - 1, "%s", path);
 
   ret = add_listener (listener, AF_UNIX, SOCK_STREAM, 0,
-      (struct sockaddr *) &addr, sizeof (addr), NULL, error);
+      (struct sockaddr *) &addr, sizeof (addr), error);
 
   if (ret == TRUE)
     {
@@ -508,4 +495,11 @@ gibber_listener_listen_socket (GibberListener *listener,
     }
 
   return ret;
+}
+
+int
+gibber_listener_get_port (GibberListener *listener)
+{
+  GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (listener);
+  return priv->port;
 }

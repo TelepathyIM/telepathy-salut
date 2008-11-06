@@ -1006,13 +1006,12 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   g_signal_connect (gibber_listener_new, "new-connection",
       G_CALLBACK (new_connection_cb), self);
 
-  port = gibber_listener_listen_tcp (priv->listener, 0, NULL);
-
-  if (port <= 0)
+  if (!gibber_listener_listen_tcp (priv->listener, 0, NULL))
     {
       DEBUG ("can't listen for incoming connection");
       return FALSE;
     }
+  port = gibber_listener_get_port (priv->listener);
 
   url = g_strdup_printf ("x-tcp://%s:%d", priv->host, port);
 

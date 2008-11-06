@@ -77,21 +77,22 @@ GType gibber_listener_get_type (void);
 
 GibberListener *gibber_listener_new (void);
 
-int gibber_listener_listen_tcp (GibberListener *listener,
+gboolean gibber_listener_listen_tcp (GibberListener *listener,
   int port, GError **error);
 
-int gibber_listener_listen_tcp_af (GibberListener *listener,
+gboolean gibber_listener_listen_tcp_af (GibberListener *listener,
   int port, GibberAddressFamily family, GError **error);
 
-int gibber_listener_listen_tcp_loopback (GibberListener *listener,
+gboolean gibber_listener_listen_tcp_loopback (GibberListener *listener,
   int port, GError **error);
 
-int gibber_listener_listen_tcp_loopback_af (GibberListener *listener,
+gboolean gibber_listener_listen_tcp_loopback_af (GibberListener *listener,
   int port, GibberAddressFamily family, GError **error);
 
 gboolean gibber_listener_listen_socket (GibberListener *listener,
   gchar *path, gboolean abstract, GError **error);
 
+int gibber_listener_get_port (GibberListener *listener);
 
 G_END_DECLS
 

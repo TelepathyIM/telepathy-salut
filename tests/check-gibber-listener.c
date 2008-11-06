@@ -118,7 +118,7 @@ START_TEST (test_tcp_listen)
   GibberListener *listener;
   GibberListener *listener_without_port;
   GibberListener *listener2;
-  int port;
+  int ret, port;
   GMainLoop *mainloop;
   GibberTransport *transport;
   GError *error = NULL;
@@ -132,8 +132,9 @@ START_TEST (test_tcp_listen)
   g_signal_connect (listener_without_port, "new-connection",
       G_CALLBACK (new_connection_cb), mainloop);
 
-  port = gibber_listener_listen_tcp (listener_without_port, 0, &error);
-  fail_if (port <= 0);
+  ret = gibber_listener_listen_tcp (listener_without_port, 0, &error);
+  fail_if (ret != TRUE);
+  port = gibber_listener_get_port (listener_without_port);
 
   signalled = FALSE;
   transport = connect_to_port (port, mainloop);
@@ -163,6 +164,7 @@ START_TEST (test_tcp_listen)
       error = NULL;
     }
   fail_if (port >= 5400);
+  fail_if (port != gibber_listener_get_port (listener));
 
   /* try a second listener on the same port */
   listener2 = gibber_listener_new ();
