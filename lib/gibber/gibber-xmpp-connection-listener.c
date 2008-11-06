@@ -158,13 +158,13 @@ new_connection_cb (GibberListener *listener,
   return TRUE;
 }
 
-gboolean
+int
 gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self,
-                                        int port,
                                         GError **error)
 {
   GibberXmppConnectionListenerPrivate *priv =
     GIBBER_XMPP_CONNECTION_LISTENER_GET_PRIVATE (self);
+  int ret;
 
   if (priv->listener == NULL)
     {
@@ -173,5 +173,9 @@ gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self,
         G_CALLBACK (new_connection_cb), self);
     }
 
-  return gibber_listener_listen_tcp (priv->listener, port, error);
+  ret = gibber_listener_listen_tcp (priv->listener, 0, error);
+  if (ret != TRUE)
+    return -1;
+
+  return gibber_listener_get_port (priv->listener);
 }

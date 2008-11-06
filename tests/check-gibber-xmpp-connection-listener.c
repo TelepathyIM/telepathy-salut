@@ -73,6 +73,7 @@ START_TEST (test_listen)
   GibberXmppConnectionListener *listener;
   int port;
   gboolean result;
+  GError *error = NULL;
 
   got_connection = FALSE;
 
@@ -82,18 +83,8 @@ START_TEST (test_listen)
   g_signal_connect (listener, "new-connection", G_CALLBACK (new_connection_cb),
       NULL);
 
-  for (port = 5298; port < 5400; port++)
-    {
-      GError *error = NULL;
-      if (gibber_xmpp_connection_listener_listen (listener, port, &error))
-        break;
-
-      fail_if (!g_error_matches (error, GIBBER_LISTENER_ERROR,
-          GIBBER_LISTENER_ERROR_ADDRESS_IN_USE));
-      g_error_free (error);
-      error = NULL;
-    }
-  fail_if (port >= 5400);
+  port = gibber_xmpp_connection_listener_listen (listener, &error);
+  fail_if (port <= 0);
 
   result = connect_to_port (port);
   fail_if (result == FALSE);

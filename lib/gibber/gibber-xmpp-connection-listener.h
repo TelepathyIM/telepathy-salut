@@ -60,9 +60,9 @@ GType gibber_xmpp_connection_listener_get_type (void);
 GibberXmppConnectionListener *
 gibber_xmpp_connection_listener_new (void);
 
-gboolean
+int
 gibber_xmpp_connection_listener_listen (
-    GibberXmppConnectionListener *listener, int port, GError **error);
+    GibberXmppConnectionListener *listener, GError **error);
 
 G_END_DECLS
 
