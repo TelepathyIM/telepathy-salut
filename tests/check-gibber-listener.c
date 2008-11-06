@@ -96,7 +96,7 @@ START_TEST (test_unix_listen)
   g_signal_connect (listener_unix, "new-connection",
       G_CALLBACK (new_connection_cb), mainloop);
 
-  ret = gibber_listener_listen_socket (listener_unix, path, TRUE, &error);
+  ret = gibber_listener_listen_socket (listener_unix, path, FALSE, &error);
   fail_if (ret != TRUE);
 
   unix_transport = gibber_unix_transport_new ();

@@ -84,6 +84,15 @@ gibber_listener_error_quark (void)
   return quark;
 }
 
+static gboolean
+unimplemented (GError **error)
+{
+  g_set_error (error, GIBBER_LISTENER_ERROR, GIBBER_LISTENER_ERROR_FAILED,
+    "Unimplemented");
+
+  return FALSE;
+}
+
 static void
 gibber_listener_init (GibberListener *self)
 {
@@ -481,6 +490,9 @@ gibber_listener_listen_socket (GibberListener *listener,
           "GibberListener is already listening");
       return FALSE;
     }
+
+  if (abstract)
+    return unimplemented (error);
 
   memset (&addr, 0, sizeof (addr));
   addr.sun_family = PF_UNIX;
