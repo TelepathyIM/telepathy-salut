@@ -456,6 +456,7 @@ gibber_bytestream_oob_dispose (GObject *object)
   if (priv->listener != NULL)
     {
       g_object_unref (priv->listener);
+      priv->listener = NULL;
     }
 
   if (priv->xmpp_connection != NULL)
