@@ -139,8 +139,7 @@ gibber_unix_transport_connect (GibberUnixTransport *transport,
     }
 
   addr.un.sun_family = PF_UNIX;
-  strncpy (addr.un.sun_path, path, sizeof (addr.un.sun_path) - 1);
-  addr.un.sun_path[sizeof (addr.un.sun_path) - 1] = '\0';
+  g_strlcpy (addr.un.sun_path, path, sizeof (addr.un.sun_path));
 
   if (connect (fd, &addr.addr, sizeof (addr.un)) == -1)
     {
