@@ -961,10 +961,9 @@ new_connection_cb (GibberListener *listener,
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (user_data);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  socklen_t addrlen = sizeof (struct sockaddr_storage);
 
   if (priv->check_addr_func != NULL && !priv->check_addr_func (self, addr,
-        addrlen, priv->check_addr_func_data))
+        size, priv->check_addr_func_data))
     {
       DEBUG ("connection refused by the bytestream user");
       return;
