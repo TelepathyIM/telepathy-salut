@@ -79,9 +79,6 @@ gboolean gibber_ll_transport_is_incoming (GibberLLTransport *connection);
 void gibber_ll_transport_set_incoming (GibberLLTransport *connetion,
     gboolean incoming);
 
-
-gboolean gibber_ll_transport_get_address (GibberLLTransport *connection,
-    struct sockaddr_storage *addr, socklen_t *len);
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_LL_TRANSPORT_H__*/
