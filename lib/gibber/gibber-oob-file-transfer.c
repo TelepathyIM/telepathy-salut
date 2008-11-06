@@ -713,6 +713,8 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
       GError *error = NULL;
       const gchar *error_code_str;
 
+      self->priv->cancelled = TRUE;
+
       /* FIXME copy the error handling code from gabble */
       error_code_str = gibber_xmpp_node_get_attribute (error_node, "code");
       if (g_ascii_strtoll (error_code_str, NULL, 10) == 406)
