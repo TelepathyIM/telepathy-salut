@@ -80,6 +80,7 @@ START_TEST (test_tcp_listen)
 {
   GibberListener *listener_unix;
   GibberListener *listener;
+  GibberListener *listener_without_port;
   GibberListener *listener2;
   GibberUnixTransport *unix_transport;
   int port;
@@ -116,7 +117,27 @@ START_TEST (test_tcp_listen)
   g_object_unref (listener_unix);
   g_object_unref (unix_transport);
 
-  /* tcp socket tests */
+  /* tcp socket tests without a specified port */
+  listener_without_port = gibber_listener_new ();
+  fail_if (listener_without_port == NULL);
+
+  g_signal_connect (listener_without_port, "new-connection",
+      G_CALLBACK (new_connection_cb), mainloop);
+
+  port = gibber_listener_listen_tcp (listener_without_port, 0, &error);
+  fail_if (port <= 0);
+
+  signalled = FALSE;
+  transport = connect_to_port (port, mainloop);
+  if (!signalled)
+    g_main_loop_run (mainloop);
+
+  fail_if (!got_connection, "Failed to connect");
+
+  g_object_unref (listener_without_port);
+  g_object_unref (transport);
+
+  /* tcp socket tests with a specified port */
   listener = gibber_listener_new ();
   fail_if (listener == NULL);
 
