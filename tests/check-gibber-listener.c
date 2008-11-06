@@ -76,17 +76,12 @@ connect_to_port (int port, GMainLoop *loop)
   return GIBBER_TRANSPORT (transport);
 }
 
-START_TEST (test_tcp_listen)
+START_TEST (test_unix_listen)
 {
   GibberListener *listener_unix;
-  GibberListener *listener;
-  GibberListener *listener_without_port;
-  GibberListener *listener2;
   GibberUnixTransport *unix_transport;
-  int port;
   int ret;
   GMainLoop *mainloop;
-  GibberTransport *transport;
   GError *error = NULL;
   gchar *path = "/tmp/check-gibber-listener-socket";
 
@@ -95,7 +90,6 @@ START_TEST (test_tcp_listen)
 
   mainloop = g_main_loop_new (NULL, FALSE);
 
-  /* unix socket tests */
   listener_unix = gibber_listener_new ();
   fail_if (listener_unix == NULL);
 
@@ -116,6 +110,20 @@ START_TEST (test_tcp_listen)
 
   g_object_unref (listener_unix);
   g_object_unref (unix_transport);
+  g_main_loop_unref (mainloop);
+} END_TEST
+
+START_TEST (test_tcp_listen)
+{
+  GibberListener *listener;
+  GibberListener *listener_without_port;
+  GibberListener *listener2;
+  int port;
+  GMainLoop *mainloop;
+  GibberTransport *transport;
+  GError *error = NULL;
+
+  mainloop = g_main_loop_new (NULL, FALSE);
 
   /* tcp socket tests without a specified port */
   listener_without_port = gibber_listener_new ();
@@ -195,5 +203,6 @@ make_gibber_listener_tcase (void)
 {
   TCase *tc = tcase_create ("GibberListener");
   tcase_add_test (tc, test_tcp_listen);
+  tcase_add_test (tc, test_unix_listen);
   return tc;
 }
