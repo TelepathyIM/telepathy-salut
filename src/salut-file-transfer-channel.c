@@ -1030,6 +1030,9 @@ salut_file_transfer_channel_set_state (
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
+  if (self->priv->state == state)
+    return;
+
   self->priv->state = state;
   salut_svc_channel_type_file_transfer_emit_file_transfer_state_changed (iface,
       state, reason);
