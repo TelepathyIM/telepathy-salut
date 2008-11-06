@@ -667,8 +667,8 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
       case NOT_FOUND:
         gibber_xmpp_node_set_attribute (error_node, "code", code_string);
         gibber_xmpp_node_set_attribute (error_node, "type", "cancel");
-        error_desc = gibber_xmpp_node_add_child_ns (error_node, "not-found",
-            GIBBER_XMPP_NS_STANZAS);
+        error_desc = gibber_xmpp_node_add_child_ns (error_node,
+            "item-not-found", GIBBER_XMPP_NS_STANZAS);
         break;
       case NOT_ACCEPTABLE:
         gibber_xmpp_node_set_attribute (error_node, "code", code_string);
