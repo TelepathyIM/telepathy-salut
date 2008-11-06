@@ -46,7 +46,7 @@ G_DEFINE_TYPE (SalutXmppConnectionManager, salut_xmpp_connection_manager, \
 
 static void
 new_connection_cb (GibberXmppConnectionListener *listener,
-    GibberXmppConnection *connection, struct sockaddr_storage *addr,
+    GibberXmppConnection *connection, struct sockaddr *addr,
     guint size, gpointer user_data);
 static gboolean
 create_new_outgoing_connection (SalutXmppConnectionManager *self,
@@ -631,7 +631,7 @@ incoming_connection_found_contact (SalutXmppConnectionManager *self,
       goto error;
     }
 
-  if (!salut_contact_has_address (contact, &addr))
+  if (!salut_contact_has_address (contact, (struct sockaddr *) &addr, size))
     {
       DEBUG ("Contact %s doesn't have that address", contact->name);
       ret = FALSE;
@@ -798,7 +798,7 @@ incoming_pending_connection_parse_error_cb (GibberXmppConnection *conn,
 static void
 new_connection_cb (GibberXmppConnectionListener *listener,
                    GibberXmppConnection *connection,
-                   struct sockaddr_storage *addr,
+                   struct sockaddr *addr,
                    guint size,
                    gpointer user_data)
 {
@@ -810,7 +810,7 @@ new_connection_cb (GibberXmppConnectionListener *listener,
   DEBUG("Handling new incoming connection");
 
   contacts = salut_contact_manager_find_contacts_by_address (
-      priv->contact_manager, addr);
+      priv->contact_manager, addr, size);
   if (contacts == NULL)
     {
       DEBUG ("Couldn't find a contact for the incoming connection");

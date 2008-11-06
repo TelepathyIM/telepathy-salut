@@ -955,7 +955,7 @@ make_oob_init_iq (const gchar *from,
 static void
 new_connection_cb (GibberListener *listener,
                    GibberTransport *transport,
-                   struct sockaddr_storage *addr,
+                   struct sockaddr *addr,
                    guint size,
                    gpointer user_data)
 {

@@ -42,7 +42,7 @@ gboolean signalled;
 static void
 new_connection_cb (GibberListener *listener,
                    GibberTransport *connection,
-                   struct sockaddr_storage *addr,
+                   struct sockaddr *addr,
                    guint size,
                    GMainLoop *loop)
 {
