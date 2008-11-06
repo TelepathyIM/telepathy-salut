@@ -94,12 +94,9 @@ gibber_listener_init (GibberListener *self)
 }
 
 static void
-gibber_listener_dispose (GObject *object)
+gibber_listeners_clean_listeners (GibberListener *self)
 {
-  GibberListener *self =
-    GIBBER_LISTENER (object);
-  GibberListenerPrivate *priv =
-    GIBBER_LISTENER_GET_PRIVATE (self);
+  GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (self);
   GSList *t;
 
   for (t = priv->listeners ; t != NULL ; t = g_slist_delete_link (t, t))
@@ -112,6 +109,15 @@ gibber_listener_dispose (GObject *object)
     }
 
   priv->listeners = NULL;
+}
+
+static void
+gibber_listener_dispose (GObject *object)
+{
+  GibberListener *self =
+    GIBBER_LISTENER (object);
+
+  gibber_listeners_clean_listeners (self);
 
   G_OBJECT_CLASS (gibber_listener_parent_class)->dispose (
       object);
@@ -396,6 +402,7 @@ listen_tcp_af (GibberListener *listener, int port, GibberAddressFamily family,
   return TRUE;
 
 error:
+  gibber_listeners_clean_listeners (listener);
   if (ans != NULL)
     freeaddrinfo (ans);
 
