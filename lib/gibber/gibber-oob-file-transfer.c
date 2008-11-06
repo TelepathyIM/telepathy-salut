@@ -685,7 +685,6 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   gibber_file_transfer_send_stanza (ft, stanza, NULL);
 
   self->priv->cancelled = TRUE;
-  g_signal_emit_by_name (self, "canceled");
 }
 
 static void
