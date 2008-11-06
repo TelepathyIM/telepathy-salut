@@ -264,6 +264,15 @@ http_client_chunk_cb (SoupMessage *msg,
   /* FIXME make async */
   g_io_channel_write_chars (self->priv->channel, msg->response.body,
       msg->response.length, NULL, NULL);
+
+  if (msg->status_code != 200)
+    {
+      /* Something did wrong, so it's not file data. Don't fire the
+       * transferred-chunk signal. */
+      self->priv->transferred_bytes += msg->response.length;
+      return;
+    }
+
   transferred_chunk (self, (guint64) msg->response.length);
 }
 
