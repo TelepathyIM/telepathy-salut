@@ -623,8 +623,7 @@ incoming_connection_found_contact (SalutXmppConnectionManager *self,
   g_signal_handlers_disconnect_matched (conn->transport,
      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
-  if (!gibber_ll_transport_get_address (
-        GIBBER_LL_TRANSPORT (conn->transport), &addr, &size))
+  if (!gibber_transport_get_sockaddr (conn->transport, &addr, &size))
     {
       DEBUG ("Failed to get address of connection from %s", contact->name);
       ret = FALSE;
@@ -703,6 +702,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   GList *contacts;
+  guint contacts_len;
 
   DEBUG ("incoming pending connection with %s opened. Open it too", from);
   gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
@@ -722,20 +722,39 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
    * support that yet.
    * */
   if (from != NULL)
-    incoming_pending_connection_got_from (self, conn, from);
+    {
+      incoming_pending_connection_got_from (self, conn, from);
+      return;
+    }
 
   /* If it's a transport to just one contacts machine, hook it up right away.
    * This is needed because iChat doesn't send message with to and
    * from data...
    */
   contacts = g_hash_table_lookup (priv->incoming_pending_connections, conn);
-  if (g_list_length (contacts) == 1)
+  contacts_len = g_list_length (contacts);
+  if (contacts_len == 1)
     {
       SalutContact *contact = contacts->data;
 
       DEBUG ("Incoming connection from a machine with just one contact (%s). "
           "Assuming it's a connection from that contact", contact->name);
       incoming_connection_found_contact (self, conn, contact);
+    }
+  else
+    {
+      GList *l;
+
+      DEBUG ("Incoming connection from a machine with %d contacts. "
+          "Can't assume its identity. Possible contacts are:",
+          contacts_len);
+
+      for (l = contacts; l != NULL; l = g_list_next (l))
+        {
+          SalutContact *contact = SALUT_CONTACT (l->data);
+
+          DEBUG ("--> %s\n", contact->name);
+        }
     }
 }
 
@@ -744,7 +763,7 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
                                                 GibberXmppStanza *stanza,
                                                 gpointer userdata)
 {
-  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (conn);
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
   const gchar *from;
 
   /* If the identity wasn't clear from the stream opening we only wait to the

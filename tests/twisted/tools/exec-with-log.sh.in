@@ -19,4 +19,5 @@ elif test -n "$SALUT_TEST_REFDBG"; then
         fi
 fi
 
+export G_DEBUG=fatal-warnings" ${G_DEBUG}"
 exec $SALUT_WRAPPER @abs_top_builddir@/src/telepathy-salut

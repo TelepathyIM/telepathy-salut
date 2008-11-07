@@ -192,21 +192,3 @@ gibber_ll_transport_set_incoming (GibberLLTransport *transport,
     GIBBER_TRANSPORT (transport)->state == GIBBER_TRANSPORT_DISCONNECTED);
   priv->incoming = incoming;
 }
-
-gboolean
-gibber_ll_transport_get_address (GibberLLTransport *transport,
-    struct sockaddr_storage *addr, socklen_t *len)
-{
-  GibberFdTransport *fd_transport = GIBBER_FD_TRANSPORT (transport);
-  gboolean success = FALSE;
-
-  g_assert (fd_transport->fd >= 0);
-  g_assert (*len == sizeof (struct sockaddr_storage));
-
-  success = (getpeername (fd_transport->fd, (struct sockaddr *)
-      addr, len) == 0);
-
-  gibber_normalize_address (addr);
-
-  return success;
-}
