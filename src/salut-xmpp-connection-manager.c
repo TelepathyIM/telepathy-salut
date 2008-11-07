@@ -1135,11 +1135,15 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   int port;
 
-  for (port = 5298; port < 5400; port++)
+  /* The port 5298 is preferred to remain compatible with old versions of
+   * iChat. Try a few close to it, and if those fail, use a random port. */
+  for (port = 5298; port < 5300; port++)
     {
       GError *e = NULL;
-      if (gibber_xmpp_connection_listener_listen (priv->listener, port,
-            &e))
+      int ret;
+      ret = gibber_xmpp_connection_listener_listen (priv->listener, port, &e);
+
+      if (ret == port)
         break;
 
       if (!g_error_matches (e, GIBBER_LISTENER_ERROR,
@@ -1153,8 +1157,10 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
       e = NULL;
     }
 
-  if (port >= 5400)
-    return -1;
+  if (port >= 5300)
+    {
+      return gibber_xmpp_connection_listener_listen (priv->listener, 0, error);
+    }
 
   return port;
 }
