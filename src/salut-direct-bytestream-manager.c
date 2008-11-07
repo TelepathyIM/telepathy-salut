@@ -335,7 +335,7 @@ listener_io_in_cb (GIOChannel *source,
    * register a callback for the "new-connection" bytestream's signal. */
   data->cb (bytestream, data->user_data);
 
-  gibber_bytestream_direct_accept_socket (bytestream, listen_fd);
+  //gibber_bytestream_direct_accept_socket (bytestream, listen_fd);
 
   return TRUE;
 }

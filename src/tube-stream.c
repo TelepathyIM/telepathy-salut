@@ -50,7 +50,6 @@
 #include "salut-connection.h"
 #include "tube-iface.h"
 #include "salut-si-bytestream-manager.h"
-#include "salut-direct-bytestream-manager.h"
 #include "salut-contact-manager.h"
 #include "salut-xmpp-connection-manager.h"
 
@@ -178,6 +177,9 @@ static void xmpp_connection_manager_connection_closed_cb (
     SalutContact *old_contact, gpointer user_data);
 
 static void ensure_iq_helper (SalutTubeStream *tube);
+
+static void salut_tube_stream_add_bytestream (SalutTubeIface *tube,
+    GibberBytestreamIface *bytestream);
 
 static void
 generate_ascii_string (guint len,
@@ -1585,14 +1587,37 @@ contact_new_connection_cb (GibberListener *listener,
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GibberBytestreamIface *bytestream;
-  TpHandleRepoIface *contact_repo;
+  SalutContactManager *contact_mgr;
+  SalutContact *contact;
 
   g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
 
-  contact_repo = tp_base_connection_get_handles (
-     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  g_object_get (priv->conn,
+      "contact-manager", &contact_mgr,
+      NULL);
+  g_assert (contact_mgr != NULL);
 
-  jid = tp_handle_inspect (contact_repo, priv->handle);
+  contact = salut_contact_manager_get_contact (contact_mgr, priv->handle);
+  if (contact == NULL)
+    {
+      DEBUG ("can't find contact with handle %d", priv->handle);
+      g_object_unref (contact_mgr);
+      return;
+    }
+
+  bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_DIRECT,
+      "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
+      "self-id", priv->conn->name,
+      "peer-id", contact->name,
+      NULL);
+
+  g_assert (bytestream != NULL);
+
+  salut_tube_stream_add_bytestream (SALUT_TUBE_IFACE (self), bytestream);
+  gibber_bytestream_direct_accept_socket (bytestream, transport);
+
+  g_object_unref (contact);
+  g_object_unref (contact_mgr);
 }
 
 /**
@@ -1610,7 +1635,7 @@ salut_tube_stream_listen (SalutTubeIface *tube)
   g_assert (priv->contact_listener == NULL);
   priv->contact_listener = gibber_listener_new ();
 
-  g_signal_connect (priv->local_listener, "new-connection",
+  g_signal_connect (priv->contact_listener, "new-connection",
       G_CALLBACK (contact_new_connection_cb), self);
 
   ret = gibber_listener_listen_tcp (priv->contact_listener, 0, NULL);

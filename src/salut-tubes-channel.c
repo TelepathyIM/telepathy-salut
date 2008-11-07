@@ -48,7 +48,6 @@
 #include "salut-contact.h"
 #include "salut-muc-channel.h"
 #include "salut-xmpp-connection-manager.h"
-#include "salut-direct-bytestream-manager.h"
 #include "tube-iface.h"
 #include "tube-dbus.h"
 #include "tube-stream.h"
@@ -1829,14 +1828,6 @@ iq_reply_cb (GibberIqHelper *helper,
       NULL);
 
   DEBUG ("tube offered successfully");
-}
-
-static void
-new_connection_cb (GibberBytestreamIface *bytestream, gpointer user_data)
-{
-  SalutTubeIface *tube = user_data;
-
-  salut_tube_iface_add_bytestream (tube, bytestream);
 }
 
 static void

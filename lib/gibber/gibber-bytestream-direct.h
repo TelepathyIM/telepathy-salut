@@ -23,6 +23,7 @@
 #include <glib-object.h>
 #include <netdb.h>
 #include "gibber-bytestream-iface.h"
+#include "gibber-transport.h"
 
 G_BEGIN_DECLS
 
@@ -67,7 +68,7 @@ void gibber_bytestream_direct_set_check_addr_func (
     GibberBytestreamDirectCheckAddrFunc func, gpointer user_data);
 
 gboolean gibber_bytestream_direct_accept_socket (
-    GibberBytestreamIface *bytestream, int listen_fd);
+    GibberBytestreamIface *bytestream, GibberTransport *transport);
 
 G_END_DECLS
 

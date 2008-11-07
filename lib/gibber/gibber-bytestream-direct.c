@@ -129,6 +129,12 @@ gibber_bytestream_direct_dispose (GObject *object)
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
     }
 
+  if (priv->transport != NULL)
+    {
+      g_object_unref (priv->transport);
+      priv->transport = NULL;
+    }
+
   G_OBJECT_CLASS (gibber_bytestream_direct_parent_class)->dispose (object);
 }
 
@@ -462,7 +468,7 @@ set_transport (GibberBytestreamDirect *self,
 
   g_assert (priv->transport == NULL);
 
-  priv->transport = transport;
+  priv->transport = g_object_ref (transport);
   gibber_transport_set_handler (transport, transport_handler, self);
 
   g_signal_connect (transport, "connected",
@@ -475,19 +481,11 @@ set_transport (GibberBytestreamDirect *self,
 
 gboolean
 gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
-                                        int listen_fd)
+                                        GibberTransport *transport)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (bytestream);
-  GibberBytestreamDirectPrivate *priv;
-  GibberLLTransport *ll_transport;
-  struct sockaddr_storage addr;
-  int fd, ret;
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  socklen_t addrlen = sizeof (struct sockaddr_storage);
-
-
-  priv = GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  GibberBytestreamDirectPrivate *priv = 
+    GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
@@ -496,28 +494,9 @@ gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
       return FALSE;
     }
 
-  fd = accept (listen_fd, (struct sockaddr *) &addr, &addrlen);
-  gibber_normalize_address (&addr);
-
-  ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
-      host, NI_MAXHOST, port, NI_MAXSERV,
-      NI_NUMERICHOST | NI_NUMERICSERV);
-
-  if (priv->check_addr_func != NULL && !priv->check_addr_func (self,
-        (struct sockaddr *) &addr, addrlen, priv->check_addr_func_data))
-    {
-      DEBUG ("connection from %s refused by the bytestream user", host);
-      return FALSE;
-    }
-
-  if (ret == 0)
-    DEBUG("New connection from %s port %s", host, port);
-  else
-    DEBUG("New connection..");
-
-  ll_transport = gibber_ll_transport_new ();
-  set_transport (self, GIBBER_TRANSPORT (ll_transport));
-  gibber_ll_transport_open_fd (ll_transport, fd);
+  set_transport (self, transport);
+  gibber_transport_set_state (transport, GIBBER_TRANSPORT_CONNECTING);
+  gibber_transport_set_state (transport, GIBBER_TRANSPORT_CONNECTED);
 
   return TRUE;
 }
