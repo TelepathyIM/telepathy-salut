@@ -742,13 +742,13 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
     {
       GList *l;
 
-      DEBUG ("Incoming connection from a machine with more than one "
-          "contact (%d). Can't assume its identity. Possible contacts are:",
+      DEBUG ("Incoming connection from a machine with %d contacts. "
+          "Can't assume its identity. Possible contacts are:",
           contacts_len);
 
       for (l = contacts; l != NULL; l = g_list_next (l))
         {
-          SalutContact *contact = l->data;
+          SalutContact *contact = SALUT_CONTACT (l->data);
 
           DEBUG ("--> %s\n", contact->name);
         }
