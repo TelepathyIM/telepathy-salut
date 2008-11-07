@@ -517,19 +517,12 @@ start_stream_direct (SalutTubeStream *self,
                      GError **error)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  TpHandleRepoIface *contact_repo;
-  const gchar *jid;
   SalutContact *contact;
   SalutContactManager *contact_mgr;
   SalutDirectBytestreamManager *direct_bytestream_mgr;
   GibberBytestreamIface *bytestream;
 
   g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
-
-  contact_repo = tp_base_connection_get_handles (
-     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
-
-  jid = tp_handle_inspect (contact_repo, priv->initiator);
 
   g_object_get (priv->conn,
       "direct-bytestream-manager", &direct_bytestream_mgr,
