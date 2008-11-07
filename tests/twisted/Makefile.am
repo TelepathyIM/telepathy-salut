@@ -12,8 +12,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-send-file-wait-to-provide.py \
 	avahi/test-receive-file.py \
 	avahi/test-receive-file-not-found.py \
-	avahi/test-text-channel.py
-	avahi/test-ichat-composing.py
+	avahi/test-text-channel.py \
+	avahi/test-ichat-composing.py \
 	avahi/test-ichat-incoming-msg.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
