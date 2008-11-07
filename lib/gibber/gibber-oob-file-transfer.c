@@ -150,15 +150,16 @@ static gchar *
 unescape_filename (const char *escaped);
 
 GibberFileTransfer *
-gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
-                                          GibberXmppConnection *connection)
+gibber_oob_file_transfer_new_from_stanza_with_from (
+    GibberXmppStanza *stanza,
+    GibberXmppConnection *connection,
+    const gchar *peer_id)
 {
   GibberOobFileTransfer *self;
   GibberXmppNode *query;
   GibberXmppNode *url_node;
   GibberXmppNode *desc_node;
   const gchar *self_id;
-  const gchar *peer_id;
   const gchar *type;
   const gchar *id;
   const gchar *size;
@@ -170,7 +171,6 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
   if (strcmp (stanza->node->name, "iq") != 0)
     return NULL;
 
-  peer_id = gibber_xmpp_node_get_attribute (stanza->node, "from");
   self_id = gibber_xmpp_node_get_attribute (stanza->node, "to");
   if (peer_id == NULL || self_id == NULL)
     return NULL;
