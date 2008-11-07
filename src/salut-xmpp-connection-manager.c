@@ -722,7 +722,10 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
    * support that yet.
    * */
   if (from != NULL)
-    incoming_pending_connection_got_from (self, conn, from);
+    {
+      incoming_pending_connection_got_from (self, conn, from);
+      return;
+    }
 
   /* If it's a transport to just one contacts machine, hook it up right away.
    * This is needed because iChat doesn't send message with to and
