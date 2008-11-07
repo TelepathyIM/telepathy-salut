@@ -33,15 +33,17 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
-#include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-bytestream-iface.h>
 #include <gibber/gibber-bytestream-oob.h>
-#include <gibber/gibber-bytestream-direct.h>
-#include <gibber/gibber-transport.h>
 #include <gibber/gibber-fd-transport.h>
 #include <gibber/gibber-iq-helper.h>
 #include <gibber/gibber-listener.h>
+#include <gibber/gibber-namespaces.h>
+#include <gibber/gibber-tcp-transport.h>
+#include <gibber/gibber-transport.h>
+#include <gibber/gibber-unix-transport.h>
+#include <gibber/gibber-xmpp-stanza.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
 
@@ -613,109 +615,49 @@ new_connection_to_socket (SalutTubeStream *self,
                           GibberBytestreamIface *bytestream)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GibberFdTransport *transport;
-  int fd;
-  SockAddr addr;
-  socklen_t len;
+  GibberTransport *transport;
 
   DEBUG ("Called.");
 
   g_assert (priv->initiator == priv->self_handle);
 
-  memset (&addr, 0, sizeof (addr));
-
   if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_UNIX)
     {
       GArray *array;
       array = g_value_get_boxed (priv->address);
-
-      fd = socket (PF_UNIX, SOCK_STREAM, 0);
-      if (fd == -1)
-        {
-          DEBUG ("Error creating socket: %s", g_strerror (errno));
-          return FALSE;
-        }
-
-      addr.un.sun_family = PF_UNIX;
-      g_strlcpy (addr.un.sun_path, array->data, sizeof (addr.un.sun_path));
-      len = sizeof (addr.un);
-
       DEBUG ("Will try to connect to socket: %s", (const gchar *) array->data);
+
+      transport = GIBBER_TRANSPORT (gibber_unix_transport_new ());
+      gibber_unix_transport_connect (GIBBER_UNIX_TRANSPORT (transport),
+          array->data, NULL);
     }
   else if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 ||
       priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV6)
     {
       gchar *ip;
+      gchar *port_str;
       guint port;
-      struct addrinfo req, *result = NULL;
-      int ret;
-
-      if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4)
-        fd = socket (PF_INET, SOCK_STREAM, 0);
-      else
-        fd = socket (PF_INET6, SOCK_STREAM, 0);
-
-      if (fd == -1)
-        {
-          DEBUG ("Error creating socket: %s", g_strerror (errno));
-          return FALSE;
-        }
 
       dbus_g_type_struct_get (priv->address,
           0, &ip,
           1, &port,
           G_MAXUINT);
+      port_str = g_strdup_printf ("%d", port);
 
-      memset (&req, 0, sizeof (req));
-      req.ai_flags = AI_NUMERICHOST;
-      req.ai_socktype = SOCK_STREAM;
-      req.ai_protocol = IPPROTO_TCP;
+      transport = GIBBER_TRANSPORT (gibber_tcp_transport_new ());
+      gibber_tcp_transport_connect (GIBBER_TCP_TRANSPORT (transport), ip,
+          port_str);
 
-      if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4)
-        req.ai_family = AF_INET;
-      else
-        req.ai_family = AF_INET6;
-
-      ret = getaddrinfo (ip, NULL, &req, &result);
-      if (ret != 0)
-        {
-          DEBUG ("getaddrinfo failed: %s",  gai_strerror (ret));
-          g_free (ip);
-          return FALSE;
-        }
-
-      DEBUG ("Will try to connect to %s:%u", ip, port);
-
-      if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4)
-        {
-          memcpy (&addr, result->ai_addr, sizeof (addr.ipv4));
-          addr.ipv4.sin_port = ntohs (port);
-          len = sizeof (addr.ipv4);
-        }
-      else
-        {
-          memcpy (&addr, result->ai_addr, sizeof (addr.ipv6));
-          addr.ipv6.sin6_port = ntohs (port);
-          len = sizeof (addr.ipv6);
-        }
+      /* TODO: use priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 */
 
       g_free (ip);
-      freeaddrinfo (result);
+      g_free (port_str);
     }
   else
     {
       g_assert_not_reached ();
     }
 
-  if (connect (fd, (struct sockaddr *) &addr, len) == -1)
-    {
-      DEBUG ("Error connecting socket: %s", g_strerror (errno));
-      return FALSE;
-    }
-  DEBUG ("Connected to socket");
-
-  transport = g_object_new (GIBBER_TYPE_FD_TRANSPORT, NULL);
-  gibber_fd_transport_set_fd (transport, fd);
 
   g_hash_table_insert (priv->bytestream_to_transport, g_object_ref (bytestream),
       g_object_ref (transport));
