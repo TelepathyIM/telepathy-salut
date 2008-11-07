@@ -521,7 +521,6 @@ start_stream_direct (SalutTubeStream *self,
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo;
   const gchar *jid;
-  struct _extra_bytestream_negotiate_cb_data *data;
   SalutContact *contact;
   SalutContactManager *contact_mgr;
   GibberBytestreamIface *bytestream;
@@ -532,10 +531,6 @@ start_stream_direct (SalutTubeStream *self,
      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
   jid = tp_handle_inspect (contact_repo, priv->initiator);
-
-  data = g_slice_new (struct _extra_bytestream_negotiate_cb_data);
-  data->self = self;
-  data->transport = g_object_ref (transport);
 
   g_object_get (priv->conn,
       "contact-manager", &contact_mgr,
