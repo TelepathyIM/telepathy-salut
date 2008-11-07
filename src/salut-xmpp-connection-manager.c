@@ -1162,7 +1162,7 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
       int ret;
       ret = gibber_xmpp_connection_listener_listen (priv->listener, port, &e);
 
-      if (ret == TRUE)
+      if (ret)
         break;
 
       if (!g_error_matches (e, GIBBER_LISTENER_ERROR,
@@ -1180,7 +1180,7 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
     {
       int ret = gibber_xmpp_connection_listener_listen (priv->listener, 0, error);
 
-      if (ret == TRUE)
+      if (ret)
         {
           return gibber_xmpp_connection_listener_get_port (priv->listener);
         }
