@@ -58,8 +58,6 @@ struct _GibberXmppConnectionListenerPrivate
 {
   GibberListener *listener;
 
-  int port;
-
   gboolean dispose_has_run;
 };
 
@@ -181,9 +179,6 @@ gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self,
 
   ret = gibber_listener_listen_tcp (priv->listener, port, error);
 
-  if (ret == TRUE)
-    priv->port = gibber_listener_get_port (priv->listener);
-
   return ret;
 }
 
@@ -194,5 +189,7 @@ gibber_xmpp_connection_listener_get_port (
   GibberXmppConnectionListenerPrivate *priv =
     GIBBER_XMPP_CONNECTION_LISTENER_GET_PRIVATE (self);
 
-  return priv->port;
+  g_return_val_if_fail (priv->listener != NULL, 0);
+
+  return gibber_listener_get_port (priv->listener);
 }
