@@ -53,7 +53,7 @@ struct _SalutContactClass {
     /* public abstract methods */
     GArray * (*get_addresses) (SalutContact *contact);
     gboolean (*has_address) (SalutContact *contact,
-        struct sockaddr_storage *address);
+        struct sockaddr *address, guint size);
 
     /* private abstract methods */
     void (*retrieve_avatar) (SalutContact *contact);
@@ -104,7 +104,8 @@ typedef struct {
 GArray * salut_contact_get_addresses (SalutContact *contact);
 
 gboolean salut_contact_has_address (SalutContact *contact,
-                                   struct sockaddr_storage *address);
+                                    struct sockaddr *address,
+                                    guint size);
 const gchar * salut_contact_get_alias (SalutContact *contact);
 
 typedef void (*salut_contact_get_avatar_callback)(SalutContact *contact,

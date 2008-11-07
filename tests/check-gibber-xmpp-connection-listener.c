@@ -40,7 +40,7 @@ gboolean got_connection;
 static void
 new_connection_cb (GibberXmppConnectionListener *listener,
                    GibberXmppConnection *connection,
-                   struct sockaddr_storage *addr,
+                   struct sockaddr *addr,
                    guint size,
                    gpointer user_data)
 {
