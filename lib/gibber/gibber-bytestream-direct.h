@@ -30,7 +30,7 @@ typedef struct _GibberBytestreamDirect GibberBytestreamDirect;
 typedef struct _GibberBytestreamDirectClass GibberBytestreamDirectClass;
 
 typedef gboolean (* GibberBytestreamDirectCheckAddrFunc) (
-    GibberBytestreamDirect *bytestream, struct sockaddr_storage *addr,
+    GibberBytestreamDirect *bytestream, struct sockaddr *addr,
     socklen_t addrlen, gpointer user_data);
 
 struct _GibberBytestreamDirectClass {

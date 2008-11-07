@@ -268,7 +268,7 @@ salut_direct_bytestream_manager_new (SalutConnection *conn)
 
 static gboolean
 check_bytestream_direct_peer_addr (GibberBytestreamDirect *bytestream,
-                                   struct sockaddr_storage *addr,
+                                   struct sockaddr *addr,
                                    socklen_t addrlen,
                                    gpointer user_data)
 {
@@ -299,7 +299,7 @@ check_bytestream_direct_peer_addr (GibberBytestreamDirect *bytestream,
   if (contact == NULL)
     return FALSE;
 
-  result = salut_contact_has_address (contact, addr);
+  result = salut_contact_has_address (contact, addr, addrlen);
   g_object_unref (contact);
 
   return result;
