@@ -301,7 +301,7 @@ add_listener (GibberListener *self, int family, int type, int protocol,
         break;
     }
 
-  l = g_slice_new(Listener);
+  l = g_slice_new (Listener);
 
   l->listener = g_io_channel_unix_new (fd);
   g_io_channel_set_close_on_unref (l->listener, TRUE);
