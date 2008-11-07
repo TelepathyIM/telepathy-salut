@@ -1173,7 +1173,7 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
       int ret;
       ret = gibber_xmpp_connection_listener_listen (priv->listener, port, &e);
 
-      if (ret == port)
+      if (ret == TRUE)
         break;
 
       if (!g_error_matches (e, GIBBER_LISTENER_ERROR,
@@ -1189,7 +1189,14 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
 
   if (port >= 5300)
     {
-      return gibber_xmpp_connection_listener_listen (priv->listener, 0, error);
+      int ret = gibber_xmpp_connection_listener_listen (priv->listener, 0, error);
+
+      if (ret == TRUE)
+        {
+          return gibber_xmpp_connection_listener_get_port (priv->listener);
+        }
+      else
+        return -1;
     }
 
   return port;
