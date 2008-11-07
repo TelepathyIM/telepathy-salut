@@ -1133,8 +1133,30 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
 {
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
+  int port;
 
-  return gibber_xmpp_connection_listener_listen (priv->listener, error);
+  for (port = 5298; port < 5400; port++)
+    {
+      GError *e = NULL;
+      if (gibber_xmpp_connection_listener_listen (priv->listener, port,
+            &e))
+        break;
+
+      if (!g_error_matches (e, GIBBER_LISTENER_ERROR,
+            GIBBER_LISTENER_ERROR_ADDRESS_IN_USE))
+        {
+          g_propagate_error (error, e);
+          return -1;
+        }
+
+      g_error_free (e);
+      e = NULL;
+    }
+
+  if (port >= 5400)
+    return -1;
+
+  return port;
 }
 
 struct find_connection_for_contact_data
