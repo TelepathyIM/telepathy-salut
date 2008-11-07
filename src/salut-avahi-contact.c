@@ -146,7 +146,7 @@ static void
 _avahi_address_to_sockaddr (AvahiAddress *address,
                             guint16 port,
                             AvahiIfIndex index,
-                            struct sockaddr_storage *sockaddr)
+                            struct sockaddr *sockaddr)
 {
   switch (address->proto)
     {
@@ -188,7 +188,7 @@ _add_address (GaServiceResolver *resolver,
   if (ga_service_resolver_get_address (resolver, &address, &port))
     {
       _avahi_address_to_sockaddr (&address, port, ifindex,
-          &(s_address.address));
+          (struct sockaddr *) &s_address.address);
       g_array_append_val (addresses, s_address);
     }
 }
@@ -209,9 +209,9 @@ salut_avahi_contact_get_addresses (SalutContact *contact)
 
 static gint
 _compare_address (GaServiceResolver *resolver,
-                  struct sockaddr_storage *addr_b)
+                  struct sockaddr *addr_b)
 {
-  struct sockaddr_storage addr_a;
+  struct sockaddr addr_a;
   AvahiIfIndex ifindex;
   AvahiAddress address;
   uint16_t port;
@@ -222,11 +222,10 @@ _compare_address (GaServiceResolver *resolver,
 
   _avahi_address_to_sockaddr (&address, port, ifindex, &addr_a);
 
-  if ( ((struct sockaddr *) &addr_a)->sa_family
-       != ((struct sockaddr *) addr_b)->sa_family)
+  if (addr_a.sa_family != addr_b->sa_family)
     return -1;
 
-  switch (((struct sockaddr *) &addr_a)->sa_family)
+  switch (addr_a.sa_family)
     {
       case AF_INET:
         {
@@ -250,7 +249,8 @@ _compare_address (GaServiceResolver *resolver,
 
 static gboolean
 salut_avahi_contact_has_address (SalutContact *contact,
-                                 struct sockaddr_storage *address)
+                                 struct sockaddr *address,
+                                 guint size)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (contact);
   SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);

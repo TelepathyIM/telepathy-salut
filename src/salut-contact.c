@@ -387,9 +387,10 @@ salut_contact_get_addresses (SalutContact *self)
 
 gboolean
 salut_contact_has_address (SalutContact *self,
-                           struct sockaddr_storage *address)
+                           struct sockaddr *address,
+                           guint size)
 {
-  return SALUT_CONTACT_GET_CLASS (self)->has_address (self, address);
+  return SALUT_CONTACT_GET_CLASS (self)->has_address (self, address, size);
 }
 
 const gchar *

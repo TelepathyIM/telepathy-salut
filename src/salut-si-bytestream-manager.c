@@ -711,7 +711,7 @@ si_request_reply_filter (SalutXmppConnectionManager *manager,
 
 static gboolean
 check_bytestream_oob_peer_addr (GibberBytestreamOOB *bytestream,
-                                struct sockaddr_storage *addr,
+                                struct sockaddr *addr,
                                 socklen_t addrlen,
                                 gpointer user_data)
 {
@@ -741,7 +741,7 @@ check_bytestream_oob_peer_addr (GibberBytestreamOOB *bytestream,
   if (contact == NULL)
     return FALSE;
 
-  result = salut_contact_has_address (contact, addr);
+  result = salut_contact_has_address (contact, addr, addrlen);
   g_object_unref (contact);
 
   return result;

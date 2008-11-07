@@ -77,7 +77,7 @@ salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle);
 
 GList *
 salut_contact_manager_find_contacts_by_address (SalutContactManager *mgr,
-    struct sockaddr_storage *address);
+    struct sockaddr *address, guint size);
 
 SalutContact * salut_contact_manager_ensure_contact (SalutContactManager *mgr,
     const gchar *name);
