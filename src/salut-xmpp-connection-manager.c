@@ -702,6 +702,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
   SalutXmppConnectionManagerPrivate *priv =
     SALUT_XMPP_CONNECTION_MANAGER_GET_PRIVATE (self);
   GList *contacts;
+  guint contacts_len;
 
   DEBUG ("incoming pending connection with %s opened. Open it too", from);
   gibber_xmpp_connection_open (conn, from, priv->connection->name, "1.0");
@@ -728,13 +729,29 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
    * from data...
    */
   contacts = g_hash_table_lookup (priv->incoming_pending_connections, conn);
-  if (g_list_length (contacts) == 1)
+  contacts_len = g_list_length (contacts);
+  if (contacts_len == 1)
     {
       SalutContact *contact = contacts->data;
 
       DEBUG ("Incoming connection from a machine with just one contact (%s). "
           "Assuming it's a connection from that contact", contact->name);
       incoming_connection_found_contact (self, conn, contact);
+    }
+  else
+    {
+      GList *l;
+
+      DEBUG ("Incoming connection from a machine with %d contacts. "
+          "Can't assume its identity. Possible contacts are:",
+          contacts_len);
+
+      for (l = contacts; l != NULL; l = g_list_next (l))
+        {
+          SalutContact *contact = SALUT_CONTACT (l->data);
+
+          DEBUG ("--> %s\n", contact->name);
+        }
     }
 }
 
