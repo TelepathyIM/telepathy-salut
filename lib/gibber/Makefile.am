@@ -62,6 +62,8 @@ HANDWRITTEN_SOURCES =             \
   gibber-file-transfer.h          \
   gibber-oob-file-transfer.c      \
   gibber-oob-file-transfer.h      \
+  gibber-listener.c               \
+  gibber-listener.h               \
   gibber-xmpp-connection-listener.c \
   gibber-xmpp-connection-listener.h \
   gibber-xmpp-error.h             \

@@ -29,6 +29,7 @@
 #include <arpa/inet.h>
 
 #include <gibber/gibber-linklocal-transport.h>
+#include <gibber/gibber-listener.h>
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-xmpp-connection-listener.h>
 
@@ -87,8 +88,8 @@ START_TEST (test_listen)
       if (gibber_xmpp_connection_listener_listen (listener, port, &error))
         break;
 
-      fail_if (error->code !=
-          GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE);
+      fail_if (!g_error_matches (error, GIBBER_LISTENER_ERROR,
+          GIBBER_LISTENER_ERROR_ADDRESS_IN_USE));
       g_error_free (error);
       error = NULL;
     }

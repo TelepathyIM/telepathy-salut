@@ -28,6 +28,7 @@
 #include "salut-contact.h"
 #include "salut-contact-manager.h"
 
+#include <gibber/gibber-listener.h>
 #include <gibber/gibber-xmpp-connection-listener.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-linklocal-transport.h>
@@ -622,8 +623,7 @@ incoming_connection_found_contact (SalutXmppConnectionManager *self,
   g_signal_handlers_disconnect_matched (conn->transport,
      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
-  if (!gibber_ll_transport_get_address (
-        GIBBER_LL_TRANSPORT (conn->transport), &addr, &size))
+  if (!gibber_transport_get_sockaddr (conn->transport, &addr, &size))
     {
       DEBUG ("Failed to get address of connection from %s", contact->name);
       ret = FALSE;
@@ -743,7 +743,7 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
                                                 GibberXmppStanza *stanza,
                                                 gpointer userdata)
 {
-  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (conn);
+  SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
   const gchar *from;
 
   /* If the identity wasn't clear from the stream opening we only wait to the
@@ -1141,7 +1141,8 @@ salut_xmpp_connection_manager_listen (SalutXmppConnectionManager *self,
             &e))
         break;
 
-      if (e->code != GIBBER_XMPP_CONNECTION_LISTENER_ERROR_ADDR_IN_USE)
+      if (!g_error_matches (e, GIBBER_LISTENER_ERROR,
+            GIBBER_LISTENER_ERROR_ADDRESS_IN_USE))
         {
           g_propagate_error (error, e);
           return -1;
