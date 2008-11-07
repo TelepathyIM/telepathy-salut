@@ -503,8 +503,8 @@ gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
       host, NI_MAXHOST, port, NI_MAXSERV,
       NI_NUMERICHOST | NI_NUMERICSERV);
 
-  if (priv->check_addr_func != NULL && !priv->check_addr_func (self, &addr,
-        addrlen, priv->check_addr_func_data))
+  if (priv->check_addr_func != NULL && !priv->check_addr_func (self,
+        (struct sockaddr *) &addr, addrlen, priv->check_addr_func_data))
     {
       DEBUG ("connection from %s refused by the bytestream user", host);
       return FALSE;
