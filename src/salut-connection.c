@@ -48,7 +48,6 @@
 #include "salut-contact-channel.h"
 #include "salut-contact.h"
 #include "salut-contact-manager.h"
-#include "salut-direct-bytestream-manager.h"
 #include "salut-disco.h"
 #include "salut-discovery-client.h"
 #include "salut-im-manager.h"
