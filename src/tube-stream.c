@@ -144,9 +144,13 @@ struct _SalutTubeStreamPrivate
   TpSocketAccessControl access_control;
   GValue *access_control_param;
 
-  GibberListener *listener;
+  /* listen for connections from local applications */
+  GibberListener *local_listener;
   GIOChannel *listen_io_channel;
   guint listen_io_channel_source_id;
+
+  /* listen for connections from the remote CM */
+  GibberListener *contact_listener;
 
   gboolean closed;
 
@@ -583,11 +587,11 @@ start_stream_direct (SalutTubeStream *self,
 
 /* callback for listening connections from the local application */
 static void
-new_connection_cb (GibberListener *listener,
-                   GibberTransport *transport,
-                   struct sockaddr_storage *addr,
-                   guint size,
-                   gpointer user_data)
+local_new_connection_cb (GibberListener *listener,
+                         GibberTransport *transport,
+                         struct sockaddr_storage *addr,
+                         guint size,
+                         gpointer user_data)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
@@ -748,11 +752,11 @@ tube_stream_open (SalutTubeStream *self,
   /* We didn't create this tube so it doesn't have
    * a socket associated with it. Let's create one */
   g_assert (priv->address == NULL);
-  g_assert (priv->listener == NULL);
-  priv->listener = gibber_listener_new ();
+  g_assert (priv->local_listener == NULL);
+  priv->local_listener = gibber_listener_new ();
 
-  g_signal_connect (priv->listener, "new-connection",
-      G_CALLBACK (new_connection_cb), self);
+  g_signal_connect (priv->local_listener, "new-connection",
+      G_CALLBACK (local_new_connection_cb), self);
 
   if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_UNIX)
     {
@@ -775,7 +779,7 @@ tube_stream_open (SalutTubeStream *self,
       g_array_free (array, TRUE);
       g_free (path);
 
-      ret = gibber_listener_listen_socket (priv->listener, path, FALSE,
+      ret = gibber_listener_listen_socket (priv->local_listener, path, FALSE,
           error);
       if (ret != TRUE)
         {
@@ -788,7 +792,7 @@ tube_stream_open (SalutTubeStream *self,
     {
       int port;
 
-      port = gibber_listener_listen_tcp_loopback_af (priv->listener, 0,
+      port = gibber_listener_listen_tcp_loopback_af (priv->local_listener, 0,
           GIBBER_AF_IPV4, error);
       if (port <= 0)
         {
@@ -810,7 +814,7 @@ tube_stream_open (SalutTubeStream *self,
     {
       int port;
 
-      port = gibber_listener_listen_tcp_loopback_af (priv->listener, 0,
+      port = gibber_listener_listen_tcp_loopback_af (priv->local_listener, 0,
           GIBBER_AF_IPV6, error);
       if (port <= 0)
         {
@@ -950,10 +954,16 @@ salut_tube_stream_dispose (GObject *object)
       priv->listen_io_channel = NULL;
     }
 
-  if (priv->listener != NULL)
+  if (priv->local_listener != NULL)
     {
-      g_object_unref (priv->listener);
-      priv->listener = NULL;
+      g_object_unref (priv->local_listener);
+      priv->local_listener = NULL;
+    }
+
+  if (priv->contact_listener != NULL)
+    {
+      g_object_unref (priv->contact_listener);
+      priv->contact_listener = NULL;
     }
 
   if (priv->iq_helper != NULL)
@@ -1576,6 +1586,51 @@ salut_tube_stream_offer_needed (SalutTubeIface *tube)
   return priv->offer_needed;
 }
 
+/* callback for listening connections from the contact's CM */
+static void
+contact_new_connection_cb (GibberListener *listener,
+                          GibberTransport *transport,
+                          struct sockaddr_storage *addr,
+                          guint size,
+                          gpointer user_data)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GibberBytestreamIface *bytestream;
+  TpHandleRepoIface *contact_repo;
+
+  g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
+
+  contact_repo = tp_base_connection_get_handles (
+     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+  jid = tp_handle_inspect (contact_repo, priv->handle);
+}
+
+/**
+ * salut_tube_stream_listem
+ *
+ * Implements salut_tube_iface_listen on SalutTubeIface
+ */
+static int
+salut_tube_stream_listen (SalutTubeIface *tube)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  int ret;
+
+  g_assert (priv->contact_listener == NULL);
+  priv->contact_listener = gibber_listener_new ();
+
+  g_signal_connect (priv->local_listener, "new-connection",
+      G_CALLBACK (contact_new_connection_cb), self);
+
+  ret = gibber_listener_listen_tcp (priv->contact_listener, 0, NULL);
+  if (ret == TRUE)
+    return gibber_listener_get_port (priv->contact_listener);
+  return -1;
+}
+
 static void
 iq_close_reply_cb (GibberIqHelper *helper,
                    GibberXmppStanza *sent_stanza,
@@ -1649,15 +1704,11 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
     {
       if (priv->initiator == priv->self_handle)
         {
-          SalutDirectBytestreamManager *direct_bytestream_mgr;
-          g_assert (priv->conn != NULL);
-          g_object_get (priv->conn,
-              "direct-bytestream-manager", &direct_bytestream_mgr,
-              NULL);
-          g_assert (direct_bytestream_mgr != NULL);
-
-          salut_direct_bytestream_manager_stop_listen (direct_bytestream_mgr, tube);
-          g_object_unref (direct_bytestream_mgr);
+          if (priv->contact_listener != NULL)
+            {
+              g_object_unref (priv->contact_listener);
+              priv->contact_listener = NULL;
+            }
         }
     }
 
@@ -1912,6 +1963,7 @@ tube_iface_init (gpointer g_iface,
 
   klass->accept = salut_tube_stream_accept;
   klass->offer_needed = salut_tube_stream_offer_needed;
+  klass->listen = salut_tube_stream_listen;
   klass->close = salut_tube_stream_close;
   klass->add_bytestream = salut_tube_stream_add_bytestream;
 }

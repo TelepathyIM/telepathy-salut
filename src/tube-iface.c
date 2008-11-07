@@ -42,6 +42,15 @@ salut_tube_iface_offer_needed (SalutTubeIface *self)
   return virtual_method (self);
 }
 
+int
+salut_tube_iface_listen (SalutTubeIface *self)
+{
+  gboolean (*virtual_method)(SalutTubeIface *) =
+    SALUT_TUBE_IFACE_GET_CLASS (self)->listen;
+  g_assert (virtual_method != NULL);
+  return virtual_method (self);
+}
+
 void
 salut_tube_iface_close (SalutTubeIface *self, gboolean closed_remotely)
 {

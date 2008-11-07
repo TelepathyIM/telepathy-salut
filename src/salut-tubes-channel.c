@@ -1880,17 +1880,8 @@ send_channel_iq_tube (gpointer key,
 
       /* listen for future connections from the remote CM before sending the
        * iq */
-      SalutDirectBytestreamManager *direct_bytestream_mgr;
-      g_assert (priv->conn != NULL);
-      g_object_get (priv->conn,
-          "direct-bytestream-manager", &direct_bytestream_mgr,
-          NULL);
-      g_assert (direct_bytestream_mgr != NULL);
-
-      port = salut_direct_bytestream_manager_listen (direct_bytestream_mgr,
-          priv->contact, new_connection_cb, tube);
-      g_object_unref (direct_bytestream_mgr);
-
+      port = salut_tube_iface_listen (tube);
+      g_assert (port > 0);
 
       contact_repo = tp_base_connection_get_handles (
          (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);

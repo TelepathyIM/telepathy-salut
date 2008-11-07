@@ -34,6 +34,7 @@ struct _SalutTubeIfaceClass {
 
   gboolean (*accept) (SalutTubeIface *tube, GError **error);
   gboolean (*offer_needed) (SalutTubeIface *tube);
+  int (*listen) (SalutTubeIface *tube);
   void (*close) (SalutTubeIface *tube, gboolean local);
   void (*add_bytestream) (SalutTubeIface *tube,
       GibberBytestreamIface *bytestream);
@@ -54,6 +55,8 @@ GType salut_tube_iface_get_type (void);
 
 /* return TRUE if the <iq> to offer the tube has never been sent */
 gboolean salut_tube_iface_offer_needed (SalutTubeIface *tube);
+
+int salut_tube_iface_listen (SalutTubeIface *tube);
 
 gboolean salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
 
