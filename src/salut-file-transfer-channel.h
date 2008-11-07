@@ -30,6 +30,8 @@
 #include <extensions/_gen/interfaces.h>
 #include <extensions/_gen/enums.h>
 
+#include "salut-contact.h"
+
 G_BEGIN_DECLS
 
 typedef struct _SalutFileTransferChannel SalutFileTransferChannel;
@@ -67,7 +69,7 @@ GType salut_file_transfer_channel_get_type (void);
 
 gboolean salut_file_transfer_channel_received_file_offer (
     SalutFileTransferChannel *self, GibberXmppStanza *stanza,
-    GibberXmppConnection *conn);
+    GibberXmppConnection *conn, SalutContact *contact);
 
 gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
     GError **error);
