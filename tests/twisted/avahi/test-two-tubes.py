@@ -117,7 +117,7 @@ def test(q, bus, conn):
     assert contact2_tube[4] is not None # parameters
     assert contact2_tube[5] == 0, contact2_tube[5] # status = local pending
 
-    unix_socket_adr= contact2_tubes_channel.AcceptStreamTube(
+    unix_socket_adr = contact2_tubes_channel.AcceptStreamTube(
             contact2_tube[0], 0, 0, '', byte_arrays=True)
 
     client = ClientCreator(reactor, ClientGreeter)
