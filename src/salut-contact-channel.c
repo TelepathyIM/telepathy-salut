@@ -182,6 +182,7 @@ salut_contact_channel_get_property (GObject    *object,
               TP_IFACE_CHANNEL, "InitiatorHandle",
               TP_IFACE_CHANNEL, "InitiatorID",
               TP_IFACE_CHANNEL, "Requested",
+              TP_IFACE_CHANNEL, "Interfaces",
               NULL));
       break;
     case PROP_CHANNEL_DESTROYED:
