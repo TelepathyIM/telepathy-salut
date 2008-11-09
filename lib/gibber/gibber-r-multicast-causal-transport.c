@@ -250,14 +250,12 @@ gibber_r_multicast_causal_transport_class_init (
 
   param_spec = g_param_spec_object ("transport", "transport",
       "The underlying Transport", GIBBER_TYPE_TRANSPORT,
-      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_TRANSPORT, param_spec);
 
   param_spec = g_param_spec_string ("name", "name",
       "The name to use on the protocol", NULL,
-      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_NAME, param_spec);
 
   transport_class->send = gibber_r_multicast_causal_transport_do_send;
