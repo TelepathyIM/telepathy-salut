@@ -540,7 +540,6 @@ start_stream_direct (SalutTubeStream *self,
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           "can't find contact with handle %d", priv->initiator);
 
-      g_object_unref (transport);
       g_object_unref (contact_mgr);
 
       return FALSE;
@@ -564,7 +563,6 @@ start_stream_direct (SalutTubeStream *self,
       /* Initiation failed. */
       gibber_bytestream_iface_close (bytestream, NULL);
 
-      g_object_unref (transport);
       g_object_unref (contact);
       g_object_unref (contact_mgr);
 
