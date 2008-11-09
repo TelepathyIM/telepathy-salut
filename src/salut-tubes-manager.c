@@ -31,7 +31,6 @@
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-iq-helper.h>
 #include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/util.h>
@@ -357,8 +356,6 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
       {
         chan = new_tubes_channel (self, initiator_handle, initiator_handle,
             NULL);
-        tp_channel_factory_iface_emit_new_channel (self,
-            (TpChannelIface *) chan, NULL);
       }
 
     salut_tubes_channel_message_received (chan, service, tube_type,
@@ -1013,13 +1010,4 @@ salut_tubes_manager_iface_init (gpointer g_iface,
   iface->foreach_channel_class = salut_tubes_manager_foreach_channel_class;
   iface->create_channel = salut_tubes_manager_create_channel;
   iface->request_channel = salut_tubes_manager_request_channel;
-
-  /* old style code (factory manager)
-  klass->close_all = salut_tubes_manager_close_all;
-  klass->connecting = NULL;
-  klass->connected = NULL;
-  klass->disconnected = NULL;
-  klass->foreach = salut_tubes_manager_iface_foreach;
-  klass->request = salut_tubes_manager_iface_request;
-   */
 }
