@@ -773,8 +773,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
       NULL,
-      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_boolean ("requested", "Requested?",
@@ -804,8 +803,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     NULL,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
+                                    G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class,
                                    PROP_NAME, param_spec);
 
@@ -815,8 +813,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     GIBBER_TYPE_MUC_CONNECTION,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
+                                    G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class,
                                    PROP_MUC_CONNECTION, param_spec);
   param_spec = g_param_spec_object ("connection",
@@ -826,8 +823,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     SALUT_TYPE_CONNECTION,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
+                                    G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class,
                                    PROP_CONNECTION, param_spec);
 
@@ -838,8 +834,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 
@@ -850,8 +845,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
       FALSE,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class,
       PROP_CREATOR, param_spec);
 

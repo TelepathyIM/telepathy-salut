@@ -566,10 +566,7 @@ salut_bytestream_manager_class_init (
       "Salut Connection that owns the connection for this bytestream channel",
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
   param_spec = g_param_spec_string (
@@ -578,10 +575,7 @@ salut_bytestream_manager_class_init (
       "The FQDN host name that will be used by OOB bytestreams",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_HOST_NAME_FQDN,
       param_spec);
 }

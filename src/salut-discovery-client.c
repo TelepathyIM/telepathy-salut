@@ -115,10 +115,7 @@ salut_discovery_client_base_init (gpointer klass)
           " this client object",
           0, NUM_SALUT_DISCOVERY_CLIENT_STATE - 1,
           SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTED,
-          G_PARAM_READABLE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       initialized = TRUE;
