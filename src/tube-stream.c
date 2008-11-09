@@ -709,7 +709,6 @@ tube_stream_open (SalutTubeStream *self,
       g_value_set_boxed (priv->address, array);
 
       g_array_free (array, TRUE);
-      g_free (path);
 
       ret = gibber_listener_listen_socket (priv->local_listener, path, FALSE,
           error);
@@ -717,8 +716,10 @@ tube_stream_open (SalutTubeStream *self,
         {
           g_assert (error != NULL && *error != NULL);
           DEBUG ("Error listening on socket %s: %s", path, (*error)->message);
+          g_free (path);
           return FALSE;
         }
+      g_free (path);
     }
   else if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4)
     {
