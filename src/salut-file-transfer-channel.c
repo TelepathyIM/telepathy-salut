@@ -901,8 +901,8 @@ ft_finished_cb (GibberFileTransfer *ft,
 }
 
 static void
-ft_remote_canceled_cb (GibberFileTransfer *ft,
-                       SalutFileTransferChannel *self)
+ft_remote_cancelled_cb (GibberFileTransfer *ft,
+                        SalutFileTransferChannel *self)
 {
   gibber_file_transfer_cancel (ft, 406);
   salut_file_transfer_channel_set_state (
@@ -965,7 +965,7 @@ send_file_offer (SalutFileTransferChannel *self)
   g_signal_connect (ft, "remote-accepted",
       G_CALLBACK (remote_accepted_cb), self);
   g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
-  g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
+  g_signal_connect (ft, "cancelled", G_CALLBACK (ft_remote_cancelled_cb), self);
 
   self->priv->ft = ft;
 
@@ -1193,7 +1193,7 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
   g_signal_connect (ft, "transferred-chunk",
       G_CALLBACK (ft_transferred_chunk_cb), self);
-  g_signal_connect (ft, "canceled", G_CALLBACK (ft_remote_canceled_cb), self);
+  g_signal_connect (ft, "cancelled", G_CALLBACK (ft_remote_cancelled_cb), self);
 
   if (!setup_local_socket (self))
     {

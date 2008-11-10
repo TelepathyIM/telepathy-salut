@@ -302,7 +302,7 @@ http_client_finished_chunks_cb (SoupMessage *msg,
       DEBUG ("File transfer incomplete (size is %"G_GUINT64_FORMAT
              " and only got %"G_GUINT64_FORMAT")",
              size, self->priv->transferred_bytes);
-      g_signal_emit_by_name (self, "canceled");
+      g_signal_emit_by_name (self, "cancelled");
       return;
     }
 
@@ -729,7 +729,7 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
       error_code_str = gibber_xmpp_node_get_attribute (error_node, "code");
       if (g_ascii_strtoll (error_code_str, NULL, 10) == 406)
         {
-          g_signal_emit_by_name (self, "canceled");
+          g_signal_emit_by_name (self, "cancelled");
           return;
         }
 
