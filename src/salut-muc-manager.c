@@ -111,6 +111,9 @@ salut_muc_manager_init (SalutMucManager *obj)
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
 #endif
+
+  priv->queued_requests = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, NULL, NULL);
 }
 
 static void
@@ -166,6 +169,29 @@ closed_channel_foreach (TpHandle handle,
   salut_muc_channel_emit_closed (channel);
 }
 
+static gboolean
+cancel_queued_requests (gpointer k,
+                        gpointer v,
+                        gpointer d)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (d);
+  GSList *requests_satisfied = v;
+  GSList *iter;
+
+  requests_satisfied = g_slist_reverse (requests_satisfied);
+
+  for (iter = requests_satisfied; iter != NULL; iter = iter->next)
+    {
+      tp_channel_manager_emit_request_failed (self,
+          iter->data, TP_ERRORS, TP_ERROR_DISCONNECTED,
+          "Unable to complete this channel request, we're disconnecting!");
+    }
+
+  g_slist_free (requests_satisfied);
+
+  return TRUE;
+}
+
 static void
 salut_muc_manager_close_all (SalutMucManager *self)
 {
@@ -177,6 +203,14 @@ salut_muc_manager_close_all (SalutMucManager *self)
     {
       g_signal_handler_disconnect (priv->connection, priv->status_changed_id);
       priv->status_changed_id = 0;
+    }
+
+  if (priv->queued_requests != NULL)
+    {
+      g_hash_table_foreach_steal (priv->queued_requests,
+          cancel_queued_requests, self);
+      g_hash_table_destroy (priv->queued_requests);
+      priv->queued_requests = NULL;
     }
 
   if (priv->text_channels)
