@@ -4,6 +4,7 @@ import dbus
 import socket
 import md5
 import struct
+import urllib
 
 from saluttest import exec_test
 from avahitest import AvahiAnnouncer
@@ -160,7 +161,8 @@ def test(q, bus, conn):
     assert url_node['size'] == str(FILE_SIZE)
     assert url_node['mimeType'] == FILE_CONTENT_TYPE
     url = url_node.children[0]
-    assert url.endswith(FILE_NAME)
+    _, host, file, _, _, _ = urlparse.urlparse(url)
+    urllib.unquote(file) == FILE_NAME
     desc_node = xpath.queryForNodes("/iq/query/desc",  iq)[0]
     desc = desc_node.children[0]
     assert desc == FILE_DESCRIPTION
@@ -172,7 +174,6 @@ def test(q, bus, conn):
     assert state == FT_STATE_PENDING
 
     # Connect HTTP client to the CM and request the file
-    _, host, file, _, _, _ = urlparse.urlparse(url)
     http = httplib.HTTPConnection(host)
     headers = {'Accept-Encoding': 'AppleSingle'}
     http.request('GET', file, headers=headers)

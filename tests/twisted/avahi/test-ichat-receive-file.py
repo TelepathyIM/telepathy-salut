@@ -5,6 +5,7 @@ import socket
 import md5
 import avahi
 import BaseHTTPServer
+import urllib
 
 from saluttest import exec_test
 from avahitest import AvahiAnnouncer, AvahiListener
@@ -113,7 +114,7 @@ def test(q, bus, conn):
     iq['type'] = 'set'
     iq['id'] = 'iChat_A1FB5D95'
     query = iq.addElement(('jabber:iq:oob', 'query'))
-    url = 'http://127.0.0.1:%u/gibber-file-transfer-0/%s' % (httpd.server_port, FILE_NAME)
+    url = 'http://127.0.0.1:%u/gibber-file-transfer-0/%s' % (httpd.server_port, urllib.quote(FILE_NAME))
     url_node = query.addElement('url', content=url)
     url_node['type'] = 'file'
     url_node['size'] = str(FILE_SIZE)
@@ -211,7 +212,7 @@ class HTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         # is that the right file ?
         filename = self.path.rsplit('/', 2)[-1]
-        assert filename == FILE_NAME
+        assert filename == urllib.quote(FILE_NAME)
 
         self.send_response(200)
         self.send_header('Content-type', FILE_CONTENT_TYPE)
