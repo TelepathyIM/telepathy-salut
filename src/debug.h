@@ -24,13 +24,12 @@ typedef enum
   DEBUG_CONNECTION     = 1 << 9,
   DEBUG_IM             = 1 << 10,
   DEBUG_SI_BYTESTREAM_MGR     = 1 << 11,
-  DEBUG_DIRECT_BYTESTREAM_MGR = 1 << 12,
-  DEBUG_NET            = 1 << 13,
-  DEBUG_SELF           = 1 << 14,
-  DEBUG_TUBES          = 1 << 15,
-  DEBUG_XCM            = 1 << 16,
-  DEBUG_DISCOVERY      = 1 << 17,
-  DEBUG_OLPC_ACTIVITY  = 1 << 18,
+  DEBUG_NET            = 1 << 12,
+  DEBUG_SELF           = 1 << 13,
+  DEBUG_TUBES          = 1 << 14,
+  DEBUG_XCM            = 1 << 15,
+  DEBUG_DISCOVERY      = 1 << 16,
+  DEBUG_OLPC_ACTIVITY  = 1 << 17,
 } DebugFlags;
 
 void debug_set_flags_from_env ();
