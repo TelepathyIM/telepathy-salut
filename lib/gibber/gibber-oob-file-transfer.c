@@ -554,26 +554,46 @@ http_server_cb (SoupServerContext *context,
       "Accept-Encoding");
   if (accept_encoding != NULL && strcmp (accept_encoding, "AppleSingle") == 0)
     {
+      guint64 size;
+      guint32 uint32;
+      guint16 uint16;
+      GByteArray *array;
+
       DEBUG ("Using AppleSingle encoding");
 
-      /* FIXME this is not working at the moment */
-      /* the header contains a magic number (4 bytes), a version number
-       * (4 bytes), a filler (16 bytes, all zeros) and the number of
-       * entries (2 bytes) */
-      static gchar buff[26] = {0};
-      if (buff[1] == 0)
-        {
-          /* magic number */
-          ((gint32*) buff)[0] = htonl (0x51600);
-          /* version */
-          ((gint32*) buff)[1] = htonl (0x20000);
-        }
+      size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
+      array = g_byte_array_sized_new (38);
+      /* magic number */
+      uint32 = htonl (0x51600);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      /* version */
+      uint32 = htonl (0x20000);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      /* filler */
+      uint32 = 0;
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      /* nb entry */
+      uint16 = htons (1);
+      g_byte_array_append (array, (guint8*) &uint16, 2);
+       /* data fork */
+      uint32 = htonl (1);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+       /* data fork offset is the length of this header */
+      uint32 = htonl (38);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+       /* data fork size is the size of the file */
+      uint32 = htonl (size);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
 
       soup_message_add_header (msg->response_headers, "Content-encoding",
           "AppleSingle");
 
-      soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_STATIC, buff,
-          sizeof (buff));
+      soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_STATIC,
+          (char *) array->data, array->len);
+
       soup_message_io_unpause (self->priv->msg);
     }
 
