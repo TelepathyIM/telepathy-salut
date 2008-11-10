@@ -143,7 +143,7 @@ enum {
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
-  PROP_BYTESTREAM_MANAGER,
+  PROP_SI_BYTESTREAM_MANAGER,
 #ifdef ENABLE_OLPC
   PROP_OLPC_ACTIVITY_MANAGER,
 #endif
@@ -192,7 +192,7 @@ struct _SalutConnectionPrivate
   /* SalutTubesManager *tubes_manager; */
 
   /* Bytestream manager */
-  SalutBytestreamManager *bytestream_manager;
+  SalutSiBytestreamManager *si_bytestream_manager;
 
 #ifdef ENABLE_OLPC
   SalutOlpcActivityManager *olpc_activity_manager;
@@ -346,8 +346,8 @@ salut_connection_get_property (GObject *object,
     case PROP_XCM:
       g_value_set_object (value, priv->xmpp_connection_manager);
       break;
-    case PROP_BYTESTREAM_MANAGER:
-      g_value_set_object (value, priv->bytestream_manager);
+    case PROP_SI_BYTESTREAM_MANAGER:
+      g_value_set_object (value, priv->si_bytestream_manager);
       break;
 #ifdef ENABLE_OLPC
     case PROP_OLPC_ACTIVITY_MANAGER:
@@ -721,11 +721,11 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   param_spec = g_param_spec_object (
       "bytestream-manager",
-      "SalutBytestreamManager object",
+      "SalutSiBytestreamManager object",
       "The Salut Bytestream Manager associated with this Salut Connection",
-      SALUT_TYPE_BYTESTREAM_MANAGER,
+      SALUT_TYPE_SI_BYTESTREAM_MANAGER,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_BYTESTREAM_MANAGER,
+  g_object_class_install_property (object_class, PROP_SI_BYTESTREAM_MANAGER,
       param_spec);
 
 #ifdef ENABLE_OLPC
@@ -793,10 +793,10 @@ salut_connection_dispose (GObject *object)
       priv->discovery_client = NULL;
     }
 
-  if (priv->bytestream_manager != NULL)
+  if (priv->si_bytestream_manager != NULL)
     {
-      g_object_unref (priv->bytestream_manager);
-      priv->bytestream_manager = NULL;
+      g_object_unref (priv->si_bytestream_manager);
+      priv->si_bytestream_manager = NULL;
     }
 
   /* release any references held by the object here */
@@ -933,7 +933,7 @@ discovery_client_running (SalutConnection *self)
     }
 
   /* Create the bytestream manager */
-  priv->bytestream_manager = salut_bytestream_manager_new (self,
+  priv->si_bytestream_manager = salut_si_bytestream_manager_new (self,
     salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
 }
 
