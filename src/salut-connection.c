@@ -645,32 +645,32 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_NICKNAME, param_spec);
 
   param_spec = g_param_spec_string ("first-name", "First name",
       "First name used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_FIRST_NAME, param_spec);
 
   param_spec = g_param_spec_string ("last-name", "Last name",
       "Last name used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_LAST_NAME, param_spec);
 
   param_spec = g_param_spec_string ("email", "E-mail address",
       "E-mail address used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_EMAIL, param_spec);
 
   param_spec = g_param_spec_string ("jid", "Jabber id",
       "Jabber id used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_JID, param_spec);
 
   param_spec = g_param_spec_string ("published-name", "Published name",
       "Username used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_PUBLISHED_NAME,
       param_spec);
 
@@ -679,9 +679,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutImManager object",
       "The Salut IM Manager associated with this Salut Connection",
       SALUT_TYPE_IM_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_IM_MANAGER,
       param_spec);
 
@@ -690,9 +688,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutMucManager object",
       "The Salut MUC Manager associated with this Salut Connection",
       SALUT_TYPE_MUC_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_MUC_MANAGER,
       param_spec);
 
@@ -712,9 +708,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutContactManager object",
       "The Salut Contact Manager associated with this Salut Connection",
       SALUT_TYPE_CONTACT_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
       param_spec);
 
@@ -723,9 +717,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutSelf object",
       "The Salut Self object associated with this Salut Connection",
       SALUT_TYPE_SELF,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_SELF,
       param_spec);
 
@@ -735,9 +727,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "The Salut XMPP Connection Manager associated with this Salut "
       "Connection",
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_XCM,
       param_spec);
 
@@ -746,9 +736,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutSiBytestreamManager object",
       "The Salut SI Bytestream Manager associated with this Salut Connection",
       SALUT_TYPE_SI_BYTESTREAM_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_SI_BYTESTREAM_MANAGER,
       param_spec);
 
@@ -758,9 +746,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutOlpcActivityManager object",
       "The OLPC activity Manager associated with this Salut Connection",
       SALUT_TYPE_OLPC_ACTIVITY_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OLPC_ACTIVITY_MANAGER,
       param_spec);
 #endif
@@ -771,10 +757,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "a G_TYPE_GTYPE of the backend to use",
       G_TYPE_NONE,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_BACKEND,
       param_spec);
 

@@ -85,10 +85,7 @@ salut_tube_iface_base_init (gpointer klass)
           "Salut connection object that owns this D-Bus tube object.",
           SALUT_TYPE_CONNECTION,
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
      param_spec = g_param_spec_uint (
@@ -98,10 +95,7 @@ salut_tube_iface_base_init (gpointer klass)
           "owns this D-Bus tube object.",
           0, G_MAXUINT32, 0,
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_uint (
@@ -111,10 +105,7 @@ salut_tube_iface_base_init (gpointer klass)
           "that owns this D-Bus tube object.",
           0, G_MAXUINT32, 0,
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_uint (
@@ -124,10 +115,7 @@ salut_tube_iface_base_init (gpointer klass)
           "connection's self handle if our handle is a room handle.",
           0, G_MAXUINT, 0,
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_uint (
@@ -136,10 +124,7 @@ salut_tube_iface_base_init (gpointer klass)
           "The unique identifier of this tube",
           0, G_MAXUINT32, 0,
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_uint (
@@ -147,10 +132,7 @@ salut_tube_iface_base_init (gpointer klass)
           "Tube type",
           "The TpTubeType this D-Bus tube object.",
           0, G_MAXUINT32, 0,
-          G_PARAM_READABLE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_uint (
@@ -159,10 +141,7 @@ salut_tube_iface_base_init (gpointer klass)
           "The TpHandle of the initiator of this D-Bus tube object.",
           0, G_MAXUINT32, 0,
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_string (
@@ -171,10 +150,7 @@ salut_tube_iface_base_init (gpointer klass)
           "the service associated with this D-BUS tube object.",
           "",
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_boxed (
@@ -183,10 +159,7 @@ salut_tube_iface_base_init (gpointer klass)
           "GHashTable containing parameters of this DBUS tube object.",
           G_TYPE_HASH_TABLE,
           G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_uint (
@@ -194,10 +167,7 @@ salut_tube_iface_base_init (gpointer klass)
           "Tube state",
           "The SalutTubeState of this DBUS tube object",
           0, G_MAXUINT32, TP_TUBE_STATE_REMOTE_PENDING,
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       initialized = TRUE;
