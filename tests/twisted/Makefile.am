@@ -16,7 +16,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-ichat-composing.py \
 	avahi/test-ichat-incoming-msg.py \
 	avahi/test-ichat-receive-file.py \
-	avahi/test-ichat-send-file.py
+	avahi/test-ichat-send-file.py \
+	avahi/test-ichat-send-file-declined.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
 	avahi/test-olpc-activity-announcements.py
