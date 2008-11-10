@@ -144,11 +144,6 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
   return TRUE;
 }
 
-static gchar *
-escape_filename (const char *unescaped);
-static gchar *
-unescape_filename (const char *escaped);
-
 GibberFileTransfer *
 gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
                                           GibberXmppConnection *connection)
@@ -201,7 +196,7 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
       return NULL;
     }
   filename++; /* move after the last "/" */
-  filename = unescape_filename (filename);
+  filename = g_uri_unescape_string (filename, NULL);
 
   desc_node = gibber_xmpp_node_get_child (query, "desc");
   if (desc_node != NULL)
@@ -417,7 +412,8 @@ create_transfer_offer (GibberOobFileTransfer *self,
   getnameinfo (&name_addr, name_addr_len, host_name, sizeof (host_name), NULL,
       0, NI_NUMERICHOST);
 
-  filename_escaped = escape_filename (GIBBER_FILE_TRANSFER (self)->filename);
+  filename_escaped = g_uri_escape_string (GIBBER_FILE_TRANSFER (self)->filename,
+      NULL, FALSE);
   url = g_strdup_printf ("http://%s:%d/%s/%s", host_name,
       soup_server_get_port (self->priv->server),
       GIBBER_FILE_TRANSFER (self)->id, filename_escaped);
@@ -740,141 +736,3 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
       return;
     }
 }
-
-
-/*
- * Escape/unescape file names according to RFC-2396, copied and modified
- * from glib/gconvert.c.
- *
- * Original copyright:
- *   Copyright Red Hat Inc., 2000
- *   Authors: Havoc Pennington, Owen Taylor
- */
-
-static const gboolean acceptable[96] =
-{
-  /*     !      "      #      $      %      &      '      (      )      *   */
-  FALSE, TRUE,  FALSE, FALSE, TRUE,  FALSE, TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
-  /* +   ,      -      .      /      0      1      2      3      4      5   */
-  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
-  /* 6   7      8      9      :      ;      <      =      >      ?      @   */
-  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  FALSE, FALSE, TRUE,  FALSE, FALSE, TRUE,
-  /* A   B      C      D      E      F      G      H      I      J      K   */
-  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
-  /* L   M      N      O      P      Q      R      S      T      U      V   */
-  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
-  /* W   X      Y      Z      [      \      ]      ^      _      `      a   */
-  TRUE,  TRUE,  TRUE,  TRUE,  FALSE, FALSE, FALSE, FALSE, TRUE,  FALSE, TRUE,
-  /* b   c      d      e      f      g      h      i      j      k      l   */
-  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
-  /* m   n      o      p      q      r      s      t      u      v      w   */
-  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,  TRUE,
-  /* x   y      z      {      |      }      ~      DEL */
-  TRUE,  TRUE,  TRUE,  FALSE, FALSE, FALSE, TRUE,  FALSE
-};
-
-static const gchar hex[16] = "0123456789ABCDEF";
-
-static gchar *
-escape_filename (const gchar *unescaped)
-{
-  const gchar *p;
-  gchar *q;
-  gchar *result;
-  int c;
-  gint unacceptable;
-
-#define ACCEPTABLE(a) ((a) >= 32 && (a) < 128 && acceptable[(a) - 32])
-
-  unacceptable = 0;
-  for (p = unescaped; *p != '\0'; p++)
-    {
-      c = (guchar) *p;
-      if (!ACCEPTABLE (c))
-        unacceptable++;
-    }
-
-  if (unacceptable == 0)
-    return g_strdup (unescaped);
-
-  result = g_malloc (p - unescaped + unacceptable * 2 + 1);
-
-  for (q = result, p = unescaped; *p != '\0'; p++)
-    {
-      c = (guchar) *p;
-
-      if (!ACCEPTABLE (c))
-        {
-          *q++ = '%'; /* means hex coming */
-          *q++ = hex[c >> 4];
-          *q++ = hex[c & 0xff];
-        }
-      else
-        {
-          *q++ = *p;
-        }
-    }
-
-#undef ACCEPTABLE
-
-  *q = '\0';
-
-  return result;
-}
-
-static int
-unescape_character (const char *scanner)
-{
-  int first_digit;
-  int second_digit;
-
-  first_digit = g_ascii_xdigit_value (scanner[0]);
-  if (first_digit < 0)
-    return -1;
-
-  second_digit = g_ascii_xdigit_value (scanner[1]);
-  if (second_digit < 0)
-    return -1;
-
-  return (first_digit << 4) | second_digit;
-}
-
-static gchar *
-unescape_filename (const char *escaped)
-{
-  int len;
-  const gchar *in, *in_end;
-  gchar *out, *result;
-  int c;
-
-  len = strlen (escaped);
-
-  result = g_malloc (len + 1);
-
-  out = result;
-  for (in = escaped, in_end = escaped + len; in < in_end; in++)
-    {
-      c = *in;
-
-      if (c == '%')
-        {
-          /* catch partial escape sequences past the end of the substring */
-          if (in + 3 > in_end)
-            break;
-
-          c = unescape_character (in + 1);
-          /* catch bad escape sequences and NUL characters */
-          if (c <= 0)
-            break;
-
-          in += 2;
-        }
-
-      *out++ = c;
-    }
-
-  *out = '\0';
-
-  return result;
-}
-
