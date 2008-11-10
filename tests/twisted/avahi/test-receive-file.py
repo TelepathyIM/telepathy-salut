@@ -5,6 +5,7 @@ import socket
 import md5
 import avahi
 import BaseHTTPServer
+import urllib
 
 from saluttest import exec_test
 from avahitest import AvahiAnnouncer, AvahiListener
@@ -46,7 +47,7 @@ SOCKET_ACCESS_CONTROL_LOCALHOST = 0
 # File to Offer
 FILE_DATA = "What a nice file"
 FILE_SIZE = len(FILE_DATA)
-FILE_NAME = 'foo.txt'
+FILE_NAME = 'The foo.txt'
 FILE_CONTENT_TYPE = 'text/plain'
 FILE_DESCRIPTION = 'A nice file to test'
 FILE_HASH_TYPE = FILE_HASH_TYPE_MD5
@@ -109,7 +110,7 @@ def test(q, bus, conn):
     iq['type'] = 'set'
     iq['id'] = 'gibber-file-transfer-0'
     query = iq.addElement(('jabber:iq:oob', 'query'))
-    url = 'http://127.0.0.1:%u/gibber-file-transfer-0/%s' % (httpd.server_port, FILE_NAME)
+    url = 'http://127.0.0.1:%u/gibber-file-transfer-0/%s' % (httpd.server_port, urllib.quote(FILE_NAME))
     url_node = query.addElement('url', content=url)
     url_node['type'] = 'file'
     url_node['size'] = str(FILE_SIZE)
@@ -206,7 +207,7 @@ class HTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         # is that the right file ?
         filename = self.path.rsplit('/', 2)[-1]
-        assert filename == FILE_NAME
+        assert filename == urllib.quote(FILE_NAME)
 
         self.send_response(200)
         self.send_header('Content-type', FILE_CONTENT_TYPE)

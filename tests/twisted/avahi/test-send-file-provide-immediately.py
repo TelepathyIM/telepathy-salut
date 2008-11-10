@@ -3,6 +3,7 @@ import urlparse
 import dbus
 import socket
 import md5
+import urllib
 
 from saluttest import exec_test
 from avahitest import AvahiAnnouncer
@@ -43,7 +44,7 @@ SOCKET_ACCESS_CONTROL_LOCALHOST = 0
 # File to Offer
 FILE_DATA = "That works!"
 FILE_SIZE = len(FILE_DATA)
-FILE_NAME = 'test.txt'
+FILE_NAME = 'My test.txt'
 FILE_CONTENT_TYPE = 'text/plain'
 FILE_DESCRIPTION = 'A nice file to test'
 FILE_HASH_TYPE = FILE_HASH_TYPE_MD5
@@ -162,7 +163,8 @@ def test(q, bus, conn):
     assert url_node['size'] == str(FILE_SIZE)
     assert url_node['mimeType'] == FILE_CONTENT_TYPE
     url = url_node.children[0]
-    assert url.endswith(FILE_NAME)
+    _, host, file, _, _, _ = urlparse.urlparse(url)
+    urllib.unquote(file) == FILE_NAME
     desc_node = xpath.queryForNodes("/iq/query/desc",  iq)[0]
     desc = desc_node.children[0]
     assert desc == FILE_DESCRIPTION
@@ -174,7 +176,6 @@ def test(q, bus, conn):
     assert state == FT_STATE_PENDING
 
     # Connect HTTP client to the CM and request the file
-    _, host, file, _, _, _ = urlparse.urlparse(url)
     http = httplib.HTTPConnection(host)
     http.request('GET', file)
 
