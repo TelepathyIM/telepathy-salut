@@ -51,6 +51,9 @@ m = md5.new()
 m.update(FILE_DATA)
 FILE_HASH = m.hexdigest()
 
+# TODO: There is lot of duplicated code between FT tests. Would be good to
+# refactor them.
+
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
