@@ -773,9 +773,7 @@ gibber_r_multicast_sender_class_init (
       "Sender Group",
       "Group of senders",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_WRITABLE       |
-      G_PARAM_STATIC_NAME    |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_WRITABLE       | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_property (object_class, PROP_SENDER_GROUP,
       param_spec);

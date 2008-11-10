@@ -384,10 +384,7 @@ salut_avahi_contact_class_init (
       "The Salut Avahi Discovery client associated with this muc manager",
       SALUT_TYPE_AVAHI_DISCOVERY_CLIENT,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CLIENT,
       param_spec);
 }

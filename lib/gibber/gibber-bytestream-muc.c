@@ -317,11 +317,7 @@ gibber_bytestream_muc_class_init (
       "Gibber MUC connection object used for communication by this "
       "bytestream if it's a muc one",
       GIBBER_TYPE_MUC_CONNECTION,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_MUC_CONNECTION,
       param_spec);
 

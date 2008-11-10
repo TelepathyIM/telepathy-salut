@@ -326,10 +326,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The Salut Connection associated with this self object",
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION,
       param_spec);
 
@@ -339,10 +336,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The nickname of the self user",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_NICKNAME,
       param_spec);
 
@@ -352,10 +346,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The first name of the self user",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_FIRST_NAME,
       param_spec);
 
@@ -365,10 +356,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The last name of the self user",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_LAST_NAME,
       param_spec);
 
@@ -378,10 +366,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The jabber ID of the self user",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_JID,
       param_spec);
 
@@ -391,10 +376,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The email of the self user",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_EMAIL,
       param_spec);
 
@@ -404,10 +386,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The name used to publish the presence service",
       g_get_user_name (),
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_PUBLISHED_NAME,
       param_spec);
 
@@ -417,10 +396,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "the OLPC key",
       "A pointer to a GArray containing the OLPC key",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OLPC_KEY,
       param_spec);
 
@@ -430,10 +406,7 @@ salut_self_class_init (SalutSelfClass *salut_self_class)
       "The OLPC color of the self user",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OLPC_COLOR,
       param_spec);
 #endif

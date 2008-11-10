@@ -216,10 +216,7 @@ gibber_iq_helper_class_init (GibberIqHelperClass *gibber_iq_helper_class)
       "GibberXmppConnection object",
       "Gibber XMPP Connection associated with this GibberIqHelper object",
       GIBBER_TYPE_XMPP_CONNECTION,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
       param_spec);
 }
