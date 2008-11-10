@@ -278,6 +278,55 @@ salut_avahi_roomlist_manager_start (SalutRoomlistManager *mgr,
   return TRUE;
 }
 
+static gchar *
+_avahi_address_to_string_address (const AvahiAddress *address)
+{
+  gchar str[AVAHI_ADDRESS_STR_MAX];
+
+  if (avahi_address_snprint (str, sizeof (str), address) == NULL)
+    {
+      DEBUG ("Failed to convert AvahiAddress to string");
+      return NULL;
+    }
+  return g_strdup (str);
+}
+
+static gboolean
+salut_avahi_roomlist_manager_find_muc_address (SalutRoomlistManager *mgr,
+                                               const gchar *name,
+                                               gchar **address,
+                                               guint16 *port)
+{
+  SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (mgr);
+  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  GArray *arr;
+  AvahiAddress avahi_address;
+  guint i;
+
+  arr = g_hash_table_lookup (priv->room_resolvers, name);
+  if (arr == NULL || arr->len == 0)
+    return FALSE;
+
+  for (i = 0; i < arr->len; i++)
+    {
+      GaServiceResolver *resolver;
+      resolver = g_array_index (arr, GaServiceResolver *, i);
+
+       if (!ga_service_resolver_get_address (resolver, &avahi_address, port))
+         {
+           DEBUG ("..._get_address failed: creating a new MUC room instead");
+           return FALSE;
+         }
+       else
+         {
+           *address = _avahi_address_to_string_address (&avahi_address);
+           return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
 static void
 add_room_to_list (const gchar *room,
                   GaServiceResolver *resolver,
@@ -317,6 +366,8 @@ salut_avahi_roomlist_manager_class_init (
   object_class->dispose = salut_avahi_roomlist_manager_dispose;
 
   roomlist_manager_class->start = salut_avahi_roomlist_manager_start;
+  roomlist_manager_class->find_muc_address =
+    salut_avahi_roomlist_manager_find_muc_address;
   roomlist_manager_class->get_rooms = salut_avahi_roomlist_manager_get_rooms;
 
   param_spec = g_param_spec_object (
