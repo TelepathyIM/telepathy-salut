@@ -56,6 +56,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutRoomlistManager, salut_roomlist_manager,
 /* properties */
 enum {
   PROP_CONNECTION = 1,
+  PROP_XCM,
   LAST_PROP
 };
 
@@ -66,6 +67,7 @@ struct _SalutRoomlistManagerPrivate
 {
   SalutConnection *connection;
   gulong status_changed_id;
+  SalutXmppConnectionManager *xmpp_connection_manager;
 
   GSList *roomlist_channels;
 
@@ -100,6 +102,9 @@ salut_roomlist_manager_get_property (GObject *object,
       case PROP_CONNECTION:
         g_value_set_object (value, priv->connection);
         break;
+      case PROP_XCM:
+        g_value_set_object (value, priv->xmpp_connection_manager);
+        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -119,6 +124,10 @@ salut_roomlist_manager_set_property (GObject *object,
     {
       case PROP_CONNECTION:
         priv->connection = g_value_get_object (value);
+        break;
+      case PROP_XCM:
+        priv->xmpp_connection_manager = g_value_get_object (value);
+        g_object_ref (priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -203,6 +212,16 @@ salut_roomlist_manager_class_init (
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "xmpp-connection-manager",
+      "SalutXmppConnectionManager object",
+      "The Salut XMPP Connection Manager associated with this muc "
+      "manager",
+      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_XCM,
       param_spec);
 }
 
