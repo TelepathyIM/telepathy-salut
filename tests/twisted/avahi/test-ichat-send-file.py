@@ -215,7 +215,6 @@ def test(q, bus, conn):
     assert hex(version) == '0x20000'
     # filler
     assert f1 == f2 == f3 == f4 == 0
-    print "nb entry:", nb_entry
     assert nb_entry == 1
     # data fork
     assert entry_id == 1
