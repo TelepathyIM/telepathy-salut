@@ -46,7 +46,7 @@
 #include "signals-marshal.h"
 #include "salut-connection.h"
 #include "tube-iface.h"
-#include "salut-bytestream-manager.h"
+#include "salut-si-bytestream-manager.h"
 #include "salut-contact-manager.h"
 
 static void
