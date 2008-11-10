@@ -64,7 +64,7 @@ SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
     SalutXmppConnectionManager *xmpp_connection_manager, TpHandle handle,
     TpHandleType handle_type, TpHandle self_handle, TpHandle initiator,
     const gchar *service, GHashTable *parameters, guint id, guint portnum,
-    GibberIqHelperRequestStanza *iq_req);
+    GibberXmppStanza *iq_req);
 
 gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,
     const GValue *address, TpSocketAccessControl access_control,

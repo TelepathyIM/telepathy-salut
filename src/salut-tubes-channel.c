@@ -177,7 +177,7 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
     TpTubeType type, TpHandle initiator, const gchar *service,
     GHashTable *parameters, guint tube_id, guint portnum,
-    GibberIqHelperRequestStanza *iq_req);
+    GibberXmppStanza *iq_req);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -933,7 +933,7 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
                                       GHashTable *parameters,
                                       guint tube_id,
                                       guint portnum,
-                                      GibberIqHelperRequestStanza *iq_req)
+                                      GibberXmppStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
@@ -1153,7 +1153,7 @@ create_new_tube (SalutTubesChannel *self,
                  GHashTable *parameters,
                  guint tube_id,
                  guint portnum,
-                 GibberIqHelperRequestStanza *iq_req)
+                 GibberXmppStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;

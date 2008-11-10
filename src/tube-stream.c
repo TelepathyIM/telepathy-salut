@@ -122,7 +122,7 @@ struct _SalutTubeStreamPrivate
   guint id;
   guint port;
   GibberXmppConnection *xmpp_connection;
-  GibberIqHelperRequestStanza *iq_req;
+  GibberXmppStanza *iq_req;
 
   /* Bytestreams for MUC tubes (using stream initiation) or 1-1 tubes (using
    * direct TCP connections). One tube can have several bytestreams. The
@@ -1081,6 +1081,8 @@ salut_tube_stream_set_property (GObject *object,
         break;
       case PROP_IQ_REQ:
         priv->iq_req = g_value_get_pointer (value);
+        if (priv->iq_req != NULL)
+          g_object_ref (priv->iq_req);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1322,8 +1324,8 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 
   param_spec = g_param_spec_pointer (
       "iq-req",
-      "A GibberIqHelper reference on the request stanza",
-      "A GibberIqHelper reference on the request stanza used to reply to "
+      "A reference on the request stanza",
+      "A reference on the request stanza used to reply to "
       "the iq request later",
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
@@ -1405,7 +1407,7 @@ salut_tube_stream_new (SalutConnection *conn,
                         GHashTable *parameters,
                         guint id,
                         guint portnum,
-                        GibberIqHelperRequestStanza *iq_req)
+                        GibberXmppStanza *iq_req)
 {
   return g_object_new (SALUT_TYPE_TUBE_STREAM,
       "connection", conn,
@@ -1485,6 +1487,8 @@ salut_tube_stream_accept (SalutTubeIface *tube,
           reply = gibber_iq_helper_new_result_reply (priv->iq_req);
           gibber_xmpp_connection_send (priv->xmpp_connection, reply, NULL);
 
+          g_object_unref (priv->iq_req);
+          priv->iq_req = NULL;
           g_object_unref (reply);
         }
     }

@@ -316,8 +316,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
     {
       GibberXmppStanza *reply;
 
-      reply = gibber_iq_helper_new_error_reply (
-          gibber_iq_helper_get_request_stanza (stanza), XMPP_ERROR_BAD_REQUEST,
+      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
           "failed to parse SI request");
       gibber_xmpp_connection_send (connection, reply, NULL);
 
@@ -345,8 +344,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       GibberXmppStanza *reply;
 
       DEBUG ("SI request doesn't contain any supported stream method.");
-      reply = gibber_iq_helper_new_error_reply (
-          gibber_iq_helper_get_request_stanza (stanza),
+      reply = gibber_iq_helper_new_error_reply (stanza,
           XMPP_ERROR_SI_NO_VALID_STREAMS, NULL);
 
       gibber_xmpp_connection_send (connection, reply, NULL);

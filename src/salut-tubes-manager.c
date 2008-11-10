@@ -323,8 +323,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
     {
       GibberXmppStanza *reply;
 
-      reply = gibber_iq_helper_new_error_reply (
-          gibber_iq_helper_get_request_stanza (stanza), XMPP_ERROR_BAD_REQUEST,
+      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
           error->message);
       gibber_xmpp_connection_send (conn, reply, NULL);
 
@@ -355,8 +354,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
       }
 
     salut_tubes_channel_message_received (chan, service, tube_type,
-        initiator_handle, parameters, tube_id, portnum,
-        gibber_iq_helper_get_request_stanza (stanza));
+        initiator_handle, parameters, tube_id, portnum, stanza);
   }
 }
 
