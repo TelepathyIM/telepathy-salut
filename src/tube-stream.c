@@ -1442,10 +1442,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "address of the local service",
       0, NUM_TP_SOCKET_ADDRESS_TYPES - 1,
       TP_SOCKET_ADDRESS_TYPE_UNIX,
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ADDRESS_TYPE,
       param_spec);
 
@@ -1454,10 +1451,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "address",
       "The listening address of the local service, as indicated by the "
       "address-type",
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ADDRESS, param_spec);
 
   param_spec = g_param_spec_uint (
@@ -1467,10 +1461,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "the local service applies to the local socket",
       0, NUM_TP_SOCKET_ACCESS_CONTROLS - 1,
       TP_SOCKET_ACCESS_CONTROL_LOCALHOST,
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL,
       param_spec);
 
@@ -1479,10 +1470,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "access control param",
       "A parameter for the access control type, to be interpreted as specified"
       "in the documentation for the Socket_Access_Control enum.",
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL_PARAM,
       param_spec);
 

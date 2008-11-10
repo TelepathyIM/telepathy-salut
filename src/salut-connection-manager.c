@@ -177,10 +177,7 @@ salut_connection_manager_class_init (
       "backend type",
       "a G_TYPE_GTYPE of the backend to use",
       G_TYPE_NONE,
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_BACKEND,
       param_spec);
 

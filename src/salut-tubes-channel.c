@@ -340,6 +340,7 @@ salut_tubes_channel_get_property (GObject *object,
                 TP_IFACE_CHANNEL, "InitiatorHandle",
                 TP_IFACE_CHANNEL, "InitiatorID",
                 TP_IFACE_CHANNEL, "Requested",
+                TP_IFACE_CHANNEL, "Interfaces",
                 NULL));
         break;
       default:
@@ -2319,30 +2320,26 @@ salut_tubes_channel_class_init (
   param_spec = g_param_spec_string ("target-id", "Target JID",
       "The string obtained by inspecting this channel's handle",
       NULL,
-      G_PARAM_READABLE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
   param_spec = g_param_spec_boolean ("requested", "Requested?",
       "True if this channel was requested by the local user",
       FALSE,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
 
   param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
       "The contact which caused the Tubes channel to appear",
       0, G_MAXUINT32, 0,
-      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
       param_spec);
 
   param_spec = g_param_spec_string ("initiator-id", "Initiator JID",
       "The string obtained by inspecting this channel's initiator-handle",
       NULL,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_INITIATOR_ID,
       param_spec);
 
@@ -2351,10 +2348,7 @@ salut_tubes_channel_class_init (
       "SalutConnection object",
       "Salut Connection that owns the connection for this tubes channel",
       SALUT_TYPE_CONNECTION,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
   param_spec = g_param_spec_object (
@@ -2363,11 +2357,7 @@ salut_tubes_channel_class_init (
       "Salut text MUC channel corresponding to this Tubes channel object, "
       "if the handle type is ROOM.",
       SALUT_TYPE_MUC_CHANNEL,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_MUC, param_spec);
 
   param_spec = g_param_spec_object (
@@ -2396,8 +2386,7 @@ salut_tubes_channel_class_init (
   param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
       "Additional Channel.Interface.* interfaces",
       G_TYPE_STRV,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   salut_tubes_channel_class->dbus_props_class.interfaces = prop_interfaces;

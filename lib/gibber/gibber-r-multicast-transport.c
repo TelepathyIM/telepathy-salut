@@ -267,9 +267,7 @@ gibber_r_multicast_transport_class_init (
      "transport", "The underlying Transport",
       GIBBER_TYPE_TRANSPORT,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE      |
-      G_PARAM_STATIC_NAME    |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE      | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_property (object_class, PROP_TRANSPORT,
                                   param_spec);
