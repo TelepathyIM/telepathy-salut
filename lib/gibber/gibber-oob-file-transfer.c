@@ -546,6 +546,10 @@ http_server_cb (SoupServerContext *context,
   soup_message_set_status (msg, SOUP_STATUS_OK);
   soup_server_message_set_encoding (SOUP_SERVER_MESSAGE (msg),
       SOUP_TRANSFER_CHUNKED);
+
+  soup_message_add_header (msg->response_headers, "Content-Type",
+      GIBBER_FILE_TRANSFER (self)->content_type);
+
   self->priv->msg = g_object_ref (msg);
 
   /* iChat accepts only AppleSingle encoding, i.e. file's contents and
