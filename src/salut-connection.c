@@ -2867,10 +2867,14 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   priv->muc_manager = salut_discovery_client_create_muc_manager (
       priv->discovery_client, self, priv->xmpp_connection_manager);
 
+  priv->roomlist_manager = salut_discovery_client_create_roomlist_manager (
+      priv->discovery_client, self, priv->xmpp_connection_manager);
+
   g_ptr_array_add (managers, priv->im_manager);
   g_ptr_array_add (managers, priv->contact_manager);
   g_ptr_array_add (managers, priv->ft_manager);
   g_ptr_array_add (managers, priv->muc_manager);
+  g_ptr_array_add (managers, priv->roomlist_manager);
 
   return managers;
 }
