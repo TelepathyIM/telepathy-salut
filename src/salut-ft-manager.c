@@ -423,7 +423,6 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
 
   date = tp_asv_get_uint64 (request_properties,
       SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date", NULL);
-  /* FIXME: can we have a valid date of 0 ? */
 
   initial_offset = tp_asv_get_uint64 (request_properties,
       SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
