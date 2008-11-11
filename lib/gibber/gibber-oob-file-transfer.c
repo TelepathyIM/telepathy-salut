@@ -595,6 +595,7 @@ http_server_cb (SoupServerContext *context,
           (char *) array->data, array->len);
 
       soup_message_io_unpause (self->priv->msg);
+      g_byte_array_free (array, TRUE);
     }
 
   g_signal_emit_by_name (self, "remote-accepted");
