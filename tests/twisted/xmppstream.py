@@ -149,19 +149,10 @@ class OutgoingXmppStream(BaseXmlStream):
         self.send_header()
 
 class OutgoingXmppiChatStream(OutgoingXmppStream):
-    def send_header(self):
-        # iChat doesn't send 'to', 'from' and 'version' attributes
-        root = domish.Element((NS_STREAMS, 'stream'))
-        self.send(root.toXml(closeElement = 0, prefixes=self.prefixes))
-
-    def send(self, obj):
-        if domish.IElement.providedBy(obj):
-            # iChat doesn't send 'from' attribute
-            if self.remote_name != None:
-                obj["to"] = self.remote_name
-            obj = obj.toXml(prefixes=self.prefixes)
-
-        xmlstream.XmlStream.send(self, obj)
+    def __init__(self, event_function, name, remote_name):
+        # name and remote_name as None as iChat doesn't send 'to' and
+        # 'from' attributes.
+        OutgoingXmppStream.__init__(self, event_function, None, None)
 
 class OutgoingXmppFactory(ClientFactory):
     def __init__(self, event_function):
