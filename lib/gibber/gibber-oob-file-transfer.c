@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* TODO: We should port code to use libsoup 2.4 */
 #include <libsoup/soup.h>
 #include <libsoup/soup-server.h>
 #include <libsoup/soup-server-message.h>
@@ -35,8 +36,9 @@
 #include "gibber-debug.h"
 
 enum {
-  NOT_FOUND = 404,
-  NOT_ACCEPTABLE = 406
+  HTTP_STATUS_CODE_OK = 200,
+  HTTP_STATUS_CODE_NOT_FOUND = 404,
+  HTTP_STATUS_CODE_NOT_ACCEPTABLE = 406
 };
 
 G_DEFINE_TYPE(GibberOobFileTransfer, gibber_oob_file_transfer,
@@ -260,7 +262,7 @@ http_client_chunk_cb (SoupMessage *msg,
   g_io_channel_write_chars (self->priv->channel, msg->response.body,
       msg->response.length, NULL, NULL);
 
-  if (msg->status_code != 200)
+  if (msg->status_code != HTTP_STATUS_CODE_OK)
     {
       /* Something did wrong, so it's not file data. Don't fire the
        * transferred-chunk signal. */
@@ -303,7 +305,7 @@ http_client_finished_chunks_cb (SoupMessage *msg,
 
   DEBUG ("Finished HTTP chunked file transfer");
 
-  if (msg->status_code != 200)
+  if (msg->status_code != HTTP_STATUS_CODE_OK)
     {
       GError *error = NULL;
       const gchar *reason_phrase;
@@ -414,6 +416,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   filename_escaped = g_uri_escape_string (GIBBER_FILE_TRANSFER (self)->filename,
       NULL, FALSE);
+  /* FIXME: this won't work with IPv6 address */
   url = g_strdup_printf ("http://%s:%d/%s/%s", host_name,
       soup_server_get_port (self->priv->server),
       GIBBER_FILE_TRANSFER (self)->id, filename_escaped);
@@ -701,13 +704,13 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
 
   switch (error_code)
     {
-      case NOT_FOUND:
+      case HTTP_STATUS_CODE_NOT_FOUND:
         gibber_xmpp_node_set_attribute (error_node, "code", code_string);
         gibber_xmpp_node_set_attribute (error_node, "type", "cancel");
         error_desc = gibber_xmpp_node_add_child_ns (error_node,
             "item-not-found", GIBBER_XMPP_NS_STANZAS);
         break;
-      case NOT_ACCEPTABLE:
+      case HTTP_STATUS_CODE_NOT_ACCEPTABLE:
         gibber_xmpp_node_set_attribute (error_node, "code", code_string);
         gibber_xmpp_node_set_attribute (error_node, "type", "modify");
         error_desc = gibber_xmpp_node_add_child_ns (error_node,

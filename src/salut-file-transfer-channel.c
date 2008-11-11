@@ -57,7 +57,8 @@ channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void
 file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
 
-G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel, G_TYPE_OBJECT,
+G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel,
+    G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
                            tp_dbus_properties_mixin_iface_init);
@@ -779,7 +780,7 @@ salut_file_transfer_channel_finalize (GObject *object)
  */
 static void
 salut_file_transfer_channel_close (TpSvcChannel *iface,
-                          DBusGMethodInvocation *context)
+                                   DBusGMethodInvocation *context)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
@@ -1062,7 +1063,7 @@ ft_transferred_chunk_cb (GibberFileTransfer *ft,
   /* Only emit the TransferredBytes signal if it has been one second since its
    * last emission, OR if the transfer has finished.
    */
-  if (timeval.tv_sec >= (self->priv->last_transferred_bytes_emitted + 1)
+  if (timeval.tv_sec > self->priv->last_transferred_bytes_emitted
       || self->priv->transferred_bytes == self->priv->size)
     {
       salut_svc_channel_type_file_transfer_emit_transferred_bytes_changed (
@@ -1091,7 +1092,7 @@ check_address_and_access_control (SalutFileTransferChannel *self,
       return FALSE;
     }
 
-  /* Do we support this AccesControl? */
+  /* Do we support this AccessControl? */
   for (i = 0; i < access->len; i++)
     {
       TpSocketAccessControl control;

@@ -392,6 +392,15 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       /* Assume File_Hash_Type_None */
       content_hash_type = SALUT_FILE_HASH_TYPE_NONE;
     }
+  else
+    {
+      if (content_hash_type >= NUM_SALUT_FILE_HASH_TYPES)
+        {
+          g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "%u is not a valid ContentHashType", content_hash_type);
+          goto error;
+        }
+    }
 
   if (content_hash_type != SALUT_FILE_HASH_TYPE_NONE)
     {
@@ -415,7 +424,6 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
 
   date = tp_asv_get_uint64 (request_properties,
       SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date", NULL);
-  /* FIXME: can we have a valid date of 0 ? */
 
   initial_offset = tp_asv_get_uint64 (request_properties,
       SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
