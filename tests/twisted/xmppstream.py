@@ -95,9 +95,7 @@ class BaseXmlStream(xmlstream.XmlStream):
 
 class IncomingXmppStream(BaseXmlStream):
     def __init__(self, event_func, name):
-        BaseXmlStream.__init__(self, event_func)
-        self.name = name
-        self.remote_name = None
+        BaseXmlStream.__init__(self, event_func, name, None)
 
     def onDocumentStart(self, rootElement):
         # Use the fact that it's always salut that connects, so it sends a
