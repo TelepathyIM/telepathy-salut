@@ -1089,7 +1089,7 @@ check_address_and_access_control (SalutFileTransferChannel *self,
       return FALSE;
     }
 
-  /* Do we support this AccesControl? */
+  /* Do we support this AccessControl? */
   for (i = 0; i < access->len; i++)
     {
       TpSocketAccessControl control;
