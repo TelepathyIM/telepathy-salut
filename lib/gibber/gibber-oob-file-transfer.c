@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* TODO: We should port code to use libsoup 2.4 */
 #include <libsoup/soup.h>
 #include <libsoup/soup-server.h>
 #include <libsoup/soup-server-message.h>
