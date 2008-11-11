@@ -4,6 +4,7 @@
  * Copyright (C) 2005, 2007, 2008 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
  *   @author: Jonny Lamb <jonny.lamb@collabora.co.uk>
+ *   @author: Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
