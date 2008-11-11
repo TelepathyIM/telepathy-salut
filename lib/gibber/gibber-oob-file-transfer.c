@@ -416,6 +416,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   filename_escaped = g_uri_escape_string (GIBBER_FILE_TRANSFER (self)->filename,
       NULL, FALSE);
+  /* FIXME: this won't work with IPv6 address */
   url = g_strdup_printf ("http://%s:%d/%s/%s", host_name,
       soup_server_get_port (self->priv->server),
       GIBBER_FILE_TRANSFER (self)->id, filename_escaped);
