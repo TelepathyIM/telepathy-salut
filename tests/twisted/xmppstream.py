@@ -71,8 +71,10 @@ class BaseXmlStream(xmlstream.XmlStream):
 
     def send_header(self):
         root = domish.Element((NS_STREAMS, 'stream'))
-        root['from'] = self.name
-        root['to'] = self.remote_name
+        if self.name is not None:
+            root['from'] = self.name
+        if self.remote_name is not None:
+            root['to'] = self.remote_name
         root['version'] = self.version
         self.send(root.toXml(closeElement = 0, prefixes=self.prefixes))
 
