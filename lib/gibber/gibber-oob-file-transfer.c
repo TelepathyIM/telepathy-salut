@@ -558,6 +558,7 @@ http_server_cb (SoupServerContext *context,
       guint32 uint32;
       guint16 uint16;
       GByteArray *array;
+      gchar *buff;
 
       DEBUG ("Using AppleSingle encoding");
 
@@ -591,8 +592,14 @@ http_server_cb (SoupServerContext *context,
       soup_message_add_header (msg->response_headers, "Content-encoding",
           "AppleSingle");
 
-      soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_STATIC,
-          (char *) array->data, array->len);
+      /* copy the bytes array using g_malloc as libsoup will have to free it
+       * once it's written. */
+
+      buff = g_malloc (array->len);
+      memcpy (buff, array->data, array->len);
+
+      soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_SYSTEM_OWNED,
+          buff, array->len);
 
       soup_message_io_unpause (self->priv->msg);
       g_byte_array_free (array, TRUE);
