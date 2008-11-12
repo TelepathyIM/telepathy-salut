@@ -727,31 +727,6 @@ create_tubes_channel (SalutMucManager *self,
   return tubes_chan;
 }
 
-/**
- * ensure_muc_channel:
- *
- * Create a MUC channel in response to RequestChannel.
- *
- * Return TRUE if it already existed, or return FALSE
- * if it needed to be created (so isn't ready yet).
- */
-static gboolean
-ensure_muc_channel (SalutMucManager *fac,
-                    SalutMucManagerPrivate *priv,
-                    TpHandle handle,
-                    SalutMucChannel **ret)
-{
-  *ret = g_hash_table_lookup (priv->text_channels, GINT_TO_POINTER (handle));
-
-  if (*ret == NULL)
-    {
-      *ret = salut_muc_manager_request_new_muc_channel (fac, handle, NULL);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
 static void
 salut_muc_manager_associate_request (SalutMucManager *self,
                                      gpointer channel,
@@ -804,7 +779,10 @@ salut_muc_manager_request (SalutMucManager *self,
               &error))
         goto error;
 
-      if (ensure_muc_channel (self, priv, handle, &text_chan))
+      text_chan = g_hash_table_lookup (priv->text_channels,
+          GINT_TO_POINTER (handle));
+
+      if (text_chan != NULL)
         {
           if (require_new)
             {
@@ -820,8 +798,12 @@ salut_muc_manager_request (SalutMucManager *self,
         }
       else
         {
+          text_chan = salut_muc_manager_request_new_muc_channel (self,
+              handle, NULL);
           salut_muc_manager_associate_request (self, text_chan,
               request_token);
+          salut_muc_manager_emit_new_channel (self,
+              TP_EXPORTABLE_CHANNEL (text_chan));
         }
 
       return TRUE;
@@ -853,7 +835,8 @@ salut_muc_manager_request (SalutMucManager *self,
         }
       else
         {
-          ensure_muc_channel (self, priv, handle, &text_chan);
+          text_chan = g_hash_table_lookup (priv->text_channels,
+              GINT_TO_POINTER (handle));
           tubes_chan = new_tubes_channel (self, handle, text_chan,
               base_conn->self_handle);
           salut_muc_manager_associate_request (self, tubes_chan,
