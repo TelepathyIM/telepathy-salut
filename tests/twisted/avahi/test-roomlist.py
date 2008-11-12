@@ -151,9 +151,9 @@ def test(q, bus, conn):
 
     q.expect_many(
             EventPattern('dbus-signal', signal='Closed',
-                path=path1[len(tp_path_prefix):]),
+                path=path1),
             EventPattern('dbus-signal', signal='Closed',
-                path=path2[len(tp_path_prefix):]),
+                path=path2),
             EventPattern('dbus-signal', signal='ChannelClosed', args=[path1]),
             EventPattern('dbus-signal', signal='ChannelClosed', args=[path2]),
             EventPattern('dbus-signal', signal='StatusChanged', args=[2, 1]),
