@@ -609,6 +609,8 @@ gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
     {
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
     }
+
+  g_object_unref (stanza);
 }
 
 static void
