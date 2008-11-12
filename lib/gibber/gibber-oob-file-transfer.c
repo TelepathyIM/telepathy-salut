@@ -65,6 +65,8 @@ struct _GibberOobFileTransferPrivate
   gboolean cancelled;
   /* the watch id on the channel */
   guint watch_id;
+  /* session used to receive the file */
+  SoupSession *session;
 };
 
 static void
@@ -121,6 +123,9 @@ gibber_oob_file_transfer_finalize (GObject *object)
 
   if (self->priv->msg)
     g_object_unref (G_OBJECT (self->priv->msg));
+
+  if (self->priv->session != NULL)
+    g_object_unref (self->priv->session);
 
   g_free (self->priv->served_name);
   g_free (self->priv->url);
@@ -360,10 +365,9 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
                                   GIOChannel *dest)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
-  SoupSession *session;
   SoupMessage *msg;
 
-  session = soup_session_async_new ();
+  self->priv->session = soup_session_async_new ();
   msg = soup_message_new (SOUP_METHOD_GET, self->priv->url);
   if (msg == NULL)
     {
@@ -381,8 +385,8 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
 
   soup_message_set_flags (msg, SOUP_MESSAGE_OVERWRITE_CHUNKS);
   g_signal_connect (msg, "got_chunk", G_CALLBACK (http_client_chunk_cb), self);
-  soup_session_queue_message (session, msg, http_client_finished_chunks_cb,
-      self);
+  soup_session_queue_message (self->priv->session, msg,
+      http_client_finished_chunks_cb, self);
 }
 
 static GibberXmppStanza *
