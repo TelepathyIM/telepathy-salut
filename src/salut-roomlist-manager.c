@@ -334,13 +334,134 @@ salut_roomlist_manager_foreach_channel_class (
 }
 
 
+static void
+roomlist_channel_closed_cb (SalutRoomlistChannel *channel,
+                            gpointer user_data)
+{
+  SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (user_data);
+  SalutRoomlistManagerPrivate *priv =
+    SALUT_ROOMLIST_MANAGER_GET_PRIVATE (self);
+
+  tp_channel_manager_emit_channel_closed_for_object (self,
+      TP_EXPORTABLE_CHANNEL (channel));
+
+  if (priv->roomlist_channels != NULL)
+    {
+      priv->roomlist_channels = g_slist_remove (priv->roomlist_channels,
+          channel);
+      g_object_unref (channel);
+    }
+}
+
+
+static SalutRoomlistChannel *
+make_roomlist_channel (SalutRoomlistManager *self)
+{
+  SalutRoomlistManagerPrivate *priv =
+    SALUT_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *conn = TP_BASE_CONNECTION (priv->connection);
+  SalutRoomlistChannel *roomlist_channel;
+  gchar *object_path;
+  static guint cpt = 0;
+  GSList *rooms, *l;
+
+  object_path = g_strdup_printf ("%s/RoomlistChannel%u",
+      conn->object_path, cpt++);
+
+  roomlist_channel = salut_roomlist_channel_new (priv->connection,
+      object_path);
+
+  rooms = SALUT_ROOMLIST_MANAGER_GET_CLASS (self)->get_rooms (self);
+  for (l = rooms; l != NULL; l = g_slist_next (l))
+    {
+      const gchar *room_name = l->data;
+
+      salut_roomlist_channel_add_room (roomlist_channel, room_name);
+    }
+
+  priv->roomlist_channels = g_slist_prepend (priv->roomlist_channels,
+      roomlist_channel);
+
+  g_signal_connect (roomlist_channel, "closed",
+      (GCallback) roomlist_channel_closed_cb, self);
+
+  g_free (object_path);
+  return roomlist_channel;
+}
+
+
 static gboolean
-salut_roomlist_manager_request (SalutRoomlistManager *self,
+salut_roomlist_manager_request (TpChannelManager *manager,
                                 gpointer request_token,
                                 GHashTable *request_properties,
                                 gboolean require_new)
 {
-  return FALSE;
+  SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (manager);
+  SalutRoomlistManagerPrivate *priv =
+    SALUT_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutRoomlistChannel *roomlist_channel = NULL;
+  GError *error = NULL;
+  GSList *request_tokens;
+  const gchar *server;
+
+  if (tp_strdiff (tp_asv_get_string (request_properties,
+          TP_IFACE_CHANNEL ".ChannelType"),
+        TP_IFACE_CHANNEL_TYPE_ROOM_LIST))
+    return FALSE;
+
+  if (tp_asv_get_uint32 (request_properties,
+       TP_IFACE_CHANNEL ".TargetHandleType", NULL) != 0)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "RoomList channels can't have a target handle");
+      goto error;
+    }
+
+  if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+          roomlist_channel_fixed_properties,
+          roomlist_channel_allowed_properties,
+          &error))
+    goto error;
+
+  server = tp_asv_get_string (request_properties,
+      TP_IFACE_CHANNEL_TYPE_ROOM_LIST ".Server");
+
+  if (server != NULL && strlen (server) != 0)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Salut does not use a server to list chatrooms");
+      goto error;
+    }
+
+  if (!require_new && priv->roomlist_channels != NULL)
+    {
+      /* reuse the first channel */
+      roomlist_channel = priv->roomlist_channels->data;
+
+      tp_channel_manager_emit_request_already_satisfied (self,
+          request_token, TP_EXPORTABLE_CHANNEL (roomlist_channel));
+      return TRUE;
+    }
+
+  roomlist_channel = make_roomlist_channel (self);
+
+  g_signal_connect (roomlist_channel, "closed",
+      (GCallback) roomlist_channel_closed_cb, self);
+  priv->roomlist_channels = g_slist_prepend (priv->roomlist_channels,
+      roomlist_channel);
+
+  request_tokens = g_slist_prepend (NULL, request_token);
+  tp_channel_manager_emit_new_channel (self,
+      TP_EXPORTABLE_CHANNEL (roomlist_channel), request_tokens);
+  g_slist_free (request_tokens);
+
+  return TRUE;
+
+error:
+  tp_channel_manager_emit_request_failed (self, request_token,
+      error->domain, error->code, error->message);
+  g_error_free (error);
+  return TRUE;
 }
 
 
@@ -349,9 +470,7 @@ salut_roomlist_manager_create_channel (TpChannelManager *manager,
                                    gpointer request_token,
                                    GHashTable *request_properties)
 {
-  SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (manager);
-
-  return salut_roomlist_manager_request (self, request_token,
+  return salut_roomlist_manager_request (manager, request_token,
       request_properties, TRUE);
 }
 
@@ -361,9 +480,7 @@ salut_roomlist_manager_request_channel (TpChannelManager *manager,
                                     gpointer request_token,
                                     GHashTable *request_properties)
 {
-  SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (manager);
-
-  return salut_roomlist_manager_request (self, request_token,
+  return salut_roomlist_manager_request (manager, request_token,
       request_properties, FALSE);
 }
 
@@ -373,9 +490,7 @@ salut_roomlist_manager_ensure_channel (TpChannelManager *manager,
                                     gpointer request_token,
                                     GHashTable *request_properties)
 {
-  SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (manager);
-
-  return salut_roomlist_manager_request (self, request_token,
+  return salut_roomlist_manager_request (manager, request_token,
       request_properties, FALSE);
 }
 
