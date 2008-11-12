@@ -386,7 +386,7 @@ make_roomlist_channel (SalutRoomlistManager *self)
     }
 
   priv->roomlist_channels = g_slist_prepend (priv->roomlist_channels,
-      roomlist_channel);
+      g_object_ref (roomlist_channel));
 
   g_signal_connect (roomlist_channel, "closed",
       (GCallback) roomlist_channel_closed_cb, self);
