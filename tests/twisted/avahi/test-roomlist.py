@@ -4,6 +4,7 @@ Test MUC support.
 """
 
 import dbus
+import avahitest
 
 from twisted.words.xish import domish
 
@@ -12,6 +13,8 @@ from servicetest import call_async, lazy, match, EventPattern, \
         tp_name_prefix, tp_path_prefix
 
 def test(q, bus, conn):
+    self_name = 'testsuite' + '@' + avahitest.get_host_name()
+
     conn.Connect()
 
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
@@ -53,9 +56,8 @@ def test(q, bus, conn):
     assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
             == conn.GetSelfHandle()
     assert props[tp_name_prefix + '.Channel.InitiatorID'] \
-            == 'test@localhost'
-    assert props[tp_name_prefix + '.Channel.Type.RoomList.Server'] == \
-            'conf.localhost'
+            == self_name
+    assert props[tp_name_prefix + '.Channel.Type.RoomList.Server'] == ''
 
     assert old_sig.args[0] == path1
     assert old_sig.args[1] == tp_name_prefix + '.Channel.Type.RoomList'
@@ -76,13 +78,12 @@ def test(q, bus, conn):
             tp_name_prefix + '.Channel.Type.RoomList',\
             channel_props.get('ChannelType')
     assert channel_props['Requested'] == True
-    assert channel_props['InitiatorID'] == 'test@localhost'
+    assert channel_props['InitiatorID'] == self_name
     assert channel_props['InitiatorHandle'] == conn.GetSelfHandle()
 
     assert chan.Get(
             tp_name_prefix + '.Channel.Type.RoomList', 'Server',
-            dbus_interface='org.freedesktop.DBus.Properties') == \
-                    'conf.localhost'
+            dbus_interface='org.freedesktop.DBus.Properties') == ''
 
     # FIXME: actually list the rooms!
 
@@ -114,7 +115,7 @@ def test(q, bus, conn):
     assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
             == conn.GetSelfHandle()
     assert props[tp_name_prefix + '.Channel.InitiatorID'] \
-            == 'test@localhost'
+            == self_name
     assert props[tp_name_prefix + '.Channel.Type.RoomList.Server'] == \
             'conference.example.net'
 
