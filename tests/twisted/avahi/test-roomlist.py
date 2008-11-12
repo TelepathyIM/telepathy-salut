@@ -93,8 +93,7 @@ def test(q, bus, conn):
             { tp_name_prefix + '.Channel.ChannelType':
                 tp_name_prefix + '.Channel.Type.RoomList',
               tp_name_prefix + '.Channel.TargetHandleType': 0,
-              tp_name_prefix + '.Channel.Type.RoomList.Server':
-                'conference.example.net',
+              tp_name_prefix + '.Channel.Type.RoomList.Server': '',
               })
 
     ret, old_sig, new_sig = q.expect_many(
@@ -116,8 +115,7 @@ def test(q, bus, conn):
             == conn.GetSelfHandle()
     assert props[tp_name_prefix + '.Channel.InitiatorID'] \
             == self_name
-    assert props[tp_name_prefix + '.Channel.Type.RoomList.Server'] == \
-            'conference.example.net'
+    assert props[tp_name_prefix + '.Channel.Type.RoomList.Server'] == ''
 
     assert new_sig.args[0][0][0] == path2
     assert new_sig.args[0][0][1] == props
@@ -130,8 +128,7 @@ def test(q, bus, conn):
 
     assert chan.Get(
             tp_name_prefix + '.Channel.Type.RoomList', 'Server',
-            dbus_interface='org.freedesktop.DBus.Properties') == \
-                    'conference.example.net'
+            dbus_interface='org.freedesktop.DBus.Properties') == ''
 
     # FIXME: actually list the rooms!
 
@@ -140,8 +137,7 @@ def test(q, bus, conn):
             { tp_name_prefix + '.Channel.ChannelType':
                 tp_name_prefix + '.Channel.Type.RoomList',
               tp_name_prefix + '.Channel.TargetHandleType': 0,
-              tp_name_prefix + '.Channel.Type.RoomList.Server':
-                'conference.example.net',
+              tp_name_prefix + '.Channel.Type.RoomList.Server': '',
               })
 
     ret = q.expect('dbus-return', method='EnsureChannel')
