@@ -358,6 +358,8 @@ http_client_finished_chunks_cb (SoupMessage *msg,
     {
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
     }
+
+  g_object_unref (stanza);
 }
 
 static void
