@@ -105,7 +105,8 @@ class IncomingXmppStream(BaseXmlStream):
 
         assert rootElement.hasAttribute("from")
         assert rootElement.hasAttribute("to")
-        assert rootElement["to"] == self.name, self.name
+        if self.name is not None:
+            assert rootElement["to"] == self.name, self.name
 
         assert rootElement.hasAttribute("version")
         assert rootElement["version"] == "1.0"
@@ -150,9 +151,14 @@ class OutgoingXmppStream(BaseXmlStream):
 
 class OutgoingXmppiChatStream(OutgoingXmppStream):
     def __init__(self, event_function, name, remote_name):
-        # name and remote_name as None as iChat doesn't send 'to' and
+        # set name and remote_name as None as iChat doesn't send 'to' and
         # 'from' attributes.
         OutgoingXmppStream.__init__(self, event_function, None, None)
+
+class IncomingXmppiChatStream(IncomingXmppStream):
+    def __init__(self, event_func, name):
+        # set name to None as iChat doesn't send 'from' attribute.
+        IncomingXmppStream.__init__(self, event_func, None)
 
 class OutgoingXmppFactory(ClientFactory):
     def __init__(self, event_function):
