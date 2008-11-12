@@ -10,7 +10,7 @@ from saluttest import exec_test
 from avahitest import AvahiAnnouncer
 from avahitest import get_host_name
 
-from xmppstream import setup_stream_listener
+from xmppstream import setup_stream_listener, IncomingXmppiChatStream
 from servicetest import make_channel_proxy, EventPattern
 
 from twisted.words.xish import domish, xpath
@@ -62,7 +62,7 @@ def test(q, bus, conn):
     self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
 
     contact_name = "test-file-receiver@" + get_host_name()
-    listener, port = setup_stream_listener(q, contact_name)
+    listener, port = setup_stream_listener(q, contact_name, protocol=IncomingXmppiChatStream)
 
     AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
 
@@ -227,7 +227,6 @@ def test(q, bus, conn):
     # Inform sender that we received all the file from the OOB transfer
     reply = domish.Element(('', 'iq'))
     reply['to'] = iq['from']
-    reply['from'] = iq['to']
     reply['type'] = 'result'
     reply['id'] = iq['id']
     incoming.send(reply)
