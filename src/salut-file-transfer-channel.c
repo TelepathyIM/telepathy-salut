@@ -753,6 +753,12 @@ salut_file_transfer_channel_dispose (GObject *object)
       self->priv->xmpp_connection = NULL;
     }
 
+  if (self->priv->ft != NULL)
+    {
+      g_object_unref (self->priv->ft);
+      self->priv->ft = NULL;
+    }
+
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->dispose)

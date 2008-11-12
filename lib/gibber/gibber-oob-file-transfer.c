@@ -63,6 +63,10 @@ struct _GibberOobFileTransferPrivate
   guint64 transferred_bytes;
   /* whether the transfer has been cancelled */
   gboolean cancelled;
+  /* the watch id on the channel */
+  guint watch_id;
+  /* session used to receive the file */
+  SoupSession *session;
 };
 
 static void
@@ -108,11 +112,20 @@ gibber_oob_file_transfer_finalize (GObject *object)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (object);
 
+  if (self->priv->watch_id != 0)
+      g_source_remove (self->priv->watch_id);
+
   if (self->priv->server != NULL)
-    g_object_unref (G_OBJECT (self->priv->server));
+    {
+      soup_server_quit (self->priv->server);
+      g_object_unref (G_OBJECT (self->priv->server));
+    }
 
   if (self->priv->msg)
     g_object_unref (G_OBJECT (self->priv->msg));
+
+  if (self->priv->session != NULL)
+    g_object_unref (self->priv->session);
 
   g_free (self->priv->served_name);
   g_free (self->priv->url);
@@ -345,6 +358,8 @@ http_client_finished_chunks_cb (SoupMessage *msg,
     {
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
     }
+
+  g_object_unref (stanza);
 }
 
 static void
@@ -352,10 +367,9 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
                                   GIOChannel *dest)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
-  SoupSession *session;
   SoupMessage *msg;
 
-  session = soup_session_async_new ();
+  self->priv->session = soup_session_async_new ();
   msg = soup_message_new (SOUP_METHOD_GET, self->priv->url);
   if (msg == NULL)
     {
@@ -373,8 +387,8 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
 
   soup_message_set_flags (msg, SOUP_MESSAGE_OVERWRITE_CHUNKS);
   g_signal_connect (msg, "got_chunk", G_CALLBACK (http_client_chunk_cb), self);
-  soup_session_queue_message (session, msg, http_client_finished_chunks_cb,
-      self);
+  soup_session_queue_message (self->priv->session, msg,
+      http_client_finished_chunks_cb, self);
 }
 
 static GibberXmppStanza *
@@ -641,6 +655,8 @@ gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
     {
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
     }
+
+  g_object_unref (stanza);
 }
 
 static void
@@ -653,8 +669,8 @@ http_server_wrote_chunk_cb (SoupMessage *msg,
       self->priv->cancelled ? "cancelled" : "not cancelled");
   if (self->priv->channel && !self->priv->cancelled)
     {
-      g_io_add_watch (self->priv->channel, G_IO_IN | G_IO_HUP,
-          input_channel_readable_cb, self);
+      self->priv->watch_id = g_io_add_watch (self->priv->channel,
+          G_IO_IN | G_IO_HUP, input_channel_readable_cb, self);
     }
 }
 
@@ -725,6 +741,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   gibber_file_transfer_send_stanza (ft, stanza, NULL);
 
   self->priv->cancelled = TRUE;
+  g_object_unref (stanza);
 }
 
 static void

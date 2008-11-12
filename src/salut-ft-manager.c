@@ -161,12 +161,7 @@ salut_ft_manager_dispose (GObject *object)
     }
 
   for (l = priv->channels; l != NULL; l = g_list_next (l))
-    {
-      SalutFileTransferChannel *chan = l->data;
-
-      g_signal_handlers_disconnect_matched (chan, G_SIGNAL_MATCH_DATA, 0, 0,
-          NULL, NULL, self);
-    }
+    g_object_unref (l->data);
 
   if (priv->channels)
     g_list_free (priv->channels);
@@ -235,6 +230,7 @@ file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
       g_object_get (chan, "handle", &handle, NULL);
       DEBUG ("Removing channel with handle %d", handle);
       priv->channels = g_list_remove (priv->channels, chan);
+      g_object_unref (chan);
     }
 }
 
