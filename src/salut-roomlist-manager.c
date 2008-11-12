@@ -148,7 +148,13 @@ salut_roomlist_manager_close_all (SalutRoomlistManager *self)
       priv->status_changed_id = 0;
     }
 
-  /* FIXME: close roomlist channels */
+  if (priv->roomlist_channels != NULL)
+    {
+      GSList *l = priv->roomlist_channels;
+      priv->roomlist_channels = NULL;
+      g_slist_foreach (l, (GFunc) g_object_unref, NULL);
+      g_slist_free (l);
+    }
 }
 
 static void
