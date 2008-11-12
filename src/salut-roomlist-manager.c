@@ -298,8 +298,7 @@ static const gchar * const roomlist_channel_fixed_properties[] = {
 };
 
 static const gchar * const roomlist_channel_allowed_properties[] = {
-    TP_IFACE_CHANNEL ".TargetHandle",
-    TP_IFACE_CHANNEL ".TargetID",
+    TP_IFACE_CHANNEL_TYPE_ROOM_LIST ".Server",
     NULL
 };
 
@@ -315,12 +314,13 @@ salut_roomlist_manager_foreach_channel_class (
   GValue *channel_type_value, *handle_type_value;
 
   channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
-  /* no string value yet - we'll change it for each channel class */
+  g_value_set_static_string (channel_type_value,
+      TP_IFACE_CHANNEL_TYPE_ROOM_LIST);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
   handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_ROOM);
+  g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_NONE);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       handle_type_value);
 
