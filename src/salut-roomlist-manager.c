@@ -351,8 +351,8 @@ salut_roomlist_manager_create_channel (TpChannelManager *manager,
 {
   SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (manager);
 
-  return salut_roomlist_manager_request (self, request_token, request_properties,
-      TRUE);
+  return salut_roomlist_manager_request (self, request_token,
+      request_properties, TRUE);
 }
 
 
@@ -363,8 +363,8 @@ salut_roomlist_manager_request_channel (TpChannelManager *manager,
 {
   SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (manager);
 
-  return salut_roomlist_manager_request (self, request_token, request_properties,
-      FALSE);
+  return salut_roomlist_manager_request (self, request_token,
+      request_properties, FALSE);
 }
 
 
@@ -375,8 +375,8 @@ salut_roomlist_manager_ensure_channel (TpChannelManager *manager,
 {
   SalutRoomlistManager *self = SALUT_ROOMLIST_MANAGER (manager);
 
-  return salut_roomlist_manager_request (self, request_token, request_properties,
-      FALSE);
+  return salut_roomlist_manager_request (self, request_token,
+      request_properties, FALSE);
 }
 
 
