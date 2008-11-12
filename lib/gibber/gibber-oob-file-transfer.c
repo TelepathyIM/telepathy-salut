@@ -63,6 +63,8 @@ struct _GibberOobFileTransferPrivate
   guint64 transferred_bytes;
   /* whether the transfer has been cancelled */
   gboolean cancelled;
+  /* the watch id on the channel */
+  guint watch_id;
 };
 
 static void
@@ -107,6 +109,9 @@ static void
 gibber_oob_file_transfer_finalize (GObject *object)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (object);
+
+  if (self->priv->watch_id != 0)
+      g_source_remove (self->priv->watch_id);
 
   if (self->priv->server != NULL)
     {
@@ -626,8 +631,8 @@ http_server_wrote_chunk_cb (SoupMessage *msg,
       self->priv->cancelled ? "cancelled" : "not cancelled");
   if (self->priv->channel && !self->priv->cancelled)
     {
-      g_io_add_watch (self->priv->channel, G_IO_IN | G_IO_HUP,
-          input_channel_readable_cb, self);
+      self->priv->watch_id = g_io_add_watch (self->priv->channel,
+          G_IO_IN | G_IO_HUP, input_channel_readable_cb, self);
     }
 }
 
