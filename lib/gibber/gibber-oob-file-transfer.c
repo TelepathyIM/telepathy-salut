@@ -703,6 +703,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   gibber_file_transfer_send_stanza (ft, stanza, NULL);
 
   self->priv->cancelled = TRUE;
+  g_object_unref (stanza);
 }
 
 static void
