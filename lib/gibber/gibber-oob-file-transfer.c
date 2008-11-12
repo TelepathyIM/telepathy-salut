@@ -109,7 +109,10 @@ gibber_oob_file_transfer_finalize (GObject *object)
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (object);
 
   if (self->priv->server != NULL)
-    g_object_unref (G_OBJECT (self->priv->server));
+    {
+      soup_server_quit (self->priv->server);
+      g_object_unref (G_OBJECT (self->priv->server));
+    }
 
   if (self->priv->msg)
     g_object_unref (G_OBJECT (self->priv->msg));
