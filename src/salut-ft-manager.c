@@ -160,7 +160,11 @@ salut_ft_manager_dispose (GObject *object)
     }
 
   for (l = priv->channels; l != NULL; l = g_list_next (l))
-    g_object_unref (l->data);
+    {
+      g_signal_handlers_disconnect_matched (l->data,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+      g_object_unref (l->data);
+    }
 
   if (priv->channels)
     g_list_free (priv->channels);
