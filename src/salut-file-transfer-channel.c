@@ -773,6 +773,7 @@ salut_file_transfer_channel_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free (self->priv->object_path);
   g_free (self->priv->filename);
+  g_free (self->priv->socket_path);
 
   G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
 }
