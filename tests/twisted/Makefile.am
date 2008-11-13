@@ -5,12 +5,14 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
+	avahi/test-send-file-and-disconnect.py \
 	avahi/test-send-file-declined.py \
 	avahi/test-send-file-item-not-found.py \
 	avahi/test-send-file-provide-immediately.py \
 	avahi/test-send-file-to-unknown-contact.py \
 	avahi/test-send-file-wait-to-provide.py \
 	avahi/test-receive-file.py \
+	avahi/test-receive-file-decline.py \
 	avahi/test-receive-file-not-found.py \
 	avahi/test-text-channel.py \
 	avahi/test-ichat-composing.py \
