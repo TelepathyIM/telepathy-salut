@@ -1132,7 +1132,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
   if (request_result ==
       SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
-      self->priv->xmpp_connection = connection;
+      self->priv->xmpp_connection = g_object_ref (connection);
       send_file_offer (self);
     }
   else if (request_result ==
