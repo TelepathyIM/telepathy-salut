@@ -11,6 +11,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-send-file-provide-immediately.py \
 	avahi/test-send-file-to-unknown-contact.py \
 	avahi/test-send-file-wait-to-provide.py \
+	avahi/test-receive-and-send-file.py \
 	avahi/test-receive-file.py \
 	avahi/test-receive-file-decline.py \
 	avahi/test-receive-file-not-found.py \
