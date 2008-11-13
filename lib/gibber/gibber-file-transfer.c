@@ -305,6 +305,8 @@ gibber_file_transfer_dispose (GObject *object)
 
   if (self->priv->connection != NULL)
     {
+      g_signal_handlers_disconnect_matched (self->priv->connection,
+          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
       g_object_unref (self->priv->connection);
       self->priv->connection = NULL;
     }
