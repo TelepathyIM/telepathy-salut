@@ -1,5 +1,5 @@
 /*
- * salut-bytestream-manager.c - Source for SalutBytestreamManager
+ * salut-si-bytestream-manager.c - Source for SalutSiBytestreamManager
  * Copyright (C) 2007 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "salut-bytestream-manager.h"
+#include "salut-si-bytestream-manager.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,10 +33,11 @@
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
 
-#define DEBUG_FLAG DEBUG_BYTESTREAM_MGR
+#define DEBUG_FLAG DEBUG_SI_BYTESTREAM_MGR
 #include "debug.h"
 
-G_DEFINE_TYPE (SalutBytestreamManager, salut_bytestream_manager, G_TYPE_OBJECT)
+G_DEFINE_TYPE (SalutSiBytestreamManager, salut_si_bytestream_manager,
+    G_TYPE_OBJECT)
 
 /* properties */
 enum
@@ -47,9 +48,9 @@ enum
 };
 
 /* private structure */
-typedef struct _SalutBytestreamManagerPrivate SalutBytestreamManagerPrivate;
+typedef struct _SalutSiBytestreamManagerPrivate SalutSiBytestreamManagerPrivate;
 
-struct _SalutBytestreamManagerPrivate
+struct _SalutSiBytestreamManagerPrivate
 {
   SalutConnection *connection;
   SalutImManager *im_manager;
@@ -60,14 +61,14 @@ struct _SalutBytestreamManagerPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_BYTESTREAM_MANAGER_GET_PRIVATE(obj) \
-    ((SalutBytestreamManagerPrivate *) ((SalutBytestreamManager *)obj)->priv)
+#define SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE(obj) \
+    ((SalutSiBytestreamManagerPrivate *) ((SalutSiBytestreamManager *)obj)->priv)
 
 static void
-salut_bytestream_manager_init (SalutBytestreamManager *self)
+salut_si_bytestream_manager_init (SalutSiBytestreamManager *self)
 {
-  SalutBytestreamManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
-      SALUT_TYPE_BYTESTREAM_MANAGER, SalutBytestreamManagerPrivate);
+  SalutSiBytestreamManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+      SALUT_TYPE_SI_BYTESTREAM_MANAGER, SalutSiBytestreamManagerPrivate);
 
   self->priv = priv;
 
@@ -235,15 +236,15 @@ bytestream_state_changed (GibberBytestreamIface *bytestream,
 }
 
 GibberBytestreamIface *
-choose_bytestream_method (SalutBytestreamManager *self,
+choose_bytestream_method (SalutSiBytestreamManager *self,
                           GSList *stream_methods,
                           GibberXmppConnection *connection,
                           SalutContact *contact,
                           const gchar *stream_id,
                           const gchar *stream_init_id)
 {
-  SalutBytestreamManagerPrivate *priv =
-    SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  SalutSiBytestreamManagerPrivate *priv =
+    SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
   GSList *l;
 
   /* We create the stream according the stream method chosen.
@@ -293,9 +294,9 @@ si_request_cb (SalutXmppConnectionManager *xcm,
                SalutContact *contact,
                gpointer user_data)
 {
-  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (user_data);
-  SalutBytestreamManagerPrivate *priv =
-    SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (user_data);
+  SalutSiBytestreamManagerPrivate *priv =
+    SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
@@ -429,11 +430,11 @@ out:
 }
 
 void
-salut_bytestream_manager_dispose (GObject *object)
+salut_si_bytestream_manager_dispose (GObject *object)
 {
-  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (object);
-  SalutBytestreamManagerPrivate *priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (
-      self);
+  SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (object);
+  SalutSiBytestreamManagerPrivate *priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE
+      (self);
 
   if (priv->dispose_has_run)
     return;
@@ -444,31 +445,32 @@ salut_bytestream_manager_dispose (GObject *object)
   g_object_unref (priv->muc_manager);
   g_object_unref (priv->xmpp_connection_manager);
 
-  if (G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->dispose (object);
+  if (G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->dispose)
+    G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->dispose (object);
 }
 
 void
-salut_bytestream_manager_finalize (GObject *object)
+salut_si_bytestream_manager_finalize (GObject *object)
 {
-  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (object);
-  SalutBytestreamManagerPrivate *priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (
+  SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (object);
+  SalutSiBytestreamManagerPrivate *priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (
       self);
 
   g_free (priv->host_name_fqdn);
 
-  if (G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->finalize)
-    G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->finalize (object);
+  if (G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->finalize)
+    G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->finalize
+        (object);
 }
 
 static void
-salut_bytestream_manager_get_property (GObject *object,
-                                       guint property_id,
-                                       GValue *value,
-                                       GParamSpec *pspec)
+salut_si_bytestream_manager_get_property (GObject *object,
+                                          guint property_id,
+                                          GValue *value,
+                                          GParamSpec *pspec)
 {
-  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (object);
-  SalutBytestreamManagerPrivate *priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (
+  SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (object);
+  SalutSiBytestreamManagerPrivate *priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (
       self);
 
   switch (property_id)
@@ -486,13 +488,13 @@ salut_bytestream_manager_get_property (GObject *object,
 }
 
 static void
-salut_bytestream_manager_set_property (GObject *object,
-                                       guint property_id,
-                                       const GValue *value,
-                                       GParamSpec *pspec)
+salut_si_bytestream_manager_set_property (GObject *object,
+                                          guint property_id,
+                                          const GValue *value,
+                                          GParamSpec *pspec)
 {
-  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (object);
-  SalutBytestreamManagerPrivate *priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (
+  SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (object);
+  SalutSiBytestreamManagerPrivate *priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (
       self);
 
   switch (property_id)
@@ -511,19 +513,19 @@ salut_bytestream_manager_set_property (GObject *object,
 }
 
 static GObject *
-salut_bytestream_manager_constructor (GType type,
+salut_si_bytestream_manager_constructor (GType type,
                                       guint n_props,
                                       GObjectConstructParam *props)
 {
   GObject *obj;
-  SalutBytestreamManager *self;
-  SalutBytestreamManagerPrivate *priv;
+  SalutSiBytestreamManager *self;
+  SalutSiBytestreamManagerPrivate *priv;
 
-  obj = G_OBJECT_CLASS (salut_bytestream_manager_parent_class)->
+  obj = G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->
            constructor (type, n_props, props);
 
-  self = SALUT_BYTESTREAM_MANAGER (obj);
-  priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  self = SALUT_SI_BYTESTREAM_MANAGER (obj);
+  priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
 
   g_assert (priv->connection != NULL);
   g_object_get (priv->connection,
@@ -544,21 +546,22 @@ salut_bytestream_manager_constructor (GType type,
 }
 
 static void
-salut_bytestream_manager_class_init (
-    SalutBytestreamManagerClass *salut_bytestream_manager_class)
+salut_si_bytestream_manager_class_init (
+    SalutSiBytestreamManagerClass *salut_si_bytestream_manager_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_bytestream_manager_class);
+  GObjectClass *object_class = G_OBJECT_CLASS
+      (salut_si_bytestream_manager_class);
   GParamSpec *param_spec;
 
-  g_type_class_add_private (salut_bytestream_manager_class,
-      sizeof (SalutBytestreamManagerPrivate));
+  g_type_class_add_private (salut_si_bytestream_manager_class,
+      sizeof (SalutSiBytestreamManagerPrivate));
 
-  object_class->constructor = salut_bytestream_manager_constructor;
-  object_class->dispose = salut_bytestream_manager_dispose;
-  object_class->finalize = salut_bytestream_manager_finalize;
+  object_class->constructor = salut_si_bytestream_manager_constructor;
+  object_class->dispose = salut_si_bytestream_manager_dispose;
+  object_class->finalize = salut_si_bytestream_manager_finalize;
 
-  object_class->get_property = salut_bytestream_manager_get_property;
-  object_class->set_property = salut_bytestream_manager_set_property;
+  object_class->get_property = salut_si_bytestream_manager_get_property;
+  object_class->set_property = salut_si_bytestream_manager_set_property;
 
   param_spec = g_param_spec_object (
       "connection",
@@ -566,10 +569,7 @@ salut_bytestream_manager_class_init (
       "Salut Connection that owns the connection for this bytestream channel",
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
   param_spec = g_param_spec_string (
@@ -578,29 +578,26 @@ salut_bytestream_manager_class_init (
       "The FQDN host name that will be used by OOB bytestreams",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_HOST_NAME_FQDN,
       param_spec);
 }
 
-SalutBytestreamManager *
-salut_bytestream_manager_new (SalutConnection *conn,
+SalutSiBytestreamManager *
+salut_si_bytestream_manager_new (SalutConnection *conn,
                               const gchar *host_name_fqdn)
 {
   g_return_val_if_fail (SALUT_IS_CONNECTION (conn), NULL);
 
   return g_object_new (
-      SALUT_TYPE_BYTESTREAM_MANAGER,
+      SALUT_TYPE_SI_BYTESTREAM_MANAGER,
       "connection", conn,
       "host-name-fqdn", host_name_fqdn,
       NULL);
 }
 
 /**
- * salut_bytestream_manager_make_stream_init_iq
+ * salut_si_bytestream_manager_make_stream_init_iq
  *
  * @from: your contact
  * @to: the contact to who you want to offer the stream
@@ -611,10 +608,10 @@ salut_bytestream_manager_new (SalutConnection *conn,
  *
  */
 GibberXmppStanza *
-salut_bytestream_manager_make_stream_init_iq (const gchar *from,
-                                              const gchar *to,
-                                              const gchar *stream_id,
-                                              const gchar *profile)
+salut_si_bytestream_manager_make_stream_init_iq (const gchar *from,
+                                                 const gchar *to,
+                                                 const gchar *stream_id,
+                                                 const gchar *profile)
 {
   return gibber_xmpp_stanza_build (
       GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_SET,
@@ -653,9 +650,9 @@ salut_bytestream_manager_make_stream_init_iq (const gchar *from,
 
 struct streaminit_reply_cb_data
 {
-  SalutBytestreamManager *self;
+  SalutSiBytestreamManager *self;
   gchar *stream_id;
-  SalutBytestreamManagerNegotiateReplyFunc func;
+  SalutSiBytestreamManagerNegotiateReplyFunc func;
   gpointer user_data;
   gchar *iq_id;
   SalutContact *contact;
@@ -710,12 +707,12 @@ si_request_reply_filter (SalutXmppConnectionManager *manager,
 
 static gboolean
 check_bytestream_oob_peer_addr (GibberBytestreamOOB *bytestream,
-                                struct sockaddr_storage *addr,
+                                struct sockaddr *addr,
                                 socklen_t addrlen,
                                 gpointer user_data)
 {
-  SalutBytestreamManager *self = SALUT_BYTESTREAM_MANAGER (user_data);
-  SalutBytestreamManagerPrivate *priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (
+  SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (user_data);
+  SalutSiBytestreamManagerPrivate *priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (
       self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
@@ -740,7 +737,7 @@ check_bytestream_oob_peer_addr (GibberBytestreamOOB *bytestream,
   if (contact == NULL)
     return FALSE;
 
-  result = salut_contact_has_address (contact, addr);
+  result = salut_contact_has_address (contact, addr, addrlen);
   g_object_unref (contact);
 
   return result;
@@ -755,8 +752,8 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
 {
   struct streaminit_reply_cb_data *data =
     (struct streaminit_reply_cb_data *) user_data;
-  SalutBytestreamManagerPrivate *priv =
-    SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (data->self);
+  SalutSiBytestreamManagerPrivate *priv =
+    SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (data->self);
   GibberStanzaSubType sub_type;
   GibberXmppNode *si, *feature, *x;
   GibberBytestreamIface *bytestream = NULL;
@@ -901,13 +898,13 @@ END:
 }
 
 static gboolean
-send_si_request (SalutBytestreamManager *self,
+send_si_request (SalutSiBytestreamManager *self,
                  GibberXmppConnection *connection,
                  struct streaminit_reply_cb_data *data,
                  GError **error)
 {
-  SalutBytestreamManagerPrivate *priv =
-    SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  SalutSiBytestreamManagerPrivate *priv =
+    SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
   const gchar *iq_id;
 
   iq_id = gibber_xmpp_node_get_attribute (data->stanza->node, "id");
@@ -992,11 +989,11 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
 }
 
 /*
- * salut_bytestream_manager_negotiate_stream:
+ * salut_si_bytestream_manager_negotiate_stream:
  *
  * @contact: the contact to who send the SI request
  * @stanza: the SI negotiation IQ (created using
- * salut_bytestream_manager_make_stream_init_iq)
+ * salut_si_bytestream_manager_make_stream_init_iq)
  * @stream_id: the stream identifier
  * @func: the callback to call when we receive the answser of the request
  * @user_data: user data to pass to the callback
@@ -1005,24 +1002,24 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
  * Send a Stream Initiation (XEP-0095) request.
  */
 gboolean
-salut_bytestream_manager_negotiate_stream (SalutBytestreamManager *self,
-                                           SalutContact *contact,
-                                           GibberXmppStanza *stanza,
-                                           const gchar *stream_id,
-                                           SalutBytestreamManagerNegotiateReplyFunc func,
-                                           gpointer user_data,
-                                           GError **error)
+salut_si_bytestream_manager_negotiate_stream (SalutSiBytestreamManager *self,
+                                              SalutContact *contact,
+                                              GibberXmppStanza *stanza,
+                                              const gchar *stream_id,
+                                              SalutSiBytestreamManagerNegotiateReplyFunc func,
+                                              gpointer user_data,
+                                              GError **error)
 {
-  SalutBytestreamManagerPrivate *priv;
+  SalutSiBytestreamManagerPrivate *priv;
   struct streaminit_reply_cb_data *data;
   GibberXmppConnection *connection = NULL;
   SalutXmppConnectionManagerRequestConnectionResult request_result;
 
-  g_assert (SALUT_IS_BYTESTREAM_MANAGER (self));
+  g_assert (SALUT_IS_SI_BYTESTREAM_MANAGER (self));
   g_assert (stream_id != NULL);
   g_assert (func != NULL);
 
-  priv = SALUT_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
 
   data = streaminit_reply_cb_data_new ();
   data->self = self;

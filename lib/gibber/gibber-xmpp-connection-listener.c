@@ -158,6 +158,9 @@ new_connection_cb (GibberListener *listener,
   return TRUE;
 }
 
+/**
+ * port: the port, or 0 to choose a random port
+ */
 gboolean
 gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self,
                                         int port,
@@ -165,13 +168,28 @@ gibber_xmpp_connection_listener_listen (GibberXmppConnectionListener *self,
 {
   GibberXmppConnectionListenerPrivate *priv =
     GIBBER_XMPP_CONNECTION_LISTENER_GET_PRIVATE (self);
+  int ret;
 
   if (priv->listener == NULL)
     {
-      priv->listener = gibber_listener_new();
+      priv->listener = gibber_listener_new ();
       g_signal_connect (priv->listener, "new-connection",
         G_CALLBACK (new_connection_cb), self);
     }
 
-  return gibber_listener_listen_tcp (priv->listener, port, error);
+  ret = gibber_listener_listen_tcp (priv->listener, port, error);
+
+  return ret;
+}
+
+int
+gibber_xmpp_connection_listener_get_port (
+    GibberXmppConnectionListener *self)
+{
+  GibberXmppConnectionListenerPrivate *priv =
+    GIBBER_XMPP_CONNECTION_LISTENER_GET_PRIVATE (self);
+
+  g_return_val_if_fail (priv->listener != NULL, 0);
+
+  return gibber_listener_get_port (priv->listener);
 }

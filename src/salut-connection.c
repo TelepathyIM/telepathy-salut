@@ -41,7 +41,7 @@
 #include "salut-contact.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
-#include "salut-bytestream-manager.h"
+#include "salut-si-bytestream-manager.h"
 
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity-manager.h"
@@ -144,7 +144,7 @@ enum {
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
-  PROP_BYTESTREAM_MANAGER,
+  PROP_SI_BYTESTREAM_MANAGER,
 #ifdef ENABLE_OLPC
   PROP_OLPC_ACTIVITY_MANAGER,
 #endif
@@ -196,7 +196,7 @@ struct _SalutConnectionPrivate
   /* SalutTubesManager *tubes_manager; */
 
   /* Bytestream manager */
-  SalutBytestreamManager *bytestream_manager;
+  SalutSiBytestreamManager *si_bytestream_manager;
 
 #ifdef ENABLE_OLPC
   SalutOlpcActivityManager *olpc_activity_manager;
@@ -350,8 +350,8 @@ salut_connection_get_property (GObject *object,
     case PROP_XCM:
       g_value_set_object (value, priv->xmpp_connection_manager);
       break;
-    case PROP_BYTESTREAM_MANAGER:
-      g_value_set_object (value, priv->bytestream_manager);
+    case PROP_SI_BYTESTREAM_MANAGER:
+      g_value_set_object (value, priv->si_bytestream_manager);
       break;
 #ifdef ENABLE_OLPC
     case PROP_OLPC_ACTIVITY_MANAGER:
@@ -649,32 +649,32 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_NICKNAME, param_spec);
 
   param_spec = g_param_spec_string ("first-name", "First name",
       "First name used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_FIRST_NAME, param_spec);
 
   param_spec = g_param_spec_string ("last-name", "Last name",
       "Last name used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_LAST_NAME, param_spec);
 
   param_spec = g_param_spec_string ("email", "E-mail address",
       "E-mail address used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_EMAIL, param_spec);
 
   param_spec = g_param_spec_string ("jid", "Jabber id",
       "Jabber id used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_JID, param_spec);
 
   param_spec = g_param_spec_string ("published-name", "Published name",
       "Username used in the published data", NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_NAME | G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_PUBLISHED_NAME,
       param_spec);
 
@@ -683,9 +683,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutImManager object",
       "The Salut IM Manager associated with this Salut Connection",
       SALUT_TYPE_IM_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_IM_MANAGER,
       param_spec);
 
@@ -694,9 +692,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutMucManager object",
       "The Salut MUC Manager associated with this Salut Connection",
       SALUT_TYPE_MUC_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_MUC_MANAGER,
       param_spec);
 
@@ -705,9 +701,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutContactManager object",
       "The Salut Contact Manager associated with this Salut Connection",
       SALUT_TYPE_CONTACT_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
       param_spec);
 
@@ -716,9 +710,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutSelf object",
       "The Salut Self object associated with this Salut Connection",
       SALUT_TYPE_SELF,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_SELF,
       param_spec);
 
@@ -728,21 +720,17 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "The Salut XMPP Connection Manager associated with this Salut "
       "Connection",
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_XCM,
       param_spec);
 
   param_spec = g_param_spec_object (
       "bytestream-manager",
-      "SalutBytestreamManager object",
+      "SalutSiBytestreamManager object",
       "The Salut Bytestream Manager associated with this Salut Connection",
-      SALUT_TYPE_BYTESTREAM_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_BYTESTREAM_MANAGER,
+      SALUT_TYPE_SI_BYTESTREAM_MANAGER,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_SI_BYTESTREAM_MANAGER,
       param_spec);
 
 #ifdef ENABLE_OLPC
@@ -751,9 +739,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutOlpcActivityManager object",
       "The OLPC activity Manager associated with this Salut Connection",
       SALUT_TYPE_OLPC_ACTIVITY_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OLPC_ACTIVITY_MANAGER,
       param_spec);
 #endif
@@ -764,10 +750,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "a G_TYPE_GTYPE of the backend to use",
       G_TYPE_NONE,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_BACKEND,
       param_spec);
 
@@ -815,10 +798,10 @@ salut_connection_dispose (GObject *object)
       priv->discovery_client = NULL;
     }
 
-  if (priv->bytestream_manager != NULL)
+  if (priv->si_bytestream_manager != NULL)
     {
-      g_object_unref (priv->bytestream_manager);
-      priv->bytestream_manager = NULL;
+      g_object_unref (priv->si_bytestream_manager);
+      priv->si_bytestream_manager = NULL;
     }
 
   /* release any references held by the object here */
@@ -955,7 +938,7 @@ discovery_client_running (SalutConnection *self)
     }
 
   /* Create the bytestream manager */
-  priv->bytestream_manager = salut_bytestream_manager_new (self,
+  priv->si_bytestream_manager = salut_si_bytestream_manager_new (self,
     salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
 }
 

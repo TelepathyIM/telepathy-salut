@@ -323,10 +323,7 @@ gibber_bytestream_ibb_class_init (
       "bytestream if it's a private one",
       GIBBER_TYPE_XMPP_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
       param_spec);
 
@@ -336,10 +333,7 @@ gibber_bytestream_ibb_class_init (
       "the iq ID of the SI request, if any",
       "",
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
       param_spec);
 

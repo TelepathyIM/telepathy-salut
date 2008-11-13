@@ -225,10 +225,7 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
       "The Salut Connection associated with this contact",
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION,
       param_spec);
 
@@ -238,10 +235,7 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
       "The name of this contact",
       NULL,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_NAME,
       param_spec);
 }
@@ -387,9 +381,10 @@ salut_contact_get_addresses (SalutContact *self)
 
 gboolean
 salut_contact_has_address (SalutContact *self,
-                           struct sockaddr_storage *address)
+                           struct sockaddr *address,
+                           guint size)
 {
-  return SALUT_CONTACT_GET_CLASS (self)->has_address (self, address);
+  return SALUT_CONTACT_GET_CLASS (self)->has_address (self, address, size);
 }
 
 const gchar *

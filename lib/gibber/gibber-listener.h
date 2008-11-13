@@ -92,6 +92,7 @@ gboolean gibber_listener_listen_tcp_loopback_af (GibberListener *listener,
 gboolean gibber_listener_listen_socket (GibberListener *listener,
   gchar *path, gboolean abstract, GError **error);
 
+int gibber_listener_get_port (GibberListener *listener);
 
 G_END_DECLS
 
