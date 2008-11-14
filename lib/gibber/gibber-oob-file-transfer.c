@@ -757,6 +757,7 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
           GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND,
           "Remote user is not able to retrieve the file");
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
+      g_error_free (error);
       return;
     }
 }
