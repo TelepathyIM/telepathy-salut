@@ -1238,6 +1238,8 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
 
   salut_file_transfer_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+
+  g_value_unset (&out_address);
 }
 
 /**
@@ -1309,6 +1311,8 @@ salut_file_transfer_channel_provide_file (
 
   salut_svc_channel_type_file_transfer_return_from_provide_file (context,
       &out_address);
+
+  g_value_unset (&out_address);
 }
 
 static void
