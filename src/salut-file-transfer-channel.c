@@ -778,6 +778,10 @@ salut_file_transfer_channel_finalize (GObject *object)
   g_free (self->priv->object_path);
   g_free (self->priv->filename);
   g_free (self->priv->socket_path);
+  g_free (self->priv->content_type);
+  g_free (self->priv->content_hash);
+  g_free (self->priv->description);
+  g_hash_table_destroy (self->priv->available_socket_types);
 
   G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
 }
