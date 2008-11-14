@@ -1036,10 +1036,12 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
 
   self->priv->ft = ft;
 
-  self->priv->filename = g_strdup (ft->filename);
-  self->priv->size = gibber_file_transfer_get_size (ft);
-  self->priv->description = g_strdup (ft->description);
-  self->priv->content_type = g_strdup (ft->content_type);
+  g_object_set (self,
+      "filename", ft->filename,
+      "size", gibber_file_transfer_get_size (ft),
+      "description", ft->description,
+      "content-type", ft->content_type,
+      NULL);
 
   return TRUE;
 }
