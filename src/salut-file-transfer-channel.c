@@ -268,7 +268,7 @@ salut_file_transfer_channel_get_property (GObject *object,
         g_value_set_boolean (value, self->priv->closed);
         break;
       case PROP_CHANNEL_PROPERTIES:
-        g_value_set_boxed (value,
+        g_value_take_boxed (value,
             tp_dbus_properties_mixin_make_properties_hash (object,
                 TP_IFACE_CHANNEL, "ChannelType",
                 TP_IFACE_CHANNEL, "Interfaces",
