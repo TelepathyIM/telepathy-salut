@@ -338,9 +338,11 @@ salut_file_transfer_channel_set_property (GObject *object,
             SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
       case PROP_CONTENT_TYPE:
+        g_free (self->priv->content_type);
         self->priv->content_type = g_value_dup_string (value);
         break;
       case PROP_FILENAME:
+        g_free (self->priv->filename);
         self->priv->filename = g_value_dup_string (value);
         break;
       case PROP_SIZE:
@@ -350,9 +352,11 @@ salut_file_transfer_channel_set_property (GObject *object,
         self->priv->content_hash_type = g_value_get_uint (value);
         break;
       case PROP_CONTENT_HASH:
+        g_free (self->priv->content_hash);
         self->priv->content_hash = g_value_dup_string (value);
         break;
       case PROP_DESCRIPTION:
+        g_free (self->priv->description);
         self->priv->description = g_value_dup_string (value);
         break;
       case PROP_INITIATOR_HANDLE:
