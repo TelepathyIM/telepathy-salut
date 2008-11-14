@@ -127,6 +127,9 @@ gibber_oob_file_transfer_finalize (GObject *object)
   if (self->priv->session != NULL)
     g_object_unref (self->priv->session);
 
+  if (self->priv->channel != NULL)
+    g_io_channel_unref (self->priv->channel);
+
   g_free (self->priv->served_name);
   g_free (self->priv->url);
 
