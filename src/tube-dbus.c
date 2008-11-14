@@ -786,10 +786,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "tube if it has a HANDLE_TYPE_ROOM handle",
       GIBBER_TYPE_MUC_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_MUC_CONNECTION,
       param_spec);
 
@@ -798,10 +795,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "Object implementing the GibberBytestreamIface interface",
       "Bytestream object used for streaming data for this D-Bus",
       G_TYPE_OBJECT,
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_BYTESTREAM, param_spec);
 
   param_spec = g_param_spec_string (
@@ -809,10 +803,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "stream id",
       "The identifier of this tube's bytestream",
       "",
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_STREAM_ID, param_spec);
 
   param_spec = g_param_spec_string (
@@ -820,10 +811,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "D-Bus address",
       "The D-Bus address on which this tube will listen for connections",
       "",
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_DBUS_ADDRESS,
       param_spec);
 
@@ -832,10 +820,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "D-Bus name",
       "The local D-Bus name on the virtual bus.",
       "",
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_DBUS_NAME, param_spec);
 
   param_spec = g_param_spec_boxed (
@@ -843,10 +828,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "D-Bus names",
       "Mapping of contact handles to D-Bus names.",
       G_TYPE_HASH_TABLE,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_DBUS_NAMES, param_spec);
 
   signals[OPENED] =

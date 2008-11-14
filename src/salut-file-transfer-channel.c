@@ -268,7 +268,7 @@ salut_file_transfer_channel_get_property (GObject *object,
         g_value_set_boolean (value, self->priv->closed);
         break;
       case PROP_CHANNEL_PROPERTIES:
-        g_value_set_boxed (value,
+        g_value_take_boxed (value,
             tp_dbus_properties_mixin_make_properties_hash (object,
                 TP_IFACE_CHANNEL, "ChannelType",
                 TP_IFACE_CHANNEL, "Interfaces",
@@ -338,9 +338,11 @@ salut_file_transfer_channel_set_property (GObject *object,
             SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
       case PROP_CONTENT_TYPE:
+        g_free (self->priv->content_type);
         self->priv->content_type = g_value_dup_string (value);
         break;
       case PROP_FILENAME:
+        g_free (self->priv->filename);
         self->priv->filename = g_value_dup_string (value);
         break;
       case PROP_SIZE:
@@ -350,9 +352,11 @@ salut_file_transfer_channel_set_property (GObject *object,
         self->priv->content_hash_type = g_value_get_uint (value);
         break;
       case PROP_CONTENT_HASH:
+        g_free (self->priv->content_hash);
         self->priv->content_hash = g_value_dup_string (value);
         break;
       case PROP_DESCRIPTION:
+        g_free (self->priv->description);
         self->priv->description = g_value_dup_string (value);
         break;
       case PROP_INITIATOR_HANDLE:
@@ -773,6 +777,11 @@ salut_file_transfer_channel_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free (self->priv->object_path);
   g_free (self->priv->filename);
+  g_free (self->priv->socket_path);
+  g_free (self->priv->content_type);
+  g_free (self->priv->content_hash);
+  g_free (self->priv->description);
+  g_hash_table_destroy (self->priv->available_socket_types);
 
   G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
 }
@@ -1029,10 +1038,12 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
 
   self->priv->ft = ft;
 
-  self->priv->filename = g_strdup (ft->filename);
-  self->priv->size = gibber_file_transfer_get_size (ft);
-  self->priv->description = g_strdup (ft->description);
-  self->priv->content_type = g_strdup (ft->content_type);
+  g_object_set (self,
+      "filename", ft->filename,
+      "size", gibber_file_transfer_get_size (ft),
+      "description", ft->description,
+      "content-type", ft->content_type,
+      NULL);
 
   return TRUE;
 }
@@ -1134,7 +1145,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
   if (request_result ==
       SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
-      self->priv->xmpp_connection = connection;
+      self->priv->xmpp_connection = g_object_ref (connection);
       send_file_offer (self);
     }
   else if (request_result ==
@@ -1229,6 +1240,8 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
 
   salut_file_transfer_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
       SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+
+  g_value_unset (&out_address);
 }
 
 /**
@@ -1300,6 +1313,8 @@ salut_file_transfer_channel_provide_file (
 
   salut_svc_channel_type_file_transfer_return_from_provide_file (context,
       &out_address);
+
+  g_value_unset (&out_address);
 }
 
 static void

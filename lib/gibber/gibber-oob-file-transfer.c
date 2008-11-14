@@ -127,6 +127,9 @@ gibber_oob_file_transfer_finalize (GObject *object)
   if (self->priv->session != NULL)
     g_object_unref (self->priv->session);
 
+  if (self->priv->channel != NULL)
+    g_io_channel_unref (self->priv->channel);
+
   g_free (self->priv->served_name);
   g_free (self->priv->url);
 
@@ -332,6 +335,7 @@ http_client_finished_chunks_cb (SoupMessage *msg,
       error = g_error_new_literal (GIBBER_FILE_TRANSFER_ERROR,
         GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND, reason_phrase);
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
+      g_error_free (error);
       return;
     }
 
@@ -790,6 +794,7 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
           GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND,
           "Remote user is not able to retrieve the file");
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
+      g_error_free (error);
       return;
     }
 }

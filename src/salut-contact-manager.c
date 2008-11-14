@@ -155,10 +155,7 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
       "The Salut Connection associated with this contact manager",
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION,
       param_spec);
 
@@ -666,13 +663,15 @@ salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle)
 }
 
 static void
-_find_by_address (gpointer key, gpointer value, gpointer user_data) {
-  struct sockaddr_storage *address =
-    (struct sockaddr_storage *)((gpointer *)user_data)[0];
+_find_by_address (gpointer key, gpointer value, gpointer user_data)
+{
+  struct sockaddr *address =
+    (struct sockaddr *)((gpointer *)user_data)[0];
   GList **list = (GList **)((gpointer *)user_data)[1];
+  guint size = GPOINTER_TO_UINT (((gpointer *)user_data)[2]);
   SalutContact *contact = SALUT_CONTACT (value);
 
-  if (salut_contact_has_address (contact, address)) {
+  if (salut_contact_has_address (contact, address, size)) {
     g_object_ref (contact);
     *list = g_list_append (*list, contact);
   }
@@ -681,13 +680,14 @@ _find_by_address (gpointer key, gpointer value, gpointer user_data) {
 /* FIXME function name is just too long */
 GList *
 salut_contact_manager_find_contacts_by_address (SalutContactManager *mgr,
-    struct sockaddr_storage *address)
+    struct sockaddr *address, guint size)
 {
   GList *list = NULL;
-  gpointer data[2];
+  gpointer data[3];
 
   data[0] = address;
   data[1] = &list;
+  data[2] = GUINT_TO_POINTER (size);
   g_hash_table_foreach (mgr->contacts, _find_by_address, data);
   return list;
 }

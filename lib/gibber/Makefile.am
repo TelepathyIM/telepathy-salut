@@ -40,6 +40,8 @@ HANDWRITTEN_SOURCES =             \
   gibber-fd-transport.h           \
   gibber-tcp-transport.c          \
   gibber-tcp-transport.h          \
+  gibber-unix-transport.c         \
+  gibber-unix-transport.h         \
   gibber-multicast-transport.c    \
   gibber-multicast-transport.h    \
   gibber-r-multicast-transport.c  \

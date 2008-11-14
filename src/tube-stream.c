@@ -46,7 +46,7 @@
 #include "signals-marshal.h"
 #include "salut-connection.h"
 #include "tube-iface.h"
-#include "salut-bytestream-manager.h"
+#include "salut-si-bytestream-manager.h"
 #include "salut-contact-manager.h"
 
 static void
@@ -404,7 +404,7 @@ start_stream_initiation (SalutTubeStream *self,
   struct _extra_bytestream_negotiate_cb_data *data;
   SalutContact *contact;
   SalutContactManager *contact_mgr;
-  SalutBytestreamManager *bytestream_mgr;
+  SalutSiBytestreamManager *bytestream_mgr;
 
   contact_repo = tp_base_connection_get_handles (
      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -413,7 +413,7 @@ start_stream_initiation (SalutTubeStream *self,
 
   stream_id = generate_stream_id (self);
 
-  msg = salut_bytestream_manager_make_stream_init_iq (priv->conn->name, jid,
+  msg = salut_si_bytestream_manager_make_stream_init_iq (priv->conn->name, jid,
       stream_id, GIBBER_TELEPATHY_NS_TUBES);
 
   si_node = gibber_xmpp_node_get_child_ns (msg->node, "si", GIBBER_XMPP_NS_SI);
@@ -459,7 +459,7 @@ start_stream_initiation (SalutTubeStream *self,
     }
   else
     {
-      result = salut_bytestream_manager_negotiate_stream (
+      result = salut_si_bytestream_manager_negotiate_stream (
         bytestream_mgr,
         contact,
         msg,
@@ -566,8 +566,7 @@ new_connection_to_socket (SalutTubeStream *self,
         }
 
       addr.un.sun_family = PF_UNIX;
-      strncpy (addr.un.sun_path, array->data, sizeof (addr.un.sun_path) - 1);
-      addr.un.sun_path[sizeof (addr.un.sun_path) - 1] = '\0';
+      g_strlcpy (addr.un.sun_path, array->data, sizeof (addr.un.sun_path));
       len = sizeof (addr.un);
 
       DEBUG ("Will try to connect to socket: %s", (const gchar *) array->data);
@@ -1198,10 +1197,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "address of the local service",
       0, NUM_TP_SOCKET_ADDRESS_TYPES - 1,
       TP_SOCKET_ADDRESS_TYPE_UNIX,
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ADDRESS_TYPE,
       param_spec);
 
@@ -1210,10 +1206,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "address",
       "The listening address of the local service, as indicated by the "
       "address-type",
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ADDRESS, param_spec);
 
   param_spec = g_param_spec_uint (
@@ -1223,10 +1216,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "the local service applies to the local socket",
       0, NUM_TP_SOCKET_ACCESS_CONTROLS - 1,
       TP_SOCKET_ACCESS_CONTROL_LOCALHOST,
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL,
       param_spec);
 
@@ -1235,10 +1225,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       "access control param",
       "A parameter for the access control type, to be interpreted as specified"
       "in the documentation for the Socket_Access_Control enum.",
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL_PARAM,
       param_spec);
 

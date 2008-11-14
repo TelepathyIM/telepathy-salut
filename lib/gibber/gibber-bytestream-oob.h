@@ -32,7 +32,7 @@ typedef struct _GibberBytestreamOOB GibberBytestreamOOB;
 typedef struct _GibberBytestreamOOBClass GibberBytestreamOOBClass;
 
 typedef gboolean (* GibberBytestreamOOBCheckAddrFunc) (
-    GibberBytestreamOOB *bytestream, struct sockaddr_storage *addr,
+    GibberBytestreamOOB *bytestream, struct sockaddr *addr,
     socklen_t addrlen, gpointer user_data);
 
 

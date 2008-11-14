@@ -179,6 +179,7 @@ salut_roomlist_channel_get_property (GObject *object,
               TP_IFACE_CHANNEL, "InitiatorHandle",
               TP_IFACE_CHANNEL, "InitiatorID",
               TP_IFACE_CHANNEL, "Requested",
+              TP_IFACE_CHANNEL, "Interfaces",
               TP_IFACE_CHANNEL_TYPE_ROOM_LIST, "Server",
               NULL));
       break;
@@ -322,8 +323,7 @@ salut_roomlist_channel_class_init (
                                     SALUT_TYPE_CONNECTION,
                                     G_PARAM_CONSTRUCT_ONLY |
                                     G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NICK |
-                                    G_PARAM_STATIC_BLURB);
+                                    G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
   salut_roomlist_channel_class->dbus_props_class.interfaces = prop_interfaces;

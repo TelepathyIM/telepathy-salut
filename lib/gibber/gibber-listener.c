@@ -22,10 +22,12 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdio.h>
 
 #include <glib.h>
 
@@ -61,6 +63,10 @@ struct _GibberListenerPrivate
 {
   GSList *listeners;
 
+  /* Don't allow to listen again if it is already listening */
+  gboolean listening;
+  int port;
+
   gboolean dispose_has_run;
 };
 
@@ -79,6 +85,15 @@ gibber_listener_error_quark (void)
   return quark;
 }
 
+static gboolean
+unimplemented (GError **error)
+{
+  g_set_error (error, GIBBER_LISTENER_ERROR, GIBBER_LISTENER_ERROR_FAILED,
+    "Unimplemented");
+
+  return FALSE;
+}
+
 static void
 gibber_listener_init (GibberListener *self)
 {
@@ -92,12 +107,9 @@ gibber_listener_init (GibberListener *self)
 }
 
 static void
-gibber_listener_dispose (GObject *object)
+gibber_listeners_clean_listeners (GibberListener *self)
 {
-  GibberListener *self =
-    GIBBER_LISTENER (object);
-  GibberListenerPrivate *priv =
-    GIBBER_LISTENER_GET_PRIVATE (self);
+  GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (self);
   GSList *t;
 
   for (t = priv->listeners ; t != NULL ; t = g_slist_delete_link (t, t))
@@ -110,6 +122,17 @@ gibber_listener_dispose (GObject *object)
     }
 
   priv->listeners = NULL;
+  priv->listening = FALSE;
+  priv->port = 0;
+}
+
+static void
+gibber_listener_dispose (GObject *object)
+{
+  GibberListener *self =
+    GIBBER_LISTENER (object);
+
+  gibber_listeners_clean_listeners (self);
 
   G_OBJECT_CLASS (gibber_listener_parent_class)->dispose (
       object);
@@ -144,16 +167,6 @@ gibber_listener_new (void)
   return g_object_new (GIBBER_TYPE_LISTENER,
       NULL);
 }
-
-static gboolean
-unimplemented (GError **error)
-{
-  g_set_error (error, GIBBER_LISTENER_ERROR, GIBBER_LISTENER_ERROR_FAILED,
-    "Unimplemented");
-
-  return FALSE;
-}
-
 
 static gboolean
 listener_io_in_cb (GIOChannel *source,
@@ -199,10 +212,15 @@ add_listener (GibberListener *self, int family, int type, int protocol,
   #define BACKLOG 5
   int fd = -1, ret, yes = 1;
   Listener *l;
-  GibberListenerPrivate *priv = self->priv;
+  GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (self);
   char name [NI_MAXHOST], portname[NI_MAXSERV];
-  struct sockaddr_storage baddress;
-  socklen_t baddrlen;
+  union {
+      struct sockaddr addr;
+      struct sockaddr_in in;
+      struct sockaddr_in6 in6;
+      struct sockaddr_storage storage;
+  } baddress;
+  socklen_t baddrlen = sizeof (baddress);
 
   fd = socket (family, type, protocol);
   if (fd == -1)
@@ -264,13 +282,26 @@ add_listener (GibberListener *self, int family, int type, int protocol,
       goto error;
     }
 
-  getsockname (fd, (struct sockaddr *)&baddress, &baddrlen);
-  getnameinfo ((struct sockaddr *)&baddress, baddrlen, name, sizeof (name),
+  getsockname (fd, &baddress.addr, &baddrlen);
+  getnameinfo (&baddress.addr, baddrlen, name, sizeof (name),
       portname, sizeof (portname), NI_NUMERICHOST | NI_NUMERICSERV);
 
   DEBUG ( "Listening on %s port %s...", name, portname);
 
-  l = g_slice_new(Listener);
+  switch (family)
+    {
+      case AF_INET:
+        priv->port = g_ntohs (baddress.in.sin_port);
+        break;
+      case AF_INET6:
+        priv->port = g_ntohs (baddress.in6.sin6_port);
+        break;
+      default:
+        priv->port = 0;
+        break;
+    }
+
+  l = g_slice_new (Listener);
 
   l->listener = g_io_channel_unix_new (fd);
   g_io_channel_set_close_on_unref (l->listener, TRUE);
@@ -287,14 +318,24 @@ error:
   return FALSE;
 }
 
+/* port: if 0, choose a random port
+ */
 static gboolean
-listen_tcp_af (GibberListener *listener, int port,
-  GibberAddressFamily family, gboolean loopback, GError **error)
+listen_tcp_af (GibberListener *listener, int port, GibberAddressFamily family,
+    gboolean loopback, GError **error)
 {
+  GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (listener);
   struct addrinfo req, *ans = NULL, *a;
-  GibberListenerPrivate *priv = listener->priv;
   int ret;
   gchar sport[6];
+
+  if (priv->listening)
+    {
+      g_set_error (error, GIBBER_LISTENER_ERROR,
+          GIBBER_LISTENER_ERROR_ALREADY_LISTENING,
+          "GibberListener is already listening");
+      return FALSE;
+    }
 
   memset (&req, 0, sizeof (req));
   if (!loopback)
@@ -327,10 +368,30 @@ listen_tcp_af (GibberListener *listener, int port,
       goto error;
     }
 
+  priv->port = 0;
   for (a = ans ; a != NULL ; a = a->ai_next)
     {
+      union {
+          struct sockaddr *addr;
+          struct sockaddr_storage *storage;
+          struct sockaddr_in *in;
+          struct sockaddr_in6 *in6;
+      } addr;
       gboolean ret;
       GError *terror = NULL;
+
+      addr.addr = a->ai_addr;
+
+      /* the caller let us choose a port and we are not in the first round */
+      if (port == 0 && priv->port != 0)
+        {
+          if (a->ai_family == AF_INET)
+            addr.in->sin_port = priv->port;
+          else if (a->ai_family == AF_INET6)
+            addr.in6->sin6_port = priv->port;
+          else
+            g_assert_not_reached ();
+        }
 
       ret = add_listener (listener, a->ai_family, a->ai_socktype,
         a->ai_protocol, a->ai_addr, a->ai_addrlen, &terror);
@@ -347,6 +408,11 @@ listen_tcp_af (GibberListener *listener, int port,
           if (fatal)
               goto error;
         }
+      else
+        {
+          /* add_listener succeeded: don't allow to listen again */
+          priv->listening = TRUE;
+        }
     }
 
   /* If all listeners failed, report the last error */
@@ -361,6 +427,7 @@ listen_tcp_af (GibberListener *listener, int port,
   return TRUE;
 
 error:
+  gibber_listeners_clean_listeners (listener);
   if (ans != NULL)
     freeaddrinfo (ans);
 
@@ -399,6 +466,40 @@ gboolean
 gibber_listener_listen_socket (GibberListener *listener,
   gchar *path, gboolean abstract, GError **error)
 {
-  return unimplemented (error);
+  GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (listener);
+  struct sockaddr_un addr;
+  int ret;
+
+  if (priv->listening)
+    {
+      g_set_error (error, GIBBER_LISTENER_ERROR,
+          GIBBER_LISTENER_ERROR_ALREADY_LISTENING,
+          "GibberListener is already listening");
+      return FALSE;
+    }
+
+  if (abstract)
+    return unimplemented (error);
+
+  memset (&addr, 0, sizeof (addr));
+  addr.sun_family = PF_UNIX;
+  snprintf (addr.sun_path, sizeof (addr.sun_path) - 1, "%s", path);
+
+  ret = add_listener (listener, AF_UNIX, SOCK_STREAM, 0,
+      (struct sockaddr *) &addr, sizeof (addr), error);
+
+  if (ret == TRUE)
+    {
+      /* add_listener succeeded: don't allow to listen again */
+      priv->listening = TRUE;
+    }
+
+  return ret;
 }
 
+int
+gibber_listener_get_port (GibberListener *listener)
+{
+  GibberListenerPrivate *priv = GIBBER_LISTENER_GET_PRIVATE (listener);
+  return priv->port;
+}

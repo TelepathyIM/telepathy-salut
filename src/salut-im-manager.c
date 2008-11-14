@@ -286,10 +286,7 @@ salut_im_manager_class_init (SalutImManagerClass *salut_im_manager_class)
       "Salut connection object that owns this text channel factory object.",
       SALUT_TYPE_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
   param_spec = g_param_spec_object (
@@ -299,10 +296,7 @@ salut_im_manager_class_init (SalutImManagerClass *salut_im_manager_class)
       "manager",
       SALUT_TYPE_CONTACT_MANAGER,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
       param_spec);
 
@@ -313,10 +307,7 @@ salut_im_manager_class_init (SalutImManagerClass *salut_im_manager_class)
       "of this manager",
       SALUT_TYPE_XMPP_CONNECTION_MANAGER,
       G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 }
