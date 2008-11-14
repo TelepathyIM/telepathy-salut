@@ -335,6 +335,7 @@ http_client_finished_chunks_cb (SoupMessage *msg,
       error = g_error_new_literal (GIBBER_FILE_TRANSFER_ERROR,
         GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND, reason_phrase);
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
+      g_error_free (error);
       return;
     }
 
