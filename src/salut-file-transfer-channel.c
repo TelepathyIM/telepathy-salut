@@ -887,23 +887,18 @@ error_cb (GibberFileTransfer *ft,
   receiver = (self->priv->initiator != base_conn->self_handle);
 
   if (domain == GIBBER_FILE_TRANSFER_ERROR && code ==
-      GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND)
+      GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND && receiver)
     {
-      if (receiver)
-        {
-          /* Inform the sender we weren't able to retrieve the file */
-          gibber_file_transfer_cancel (self->priv->ft, 404);
-        }
-
-      salut_file_transfer_channel_set_state (
-          SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-          SALUT_FILE_TRANSFER_STATE_CANCELLED,
-          receiver ?
-          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_ERROR :
-          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_ERROR);
+      /* Inform the sender we weren't able to retrieve the file */
+      gibber_file_transfer_cancel (self->priv->ft, 404);
     }
 
-  /* TODO: handle other errors */
+  salut_file_transfer_channel_set_state (
+      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+      SALUT_FILE_TRANSFER_STATE_CANCELLED,
+      receiver ?
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_ERROR :
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_ERROR);
 }
 
 static void
