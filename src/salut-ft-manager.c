@@ -249,7 +249,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
   SalutFileTransferChannel *chan;
   SalutContact *contact;
-  const gchar *name;
   gchar *path = NULL;
   guint state;
   TpHandle initiator;
@@ -258,13 +257,14 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
   DEBUG ("Requested channel for handle: %d", handle);
 
-  name = tp_handle_inspect (handle_repo, handle);
-
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
     {
+      const gchar *name = tp_handle_inspect (handle_repo, handle);
+
       g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "%s is not online", name);
+
       return NULL;
     }
 
