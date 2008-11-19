@@ -465,6 +465,7 @@ error:
   return TRUE;
 }
 
+/* Keep in sync with values set in salut_ft_manager_foreach_channel_class */
 static const gchar * const file_transfer_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
     TP_IFACE_CHANNEL ".TargetHandleType",
@@ -499,13 +500,11 @@ salut_ft_manager_foreach_channel_class (TpChannelManager *manager,
 
   value = tp_g_value_slice_new (G_TYPE_STRING);
   g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
-  g_hash_table_insert (table,
-      (gchar *) file_transfer_channel_fixed_properties[0], value);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType" , value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
   g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table,
-      (gchar *) file_transfer_channel_fixed_properties[1], value);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
 
   func (manager, table, file_transfer_channel_allowed_properties,
       user_data);
