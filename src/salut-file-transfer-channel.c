@@ -122,7 +122,8 @@ struct _SalutFileTransferChannelPrivate {
   SalutXmppConnectionManager *xmpp_connection_manager;
   GibberXmppConnection *xmpp_connection;
   GibberFileTransfer *ft;
-  glong last_transferred_bytes_emitted;
+  GTimeVal last_transferred_bytes_emitted;
+  guint progress_timer;
   gchar *socket_path;
   TpHandle initiator;
   gboolean remote_accepted;
@@ -423,8 +424,6 @@ salut_file_transfer_channel_constructor (GType type,
   g_array_append_val (unix_access, access);
   g_hash_table_insert (self->priv->available_socket_types,
       GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX), unix_access);
-
-  self->priv->last_transferred_bytes_emitted = 0;
 
   return obj;
 }
@@ -737,6 +736,12 @@ salut_file_transfer_channel_dispose (GObject *object)
   tp_handle_unref (handle_repo, self->priv->handle);
 
   salut_file_transfer_channel_do_close (self);
+
+  if (self->priv->progress_timer != 0)
+    {
+      g_source_remove (self->priv->progress_timer);
+      self->priv->progress_timer = 0;
+    }
 
   if (self->priv->contact)
     {
@@ -1062,28 +1067,87 @@ salut_file_transfer_channel_set_state (
 }
 
 static void
+emit_progress_update (SalutFileTransferChannel *self)
+{
+  SalutSvcChannelTypeFileTransfer *iface = \
+      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self);
+
+  g_get_current_time (&self->priv->last_transferred_bytes_emitted);
+
+  salut_svc_channel_type_file_transfer_emit_transferred_bytes_changed (
+    iface, self->priv->transferred_bytes);
+
+  if (self->priv->progress_timer != 0)
+    {
+      g_source_remove (self->priv->progress_timer);
+      self->priv->progress_timer = 0;
+    }
+}
+
+static gboolean
+emit_progress_update_cb (gpointer user_data)
+{
+  SalutFileTransferChannel *self = \
+      SALUT_FILE_TRANSFER_CHANNEL (user_data);
+
+  emit_progress_update (self);
+
+  return FALSE;
+}
+
+static void
 ft_transferred_chunk_cb (GibberFileTransfer *ft,
                          guint64 count,
                          SalutFileTransferChannel *self)
 {
-  SalutSvcChannelTypeFileTransfer *iface = \
-      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self);
   GTimeVal timeval;
+  gint interval;
 
   self->priv->transferred_bytes += count;
 
-  g_get_current_time (&timeval);
+  if (self->priv->transferred_bytes >= self->priv->size)
+    {
+      /* If the transfer has finished send an update right away */
+      emit_progress_update (self);
+      return;
+    }
+
+  if (self->priv->progress_timer != 0)
+    {
+      /* A progress update signal is already scheduled */
+      return;
+    }
 
   /* Only emit the TransferredBytes signal if it has been one second since its
-   * last emission, OR if the transfer has finished.
+   * last emission.
    */
-  if (timeval.tv_sec > self->priv->last_transferred_bytes_emitted
-      || self->priv->transferred_bytes == self->priv->size)
+  g_get_current_time (&timeval);
+  interval = timeval.tv_sec -
+    self->priv->last_transferred_bytes_emitted.tv_sec;
+
+  if (interval > 1)
     {
-      salut_svc_channel_type_file_transfer_emit_transferred_bytes_changed (
-          iface, self->priv->transferred_bytes);
-      self->priv->last_transferred_bytes_emitted = timeval.tv_sec;
+      /* At least more then a second apart, emit right away */
+      emit_progress_update (self);
+      return;
     }
+
+  /* Convert interval to milliseconds and calculate it more precisely */
+  interval *= 1000;
+
+  interval += (timeval.tv_usec -
+    self->priv->last_transferred_bytes_emitted.tv_usec)/1000;
+
+  /* Protect against clock skew, if the interval is negative the worst thing
+   * that can happen is that we wait an extra second before emitting the signal
+   */
+  interval = ABS(interval);
+
+  if (interval > 1000)
+    emit_progress_update (self);
+  else
+    self->priv->progress_timer = g_timeout_add (1000 - interval,
+       emit_progress_update_cb, self);
 }
 
 static gboolean
