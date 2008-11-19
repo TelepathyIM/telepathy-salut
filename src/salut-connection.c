@@ -581,8 +581,9 @@ set_own_status (GObject *obj,
     }
   else
     {
-      *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-          err->message);
+      if (error != NULL)
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            err->message);
     }
 
   return TRUE;

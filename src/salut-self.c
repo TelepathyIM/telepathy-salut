@@ -551,8 +551,9 @@ salut_self_set_alias (SalutSelf *self, const gchar *alias, GError **error)
   ret = SALUT_SELF_GET_CLASS (self)->set_alias (self, &err);
   if (!ret)
     {
-      *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-          err->message);
+      if (error != NULL)
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            err->message);
       g_error_free (err);
     }
   return ret;
@@ -593,8 +594,9 @@ salut_self_set_avatar (SalutSelf *self, guint8 *data,
   if (!ret)
     {
       salut_self_remove_avatar (self);
-      *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-          err->message);
+      if (error != NULL)
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            err->message);
       g_error_free (err);
     }
 
