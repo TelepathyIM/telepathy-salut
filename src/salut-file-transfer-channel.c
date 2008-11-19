@@ -462,7 +462,6 @@ salut_file_transfer_channel_class_init (
     { "ContentHashType", "content-hash-type", "content-hash-type" },
     { "ContentHash", "content-hash", "content-hash" },
     { "Description", "description", "description" },
-    { "Description", "date", "date" },
     { "AvailableSocketTypes", "available-socket-types", NULL },
     { "TransferredBytes", "transferred-bytes", NULL },
     { "InitialOffset", "initial-offset", NULL },
