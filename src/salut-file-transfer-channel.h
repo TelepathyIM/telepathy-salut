@@ -32,6 +32,9 @@
 #include <extensions/_gen/enums.h>
 
 #include "salut-contact.h"
+#include "salut-connection.h"
+#include "salut-contact.h"
+#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 
@@ -74,6 +77,11 @@ gboolean salut_file_transfer_channel_received_file_offer (
 
 gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
     GError **error);
+
+SalutFileTransferChannel * salut_file_transfer_channel_new (
+    SalutConnection *conn, SalutContact *contact, const gchar *path,
+    TpHandle handle, SalutXmppConnectionManager *xcm, TpHandle initiator_handle,
+    SalutFileTransferState state);
 
 G_END_DECLS
 

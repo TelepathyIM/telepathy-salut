@@ -1555,3 +1555,23 @@ setup_local_socket (SalutFileTransferChannel *self)
 
   return TRUE;
 }
+
+SalutFileTransferChannel *
+salut_file_transfer_channel_new (SalutConnection *conn,
+                                 SalutContact *contact,
+                                 const gchar *path,
+                                 TpHandle handle,
+                                 SalutXmppConnectionManager *xcm,
+                                 TpHandle initiator_handle,
+                                 SalutFileTransferState state)
+{
+  return g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
+      "connection", conn,
+      "contact", contact,
+      "object-path", path,
+      "handle", handle,
+      "xmpp-connection-manager", xcm,
+      "initiator-handle", initiator_handle,
+      "state", state,
+      NULL);
+}
