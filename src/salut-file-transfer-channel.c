@@ -610,15 +610,12 @@ salut_file_transfer_channel_class_init (
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_STATE, param_spec);
 
-  /* TODO: most of these properties should be construct only but
-   * then incoming FT stanza should be parsed before creating the
-   * channel object. */
   param_spec = g_param_spec_string (
       "content-type",
       "gchar *content-type",
       "ContentType of the file",
       "application/octet-stream",
-      G_PARAM_CONSTRUCT |
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -630,7 +627,7 @@ salut_file_transfer_channel_class_init (
       "gchar *filename",
       "Name of the file",
       "",
-      G_PARAM_CONSTRUCT |
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -643,7 +640,7 @@ salut_file_transfer_channel_class_init (
       0,
       G_MAXUINT64,
       SALUT_UNDEFINED_FILE_SIZE,
-      G_PARAM_CONSTRUCT |
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -656,8 +653,8 @@ salut_file_transfer_channel_class_init (
       0,
       G_MAXUINT,
       TP_FILE_HASH_TYPE_NONE,
-      G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTENT_HASH_TYPE,
@@ -668,7 +665,7 @@ salut_file_transfer_channel_class_init (
       "gchar *content-hash",
       "Hash of the file contents",
       "",
-      G_PARAM_CONSTRUCT |
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -680,7 +677,7 @@ salut_file_transfer_channel_class_init (
       "gchar *description",
       "Description of the file",
       "",
-      G_PARAM_CONSTRUCT |
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
@@ -730,6 +727,7 @@ salut_file_transfer_channel_class_init (
       0,
       G_MAXUINT64,
       0,
+      G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
