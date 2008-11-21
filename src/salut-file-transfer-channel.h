@@ -71,10 +71,6 @@ GType salut_file_transfer_channel_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_FILE_TRANSFER_CHANNEL, \
                               SalutFileTransferChannelClass))
 
-gboolean salut_file_transfer_channel_received_file_offer (
-    SalutFileTransferChannel *self, GibberXmppStanza *stanza,
-    GibberXmppConnection *conn, SalutContact *contact);
-
 gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
     GError **error);
 
@@ -82,6 +78,12 @@ SalutFileTransferChannel * salut_file_transfer_channel_new (
     SalutConnection *conn, SalutContact *contact, const gchar *path,
     TpHandle handle, SalutXmppConnectionManager *xcm, TpHandle initiator_handle,
     TpFileTransferState state);
+
+SalutFileTransferChannel * salut_file_transfer_channel_new_from_stanza (
+    SalutConnection *connection, SalutContact *contact, const gchar *path,
+    TpHandle handle, SalutXmppConnectionManager *xcm,
+    TpFileTransferState state, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn);
 
 G_END_DECLS
 

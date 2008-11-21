@@ -1032,46 +1032,6 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   send_file_offer (channel);
 }
 
-gboolean
-salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
-                                                 GibberXmppStanza *stanza,
-                                                 GibberXmppConnection *conn,
-                                                 SalutContact *contact)
-{
-  GibberFileTransfer *ft;
-
-  salut_xmpp_connection_manager_take_connection (
-      self->priv->xmpp_connection_manager , conn);
-  ft = gibber_file_transfer_new_from_stanza_with_from (stanza, conn,
-    contact->name);
-
-  if (ft == NULL)
-    {
-      /* Reply with an error */
-      GibberXmppStanza *reply;
-
-      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
-          "failed to parse file offer");
-      gibber_xmpp_connection_send (conn, reply, NULL);
-      return FALSE;
-    }
-
-  g_signal_connect (ft, "error", G_CALLBACK (error_cb), self);
-
-  DEBUG ("Received file offer with id '%s'", ft->id);
-
-  self->priv->ft = ft;
-
-  g_object_set (self,
-      "filename", ft->filename,
-      "size", gibber_file_transfer_get_size (ft),
-      "description", ft->description,
-      "content-type", ft->content_type,
-      NULL);
-
-  return TRUE;
-}
-
 static void
 salut_file_transfer_channel_set_state (
     TpSvcChannelTypeFileTransfer *iface,
@@ -1574,4 +1534,54 @@ salut_file_transfer_channel_new (SalutConnection *conn,
       "initiator-handle", initiator_handle,
       "state", state,
       NULL);
+}
+
+SalutFileTransferChannel *
+salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
+                                             SalutContact *contact,
+                                             const gchar *path,
+                                             TpHandle handle,
+                                             SalutXmppConnectionManager *xcm,
+                                             TpFileTransferState state,
+                                             GibberXmppStanza *stanza,
+                                             GibberXmppConnection *conn)
+{
+  GibberFileTransfer *ft;
+  SalutFileTransferChannel *chan;
+
+  salut_xmpp_connection_manager_take_connection (xcm , conn);
+  ft = gibber_file_transfer_new_from_stanza (stanza, conn);
+
+  if (ft == NULL)
+    {
+      /* Reply with an error */
+      GibberXmppStanza *reply;
+
+      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
+          "failed to parse file offer");
+      gibber_xmpp_connection_send (conn, reply, NULL);
+      return FALSE;
+    }
+
+  DEBUG ("Received file offer with id '%s'", ft->id);
+
+  chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
+      "connection", connection,
+      "contact", contact,
+      "object-path", path,
+      "handle", handle,
+      "xmpp-connection-manager", xcm,
+      "initiator-handle", handle,
+      "state", state,
+      "filename", ft->filename,
+      "size", gibber_file_transfer_get_size (ft),
+      "description", ft->description,
+      "content-type", ft->content_type,
+      NULL);
+
+  chan->priv->ft = ft;
+
+  g_signal_connect (ft, "error", G_CALLBACK (error_cb), chan);
+
+  return chan;
 }
