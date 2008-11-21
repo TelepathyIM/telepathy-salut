@@ -1563,7 +1563,7 @@ salut_file_transfer_channel_new (SalutConnection *conn,
                                  TpHandle handle,
                                  SalutXmppConnectionManager *xcm,
                                  TpHandle initiator_handle,
-                                 SalutFileTransferState state)
+                                 TpFileTransferState state)
 {
   return g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
       "connection", conn,

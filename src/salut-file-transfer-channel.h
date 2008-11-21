@@ -81,7 +81,7 @@ gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
 SalutFileTransferChannel * salut_file_transfer_channel_new (
     SalutConnection *conn, SalutContact *contact, const gchar *path,
     TpHandle handle, SalutXmppConnectionManager *xcm, TpHandle initiator_handle,
-    SalutFileTransferState state);
+    TpFileTransferState state);
 
 G_END_DECLS
 
