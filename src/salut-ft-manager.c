@@ -260,9 +260,13 @@ generate_object_path (SalutFtManager *self,
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   /* Increasing guint to make sure object paths are random */
   static guint id = 0;
+  gchar *path;
 
-  return g_strdup_printf ("%s/FileTransferChannel/%u/%u",
+  path = g_strdup_printf ("%s/FileTransferChannel/%u/%u",
       base_connection->object_path, handle, id++);
+
+  DEBUG ("Object path of file channel is %s", path);
+  return path;
 }
 
 static SalutFileTransferChannel *
@@ -311,7 +315,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
   path = generate_object_path (mgr, handle);
 
-  DEBUG ("Object path of file channel is %s", path);
 
   chan = salut_file_transfer_channel_new (priv->connection, contact, path,
       handle, priv->xmpp_connection_manager, initiator, state);
