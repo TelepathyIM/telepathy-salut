@@ -1523,7 +1523,15 @@ salut_file_transfer_channel_new (SalutConnection *conn,
                                  TpHandle handle,
                                  SalutXmppConnectionManager *xcm,
                                  TpHandle initiator_handle,
-                                 TpFileTransferState state)
+                                 TpFileTransferState state,
+                                 const gchar *content_type,
+                                 const gchar *filename,
+                                 guint64 size,
+                                 TpFileHashType content_hash_type,
+                                 const gchar *content_hash,
+                                 const gchar *description,
+                                 guint64 date,
+                                 guint64 initial_offset)
 {
   return g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
       "connection", conn,
@@ -1533,6 +1541,14 @@ salut_file_transfer_channel_new (SalutConnection *conn,
       "xmpp-connection-manager", xcm,
       "initiator-handle", initiator_handle,
       "state", state,
+      "content-type", content_type,
+      "filename", filename,
+      "size", size,
+      "content-hash-type", content_hash_type,
+      "content-hash", content_hash,
+      "description", description,
+      "date", date,
+      "initial-offset", initial_offset,
       NULL);
 }
 

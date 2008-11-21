@@ -77,7 +77,10 @@ gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
 SalutFileTransferChannel * salut_file_transfer_channel_new (
     SalutConnection *conn, SalutContact *contact, const gchar *path,
     TpHandle handle, SalutXmppConnectionManager *xcm, TpHandle initiator_handle,
-    TpFileTransferState state);
+    TpFileTransferState state, const gchar *content_type,
+    const gchar *filename, guint64 size, TpFileHashType hash_type,
+    const gchar *content_hash, const gchar *description, guint64 date,
+    guint64 initial_offset);
 
 SalutFileTransferChannel * salut_file_transfer_channel_new_from_stanza (
     SalutConnection *connection, SalutContact *contact, const gchar *path,

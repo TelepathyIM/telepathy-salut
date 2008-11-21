@@ -426,19 +426,9 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   path = generate_object_path (self, handle);
 
   chan = salut_file_transfer_channel_new (priv->connection, contact, path,
-      handle, priv->xmpp_connection_manager,  base_connection->self_handle,
-      TP_FILE_TRANSFER_STATE_PENDING);
-
-  g_object_set (chan,
-      "content-type", content_type,
-      "filename", filename,
-      "size", size,
-      "content-hash-type", content_hash_type,
-      "content-hash", content_hash,
-      "description", description,
-      "date", date,
-      "initial-offset", initial_offset,
-      NULL);
+      handle, priv->xmpp_connection_manager, base_connection->self_handle,
+      TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
+      content_hash_type, content_hash, description, date, initial_offset);
 
   g_free (path);
   g_object_unref (contact);
