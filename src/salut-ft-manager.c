@@ -47,6 +47,8 @@ static void caps_channel_manager_iface_init (gpointer, gpointer);
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
     gboolean requested, GError **error);
+static void salut_ft_manager_channel_created (SalutFtManager *mgr,
+    SalutFileTransferChannel *chan, gpointer request_token);
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
@@ -119,6 +121,8 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
       tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
           NULL);
     }
+
+  salut_ft_manager_channel_created (self, chan, NULL);
 }
 
 static void salut_ft_manager_dispose (GObject *object);
@@ -269,6 +273,27 @@ generate_object_path (SalutFtManager *self,
   return path;
 }
 
+static void
+salut_ft_manager_channel_created (SalutFtManager *self,
+                                  SalutFileTransferChannel *chan,
+                                  gpointer request_token)
+{
+  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
+  GSList *requests = NULL;
+
+  g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), self);
+
+  priv->channels = g_list_append (priv->channels, chan);
+
+  if (request_token != NULL)
+    requests = g_slist_prepend (requests, request_token);
+
+  tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
+      requests);
+
+  g_slist_free (requests);
+}
+
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr,
                               TpHandle handle,
@@ -315,19 +340,11 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
   path = generate_object_path (mgr, handle);
 
-
   chan = salut_file_transfer_channel_new (priv->connection, contact, path,
       handle, priv->xmpp_connection_manager, initiator, state);
 
   g_object_unref (contact);
   g_free (path);
-
-  /* Don't fire the new channel signal now so the caller of this function can
-   * set the extra properties on the ft channel. */
-
-  g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), mgr);
-
-  priv->channels = g_list_append (priv->channels, chan);
 
   return chan;
 }
@@ -349,7 +366,6 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   TpFileHashType content_hash_type;
   GError *error = NULL;
   gboolean valid;
-  GSList *requests = NULL;
 
   DEBUG ("File transfer request");
 
@@ -476,10 +492,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       goto error;
     }
 
-  requests = g_slist_prepend (requests, request_token);
-  tp_channel_manager_emit_new_channel (manager, TP_EXPORTABLE_CHANNEL (chan),
-      requests);
-  g_slist_free (requests);
+  salut_ft_manager_channel_created (self, chan, request_token);
 
   return TRUE;
 
