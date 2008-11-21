@@ -252,6 +252,19 @@ file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
   file_channel_closed (self, chan);
 }
 
+static gchar *
+generate_object_path (SalutFtManager *self,
+                      TpHandle handle)
+{
+  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
+  /* Increasing guint to make sure object paths are random */
+  static guint id = 0;
+
+  return g_strdup_printf ("%s/FileTransferChannel/%u/%u",
+      base_connection->object_path, handle, id++);
+}
+
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr,
                               TpHandle handle,
@@ -267,8 +280,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   gchar *path = NULL;
   guint state;
   TpHandle initiator;
-  /* Increasing guint to make sure object paths are random */
-  static guint id = 0;
 
   if (requested)
     DEBUG ("Outgoing channel requested for handle %d", handle);
@@ -298,8 +309,7 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
       initiator = base_connection->self_handle;
     }
 
-  path = g_strdup_printf ("%s/FileTransferChannel/%u/%u",
-                         base_connection->object_path, handle, id++);
+  path = generate_object_path (mgr, handle);
 
   DEBUG ("Object path of file channel is %s", path);
 
