@@ -375,9 +375,8 @@ gibber_xmpp_error_to_g_error (GibberXmppError error)
       return g_error_new (GIBBER_XMPP_ERROR, XMPP_ERROR_UNDEFINED_CONDITION,
           "Unknown or invalid XMPP error");
 
-  return g_error_new (GIBBER_XMPP_ERROR,
-                      error,
-                      xmpp_errors[error].description);
+  return g_error_new_literal (GIBBER_XMPP_ERROR, error,
+      xmpp_errors[error].description);
 }
 
 /*

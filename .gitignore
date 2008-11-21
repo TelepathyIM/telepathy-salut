@@ -6,15 +6,46 @@ cscope.out
 
 .deps
 .libs
+*.hi
 *.o
 *.lo
 *.la
 *.loT
+*.o.cmd
+*.ko.cmd
+*.mod.c
+*.tmp_versions
+CVS
+RCS
+*~
+_darcs
+*.bak
+*.BAK
+*.orig
+vssver.scc
+*.swp
+MT
+{arch}
+.arch-ids
+,
+*.class
+*.prof
+.DS_Store
+BitKeeper
+ChangeSet
+.svn
 *.pyc
 
+*.pyo
+*#
+.cvsignore
+Thumbs.db
+autom4te.cache
 Makefile
 Makefile.in
 INSTALL
+.libs
+.deps
 aclocal.m4
 autom4te.cache
 compile
@@ -40,24 +71,48 @@ signals-marshal.list
 *-enumtypes.h
 
 data/org.freedesktop.Telepathy.ConnectionManager.salut.service
+data/*.service
 data/salut.manager
 
+depcomp
 docs/xep.xsl
 docs/clique.html
 docs/telepathy-salut.8
 
+docs/clique.html
 extensions/_gen
 extensions/extensions.html
 
 lib/gibber/examples/test_{ssl,tcp}
 
 tests/telepathy-salut-debug
+install-sh
+lib/gibber/signals-marshal.c
+lib/gibber/signals-marshal.h
+lib/gibber/signals-marshal.list
+lib/gibber/*-enumtypes.c
+lib/gibber/*-enumtypes.h
+lib/gibber/examples/test_ssl
+lib/gibber/examples/test_tcp
+libtool
+ltmain.sh
+missing
+src/signals-marshal.c
+src/signals-marshal.h
+src/signals-marshal.list
+src/*-enumtypes.c
+src/*-enumtypes.h
+src/telepathy-salut
+src/write-mgr-file
+stamp-h1
+telepathy-salut-*.tar.gz
 tests/check-main
 tests/outputs
 tests/sasl-test.db
 tests/test-xmpp-connection
 tests/test-r-multicast-{packet,sender,transport-io}
 tests/test-r-multicast-transport-io
+tests/twisted/tools/core
 tests/twisted/tools/exec-with-log.sh
 tests/twisted/tools/salut-testing.log
 tests/twisted/tools/tmp-session-bus.conf
@@ -71,3 +126,7 @@ src/write-mgr-file
 
 /telepathy-salut-*/
 /telepathy-salut-*.tar.gz
+tests/test-r-multicast-packet
+tests/test-r-sender
+tests/test-r-transport-io
+tests/telepathy-salut-debug

@@ -37,6 +37,7 @@
 #include "salut-contact-channel.h"
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
+#include "salut-ft-manager.h"
 #include "salut-contact.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
@@ -186,6 +187,9 @@ struct _SalutConnectionPrivate
 
   /* MUC channel manager */
   SalutMucManager *muc_manager;
+
+  /* FT channel manager */
+  SalutFtManager *ft_manager;
 
   /* Tubes channel manager */
   /* XXX disabled while private tubes aren't implemented */
@@ -577,7 +581,9 @@ set_own_status (GObject *obj,
     }
   else
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      if (error != NULL)
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            err->message);
     }
 
   return TRUE;
@@ -2827,8 +2833,12 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
+  priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
+
   g_ptr_array_add (managers, priv->im_manager);
   g_ptr_array_add (managers, priv->contact_manager);
+  g_ptr_array_add (managers, priv->ft_manager);
 
   return managers;
 }
