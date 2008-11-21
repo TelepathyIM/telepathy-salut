@@ -446,6 +446,8 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   initial_offset = tp_asv_get_uint64 (request_properties,
       TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
 
+  DEBUG ("Requested channel for handle: %d", handle);
+
   chan = salut_ft_manager_new_channel (self, handle, TRUE, &error);
   if (chan == NULL)
     {
