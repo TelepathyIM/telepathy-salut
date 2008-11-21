@@ -378,7 +378,7 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
     {
       GError *error = NULL;
 
-      gibber_file_transfer_cancel (ft, 404);
+      gibber_file_transfer_cancel (ft, HTTP_STATUS_CODE_NOT_FOUND);
       g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
           GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND, "Couldn't get the file");
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
