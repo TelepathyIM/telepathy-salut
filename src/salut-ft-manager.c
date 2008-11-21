@@ -303,15 +303,8 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
   DEBUG ("Object path of file channel is %s", path);
 
-  chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
-      "connection", priv->connection,
-      "contact", contact,
-      "object-path", path,
-      "handle", handle,
-      "xmpp-connection-manager", priv->xmpp_connection_manager,
-      "initiator-handle", initiator,
-      "state", state,
-      NULL);
+  chan = salut_file_transfer_channel_new (priv->connection, contact, path,
+      handle, priv->xmpp_connection_manager, initiator, state);
 
   g_object_unref (contact);
   g_free (path);
