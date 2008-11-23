@@ -323,7 +323,6 @@ http_client_finished_chunks_cb (SoupMessage *msg,
 
   if (msg->status_code != HTTP_STATUS_CODE_OK)
     {
-      GError *error = NULL;
       const gchar *reason_phrase;
 
       if (msg->reason_phrase != NULL)
