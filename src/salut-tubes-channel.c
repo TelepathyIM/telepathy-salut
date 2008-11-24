@@ -524,7 +524,7 @@ setup_connection (SalutTubesChannel *self)
   SalutXmppConnectionManagerRequestConnectionResult result;
   GibberXmppConnection *conn = NULL;
 
-  DEBUG ("called. state=%d", priv->state);
+  DEBUG ("Setup XmppConnection for the tubes channel");
 
   if (priv->state == CHANNEL_CONNECTING)
     return;
@@ -1112,7 +1112,6 @@ tube_closed_cb (SalutTubeIface *tube,
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   guint tube_id;
 
-  DEBUG ("Called. closed=%d", priv->closed);
   if (priv->closed)
     return;
 
@@ -1855,7 +1854,6 @@ send_channel_iq_tube (gpointer key,
                 "state", &state,
                 NULL);
 
-  DEBUG ("called for tube id %d", tube_id);
   if (salut_tube_iface_offer_needed (tube))
     {
       GError *error = NULL;
@@ -1868,7 +1866,8 @@ send_channel_iq_tube (gpointer key,
       int port;
       gchar *port_str;
 
-      DEBUG ("Tube in remote pending state");
+      DEBUG ("Listen for connections from the remote contact "
+          "and send the tube offer stanza");
 
       /* listen for future connections from the remote CM before sending the
        * iq */
@@ -1942,8 +1941,6 @@ static void
 send_channel_iq_tubes (SalutTubesChannel *self)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-
-  DEBUG ("called. state=%d", priv->state);
 
   if (priv->state != CHANNEL_CONNECTED)
     {
@@ -2466,8 +2463,6 @@ salut_tubes_channel_close (SalutTubesChannel *self)
   SalutTubesChannelPrivate *priv;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
-
-  DEBUG ("called on %p", self);
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
