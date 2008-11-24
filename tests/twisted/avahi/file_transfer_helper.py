@@ -92,7 +92,7 @@ class FileTransferTest(object):
         self.self_handle = self.conn.GetSelfHandle()
         self.self_handle_name =  self.conn.InspectHandles(HT_CONTACT, [self.self_handle])[0]
 
-    def announce_contact(self, name):
+    def announce_contact(self, name=CONTACT_NAME):
         basic_txt = { "txtvers": "1", "status": "avail" }
 
         self.contact_name = '%s@%s' % (name, get_host_name())
@@ -100,7 +100,7 @@ class FileTransferTest(object):
 
         AvahiAnnouncer(self.contact_name, "_presence._tcp", port, basic_txt)
 
-    def wait_for_contact(self, name):
+    def wait_for_contact(self, name=CONTACT_NAME):
         publish_handle = self.conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
         publish = self.conn.RequestChannel(
                 "org.freedesktop.Telepathy.Channel.Type.ContactList",
@@ -130,9 +130,20 @@ class FileTransferTest(object):
         self.bus = bus
         self.conn = conn
 
-        self.run()
+        for fct in self._actions:
+            # stop if a function returns True
+            if fct():
+                break
 
 class ReceiveFileTest(FileTransferTest):
+    def __init__(self):
+        FileTransferTest.__init__(self)
+
+        self._actions = [self.connect, self.announce_contact, self.wait_for_contact,
+            self.connect_to_salut, self.setup_http_server, self.send_ft_offer_iq,
+            self.check_new_channel, self.create_ft_channel, self.accept_file,
+            self.receive_file, self.close_channel]
+
     def connect_to_salut(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
         e = self.q.expect('service-added', name = self.self_handle_name,
@@ -263,20 +274,15 @@ class ReceiveFileTest(FileTransferTest):
         assert state == FT_STATE_COMPLETED
         assert reason == FT_STATE_CHANGE_REASON_NONE
 
-    def run(self):
-        self.connect()
-        self.announce_contact(self.CONTACT_NAME)
-        self.wait_for_contact(self.CONTACT_NAME)
-        self.connect_to_salut()
-        self.setup_http_server()
-        self.send_ft_offer_iq()
-        self.check_new_channel()
-        self.create_ft_channel()
-        self.accept_file()
-        self.receive_file()
-        self.close_channel()
-
 class SendFileTest(FileTransferTest):
+    def __init__(self):
+        FileTransferTest.__init__(self)
+
+        self._actions = [self.connect, self.announce_contact, self.wait_for_contact,
+            self.check_ft_available, self.request_ft_channel, self.create_ft_channel,
+            self.got_send_iq, self.provide_file, self.client_request_file, self.send_file,
+            self.close_channel]
+
     def check_ft_available(self):
         properties = self.conn.GetAll(
                 CONNECTION_INTERFACE_REQUESTS,
@@ -405,16 +411,3 @@ class SendFileTest(FileTransferTest):
         state, reason = e.args
         assert state == FT_STATE_COMPLETED
         assert reason == FT_STATE_CHANGE_REASON_NONE
-
-    def run(self):
-        self.connect()
-        self.announce_contact(self.CONTACT_NAME)
-        self.wait_for_contact(self.CONTACT_NAME)
-        self.check_ft_available()
-        self.request_ft_channel()
-        self.create_ft_channel()
-        self.got_send_iq()
-        self.provide_file()
-        self.client_request_file()
-        self.send_file()
-        self.close_channel()

@@ -4,6 +4,13 @@ from file_transfer_helper import SendFileTest, CHANNEL_TYPE_FILE_TRANSFER, \
     FT_STATE_CHANGE_REASON_NONE
 
 class SendFileTransferWaitToProvideTest(SendFileTest):
+    def __init__(self):
+        SendFileTest.__init__(self)
+
+        self._actions =  [self.connect, self.check_ft_available, self.announce_contact, self.wait_for_contact,
+            self.check_ft_available, self.request_ft_channel, self.create_ft_channel, self.got_send_iq,
+            self.client_request_file, self.provide_file, self.send_file, self.close_channel]
+
     def client_request_file(self):
         # state is still Pending as remote didn't accept the transfer yet
         state = self.ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'State')
@@ -30,20 +37,6 @@ class SendFileTransferWaitToProvideTest(SendFileTest):
         state, reason = e.args
         assert state == FT_STATE_OPEN
         assert reason == FT_STATE_CHANGE_REASON_REQUESTED
-
-    def run(self):
-        self.connect()
-        self.check_ft_available()
-        self.announce_contact(self.CONTACT_NAME)
-        self.wait_for_contact(self.CONTACT_NAME)
-        self.check_ft_available()
-        self.request_ft_channel()
-        self.create_ft_channel()
-        self.got_send_iq()
-        self.client_request_file()
-        self.provide_file()
-        self.send_file()
-        self.close_channel()
 
 if __name__ == '__main__':
     test = SendFileTransferWaitToProvideTest()
