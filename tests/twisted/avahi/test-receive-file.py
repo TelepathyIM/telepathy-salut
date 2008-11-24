@@ -1,6 +1,6 @@
 from saluttest import exec_test
-from file_transfer_helper import ReceiveFileTransferTest
+from file_transfer_helper import ReceiveFileTest
 
 if __name__ == '__main__':
-    test = ReceiveFileTransferTest()
+    test = ReceiveFileTest()
     exec_test(test.test)

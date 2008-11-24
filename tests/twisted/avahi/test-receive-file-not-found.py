@@ -5,10 +5,10 @@ import urllib
 from twisted.words.xish import xpath
 
 from saluttest import exec_test
-from file_transfer_helper import ReceiveFileTransferTest,FT_STATE_CANCELLED, \
+from file_transfer_helper import ReceiveFileTest,FT_STATE_CANCELLED, \
     FT_STATE_CHANGE_REASON_LOCAL_ERROR, CHANNEL_TYPE_FILE_TRANSFER
 
-class ReceiveFileNotFound(ReceiveFileTransferTest):
+class ReceiveFileNotFound(ReceiveFileTest):
     def setup_http_server(self):
         class HTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             def do_GET(self_):

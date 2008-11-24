@@ -1,10 +1,10 @@
 from servicetest import make_channel_proxy
 from saluttest import exec_test
 
-from file_transfer_helper import ReceiveFileTransferTest, FT_STATE_CANCELLED, \
+from file_transfer_helper import ReceiveFileTest, FT_STATE_CANCELLED, \
     FT_STATE_CHANGE_REASON_LOCAL_STOPPED
 
-class ReceiveFileDeclineTest(ReceiveFileTransferTest):
+class ReceiveFileDeclineTest(ReceiveFileTest):
     def accept_file(self):
         # decline FT
         self. channel.Close()

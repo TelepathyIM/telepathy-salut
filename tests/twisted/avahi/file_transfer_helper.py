@@ -132,7 +132,7 @@ class FileTransferTest(object):
 
         self.run()
 
-class ReceiveFileTransferTest(FileTransferTest):
+class ReceiveFileTest(FileTransferTest):
     def connect_to_salut(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
         e = self.q.expect('service-added', name = self.self_handle_name,
