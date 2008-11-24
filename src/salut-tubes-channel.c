@@ -1818,7 +1818,7 @@ iq_reply_cb (GibberIqHelper *helper,
   gibber_xmpp_stanza_get_type_info (reply_stanza, NULL, &sub_type);
   if (sub_type != GIBBER_STANZA_SUB_TYPE_RESULT)
     {
-      DEBUG ("tube offer declined declined");
+      DEBUG ("The contact has declined our tube offer");
       salut_tube_iface_close (tube, TRUE);
       return;
     }
@@ -1827,7 +1827,7 @@ iq_reply_cb (GibberIqHelper *helper,
       "state", TP_TUBE_STATE_OPEN,
       NULL);
 
-  DEBUG ("tube offered successfully");
+  DEBUG ("The contact has accepted our tube offer");
 }
 
 static void
