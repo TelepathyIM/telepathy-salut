@@ -629,6 +629,8 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
   } addr;
   GibberBytestreamDirectPrivate *priv =
       GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
+  int i;
+  gboolean ret;
 
   DEBUG ("Called.");
 
@@ -642,19 +644,21 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
       return FALSE;
     }
 
-  /* Use the first address for now
-   * FIXME: it should try the other addresses of the array if the first does
-   * not work. */
-  addr.storage = g_array_index (priv->addresses, struct sockaddr_storage, 0);
-
-  addr.in6.sin6_port = g_htons ((guint16) priv->portnum);
-
   ll_transport = gibber_ll_transport_new ();
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
-  gibber_ll_transport_open_sockaddr (ll_transport,
-      &addr.storage, NULL);
 
-  return TRUE;
+  ret = FALSE;
+  for (i = 0 ; i < priv->addresses->len && !ret ; i++)
+    {
+      addr.storage = g_array_index (priv->addresses, struct sockaddr_storage,
+          i);
+      addr.in6.sin6_port = g_htons ((guint16) priv->portnum);
+
+      ret = gibber_ll_transport_open_sockaddr (ll_transport, &addr.storage,
+          NULL);
+  }
+
+  return ret;
 }
 
 static void
