@@ -494,8 +494,11 @@ gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
     }
 
   set_transport (self, transport);
-  gibber_transport_set_state (transport, GIBBER_TRANSPORT_CONNECTING);
-  gibber_transport_set_state (transport, GIBBER_TRANSPORT_CONNECTED);
+  if (gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED)
+      {
+        g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
+            NULL);
+      }
 
   return TRUE;
 }
