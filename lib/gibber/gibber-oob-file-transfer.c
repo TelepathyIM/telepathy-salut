@@ -31,6 +31,7 @@
 #include "gibber-oob-file-transfer.h"
 #include "gibber-fd-transport.h"
 #include "gibber-namespaces.h"
+#include "gibber-util.h"
 
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
 #include "gibber-debug.h"
@@ -178,6 +179,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   const gchar *size;
   const gchar *description = NULL;
   const gchar *content_type;
+  const gchar *ft_type;
   gchar *url;
   gchar *filename;
 
@@ -202,6 +204,11 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
 
   url_node = gibber_xmpp_node_get_child (query, "url");
   if (url_node == NULL || url_node->content == NULL)
+    return NULL;
+
+  ft_type = gibber_xmpp_node_get_attribute (url_node, "type");
+  if (ft_type != NULL && gibber_strdiff (ft_type, "file"))
+    /* We don't support directory transfer */
     return NULL;
 
   /* The file name is extracted from the address */
