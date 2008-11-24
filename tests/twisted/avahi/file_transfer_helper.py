@@ -4,14 +4,16 @@ import md5
 import avahi
 import BaseHTTPServer
 import urllib
+import httplib
+import urlparse
 
 from avahitest import AvahiAnnouncer, AvahiListener
 from avahitest import get_host_name
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy
+from servicetest import make_channel_proxy, EventPattern
 
-from twisted.words.xish import domish
+from twisted.words.xish import domish, xpath
 
 from dbus import PROPERTIES_IFACE
 
@@ -65,6 +67,7 @@ class File(object):
 
         self.content_type = content_type
         self.description = description
+        self.date = 0
 
         self.compute_hash(hash_type)
 
@@ -76,7 +79,7 @@ class File(object):
         m.update(self.data)
         self.hash = m.hexdigest()
 
-class ReceiveFileTransferTest(object):
+class FileTransferTest(object):
     CONTACT_NAME = 'test-ft'
 
     def __init__(self):
@@ -93,7 +96,7 @@ class ReceiveFileTransferTest(object):
         basic_txt = { "txtvers": "1", "status": "avail" }
 
         self.contact_name = '%s@%s' % (name, get_host_name())
-        listener, port = setup_stream_listener(self.q, self.contact_name)
+        self.listener, port = setup_stream_listener(self.q, self.contact_name)
 
         AvahiAnnouncer(self.contact_name, "_presence._tcp", port, basic_txt)
 
@@ -112,6 +115,24 @@ class ReceiveFileTransferTest(object):
                 if name == self.contact_name:
                     self.handle = h
 
+    def create_ft_channel(self):
+        self.channel = make_channel_proxy(self.conn, self.ft_path, 'Channel')
+        self.ft_channel = make_channel_proxy(self.conn, self.ft_path, 'Channel.Type.FileTransfer.DRAFT')
+        self.ft_props = dbus.Interface(self.bus.get_object(
+            self.conn.object.bus_name, self.ft_path), PROPERTIES_IFACE)
+
+    def close_channel(self):
+        self.channel.Close()
+        self.q.expect('dbus-signal', signal='Closed')
+
+    def test(self, q, bus, conn):
+        self.q = q
+        self.bus = bus
+        self.conn = conn
+
+        self.run()
+
+class ReceiveFileTransferTest(FileTransferTest):
     def connect_to_salut(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
         e = self.q.expect('service-added', name = self.self_handle_name,
@@ -193,12 +214,6 @@ class ReceiveFileTransferTest(object):
 
         self.ft_path = path
 
-    def create_ft_channel(self):
-        self.channel = make_channel_proxy(self.conn, self.ft_path, 'Channel')
-        self.ft_channel = make_channel_proxy(self.conn, self.ft_path, 'Channel.Type.FileTransfer.DRAFT')
-        self.ft_props = dbus.Interface(self.bus.get_object(
-            self.conn.object.bus_name, self.ft_path), PROPERTIES_IFACE)
-
     def accept_file(self):
         self.address = self.ft_channel.AcceptFile(SOCKET_ADDRESS_TYPE_UNIX,
                 SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5)
@@ -248,10 +263,6 @@ class ReceiveFileTransferTest(object):
         assert state == FT_STATE_COMPLETED
         assert reason == FT_STATE_CHANGE_REASON_NONE
 
-    def close_channel(self):
-        self.channel.Close()
-        self.q.expect('dbus-signal', signal='Closed')
-
     def run(self):
         self.connect()
         self.announce_contact(self.CONTACT_NAME)
@@ -265,9 +276,142 @@ class ReceiveFileTransferTest(object):
         self.receive_file()
         self.close_channel()
 
-    def test(self, q, bus, conn):
-        self.q = q
-        self.bus = bus
-        self.conn = conn
+class SendFileTest(FileTransferTest):
+    def check_ft_available(self):
+        properties = self.conn.GetAll(
+                CONNECTION_INTERFACE_REQUESTS,
+                dbus_interface=PROPERTIES_IFACE)
 
-        self.run()
+        assert ({CHANNEL_INTERFACE + '.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
+                 CHANNEL_INTERFACE + '.TargetHandleType': HT_CONTACT},
+                [CHANNEL_INTERFACE + '.TargetHandle',
+                 CHANNEL_INTERFACE + '.TargetID',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.ContentType',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.Filename',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.Size',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.Description',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.Date',
+                 CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'],
+             ) in properties.get('RequestableChannelClasses'),\
+                     properties['RequestableChannelClasses']
+
+    def request_ft_channel(self):
+        requests_iface = dbus.Interface(self.conn, CONNECTION_INTERFACE_REQUESTS)
+
+        self.ft_path, props = requests_iface.CreateChannel({
+            CHANNEL_INTERFACE + '.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
+            CHANNEL_INTERFACE + '.TargetHandleType': HT_CONTACT,
+            CHANNEL_INTERFACE + '.TargetHandle': self.handle,
+            CHANNEL_TYPE_FILE_TRANSFER + '.ContentType': self.file.content_type,
+            CHANNEL_TYPE_FILE_TRANSFER + '.Filename': self.file.name,
+            CHANNEL_TYPE_FILE_TRANSFER + '.Size': self.file.size,
+            CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType': self.file.hash_type,
+            CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash': self.file.hash,
+            CHANNEL_TYPE_FILE_TRANSFER + '.Description': self.file.description,
+            CHANNEL_TYPE_FILE_TRANSFER + '.Date':  self.file.date,
+            CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset': 0,
+            })
+
+        # org.freedesktop.Telepathy.Channel D-Bus properties
+        assert props[CHANNEL_INTERFACE + '.ChannelType'] == CHANNEL_TYPE_FILE_TRANSFER
+        assert props[CHANNEL_INTERFACE + '.Interfaces'] == []
+        assert props[CHANNEL_INTERFACE + '.TargetHandle'] == self.handle
+        assert props[CHANNEL_INTERFACE + '.TargetID'] == self.contact_name
+        assert props[CHANNEL_INTERFACE + '.TargetHandleType'] == HT_CONTACT
+        assert props[CHANNEL_INTERFACE + '.Requested'] == True
+        assert props[CHANNEL_INTERFACE + '.InitiatorHandle'] == self.self_handle
+        assert props[CHANNEL_INTERFACE + '.InitiatorID'] == self.self_handle_name
+
+        # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.State'] == FT_STATE_PENDING
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentType'] == self.file.content_type
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Filename'] == self.file.name
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Size'] == self.file.size
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType'] == self.file.hash_type
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash'] == self.file.hash
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Description'] == self.file.description
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Date'] == self.file.date
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.AvailableSocketTypes'] == \
+            {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.TransferredBytes'] == 0
+        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'] == 0
+
+    def got_send_iq(self):
+        conn_event, iq_event = self.q.expect_many(
+            EventPattern('incoming-connection', listener = self.listener),
+            EventPattern('stream-iq'))
+
+        self.incoming = conn_event.connection
+
+        assert iq_event.iq_type == 'set'
+        assert iq_event.connection == self.incoming
+        self.iq = iq_event.stanza
+        assert self.iq['to'] == self.contact_name
+        query = self.iq.firstChildElement()
+        assert query.uri == 'jabber:iq:oob'
+        url_node = xpath.queryForNodes("/iq/query/url", self.iq)[0]
+        assert url_node['type'] == 'file'
+        assert url_node['size'] == str(self.file.size)
+        assert url_node['mimeType'] == self.file.content_type
+        self.url = url_node.children[0]
+        _, self.host, self.filename, _, _, _ = urlparse.urlparse(self.url)
+        urllib.unquote(self.filename) == self.file.name
+        desc_node = xpath.queryForNodes("/iq/query/desc", self.iq)[0]
+        self.desc = desc_node.children[0]
+        assert self.desc == self.file.description
+
+    def provide_file(self):
+        self.address = self.ft_channel.ProvideFile(SOCKET_ADDRESS_TYPE_UNIX,
+                SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+
+    def client_request_file(self):
+        # Connect HTTP client to the CM and request the file
+        self.http = httplib.HTTPConnection(self.host)
+        self.http.request('GET', self.filename)
+
+    def send_file(self):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(self.address)
+        s.send(self.file.data)
+
+        e = self.q.expect('dbus-signal', signal='TransferredBytesChanged')
+
+        count = e.args[0]
+        while count < self.file.size:
+            # Catch TransferredBytesChanged until we transfered all the data
+            e = self.q.expect('dbus-signal', signal='TransferredBytesChanged')
+            count = e.args[0]
+
+        response = self.http.getresponse()
+        assert (response.status, response.reason) == (200, 'OK')
+        data = response.read(self.file.size)
+        # Did we received the right file?
+        assert data == self.file.data
+
+        # Inform sender that we received all the file from the OOB transfer
+        reply = domish.Element(('', 'iq'))
+        reply['to'] = self.iq['from']
+        reply['from'] = self.iq['to']
+        reply['type'] = 'result'
+        reply['id'] = self.iq['id']
+        self.incoming.send(reply)
+
+        e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
+        state, reason = e.args
+        assert state == FT_STATE_COMPLETED
+        assert reason == FT_STATE_CHANGE_REASON_NONE
+
+    def run(self):
+        self.connect()
+        self.announce_contact(self.CONTACT_NAME)
+        self.wait_for_contact(self.CONTACT_NAME)
+        self.check_ft_available()
+        self.request_ft_channel()
+        self.create_ft_channel()
+        self.got_send_iq()
+        self.provide_file()
+        self.client_request_file()
+        self.send_file()
+        self.close_channel()
