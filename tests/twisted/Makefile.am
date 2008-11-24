@@ -74,7 +74,8 @@ EXTRA_DIST = \
 	$(TWISTED_BASIC_TESTS) \
 	saluttest.py \
 	servicetest.py \
-        trivialstream.py
+        trivialstream.py \
+	avahi/file_transfer_helper.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc
 
