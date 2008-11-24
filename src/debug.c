@@ -36,6 +36,7 @@ GDebugKey keys[] = {
   { "si-bytestream-manager",    DEBUG_SI_BYTESTREAM_MGR },
   { "discovery",      DEBUG_DISCO },
   { "olpc-activity",      DEBUG_OLPC_ACTIVITY },
+  { "ft",             DEBUG_FT },
   { "all",            ~0 },
   { 0, },
 };

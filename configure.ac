@@ -136,7 +136,7 @@ dnl GTK docs
 GTK_DOC_CHECK
 
 dnl Check for Glib
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.16, gobject-2.0 >= 2.16])
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.16, gobject-2.0 >= 2.16, gthread-2.0 >= 2.4])
 
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
@@ -235,6 +235,11 @@ dnl Check for Avahi
 PKG_CHECK_MODULES(AVAHI, [ avahi-gobject ])
 AC_SUBST(AVAHI_CFLAGS)
 AC_SUBST(AVAHI_LIBS)
+
+dnl Check for libsoup
+PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.2])
+AC_SUBST(LIBSOUP_CFLAGS)
+AC_SUBST(LIBSOUP_LIBS)
 
 dnl glibc backtrace functions
 AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
