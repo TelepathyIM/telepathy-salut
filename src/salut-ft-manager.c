@@ -30,6 +30,7 @@
 #include "salut-signals-marshal.h"
 
 #include "salut-file-transfer-channel.h"
+#include "salut-caps-channel-manager.h"
 #include "salut-contact-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
@@ -41,6 +42,7 @@
 
 static void
 channel_manager_iface_init (gpointer, gpointer);
+static void caps_channel_manager_iface_init (gpointer, gpointer);
 
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
@@ -48,7 +50,9 @@ salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
-      channel_manager_iface_init));
+      channel_manager_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
+      caps_channel_manager_iface_init));
 
 /* private structure */
 typedef struct _SalutFtManagerPrivate SalutFtManagerPrivate;
@@ -566,4 +570,22 @@ salut_ft_manager_new (SalutConnection *connection,
   priv->connection = connection;
 
   return ret;
+}
+
+static void
+salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
+                                   SalutConnection *conn,
+                                   TpHandle handle,
+                                   GPtrArray *arr)
+{
+  /* TODO */
+}
+
+static void
+caps_channel_manager_iface_init (gpointer g_iface,
+                                 gpointer iface_data)
+{
+  SalutCapsChannelManagerIface *iface = g_iface;
+
+  iface->get_contact_caps = salut_ft_manager_get_contact_caps;
 }
