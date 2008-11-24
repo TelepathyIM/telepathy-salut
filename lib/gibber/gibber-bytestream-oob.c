@@ -212,7 +212,6 @@ transport_buffer_empty_cb (GibberTransport *transport,
       DEBUG ("buffer is now empty. Bytestream can be closed");
       bytestream_closed (self);
     }
-
   else if (priv->write_blocked)
     {
       DEBUG ("buffer is empty, unblock write to the bytestream");
