@@ -9,7 +9,7 @@ import string
 
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy, Event, EventPattern, call_async, \
-         tp_name_prefix
+         tp_name_prefix, sync_dbus
 
 from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
@@ -110,7 +110,7 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
 
 
 def check_NewChannel_signal(old_sig, channel_type, chan_path, contact_handle):
-    assert old_sig[0] == chan_path
+    assert old_sig[0] == chan_path, old_sig[0]
     assert old_sig[1] == tp_name_prefix + '.Channel.Type.' + channel_type
     assert old_sig[2] == 1         # contact handle
     assert old_sig[3] == contact_handle
@@ -192,6 +192,11 @@ def test(q, bus, conn):
             name = conn.InspectHandles(HT_CONTACT, [h])[0]
             if name == contact_name:
                 handle = h
+
+    # NewChannels would be emitted for the contact list channels, we don't
+    # want this to interfere with the NewChannels signals for the requested
+    # tubes channel
+    sync_dbus(bus, q, conn)
 
     # old requestotron
     call_async(q, conn, 'RequestChannel',
