@@ -33,6 +33,16 @@ salut_tube_iface_accept (SalutTubeIface *self,
   return virtual_method (self, error);
 }
 
+void
+salut_tube_iface_accepted (SalutTubeIface *self)
+{
+  void (*virtual_method)(SalutTubeIface *) =
+    SALUT_TUBE_IFACE_GET_CLASS (self)->accepted;
+  if (virtual_method != NULL)
+    virtual_method (self);
+  /* else nothing to do */
+}
+
 gboolean
 salut_tube_iface_offer_needed (SalutTubeIface *self)
 {
@@ -167,7 +177,7 @@ salut_tube_iface_base_init (gpointer klass)
           "Tube state",
           "The SalutTubeState of this DBUS tube object",
           0, G_MAXUINT32, TP_TUBE_STATE_REMOTE_PENDING,
-          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
       initialized = TRUE;

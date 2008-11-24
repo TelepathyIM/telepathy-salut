@@ -1040,11 +1040,6 @@ salut_tube_stream_set_property (GObject *object,
       case PROP_PARAMETERS:
         priv->parameters = g_value_get_boxed (value);
         break;
-      case PROP_STATE:
-        priv->state = g_value_get_uint (value);
-        if (priv->state == TP_TUBE_STATE_OPEN)
-          g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
-        break;
       case PROP_ADDRESS_TYPE:
         g_assert (g_value_get_uint (value) == TP_SOCKET_ADDRESS_TYPE_UNIX ||
             g_value_get_uint (value) == TP_SOCKET_ADDRESS_TYPE_IPV4 ||
@@ -1499,6 +1494,24 @@ salut_tube_stream_accept (SalutTubeIface *tube,
 }
 
 /**
+ * salut_tube_stream_accepted
+ *
+ * Implements salut_tube_iface_accepted on SalutTubeIface
+ */
+static void
+salut_tube_stream_accepted (SalutTubeIface *tube)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  if (priv->state == TP_TUBE_STATE_OPEN)
+    return;
+
+  priv->state = TP_TUBE_STATE_OPEN;
+  g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
+}
+
+/**
  * salut_tube_stream_offer_needed
  *
  * Implements salut_tube_iface_offer_needed on SalutTubeIface
@@ -1911,6 +1924,7 @@ tube_iface_init (gpointer g_iface,
   SalutTubeIfaceClass *klass = (SalutTubeIfaceClass *) g_iface;
 
   klass->accept = salut_tube_stream_accept;
+  klass->accepted = salut_tube_stream_accepted;
   klass->offer_needed = salut_tube_stream_offer_needed;
   klass->listen = salut_tube_stream_listen;
   klass->close = salut_tube_stream_close;

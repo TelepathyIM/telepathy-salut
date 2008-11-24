@@ -33,6 +33,7 @@ struct _SalutTubeIfaceClass {
   GTypeInterface parent;
 
   gboolean (*accept) (SalutTubeIface *tube, GError **error);
+  void (*accepted) (SalutTubeIface *tube);
   gboolean (*offer_needed) (SalutTubeIface *tube);
   int (*listen) (SalutTubeIface *tube);
   void (*close) (SalutTubeIface *tube, gboolean local);
@@ -58,7 +59,11 @@ gboolean salut_tube_iface_offer_needed (SalutTubeIface *tube);
 
 int salut_tube_iface_listen (SalutTubeIface *tube);
 
+/* accept the tube offered by the contact */
 gboolean salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
+
+/* the contact accepted our tube offer */
+void salut_tube_iface_accepted (SalutTubeIface *tube);
 
 void salut_tube_iface_close (SalutTubeIface *tube, gboolean closed_remotely);
 

@@ -1823,9 +1823,7 @@ iq_reply_cb (GibberIqHelper *helper,
       return;
     }
 
-  g_object_set (tube,
-      "state", TP_TUBE_STATE_OPEN,
-      NULL);
+  salut_tube_iface_accepted (tube);
 
   DEBUG ("The contact has accepted our tube offer");
 }
