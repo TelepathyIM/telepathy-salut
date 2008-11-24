@@ -32,7 +32,6 @@ class ReceiveFileNotFound(ReceiveFileTest):
         # Receiver inform us he can't download the file
         e = self.q.expect('stream-iq', iq_type='error')
         iq = e.stanza
-        print iq.toXml()
         error_node = xpath.queryForNodes("/iq/error", iq)[0]
         assert error_node['code'] == '404'
         assert error_node['type'] == 'cancel'
