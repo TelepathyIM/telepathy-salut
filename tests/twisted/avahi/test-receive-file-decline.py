@@ -35,11 +35,8 @@ class ReceiveFileDeclineTest(ReceiveFileTest):
         assert reason == FT_STATE_CHANGE_REASON_LOCAL_STOPPED
         self.q.expect('dbus-signal', signal='Closed')
 
-    def receive_file(self):
-        pass
-
-    def close_channel(self):
-        pass
+        # stop test
+        return True
 
 if __name__ == '__main__':
     test = ReceiveFileDeclineTest()

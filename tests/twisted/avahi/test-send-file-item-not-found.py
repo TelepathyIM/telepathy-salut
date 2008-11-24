@@ -31,8 +31,8 @@ class SendFileItemNotFound(SendFileTest):
         # no byte has been transferred as the transfer failed
         assert transferred == 0
 
-    def send_file(self):
-        pass
+        # stop test
+        return True
 
 if __name__ == '__main__':
     test = SendFileItemNotFound()

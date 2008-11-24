@@ -9,14 +9,8 @@ class SendFileAndDisconnectTest(SendFileTest):
         self.conn.Disconnect()
         self.q.expect('dbus-signal', signal='StatusChanged', args=[2L, 1L])
 
-    def client_request_file(self):
-        pass
-
-    def send_file(self):
-        pass
-
-    def close_channel(self):
-        pass
+        # stop test
+        return True
 
 if __name__ == '__main__':
     test = SendFileAndDisconnectTest()

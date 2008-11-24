@@ -33,14 +33,8 @@ class SendFileDeclinedTest(SendFileTest):
         # no byte has been transferred as the file was declined
         assert transferred == 0
 
-    def provide_file(self):
-        pass
-
-    def client_request_file(self):
-        pass
-
-    def send_file(self):
-        pass
+        # stop test
+        return True
 
 if __name__ == '__main__':
     test = SendFileDeclinedTest()

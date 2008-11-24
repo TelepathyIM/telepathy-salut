@@ -32,11 +32,8 @@ class SendFileAndCancelImmediatelyTest(SendFileTest):
         else:
             assert False
 
-    def send_file(self):
-        pass
-
-    def close_channel(self):
-        pass
+        # stop test
+        return True
 
 if __name__ == '__main__':
     test = SendFileAndCancelImmediatelyTest()
