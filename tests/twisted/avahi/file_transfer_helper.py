@@ -345,6 +345,9 @@ class SendFileTest(FileTransferTest):
 
         self.incoming = conn_event.connection
 
+        self._check_oob_iq(iq_event)
+
+    def _check_oob_iq(self, iq_event):
         assert iq_event.iq_type == 'set'
         assert iq_event.connection == self.incoming
         self.iq = iq_event.stanza
