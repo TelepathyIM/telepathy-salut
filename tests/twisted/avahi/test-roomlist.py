@@ -152,8 +152,6 @@ def test(q, bus, conn):
             CHANNEL_TYPE_ROOMLIST, 'Server',
             dbus_interface='org.freedesktop.DBus.Properties') == ''
 
-    # FIXME: actually list the rooms!
-
     # ensure roomlist channel
     call_async(q, requestotron, 'EnsureChannel',
             { tp_name_prefix + '.Channel.ChannelType':
