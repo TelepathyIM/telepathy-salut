@@ -1,6 +1,6 @@
 
 """
-Test MUC support.
+Test requesting of muc text channels using the old and new request API.
 """
 
 import dbus

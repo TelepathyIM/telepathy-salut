@@ -1,6 +1,6 @@
 
 """
-Test MUC tubes support.
+Test requesting of muc tubes channels using the old and new request API.
 """
 
 import dbus
