@@ -834,10 +834,11 @@ salut_muc_manager_request (SalutMucManager *self,
         }
       else
         {
-          text_chan = g_hash_table_lookup (priv->text_channels,
-              GINT_TO_POINTER (handle));
-          tubes_chan = new_tubes_channel (self, handle, text_chan,
-              base_conn->self_handle);
+          tubes_chan = create_tubes_channel (self, handle,
+              base_conn->self_handle, &error);
+          if (tubes_chan == NULL)
+            goto error;
+
           salut_muc_manager_associate_request (self, tubes_chan,
               request_token);
           salut_muc_manager_emit_new_channel (self,
