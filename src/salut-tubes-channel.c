@@ -524,7 +524,7 @@ setup_connection (SalutTubesChannel *self)
   SalutXmppConnectionManagerRequestConnectionResult result;
   GibberXmppConnection *conn = NULL;
 
-  DEBUG ("setuping XmppConnection for the tubes channel");
+  DEBUG ("setting up XmppConnection for the tubes channel");
 
   if (priv->state == CHANNEL_CONNECTING)
     return;
