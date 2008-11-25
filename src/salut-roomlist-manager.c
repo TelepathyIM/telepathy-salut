@@ -304,7 +304,6 @@ static const gchar * const roomlist_channel_fixed_properties[] = {
 };
 
 static const gchar * const roomlist_channel_allowed_properties[] = {
-    TP_IFACE_CHANNEL_TYPE_ROOM_LIST ".Server",
     NULL
 };
 
@@ -334,7 +333,6 @@ salut_roomlist_manager_foreach_channel_class (
       TP_IFACE_CHANNEL_TYPE_ROOM_LIST);
   func (manager, table, roomlist_channel_allowed_properties,
       user_data);
-
 
   g_hash_table_destroy (table);
 }
