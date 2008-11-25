@@ -95,12 +95,17 @@ struct _SalutMucManagerPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_MUC_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate))
+#define SALUT_MUC_MANAGER_GET_PRIVATE(obj) \
+  ((SalutMucManagerPrivate *) ((SalutMucManager *)obj)->priv)
 
 static void
 salut_muc_manager_init (SalutMucManager *obj)
 {
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
+  SalutMucManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (obj,
+      SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate);
+
+  obj->priv = priv;
+
   priv->connection = NULL;
 
   /* allocate any data required by the object here */
@@ -1113,4 +1118,3 @@ salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
 
   return tubes_chan;
 }
-

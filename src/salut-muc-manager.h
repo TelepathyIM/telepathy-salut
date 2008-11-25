@@ -47,6 +47,8 @@ struct _SalutMucManagerClass {
 
 struct _SalutMucManager {
     GObject parent;
+
+    gpointer priv;
 };
 
 GType salut_muc_manager_get_type (void);
