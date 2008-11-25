@@ -19,6 +19,7 @@ def test(q, bus, conn):
 
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
+    # check if we can request roomlist channels
     properties = conn.GetAll(
             tp_name_prefix + '.Connection.Interface.Requests',
             dbus_interface='org.freedesktop.DBus.Properties')
@@ -89,6 +90,8 @@ def test(q, bus, conn):
 
     requestotron = dbus.Interface(conn,
             tp_name_prefix + '.Connection.Interface.Requests')
+
+    # create roomlist channel using new API
     call_async(q, requestotron, 'CreateChannel',
             { tp_name_prefix + '.Channel.ChannelType':
                 tp_name_prefix + '.Channel.Type.RoomList',
@@ -132,6 +135,7 @@ def test(q, bus, conn):
     # FIXME: actually list the rooms!
 
 
+    # ensure roomlist channel
     call_async(q, requestotron, 'EnsureChannel',
             { tp_name_prefix + '.Channel.ChannelType':
                 tp_name_prefix + '.Channel.Type.RoomList',
@@ -143,7 +147,6 @@ def test(q, bus, conn):
 
     assert not yours
     assert ensured_path == path2, (ensured_path, path2)
-
 
     conn.Disconnect()
 
