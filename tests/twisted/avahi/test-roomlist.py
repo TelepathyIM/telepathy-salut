@@ -12,6 +12,8 @@ from saluttest import exec_test
 from servicetest import call_async, lazy, match, EventPattern, \
         tp_name_prefix, tp_path_prefix
 
+CHANNEL_TYPE_ROOMLIST = 'org.freedesktop.Telepathy.Channel.Type.RoomList'
+
 def test(q, bus, conn):
     self_name = 'testsuite' + '@' + avahitest.get_host_name()
 
@@ -25,15 +27,15 @@ def test(q, bus, conn):
             dbus_interface='org.freedesktop.DBus.Properties')
     assert properties.get('Channels') == [], properties['Channels']
     assert ({tp_name_prefix + '.Channel.ChannelType':
-                tp_name_prefix + '.Channel.Type.RoomList',
+                CHANNEL_TYPE_ROOMLIST,
              tp_name_prefix + '.Channel.TargetHandleType': 0,
              },
              [],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
-    call_async(q, conn, 'RequestChannel',
-        tp_name_prefix + '.Channel.Type.RoomList', 0, 0, True)
+    # request a roomlist channel using the old API
+    call_async(q, conn, 'RequestChannel', CHANNEL_TYPE_ROOMLIST, 0, 0, True)
 
     ret, old_sig, new_sig = q.expect_many(
         EventPattern('dbus-return', method='RequestChannel'),
@@ -49,7 +51,7 @@ def test(q, bus, conn):
 
     props = new_sig.args[0][0][1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            tp_name_prefix + '.Channel.Type.RoomList'
+            CHANNEL_TYPE_ROOMLIST
     assert props[tp_name_prefix + '.Channel.TargetHandleType'] == 0
     assert props[tp_name_prefix + '.Channel.TargetHandle'] == 0
     assert props[tp_name_prefix + '.Channel.TargetID'] == ''
@@ -61,7 +63,7 @@ def test(q, bus, conn):
     assert props[tp_name_prefix + '.Channel.Type.RoomList.Server'] == ''
 
     assert old_sig.args[0] == path1
-    assert old_sig.args[1] == tp_name_prefix + '.Channel.Type.RoomList'
+    assert old_sig.args[1] == CHANNEL_TYPE_ROOMLIST
     assert old_sig.args[2] == 0     # handle type
     assert old_sig.args[3] == 0     # handle
     assert old_sig.args[4] == 1     # suppress handler
@@ -76,14 +78,13 @@ def test(q, bus, conn):
     assert channel_props.get('TargetHandleType') == 0,\
             channel_props.get('TargetHandleType')
     assert channel_props.get('ChannelType') == \
-            tp_name_prefix + '.Channel.Type.RoomList',\
-            channel_props.get('ChannelType')
+            CHANNEL_TYPE_ROOMLIST, channel_props.get('ChannelType')
     assert channel_props['Requested'] == True
     assert channel_props['InitiatorID'] == self_name
     assert channel_props['InitiatorHandle'] == conn.GetSelfHandle()
 
     assert chan.Get(
-            tp_name_prefix + '.Channel.Type.RoomList', 'Server',
+            CHANNEL_TYPE_ROOMLIST, 'Server',
             dbus_interface='org.freedesktop.DBus.Properties') == ''
 
     # FIXME: actually list the rooms!
@@ -94,7 +95,7 @@ def test(q, bus, conn):
     # create roomlist channel using new API
     call_async(q, requestotron, 'CreateChannel',
             { tp_name_prefix + '.Channel.ChannelType':
-                tp_name_prefix + '.Channel.Type.RoomList',
+                CHANNEL_TYPE_ROOMLIST,
               tp_name_prefix + '.Channel.TargetHandleType': 0,
               })
 
@@ -108,7 +109,7 @@ def test(q, bus, conn):
 
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            tp_name_prefix + '.Channel.Type.RoomList'
+            CHANNEL_TYPE_ROOMLIST
     assert props[tp_name_prefix + '.Channel.TargetHandleType'] == 0
     assert props[tp_name_prefix + '.Channel.TargetHandle'] == 0
     assert props[tp_name_prefix + '.Channel.TargetID'] == ''
@@ -123,13 +124,13 @@ def test(q, bus, conn):
     assert new_sig.args[0][0][1] == props
 
     assert old_sig.args[0] == path2
-    assert old_sig.args[1] == tp_name_prefix + '.Channel.Type.RoomList'
+    assert old_sig.args[1] == CHANNEL_TYPE_ROOMLIST
     assert old_sig.args[2] == 0     # handle type
     assert old_sig.args[3] == 0     # handle
     assert old_sig.args[4] == 1     # suppress handler
 
     assert chan.Get(
-            tp_name_prefix + '.Channel.Type.RoomList', 'Server',
+            CHANNEL_TYPE_ROOMLIST, 'Server',
             dbus_interface='org.freedesktop.DBus.Properties') == ''
 
     # FIXME: actually list the rooms!
@@ -138,7 +139,7 @@ def test(q, bus, conn):
     # ensure roomlist channel
     call_async(q, requestotron, 'EnsureChannel',
             { tp_name_prefix + '.Channel.ChannelType':
-                tp_name_prefix + '.Channel.Type.RoomList',
+                CHANNEL_TYPE_ROOMLIST,
               tp_name_prefix + '.Channel.TargetHandleType': 0,
               })
 
