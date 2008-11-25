@@ -714,7 +714,7 @@ gibber_bytestream_oob_send (GibberBytestreamIface *bytestream,
 
   if (priv->write_blocked)
     {
-      DEBUG ("Attempt to send data while the bytestream is blocked");
+      DEBUG ("sending data while the bytestream was blocked");
     }
 
   DEBUG ("send %u bytes through bytestream", len);

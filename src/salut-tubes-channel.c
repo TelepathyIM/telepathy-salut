@@ -524,7 +524,7 @@ setup_connection (SalutTubesChannel *self)
   SalutXmppConnectionManagerRequestConnectionResult result;
   GibberXmppConnection *conn = NULL;
 
-  DEBUG ("Setup XmppConnection for the tubes channel");
+  DEBUG ("setuping XmppConnection for the tubes channel");
 
   if (priv->state == CHANNEL_CONNECTING)
     return;
@@ -1864,8 +1864,8 @@ send_channel_iq_tube (gpointer key,
       int port;
       gchar *port_str;
 
-      DEBUG ("Listen for connections from the remote contact "
-          "and send the tube offer stanza");
+      DEBUG ("Listening for connections from the remote contact "
+          "and sending the tube offer stanza");
 
       /* listen for future connections from the remote CM before sending the
        * iq */
