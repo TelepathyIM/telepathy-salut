@@ -715,6 +715,8 @@ create_tubes_channel (SalutMucManager *self,
       /* FIXME: this channel will come out with Requested: True. */
       text_chan = salut_muc_manager_request_new_muc_channel (self,
           handle, error);
+      salut_muc_manager_emit_new_channel (self,
+          TP_EXPORTABLE_CHANNEL (text_chan));
       if (text_chan == NULL)
         return NULL;
     }
@@ -739,7 +741,6 @@ salut_muc_manager_associate_request (SalutMucManager *self,
   list = g_slist_prepend (list, request);
   g_hash_table_insert (priv->queued_requests, channel, list);
 }
-
 
 static gboolean
 salut_muc_manager_request (SalutMucManager *self,
