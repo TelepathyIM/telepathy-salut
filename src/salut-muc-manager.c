@@ -565,7 +565,6 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   g_free (path);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
-  salut_muc_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (chan));
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
 
@@ -607,7 +606,6 @@ new_tubes_channel (SalutMucManager *self,
       NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
-  salut_muc_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan));
 
   g_hash_table_insert (priv->tubes_channels, GUINT_TO_POINTER (room), chan);
 

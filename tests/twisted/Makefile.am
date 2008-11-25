@@ -20,7 +20,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-text-channel.py \
 	avahi/test-ichat-composing.py \
 	avahi/test-ichat-incoming-msg.py \
-	avahi/test-room-list.py \
+	avahi/test-request-muc.py \
+        avahi/test-roomlist.py \
 	avahi/test-tube.py \
 	avahi/test-two-tubes.py \
 	avahi/test-tube-close.py
