@@ -2834,13 +2834,9 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       G_CALLBACK (_olpc_activity_manager_activity_modified_cb), self);
 #endif
 
-  priv->muc_manager = salut_discovery_client_create_muc_manager (
-      priv->discovery_client, self, priv->xmpp_connection_manager);
-
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
-  g_ptr_array_add (factories, priv->muc_manager);
   g_ptr_array_add (factories, priv->tubes_manager);
 
   return factories;
