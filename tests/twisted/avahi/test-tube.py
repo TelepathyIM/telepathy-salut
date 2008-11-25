@@ -276,8 +276,6 @@ def test(q, bus, conn):
     assert len(ret.value) == 2 # CreateChannel returns 2 values: o, a{sv}
     new_chan_path = ret.value[0]
     new_chan_prop_asv = ret.value[1]
-    assert new_chan_path.find("StreamTube") != -1, new_chan_path
-    assert new_chan_path.find("SITubesChannel") == -1, new_chan_path
     # The path of the Channel.Type.Tubes object MUST be different to the path
     # of the Channel.Type.StreamTube object !
     assert chan_path != new_chan_path
