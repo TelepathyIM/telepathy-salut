@@ -103,7 +103,8 @@ salut_avahi_roomlist_manager_get_property (GObject *object,
                                            GParamSpec *pspec)
 {
   SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (object);
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
 
   switch (property_id)
     {
@@ -123,7 +124,8 @@ salut_avahi_roomlist_manager_set_property (GObject *object,
                                            GParamSpec *pspec)
 {
   SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (object);
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
 
   switch (property_id)
     {
@@ -149,7 +151,8 @@ browser_found (GaServiceBrowser *browser,
                GaLookupResultFlags flags,
                SalutAvahiRoomlistManager *self)
 {
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
   GArray *arr;
   GaServiceResolver *resolver;
   GError *error = NULL;
@@ -188,7 +191,8 @@ browser_removed (GaServiceBrowser *browser,
                  GaLookupResultFlags flags,
                  SalutAvahiRoomlistManager *self)
 {
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
   GArray *arr;
   int i;
 
@@ -259,7 +263,8 @@ salut_avahi_roomlist_manager_start (SalutRoomlistManager *mgr,
                                GError **error)
 {
   SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (mgr);
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
 
   g_signal_connect (priv->browser, "new-service",
       G_CALLBACK (browser_found), self);
@@ -298,7 +303,8 @@ salut_avahi_roomlist_manager_find_muc_address (SalutRoomlistManager *mgr,
                                                guint16 *port)
 {
   SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (mgr);
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
   GArray *arr;
   AvahiAddress avahi_address;
   guint i;
@@ -339,7 +345,8 @@ static GSList *
 salut_avahi_roomlist_manager_get_rooms (SalutRoomlistManager *mgr)
 {
   SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (mgr);
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
   GSList *rooms = NULL;
 
   g_hash_table_foreach (priv->room_resolvers, (GHFunc) add_room_to_list,
@@ -352,8 +359,10 @@ static void
 salut_avahi_roomlist_manager_class_init (
     SalutAvahiRoomlistManagerClass *salut_avahi_roomlist_manager_class)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (salut_avahi_roomlist_manager_class);
-  SalutRoomlistManagerClass *roomlist_manager_class = SALUT_ROOMLIST_MANAGER_CLASS (
+  GObjectClass *object_class = G_OBJECT_CLASS (
+      salut_avahi_roomlist_manager_class);
+  SalutRoomlistManagerClass *roomlist_manager_class =
+    SALUT_ROOMLIST_MANAGER_CLASS (
       salut_avahi_roomlist_manager_class);
   GParamSpec *param_spec;
 
@@ -385,7 +394,8 @@ static void
 salut_avahi_roomlist_manager_dispose (GObject *object)
 {
   SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (object);
-  SalutAvahiRoomlistManagerPrivate *priv = SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
+  SalutAvahiRoomlistManagerPrivate *priv =
+    SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
 
   if (priv->dispose_has_run)
     return;
@@ -413,14 +423,16 @@ salut_avahi_roomlist_manager_dispose (GObject *object)
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (salut_avahi_roomlist_manager_parent_class)->dispose)
-    G_OBJECT_CLASS (salut_avahi_roomlist_manager_parent_class)->dispose (object);
+    G_OBJECT_CLASS (salut_avahi_roomlist_manager_parent_class)->dispose (
+        object);
 }
 
 /* public functions */
 SalutAvahiRoomlistManager *
-salut_avahi_roomlist_manager_new (SalutConnection *connection,
-                             SalutXmppConnectionManager *xmpp_connection_manager,
-                             SalutAvahiDiscoveryClient *discovery_client)
+salut_avahi_roomlist_manager_new (
+    SalutConnection *connection,
+    SalutXmppConnectionManager *xmpp_connection_manager,
+    SalutAvahiDiscoveryClient *discovery_client)
 {
   g_assert (connection != NULL);
   g_assert (xmpp_connection_manager != NULL);
