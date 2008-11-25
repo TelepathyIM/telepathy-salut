@@ -897,9 +897,8 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       if (require_new)
         {
           g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-              "Already chatting with contact #%u in another channel", handle);
-          DEBUG ("Already chatting with contact #%u in another channel",
-              handle);
+              "A tube channel with contact #%u already exists", handle);
+          DEBUG ("A tube channel with contact #%u already exists", handle);
           goto error;
         }
 
