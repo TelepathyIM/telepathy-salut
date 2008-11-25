@@ -817,7 +817,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     return FALSE;
 
-  if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
@@ -825,7 +825,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
               &error))
         goto error;
     }
-  else if (! tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
       const gchar *service;
 
@@ -846,7 +846,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           goto error;
         }
     }
-  else if (! tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       const gchar *service;
 
@@ -885,7 +885,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   channel = g_hash_table_lookup (priv->channels,
       GUINT_TO_POINTER (handle));
 
-  if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
       if (channel == NULL)
         {
