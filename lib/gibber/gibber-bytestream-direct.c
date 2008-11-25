@@ -323,7 +323,7 @@ transport_handler (GibberTransport *transport,
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (user_data);
   GString *buffer;
 
-  DEBUG ("Called. GibberBytestreamDirect emit DATA_RECEIVED.");
+  DEBUG ("GibberBytestreamDirect emit DATA_RECEIVED.");
 
   buffer = g_string_new_len ((const gchar *) data->data, data->length);
 
@@ -598,8 +598,6 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
       GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
   guint i;
   gboolean ret;
-
-  DEBUG ("Called.");
 
   g_assert (priv->addresses != NULL);
   if (priv->addresses->len < 1)

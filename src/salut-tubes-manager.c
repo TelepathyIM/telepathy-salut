@@ -805,7 +805,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   const gchar *channel_type;
   SalutTubesChannel *channel;
 
-  DEBUG ("Called.");
   if (tp_asv_get_uint32 (request_properties,
         TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
     return FALSE;

@@ -376,8 +376,6 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
 
-  DEBUG ("Called.");
-
   if (state == GIBBER_BYTESTREAM_STATE_OPEN)
     {
       GibberTransport *transport;
@@ -675,8 +673,6 @@ new_connection_to_socket (SalutTubeStream *self,
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GibberTransport *transport;
-
-  DEBUG ("Called.");
 
   g_assert (priv->initiator == priv->self_handle);
 
@@ -1948,8 +1944,6 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  DEBUG ("Called.");
 
   if (priv->initiator != priv->self_handle)
     {
