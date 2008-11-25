@@ -10,7 +10,7 @@ from twisted.words.xish import domish
 
 from saluttest import exec_test
 from servicetest import call_async, lazy, match, EventPattern, \
-        tp_name_prefix, tp_path_prefix
+        tp_name_prefix, tp_path_prefix, make_channel_proxy
 
 CHANNEL_TYPE_ROOMLIST = 'org.freedesktop.Telepathy.Channel.Type.RoomList'
 
@@ -43,9 +43,8 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
-    bus = dbus.SessionBus()
     path1 = ret.value[0]
-    chan = bus.get_object(conn.bus_name, path1)
+    chan = make_channel_proxy(conn, path1, "Channel.Type.RoomList")
 
     assert new_sig.args[0][0][0] == path1
 
@@ -105,7 +104,7 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='NewChannels'),
         )
     path2 = ret.value[0]
-    chan = bus.get_object(conn.bus_name, path2)
+    chan = make_channel_proxy(conn, path2, "Channel.Type.RoomList")
 
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
