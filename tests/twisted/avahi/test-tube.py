@@ -48,7 +48,7 @@ def check_conn_properties(q, bus, conn, channel_list=None):
 
     assert ({'org.freedesktop.Telepathy.Channel.ChannelType':
                 'org.freedesktop.Telepathy.Channel.Type.Tubes',
-             'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
+             'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT,
              },
              ['org.freedesktop.Telepathy.Channel.TargetHandle',
              ]
@@ -56,7 +56,7 @@ def check_conn_properties(q, bus, conn, channel_list=None):
                      properties['RequestableChannelClasses']
     assert ({'org.freedesktop.Telepathy.Channel.ChannelType':
                 'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
-             'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
+             'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT,
              },
              ['org.freedesktop.Telepathy.Channel.TargetHandle',
               'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters',
@@ -74,7 +74,7 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
             dbus_interface='org.freedesktop.DBus.Properties')
     assert channel_props.get('TargetHandle') == contact_handle,\
             (channel_props.get('TargetHandle'), contact_handle)
-    assert channel_props.get('TargetHandleType') == 1,\
+    assert channel_props.get('TargetHandleType') == HT_CONTACT,\
             channel_props.get('TargetHandleType')
     assert channel_props.get('ChannelType') == \
             'org.freedesktop.Telepathy.Channel.Type.' + channel_type,\
@@ -112,7 +112,7 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
 def check_NewChannel_signal(old_sig, channel_type, chan_path, contact_handle):
     assert old_sig[0] == chan_path, old_sig[0]
     assert old_sig[1] == tp_name_prefix + '.Channel.Type.' + channel_type
-    assert old_sig[2] == 1         # contact handle
+    assert old_sig[2] == HT_CONTACT
     assert old_sig[3] == contact_handle
     assert old_sig[4] == True      # suppress handler
 
@@ -126,7 +126,8 @@ def check_NewChannels_signal(new_sig, channel_type, chan_path, contact_handle,
 
     assert emitted_props[tp_name_prefix + '.Channel.ChannelType'] ==\
             tp_name_prefix + '.Channel.Type.' + channel_type
-    assert emitted_props[tp_name_prefix + '.Channel.TargetHandleType'] == 1
+    assert emitted_props[tp_name_prefix + '.Channel.TargetHandleType'] == \
+            HT_CONTACT
     assert emitted_props[tp_name_prefix + '.Channel.TargetHandle'] ==\
             contact_handle
     assert emitted_props[tp_name_prefix + '.Channel.TargetID'] == \
@@ -228,7 +229,7 @@ def test(q, bus, conn):
             {'org.freedesktop.Telepathy.Channel.ChannelType':
                 'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
-                1,
+                HT_CONTACT,
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle,
              'this.property.does.not.exist':
@@ -244,7 +245,7 @@ def test(q, bus, conn):
             {'org.freedesktop.Telepathy.Channel.ChannelType':
                 'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
-                1,
+                HT_CONTACT,
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle
             });
@@ -258,7 +259,7 @@ def test(q, bus, conn):
             {'org.freedesktop.Telepathy.Channel.ChannelType':
                 'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
-                1,
+                HT_CONTACT,
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle,
              'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
