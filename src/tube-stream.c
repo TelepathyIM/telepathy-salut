@@ -1356,11 +1356,11 @@ tube_iface_props_setter (GObject *object,
     }
 
   if (priv->state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
-  {
-    g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "Can change parameters only if the tube is not offered");
-    return FALSE;
-  }
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Can change parameters only if the tube is not offered");
+      return FALSE;
+    }
 
   priv->parameters = g_value_dup_boxed (value);
 
