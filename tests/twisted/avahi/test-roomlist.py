@@ -25,7 +25,6 @@ def test(q, bus, conn):
     properties = conn.GetAll(
             tp_name_prefix + '.Connection.Interface.Requests',
             dbus_interface='org.freedesktop.DBus.Properties')
-    assert properties.get('Channels') == [], properties['Channels']
     assert ({tp_name_prefix + '.Channel.ChannelType':
                 CHANNEL_TYPE_ROOMLIST,
              tp_name_prefix + '.Channel.TargetHandleType': 0,
