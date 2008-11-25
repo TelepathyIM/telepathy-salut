@@ -154,7 +154,6 @@ def test(q, bus, conn):
 
     # FIXME: actually list the rooms!
 
-
     # ensure roomlist channel
     call_async(q, requestotron, 'EnsureChannel',
             { tp_name_prefix + '.Channel.ChannelType':
