@@ -2214,6 +2214,11 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
       return;
     }
 
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+    priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
+  else
+    priv->state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
+
   g_assert (address_type == TP_SOCKET_ADDRESS_TYPE_UNIX ||
       address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 ||
       address_type == TP_SOCKET_ADDRESS_TYPE_IPV6);
