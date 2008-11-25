@@ -388,7 +388,6 @@ salut_muc_manager_foreach_channel (TpChannelManager *iface,
   data.user_data = user_data;
   data.foreach = foreach;
 
-
   g_hash_table_foreach (priv->text_channels, _foreach_slave, &data);
 #ifdef ENABLE_DBUS_TUBES
   g_hash_table_foreach (priv->tubes_channels, _foreach_slave, &data);
@@ -864,8 +863,8 @@ error:
 
 static gboolean
 salut_muc_manager_create_channel (TpChannelManager *manager,
-                                   gpointer request_token,
-                                   GHashTable *request_properties)
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (manager);
 
@@ -876,8 +875,8 @@ salut_muc_manager_create_channel (TpChannelManager *manager,
 
 static gboolean
 salut_muc_manager_request_channel (TpChannelManager *manager,
-                                    gpointer request_token,
-                                    GHashTable *request_properties)
+                                   gpointer request_token,
+                                   GHashTable *request_properties)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (manager);
 
@@ -888,8 +887,8 @@ salut_muc_manager_request_channel (TpChannelManager *manager,
 
 static gboolean
 salut_muc_manager_ensure_channel (TpChannelManager *manager,
-                                    gpointer request_token,
-                                    GHashTable *request_properties)
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (manager);
 
