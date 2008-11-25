@@ -27,7 +27,7 @@ def test(q, bus, conn):
                 tp_name_prefix + '.Channel.Type.RoomList',
              tp_name_prefix + '.Channel.TargetHandleType': 0,
              },
-             [tp_name_prefix + '.Channel.Type.RoomList.Server'],
+             [],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
@@ -93,7 +93,6 @@ def test(q, bus, conn):
             { tp_name_prefix + '.Channel.ChannelType':
                 tp_name_prefix + '.Channel.Type.RoomList',
               tp_name_prefix + '.Channel.TargetHandleType': 0,
-              tp_name_prefix + '.Channel.Type.RoomList.Server': '',
               })
 
     ret, old_sig, new_sig = q.expect_many(
@@ -137,7 +136,6 @@ def test(q, bus, conn):
             { tp_name_prefix + '.Channel.ChannelType':
                 tp_name_prefix + '.Channel.Type.RoomList',
               tp_name_prefix + '.Channel.TargetHandleType': 0,
-              tp_name_prefix + '.Channel.Type.RoomList.Server': '',
               })
 
     ret = q.expect('dbus-return', method='EnsureChannel')
