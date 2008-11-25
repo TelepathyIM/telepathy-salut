@@ -86,7 +86,18 @@ def test(q, bus, conn):
             CHANNEL_TYPE_ROOMLIST, 'Server',
             dbus_interface='org.freedesktop.DBus.Properties') == ''
 
-    # FIXME: actually list the rooms!
+    # list rooms
+    chan.ListRooms()
+
+    q.expect('dbus-signal', signal='ListingRooms', args=[True])
+
+    e = q.expect('dbus-signal', signal='GotRooms')
+    rooms = e.args[0]
+    assert rooms == []
+
+    q.expect('dbus-signal', signal='ListingRooms', args=[False])
+
+    # FIXME: announce some Clique rooms and check is they are properly listed
 
     requestotron = dbus.Interface(conn,
             tp_name_prefix + '.Connection.Interface.Requests')
