@@ -12,6 +12,7 @@ from saluttest import exec_test
 from servicetest import call_async, lazy, match, EventPattern, \
         tp_name_prefix, tp_path_prefix, make_channel_proxy
 
+CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
 CHANNEL_TYPE_TUBES = 'org.freedesktop.Telepathy.Channel.Type.Tubes'
 
 HT_ROOM = 2
@@ -59,7 +60,17 @@ def test(q, bus, conn):
     chan = make_channel_proxy(conn, path1, "Channel")
 
     # first the text channel is announced
-    # FIXME: check text channel
+    props = new_sig.args[0][0][1]
+    assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
+            CHANNEL_TYPE_TEXT
+    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
+    assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
+    assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-first-room'
+    assert props[tp_name_prefix + '.Channel.Requested'] == True
+    assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
+            == conn.GetSelfHandle()
+    assert props[tp_name_prefix + '.Channel.InitiatorID'] \
+            == self_name
 
     # then the tubes channel is announced
     old_sig, new_sig = q.expect_many(
@@ -135,7 +146,17 @@ def test(q, bus, conn):
             == self_name
 
     # first the text channel is announced
-    # FIXME: check text channel
+    text_props = new_sig.args[0][0][1]
+    assert text_props[tp_name_prefix + '.Channel.ChannelType'] ==\
+            CHANNEL_TYPE_TEXT
+    assert text_props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
+    assert text_props[tp_name_prefix + '.Channel.TargetHandle'] == handle
+    assert text_props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
+    assert text_props[tp_name_prefix + '.Channel.Requested'] == True
+    assert text_props[tp_name_prefix + '.Channel.InitiatorHandle'] \
+            == conn.GetSelfHandle()
+    assert text_props[tp_name_prefix + '.Channel.InitiatorID'] \
+            == self_name
 
     # then the tubes channel is announced
     old_sig, new_sig = q.expect_many(
