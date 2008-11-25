@@ -21,6 +21,15 @@ def test(q, bus, conn):
 
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
+    # FIXME: this is a hack to be sure to have all the contact list channels
+    # announced so they won't interfere with the roomlist ones announces.
+    # publish
+    q.expect('dbus-signal', signal='NewChannel')
+    # subscribe
+    q.expect('dbus-signal', signal='NewChannel')
+    # known
+    q.expect('dbus-signal', signal='NewChannel')
+
     # check if we can request roomlist channels
     properties = conn.GetAll(
             tp_name_prefix + '.Connection.Interface.Requests',
