@@ -94,8 +94,8 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
                 dbus_interface='org.freedesktop.DBus.Properties')
         assert tube_props['Status'] == state
         # no strict check but at least check the properties exist
-        assert tube_props['Parameters'] is not None
-        assert tube_props['Initiator'] is not None
+        assert tube_props.has_key('Parameters')
+        assert tube_props.has_key('Initiator')
 
     self_handle = conn.GetSelfHandle()
 
