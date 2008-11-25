@@ -441,8 +441,6 @@ salut_muc_manager_foreach_channel_class (TpChannelManager *manager,
   func (manager, table, muc_tubes_channel_allowed_properties,
       user_data);
 
-  /* FIXME: add roomlist channels */
-
   g_hash_table_destroy (table);
 }
 
