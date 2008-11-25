@@ -2261,6 +2261,15 @@ salut_tube_stream_accept_stream_tube (SalutSvcChannelTypeStreamTube *iface,
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GError *error = NULL;
 
+  if (priv->state != SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING)
+    {
+      GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Tube is not in the local pending state" };
+
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
   if (address_type != TP_SOCKET_ADDRESS_TYPE_UNIX &&
       address_type != TP_SOCKET_ADDRESS_TYPE_IPV4 &&
       address_type != TP_SOCKET_ADDRESS_TYPE_IPV6)
@@ -2277,15 +2286,6 @@ salut_tube_stream_accept_stream_tube (SalutSvcChannelTypeStreamTube *iface,
     {
       GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Unix sockets only support localhost control access" };
-
-      dbus_g_method_return_error (context, &e);
-      return;
-    }
-
-  if (priv->state != SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING)
-    {
-      GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-          "Tube is not in the local pending state" };
 
       dbus_g_method_return_error (context, &e);
       return;
