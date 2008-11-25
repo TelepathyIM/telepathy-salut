@@ -259,6 +259,7 @@ salut_tubes_channel_constructor (GType type,
 
   DEBUG ("Registering at '%s'", priv->object_path);
 
+
   return obj;
 }
 
@@ -324,7 +325,7 @@ salut_tubes_channel_get_property (GObject *object,
         }
         break;
       case PROP_REQUESTED:
-        g_value_set_boolean (value, (priv->initiator != priv->self_handle));
+        g_value_set_boolean (value, (priv->initiator == priv->self_handle));
         break;
       case PROP_CHANNEL_DESTROYED:
         g_value_set_boolean (value, priv->closed);
