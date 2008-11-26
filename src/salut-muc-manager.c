@@ -462,7 +462,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
                                    TpHandle handle,
                                    GibberMucConnection *connection,
                                    TpHandle initiator,
-                                   gboolean new_connection)
+                                   gboolean new_connection,
+                                   gboolean requested)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
@@ -484,7 +485,7 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 
   chan = SALUT_MUC_MANAGER_GET_CLASS (mgr)->create_muc_channel (mgr,
       priv->connection, path, connection, handle, name, initiator,
-      new_connection, priv->xmpp_connection_manager);
+      new_connection, priv->xmpp_connection_manager, requested);
   g_free (path);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
@@ -556,6 +557,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   gboolean r;
   GSList *tokens = NULL;
   SalutRoomlistManager *roomlist_manager;
+  gboolean requested;
 
   g_object_get (priv->connection, "roomlist-manager", &roomlist_manager, NULL);
 
@@ -608,8 +610,11 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
     }
   DEBUG ("Connect succeeded");
 
+  requested = (request_token != NULL);
+
   text_chan = salut_muc_manager_new_muc_channel (mgr, handle,
-      connection, base_connection->self_handle, params == NULL);
+      connection, base_connection->self_handle, params == NULL,
+      requested);
   r = salut_muc_channel_invited (text_chan,
         base_connection->self_handle, NULL, NULL);
   /* Inviting ourselves to a connected channel should always
@@ -645,7 +650,6 @@ create_tubes_channel (SalutMucManager *self,
   if (text_chan == NULL)
     {
       DEBUG ("have to create the text channel before the tubes one");
-      /* FIXME: this channel will come out with Requested: True. */
       text_chan = salut_muc_manager_request_new_muc_channel (self,
           handle, NULL, error);
 
@@ -940,7 +944,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
         }
       /* Need to create a new one */
       chan = salut_muc_manager_new_muc_channel (self, room_handle,
-          connection, inviter_handle, FALSE);
+          connection, inviter_handle, FALSE, FALSE);
 
       tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
           NULL);

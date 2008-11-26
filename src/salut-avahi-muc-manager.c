@@ -129,14 +129,15 @@ salut_avahi_muc_manager_create_muc_channel (
     const gchar *name,
     TpHandle initiator,
     gboolean creator,
-    SalutXmppConnectionManager *xcm)
+    SalutXmppConnectionManager *xcm,
+    gboolean requested)
 {
   SalutAvahiMucManager *self = SALUT_AVAHI_MUC_MANAGER (mgr);
   SalutAvahiMucManagerPrivate *priv = SALUT_AVAHI_MUC_MANAGER_GET_PRIVATE (self);
 
   return SALUT_MUC_CHANNEL (salut_avahi_muc_channel_new (connection,
         path, muc_connection, handle, name, priv->discovery_client, initiator,
-        creator, xcm));
+        creator, xcm, requested));
 }
 
 static void

@@ -66,7 +66,7 @@ def test(q, bus, conn):
     assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
     assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
     assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-first-room'
-    assert props[tp_name_prefix + '.Channel.Requested'] == True
+    assert props[tp_name_prefix + '.Channel.Requested'] == False
     assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
             == conn.GetSelfHandle()
     assert props[tp_name_prefix + '.Channel.InitiatorID'] \
@@ -152,7 +152,7 @@ def test(q, bus, conn):
     assert text_props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
     assert text_props[tp_name_prefix + '.Channel.TargetHandle'] == handle
     assert text_props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
-    assert text_props[tp_name_prefix + '.Channel.Requested'] == True
+    assert text_props[tp_name_prefix + '.Channel.Requested'] == False
     assert text_props[tp_name_prefix + '.Channel.InitiatorHandle'] \
             == conn.GetSelfHandle()
     assert text_props[tp_name_prefix + '.Channel.InitiatorID'] \

@@ -42,7 +42,7 @@ struct _SalutMucManagerClass {
         SalutConnection *connection, const gchar *path,
         GibberMucConnection *muc_connection, TpHandle handle,
         const gchar *name, TpHandle initiator, gboolean creator,
-        SalutXmppConnectionManager *xcm);
+        SalutXmppConnectionManager *xcm, gboolean requested);
 };
 
 struct _SalutMucManager {

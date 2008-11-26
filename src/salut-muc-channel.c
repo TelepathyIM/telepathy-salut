@@ -121,6 +121,7 @@ struct _SalutMucChannelPrivate
   GHashTable *senders;
   SalutMucManager *muc_manager;
   TpHandle initiator;
+  gboolean requested;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -201,8 +202,7 @@ salut_muc_channel_get_property (GObject    *object,
       }
       break;
     case PROP_REQUESTED:
-      g_value_set_boolean (value,
-          (priv->initiator == tp_base_connection_get_self_handle (base_conn)));
+      g_value_set_boolean (value, priv->requested);
       break;
       case PROP_CHANNEL_DESTROYED:
         /* TODO: this should be FALSE if there are still pending messages, so
@@ -275,6 +275,9 @@ salut_muc_channel_set_property (GObject     *object,
       break;
     case PROP_XMPP_CONNECTION_MANAGER:
       priv->xmpp_connection_manager = g_value_get_object (value);
+      break;
+    case PROP_REQUESTED:
+      priv->requested = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -780,7 +783,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   param_spec = g_param_spec_boolean ("requested", "Requested?",
       "True if this channel was requested by the local user",
       FALSE,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
 
   param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
