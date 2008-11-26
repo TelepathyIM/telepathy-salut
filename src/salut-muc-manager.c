@@ -60,9 +60,9 @@ static void salut_muc_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
-                        G_TYPE_OBJECT,
-                        G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
-                                        salut_muc_manager_iface_init));
+    G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
+      salut_muc_manager_iface_init));
 
 /* properties */
 enum {
@@ -110,7 +110,9 @@ salut_muc_manager_init (SalutMucManager *obj)
 
 static void
 salut_muc_manager_get_property (GObject *object,
-    guint property_id, GValue *value, GParamSpec *pspec)
+                                guint property_id,
+                                GValue *value,
+                                GParamSpec *pspec)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (object);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -306,7 +308,9 @@ struct _ForeachData
 };
 
 static void
-_foreach_slave (gpointer key, gpointer value, gpointer user_data)
+_foreach_slave (gpointer key,
+                gpointer value,
+                gpointer user_data)
 {
   struct _ForeachData *data = (struct _ForeachData *) user_data;
   TpExportableChannel *channel = TP_EXPORTABLE_CHANNEL (value);
@@ -417,7 +421,8 @@ muc_channel_closed_cb (SalutMucChannel *chan,
  * that MucManager holds to them.
  */
 static void
-tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
+tubes_channel_closed_cb (SalutTubesChannel *chan,
+                         gpointer user_data)
 {
   SalutMucManager *fac = SALUT_MUC_MANAGER (user_data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (fac);
