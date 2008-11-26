@@ -86,8 +86,6 @@ struct _SalutRoomlistManagerPrivate
 static void
 salut_roomlist_manager_init (SalutRoomlistManager *obj)
 {
-  SalutRoomlistManagerPrivate *priv = SALUT_ROOMLIST_MANAGER_GET_PRIVATE (obj);
-  priv->connection = NULL;
 }
 
 static void
