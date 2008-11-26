@@ -192,7 +192,7 @@ struct _SalutConnectionPrivate
   /* FT channel manager */
   SalutFtManager *ft_manager;
 
-  /* MUC channel manager */
+  /* Roomlist channel manager */
   SalutRoomlistManager *roomlist_manager;
 
   /* Tubes channel manager */
