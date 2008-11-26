@@ -897,7 +897,9 @@ _self_established_cb (SalutSelf *s, gpointer data)
 #ifdef ENABLE_OLPC
   if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, NULL))
     {
-      /* XXX handle error */
+      tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
     }
 #endif
