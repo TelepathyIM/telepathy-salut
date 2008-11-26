@@ -1325,7 +1325,13 @@ salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context)
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
   if (priv->connected)
-    gibber_muc_connection_disconnect (priv->muc_connection);
+    {
+      gibber_muc_connection_disconnect (priv->muc_connection);
+    }
+  else
+    {
+      tp_svc_channel_emit_closed (self);
+    }
 
   tp_svc_channel_return_from_close (context);
 }
