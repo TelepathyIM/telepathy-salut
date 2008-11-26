@@ -711,9 +711,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutTubesManager object",
       "The Salut Tubes Manager associated with this Salut Connection",
       SALUT_TYPE_TUBES_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_TUBES_MANAGER,
       param_spec);
 
@@ -722,9 +720,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       "SalutRoomlistManager object",
       "The Salut Roomlist Manager associated with this Salut Connection",
       SALUT_TYPE_ROOMLIST_MANAGER,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_ROOMLIST_MANAGER,
       param_spec);
 
