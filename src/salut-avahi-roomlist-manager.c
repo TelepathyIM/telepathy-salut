@@ -61,7 +61,7 @@ struct _SalutAvahiRoomlistManagerPrivate
   SalutAvahiDiscoveryClient *discovery_client;
   GaServiceBrowser *browser;
 
-  /* room name => (GaServiceResolver *) */
+  /* room name => GArray of GaServiceResolver* */
   GHashTable *room_resolvers;
 
   gboolean dispose_has_run;
