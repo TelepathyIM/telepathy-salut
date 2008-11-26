@@ -82,10 +82,9 @@ struct _SalutMucManagerPrivate
 
   /* GUINT_TO_POINTER (room_handle) => (SalutMucChannel *) */
   GHashTable *text_channels;
-#ifdef ENABLE_DBUS_TUBES
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
-#endif
+  GSList *roomlist_channels;
 
   gboolean dispose_has_run;
 };
@@ -106,11 +105,10 @@ salut_muc_manager_init (SalutMucManager *obj)
   /* allocate any data required by the object here */
   priv->text_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
                                                NULL, g_object_unref);
-
-#ifdef ENABLE_DBUS_TUBES
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
-#endif
+
+  priv->roomlist_channels = NULL;
 }
 
 static void
@@ -187,14 +185,12 @@ salut_muc_manager_close_all (SalutMucManager *self)
       g_hash_table_destroy (tmp);
     }
 
-#ifdef ENABLE_DBUS_TUBES
   if (priv->tubes_channels != NULL)
     {
       GHashTable *tmp = priv->tubes_channels;
       priv->tubes_channels = NULL;
       g_hash_table_destroy (tmp);
     }
-#endif
 }
 
 static void
@@ -292,9 +288,7 @@ salut_muc_manager_dispose (GObject *object)
 
   salut_muc_manager_close_all (self);
   g_assert (priv->text_channels == NULL);
-#ifdef ENABLE_DBUS_TUBES
   g_assert (priv->tubes_channels == NULL);
-#endif
 
   if (priv->xmpp_connection_manager != NULL)
     {
@@ -327,7 +321,6 @@ struct _ForeachData
   gpointer user_data;
 };
 
-
 static void
 _foreach_slave (gpointer key, gpointer value, gpointer user_data)
 {
@@ -350,9 +343,7 @@ salut_muc_manager_foreach_channel (TpChannelManager *iface,
   data.foreach = foreach;
 
   g_hash_table_foreach (priv->text_channels, _foreach_slave, &data);
-#ifdef ENABLE_DBUS_TUBES
   g_hash_table_foreach (priv->tubes_channels, _foreach_slave, &data);
-#endif
 }
 
 static const gchar * const muc_channel_fixed_properties[] = {
@@ -421,7 +412,6 @@ muc_channel_closed_cb (SalutMucChannel *chan,
       g_object_get (chan, "handle", &handle, NULL);
       DEBUG ("Removing channel with handle %u", handle);
 
-#ifdef ENABLE_DBUS_TUBES
       if (priv->tubes_channels != NULL)
         {
           SalutTubesChannel *tubes;
@@ -431,13 +421,11 @@ muc_channel_closed_cb (SalutMucChannel *chan,
           if (tubes != NULL)
             salut_tubes_channel_close (tubes);
         }
-#endif
 
       g_hash_table_remove (priv->text_channels, GUINT_TO_POINTER (handle));
     }
 }
 
-#ifdef ENABLE_DBUS_TUBES
 /**
  * tubes_channel_closed_cb:
  *
@@ -467,8 +455,6 @@ tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
        * but closing the corresponding text channel would be too astonishing */
     }
 }
-#endif
-
 
 static GibberMucConnection *
 _get_connection (SalutMucManager *mgr,
@@ -519,7 +505,6 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   return chan;
 }
 
-#ifdef ENABLE_DBUS_TUBES
 /**
  * new_tubes_channel:
  *
@@ -561,7 +546,6 @@ new_tubes_channel (SalutMucManager *self,
 
   return chan;
 }
-#endif
 
 static SalutMucChannel *
 salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
@@ -1020,10 +1004,8 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
 
   g_return_if_fail (tp_handle_is_valid (room_repo, room_handle, NULL));
 
-#ifdef ENABLE_DBUS_TUBES
   chan = g_hash_table_lookup (priv->tubes_channels,
       GUINT_TO_POINTER (room_handle));
-#endif
   if (chan == NULL)
     {
       GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
