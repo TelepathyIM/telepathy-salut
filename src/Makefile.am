@@ -54,23 +54,18 @@ CORE_SOURCES =                                          \
     salut-xmpp-connection-manager.c                     \
     salut-discovery-client.h                            \
     salut-discovery-client.c                            \
+    tube-dbus.h                                         \
+    tube-dbus.c                                         \
     tube-iface.h                                        \
     tube-iface.c                                        \
+    tube-stream.h                                       \
+    tube-stream.c                                       \
+    salut-tubes-channel.h                               \
+    salut-tubes-channel.c                               \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
     debug.h
-
-if ENABLE_DBUS_TUBES
-  CORE_SOURCES +=                                       \
-    tube-dbus.h                                         \
-    tube-dbus.c                                         \
-    tube-stream.h                                       \
-    tube-stream.c                                       \
-    salut-tubes-channel.h                               \
-    salut-tubes-channel.c
-endif
-
 
 AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.h                      \
