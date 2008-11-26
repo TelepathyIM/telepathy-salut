@@ -259,7 +259,6 @@ salut_tubes_channel_constructor (GType type,
 
   DEBUG ("Registering at '%s'", priv->object_path);
 
-
   return obj;
 }
 
