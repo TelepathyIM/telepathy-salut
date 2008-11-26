@@ -129,6 +129,7 @@ enum
   PROP_SERVICE,
   PROP_PARAMETERS,
   PROP_STATE,
+  PROP_OFFERED,
   PROP_ADDRESS_TYPE,
   PROP_ADDRESS,
   PROP_ACCESS_CONTROL,
@@ -184,6 +185,9 @@ struct _SalutTubeStreamPrivate
   gchar *service;
   GHashTable *parameters;
   SalutTubeChannelState state;
+  /* whether the tube is already offered at construct-time (with the
+   * Channel.Type.Tubes interface) */
+  gboolean offered;
 
   TpSocketAddressType address_type;
   GValue *address;
@@ -1052,6 +1056,9 @@ salut_tube_stream_get_property (GObject *object,
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
         break;
+      case PROP_OFFERED:
+        g_value_set_boolean (value, priv->offered);
+        break;
       case PROP_ADDRESS_TYPE:
         g_value_set_uint (value, priv->address_type);
         break;
@@ -1149,10 +1156,8 @@ salut_tube_stream_set_property (GObject *object,
           g_hash_table_destroy (priv->parameters);
         priv->parameters = g_value_dup_boxed (value);
         break;
-      case PROP_STATE:
-        priv->state = g_value_get_uint (value);
-        if (priv->state == SALUT_TUBE_CHANNEL_STATE_OPEN)
-          g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
+      case PROP_OFFERED:
+        priv->offered = g_value_get_boolean (value);
         break;
       case PROP_ADDRESS_TYPE:
         g_assert (g_value_get_uint (value) == TP_SOCKET_ADDRESS_TYPE_UNIX ||
@@ -1303,20 +1308,26 @@ salut_tube_stream_constructor (GType type,
       if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
         {
           /* Private tube */
-          g_assert (priv->state == SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED ||
-              priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING);
-          if (priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING)
-            priv->offer_needed = TRUE;
+          if (priv->offered)
+            {
+              priv->state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
+              priv->offer_needed = TRUE;
+            }
+          else
+            {
+              priv->state = SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED;
+            }
         }
       else
         {
           /* Muc tube */
-          g_assert (priv->state == SALUT_TUBE_CHANNEL_STATE_OPEN);
+          priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
+          g_signal_emit (obj, signals[OPENED], 0);
         }
     }
   else
     {
-      g_assert (priv->state == SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING);
+      priv->state = SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING;
     }
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
@@ -1552,6 +1563,14 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_IQ_REQ, param_spec);
 
+  param_spec = g_param_spec_boolean (
+      "offered",
+      "Whether the application asked to offer the tube",
+      "Whether the application asked to offer the tube",
+      FALSE,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_OFFERED, param_spec);
+
   signals[OPENED] =
     g_signal_new ("tube-opened",
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
@@ -1633,7 +1652,7 @@ salut_tube_stream_new (SalutConnection *conn,
                        TpHandleType handle_type,
                        TpHandle self_handle,
                        TpHandle initiator,
-                       SalutTubeChannelState initial_state,
+                       gboolean offered,
                        const gchar *service,
                        GHashTable *parameters,
                        guint id,
@@ -1655,7 +1674,7 @@ salut_tube_stream_new (SalutConnection *conn,
       "handle-type", handle_type,
       "self-handle", self_handle,
       "initiator", initiator,
-      "state", initial_state,
+      "offered", offered,
       "service", service,
       "parameters", parameters,
       "id", id,

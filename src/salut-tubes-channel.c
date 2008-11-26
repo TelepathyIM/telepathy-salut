@@ -175,9 +175,8 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
     GibberXmppNode *tube_node, TpTubeType *type, TpHandle *initiator_handle,
     const gchar **service, GHashTable **parameters, guint *tube_id);
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
-    TpTubeType type, TpHandle initiator, SalutTubeChannelState initial_state,
-    const gchar *service,
-    GHashTable *parameters, guint tube_id, guint portnum,
+    TpTubeType type, TpHandle initiator, gboolean offered,
+    const gchar *service, GHashTable *parameters, guint tube_id, guint portnum,
     GibberXmppStanza *iq_req);
 
 static void
@@ -857,8 +856,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                     }
                 }
 
-              tube = create_new_tube (self, type, initiator_handle,
-                  SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING, service, parameters,
+              tube = create_new_tube (self, type, initiator_handle, FALSE, service, parameters,
                   tube_id, 0, NULL);
 
               /* the tube has reffed its initiator, no need to keep a ref */
@@ -949,9 +947,8 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
   if (tube == NULL)
     {
-      tube = create_new_tube (self, tube_type, initiator_handle,
-        SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING, service,
-        parameters, tube_id, portnum, iq_req);
+      tube = create_new_tube (self, tube_type, initiator_handle, FALSE,
+          service, parameters, tube_id, portnum, iq_req);
     }
 }
 
@@ -1036,8 +1033,7 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
   DEBUG ("Request a tube channel with type='%s' and service='%s'",
       channel_type, service);
 
-  tube = create_new_tube (self, type, priv->self_handle,
-      SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED, service,
+  tube = create_new_tube (self, type, priv->self_handle, FALSE, service,
       parameters, tube_id, 0, NULL);
 
   return tube;
@@ -1221,7 +1217,7 @@ static SalutTubeIface *
 create_new_tube (SalutTubesChannel *self,
                  TpTubeType type,
                  TpHandle initiator,
-                 SalutTubeChannelState initial_state,
+                 gboolean offered,
                  const gchar *service,
                  GHashTable *parameters,
                  guint tube_id,
@@ -1246,7 +1242,7 @@ create_new_tube (SalutTubesChannel *self,
     case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, self,
           priv->xmpp_connection_manager, priv->handle, priv->handle_type,
-          priv->self_handle, initiator, initial_state, service, parameters,
+          priv->self_handle, initiator, offered, service, parameters,
           tube_id, portnum, iq_req));
       break;
     default:
@@ -1556,7 +1552,6 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   guint tube_id;
   SalutTubeIface *tube;
   GHashTable *parameters_copied;
-  SalutTubeChannelState initial_state;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1576,13 +1571,8 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
 
   tube_id = generate_tube_id ();
 
-  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
-    initial_state = SALUT_TUBE_CHANNEL_STATE_OPEN;
-  else
-    initial_state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
-
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      initial_state, service, parameters_copied,
+      TRUE, service, parameters_copied,
       tube_id, 0, NULL);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
@@ -2040,7 +2030,6 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   guint tube_id;
   SalutTubeIface *tube;
   GError *error = NULL;
-  SalutTubeChannelState initial_state;
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   base = (TpBaseConnection *) priv->conn;
@@ -2066,13 +2055,8 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 
   tube_id = generate_tube_id ();
 
-  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
-    initial_state = SALUT_TUBE_CHANNEL_STATE_OPEN;
-  else
-    initial_state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
-
   tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
-      initial_state, service, parameters, tube_id, 0, NULL);
+      TRUE, service, parameters, tube_id, 0, NULL);
 
   g_object_set (tube,
       "address-type", address_type,
