@@ -84,7 +84,6 @@ struct _SalutMucManagerPrivate
   GHashTable *text_channels;
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
-  GSList *roomlist_channels;
 
   gboolean dispose_has_run;
 };
@@ -107,8 +106,6 @@ salut_muc_manager_init (SalutMucManager *obj)
                                                NULL, g_object_unref);
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
-
-  priv->roomlist_channels = NULL;
 }
 
 static void
