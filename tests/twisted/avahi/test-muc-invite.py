@@ -25,9 +25,6 @@ HT_CONTACT_LIST = 3
 
 NS_CLIQUE = "http://telepathy.freedesktop.org/xmpp/clique"
 
-print "FIXME: test-muc-invite.py disabled because of bug http://bugs.freedesktop.org/show_bug.cgi?id=18552"
-raise SystemExit(77)
-
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
