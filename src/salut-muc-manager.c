@@ -297,7 +297,7 @@ salut_muc_manager_dispose (GObject *object)
     G_OBJECT_CLASS (salut_muc_manager_parent_class)->dispose (object);
 }
 
-/* Channel Factory interface */
+/* Channel Manager interface */
 
 struct _ForeachData
 {
