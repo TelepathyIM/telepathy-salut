@@ -260,7 +260,7 @@ browser_failed (GaServiceBrowser *browser,
 
 static gboolean
 salut_avahi_roomlist_manager_start (SalutRoomlistManager *mgr,
-                               GError **error)
+                                    GError **error)
 {
   SalutAvahiRoomlistManager *self = SALUT_AVAHI_ROOMLIST_MANAGER (mgr);
   SalutAvahiRoomlistManagerPrivate *priv =
