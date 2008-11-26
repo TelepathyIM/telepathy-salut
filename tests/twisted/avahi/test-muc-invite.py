@@ -80,7 +80,7 @@ def test(q, bus, conn):
     invite.addElement('roomname', content='my-room')
     invite.addElement('reason', content='Inviting to this room')
     # FIXME: we should create a real Clique room and use its IP and port.
-    # Hardcode values for now.
+    # Hardcode values for now. The IP is a multicast address.
     invite.addElement('address', content='239.255.71.249')
     invite.addElement('port', content='62472')
     outbound.send(msg)
