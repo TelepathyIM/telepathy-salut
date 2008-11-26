@@ -92,7 +92,7 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
         tube_props = channel.GetAll(
                 'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT',
                 dbus_interface='org.freedesktop.DBus.Properties')
-        assert tube_props['Status'] == state
+        assert tube_props['Status'] == state, tube_props['Status']
         # no strict check but at least check the properties exist
         assert tube_props.has_key('Parameters')
         assert tube_props.has_key('Initiator')
