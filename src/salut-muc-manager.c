@@ -968,6 +968,9 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
       /* Need to create a new one */
       chan = salut_muc_manager_new_muc_channel (self, room_handle,
           connection, inviter_handle, FALSE);
+
+      tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
+          NULL);
     }
 
   /* FIXME handle properly */
