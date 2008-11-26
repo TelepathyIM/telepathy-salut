@@ -53,4 +53,10 @@
 #define GIBBER_TELEPATHY_NS_CLIQUE \
   (const gchar *)"http://telepathy.freedesktop.org/xmpp/clique"
 
+#define GIBBER_XMPP_NS_OOB \
+  (const gchar *)"jabber:iq:oob"
+
+#define GIBBER_XMPP_NS_STANZAS \
+  (const gchar *)"urn:ietf:params:xml:ns:xmpp-stanzas"
+
 #endif /* #ifndef __GIBBER_NAMESPACES_H__ */

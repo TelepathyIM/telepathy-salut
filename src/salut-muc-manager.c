@@ -78,10 +78,8 @@ struct _SalutMucManagerPrivate
 
   /* GUINT_TO_POINTER (room_handle) => (SalutMucChannel *) */
   GHashTable *text_channels;
-#ifdef ENABLE_DBUS_TUBES
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
-#endif
   GSList *roomlist_channels;
 
   gboolean dispose_has_run;
@@ -98,11 +96,8 @@ salut_muc_manager_init (SalutMucManager *obj)
   /* allocate any data required by the object here */
   priv->text_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
                                                NULL, g_object_unref);
-
-#ifdef ENABLE_DBUS_TUBES
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
-#endif
 
   priv->roomlist_channels = NULL;
 }
@@ -230,9 +225,7 @@ salut_muc_manager_dispose (GObject *object)
 
   tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
   g_assert (priv->text_channels == NULL);
-#ifdef ENABLE_DBUS_TUBES
   g_assert (priv->tubes_channels == NULL);
-#endif
 
   if (priv->xmpp_connection_manager != NULL)
     {
@@ -280,14 +273,12 @@ salut_muc_manager_factory_iface_close_all (TpChannelFactoryIface *iface) {
       g_hash_table_destroy (tmp);
   }
 
-#ifdef ENABLE_DBUS_TUBES
   if (priv->tubes_channels != NULL)
     {
       GHashTable *tmp = priv->tubes_channels;
       priv->tubes_channels = NULL;
       g_hash_table_destroy (tmp);
     }
-#endif
 
   if (priv->roomlist_channels != NULL)
     {
@@ -350,10 +341,8 @@ salut_muc_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
 
   g_hash_table_foreach (priv->text_channels,
       salut_muc_manager_iface_foreach_one, &f);
-#ifdef ENABLE_DBUS_TUBES
   g_hash_table_foreach (priv->tubes_channels,
       salut_muc_manager_iface_foreach_one, &f);
-#endif
 
   g_slist_foreach (priv->roomlist_channels,
       (GFunc) salut_muc_manager_iface_foreach_one_list, &f);
@@ -372,7 +361,6 @@ muc_channel_closed_cb (SalutMucChannel *chan,
       g_object_get (chan, "handle", &handle, NULL);
       DEBUG ("Removing channel with handle %u", handle);
 
-#ifdef ENABLE_DBUS_TUBES
       if (priv->tubes_channels != NULL)
         {
           SalutTubesChannel *tubes;
@@ -382,13 +370,11 @@ muc_channel_closed_cb (SalutMucChannel *chan,
           if (tubes != NULL)
             salut_tubes_channel_close (tubes);
         }
-#endif
 
       g_hash_table_remove (priv->text_channels, GUINT_TO_POINTER (handle));
     }
 }
 
-#ifdef ENABLE_DBUS_TUBES
 /**
  * tubes_channel_closed_cb:
  *
@@ -415,8 +401,6 @@ tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
        * but closing the corresponding text channel would be too astonishing */
     }
 }
-#endif
-
 
 static GibberMucConnection *
 _get_connection (SalutMucManager *mgr,
@@ -470,7 +454,6 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   return chan;
 }
 
-#ifdef ENABLE_DBUS_TUBES
 /**
  * new_tubes_channel:
  *
@@ -514,7 +497,6 @@ new_tubes_channel (SalutMucManager *self,
 
   return chan;
 }
-#endif
 
 static SalutMucChannel *
 salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
@@ -563,8 +545,9 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   if (connection == NULL)
     {
       DEBUG ("get connection failed: %s", connection_error->message);
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-          connection_error->message);
+      if (error != NULL)
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            connection_error->message);
       g_error_free (connection_error);
       return NULL;
     }
@@ -573,8 +556,9 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   if (!gibber_muc_connection_connect (connection, &connection_error))
     {
       DEBUG ("Connect failed: %s", connection_error->message);
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-          connection_error->message);
+      if (error != NULL)
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            connection_error->message);
       g_error_free (connection_error);
       g_object_unref (connection);
       return NULL;
@@ -735,7 +719,6 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
       g_assert (text_chan != NULL);
       *ret = TP_CHANNEL_IFACE (text_chan);
     }
-#ifdef ENABLE_DBUS_TUBES
   else if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
       SalutTubesChannel *tubes_chan;
@@ -760,7 +743,6 @@ salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
           status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
         }
     }
-#endif
   else
     {
       return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
@@ -955,10 +937,8 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
 
   g_return_if_fail (tp_handle_is_valid (room_repo, room_handle, NULL));
 
-#ifdef ENABLE_DBUS_TUBES
   chan = g_hash_table_lookup (priv->tubes_channels,
       GUINT_TO_POINTER (room_handle));
-#endif
   if (chan == NULL)
     {
       GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,

@@ -34,12 +34,40 @@ salut_tube_iface_accept (SalutTubeIface *self,
 }
 
 void
-salut_tube_iface_close (SalutTubeIface *self)
+salut_tube_iface_accepted (SalutTubeIface *self)
 {
   void (*virtual_method)(SalutTubeIface *) =
+    SALUT_TUBE_IFACE_GET_CLASS (self)->accepted;
+  if (virtual_method != NULL)
+    virtual_method (self);
+  /* else nothing to do */
+}
+
+gboolean
+salut_tube_iface_offer_needed (SalutTubeIface *self)
+{
+  gboolean (*virtual_method)(SalutTubeIface *) =
+    SALUT_TUBE_IFACE_GET_CLASS (self)->offer_needed;
+  g_assert (virtual_method != NULL);
+  return virtual_method (self);
+}
+
+int
+salut_tube_iface_listen (SalutTubeIface *self)
+{
+  gboolean (*virtual_method)(SalutTubeIface *) =
+    SALUT_TUBE_IFACE_GET_CLASS (self)->listen;
+  g_assert (virtual_method != NULL);
+  return virtual_method (self);
+}
+
+void
+salut_tube_iface_close (SalutTubeIface *self, gboolean closed_remotely)
+{
+  void (*virtual_method)(SalutTubeIface *, gboolean) =
     SALUT_TUBE_IFACE_GET_CLASS (self)->close;
   g_assert (virtual_method != NULL);
-  virtual_method (self);
+  virtual_method (self, closed_remotely);
 }
 
 void

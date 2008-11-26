@@ -63,8 +63,7 @@ GType salut_si_bytestream_manager_get_type (void);
                               SalutSiBytestreamManagerClass))
 
 typedef void (* SalutSiBytestreamManagerNegotiateReplyFunc) (
-    GibberBytestreamIface *bytestream, const gchar *stream_id,
-    GibberXmppStanza *stanza, gpointer user_data);
+    GibberBytestreamIface *bytestream, gpointer user_data);
 
 SalutSiBytestreamManager *
 salut_si_bytestream_manager_new (SalutConnection *connection,

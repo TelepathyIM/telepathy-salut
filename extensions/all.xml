@@ -28,11 +28,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
 <tp:generic-types>
   <tp:external-type name="Contact_Handle" type="u"
     from="Telepathy specification"/>
+  <tp:external-type name="Socket_Address_Type" type="u"
+    from="Telepathy specification"/>
   <tp:external-type name="DBus_Interface" type="s"
+    from="Telepathy specification"/>
+  <tp:external-type name="Socket_Access_Control" type="u"
     from="Telepathy specification"/>
   <tp:external-type name="DBus_Qualified_Member" type="s"
     from="Telepathy specification"/>
   <tp:external-type name="Qualified_Property_Value_Map" type="a{sv}"
+    from="Telepathy specification"/>
+  <tp:external-type name="Supported_Socket_Map" type="a{uau}"
+    from="Telepathy specification"/>
+  <tp:external-type name="Unix_Timestamp64" type="t"
     from="Telepathy specification"/>
 </tp:generic-types>
 

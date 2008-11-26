@@ -37,6 +37,7 @@
 #include "salut-contact-channel.h"
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
+#include "salut-ft-manager.h"
 #include "salut-contact.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
@@ -46,9 +47,7 @@
 #include "salut-olpc-activity-manager.h"
 #endif
 
-/*
 #include "salut-tubes-manager.h"
-*/
 
 #include "salut-presence.h"
 #include "salut-discovery-client.h"
@@ -140,6 +139,7 @@ enum {
   PROP_PUBLISHED_NAME,
   PROP_IM_MANAGER,
   PROP_MUC_MANAGER,
+  PROP_TUBES_MANAGER,
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
@@ -187,11 +187,13 @@ struct _SalutConnectionPrivate
   /* MUC channel manager */
   SalutMucManager *muc_manager;
 
-  /* Tubes channel manager */
-  /* XXX disabled while private tubes aren't implemented */
-  /* SalutTubesManager *tubes_manager; */
+  /* FT channel manager */
+  SalutFtManager *ft_manager;
 
-  /* Bytestream manager */
+  /* Tubes channel manager */
+  SalutTubesManager *tubes_manager;
+
+  /* Bytestream manager for stream initiation (XEP-0095) */
   SalutSiBytestreamManager *si_bytestream_manager;
 
 #ifdef ENABLE_OLPC
@@ -336,6 +338,9 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_MUC_MANAGER:
       g_value_set_object (value, priv->muc_manager);
+      break;
+    case PROP_TUBES_MANAGER:
+      g_value_set_object (value, priv->tubes_manager);
       break;
     case PROP_CONTACT_MANAGER:
       g_value_set_object (value, priv->contact_manager);
@@ -577,7 +582,9 @@ set_own_status (GObject *obj,
     }
   else
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      if (error != NULL)
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+            err->message);
     }
 
   return TRUE;
@@ -692,6 +699,17 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
+      "tubes-manager",
+      "SalutTubesManager object",
+      "The Salut Tubes Manager associated with this Salut Connection",
+      SALUT_TYPE_TUBES_MANAGER,
+      G_PARAM_READABLE |
+      G_PARAM_STATIC_NICK |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_TUBES_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
       "contact-manager",
       "SalutContactManager object",
       "The Salut Contact Manager associated with this Salut Connection",
@@ -720,9 +738,9 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
-      "bytestream-manager",
+      "si-bytestream-manager",
       "SalutSiBytestreamManager object",
-      "The Salut Bytestream Manager associated with this Salut Connection",
+      "The Salut SI Bytestream Manager associated with this Salut Connection",
       SALUT_TYPE_SI_BYTESTREAM_MANAGER,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_SI_BYTESTREAM_MANAGER,
@@ -862,23 +880,26 @@ _self_established_cb (SalutSelf *s, gpointer data)
 
   if (!salut_contact_manager_start (priv->contact_manager, NULL))
     {
-      /* FIXME handle error */
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
-          TP_CONNECTION_STATUS_CONNECTING,
-          TP_CONNECTION_STATUS_REASON_REQUESTED);
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
   }
 
   if (!salut_muc_manager_start (priv->muc_manager, NULL))
     {
-      /* XXX handle error */
+      tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
     }
 
 #ifdef ENABLE_OLPC
   if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, NULL))
     {
-      /* XXX handle error */
+      tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
     }
 #endif
@@ -2772,7 +2793,7 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  GPtrArray *factories = g_ptr_array_sized_new (3);
+  GPtrArray *factories = g_ptr_array_sized_new (4);
 
   /* Create the contact manager */
   priv->contact_manager = salut_discovery_client_create_contact_manager (
@@ -2800,14 +2821,11 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   priv->muc_manager = salut_discovery_client_create_muc_manager (
       priv->discovery_client, self, priv->xmpp_connection_manager);
 
-  /*
-  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
-  */
+  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
 
   g_ptr_array_add (factories, priv->muc_manager);
-  /*
   g_ptr_array_add (factories, priv->tubes_manager);
-  */
 
   return factories;
 }
@@ -2827,8 +2845,12 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
+  priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
+
   g_ptr_array_add (managers, priv->im_manager);
   g_ptr_array_add (managers, priv->contact_manager);
+  g_ptr_array_add (managers, priv->ft_manager);
 
   return managers;
 }

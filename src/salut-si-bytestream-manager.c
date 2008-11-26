@@ -32,6 +32,7 @@
 
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
+#include "salut-tubes-manager.h"
 
 #define DEBUG_FLAG DEBUG_SI_BYTESTREAM_MGR
 #include "debug.h"
@@ -133,8 +134,8 @@ streaminit_parse_request (GibberXmppStanza *stanza,
     }
 
   *mime_type = gibber_xmpp_node_get_attribute (si, "mime-type");
-  /* if no mime_type is defined, XEP-0095 says to assume "binary/octect-stream"
-   * which is presumably a typo for "application/octet-stream" */
+  /* if no mime_type is defined, XEP-0095 says to assume
+   * "application/octet-stream" */
 
   *profile = gibber_xmpp_node_get_attribute (si, "profile");
   if (*profile == NULL)
@@ -374,17 +375,12 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       goto out;
     }
 
-  /* A Tubes SI request can be:
-   *  - a 1-1 new tube offer
-   *  - a 1-1 tube extra bytestream offer
-   *  - a muc tube extra bytestream offer
+  /* A Tubes SI request can only be a muc tube extra bytestream offer.
+   * We don't use SI for 1-1 tubes
    */
 
-  /* TODO: implement 1-1 tubes */
-
-  node = gibber_xmpp_node_get_child_ns (si, "muc-stream",
-        GIBBER_TELEPATHY_NS_TUBES);
-  if (node != NULL)
+  if ((node = gibber_xmpp_node_get_child_ns (si, "muc-stream",
+          GIBBER_TELEPATHY_NS_TUBES)))
     {
       const gchar *muc;
       TpHandle room_handle;
@@ -620,7 +616,7 @@ salut_si_bytestream_manager_make_stream_init_iq (const gchar *from,
         GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_SI,
         GIBBER_NODE_ATTRIBUTE, "id", stream_id,
         GIBBER_NODE_ATTRIBUTE, "profile", profile,
-        GIBBER_NODE_ATTRIBUTE, "mime-type", "binary/octect-stream",
+        GIBBER_NODE_ATTRIBUTE, "mime-type", "application/octet-stream",
         GIBBER_NODE, "feature",
           GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_FEATURENEG,
           GIBBER_NODE, "x",
@@ -891,8 +887,7 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
 
 END:
   /* user callback */
-  data->func (bytestream, data->stream_id, stanza,
-      data->user_data);
+  data->func (bytestream, data->user_data);
 
   streaminit_reply_cb_data_free (data);
 }
@@ -980,8 +975,7 @@ xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
 
  /* Call the user callback without bytestream to inform him the SI request
   * failed */
-  data->func (NULL, data->stream_id, NULL,
-      data->user_data);
+  data->func (NULL, data->user_data);
 
   g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
       NULL, data);

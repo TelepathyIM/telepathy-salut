@@ -136,7 +136,7 @@ dnl GTK docs
 GTK_DOC_CHECK
 
 dnl Check for Glib
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.16, gobject-2.0 >= 2.16])
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.16, gobject-2.0 >= 2.16, gthread-2.0 >= 2.4])
 
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
@@ -145,28 +145,10 @@ GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
 AC_SUBST(GLIB_GENMARSHAL)
 
 dnl Check for D-Bus
-PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.0.0, dbus-glib-1 >= 0.61])
+PKG_CHECK_MODULES(DBUS, [dbus-1 >= 1.1.0, dbus-glib-1 >= 0.61])
 
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
-
-dnl Check for D-Bus tubes
-AC_CHECK_LIB(dbus-1, dbus_message_marshal,
-             [have_dbus_message_marshal=yes],
-             [have_dbus_message_marshal=no],
-             [$DBUS_LIBS])
-
-have_dbus_tube=no
-if test x$have_dbus_message_marshal = xyes; then
-  have_dbus_tube=yes
-  AC_DEFINE(ENABLE_DBUS_TUBES, 1, [Define if we have D-Bus tubes support])
-fi
-
-AM_CONDITIONAL(ENABLE_DBUS_TUBES, test x$have_dbus_tube = xyes)
-
-if test x$have_dbus_tube = xno; then
-  AC_MSG_WARN("Not building support for D-Bus tubes! (libdbus >= 1.1 required)")
-fi
 
 dnl Check for libxml2
 PKG_CHECK_MODULES(LIBXML2, [libxml-2.0])
@@ -235,6 +217,11 @@ dnl Check for Avahi
 PKG_CHECK_MODULES(AVAHI, [ avahi-gobject ])
 AC_SUBST(AVAHI_CFLAGS)
 AC_SUBST(AVAHI_LIBS)
+
+dnl Check for libsoup
+PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.2])
+AC_SUBST(LIBSOUP_CFLAGS)
+AC_SUBST(LIBSOUP_LIBS)
 
 dnl glibc backtrace functions
 AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
