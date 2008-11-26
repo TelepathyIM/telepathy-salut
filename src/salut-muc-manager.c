@@ -228,7 +228,6 @@ salut_muc_manager_constructor (GType type,
 }
 
 static void salut_muc_manager_dispose (GObject *object);
-static void salut_muc_manager_finalize (GObject *object);
 
 static void
 salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
@@ -244,7 +243,6 @@ salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
 
   object_class->constructor = salut_muc_manager_constructor;
   object_class->dispose = salut_muc_manager_dispose;
-  object_class->finalize = salut_muc_manager_finalize;
 
   param_spec = g_param_spec_object (
       "connection",
@@ -297,17 +295,6 @@ salut_muc_manager_dispose (GObject *object)
 
   if (G_OBJECT_CLASS (salut_muc_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_muc_manager_parent_class)->dispose (object);
-}
-
-void
-salut_muc_manager_finalize (GObject *object)
-{
-  /*SalutMucManager *self = SALUT_MUC_MANAGER (object);*/
-  /*SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);*/
-
-  /* free any data held directly by the object here */
-
-  G_OBJECT_CLASS (salut_muc_manager_parent_class)->finalize (object);
 }
 
 /* Channel Factory interface */
