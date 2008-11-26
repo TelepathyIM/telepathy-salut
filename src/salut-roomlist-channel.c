@@ -231,10 +231,6 @@ salut_roomlist_channel_set_property (GObject *object,
     case PROP_CONNECTION:
       priv->connection = g_value_get_object (value);
       break;
-    case PROP_CONFERENCE_SERVER:
-      /* Salut does not use a server, so this string is always empty */
-      g_assert (strlen (g_value_get_string (value)) == 0);
-      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -348,7 +344,7 @@ salut_roomlist_channel_class_init (
       "Name of conference server to use",
       "Name of conference server to use, which is an empty string for Salut",
       "",
-      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONFERENCE_SERVER,
       param_spec);
 
