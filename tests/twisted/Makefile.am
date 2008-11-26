@@ -5,6 +5,7 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
+	avahi/test-muc-invite.py \
 	avahi/test-send-file-and-cancel-immediately.py \
 	avahi/test-send-file-and-disconnect.py \
 	avahi/test-send-file-declined.py \
