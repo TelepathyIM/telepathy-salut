@@ -1,6 +1,6 @@
 
 """
-Test MUC support.
+Test room list support.
 """
 
 import dbus
