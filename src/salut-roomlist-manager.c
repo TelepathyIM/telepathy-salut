@@ -327,8 +327,6 @@ salut_roomlist_manager_foreach_channel_class (
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       handle_type_value);
 
-  g_value_set_static_string (channel_type_value,
-      TP_IFACE_CHANNEL_TYPE_ROOM_LIST);
   func (manager, table, roomlist_channel_allowed_properties,
       user_data);
 
