@@ -6,6 +6,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
 	avahi/test-close-local-pending-room.py \
+	avahi/test-disabled-1-1-tubes.py \
 	avahi/test-send-file-and-cancel-immediately.py \
 	avahi/test-send-file-and-disconnect.py \
 	avahi/test-send-file-declined.py \
