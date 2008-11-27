@@ -365,6 +365,8 @@ make_roomlist_channel (SalutRoomlistManager *self)
   static guint cpt = 0;
   GSList *rooms, *l;
 
+  /* FIXME: this is not optimal as all the Connection will share the same cpt
+   * and we could have problem if we overflow the guint. */
   object_path = g_strdup_printf ("%s/RoomlistChannel%u",
       conn->object_path, cpt++);
 
