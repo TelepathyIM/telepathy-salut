@@ -153,14 +153,11 @@ def test(q, bus, conn):
             dbus_interface='org.freedesktop.DBus.Properties') == ''
 
     # ensure roomlist channel
-    call_async(q, requestotron, 'EnsureChannel',
+    yours, ensured_path, ensured_props = requestotron.EnsureChannel(
             { tp_name_prefix + '.Channel.ChannelType':
                 CHANNEL_TYPE_ROOMLIST,
               tp_name_prefix + '.Channel.TargetHandleType': 0,
               })
-
-    ret = q.expect('dbus-return', method='EnsureChannel')
-    yours, ensured_path, ensured_props = ret.value
 
     assert not yours
     assert ensured_path == path2, (ensured_path, path2)
