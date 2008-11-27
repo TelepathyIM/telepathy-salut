@@ -402,7 +402,6 @@ salut_roomlist_manager_request (TpChannelManager *manager,
   SalutRoomlistChannel *roomlist_channel = NULL;
   GError *error = NULL;
   GSList *request_tokens;
-  const gchar *server;
 
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"),
@@ -422,16 +421,6 @@ salut_roomlist_manager_request (TpChannelManager *manager,
           roomlist_channel_allowed_properties,
           &error))
     goto error;
-
-  server = tp_asv_get_string (request_properties,
-      TP_IFACE_CHANNEL_TYPE_ROOM_LIST ".Server");
-
-  if (server != NULL && strlen (server) != 0)
-    {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-          "Salut does not use a server to list chatrooms");
-      goto error;
-    }
 
   if (!require_new && priv->roomlist_channels != NULL)
     {
