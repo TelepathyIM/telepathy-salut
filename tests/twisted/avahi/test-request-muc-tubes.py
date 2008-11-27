@@ -174,15 +174,12 @@ def test(q, bus, conn):
     assert old_sig.args[4] == True        # suppress handler
 
     # ensure roomlist channel
-    call_async(q, requestotron, 'EnsureChannel',
+    yours, ensured_path, ensured_props = requestotron.EnsureChannel(
             { tp_name_prefix + '.Channel.ChannelType':
                 CHANNEL_TYPE_TUBES,
               tp_name_prefix + '.Channel.TargetHandleType': HT_ROOM,
               tp_name_prefix + '.Channel.TargetHandle': handle,
               })
-
-    ret = q.expect('dbus-return', method='EnsureChannel')
-    yours, ensured_path, ensured_props = ret.value
 
     assert not yours
     assert ensured_path == path2, (ensured_path, path2)
