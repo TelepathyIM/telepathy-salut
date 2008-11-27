@@ -1332,6 +1332,16 @@ salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context)
   SalutMucChannel *self = SALUT_MUC_CHANNEL (iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
+  if (priv->closed)
+    {
+      GError already = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Channel already closed"};
+      DEBUG ("channel already closed");
+
+      dbus_g_method_return_error (context, &already);
+      return;
+    }
+
   if (priv->connected)
     {
       /* priv->closed will be set in salut_muc_channel_disconnected */
