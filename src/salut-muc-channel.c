@@ -122,6 +122,7 @@ struct _SalutMucChannelPrivate
   SalutMucManager *muc_manager;
   TpHandle initiator;
   gboolean requested;
+  gboolean closed;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -1236,6 +1237,10 @@ salut_muc_channel_disconnected (GibberTransport *transport, gpointer user_data)
       g_signal_emit (self, signals[JOIN_ERROR], 0, &error);
     }
 
+  if (priv->closed)
+    return;
+
+  priv->closed = TRUE;
   tp_svc_channel_emit_closed (self);
 }
 
@@ -1329,10 +1334,12 @@ salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context)
 
   if (priv->connected)
     {
+      /* priv->closed will be set in salut_muc_channel_disconnected */
       gibber_muc_connection_disconnect (priv->muc_connection);
     }
   else
     {
+      priv->closed = TRUE;
       tp_svc_channel_emit_closed (self);
     }
 
