@@ -156,14 +156,6 @@ salut_muc_manager_set_property (GObject *object,
 }
 
 static void
-closed_channel_foreach (TpHandle handle,
-                        SalutMucChannel *channel,
-                        SalutMucManager *self)
-{
-  salut_muc_channel_emit_closed (channel);
-}
-
-static void
 salut_muc_manager_close_all (SalutMucManager *self)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -180,7 +172,6 @@ salut_muc_manager_close_all (SalutMucManager *self)
     {
       GHashTable *tmp = priv->text_channels;
       priv->text_channels = NULL;
-      g_hash_table_foreach (tmp, (GHFunc) closed_channel_foreach, self);
       g_hash_table_destroy (tmp);
     }
 
