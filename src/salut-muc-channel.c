@@ -924,6 +924,12 @@ salut_muc_channel_dispose (GObject *object)
       priv->senders = NULL;
     }
 
+  if (!priv->closed)
+    {
+      priv->closed = TRUE;
+      tp_svc_channel_emit_closed (self);
+    }
+
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
     G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose (object);
