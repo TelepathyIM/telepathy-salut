@@ -33,6 +33,10 @@ sample_parameters = dbus.Dictionary({
 
 test_string = "This string travels on a tube !"
 
+print "FIXME: test-tube.py disabled because 1-1 tubes are disabled for now"
+# exiting 77 causes automake to consider the test to have been skipped
+raise SystemExit(77)
+
 def test(q, bus, conn):
 
     # define a basic tcp server that echoes what the client says, but with
