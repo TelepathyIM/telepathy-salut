@@ -5,6 +5,7 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
+	avahi/test-muc-invite.py \
 	avahi/test-close-local-pending-room.py \
 	avahi/test-disabled-1-1-tubes.py \
 	avahi/test-send-file-and-cancel-immediately.py \
@@ -22,7 +23,9 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-text-channel.py \
 	avahi/test-ichat-composing.py \
 	avahi/test-ichat-incoming-msg.py \
-	avahi/test-room-list.py \
+	avahi/test-request-muc.py \
+	avahi/test-request-muc-tubes.py \
+        avahi/test-roomlist.py \
 	avahi/test-tube.py \
 	avahi/test-two-tubes.py \
 	avahi/test-tube-close.py
