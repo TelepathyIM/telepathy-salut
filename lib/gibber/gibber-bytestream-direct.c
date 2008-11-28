@@ -483,7 +483,7 @@ gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
                                         GibberTransport *transport)
 {
   GibberBytestreamDirect *self = GIBBER_BYTESTREAM_DIRECT (bytestream);
-  GibberBytestreamDirectPrivate *priv = 
+  GibberBytestreamDirectPrivate *priv =
     GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
