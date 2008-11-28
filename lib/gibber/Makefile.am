@@ -22,6 +22,8 @@ HANDWRITTEN_SOURCES =             \
   gibber-bytestream-muc.c         \
   gibber-bytestream-oob.h         \
   gibber-bytestream-oob.c         \
+  gibber-bytestream-direct.h      \
+  gibber-bytestream-direct.c      \
   gibber-debug.c                  \
   gibber-debug.h                  \
   gibber-xmpp-node.c              \

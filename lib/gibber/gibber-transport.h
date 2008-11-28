@@ -97,11 +97,11 @@ void gibber_transport_received_data_custom (GibberTransport *transport,
 void gibber_transport_set_state (GibberTransport *transport,
     GibberTransportState state);
 
-GibberTransportState gibber_transport_get_state (GibberTransport *transport);
-
 void gibber_transport_emit_error (GibberTransport *transport, GError *error);
 
 /* Public api */
+GibberTransportState gibber_transport_get_state (GibberTransport *transport);
+
 gboolean gibber_transport_send (GibberTransport *transport, const guint8 *data,
     gsize size, GError **error);
 

@@ -61,6 +61,7 @@ enum
   PROP_HANDLE,
   PROP_CONNECTION,
   PROP_INTERFACES,
+  PROP_CONFERENCE_SERVER,
   PROP_TARGET_ID,
   PROP_INITIATOR_HANDLE,
   PROP_INITIATOR_ID,
@@ -147,6 +148,10 @@ salut_roomlist_channel_get_property (GObject *object,
     case PROP_INTERFACES:
       g_value_set_static_boxed (value, salut_roomlist_channel_interfaces);
       break;
+    case PROP_CONFERENCE_SERVER:
+      /* Salut does not use a server, so this string is always empty */
+      g_value_set_string (value, "");
+      break;
     case PROP_TARGET_ID:
       g_value_set_static_string (value, "");
       break;
@@ -180,6 +185,7 @@ salut_roomlist_channel_get_property (GObject *object,
               TP_IFACE_CHANNEL, "InitiatorID",
               TP_IFACE_CHANNEL, "Requested",
               TP_IFACE_CHANNEL, "Interfaces",
+              TP_IFACE_CHANNEL_TYPE_ROOM_LIST, "Server",
               NULL));
       break;
     default:
@@ -251,11 +257,20 @@ salut_roomlist_channel_class_init (
       { "Interfaces", "interfaces", NULL },
       { NULL }
   };
+  static TpDBusPropertiesMixinPropImpl roomlist_props[] = {
+      { "Server", "conference-server", NULL },
+      { NULL }
+  };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
       { TP_IFACE_CHANNEL,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         channel_props,
+      },
+      { TP_IFACE_CHANNEL_TYPE_ROOM_LIST,
+        tp_dbus_properties_mixin_getter_gobject_properties,
+        NULL,
+        roomlist_props,
       },
       { NULL }
   };
@@ -324,6 +339,14 @@ salut_roomlist_channel_class_init (
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+  param_spec = g_param_spec_string ("conference-server",
+      "Name of conference server to use",
+      "Name of conference server to use, which is an empty string for Salut",
+      "",
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_CONFERENCE_SERVER,
+      param_spec);
 
   salut_roomlist_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,

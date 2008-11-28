@@ -378,7 +378,7 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
     {
       GError *error = NULL;
 
-      gibber_file_transfer_cancel (ft, 404);
+      gibber_file_transfer_cancel (ft, HTTP_STATUS_CODE_NOT_FOUND);
       g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
           GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND, "Couldn't get the file");
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
@@ -707,6 +707,12 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
 
   if (self->priv->cancelled)
     return;
+  self->priv->cancelled = TRUE;
+
+  if (ft->direction == GIBBER_FILE_TRANSFER_DIRECTION_OUTGOING)
+    /* The OOB XEP doesn't have protocol to inform the receiver that the
+     * sender cancelled the transfer. */
+    return;
 
   stanza = gibber_xmpp_stanza_new ("iq");
   gibber_xmpp_node_set_attribute (stanza->node, "type", "error");
@@ -743,7 +749,6 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
 
   gibber_file_transfer_send_stanza (ft, stanza, NULL);
 
-  self->priv->cancelled = TRUE;
   g_object_unref (stanza);
 }
 

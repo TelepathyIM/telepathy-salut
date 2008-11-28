@@ -25,12 +25,16 @@ CORE_SOURCES =                                          \
     salut-im-channel.h                                  \
     salut-muc-manager.c                                 \
     salut-muc-manager.h                                 \
+    salut-roomlist-manager.c                            \
+    salut-roomlist-manager.h                            \
     salut-muc-channel.c                                 \
     salut-ft-manager.c                                  \
     salut-ft-manager.h                                  \
     salut-file-transfer-channel.c                       \
     salut-file-transfer-channel.h                       \
     salut-muc-channel.h                                 \
+    salut-tubes-manager.c                               \
+    salut-tubes-manager.h                               \
     salut-contact.h                                     \
     salut-contact.c                                     \
     salut-self.h                                        \
@@ -52,29 +56,26 @@ CORE_SOURCES =                                          \
     salut-xmpp-connection-manager.c                     \
     salut-discovery-client.h                            \
     salut-discovery-client.c                            \
+    tube-dbus.h                                         \
+    tube-dbus.c                                         \
     tube-iface.h                                        \
     tube-iface.c                                        \
+    tube-stream.h                                       \
+    tube-stream.c                                       \
+    salut-tubes-channel.h                               \
+    salut-tubes-channel.c                               \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
     debug.h
-
-if ENABLE_DBUS_TUBES
-  CORE_SOURCES +=                                       \
-    tube-dbus.h                                         \
-    tube-dbus.c                                         \
-    tube-stream.h                                       \
-    tube-stream.c                                       \
-    salut-tubes-channel.h                               \
-    salut-tubes-channel.c
-endif
-
 
 AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.h                      \
     salut-avahi-discovery-client.c                      \
     salut-avahi-muc-manager.h                           \
     salut-avahi-muc-manager.c                           \
+    salut-avahi-roomlist-manager.h                      \
+    salut-avahi-roomlist-manager.c                      \
     salut-avahi-muc-channel.h                           \
     salut-avahi-muc-channel.c                           \
     salut-avahi-contact-manager.h                       \

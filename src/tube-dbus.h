@@ -63,8 +63,7 @@ SalutTubeDBus *
 salut_tube_dbus_new (SalutConnection *conn, TpHandle handle,
     TpHandleType handle_type, TpHandle self_handle,
     GibberMucConnection *muc_connection, TpHandle initiator,
-    const gchar *service, GHashTable *parameters, guint id,
-    GibberBytestreamIface *bytestream);
+    const gchar *service, GHashTable *parameters, guint id);
 
 gboolean salut_tube_dbus_add_name (SalutTubeDBus *self, TpHandle handle,
     const gchar *name);

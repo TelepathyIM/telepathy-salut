@@ -25,6 +25,7 @@
 #include <telepathy-glib/enums.h>
 
 #include "salut-connection.h"
+#include "salut-tubes-channel.h"
 
 G_BEGIN_DECLS
 
@@ -60,9 +61,10 @@ GType salut_tube_stream_get_type (void);
                               SalutTubeStreamClass))
 
 SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
-    TpHandle handle, TpHandleType handle_type, TpHandle self_handle,
-    TpHandle initiator, const gchar *service, GHashTable *parameters,
-    guint id);
+    SalutXmppConnectionManager *xmpp_connection_manager, TpHandle handle,
+    TpHandleType handle_type, TpHandle self_handle, TpHandle initiator,
+    const gchar *service, GHashTable *parameters, guint id, guint portnum,
+    GibberXmppStanza *iq_req);
 
 gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,
     const GValue *address, TpSocketAccessControl access_control,

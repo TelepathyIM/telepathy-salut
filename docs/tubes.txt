@@ -1,0 +1,59 @@
+Implementation of tubes in telepathy-salut
+==========================================
+
+- Stream tubes and D-Bus tubes in a chatroom
+
+Implemented. The XMPP spec is available on:
+http://telepathy.freedesktop.org/xmpp/tubes.html
+This XMPP spec is generated from the telepathy-gabble source code.
+
+- 1-1 D-Bus tubes
+
+Not implemented
+
+- 1-1 stream tubes
+
+Implemented. The XMPP spec is considered as experimental. It may change before
+being considered final.
+
+Initiator to receptor: offer the tube:
+  <iq type="set"
+      from="alban_test01@alban-hp"
+      to="alban_test02@alban-hp"
+      id="8849419577">
+    <tube type="stream"
+          service="TicTacTube"
+          id="364091438"
+          xmlns="http://telepathy.freedesktop.org/xmpp/tubes">
+      <transport port="47246"/>
+    </tube>
+    <parameters/>
+  </iq>
+
+Receptor to initiator: acknowledgment of the offer
+  <iq type="result"
+      from="alban_test02@alban-hp"
+      to="alban_test01@alban-hp"
+      id="8849419577"/>
+
+This acknowledgment is used to accept the tube.
+
+
+-- Tube is used --
+The receptor uses the port given by the iq stanza and the IP address used by the XMPP connection.
+
+Receptor to initiator: close the tube
+  <iq type="set"
+      from="alban_test02@alban-hp"
+      to="alban_test01@alban-hp"
+      id="67843">
+    <close id="364091438"
+           xmlns="http://telepathy.freedesktop.org/xmpp/tubes">
+  </iq>
+
+Initiator to receptor: acknowledges the close request
+  <iq type="result"
+      from="alban_test01@alban-hp"
+      to="alban_test02@alban-hp"
+      id="67843"/>
+

@@ -39,6 +39,7 @@
 #include "salut-muc-manager.h"
 #include "salut-ft-manager.h"
 #include "salut-contact.h"
+#include "salut-roomlist-manager.h"
 #include "salut-self.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-si-bytestream-manager.h"
@@ -47,9 +48,7 @@
 #include "salut-olpc-activity-manager.h"
 #endif
 
-/*
 #include "salut-tubes-manager.h"
-*/
 
 #include "salut-presence.h"
 #include "salut-discovery-client.h"
@@ -141,6 +140,8 @@ enum {
   PROP_PUBLISHED_NAME,
   PROP_IM_MANAGER,
   PROP_MUC_MANAGER,
+  PROP_TUBES_MANAGER,
+  PROP_ROOMLIST_MANAGER,
   PROP_CONTACT_MANAGER,
   PROP_SELF,
   PROP_XCM,
@@ -191,11 +192,13 @@ struct _SalutConnectionPrivate
   /* FT channel manager */
   SalutFtManager *ft_manager;
 
-  /* Tubes channel manager */
-  /* XXX disabled while private tubes aren't implemented */
-  /* SalutTubesManager *tubes_manager; */
+  /* Roomlist channel manager */
+  SalutRoomlistManager *roomlist_manager;
 
-  /* Bytestream manager */
+  /* Tubes channel manager */
+  SalutTubesManager *tubes_manager;
+
+  /* Bytestream manager for stream initiation (XEP-0095) */
   SalutSiBytestreamManager *si_bytestream_manager;
 
 #ifdef ENABLE_OLPC
@@ -340,6 +343,12 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_MUC_MANAGER:
       g_value_set_object (value, priv->muc_manager);
+      break;
+    case PROP_TUBES_MANAGER:
+      g_value_set_object (value, priv->tubes_manager);
+      break;
+    case PROP_ROOMLIST_MANAGER:
+      g_value_set_object (value, priv->roomlist_manager);
       break;
     case PROP_CONTACT_MANAGER:
       g_value_set_object (value, priv->contact_manager);
@@ -698,6 +707,24 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
+      "tubes-manager",
+      "SalutTubesManager object",
+      "The Salut Tubes Manager associated with this Salut Connection",
+      SALUT_TYPE_TUBES_MANAGER,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_TUBES_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "roomlist-manager",
+      "SalutRoomlistManager object",
+      "The Salut Roomlist Manager associated with this Salut Connection",
+      SALUT_TYPE_ROOMLIST_MANAGER,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_ROOMLIST_MANAGER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
       "contact-manager",
       "SalutContactManager object",
       "The Salut Contact Manager associated with this Salut Connection",
@@ -726,9 +753,9 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
-      "bytestream-manager",
+      "si-bytestream-manager",
       "SalutSiBytestreamManager object",
-      "The Salut Bytestream Manager associated with this Salut Connection",
+      "The Salut SI Bytestream Manager associated with this Salut Connection",
       SALUT_TYPE_SI_BYTESTREAM_MANAGER,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_SI_BYTESTREAM_MANAGER,
@@ -868,23 +895,26 @@ _self_established_cb (SalutSelf *s, gpointer data)
 
   if (!salut_contact_manager_start (priv->contact_manager, NULL))
     {
-      /* FIXME handle error */
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
-          TP_CONNECTION_STATUS_CONNECTING,
-          TP_CONNECTION_STATUS_REASON_REQUESTED);
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
   }
 
-  if (!salut_muc_manager_start (priv->muc_manager, NULL))
+  if (!salut_roomlist_manager_start (priv->roomlist_manager, NULL))
     {
-      /* XXX handle error */
+      tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
     }
 
 #ifdef ENABLE_OLPC
   if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, NULL))
     {
-      /* XXX handle error */
+      tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
     }
 #endif
@@ -2778,7 +2808,7 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  GPtrArray *factories = g_ptr_array_sized_new (3);
+  GPtrArray *factories = g_ptr_array_sized_new (4);
 
   /* Create the contact manager */
   priv->contact_manager = salut_discovery_client_create_contact_manager (
@@ -2803,17 +2833,14 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       G_CALLBACK (_olpc_activity_manager_activity_modified_cb), self);
 #endif
 
-  priv->muc_manager = salut_discovery_client_create_muc_manager (
-      priv->discovery_client, self, priv->xmpp_connection_manager);
+#if 0
+  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager,
+      priv->xmpp_connection_manager);
+#endif
 
-  /*
-  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
-  */
-
-  g_ptr_array_add (factories, priv->muc_manager);
-  /*
+#if 0
   g_ptr_array_add (factories, priv->tubes_manager);
-  */
+#endif
 
   return factories;
 }
@@ -2836,9 +2863,17 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
 
+  priv->muc_manager = salut_discovery_client_create_muc_manager (
+      priv->discovery_client, self, priv->xmpp_connection_manager);
+
+  priv->roomlist_manager = salut_discovery_client_create_roomlist_manager (
+      priv->discovery_client, self, priv->xmpp_connection_manager);
+
   g_ptr_array_add (managers, priv->im_manager);
   g_ptr_array_add (managers, priv->contact_manager);
   g_ptr_array_add (managers, priv->ft_manager);
+  g_ptr_array_add (managers, priv->muc_manager);
+  g_ptr_array_add (managers, priv->roomlist_manager);
 
   return managers;
 }

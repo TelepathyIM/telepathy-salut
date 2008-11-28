@@ -33,7 +33,10 @@ struct _SalutTubeIfaceClass {
   GTypeInterface parent;
 
   gboolean (*accept) (SalutTubeIface *tube, GError **error);
-  void (*close) (SalutTubeIface *tube);
+  void (*accepted) (SalutTubeIface *tube);
+  gboolean (*offer_needed) (SalutTubeIface *tube);
+  int (*listen) (SalutTubeIface *tube);
+  void (*close) (SalutTubeIface *tube, gboolean local);
   void (*add_bytestream) (SalutTubeIface *tube,
       GibberBytestreamIface *bytestream);
 };
@@ -51,14 +54,20 @@ GType salut_tube_iface_get_type (void);
   (G_TYPE_INSTANCE_GET_INTERFACE ((obj), SALUT_TYPE_TUBE_IFACE,\
                               SalutTubeIfaceClass))
 
-gboolean
-salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
+/* return TRUE if the <iq> to offer the tube has never been sent */
+gboolean salut_tube_iface_offer_needed (SalutTubeIface *tube);
 
-void
-salut_tube_iface_close (SalutTubeIface *tube);
+int salut_tube_iface_listen (SalutTubeIface *tube);
 
-void
-salut_tube_iface_add_bytestream (SalutTubeIface *tube,
+/* accept the tube offered by the contact */
+gboolean salut_tube_iface_accept (SalutTubeIface *tube, GError **error);
+
+/* the contact accepted our tube offer */
+void salut_tube_iface_accepted (SalutTubeIface *tube);
+
+void salut_tube_iface_close (SalutTubeIface *tube, gboolean closed_remotely);
+
+void salut_tube_iface_add_bytestream (SalutTubeIface *tube,
     GibberBytestreamIface *bytestream);
 
 G_END_DECLS
