@@ -63,6 +63,17 @@ gibber_bytestream_iface_accept (GibberBytestreamIface *self,
   virtual_method (self, func, user_data);
 }
 
+void
+gibber_bytestream_iface_block_read (GibberBytestreamIface *self,
+                                    gboolean block)
+{
+  void (*virtual_method)(GibberBytestreamIface *, gboolean) =
+    GIBBER_BYTESTREAM_IFACE_GET_CLASS (self)->block_read;
+  if (virtual_method != NULL)
+    virtual_method (self, block);
+  /* else: do nothing. Some bytestreams like IBB does not have read_block. */
+}
+
 static void
 gibber_bytestream_iface_base_init (gpointer klass)
 {

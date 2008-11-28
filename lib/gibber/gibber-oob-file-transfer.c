@@ -385,7 +385,7 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
     {
       GError *error = NULL;
 
-      gibber_file_transfer_cancel (ft, 404);
+      gibber_file_transfer_cancel (ft, HTTP_STATUS_CODE_NOT_FOUND);
       g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
           GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND, "Couldn't get the file");
       gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
@@ -586,6 +586,7 @@ http_server_cb (SoupServerContext *context,
       guint16 uint16;
       GByteArray *array;
       gchar *buff;
+      guint len;
 
       DEBUG ("Using AppleSingle encoding");
 
@@ -619,17 +620,13 @@ http_server_cb (SoupServerContext *context,
       soup_message_add_header (msg->response_headers, "Content-encoding",
           "AppleSingle");
 
-      /* copy the bytes array using g_malloc as libsoup will have to free it
-       * once it's written. */
-
-      buff = g_malloc (array->len);
-      memcpy (buff, array->data, array->len);
-
+      /* libsoup will free the date once they are written */
+      len = array->len;
+      buff = (gchar *) g_byte_array_free (array, FALSE);
       soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_SYSTEM_OWNED,
-          buff, array->len);
+          buff, len);
 
       soup_message_io_unpause (self->priv->msg);
-      g_byte_array_free (array, TRUE);
     }
 
   g_signal_emit_by_name (self, "remote-accepted");
@@ -714,6 +711,12 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
 
   if (self->priv->cancelled)
     return;
+  self->priv->cancelled = TRUE;
+
+  if (ft->direction == GIBBER_FILE_TRANSFER_DIRECTION_OUTGOING)
+    /* The OOB XEP doesn't have protocol to inform the receiver that the
+     * sender cancelled the transfer. */
+    return;
 
   stanza = gibber_xmpp_stanza_new ("iq");
   gibber_xmpp_node_set_attribute (stanza->node, "type", "error");
@@ -750,7 +753,6 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
 
   gibber_file_transfer_send_stanza (ft, stanza, NULL);
 
-  self->priv->cancelled = TRUE;
   g_object_unref (stanza);
 }
 
@@ -790,7 +792,7 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
         error_code_str = gibber_xmpp_node_get_attribute (error_node, "type");
 
       if (error_code_str != NULL && g_ascii_strtoll (error_code_str, NULL,
-            10) == 406)
+            10) == HTTP_STATUS_CODE_NOT_ACCEPTABLE)
         {
           g_signal_emit_by_name (self, "cancelled");
           return;

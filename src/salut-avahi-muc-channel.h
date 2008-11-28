@@ -65,7 +65,8 @@ GType salut_avahi_muc_channel_get_type (void);
 SalutAvahiMucChannel * salut_avahi_muc_channel_new (SalutConnection *connection,
     const gchar *path, GibberMucConnection *muc_connection, TpHandle handle,
     const gchar *name, SalutAvahiDiscoveryClient *discovery_client,
-    TpHandle initiator, gboolean creator, SalutXmppConnectionManager *xcm);
+    TpHandle initiator, gboolean creator, SalutXmppConnectionManager *xcm,
+    gboolean requested);
 
 G_END_DECLS
 

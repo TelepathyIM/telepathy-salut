@@ -1033,7 +1033,7 @@ data_received_cb (GibberBytestreamIface *stream,
             {
               DEBUG ("D-Bus message has unknown endianness byte 0x%x, "
                   "closing tube", (unsigned int) buf->str[0]);
-              salut_tube_iface_close (SALUT_TUBE_IFACE (tube));
+              salut_tube_iface_close (SALUT_TUBE_IFACE (tube), FALSE);
               return;
             }
 
@@ -1054,7 +1054,7 @@ data_received_cb (GibberBytestreamIface *stream,
               priv->reassembly_bytes_needed > DBUS_MAXIMUM_MESSAGE_LENGTH)
             {
               DEBUG ("D-Bus message is too large to be valid, closing tube");
-              salut_tube_iface_close (SALUT_TUBE_IFACE (tube));
+              salut_tube_iface_close (SALUT_TUBE_IFACE (tube), FALSE);
               return;
             }
 
@@ -1081,8 +1081,7 @@ salut_tube_dbus_new (SalutConnection *conn,
                      TpHandle initiator,
                      const gchar *service,
                      GHashTable *parameters,
-                     guint id,
-                     GibberBytestreamIface *bytestream)
+                     guint id)
 {
   SalutTubeDBus *tube = g_object_new (SALUT_TYPE_TUBE_DBUS,
       "connection", conn,
@@ -1095,9 +1094,6 @@ salut_tube_dbus_new (SalutConnection *conn,
       "parameters", parameters,
       "id", id,
       NULL);
-
-  if (bytestream != NULL)
-    g_object_set (tube, "bytestream", bytestream, NULL);
 
   return tube;
 }
@@ -1146,7 +1142,7 @@ salut_tube_dbus_accept (SalutTubeIface *tube,
  * Implements salut_tube_iface_close on SalutTubeIface
  */
 static void
-salut_tube_dbus_close (SalutTubeIface *tube)
+salut_tube_dbus_close (SalutTubeIface *tube, gboolean closed_remotely)
 {
   SalutTubeDBus *self = SALUT_TUBE_DBUS (tube);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
@@ -1258,6 +1254,7 @@ tube_iface_init (gpointer g_iface,
   SalutTubeIfaceClass *klass = (SalutTubeIfaceClass *) g_iface;
 
   klass->accept = salut_tube_dbus_accept;
+  klass->offer_needed = NULL;
   klass->close = salut_tube_dbus_close;
   klass->add_bytestream = salut_tube_dbus_add_bytestream;
 }

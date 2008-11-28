@@ -123,6 +123,7 @@ struct _SalutImChannelPrivate
   /* Outcoming and incoming message queues */
   GQueue *out_queue;
   ChannelState state;
+  gboolean closed;
 };
 
 #define SALUT_IM_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE \
@@ -143,12 +144,15 @@ salut_im_channel_do_close (SalutImChannel *self)
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   ChannelState oldstate = priv->state;
 
+  if (priv->closed)
+    return;
+  priv->closed = TRUE;
+
   priv->state = CHANNEL_NOT_CONNECTED;
 
   switch (oldstate)
     {
       case CHANNEL_NOT_CONNECTED:
-        /* FIXME return an error ? */
         break;
       case CHANNEL_CONNECTING:
         break;
@@ -527,8 +531,7 @@ salut_im_channel_dispose (GObject *object)
   if (priv->initiator != 0)
     tp_handle_unref (handle_repo, priv->initiator);
 
-  if (priv->state != CHANNEL_NOT_CONNECTED)
-    salut_im_channel_do_close (self);
+  salut_im_channel_do_close (self);
 
   if (priv->xmpp_connection)
     {

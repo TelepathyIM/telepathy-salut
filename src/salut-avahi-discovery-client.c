@@ -38,6 +38,7 @@
 
 #include "salut-avahi-muc-manager.h"
 #include "salut-avahi-contact-manager.h"
+#include "salut-avahi-roomlist-manager.h"
 #include "salut-avahi-self.h"
 #ifdef ENABLE_OLPC
 #include "salut-avahi-olpc-activity-manager.h"
@@ -240,6 +241,24 @@ salut_avahi_discovery_client_create_muc_manager (SalutDiscoveryClient *client,
 }
 
 /*
+ * salut_avahi_discovery_client_create_roomlist_manager
+ *
+ * Implements salut_discovery_client_create_roomlist_manager on
+ * SalutDiscoveryClient
+ */
+static SalutRoomlistManager *
+salut_avahi_discovery_client_create_roomlist_manager (
+    SalutDiscoveryClient *client,
+    SalutConnection *connection,
+    SalutXmppConnectionManager *xcm)
+{
+  SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (client);
+
+  return SALUT_ROOMLIST_MANAGER (salut_avahi_roomlist_manager_new (connection,
+        xcm, self));
+}
+
+/*
  * salut_avahi_discovery_client_create_contact_manager
  *
  * Implements salut_discovery_client_create_contact_manager on
@@ -313,6 +332,8 @@ discovery_client_init (gpointer g_iface,
 
   klass->start = salut_avahi_discovery_client_start;
   klass->create_muc_manager = salut_avahi_discovery_client_create_muc_manager;
+  klass->create_roomlist_manager =
+    salut_avahi_discovery_client_create_roomlist_manager;
   klass->create_contact_manager =
     salut_avahi_discovery_client_create_contact_manager;
 #ifdef ENABLE_OLPC

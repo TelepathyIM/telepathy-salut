@@ -425,7 +425,7 @@ gibber_multicast_transport_disconnect (GibberTransport *transport)
     GIBBER_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
   /* Ensure we're connected */
-  g_assert (priv->fd > 0);
+  g_assert (priv->fd >= 0);
 
   if (priv->watch_in)
     {

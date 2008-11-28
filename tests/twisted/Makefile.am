@@ -5,6 +5,11 @@ TWISTED_BASIC_TESTS =
 TWISTED_AVAHI_TESTS = \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
+	avahi/test-request-im.py \
+	avahi/test-muc-invite.py \
+	avahi/test-close-local-pending-room.py \
+	avahi/test-disabled-1-1-tubes.py \
+	avahi/test-send-file-and-cancel-immediately.py \
 	avahi/test-send-file-and-disconnect.py \
 	avahi/test-send-file-declined.py \
 	avahi/test-send-file-item-not-found.py \
@@ -13,6 +18,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-send-file-wait-to-provide.py \
 	avahi/test-receive-and-send-file.py \
 	avahi/test-receive-file.py \
+	avahi/test-receive-file-cancelled-immediately.py \
 	avahi/test-receive-file-decline.py \
 	avahi/test-receive-file-not-found.py \
 	avahi/test-text-channel.py \
@@ -22,7 +28,12 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-ichat-receive-file.py \
 	avahi/test-ichat-send-file.py \
 	avahi/test-ichat-send-file-declined.py  \
-	avahi/test-room-list.py
+	avahi/test-request-muc.py \
+	avahi/test-request-muc-tubes.py \
+        avahi/test-roomlist.py \
+	avahi/test-tube.py \
+	avahi/test-two-tubes.py \
+	avahi/test-tube-close.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
 	avahi/test-olpc-activity-announcements.py
@@ -61,7 +72,8 @@ EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
 	saluttest.py \
-	servicetest.py
+	servicetest.py \
+        trivialstream.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc
 
