@@ -74,18 +74,6 @@ gboolean
 salut_roomlist_manager_start (SalutRoomlistManager *roomlist_manager,
     GError **error);
 
-SalutRoomlistChannel *
-salut_roomlist_manager_get_text_channel (SalutRoomlistManager *roomlist_manager,
-    TpHandle handle);
-
-void salut_roomlist_manager_handle_si_stream_request (
-    SalutRoomlistManager *roomlist_manager,
-    GibberBytestreamIface *bytestream, TpHandle room_handle,
-    const gchar *stream_id, GibberXmppStanza *msg);
-
-SalutTubesChannel * salut_roomlist_manager_ensure_tubes_channel (
-    SalutRoomlistManager *roomlist_manager, TpHandle handle, TpHandle actor);
-
 /* "protected" methods */
 void salut_roomlist_manager_room_discovered (
     SalutRoomlistManager *roomlist_manager, const gchar *room);
