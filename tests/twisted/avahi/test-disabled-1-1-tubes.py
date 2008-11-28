@@ -64,7 +64,7 @@ def test(q, bus, conn):
         conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT, handle,
             True)
     except dbus.DBusException, e:
-        assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotAvailable'
+        assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotImplemented'
     else:
         assert False
 
