@@ -572,6 +572,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
     {
       DEBUG ("Didn't find address for room %s, let's generate one", room_name);
     }
+  g_object_unref (roomlist_manager);
 
   connection = _get_connection (mgr, NULL, params, &connection_error);
 
