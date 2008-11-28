@@ -782,7 +782,7 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
         error_code_str = gibber_xmpp_node_get_attribute (error_node, "type");
 
       if (error_code_str != NULL && g_ascii_strtoll (error_code_str, NULL,
-            10) == 406)
+            10) == HTTP_STATUS_CODE_NOT_ACCEPTABLE)
         {
           g_signal_emit_by_name (self, "cancelled");
           return;
