@@ -230,6 +230,12 @@ set_transport (GibberBytestreamOOB *self,
   priv->transport = g_object_ref (transport);
   gibber_transport_set_handler (transport, transport_handler, self);
 
+  if (gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED)
+    {
+      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
+          NULL);
+    }
+
   g_signal_connect (transport, "connected",
       G_CALLBACK (transport_connected_cb), self);
   g_signal_connect (transport, "disconnected",
@@ -961,11 +967,6 @@ new_connection_cb (GibberListener *listener,
   DEBUG("New connection..");
 
   set_transport (self, transport);
-  if (gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED)
-    {
-      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
-          NULL);
-    }
 }
 
 /*

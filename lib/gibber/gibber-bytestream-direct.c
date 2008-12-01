@@ -470,6 +470,12 @@ set_transport (GibberBytestreamDirect *self,
   priv->transport = g_object_ref (transport);
   gibber_transport_set_handler (transport, transport_handler, self);
 
+  if (gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED)
+      {
+        g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
+            NULL);
+      }
+
   g_signal_connect (transport, "connected",
       G_CALLBACK (transport_connected_cb), self);
   g_signal_connect (transport, "disconnected",
@@ -494,11 +500,6 @@ gibber_bytestream_direct_accept_socket (GibberBytestreamIface *bytestream,
     }
 
   set_transport (self, transport);
-  if (gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED)
-      {
-        g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
-            NULL);
-      }
 
   return TRUE;
 }
