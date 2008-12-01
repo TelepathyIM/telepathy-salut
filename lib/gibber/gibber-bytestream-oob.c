@@ -227,14 +227,14 @@ set_transport (GibberBytestreamOOB *self,
 
   g_assert (priv->transport == NULL);
 
-  priv->transport = transport;
+  priv->transport = g_object_ref (transport);
   gibber_transport_set_handler (transport, transport_handler, self);
 
   g_signal_connect (transport, "connected",
       G_CALLBACK (transport_connected_cb), self);
   g_signal_connect (transport, "disconnected",
       G_CALLBACK (transport_disconnected_cb), self);
-  g_signal_connect (priv->transport, "buffer-empty",
+  g_signal_connect (transport, "buffer-empty",
       G_CALLBACK (transport_buffer_empty_cb), self);
 }
 
