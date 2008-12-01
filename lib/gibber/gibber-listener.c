@@ -189,9 +189,21 @@ listener_io_in_cb (GIOChannel *source,
   transport = g_object_new (GIBBER_TYPE_FD_TRANSPORT, NULL);
   gibber_fd_transport_set_fd (transport, nfd);
 
-  ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
-      host, NI_MAXHOST, port, NI_MAXSERV,
-      NI_NUMERICHOST | NI_NUMERICSERV);
+  if (addr.ss_family == AF_UNIX)
+    {
+      /* UNIX sockets doesn't have port */
+      ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
+          host, NI_MAXHOST, NULL, 0,
+          NI_NUMERICHOST);
+
+      port[0] = '\0';
+    }
+  else
+    {
+      ret = getnameinfo ((struct sockaddr *) &addr, addrlen,
+          host, NI_MAXHOST, port, NI_MAXSERV,
+          NI_NUMERICHOST | NI_NUMERICSERV);
+    }
 
   if (ret == 0)
     DEBUG("New connection from %s port %s", host, port);
