@@ -733,11 +733,11 @@ tube_stream_open (SalutTubeStream *self,
     }
   else if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4)
     {
-      int port;
+      int ret;
 
-      port = gibber_listener_listen_tcp_loopback_af (priv->local_listener, 0,
+      ret = gibber_listener_listen_tcp_loopback_af (priv->local_listener, 0,
           GIBBER_AF_IPV4, error);
-      if (port <= 0)
+      if (!ret)
         {
           g_assert (error != NULL && *error != NULL);
           DEBUG ("Error listening on socket: %s", (*error)->message);
@@ -750,16 +750,16 @@ tube_stream_open (SalutTubeStream *self,
 
       dbus_g_type_struct_set (priv->address,
           0, "127.0.0.1",
-          1, port,
+          1, gibber_listener_get_port (priv->local_listener),
           G_MAXUINT);
     }
   else if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV6)
     {
-      int port;
+      int ret;
 
-      port = gibber_listener_listen_tcp_loopback_af (priv->local_listener, 0,
+      ret = gibber_listener_listen_tcp_loopback_af (priv->local_listener, 0,
           GIBBER_AF_IPV6, error);
-      if (port <= 0)
+      if (!ret)
         {
           g_assert (error != NULL && *error != NULL);
           DEBUG ("Error listening on socket: %s", (*error)->message);
@@ -772,7 +772,7 @@ tube_stream_open (SalutTubeStream *self,
 
       dbus_g_type_struct_set (priv->address,
           0, "::1",
-          1, port,
+          1, gibber_listener_get_port (priv->local_listener),
           G_MAXUINT);
     }
   else
