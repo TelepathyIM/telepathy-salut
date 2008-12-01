@@ -160,6 +160,10 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
   if (url == NULL || url->content == NULL || strcmp (url->content, "") == 0)
     return FALSE;
 
+  /* We only support file transfer over HTTP */
+  if (!g_str_has_prefix (url->content, "http://"))
+    return FALSE;
+
   return TRUE;
 }
 
