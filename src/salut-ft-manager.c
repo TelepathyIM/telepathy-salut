@@ -256,7 +256,10 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
   /* Increasing guint to make sure object paths are random */
   static guint id = 0;
 
-  DEBUG ("Requested channel for handle: %d", handle);
+  if (requested)
+    DEBUG ("Outgoing channel requested for handle %d", handle);
+  else
+    DEBUG ("Incoming channel received from handle %d", handle);
 
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
@@ -268,8 +271,6 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
 
       return NULL;
     }
-
-  DEBUG ("%s channel requested", requested ? "Outgoing" : "Incoming");
 
   state = SALUT_FILE_TRANSFER_STATE_PENDING;
   if (!requested)
