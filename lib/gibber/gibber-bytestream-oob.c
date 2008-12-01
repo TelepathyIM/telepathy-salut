@@ -234,7 +234,7 @@ set_transport (GibberBytestreamOOB *self,
       G_CALLBACK (transport_connected_cb), self);
   g_signal_connect (transport, "disconnected",
       G_CALLBACK (transport_disconnected_cb), self);
-  g_signal_connect (priv->transport, "buffer-empty",
+  g_signal_connect (transport, "buffer-empty",
       G_CALLBACK (transport_buffer_empty_cb), self);
 }
 
