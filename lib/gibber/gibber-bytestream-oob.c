@@ -961,6 +961,11 @@ new_connection_cb (GibberListener *listener,
   DEBUG("New connection..");
 
   set_transport (self, transport);
+  if (gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED)
+    {
+      g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
+          NULL);
+    }
 }
 
 /*
