@@ -242,6 +242,12 @@ salut_roomlist_manager_dispose (GObject *object)
 
   salut_roomlist_manager_close_all (self);
 
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
+
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (salut_roomlist_manager_parent_class)->dispose)
