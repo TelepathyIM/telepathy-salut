@@ -230,6 +230,9 @@ set_transport (GibberBytestreamOOB *self,
   priv->transport = g_object_ref (transport);
   gibber_transport_set_handler (transport, transport_handler, self);
 
+  /* The transport will already be connected if it is created from
+   * GibberListener. In this case, set the bytestream to open, otherwise
+   * it will be done in transport_connected_cb. */
   if (gibber_transport_get_state (transport) == GIBBER_TRANSPORT_CONNECTED)
     {
       g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_OPEN,
