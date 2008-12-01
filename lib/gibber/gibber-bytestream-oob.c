@@ -227,7 +227,7 @@ set_transport (GibberBytestreamOOB *self,
 
   g_assert (priv->transport == NULL);
 
-  priv->transport = transport;
+  priv->transport = g_object_ref (transport);
   gibber_transport_set_handler (transport, transport_handler, self);
 
   g_signal_connect (transport, "connected",
