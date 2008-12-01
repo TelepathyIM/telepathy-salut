@@ -1010,13 +1010,15 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
 gboolean
 salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
                                                  GibberXmppStanza *stanza,
-                                                 GibberXmppConnection *conn)
+                                                 GibberXmppConnection *conn,
+                                                 SalutContact *contact)
 {
   GibberFileTransfer *ft;
 
   salut_xmpp_connection_manager_take_connection (
       self->priv->xmpp_connection_manager , conn);
-  ft = gibber_file_transfer_new_from_stanza (stanza, conn);
+  ft = gibber_file_transfer_new_from_stanza_with_from (stanza, conn,
+    contact->name);
 
   if (ft == NULL)
     {

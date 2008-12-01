@@ -351,20 +351,35 @@ gibber_file_transfer_is_file_offer (GibberXmppStanza *stanza)
 }
 
 GibberFileTransfer *
-gibber_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
-                                      GibberXmppConnection *connection)
+gibber_file_transfer_new_from_stanza_with_from (
+    GibberXmppStanza *stanza,
+    GibberXmppConnection *connection,
+    const gchar *from)
 {
   /* FIXME put the known backends in a list and stop when the first one
    * can handle the stanza */
   GibberFileTransfer *ft;
 
-  ft = gibber_oob_file_transfer_new_from_stanza (stanza, connection);
+  ft = gibber_oob_file_transfer_new_from_stanza_with_from (stanza, connection,
+      from);
   /* it's not possible to have an outgoing transfer created from
    * a stanza */
   g_assert (ft == NULL ||
       ft->direction == GIBBER_FILE_TRANSFER_DIRECTION_INCOMING);
 
   return ft;
+}
+
+GibberFileTransfer *
+gibber_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
+                                      GibberXmppConnection *connection)
+{
+  const gchar *from;
+
+  from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+
+  return gibber_file_transfer_new_from_stanza_with_from (stanza, connection,
+      from);
 }
 
 void

@@ -992,7 +992,7 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   g_assert (priv->listener == NULL);
   priv->listener = gibber_listener_new ();
 
-  g_signal_connect (gibber_listener_new, "new-connection",
+  g_signal_connect (priv->listener, "new-connection",
       G_CALLBACK (new_connection_cb), self);
 
   if (!gibber_listener_listen_tcp (priv->listener, 0, NULL))

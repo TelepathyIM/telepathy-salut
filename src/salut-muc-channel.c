@@ -121,6 +121,8 @@ struct _SalutMucChannelPrivate
   GHashTable *senders;
   SalutMucManager *muc_manager;
   TpHandle initiator;
+  gboolean requested;
+  gboolean closed;
 };
 
 #define SALUT_MUC_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_CHANNEL, SalutMucChannelPrivate))
@@ -201,8 +203,7 @@ salut_muc_channel_get_property (GObject    *object,
       }
       break;
     case PROP_REQUESTED:
-      g_value_set_boolean (value,
-          (priv->initiator == tp_base_connection_get_self_handle (base_conn)));
+      g_value_set_boolean (value, priv->requested);
       break;
       case PROP_CHANNEL_DESTROYED:
         /* TODO: this should be FALSE if there are still pending messages, so
@@ -275,6 +276,9 @@ salut_muc_channel_set_property (GObject     *object,
       break;
     case PROP_XMPP_CONNECTION_MANAGER:
       priv->xmpp_connection_manager = g_value_get_object (value);
+      break;
+    case PROP_REQUESTED:
+      priv->requested = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -780,7 +784,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   param_spec = g_param_spec_boolean ("requested", "Requested?",
       "True if this channel was requested by the local user",
       FALSE,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
 
   param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
@@ -918,6 +922,12 @@ salut_muc_channel_dispose (GObject *object)
     {
       g_hash_table_destroy (priv->senders);
       priv->senders = NULL;
+    }
+
+  if (!priv->closed)
+    {
+      priv->closed = TRUE;
+      tp_svc_channel_emit_closed (self);
     }
 
   /* release any references held by the object here */
@@ -1233,12 +1243,10 @@ salut_muc_channel_disconnected (GibberTransport *transport, gpointer user_data)
       g_signal_emit (self, signals[JOIN_ERROR], 0, &error);
     }
 
-  tp_svc_channel_emit_closed (self);
-}
+  if (priv->closed)
+    return;
 
-void
-salut_muc_channel_emit_closed (SalutMucChannel *self)
-{
+  priv->closed = TRUE;
   tp_svc_channel_emit_closed (self);
 }
 
@@ -1324,7 +1332,26 @@ salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context)
   SalutMucChannel *self = SALUT_MUC_CHANNEL (iface);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
 
-  gibber_muc_connection_disconnect (priv->muc_connection);
+  if (priv->closed)
+    {
+      GError already = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Channel already closed"};
+      DEBUG ("channel already closed");
+
+      dbus_g_method_return_error (context, &already);
+      return;
+    }
+
+  if (priv->connected)
+    {
+      /* priv->closed will be set in salut_muc_channel_disconnected */
+      gibber_muc_connection_disconnect (priv->muc_connection);
+    }
+  else
+    {
+      priv->closed = TRUE;
+      tp_svc_channel_emit_closed (self);
+    }
 
   tp_svc_channel_return_from_close (context);
 }

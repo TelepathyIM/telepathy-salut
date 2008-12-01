@@ -320,11 +320,11 @@ salut_tubes_channel_get_property (GObject *object,
               (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
           g_assert (priv->initiator != 0);
-          g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+          g_value_set_string (value, tp_handle_inspect (repo, priv->initiator));
         }
         break;
       case PROP_REQUESTED:
-        g_value_set_boolean (value, (priv->initiator != priv->self_handle));
+        g_value_set_boolean (value, (priv->initiator == priv->self_handle));
         break;
       case PROP_CHANNEL_DESTROYED:
         g_value_set_boolean (value, priv->closed);

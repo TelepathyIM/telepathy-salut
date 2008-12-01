@@ -31,6 +31,7 @@
 #include "gibber-oob-file-transfer.h"
 #include "gibber-fd-transport.h"
 #include "gibber-namespaces.h"
+#include "gibber-util.h"
 
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
 #include "gibber-debug.h"
@@ -159,31 +160,36 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
   if (url == NULL || url->content == NULL || strcmp (url->content, "") == 0)
     return FALSE;
 
+  /* We only support file transfer over HTTP */
+  if (!g_str_has_prefix (url->content, "http://"))
+    return FALSE;
+
   return TRUE;
 }
 
 GibberFileTransfer *
-gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
-                                          GibberXmppConnection *connection)
+gibber_oob_file_transfer_new_from_stanza_with_from (
+    GibberXmppStanza *stanza,
+    GibberXmppConnection *connection,
+    const gchar *peer_id)
 {
   GibberOobFileTransfer *self;
   GibberXmppNode *query;
   GibberXmppNode *url_node;
   GibberXmppNode *desc_node;
   const gchar *self_id;
-  const gchar *peer_id;
   const gchar *type;
   const gchar *id;
   const gchar *size;
   const gchar *description = NULL;
   const gchar *content_type;
+  const gchar *ft_type;
   gchar *url;
   gchar *filename;
 
   if (strcmp (stanza->node->name, "iq") != 0)
     return NULL;
 
-  peer_id = gibber_xmpp_node_get_attribute (stanza->node, "from");
   self_id = gibber_xmpp_node_get_attribute (stanza->node, "to");
   if (peer_id == NULL || self_id == NULL)
     return NULL;
@@ -202,6 +208,11 @@ gibber_oob_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
 
   url_node = gibber_xmpp_node_get_child (query, "url");
   if (url_node == NULL || url_node->content == NULL)
+    return NULL;
+
+  ft_type = gibber_xmpp_node_get_attribute (url_node, "type");
+  if (ft_type != NULL && gibber_strdiff (ft_type, "file"))
+    /* We don't support directory transfer */
     return NULL;
 
   /* The file name is extracted from the address */
@@ -562,6 +573,10 @@ http_server_cb (SoupServerContext *context,
   soup_message_set_status (msg, SOUP_STATUS_OK);
   soup_server_message_set_encoding (SOUP_SERVER_MESSAGE (msg),
       SOUP_TRANSFER_CHUNKED);
+
+  soup_message_add_header (msg->response_headers, "Content-Type",
+      GIBBER_FILE_TRANSFER (self)->content_type);
+
   self->priv->msg = g_object_ref (msg);
 
   /* iChat accepts only AppleSingle encoding, i.e. file's contents and
@@ -570,26 +585,51 @@ http_server_cb (SoupServerContext *context,
       "Accept-Encoding");
   if (accept_encoding != NULL && strcmp (accept_encoding, "AppleSingle") == 0)
     {
+      guint64 size;
+      guint32 uint32;
+      guint16 uint16;
+      GByteArray *array;
+      gchar *buff;
+      guint len;
+
       DEBUG ("Using AppleSingle encoding");
 
-      /* FIXME this is not working at the moment */
-      /* the header contains a magic number (4 bytes), a version number
-       * (4 bytes), a filler (16 bytes, all zeros) and the number of
-       * entries (2 bytes) */
-      static gchar buff[26] = {0};
-      if (buff[1] == 0)
-        {
-          /* magic number */
-          ((gint32*) buff)[0] = htonl (0x51600);
-          /* version */
-          ((gint32*) buff)[1] = htonl (0x20000);
-        }
+      size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
+      array = g_byte_array_sized_new (38);
+      /* magic number */
+      uint32 = htonl (0x51600);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      /* version */
+      uint32 = htonl (0x20000);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      /* filler */
+      uint32 = 0;
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+      /* nb entry */
+      uint16 = htons (1);
+      g_byte_array_append (array, (guint8*) &uint16, 2);
+       /* data fork */
+      uint32 = htonl (1);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+       /* data fork offset is the length of this header */
+      uint32 = htonl (38);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
+       /* data fork size is the size of the file */
+      uint32 = htonl (size);
+      g_byte_array_append (array, (guint8*) &uint32, 4);
 
       soup_message_add_header (msg->response_headers, "Content-encoding",
           "AppleSingle");
 
-      soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_STATIC, buff,
-          sizeof (buff));
+      /* libsoup will free the date once they are written */
+      len = array->len;
+      buff = (gchar *) g_byte_array_free (array, FALSE);
+      soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_SYSTEM_OWNED,
+          buff, len);
+
       soup_message_io_unpause (self->priv->msg);
     }
 
@@ -751,7 +791,12 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
 
       /* FIXME copy the error handling code from gabble */
       error_code_str = gibber_xmpp_node_get_attribute (error_node, "code");
-      if (g_ascii_strtoll (error_code_str, NULL, 10) == 406)
+      if (error_code_str == NULL)
+        /* iChat uses the 'type' attribute to transmit the error code */
+        error_code_str = gibber_xmpp_node_get_attribute (error_node, "type");
+
+      if (error_code_str != NULL && g_ascii_strtoll (error_code_str, NULL,
+            10) == HTTP_STATUS_CODE_NOT_ACCEPTABLE)
         {
           g_signal_emit_by_name (self, "cancelled");
           return;

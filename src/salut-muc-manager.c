@@ -33,11 +33,14 @@
 #include "salut-contact-manager.h"
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
+#include "salut-roomlist-manager.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-discovery-client.h"
 
-#include <telepathy-glib/channel-factory-iface.h>
+#include <telepathy-glib/channel-manager.h>
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/util.h>
 
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
@@ -53,13 +56,13 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
     SalutContact *contact, gpointer user_data);
 
 
-static void salut_muc_manager_factory_iface_init (gpointer g_iface,
+static void salut_muc_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
-                        G_TYPE_OBJECT,
-                        G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
-                                        salut_muc_manager_factory_iface_init));
+    G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
+      salut_muc_manager_iface_init));
 
 /* properties */
 enum {
@@ -74,23 +77,28 @@ typedef struct _SalutMucManagerPrivate SalutMucManagerPrivate;
 struct _SalutMucManagerPrivate
 {
   SalutConnection *connection;
+  gulong status_changed_id;
   SalutXmppConnectionManager *xmpp_connection_manager;
 
   /* GUINT_TO_POINTER (room_handle) => (SalutMucChannel *) */
   GHashTable *text_channels;
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
-  GSList *roomlist_channels;
 
   gboolean dispose_has_run;
 };
 
-#define SALUT_MUC_MANAGER_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate))
+#define SALUT_MUC_MANAGER_GET_PRIVATE(obj) \
+  ((SalutMucManagerPrivate *) ((SalutMucManager *)obj)->priv)
 
 static void
 salut_muc_manager_init (SalutMucManager *obj)
 {
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
+  SalutMucManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (obj,
+      SALUT_TYPE_MUC_MANAGER, SalutMucManagerPrivate);
+
+  obj->priv = priv;
+
   priv->connection = NULL;
 
   /* allocate any data required by the object here */
@@ -98,13 +106,13 @@ salut_muc_manager_init (SalutMucManager *obj)
                                                NULL, g_object_unref);
   priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
-
-  priv->roomlist_channels = NULL;
 }
 
 static void
 salut_muc_manager_get_property (GObject *object,
-    guint property_id, GValue *value, GParamSpec *pspec)
+                                guint property_id,
+                                GValue *value,
+                                GParamSpec *pspec)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (object);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -147,6 +155,48 @@ salut_muc_manager_set_property (GObject *object,
     }
 }
 
+static void
+salut_muc_manager_close_all (SalutMucManager *self)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+
+  DEBUG ("closing channels");
+
+  if (priv->status_changed_id != 0)
+    {
+      g_signal_handler_disconnect (priv->connection, priv->status_changed_id);
+      priv->status_changed_id = 0;
+    }
+
+  if (priv->text_channels)
+    {
+      GHashTable *tmp = priv->text_channels;
+      priv->text_channels = NULL;
+      g_hash_table_destroy (tmp);
+    }
+
+  if (priv->tubes_channels != NULL)
+    {
+      GHashTable *tmp = priv->tubes_channels;
+      priv->tubes_channels = NULL;
+      g_hash_table_destroy (tmp);
+    }
+}
+
+static void
+connection_status_changed_cb (SalutConnection *conn,
+                              guint status,
+                              guint reason,
+                              SalutMucManager *self)
+{
+  switch (status)
+    {
+    case TP_CONNECTION_STATUS_DISCONNECTED:
+      salut_muc_manager_close_all (self);
+      break;
+    }
+}
+
 static GObject *
 salut_muc_manager_constructor (GType type,
                                guint n_props,
@@ -164,11 +214,13 @@ salut_muc_manager_constructor (GType type,
       priv->xmpp_connection_manager, NULL,
       invite_stanza_filter, invite_stanza_callback, obj);
 
+  priv->status_changed_id = g_signal_connect (priv->connection,
+      "status-changed", (GCallback) connection_status_changed_cb, obj);
+
   return obj;
 }
 
 static void salut_muc_manager_dispose (GObject *object);
-static void salut_muc_manager_finalize (GObject *object);
 
 static void
 salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
@@ -184,7 +236,6 @@ salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
 
   object_class->constructor = salut_muc_manager_constructor;
   object_class->dispose = salut_muc_manager_dispose;
-  object_class->finalize = salut_muc_manager_finalize;
 
   param_spec = g_param_spec_object (
       "connection",
@@ -223,7 +274,7 @@ salut_muc_manager_dispose (GObject *object)
       priv->xmpp_connection_manager, NULL,
       invite_stanza_filter, invite_stanza_callback, self);
 
-  tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
+  salut_muc_manager_close_all (self);
   g_assert (priv->text_channels == NULL);
   g_assert (priv->tubes_channels == NULL);
 
@@ -239,114 +290,90 @@ salut_muc_manager_dispose (GObject *object)
     G_OBJECT_CLASS (salut_muc_manager_parent_class)->dispose (object);
 }
 
-void
-salut_muc_manager_finalize (GObject *object)
+/* Channel Manager interface */
+
+struct _ForeachData
 {
-  /*SalutMucManager *self = SALUT_MUC_MANAGER (object);*/
-  /*SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);*/
-
-  /* free any data held directly by the object here */
-
-  G_OBJECT_CLASS (salut_muc_manager_parent_class)->finalize (object);
-}
-
-static void
-closed_channel_foreach (TpHandle handle,
-                        SalutMucChannel *channel,
-                        SalutMucManager *self)
-{
-  salut_muc_channel_emit_closed (channel);
-}
-
-/* Channel Factory interface */
-
-static void
-salut_muc_manager_factory_iface_close_all (TpChannelFactoryIface *iface) {
-  SalutMucManager *mgr = SALUT_MUC_MANAGER (iface);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
-
-  if (priv->text_channels)
-    {
-      GHashTable *tmp = priv->text_channels;
-      priv->text_channels = NULL;
-      g_hash_table_foreach (tmp, (GHFunc) closed_channel_foreach, mgr);
-      g_hash_table_destroy (tmp);
-  }
-
-  if (priv->tubes_channels != NULL)
-    {
-      GHashTable *tmp = priv->tubes_channels;
-      priv->tubes_channels = NULL;
-      g_hash_table_destroy (tmp);
-    }
-
-  if (priv->roomlist_channels != NULL)
-    {
-      GSList *l = priv->roomlist_channels;
-      priv->roomlist_channels = NULL;
-      g_slist_foreach (l, (GFunc) g_object_unref, NULL);
-      g_slist_free (l);
-    }
-}
-
-static void
-salut_muc_manager_factory_iface_connecting (TpChannelFactoryIface *iface)
-{
-}
-
-static void
-salut_muc_manager_factory_iface_connected (TpChannelFactoryIface *iface)
-{
-}
-
-static void
-salut_muc_manager_factory_iface_disconnected (TpChannelFactoryIface *iface)
-{
-  /* FIMXE close all channels ? */
-}
-
-struct foreach_data {
-  TpChannelFunc func;
-  gpointer data;
+  TpExportableChannelFunc foreach;
+  gpointer user_data;
 };
 
 static void
-salut_muc_manager_iface_foreach_one (gpointer key,
-                                     gpointer value,
-                                     gpointer data)
+_foreach_slave (gpointer key,
+                gpointer value,
+                gpointer user_data)
 {
-  TpChannelIface *chan = TP_CHANNEL_IFACE (value);
-  struct foreach_data *f = (struct foreach_data *) data;
+  struct _ForeachData *data = (struct _ForeachData *) user_data;
+  TpExportableChannel *channel = TP_EXPORTABLE_CHANNEL (value);
 
-  f->func (chan, f->data);
+  data->foreach (channel, data->user_data);
 }
 
 static void
-salut_muc_manager_iface_foreach_one_list (TpChannelIface *chan,
-                                          gpointer data)
+salut_muc_manager_foreach_channel (TpChannelManager *iface,
+                                   TpExportableChannelFunc foreach,
+                                   gpointer user_data)
 {
-  struct foreach_data *f = (struct foreach_data *) data;
+  SalutMucManager *fac = SALUT_MUC_MANAGER (iface);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (fac);
+  struct _ForeachData data;
 
-  f->func (chan, f->data);
+  data.user_data = user_data;
+  data.foreach = foreach;
+
+  g_hash_table_foreach (priv->text_channels, _foreach_slave, &data);
+  g_hash_table_foreach (priv->tubes_channels, _foreach_slave, &data);
 }
+
+static const gchar * const muc_channel_fixed_properties[] = {
+    TP_IFACE_CHANNEL ".ChannelType",
+    TP_IFACE_CHANNEL ".TargetHandleType",
+    NULL
+};
+
+static const gchar * const * muc_tubes_channel_fixed_properties =
+    muc_channel_fixed_properties;
+
+static const gchar * const muc_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
+    NULL
+};
+
+static const gchar * const * muc_tubes_channel_allowed_properties =
+    muc_channel_allowed_properties;
+
 
 static void
-salut_muc_manager_factory_iface_foreach (TpChannelFactoryIface *iface,
-                                         TpChannelFunc func, gpointer data) {
-  SalutMucManager *mgr = SALUT_MUC_MANAGER(iface);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
-  struct foreach_data f;
-  f.func = func;
-  f.data = data;
+salut_muc_manager_foreach_channel_class (TpChannelManager *manager,
+                                         TpChannelManagerChannelClassFunc func,
+                                         gpointer user_data)
+{
+  GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+  GValue *channel_type_value, *handle_type_value;
 
-  g_hash_table_foreach (priv->text_channels,
-      salut_muc_manager_iface_foreach_one, &f);
-  g_hash_table_foreach (priv->tubes_channels,
-      salut_muc_manager_iface_foreach_one, &f);
+  channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  /* no string value yet - we'll change it for each channel class */
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
+      channel_type_value);
 
-  g_slist_foreach (priv->roomlist_channels,
-      (GFunc) salut_muc_manager_iface_foreach_one_list, &f);
+  handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_ROOM);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+      handle_type_value);
+
+  g_value_set_static_string (channel_type_value, TP_IFACE_CHANNEL_TYPE_TEXT);
+  func (manager, table, muc_channel_allowed_properties,
+      user_data);
+
+  g_value_set_static_string (channel_type_value, TP_IFACE_CHANNEL_TYPE_TUBES);
+  func (manager, table, muc_tubes_channel_allowed_properties,
+      user_data);
+
+  g_hash_table_destroy (table);
 }
+
 
 static void
 muc_channel_closed_cb (SalutMucChannel *chan,
@@ -355,6 +382,9 @@ muc_channel_closed_cb (SalutMucChannel *chan,
   SalutMucManager *self = SALUT_MUC_MANAGER (user_data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandle handle;
+
+  tp_channel_manager_emit_channel_closed_for_object (self,
+      TP_EXPORTABLE_CHANNEL (chan));
 
   if (priv->text_channels)
     {
@@ -382,11 +412,15 @@ muc_channel_closed_cb (SalutMucChannel *chan,
  * that MucManager holds to them.
  */
 static void
-tubes_channel_closed_cb (SalutTubesChannel *chan, gpointer user_data)
+tubes_channel_closed_cb (SalutTubesChannel *chan,
+                         gpointer user_data)
 {
   SalutMucManager *fac = SALUT_MUC_MANAGER (user_data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (fac);
   TpHandle room_handle;
+
+  tp_channel_manager_emit_channel_closed_for_object (fac,
+      TP_EXPORTABLE_CHANNEL (chan));
 
   if (priv->tubes_channels != NULL)
     {
@@ -414,13 +448,13 @@ _get_connection (SalutMucManager *mgr,
       protocol, parameters, error);
 }
 
-
 static SalutMucChannel *
 salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
                                    TpHandle handle,
                                    GibberMucConnection *connection,
                                    TpHandle initiator,
-                                   gboolean new_connection)
+                                   gboolean new_connection,
+                                   gboolean requested)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
@@ -442,12 +476,10 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 
   chan = SALUT_MUC_MANAGER_GET_CLASS (mgr)->create_muc_channel (mgr,
       priv->connection, path, connection, handle, name, initiator,
-      new_connection, priv->xmpp_connection_manager);
+      new_connection, priv->xmpp_connection_manager, requested);
   g_free (path);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
-  tp_channel_factory_iface_emit_new_channel (mgr, TP_CHANNEL_IFACE (chan),
-      NULL);
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
 
@@ -488,8 +520,6 @@ new_tubes_channel (SalutMucManager *self,
       NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
-  tp_channel_factory_iface_emit_new_channel (self,
-      TP_CHANNEL_IFACE (chan), NULL);
 
   g_hash_table_insert (priv->tubes_channels, GUINT_TO_POINTER (room), chan);
 
@@ -501,6 +531,7 @@ new_tubes_channel (SalutMucManager *self,
 static SalutMucChannel *
 salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
                                            TpHandle handle,
+                                           gpointer request_token,
                                            GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
@@ -515,11 +546,16 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   gchar *address;
   guint16 p;
   gboolean r;
+  GSList *tokens = NULL;
+  SalutRoomlistManager *roomlist_manager;
+  gboolean requested;
+
+  g_object_get (priv->connection, "roomlist-manager", &roomlist_manager, NULL);
 
   room_name = tp_handle_inspect (room_repo, handle);
 
-  if (SALUT_MUC_MANAGER_GET_CLASS (mgr)->find_muc_address (mgr, room_name,
-        &address, &p))
+  if (SALUT_ROOMLIST_MANAGER_GET_CLASS (roomlist_manager)->find_muc_address
+      (roomlist_manager, room_name, &address, &p))
     {
       /* This MUC already exists on the network, so we reuse its
        * address */
@@ -536,6 +572,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
     {
       DEBUG ("Didn't find address for room %s, let's generate one", room_name);
     }
+  g_object_unref (roomlist_manager);
 
   connection = _get_connection (mgr, NULL, params, &connection_error);
 
@@ -565,78 +602,39 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
     }
   DEBUG ("Connect succeeded");
 
+  requested = (request_token != NULL);
+
   text_chan = salut_muc_manager_new_muc_channel (mgr, handle,
-      connection, base_connection->self_handle, params == NULL);
+      connection, base_connection->self_handle, params == NULL,
+      requested);
   r = salut_muc_channel_invited (text_chan,
         base_connection->self_handle, NULL, NULL);
   /* Inviting ourselves to a connected channel should always
    * succeed */
   g_assert (r);
 
+  if (request_token != NULL)
+    tokens = g_slist_prepend (tokens, request_token);
+
+  tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (text_chan),
+      tokens);
+
+  g_slist_free (tokens);
+
   return text_chan;
-}
-
-static void
-roomlist_channel_closed_cb (SalutRoomlistChannel *chan,
-                            gpointer data)
-{
-  SalutMucManager *self = SALUT_MUC_MANAGER (data);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-
-  if (priv->roomlist_channels != NULL)
-    {
-      g_object_unref (chan);
-      priv->roomlist_channels = g_slist_remove (priv->roomlist_channels, chan);
-    }
-}
-
-static SalutRoomlistChannel *
-make_roomlist_channel (SalutMucManager *self,
-                       gpointer request)
-{
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *conn = (TpBaseConnection *) priv->connection;
-  SalutRoomlistChannel *roomlist_channel;
-  gchar *object_path;
-  static guint cpt = 0;
-  GSList *rooms, *l;
-
-  object_path = g_strdup_printf ("%s/RoomlistChannel%u",
-      conn->object_path, cpt++);
-
-  roomlist_channel = salut_roomlist_channel_new (priv->connection,
-      object_path);
-
-  rooms = SALUT_MUC_MANAGER_GET_CLASS (self)->get_rooms (self);
-  for (l = rooms; l != NULL; l = g_slist_next (l))
-    {
-      const gchar *room_name = l->data;
-
-      salut_roomlist_channel_add_room (roomlist_channel, room_name);
-    }
-
-  priv->roomlist_channels = g_slist_prepend (priv->roomlist_channels,
-      roomlist_channel);
-
-  g_signal_connect (roomlist_channel, "closed",
-      (GCallback) roomlist_channel_closed_cb, self);
-
-  tp_channel_factory_iface_emit_new_channel (self,
-      (TpChannelIface *) roomlist_channel, request);
-
-  g_free (object_path);
-  return roomlist_channel;
 }
 
 static SalutTubesChannel *
 create_tubes_channel (SalutMucManager *self,
                       TpHandle handle,
                       TpHandle initiator,
+                      gpointer request_token,
                       GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutMucChannel *text_chan;
   SalutTubesChannel *tubes_chan;
+  GSList *tokens = NULL;
 
   text_chan = g_hash_table_lookup (priv->text_channels,
       GUINT_TO_POINTER (handle));
@@ -644,9 +642,9 @@ create_tubes_channel (SalutMucManager *self,
   if (text_chan == NULL)
     {
       DEBUG ("have to create the text channel before the tubes one");
-      /* FIXME: this channel will come out with Requested: True. */
       text_chan = salut_muc_manager_request_new_muc_channel (self,
-          handle, error);
+          handle, NULL, error);
+
       if (text_chan == NULL)
         return NULL;
     }
@@ -654,113 +652,171 @@ create_tubes_channel (SalutMucManager *self,
   tubes_chan = new_tubes_channel (self, handle, text_chan, initiator);
   g_assert (tubes_chan != NULL);
 
+  if (request_token != NULL)
+    tokens = g_slist_prepend (tokens, request_token);
+
+  tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (tubes_chan),
+      tokens);
+
+  g_slist_free (tokens);
+
   return tubes_chan;
 }
 
-static TpChannelFactoryRequestStatus
-salut_muc_manager_factory_iface_request (TpChannelFactoryIface *iface,
-                                         const gchar *chan_type,
-                                         TpHandleType handle_type,
-                                         guint handle,
-                                         gpointer request,
-                                         TpChannelIface **ret,
-                                         GError **error)
+static gboolean
+salut_muc_manager_request (SalutMucManager *self,
+                           gpointer request_token,
+                           GHashTable *request_properties,
+                           gboolean require_new)
 {
-  SalutMucManager *mgr = SALUT_MUC_MANAGER (iface);
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
-  TpBaseConnection *base_connection = (TpBaseConnection *) (priv->connection);
-  TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_ROOM);
+  GError *error = NULL;
+  TpHandle handle;
+  const gchar *channel_type;
   SalutMucChannel *text_chan;
-  TpChannelFactoryRequestStatus status;
+  SalutTubesChannel *tubes_chan;
 
-  DEBUG ("MUC request: ctype=%s htype=%u handle=%u", chan_type, handle_type,
-      handle);
+  if (tp_asv_get_uint32 (request_properties,
+      TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_ROOM)
+    return FALSE;
 
-  if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_ROOM_LIST))
+  handle = tp_asv_get_uint32 (request_properties,
+      TP_IFACE_CHANNEL ".TargetHandle", NULL);
+
+  if (!tp_handle_is_valid (room_repo, handle, &error))
+    goto error;
+
+  channel_type = tp_asv_get_string (request_properties,
+      TP_IFACE_CHANNEL ".ChannelType");
+
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TEXT))
     {
-      SalutRoomlistChannel *roomlist_channel;
+      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+              muc_channel_fixed_properties, muc_channel_allowed_properties,
+              &error))
+        goto error;
 
-      roomlist_channel = make_roomlist_channel (mgr, request);
-      *ret = TP_CHANNEL_IFACE (roomlist_channel);
-      return TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-    }
-
-  if (handle_type != TP_HANDLE_TYPE_ROOM)
-    {
-      return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-    }
-
-  /* Most be a valid room handle */
-  if (!tp_handle_is_valid (room_repo, handle, NULL))
-    {
-      return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
-    }
-
-  if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
-    {
       text_chan = g_hash_table_lookup (priv->text_channels,
-          GUINT_TO_POINTER (handle));
+          GINT_TO_POINTER (handle));
 
       if (text_chan != NULL)
         {
-          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+          if (require_new)
+            {
+              g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                  "That channel has already been created (or requested)");
+              goto error;
+            }
+          else
+            {
+              tp_channel_manager_emit_request_already_satisfied (self,
+                  request_token, TP_EXPORTABLE_CHANNEL (text_chan));
+            }
         }
       else
         {
-          text_chan = salut_muc_manager_request_new_muc_channel (mgr,
-              handle, error);
-          if (text_chan == NULL)
-            return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
-
-          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+          text_chan = salut_muc_manager_request_new_muc_channel (self,
+              handle, request_token, NULL);
         }
 
-      g_assert (text_chan != NULL);
-      *ret = TP_CHANNEL_IFACE (text_chan);
+      return TRUE;
     }
-  else if (!tp_strdiff (chan_type, TP_IFACE_CHANNEL_TYPE_TUBES))
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
     {
-      SalutTubesChannel *tubes_chan;
+      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+              muc_tubes_channel_fixed_properties,
+              muc_tubes_channel_allowed_properties,
+              &error))
+        goto error;
 
       tubes_chan = g_hash_table_lookup (priv->tubes_channels,
           GUINT_TO_POINTER (handle));
 
       if (tubes_chan != NULL)
         {
-          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
-          *ret = TP_CHANNEL_IFACE (tubes_chan);
+          if (require_new)
+            {
+              g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                  "That channel has already been created (or requested)");
+              goto error;
+            }
+          else
+            {
+              tp_channel_manager_emit_request_already_satisfied (self,
+                  request_token, TP_EXPORTABLE_CHANNEL (tubes_chan));
+            }
         }
       else
         {
-          tubes_chan = create_tubes_channel (mgr, handle,
-              base_connection->self_handle, error);
+          tubes_chan = create_tubes_channel (self, handle,
+              base_conn->self_handle, request_token, &error);
           if (tubes_chan == NULL)
-            return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
-
-          *ret = TP_CHANNEL_IFACE (tubes_chan);
-
-          status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+            goto error;
         }
+
+      return TRUE;
     }
   else
     {
-      return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
+      return FALSE;
     }
 
-  return status;
+error:
+  tp_channel_manager_emit_request_failed (self, request_token,
+      error->domain, error->code, error->message);
+  g_error_free (error);
+  return TRUE;
 }
 
-static void salut_muc_manager_factory_iface_init (gpointer g_iface,
-                                                  gpointer iface_data) {
-   TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *)g_iface;
+static gboolean
+salut_muc_manager_create_channel (TpChannelManager *manager,
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (manager);
 
-   klass->close_all = salut_muc_manager_factory_iface_close_all;
-   klass->connecting = salut_muc_manager_factory_iface_connecting;
-   klass->connected = salut_muc_manager_factory_iface_connected;
-   klass->disconnected = salut_muc_manager_factory_iface_disconnected;
-   klass->foreach = salut_muc_manager_factory_iface_foreach;
-   klass->request = salut_muc_manager_factory_iface_request;
+  return salut_muc_manager_request (self, request_token, request_properties,
+      TRUE);
+}
+
+
+static gboolean
+salut_muc_manager_request_channel (TpChannelManager *manager,
+                                   gpointer request_token,
+                                   GHashTable *request_properties)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (manager);
+
+  return salut_muc_manager_request (self, request_token, request_properties,
+      FALSE);
+}
+
+
+static gboolean
+salut_muc_manager_ensure_channel (TpChannelManager *manager,
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (manager);
+
+  return salut_muc_manager_request (self, request_token, request_properties,
+      FALSE);
+}
+
+
+static void salut_muc_manager_iface_init (gpointer g_iface,
+                                          gpointer iface_data)
+{
+  TpChannelManagerIface *iface = g_iface;
+
+  iface->foreach_channel = salut_muc_manager_foreach_channel;
+  iface->foreach_channel_class = salut_muc_manager_foreach_channel_class;
+  iface->request_channel = salut_muc_manager_request_channel;
+  iface->create_channel = salut_muc_manager_create_channel;
+  iface->ensure_channel = salut_muc_manager_ensure_channel;
 }
 
 static gboolean
@@ -880,7 +936,10 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
         }
       /* Need to create a new one */
       chan = salut_muc_manager_new_muc_channel (self, room_handle,
-          connection, inviter_handle, FALSE);
+          connection, inviter_handle, FALSE, FALSE);
+
+      tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
+          NULL);
     }
 
   /* FIXME handle properly */
@@ -900,13 +959,6 @@ discard:
 }
 
 /* public functions */
-
-gboolean
-salut_muc_manager_start (SalutMucManager *self,
-                         GError **error)
-{
-  return SALUT_MUC_MANAGER_GET_CLASS (self)->start (self, error);
-}
 
 SalutMucChannel *
 salut_muc_manager_get_text_channel (SalutMucManager *self,
@@ -968,60 +1020,9 @@ salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
       return tubes_chan;
     }
 
-  tubes_chan = create_tubes_channel (self, handle, actor, NULL);
+  tubes_chan = create_tubes_channel (self, handle, actor, NULL, NULL);
   g_assert (tubes_chan != NULL);
   g_object_ref (tubes_chan);
 
   return tubes_chan;
-}
-
-static void
-add_room_foreach (SalutRoomlistChannel *roomlist_channel,
-                  const gchar *room)
-{
-  salut_roomlist_channel_add_room (roomlist_channel, room);
-}
-
-void
-salut_muc_manager_room_discovered (SalutMucManager *self,
-                                  const gchar *room)
-{
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-
-  g_slist_foreach (priv->roomlist_channels, (GFunc) add_room_foreach,
-      (gchar *) room);
-}
-
-static void
-remove_room_foreach (SalutRoomlistChannel *roomlist_channel,
-                     const gchar *room)
-{
-  salut_roomlist_channel_remove_room (roomlist_channel, room);
-}
-
-void
-salut_muc_manager_room_removed (SalutMucManager *self,
-                                const gchar *room)
-{
-  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
-  TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
-  TpHandle handle;
-  SalutMucChannel *muc;
-
-  g_slist_foreach (priv->roomlist_channels, (GFunc) remove_room_foreach,
-      (gchar *) room);
-
-    /* Do we have to re-announce this room ? */
-  handle = tp_handle_lookup (room_repo, room, NULL, NULL);
-  if (handle == 0)
-    return;
-
-  muc = g_hash_table_lookup (priv->text_channels, GUINT_TO_POINTER (handle));
-  if (muc == NULL)
-    return;
-
-  DEBUG ("We know this room %s. Try to re-announce it", room);
-  salut_muc_channel_publish_service (muc);
 }

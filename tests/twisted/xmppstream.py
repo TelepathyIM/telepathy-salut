@@ -71,8 +71,10 @@ class BaseXmlStream(xmlstream.XmlStream):
 
     def send_header(self):
         root = domish.Element((NS_STREAMS, 'stream'))
-        root['from'] = self.name
-        root['to'] = self.remote_name
+        if self.name is not None:
+            root['from'] = self.name
+        if self.remote_name is not None:
+            root['to'] = self.remote_name
         root['version'] = self.version
         self.send(root.toXml(closeElement = 0, prefixes=self.prefixes))
 
@@ -93,9 +95,7 @@ class BaseXmlStream(xmlstream.XmlStream):
 
 class IncomingXmppStream(BaseXmlStream):
     def __init__(self, event_func, name):
-        BaseXmlStream.__init__(self, event_func)
-        self.name = name
-        self.remote_name = None
+        BaseXmlStream.__init__(self, event_func, name, None)
 
     def onDocumentStart(self, rootElement):
         # Use the fact that it's always salut that connects, so it sends a
@@ -105,7 +105,8 @@ class IncomingXmppStream(BaseXmlStream):
 
         assert rootElement.hasAttribute("from")
         assert rootElement.hasAttribute("to")
-        assert rootElement["to"] == self.name, self.name
+        if self.name is not None:
+            assert rootElement["to"] == self.name, self.name
 
         assert rootElement.hasAttribute("version")
         assert rootElement["version"] == "1.0"
@@ -149,19 +150,15 @@ class OutgoingXmppStream(BaseXmlStream):
         self.send_header()
 
 class OutgoingXmppiChatStream(OutgoingXmppStream):
-    def send_header(self):
-        # iChat doesn't send 'to', 'from' and 'version' attributes
-        root = domish.Element((NS_STREAMS, 'stream'))
-        self.send(root.toXml(closeElement = 0, prefixes=self.prefixes))
+    def __init__(self, event_function, name, remote_name):
+        # set name and remote_name as None as iChat doesn't send 'to' and
+        # 'from' attributes.
+        OutgoingXmppStream.__init__(self, event_function, None, None)
 
-    def send(self, obj):
-        if domish.IElement.providedBy(obj):
-            # iChat doesn't send 'from' attribute
-            if self.remote_name != None:
-                obj["to"] = self.remote_name
-            obj = obj.toXml(prefixes=self.prefixes)
-
-        xmlstream.XmlStream.send(self, obj)
+class IncomingXmppiChatStream(IncomingXmppStream):
+    def __init__(self, event_func, name):
+        # set name to None as iChat doesn't send 'from' attribute.
+        IncomingXmppStream.__init__(self, event_func, None)
 
 class OutgoingXmppFactory(ClientFactory):
     def __init__(self, event_function):

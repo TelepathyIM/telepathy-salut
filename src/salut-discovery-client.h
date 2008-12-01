@@ -24,6 +24,7 @@
 
 #include "salut-muc-manager.h"
 #include "salut-contact-manager.h"
+#include "salut-roomlist-manager.h"
 #include "salut-self.h"
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity-manager.h"
@@ -49,6 +50,8 @@ struct _SalutDiscoveryClientClass
 
   gboolean (*start) (SalutDiscoveryClient *clt, GError **error);
   SalutMucManager * (*create_muc_manager) (SalutDiscoveryClient *clt,
+      SalutConnection *connection, SalutXmppConnectionManager *xcm);
+  SalutRoomlistManager * (*create_roomlist_manager) (SalutDiscoveryClient *clt,
       SalutConnection *connection, SalutXmppConnectionManager *xcm);
   SalutContactManager * (*create_contact_manager) (SalutDiscoveryClient *clt,
       SalutConnection *connection);
@@ -82,6 +85,10 @@ gboolean salut_discovery_client_start (SalutDiscoveryClient *clt,
     GError **error);
 
 SalutMucManager * salut_discovery_client_create_muc_manager (
+    SalutDiscoveryClient *clt, SalutConnection *connection,
+    SalutXmppConnectionManager *xcm);
+
+SalutRoomlistManager * salut_discovery_client_create_roomlist_manager (
     SalutDiscoveryClient *clt, SalutConnection *connection,
     SalutXmppConnectionManager *xcm);
 
