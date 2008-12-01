@@ -206,9 +206,16 @@ listener_io_in_cb (GIOChannel *source,
     }
 
   if (ret == 0)
-    DEBUG("New connection from %s port %s", host, port);
+    {
+      if (port[0] != '\0')
+        DEBUG ("New connection from %s port %s", host, port);
+      else
+        DEBUG ("New connection from %s", host);
+    }
   else
-    DEBUG("New connection..");
+    {
+      DEBUG("New connection...");
+    }
 
   g_signal_emit (self, signals[NEW_CONNECTION], 0, transport, &addr,
       (guint) addrlen);
