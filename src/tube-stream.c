@@ -128,12 +128,23 @@ struct _SalutTubeStreamPrivate
    * direct TCP connections). One tube can have several bytestreams. The
    * mapping between the tube bytestream and the transport to the local
    * application is stored in the transport_to_bytestream and
-   * bytestream_to_transport fields. */
+   * bytestream_to_transport fields. This is used both on initiator-side and
+   * on recipient-side. */
 
-  /* (GibberTransport *) -> (GibberBytestreamIface *) */
-  GHashTable *transport_to_bytestream;
-  /* (GibberBytestreamIface *) -> (GibberTransport *) */
+  /* (GibberBytestreamIface *) -> (GibberTransport *)
+   *
+   * The (b->t) is inserted as soon as they are created. On initiator side,
+   * we receive an incoming bytestream, create a transport and insert (b->t).
+   * On recipient side, we receive an incoming transport, create a bytestream
+   * and insert (b->t).
+   */
   GHashTable *bytestream_to_transport;
+
+  /* (GibberTransport *) -> (GibberBytestreamIface *)
+   *
+   * The (t->b) is inserted when the bytestream is open.
+   */
+  GHashTable *transport_to_bytestream;
 
   TpHandle initiator;
   gchar *service;
@@ -210,7 +221,7 @@ transport_handler (GibberTransport *transport,
   bytestream = g_hash_table_lookup (priv->transport_to_bytestream, transport);
   if (bytestream == NULL)
     {
-      DEBUG ("no bytestream associated with this transport");
+      DEBUG ("no open bytestream associated with this transport");
       return;
     }
 
@@ -238,19 +249,19 @@ transport_disconnected_cb (GibberTransport *transport,
 
 static void
 remove_transport (SalutTubeStream *self,
+                  GibberBytestreamIface *bytestream,
                   GibberTransport *transport)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GibberBytestreamIface *bytestream;
-
-  bytestream = g_hash_table_lookup (priv->transport_to_bytestream, transport);
-  g_assert (bytestream != NULL);
 
   DEBUG ("disconnect and remove transport");
   g_signal_handlers_disconnect_matched (transport, G_SIGNAL_MATCH_DATA,
       0, 0, NULL, NULL, self);
 
   gibber_transport_disconnect (transport);
+
+  /* the transport may not be in transport_to_bytestream if the bytestream was
+   * not fully open */
   g_hash_table_remove (priv->transport_to_bytestream, transport);
 
   g_hash_table_remove (priv->bytestream_to_transport, bytestream);
@@ -271,7 +282,7 @@ transport_buffer_empty_cb (GibberTransport *transport,
   if (state == GIBBER_BYTESTREAM_STATE_CLOSED)
     {
       DEBUG ("buffer is now empty. Transport can be removed");
-      remove_transport (self, transport);
+      remove_transport (self, bytestream, transport);
       return;
     }
 
@@ -291,8 +302,6 @@ add_transport (SalutTubeStream *self,
 
   g_hash_table_insert (priv->transport_to_bytestream,
       g_object_ref (transport), g_object_ref (bytestream));
-  g_hash_table_insert (priv->bytestream_to_transport,
-      g_object_ref (bytestream), g_object_ref (transport));
 
   g_signal_connect (transport, "disconnected",
       G_CALLBACK (transport_disconnected_cb), self);
@@ -363,7 +372,7 @@ extra_bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
           if (gibber_transport_buffer_is_empty (transport))
             {
               DEBUG ("Buffer is empty, we can remove the transport");
-              remove_transport (self, transport);
+              remove_transport (self, bytestream, transport);
             }
           else
             {
