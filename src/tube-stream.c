@@ -818,8 +818,8 @@ close_each_extra_bytestream (gpointer key,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GibberTransport *transport = (GibberTransport *) key;
-  GibberBytestreamIface *bytestream = (GibberBytestreamIface *) value;
+  GibberTransport *transport = (GibberTransport *) value;
+  GibberBytestreamIface *bytestream = (GibberBytestreamIface *) key;
 
   /* We are iterating over priv->transport_to_bytestream so we can't modify it.
    * Disconnect signals so extra_bytestream_state_changed_cb won't be
@@ -833,7 +833,7 @@ close_each_extra_bytestream (gpointer key,
   gibber_bytestream_iface_close (bytestream, NULL);
   gibber_transport_disconnect (transport);
 
-  g_hash_table_remove (priv->bytestream_to_transport, bytestream);
+  g_hash_table_remove (priv->transport_to_bytestream, transport);
 
   return TRUE;
 }
@@ -1626,7 +1626,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
     return;
   priv->closed = TRUE;
 
-  g_hash_table_foreach_remove (priv->transport_to_bytestream,
+  g_hash_table_foreach_remove (priv->bytestream_to_transport,
       close_each_extra_bytestream, self);
 
   /* do not send the close stanza if the tube was closed due to the remote
