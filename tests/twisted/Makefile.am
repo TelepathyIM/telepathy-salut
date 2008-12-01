@@ -32,6 +32,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-request-muc-tubes.py \
         avahi/test-roomlist.py \
 	avahi/test-tube.py \
+	avahi/test-two-muc-stream-tubes.py \
 	avahi/test-two-tubes.py \
 	avahi/test-tube-close.py
 
