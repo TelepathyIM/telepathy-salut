@@ -1,3 +1,28 @@
+telepathy-salut 0.3.6 (2008-12-02)
+==================================
+The "I accidentally 93MB of .rar files" release.
+
+Requirements:
+
+* glib >= 2.16
+* dbus >= 1.1.0
+* telepathy-glib >= 0.7.17
+* libsoup-2.2
+
+Enhancements:
+
+* Implement org.freedesktop.Telepathy.Channel.Type.FileTransfer.DRAFT.
+  This means you can now send files to your Salut contacts. Current
+  implementation uses OOB (XEP-0066) and is fully compatible with iChat.
+* All channels are now requestable using the new
+  org.freedesktop.Telepathy.Connection.Interface.Requests interface.
+
+Fixes:
+
+* Assertion failed in gibber_multicast_transport_disconnect when closing
+  a local pending room (b.fd.o #18552).
+
+
 telepathy-salut 0.3.5 (2008-09-17)
 ==================================
 The "Please don't flood my network" release.
