@@ -115,7 +115,7 @@ def test(q, bus, conn):
     iq['id'] = 'iChat_A1FB5D95'
     query = iq.addElement(('jabber:iq:oob', 'query'))
     url = 'http://127.0.0.1:%u/gibber-file-transfer-0/%s' % (httpd.server_port, urllib.quote(FILE_NAME))
-    url_node = query.addElement('url', content=url)
+    url_node = query.addElement('url', content="\n%s" % url)  #iChat adds a \n before the URL
     url_node['type'] = 'file'
     url_node['size'] = str(FILE_SIZE)
     url_node['mimeType'] = FILE_CONTENT_TYPE

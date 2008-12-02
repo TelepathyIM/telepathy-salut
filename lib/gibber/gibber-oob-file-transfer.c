@@ -144,6 +144,7 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
   GibberStanzaSubType sub_type;
   GibberXmppNode *query;
   GibberXmppNode *url;
+  const gchar *url_content;
 
   gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
   if (type != GIBBER_STANZA_TYPE_IQ ||
@@ -157,11 +158,16 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
     return FALSE;
 
   url = gibber_xmpp_node_get_child (query, "url");
-  if (url == NULL || url->content == NULL || strcmp (url->content, "") == 0)
+  url_content = url->content;
+  if (url == NULL || url_content == NULL || strcmp (url_content, "") == 0)
     return FALSE;
 
+  if (url_content[0] == '\n')
+    /* iChat prefixes url with '\n' */
+    url_content++;
+
   /* We only support file transfer over HTTP */
-  if (!g_str_has_prefix (url->content, "http://"))
+  if (!g_str_has_prefix (url_content, "http://"))
     return FALSE;
 
   return TRUE;
