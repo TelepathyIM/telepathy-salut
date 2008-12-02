@@ -307,6 +307,9 @@ add_transport (SalutTubeStream *self,
       G_CALLBACK (transport_disconnected_cb), self);
   g_signal_connect (transport, "buffer-empty",
       G_CALLBACK (transport_buffer_empty_cb), self);
+
+  /* We can transfer transport's data; unblock it. */
+  gibber_transport_block_receiving (transport, FALSE);
 }
 
 static void
@@ -597,6 +600,10 @@ local_new_connection_cb (GibberListener *listener,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  /* Block the transport while there is no open bytestream to transfer
+   * its data. */
+  gibber_transport_block_receiving (transport, TRUE);
 
   /* Streams in MUC tubes are established with stream initiation (XEP-0095).
    * We use SalutSiBytestreamManager.
