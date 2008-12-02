@@ -263,5 +263,5 @@ def test(q, bus, conn):
     conn2.Disconnect()
 
 if __name__ == '__main__':
-    # increase timer because Clique takes 30 second to join an existing muc
-    exec_test(test, timeout=35)
+    # increase timer because Clique takes some time to join an existing muc
+    exec_test(test, timeout=60)
