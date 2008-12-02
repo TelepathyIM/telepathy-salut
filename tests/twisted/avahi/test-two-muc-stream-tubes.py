@@ -24,6 +24,10 @@ SOCKET_ADDRESS_TYPE_UNIX = dbus.UInt32(0)
 SOCKET_ADDRESS_TYPE_IPV4 = dbus.UInt32(2)
 SOCKET_ACCESS_CONTROL_LOCALHOST = dbus.UInt32(0)
 
+TUBE_STATE_LOCAL_PENDING = 0
+TUBE_STATE_REMOTE_PENDING = 1
+TUBE_STATE_OPEN = 2
+
 sample_parameters = dbus.Dictionary({
     's': 'hello',
     'ay': dbus.ByteArray('hello'),
@@ -187,29 +191,38 @@ def test(q, bus, conn):
         args=['', [conn2_self_handle], [], [], [], conn2_self_handle, 0])
 
     # first connection: offer a muc stream tube
-    t = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_ROOM, muc_handle1, True)
-    contact1_tubes_channel = make_channel_proxy(conn, t, "Channel.Type.Tubes")
+    tubes1_path = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_ROOM, muc_handle1, True)
+    contact1_tubes_channel = make_channel_proxy(conn, tubes1_path, "Channel.Type.Tubes")
 
     q.expect('dbus-signal', signal='NewChannel',
-        args=[t, CHANNEL_TYPE_TUBES, HT_ROOM, muc_handle1, True])
+        args=[tubes1_path, CHANNEL_TYPE_TUBES, HT_ROOM, muc_handle1, True])
 
-    tube_id = contact1_tubes_channel.OfferStreamTube("http", sample_parameters,
+    conn1_tube_id = contact1_tubes_channel.OfferStreamTube("http", sample_parameters,
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
             SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+
+    e = q.expect('dbus-signal', signal='NewTube', path=tubes1_path)
+    tube = e.args
+    assert tube[1] == conn1_self_handle    # initiator
+    assert tube[2] == 1                    # type = stream tube
+    assert tube[3] == 'http'               # service
+    assert tube[4] == sample_parameters    # paramaters
+    assert tube[5] == TUBE_STATE_OPEN
 
     contact2_channeltype = None
     while contact2_channeltype == None:
         e = q.expect('dbus-signal', signal='NewChannel')
         if (e.args[1] == CHANNEL_TYPE_TUBES) and (e.path.endswith("testsuite2") == True):
-            contact2_objpath = e.args[0]
+            tubes2_path = e.args[0]
             contact2_channeltype = e.args[1]
 
-    contact2_tubes_channel = make_channel_proxy(conn2, contact2_objpath, "Channel.Type.Tubes")
+    contact2_tubes_channel = make_channel_proxy(conn2, tubes2_path, "Channel.Type.Tubes")
 
     contact2_tubes = contact2_tubes_channel.ListTubes()
     assert len(contact2_tubes) == 1
     contact2_tube = contact2_tubes[0]
     assert contact2_tube[0] is not None # tube id
+    conn2_tube_id = contact2_tube[0]
     assert contact2_tube[1] is not None # initiator
     assert contact2_tube[2] == 1 # type = stream tube
     assert contact2_tube[3] == 'http' # service = http
@@ -220,11 +233,22 @@ def test(q, bus, conn):
     unix_socket_adr = contact2_tubes_channel.AcceptStreamTube(
             contact2_tube[0], 0, 0, '', byte_arrays=True)
 
+    e = q.expect('dbus-signal', signal='TubeStateChanged', path=tubes2_path)
+    id, state = e.args
+    assert id == conn2_tube_id
+    assert state == TUBE_STATE_OPEN
+
     client = ClientCreator(reactor, ClientGreeter)
     client.connectUNIX(unix_socket_adr).addCallback(client_connected_cb)
 
     e = q.expect('client-connected')
     client_transport = e.transport
+
+    e = q.expect('dbus-signal', signal='StreamTubeNewConnection', path=tubes1_path)
+    id, handle = e.args
+    assert id == conn1_tube_id
+    assert handle == contact2_handle_on_conn1
+
     client_transport.write(test_string)
 
     e = q.expect('server-data-received')
@@ -234,7 +258,7 @@ def test(q, bus, conn):
     assert e.data == string.swapcase(test_string)
 
     # Close the tube propertly
-    contact1_tubes_channel.CloseTube(tube_id)
+    contact1_tubes_channel.CloseTube(conn1_tube_id)
     conn.Disconnect()
     conn2.Disconnect()
 
