@@ -264,4 +264,4 @@ def test(q, bus, conn):
 
 if __name__ == '__main__':
     # increase timer because Clique takes 30 second to join an existing muc
-    exec_test(test, timeout=32)
+    exec_test(test, timeout=35)
