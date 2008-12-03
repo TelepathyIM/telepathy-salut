@@ -50,7 +50,8 @@ struct _GibberOobFileTransferPrivate
 {
   /* HTTP server used to send files (only when sending files) */
   SoupServer *server;
-  /* object used to send file chunks (only when sending files) */
+  /* object used to send file chunks (when sending files) or to
+   * get the file (when receiving file) */
   SoupMessage *msg;
   /* The unescaped served path passed to libsoup, i.e.
    * "/salut-ft-12/hello world" (only when sending files) */
@@ -321,6 +322,9 @@ http_client_finished_chunks_cb (SoupMessage *msg,
   /* disconnect from the "got_chunk" signal */
   g_signal_handlers_disconnect_by_func (msg, http_client_chunk_cb, user_data);
 
+  /* message has been unreffed by libsoup */
+  self->priv->msg = NULL;
+
   g_io_channel_unref (self->priv->channel);
   self->priv->channel = NULL;
 
@@ -387,11 +391,10 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
                                   GIOChannel *dest)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
-  SoupMessage *msg;
 
   self->priv->session = soup_session_async_new ();
-  msg = soup_message_new (SOUP_METHOD_GET, self->priv->url);
-  if (msg == NULL)
+  self->priv->msg = soup_message_new (SOUP_METHOD_GET, self->priv->url);
+  if (self->priv->msg == NULL)
     {
       GError *error = NULL;
 
@@ -405,9 +408,9 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
 
   self->priv->channel = g_io_channel_ref (dest);
 
-  soup_message_set_flags (msg, SOUP_MESSAGE_OVERWRITE_CHUNKS);
-  g_signal_connect (msg, "got_chunk", G_CALLBACK (http_client_chunk_cb), self);
-  soup_session_queue_message (self->priv->session, msg,
+  soup_message_set_flags (self->priv->msg, SOUP_MESSAGE_OVERWRITE_CHUNKS);
+  g_signal_connect (self->priv->msg, "got_chunk", G_CALLBACK (http_client_chunk_cb), self);
+  soup_session_queue_message (self->priv->session, self->priv->msg,
       http_client_finished_chunks_cb, self);
 }
 
