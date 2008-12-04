@@ -25,7 +25,7 @@
 /* TODO: We should port code to use libsoup 2.4 */
 #include <libsoup/soup.h>
 #include <libsoup/soup-server.h>
-#include <libsoup/soup-server-message.h>
+#include <libsoup/soup-message.h>
 
 #include "gibber-xmpp-stanza.h"
 #include "gibber-oob-file-transfer.h"
@@ -293,25 +293,26 @@ http_client_chunk_cb (SoupMessage *msg,
     return;
 
   /* FIXME make async */
-  g_io_channel_write_chars (self->priv->channel, msg->response.body,
-      msg->response.length, NULL, NULL);
+  g_io_channel_write_chars (self->priv->channel, msg->response_body->data,
+      msg->response_body->length, NULL, NULL);
 
   if (msg->status_code != HTTP_STATUS_CODE_OK)
     {
       /* Something did wrong, so it's not file data. Don't fire the
        * transferred-chunk signal. */
-      self->priv->transferred_bytes += msg->response.length;
+      self->priv->transferred_bytes += msg->response_body->length;
       return;
     }
 
-  transferred_chunk (self, (guint64) msg->response.length);
+  transferred_chunk (self, (guint64) msg->response_body->length);
 }
 
 /*
  * Received all the file from the HTTP server.
  */
 static void
-http_client_finished_chunks_cb (SoupMessage *msg,
+http_client_finished_chunks_cb (SoupSession *session,
+                                SoupMessage *msg,
                                 gpointer user_data)
 {
   GibberOobFileTransfer *self = user_data;
@@ -521,9 +522,9 @@ input_channel_readable_cb (GIOChannel *source,
       switch (status)
         {
         case G_IO_STATUS_NORMAL:
-          soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_SYSTEM_OWNED,
+          soup_message_body_append (self->priv->msg->request_body, SOUP_MEMORY_TAKE,
               buff, bytes_read);
-          soup_message_io_unpause (self->priv->msg);
+          soup_session_unpause_message (self->priv->session, self->priv->msg);
           DEBUG("Data available, writing a %"G_GSIZE_FORMAT" bytes chunk",
               bytes_read);
           transferred_chunk (self, (guint64) bytes_read);
@@ -544,8 +545,8 @@ input_channel_readable_cb (GIOChannel *source,
 #undef BUFF_SIZE
 
   DEBUG("Closing HTTP chunked transfer");
-  soup_message_add_final_chunk (self->priv->msg);
-  soup_message_io_unpause (self->priv->msg);
+  soup_message_body_complete (self->priv->msg->request_body);
+  soup_session_unpause_message (self->priv->session, self->priv->msg);
 
   g_io_channel_unref (self->priv->channel);
   self->priv->channel = NULL;
@@ -556,15 +557,18 @@ input_channel_readable_cb (GIOChannel *source,
 }
 
 static void
-http_server_cb (SoupServerContext *context,
+http_server_cb (SoupServer *server,
                 SoupMessage *msg,
+                const char *path,
+                GHashTable *query,
+                SoupClientContext *context,
                 gpointer user_data)
 {
-  const SoupUri *uri = soup_message_get_uri (msg);
+  const SoupURI *uri = soup_message_get_uri (msg);
   GibberOobFileTransfer *self = user_data;
   const gchar *accept_encoding;
 
-  if (context->method_id != SOUP_METHOD_ID_GET)
+  if (msg->method != SOUP_METHOD_GET)
     {
       DEBUG ("A HTTP client tried to use an unsupported method");
       soup_message_set_status (msg, SOUP_STATUS_NOT_IMPLEMENTED);
@@ -580,17 +584,16 @@ http_server_cb (SoupServerContext *context,
   DEBUG ("Serving '%s'", uri->path);
 
   soup_message_set_status (msg, SOUP_STATUS_OK);
-  soup_server_message_set_encoding (SOUP_SERVER_MESSAGE (msg),
-      SOUP_TRANSFER_CHUNKED);
+  soup_message_headers_set_encoding (msg->response_headers, SOUP_ENCODING_CHUNKED);
 
-  soup_message_add_header (msg->response_headers, "Content-Type",
+  soup_message_headers_append (msg->response_headers, "Content-Type",
       GIBBER_FILE_TRANSFER (self)->content_type);
 
   self->priv->msg = g_object_ref (msg);
 
   /* iChat accepts only AppleSingle encoding, i.e. file's contents and
    * attributes are stored in the same stream */
-  accept_encoding = soup_message_get_header (msg->request_headers,
+  accept_encoding = soup_message_headers_get (msg->request_headers,
       "Accept-Encoding");
   if (accept_encoding != NULL && strcmp (accept_encoding, "AppleSingle") == 0)
     {
@@ -630,13 +633,13 @@ http_server_cb (SoupServerContext *context,
       uint32 = htonl (size);
       g_byte_array_append (array, (guint8*) &uint32, 4);
 
-      soup_message_add_header (msg->response_headers, "Content-encoding",
+      soup_message_headers_append (msg->response_headers, "Content-encoding",
           "AppleSingle");
 
       /* libsoup will free the date once they are written */
       len = array->len;
       buff = (gchar *) g_byte_array_free (array, FALSE);
-      soup_message_add_chunk (self->priv->msg, SOUP_BUFFER_SYSTEM_OWNED,
+      soup_message_body_append (self->priv->msg->response_body, SOUP_MEMORY_TAKE,
           buff, len);
 
       soup_message_io_unpause (self->priv->msg);
@@ -667,8 +670,8 @@ gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
       return;
     }
 
-  soup_server_add_handler (self->priv->server, self->priv->served_name, NULL,
-      http_server_cb, NULL, self);
+  soup_server_add_handler (self->priv->server, self->priv->served_name,
+      http_server_cb, self, NULL);
 
   if (!gibber_file_transfer_send_stanza (GIBBER_FILE_TRANSFER (self),
         stanza, &error))
