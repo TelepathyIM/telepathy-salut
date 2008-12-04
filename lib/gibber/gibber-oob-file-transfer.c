@@ -584,7 +584,8 @@ http_server_cb (SoupServer *server,
   DEBUG ("Serving '%s'", uri->path);
 
   soup_message_set_status (msg, SOUP_STATUS_OK);
-  soup_message_headers_set_encoding (msg->response_headers, SOUP_ENCODING_CHUNKED);
+  soup_message_headers_set_encoding (msg->response_headers,
+    SOUP_ENCODING_CHUNKED);
 
   soup_message_headers_append (msg->response_headers, "Content-Type",
       GIBBER_FILE_TRANSFER (self)->content_type);
@@ -639,8 +640,8 @@ http_server_cb (SoupServer *server,
       /* libsoup will free the date once they are written */
       len = array->len;
       buff = (gchar *) g_byte_array_free (array, FALSE);
-      soup_message_body_append (self->priv->msg->response_body, SOUP_MEMORY_TAKE,
-          buff, len);
+      soup_message_body_append (self->priv->msg->response_body,
+        SOUP_MEMORY_TAKE, buff, len);
 
       soup_message_io_unpause (self->priv->msg);
     }
