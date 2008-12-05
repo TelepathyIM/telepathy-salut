@@ -7,8 +7,7 @@ import urllib
 import httplib
 import urlparse
 
-from avahitest import AvahiAnnouncer, AvahiListener
-from avahitest import get_host_name
+from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy, EventPattern
