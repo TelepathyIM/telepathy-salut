@@ -524,7 +524,7 @@ input_channel_readable_cb (GIOChannel *source,
         case G_IO_STATUS_NORMAL:
           soup_message_body_append (self->priv->msg->request_body, SOUP_MEMORY_TAKE,
               buff, bytes_read);
-          soup_session_unpause_message (self->priv->session, self->priv->msg);
+          soup_server_unpause_message (self->priv->server, self->priv->msg);
           DEBUG("Data available, writing a %"G_GSIZE_FORMAT" bytes chunk",
               bytes_read);
           transferred_chunk (self, (guint64) bytes_read);
@@ -546,7 +546,7 @@ input_channel_readable_cb (GIOChannel *source,
 
   DEBUG("Closing HTTP chunked transfer");
   soup_message_body_complete (self->priv->msg->request_body);
-  soup_session_unpause_message (self->priv->session, self->priv->msg);
+  soup_server_unpause_message (self->priv->server, self->priv->msg);
 
   g_io_channel_unref (self->priv->channel);
   self->priv->channel = NULL;
