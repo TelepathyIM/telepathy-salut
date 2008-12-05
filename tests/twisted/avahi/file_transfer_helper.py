@@ -383,6 +383,13 @@ class SendFileTest(FileTransferTest):
         self.http = httplib.HTTPConnection(self.host)
         self.http.request('GET', self.filename)
 
+    def _get_http_response(self):
+        response = self.http.getresponse()
+        assert (response.status, response.reason) == (200, 'OK')
+        data = response.read(self.file.size)
+        # Did we received the right file?
+        assert data == self.file.data
+
     def send_file(self):
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.connect(self.address)
@@ -396,11 +403,7 @@ class SendFileTest(FileTransferTest):
             e = self.q.expect('dbus-signal', signal='TransferredBytesChanged')
             count = e.args[0]
 
-        response = self.http.getresponse()
-        assert (response.status, response.reason) == (200, 'OK')
-        data = response.read(self.file.size)
-        # Did we received the right file?
-        assert data == self.file.data
+        self._get_http_response()
 
         # Inform sender that we received all the file from the OOB transfer
         reply = domish.Element(('', 'iq'))
