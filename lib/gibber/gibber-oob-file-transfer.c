@@ -643,7 +643,7 @@ http_server_cb (SoupServer *server,
       soup_message_body_append (self->priv->msg->response_body,
         SOUP_MEMORY_TAKE, buff, len);
 
-      soup_message_io_unpause (self->priv->msg);
+      soup_session_unpause_message (self->priv->session, self->priv->msg);
     }
 
   g_signal_emit_by_name (self, "remote-accepted");
