@@ -144,7 +144,7 @@ class ReceiveFileTest(FileTransferTest):
             self.check_new_channel, self.create_ft_channel, self.accept_file,
             self.receive_file, self.close_channel]
 
-    def connect_to_salut(self):
+    def _resolve_salut_presence(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
         e = self.q.expect('service-added', name = self.self_handle_name,
             protocol = avahi.PROTO_INET)
@@ -152,9 +152,13 @@ class ReceiveFileTest(FileTransferTest):
         service.resolve()
 
         e = self.q.expect('service-resolved', service = service)
+        return str(e.pt), e.port
+
+    def connect_to_salut(self):
+        host, port = self._resolve_salut_presence()
 
         self.outbound = connect_to_stream(self.q, self.contact_name,
-            self.self_handle_name, str(e.pt), e.port)
+            self.self_handle_name, host, port)
 
         e = self.q.expect('connection-result')
         assert e.succeeded, e.reason
