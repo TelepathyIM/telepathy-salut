@@ -522,8 +522,8 @@ input_channel_readable_cb (GIOChannel *source,
       switch (status)
         {
         case G_IO_STATUS_NORMAL:
-          soup_message_body_append (self->priv->msg->request_body, SOUP_MEMORY_TAKE,
-              buff, bytes_read);
+          soup_message_body_append (self->priv->msg->request_body,
+              SOUP_MEMORY_TAKE, buff, bytes_read);
           soup_server_unpause_message (self->priv->server, self->priv->msg);
           DEBUG("Data available, writing a %"G_GSIZE_FORMAT" bytes chunk",
               bytes_read);
