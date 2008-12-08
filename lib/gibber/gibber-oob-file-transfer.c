@@ -293,18 +293,18 @@ http_client_chunk_cb (SoupMessage *msg,
     return;
 
   /* FIXME make async */
-  g_io_channel_write_chars (self->priv->channel, msg->response_body->data,
-      msg->response_body->length, NULL, NULL);
+  g_io_channel_write_chars (self->priv->channel, chunk->data,
+      chunk->length, NULL, NULL);
 
   if (msg->status_code != HTTP_STATUS_CODE_OK)
     {
       /* Something did wrong, so it's not file data. Don't fire the
        * transferred-chunk signal. */
-      self->priv->transferred_bytes += msg->response_body->length;
+      self->priv->transferred_bytes += chunk->length;
       return;
     }
 
-  transferred_chunk (self, (guint64) msg->response_body->length);
+  transferred_chunk (self, (guint64) chunk->length);
 }
 
 /*
