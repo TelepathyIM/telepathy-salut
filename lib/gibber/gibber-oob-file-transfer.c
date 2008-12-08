@@ -409,7 +409,7 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
 
   self->priv->channel = g_io_channel_ref (dest);
 
-  soup_message_set_flags (self->priv->msg, SOUP_MESSAGE_OVERWRITE_CHUNKS);
+  soup_message_body_set_accumulate (self->priv->msg->response_body, FALSE);
   g_signal_connect (self->priv->msg, "got-chunk",
       G_CALLBACK (http_client_chunk_cb), self);
   soup_session_queue_message (self->priv->session, self->priv->msg,
