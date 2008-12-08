@@ -16,8 +16,9 @@ gboolean
 send_hook (GibberTransport *transport, const guint8 *data,
     gsize length, GError **error, gpointer user_data)
 {
+  size_t written;
   /* Nothing for now */
-  fwrite (data, 1, length, xmlfile);
+  written = fwrite (data, 1, length, xmlfile);
   return TRUE;
 }
 
