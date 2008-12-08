@@ -19,6 +19,7 @@ send_hook (GibberTransport *transport, const guint8 *data,
   size_t written;
   /* Nothing for now */
   written = fwrite (data, 1, length, xmlfile);
+  g_assert (written == length);
   return TRUE;
 }
 
