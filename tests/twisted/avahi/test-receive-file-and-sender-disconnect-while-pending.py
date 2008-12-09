@@ -4,7 +4,7 @@ from saluttest import exec_test
 from file_transfer_helper import ReceiveFileTest, SOCKET_ADDRESS_TYPE_UNIX,\
     SOCKET_ACCESS_CONTROL_LOCALHOST
 
-class ReceiveFileAndSenderDisconnectTest(ReceiveFileTest):
+class ReceiveFileAndSenderDisconnectWhilePendingTest(ReceiveFileTest):
     def accept_file(self):
         # The sender of the file disconnects
         self.outbound.transport.loseConnection()
@@ -27,5 +27,5 @@ class ReceiveFileAndSenderDisconnectTest(ReceiveFileTest):
         return True
 
 if __name__ == '__main__':
-    test = ReceiveFileAndSenderDisconnectTest()
+    test = ReceiveFileAndSenderDisconnectWhilePendingTest()
     exec_test(test.test)
