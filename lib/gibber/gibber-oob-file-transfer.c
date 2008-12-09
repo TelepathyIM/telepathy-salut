@@ -546,7 +546,7 @@ input_channel_readable_cb (GIOChannel *source,
 #undef BUFF_SIZE
 
   DEBUG("Closing HTTP chunked transfer");
-  soup_message_body_complete (self->priv->msg->request_body);
+  soup_message_body_complete (self->priv->msg->response_body);
   soup_server_unpause_message (self->priv->server, self->priv->msg);
 
   g_io_channel_unref (self->priv->channel);
