@@ -455,5 +455,14 @@ gibber_file_transfer_send_stanza (GibberFileTransfer *self,
                                   GibberXmppStanza *stanza,
                                   GError **error)
 {
+  if (self->priv->connection->transport == NULL ||
+      self->priv->connection->transport->state != GIBBER_TRANSPORT_CONNECTED)
+    {
+      g_set_error (error, GIBBER_FILE_TRANSFER_ERROR,
+          GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED,
+          "XMPP connection not connected");
+      return FALSE;
+    }
+
   return gibber_xmpp_connection_send (self->priv->connection, stanza, error);
 }
