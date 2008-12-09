@@ -1,3 +1,18 @@
+telepathy-salut 0.3.7 (UNRELEASED)
+==================================
+
+Requirements:
+* libsoup-2.4 (instead of libsoup-2.2)
+
+Enhancements:
+* State of pending file transfer channels is now automatically changed to
+  "Cancelled" if peer is disconnected.
+
+Fixes:
+* Uses libsoup 2.4 instead of the obsolete 2.2 version (b.fd.o #18891).
+* Don't crash if the XMPP connection is disconnected during a file transfer.
+
+
 telepathy-salut 0.3.6 (2008-12-02)
 ==================================
 The "I accidentally 93MB of .rar files" release.
