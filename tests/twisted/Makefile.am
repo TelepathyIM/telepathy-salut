@@ -18,6 +18,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-send-file-wait-to-provide.py \
 	avahi/test-receive-and-send-file.py \
 	avahi/test-receive-file.py \
+	avahi/test-receive-file-and-disconnect.py \
 	avahi/test-receive-file-cancelled-immediately.py \
 	avahi/test-receive-file-decline.py \
 	avahi/test-receive-file-not-found.py \
