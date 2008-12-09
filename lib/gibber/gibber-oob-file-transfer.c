@@ -369,20 +369,19 @@ http_client_finished_chunks_cb (SoupSession *session,
   gibber_xmpp_node_set_attribute (stanza->node, "id",
       GIBBER_FILE_TRANSFER (self)->id);
 
-  if (gibber_file_transfer_send_stanza (GIBBER_FILE_TRANSFER (self), stanza,
+  if (!gibber_file_transfer_send_stanza (GIBBER_FILE_TRANSFER (self), stanza,
         &error))
     {
-      /* Send one last TransferredBytes signal. This will definitely get
-       * through, even if it has been < 1s since the last emission, so that
-       * clients will show 100% for sure.
-       */
-      transferred_chunk (self, 0);
-      g_signal_emit_by_name (self, "finished");
+      DEBUG ("Wasn't able to send IQ result; ignoring: %s", error->message);
+      g_error_free (error);
     }
-  else
-    {
-      gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self), error);
-    }
+
+  /* Send one last TransferredBytes signal. This will definitely get
+   * through, even if it has been < 1s since the last emission, so that
+   * clients will show 100% for sure.
+   */
+  transferred_chunk (self, 0);
+  g_signal_emit_by_name (self, "finished");
 
   g_object_unref (stanza);
 }
