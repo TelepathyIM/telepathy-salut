@@ -7,7 +7,7 @@ from file_transfer_helper import ReceiveFileTest, SOCKET_ADDRESS_TYPE_UNIX,\
 class ReceiveFileAndSenderDisconnectTest(ReceiveFileTest):
     def accept_file(self):
         # The sender of the file disconnects
-
+        self.outbound.transport.loseConnection()
         self.contact_service.stop()
 
         self.q.expect('dbus-signal', signal='FileTransferStateChanged')
