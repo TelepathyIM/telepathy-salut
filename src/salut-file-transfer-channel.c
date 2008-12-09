@@ -171,6 +171,18 @@ static void salut_file_transfer_channel_set_state (
     SalutFileTransferStateChangeReason reason);
 
 static void
+contact_lost_cb (SalutContact *contact,
+                 SalutFileTransferChannel *self)
+{
+  g_assert (contact == self->priv->contact);
+
+  salut_file_transfer_channel_set_state (
+      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+      SALUT_FILE_TRANSFER_STATE_CANCELLED,
+      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
+}
+
+static void
 salut_file_transfer_channel_get_property (GObject *object,
                                           guint property_id,
                                           GValue *value,
@@ -317,6 +329,8 @@ salut_file_transfer_channel_set_property (GObject *object,
         break;
       case PROP_CONTACT:
         self->priv->contact = g_value_dup_object (value);
+        g_signal_connect (self->priv->contact, "lost",
+            G_CALLBACK (contact_lost_cb), self);
         break;
       case PROP_CONNECTION:
         self->priv->connection = g_value_get_object (value);
@@ -745,6 +759,8 @@ salut_file_transfer_channel_dispose (GObject *object)
 
   if (self->priv->contact)
     {
+      g_signal_handlers_disconnect_by_func (self->priv->contact,
+          contact_lost_cb, self);
       g_object_unref (self->priv->contact);
       self->priv->contact = NULL;
     }
