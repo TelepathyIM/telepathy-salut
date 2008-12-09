@@ -820,7 +820,8 @@ salut_file_transfer_channel_close (TpSvcChannel *iface,
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
-  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_COMPLETED)
+  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_COMPLETED &&
+      self->priv->state != SALUT_FILE_TRANSFER_STATE_CANCELLED)
     {
       gibber_file_transfer_cancel (self->priv->ft, 406);
       salut_file_transfer_channel_set_state (
