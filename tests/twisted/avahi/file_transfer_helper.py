@@ -97,7 +97,8 @@ class FileTransferTest(object):
         self.contact_name = '%s@%s' % (name, get_host_name())
         self.listener, port = setup_stream_listener(self.q, self.contact_name)
 
-        AvahiAnnouncer(self.contact_name, "_presence._tcp", port, basic_txt)
+        self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp",
+                port, basic_txt)
 
     def wait_for_contact(self, name=CONTACT_NAME):
         publish_handle = self.conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
