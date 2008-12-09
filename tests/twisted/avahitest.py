@@ -175,6 +175,8 @@ class AvahiAnnouncer:
         dbus.UInt32(0), self.name, self.type, get_domain_name(),
         avahi.dict_to_txt_array(self.txt))
 
+    def stop(self):
+        self.entry.Free()
 
 if __name__ == '__main__':
     from twisted.internet import reactor
