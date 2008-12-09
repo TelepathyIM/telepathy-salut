@@ -20,6 +20,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-receive-file.py \
 	avahi/test-receive-file-and-disconnect.py \
 	avahi/test-receive-file-and-sender-disconnect-while-pending.py \
+	avahi/test-receive-file-and-sender-disconnect-while-transfering.py \
 	avahi/test-receive-file-and-xmpp-disconnect.py \
 	avahi/test-receive-file-cancelled-immediately.py \
 	avahi/test-receive-file-decline.py \
