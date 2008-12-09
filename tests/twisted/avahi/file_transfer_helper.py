@@ -248,16 +248,7 @@ class ReceiveFileTest(FileTransferTest):
         assert state == FT_STATE_OPEN
         assert reason == FT_STATE_CHANGE_REASON_NONE
 
-    def receive_file(self):
-        # Connect to Salut's socket
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.connect(self.address)
-
-        self.httpd.handle_request()
-
-        # Receiver inform us he finished to download the file
-        self.q.expect('stream-iq', iq_type='result')
-
+    def _read_file_from_socket(self, s):
         # Read the file from Salut's socket
         data = ''
         read = 0
@@ -277,6 +268,18 @@ class ReceiveFileTest(FileTransferTest):
         state, reason = e.args
         assert state == FT_STATE_COMPLETED
         assert reason == FT_STATE_CHANGE_REASON_NONE
+
+    def receive_file(self):
+        # Connect to Salut's socket
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(self.address)
+
+        self.httpd.handle_request()
+
+        # Receiver inform us he finished to download the file
+        self.q.expect('stream-iq', iq_type='result')
+
+        self._read_file_from_socket(s)
 
 class SendFileTest(FileTransferTest):
     def __init__(self):
