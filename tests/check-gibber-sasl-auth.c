@@ -33,9 +33,9 @@ test_t *current_test = NULL;
 GError *error = NULL;
 
 static void
-got_error (GQuark domain, int code, gchar *message)
+got_error (GQuark domain, int code, const gchar *message)
 {
-  g_set_error (&error, domain, code, message);
+  g_set_error (&error, domain, code, "%s", message);
   run_done = TRUE;
   g_main_loop_quit (mainloop);
 }
