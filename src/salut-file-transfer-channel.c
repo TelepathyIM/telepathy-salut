@@ -176,6 +176,13 @@ contact_lost_cb (SalutContact *contact,
 {
   g_assert (contact == self->priv->contact);
 
+  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_PENDING)
+    {
+      DEBUG ("%s was disconnected. Ignoring as there is still a chance to"
+         " be able to complete the transfer", contact->name);
+      return;
+    }
+
   DEBUG ("%s was disconnected. Cancel file tranfer.", contact->name);
   salut_file_transfer_channel_set_state (
       SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
