@@ -1215,6 +1215,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
 {
   SalutXmppConnectionManagerRequestConnectionResult request_result;
   GibberXmppConnection *connection = NULL;
+  GError *e = NULL;
 
   g_assert (!CHECK_STR_EMPTY (self->priv->filename));
   g_assert (self->priv->size != SALUT_UNDEFINED_FILE_SIZE);
@@ -1223,7 +1224,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
 
   request_result = salut_xmpp_connection_manager_request_connection (
       self->priv->xmpp_connection_manager, self->priv->contact,
-      &connection, error);
+      &connection, &e);
 
   if (request_result ==
       SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
@@ -1242,7 +1243,8 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
     {
       DEBUG ("Request connection failed");
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-        "Request connection failed");
+        "Request connection failed: %s", e->message);
+      g_error_free (e);
       return FALSE;
     }
 
