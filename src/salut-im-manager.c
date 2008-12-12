@@ -379,7 +379,7 @@ salut_im_manager_iface_foreach_one (gpointer key,
   f->func (chan, f->data);
 }
 
-void
+static void
 salut_im_manager_foreach_channel (TpChannelManager *iface,
                                   TpExportableChannelFunc func,
                                   gpointer user_data)
