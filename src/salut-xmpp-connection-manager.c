@@ -881,7 +881,7 @@ disconnect_signals_foreach (gpointer key,
       0, 0, NULL, NULL, self);
 }
 
-void
+static void
 salut_xmpp_connection_manager_dispose (GObject *object)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (object);
@@ -1520,7 +1520,7 @@ salut_xmpp_connection_manager_reset_connection_timer (
     }
 }
 
-GSList *
+static GSList *
 find_filter (GSList *list,
              SalutXmppConnectionManagerStanzaFilterFunc filter_func,
              SalutXmppConnectionManagerStanzaCallbackFunc callback,
@@ -1543,7 +1543,7 @@ find_filter (GSList *list,
   return NULL;
 }
 
-GSList *
+static GSList *
 remove_filter (GSList *list,
                SalutXmppConnectionManagerStanzaFilterFunc filter_func,
                SalutXmppConnectionManagerStanzaCallbackFunc callback,
