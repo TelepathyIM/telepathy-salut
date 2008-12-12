@@ -745,6 +745,7 @@ gibber_sasl_auth_start_mechanism (GibberSaslAuth *sasl,
       {
         GString *str = g_string_new ("");
         gchar *username = NULL, *password = NULL;
+        gchar *cstr;
 
         g_signal_emit (sasl, signals[USERNAME_REQUESTED], 0, &username);
         g_signal_emit (sasl, signals[PASSWORD_REQUESTED], 0, &password);
@@ -757,7 +758,6 @@ gibber_sasl_auth_start_mechanism (GibberSaslAuth *sasl,
           }
 
         DEBUG ("Got username and password");
-        gchar *cstr;
         g_string_append_c (str, '\0');
         g_string_append (str, username);
         g_string_append_c (str, '\0');
