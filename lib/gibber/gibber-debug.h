@@ -29,7 +29,7 @@ typedef enum
 
 #define DEBUG_XMPP (DEBUG_XMPP_READER | DEBUG_XMPP_WRITER)
 
-void gibber_debug_set_flags_from_env ();
+void gibber_debug_set_flags_from_env (void);
 void gibber_debug_set_flags (DebugFlags flags);
 gboolean gibber_debug_flag_is_set (DebugFlags flag);
 void gibber_debug (DebugFlags flag, const gchar *format, ...)
