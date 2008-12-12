@@ -198,11 +198,13 @@ static void
 salut_ft_manager_iface_foreach_one (gpointer value,
                                     gpointer data)
 {
+  TpExportableChannel *chan;
+  struct foreach_data *f = (struct foreach_data *) data;
+
   if (!value)
     return;
 
-  TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
-  struct foreach_data *f = (struct foreach_data *) data;
+  chan = TP_EXPORTABLE_CHANNEL (value);
 
   f->func (chan, f->data);
 }
