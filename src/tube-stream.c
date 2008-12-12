@@ -675,6 +675,9 @@ new_connection_to_socket (SalutTubeStream *self,
       g_assert_not_reached ();
     }
 
+  /* Block the transport while there is no open bytestream to transfer
+   * its data. */
+  gibber_transport_block_receiving (transport, TRUE);
 
   g_hash_table_insert (priv->bytestream_to_transport, g_object_ref (bytestream),
       g_object_ref (transport));
