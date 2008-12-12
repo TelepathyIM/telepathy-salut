@@ -94,6 +94,9 @@ gboolean gibber_xmpp_connection_send (GibberXmppConnection *connection,
 
 gchar * gibber_xmpp_connection_new_id (GibberXmppConnection *connection);
 
+GibberXmppConnection * gibber_xmpp_connection_new_no_stream (
+    GibberTransport *transport);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_XMPP_CONNECTION_H__*/
