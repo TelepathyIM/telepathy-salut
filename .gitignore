@@ -93,9 +93,9 @@ lib/gibber/examples/test_{ssl,tcp}
 
 tests/telepathy-salut-debug
 install-sh
-lib/gibber/signals-marshal.c
-lib/gibber/signals-marshal.h
-lib/gibber/signals-marshal.list
+lib/gibber/gibber-signals-marshal.c
+lib/gibber/gibber-signals-marshal.h
+lib/gibber/gibber-signals-marshal.list
 lib/gibber/*-enumtypes.c
 lib/gibber/*-enumtypes.h
 lib/gibber/examples/test_ssl
