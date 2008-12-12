@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 #include "gibber-transport.h"
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_TRANSPORT
 #include "gibber-debug.h"

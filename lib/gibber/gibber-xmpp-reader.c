@@ -26,7 +26,7 @@
 #include <libxml/parser.h>
 
 #include "gibber-xmpp-reader.h"
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 #include "gibber-xmpp-stanza.h"
 

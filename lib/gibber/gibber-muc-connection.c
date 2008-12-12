@@ -28,7 +28,7 @@
 #include <netdb.h>
 
 #include "gibber-muc-connection.h"
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 #include "gibber-namespaces.h"
 #include "gibber-xmpp-reader.h"

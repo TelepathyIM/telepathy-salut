@@ -32,7 +32,7 @@
 #include "gibber-r-multicast-packet.h"
 #include "gibber-r-multicast-sender.h"
 
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 #define SESSION_TIMEOUT_MIN 1500
 #define SESSION_TIMEOUT_MAX 3000

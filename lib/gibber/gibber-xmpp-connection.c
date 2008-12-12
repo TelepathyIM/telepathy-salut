@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "gibber-xmpp-connection.h"
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 #include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"

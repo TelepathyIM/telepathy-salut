@@ -36,7 +36,7 @@
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
 
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 static void
 bytestream_iface_init (gpointer g_iface, gpointer iface_data);

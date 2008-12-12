@@ -34,7 +34,7 @@
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
 
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 /* IMPORTANT NOTE: This bytestream is not used anymore by Salut and so probably
  * a bit rotten */

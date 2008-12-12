@@ -28,7 +28,7 @@
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
 #include "gibber-debug.h"
 
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 #include "gibber-file-transfer-enumtypes.h"
 
 

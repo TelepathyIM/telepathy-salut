@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "gibber-sasl-auth.h"
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 #include "gibber-namespaces.h"
 
 #include "libmd5-rfc/md5.h"

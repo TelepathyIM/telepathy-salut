@@ -38,7 +38,7 @@
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"
 
-#include "signals-marshal.h"
+#include "gibber-signals-marshal.h"
 
 G_DEFINE_TYPE (GibberXmppConnectionListener, gibber_xmpp_connection_listener, \
     G_TYPE_OBJECT);
