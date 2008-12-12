@@ -977,7 +977,7 @@ new_connection_cb (GibberListener *listener,
  *
  * Implements gibber_bytestream_iface_initiate on GibberBytestreamIface
  */
-gboolean
+static gboolean
 gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
 {
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (bytestream);
