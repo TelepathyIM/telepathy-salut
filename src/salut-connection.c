@@ -210,7 +210,7 @@ struct _SalutConnectionPrivate
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
-  ((SalutConnectionPrivate *)((SalutConnection *)o)->priv);
+  ((SalutConnectionPrivate *)((SalutConnection *)o)->priv)
 
 typedef struct _ChannelRequest ChannelRequest;
 
