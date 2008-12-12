@@ -773,7 +773,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
   GHashTable *old_dbus_tubes;
   struct _add_in_old_dbus_tubes_data add_data;
   struct emit_d_bus_names_changed_foreach_data emit_data;
-  GibberStanzaType type;
+  GibberStanzaType stanza_type;
   GibberStanzaSubType sub_type;
 
   contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
@@ -783,8 +783,8 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
     /* We don't need to inspect our own tubes */
     return;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
-  if (type != GIBBER_STANZA_TYPE_MESSAGE
+  gibber_xmpp_stanza_get_type_info (stanza, &stanza_type, &sub_type);
+  if (stanza_type != GIBBER_STANZA_TYPE_MESSAGE
       || sub_type != GIBBER_STANZA_SUB_TYPE_GROUPCHAT)
     return;
 
@@ -817,13 +817,12 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
         {
           /* We don't know yet this tube */
           const gchar *service;
-          TpTubeType type;
           TpHandle initiator_handle;
           GHashTable *parameters;
-          guint tube_id;
+          guint id;
 
           if (extract_tube_information (self, tube_node, &type,
-                &initiator_handle, &service, &parameters, &tube_id))
+                &initiator_handle, &service, &parameters, &id))
             {
               switch (type)
                 {
@@ -854,7 +853,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                 }
 
               tube = create_new_tube (self, type, initiator_handle,
-                  service, parameters, tube_id, 0, NULL);
+                  service, parameters, id, 0, NULL);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -1982,10 +1981,10 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
     && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,
         priv->self_handle))
     {
-      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      GError err = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
          "Tube channel isn't connected" };
 
-      dbus_g_method_return_error (context, &error);
+      dbus_g_method_return_error (context, &err);
       return;
     }
 
@@ -2054,9 +2053,9 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
   if (tube == NULL)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+      GError err = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
 
-      dbus_g_method_return_error (context, &error);
+      dbus_g_method_return_error (context, &err);
       return;
     }
 
@@ -2064,27 +2063,27 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
       address_type != TP_SOCKET_ADDRESS_TYPE_IPV4 &&
       address_type != TP_SOCKET_ADDRESS_TYPE_IPV6)
     {
-      GError *error = NULL;
+      GError *err = NULL;
 
-      error = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      err = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
           "Address type %d not implemented", address_type);
 
-      dbus_g_method_return_error (context, error);
+      dbus_g_method_return_error (context, err);
 
-      g_error_free (error);
+      g_error_free (err);
       return;
     }
 
   if (access_control != TP_SOCKET_ACCESS_CONTROL_LOCALHOST)
     {
-      GError *error = NULL;
+      GError *err = NULL;
 
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      err = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Unix sockets only support localhost control access");
 
-      dbus_g_method_return_error (context, error);
+      dbus_g_method_return_error (context, err);
 
-      g_error_free (error);
+      g_error_free (err);
       return;
     }
 
@@ -2095,19 +2094,19 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
 
   if (type != TP_TUBE_TYPE_STREAM)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError err = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not a stream tube" };
 
-      dbus_g_method_return_error (context, &error);
+      dbus_g_method_return_error (context, &err);
       return;
     }
 
   if (state != TP_TUBE_STATE_LOCAL_PENDING)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError err = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the local pending state" };
 
-      dbus_g_method_return_error (context, &error);
+      dbus_g_method_return_error (context, &err);
       return;
     }
 
