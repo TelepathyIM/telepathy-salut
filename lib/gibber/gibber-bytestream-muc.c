@@ -414,7 +414,7 @@ gibber_bytestream_muc_close (GibberBytestreamIface *bytestream,
  *
  * Implements gibber_bytestream_iface_initiate on GibberBytestreamIface
  */
-gboolean
+static gboolean
 gibber_bytestream_muc_initiate (GibberBytestreamIface *bytestream)
 {
   /* Nothing to do */
