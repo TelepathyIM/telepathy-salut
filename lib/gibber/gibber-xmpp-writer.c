@@ -192,7 +192,7 @@ gibber_xmpp_writer_stream_close (GibberXmppWriter *writer,
 static void
 _xml_write_node (GibberXmppWriter *writer, GibberXmppNode *node);
 
-gboolean
+static gboolean
 _write_attr (const gchar *key, const gchar *value, const gchar *ns,
     gpointer user_data)
 {
@@ -226,7 +226,7 @@ _write_attr (const gchar *key, const gchar *value, const gchar *ns,
   return TRUE;
 }
 
-gboolean
+static gboolean
 _write_child (GibberXmppNode *node, gpointer user_data)
 {
   _xml_write_node (GIBBER_XMPP_WRITER (user_data), node);
