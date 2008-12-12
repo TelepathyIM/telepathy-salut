@@ -57,7 +57,7 @@ GType gibber_tcp_transport_get_type (void);
    GibberTCPTransportClass))
 
 GibberTCPTransport *
-gibber_tcp_transport_new ();
+gibber_tcp_transport_new (void);
 
 void gibber_tcp_transport_connect (GibberTCPTransport *tcp_transport,
     const gchar *host, const gchar *port);
