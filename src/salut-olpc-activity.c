@@ -29,7 +29,7 @@
 #include "salut-muc-manager.h"
 #include "salut-util.h"
 
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_OLPC_ACTIVITY
 #include "debug.h"

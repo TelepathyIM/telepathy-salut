@@ -36,7 +36,7 @@
 #define DEBUG_FLAG DEBUG_XCM
 #include "debug.h"
 
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 
 #define OUTGOING_CONNECTION_TIMEOUT 10000
 #define REFCOUNT_CONNECTION_TIMEOUT 10000

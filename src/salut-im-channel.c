@@ -45,7 +45,7 @@
 #include "salut-connection.h"
 #include "salut-contact.h"
 #include "salut-xmpp-connection-manager.h"
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 #include "text-helper.h"
 
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);

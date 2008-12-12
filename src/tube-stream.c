@@ -48,7 +48,7 @@
 #define DEBUG_FLAG DEBUG_TUBES
 
 #include "debug.h"
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 #include "salut-connection.h"
 #include "tube-iface.h"
 #include "salut-si-bytestream-manager.h"

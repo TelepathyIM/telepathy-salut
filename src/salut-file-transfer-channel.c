@@ -35,7 +35,7 @@
 #include "debug.h"
 
 #include "salut-file-transfer-channel.h"
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 
 #include "salut-connection.h"
 #include "salut-im-manager.h"

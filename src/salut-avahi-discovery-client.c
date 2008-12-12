@@ -44,7 +44,7 @@
 #include "salut-avahi-olpc-activity-manager.h"
 #endif
 
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 
 static void
 discovery_client_init (gpointer g_iface, gpointer iface_data);

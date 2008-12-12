@@ -26,7 +26,7 @@
 #include "salut-connection.h"
 #include "salut-contact-channel.h"
 #include "salut-contact-manager.h"
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 #include "salut-contact.h"
 #include "salut-presence-enumtypes.h"
 

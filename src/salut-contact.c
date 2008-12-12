@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "salut-contact.h"
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 #include "salut-presence.h"
 #include "salut-presence-enumtypes.h"
 
