@@ -864,7 +864,7 @@ salut_connection_finalize (GObject *object)
   G_OBJECT_CLASS (salut_connection_parent_class)->finalize (object);
 }
 
-void
+static void
 _contact_manager_contact_status_changed (SalutConnection *self,
     SalutContact *contact, TpHandle handle)
 {
@@ -1025,7 +1025,7 @@ _salut_connection_disconnect (SalutConnection *self)
  * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
  *
  */
-void
+static void
 salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
     DBusGMethodInvocation *context)
 {
@@ -1076,7 +1076,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
  * on interface org.freedesktop.Telepathy.Connection.Interface.Aliasing
  *
  */
-void
+static void
 salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
     const GArray *contacts, DBusGMethodInvocation *context)
 {
@@ -1200,7 +1200,7 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
   tp_svc_connection_interface_aliasing_return_from_set_aliases (context);
 }
 
-void
+static void
 _contact_manager_contact_alias_changed  (SalutConnection *self,
     SalutContact *contact, TpHandle handle)
 {
@@ -1241,7 +1241,7 @@ salut_connection_aliasing_service_iface_init (gpointer g_iface,
 }
 
 /* Avatar service implementation */
-void
+static void
 _contact_manager_contact_avatar_changed (SalutConnection *self,
     SalutContact *contact, TpHandle handle)
 {
@@ -2647,7 +2647,7 @@ salut_connection_create_handle_repos (TpBaseConnection *self,
       list_handle_strings);
 }
 
-void
+static void
 _contact_manager_contact_change_cb (SalutContactManager *mgr,
     SalutContact *contact, int changes, gpointer data)
 {
