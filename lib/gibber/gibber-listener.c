@@ -396,7 +396,7 @@ listen_tcp_af (GibberListener *listener, int port, GibberAddressFamily family,
           struct sockaddr_in *in;
           struct sockaddr_in6 *in6;
       } addr;
-      gboolean ret;
+      gboolean ret_;
       GError *terror = NULL;
 
       addr.addr = a->ai_addr;
@@ -412,10 +412,10 @@ listen_tcp_af (GibberListener *listener, int port, GibberAddressFamily family,
             g_assert_not_reached ();
         }
 
-      ret = add_listener (listener, a->ai_family, a->ai_socktype,
+      ret_ = add_listener (listener, a->ai_family, a->ai_socktype,
         a->ai_protocol, a->ai_addr, a->ai_addrlen, &terror);
 
-      if (ret == FALSE)
+      if (ret_ == FALSE)
         {
           gboolean fatal = !g_error_matches (terror, GIBBER_LISTENER_ERROR,
               GIBBER_LISTENER_ERROR_FAMILY_NOT_SUPPORTED);
