@@ -53,7 +53,7 @@ add_text (GibberXmppStanza *stanza, const gchar *text)
       GIBBER_W3C_NS_XHTML);
 }
 
-GibberXmppStanza *
+static GibberXmppStanza *
 create_message_stanza (const gchar *from,
   const gchar *to, TpChannelTextMessageType type, const gchar *text,
   GError **error)
