@@ -145,7 +145,7 @@ salut_avahi_contact_set_property (GObject *object,
 static void
 _avahi_address_to_sockaddr (AvahiAddress *address,
                             guint16 port,
-                            AvahiIfIndex index,
+                            AvahiIfIndex index_,
                             struct sockaddr *sockaddr)
 {
   switch (address->proto)
@@ -167,7 +167,7 @@ _avahi_address_to_sockaddr (AvahiAddress *address,
           memcpy (sockaddr6->sin6_addr.s6_addr, address->data.ipv6.address, 16);
 
           sockaddr6->sin6_flowinfo = 0;
-          sockaddr6->sin6_scope_id = index;
+          sockaddr6->sin6_scope_id = index_;
           break;
        }
     default:

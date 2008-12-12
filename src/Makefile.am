@@ -180,7 +180,6 @@ signals-marshal.h: signals-marshal.list
 signals-marshal.c: signals-marshal.list
 	glib-genmarshal --body --prefix=salut_signals_marshal $< > $@
 
-
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in
 	glib-mkenums \
@@ -192,7 +191,7 @@ signals-marshal.c: signals-marshal.list
 
 %-enumtypes.c: %.h Makefile.in
 	glib-mkenums \
-	--fhead "#include <$*.h>" \
+	--fhead "#include <$*.h>\n#include <$*-enumtypes.h>" \
 	--fprod "\n/* enumerations from \"@filename@\" */" \
 	--vhead "GType\n@enum_name@_get_type (void)\n{\n  static GType etype = 0;\n  if (etype == 0) {\n    static const G@Type@Value values[] = {"     \
 	--vprod "      { @VALUENAME@, \"@VALUENAME@\", \"@VALUENAME@\" }," \
