@@ -457,6 +457,8 @@ start_stream_initiation (SalutTubeStream *self,
   SalutContact *contact;
   SalutContactManager *contact_mgr;
   SalutSiBytestreamManager *si_bytestream_mgr;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
+      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_ROOM);
 
   contact_repo = tp_base_connection_get_handles (
      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -474,9 +476,6 @@ start_stream_initiation (SalutTubeStream *self,
   id_str = g_strdup_printf ("%u", priv->id);
 
   g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
-
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_ROOM);
 
   /* FIXME: this needs standardizing */
   node = gibber_xmpp_node_add_child (si_node, "muc-stream");
@@ -1767,7 +1766,7 @@ check_unix_params (TpSocketAddressType address_type,
                    GError **error)
 {
   GArray *array;
-  GString *socket;
+  GString *socket_path;
   struct stat stat_buff;
   guint i;
   struct sockaddr_un dummy;
@@ -1803,29 +1802,29 @@ check_unix_params (TpSocketAddressType address_type,
         }
     }
 
-  socket = g_string_new_len (array->data, array->len);
+  socket_path = g_string_new_len (array->data, array->len);
 
-  if (g_stat (socket->str, &stat_buff) == -1)
+  if (g_stat (socket_path->str, &stat_buff) == -1)
   {
     DEBUG ("Error calling stat on socket: %s", g_strerror (errno));
 
     g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "%s: %s",
-        socket->str, g_strerror (errno));
-    g_string_free (socket, TRUE);
+        socket_path->str, g_strerror (errno));
+    g_string_free (socket_path, TRUE);
     return FALSE;
   }
 
   if (!S_ISSOCK (stat_buff.st_mode))
   {
-    DEBUG ("%s is not a socket", socket->str);
+    DEBUG ("%s is not a socket", socket_path->str);
 
     g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-        "%s is not a socket", socket->str);
-    g_string_free (socket, TRUE);
+        "%s is not a socket", socket_path->str);
+    g_string_free (socket_path, TRUE);
     return FALSE;
   }
 
-  g_string_free (socket, TRUE);
+  g_string_free (socket_path, TRUE);
 
   if (access_control != TP_SOCKET_ACCESS_CONTROL_LOCALHOST)
   {
