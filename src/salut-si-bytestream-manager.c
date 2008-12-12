@@ -236,7 +236,7 @@ bytestream_state_changed (GibberBytestreamIface *bytestream,
     }
 }
 
-GibberBytestreamIface *
+static GibberBytestreamIface *
 choose_bytestream_method (SalutSiBytestreamManager *self,
                           GSList *stream_methods,
                           GibberXmppConnection *connection,
@@ -425,7 +425,7 @@ out:
   return;
 }
 
-void
+static void
 salut_si_bytestream_manager_dispose (GObject *object)
 {
   SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (object);
@@ -445,7 +445,7 @@ salut_si_bytestream_manager_dispose (GObject *object)
     G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->dispose (object);
 }
 
-void
+static void
 salut_si_bytestream_manager_finalize (GObject *object)
 {
   SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (object);
