@@ -426,8 +426,6 @@ gibber_xmpp_error_to_node (GibberXmppError error,
 
   if (NULL != errmsg)
     {
-      GibberXmppNode * node;
-
       node = gibber_xmpp_node_add_child (error_node, "text");
       gibber_xmpp_node_set_content (node, errmsg);
     }
