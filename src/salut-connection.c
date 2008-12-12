@@ -1306,10 +1306,11 @@ salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *handle_repo;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+  handle_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_CONTACT);
 
   if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
@@ -1361,10 +1362,11 @@ salut_connection_get_known_avatar_tokens (
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *handle_repo;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+  handle_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_CONTACT);
 
   if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
@@ -1488,10 +1490,11 @@ salut_connection_request_avatars (
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *handle_repo;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+  handle_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_CONTACT);
 
   if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
@@ -1572,10 +1575,11 @@ salut_connection_request_avatar (TpSvcConnectionInterfaceAvatars *iface,
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   SalutContact *contact;
   GError *err = NULL;
+  TpHandleRepoIface *handle_repo;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
+  handle_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_CONTACT);
 
   if (!tp_handle_is_valid (handle_repo, handle, &err))
