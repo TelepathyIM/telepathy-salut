@@ -695,10 +695,10 @@ gibber_r_multicast_sender_class_init (
 {
   GObjectClass *object_class =
       G_OBJECT_CLASS (gibber_r_multicast_sender_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (gibber_r_multicast_sender_class,
       sizeof (GibberRMulticastSenderPrivate));
-  GParamSpec *param_spec;
 
   object_class->dispose = gibber_r_multicast_sender_dispose;
   object_class->finalize = gibber_r_multicast_sender_finalize;
