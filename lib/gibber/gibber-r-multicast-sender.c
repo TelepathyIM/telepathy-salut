@@ -428,7 +428,7 @@ can_gc_sender (GibberRMulticastSenderGroup *group,
   return ret == NULL;
 }
 
-void
+static void
 gibber_r_multicast_sender_group_gc (GibberRMulticastSenderGroup *group)
 {
   GArray *array;
@@ -1666,7 +1666,7 @@ pop_packets (GibberRMulticastSender *sender)
   g_object_unref (sender);
 }
 
-void
+static void
 insert_packet (GibberRMulticastSender *sender, GibberRMulticastPacket *packet)
 {
   GibberRMulticastSenderPrivate *priv =
