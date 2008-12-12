@@ -349,18 +349,18 @@ gibber_fd_transport_read (GibberFdTransport *transport,
 {
   guint8  buf[BUFSIZE + 1];
   GIOStatus status;
-  gsize read_;
+  gsize bytes_read;
 
   status = g_io_channel_read_chars (channel, (gchar *)buf, BUFSIZE,
-    &read_, error);
+    &bytes_read, error);
 
   switch (status)
     {
       case G_IO_STATUS_NORMAL:
-        buf[read_] = '\0';
-        DEBUG ("Received %zd bytes", read_);
+        buf[bytes_read] = '\0';
+        DEBUG ("Received %zd bytes", bytes_read);
         gibber_transport_received_data (GIBBER_TRANSPORT (transport),
-            buf, read_);
+            buf, bytes_read);
         return GIBBER_FD_IO_RESULT_SUCCESS;
       case G_IO_STATUS_ERROR:
         return GIBBER_FD_IO_RESULT_ERROR;
