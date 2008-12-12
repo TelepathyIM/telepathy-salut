@@ -1,7 +1,7 @@
 BUILT_SOURCES = \
-    signals-marshal.list \
-    signals-marshal.h \
-    signals-marshal.c \
+    salut-signals-marshal.list \
+    salut-signals-marshal.h \
+    salut-signals-marshal.c \
     salut-presence-enumtypes.h \
     salut-presence-enumtypes.c
 
@@ -162,23 +162,25 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
-
-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) Makefile.am
+salut-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) Makefile.am
 	( cd $(srcdir) && \
 	sed -n -e 's/.*salut_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
-		$(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) ) \
-		| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
+	$(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) ) \
+	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
 	if cmp -s $@.tmp $@; then \
 		rm $@.tmp; \
+		touch $@; \
 	else \
 		mv $@.tmp $@; \
 	fi
 
-signals-marshal.h: signals-marshal.list
-	glib-genmarshal --header --prefix=salut_signals_marshal $< > $@
+%-signals-marshal.h: %-signals-marshal.list Makefile.am
+	glib-genmarshal --header --prefix=$(subst -,_,$*)_signals_marshal $< > $@
 
-signals-marshal.c: signals-marshal.list
-	glib-genmarshal --body --prefix=salut_signals_marshal $< > $@
+%-signals-marshal.c: %-signals-marshal.list Makefile.am
+	{ echo '#include "$*-signals-marshal.h"' && \
+	glib-genmarshal --body --prefix=$(subst -,_,$*)_signals_marshal $< ; \
+	} > $@
 
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in
