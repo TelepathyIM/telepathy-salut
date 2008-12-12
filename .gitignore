@@ -63,10 +63,6 @@ missing
 stamp-h1
 depcomp
 
-signals-marshal.c
-signals-marshal.h
-signals-marshal.list
-
 *-enumtypes.c
 *-enumtypes.h
 
@@ -103,9 +99,9 @@ lib/gibber/examples/test_tcp
 libtool
 ltmain.sh
 missing
-src/signals-marshal.c
-src/signals-marshal.h
-src/signals-marshal.list
+src/salut-signals-marshal.c
+src/salut-signals-marshal.h
+src/salut-signals-marshal.list
 src/*-enumtypes.c
 src/*-enumtypes.h
 src/telepathy-salut
