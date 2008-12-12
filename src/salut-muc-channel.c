@@ -672,7 +672,7 @@ salut_muc_channel_add_member (GObject *iface,
   if (handle == base_connection->self_handle)
     {
       /* adding yourself, let's join the muc */
-      TpIntSet *empty;
+      TpIntSet *empty_;
       TpIntSet *add;
       gboolean ret = TRUE;
 
@@ -683,7 +683,7 @@ salut_muc_channel_add_member (GObject *iface,
           return TRUE;
         }
 
-      empty = tp_intset_new ();
+      empty_ = tp_intset_new ();
       add = tp_intset_new ();
       tp_intset_add (add, handle);
       /* Add to members */
@@ -693,7 +693,8 @@ salut_muc_channel_add_member (GObject *iface,
           /* We are considered as remote-pending while the muc connection
            * is not connected */
           tp_group_mixin_change_members (G_OBJECT (self),
-              message, empty, empty, empty, add, base_connection->self_handle,
+              message, empty_, empty_, empty_, add,
+              base_connection->self_handle,
               TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
         }
       else
@@ -703,7 +704,7 @@ salut_muc_channel_add_member (GObject *iface,
           ret = FALSE;
         }
 
-      tp_intset_destroy (empty);
+      tp_intset_destroy (empty_);
       tp_intset_destroy (add);
       return ret;
     }
