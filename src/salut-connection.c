@@ -454,9 +454,9 @@ const char *salut_presence_status_txt_names[] = {
 
 static gboolean
 is_presence_status_available (GObject *obj,
-                              guint index)
+                              guint index_)
 {
-  return (index >= 0 && index < SALUT_PRESENCE_OFFLINE);
+  return (index_ >= 0 && index_ < SALUT_PRESENCE_OFFLINE);
 }
 
 static GHashTable *
