@@ -712,11 +712,11 @@ start_joining_phase (GibberRMulticastTransport *self)
    * failure packet */
   for (i = 0; i < priv->pending_failures->len; i++)
     {
-      GibberRMulticastSender *sender;
-      sender = gibber_r_multicast_causal_transport_get_sender (priv->transport,
+      GibberRMulticastSender *sender_;
+      sender_ = gibber_r_multicast_causal_transport_get_sender (priv->transport,
         g_array_index (priv->pending_failures, guint32, i));
 
-      gibber_r_multicast_sender_set_failed (sender);
+      gibber_r_multicast_sender_set_failed (sender_);
     }
 
   if (priv->pending_failures->len > 0)
@@ -1443,12 +1443,12 @@ check_join_agreement (GibberRMulticastTransport *self)
       switch (info->state)
         {
           case MEMBER_STATE_MEMBER_FAILING: {
-            GibberRMulticastSender *sender =
+            GibberRMulticastSender *sender_ =
               gibber_r_multicast_causal_transport_get_sender (priv->transport,
                 info->id);
             if (info->state == MEMBER_STATE_MEMBER_FAILING)
               {
-                gchar *name = g_strdup (sender->name);
+                gchar *name = g_strdup (sender_->name);
                 g_array_append_val (lost, name);
               }
           }
@@ -1477,17 +1477,17 @@ check_join_agreement (GibberRMulticastTransport *self)
       if (info->state != MEMBER_STATE_MEMBER &&
             info->state < MEMBER_STATE_FAILING)
         {
-          GibberRMulticastSender *sender;
+          GibberRMulticastSender *sender_;
 
-          sender = gibber_r_multicast_causal_transport_get_sender (
+          sender_ = gibber_r_multicast_causal_transport_get_sender (
               priv->transport, info->id);
 
-          DEBUG ("New member: %s (%x)", sender->name, info->id);
+          DEBUG ("New member: %s (%x)", sender_->name, info->id);
 
           info->state = MEMBER_STATE_MEMBER;
-          gibber_r_multicast_sender_set_data_start (sender,
+          gibber_r_multicast_sender_set_data_start (sender_,
               info->join_packet_id);
-          g_array_append_val (new, sender->name);
+          g_array_append_val (new, sender_->name);
         }
 
       if (info->state >= MEMBER_STATE_FAILING)
