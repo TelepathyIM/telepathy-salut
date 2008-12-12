@@ -33,7 +33,7 @@ typedef enum
   DEBUG_FT             = 1 << 18,
 } DebugFlags;
 
-void debug_set_flags_from_env ();
+void debug_set_flags_from_env (void);
 void debug_set_flags (DebugFlags flags);
 gboolean debug_flag_is_set (DebugFlags flag);
 void debug (DebugFlags flag, const gchar *format, ...)
