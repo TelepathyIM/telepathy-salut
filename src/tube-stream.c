@@ -287,7 +287,7 @@ transport_buffer_empty_cb (GibberTransport *transport,
     }
 
   /* Buffer is empty so we can unblock the buffer if it was blocked */
-  DEBUG ("tube buffer isn't empty. Block the bytestream");
+  DEBUG ("tube buffer is empty. Unblock the bytestream");
   gibber_bytestream_iface_block_read (bytestream, FALSE);
 }
 
