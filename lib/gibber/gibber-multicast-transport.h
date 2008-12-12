@@ -50,7 +50,7 @@ struct _GibberMulticastTransport {
     GibberTransport parent;
 };
 
-GibberMulticastTransport * gibber_multicast_transport_new ();
+GibberMulticastTransport * gibber_multicast_transport_new (void);
 
 gboolean gibber_multicast_transport_connect (
   GibberMulticastTransport *mtransport, const gchar *address,
