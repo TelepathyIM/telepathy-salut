@@ -415,7 +415,7 @@ salut_file_transfer_channel_constructor (GType type,
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
   GArray *unix_access;
-  TpSocketAccessControl access;
+  TpSocketAccessControl access_control;
 
   /* Parent constructor chain */
   obj = G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->
@@ -442,8 +442,8 @@ salut_file_transfer_channel_constructor (GType type,
   /* Socket_Address_Type_Unix */
   unix_access = g_array_sized_new (FALSE, FALSE, sizeof (TpSocketAccessControl),
       1);
-  access = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
-  g_array_append_val (unix_access, access);
+  access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
+  g_array_append_val (unix_access, access_control);
   g_hash_table_insert (self->priv->available_socket_types,
       GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX), unix_access);
 
@@ -1179,13 +1179,13 @@ check_address_and_access_control (SalutFileTransferChannel *self,
                                   const GValue *access_control_param,
                                   GError **error)
 {
-  GArray *access;
+  GArray *access_arr;
   guint i;
 
   /* Do we support this AddressType? */
-  access = g_hash_table_lookup (self->priv->available_socket_types,
+  access_arr = g_hash_table_lookup (self->priv->available_socket_types,
       GUINT_TO_POINTER (address_type));
-  if (access == NULL)
+  if (access_arr == NULL)
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "AddressType %u is not implemented", address_type);
@@ -1193,11 +1193,11 @@ check_address_and_access_control (SalutFileTransferChannel *self,
     }
 
   /* Do we support this AccessControl? */
-  for (i = 0; i < access->len; i++)
+  for (i = 0; i < access_arr->len; i++)
     {
       TpSocketAccessControl control;
 
-      control = g_array_index (access, TpSocketAccessControl, i);
+      control = g_array_index (access_arr, TpSocketAccessControl, i);
       if (control == access_control)
         return TRUE;
     }
@@ -1420,14 +1420,14 @@ static const gchar *
 get_local_unix_socket_path (SalutFileTransferChannel *self)
 {
   gchar *path = NULL;
-  gint32 random;
+  gint32 random_int;
   gchar *random_str;
   struct stat buf;
 
   while (TRUE)
     {
-      random = g_random_int_range (0, G_MAXINT32);
-      random_str = g_strdup_printf ("tp-ft-%i", random);
+      random_int = g_random_int_range (0, G_MAXINT32);
+      random_str = g_strdup_printf ("tp-ft-%i", random_int);
       path = g_build_filename (g_get_tmp_dir (), random_str, NULL);
       g_free (random_str);
 
