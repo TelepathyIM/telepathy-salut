@@ -39,6 +39,8 @@ test_string = "This string travels on a tube !"
 
 muc_name = "test-two-muc-stream-tubes"
 
+SERVER_WELCOME_MSG = "Welcome!"
+
 def test(q, bus, conn):
 
     # define a basic tcp server that echoes what the client says, but with
@@ -49,11 +51,19 @@ def test(q, bus, conn):
             e = Event('server-data-received', service = self, data = data)
             q.append(e)
 
+        def connectionMade(self):
+            e = Event('server-connected', transport = self.transport)
+            q.append(e)
+
+            # send welcome message to the client
+            self.transport.write(SERVER_WELCOME_MSG)
+
     # define a basic tcp client
     class ClientGreeter(Protocol):
         def dataReceived(self, data):
             e = Event('client-data-received', service = self, data = data)
             q.append(e)
+
     def client_connected_cb(p):
         e = Event('client-connected', transport = p.transport)
         q.append(e)
@@ -241,6 +251,9 @@ def test(q, bus, conn):
     client = ClientCreator(reactor, ClientGreeter)
     client.connectUNIX(unix_socket_adr).addCallback(client_connected_cb)
 
+    # server got the connection
+    q.expect('server-connected')
+
     e = q.expect('client-connected')
     client_transport = e.transport
 
@@ -248,6 +261,10 @@ def test(q, bus, conn):
     id, handle = e.args
     assert id == conn1_tube_id
     assert handle == contact2_handle_on_conn1
+
+    # client receives server's welcome message
+    e = q.expect('client-data-received')
+    assert e.data == SERVER_WELCOME_MSG
 
     client_transport.write(test_string)
 
