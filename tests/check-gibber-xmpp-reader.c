@@ -7,6 +7,8 @@
 
 #include <check.h>
 
+#include "check-gibber.h"
+
 typedef struct _ReceivedStanzaEvent ReceivedStanzaEvent;
 
 struct _ReceivedStanzaEvent {
