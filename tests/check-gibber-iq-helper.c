@@ -31,6 +31,7 @@
 
 #include <check.h>
 #include "check-helpers.h"
+#include "check-gibber.h"
 
 #include "test-transport.h"
 
