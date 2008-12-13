@@ -25,7 +25,7 @@
 static gboolean expecting_critical = FALSE;
 static gboolean received_critical  = FALSE;
 
-void
+static void
 check_helper_log_critical_func (const gchar *log_damain,
                                 GLogLevelFlags log_level,
                                 const gchar *message,
