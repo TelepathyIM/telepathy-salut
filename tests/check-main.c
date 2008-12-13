@@ -11,7 +11,7 @@
 
 #include "config.h"
 
-Suite *
+static Suite *
 make_gibber_suite (void)
 {
     Suite *s = suite_create ("Gibber");
@@ -35,7 +35,7 @@ make_gibber_suite (void)
     return s;
 }
 
-Suite *
+static Suite *
 make_salut_suite (void)
 {
     Suite *s = suite_create ("Salut");
