@@ -1,6 +1,8 @@
 #ifndef __CHECK_GIBBER_H__
 #define __CHECK_GIBBER_H__
 
+#include <check.h>
+
 TCase *make_gibber_xmpp_node_tcase (void);
 TCase *make_gibber_xmpp_reader_tcase (void);
 TCase *make_gibber_xmpp_connection_tcase (void);
