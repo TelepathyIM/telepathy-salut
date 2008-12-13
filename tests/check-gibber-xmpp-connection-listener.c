@@ -34,6 +34,7 @@
 #include <gibber/gibber-xmpp-connection-listener.h>
 
 #include <check.h>
+#include "check-gibber.h"
 
 gboolean got_connection;
 
