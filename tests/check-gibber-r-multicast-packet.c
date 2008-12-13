@@ -4,6 +4,7 @@
 #include <gibber/gibber-r-multicast-packet.h>
 
 #include <check.h>
+#include "check-gibber.h"
 
 #define COMPARE(x) G_STMT_START { \
   fail_unless (a->x == b->x); \
