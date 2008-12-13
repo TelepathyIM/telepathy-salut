@@ -6,6 +6,7 @@
 
 #include <check.h>
 #include "check-helpers.h"
+#include "check-gibber.h"
 
 START_TEST (test_instantiation)
 {
