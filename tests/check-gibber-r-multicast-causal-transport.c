@@ -24,6 +24,7 @@
 #include <gibber/gibber-r-multicast-causal-transport.h>
 #include <gibber/gibber-r-multicast-packet.h>
 #include "test-transport.h"
+#include "check-gibber.h"
 
 #include <check.h>
 
@@ -34,7 +35,7 @@
 #define TEST_DATA_SIZE 3300
 GMainLoop *loop;
 
-GibberRMulticastCausalTransport *
+static GibberRMulticastCausalTransport *
 create_rmulticast_transport (TestTransport **testtransport,
                              const gchar *name,
                              test_transport_send_hook test_send_hook,
@@ -61,7 +62,7 @@ create_rmulticast_transport (TestTransport **testtransport,
   return rmctransport;
 }
 
-void
+static void
 rmulticast_connect (GibberRMulticastCausalTransport *transport)
 {
 
@@ -87,7 +88,7 @@ struct {
                 { NULL,    0,        0, FALSE }
 };
 
-gboolean
+static gboolean
 depends_send_hook (GibberTransport *transport,
                    const guint8 *data,
                    gsize length,
@@ -250,7 +251,7 @@ END_TEST
 
 
 /* test fragmentation testing */
-gboolean
+static gboolean
 fragmentation_send_hook (GibberTransport *transport,
                          const guint8 *data,
                          gsize length,
@@ -345,7 +346,7 @@ END_TEST
 
 
 /* test unique id */
-gboolean
+static gboolean
 unique_id_send_hook (GibberTransport *transport,
                      const guint8 *data,
                      gsize length,
@@ -434,7 +435,7 @@ typedef struct {
   gint wait;
 } unique_id_conflict_test_t;
 
-gboolean
+static gboolean
 id_generation_conflict_send_hook (GibberTransport *transport,
                                   const guint8 *data,
                                   gsize length,
