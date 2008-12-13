@@ -15,7 +15,7 @@ GibberRMulticastTransport *rm;
 GibberRMulticastCausalTransport *rmc;
 gulong rmc_connected_handler = 0;
 
-void
+static void
 received_data (GibberTransport *transport, GibberBuffer *buffer,
     gpointer user_data)
 {
@@ -28,7 +28,7 @@ received_data (GibberTransport *transport, GibberBuffer *buffer,
   g_free (b64);
 }
 
-gboolean
+static gboolean
 send_hook (GibberTransport *transport, const guint8 *data, gsize length,
     GError **error, gpointer user_data)
 {
@@ -55,7 +55,7 @@ fail_node (gchar *name)
   _gibber_r_multicast_TEST_sender_fail (sender);
 }
 
-gboolean
+static gboolean
 got_input (GIOChannel *source, GIOCondition condition, gpointer user_data)
 {
   GIOStatus s;
@@ -114,7 +114,7 @@ out:
   return TRUE;
 }
 
-gboolean
+static gboolean
 got_error (GIOChannel *source, GIOCondition condition, gpointer user_data)
 {
   g_main_loop_quit (loop);
