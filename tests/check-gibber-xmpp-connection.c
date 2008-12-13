@@ -5,6 +5,7 @@
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-transport.h>
 #include "test-transport.h"
+#include "check-gibber.h"
 
 #include <check.h>
 
@@ -16,14 +17,14 @@ struct _FileChunker {
 };
 typedef struct _FileChunker FileChunker;
 
-void
+static void
 file_chunker_destroy (FileChunker *fc) {
   g_free (fc->contents);
   g_free (fc);
 }
 
 
-FileChunker *
+static FileChunker *
 file_chunker_new (const gchar *filename, gsize chunk_size) {
   FileChunker *fc;
   fc = g_new0 (FileChunker, 1);
@@ -36,7 +37,7 @@ file_chunker_new (const gchar *filename, gsize chunk_size) {
   return fc;
 }
 
-gboolean
+static gboolean
 file_chunker_get_chunk (FileChunker *fc,
                         gchar **chunk,
                         gsize *chunk_size) {
@@ -66,7 +67,7 @@ START_TEST (test_instantiation)
 }
 END_TEST
 
-void
+static void
 parse_error_cb (GibberXmppConnection *connection, gpointer user_data)
 {
   gboolean *parse_error_found = user_data;
@@ -82,6 +83,7 @@ START_TEST (test_simple_message)
   gboolean parse_error_found = FALSE;
   const gchar *srcdir;
   gchar *file;
+  FileChunker *fc;
 
   srcdir = g_getenv ("srcdir");
   if (srcdir == NULL)
@@ -93,7 +95,7 @@ START_TEST (test_simple_message)
       file = g_strdup_printf ("%s/inputs/simple-message.input", srcdir);
     }
 
-  FileChunker *fc = file_chunker_new (file, 10);
+  fc = file_chunker_new (file, 10);
   fail_if (fc == NULL);
 
   transport = test_transport_new (NULL, NULL);
