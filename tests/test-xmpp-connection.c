@@ -12,7 +12,7 @@ FILE *treefile = NULL;
 FILE *xmlfile = NULL;
 gboolean parsing_failed = FALSE;
 
-gboolean
+static gboolean
 send_hook (GibberTransport *transport, const guint8 *data,
     gsize length, GError **error, gpointer user_data)
 {
@@ -23,7 +23,7 @@ send_hook (GibberTransport *transport, const guint8 *data,
   return TRUE;
 }
 
-void
+static void
 parse_error (GibberXmppConnection *connection, gpointer user_data)
 {
   fprintf (treefile, "PARSE ERROR\n");
@@ -31,7 +31,7 @@ parse_error (GibberXmppConnection *connection, gpointer user_data)
   parsing_failed = TRUE;
 }
 
-void
+static void
 stream_opened (GibberXmppConnection *connection, const gchar *to,
     const gchar *from, const gchar *version, gpointer user_data)
 {
@@ -41,14 +41,14 @@ stream_opened (GibberXmppConnection *connection, const gchar *to,
   gibber_xmpp_connection_open (connection, to, from, version);
 }
 
-void
+static void
 stream_closed (GibberXmppConnection *connection, gpointer user_data)
 {
   fprintf (treefile, "STREAM CLOSED\n");
   gibber_xmpp_connection_close (connection);
 }
 
-gboolean
+static gboolean
 print_attribute (const gchar *key, const gchar *value, const gchar *ns,
     gpointer user_data)
 {
@@ -57,16 +57,16 @@ print_attribute (const gchar *key, const gchar *value, const gchar *ns,
   return TRUE;
 }
 
-void print_node (GibberXmppNode *node, gint ident);
+static void print_node (GibberXmppNode *node, gint ident);
 
-gboolean
+static gboolean
 print_child (GibberXmppNode *node, gpointer user_data)
 {
   print_node (node, GPOINTER_TO_INT(user_data));
   return TRUE;
 }
 
-void
+static void
 print_node (GibberXmppNode *node, gint ident)
 {
   fprintf (treefile, "%*s`-+-- Name: %s (ns: %s)\n", ident - 1, " ",
@@ -83,7 +83,7 @@ print_node (GibberXmppNode *node, gint ident)
   gibber_xmpp_node_each_child (node, print_child, GINT_TO_POINTER (ident + 2));
 }
 
-void
+static void
 received_stanza (GibberXmppConnection *connection, GibberXmppStanza *stanza,
     gpointer user_data)
 {
