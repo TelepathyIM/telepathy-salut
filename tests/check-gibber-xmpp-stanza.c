@@ -29,6 +29,7 @@
 #include <gibber/gibber-debug.h>
 
 #include <check.h>
+#include "check-gibber.h"
 
 START_TEST (test_build_with_html_message)
 {
