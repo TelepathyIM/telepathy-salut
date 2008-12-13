@@ -31,6 +31,7 @@
 
 #include <check.h>
 #include "check-helpers.h"
+#include "check-gibber.h"
 
 static GibberXmppStanza*
 create_sample_stanza (void)
@@ -244,10 +245,11 @@ END_TEST
 TCase *
 make_salut_gibber_xmpp_node_properties_tcase (void)
 {
+  TCase *tc = tcase_create ("XMPP Node");
+
   /* to initiate D-Bus types */
   dbus_g_bus_get (DBUS_BUS_STARTER, NULL);
 
-  TCase *tc = tcase_create ("XMPP Node");
   tcase_add_test (tc, test_extract_properties);
   tcase_add_test (tc, test_add_children_from_properties);
   return tc;
