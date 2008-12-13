@@ -5,6 +5,7 @@
 #include <gibber/gibber-r-multicast-sender.h>
 
 #include <check.h>
+#include "check-gibber.h"
 
 #define SENDER 4321
 #define SENDER_NAME "testsender"
@@ -35,7 +36,7 @@ recv_t receivers[] = {
     {     0,      NULL,   0 }
 };
 
-GibberRMulticastPacket *
+static GibberRMulticastPacket *
 generate_packet (guint32 serial)
 {
   GibberRMulticastPacket *p;
@@ -83,7 +84,7 @@ generate_packet (guint32 serial)
   return p;
 }
 
-void
+static void
 data_received_cb (GibberRMulticastSender *sender, guint8 stream_id,
     guint8 *data, gsize size, gpointer user_data)
 {
@@ -115,7 +116,7 @@ data_received_cb (GibberRMulticastSender *sender, guint8 stream_id,
 
 }
 
-void
+static void
 repair_request_cb (GibberRMulticastSender *sender, guint id, gpointer data)
 {
   GibberRMulticastPacket *p;
@@ -129,7 +130,7 @@ repair_request_cb (GibberRMulticastSender *sender, guint id, gpointer data)
   g_object_unref (p);
 }
 
-void
+static void
 repair_message_cb (GibberRMulticastSender *sender,
     GibberRMulticastPacket *packet, gpointer user_data)
 {
