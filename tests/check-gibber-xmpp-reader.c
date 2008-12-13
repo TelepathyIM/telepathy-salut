@@ -17,7 +17,8 @@ struct _ReceivedStanzaEvent {
 static void received_stanza_cb (GibberXmppReader *reader,
     GibberXmppStanza *stanza, gpointer user_data)
 {
-  GQueue *events_queue = (GQueue *)user_data;
+  GQueue *events_queue = (GQueue *) user_data;
+  ReceivedStanzaEvent *event;
 
   fail_if (reader == NULL);
   fail_if (stanza == NULL);
@@ -25,7 +26,6 @@ static void received_stanza_cb (GibberXmppReader *reader,
 
   g_object_ref (stanza);
 
-  ReceivedStanzaEvent *event;
   event = g_new (ReceivedStanzaEvent, 1);
   event->reader = reader;
   event->stanza = stanza;
