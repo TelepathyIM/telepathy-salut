@@ -6,6 +6,7 @@
 #include <gibber/gibber-sasl-auth.h>
 
 #include <check.h>
+#include "check-gibber.h"
 
 typedef struct {
   gchar *description;
@@ -40,9 +41,9 @@ got_error (GQuark domain, int code, const gchar *message)
   g_main_loop_quit (mainloop);
 }
 
-gboolean
+static gboolean
 send_hook (GibberTransport *transport, const guint8 *data,
-   gsize length, GError **error, gpointer user_data)
+   gsize length, GError **err, gpointer user_data)
 {
   GibberTransport *target =
      (servertransport == transport) ? clienttransport : servertransport;
@@ -51,14 +52,14 @@ send_hook (GibberTransport *transport, const guint8 *data,
   return TRUE;
 }
 
-gchar *
+static gchar *
 return_str (GibberSaslAuth *auth, gpointer user_data)
 {
   return g_strdup (user_data);
 }
 
-void
-auth_success (GibberSaslAuth *sasl, gpointer user_data)
+static void
+auth_success (GibberSaslAuth *sasl_, gpointer user_data)
 {
   authenticated = TRUE;
   /* Reopen the connection */
@@ -66,8 +67,8 @@ auth_success (GibberSaslAuth *sasl, gpointer user_data)
   gibber_xmpp_connection_open (conn, servername, NULL, "1.0");
 }
 
-void
-auth_failed (GibberSaslAuth *sasl, GQuark domain,
+static void
+auth_failed (GibberSaslAuth *sasl_, GQuark domain,
     int code, gchar *message, gpointer user_data)
 {
   got_error (domain, code, message);
@@ -100,7 +101,7 @@ received_stanza (GibberXmppConnection *connection, GibberXmppStanza *stanza,
 {
   if (sasl == NULL)
     {
-      GError *error = NULL;
+      GError *err = NULL;
       sasl = gibber_sasl_auth_new ();
 
       g_signal_connect (sasl, "username-requested",
@@ -113,15 +114,15 @@ received_stanza (GibberXmppConnection *connection, GibberXmppStanza *stanza,
           G_CALLBACK (auth_failed), NULL);
 
       if (!gibber_sasl_auth_authenticate (sasl, servername, connection, stanza,
-          current_test->allow_plain, &error))
+          current_test->allow_plain, &err))
         {
-          got_error (error->domain, error->code, error->message);
-          g_error_free (error);
+          got_error (err->domain, err->code, err->message);
+          g_error_free (err);
         }
     }
 }
 
-void
+static void
 run_rest (test_t *test)
 {
   TestSaslAuthServer *server;
