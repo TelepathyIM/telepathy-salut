@@ -29,6 +29,7 @@
 #include <gibber/gibber-debug.h>
 
 #include <check.h>
+#include "check-gibber.h"
 
 static void
 test_xmpp_error_to_node_with_bad_request (void)
