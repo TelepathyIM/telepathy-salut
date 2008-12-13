@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "test-resolver.h"
+#include "check-gibber.h"
 
 #include <check.h>
 
