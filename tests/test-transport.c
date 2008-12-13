@@ -178,14 +178,14 @@ test_transport_disconnect (GibberTransport *transport)
 
 
 TestTransport *
-test_transport_new (test_transport_send_hook send, gpointer user_data)
+test_transport_new (test_transport_send_hook send_, gpointer user_data)
 {
   TestTransport *self;
   TestTransportPrivate *priv;
 
   self = g_object_new (TEST_TYPE_TRANSPORT, NULL);
   priv  = TEST_TRANSPORT_GET_PRIVATE (self);
-  priv->send = send;
+  priv->send = send_;
   priv->user_data = user_data;
 
   gibber_transport_set_state (GIBBER_TRANSPORT(self),
