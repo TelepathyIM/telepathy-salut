@@ -1360,7 +1360,7 @@ salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context)
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data)
 {
-  TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
+  TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_implement_##x (\
     klass, salut_muc_channel_##x)
@@ -1425,7 +1425,7 @@ salut_muc_channel_send (TpSvcChannelTypeText *channel,
 static void
 text_iface_init (gpointer g_iface, gpointer iface_data)
 {
-  TpSvcChannelTypeTextClass *klass = (TpSvcChannelTypeTextClass *)g_iface;
+  TpSvcChannelTypeTextClass *klass = (TpSvcChannelTypeTextClass *) g_iface;
 
   tp_text_mixin_iface_init (g_iface, iface_data);
 #define IMPLEMENT(x) tp_svc_channel_type_text_implement_##x (\
