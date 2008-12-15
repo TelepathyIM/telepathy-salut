@@ -49,16 +49,6 @@ G_DEFINE_TYPE_WITH_CODE (GibberBytestreamIBB, gibber_bytestream_ibb,
     G_IMPLEMENT_INTERFACE (GIBBER_TYPE_BYTESTREAM_IFACE,
       bytestream_iface_init));
 
-/* signals */
-enum
-{
-  DATA_RECEIVED,
-  STATE_CHANGED,
-  LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
-
 /* properties */
 enum
 {
@@ -145,7 +135,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
 
   decoded = g_base64_decode (data->content, &len);
   str = g_string_new_len ((const gchar *) decoded, len);
-  g_signal_emit (G_OBJECT (self), signals[DATA_RECEIVED], 0, from, str);
+  g_signal_emit_by_name (G_OBJECT (self), "data-received", from, str);
 
   g_string_free (str, TRUE);
   g_free (decoded);
@@ -258,7 +248,7 @@ gibber_bytestream_ibb_set_property (GObject *object,
         if (priv->state != g_value_get_uint (value))
             {
               priv->state = g_value_get_uint (value);
-              g_signal_emit (object, signals[STATE_CHANGED], 0, priv->state);
+              g_signal_emit_by_name (object, "state-changed", priv->state);
             }
         break;
       default:
@@ -336,24 +326,6 @@ gibber_bytestream_ibb_class_init (
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
       param_spec);
-
-  signals[DATA_RECEIVED] =
-    g_signal_new ("data-received",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_ibb_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  _gibber_signals_marshal_VOID__STRING_POINTER,
-                  G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
-
-  signals[STATE_CHANGED] =
-    g_signal_new ("state-changed",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_ibb_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__UINT,
-                  G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
 /*
