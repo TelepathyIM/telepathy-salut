@@ -397,7 +397,7 @@ received_data (GibberTransport *transport, GibberBuffer *buffer,
 {
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
   GibberRMulticastCausalBuffer *cbuffer =
-    (GibberRMulticastCausalBuffer *)buffer;
+    (GibberRMulticastCausalBuffer *) buffer;
   MemberState state;
 
   state = member_get_state (self, cbuffer->sender_id);
@@ -443,7 +443,7 @@ new_member (GibberRMulticastTransport *self, guint32 id)
 static void
 free_member_info (gpointer data)
 {
-  MemberInfo *info = (MemberInfo *)data;
+  MemberInfo *info = (MemberInfo *) data;
 
   if (info->fail_timeout != 0)
     g_source_remove (info->fail_timeout);
@@ -536,7 +536,7 @@ member_list_to_str (GibberRMulticastTransport *self) {
 
 static void
 add_to_join (gpointer key, gpointer value, gpointer user_data) {
-  MemberInfo *info = (MemberInfo *)value;
+  MemberInfo *info = (MemberInfo *) value;
   GibberRMulticastTransport *self = GIBBER_R_MULTICAST_TRANSPORT (user_data);
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
@@ -789,7 +789,7 @@ guint32_array_remove (GArray *array, guint32 id)
 static void
 add_to_senders (gpointer key, gpointer value, gpointer user_data) {
   struct HTData *data = (struct HTData *)user_data;
-  MemberInfo *info = (MemberInfo *)value;
+  MemberInfo *info = (MemberInfo *) value;
 
   if (info->state == MEMBER_STATE_UNKNOWN) {
     info->state = MEMBER_STATE_ATTEMPT_JOIN_STARTED;
@@ -1093,8 +1093,8 @@ static gboolean
 find_unfailed_member (gpointer key, gpointer value, gpointer user_data)
 {
   guint i;
-  guint32 *id = (guint32 *)user_data;
-  MemberInfo *info = (MemberInfo *)value;
+  guint32 *id = (guint32 *) user_data;
+  MemberInfo *info = (MemberInfo *) value;
 
   if (info->state < MEMBER_STATE_ATTEMPT_JOIN_DONE ||
       info->state > MEMBER_STATE_MEMBER)
@@ -1114,8 +1114,8 @@ find_unfailed_member (gpointer key, gpointer value, gpointer user_data)
 static void
 remove_failure (gpointer key, gpointer value, gpointer user_data)
 {
-  guint32 *id = (guint32 *)user_data;
-  MemberInfo *info = (MemberInfo *)value;
+  guint32 *id = (guint32 *) user_data;
+  MemberInfo *info = (MemberInfo *) value;
 
   guint32_array_remove (info->failures, *id);
 }
@@ -1123,8 +1123,8 @@ remove_failure (gpointer key, gpointer value, gpointer user_data)
 static void
 collect_failed_members (gpointer key, gpointer value, gpointer user_data)
 {
-  MemberInfo *info = (MemberInfo *)value;
-  GArray *array = (GArray *)user_data;
+  MemberInfo *info = (MemberInfo *) value;
+  GArray *array = (GArray *) user_data;
 
   if (info->state >= MEMBER_STATE_FAILING &&
       info->state < MEMBER_STATE_INSTANT_FAILURE)
@@ -1207,7 +1207,7 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
 static gboolean
 fail_member_timeout_cb (gpointer user_data)
 {
-  MemberInfo *info = (MemberInfo *)user_data;
+  MemberInfo *info = (MemberInfo *) user_data;
   GibberRMulticastTransport *self = info->transport;
   GibberRMulticastTransportPrivate *priv =
       GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE(self);
