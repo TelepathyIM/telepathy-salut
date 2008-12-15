@@ -81,7 +81,7 @@ struct _SalutAvahiDiscoveryClientPrivate
 
 #define SALUT_AVAHI_DISCOVERY_CLIENT_GET_PRIVATE(obj) \
     ((SalutAvahiDiscoveryClientPrivate *) \
-      ((SalutAvahiDiscoveryClient *)obj)->priv)
+      ((SalutAvahiDiscoveryClient *) obj)->priv)
 
 static void
 salut_avahi_discovery_client_init (SalutAvahiDiscoveryClient *self)
