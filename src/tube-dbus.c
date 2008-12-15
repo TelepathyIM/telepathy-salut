@@ -130,7 +130,7 @@ struct _SalutTubeDBusPrivate
 };
 
 #define SALUT_TUBE_DBUS_GET_PRIVATE(obj) \
-    ((SalutTubeDBusPrivate *) ((SalutTubeDBus *)obj)->priv)
+    ((SalutTubeDBusPrivate *) ((SalutTubeDBus *) obj)->priv)
 
 static void data_received_cb (GibberBytestreamIface *bytestream,
     const gchar *from, GString *data, gpointer user_data);
