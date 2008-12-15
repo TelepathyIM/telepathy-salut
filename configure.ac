@@ -75,6 +75,8 @@ AC_ARG_ENABLE(coding-style-checks,
     [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=yes])
     ])
 
+AC_SUBST([ENABLE_CODING_STYLE_CHECKS])
+
 dnl Check for code generation tools
 XSLTPROC=
 AC_CHECK_PROGS([XSLTPROC], [xsltproc])
