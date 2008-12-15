@@ -65,7 +65,7 @@ struct _SalutAvahiMucManagerPrivate
 };
 
 #define SALUT_AVAHI_MUC_MANAGER_GET_PRIVATE(obj) \
-    ((SalutAvahiMucManagerPrivate *) ((SalutAvahiMucManager *)obj)->priv)
+    ((SalutAvahiMucManagerPrivate *) ((SalutAvahiMucManager *) obj)->priv)
 
 static void
 salut_avahi_muc_manager_init (SalutAvahiMucManager *self)
