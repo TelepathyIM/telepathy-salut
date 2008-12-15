@@ -56,7 +56,7 @@ struct _SalutDummyDiscoveryClientPrivate
 
 #define SALUT_DUMMY_DISCOVERY_CLIENT_GET_PRIVATE(obj) \
     ((SalutDummyDiscoveryClientPrivate *) \
-      ((SalutDummyDiscoveryClient *)obj)->priv)
+      ((SalutDummyDiscoveryClient *) obj)->priv)
 
 static void
 salut_dummy_discovery_client_init (SalutDummyDiscoveryClient *self)
