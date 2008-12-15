@@ -411,7 +411,7 @@ salut_contact_avatar_request_flush (SalutContact *contact,
   priv->avatar_requests = NULL;
 
   for (list = liststart; list != NULL; list = g_list_next (list)) {
-    request = (AvatarRequest *)list->data;
+    request = (AvatarRequest *) list->data;
     request->callback (contact, data, size, request->user_data);
     g_slice_free (AvatarRequest, request);
   }
