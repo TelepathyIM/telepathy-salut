@@ -58,7 +58,7 @@ struct _SalutAvahiSelfPrivate
 };
 
 #define SALUT_AVAHI_SELF_GET_PRIVATE(obj) \
-    ((SalutAvahiSelfPrivate *) ((SalutAvahiSelf *)obj)->priv)
+    ((SalutAvahiSelfPrivate *) ((SalutAvahiSelf *) obj)->priv)
 
 
 static void

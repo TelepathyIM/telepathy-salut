@@ -107,7 +107,7 @@ START_TEST (test_simple_message)
   while (!parse_error_found &&
       file_chunker_get_chunk (fc, &chunk, &chunk_length))
     {
-      test_transport_write (transport, (guint8*)chunk, chunk_length);
+      test_transport_write (transport, (guint8 *) chunk, chunk_length);
     }
 
   fail_if (parse_error_found);

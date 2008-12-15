@@ -666,9 +666,9 @@ static void
 _find_by_address (gpointer key, gpointer value, gpointer user_data)
 {
   struct sockaddr *address =
-    (struct sockaddr *)((gpointer *)user_data)[0];
-  GList **list = (GList **)((gpointer *)user_data)[1];
-  guint size = GPOINTER_TO_UINT (((gpointer *)user_data)[2]);
+    (struct sockaddr *)((gpointer *) user_data)[0];
+  GList **list = (GList **)((gpointer *) user_data)[1];
+  guint size = GPOINTER_TO_UINT (((gpointer *) user_data)[2]);
   SalutContact *contact = SALUT_CONTACT (value);
 
   if (salut_contact_has_address (contact, address, size)) {

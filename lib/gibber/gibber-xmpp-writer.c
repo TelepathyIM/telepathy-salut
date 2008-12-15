@@ -143,7 +143,7 @@ gibber_xmpp_writer_stream_open (GibberXmppWriter *writer,
     {
       xmlTextWriterWriteString (priv->xmlwriter, (xmlChar *)"\n  to=\"");
       xmlTextWriterFlush (priv->xmlwriter);
-      xmlAttrSerializeTxtContent (priv->buffer, NULL, NULL, (xmlChar *)to);
+      xmlAttrSerializeTxtContent (priv->buffer, NULL, NULL, (xmlChar *) to);
       xmlTextWriterWriteString (priv->xmlwriter, (xmlChar *)"\"");
     }
 
@@ -151,7 +151,7 @@ gibber_xmpp_writer_stream_open (GibberXmppWriter *writer,
     {
       xmlTextWriterWriteString (priv->xmlwriter, (xmlChar *)"\n  from=\"");
       xmlTextWriterFlush (priv->xmlwriter);
-      xmlAttrSerializeTxtContent (priv->buffer, NULL, NULL, (xmlChar *)from);
+      xmlAttrSerializeTxtContent (priv->buffer, NULL, NULL, (xmlChar *) from);
       xmlTextWriterWriteString (priv->xmlwriter, (xmlChar *)"\"");
     }
 
@@ -160,7 +160,7 @@ gibber_xmpp_writer_stream_open (GibberXmppWriter *writer,
       xmlTextWriterWriteString (priv->xmlwriter, (xmlChar *)"\n  version=\"");
       xmlTextWriterFlush (priv->xmlwriter);
       xmlAttrSerializeTxtContent (priv->buffer, NULL,
-        NULL, (xmlChar *)version);
+        NULL, (xmlChar *) version);
       xmlTextWriterWriteString (priv->xmlwriter, (xmlChar *)"\"");
     }
 
@@ -184,7 +184,7 @@ gibber_xmpp_writer_stream_close (GibberXmppWriter *writer,
   static const guint8 *close = (const guint8 *)"</stream:stream>\n";
 
   *data = close;
-  *length = strlen ((gchar *)close);
+  *length = strlen ((gchar *) close);
 
   DEBUG ("Writing xml: %.*s", (int)*length, *data);
 }

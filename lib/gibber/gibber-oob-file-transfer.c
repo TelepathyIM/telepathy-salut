@@ -611,28 +611,28 @@ http_server_cb (SoupServer *server,
       array = g_byte_array_sized_new (38);
       /* magic number */
       uint32 = htonl (0x51600);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
       /* version */
       uint32 = htonl (0x20000);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
       /* filler */
       uint32 = 0;
-      g_byte_array_append (array, (guint8*) &uint32, 4);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
       /* nb entry */
       uint16 = htons (1);
-      g_byte_array_append (array, (guint8*) &uint16, 2);
+      g_byte_array_append (array, (guint8 *) &uint16, 2);
        /* data fork */
       uint32 = htonl (1);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
        /* data fork offset is the length of this header */
       uint32 = htonl (38);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
        /* data fork size is the size of the file */
       uint32 = htonl (size);
-      g_byte_array_append (array, (guint8*) &uint32, 4);
+      g_byte_array_append (array, (guint8 *) &uint32, 4);
 
       soup_message_headers_append (msg->response_headers, "Content-encoding",
           "AppleSingle");

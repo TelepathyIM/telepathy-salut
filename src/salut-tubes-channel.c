@@ -164,7 +164,7 @@ struct _SalutTubesChannelPrivate
 };
 
 #define SALUT_TUBES_CHANNEL_GET_PRIVATE(obj) \
-  ((SalutTubesChannelPrivate *) ((SalutTubesChannel *)obj)->priv)
+  ((SalutTubesChannelPrivate *) ((SalutTubesChannel *) obj)->priv)
 
 static gboolean update_tubes_info (SalutTubesChannel *self);
 static void muc_connection_lost_senders_cb (GibberMucConnection *conn,
@@ -1436,7 +1436,7 @@ static gboolean
 update_tubes_info (SalutTubesChannel *self)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  TpBaseConnection *conn = (TpBaseConnection*) priv->conn;
+  TpBaseConnection *conn = (TpBaseConnection *) priv->conn;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
       conn, TP_HANDLE_TYPE_ROOM);
   GibberXmppStanza *msg;
@@ -1508,7 +1508,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  base = (TpBaseConnection*) priv->conn;
+  base = (TpBaseConnection *) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
     && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,
@@ -1872,7 +1872,7 @@ send_channel_iq_tube (gpointer key,
       g_assert (port > 0);
 
       contact_repo = tp_base_connection_get_handles (
-         (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+         (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
       jid_to = tp_handle_inspect (contact_repo, priv->handle);
@@ -1975,7 +1975,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   GError *error = NULL;
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  base = (TpBaseConnection*) priv->conn;
+  base = (TpBaseConnection *) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
     && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,

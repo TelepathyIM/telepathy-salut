@@ -86,7 +86,7 @@ struct _SalutRoomlistChannelPrivate
 };
 
 #define SALUT_ROOMLIST_CHANNEL_GET_PRIVATE(obj) \
-    ((SalutRoomlistChannelPrivate *) ((SalutRoomlistChannel *)obj)->priv)
+    ((SalutRoomlistChannelPrivate *) ((SalutRoomlistChannel *) obj)->priv)
 
 static void
 salut_roomlist_channel_init (SalutRoomlistChannel *self)
@@ -402,7 +402,7 @@ salut_roomlist_channel_dispose (GObject *object)
   if (!priv->closed)
     {
       priv->closed = TRUE;
-      tp_svc_channel_emit_closed ((TpSvcChannel *)object);
+      tp_svc_channel_emit_closed ((TpSvcChannel *) object);
     }
 
   if (G_OBJECT_CLASS (salut_roomlist_channel_parent_class)->dispose)
@@ -663,7 +663,7 @@ static void
 channel_iface_init (gpointer g_iface,
                     gpointer iface_data)
 {
-  TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
+  TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_implement_##x (\
     klass, salut_roomlist_channel_##x)
@@ -679,7 +679,7 @@ roomlist_iface_init (gpointer g_iface,
                      gpointer iface_data)
 {
   TpSvcChannelTypeRoomListClass *klass =
-    (TpSvcChannelTypeRoomListClass *)g_iface;
+    (TpSvcChannelTypeRoomListClass *) g_iface;
 
 #define IMPLEMENT(x) tp_svc_channel_type_room_list_implement_##x (\
     klass, salut_roomlist_channel_##x)

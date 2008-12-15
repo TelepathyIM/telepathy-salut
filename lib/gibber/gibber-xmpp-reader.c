@@ -252,8 +252,8 @@ _start_element_ns (void *user_data, const xmlChar *localname,
 
   if (priv->stream_mode && G_UNLIKELY (priv->depth == 0))
     {
-      if (strcmp ("stream", (gchar *)localname)
-          || strcmp (XMPP_STREAM_NAMESPACE, (gchar *)uri))
+      if (strcmp ("stream", (gchar *) localname)
+          || strcmp (XMPP_STREAM_NAMESPACE, (gchar *) uri))
         {
           priv->error = TRUE;
           return;
@@ -262,24 +262,24 @@ _start_element_ns (void *user_data, const xmlChar *localname,
 
       for (i = 0; i < nb_attributes * 5; i+=5)
         {
-          if (!strcmp ((gchar *)attributes[i], "to"))
+          if (!strcmp ((gchar *) attributes[i], "to"))
             {
               g_free (priv->to);
-              priv->to = g_strndup ((gchar *)attributes[i+3],
+              priv->to = g_strndup ((gchar *) attributes[i+3],
                            (gsize) (attributes[i+4] - attributes[i+3]));
             }
 
-          if (!strcmp ((gchar *)attributes[i], "from"))
+          if (!strcmp ((gchar *) attributes[i], "from"))
             {
               g_free (priv->from);
-              priv->from = g_strndup ((gchar *)attributes[i+3],
+              priv->from = g_strndup ((gchar *) attributes[i+3],
                          (gsize) (attributes[i+4] - attributes[i+3]));
             }
 
-          if (!strcmp ((gchar *)attributes[i], "version"))
+          if (!strcmp ((gchar *) attributes[i], "version"))
             {
               g_free (priv->version);
-              priv->version = g_strndup ((gchar *)attributes[i+3],
+              priv->version = g_strndup ((gchar *) attributes[i+3],
                   (gsize) (attributes[i+4] - attributes[i+3]));
             }
         }
@@ -289,32 +289,32 @@ _start_element_ns (void *user_data, const xmlChar *localname,
 
   if (priv->stanza == NULL)
     {
-      priv->stanza = gibber_xmpp_stanza_new ((gchar *)localname);
+      priv->stanza = gibber_xmpp_stanza_new ((gchar *) localname);
       priv->node = priv->stanza->node;
     }
   else
     {
       g_queue_push_tail (priv->nodes, priv->node);
-      priv->node = gibber_xmpp_node_add_child (priv->node, (gchar *)localname);
+      priv->node = gibber_xmpp_node_add_child (priv->node, (gchar *) localname);
     }
-  gibber_xmpp_node_set_ns (priv->node, (gchar *)uri);
+  gibber_xmpp_node_set_ns (priv->node, (gchar *) uri);
 
   for (i = 0; i < nb_attributes * 5; i+=5)
     {
       /* Node is localname, prefix, uri, valuestart, valueend */
-      if (attributes[i+1] != NULL && !strcmp ((gchar *)attributes[i+1], "xml")
-          && !strcmp ((gchar *)attributes[i], "lang"))
+      if (attributes[i+1] != NULL && !strcmp ((gchar *) attributes[i+1], "xml")
+          && !strcmp ((gchar *) attributes[i], "lang"))
         {
           gibber_xmpp_node_set_language_n (priv->node,
-              (gchar *)attributes[i+3],
+              (gchar *) attributes[i+3],
               (gsize) (attributes[i+4] - attributes[i+3]));
         }
       else
         {
           gibber_xmpp_node_set_attribute_n_ns (priv->node,
-              (gchar *)attributes[i], (gchar *)attributes[i+3],
+              (gchar *) attributes[i], (gchar *) attributes[i+3],
               (gsize)(attributes[i+4] - attributes[i+3]),
-              (gchar *)attributes[i+2]);
+              (gchar *) attributes[i+2]);
         }
      }
   priv->depth++;
@@ -375,7 +375,7 @@ _end_element_ns (void *user_data, const xmlChar *localname,
     }
   else
     {
-      priv->node = (GibberXmppNode *)g_queue_pop_tail (priv->nodes);
+      priv->node = (GibberXmppNode *) g_queue_pop_tail (priv->nodes);
     }
 }
 

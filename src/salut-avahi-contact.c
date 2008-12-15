@@ -88,7 +88,7 @@ struct _SalutAvahiContactPrivate
 };
 
 #define SALUT_AVAHI_CONTACT_GET_PRIVATE(obj) \
-    ((SalutAvahiContactPrivate *) ((SalutAvahiContact *)obj)->priv)
+    ((SalutAvahiContactPrivate *) ((SalutAvahiContact *) obj)->priv)
 
 static void
 salut_avahi_contact_init (SalutAvahiContact *self)

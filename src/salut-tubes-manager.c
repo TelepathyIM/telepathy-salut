@@ -701,7 +701,7 @@ salut_tubes_manager_iface_request (TpChannelFactoryIface *iface,
     return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
 
   /* Don't support opening a channel to our self handle */
-  if (handle == ((TpBaseConnection*) priv->conn)->self_handle)
+  if (handle == ((TpBaseConnection *) priv->conn)->self_handle)
     {
      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
          "Can't open a channel to your self handle");
@@ -715,14 +715,14 @@ salut_tubes_manager_iface_request (TpChannelFactoryIface *iface,
     {
       status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
       chan = new_tubes_channel (fac, handle,
-          ((TpBaseConnection*) priv->conn)->self_handle);
+          ((TpBaseConnection *) priv->conn)->self_handle);
       if (chan == NULL)
         {
           DEBUG ("Cannot create a tubes channel with handle %u",
               handle);
           return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
         }
-      tp_channel_factory_iface_emit_new_channel (fac, (TpChannelIface *)chan,
+      tp_channel_factory_iface_emit_new_channel (fac, (TpChannelIface *) chan,
           request);
     }
 

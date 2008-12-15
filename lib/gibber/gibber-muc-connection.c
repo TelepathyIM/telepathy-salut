@@ -650,7 +650,7 @@ _connection_received_data (GibberTransport *transport, GibberBuffer *buffer,
 {
   GibberMucConnection *self = GIBBER_MUC_CONNECTION (user_data);
   GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
-  GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *)buffer;
+  GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *) buffer;
   gboolean ret;
   GError *error = NULL;
 

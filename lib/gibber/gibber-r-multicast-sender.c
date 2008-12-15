@@ -210,7 +210,7 @@ static gboolean
 find_by_name (gpointer key, gpointer value, gpointer user_data)
 {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
-  const gchar *name = (gchar *)user_data;
+  const gchar *name = (gchar *) user_data;
 
   if (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_PENDING_REMOVAL)
     return FALSE;
@@ -297,7 +297,7 @@ static void
 create_sender_array (gpointer key, gpointer value, gpointer user_data)
 {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
-  GArray *array = (GArray *)user_data;
+  GArray *array = (GArray *) user_data;
   AckInfo info;
 
   if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
@@ -313,7 +313,7 @@ static void
 update_sender_acks (gpointer key, gpointer value, gpointer user_data)
 {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
-  GArray *array = (GArray *)user_data;
+  GArray *array = (GArray *) user_data;
   gint i;
 
   if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
@@ -632,7 +632,7 @@ typedef struct {
 static void
 packet_info_free (gpointer data)
 {
-  PacketInfo *p = (PacketInfo *)data;
+  PacketInfo *p = (PacketInfo *) data;
   if (p->packet != NULL) {
     g_object_unref (p->packet);
   }
@@ -1032,7 +1032,7 @@ name_discovered (GibberRMulticastSender *self, const gchar *name)
 static gboolean
 request_repair (gpointer data)
 {
-  PacketInfo *info = (PacketInfo *)data;
+  PacketInfo *info = (PacketInfo *) data;
 
   DEBUG_SENDER (info->sender, "Sending out repair request for 0x%x",
     info->packet_id);
@@ -1082,7 +1082,7 @@ schedule_repair (GibberRMulticastSender *sender, guint32 id)
 static gboolean
 do_repair (gpointer data)
 {
-  PacketInfo *info = (PacketInfo *)data;
+  PacketInfo *info = (PacketInfo *) data;
 
   g_assert (info != NULL && info->packet != NULL);
 
@@ -2059,7 +2059,7 @@ gibber_r_multicast_sender_get_ackinfo (GibberRMulticastSender *sender,
   GibberRMulticastSenderPrivate *priv =
     GIBBER_R_MULTICAST_SENDER_GET_PRIVATE (sender);
 
-  return (AckInfo *)g_hash_table_lookup (priv->acks, &sender_id);
+  return (AckInfo *) g_hash_table_lookup (priv->acks, &sender_id);
 }
 
 void
@@ -2120,7 +2120,7 @@ gibber_r_multicast_sender_release_data (GibberRMulticastSender *sender)
 static void
 stop_packet (gpointer key, gpointer value, gpointer user_data)
 {
-  PacketInfo *p = (PacketInfo *)value;
+  PacketInfo *p = (PacketInfo *) value;
 
   if (p->timeout != 0)
     {

@@ -110,7 +110,7 @@ struct _GibberBytestreamIBBPrivate
 };
 
 #define GIBBER_BYTESTREAM_OOB_GET_PRIVATE(obj) \
-    ((GibberBytestreamOOBPrivate *) (GibberBytestreamOOB *)obj->priv)
+    ((GibberBytestreamOOBPrivate *) (GibberBytestreamOOB *) obj->priv)
 
 static void gibber_bytestream_oob_do_close (GibberBytestreamOOB *self,
     GError *error, gboolean can_wait);

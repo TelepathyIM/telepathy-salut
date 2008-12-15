@@ -237,7 +237,7 @@ gibber_resolver_job_add (GibberResolver *resolver,
 
 static void free_job (gpointer data)
 {
-  GibberResolverJob *job = (GibberResolverJob *)data;
+  GibberResolverJob *job = (GibberResolverJob *) data;
 
   if (job->destroy)
     job->destroy (job->user_data);
@@ -283,7 +283,7 @@ gibber_resolver_addrinfo_list_free (GList *addrinfo_list)
 
   for (t = addrinfo_list ; t != NULL; t = g_list_delete_link (t, t))
     {
-      a = (GibberResolverAddrInfo *)t->data;
+      a = (GibberResolverAddrInfo *) t->data;
       gibber_resolver_addrinfo_free (a);
     }
 }
@@ -557,7 +557,7 @@ sort_srv_list (GList *srv_list)
 
       /* Find the start entry with a non-zero weight */
       for (start = sorted ; start != NULL &&
-        ((GibberResolverSrvRecord *)start->data)->weight == 0;
+        ((GibberResolverSrvRecord *) start->data)->weight == 0;
         start = start->next)
         /* nothing */;
 
@@ -567,11 +567,11 @@ sort_srv_list (GList *srv_list)
       if (start != NULL)
         {
           cut_list (start);
-          priority = ((GibberResolverSrvRecord *)start->data)->priority;
+          priority = ((GibberResolverSrvRecord *) start->data)->priority;
         }
 
       for (end = start ; end != NULL &&
-        ((GibberResolverSrvRecord *)end->data)->priority == priority;
+        ((GibberResolverSrvRecord *) end->data)->priority == priority;
         end = end->next)
         /* nothing */;
 
@@ -666,7 +666,7 @@ gibber_resolver_res_query_to_list (guchar *answer, int length)
   int len;
   const unsigned char *pos = answer + sizeof (HEADER);
   unsigned char *end = answer + length;
-  HEADER *head = (HEADER *)answer;
+  HEADER *head = (HEADER *) answer;
   char name[256];
 
   qdcount = ntohs (head->qdcount);

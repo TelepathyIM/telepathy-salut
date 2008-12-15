@@ -210,7 +210,7 @@ struct _SalutConnectionPrivate
 };
 
 #define SALUT_CONNECTION_GET_PRIVATE(o) \
-  ((SalutConnectionPrivate *)((SalutConnection *)o)->priv)
+  ((SalutConnectionPrivate *)((SalutConnection *) o)->priv)
 
 typedef struct _ChannelRequest ChannelRequest;
 
@@ -1281,8 +1281,8 @@ salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars *iface,
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  if (!salut_self_set_avatar (priv->self, (guint8 *)avatar->data,
-                             avatar->len, &error))
+  if (!salut_self_set_avatar (priv->self, (guint8 *) avatar->data,
+        avatar->len, &error))
     {
       dbus_g_method_return_error (context, error);
       g_error_free (error);
@@ -2807,7 +2807,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
 
 #endif
 
-static GPtrArray*
+static GPtrArray *
 salut_connection_create_channel_factories (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);

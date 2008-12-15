@@ -1407,7 +1407,7 @@ file_transfer_iface_init (gpointer g_iface,
                           gpointer iface_data)
 {
   SalutSvcChannelTypeFileTransferClass *klass =
-      (SalutSvcChannelTypeFileTransferClass *)g_iface;
+      (SalutSvcChannelTypeFileTransferClass *) g_iface;
 
 #define IMPLEMENT(x) salut_svc_channel_type_file_transfer_implement_##x (\
     klass, salut_file_transfer_channel_##x)

@@ -33,7 +33,7 @@
 #include "check-helpers.h"
 #include "check-salut.h"
 
-static GibberXmppStanza*
+static GibberXmppStanza *
 create_sample_stanza (void)
 {
   GibberXmppStanza *stanza;
