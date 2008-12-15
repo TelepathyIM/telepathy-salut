@@ -54,7 +54,7 @@ struct _SalutAvahiMucChannelPrivate
 };
 
 #define SALUT_AVAHI_MUC_CHANNEL_GET_PRIVATE(obj) \
-    ((SalutAvahiMucChannelPrivate *) ((SalutAvahiMucChannel *)obj)->priv)
+    ((SalutAvahiMucChannelPrivate *) ((SalutAvahiMucChannel *) obj)->priv)
 
 
 static void
