@@ -19,7 +19,7 @@ static void
 received_data (GibberTransport *transport, GibberBuffer *buffer,
     gpointer user_data)
 {
-  GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *)buffer;
+  GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *) buffer;
   gchar *b64;
 
   b64 = g_base64_encode ((guchar *) buffer->data, buffer->length);
@@ -34,7 +34,7 @@ send_hook (GibberTransport *transport, const guint8 *data, gsize length,
 {
   gchar *b64;
 
-  b64 = g_base64_encode ((guchar *)data, length);
+  b64 = g_base64_encode ((guchar *) data, length);
   printf ("SEND:%s\n", b64);
   fflush (stdout);
   g_free (b64);
