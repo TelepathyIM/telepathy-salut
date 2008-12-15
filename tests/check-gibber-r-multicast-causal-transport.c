@@ -443,7 +443,7 @@ id_generation_conflict_send_hook (GibberTransport *transport,
                                   gpointer user_data)
 {
   GibberRMulticastPacket *packet;
-  unique_id_conflict_test_t *test = (unique_id_conflict_test_t *)user_data;
+  unique_id_conflict_test_t *test = (unique_id_conflict_test_t *) user_data;
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
   fail_unless (packet != NULL);
