@@ -426,7 +426,7 @@ get_string (const guint8 *data, gsize length, gsize *offset)
   if (*offset + len > length)
     return NULL;
 
-  str = g_strndup ((gchar *)data + *offset, len);
+  str = g_strndup ((gchar *) data + *offset, len);
   (*offset) += len;
   return str;
 }
