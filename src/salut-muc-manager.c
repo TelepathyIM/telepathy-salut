@@ -89,7 +89,7 @@ struct _SalutMucManagerPrivate
 };
 
 #define SALUT_MUC_MANAGER_GET_PRIVATE(obj) \
-  ((SalutMucManagerPrivate *) ((SalutMucManager *)obj)->priv)
+  ((SalutMucManagerPrivate *) ((SalutMucManager *) obj)->priv)
 
 static void
 salut_muc_manager_init (SalutMucManager *obj)
@@ -984,7 +984,7 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-     (TpBaseConnection*) priv->connection, TP_HANDLE_TYPE_ROOM);
+     (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
   SalutTubesChannel *chan = NULL;
 
   g_return_if_fail (tp_handle_is_valid (room_repo, room_handle, NULL));
