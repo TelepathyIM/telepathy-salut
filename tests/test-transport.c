@@ -102,7 +102,7 @@ test_transport_dispose (GObject *object)
 static void
 free_array (gpointer data, gpointer user_data)
 {
-  g_array_free ((GArray *)data, TRUE);
+  g_array_free ((GArray *) data, TRUE);
 }
 
 void
@@ -126,10 +126,10 @@ send_data (gpointer data)
 
   g_assert (priv->send != NULL);
 
-  arr = (GArray *)g_queue_pop_head (priv->buffers);
+  arr = (GArray *) g_queue_pop_head (priv->buffers);
 
   priv->send (GIBBER_TRANSPORT (self),
-      (guint8 *)arr->data, arr->len, NULL, priv->user_data);
+      (guint8 *) arr->data, arr->len, NULL, priv->user_data);
 
   g_array_free (arr, TRUE);
 
