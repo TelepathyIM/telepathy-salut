@@ -158,8 +158,6 @@ struct _SalutTubeStreamPrivate
 
   /* listen for connections from local applications */
   GibberListener *local_listener;
-  GIOChannel *listen_io_channel;
-  guint listen_io_channel_source_id;
 
   /* listen for connections from the remote CM */
   GibberListener *contact_listener;
@@ -808,8 +806,6 @@ salut_tube_stream_init (SalutTubeStream *self)
       g_direct_equal, (GDestroyNotify) g_object_unref,
       (GDestroyNotify) g_object_unref);
 
-  priv->listen_io_channel = NULL;
-  priv->listen_io_channel_source_id = 0;
   priv->address_type = TP_SOCKET_ADDRESS_TYPE_UNIX;
   priv->address = NULL;
   priv->access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
@@ -892,19 +888,6 @@ salut_tube_stream_dispose (GObject *object)
     }
 
   tp_handle_unref (contact_repo, priv->initiator);
-
-  if (priv->listen_io_channel_source_id != 0)
-    {
-      g_source_destroy (g_main_context_find_source_by_id (NULL,
-            priv->listen_io_channel_source_id));
-      priv->listen_io_channel_source_id = 0;
-    }
-
-  if (priv->listen_io_channel)
-    {
-      g_io_channel_unref (priv->listen_io_channel);
-      priv->listen_io_channel = NULL;
-    }
 
   if (priv->local_listener != NULL)
     {
