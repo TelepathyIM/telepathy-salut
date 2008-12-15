@@ -18,6 +18,7 @@
  */
 
 #include "gibber-bytestream-iface.h"
+#include "gibber-signals-marshal.h"
 
 #include <glib.h>
 
@@ -128,6 +129,30 @@ gibber_bytestream_iface_base_init (gpointer klass)
           NULL,
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
+
+      g_signal_new ("data-received",
+          G_TYPE_FROM_INTERFACE (klass),
+          G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+          0,
+          NULL, NULL,
+          _gibber_signals_marshal_VOID__STRING_POINTER,
+          G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
+
+      g_signal_new ("state-changed",
+          G_TYPE_FROM_INTERFACE (klass),
+          G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+          0,
+          NULL, NULL,
+          g_cclosure_marshal_VOID__UINT,
+          G_TYPE_NONE, 1, G_TYPE_UINT);
+
+      g_signal_new ("write-blocked",
+          G_TYPE_FROM_INTERFACE (klass),
+          G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+          0,
+          NULL, NULL,
+          g_cclosure_marshal_VOID__BOOLEAN,
+          G_TYPE_NONE, 1, G_TYPE_BOOLEAN);
 
       initialized = TRUE;
     }
