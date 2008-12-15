@@ -216,7 +216,7 @@ _writeout (GibberFdTransport *self, const guint8 *data, gsize len)
   GibberFdTransportPrivate *priv = GIBBER_FD_TRANSPORT_GET_PRIVATE (self);
   gsize written = 0;
 
-  DEBUG ("Writing out %zd bytes", len);
+  DEBUG ("Writing out %" G_GSIZE_FORMAT " bytes", len);
   if (priv->output_buffer == NULL || priv->output_buffer->len == 0)
     {
       /* We've got nothing buffer yet so try to write out directly */
@@ -358,7 +358,7 @@ gibber_fd_transport_read (GibberFdTransport *transport,
     {
       case G_IO_STATUS_NORMAL:
         buf[bytes_read] = '\0';
-        DEBUG ("Received %zd bytes", bytes_read);
+        DEBUG ("Received %" G_GSIZE_FORMAT " bytes", bytes_read);
         gibber_transport_received_data (GIBBER_TRANSPORT (transport),
             buf, bytes_read);
         return GIBBER_FD_IO_RESULT_SUCCESS;

@@ -305,8 +305,8 @@ salut_contact_avatar_found (GaRecordBrowser *browser,
                             AvahiLookupFlags flags,
                             SalutAvahiContact *self)
 {
-  DEBUG ("Found avatar for %s for size %zd", SALUT_CONTACT (self)->name,
-      rdata_size);
+  DEBUG ("Found avatar for %s for size %" G_GSIZE_FORMAT,
+      SALUT_CONTACT (self)->name, rdata_size);
 
   if (rdata_size <= 0)
     salut_avahi_contact_avatar_request_flush (self, NULL, 0);

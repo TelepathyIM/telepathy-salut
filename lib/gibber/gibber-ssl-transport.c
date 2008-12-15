@@ -272,7 +272,7 @@ ssl_handle_read(GibberTransport *transport, GibberBuffer *buffer,
   GibberSSLTransportPrivate *priv = GIBBER_SSL_TRANSPORT_GET_PRIVATE(ssl);
   int ret;
 
-  DEBUG("Adding %zd bytes to read BIO", buffer->length);
+  DEBUG("Adding %" G_GSIZE_FORMAT " bytes to read BIO", buffer->length);
   ret = BIO_write(priv->rbio, buffer->data, buffer->length);
   g_assert(ret == buffer->length);
 
