@@ -495,6 +495,7 @@ start_stream_initiation (SalutTubeStream *self,
       g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           "can't find contact with handle %d", priv->initiator);
       g_object_unref (transport);
+      g_slice_free (struct _extra_bytestream_negotiate_cb_data, data);
     }
   else
     {
