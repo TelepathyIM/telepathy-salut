@@ -42,7 +42,7 @@ struct _SalutConnectionManagerPrivate
 };
 
 #define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) \
-    ((SalutConnectionManagerPrivate *) ((SalutConnectionManager *)obj)->priv)
+    ((SalutConnectionManagerPrivate *) ((SalutConnectionManager *) obj)->priv)
 
 
 typedef struct {
@@ -193,7 +193,7 @@ static void *salut_params_new (void) {
 
 static void salut_params_free (void *params)
 {
-  SalutParams *p = (SalutParams *)params;
+  SalutParams *p = (SalutParams *) params;
 
   g_free (p->nickname);
   g_free (p->first_name);
@@ -221,7 +221,7 @@ salut_connection_manager_new_connection (TpBaseConnectionManager *self,
   SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE
       (self);
   SalutConnection *conn;
-  SalutParams *params = (SalutParams *)parsed_params;
+  SalutParams *params = (SalutParams *) parsed_params;
 
   g_assert (!tp_strdiff (proto, "local-xmpp"));
 
