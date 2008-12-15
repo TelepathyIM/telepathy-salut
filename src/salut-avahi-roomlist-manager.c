@@ -69,7 +69,7 @@ struct _SalutAvahiRoomlistManagerPrivate
 
 #define SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE(obj) \
     ((SalutAvahiRoomlistManagerPrivate *) \
-    ((SalutAvahiRoomlistManager *)obj)->priv)
+    ((SalutAvahiRoomlistManager *) obj)->priv)
 
 static void
 room_resolver_removed (gpointer data)
