@@ -176,7 +176,7 @@ struct _SalutTubeStreamPrivate
 };
 
 #define SALUT_TUBE_STREAM_GET_PRIVATE(obj) \
-    ((SalutTubeStreamPrivate *) ((SalutTubeStream *)obj)->priv)
+    ((SalutTubeStreamPrivate *) ((SalutTubeStream *) obj)->priv)
 
 static void data_received_cb (GibberBytestreamIface *ibb, TpHandle sender,
     GString *data, gpointer user_data);
@@ -458,10 +458,10 @@ start_stream_initiation (SalutTubeStream *self,
   SalutContactManager *contact_mgr;
   SalutSiBytestreamManager *si_bytestream_mgr;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-      (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_ROOM);
+      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_ROOM);
 
   contact_repo = tp_base_connection_get_handles (
-     (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+     (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
   jid = tp_handle_inspect (contact_repo, priv->initiator);
 
@@ -1645,7 +1645,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
       GibberXmppStanza *stanza;
       const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+          (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
       gchar *tube_id_str;
       GError *error = NULL;
 
@@ -1731,7 +1731,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
       TpHandle contact;
       gchar *peer_id;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          (TpBaseConnection*) priv->conn, TP_HANDLE_TYPE_CONTACT);
+          (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
       if (priv->state == TP_TUBE_STATE_REMOTE_PENDING)
         {
