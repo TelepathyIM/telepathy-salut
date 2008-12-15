@@ -76,7 +76,7 @@ START_TEST (test_simple_message)
   fail_unless (g_file_get_contents (file, &data, &length, NULL));
   g_free (file);
 
-  valid = gibber_xmpp_reader_push (reader, (guint8 *)data, length, NULL);
+  valid = gibber_xmpp_reader_push (reader, (guint8 *) data, length, NULL);
   fail_unless (valid);
 
   fail_unless (g_queue_get_length (received_stanzas) == 2);
