@@ -48,7 +48,7 @@ struct _GibberIqHelperPrivate
 };
 
 #define GIBBER_IQ_HELPER_GET_PRIVATE(obj) \
-  ((GibberIqHelperPrivate *) ((GibberIqHelper *)obj)->priv)
+  ((GibberIqHelperPrivate *) ((GibberIqHelper *) obj)->priv)
 
 static void
 reply_handler_object_destroy_notify_cb (gpointer _data, GObject *object);
