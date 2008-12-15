@@ -684,7 +684,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
   if (olpc_key_part != NULL)
     {
       guint i = 0;
-      gchar *name = NULL;
+      gchar *olpc_key_part_name = NULL;
       GArray *olpc_key;
 
       /* FIXME: how big are OLPC keys anyway? */
@@ -696,10 +696,10 @@ contact_resolved_cb (GaServiceResolver *resolver,
           avahi_free (olpc_key_part);
 
           i++;
-          name = g_strdup_printf ("olpc-key-part%u", i);
-          olpc_key_part = _avahi_txt_get_keyval_with_size (txt, name,
-              &size);
-          g_free (name);
+          olpc_key_part_name = g_strdup_printf ("olpc-key-part%u", i);
+          olpc_key_part = _avahi_txt_get_keyval_with_size (txt,
+              olpc_key_part_name, &size);
+          g_free (olpc_key_part_name);
         }
       while (olpc_key_part != NULL);
 
