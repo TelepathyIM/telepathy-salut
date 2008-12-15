@@ -397,6 +397,7 @@ extra_bytestream_negotiate_cb (GibberBytestreamIface *bytestream,
       DEBUG ("initiator refused new bytestream");
 
       g_object_unref (data->transport);
+      g_slice_free (struct _extra_bytestream_negotiate_cb_data, data);
       return;
     }
 
