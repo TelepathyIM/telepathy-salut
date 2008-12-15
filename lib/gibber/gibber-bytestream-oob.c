@@ -56,17 +56,6 @@ G_DEFINE_TYPE_WITH_CODE (GibberBytestreamOOB, gibber_bytestream_oob,
     G_IMPLEMENT_INTERFACE (GIBBER_TYPE_BYTESTREAM_IFACE,
       bytestream_iface_init));
 
-/* signals */
-enum
-{
-  DATA_RECEIVED,
-  STATE_CHANGED,
-  WRITE_BLOCKED,
-  LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
-
 /* properties */
 enum
 {
@@ -149,7 +138,7 @@ transport_handler (GibberTransport *transport,
 
   buffer = g_string_new_len ((const gchar *) data->data, data->length);
 
-  g_signal_emit (G_OBJECT (self), signals[DATA_RECEIVED], 0, priv->peer_id,
+  g_signal_emit_by_name (G_OBJECT (self), "data-received", priv->peer_id,
       buffer);
 
   g_string_free (buffer, TRUE);
@@ -198,7 +187,7 @@ change_write_blocked_state (GibberBytestreamOOB *self,
     return;
 
   priv->write_blocked = blocked;
-  g_signal_emit (self, signals[WRITE_BLOCKED], 0, blocked);
+  g_signal_emit_by_name (self, "write-blocked", blocked);
 }
 
 static void
@@ -579,7 +568,7 @@ gibber_bytestream_oob_set_property (GObject *object,
         if (priv->state != g_value_get_uint (value))
             {
               priv->state = g_value_get_uint (value);
-              g_signal_emit (object, signals[STATE_CHANGED], 0, priv->state);
+              g_signal_emit_by_name (object, "state-changed", priv->state);
             }
         break;
       case PROP_HOST:
@@ -671,33 +660,6 @@ gibber_bytestream_oob_class_init (
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_HOST,
       param_spec);
-
-  signals[DATA_RECEIVED] =
-    g_signal_new ("data-received",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_oob_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  _gibber_signals_marshal_VOID__STRING_POINTER,
-                  G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
-
-  signals[STATE_CHANGED] =
-    g_signal_new ("state-changed",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_oob_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__UINT,
-                  G_TYPE_NONE, 1, G_TYPE_UINT);
-
-  signals[WRITE_BLOCKED] =
-    g_signal_new ("write-blocked",
-                  G_OBJECT_CLASS_TYPE (gibber_bytestream_oob_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  g_cclosure_marshal_VOID__BOOLEAN,
-                  G_TYPE_NONE, 1, G_TYPE_BOOLEAN);
 }
 
 /*
