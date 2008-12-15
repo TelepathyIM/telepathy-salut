@@ -77,7 +77,7 @@ generate_packet (guint32 serial)
     }
 
   payload = g_strdup_printf ("%010d\n", serial);
-  gibber_r_multicast_packet_add_payload (p, (guint8 *)payload,
+  gibber_r_multicast_packet_add_payload (p, (guint8 *) payload,
       strlen (payload));
 
   g_free (payload);
@@ -108,7 +108,7 @@ data_received_cb (GibberRMulticastSender *sender, guint8 stream_id,
 
   if (expected == serial_offset + NR_PACKETS
       || expected == serial_offset + NR_PACKETS + EXTRA_SEEN) {
-    g_main_loop_quit ((GMainLoop *)user_data);
+    g_main_loop_quit ((GMainLoop *) user_data);
   }
 
   g_strfreev (lines);
@@ -138,7 +138,7 @@ repair_message_cb (GibberRMulticastSender *sender,
   fail_unless (packet->type == PACKET_TYPE_DATA);
   fail_unless (packet->packet_id == REPAIR_PACKET + serial_offset);
 
-  g_main_loop_quit ((GMainLoop *)user_data);
+  g_main_loop_quit ((GMainLoop *) user_data);
 }
 
 static gboolean
@@ -280,13 +280,13 @@ h_find_sender (gpointer key, gpointer value, gpointer user_data)
 {
   GibberRMulticastSender *s = GIBBER_R_MULTICAST_SENDER (value);
 
-  return strcmp (s->name, (gchar *)user_data) == 0;
+  return strcmp (s->name, (gchar *) user_data) == 0;
 }
 
 static gboolean
 h_idle_next_step (gpointer user_data)
 {
-  h_data_t *d = (h_data_t *)user_data;
+  h_data_t *d = (h_data_t *) user_data;
   h_expect_t *e = &(d->expectation[d->test_step]);
   GibberRMulticastSender *s;
 
