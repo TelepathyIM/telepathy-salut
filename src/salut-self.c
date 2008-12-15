@@ -686,18 +686,18 @@ _set_olpc_activities_delete (gpointer key, gpointer value, gpointer user_data)
 {
   SalutOlpcActivity *activity = (SalutOlpcActivity *) value;
   struct _set_olpc_activities_ctx *data = user_data;
-  gboolean remove;
+  gboolean remove_activity;
 
   /* delete the activity service if it's not in data->room_to_act_id */
-  remove = (g_hash_table_lookup (data->room_to_act_id, key) == NULL);
+  remove_activity = (g_hash_table_lookup (data->room_to_act_id, key) == NULL);
 
-  if (remove)
+  if (remove_activity)
     {
       salut_olpc_activity_left (activity);
       salut_olpc_activity_revoke_invitations (activity);
     }
 
-  return remove;
+  return remove_activity;
 }
 
 gboolean
