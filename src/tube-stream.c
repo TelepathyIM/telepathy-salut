@@ -32,6 +32,7 @@
 
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <telepathy-glib/gtypes.h>
 
 #include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-bytestream-iface.h>
@@ -59,14 +60,6 @@ static void tube_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init));
-
-#define SOCKET_ADDRESS_IPV4_TYPE \
-    dbus_g_type_get_struct ("GValueArray", G_TYPE_STRING, G_TYPE_UINT, \
-        G_TYPE_INVALID)
-
-#define SOCKET_ADDRESS_IPV6_TYPE \
-    dbus_g_type_get_struct ("GValueArray", G_TYPE_STRING, G_TYPE_UINT, \
-        G_TYPE_INVALID)
 
 /* Linux glibc bits/socket.h suggests that struct sockaddr_storage is
  * not guaranteed to be big enough for AF_UNIX addresses */
@@ -751,9 +744,10 @@ tube_stream_open (SalutTubeStream *self,
           return FALSE;
         }
 
-      priv->address = tp_g_value_slice_new (SOCKET_ADDRESS_IPV4_TYPE);
+      priv->address = tp_g_value_slice_new (TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV4);
       g_value_take_boxed (priv->address,
-          dbus_g_type_specialized_construct (SOCKET_ADDRESS_IPV4_TYPE));
+          dbus_g_type_specialized_construct (
+            TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV4));
 
       dbus_g_type_struct_set (priv->address,
           0, "127.0.0.1",
@@ -773,9 +767,10 @@ tube_stream_open (SalutTubeStream *self,
           return FALSE;
         }
 
-      priv->address = tp_g_value_slice_new (SOCKET_ADDRESS_IPV6_TYPE);
+      priv->address = tp_g_value_slice_new (TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV6);
       g_value_take_boxed (priv->address,
-          dbus_g_type_specialized_construct (SOCKET_ADDRESS_IPV6_TYPE));
+          dbus_g_type_specialized_construct (
+            TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV6));
 
       dbus_g_type_struct_set (priv->address,
           0, "::1",
@@ -1834,7 +1829,7 @@ check_ip_params (TpSocketAddressType address_type,
   /* Check address type */
   if (address_type == TP_SOCKET_ADDRESS_TYPE_IPV4)
     {
-      if (G_VALUE_TYPE (address) != SOCKET_ADDRESS_IPV4_TYPE)
+      if (G_VALUE_TYPE (address) != TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV4)
         {
           g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "IPv4 socket address is supposed to be sq");
@@ -1843,7 +1838,7 @@ check_ip_params (TpSocketAddressType address_type,
     }
   else if (address_type == TP_SOCKET_ADDRESS_TYPE_IPV6)
     {
-      if (G_VALUE_TYPE (address) != SOCKET_ADDRESS_IPV6_TYPE)
+      if (G_VALUE_TYPE (address) != TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV6)
         {
           g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "IPv6 socket address is supposed to be sq");
