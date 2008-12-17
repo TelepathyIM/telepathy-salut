@@ -588,11 +588,14 @@ d_bus_names_changed_removed (SalutTubesChannel *self,
                              TpHandle contact)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  GPtrArray *added = g_ptr_array_new ();
-  GArray *removed = g_array_new (FALSE, FALSE, sizeof (guint));
+  GPtrArray *added;
+  GArray *removed;
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     return;
+
+  added = g_ptr_array_new ();
+  removed = g_array_new (FALSE, FALSE, sizeof (guint));
 
   g_array_append_val (removed, contact);
 
