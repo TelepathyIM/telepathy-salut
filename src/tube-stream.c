@@ -511,6 +511,12 @@ start_stream_initiation (SalutTubeStream *self,
       g_object_unref (contact);
     }
 
+  if (!result)
+    {
+      g_object_unref (data->transport);
+      g_slice_free (struct _extra_bytestream_negotiate_cb_data, data);
+    }
+
   g_object_unref (si_bytestream_mgr);
   g_object_unref (contact_mgr);
   g_object_unref (msg);
