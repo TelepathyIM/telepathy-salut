@@ -663,8 +663,6 @@ new_connection_to_socket (SalutTubeStream *self,
       gibber_tcp_transport_connect (GIBBER_TCP_TRANSPORT (transport), ip,
           port_str);
 
-      /* TODO: use priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 */
-
       g_free (ip);
       g_free (port_str);
     }
