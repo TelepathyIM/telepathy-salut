@@ -355,6 +355,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
 
     salut_tubes_channel_message_received (chan, service, tube_type,
         initiator_handle, parameters, tube_id, portnum, stanza);
+
+    g_hash_table_destroy (parameters);
   }
 }
 
