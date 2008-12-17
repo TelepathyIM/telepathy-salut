@@ -1043,7 +1043,9 @@ salut_tube_stream_set_property (GObject *object,
         priv->service = g_value_dup_string (value);
         break;
       case PROP_PARAMETERS:
-        priv->parameters = g_value_get_boxed (value);
+        if (priv->parameters != NULL)
+          g_hash_table_destroy (priv->parameters);
+        priv->parameters = g_value_dup_boxed (value);
         break;
       case PROP_ADDRESS_TYPE:
         g_assert (g_value_get_uint (value) == TP_SOCKET_ADDRESS_TYPE_UNIX ||
