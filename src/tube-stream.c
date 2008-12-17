@@ -508,6 +508,9 @@ start_stream_initiation (SalutTubeStream *self,
         data,
         error);
 
+      /* FIXME: data and one ref on data->transport are leaked if the tube is
+       * closed before we got the SI reply. */
+
       g_object_unref (contact);
     }
 
