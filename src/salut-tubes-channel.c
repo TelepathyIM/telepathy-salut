@@ -857,6 +857,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
+              g_hash_table_destroy (parameters);
             }
         }
       else
