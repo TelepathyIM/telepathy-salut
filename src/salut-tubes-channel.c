@@ -1306,23 +1306,6 @@ extract_tube_information (SalutTubesChannel *self,
 }
 
 static void
-copy_parameter (gpointer key,
-                gpointer value,
-                gpointer user_data)
-{
-  const gchar *prop = key;
-  GValue *gvalue = value;
-  GHashTable *parameters = user_data;
-  GValue *gvalue_copied;
-
-  gvalue_copied = g_slice_new0 (GValue);
-  g_value_init (gvalue_copied, G_VALUE_TYPE (gvalue));
-  g_value_copy (gvalue, gvalue_copied);
-
-  g_hash_table_insert (parameters, g_strdup (prop), gvalue_copied);
-}
-
-static void
 publish_tube_in_node (SalutTubesChannel *self,
                       GibberXmppNode *node,
                       SalutTubeIface *tube)
@@ -1503,7 +1486,6 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   TpBaseConnection *base;
   guint tube_id;
   SalutTubeIface *tube;
-  GHashTable *parameters_copied;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1521,14 +1503,10 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  parameters_copied = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-      (GDestroyNotify) tp_g_value_slice_free);
-  g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
-
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      service, parameters_copied, tube_id, 0, NULL);
+      service, parameters, tube_id, 0, NULL);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 }
@@ -1971,7 +1949,6 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   TpBaseConnection *base;
   guint tube_id;
   SalutTubeIface *tube;
-  GHashTable *parameters_copied;
   GError *error = NULL;
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
@@ -1996,14 +1973,10 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  parameters_copied = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-      (GDestroyNotify) tp_g_value_slice_free);
-  g_hash_table_foreach (parameters, copy_parameter, parameters_copied);
-
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
-      service, parameters_copied, tube_id, 0, NULL);
+      service, parameters, tube_id, 0, NULL);
 
   g_object_set (tube,
       "address-type", address_type,
