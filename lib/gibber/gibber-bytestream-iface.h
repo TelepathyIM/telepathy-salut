@@ -58,7 +58,7 @@ struct _GibberBytestreamIfaceClass {
   void (*close) (GibberBytestreamIface *bytestream, GError *error);
   void (*accept) (GibberBytestreamIface *bytestream,
       GibberBytestreamAugmentSiAcceptReply func, gpointer user_data);
-  void (*block_read) (GibberBytestreamIface *bytestream, gboolean block);
+  void (*block_reading) (GibberBytestreamIface *bytestream, gboolean block);
 };
 
 GType gibber_bytestream_iface_get_type (void);
@@ -86,7 +86,7 @@ void gibber_bytestream_iface_close (GibberBytestreamIface *bytestream,
 void gibber_bytestream_iface_accept (GibberBytestreamIface *bytestream,
     GibberBytestreamAugmentSiAcceptReply func, gpointer user_data);
 
-void gibber_bytestream_iface_block_read (GibberBytestreamIface *bytestream,
+void gibber_bytestream_iface_block_reading (GibberBytestreamIface *bytestream,
     gboolean block);
 
 G_END_DECLS
