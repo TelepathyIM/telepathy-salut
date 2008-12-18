@@ -42,8 +42,6 @@ GQuark gibber_fd_transport_error_quark (void);
 
 typedef enum
 {
-  GIBBER_FD_TRANSPORT_ERROR_INVAL,
-  GIBBER_FD_TRANSPORT_ERROR_IO,
   GIBBER_FD_TRANSPORT_ERROR_PIPE,
   GIBBER_FD_TRANSPORT_ERROR_FAILED,
 } GibberFdTransportError;
