@@ -64,7 +64,7 @@ def test(q, bus, conn):
     conn_caps_iface.SetSelfCapabilities([])
 
     e = q.expect('service-resolved', service = service)
-    check_caps(e.txt, ver='39YAP9DzkebC8Rmk5Sd3IsFCTO8=')
+    check_caps(e.txt, ver='6xL70ary1kvkYI5+Ilthr8ox28Y=')
 
 if __name__ == '__main__':
     exec_test(test)

@@ -254,7 +254,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
             caps_via_contacts_iface
 
     # send presence with 1 stream tube cap
-    txt_record['ver'] = 'njTWnNVMGeDjS8+4TkMuMX6Z/Ug='
+    txt_record['ver'] = 'f5oUAlH0fcR8btEo5K0P135QReo='
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -297,7 +297,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with 1 D-Bus tube cap
-    txt_record['ver'] = '8/mwj7yF0K23YT6GurBXI1X4hd4='
+    txt_record['ver'] = '4Ps2iaOc+lsFwfbasCdsBjLOQ5s='
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -340,7 +340,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    txt_record['ver'] = 'moS31cvk2kf9Zka4gb6ncj2VJCo='
+    txt_record['ver'] = 'ALCBfacl4M/FKWckV1OCHfj+lt0='
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -389,7 +389,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with 4 tube caps
-    txt_record['ver'] = '4uwiaJY110AjLEFSIeu4/mVJ8wc='
+    txt_record['ver'] = 'ObSHJf9W0fUDuSjmB6gmthptw+s='
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -451,7 +451,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    txt_record['ver'] = 'moS31cvk2kf9Zka4gb6ncj2VJCo='
+    txt_record['ver'] = 'ALCBfacl4M/FKWckV1OCHfj+lt0='
     announcer.update(txt_record)
 
     # Salut does not look up our capabilities because of the cache
