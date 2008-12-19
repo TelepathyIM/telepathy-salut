@@ -371,7 +371,7 @@ _caps_disco_cb (SalutDisco *disco,
 
   if (NULL == node)
     {
-      g_warning ("got disco response with NULL node, ignoring");
+      DEBUG ("got disco response with NULL node, ignoring");
       return;
     }
 
@@ -476,7 +476,7 @@ _caps_disco_cb (SalutDisco *disco,
       else
         {
           /* The received reply does not match the */
-          g_warning ("The announced verification string '%s' does not match "
+          DEBUG ("The announced verification string '%s' does not match "
               "our hash '%s'.", waiter_self->ver, computed_hash);
           salut_presence_cache_free_cache_entry (per_channel_manager_caps);
           per_channel_manager_caps = NULL;
