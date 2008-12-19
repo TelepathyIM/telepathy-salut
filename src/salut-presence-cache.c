@@ -35,7 +35,7 @@
 #include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
 #include "salut-disco.h"
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 
 G_DEFINE_TYPE (SalutPresenceCache, salut_presence_cache, G_TYPE_OBJECT);
 

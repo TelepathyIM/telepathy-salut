@@ -37,7 +37,7 @@
 #include "debug.h"
 #include "salut-connection.h"
 #include "salut-xmpp-connection-manager.h"
-#include "signals-marshal.h"
+#include "salut-signals-marshal.h"
 
 #define DEFAULT_REQUEST_TIMEOUT 20000
 
