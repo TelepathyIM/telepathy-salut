@@ -466,11 +466,12 @@ salut_connection_constructor (GType type,
 {
   GObject *obj;
   SalutConnection *self;
+  SalutConnectionPrivate *priv;
 
   obj = G_OBJECT_CLASS (salut_connection_parent_class)->
            constructor (type, n_props, props);
   self = SALUT_CONNECTION (obj);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  priv = SALUT_CONNECTION_GET_PRIVATE(self);
 
   /* receive discovery requests */
   salut_xmpp_connection_manager_add_stanza_filter (
