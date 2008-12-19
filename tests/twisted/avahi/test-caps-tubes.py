@@ -269,7 +269,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream/daap'
+    feature['var'] = ns_tubes + '/stream#daap'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -312,7 +312,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus/com.example.Xiangqi'
+    feature['var'] = ns_tubes + '/dbus#com.example.Xiangqi'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -355,9 +355,9 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus/com.example.Xiangqi'
+    feature['var'] = ns_tubes + '/dbus#com.example.Xiangqi'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream/daap'
+    feature['var'] = ns_tubes + '/stream#daap'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -404,13 +404,13 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus/com.example.Xiangqi'
+    feature['var'] = ns_tubes + '/dbus#com.example.Xiangqi'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus/com.example.Go'
+    feature['var'] = ns_tubes + '/dbus#com.example.Go'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream/daap'
+    feature['var'] = ns_tubes + '/stream#daap'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream/http'
+    feature['var'] = ns_tubes + '/stream#http'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -565,11 +565,11 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
     assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Go') \
+    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Xiangqi') \
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
             == False, caps_str
     assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
@@ -593,11 +593,11 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
     assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/daap') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Go') \
+    assert caps_contain(event, ns_tubes + '/stream#daap') == False, caps_str
+    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Xiangqi') \
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
@@ -621,11 +621,11 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
     assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Go') \
+    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Xiangqi') \
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
@@ -653,11 +653,11 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
     assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/http') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Go') \
+    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns_tubes + '/stream#http') == True, caps_str
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
             == True, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Xiangqi') \
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 5, signaled_caps # basic caps + 4 tubes
     assert signaled_caps[1][0] \
@@ -690,11 +690,11 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
 service)
     assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream/http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Go') \
+    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus/com.example.Xiangqi') \
+    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
