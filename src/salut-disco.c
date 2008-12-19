@@ -247,7 +247,7 @@ send_disco_request (SalutDisco *self,
   GError *error = NULL;
 
   contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection*) priv->connection, TP_HANDLE_TYPE_CONTACT);
+      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
 
   jid_from = tp_handle_inspect (contact_repo, base_conn->self_handle);
   jid_to = tp_handle_inspect (contact_repo, contact->handle);
