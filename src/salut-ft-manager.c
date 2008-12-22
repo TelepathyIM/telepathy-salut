@@ -450,8 +450,9 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
 
   if (!salut_file_transfer_channel_offer_file (chan, &error))
     {
-      /* Destroying the channel will emit the "closed" signal. */
-      g_object_unref (chan);
+      /* Pretend the chan was closed so it's removed from the channels
+       * list and unreffed. */
+      file_channel_closed_cb (chan, self);
       goto error;
     }
 
