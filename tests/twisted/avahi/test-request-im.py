@@ -11,7 +11,9 @@ from servicetest import call_async, EventPattern, \
 from avahitest import get_host_name, AvahiAnnouncer
 from xmppstream import setup_stream_listener
 
+CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
 CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
+CHANNEL_TYPE_CONTACT_LIST = 'org.freedesktop.Telepathy.Channel.Type.ContactList'
 
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
@@ -26,13 +28,27 @@ def test(q, bus, conn):
     contact_name = "test-request-im@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
 
+    requestotron = dbus.Interface(conn, CONNECTION_INTERFACE_REQUESTS)
+
     # FIXME: this is a hack to be sure to have all the contact list channels
     # announced so they won't interfere with the muc ones announces.
     # publish
+    requestotron.CreateChannel({
+        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetID': 'publish'})
     q.expect('dbus-signal', signal='NewChannel')
     # subscribe
+    requestotron.CreateChannel({
+        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetID': 'subscribe'})
     q.expect('dbus-signal', signal='NewChannel')
     # known
+    requestotron.CreateChannel({
+        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetID': 'known'})
     q.expect('dbus-signal', signal='NewChannel')
 
     AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
