@@ -772,7 +772,8 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
   if (!SALUT_SELF_GET_CLASS (self)->update_current_activity (self, room_name,
         &err))
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, "%s",
+          err->message);
       g_error_free (err);
       return FALSE;
     }
@@ -850,7 +851,8 @@ salut_self_set_olpc_properties (SalutSelf *self,
   if (!SALUT_SELF_GET_CLASS (self)->set_olpc_properties (self, key, color, jid,
         &err))
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, err->message);
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, "%s",
+          err->message);
       g_error_free (err);
       return FALSE;
     }
