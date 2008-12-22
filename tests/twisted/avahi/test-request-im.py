@@ -5,13 +5,14 @@ Test requesting of text 1-1 channels using the old and new request API.
 
 import dbus
 
-from saluttest import exec_test
+from saluttest import exec_test, wait_for_contact_list
 from servicetest import call_async, EventPattern, \
         tp_name_prefix, make_channel_proxy
 from avahitest import get_host_name, AvahiAnnouncer
 from xmppstream import setup_stream_listener
 
 CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
+CHANNEL_TYPE_CONTACT_LIST = 'org.freedesktop.Telepathy.Channel.Type.ContactList'
 
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
@@ -28,12 +29,7 @@ def test(q, bus, conn):
 
     # FIXME: this is a hack to be sure to have all the contact list channels
     # announced so they won't interfere with the muc ones announces.
-    # publish
-    q.expect('dbus-signal', signal='NewChannel')
-    # subscribe
-    q.expect('dbus-signal', signal='NewChannel')
-    # known
-    q.expect('dbus-signal', signal='NewChannel')
+    wait_for_contact_list(q, conn)
 
     AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
 

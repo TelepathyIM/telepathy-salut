@@ -97,3 +97,32 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
 def exec_test(fun, params=None, protocol=None, timeout=None):
   reactor.callWhenRunning (exec_test_deferred, fun, params, protocol, timeout)
   reactor.run()
+
+def wait_for_contact_list(q, conn):
+    """Request contact list channels and wait for their NewChannel signals.
+    This is useful to avoid these signals to interfere with your test."""
+
+    requestotron = dbus.Interface(conn,
+        'org.freedesktop.Telepathy.Connection.Interface.Requests')
+
+    CHANNEL_TYPE_CONTACT_LIST = 'org.freedesktop.Telepathy.Channel.Type.ContactList'
+    HT_CONTACT_LIST = 3
+
+    # publish
+    requestotron.CreateChannel({
+        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetID': 'publish'})
+    q.expect('dbus-signal', signal='NewChannel')
+    # subscribe
+    requestotron.CreateChannel({
+        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetID': 'subscribe'})
+    q.expect('dbus-signal', signal='NewChannel')
+    # known
+    requestotron.CreateChannel({
+        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
+        'org.freedesktop.Telepathy.Channel.TargetID': 'known'})
+    q.expect('dbus-signal', signal='NewChannel')
