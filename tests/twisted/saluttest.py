@@ -109,19 +109,19 @@ def wait_for_contact_list(q, conn):
     HT_CONTACT_LIST = 3
 
     # publish
-    requestotron.CreateChannel({
+    requestotron.EnsureChannel({
         'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
         'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
         'org.freedesktop.Telepathy.Channel.TargetID': 'publish'})
     q.expect('dbus-signal', signal='NewChannel')
     # subscribe
-    requestotron.CreateChannel({
+    requestotron.EnsureChannel({
         'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
         'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
         'org.freedesktop.Telepathy.Channel.TargetID': 'subscribe'})
     q.expect('dbus-signal', signal='NewChannel')
     # known
-    requestotron.CreateChannel({
+    requestotron.EnsureChannel({
         'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
         'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
         'org.freedesktop.Telepathy.Channel.TargetID': 'known'})
