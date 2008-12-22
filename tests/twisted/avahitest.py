@@ -140,11 +140,13 @@ class AvahiRecordAnnouncer:
         self.entry = entry
 
 class AvahiAnnouncer:
-    def __init__(self, name, type, port, txt, hostname = get_host_name_fqdn()):
+    def __init__(self, name, type, port, txt, hostname = get_host_name_fqdn(),
+            proto=avahi.PROTO_INET):
         self.name = name
         self.type = type
         self.port = port
         self.txt = txt
+        self.proto = proto
 
         self.bus = dbus.SystemBus()
         self.server = dbus.Interface(self.bus.get_object(avahi.DBUS_NAME,
@@ -155,7 +157,7 @@ class AvahiAnnouncer:
         entry = dbus.Interface(entry_obj,
             avahi.DBUS_INTERFACE_ENTRY_GROUP)
 
-        entry.AddService(avahi.IF_UNSPEC, avahi.PROTO_INET,
+        entry.AddService(avahi.IF_UNSPEC, self.proto,
             dbus.UInt32(0), name, type, get_domain_name(), hostname,
             port, avahi.dict_to_txt_array(txt))
         entry.Commit()
@@ -165,13 +167,13 @@ class AvahiAnnouncer:
     def update(self, txt):
       self.txt.update(txt)
 
-      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_INET,
+      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, self.proto,
         dbus.UInt32(0), self.name, self.type, get_domain_name(),
         avahi.dict_to_txt_array(self.txt))
 
     def set(self, txt):
       self.txt = txt
-      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, avahi.PROTO_INET,
+      self.entry.UpdateServiceTxt(avahi.IF_UNSPEC, self.proto,
         dbus.UInt32(0), self.name, self.type, get_domain_name(),
         avahi.dict_to_txt_array(self.txt))
 
