@@ -1,4 +1,4 @@
-from saluttest import exec_test, make_connection
+from saluttest import exec_test, make_connection, wait_for_contact_list
 from avahitest import AvahiAnnouncer, AvahiListener
 from avahitest import get_host_name
 import avahi
@@ -86,12 +86,7 @@ def test(q, bus, conn):
 
     # FIXME: this is a hack to be sure to have all the contact list channels
     # announced so they won't interfere with the muc ones announces.
-    # publish
-    q.expect('dbus-signal', signal='NewChannel', path=conn.object_path)
-    # subscribe
-    q.expect('dbus-signal', signal='NewChannel', path=conn.object_path)
-    # known
-    q.expect('dbus-signal', signal='NewChannel', path=conn.object_path)
+    wait_for_contact_list(q, conn)
 
     # second connection: connect
     conn2_params = {
