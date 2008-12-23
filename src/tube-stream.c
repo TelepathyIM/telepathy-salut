@@ -1125,6 +1125,9 @@ xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
 
   g_signal_connect (priv->xmpp_connection_manager, "new-connection",
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
+
+  g_object_unref (contact);
+  g_object_unref (contact_mgr);
 }
 
 static void
