@@ -911,6 +911,12 @@ salut_tube_stream_dispose (GObject *object)
       priv->iq_helper = NULL;
     }
 
+  if (priv->xmpp_connection_manager != NULL)
+    {
+      g_object_unref (priv->xmpp_connection_manager);
+      priv->xmpp_connection_manager = NULL;
+    }
+
   priv->dispose_has_run = TRUE;
 
   if (G_OBJECT_CLASS (salut_tube_stream_parent_class)->dispose)
