@@ -300,6 +300,7 @@ connect_to_url (GibberBytestreamOOB *self,
   ll_transport = gibber_ll_transport_new ();
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
   gibber_ll_transport_open_sockaddr (ll_transport, &addr, NULL);
+  g_object_unref (ll_transport);
 
 out:
   g_strfreev (tokens);
