@@ -521,6 +521,7 @@ pending_connection_for_invite_data_free (
     struct pending_connection_for_invite_data *data)
 {
   g_object_unref (data->invite);
+  g_object_unref (data->contact);
   g_slice_free (struct pending_connection_for_invite_data, data);
 }
 
@@ -628,6 +629,7 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
       SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
     {
       DEBUG ("request connection failed");
+      g_object_unref (contact);
       return FALSE;
     }
 
@@ -639,6 +641,7 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
       DEBUG ("got an existing connection. Send the invite");
       result = gibber_xmpp_connection_send (connection, stanza, error);
       g_object_unref (stanza);
+      g_object_unref (contact);
       return TRUE;
     }
 
