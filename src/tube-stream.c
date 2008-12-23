@@ -1464,6 +1464,9 @@ ensure_iq_helper (SalutTubeStream *tube)
           priv->iq_helper = gibber_iq_helper_new (priv->xmpp_connection);
           g_assert (priv->iq_helper);
         }
+
+      g_object_unref (contact);
+      g_object_unref (contact_mgr);
     }
 }
 
