@@ -12,6 +12,7 @@ Fixes:
 * Uses libsoup 2.4 instead of the obsolete 2.2 version (b.fd.o #18891).
 * Don't crash if the XMPP connection is disconnected during a file transfer.
 * Fix a race in stream tubes causing potential data lost.
+* Fix various leaks including one leading to a crash (b.fd.o #19181).
 
 
 telepathy-salut 0.3.6 (2008-12-02)
