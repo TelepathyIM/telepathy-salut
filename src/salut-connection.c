@@ -2595,6 +2595,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
 
   g_object_unref (muc);
   g_hash_table_destroy (properties);
+  g_object_unref (inviter);
 }
 
 static void
