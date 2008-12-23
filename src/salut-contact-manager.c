@@ -524,7 +524,7 @@ error:
   tp_channel_manager_emit_request_failed (self, request_token,
       error->domain, error->code, error->message);
   g_error_free (error);
-  return FALSE;
+  return TRUE;
 }
 
 static gboolean
