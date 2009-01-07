@@ -40,7 +40,9 @@ START_TEST (test_build_with_html_message)
   const gchar *value;
 
   g_type_init ();
+#ifdef ENABLE_DEBUG
   gibber_debug_set_flags_from_env ();
+#endif
 
   stanza = gibber_xmpp_stanza_build (
       GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
