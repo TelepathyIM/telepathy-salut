@@ -55,6 +55,10 @@ ifelse(salut_nano_version, 0,
     ])
 AC_SUBST(ERROR_CFLAGS)
 
+AC_ARG_ENABLE(debug,
+  AC_HELP_STRING([--disable-debug],[compile without debug code]),
+    enable_debug=$enableval, enable_debug=yes )
+
 AS_COMPILER_FLAG(-Wdeclaration-after-statement, ERROR_CFLAGS="$ERROR_CFLAGS -Wdeclaration-after-statement")
 AS_COMPILER_FLAG(-Wshadow, ERROR_CFLAGS="$ERROR_CFLAGS -Wshadow")
 AS_COMPILER_FLAG(-Wstrict-prototypes, ERROR_CFLAGS="$ERROR_CFLAGS -Wstrict-prototypes")
@@ -74,6 +78,10 @@ AC_ARG_ENABLE(coding-style-checks,
                  [don't check coding style using grep]),
     [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=yes])
     ])
+
+if test x$enable_debug = xyes; then
+  AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
+fi
 
 AC_SUBST([ENABLE_CODING_STYLE_CHECKS])
 
