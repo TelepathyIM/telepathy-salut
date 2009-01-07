@@ -2,6 +2,8 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = tools extensions lib src data m4 tests docs
 
+DISTCHECK_CONFIGURE_FLAGS = --disable-debug
+
 dist-hook:
 	chmod u+w ${distdir}/ChangeLog
 	if test -d ${top_srcdir}/.git; then \
