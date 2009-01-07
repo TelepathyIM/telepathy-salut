@@ -8,9 +8,9 @@
 
 #include "gibber-xmpp-stanza.h"
 
-#ifdef ENABLE_DEBUG
-
 G_BEGIN_DECLS
+
+#ifdef ENABLE_DEBUG
 
 typedef enum
 {
@@ -70,4 +70,3 @@ void gibber_debug_stanza (DebugFlags flag, GibberXmppStanza *stanza,
 G_END_DECLS
 
 #endif
-
