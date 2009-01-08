@@ -161,9 +161,9 @@ salut_tube_iface_base_init (gpointer klass)
       g_object_interface_install_property (klass, param_spec);
 
       param_spec = g_param_spec_uint (
-          "initiator",
+          "initiator-handle",
           "Initiator handle",
-          "The TpHandle of the initiator of this D-Bus tube object.",
+          "The TpHandle of the initiator of tube object.",
           0, G_MAXUINT32, 0,
           G_PARAM_CONSTRUCT_ONLY |
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
