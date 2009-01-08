@@ -79,7 +79,7 @@ enum
   PROP_BYTESTREAM,
   PROP_STREAM_ID,
   PROP_TYPE,
-  PROP_INITIATOR,
+  PROP_INITIATOR_HANDLE,
   PROP_SERVICE,
   PROP_PARAMETERS,
   PROP_STATE,
@@ -563,7 +563,7 @@ salut_tube_dbus_get_property (GObject *object,
       case PROP_TYPE:
         g_value_set_uint (value, TP_TUBE_TYPE_DBUS);
         break;
-      case PROP_INITIATOR:
+      case PROP_INITIATOR_HANDLE:
         g_value_set_uint (value, priv->initiator);
         break;
       case PROP_SERVICE:
@@ -641,7 +641,7 @@ salut_tube_dbus_set_property (GObject *object,
                 G_CALLBACK (bytestream_state_changed_cb), self);
           }
         break;
-      case PROP_INITIATOR:
+      case PROP_INITIATOR_HANDLE:
         priv->initiator = g_value_get_uint (value);
         break;
       case PROP_SERVICE:
@@ -780,8 +780,8 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
     "id");
   g_object_class_override_property (object_class, PROP_TYPE,
     "type");
-  g_object_class_override_property (object_class, PROP_INITIATOR,
-    "initiator");
+  g_object_class_override_property (object_class, PROP_INITIATOR_HANDLE,
+    "initiator-handle");
   g_object_class_override_property (object_class, PROP_SERVICE,
     "service");
   g_object_class_override_property (object_class, PROP_PARAMETERS,
@@ -1101,7 +1101,7 @@ salut_tube_dbus_new (SalutConnection *conn,
       "handle-type", handle_type,
       "self-handle", self_handle,
       "muc-connection", muc_connection,
-      "initiator", initiator,
+      "initiator-handle", initiator,
       "service", service,
       "parameters", parameters,
       "id", id,
