@@ -2416,6 +2416,49 @@ salut_tube_stream_get_interfaces (TpSvcChannel *iface,
     }
 }
 
+static void
+destroy_socket_control_list (gpointer data)
+{
+  GArray *tab = data;
+  g_array_free (tab, TRUE);
+}
+
+GHashTable *
+salut_tube_stream_get_supported_socket_types (void)
+{
+  GHashTable *ret;
+  GArray *unix_tab, *ipv4_tab, *ipv6_tab;
+  TpSocketAccessControl access_control;
+
+  ret = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
+      destroy_socket_control_list);
+
+  /* Socket_Address_Type_Unix */
+  unix_tab = g_array_sized_new (FALSE, FALSE, sizeof (TpSocketAccessControl),
+      1);
+  access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
+  g_array_append_val (unix_tab, access_control);
+  g_hash_table_insert (ret, GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX),
+      unix_tab);
+
+  /* Socket_Address_Type_IPv4 */
+  ipv4_tab = g_array_sized_new (FALSE, FALSE, sizeof (TpSocketAccessControl),
+      1);
+  access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
+  g_array_append_val (ipv4_tab, access_control);
+  g_hash_table_insert (ret, GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_IPV4),
+      ipv4_tab);
+
+  /* Socket_Address_Type_IPv6 */
+  ipv6_tab = g_array_sized_new (FALSE, FALSE, sizeof (TpSocketAccessControl),
+      1);
+  access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
+  g_array_append_val (ipv6_tab, access_control);
+  g_hash_table_insert (ret, GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_IPV6),
+      ipv6_tab);
+
+  return ret;
+}
 
 static void
 tube_iface_init (gpointer g_iface,

@@ -75,6 +75,8 @@ gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,
     const GValue *address, TpSocketAccessControl access_control,
     const GValue *access_control_param, GError **error);
 
+GHashTable * salut_tube_stream_get_supported_socket_types (void);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_TUBE_STREAM_H__ */
