@@ -849,6 +849,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       const gchar *service;
+      GError *err = NULL;
 
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
@@ -864,6 +865,14 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
               "Request missed a mandatory property '%s'",
               SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+          goto error;
+        }
+
+      if (!tp_dbus_check_valid_bus_name (service, TP_DBUS_NAME_TYPE_ANY, &err))
+        {
+          g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "Invalid ServiceName: %s", err->message);
+          g_error_free (err);
           goto error;
         }
     }
