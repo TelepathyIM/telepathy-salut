@@ -125,7 +125,7 @@ enum
   PROP_SELF_HANDLE,
   PROP_ID,
   PROP_TYPE,
-  PROP_INITIATOR,
+  PROP_INITIATOR_HANDLE,
   PROP_SERVICE,
   PROP_PARAMETERS,
   PROP_STATE,
@@ -1044,7 +1044,7 @@ salut_tube_stream_get_property (GObject *object,
       case PROP_TYPE:
         g_value_set_uint (value, TP_TUBE_TYPE_STREAM);
         break;
-      case PROP_INITIATOR:
+      case PROP_INITIATOR_HANDLE:
         g_value_set_uint (value, priv->initiator);
         break;
       case PROP_SERVICE:
@@ -1144,7 +1144,7 @@ salut_tube_stream_set_property (GObject *object,
       case PROP_ID:
         priv->id = g_value_get_uint (value);
         break;
-      case PROP_INITIATOR:
+      case PROP_INITIATOR_HANDLE:
         priv->initiator = g_value_get_uint (value);
         break;
       case PROP_SERVICE:
@@ -1453,8 +1453,8 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
     "id");
   g_object_class_override_property (object_class, PROP_TYPE,
     "type");
-  g_object_class_override_property (object_class, PROP_INITIATOR,
-    "initiator");
+  g_object_class_override_property (object_class, PROP_INITIATOR_HANDLE,
+    "initiator-handle");
   g_object_class_override_property (object_class, PROP_SERVICE,
     "service");
   g_object_class_override_property (object_class, PROP_PARAMETERS,
@@ -1673,7 +1673,7 @@ salut_tube_stream_new (SalutConnection *conn,
       "handle", handle,
       "handle-type", handle_type,
       "self-handle", self_handle,
-      "initiator", initiator,
+      "initiator-handle", initiator,
       "offered", offered,
       "service", service,
       "parameters", parameters,
