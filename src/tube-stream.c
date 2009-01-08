@@ -142,6 +142,9 @@ enum
   PROP_OBJECT_PATH,
   PROP_CHANNEL_TYPE,
   PROP_TARGET_ID,
+  PROP_REQUESTED,
+  PROP_INITIATOR_ID,
+  PROP_SUPPORTED_SOCKET_TYPES,
   LAST_PROPERTY
 };
 
@@ -1090,7 +1093,30 @@ salut_tube_stream_get_property (GObject *object,
                 TP_IFACE_CHANNEL, "TargetHandleType",
                 TP_IFACE_CHANNEL, "ChannelType",
                 TP_IFACE_CHANNEL, "TargetID",
+                TP_IFACE_CHANNEL, "InitiatorHandle",
+                TP_IFACE_CHANNEL, "InitiatorID",
+                TP_IFACE_CHANNEL, "Requested",
+                TP_IFACE_CHANNEL, "Interfaces",
+                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
+                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
                 NULL));
+        break;
+      case PROP_REQUESTED:
+        g_value_set_boolean (value,
+            (priv->initiator == priv->self_handle));
+        break;
+      case PROP_INITIATOR_ID:
+          {
+            TpHandleRepoIface *repo = tp_base_connection_get_handles (
+                base_conn, TP_HANDLE_TYPE_CONTACT);
+
+            /* some channel can have o.f.T.Channel.InitiatorHandle == 0 but
+             * tubes always have an initiator */
+            g_assert (priv->initiator != 0);
+
+            g_value_set_string (value,
+                tp_handle_inspect (repo, priv->initiator));
+          }
         break;
       case PROP_TARGET_ID:
           {
@@ -1100,6 +1126,10 @@ salut_tube_stream_get_property (GObject *object,
             g_value_set_string (value,
                 tp_handle_inspect (repo, priv->handle));
           }
+        break;
+      case PROP_SUPPORTED_SOCKET_TYPES:
+        g_value_take_boxed (value,
+            salut_tube_stream_get_supported_socket_types ());
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -1394,15 +1424,17 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       { "ChannelType", "channel-type", NULL },
       { "TargetID", "target-id", NULL },
       { "Interfaces", "interfaces", NULL },
+      { "Requested", "requested", NULL },
+      { "InitiatorHandle", "initiator-handle", NULL },
+      { "InitiatorID", "initiator-id", NULL },
       { NULL }
   };
   static TpDBusPropertiesMixinPropImpl stream_tube_props[] = {
       { "Service", "service", NULL },
-      /*{ "AvailableStreamTubeTypes", NULL, NULL },*/
+      { "SupportedSocketTypes", "supported-socket-types", NULL },
       { NULL }
   };
   static TpDBusPropertiesMixinPropImpl tube_iface_props[] = {
-      { "Initiator", "initiator", NULL },
       { "Parameters", "parameters", "parameters" },
       { "Status", "state", NULL },
       { NULL }
@@ -1570,6 +1602,28 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       FALSE,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OFFERED, param_spec);
+
+  param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
+      "The string obtained by inspecting the initiator-handle",
+      NULL,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+      param_spec);
+
+  param_spec = g_param_spec_boolean ("requested", "Requested?",
+      "True if this channel was requested by the local user",
+      FALSE,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+  param_spec = g_param_spec_boxed (
+      "supported-socket-types",
+      "Supported socket types",
+      "GHashTable containing supported socket types.",
+      dbus_g_type_get_map ("GHashTable", G_TYPE_UINT, DBUS_TYPE_G_UINT_ARRAY),
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_SUPPORTED_SOCKET_TYPES,
+      param_spec);
 
   signals[OPENED] =
     g_signal_new ("tube-opened",
