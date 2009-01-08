@@ -32,6 +32,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-ichat-receive-file.py \
 	avahi/test-ichat-send-file.py \
 	avahi/test-ichat-send-file-declined.py  \
+	avahi/test-request-invalid-dbus-tube.py \
 	avahi/test-request-muc.py \
 	avahi/test-request-muc-tubes.py \
         avahi/test-roomlist.py \
