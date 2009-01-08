@@ -23,6 +23,7 @@ HT_CONTACT_LIST = 3
 TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
 SOCKET_ADDRESS_TYPE_UNIX = dbus.UInt32(0)
 SOCKET_ADDRESS_TYPE_IPV4 = dbus.UInt32(2)
+SOCKET_ADDRESS_TYPE_IPV6 = dbus.UInt32(3)
 SOCKET_ACCESS_CONTROL_LOCALHOST = dbus.UInt32(0)
 
 sample_parameters = dbus.Dictionary({
@@ -95,18 +96,13 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
         assert tube_props['Status'] == state, tube_props['Status']
         # no strict check but at least check the properties exist
         assert tube_props.has_key('Parameters')
-        assert tube_props.has_key('Initiator')
 
     self_handle = conn.GetSelfHandle()
+    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
 
-    ## Exercise FUTURE properties
-    ## on the channel of type channel_type
-    #future_props = channel.GetAll(
-    #        'org.freedesktop.Telepathy.Channel.FUTURE',
-    #        dbus_interface='org.freedesktop.DBus.Properties')
-    #assert future_props['Requested'] == True
-    #assert future_props['InitiatorID'] == 'test@localhost'
-    #assert future_props['InitiatorHandle'] == self_handle
+    assert channel_props['Requested'] == True
+    assert channel_props['InitiatorID'] == self_handle_name
+    assert channel_props['InitiatorHandle'] == self_handle
 
 
 def check_NewChannel_signal(old_sig, channel_type, chan_path, contact_handle):
@@ -116,7 +112,7 @@ def check_NewChannel_signal(old_sig, channel_type, chan_path, contact_handle):
     assert old_sig[3] == contact_handle
     assert old_sig[4] == True      # suppress handler
 
-def check_NewChannels_signal(new_sig, channel_type, chan_path, contact_handle,
+def check_NewChannels_signal(conn, new_sig, channel_type, chan_path, contact_handle,
         contact_id, initiator_handle):
     assert len(new_sig) == 1
     assert len(new_sig[0]) == 1        # one channel
@@ -124,6 +120,7 @@ def check_NewChannels_signal(new_sig, channel_type, chan_path, contact_handle,
     assert new_sig[0][0][0] == chan_path
     emitted_props = new_sig[0][0][1]
 
+    initiator_name =  conn.InspectHandles(HT_CONTACT, [initiator_handle])[0]
     assert emitted_props[tp_name_prefix + '.Channel.ChannelType'] ==\
             tp_name_prefix + '.Channel.Type.' + channel_type
     assert emitted_props[tp_name_prefix + '.Channel.TargetHandleType'] == \
@@ -132,11 +129,11 @@ def check_NewChannels_signal(new_sig, channel_type, chan_path, contact_handle,
             contact_handle
     assert emitted_props[tp_name_prefix + '.Channel.TargetID'] == \
             contact_id
-    #assert emitted_props[tp_name_prefix + '.Channel.FUTURE.Requested'] == True
-    #assert emitted_props[tp_name_prefix + '.Channel.FUTURE.InitiatorHandle'] \
-    #        == initiator_handle
-    #assert emitted_props[tp_name_prefix + '.Channel.FUTURE.InitiatorID'] == \
-    #        'test@localhost'
+    assert emitted_props[tp_name_prefix + '.Channel.Requested'] == True
+    assert emitted_props[tp_name_prefix + '.Channel.InitiatorHandle'] \
+            == initiator_handle
+    assert emitted_props[tp_name_prefix + '.Channel.InitiatorID'] == \
+            initiator_name
 
 def test(q, bus, conn):
 
@@ -213,8 +210,9 @@ def test(q, bus, conn):
     chan_path = ret.value[0]
 
     check_NewChannel_signal(old_sig.args, "Tubes", chan_path, handle)
-    check_NewChannels_signal(new_sig.args, "Tubes", chan_path,
+    check_NewChannels_signal(conn, new_sig.args, "Tubes", chan_path,
             handle, contact_name, conn.GetSelfHandle())
+    emitted_props = new_sig.args[0][0][1]
     old_tubes_channel_properties = new_sig.args[0][0]
 
     check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
@@ -282,12 +280,19 @@ def test(q, bus, conn):
 
     check_NewChannel_signal(old_sig.args, "StreamTube.DRAFT", \
             new_chan_path, handle)
-    check_NewChannels_signal(new_sig.args, "StreamTube.DRAFT", new_chan_path, \
+    check_NewChannels_signal(conn, new_sig.args, "StreamTube.DRAFT", new_chan_path, \
             handle, contact_name, conn.GetSelfHandle())
     stream_tube_channel_properties = new_sig.args[0][0]
 
     check_conn_properties(q, bus, conn,
             [old_tubes_channel_properties, stream_tube_channel_properties])
+
+    assert stream_tube_channel_properties[1]['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] == \
+        'newecho'
+    assert stream_tube_channel_properties[1]['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.SupportedSocketTypes'] == \
+        {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST],
+         SOCKET_ADDRESS_TYPE_IPV4: [SOCKET_ACCESS_CONTROL_LOCALHOST],
+         SOCKET_ADDRESS_TYPE_IPV6: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
 
     # continue
     tubes_channel = make_channel_proxy(conn, chan_path, "Channel.Type.Tubes")
