@@ -1,3 +1,10 @@
+telepathy-salut 0.3.8 (UNRELEASED)
+==================================
+
+Enhancements:
+* Implement org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.
+
+
 telepathy-salut 0.3.7 (2009-01-05)
 ==================================
 The "Post-Waffle Hibernation" release.
