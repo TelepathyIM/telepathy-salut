@@ -718,12 +718,15 @@ static const gchar * const stream_tube_channel_allowed_properties[] = {
     SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
     NULL
 };
+/* Temporarily disabled since the implementation is incomplete. */
+#if 0
 static const gchar * const dbus_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
     SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
     NULL
 };
+#endif
 
 static void
 salut_tubes_manager_foreach_channel_class (
@@ -771,6 +774,8 @@ salut_tubes_manager_foreach_channel_class (
   g_hash_table_destroy (table);
 
   /* 1-1 Channel.Type.DBusTube */
+  /* Temporarily disabled since the implementation is incomplete. */
+#if 0
   table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
       (GDestroyNotify) tp_g_value_slice_free);
 
@@ -787,6 +792,7 @@ salut_tubes_manager_foreach_channel_class (
   func (manager, table, dbus_tube_channel_allowed_properties, user_data);
 
   g_hash_table_destroy (table);
+#endif
 }
 
 static gboolean
@@ -813,8 +819,9 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
             TP_IFACE_CHANNEL ".ChannelType");
 
   if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
-      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
-      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  /* Temporarily disabled since the implementation is incomplete. */
+  /*  tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE) && */
+      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     return FALSE;
 
   if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
@@ -846,6 +853,8 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           goto error;
         }
     }
+/* Temporarily disabled since the implementation is incomplete. */
+#if 0
   else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       const gchar *service;
@@ -877,6 +886,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           goto error;
         }
     }
+#endif
 
   handle = tp_asv_get_uint32 (request_properties,
       TP_IFACE_CHANNEL ".TargetHandle", NULL);
