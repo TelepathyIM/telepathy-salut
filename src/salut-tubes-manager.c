@@ -868,7 +868,8 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           goto error;
         }
 
-      if (!tp_dbus_check_valid_bus_name (service, TP_DBUS_NAME_TYPE_ANY, &err))
+      if (!tp_dbus_check_valid_bus_name (service, TP_DBUS_NAME_TYPE_WELL_KNOWN,
+            &err))
         {
           g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "Invalid ServiceName: %s", err->message);
