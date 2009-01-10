@@ -928,40 +928,28 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     }
   else
     {
-      gboolean channel_was_existing = (channel != NULL);
       SalutTubeIface *new_channel;
 
       if (channel == NULL)
-        {
-          /* Don't give the request_token to new_tubes_channel() because we
-           * must emit NewChannels with 2 channels together */
-          channel = new_tubes_channel (self, handle, base_conn->self_handle,
-              NULL);
-        }
+        channel = new_tubes_channel (self, handle, base_conn->self_handle,
+            NULL);
+
       g_assert (channel != NULL);
 
       new_channel = salut_tubes_channel_tube_request (channel, request_token,
           request_properties, require_new);
+
       if (new_channel != NULL)
         {
-          GHashTable *channels;
-          GSList *request_tokens;
-
-          channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-              NULL, NULL);
-          if (!channel_was_existing)
-            g_hash_table_insert (channels, channel, NULL);
+          GSList *tokens = NULL;
 
           if (request_token != NULL)
-            request_tokens = g_slist_prepend (NULL, request_token);
-          else
-            request_tokens = NULL;
+            tokens = g_slist_prepend (NULL, request_token);
 
-          g_hash_table_insert (channels, new_channel, request_tokens);
-          tp_channel_manager_emit_new_channels (self, channels);
+          tp_channel_manager_emit_new_channel (self,
+              TP_EXPORTABLE_CHANNEL (new_channel), tokens);
 
-          g_hash_table_destroy (channels);
-          g_slist_free (request_tokens);
+          g_slist_free (tokens);
         }
       else
         {
