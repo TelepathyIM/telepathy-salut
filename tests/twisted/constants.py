@@ -16,6 +16,7 @@ CONN = "org.freedesktop.Telepathy.Connection"
 CONN_IFACE_REQUESTS = CONN + '.Interface.Requests'
 
 ERRORS = 'org.freedesktop.Telepathy.Errors'
-NOT_AVAILABLE = ERRORS + '.NotAvailable'
 INVALID_ARGUMENT = ERRORS + '.InvalidArgument'
+NOT_IMPLEMENTED = ERRORS + '.NotImplemented'
+NOT_AVAILABLE = ERRORS + '.NotAvailable'
 

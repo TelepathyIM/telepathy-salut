@@ -15,6 +15,8 @@ from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
 
+from constants import INVALID_ARGUMENT, NOT_IMPLEMENTED
+
 PUBLISHED_NAME="test-tube"
 
 CHANNEL_TYPE_TUBES = "org.freedesktop.Telepathy.Channel.Type.Tubes"
@@ -223,7 +225,8 @@ def test(q, bus, conn):
 
     # Try to CreateChannel with unknown properties
     # Salut must return an error
-    call_async(q, requestotron, 'CreateChannel',
+    try:
+        requestotron.CreateChannel(
             {'org.freedesktop.Telepathy.Channel.ChannelType':
                 'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
@@ -232,14 +235,19 @@ def test(q, bus, conn):
                 handle,
              'this.property.does.not.exist':
                 'this.value.should.not.exist'
-            });
-    ret = q.expect_many(EventPattern('dbus-error', method='CreateChannel'))
+            })
+    except dbus.DBusException, e:
+        assert e.get_dbus_name() == NOT_IMPLEMENTED, e.get_dbus_name()
+    else:
+        assert False
+
     # CreateChannel failed, we expect no new channel
     check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
 
     # Try to CreateChannel with missing properties ("Service")
     # Salut must return an error
-    call_async(q, requestotron, 'CreateChannel',
+    try:
+        requestotron.CreateChannel(
             {'org.freedesktop.Telepathy.Channel.ChannelType':
                 'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
@@ -247,7 +255,10 @@ def test(q, bus, conn):
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle
             });
-    ret = q.expect_many(EventPattern('dbus-error', method='CreateChannel'))
+    except dbus.DBusException, e:
+        assert e.get_dbus_name() == INVALID_ARGUMENT, e.get_dbus_name()
+    else:
+        assert False
     # CreateChannel failed, we expect no new channel
     check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
 
