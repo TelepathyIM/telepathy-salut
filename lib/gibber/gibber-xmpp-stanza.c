@@ -253,7 +253,7 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
 static const gchar *
 get_type_name (GibberStanzaType type)
 {
-  if (type < GIBBER_STANZA_TYPE_NONE ||
+  if (type <= GIBBER_STANZA_TYPE_NONE ||
       type >= NUM_GIBBER_STANZA_TYPE)
     return NULL;
 
@@ -264,7 +264,7 @@ get_type_name (GibberStanzaType type)
 static const gchar *
 get_type_ns (GibberStanzaType type)
 {
-  if (type < GIBBER_STANZA_TYPE_NONE ||
+  if (type <= GIBBER_STANZA_TYPE_NONE ||
       type >= NUM_GIBBER_STANZA_TYPE)
     return NULL;
 
@@ -275,7 +275,7 @@ get_type_ns (GibberStanzaType type)
 static const gchar *
 get_sub_type_name (GibberStanzaSubType sub_type)
 {
-  if (sub_type < GIBBER_STANZA_SUB_TYPE_NONE ||
+  if (sub_type <= GIBBER_STANZA_SUB_TYPE_NONE ||
       sub_type >= NUM_GIBBER_STANZA_SUB_TYPE)
     return NULL;
 
@@ -287,10 +287,9 @@ static gboolean
 check_sub_type (GibberStanzaType type,
                 GibberStanzaSubType sub_type)
 {
-  g_return_val_if_fail (type >= GIBBER_STANZA_TYPE_NONE &&
+  g_return_val_if_fail (type > GIBBER_STANZA_TYPE_NONE &&
       type < NUM_GIBBER_STANZA_TYPE, FALSE);
-  g_return_val_if_fail (sub_type >= GIBBER_STANZA_SUB_TYPE_NONE &&
-      sub_type < NUM_GIBBER_STANZA_SUB_TYPE, FALSE);
+  g_return_val_if_fail (sub_type < NUM_GIBBER_STANZA_SUB_TYPE, FALSE);
 
   g_assert (sub_type_names[sub_type].sub_type == sub_type);
   g_return_val_if_fail (
