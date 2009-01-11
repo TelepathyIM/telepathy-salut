@@ -518,7 +518,7 @@ salut_self_set_presence (SalutSelf *self, SalutPresenceId status,
     const gchar *message, GError **error)
 {
 
-  g_assert (status >= 0 && status < SALUT_PRESENCE_NR_PRESENCES);
+  g_assert (status < SALUT_PRESENCE_NR_PRESENCES);
 
   self->status = status;
   g_free (self->status_message);
