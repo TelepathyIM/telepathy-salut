@@ -52,11 +52,13 @@ void debug (DebugFlags flag, const gchar *format, ...)
 
 #ifdef DEBUG_FLAG
 
-#define DEBUG(format, ...)
+#define DEBUG(format, ...) \
+  G_STMT_START { } G_STMT_END
 
 #define DEBUGGING 0
 
-#define NODE_DEBUG(n, s)
+#define NODE_DEBUG(n, s) \
+  G_STMT_START { } G_STMT_END
 
 #endif /* DEBUG_FLAG */
 

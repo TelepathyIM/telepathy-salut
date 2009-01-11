@@ -55,13 +55,16 @@ void gibber_debug_stanza (DebugFlags flag, GibberXmppStanza *stanza,
 
 #ifdef DEBUG_FLAG
 
-#define DEBUG(format, ...)
+#define DEBUG(format, ...) \
+  G_STMT_START { } G_STMT_END
 
-#define DEBUG_STANZA(stanza, format, ...)
+#define DEBUG_STANZA(stanza, format, ...) \
+  G_STMT_START { } G_STMT_END
 
 #define DEBUGGING 0
 
-#define NODE_DEBUG(n, s)
+#define NODE_DEBUG(n, s) \
+  G_STMT_START { } G_STMT_END
 
 #endif /* DEBUG_FLAG */
 
