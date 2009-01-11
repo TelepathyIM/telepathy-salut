@@ -696,7 +696,7 @@ start_joining_phase (GibberRMulticastTransport *self)
   GibberRMulticastTransportPrivate *priv =
     GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
   GibberRMulticastSender *sender;
-  int i;
+  guint i;
 
   setup_joining_phase (self);
 
@@ -966,7 +966,7 @@ received_foreign_packet_cb (GibberRMulticastCausalTransport *ctransport,
       /* Either the sender wants a start position from us or has replied to one
        * or our AJ messages.. Or it's some completely unrelated packet and we
        * can handle it just like any other reliable packet */
-      int i;
+      guint i;
       gboolean self_in_senders = FALSE;
 
       for (i = 0; i < packet->data.attempt_join.senders->len; i++) {

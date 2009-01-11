@@ -434,7 +434,7 @@ get_string (const guint8 *data, gsize length, gsize *offset)
 static void
 add_sender_info (guint8 *data, gsize length, gsize *offset, GArray *senders)
 {
-  int i;
+  guint i;
 
   add_guint8 (data, length, offset, senders->len);
 
@@ -553,7 +553,7 @@ gibber_r_multicast_packet_build (GibberRMulticastPacket *packet)
             packet->data.repair_request.packet_id);
       break;
     case PACKET_TYPE_ATTEMPT_JOIN: {
-      int i;
+      guint i;
       add_guint8 (priv->data, priv->max_data, &(priv->size),
             packet->data.attempt_join.senders->len);
 
@@ -564,7 +564,7 @@ gibber_r_multicast_packet_build (GibberRMulticastPacket *packet)
       break;
     }
     case PACKET_TYPE_JOIN: {
-      int i;
+      guint i;
       add_guint8 (priv->data, priv->max_data, &(priv->size),
             packet->data.join.failures->len);
 
@@ -575,7 +575,7 @@ gibber_r_multicast_packet_build (GibberRMulticastPacket *packet)
       break;
     }
     case PACKET_TYPE_FAILURE: {
-      int i;
+      guint i;
       add_guint8 (priv->data, priv->max_data, &(priv->size),
             packet->data.failure.failures->len);
 

@@ -596,7 +596,7 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
   } addr;
   GibberBytestreamDirectPrivate *priv =
       GIBBER_BYTESTREAM_DIRECT_GET_PRIVATE (self);
-  int i;
+  guint i;
   gboolean ret;
 
   DEBUG ("Called.");

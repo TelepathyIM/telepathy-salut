@@ -155,7 +155,7 @@ void
 gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
 {
   GHashTable *h;
-  int i;
+  guint i;
 
   g_assert (group->popping == FALSE);
 
@@ -239,7 +239,7 @@ static void
 gibber_r_multicast_sender_group_gc_acks (GibberRMulticastSenderGroup *group,
     guint32 sender_id)
 {
-  int i;
+  guint i;
   GibberRMulticastSender *s;
   /* If there are no more senders for sender_id in the list, clean up the acks
    */
@@ -314,7 +314,7 @@ update_sender_acks (gpointer key, gpointer value, gpointer user_data)
 {
   GibberRMulticastSender *sender = GIBBER_R_MULTICAST_SENDER (value);
   GArray *array = (GArray *) user_data;
-  gint i;
+  guint i;
 
   if (sender->state >= GIBBER_R_MULTICAST_SENDER_STATE_STOPPED)
     return;
@@ -475,7 +475,7 @@ gibber_r_multicast_sender_group_push_packet (
 {
   gboolean handled = FALSE;
   GibberRMulticastSender *sender;
-  int i;
+  guint i;
 
   if (packet->type == PACKET_TYPE_WHOIS_REQUEST)
     sender = gibber_r_multicast_sender_group_lookup (group,

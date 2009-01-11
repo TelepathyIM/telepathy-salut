@@ -75,7 +75,7 @@ static void
 room_resolver_removed (gpointer data)
 {
   GArray *arr = (GArray *) data;
-  int i;
+  guint i;
   for (i = 0; i < arr->len; i++)
     {
       g_object_unref (g_array_index (arr, GObject *, i));
@@ -194,7 +194,7 @@ browser_removed (GaServiceBrowser *browser,
   SalutAvahiRoomlistManagerPrivate *priv =
     SALUT_AVAHI_ROOMLIST_MANAGER_GET_PRIVATE (self);
   GArray *arr;
-  int i;
+  guint i;
 
   arr = g_hash_table_lookup (priv->room_resolvers, name);
 

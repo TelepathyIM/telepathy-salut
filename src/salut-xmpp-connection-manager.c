@@ -1291,7 +1291,7 @@ create_new_outgoing_connection (SalutXmppConnectionManager *self,
   GibberXmppConnection *connection;
   GibberLLTransport *transport;
   GArray *addrs;
-  gint i;
+  guint i;
   GError *e = NULL;
 
   DEBUG ("create a new outgoing connection to %s", contact->name);

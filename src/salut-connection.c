@@ -1082,7 +1082,7 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
-  int i;
+  guint i;
   const gchar **aliases;
   GError *error = NULL;
   TpHandleRepoIface *contact_handles =
@@ -1300,7 +1300,7 @@ static void
 salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
     const GArray *contacts, DBusGMethodInvocation *context)
 {
-  int i;
+  guint i;
   gchar **ret;
   GError *err = NULL;
   SalutConnection *self = SALUT_CONNECTION (iface);
@@ -1356,7 +1356,7 @@ salut_connection_get_known_avatar_tokens (
     TpSvcConnectionInterfaceAvatars *iface, const GArray *contacts,
     DBusGMethodInvocation *context)
 {
-  int i;
+  guint i;
   GHashTable *ret;
   GError *err = NULL;
   SalutConnection *self = SALUT_CONNECTION (iface);
@@ -1485,7 +1485,7 @@ salut_connection_request_avatars (
     const GArray *contacts,
     DBusGMethodInvocation *context)
 {
-  gint i;
+  guint i;
   GError *err = NULL;
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);

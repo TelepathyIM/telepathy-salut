@@ -345,7 +345,7 @@ sendout_packet (GibberRMulticastCausalTransport *transport,
 static gchar *
 g_array_uint32_to_str (GArray *array)
 {
-  int i;
+  guint i;
   GString *str;
 
   if (array == NULL || array->len == 0) {
@@ -687,7 +687,7 @@ handle_session_message (GibberRMulticastCausalTransport *self,
 {
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
-  int i;
+  guint i;
   gboolean outdated = FALSE;
 
   g_assert (packet->type == PACKET_TYPE_SESSION);
@@ -734,7 +734,7 @@ handle_packet_depends (GibberRMulticastCausalTransport *self,
 {
   GibberRMulticastCausalTransportPrivate *priv =
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT_GET_PRIVATE (self);
-  int i;
+  guint i;
 
   g_assert (GIBBER_R_MULTICAST_PACKET_IS_RELIABLE_PACKET (packet));
 
