@@ -248,10 +248,6 @@ gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
 
   g_slist_free (stack);
   return TRUE;
-
-error_build_parsing:
-  g_slist_free (stack);
-  return FALSE;
 }
 
 static const gchar *
