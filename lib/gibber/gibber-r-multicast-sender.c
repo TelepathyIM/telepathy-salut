@@ -458,7 +458,7 @@ gibber_r_multicast_sender_group_gc (GibberRMulticastSenderGroup *group)
 
       s = GIBBER_R_MULTICAST_SENDER (g_ptr_array_index (group->pending_removal,
           i));
-      if (can_gc_sender (group, s));
+      if (can_gc_sender (group, s))
         {
           g_ptr_array_remove_index_fast (group->pending_removal, i);
           gibber_r_multicast_sender_group_gc_acks (group, s->id);
@@ -1769,7 +1769,7 @@ gibber_r_multicast_sender_update_end (GibberRMulticastSender *sender,
 
   g_assert (sender->state == GIBBER_R_MULTICAST_SENDER_STATE_FAILED);
 
-  if  (gibber_r_multicast_packet_diff (priv->end_point, packet_id) >= 0);
+  if  (gibber_r_multicast_packet_diff (priv->end_point, packet_id) >= 0)
     {
       DEBUG_SENDER (sender, "Updating end to %x", packet_id);
       priv->end_point = packet_id;
