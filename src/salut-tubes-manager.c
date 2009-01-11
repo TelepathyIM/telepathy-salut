@@ -866,8 +866,8 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
                 SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
       if (service == NULL)
         {
-          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-              "Request missed a mandatory property '%s'",
+          g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              "StreamTube requests must include '%s'",
               SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
           goto error;
         }
