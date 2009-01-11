@@ -456,7 +456,7 @@ static gboolean
 is_presence_status_available (GObject *obj,
                               guint index_)
 {
-  return (index_ >= 0 && index_ < SALUT_PRESENCE_OFFLINE);
+  return (index_ < SALUT_PRESENCE_OFFLINE);
 }
 
 static GHashTable *
