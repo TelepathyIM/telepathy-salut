@@ -119,7 +119,7 @@ START_TEST (test_message_get_xmpp_error)
       fail_if (error == NULL);
 
       fail_if (error->domain != GIBBER_XMPP_ERROR);
-      fail_if (error->code != xmpp_error);
+      fail_if (error->code != (gint) xmpp_error);
       fail_if (strcmp (error->message, gibber_xmpp_error_description (
               xmpp_error)) != 0);
 

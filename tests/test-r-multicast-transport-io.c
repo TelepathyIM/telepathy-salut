@@ -127,7 +127,7 @@ static void
 new_senders_cb (GibberRMulticastTransport *transport,
     GArray *names, gpointer user_data)
 {
-  int i;
+  guint i;
   GString *str = g_string_new ("NEWNODES:");
 
   for (i = 0; i < names->len; i++)
@@ -143,7 +143,7 @@ static void
 lost_senders_cb (GibberRMulticastTransport *transport,
     GArray *names, gpointer user_data)
 {
-  int i;
+  guint i;
   GString *str = g_string_new ("LOSTNODES:");
 
   for (i = 0; i < names->len; i++)

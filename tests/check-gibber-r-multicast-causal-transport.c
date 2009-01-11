@@ -96,7 +96,7 @@ depends_send_hook (GibberTransport *transport,
                    gpointer user_data)
 {
   GibberRMulticastPacket *packet;
-  int i, n;
+  guint i, n;
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
   fail_unless (packet != NULL);

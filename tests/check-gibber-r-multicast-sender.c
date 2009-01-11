@@ -16,7 +16,7 @@
 #define NR_PACKETS ((guint32)40)
 
 guint32 serial_offset;
-int expected;
+guint32 expected;
 
 typedef struct {
   guint32 serial_offset;

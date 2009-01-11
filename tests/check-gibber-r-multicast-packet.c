@@ -64,7 +64,7 @@ START_TEST (test_data_packet)
   gsize len;
   guint8 *pdata;
   gsize plen;
-  int i,n;
+  guint i,n;
   sender_t senders[] =
     { { 0x300, 500, FALSE }, { 0x400, 600, FALSE }, { 0, 0, FALSE } };
   gchar *payload = "1234567890";
@@ -139,7 +139,7 @@ START_TEST (test_attempt_join_packet)
   guint32 packet_id = 1200;
   guint8 *data;
   gsize len;
-  int i, n;
+  guint i, n;
   sender_t senders[] =
     { { 0x300, 500, FALSE }, { 0x400, 600, FALSE }, { 0, 0, FALSE } };
   sender_t new_senders[] =
