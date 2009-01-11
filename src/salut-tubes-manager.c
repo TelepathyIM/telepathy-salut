@@ -48,7 +48,8 @@
 
 
 static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
-    TpHandle handle, TpHandle initiator, gpointer request_token);
+    TpHandle handle, TpHandle initiator, gpointer request_token,
+    GError **error);
 
 static void tubes_channel_closed_cb (SalutTubesChannel *chan,
     gpointer user_data);
@@ -354,8 +355,16 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   {
     if (chan == NULL)
       {
+        GError *e = NULL;
+
         chan = new_tubes_channel (self, initiator_handle, initiator_handle,
-            NULL);
+            NULL, &e);
+
+        if (chan == NULL)
+          {
+            DEBUG ("couldn't make new tubes channel: %s", e->message);
+            g_error_free (e);
+          }
       }
 
     salut_tubes_channel_message_received (chan, service, tube_type,
@@ -610,7 +619,8 @@ static SalutTubesChannel *
 new_tubes_channel (SalutTubesManager *fac,
                    TpHandle handle,
                    TpHandle initiator,
-                   gpointer request_token)
+                   gpointer request_token,
+                   GError **error)
 {
   SalutTubesManagerPrivate *priv;
   TpBaseConnection *conn;
@@ -625,8 +635,17 @@ new_tubes_channel (SalutTubesManager *fac,
   conn = (TpBaseConnection *) priv->conn;
 
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
+
   if (contact == NULL)
-    return NULL;
+    {
+      TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+      TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+          base_conn, TP_HANDLE_TYPE_CONTACT);
+
+      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "%s is not online", tp_handle_inspect (contact_repo, handle));
+      return NULL;
+    }
 
   object_path = g_strdup_printf ("%s/TubesChannel%u", conn->object_path,
       handle);
@@ -910,7 +929,11 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       if (channel == NULL)
         {
           channel = new_tubes_channel (self, handle, base_conn->self_handle,
-              request_token);
+              request_token, &error);
+
+          if (channel == NULL)
+            goto error;
+
           return TRUE;
         }
 
@@ -931,10 +954,12 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       SalutTubeIface *new_channel;
 
       if (channel == NULL)
-        channel = new_tubes_channel (self, handle, base_conn->self_handle,
-            NULL);
-
-      g_assert (channel != NULL);
+        {
+          channel = new_tubes_channel (self, handle, base_conn->self_handle,
+              NULL, &error);
+          if (channel == NULL)
+            goto error;
+        }
 
       new_channel = salut_tubes_channel_tube_request (channel, request_token,
           request_properties, require_new);
