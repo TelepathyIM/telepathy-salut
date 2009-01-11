@@ -753,6 +753,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
     }
   else
     {
+#ifdef ENABLE_DEBUG
       GList *l;
 
       DEBUG ("Incoming connection from a machine with %d contacts. "
@@ -765,6 +766,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
 
           DEBUG ("--> %s\n", contact->name);
         }
+#endif
     }
 }
 

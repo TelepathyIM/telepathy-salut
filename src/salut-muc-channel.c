@@ -668,7 +668,9 @@ salut_muc_channel_add_member (GObject *iface,
                               GError **error)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL(iface);
+#ifdef ENABLE_DEBUG
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+#endif
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
   TpIntSet *empty, *remote_pending;
 
@@ -959,12 +961,14 @@ gboolean
 salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
                           const gchar *stanza, GError **error)
 {
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
+#ifdef ENABLE_DEBUG
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+#endif
   gboolean ret = TRUE;
 
   /* Got invited to this muc channel */
