@@ -86,8 +86,7 @@ void salut_tubes_channel_message_close_received (SalutTubesChannel *self,
     TpHandle initiator_handle, guint tube_id);
 
 SalutTubeIface *salut_tubes_channel_tube_request (SalutTubesChannel *self,
-    gpointer request_token, GHashTable *request_properties,
-    gboolean require_new);
+    gpointer request_token, GHashTable *request_properties);
 
 void salut_tubes_channel_send_iq_offer (SalutTubesChannel *self);
 

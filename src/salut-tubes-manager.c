@@ -962,7 +962,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
         }
 
       new_channel = salut_tubes_channel_tube_request (tubes_channel,
-          request_token, request_properties, require_new);
+          request_token, request_properties);
 
       if (new_channel != NULL)
         {

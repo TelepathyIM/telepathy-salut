@@ -983,8 +983,7 @@ generate_tube_id (void)
 SalutTubeIface *
 salut_tubes_channel_tube_request (SalutTubesChannel *self,
                                   gpointer request_token,
-                                  GHashTable *request_properties,
-                                  gboolean require_new)
+                                  GHashTable *request_properties)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
