@@ -2382,24 +2382,6 @@ salut_tube_stream_accept_stream_tube (SalutSvcChannelTypeStreamTube *iface,
 }
 
 /**
- * salut_tube_stream_get_stream_tube_socket_address
- *
- * Implements D-Bus method GetStreamTubeSocketAddress
- * on org.freedesktop.Telepathy.Channel.Type.StreamTube
- */
-static void
-salut_tube_stream_get_stream_tube_socket_address (
-    SalutSvcChannelTypeStreamTube *iface,
-    DBusGMethodInvocation *context)
-{
-  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  salut_svc_channel_type_stream_tube_return_from_get_stream_tube_socket_address
-      (context, priv->address_type, priv->address);
-}
-
-/**
  * salut_tube_stream_close_async:
  *
  * Implements D-Bus method Close
@@ -2539,7 +2521,6 @@ streamtube_iface_init (gpointer g_iface,
     klass, salut_tube_stream_##x)
   IMPLEMENT(offer_stream_tube);
   IMPLEMENT(accept_stream_tube);
-  IMPLEMENT(get_stream_tube_socket_address);
 #undef IMPLEMENT
 }
 
