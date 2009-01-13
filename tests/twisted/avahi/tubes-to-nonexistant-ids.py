@@ -1,5 +1,5 @@
 """
-Test that requests for Tubes and StreamTube channels to jids which aren't
+Test that requests for Tubes and StreamTube channels to ids which aren't
 actually on the network fail gracefully with NotAvailable
 """
 
@@ -14,13 +14,13 @@ from constants import (
 
 import dbus
 
-arbitrary_jids = [ "DooN4Bei@TheeK6bo-Tegh4aci", "ahrui1iM@Dai6igho-ADetaes3" ]
+arbitrary_ids = [ "DooN4Bei@TheeK6bo-Tegh4aci", "ahrui1iM@Dai6igho-ADetaes3" ]
 
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
-    h1, h2 = conn.RequestHandles(HT_CONTACT, arbitrary_jids)
+    h1, h2 = conn.RequestHandles(HT_CONTACT, arbitrary_ids)
 
     try:
         conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT, h1, True)
