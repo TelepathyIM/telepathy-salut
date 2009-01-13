@@ -2220,10 +2220,10 @@ check_ip_params (TpSocketAddressType address_type,
 
 gboolean
 salut_tube_stream_check_params (TpSocketAddressType address_type,
-                                 const GValue *address,
-                                 TpSocketAccessControl access_control,
-                                 const GValue *access_control_param,
-                                 GError **error)
+                                const GValue *address,
+                                TpSocketAccessControl access_control,
+                                const GValue *access_control_param,
+                                GError **error)
 {
   switch (address_type)
     {
