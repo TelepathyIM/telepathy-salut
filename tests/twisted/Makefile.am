@@ -78,6 +78,7 @@ check-twisted:
 EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
+	constants.py \
 	saluttest.py \
 	servicetest.py \
         trivialstream.py \
