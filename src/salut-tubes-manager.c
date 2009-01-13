@@ -952,6 +952,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   else
     {
       SalutTubeIface *new_channel;
+      GSList *tokens = NULL;
 
       if (tubes_channel == NULL)
         {
@@ -963,25 +964,15 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 
       new_channel = salut_tubes_channel_tube_request (tubes_channel,
           request_token, request_properties);
+      g_assert (new_channel != NULL);
 
-      if (new_channel != NULL)
-        {
-          GSList *tokens = NULL;
+      if (request_token != NULL)
+        tokens = g_slist_prepend (NULL, request_token);
 
-          if (request_token != NULL)
-            tokens = g_slist_prepend (NULL, request_token);
+      tp_channel_manager_emit_new_channel (self,
+          TP_EXPORTABLE_CHANNEL (new_channel), tokens);
 
-          tp_channel_manager_emit_new_channel (self,
-              TP_EXPORTABLE_CHANNEL (new_channel), tokens);
-
-          g_slist_free (tokens);
-        }
-      else
-        {
-          tp_channel_manager_emit_request_already_satisfied (self,
-              request_token, TP_EXPORTABLE_CHANNEL (tubes_channel));
-        }
-
+      g_slist_free (tokens);
       return TRUE;
     }
 
