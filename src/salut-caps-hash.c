@@ -269,7 +269,7 @@ _parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
     (DataformParsingContext *) user_data;
   const gchar *var;
 
-  if (! g_str_equal (field_node->name, "field"))
+  if (tp_strdiff (field_node->name, "field"))
     return TRUE;
 
   var = gibber_xmpp_node_get_attribute (field_node, "var");
@@ -277,7 +277,7 @@ _parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
   if (NULL == var)
     return TRUE;
 
-  if (g_str_equal (var, "FORM_TYPE"))
+  if (!tp_strdiff (var, "FORM_TYPE"))
     {
       DataformFieldParsingContext *dataform_field_context;
       dataform_field_context = g_slice_new0 (DataformFieldParsingContext);
@@ -352,7 +352,7 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
 {
   AllCapsData *caps_data = (AllCapsData *) user_data;
 
-  if (g_str_equal (node->name, "identity"))
+  if (!tp_strdiff (node->name, "identity"))
     {
       const gchar *category;
       const gchar *name;
@@ -376,7 +376,7 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
       g_ptr_array_add (caps_data->identities,
           g_strdup_printf ("%s/%s/%s/%s", category, type, xmllang, name));
     }
-  else if (g_str_equal (node->name, "feature"))
+  else if (!tp_strdiff (node->name, "feature"))
     {
       const gchar *var;
       var = gibber_xmpp_node_get_attribute (node, "var");
@@ -386,7 +386,7 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
 
       g_ptr_array_add (caps_data->features, g_strdup (var));
     }
-  else if (g_str_equal (node->name, "x"))
+  else if (!tp_strdiff (node->name, "x"))
     {
       const gchar *xmlns;
       const gchar *type;
