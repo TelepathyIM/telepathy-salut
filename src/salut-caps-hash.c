@@ -35,7 +35,6 @@
 #include "salut-capabilities.h"
 #include "salut-caps-hash.h"
 #include "salut-self.h"
-#include "sha1/sha1-util.h"
 
 typedef struct _DataFormField DataFormField;
 
@@ -139,6 +138,8 @@ salut_presence_free_xep0115_hash (
   g_ptr_array_free (dataforms, TRUE);
 }
 
+#define SHA1_HASH_SIZE 20
+
 static gchar *
 caps_hash_compute (
     GPtrArray *features,
@@ -146,7 +147,9 @@ caps_hash_compute (
     GPtrArray *dataforms)
 {
   GString *s;
-  gchar sha1[SHA1_HASH_SIZE];
+  GChecksum *checksum;
+  guchar sha1[SHA1_HASH_SIZE];
+  gsize out_len = SHA1_HASH_SIZE;
   guint i;
   gchar *encoded;
 
@@ -198,10 +201,13 @@ caps_hash_compute (
         }
     }
 
-  sha1_bin (s->str, s->len, (guchar *) sha1);
+  checksum = g_checksum_new (G_CHECKSUM_SHA1);
+  g_checksum_update (checksum, (guchar *) s->str, s->len);
+  g_checksum_get_digest (checksum, sha1, &out_len);
   g_string_free (s, TRUE);
+  g_checksum_free (checksum);
 
-  encoded = g_base64_encode ((guchar *) sha1, SHA1_HASH_SIZE);
+  encoded = g_base64_encode (sha1, SHA1_HASH_SIZE);
 
   return encoded;
 }
