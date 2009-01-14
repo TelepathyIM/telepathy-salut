@@ -990,11 +990,17 @@ salut_connection_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  g_object_unref (self->disco);
-  self->disco = NULL;
+  if (self->disco != NULL)
+    {
+      g_object_unref (self->disco);
+      self->disco = NULL;
+    }
 
-  g_object_unref (self->presence_cache);
-  self->presence_cache = NULL;
+  if (self->presence_cache)
+    {
+      g_object_unref (self->presence_cache);
+      self->presence_cache = NULL;
+    }
 
   if (priv->self) {
     g_object_unref (priv->self);
