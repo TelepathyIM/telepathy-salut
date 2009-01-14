@@ -77,6 +77,11 @@ check-twisted:
 		exit 1;\
 	fi
 
+config.py:
+	echo "PACKAGE_STRING = \"$(PACKAGE_STRING)\"" > config.py
+
+BUILT_SOURCES = config.py
+
 EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
@@ -84,6 +89,7 @@ EXTRA_DIST = \
 	saluttest.py \
 	servicetest.py \
         trivialstream.py \
+        config.py \
 	avahi/file_transfer_helper.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc

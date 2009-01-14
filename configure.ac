@@ -269,6 +269,8 @@ PKG_CHECK_MODULES([CHECK], [check >= 0.9.4],
                    [ HAVE_CHECK=no ] )
 AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
 
+AC_SUBST(PACKAGE_STRING)
+
 AC_OUTPUT( Makefile                       \
            docs/Makefile                  \
            lib/Makefile                   \
