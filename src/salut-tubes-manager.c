@@ -1357,6 +1357,26 @@ salut_tubes_manager_update_caps (
 }
 
 static gboolean
+hash_table_is_subset (GHashTable *superset,
+                      GHashTable *subset)
+{
+  GHashTableIter iter;
+  gpointer look_for;
+
+  g_hash_table_iter_init (&iter, subset);
+  while (g_hash_table_iter_next (&iter, &look_for, NULL))
+    {
+      gpointer key, value;
+
+      if (!g_hash_table_lookup_extended (superset, look_for, &key, &value))
+        /* One of subset's key is not in superset */
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
 salut_tubes_manager_caps_diff (
     SalutCapsChannelManager *manager,
     TpHandle handle,
@@ -1365,64 +1385,30 @@ salut_tubes_manager_caps_diff (
 {
   TubesCapabilities *old_caps = specific_old_caps;
   TubesCapabilities *new_caps = specific_new_caps;
-  GHashTableIter tube_caps_iter;
-  gpointer service;
 
-  if (old_caps != NULL)
-    {
-      g_hash_table_iter_init (&tube_caps_iter, old_caps->stream_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, &service,
-            NULL))
-        {
-          gpointer key, value;
-          if (new_caps == NULL ||
-              !g_hash_table_lookup_extended (new_caps->stream_tube_caps,
-                  service, &key, &value))
-            {
-              return TRUE;
-            }
-        }
-      g_hash_table_iter_init (&tube_caps_iter, old_caps->dbus_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, &service,
-            NULL))
-        {
-          gpointer key, value;
-          if (new_caps == NULL ||
-              !g_hash_table_lookup_extended (new_caps->dbus_tube_caps,
-                  service, &key, &value))
-            {
-              return TRUE;
-            }
-        }
-    }
+  if (new_caps == NULL && old_caps != NULL)
+    return TRUE;
+  else if (old_caps == NULL && new_caps != NULL)
+    return TRUE;
+  else if (old_caps == NULL && new_caps == NULL)
+    return TRUE;
 
-  if (new_caps != NULL)
-    {
-      g_hash_table_iter_init (&tube_caps_iter, new_caps->stream_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, &service,
-            NULL))
-        {
-          gpointer key, value;
-          if (old_caps == NULL ||
-              !g_hash_table_lookup_extended (old_caps->stream_tube_caps,
-                  service, &key, &value))
-            {
-              return TRUE;
-            }
-        }
-      g_hash_table_iter_init (&tube_caps_iter, new_caps->dbus_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, &service,
-            NULL))
-        {
-          gpointer key, value;
-          if (old_caps == NULL ||
-              !g_hash_table_lookup_extended (old_caps->dbus_tube_caps,
-                  service, &key, &value))
-            {
-              return TRUE;
-            }
-        }
-    }
+  if (!hash_table_is_subset (new_caps->stream_tube_caps,
+        old_caps->stream_tube_caps))
+    return TRUE;
+
+  if (!hash_table_is_subset (new_caps->dbus_tube_caps,
+        old_caps->dbus_tube_caps))
+    return TRUE;
+
+  if (!hash_table_is_subset (old_caps->stream_tube_caps,
+        new_caps->stream_tube_caps))
+    return TRUE;
+
+  if (!hash_table_is_subset (old_caps->dbus_tube_caps,
+        new_caps->dbus_tube_caps))
+    return TRUE;
+
   return FALSE;
 }
 
