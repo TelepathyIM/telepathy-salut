@@ -452,7 +452,7 @@ salut_contact_set_capabilities (SalutContact *contact,
                                 GHashTable *per_channel_manager_caps)
 {
   salut_presence_cache_free_cache_entry (contact->per_channel_manager_caps);
-  salut_presence_cache_copy_cache_entry (&contact->per_channel_manager_caps,
+  contact->per_channel_manager_caps = salut_presence_cache_copy_cache_entry (
       per_channel_manager_caps);
 }
 

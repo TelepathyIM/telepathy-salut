@@ -82,7 +82,7 @@ void salut_presence_cache_free_cache_entry (
 
 /* loop on CapabilityInfo::per_channel_manager_caps and call
  * salut_caps_channel_manager_copy_capabilities */
-void salut_presence_cache_copy_cache_entry (GHashTable **out,
+G_GNUC_WARN_UNUSED_RESULT GHashTable * salut_presence_cache_copy_cache_entry (
     GHashTable *in);
 
 /* loop on CapabilityInfo::per_channel_manager_caps and call

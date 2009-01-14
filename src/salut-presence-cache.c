@@ -508,7 +508,8 @@ _caps_disco_cb (SalutDisco *disco,
           if (!bad_hash)
             {
               GHashTable *save_enhanced_caps;
-              salut_presence_cache_copy_cache_entry (&save_enhanced_caps,
+
+              save_enhanced_caps = salut_presence_cache_copy_cache_entry (
                   waiter->contact->per_channel_manager_caps);
 
               DEBUG ("setting caps for %s (thanks to %s)",
@@ -602,7 +603,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
 
       DEBUG ("setting caps for %s", contact->name);
 
-      salut_presence_cache_copy_cache_entry (&save_enhanced_caps,
+      save_enhanced_caps = salut_presence_cache_copy_cache_entry (
           contact->per_channel_manager_caps);
 
       DEBUG ("setting caps for %s (thanks to %s)",
@@ -694,14 +695,17 @@ copy_caps_helper (gpointer key, gpointer value, gpointer user_data)
   g_hash_table_insert (table_out, key, out);
 }
 
-void
-salut_presence_cache_copy_cache_entry (
-    GHashTable **out, GHashTable *in)
+GHashTable *
+salut_presence_cache_copy_cache_entry (GHashTable *in)
 {
-  *out = g_hash_table_new (NULL, NULL);
+  GHashTable *out;
+
+  out = g_hash_table_new (NULL, NULL);
   if (in != NULL)
     g_hash_table_foreach (in, copy_caps_helper,
-        *out);
+        out);
+
+  return out;
 }
 
 static void
