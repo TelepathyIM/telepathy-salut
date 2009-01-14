@@ -714,7 +714,6 @@ new_tubes_channel (SalutTubesManager *fac,
                        "initiator-handle", initiator,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
                        NULL);
-  g_object_unref (contact);
 
   DEBUG ("object path %s", object_path);
 
