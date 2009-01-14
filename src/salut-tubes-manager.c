@@ -104,7 +104,7 @@ struct _TubesCapabilities
    * It can also be used to store the list of tubes that Salut advertises to
    * support when Salut replies to XEP-0115 Entity Capabilities requests. In
    * this case, a Feature structure is associated with each tube type in order
-   * to be returned by salut_private_tubes_factory_get_feature_list().
+   * to be returned by salut_tubes_manager_get_feature_list().
    *
    * So the value of the hash table is either NULL (if the variable is related
    * to a contact handle), either a Feature structure (if the variable is
@@ -130,7 +130,7 @@ const Feature tube_feature = {
 };
 
 static void
-salut_private_tubes_factory_free_feat (gpointer data)
+free_feat (gpointer data)
 {
   Feature *feat = (Feature *) data;
 
@@ -1144,7 +1144,7 @@ add_service_to_array (gchar *service,
 }
 
 static void
-salut_private_tubes_factory_get_contact_caps (
+salut_tubes_manager_get_contact_caps (
     SalutCapsChannelManager *manager,
     SalutConnection *conn,
     TpHandle handle,
@@ -1216,7 +1216,7 @@ salut_private_tubes_factory_get_contact_caps (
 }
 
 static void
-salut_private_tubes_factory_get_feature_list (
+salut_tubes_manager_get_feature_list (
     SalutCapsChannelManager *manager,
     gpointer specific_caps,
     GSList **features)
@@ -1280,7 +1280,7 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
 }
 
 static gpointer
-salut_private_tubes_factory_parse_caps (
+salut_tubes_manager_parse_caps (
     SalutCapsChannelManager *manager,
     GibberXmppNode *node)
 {
@@ -1288,9 +1288,9 @@ salut_private_tubes_factory_parse_caps (
 
   caps = g_new0 (TubesCapabilities, 1);
   caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, salut_private_tubes_factory_free_feat);
+      g_free, free_feat);
   caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, salut_private_tubes_factory_free_feat);
+      g_free, free_feat);
 
   gibber_xmpp_node_each_child (node, _parse_caps_item, caps);
 
@@ -1298,7 +1298,7 @@ salut_private_tubes_factory_parse_caps (
 }
 
 static void
-salut_private_tubes_factory_free_caps (
+salut_tubes_manager_free_caps (
     SalutCapsChannelManager *manager,
     gpointer data)
 {
@@ -1318,7 +1318,7 @@ copy_caps_helper (gpointer key, gpointer value, gpointer user_data)
 }
 
 static void
-salut_private_tubes_factory_copy_caps (
+salut_tubes_manager_copy_caps (
     SalutCapsChannelManager *manager,
     gpointer *specific_caps_out,
     gpointer specific_caps_in)
@@ -1327,12 +1327,12 @@ salut_private_tubes_factory_copy_caps (
   TubesCapabilities *caps_out = g_new0 (TubesCapabilities, 1);
 
   caps_out->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, salut_private_tubes_factory_free_feat);
+      g_free, free_feat);
   g_hash_table_foreach (caps_in->stream_tube_caps, copy_caps_helper,
       caps_out->stream_tube_caps);
 
   caps_out->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, salut_private_tubes_factory_free_feat);
+      g_free, free_feat);
   g_hash_table_foreach (caps_in->dbus_tube_caps, copy_caps_helper,
       caps_out->dbus_tube_caps);
 
@@ -1340,7 +1340,7 @@ salut_private_tubes_factory_copy_caps (
 }
 
 static void
-salut_private_tubes_factory_update_caps (
+salut_tubes_manager_update_caps (
     SalutCapsChannelManager *manager,
     gpointer *specific_caps_out,
     gpointer specific_caps_in)
@@ -1358,7 +1358,7 @@ salut_private_tubes_factory_update_caps (
 }
 
 static gboolean
-salut_private_tubes_factory_caps_diff (
+salut_tubes_manager_caps_diff (
     SalutCapsChannelManager *manager,
     TpHandle handle,
     gpointer specific_old_caps,
@@ -1428,7 +1428,7 @@ salut_private_tubes_factory_caps_diff (
 }
 
 static void
-salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
+salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
                                       SalutConnection *conn,
                                       TpHandle handle,
                                       GHashTable *cap)
@@ -1482,9 +1482,9 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
     {
       caps = g_new0 (TubesCapabilities, 1);
       caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          g_free, salut_private_tubes_factory_free_feat);
+          g_free, free_feat);
       caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          g_free, salut_private_tubes_factory_free_feat);
+          g_free, free_feat);
       g_hash_table_insert (*per_channel_manager_caps, manager, caps);
     }
 
@@ -1520,12 +1520,12 @@ caps_channel_manager_iface_init (gpointer g_iface,
 {
   SalutCapsChannelManagerIface *iface = g_iface;
 
-  iface->get_contact_caps = salut_private_tubes_factory_get_contact_caps;
-  iface->get_feature_list = salut_private_tubes_factory_get_feature_list;
-  iface->parse_caps = salut_private_tubes_factory_parse_caps;
-  iface->free_caps = salut_private_tubes_factory_free_caps;
-  iface->copy_caps = salut_private_tubes_factory_copy_caps;
-  iface->update_caps = salut_private_tubes_factory_update_caps;
-  iface->caps_diff = salut_private_tubes_factory_caps_diff;
-  iface->add_cap = salut_private_tubes_factory_add_cap;
+  iface->get_contact_caps = salut_tubes_manager_get_contact_caps;
+  iface->get_feature_list = salut_tubes_manager_get_feature_list;
+  iface->parse_caps = salut_tubes_manager_parse_caps;
+  iface->free_caps = salut_tubes_manager_free_caps;
+  iface->copy_caps = salut_tubes_manager_copy_caps;
+  iface->update_caps = salut_tubes_manager_update_caps;
+  iface->caps_diff = salut_tubes_manager_caps_diff;
+  iface->add_cap = salut_tubes_manager_add_cap;
 }
