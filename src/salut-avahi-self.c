@@ -229,19 +229,19 @@ error:
 }
 
 static gboolean
-salut_avahi_self_set_presence (SalutSelf *_self,
+salut_avahi_self_set_presence (SalutSelf *self,
                                GError **error)
 {
-  SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelf *avahi_self = SALUT_AVAHI_SELF (self);
+  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (avahi_self);
 
   ga_entry_group_service_freeze (priv->presence);
   ga_entry_group_service_set (priv->presence, "status",
-      salut_presence_status_txt_names[_self->status], NULL);
+      salut_presence_status_txt_names[self->status], NULL);
 
-  if (_self->status_message)
+  if (self->status_message)
     ga_entry_group_service_set (priv->presence, "msg",
-        _self->status_message, NULL);
+        self->status_message, NULL);
   else
     ga_entry_group_service_remove_key (priv->presence, "msg", NULL);
 
