@@ -1304,7 +1304,7 @@ salut_tubes_manager_free_caps (
  TubesCapabilities *caps = data;
  g_hash_table_destroy (caps->stream_tube_caps);
  g_hash_table_destroy (caps->dbus_tube_caps);
- g_free (caps);
+ g_slice_free (TubesCapabilities, caps);
 }
 
 static void
@@ -1413,6 +1413,12 @@ salut_tubes_manager_caps_diff (
 }
 
 static void
+free_feature (gpointer feature)
+{
+  g_slice_free (Feature, feature);
+}
+
+static void
 salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
                              SalutConnection *conn,
                              TpHandle handle,
@@ -1465,17 +1471,17 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
   caps = g_hash_table_lookup (*per_channel_manager_caps, manager);
   if (caps == NULL)
     {
-      caps = g_new0 (TubesCapabilities, 1);
+      caps = g_slice_new (TubesCapabilities);
       caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          g_free, free_feat);
+          free_feature, free_feature);
       caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          g_free, free_feat);
+          g_free, free_feature);
       g_hash_table_insert (*per_channel_manager_caps, manager, caps);
     }
 
   if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
-      Feature *feat = g_new0 (Feature, 1);
+      Feature *feat = g_slice_new (Feature);
       gchar *service = g_strdup (tp_asv_get_string (cap,
           SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service"));
       feat->feature_type = FEATURE_OPTIONAL;
@@ -1485,7 +1491,7 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
     }
   else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
-      Feature *feat = g_new0 (Feature, 1);
+      Feature *feat = g_slice_new (Feature);
       gchar *service = g_strdup (tp_asv_get_string (cap,
           SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName"));
       feat->feature_type = FEATURE_OPTIONAL;
