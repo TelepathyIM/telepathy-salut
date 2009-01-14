@@ -1168,6 +1168,7 @@ salut_private_tubes_factory_get_contact_caps (
       SalutSelf *salut_self;
       g_object_get (conn, "self", &salut_self, NULL);
       per_channel_manager_caps = salut_self->per_channel_manager_caps;
+      g_object_unref (salut_self);
     }
   else
     {
@@ -1460,6 +1461,7 @@ salut_private_tubes_factory_add_cap (SalutCapsChannelManager *manager,
       SalutSelf *salut_self;
       g_object_get (conn, "self", &salut_self, NULL);
       per_channel_manager_caps = &salut_self->per_channel_manager_caps;
+      g_object_unref (salut_self);
     }
   else
     {
