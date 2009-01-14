@@ -1158,7 +1158,6 @@ salut_tubes_manager_get_contact_caps (
   GHashTable *dbus_tube_caps;
   GHashTableIter tube_caps_iter;
   gpointer service;
-  SalutContact *contact = NULL;
   GHashTable *per_channel_manager_caps;
 
   g_assert (handle != 0);
@@ -1172,6 +1171,8 @@ salut_tubes_manager_get_contact_caps (
     }
   else
     {
+      SalutContact *contact;
+
       contact = salut_contact_manager_get_contact (
           priv->contact_manager, handle);
 
@@ -1179,6 +1180,7 @@ salut_tubes_manager_get_contact_caps (
         return;
 
       per_channel_manager_caps = contact->per_channel_manager_caps;
+      g_object_unref (contact);
     }
 
   if (per_channel_manager_caps == NULL)
@@ -1210,9 +1212,6 @@ salut_tubes_manager_get_contact_caps (
           add_service_to_array (service, arr, TP_TUBE_TYPE_DBUS, handle);
         }
     }
-
-  if (contact != NULL)
-    g_object_unref (contact);
 }
 
 static void
