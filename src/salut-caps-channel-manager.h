@@ -129,7 +129,6 @@ struct _SalutCapsChannelManagerIface {
     SalutCapsChannelManagerUpdateCapsFunc update_caps;
     SalutCapsChannelManagerCapsDiffFunc caps_diff;
 
-    GCallback _future[8];
     gpointer priv;
 };
 
