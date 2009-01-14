@@ -149,7 +149,13 @@ def presence_add_caps(presence, ver, client, hash=None):
         c['hash'] = hash
     return presence
 
+# last value of the "ver" key we resolved. We use it to be sure that the
+# modified caps has already be announced.
+old_ver = ''
+
 def receive_presence_and_ask_caps(q, stream, service):
+    global old_ver
+
     event_avahi, event_dbus = q.expect_many(
             EventPattern('service-resolved', service=service),
             EventPattern('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -157,8 +163,14 @@ def receive_presence_and_ask_caps(q, stream, service):
     assert event_dbus.args[0] == 1
     signaled_caps = event_dbus.args[1]
 
-    hash = txt_get_key(event_avahi.txt, "hash")
     ver = txt_get_key(event_avahi.txt, "ver")
+    while ver == old_ver:
+        # be sure that the announced caps actually changes
+        event_avahi = q.expect('service-resolved', service=service)
+        ver = txt_get_key(event_avahi.txt, "ver")
+    old_ver = ver
+
+    hash = txt_get_key(event_avahi.txt, "hash")
     node = txt_get_key(event_avahi.txt, "node")
     assert hash == 'sha-1'
 
