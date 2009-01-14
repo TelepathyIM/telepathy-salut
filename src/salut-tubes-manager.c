@@ -1414,9 +1414,9 @@ salut_tubes_manager_caps_diff (
 
 static void
 salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
-                                      SalutConnection *conn,
-                                      TpHandle handle,
-                                      GHashTable *cap)
+                             SalutConnection *conn,
+                             TpHandle handle,
+                             GHashTable *cap)
 {
   SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
   SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
