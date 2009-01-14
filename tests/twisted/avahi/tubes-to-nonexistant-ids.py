@@ -39,7 +39,6 @@ def test(q, bus, conn):
             CHANNEL_TYPE_STREAM_TUBE + ".Service": "com.example",
         })
     except dbus.DBusException, e:
-        print e
         assert e.get_dbus_name() == NOT_AVAILABLE, e.get_dbus_name()
     else:
         assert False
