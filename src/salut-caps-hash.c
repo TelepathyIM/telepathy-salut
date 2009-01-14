@@ -31,7 +31,6 @@
 
 #define DEBUG_FLAG SALUT_DEBUG_PRESENCE
 
-#include "base64.h"
 #include "debug.h"
 #include "salut-capabilities.h"
 #include "salut-caps-hash.h"
@@ -202,7 +201,7 @@ caps_hash_compute (
   sha1_bin (s->str, s->len, (guchar *) sha1);
   g_string_free (s, TRUE);
 
-  encoded = base64_encode (SHA1_HASH_SIZE, sha1, FALSE);
+  encoded = g_base64_encode ((guchar *) sha1, SHA1_HASH_SIZE);
 
   return encoded;
 }
