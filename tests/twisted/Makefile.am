@@ -3,6 +3,7 @@ TWISTED_TESTS =
 TWISTED_BASIC_TESTS =
 
 TWISTED_AVAHI_TESTS = \
+	avahi/caps_helper.py \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
 	avahi/test-request-im.py \
