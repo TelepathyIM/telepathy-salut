@@ -1,6 +1,5 @@
 import hashlib
 import base64
-from config import PACKAGE_STRING
 
 def compute_caps_hash(identities, features, dataforms):
     S = ''
@@ -16,9 +15,6 @@ def compute_caps_hash(identities, features, dataforms):
     m = hashlib.sha1()
     m.update(S)
     return base64.b64encode(m.digest())
-
-def generate_caps(features):
-    return compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], features, [])
 
 if __name__ == '__main__':
     # example from XEP-0115

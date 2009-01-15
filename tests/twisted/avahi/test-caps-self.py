@@ -13,7 +13,8 @@ from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy
 
 from twisted.words.xish import xpath, domish
-from caps_helper import generate_caps
+from caps_helper import compute_caps_hash
+from config import PACKAGE_STRING
 
 import time
 import dbus
@@ -65,7 +66,7 @@ def test(q, bus, conn):
 
     e = q.expect('service-resolved', service = service)
 
-    caps = generate_caps([])
+    caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], [], [])
     check_caps(e.txt, ver=caps)
 
 if __name__ == '__main__':
