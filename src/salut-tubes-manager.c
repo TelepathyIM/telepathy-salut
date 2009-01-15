@@ -138,7 +138,7 @@ feature_free (gpointer feat)
     return;
 
    if (feature->ns != NULL)
-      g_free (feature->ns);
+     g_free (feature->ns);
 
   g_slice_free (Feature, feature);
 }
@@ -155,6 +155,14 @@ tubes_capabilities_new (void)
       g_free, feature_free);
 
   return caps;
+}
+
+static void
+tubes_capabilities_free (TubesCapabilities *caps)
+{
+  g_hash_table_destroy (caps->stream_tube_caps);
+  g_hash_table_destroy (caps->dbus_tube_caps);
+  g_slice_free (TubesCapabilities, caps);
 }
 
 static void
@@ -1311,9 +1319,7 @@ salut_tubes_manager_free_caps (
     gpointer data)
 {
  TubesCapabilities *caps = data;
- g_hash_table_destroy (caps->stream_tube_caps);
- g_hash_table_destroy (caps->dbus_tube_caps);
- g_slice_free (TubesCapabilities, caps);
+ tubes_capabilities_free (caps);
 }
 
 static void
