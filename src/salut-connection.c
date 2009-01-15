@@ -363,6 +363,8 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
             GIBBER_NODE, "identity",
               GIBBER_NODE_ATTRIBUTE, "category", "client",
               GIBBER_NODE_ATTRIBUTE, "name", PACKAGE_STRING,
+              /* FIXME: maybe we should add a connection property allowing to
+               * set the type attribute instead of hardcoding "pc". */
               GIBBER_NODE_ATTRIBUTE, "type", "pc",
             GIBBER_NODE_END,
           GIBBER_NODE_END,
