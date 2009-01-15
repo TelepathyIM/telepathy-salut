@@ -130,17 +130,31 @@ const Feature tube_feature = {
 };
 
 static void
-free_feat (gpointer data)
+feature_free (gpointer feat)
 {
-  Feature *feat = (Feature *) data;
+  Feature *feature = (Feature *) feat;
 
-  if (feat == NULL)
+  if (feature == NULL)
     return;
 
-  if (feat->ns != NULL)
-    g_free (feat->ns);
+   if (feature->ns != NULL)
+      g_free (feature->ns);
 
-  g_free (feat);
+  g_slice_free (Feature, feature);
+}
+
+static TubesCapabilities *
+tubes_capabilities_new (void)
+{
+  TubesCapabilities *caps;
+
+  caps = g_slice_new (TubesCapabilities);
+  caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, feature_free);
+  caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, feature_free);
+
+  return caps;
 }
 
 static void
@@ -1285,12 +1299,7 @@ salut_tubes_manager_parse_caps (
 {
   TubesCapabilities *caps;
 
-  caps = g_new0 (TubesCapabilities, 1);
-  caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, free_feat);
-  caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, free_feat);
-
+  caps = tubes_capabilities_new ();
   gibber_xmpp_node_each_child (node, _parse_caps_item, caps);
 
   return caps;
@@ -1323,15 +1332,11 @@ salut_tubes_manager_copy_caps (
     gpointer specific_caps_in)
 {
   TubesCapabilities *caps_in = specific_caps_in;
-  TubesCapabilities *caps_out = g_new0 (TubesCapabilities, 1);
+  TubesCapabilities *caps_out = tubes_capabilities_new ();
 
-  caps_out->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, free_feat);
   g_hash_table_foreach (caps_in->stream_tube_caps, copy_caps_helper,
       caps_out->stream_tube_caps);
 
-  caps_out->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, free_feat);
   g_hash_table_foreach (caps_in->dbus_tube_caps, copy_caps_helper,
       caps_out->dbus_tube_caps);
 
@@ -1413,12 +1418,6 @@ salut_tubes_manager_caps_diff (
 }
 
 static void
-free_feature (gpointer feature)
-{
-  g_slice_free (Feature, feature);
-}
-
-static void
 salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
                              SalutConnection *conn,
                              TpHandle handle,
@@ -1471,11 +1470,7 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
   caps = g_hash_table_lookup (*per_channel_manager_caps, manager);
   if (caps == NULL)
     {
-      caps = g_slice_new (TubesCapabilities);
-      caps->stream_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          free_feature, free_feature);
-      caps->dbus_tube_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
-          g_free, free_feature);
+      caps = tubes_capabilities_new ();
       g_hash_table_insert (*per_channel_manager_caps, manager, caps);
     }
 
