@@ -162,8 +162,7 @@ def receive_presence_and_ask_caps(q, stream, service):
             EventPattern('service-resolved', service=service),
             EventPattern('dbus-signal', signal='ContactCapabilitiesChanged')
         )
-    assert event_dbus.args[0] == 1
-    signaled_caps = event_dbus.args[1]
+    signaled_caps = event_dbus.args[0][1]
 
     ver = txt_get_key(event_avahi.txt, "ver")
     while ver == old_ver:
@@ -287,8 +286,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
-    assert event.args[0] == contact_handle
-    signaled_caps = event.args[1]
+    signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
@@ -330,8 +328,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
-    assert event.args[0] == contact_handle
-    signaled_caps = event.args[1]
+    signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 2, signaled_caps # basic caps + Xiangqi
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
@@ -376,8 +373,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
-    assert event.args[0] == contact_handle
-    signaled_caps = event.args[1]
+    signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
@@ -430,8 +426,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
-    assert event.args[0] == contact_handle
-    signaled_caps = event.args[1]
+    signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 5, signaled_caps # basic caps + 4 tubes
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
@@ -474,8 +469,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     # Salut does not look up our capabilities because of the cache
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
-    assert event.args[0] == contact_handle
-    signaled_caps = event.args[1]
+    signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
