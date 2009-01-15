@@ -11,14 +11,12 @@ import avahi
 
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy
-from config import PACKAGE_STRING
 
 from twisted.words.xish import xpath, domish
+from caps_helper import generate_caps
 
 import time
 import dbus
-import hashlib
-import base64
 
 HT_CONTACT = 1
 caps_iface = 'org.freedesktop.Telepathy.' + \
@@ -44,21 +42,6 @@ def check_caps(txt, ver=None):
         v = txt_get_key(txt, "ver")
         assert v == ver, (v, ver)
 
-def compute_caps_hash(identities, features, dataforms):
-    S = ''
-
-    for identity in sorted(identities):
-        S += '%s<' % identity
-
-    for feature in sorted(features):
-        S += '%s<' % feature
-
-    # FIXME: support dataforms
-
-    m = hashlib.sha1()
-    m.update(S)
-    return base64.b64encode(m.digest())
-
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
@@ -82,12 +65,8 @@ def test(q, bus, conn):
 
     e = q.expect('service-resolved', service = service)
 
-    caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], [], [])
+    caps = generate_caps([])
     check_caps(e.txt, ver=caps)
 
 if __name__ == '__main__':
-    # example from XEP-0115
-    assert compute_caps_hash(['client/pc//Exodus 0.9.1'], ["http://jabber.org/protocol/disco#info",
-        "http://jabber.org/protocol/disco#items", "http://jabber.org/protocol/muc",
-        "http://jabber.org/protocol/caps"], []) == 'QgayPKawpkPSDYmwT/WM94uAlu0='
     exec_test(test)
