@@ -32,6 +32,7 @@
 
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
 #include <telepathy-glib/handle-repo.h>
 #include <telepathy-glib/handle-repo-static.h>
@@ -1427,7 +1428,7 @@ conn_contact_capabilities_fill_contact_attributes (GObject *obj,
       if (array->len > 0)
         {
           GValue *val =  tp_g_value_slice_new (
-            SALUT_ARRAY_TYPE_ENHANCED_CONTACT_CAPABILITY_LIST);
+            TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST);
 
           g_value_take_boxed (val, array);
           tp_contacts_mixin_set_contact_attribute (attributes_hash,
@@ -1929,7 +1930,7 @@ salut_free_enhanced_contact_capabilities (GPtrArray *caps)
     {
       GValue monster = {0, };
 
-      g_value_init (&monster, SALUT_STRUCT_TYPE_ENHANCED_CONTACT_CAPABILITY);
+      g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
       g_value_take_boxed (&monster, g_ptr_array_index (caps, i));
       g_value_unset (&monster);
     }
@@ -1998,6 +1999,7 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
   TpChannelManager *manager;
   GPtrArray *ret;
   gboolean diff = FALSE;
+  GHashTable *caps;
 
   tp_base_connection_channel_manager_iter_init (&iter, base_conn);
   while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
@@ -2026,13 +2028,17 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
   if (! diff)
     return;
 
+  caps = g_hash_table_new (g_direct_hash, g_direct_equal);
   ret = g_ptr_array_new ();
 
   salut_connection_get_handle_contact_capabilities (conn, handle, ret);
+  g_hash_table_insert (caps, GUINT_TO_POINTER (handle), ret);
+
   salut_svc_connection_interface_contact_capabilities_emit_contact_capabilities_changed (
-      conn, handle, ret);
+      conn, caps);
 
   salut_free_enhanced_contact_capabilities (ret);
+  g_hash_table_destroy (caps);
 }
 
 static void
