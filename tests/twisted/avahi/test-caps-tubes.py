@@ -44,6 +44,8 @@ from servicetest import EventPattern
 from saluttest import exec_test, make_result_iq, sync_stream
 from xmppstream import setup_stream_listener, connect_to_stream
 
+from caps_helper import compute_caps_hash
+
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
 
@@ -213,7 +215,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     conn_contacts_iface = dbus.Interface(conn, contacts_iface)
 
     # send presence with no tube cap
-    ver = 'JpaYgiKL0y4fUOCTwN3WLGpaftM='
+    ver = compute_caps_hash([], [], [])
     txt_record = { "txtvers": "1", "status": "avail",
         "node": client, "ver": ver, "hash": "sha-1"}
     contact_name = "test-caps-tube@" + get_host_name()
@@ -266,7 +268,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
             caps_via_contacts_iface
 
     # send presence with 1 stream tube cap
-    txt_record['ver'] = 'f5oUAlH0fcR8btEo5K0P135QReo='
+    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/stream#daap'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -309,7 +311,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with 1 D-Bus tube cap
-    txt_record['ver'] = '4Ps2iaOc+lsFwfbasCdsBjLOQ5s='
+    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -352,7 +354,8 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    txt_record['ver'] = 'ALCBfacl4M/FKWckV1OCHfj+lt0='
+    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi',
+        ns_tubes + '/stream#daap'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -401,7 +404,8 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with 4 tube caps
-    txt_record['ver'] = 'ObSHJf9W0fUDuSjmB6gmthptw+s='
+    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi',
+        ns_tubes + '/dbus#com.example.Go', ns_tubes + '/stream#daap', ns_tubes + '/stream#http'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -463,7 +467,8 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    txt_record['ver'] = 'ALCBfacl4M/FKWckV1OCHfj+lt0='
+    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi',
+         ns_tubes + '/stream#daap'], [])
     announcer.update(txt_record)
 
     # Salut does not look up our capabilities because of the cache
