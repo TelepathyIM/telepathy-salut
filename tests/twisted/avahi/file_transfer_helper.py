@@ -18,7 +18,7 @@ from dbus import PROPERTIES_IFACE
 
 CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
 CHANNEL_INTERFACE ='org.freedesktop.Telepathy.Channel'
-CHANNEL_TYPE_FILE_TRANSFER = 'org.freedesktop.Telepathy.Channel.Type.FileTransfer.DRAFT'
+CHANNEL_TYPE_FILE_TRANSFER = 'org.freedesktop.Telepathy.Channel.Type.FileTransfer'
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
 
@@ -117,7 +117,7 @@ class FileTransferTest(object):
 
     def create_ft_channel(self):
         self.channel = make_channel_proxy(self.conn, self.ft_path, 'Channel')
-        self.ft_channel = make_channel_proxy(self.conn, self.ft_path, 'Channel.Type.FileTransfer.DRAFT')
+        self.ft_channel = make_channel_proxy(self.conn, self.ft_path, 'Channel.Type.FileTransfer')
         self.ft_props = dbus.Interface(self.bus.get_object(
             self.conn.object.bus_name, self.ft_path), PROPERTIES_IFACE)
 
