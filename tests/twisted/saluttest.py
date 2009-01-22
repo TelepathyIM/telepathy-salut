@@ -103,6 +103,7 @@ def wait_for_contact_list(q, conn):
     """Request contact list channels and wait for their NewChannel signals.
     This is useful to avoid these signals to interfere with your test."""
 
+    #FIXME: this maybe racy if there are other contacts connected
     requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
 
     # publish
