@@ -1377,9 +1377,7 @@ hash_table_is_subset (GHashTable *superset,
   g_hash_table_iter_init (&iter, subset);
   while (g_hash_table_iter_next (&iter, &look_for, NULL))
     {
-      gpointer key, value;
-
-      if (!g_hash_table_lookup_extended (superset, look_for, &key, &value))
+      if (!g_hash_table_lookup_extended (superset, look_for, NULL, NULL))
         /* One of subset's key is not in superset */
         return FALSE;
     }
