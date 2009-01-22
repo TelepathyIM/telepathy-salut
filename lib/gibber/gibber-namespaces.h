@@ -56,6 +56,9 @@
 #define GIBBER_XMPP_NS_IQ_OOB \
   "jabber:iq:oob"
 
+#define GIBBER_XMPP_NS_X_OOB \
+  "jabber:x:oob"
+
 #define GIBBER_XMPP_NS_JINGLE_ERRORS \
   "http://jabber.org/protocol/jingle#errors"
 
