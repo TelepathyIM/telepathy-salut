@@ -323,7 +323,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
     return FALSE;
 
   query_node = gibber_xmpp_node_get_child_ns (stanza->node, "query",
-      GIBBER_XMPP_NS_OOB);
+      GIBBER_XMPP_NS_IQ_OOB);
   if (query_node == NULL)
     return FALSE;
 
@@ -518,7 +518,7 @@ gibber_bytestream_oob_get_property (GObject *object,
         g_value_set_string (value, priv->host);
         break;
       case PROP_PROTOCOL:
-        g_value_set_string (value, GIBBER_XMPP_NS_OOB);
+        g_value_set_string (value, GIBBER_XMPP_NS_IQ_OOB);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -729,7 +729,7 @@ create_si_accept_iq (GibberBytestreamOOB *self)
             GIBBER_NODE, "field",
               GIBBER_NODE_ATTRIBUTE, "var", "stream-method",
               GIBBER_NODE, "value",
-                GIBBER_NODE_TEXT, GIBBER_XMPP_NS_OOB,
+                GIBBER_NODE_TEXT, GIBBER_XMPP_NS_IQ_OOB,
               GIBBER_NODE_END,
             GIBBER_NODE_END,
           GIBBER_NODE_END,
@@ -905,7 +905,7 @@ make_oob_init_iq (const gchar *from,
       GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_SET,
       from, to,
       GIBBER_NODE, "query",
-        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_OOB,
+        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_IQ_OOB,
         GIBBER_NODE_ATTRIBUTE, "sid", stream_id,
         GIBBER_NODE, "url",
           GIBBER_NODE_TEXT, url,

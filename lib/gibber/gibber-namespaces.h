@@ -53,7 +53,7 @@
 #define GIBBER_XMPP_NS_STANZAS \
   "urn:ietf:params:xml:ns:xmpp-stanzas"
 
-#define GIBBER_XMPP_NS_OOB \
+#define GIBBER_XMPP_NS_IQ_OOB \
   "jabber:iq:oob"
 
 #define GIBBER_XMPP_NS_JINGLE_ERRORS \

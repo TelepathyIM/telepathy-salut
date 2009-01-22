@@ -472,7 +472,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
       GIBBER_FILE_TRANSFER (self)->peer_id);
 
   query_node = gibber_xmpp_node_add_child_ns (stanza->node, "query",
-      GIBBER_XMPP_NS_OOB);
+      GIBBER_XMPP_NS_IQ_OOB);
 
   url_node = gibber_xmpp_node_add_child_with_content (query_node, "url", url);
   gibber_xmpp_node_set_attribute (url_node, "type", "file");
@@ -742,7 +742,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   gibber_xmpp_node_set_attribute (stanza->node, "id", ft->id);
 
   query = gibber_xmpp_node_add_child_ns (stanza->node, "query",
-      GIBBER_XMPP_NS_OOB);
+      GIBBER_XMPP_NS_IQ_OOB);
   gibber_xmpp_node_add_child_with_content (query, "url", self->priv->url);
 
   error_node = gibber_xmpp_node_add_child (stanza->node, "error");
