@@ -57,7 +57,7 @@ def test(q, bus, conn):
                 'org.freedesktop.Telepathy.Errors.InvalidArgument', \
                 (e.get_dbus_name(), invalid_service_name)
         else:
-            assert False
+            assert False, "Should raise InvalidArgument error"
 
 if __name__ == '__main__':
     exec_test(test)
