@@ -18,6 +18,8 @@ def compute_caps_hash(identities, features, dataforms):
 
 if __name__ == '__main__':
     # example from XEP-0115
-    assert compute_caps_hash(['client/pc//Exodus 0.9.1'], ["http://jabber.org/protocol/disco#info",
-        "http://jabber.org/protocol/disco#items", "http://jabber.org/protocol/muc",
-        "http://jabber.org/protocol/caps"], []) == 'QgayPKawpkPSDYmwT/WM94uAlu0='
+    assert compute_caps_hash(['client/pc//Exodus 0.9.1'],
+        ["http://jabber.org/protocol/disco#info",
+        "http://jabber.org/protocol/disco#items",
+        "http://jabber.org/protocol/muc", "http://jabber.org/protocol/caps"],
+        []) == 'QgayPKawpkPSDYmwT/WM94uAlu0='
