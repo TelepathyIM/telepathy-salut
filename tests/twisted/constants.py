@@ -3,12 +3,15 @@ Some handy constants for other tests to share and enjoy.
 """
 
 HT_CONTACT = 1
+HT_CONTACT_LIST = 3
+
 
 CHANNEL = "org.freedesktop.Telepathy.Channel"
 CHANNEL_IFACE_GROUP = CHANNEL + ".Interface.Group"
 CHANNEL_TYPE_TUBES = CHANNEL + ".Type.Tubes"
 CHANNEL_IFACE_TUBE = CHANNEL + ".Interface.Tube.DRAFT"
 CHANNEL_TYPE_STREAM_TUBE = CHANNEL + ".Type.StreamTube.DRAFT"
+CHANNEL_TYPE_CONTACT_LIST = CHANNEL + ".Type.ContactList"
 
 CHANNEL_TYPE = CHANNEL + '.ChannelType'
 TARGET_HANDLE_TYPE = CHANNEL + '.TargetHandleType'
