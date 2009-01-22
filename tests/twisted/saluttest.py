@@ -12,6 +12,7 @@ import time
 import servicetest
 import twisted
 from twisted.internet import reactor
+from constants import *
 
 import dbus
 
@@ -102,27 +103,23 @@ def wait_for_contact_list(q, conn):
     """Request contact list channels and wait for their NewChannel signals.
     This is useful to avoid these signals to interfere with your test."""
 
-    requestotron = dbus.Interface(conn,
-        'org.freedesktop.Telepathy.Connection.Interface.Requests')
-
-    CHANNEL_TYPE_CONTACT_LIST = 'org.freedesktop.Telepathy.Channel.Type.ContactList'
-    HT_CONTACT_LIST = 3
+    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
 
     # publish
     requestotron.EnsureChannel({
-        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
-        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
-        'org.freedesktop.Telepathy.Channel.TargetID': 'publish'})
+        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
+        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
+        TARGET_ID: 'publish'})
     q.expect('dbus-signal', signal='NewChannel')
     # subscribe
     requestotron.EnsureChannel({
-        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
-        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
-        'org.freedesktop.Telepathy.Channel.TargetID': 'subscribe'})
+        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
+        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
+        TARGET_ID: 'subscribe'})
     q.expect('dbus-signal', signal='NewChannel')
     # known
     requestotron.EnsureChannel({
-        'org.freedesktop.Telepathy.Channel.ChannelType': CHANNEL_TYPE_CONTACT_LIST,
-        'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT_LIST,
-        'org.freedesktop.Telepathy.Channel.TargetID': 'known'})
+        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
+        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
+        TARGET_ID: 'known'})
     q.expect('dbus-signal', signal='NewChannel')
