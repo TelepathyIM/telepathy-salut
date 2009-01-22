@@ -225,9 +225,9 @@ salut_ft_manager_foreach_channel (TpChannelManager *iface,
 }
 
 static void
-file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
+file_channel_closed (SalutFtManager *self,
+                     SalutFileTransferChannel *chan)
 {
-  SalutFtManager *self = SALUT_FT_MANAGER (user_data);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
   TpHandle handle;
 
@@ -238,6 +238,14 @@ file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
       priv->channels = g_list_remove (priv->channels, chan);
       g_object_unref (chan);
     }
+}
+
+static void
+file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
+{
+  SalutFtManager *self = SALUT_FT_MANAGER (user_data);
+
+  file_channel_closed (self, chan);
 }
 
 static SalutFileTransferChannel *
@@ -452,7 +460,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     {
       /* Pretend the chan was closed so it's removed from the channels
        * list and unreffed. */
-      file_channel_closed_cb (chan, self);
+      file_channel_closed (self, chan);
       goto error;
     }
 
