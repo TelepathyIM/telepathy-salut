@@ -1404,20 +1404,21 @@ salut_tubes_manager_caps_diff (
   if (old_caps == new_caps || old_caps == NULL || new_caps == NULL)
     return TRUE;
 
+  if (g_hash_table_size (old_caps->stream_tube_caps) !=
+      g_hash_table_size (new_caps->stream_tube_caps))
+    return TRUE;
+
+  if (g_hash_table_size (old_caps->dbus_tube_caps) !=
+      g_hash_table_size (new_caps->dbus_tube_caps))
+    return TRUE;
+
+  /* Hash tables have the same size */
   if (!hash_table_is_subset (new_caps->stream_tube_caps,
         old_caps->stream_tube_caps))
     return TRUE;
 
   if (!hash_table_is_subset (new_caps->dbus_tube_caps,
         old_caps->dbus_tube_caps))
-    return TRUE;
-
-  if (!hash_table_is_subset (old_caps->stream_tube_caps,
-        new_caps->stream_tube_caps))
-    return TRUE;
-
-  if (!hash_table_is_subset (old_caps->dbus_tube_caps,
-        new_caps->dbus_tube_caps))
     return TRUE;
 
   return FALSE;
