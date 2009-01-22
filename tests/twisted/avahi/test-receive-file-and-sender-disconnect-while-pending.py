@@ -19,7 +19,7 @@ class ReceiveFileAndSenderDisconnectWhilePendingTest(ReceiveFileTest):
         except dbus.DBusException, e:
             assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotAvailable'
         else:
-            assert False
+            assert False, "Should raise NotAvailable error"
 
         self.close_channel()
 
