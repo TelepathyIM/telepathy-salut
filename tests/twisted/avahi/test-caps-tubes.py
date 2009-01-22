@@ -45,6 +45,7 @@ from saluttest import exec_test, make_result_iq, sync_stream
 from xmppstream import setup_stream_listener, connect_to_stream
 
 from caps_helper import compute_caps_hash
+from config import PACKAGE_STRING
 
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
@@ -191,6 +192,13 @@ def receive_presence_and_ask_caps(q, stream, service):
     event = q.expect('stream-iq',
         query_ns='http://jabber.org/protocol/disco#info')
     caps_str = str(xpath.queryForNodes('/iq/query/feature', event.stanza))
+
+    features = []
+    for feature in xpath.queryForNodes('/iq/query/feature', event.stanza):
+        features.append(feature['var'])
+
+    # Check if the hash matches the announced capabilities
+    assert ver == compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], features, [])
 
     return (event, caps_str, signaled_caps)
 
