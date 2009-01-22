@@ -138,8 +138,6 @@ salut_presence_free_xep0115_hash (
   g_ptr_array_free (dataforms, TRUE);
 }
 
-#define SHA1_HASH_SIZE 20
-
 static gchar *
 caps_hash_compute (
     GPtrArray *features,
@@ -148,10 +146,13 @@ caps_hash_compute (
 {
   GString *s;
   GChecksum *checksum;
-  guchar sha1[SHA1_HASH_SIZE];
-  gsize out_len = SHA1_HASH_SIZE;
+  guchar *sha1;
+  gsize out_len;
   guint i;
   gchar *encoded;
+
+  out_len = g_checksum_type_get_length (G_CHECKSUM_SHA1);
+  sha1 = g_malloc (out_len * sizeof (guchar));
 
   g_ptr_array_sort (identities, char_cmp);
   g_ptr_array_sort (features, char_cmp);
@@ -207,7 +208,8 @@ caps_hash_compute (
   g_string_free (s, TRUE);
   g_checksum_free (checksum);
 
-  encoded = g_base64_encode (sha1, SHA1_HASH_SIZE);
+  encoded = g_base64_encode (sha1, out_len);
+  g_free (sha1);
 
   return encoded;
 }
