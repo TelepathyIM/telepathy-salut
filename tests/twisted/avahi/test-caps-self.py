@@ -24,7 +24,6 @@ import dbus
 HT_CONTACT = 1
 caps_iface = 'org.freedesktop.Telepathy.' + \
              'Connection.Interface.ContactCapabilities.DRAFT'
-NS_TELEPATHY_CAPS = 'http://telepathy.freedesktop.org/caps'
 
 def check_caps(txt, ver):
     for (key, val) in { "1st": "test",
@@ -35,7 +34,7 @@ def check_caps(txt, ver):
         assert v == val, (key, val, v)
 
     assert txt_get_key(txt, "hash") == "sha-1"
-    assert txt_get_key(txt, "node") == NS_TELEPATHY_CAPS
+    assert txt_get_key(txt, "node") == ns.TELEPATHY_CAPS
 
     v = txt_get_key(txt, "ver")
     assert v == ver, (v, ver)
