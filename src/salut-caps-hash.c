@@ -446,8 +446,7 @@ caps_hash_compute_from_stanza (GibberXmppNode *node)
 gchar *
 caps_hash_compute_from_self_presence (SalutSelf *self)
 {
-  GSList *features_list = capabilities_get_features (
-      self->per_channel_manager_caps);
+  GSList *features_list = salut_self_get_features (self);
   GPtrArray *features = g_ptr_array_new ();
   GPtrArray *identities = g_ptr_array_new ();
   GPtrArray *dataforms = g_ptr_array_new ();
