@@ -41,8 +41,9 @@ import avahi
 from twisted.words.xish import domish, xpath
 
 from servicetest import EventPattern
-from saluttest import exec_test, make_result_iq, sync_stream
+from saluttest import exec_test, make_result_iq, sync_stream, fixed_features
 from xmppstream import setup_stream_listener, connect_to_stream
+import ns
 
 from caps_helper import compute_caps_hash
 from config import PACKAGE_STRING
@@ -110,7 +111,7 @@ go_allowed_properties = dbus.Array([
     'org.freedesktop.Telepathy.Channel.TargetHandle',
     ])
 
-def check_caps(txt, ver=None):
+def check_caps(txt, ver):
     for (key, val) in { "1st": "test",
                         "last": "suite",
                         "status": "avail",
@@ -118,16 +119,11 @@ def check_caps(txt, ver=None):
         v =  txt_get_key(txt, key)
         assert v == val, (key, val, v)
 
-    if ver is None:
-        assert txt_get_key(txt, "hash") is None
-        assert txt_get_key(txt, "node") is None
-        assert txt_get_key(txt, "ver") is None
-    else:
-        assert txt_get_key(txt, "hash") == "sha-1"
-        assert txt_get_key(txt, "node") == NS_TELEPATHY_CAPS
+    assert txt_get_key(txt, "hash") == "sha-1"
+    assert txt_get_key(txt, "node") == ns.TELEPATHY_CAPS
 
-        v = txt_get_key(txt, "ver")
-        assert v == ver, (v, ver)
+    v = txt_get_key(txt, "ver")
+    assert v == ver, (v, ver)
 
 
 def make_presence(from_jid, type, status):
@@ -734,6 +730,10 @@ service)
 
 
 def test(q, bus, conn):
+    # last value of the "ver" key we resolved. We use it to be sure that the
+    # modified caps has already be announced.
+    old_ver = None
+
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 0])
 
@@ -747,7 +747,16 @@ def test(q, bus, conn):
     service.resolve()
 
     e = q.expect('service-resolved', service = service)
-    check_caps(e.txt)
+    ver = txt_get_key(e.txt, "ver")
+    while ver == old_ver:
+        # be sure that the announced caps actually changes
+        e = q.expect('service-resolved', service=service)
+        ver = txt_get_key(e.txt, "ver")
+    old_ver = ver
+
+    caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
+        fixed_features, [])
+    check_caps(e.txt, caps)
 
     client = 'http://telepathy.freedesktop.org/fake-client'
 
