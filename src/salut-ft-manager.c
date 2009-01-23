@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include <gibber/gibber-file-transfer.h>
+#include <gibber/gibber-namespaces.h>
 
 #include "salut-ft-manager.h"
 #include "salut-signals-marshal.h"
@@ -36,6 +37,7 @@
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/gtypes.h>
 
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
@@ -47,6 +49,13 @@ static void caps_channel_manager_iface_init (gpointer, gpointer);
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
     gboolean requested, GError **error);
+
+typedef enum
+{
+  FT_CAPA_UNKNOWN = 0,
+  FT_CAPA_SUPPORTED,
+  FT_CAPA_UNSUPPORTED,
+} FtCapaStatus;
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
@@ -573,12 +582,131 @@ salut_ft_manager_new (SalutConnection *connection,
 }
 
 static void
+add_file_transfer_channel_class (GPtrArray *arr,
+                                 TpHandle handle)
+{
+  GValue monster = {0, };
+  GHashTable *fixed_properties;
+  GValue *channel_type_value;
+  GValue *target_handle_type_value;
+
+  g_assert (handle != 0);
+
+  g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
+  g_value_take_boxed (&monster,
+      dbus_g_type_specialized_construct (
+        TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS));
+
+  fixed_properties = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (channel_type_value,
+      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
+      channel_type_value);
+
+  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetHandleType",
+      target_handle_type_value);
+
+  dbus_g_type_struct_set (&monster,
+      0, fixed_properties,
+      1, file_transfer_channel_allowed_properties,
+      G_MAXUINT);
+
+  g_hash_table_destroy (fixed_properties);
+
+  g_ptr_array_add (arr, g_value_get_boxed (&monster));
+}
+
+static void
 salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
                                    SalutConnection *conn,
                                    TpHandle handle,
                                    GPtrArray *arr)
 {
-  /* TODO */
+  SalutFtManager *self = SALUT_FT_MANAGER (manager);
+  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) conn;
+  SalutContact *contact;
+  FtCapaStatus caps;
+
+  g_assert (handle != 0);
+
+  if (handle == base->self_handle)
+    {
+      /* FIXME */
+      return;
+    }
+
+  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
+  if (contact == NULL)
+    return;
+  g_object_unref (contact);
+
+  if (contact->per_channel_manager_caps == NULL)
+    return;
+
+  caps = GPOINTER_TO_UINT (g_hash_table_lookup (
+        contact->per_channel_manager_caps, manager));
+
+  if (caps != FT_CAPA_SUPPORTED)
+    return;
+
+  /* FT is supported */
+  add_file_transfer_channel_class (arr, handle);
+}
+
+static gboolean
+_parse_caps_item (GibberXmppNode *node,
+                  gpointer user_data)
+{
+  const gchar *var;
+  gboolean *support_ft = (gboolean *) user_data;
+
+  if (tp_strdiff (node->name, "feature"))
+    return TRUE;
+
+  var = gibber_xmpp_node_get_attribute (node, "var");
+  if (var == NULL)
+    return TRUE;
+
+  if (!tp_strdiff (var, GIBBER_XMPP_NS_IQ_OOB) ||
+      !tp_strdiff (var, GIBBER_XMPP_NS_X_OOB))
+    {
+      DEBUG ("found FileTransfer capability");
+      *support_ft = TRUE;
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gpointer
+salut_ft_manager_parse_caps (SalutCapsChannelManager *manager,
+                             GibberXmppNode *node)
+{
+  gboolean support_ft = FALSE;
+  FtCapaStatus caps;
+
+  gibber_xmpp_node_each_child (node, _parse_caps_item, &support_ft);
+
+  if (support_ft)
+    caps = FT_CAPA_SUPPORTED;
+  else
+    caps = FT_CAPA_UNSUPPORTED;
+
+  return GUINT_TO_POINTER (caps);
+}
+
+static void
+salut_ft_manager_copy_caps (SalutCapsChannelManager *manager,
+                            gpointer *specific_caps_out,
+                            gpointer specific_caps_in)
+{
+  *specific_caps_out = specific_caps_in;
 }
 
 static void
@@ -588,4 +716,6 @@ caps_channel_manager_iface_init (gpointer g_iface,
   SalutCapsChannelManagerIface *iface = g_iface;
 
   iface->get_contact_caps = salut_ft_manager_get_contact_caps;
+  iface->parse_caps = salut_ft_manager_parse_caps;
+  iface->copy_caps = salut_ft_manager_copy_caps;
 }
