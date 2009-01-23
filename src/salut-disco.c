@@ -484,8 +484,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   if (!tp_strdiff (suffix, caps_hash))
     {
       GibberXmppStanza *result;
-      GSList *features = capabilities_get_features (
-          salut_self->per_channel_manager_caps);
+      GSList *features = salut_self_get_features (salut_self);
 
       /* Every entity MUST have at least one identity (XEP-0030). Salut publishs
        * one identity. If you change the identity here, you also need to change
