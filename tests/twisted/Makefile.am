@@ -8,6 +8,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-aliases.py \
 	avahi/test-request-im.py \
 	avahi/test-muc-invite.py \
+	avahi/test-caps-file-transfer.py \
 	avahi/test-close-local-pending-room.py \
 	avahi/test-disabled-1-1-tubes.py \
 	avahi/test-send-file-and-cancel-immediately.py \
