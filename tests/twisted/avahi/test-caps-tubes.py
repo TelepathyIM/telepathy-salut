@@ -44,19 +44,10 @@ from servicetest import EventPattern
 from saluttest import exec_test, make_result_iq, sync_stream, fixed_features
 from xmppstream import setup_stream_listener, connect_to_stream
 import ns
+from constants import *
 
 from caps_helper import compute_caps_hash
 from config import PACKAGE_STRING
-
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
-
-text_iface = 'org.freedesktop.Telepathy.Channel.Type.Text'
-caps_iface = 'org.freedesktop.Telepathy.' + \
-             'Connection.Interface.ContactCapabilities.DRAFT'
-contacts_iface = 'org.freedesktop.Telepathy.Connection.Interface.Contacts'
-
-ns_tubes = 'http://telepathy.freedesktop.org/xmpp/tubes'
 
 text_fixed_properties = dbus.Dictionary({
     'org.freedesktop.Telepathy.Channel.TargetHandleType': 1L,
@@ -214,8 +205,8 @@ def caps_contain(event, cap):
 def test_tube_caps_from_contact(q, bus, conn, service,
         client):
 
-    conn_caps_iface = dbus.Interface(conn, caps_iface)
-    conn_contacts_iface = dbus.Interface(conn, contacts_iface)
+    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPA)
+    conn_contacts_iface = dbus.Interface(conn, CONN_IFACE_CONTACTS)
 
     # send presence with no tube cap
     ver = compute_caps_hash([], [], [])
@@ -265,13 +256,13 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps == basic_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [caps_iface], False) \
-            [contact_handle][caps_iface + '/caps']
+            [contact_handle], [CONN_IFACE_CONTACT_CAPA], False) \
+            [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[contact_handle], \
             caps_via_contacts_iface
 
     # send presence with 1 stream tube cap
-    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/stream#daap'], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/stream#daap'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -286,7 +277,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream#daap'
+    feature['var'] = ns.TUBES + '/stream#daap'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -307,13 +298,13 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps == daap_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [caps_iface], False) \
-            [contact_handle][caps_iface + '/caps']
+            [contact_handle], [CONN_IFACE_CONTACT_CAPA], False) \
+            [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[contact_handle], \
         caps_via_contacts_iface
 
     # send presence with 1 D-Bus tube cap
-    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi'], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -328,7 +319,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus#com.example.Xiangqi'
+    feature['var'] = ns.TUBES + '/dbus#com.example.Xiangqi'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -349,14 +340,14 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps == xiangqi_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [caps_iface], False) \
-            [contact_handle][caps_iface + '/caps']
+            [contact_handle], [CONN_IFACE_CONTACT_CAPA], False) \
+            [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[contact_handle], \
         caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi',
-        ns_tubes + '/stream#daap'], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi',
+        ns.TUBES + '/stream#daap'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -371,9 +362,9 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus#com.example.Xiangqi'
+    feature['var'] = ns.TUBES + '/dbus#com.example.Xiangqi'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream#daap'
+    feature['var'] = ns.TUBES + '/stream#daap'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -398,14 +389,14 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps == daap_xiangqi_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [caps_iface], False) \
-            [contact_handle][caps_iface + '/caps']
+            [contact_handle], [CONN_IFACE_CONTACT_CAPA], False) \
+            [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[contact_handle], \
         caps_via_contacts_iface
 
     # send presence with 4 tube caps
-    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi',
-        ns_tubes + '/dbus#com.example.Go', ns_tubes + '/stream#daap', ns_tubes + '/stream#http'], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi',
+        ns.TUBES + '/dbus#com.example.Go', ns.TUBES + '/stream#daap', ns.TUBES + '/stream#http'], [])
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -420,13 +411,13 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     query = result.firstChildElement()
     query['node'] = client + '#' + txt_record['ver']
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus#com.example.Xiangqi'
+    feature['var'] = ns.TUBES + '/dbus#com.example.Xiangqi'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/dbus#com.example.Go'
+    feature['var'] = ns.TUBES + '/dbus#com.example.Go'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream#daap'
+    feature['var'] = ns.TUBES + '/stream#daap'
     feature = query.addElement('feature')
-    feature['var'] = ns_tubes + '/stream#http'
+    feature['var'] = ns.TUBES + '/stream#http'
     incoming.send(result)
 
     event = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
@@ -460,14 +451,14 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps == all_tubes_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [caps_iface], False) \
-            [contact_handle][caps_iface + '/caps']
+            [contact_handle], [CONN_IFACE_CONTACT_CAPA], False) \
+            [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[contact_handle], \
         caps_via_contacts_iface
 
     # send presence with both D-Bus and stream tube caps
-    txt_record['ver'] = compute_caps_hash([], [ns_tubes + '/dbus#com.example.Xiangqi',
-         ns_tubes + '/stream#daap'], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi',
+         ns.TUBES + '/stream#daap'], [])
     announcer.update(txt_record)
 
     # Salut does not look up our capabilities because of the cache
@@ -494,8 +485,8 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert caps == daap_xiangqi_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [caps_iface], False) \
-            [contact_handle][caps_iface + '/caps']
+            [contact_handle], [CONN_IFACE_CONTACT_CAPA], False) \
+            [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[contact_handle], \
         caps_via_contacts_iface
 
@@ -546,16 +537,16 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert e.succeeded, e.reason
     e = q.expect('stream-opened', connection = outbound)
 
-    conn_caps_iface = dbus.Interface(conn, caps_iface)
-    conn_contacts_iface = dbus.Interface(conn, contacts_iface)
+    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPA)
+    conn_contacts_iface = dbus.Interface(conn, CONN_IFACE_CONTACTS)
 
     # Check our own caps
     caps = conn_caps_iface.GetContactCapabilities([1])
     assert caps == basic_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [1], [caps_iface], False) \
-            [1][caps_iface + '/caps']
+            [1], [CONN_IFACE_CONTACT_CAPA], False) \
+            [1][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
     # Advertise nothing
@@ -566,8 +557,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps == basic_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [1], [caps_iface], False) \
-            [1][caps_iface + '/caps']
+            [1], [CONN_IFACE_CONTACT_CAPA], False) \
+            [1][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
     sync_stream(q, outbound)
@@ -579,12 +570,12 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
-    assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
+    assert caps_contain(event, ns.TUBES) == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == False, caps_str
     assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
@@ -596,8 +587,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps == daap_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [1], [caps_iface], False) \
-            [1][caps_iface + '/caps']
+            [1], [CONN_IFACE_CONTACT_CAPA], False) \
+            [1][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
     # Advertise xiangqi
@@ -607,12 +598,12 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
-    assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#daap') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
+    assert caps_contain(event, ns.TUBES) == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#daap') == False, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
@@ -624,8 +615,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps == xiangqi_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [1], [caps_iface], False) \
-            [1][caps_iface + '/caps']
+            [1], [CONN_IFACE_CONTACT_CAPA], False) \
+            [1][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
     # Advertise daap + xiangqi
@@ -635,12 +626,12 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
-    assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
+    assert caps_contain(event, ns.TUBES) == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
@@ -655,8 +646,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps == daap_xiangqi_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [1], [caps_iface], False) \
-            [1][caps_iface + '/caps']
+            [1], [CONN_IFACE_CONTACT_CAPA], False) \
+            [1][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
     # Advertise 4 tubes
@@ -667,12 +658,12 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
             service)
-    assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#http') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
+    assert caps_contain(event, ns.TUBES) == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#http') == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Go') \
             == True, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 5, signaled_caps # basic caps + 4 tubes
     assert signaled_caps[1][0] \
@@ -693,8 +684,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps == all_tubes_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [1], [caps_iface], False) \
-            [1][caps_iface + '/caps']
+            [1], [CONN_IFACE_CONTACT_CAPA], False) \
+            [1][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
     # Advertise daap + xiangqi
@@ -704,12 +695,12 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
 service)
-    assert caps_contain(event, ns_tubes) == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#daap') == True, caps_str
-    assert caps_contain(event, ns_tubes + '/stream#http') == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Go') \
+    assert caps_contain(event, ns.TUBES) == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#daap') == True, caps_str
+    assert caps_contain(event, ns.TUBES + '/stream#http') == False, caps_str
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Go') \
             == False, caps_str
-    assert caps_contain(event, ns_tubes + '/dbus#com.example.Xiangqi') \
+    assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
@@ -724,8 +715,8 @@ service)
     assert caps == daap_xiangqi_caps, caps
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [1], [caps_iface], False) \
-            [1][caps_iface + '/caps']
+            [1], [CONN_IFACE_CONTACT_CAPA], False) \
+            [1][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
 
