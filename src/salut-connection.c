@@ -921,6 +921,26 @@ _contact_manager_contact_status_changed (SalutConnection *self,
     g_hash_table_destroy (ps.optional_arguments);
 }
 
+static gboolean
+announce_self_caps (SalutConnection *self,
+                    GError **error)
+{
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  gchar *caps_hash;
+
+  caps_hash = caps_hash_compute_from_self_presence (priv->self);
+
+  if (!salut_self_set_caps (priv->self, GIBBER_TELEPATHY_NS_CAPS, "sha-1",
+        caps_hash, error))
+    {
+      g_free (caps_hash);
+      return FALSE;
+    }
+
+  g_free (caps_hash);
+  return TRUE;
+}
+
 static void
 _self_established_cb (SalutSelf *s, gpointer data)
 {
@@ -1908,7 +1928,6 @@ salut_connection_set_self_capabilities (
   guint i;
   GHashTable *save_caps;
   GError *error = NULL;
-  gchar *caps_hash;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1936,17 +1955,13 @@ salut_connection_set_self_capabilities (
     }
 
   /* XEP-0115 version 1.5 uses a verification string in the 'ver' attribute */
-  caps_hash = caps_hash_compute_from_self_presence (priv->self);
-
-  if (!salut_self_set_caps (priv->self, GIBBER_TELEPATHY_NS_CAPS, "sha-1",
-        caps_hash, &error))
+  if (!announce_self_caps (self, &error))
     {
-      g_free (caps_hash);
       salut_presence_cache_free_cache_entry (save_caps);
       dbus_g_method_return_error (context, error);
+      g_error_free (error);
       return;
     }
-  g_free (caps_hash);
 
   _emit_contact_capabilities_changed (self, base->self_handle,
                                       save_caps,
