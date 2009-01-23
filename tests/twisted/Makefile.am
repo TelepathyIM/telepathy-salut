@@ -91,6 +91,7 @@ EXTRA_DIST = \
 	servicetest.py \
         trivialstream.py \
         config.py \
+	ns.py \
 	avahi/file_transfer_helper.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc
