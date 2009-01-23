@@ -158,8 +158,11 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
     return FALSE;
 
   url = gibber_xmpp_node_get_child (query, "url");
+  if (url == NULL)
+    return FALSE;
+
   url_content = url->content;
-  if (url == NULL || url_content == NULL || strcmp (url_content, "") == 0)
+  if (url_content == NULL || strcmp (url_content, "") == 0)
     return FALSE;
 
   if (url_content[0] == '\n')
