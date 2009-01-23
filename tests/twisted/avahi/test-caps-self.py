@@ -11,6 +11,7 @@ import avahi
 
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy
+from saluttest import fixed_features
 
 from twisted.words.xish import xpath, domish
 from caps_helper import compute_caps_hash
@@ -68,7 +69,7 @@ def test(q, bus, conn):
 
     # We support OOB file transfer
     caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
-        [ns.SI, ns.IBB, ns.TUBES], [])
+        fixed_features, [])
     check_caps(e.txt, caps)
 
     conn_caps_iface = dbus.Interface(conn, caps_iface)
@@ -81,7 +82,7 @@ def test(q, bus, conn):
 
     # Announced capa didn't change
     caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
-        [ns.SI, ns.IBB, ns.TUBES], [])
+        fixed_features, [])
 
     check_caps(e.txt, caps)
 
