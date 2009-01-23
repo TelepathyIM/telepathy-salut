@@ -14,8 +14,12 @@ import twisted
 from twisted.internet import reactor
 from constants import *
 from twisted.words.protocols.jabber.client import IQ
+import ns
 
 import dbus
+
+# keep sync with src/salut-capabilities.c:self_advertised_features
+fixed_features = [ns.SI, ns.IBB, ns.TUBES]
 
 def make_result_iq(iq):
     result = IQ(None, "result")
