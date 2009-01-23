@@ -19,5 +19,6 @@ OLPC_CURRENT_ACTIVITY_NOTIFY = "%s+notify" % OLPC_CURRENT_ACTIVITY
 PUBSUB = "http://jabber.org/protocol/pubsub"
 SI = "http://jabber.org/protocol/si"
 STANZA = "urn:ietf:params:xml:ns:xmpp-stanzas"
+TELEPATHY_CAPS = 'http://telepathy.freedesktop.org/caps'
 TUBES = "http://telepathy.freedesktop.org/xmpp/tubes"
 X_OOB = "jabber:x:oob"
