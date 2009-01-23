@@ -15,6 +15,7 @@ from servicetest import make_channel_proxy
 from twisted.words.xish import xpath, domish
 from caps_helper import compute_caps_hash
 from config import PACKAGE_STRING
+import ns
 
 import time
 import dbus
@@ -24,7 +25,7 @@ caps_iface = 'org.freedesktop.Telepathy.' + \
              'Connection.Interface.ContactCapabilities.DRAFT'
 NS_TELEPATHY_CAPS = 'http://telepathy.freedesktop.org/caps'
 
-def check_caps(txt, ver=None):
+def check_caps(txt, ver):
     for (key, val) in { "1st": "test",
                         "last": "suite",
                         "status": "avail",
@@ -32,18 +33,18 @@ def check_caps(txt, ver=None):
         v =  txt_get_key(txt, key)
         assert v == val, (key, val, v)
 
-    if ver is None:
-        assert txt_get_key(txt, "hash") is None
-        assert txt_get_key(txt, "node") is None
-        assert txt_get_key(txt, "ver") is None
-    else:
-        assert txt_get_key(txt, "hash") == "sha-1"
-        assert txt_get_key(txt, "node") == NS_TELEPATHY_CAPS
+    assert txt_get_key(txt, "hash") == "sha-1"
+    assert txt_get_key(txt, "node") == NS_TELEPATHY_CAPS
 
-        v = txt_get_key(txt, "ver")
-        assert v == ver, (v, ver)
+    v = txt_get_key(txt, "ver")
+    assert v == ver, (v, ver)
+
 
 def test(q, bus, conn):
+    # last value of the "ver" key we resolved. We use it to be sure that the
+    # modified caps has already be announced.
+    old_ver = None
+
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
@@ -57,17 +58,32 @@ def test(q, bus, conn):
     service.resolve()
 
     e = q.expect('service-resolved', service = service)
-    check_caps(e.txt)
+
+    ver = txt_get_key(e.txt, "ver")
+    while ver == old_ver:
+        # be sure that the announced caps actually changes
+        e = q.expect('service-resolved', service=service)
+        ver = txt_get_key(e.txt, "ver")
+    old_ver = ver
+
+    # We support OOB file transfer
+    caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
+        [ns.SI, ns.IBB, ns.TUBES], [])
+    check_caps(e.txt, caps)
 
     conn_caps_iface = dbus.Interface(conn, caps_iface)
 
     # Advertise nothing
     conn_caps_iface.SetSelfCapabilities([])
 
+    service.resolve()
     e = q.expect('service-resolved', service = service)
 
-    caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], [], [])
-    check_caps(e.txt, ver=caps)
+    # Announced capa didn't change
+    caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
+        [ns.SI, ns.IBB, ns.TUBES], [])
+
+    check_caps(e.txt, caps)
 
 if __name__ == '__main__':
     exec_test(test)
