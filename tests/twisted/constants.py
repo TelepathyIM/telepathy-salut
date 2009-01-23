@@ -23,6 +23,8 @@ INITIATOR_ID = CHANNEL + '.InitiatorID'
 
 CONN = "org.freedesktop.Telepathy.Connection"
 CONN_IFACE_REQUESTS = CONN + '.Interface.Requests'
+CONN_IFACE_CONTACT_CAPA = CONN + '.Interface.ContactCapabilities.DRAFT'
+CONN_IFACE_CONTACTS = CONN + '.Interface.Contacts'
 
 ERRORS = 'org.freedesktop.Telepathy.Errors'
 INVALID_ARGUMENT = ERRORS + '.InvalidArgument'
