@@ -949,7 +949,7 @@ _self_established_cb (SalutSelf *s, gpointer data)
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (self), TP_HANDLE_TYPE_CONTACT);
-
+  GError *error = NULL;
 
   g_free (self->name);
   self->name = g_strdup (s->name);
@@ -984,6 +984,13 @@ _self_established_cb (SalutSelf *s, gpointer data)
 
   tp_base_connection_change_status (base, TP_CONNECTION_STATUS_CONNECTED,
       TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+
+  /* FIXME: Is it the right place to do that? */
+  if (!announce_self_caps (self, &error))
+    {
+      DEBUG ("Can't announce our capabilities: %s", error->message);
+      g_error_free (error);
+    }
 }
 
 
