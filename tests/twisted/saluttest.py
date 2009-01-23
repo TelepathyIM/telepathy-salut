@@ -19,7 +19,7 @@ import ns
 import dbus
 
 # keep sync with src/salut-capabilities.c:self_advertised_features
-fixed_features = [ns.SI, ns.IBB, ns.TUBES]
+fixed_features = [ns.SI, ns.IBB, ns.TUBES, ns.IQ_OOB, ns.X_OOB]
 
 def make_result_iq(iq):
     result = IQ(None, "result")
