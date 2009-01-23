@@ -607,6 +607,10 @@ salut_disco_dispose (GObject *object)
       priv->xmpp_connection_manager, NULL,
       caps_req_stanza_filter, caps_req_stanza_callback, self);
 
+  /* cancel request removes the element from the list after cancelling */
+  while (priv->requests)
+    cancel_request (priv->requests->data);
+
   if (priv->xmpp_connection_manager != NULL)
     {
       g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
@@ -615,10 +619,6 @@ salut_disco_dispose (GObject *object)
       g_object_unref (priv->xmpp_connection_manager);
       priv->xmpp_connection_manager = NULL;
     }
-
-  /* cancel request removes the element from the list after cancelling */
-  while (priv->requests)
-    cancel_request (priv->requests->data);
 
   if (G_OBJECT_CLASS (salut_disco_parent_class)->dispose)
     G_OBJECT_CLASS (salut_disco_parent_class)->dispose (object);
