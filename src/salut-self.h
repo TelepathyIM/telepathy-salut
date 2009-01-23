@@ -148,6 +148,8 @@ void salut_self_olpc_augment_invitation (SalutSelf *self,
     TpHandle room, TpHandle contact, GibberXmppNode *invite_node);
 #endif
 
+GSList * salut_self_get_features (SalutSelf *self);
+
 /* protected methods */
 void salut_self_established (SalutSelf *self);
 

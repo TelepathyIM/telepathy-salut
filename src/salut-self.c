@@ -35,6 +35,7 @@
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
+#include "salut-capabilities.h"
 #include "salut-contact-manager.h"
 #include "salut-util.h"
 #include "salut-muc-manager.h"
@@ -981,4 +982,10 @@ void
 salut_self_established (SalutSelf *self)
 {
   g_signal_emit (self, signals[ESTABLISHED], 0, NULL);
+}
+
+GSList *
+salut_self_get_features (SalutSelf *self)
+{
+  return capabilities_get_features (self->per_channel_manager_caps);
 }
