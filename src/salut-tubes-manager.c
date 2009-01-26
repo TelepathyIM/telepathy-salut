@@ -1300,7 +1300,8 @@ salut_tubes_manager_parse_caps (
   TubesCapabilities *caps;
 
   caps = tubes_capabilities_new ();
-  gibber_xmpp_node_each_child (node, _parse_caps_item, caps);
+  if (node != NULL)
+    gibber_xmpp_node_each_child (node, _parse_caps_item, caps);
 
   return caps;
 }
