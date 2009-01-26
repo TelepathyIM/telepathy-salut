@@ -148,7 +148,50 @@ def test_ft_caps_from_contact(q, bus, conn, client):
             [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
-    # TODO: capa announced without FT
+
+    # capa announced without FT
+    ver = compute_caps_hash([], ["http://telepathy.freedesktop.org/xmpp/pony"], [])
+    txt_record = { "txtvers": "1", "status": "avail",
+        "node": client, "ver": ver, "hash": "sha-1"}
+    contact_name = "test-caps-ft2@" + get_host_name()
+    listener, port = setup_stream_listener(q, contact_name)
+    announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
+            txt_record)
+
+    # this is the first presence, Salut connects to the contact
+    e = q.expect('incoming-connection', listener = listener)
+    incoming = e.connection
+
+    # Salut looks up our capabilities
+    event = q.expect('stream-iq', connection = incoming,
+        query_ns='http://jabber.org/protocol/disco#info')
+    query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
+    assert query_node.attributes['node'] == \
+        client + '#' + ver, (query_node.attributes['node'], client, ver)
+
+    contact_handle = conn.RequestHandles(HT_CONTACT, [contact_name])[0]
+
+    # send good reply
+    result = make_result_iq(event.stanza)
+    query = result.firstChildElement()
+    query['node'] = client + '#' + ver
+
+    feature = query.addElement('feature')
+    feature['var'] = "http://telepathy.freedesktop.org/xmpp/pony"
+    incoming.send(result)
+
+    # the FT capability is not announced
+    e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
+    caps = e.args[0][contact_handle]
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
+             TARGET_HANDLE_TYPE: HT_CONTACT},
+            [TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME, FT_SIZE,
+                FT_CONTENT_HASH_TYPE, FT_CONTENT_HASH, FT_DESCRIPTION,
+                FT_DATE, FT_INITIAL_OFFSET]) not in caps
+
+    caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
+    assert caps == caps_get
+
     # TODO: no capabilites announced (assume FT is supported)
 
 def test(q, bus, conn):
