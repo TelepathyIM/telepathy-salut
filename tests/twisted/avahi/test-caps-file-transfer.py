@@ -16,9 +16,10 @@ results.
 
 import dbus
 
-from avahitest import AvahiAnnouncer
+from avahitest import AvahiAnnouncer, AvahiListener
 from avahitest import get_host_name
 from avahitest import txt_get_key
+import avahi
 
 from twisted.words.xish import xpath
 
@@ -35,14 +36,10 @@ from config import PACKAGE_STRING
 # modified caps has already be announced.
 old_ver = ''
 
-def receive_presence_and_ask_caps(q, stream, service):
+def receive_presence_and_ask_caps(q, stream, service, contact_name):
     global old_ver
 
-    event_avahi, event_dbus = q.expect_many(
-            EventPattern('service-resolved', service=service),
-            EventPattern('dbus-signal', signal='ContactCapabilitiesChanged')
-        )
-    signaled_caps = event_dbus.args[0][1]
+    event_avahi = q.expect('service-resolved', service=service)
 
     ver = txt_get_key(event_avahi.txt, "ver")
     while ver == old_ver:
@@ -57,7 +54,7 @@ def receive_presence_and_ask_caps(q, stream, service):
 
     # ask caps
     request = """
-<iq from='fake_contact@jabber.org/resource' 
+<iq from='""" + contact_name + """'
     id='disco1'
     to='salut@jabber.org/resource' 
     type='get'>
@@ -78,8 +75,8 @@ def receive_presence_and_ask_caps(q, stream, service):
 
     # Check if the hash matches the announced capabilities
     assert ver == compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], features, [])
-
-    return (event, caps_str, signaled_caps)
+    assert ns.X_OOB in features
+    assert ns.IQ_OOB in features
 
 def caps_contain(event, cap):
     node = xpath.queryForNodes('/iq/query/feature[@var="%s"]'
@@ -148,6 +145,17 @@ def test_ft_caps_from_contact(q, bus, conn, client):
             [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
+    # check if Salut announces the OOB capa
+    self_handle = conn.GetSelfHandle()
+    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+
+    AvahiListener(q).listen_for_service("_presence._tcp")
+    e = q.expect('service-added', name = self_handle_name,
+            protocol = avahi.PROTO_INET)
+    service = e.service
+    service.resolve()
+
+    receive_presence_and_ask_caps(q, incoming, service, contact_name)
 
     # capa announced without FT
     ver = compute_caps_hash([], ["http://telepathy.freedesktop.org/xmpp/pony"], [])
@@ -231,10 +239,7 @@ def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 0])
 
-    # TODO: check if Salut advertise the OOB caps
-
     client = 'http://telepathy.freedesktop.org/fake-client'
-
     test_ft_caps_from_contact(q, bus, conn, client)
 
     conn.Disconnect()
