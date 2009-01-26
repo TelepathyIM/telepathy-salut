@@ -192,7 +192,36 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
     assert caps == caps_get
 
-    # TODO: no capabilites announced (assume FT is supported)
+
+    # no capabilites announced (assume FT is supported to insure interop)
+    txt_record = { "txtvers": "1", "status": "avail"}
+    contact_name = "test-caps-ft-no-capa2@" + get_host_name()
+    listener, port = setup_stream_listener(q, contact_name)
+    announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
+            txt_record)
+
+    # FT capa is announced
+    contact_handle = 0
+    while contact_handle == 0:
+        e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
+        handles = e.args[0].keys()
+        ids = conn.InspectHandles(HT_CONTACT, handles)
+        if contact_name not in ids:
+            continue
+
+        for handle, id in zip(handles, ids):
+            if id == contact_name:
+                contact_handle = handle
+
+    caps = e.args[0][contact_handle]
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
+             TARGET_HANDLE_TYPE: HT_CONTACT},
+            [TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME, FT_SIZE,
+                FT_CONTENT_HASH_TYPE, FT_CONTENT_HASH, FT_DESCRIPTION,
+                FT_DATE, FT_INITIAL_OFFSET]) in caps
+
+    caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
+    assert caps == caps_get
 
 def test(q, bus, conn):
     # last value of the "ver" key we resolved. We use it to be sure that the
