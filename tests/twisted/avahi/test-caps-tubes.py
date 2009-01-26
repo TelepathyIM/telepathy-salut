@@ -58,6 +58,16 @@ text_allowed_properties = dbus.Array([
     'org.freedesktop.Telepathy.Channel.TargetHandle',
     ])
 
+ft_fixed_properties = dbus.Dictionary({
+    CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
+    TARGET_HANDLE_TYPE: HT_CONTACT
+    })
+ft_allowed_properties = dbus.Array([
+    TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME, FT_SIZE,
+    FT_CONTENT_HASH_TYPE, FT_CONTENT_HASH, FT_DESCRIPTION,
+    FT_DATE, FT_INITIAL_OFFSET
+    ])
+
 daap_fixed_properties = dbus.Dictionary({
     'org.freedesktop.Telepathy.Channel.TargetHandleType': 1L,
     'org.freedesktop.Telepathy.Channel.ChannelType':
@@ -492,23 +502,28 @@ def test_tube_caps_from_contact(q, bus, conn, service,
 
 def test_tube_caps_to_contact(q, bus, conn, service):
     basic_caps = dbus.Dictionary({1:
-        [(text_fixed_properties, text_allowed_properties)]})
+        [(text_fixed_properties, text_allowed_properties),
+         (ft_fixed_properties, ft_allowed_properties)]})
     daap_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
-        (daap_fixed_properties, daap_allowed_properties)]})
+        (daap_fixed_properties, daap_allowed_properties),
+        (ft_fixed_properties, ft_allowed_properties)]})
     xiangqi_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
-        (xiangqi_fixed_properties, xiangqi_allowed_properties)]})
+        (xiangqi_fixed_properties, xiangqi_allowed_properties),
+        (ft_fixed_properties, ft_allowed_properties)]})
     daap_xiangqi_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
         (daap_fixed_properties, daap_allowed_properties),
-        (xiangqi_fixed_properties, xiangqi_allowed_properties)]})
+        (xiangqi_fixed_properties, xiangqi_allowed_properties),
+        (ft_fixed_properties, ft_allowed_properties)]})
     all_tubes_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
         (daap_fixed_properties, daap_allowed_properties),
         (http_fixed_properties, http_allowed_properties),
         (xiangqi_fixed_properties, xiangqi_allowed_properties),
-        (go_fixed_properties, go_allowed_properties)]})
+        (go_fixed_properties, go_allowed_properties),
+        (ft_fixed_properties, ft_allowed_properties)]})
 
     # send presence with no cap info
     txt_record = { "txtvers": "1", "status": "avail"}
@@ -577,7 +592,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
             == False, caps_str
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == False, caps_str
-    assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
+    assert len(signaled_caps) == 3, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
         == 'daap'
@@ -605,7 +620,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
             == False, caps_str
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
-    assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
+    assert len(signaled_caps) == 3, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
         == 'com.example.Xiangqi'
@@ -633,7 +648,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
             == False, caps_str
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
-    assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
+    assert len(signaled_caps) == 4, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
         == 'daap'
@@ -665,7 +680,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
             == True, caps_str
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
-    assert len(signaled_caps) == 5, signaled_caps # basic caps + 4 tubes
+    assert len(signaled_caps) == 6, signaled_caps # basic caps + 4 tubes
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
         == 'daap'
@@ -702,7 +717,7 @@ service)
             == False, caps_str
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
-    assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
+    assert len(signaled_caps) == 4, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
         ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
         == 'daap'
