@@ -652,7 +652,7 @@ salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
   caps = GPOINTER_TO_UINT (g_hash_table_lookup (
         contact->per_channel_manager_caps, manager));
 
-  if (caps != FT_CAPA_SUPPORTED)
+  if (caps == FT_CAPA_UNSUPPORTED)
     return;
 
   /* FT is supported */
@@ -690,6 +690,9 @@ salut_ft_manager_parse_caps (SalutCapsChannelManager *manager,
 {
   gboolean support_ft = FALSE;
   FtCapaStatus caps;
+
+  if (node == NULL)
+    return FT_CAPA_UNKNOWN;
 
   gibber_xmpp_node_each_child (node, _parse_caps_item, &support_ft);
 
