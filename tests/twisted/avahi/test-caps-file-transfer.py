@@ -239,6 +239,16 @@ def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 0])
 
+    # check our own capabilities
+    self_handle = conn.GetSelfHandle()
+    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPA)
+    caps = conn_caps_iface.GetContactCapabilities([self_handle])[self_handle]
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
+             TARGET_HANDLE_TYPE: HT_CONTACT},
+            [TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME, FT_SIZE,
+                FT_CONTENT_HASH_TYPE, FT_CONTENT_HASH, FT_DESCRIPTION,
+                FT_DATE, FT_INITIAL_OFFSET]) in caps
+
     client = 'http://telepathy.freedesktop.org/fake-client'
     test_ft_caps_from_contact(q, bus, conn, client)
 
@@ -248,4 +258,3 @@ def test(q, bus, conn):
 
 if __name__ == '__main__':
     exec_test(test)
-
