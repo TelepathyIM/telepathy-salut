@@ -103,7 +103,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     ver = compute_caps_hash([], [ns.IQ_OOB], [])
     txt_record = { "txtvers": "1", "status": "avail",
         "node": client, "ver": ver, "hash": "sha-1"}
-    contact_name = "test-caps-tube@" + get_host_name()
+    contact_name = "test-caps-ft@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
             txt_record)
