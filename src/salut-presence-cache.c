@@ -587,6 +587,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
   CapabilityInfo *info;
   GHashTable *per_channel_manager_caps;
   gboolean caps_set;
+  gboolean hash_table_created = FALSE;
 
   DEBUG ("Called for %s with '%s' '%s' '%s'",
     contact->name, hash, node, ver);
@@ -599,7 +600,9 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
       /* if the contact does not support capabilities, we consider the default
        * basic ones */
       caps_set = TRUE;
-      per_channel_manager_caps = NULL;
+      /* get the default capabilities */
+      per_channel_manager_caps = create_per_channel_manager_caps (self, NULL);
+      hash_table_created = TRUE;
     }
   else
     {
@@ -666,6 +669,9 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
           waiter->disco_requested = TRUE;
         }
     }
+
+  if (hash_table_created)
+    g_hash_table_destroy (per_channel_manager_caps);
 }
 
 SalutPresenceCache *
