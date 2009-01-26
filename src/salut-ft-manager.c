@@ -637,7 +637,8 @@ salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
 
   if (handle == base->self_handle)
     {
-      /* FIXME */
+      /* We support file transfer */
+      add_file_transfer_channel_class (arr, handle);
       return;
     }
 
