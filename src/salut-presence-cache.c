@@ -343,6 +343,37 @@ salut_presence_cache_set_property (GObject     *object,
     }
 }
 
+static GHashTable *
+create_per_channel_manager_caps (SalutPresenceCache *self,
+                                 GibberXmppNode *query_result)
+{
+  SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (self);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+  GHashTable *per_channel_manager_caps;
+  TpChannelManagerIter iter;
+  TpChannelManager *manager;
+
+  per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+
+  /* parsing for Connection.Interface.ContactCapabilities.DRAFT */
+  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
+  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
+    {
+      gpointer *factory_caps;
+
+      /* all channel managers must implement the capability interface */
+      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
+
+      factory_caps = salut_caps_channel_manager_parse_capabilities
+          (SALUT_CAPS_CHANNEL_MANAGER (manager), query_result);
+      if (factory_caps != NULL)
+        g_hash_table_insert (per_channel_manager_caps,
+            SALUT_CAPS_CHANNEL_MANAGER (manager), factory_caps);
+    }
+
+  return per_channel_manager_caps;
+}
+
 static void
 _caps_disco_cb (SalutDisco *disco,
                 SalutDiscoRequest *request,
@@ -360,8 +391,6 @@ _caps_disco_cb (SalutDisco *disco,
   GHashTable *per_channel_manager_caps;
   gboolean bad_hash = FALSE;
   TpBaseConnection *base_conn;
-  TpChannelManagerIter iter;
-  TpChannelManager *manager;
 
   cache = SALUT_PRESENCE_CACHE (user_data);
   priv = SALUT_PRESENCE_CACHE_PRIV (cache);
@@ -415,24 +444,8 @@ _caps_disco_cb (SalutDisco *disco,
       return;
     }
 
-  per_channel_manager_caps = g_hash_table_new (NULL, NULL);
-
-  /* parsing for Connection.Interface.ContactCapabilities.DRAFT */
-  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
-  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
-    {
-      gpointer *factory_caps;
-
-      /* all channel managers must implement the capability interface */
-      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
-
-      factory_caps = salut_caps_channel_manager_parse_capabilities
-          (SALUT_CAPS_CHANNEL_MANAGER (manager), query_result);
-      if (factory_caps != NULL)
-        g_hash_table_insert (per_channel_manager_caps,
-            SALUT_CAPS_CHANNEL_MANAGER (manager), factory_caps);
-    }
-
+  per_channel_manager_caps = create_per_channel_manager_caps (cache,
+      query_result);
 
   waiter_self = NULL;
   for (i = waiters; NULL != i;  i = i->next)
