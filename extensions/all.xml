@@ -52,6 +52,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
     from="Telepathy specification"/>
   <tp:external-type name="Supported_Socket_Map" type="a{uau}"
     from="Telepathy specification"/>
+  <tp:external-type name="Unix_Timestamp64" type="t"
+    from="Telepathy specification"/>
+  <tp:simple-type name="DBus_Unique_Name" type="s"
+    from="Telepathy specification"/>
 </tp:generic-types>
 
 </tp:spec>
