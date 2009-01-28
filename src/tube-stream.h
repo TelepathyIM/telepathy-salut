@@ -23,6 +23,7 @@
 #include <glib-object.h>
 
 #include <telepathy-glib/enums.h>
+#include <telepathy-glib/interfaces.h>
 
 #include "extensions/extensions.h"
 #include "salut-connection.h"
@@ -46,6 +47,14 @@ struct _SalutTubeStream {
 };
 
 GType salut_tube_stream_get_type (void);
+
+static const gchar * const salut_stream_tube_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
+    SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
+    SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
+    NULL
+};
 
 /* TYPE MACROS */
 #define SALUT_TYPE_TUBE_STREAM \
