@@ -315,15 +315,14 @@ def test(q, bus, conn):
     check_channel_properties(q, bus, conn, tube_channel, "StreamTube.DRAFT",
             handle, contact_name, 3)
 
-    tube_id = tubes_channel.OfferStreamTube("http", sample_parameters,
-            SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
+    tube_channel.OfferStreamTube(SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
             SOCKET_ACCESS_CONTROL_LOCALHOST, "")
 
     e = q.expect('stream-iq')
     iq_tube = xpath.queryForNodes('/iq/tube', e.stanza)[0]
     transport = xpath.queryForNodes('/iq/tube/transport', e.stanza)[0]
     assert iq_tube.attributes['type'] == 'stream'
-    assert iq_tube.attributes['service'] == 'http', \
+    assert iq_tube.attributes['service'] == 'newecho', \
         iq_tube.attributes['service']
     assert iq_tube.attributes['id'] is not None
     port = transport.attributes['port']
@@ -338,11 +337,7 @@ def test(q, bus, conn):
     for node in parameter_nodes:
         assert node['name'] not in params
         params[node['name']] = (node['type'], str(node))
-    assert params == {'ay': ('bytes', 'aGVsbG8='),
-                      's': ('str', 'hello'),
-                      'i': ('int', '-123'),
-                      'u': ('uint', '123'),
-                     }, params
+    assert params == {'foo': ('str', 'bar')}, params
 
     # find the right host/IP address because Salut checks it
     self_handle = conn.GetSelfHandle()
