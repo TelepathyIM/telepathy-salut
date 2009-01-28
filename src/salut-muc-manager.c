@@ -36,6 +36,7 @@
 #include "salut-roomlist-manager.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-discovery-client.h"
+#include "tube-stream.h"
 
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
@@ -363,12 +364,20 @@ salut_muc_manager_foreach_channel_class (TpChannelManager *manager,
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       handle_type_value);
 
+  /* org.freedesktop.Telepathy.Channel.Type.Text */
   g_value_set_static_string (channel_type_value, TP_IFACE_CHANNEL_TYPE_TEXT);
   func (manager, table, muc_channel_allowed_properties,
       user_data);
 
+  /* org.freedesktop.Telepathy.Channel.Type.Tubes */
   g_value_set_static_string (channel_type_value, TP_IFACE_CHANNEL_TYPE_TUBES);
   func (manager, table, muc_tubes_channel_allowed_properties,
+      user_data);
+
+  /* org.freedesktop.Telepathy.Channel.Type.StreamTube */
+  g_value_set_static_string (channel_type_value,
+      SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+  func (manager, table, salut_stream_tube_channel_allowed_properties,
       user_data);
 
   g_hash_table_destroy (table);
