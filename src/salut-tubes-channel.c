@@ -1203,8 +1203,11 @@ tube_closed_cb (SalutTubeIface *tube,
 
   DEBUG ("tube %d removed", tube_id);
 
-  /* Emit the DBusNamesChanged signal */
-  d_bus_names_changed_removed (self, tube_id, priv->self_handle);
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM && SALUT_IS_TUBE_DBUS (tube))
+    {
+      /* Emit the DBusNamesChanged signal */
+      d_bus_names_changed_removed (self, tube_id, priv->self_handle);
+    }
 
   update_tubes_info (self);
 
