@@ -2301,6 +2301,11 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
       salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
           self, SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING);
     }
+  else
+    {
+      salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
+          self, SALUT_TUBE_CHANNEL_STATE_OPEN);
+    }
 
   salut_svc_channel_type_stream_tube_return_from_offer_stream_tube (context);
 }
