@@ -1206,6 +1206,42 @@ tube_opened_cb (SalutTubeIface *tube,
       TP_TUBE_STATE_OPEN);
 }
 
+static void
+tube_offered_cb (SalutTubeIface *tube,
+                 gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  guint tube_id;
+  TpHandle initiator;
+  TpTubeType type;
+  gchar *service;
+  GHashTable *parameters;
+  TpTubeState state;
+
+  g_object_get (tube,
+      "id", &tube_id,
+      "initiator-handle", &initiator,
+      "type", &type,
+      "service", &service,
+      "parameters", &parameters,
+      "state", &state,
+      NULL);
+
+  /* tube has been offered and so can be announced using the old API */
+  tp_svc_channel_type_tubes_emit_new_tube (self,
+      tube_id,
+      initiator,
+      type,
+      service,
+      parameters,
+      state);
+
+  update_tubes_info (self);
+
+  g_free (service);
+  g_hash_table_destroy (parameters);
+}
+
 static SalutTubeIface *
 create_new_tube (SalutTubesChannel *self,
                  TpTubeType type,
@@ -1244,17 +1280,27 @@ create_new_tube (SalutTubesChannel *self,
 
   DEBUG ("create tube %u", tube_id);
   g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);
-  update_tubes_info (self);
 
   g_object_get (tube, "state", &state, NULL);
 
-  tp_svc_channel_type_tubes_emit_new_tube (self,
-      tube_id,
-      initiator,
-      type,
-      service,
-      parameters,
-      state);
+  if (state == SALUT_TUBE_CHANNEL_STATE_OPEN)
+    {
+      /* FIXME: does it still make sense to call it here? */
+      update_tubes_info (self);
+    }
+
+    /* The old API doesn't know the "not offered" state, so we have to wait that
+   * the tube is offered before announcing it. */
+  if (state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
+    {
+      tp_svc_channel_type_tubes_emit_new_tube (self,
+          tube_id,
+          initiator,
+          type,
+          service,
+          parameters,
+          state);
+    }
 
   if (type == TP_TUBE_TYPE_DBUS &&
       state != TP_TUBE_STATE_LOCAL_PENDING)
@@ -1264,6 +1310,7 @@ create_new_tube (SalutTubesChannel *self,
 
   g_signal_connect (tube, "tube-opened", G_CALLBACK (tube_opened_cb), self);
   g_signal_connect (tube, "tube-closed", G_CALLBACK (tube_closed_cb), self);
+  g_signal_connect (tube, "tube-offered", G_CALLBACK (tube_offered_cb), self);
 
   if (muc_connection != NULL)
     g_object_unref (muc_connection);
