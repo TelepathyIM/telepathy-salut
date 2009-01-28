@@ -280,7 +280,7 @@ def test(q, bus, conn):
     # request a stream tube channel (new API)
     requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
 
-    call_async(q, requestotron, 'CreateChannel', {
+    requestotron.CreateChannel({
         CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
         TARGET_HANDLE_TYPE: HT_ROOM,
         TARGET_ID: muc2_name,
