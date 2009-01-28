@@ -23,6 +23,7 @@ TARGET_ID = CHANNEL + '.TargetID'
 REQUESTED = CHANNEL + '.Requested'
 INITIATOR_HANDLE = CHANNEL + '.InitiatorHandle'
 INITIATOR_ID = CHANNEL + '.InitiatorID'
+INTERFACES = CHANNEL + '.org.freedesktop.Telepathy.Channel.Interfaces'
 
 CONN = "org.freedesktop.Telepathy.Connection"
 CONN_IFACE_REQUESTS = CONN + '.Interface.Requests'
