@@ -8,7 +8,7 @@ import errno
 import string
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, Event, call_async
+from servicetest import make_channel_proxy, Event, call_async, EventPattern
 
 from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
@@ -235,9 +235,10 @@ def test(q, bus, conn):
     client.connectUNIX(unix_socket_adr).addCallback(client_connected_cb)
 
     # server got the connection
-    q.expect('server-connected')
+    _, e = q.expect_many(
+        EventPattern('server-connected'),
+        EventPattern('client-connected'))
 
-    e = q.expect('client-connected')
     client_transport = e.transport
 
     e = q.expect('dbus-signal', signal='StreamTubeNewConnection', path=tubes1_path)
