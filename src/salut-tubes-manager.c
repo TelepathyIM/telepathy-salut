@@ -50,7 +50,7 @@
 
 static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
     TpHandle handle, TpHandle initiator, gpointer request_token,
-    GError **error);
+    gboolean requested, GError **error);
 
 static void tubes_channel_closed_cb (SalutTubesChannel *chan,
     gpointer user_data);
@@ -359,7 +359,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
         GError *e = NULL;
 
         chan = new_tubes_channel (self, initiator_handle, initiator_handle,
-            NULL, &e);
+            NULL, FALSE, &e);
 
         if (chan == NULL)
           {
@@ -622,6 +622,7 @@ new_tubes_channel (SalutTubesManager *fac,
                    TpHandle handle,
                    TpHandle initiator,
                    gpointer request_token,
+                   gboolean requested,
                    GError **error)
 {
   SalutTubesManagerPrivate *priv;
@@ -660,6 +661,7 @@ new_tubes_channel (SalutTubesManager *fac,
                        "contact", contact,
                        "initiator-handle", initiator,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
+                       "requested", requested,
                        NULL);
 
   DEBUG ("object path %s", object_path);
@@ -911,7 +913,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       if (tubes_channel == NULL)
         {
           tubes_channel = new_tubes_channel (self, handle,
-              base_conn->self_handle, request_token, &error);
+              base_conn->self_handle, request_token, TRUE, &error);
 
           if (tubes_channel == NULL)
             goto error;
@@ -940,7 +942,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       if (tubes_channel == NULL)
         {
           tubes_channel = new_tubes_channel (self, handle,
-              base_conn->self_handle, NULL, &error);
+              base_conn->self_handle, NULL, FALSE, &error);
           if (tubes_channel == NULL)
             goto error;
         }
