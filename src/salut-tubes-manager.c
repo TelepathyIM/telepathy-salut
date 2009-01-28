@@ -45,6 +45,7 @@
 #include "salut-muc-channel.h"
 #include "salut-util.h"
 #include "tube-iface.h"
+#include "tube-stream.h"
 
 
 static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
@@ -719,12 +720,6 @@ static const gchar * const old_tubes_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     NULL
 };
-static const gchar * const stream_tube_channel_allowed_properties[] = {
-    TP_IFACE_CHANNEL ".TargetHandle",
-    SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
-    SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
-    NULL
-};
 /* Temporarily disabled since the implementation is incomplete. */
 #if 0
 static const gchar * const dbus_tube_channel_allowed_properties[] = {
@@ -776,7 +771,8 @@ salut_tubes_manager_foreach_channel_class (
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       value);
 
-  func (manager, table, stream_tube_channel_allowed_properties, user_data);
+  func (manager, table, salut_stream_tube_channel_allowed_properties,
+      user_data);
 
   g_hash_table_destroy (table);
 
@@ -844,7 +840,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
-              stream_tube_channel_allowed_properties,
+              salut_stream_tube_channel_allowed_properties,
               &error))
         goto error;
 
