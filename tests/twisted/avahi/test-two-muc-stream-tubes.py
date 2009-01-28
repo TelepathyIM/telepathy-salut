@@ -8,7 +8,7 @@ import errno
 import string
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, Event
+from servicetest import make_channel_proxy, Event, call_async
 
 from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
@@ -25,6 +25,7 @@ sample_parameters = dbus.Dictionary({
 test_string = "This string travels on a tube !"
 
 muc_name = "test-two-muc-stream-tubes"
+muc2_name = "test-two-muc-stream-tubes-2"
 
 SERVER_WELCOME_MSG = "Welcome!"
 
@@ -263,6 +264,57 @@ def test(q, bus, conn):
     # contact2 closes the tube
     contact2_tubes_channel.CloseTube(conn2_tube_id)
     q.expect('dbus-signal', signal='TubeClosed', args=[conn2_tube_id])
+
+    # Now contact1 will create a new muc stream tube to another room using the
+    # new API
+
+    # Can we request muc stream tubes?
+    properties = conn.GetAll(CONN_IFACE_REQUESTS, dbus_interface=PROPERTIES_IFACE)
+
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
+             TARGET_HANDLE_TYPE: HT_ROOM},
+         [TARGET_HANDLE, TARGET_ID, TUBE_PARAMETERS, STREAM_TUBE_SERVICE]
+        ) in properties.get('RequestableChannelClasses'),\
+                 properties['RequestableChannelClasses']
+
+    # request a stream tube channel (new API)
+    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
+
+    call_async(q, requestotron, 'CreateChannel', {
+        CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
+        TARGET_HANDLE_TYPE: HT_ROOM,
+        TARGET_ID: muc2_name,
+        STREAM_TUBE_SERVICE: 'test',
+        TUBE_PARAMETERS: sample_parameters})
+
+    e = q.expect('dbus-signal', signal='NewChannels')
+    channels = e.args[0]
+    assert len(channels) == 3
+
+    got_text, got_tubes, got_tube = False, False, False
+    for path, props in channels:
+        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
+            got_text = True
+            assert props[REQUESTED] == False
+        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
+            got_tubes = True
+            assert props[REQUESTED] == False
+            #assert props[INTERFACES] == CHANNEL_IFACE_GROUP
+        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
+            got_tube = True
+            assert props[REQUESTED] == True
+            #assert props[INTERFACES] == CHANNEL_IFACE_GROUP
+            assert props[STREAM_TUBE_SERVICE] == 'test'
+        else:
+            assert False
+
+        assert props[INITIATOR_HANDLE] == conn1_self_handle
+        assert props[INITIATOR_ID] == contact1_name
+        assert props[TARGET_ID] == muc2_name
+
+    assert got_text
+    assert got_tubes
+    assert got_tube
 
     conn.Disconnect()
     conn2.Disconnect()
