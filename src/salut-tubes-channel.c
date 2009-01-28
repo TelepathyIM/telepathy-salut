@@ -49,6 +49,8 @@
 #include "salut-connection.h"
 #include "salut-contact.h"
 #include "salut-muc-channel.h"
+#include "salut-muc-manager.h"
+#include "salut-tubes-manager.h"
 #include "salut-xmpp-connection-manager.h"
 #include "tube-iface.h"
 #include "tube-dbus.h"
@@ -862,6 +864,21 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
 
               tube = create_new_tube (self, type, initiator_handle, FALSE, service, parameters,
                   tube_id, 0, NULL);
+
+              if (type == TP_TUBE_TYPE_STREAM)
+                {
+                  /* FIXME: remove this test once D-Tube new API is
+                   * implemented */
+                  SalutMucManager *mgr;
+
+                  g_object_get (priv->conn, "muc-manager", &mgr, NULL);
+                  g_assert (mgr != NULL);
+
+                  tp_channel_manager_emit_new_channel (mgr,
+                      TP_EXPORTABLE_CHANNEL (tube), NULL);
+
+                  g_object_unref (mgr);
+                }
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
