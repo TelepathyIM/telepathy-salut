@@ -2,6 +2,8 @@
 Some handy constants for other tests to share and enjoy.
 """
 
+from dbus import PROPERTIES_IFACE
+
 HT_CONTACT = 1
 HT_ROOM =2
 HT_CONTACT_LIST = 3
