@@ -2040,6 +2040,9 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 
       g_signal_emit (G_OBJECT (self), signals[NEW_CONNECTION], 0, contact);
 
+      salut_svc_channel_type_stream_tube_emit_stream_tube_new_connection (
+          self, contact);
+
       tp_handle_unref (contact_repo, contact);
       g_free (peer_id);
     }
