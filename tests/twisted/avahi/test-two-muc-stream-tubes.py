@@ -326,8 +326,12 @@ def test(q, bus, conn):
     state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State', dbus_interface=PROPERTIES_IFACE)
     assert state == TUBE_CHANNEL_STATE_NOT_OFFERED
 
-    contact1_stream_tube.OfferStreamTube(SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
-            SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+    call_async(q, contact1_stream_tube, 'OfferStreamTube', SOCKET_ADDRESS_TYPE_UNIX,
+            dbus.ByteArray(server_socket_address), SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+
+    q.expect_many(
+        EventPattern('dbus-signal', signal='TubeChannelStateChanged', args=[TUBE_CHANNEL_STATE_OPEN]),
+        EventPattern('dbus-return', method='OfferStreamTube'))
 
     state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State', dbus_interface=PROPERTIES_IFACE)
     assert state == TUBE_CHANNEL_STATE_OPEN
