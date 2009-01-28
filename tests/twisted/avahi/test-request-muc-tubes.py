@@ -11,6 +11,7 @@ from twisted.words.xish import domish
 from saluttest import exec_test, wait_for_contact_list
 from servicetest import call_async, lazy, match, EventPattern, \
         tp_name_prefix, tp_path_prefix, make_channel_proxy
+from constants import *
 
 CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
 CHANNEL_TYPE_TUBES = 'org.freedesktop.Telepathy.Channel.Type.Tubes'
@@ -54,43 +55,28 @@ def test(q, bus, conn):
     path1 = ret.value[0]
     chan = make_channel_proxy(conn, path1, "Channel")
 
-    # first the text channel is announced
-    props = new_sig.args[0][0][1]
-    assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            CHANNEL_TYPE_TEXT
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
-    assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-    assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-first-room'
-    assert props[tp_name_prefix + '.Channel.Requested'] == False
-    assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
-            == conn.GetSelfHandle()
-    assert props[tp_name_prefix + '.Channel.InitiatorID'] \
-            == self_name
+    # text and tubes channels are announced
+    channels = new_sig.args[0]
+    assert len(channels) == 2
+    got_text, got_tubes = False, False
 
-    # then the tubes channel is announced
-    old_sig, new_sig = q.expect_many(
-        EventPattern('dbus-signal', signal='NewChannel'),
-        EventPattern('dbus-signal', signal='NewChannels'),
-        )
+    for path, props in channels:
+        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
+            got_text = True
+            assert props[tp_name_prefix + '.Channel.Requested'] == False
+        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
+            got_tubes = True
+            assert props[tp_name_prefix + '.Channel.Requested'] == True
+        else:
+            assert False
 
-    assert new_sig.args[0][0][0] == path1
-
-    props = new_sig.args[0][0][1]
-    assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            CHANNEL_TYPE_TUBES
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
-    assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-    assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-first-room'
-    assert props[tp_name_prefix + '.Channel.Requested'] == True
-    assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
-            == conn.GetSelfHandle()
-    assert props[tp_name_prefix + '.Channel.InitiatorID'] \
-            == self_name
-
-    assert old_sig.args[0] == path1
-    assert old_sig.args[1] == CHANNEL_TYPE_TUBES
-    assert old_sig.args[2] == HT_ROOM     # handle type
-    assert old_sig.args[3] == handle     # handle
+        assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
+        assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
+        assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-first-room'
+        assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
+                == conn.GetSelfHandle()
+        assert props[tp_name_prefix + '.Channel.InitiatorID'] \
+                == self_name
 
     # Exercise basic Channel Properties from spec 0.17.7
     channel_props = chan.GetAll(
@@ -128,45 +114,41 @@ def test(q, bus, conn):
 
     handle = conn.RequestHandles(HT_ROOM, ['my-second-room'])[0]
 
-    props = ret.value[1]
-    assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
+    tubes_props = ret.value[1]
+    assert tubes_props[tp_name_prefix + '.Channel.ChannelType'] ==\
             CHANNEL_TYPE_TUBES
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
-    assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-    assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
-    assert props[tp_name_prefix + '.Channel.Requested'] == True
-    assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
+    assert tubes_props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
+    assert tubes_props[tp_name_prefix + '.Channel.TargetHandle'] == handle
+    assert tubes_props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
+    assert tubes_props[tp_name_prefix + '.Channel.Requested'] == True
+    assert tubes_props[tp_name_prefix + '.Channel.InitiatorHandle'] \
             == conn.GetSelfHandle()
-    assert props[tp_name_prefix + '.Channel.InitiatorID'] \
+    assert tubes_props[tp_name_prefix + '.Channel.InitiatorID'] \
             == self_name
 
-    # first the text channel is announced
-    text_props = new_sig.args[0][0][1]
-    assert text_props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            CHANNEL_TYPE_TEXT
-    assert text_props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
-    assert text_props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-    assert text_props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
-    assert text_props[tp_name_prefix + '.Channel.Requested'] == False
-    assert text_props[tp_name_prefix + '.Channel.InitiatorHandle'] \
-            == conn.GetSelfHandle()
-    assert text_props[tp_name_prefix + '.Channel.InitiatorID'] \
-            == self_name
+    # text and tubes channels are announced
+    channels = new_sig.args[0]
+    assert len(channels) == 2
+    got_text, got_tubes = False, False
 
-    # then the tubes channel is announced
-    old_sig, new_sig = q.expect_many(
-        EventPattern('dbus-signal', signal='NewChannel'),
-        EventPattern('dbus-signal', signal='NewChannels'),
-        )
+    for path, props in channels:
+        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
+            got_text = True
+            assert props[tp_name_prefix + '.Channel.Requested'] == False
+        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
+            got_tubes = True
+            assert props == tubes_props
+            assert path == path2
+        else:
+            assert False
 
-    assert new_sig.args[0][0][0] == path2
-    assert new_sig.args[0][0][1] == props
-
-    assert old_sig.args[0] == path2
-    assert old_sig.args[1] == CHANNEL_TYPE_TUBES
-    assert old_sig.args[2] == HT_ROOM     # handle type
-    assert old_sig.args[3] == handle      # handle
-    assert old_sig.args[4] == True        # suppress handler
+        assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
+        assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
+        assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
+        assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
+                == conn.GetSelfHandle()
+        assert props[tp_name_prefix + '.Channel.InitiatorID'] \
+                == self_name
 
     # ensure roomlist channel
     yours, ensured_path, ensured_props = requestotron.EnsureChannel(
