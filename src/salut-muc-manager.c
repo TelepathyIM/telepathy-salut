@@ -504,7 +504,8 @@ static SalutTubesChannel *
 new_tubes_channel (SalutMucManager *self,
                    TpHandle room,
                    SalutMucChannel *muc,
-                   TpHandle initiator)
+                   TpHandle initiator,
+                   gboolean requested)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *conn = (TpBaseConnection *) priv->connection;
@@ -526,6 +527,7 @@ new_tubes_channel (SalutMucManager *self,
       "handle-type", TP_HANDLE_TYPE_ROOM,
       "muc", muc,
       "initiator-handle", initiator,
+      "requested", requested,
       NULL);
 
   g_signal_connect (chan, "closed", (GCallback) tubes_channel_closed_cb, self);
@@ -541,6 +543,7 @@ static SalutMucChannel *
 salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
                                            TpHandle handle,
                                            gpointer request_token,
+                                           gboolean announce,
                                            GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
@@ -625,8 +628,11 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   if (request_token != NULL)
     tokens = g_slist_prepend (tokens, request_token);
 
-  tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (text_chan),
-      tokens);
+  if (announce)
+    {
+      tp_channel_manager_emit_new_channel (mgr,
+          TP_EXPORTABLE_CHANNEL (text_chan), tokens);
+    }
 
   g_slist_free (tokens);
 
@@ -638,12 +644,15 @@ create_tubes_channel (SalutMucManager *self,
                       TpHandle handle,
                       TpHandle initiator,
                       gpointer request_token,
+                      gboolean announce,
+                      gboolean *text_created,
+                      gboolean requested,
                       GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutMucChannel *text_chan;
   SalutTubesChannel *tubes_chan;
-  GSList *tokens = NULL;
+  gboolean txt_created = FALSE;
 
   text_chan = g_hash_table_lookup (priv->text_channels,
       GUINT_TO_POINTER (handle));
@@ -652,22 +661,45 @@ create_tubes_channel (SalutMucManager *self,
     {
       DEBUG ("have to create the text channel before the tubes one");
       text_chan = salut_muc_manager_request_new_muc_channel (self,
-          handle, NULL, error);
+          handle, NULL, FALSE, error);
 
       if (text_chan == NULL)
         return NULL;
+
+      txt_created = TRUE;
     }
 
-  tubes_chan = new_tubes_channel (self, handle, text_chan, initiator);
+  tubes_chan = new_tubes_channel (self, handle, text_chan, initiator,
+      requested);
   g_assert (tubes_chan != NULL);
 
-  if (request_token != NULL)
-    tokens = g_slist_prepend (tokens, request_token);
+  if (announce)
+    {
+      GHashTable *channels;
+      GSList *tokens = NULL;
 
-  tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (tubes_chan),
-      tokens);
+      if (request_token != NULL)
+        tokens = g_slist_prepend (tokens, request_token);
 
-  g_slist_free (tokens);
+      /* announce channels */
+      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+          NULL, NULL);
+
+      if (txt_created)
+        {
+          g_hash_table_insert (channels, text_chan, NULL);
+        }
+
+      g_hash_table_insert (channels, tubes_chan, tokens);
+      tp_channel_manager_emit_new_channels (self, channels);
+
+      g_hash_table_destroy (channels);
+      g_slist_free (tokens);
+    }
+
+
+  if (text_created != NULL)
+    *text_created = txt_created;
 
   return tubes_chan;
 }
@@ -680,8 +712,6 @@ salut_muc_manager_request (SalutMucManager *self,
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_ROOM);
   GError *error = NULL;
   TpHandle handle;
   const gchar *channel_type;
@@ -692,14 +722,18 @@ salut_muc_manager_request (SalutMucManager *self,
       TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_ROOM)
     return FALSE;
 
-  handle = tp_asv_get_uint32 (request_properties,
-      TP_IFACE_CHANNEL ".TargetHandle", NULL);
-
-  if (!tp_handle_is_valid (room_repo, handle, &error))
-    goto error;
-
   channel_type = tp_asv_get_string (request_properties,
       TP_IFACE_CHANNEL ".ChannelType");
+
+  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TEXT) &&
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
+      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    return FALSE;
+
+  /* validity already checked by TpBaseConnection */
+  handle = tp_asv_get_uint32 (request_properties,
+      TP_IFACE_CHANNEL ".TargetHandle", NULL);
+  g_assert (handle != 0);
 
   if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TEXT))
     {
@@ -728,7 +762,7 @@ salut_muc_manager_request (SalutMucManager *self,
       else
         {
           text_chan = salut_muc_manager_request_new_muc_channel (self,
-              handle, request_token, NULL);
+              handle, request_token, TRUE, NULL);
         }
 
       return TRUE;
@@ -761,11 +795,78 @@ salut_muc_manager_request (SalutMucManager *self,
       else
         {
           tubes_chan = create_tubes_channel (self, handle,
-              base_conn->self_handle, request_token, &error);
+              base_conn->self_handle, request_token, TRUE, NULL, TRUE, &error);
           if (tubes_chan == NULL)
             goto error;
         }
 
+      return TRUE;
+    }
+  else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      const gchar *service;
+      SalutTubeIface *new_channel;
+      GHashTable *channels;
+      GSList *request_tokens;
+      gboolean announce_text = FALSE, announce_tubes = FALSE;
+
+      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+              muc_tubes_channel_fixed_properties,
+              salut_stream_tube_channel_allowed_properties,
+              &error))
+        goto error;
+
+      /* "Service" is a mandatory, not-fixed property */
+      service = tp_asv_get_string (request_properties,
+                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+      if (service == NULL)
+        {
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+              "Request does not contain the mandatory property '%s'",
+              SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+          goto error;
+        }
+
+      tubes_chan = g_hash_table_lookup (priv->tubes_channels,
+          GUINT_TO_POINTER (handle));
+      if (tubes_chan == NULL)
+        {
+          tubes_chan = create_tubes_channel (self, handle,
+              base_conn->self_handle, NULL, FALSE, &announce_text,
+              FALSE, &error);
+          if (tubes_chan == NULL)
+            goto error;
+          announce_tubes = TRUE;
+        }
+
+      g_assert (tubes_chan != NULL);
+      new_channel = salut_tubes_channel_tube_request (tubes_chan,
+            request_token, request_properties);
+      g_assert (new_channel != NULL);
+
+      /* announce channels */
+      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+          NULL, NULL);
+
+      if (announce_text)
+        {
+          text_chan = g_hash_table_lookup (priv->text_channels,
+              GINT_TO_POINTER (handle));
+          g_assert (text_chan != NULL);
+          g_hash_table_insert (channels, text_chan, NULL);
+        }
+
+      if (announce_tubes)
+        {
+          g_hash_table_insert (channels, tubes_chan, NULL);
+        }
+
+      request_tokens = g_slist_prepend (NULL, request_token);
+      g_hash_table_insert (channels, new_channel, request_tokens);
+      tp_channel_manager_emit_new_channels (self, channels);
+
+      g_hash_table_destroy (channels);
+      g_slist_free (request_tokens);
       return TRUE;
     }
   else
@@ -1029,7 +1130,8 @@ salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
       return tubes_chan;
     }
 
-  tubes_chan = create_tubes_channel (self, handle, actor, NULL, NULL);
+  tubes_chan = create_tubes_channel (self, handle, actor, NULL, TRUE, NULL,
+      FALSE, NULL);
   g_assert (tubes_chan != NULL);
   g_object_ref (tubes_chan);
 
