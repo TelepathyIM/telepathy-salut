@@ -9,14 +9,8 @@ import avahitest
 from twisted.words.xish import domish
 
 from saluttest import exec_test, wait_for_contact_list
-from servicetest import call_async, lazy, match, EventPattern, \
-        tp_name_prefix, tp_path_prefix, make_channel_proxy
+from servicetest import call_async, lazy, match, EventPattern, make_channel_proxy
 from constants import *
-
-CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
-CHANNEL_TYPE_TUBES = 'org.freedesktop.Telepathy.Channel.Type.Tubes'
-
-HT_ROOM = 2
 
 def test(q, bus, conn):
     self_name = 'testsuite' + '@' + avahitest.get_host_name()
@@ -30,15 +24,10 @@ def test(q, bus, conn):
     wait_for_contact_list(q, conn)
 
     # check if we can request roomlist channels
-    properties = conn.GetAll(
-            tp_name_prefix + '.Connection.Interface.Requests',
-            dbus_interface='org.freedesktop.DBus.Properties')
-    assert ({tp_name_prefix + '.Channel.ChannelType':
-                CHANNEL_TYPE_TUBES,
-             tp_name_prefix + '.Channel.TargetHandleType': HT_ROOM,
-             },
-             [tp_name_prefix + '.Channel.TargetHandle',
-              tp_name_prefix + '.Channel.TargetID'],
+    properties = conn.GetAll(CONN_IFACE_REQUESTS, dbus_interface=PROPERTIES_IFACE)
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_TUBES,
+             TARGET_HANDLE_TYPE: HT_ROOM},
+             [TARGET_HANDLE, TARGET_ID],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
@@ -63,25 +52,21 @@ def test(q, bus, conn):
     for path, props in channels:
         if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
             got_text = True
-            assert props[tp_name_prefix + '.Channel.Requested'] == False
+            assert props[REQUESTED] == False
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
             got_tubes = True
-            assert props[tp_name_prefix + '.Channel.Requested'] == True
+            assert props[REQUESTED] == True
         else:
             assert False
 
-        assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
-        assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-        assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-first-room'
-        assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
-                == conn.GetSelfHandle()
-        assert props[tp_name_prefix + '.Channel.InitiatorID'] \
-                == self_name
+        assert props[TARGET_HANDLE_TYPE] == HT_ROOM
+        assert props[TARGET_HANDLE] == handle
+        assert props[TARGET_ID] == 'my-first-room'
+        assert props[INITIATOR_HANDLE] == conn.GetSelfHandle()
+        assert props[INITIATOR_ID] == self_name
 
     # Exercise basic Channel Properties from spec 0.17.7
-    channel_props = chan.GetAll(
-            tp_name_prefix + '.Channel',
-            dbus_interface='org.freedesktop.DBus.Properties')
+    channel_props = chan.GetAll(CHANNEL, dbus_interface=PROPERTIES_IFACE)
     assert channel_props.get('TargetHandle') == handle,\
             channel_props.get('TargetHandle')
     assert channel_props['TargetID'] == 'my-first-room', channel_props
@@ -93,15 +78,13 @@ def test(q, bus, conn):
     assert channel_props['InitiatorID'] == self_name
     assert channel_props['InitiatorHandle'] == conn.GetSelfHandle()
 
-    requestotron = dbus.Interface(conn,
-            tp_name_prefix + '.Connection.Interface.Requests')
+    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
 
     # create muc channel using new API
     call_async(q, requestotron, 'CreateChannel',
-            { tp_name_prefix + '.Channel.ChannelType':
-                CHANNEL_TYPE_TUBES,
-              tp_name_prefix + '.Channel.TargetHandleType': HT_ROOM,
-              tp_name_prefix + '.Channel.TargetID': 'my-second-room',
+            { CHANNEL_TYPE: CHANNEL_TYPE_TUBES,
+              TARGET_HANDLE_TYPE: HT_ROOM,
+              TARGET_ID: 'my-second-room',
               })
 
     ret, old_sig, new_sig = q.expect_many(
@@ -115,16 +98,13 @@ def test(q, bus, conn):
     handle = conn.RequestHandles(HT_ROOM, ['my-second-room'])[0]
 
     tubes_props = ret.value[1]
-    assert tubes_props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            CHANNEL_TYPE_TUBES
-    assert tubes_props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
-    assert tubes_props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-    assert tubes_props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
-    assert tubes_props[tp_name_prefix + '.Channel.Requested'] == True
-    assert tubes_props[tp_name_prefix + '.Channel.InitiatorHandle'] \
-            == conn.GetSelfHandle()
-    assert tubes_props[tp_name_prefix + '.Channel.InitiatorID'] \
-            == self_name
+    assert tubes_props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES
+    assert tubes_props[TARGET_HANDLE_TYPE] == HT_ROOM
+    assert tubes_props[TARGET_HANDLE] == handle
+    assert tubes_props[TARGET_ID] == 'my-second-room'
+    assert tubes_props[REQUESTED] == True
+    assert tubes_props[INITIATOR_HANDLE] == conn.GetSelfHandle()
+    assert tubes_props[INITIATOR_ID] == self_name
 
     # text and tubes channels are announced
     channels = new_sig.args[0]
@@ -134,7 +114,7 @@ def test(q, bus, conn):
     for path, props in channels:
         if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
             got_text = True
-            assert props[tp_name_prefix + '.Channel.Requested'] == False
+            assert props[REQUESTED] == False
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
             got_tubes = True
             assert props == tubes_props
@@ -142,20 +122,17 @@ def test(q, bus, conn):
         else:
             assert False
 
-        assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
-        assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
-        assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
-        assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
-                == conn.GetSelfHandle()
-        assert props[tp_name_prefix + '.Channel.InitiatorID'] \
-                == self_name
+        assert props[TARGET_HANDLE_TYPE] == HT_ROOM
+        assert props[TARGET_HANDLE] == handle
+        assert props[TARGET_ID] == 'my-second-room'
+        assert props[INITIATOR_HANDLE] == conn.GetSelfHandle()
+        assert props[INITIATOR_ID] == self_name
 
     # ensure roomlist channel
     yours, ensured_path, ensured_props = requestotron.EnsureChannel(
-            { tp_name_prefix + '.Channel.ChannelType':
-                CHANNEL_TYPE_TUBES,
-              tp_name_prefix + '.Channel.TargetHandleType': HT_ROOM,
-              tp_name_prefix + '.Channel.TargetHandle': handle,
+            { CHANNEL_TYPE: CHANNEL_TYPE_TUBES,
+              TARGET_HANDLE_TYPE: HT_ROOM,
+              TARGET_HANDLE: handle,
               })
 
     assert not yours
