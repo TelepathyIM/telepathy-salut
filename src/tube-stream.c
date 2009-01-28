@@ -1331,33 +1331,17 @@ salut_tube_stream_constructor (GType type,
       ((TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
   tp_handle_ref (contact_repo, priv->initiator);
 
-  /* Set initial state of the tube */
   if (priv->initiator == priv->self_handle)
-    {
-      /* We initiated this tube */
-      if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-        {
-          /* Private tube */
-          if (priv->offered)
-            {
-              priv->state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
-              priv->offer_needed = TRUE;
-            }
-          else
-            {
-              priv->state = SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED;
-            }
-        }
-      else
-        {
-          /* Muc tube */
-          priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
-        }
-    }
+  {
+    /* We initiated this tube */
+    priv->state = SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED;
+    /* FIXME: we should probably remove this offer_needed */
+    priv->offer_needed = TRUE;
+  }
   else
-    {
-      priv->state = SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING;
-    }
+  {
+    priv->state = SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING;
+  }
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
