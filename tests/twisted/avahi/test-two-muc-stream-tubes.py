@@ -299,11 +299,11 @@ def test(q, bus, conn):
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
             got_tubes = True
             assert props[REQUESTED] == False
-            #assert props[INTERFACES] == CHANNEL_IFACE_GROUP
+            assert props[INTERFACES] == [CHANNEL_IFACE_GROUP]
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
             got_tube = True
             assert props[REQUESTED] == True
-            #assert props[INTERFACES] == CHANNEL_IFACE_GROUP
+            assert props[INTERFACES] == [CHANNEL_IFACE_GROUP, CHANNEL_IFACE_TUBE]
             assert props[STREAM_TUBE_SERVICE] == 'test'
         else:
             assert False
