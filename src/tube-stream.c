@@ -109,6 +109,7 @@ enum
   OPENED,
   NEW_CONNECTION,
   CLOSED,
+  OFFERED,
   LAST_SIGNAL
 };
 
@@ -1635,6 +1636,15 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   salut_signals_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
+  signals[OFFERED] =
+    g_signal_new ("tube-offered",
+                  G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  salut_signals_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
+
   salut_tube_stream_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutTubeStreamClass, dbus_props_class));
@@ -2468,6 +2478,30 @@ salut_tube_stream_get_supported_socket_types (void)
       ipv6_tab);
 
   return ret;
+}
+
+gboolean
+salut_tube_stream_offer (SalutTubeStream *self,
+                         GError **error)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  g_assert (priv->state == SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED);
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      /* 1-1 tube. Send tube offer message */
+      /* TODO */
+    }
+  else
+    {
+      /* muc tube is open as soon it's offered */
+      priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
+      g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
+    }
+
+  g_signal_emit (G_OBJECT (self), signals[OFFERED], 0);
+  return TRUE;
 }
 
 static void
