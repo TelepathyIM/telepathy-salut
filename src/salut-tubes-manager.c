@@ -354,15 +354,15 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   }
   else
   {
+    SalutTubeIface *tube;
+    GHashTable *channels;
+
     if (chan == NULL)
       {
         GError *e = NULL;
 
         chan = new_tubes_channel (self, initiator_handle, initiator_handle,
             NULL, FALSE, &e);
-
-        tp_channel_manager_emit_new_channel (self,
-            TP_EXPORTABLE_CHANNEL (chan), NULL);
 
         if (chan == NULL)
           {
@@ -371,10 +371,23 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
           }
       }
 
-    salut_tubes_channel_message_received (chan, service, tube_type,
+    tube = salut_tubes_channel_message_received (chan, service, tube_type,
         initiator_handle, parameters, tube_id, portnum, stanza);
 
+    /* announce tubes and tube channels */
+    channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+        NULL, NULL);
+    g_hash_table_insert (channels, chan, NULL);
+    if (tube != NULL)
+      g_hash_table_insert (channels, tube, NULL);
+
+    /* FIXME: if tube is NULL, maybe we should destroy the tubes channel
+     * instead of announcing it as it's useless? */
+
+    tp_channel_manager_emit_new_channels (self, channels);
+
     g_hash_table_destroy (parameters);
+    g_hash_table_destroy (channels);
   }
 }
 
