@@ -611,6 +611,7 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
 
   ll_transport = gibber_ll_transport_new ();
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
+  g_object_unref (ll_transport);
 
   ret = FALSE;
   for (i = 0 ; i < priv->addresses->len && !ret ; i++)
