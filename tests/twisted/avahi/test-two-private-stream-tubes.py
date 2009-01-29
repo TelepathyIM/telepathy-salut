@@ -125,14 +125,12 @@ def test(q, bus, conn):
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
             SOCKET_ACCESS_CONTROL_LOCALHOST, "")
 
-    contact2_channeltype = None
-    while contact2_channeltype == None:
+    contact2_tubes_channel_path = None
+    while contact2_tubes_channel_path is None:
         e = q.expect('dbus-signal', signal='NewChannel')
         if (e.args[1] == CHANNEL_TYPE_TUBES) and (e.path.endswith("testsuite2") == True):
-            contact2_objpath = e.args[0]
-            contact2_channeltype = e.args[1]
+            contact2_tubes_channel_path = e.args[0]
 
-    contact2_tubes_channel_path = contact2_objpath
     contact2_tubes_channel = make_channel_proxy(conn2, contact2_tubes_channel_path, "Channel.Type.Tubes")
 
     contact2_tubes = contact2_tubes_channel.ListTubes()
