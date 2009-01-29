@@ -13,14 +13,7 @@ from servicetest import make_channel_proxy, Event
 from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
-
-CHANNEL_TYPE_TUBES = "org.freedesktop.Telepathy.Channel.Type.Tubes"
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
-TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
-SOCKET_ADDRESS_TYPE_UNIX = dbus.UInt32(0)
-SOCKET_ADDRESS_TYPE_IPV4 = dbus.UInt32(2)
-SOCKET_ACCESS_CONTROL_LOCALHOST = dbus.UInt32(0)
+from constants import *
 
 sample_parameters = dbus.Dictionary({
     's': 'hello',
@@ -79,15 +72,13 @@ def test(q, bus, conn):
 
     # first connection: get the contact list
     publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-    conn1_publish = conn.RequestChannel(
-        "org.freedesktop.Telepathy.Channel.Type.ContactList",
+    conn1_publish = conn.RequestChannel(CHANNEL_TYPE_CONTACT_LIST,
         HT_CONTACT_LIST, publish_handle, False)
     conn1_publish_proxy = bus.get_object(conn.bus_name, conn1_publish)
 
     # second connection: get the contact list
     publish_handle = conn2.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-    conn2_publish = conn2.RequestChannel(
-        "org.freedesktop.Telepathy.Channel.Type.ContactList",
+    conn2_publish = conn2.RequestChannel(CHANNEL_TYPE_CONTACT_LIST,
         HT_CONTACT_LIST, publish_handle, False)
     conn2_publish_proxy = bus.get_object(conn2.bus_name, conn2_publish)
 
@@ -95,9 +86,8 @@ def test(q, bus, conn):
     # The signal MembersChanged may be already emitted... check the Members
     # property first
     contact2_handle_on_conn1 = 0
-    conn1_members = conn1_publish_proxy.Get(
-            'org.freedesktop.Telepathy.Channel.Interface.Group', 'Members',
-            dbus_interface='org.freedesktop.DBus.Properties')
+    conn1_members = conn1_publish_proxy.Get(CHANNEL_IFACE_GROUP, 'Members',
+            dbus_interface=PROPERTIES_IFACE)
     for h in conn1_members:
         name = conn.InspectHandles(HT_CONTACT, [h])[0]
         if name == contact2_name:
@@ -113,9 +103,8 @@ def test(q, bus, conn):
     # The signal MembersChanged may be already emitted... check the Members
     # property first
     contact1_handle_on_conn2 = 0
-    conn2_members = conn2_publish_proxy.Get(
-            'org.freedesktop.Telepathy.Channel.Interface.Group', 'Members',
-            dbus_interface='org.freedesktop.DBus.Properties')
+    conn2_members = conn2_publish_proxy.Get(CHANNEL_IFACE_GROUP, 'Members',
+            dbus_interface=PROPERTIES_IFACE)
     for h in conn2_members:
         name = conn.InspectHandles(HT_CONTACT, [h])[0]
         if name == contact1_name:
@@ -127,7 +116,7 @@ def test(q, bus, conn):
             if name == contact1_name:
                 contact1_handle_on_conn2 = h
 
-    # do tubes
+    # contact1 offers stream tube to contact2 (old API)
     t = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT,
             contact2_handle_on_conn1, True)
     contact1_tubes_channel = make_channel_proxy(conn, t, "Channel.Type.Tubes")
