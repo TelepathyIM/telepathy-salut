@@ -615,7 +615,7 @@ start_stream_direct (SalutTubeStream *self,
   g_assert (bytestream != NULL);
 
   g_hash_table_insert (priv->bytestream_to_transport,
-      g_object_ref (bytestream), g_object_ref (transport));
+      bytestream, g_object_ref (transport));
 
   g_signal_connect (bytestream, "state-changed",
       G_CALLBACK (extra_bytestream_state_changed_cb), self);
