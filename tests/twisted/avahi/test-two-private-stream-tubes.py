@@ -69,6 +69,8 @@ def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
+    conn1_self_handle = conn.GetSelfHandle()
+
     # second connection: connect
     conn2_params = {
         'published-name': 'testsuite2',
@@ -198,6 +200,156 @@ def test(q, bus, conn):
     # close both tubes channels
     contact1_tubes_channel_iface.Close()
     contact2_tubes_channel_iface.Close()
+
+    # now contact1 will offer another stream tube to contact2 using the new
+    # API
+
+    # Can we request private stream tubes?
+    properties = conn.GetAll(CONN_IFACE_REQUESTS, dbus_interface=PROPERTIES_IFACE)
+
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
+             TARGET_HANDLE_TYPE: HT_CONTACT},
+         [TARGET_HANDLE, TARGET_ID, TUBE_PARAMETERS, STREAM_TUBE_SERVICE]
+        ) in properties.get('RequestableChannelClasses'),\
+                 properties['RequestableChannelClasses']
+
+    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
+
+    requestotron.CreateChannel({
+        CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
+        TARGET_HANDLE_TYPE: HT_CONTACT,
+        TARGET_ID: contact2_name,
+        STREAM_TUBE_SERVICE: 'test',
+        TUBE_PARAMETERS: sample_parameters})
+
+    # tubes and tube channels are created on the first connection
+    e = q.expect('dbus-signal', signal='NewChannels', path=conn.object.object_path)
+    channels = e.args[0]
+    assert len(channels) == 2
+
+    got_tubes, got_tube = False, False
+    for path, props in channels:
+        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
+            got_tubes = True
+            assert props[REQUESTED] == False
+            assert props[INTERFACES] == []
+        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
+            got_tube = True
+            assert props[REQUESTED] == True
+            assert props[INTERFACES] == [CHANNEL_IFACE_TUBE]
+            assert props[STREAM_TUBE_SERVICE] == 'test'
+
+            contact1_tube = bus.get_object(conn.bus_name, path)
+            contact1_stream_tube = make_channel_proxy(conn, path, "Channel.Type.StreamTube.DRAFT")
+            contact1_tube_channel = make_channel_proxy(conn, path, "Channel")
+            tube1_path = path
+        else:
+            assert False
+
+        assert props[INITIATOR_HANDLE] == conn1_self_handle
+        assert props[INITIATOR_ID] == contact1_name
+        assert props[TARGET_ID] == contact2_name
+
+    assert got_tubes
+    assert got_tube
+
+    state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State', dbus_interface=PROPERTIES_IFACE)
+    assert state == TUBE_CHANNEL_STATE_NOT_OFFERED
+
+    call_async(q, contact1_stream_tube, 'OfferStreamTube', SOCKET_ADDRESS_TYPE_UNIX,
+            dbus.ByteArray(server_socket_address), SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+
+    _, return_event, new_chans = q.expect_many(
+        EventPattern('dbus-signal', signal='TubeChannelStateChanged',
+            args=[TUBE_CHANNEL_STATE_REMOTE_PENDING]),
+        EventPattern('dbus-return', method='OfferStreamTube'),
+        EventPattern('dbus-signal', signal='NewChannels', path=conn2.object.object_path))
+
+    state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State', dbus_interface=PROPERTIES_IFACE)
+    assert state == TUBE_CHANNEL_STATE_REMOTE_PENDING
+
+    # tube and tubes channels have been created on conn2
+    channels = new_chans.args[0]
+    assert len(channels) == 2
+
+    got_tubes, got_tube = False, False
+    for path, props in channels:
+        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
+            got_tubes = True
+            assert props[REQUESTED] == False
+            assert props[INTERFACES] == []
+        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
+            got_tube = True
+            assert props[REQUESTED] == False
+            assert props[INTERFACES] == [CHANNEL_IFACE_TUBE]
+            assert props[STREAM_TUBE_SERVICE] == 'test'
+
+            contact2_tube = bus.get_object(conn.bus_name, path)
+            contact2_stream_tube = make_channel_proxy(conn, path, "Channel.Type.StreamTube.DRAFT")
+            contact2_tube_channel = make_channel_proxy(conn, path, "Channel")
+            tube2_path = path
+        else:
+            assert False
+
+        assert props[INITIATOR_HANDLE] == contact1_handle_on_conn2
+        assert props[INITIATOR_ID] == contact1_name
+        assert props[TARGET_ID] == contact1_name
+
+    assert got_tubes
+    assert got_tube
+
+    state = contact2_tube.Get(CHANNEL_IFACE_TUBE, 'State', dbus_interface=PROPERTIES_IFACE)
+    assert state == TUBE_CHANNEL_STATE_LOCAL_PENDING
+
+    # second connection: accept the tube (new API)
+    unix_socket_adr = contact2_stream_tube.AcceptStreamTube(SOCKET_ADDRESS_TYPE_UNIX,
+        SOCKET_ACCESS_CONTROL_LOCALHOST, '', byte_arrays=True)
+
+    state = contact2_tube.Get(CHANNEL_IFACE_TUBE, 'State', dbus_interface=PROPERTIES_IFACE)
+    assert state == TUBE_CHANNEL_STATE_OPEN
+
+    q.expect_many(
+        EventPattern('dbus-signal', signal='TubeChannelStateChanged', path=tube2_path,
+            args=[TUBE_CHANNEL_STATE_OPEN]),
+        EventPattern('dbus-signal', signal='TubeChannelStateChanged', path=tube1_path,
+            args=[TUBE_CHANNEL_STATE_OPEN]))
+
+    client = ClientCreator(reactor, ClientGreeter)
+    client.connectUNIX(unix_socket_adr).addCallback(client_connected_cb)
+
+    # server got the connection
+    _, e = q.expect_many(
+        EventPattern('server-connected'),
+        EventPattern('client-connected'))
+
+    client_transport = e.transport
+
+    e = q.expect('dbus-signal', signal='StreamTubeNewConnection', path=tube1_path)
+    handle = e.args[0]
+    assert handle == contact2_handle_on_conn1
+
+    # client receives server's welcome message
+    e = q.expect('client-data-received')
+    assert e.data == SERVER_WELCOME_MSG
+
+    client_transport.write(test_string)
+
+    e = q.expect('server-data-received')
+    assert e.data == test_string
+
+    e = q.expect('client-data-received')
+    assert e.data == string.swapcase(test_string)
+
+    # contact1 close the tube
+    call_async(q, contact1_tube_channel, 'Close')
+
+    # tube is closed on both sides
+    q.expect_many(
+        EventPattern('dbus-return', method='Close'),
+        EventPattern('dbus-signal', signal='Closed', path=tube1_path),
+        EventPattern('dbus-signal', signal='Closed', path=tube2_path),
+        EventPattern('dbus-signal', signal='ChannelClosed', path=conn.object.object_path),
+        EventPattern('dbus-signal', signal='ChannelClosed', path=conn2.object.object_path))
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
