@@ -8,7 +8,7 @@ import errno
 import string
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, Event
+from servicetest import make_channel_proxy, Event, EventPattern, call_async
 
 from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
@@ -117,9 +117,9 @@ def test(q, bus, conn):
                 contact1_handle_on_conn2 = h
 
     # contact1 offers stream tube to contact2 (old API)
-    t = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT,
+    contact1_tubes_channel_path = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT,
             contact2_handle_on_conn1, True)
-    contact1_tubes_channel = make_channel_proxy(conn, t, "Channel.Type.Tubes")
+    contact1_tubes_channel = make_channel_proxy(conn, contact1_tubes_channel_path, "Channel.Type.Tubes")
 
     tube_id = contact1_tubes_channel.OfferStreamTube("http", sample_parameters,
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
@@ -132,7 +132,8 @@ def test(q, bus, conn):
             contact2_objpath = e.args[0]
             contact2_channeltype = e.args[1]
 
-    contact2_tubes_channel = make_channel_proxy(conn2, contact2_objpath, "Channel.Type.Tubes")
+    contact2_tubes_channel_path = contact2_objpath
+    contact2_tubes_channel = make_channel_proxy(conn2, contact2_tubes_channel_path, "Channel.Type.Tubes")
 
     contact2_tubes = contact2_tubes_channel.ListTubes()
     assert len(contact2_tubes) == 1
@@ -161,7 +162,13 @@ def test(q, bus, conn):
     assert e.data == string.swapcase(test_string)
 
     # Close the tube propertly
-    contact1_tubes_channel.CloseTube(tube_id)
+    call_async(q, contact1_tubes_channel, 'CloseTube', tube_id)
+
+    q.expect_many(
+        EventPattern('dbus-signal', signal='TubeClosed', path=contact1_tubes_channel_path),
+        EventPattern('dbus-signal', signal='TubeClosed', path=contact2_tubes_channel_path),
+        EventPattern('dbus-return', method='CloseTube'))
+
     conn.Disconnect()
     conn2.Disconnect()
 
