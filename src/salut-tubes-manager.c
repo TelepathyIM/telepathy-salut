@@ -938,6 +938,8 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       SalutTubeIface *new_channel;
       GSList *tokens = NULL;
       GHashTable *parameters;
+      gboolean tubes_channel_created = FALSE;
+      GHashTable *channels;
 
       if (tubes_channel == NULL)
         {
@@ -946,8 +948,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           if (tubes_channel == NULL)
             goto error;
 
-          tp_channel_manager_emit_new_channel (self,
-              TP_EXPORTABLE_CHANNEL (tubes_channel), NULL);
+          tubes_channel_created = TRUE;
         }
 
       parameters = tp_asv_get_boxed (request_properties,
@@ -961,9 +962,14 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       if (request_token != NULL)
         tokens = g_slist_prepend (NULL, request_token);
 
-      tp_channel_manager_emit_new_channel (self,
-          TP_EXPORTABLE_CHANNEL (new_channel), tokens);
+      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+          NULL, NULL);
+      g_hash_table_insert (channels, tubes_channel, NULL);
+      g_hash_table_insert (channels, new_channel, tokens);
 
+      tp_channel_manager_emit_new_channels (self, channels);
+
+      g_hash_table_destroy (channels);
       g_slist_free (tokens);
       return TRUE;
     }
