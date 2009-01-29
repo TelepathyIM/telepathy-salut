@@ -1114,10 +1114,12 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
   salut_tubes_channel_bytestream_offered (chan, bytestream, msg);
 }
 
+/* Caller is reponsible of announcing the channel if created */
 SalutTubesChannel *
 salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
                                         TpHandle handle,
-                                        TpHandle actor)
+                                        TpHandle actor,
+                                        gboolean *created)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutTubesChannel *tubes_chan;
@@ -1127,13 +1129,16 @@ salut_muc_manager_ensure_tubes_channel (SalutMucManager *self,
   if (tubes_chan != NULL)
     {
       g_object_ref (tubes_chan);
+      *created = FALSE;
       return tubes_chan;
     }
 
-  tubes_chan = create_tubes_channel (self, handle, actor, NULL, TRUE, NULL,
+
+  tubes_chan = create_tubes_channel (self, handle, actor, NULL, FALSE, NULL,
       FALSE, NULL);
   g_assert (tubes_chan != NULL);
   g_object_ref (tubes_chan);
 
+  *created = TRUE;
   return tubes_chan;
 }

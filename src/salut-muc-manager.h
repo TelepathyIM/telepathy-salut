@@ -76,7 +76,8 @@ void salut_muc_manager_handle_si_stream_request (SalutMucManager *muc_manager,
     const gchar *stream_id, GibberXmppStanza *msg);
 
 SalutTubesChannel * salut_muc_manager_ensure_tubes_channel (
-    SalutMucManager *muc_manager, TpHandle handle, TpHandle actor);
+    SalutMucManager *muc_manager, TpHandle handle, TpHandle actor,
+    gboolean *created);
 
 
 G_END_DECLS
