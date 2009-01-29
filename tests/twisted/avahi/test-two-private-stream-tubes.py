@@ -66,7 +66,7 @@ def test(q, bus, conn):
         'last-name': 'suite2',
         }
     contact2_name = "testsuite2" + "@" + get_host_name()
-    conn2 = make_connection(bus, q.append, conn2_params)
+    conn2 = make_connection(bus, lambda x: None, conn2_params)
     conn2.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
