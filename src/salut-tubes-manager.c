@@ -361,6 +361,9 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
         chan = new_tubes_channel (self, initiator_handle, initiator_handle,
             NULL, FALSE, &e);
 
+        tp_channel_manager_emit_new_channel (self,
+            TP_EXPORTABLE_CHANNEL (chan), NULL);
+
         if (chan == NULL)
           {
             DEBUG ("couldn't make new tubes channel: %s", e->message);
@@ -630,7 +633,6 @@ new_tubes_channel (SalutTubesManager *fac,
   SalutTubesChannel *chan;
   char *object_path;
   SalutContact *contact;
-  GSList *request_tokens;
 
   g_assert (SALUT_IS_TUBES_MANAGER (fac));
 
@@ -672,16 +674,6 @@ new_tubes_channel (SalutTubesManager *fac,
 
   g_object_unref (contact);
   g_free (object_path);
-
-  if (request_token != NULL)
-    request_tokens = g_slist_prepend (NULL, request_token);
-  else
-    request_tokens = NULL;
-
-  tp_channel_manager_emit_new_channel (fac,
-      TP_EXPORTABLE_CHANNEL (chan), request_tokens);
-
-  g_slist_free (request_tokens);
 
   return chan;
 }
@@ -912,12 +904,20 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       if (tubes_channel == NULL)
         {
+          GSList *tokens = NULL;
+
           tubes_channel = new_tubes_channel (self, handle,
               base_conn->self_handle, request_token, TRUE, &error);
 
           if (tubes_channel == NULL)
             goto error;
 
+          tokens = g_slist_prepend (tokens, request_token);
+
+          tp_channel_manager_emit_new_channel (self,
+              TP_EXPORTABLE_CHANNEL (tubes_channel), tokens);
+
+          g_slist_free (tokens);
           return TRUE;
         }
 
@@ -945,6 +945,9 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
               base_conn->self_handle, NULL, FALSE, &error);
           if (tubes_channel == NULL)
             goto error;
+
+          tp_channel_manager_emit_new_channel (self,
+              TP_EXPORTABLE_CHANNEL (tubes_channel), NULL);
         }
 
       parameters = tp_asv_get_boxed (request_properties,
