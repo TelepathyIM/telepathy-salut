@@ -285,16 +285,14 @@ def test(q, bus, conn):
 
     assert len(ret.value) == 2 # CreateChannel returns 2 values: o, a{sv}
     new_chan_path = ret.value[0]
-    new_chan_prop_asv = ret.value[1]
+    stream_tube_channel_properties = ret.value
     # The path of the Channel.Type.Tubes object MUST be different to the path
     # of the Channel.Type.StreamTube object !
     assert chan_path != new_chan_path
 
-    check_NewChannel_signal(old_sig.args, "StreamTube.DRAFT", \
-            new_chan_path, handle)
-    check_NewChannels_signal(conn, new_sig.args, "StreamTube.DRAFT", new_chan_path, \
-            handle, contact_name, conn.GetSelfHandle())
-    stream_tube_channel_properties = new_sig.args[0][0]
+    channels = new_sig.args[0]
+    # tubes and tube channels are announced
+    assert len(channels) == 2
 
     check_conn_properties(q, bus, conn,
             [old_tubes_channel_properties, stream_tube_channel_properties])
