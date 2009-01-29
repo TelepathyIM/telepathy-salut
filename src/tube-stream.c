@@ -1894,6 +1894,7 @@ contact_new_connection_cb (GibberListener *listener,
   salut_tube_stream_add_bytestream (SALUT_TUBE_IFACE (self), bytestream);
   gibber_bytestream_direct_accept_socket (bytestream, transport);
 
+  g_object_unref (bytestream);
   g_object_unref (contact);
   g_object_unref (contact_mgr);
 }
