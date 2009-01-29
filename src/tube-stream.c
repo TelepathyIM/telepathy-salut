@@ -1832,6 +1832,9 @@ salut_tube_stream_accepted (SalutTubeIface *tube)
 
   priv->state = TP_TUBE_STATE_OPEN;
   g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
+
+  salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
+      self, SALUT_TUBE_CHANNEL_STATE_OPEN);
 }
 
 /**
