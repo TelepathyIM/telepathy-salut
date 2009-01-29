@@ -770,7 +770,10 @@ emit_d_bus_names_changed_foreach (gpointer key,
 }
 
 /* MUC message */
-void
+/* Return an array containing all the SalutTubeIface * channels that have been
+ * created due to this message. These channels have not been announced yet
+ * so it's the responsability of the caller to announce them. */
+GPtrArray *
 salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                                           const gchar *sender,
                                           GibberXmppStanza *stanza)
@@ -786,18 +789,19 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
   struct emit_d_bus_names_changed_foreach_data emit_data;
   GibberStanzaType stanza_type;
   GibberStanzaSubType sub_type;
+  GPtrArray *result = g_ptr_array_new ();
 
   contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
   g_assert (contact != 0);
 
   if (contact == priv->self_handle)
     /* We don't need to inspect our own tubes */
-    return;
+    return result;
 
   gibber_xmpp_stanza_get_type_info (stanza, &stanza_type, &sub_type);
   if (stanza_type != GIBBER_STANZA_TYPE_MESSAGE
       || sub_type != GIBBER_STANZA_SUB_TYPE_GROUPCHAT)
-    return;
+    return result;
 
   tubes_node = gibber_xmpp_node_get_child_ns (stanza->node, "tubes",
       GIBBER_TELEPATHY_NS_TUBES);
@@ -863,23 +867,9 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                     }
                 }
 
-              tube = create_new_tube (self, type, initiator_handle, FALSE, service, parameters,
-                  tube_id, 0, NULL);
-
-              if (type == TP_TUBE_TYPE_STREAM)
-                {
-                  /* FIXME: remove this test once D-Tube new API is
-                   * implemented */
-                  SalutMucManager *mgr;
-
-                  g_object_get (priv->conn, "muc-manager", &mgr, NULL);
-                  g_assert (mgr != NULL);
-
-                  tp_channel_manager_emit_new_channel (mgr,
-                      TP_EXPORTABLE_CHANNEL (tube), NULL);
-
-                  g_object_unref (mgr);
-                }
+              tube = create_new_tube (self, type, initiator_handle, FALSE,
+                  service, parameters, id, 0, NULL);
+              g_ptr_array_add (result, tube);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -948,6 +938,8 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
       &emit_data);
 
   g_hash_table_destroy (old_dbus_tubes);
+
+  return result;
 }
 
 /* 1-1 message */
