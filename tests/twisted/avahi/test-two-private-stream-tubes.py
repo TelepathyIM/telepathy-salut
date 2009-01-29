@@ -120,6 +120,7 @@ def test(q, bus, conn):
     contact1_tubes_channel_path = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT,
             contact2_handle_on_conn1, True)
     contact1_tubes_channel = make_channel_proxy(conn, contact1_tubes_channel_path, "Channel.Type.Tubes")
+    contact1_tubes_channel_iface = make_channel_proxy(conn, contact1_tubes_channel_path, "Channel")
 
     tube_id = contact1_tubes_channel.OfferStreamTube("http", sample_parameters,
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
@@ -132,6 +133,7 @@ def test(q, bus, conn):
             contact2_tubes_channel_path = e.args[0]
 
     contact2_tubes_channel = make_channel_proxy(conn2, contact2_tubes_channel_path, "Channel.Type.Tubes")
+    contact2_tubes_channel_iface = make_channel_proxy(conn, contact2_tubes_channel_path, "Channel")
 
     contact2_tubes = contact2_tubes_channel.ListTubes()
     assert len(contact2_tubes) == 1
@@ -167,8 +169,14 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='TubeClosed', path=contact2_tubes_channel_path),
         EventPattern('dbus-return', method='CloseTube'))
 
+    # close both tubes channels
+    contact1_tubes_channel_iface.Close()
+    contact2_tubes_channel_iface.Close()
+
     conn.Disconnect()
+    q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
     conn2.Disconnect()
+    q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
 
 if __name__ == '__main__':
     exec_test(test)
