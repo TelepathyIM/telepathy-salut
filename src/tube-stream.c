@@ -975,6 +975,7 @@ salut_tube_stream_finalize (GObject *object)
   SalutTubeStream *self = SALUT_TUBE_STREAM (object);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
 
+  g_free (priv->object_path);
   g_free (priv->service);
   if (priv->parameters != NULL)
     {
