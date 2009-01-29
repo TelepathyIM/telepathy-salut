@@ -951,7 +951,11 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
 }
 
 /* 1-1 message */
-void
+
+/* Return a newly created SalutTubeIface channel if it has been created
+ * due to this message. This channel has not been announced yet
+ * so it's the responsability of the caller to announce it. */
+SalutTubeIface *
 salut_tubes_channel_message_received (SalutTubesChannel *self,
                                       const gchar *service,
                                       TpTubeType tube_type,
@@ -962,7 +966,6 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
                                       GibberXmppStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-
   SalutTubeIface *tube;
 
   /* do we already know this tube? */
@@ -971,7 +974,10 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
     {
       tube = create_new_tube (self, tube_type, initiator_handle, FALSE,
           service, parameters, tube_id, portnum, iq_req);
+      return tube;
     }
+
+  return NULL;
 }
 
 void

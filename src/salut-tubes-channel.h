@@ -77,7 +77,7 @@ void salut_tubes_channel_bytestream_offered (SalutTubesChannel *chanel,
 void salut_tubes_channel_muc_message_received (SalutTubesChannel *channel,
     const gchar *sender, GibberXmppStanza *stanza);
 
-void salut_tubes_channel_message_received (SalutTubesChannel *self,
+SalutTubeIface * salut_tubes_channel_message_received (SalutTubesChannel *self,
     const gchar *service, TpTubeType tube_type, TpHandle initiator_handle,
     GHashTable *parameters, guint tube_id, guint portnum,
     GibberXmppStanza *iq_req);
