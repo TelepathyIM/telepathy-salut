@@ -105,7 +105,7 @@ class AvahiListener:
 
     def listen_for_service(self, sname):
         browser_path = self.server.ServiceBrowserNew(avahi.IF_UNSPEC,
-            avahi.PROTO_INET, sname, "local", dbus.UInt32(0));
+            avahi.PROTO_UNSPEC, sname, "local", dbus.UInt32(0));
         browser_obj = self.bus.get_object(avahi.DBUS_NAME, browser_path)
         browser = dbus.Interface(browser_obj,
             avahi.DBUS_INTERFACE_SERVICE_BROWSER)
