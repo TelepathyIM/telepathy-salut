@@ -11,6 +11,8 @@ from twisted.words.xish import domish, xpath, xmlstream
 from twisted.internet.protocol import Factory, ClientFactory
 from twisted.internet import reactor
 
+from ipv6 import listenTCP6
+
 NS_STREAMS = 'http://etherx.jabber.org/streams'
 
 def make_stream_event(type, stanza):
@@ -135,6 +137,16 @@ def setup_stream_listener(queue, name, port = 0, protocol = None):
     factory = IncomingXmppFactory()
     factory.protocol = lambda *args: protocol(queue.append, name)
     port = reactor.listenTCP(port, factory)
+
+    return (factory, port.getHost().port)
+
+def setup_stream_listener6(queue, name, port = 0, protocol = None):
+    if protocol == None:
+        protocol = IncomingXmppStream
+
+    factory = IncomingXmppFactory()
+    factory.protocol = lambda *args: protocol(queue.append, name)
+    port = listenTCP6(port, factory)
 
     return (factory, port.getHost().port)
 
