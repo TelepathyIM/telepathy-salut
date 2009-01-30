@@ -2362,6 +2362,12 @@ salut_tube_stream_accept_stream_tube (SalutSvcChannelTypeStreamTube *iface,
       return;
     }
 
+  g_object_set (self,
+      "address-type", address_type,
+      "access-control", access_control,
+      "access-control-param", access_control_param,
+      NULL);
+
   if (!salut_tube_stream_accept (SALUT_TUBE_IFACE (self), &error))
     {
       dbus_g_method_return_error (context, error);
