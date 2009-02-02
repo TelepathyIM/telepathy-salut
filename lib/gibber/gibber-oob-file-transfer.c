@@ -566,6 +566,8 @@ http_server_cb (SoupServer *server,
   const SoupURI *uri = soup_message_get_uri (msg);
   GibberOobFileTransfer *self = user_data;
   const gchar *accept_encoding;
+  guint64 size;
+  gchar *size_str;
 
   if (msg->method != SOUP_METHOD_GET)
     {
@@ -589,6 +591,12 @@ http_server_cb (SoupServer *server,
   soup_message_headers_append (msg->response_headers, "Content-Type",
       GIBBER_FILE_TRANSFER (self)->content_type);
 
+  size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
+  size_str = g_strdup_printf ("%llu", size);
+  soup_message_headers_append (msg->response_headers, "Content-Length",
+      size_str);
+  g_free (size_str);
+
   self->priv->msg = g_object_ref (msg);
 
   /* iChat accepts only AppleSingle encoding, i.e. file's contents and
@@ -597,7 +605,6 @@ http_server_cb (SoupServer *server,
       "Accept-Encoding");
   if (accept_encoding != NULL && strcmp (accept_encoding, "AppleSingle") == 0)
     {
-      guint64 size;
       guint32 uint32;
       guint16 uint16;
       GByteArray *array;
@@ -606,7 +613,6 @@ http_server_cb (SoupServer *server,
 
       DEBUG ("Using AppleSingle encoding");
 
-      size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
       array = g_byte_array_sized_new (38);
       /* magic number */
       uint32 = htonl (0x51600);
