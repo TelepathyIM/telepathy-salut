@@ -1395,11 +1395,10 @@ salut_tubes_manager_caps_diff (
   TubesCapabilities *old_caps = specific_old_caps;
   TubesCapabilities *new_caps = specific_new_caps;
 
-  if (old_caps == NULL && new_caps == NULL)
+  if (old_caps == new_caps)
     return FALSE;
 
-  /* At most one of the caps is NULL at this point */
-  if (old_caps == new_caps || old_caps == NULL || new_caps == NULL)
+  if (old_caps == NULL || new_caps == NULL)
     return TRUE;
 
   if (g_hash_table_size (old_caps->stream_tube_caps) !=
