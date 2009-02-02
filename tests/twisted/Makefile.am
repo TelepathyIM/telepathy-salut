@@ -24,6 +24,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-receive-file-and-xmpp-disconnect.py \
 	avahi/test-receive-file-cancelled-immediately.py \
 	avahi/test-receive-file-decline.py \
+	avahi/test-receive-file-ipv6.py \
 	avahi/test-receive-file-not-found.py \
 	avahi/test-text-channel.py \
 	avahi/test-ichat-composing.py \
