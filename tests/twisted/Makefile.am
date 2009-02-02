@@ -13,6 +13,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-send-file-and-disconnect.py \
 	avahi/test-send-file-declined.py \
 	avahi/test-send-file-item-not-found.py \
+	avahi/test-send-file-ipv6.py \
 	avahi/test-send-file-provide-immediately.py \
 	avahi/test-send-file-to-unknown-contact.py \
 	avahi/test-send-file-wait-to-provide.py \
