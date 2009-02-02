@@ -425,6 +425,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   gchar host_name[NI_MAXHOST];
   struct sockaddr_storage name_addr;
   socklen_t name_addr_len = sizeof (name_addr);
+  gchar *host_escaped;
 
   GibberXmppStanza *stanza;
   GibberXmppNode *query_node;
@@ -451,12 +452,23 @@ create_transfer_offer (GibberOobFileTransfer *self,
   getnameinfo ((struct sockaddr *) &name_addr, name_addr_len, host_name,
       sizeof (host_name), NULL, 0, NI_NUMERICHOST);
 
+  if (name_addr.ss_family == AF_INET6)
+    {
+      /* put brackets around the IP6 */
+      host_escaped = g_strdup_printf("[%s]", host_name);
+    }
+  else
+    {
+      /* IPv4: No need to modify the host_name */
+      host_escaped = g_strdup (host_name);
+    }
+
   filename_escaped = g_uri_escape_string (GIBBER_FILE_TRANSFER (self)->filename,
       NULL, FALSE);
-  /* FIXME: this won't work with IPv6 address */
-  url = g_strdup_printf ("http://%s:%d/%s/%s", host_name,
+  url = g_strdup_printf ("http://%s:%d/%s/%s", host_escaped,
       soup_server_get_port (self->priv->server),
       GIBBER_FILE_TRANSFER (self)->id, filename_escaped);
+  g_free (host_escaped);
   g_free (filename_escaped);
   served_name = g_strdup_printf ("/%s/%s", GIBBER_FILE_TRANSFER (self)->id,
       GIBBER_FILE_TRANSFER (self)->filename);
