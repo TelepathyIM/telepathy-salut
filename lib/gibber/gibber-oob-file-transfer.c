@@ -420,11 +420,10 @@ create_transfer_offer (GibberOobFileTransfer *self,
                        GError **error)
 {
   GibberXmppConnection *connection;
-  GibberFdTransport *transport;
 
   /* local host name */
   gchar host_name[NI_MAXHOST];
-  struct sockaddr name_addr;
+  struct sockaddr_storage name_addr;
   socklen_t name_addr_len = sizeof (name_addr);
 
   GibberXmppStanza *stanza;
@@ -439,18 +438,18 @@ create_transfer_offer (GibberOobFileTransfer *self,
   guint64 size;
 
   g_object_get (GIBBER_FILE_TRANSFER (self), "connection", &connection, NULL);
-  transport = GIBBER_FD_TRANSPORT (connection->transport);
-  if (transport == NULL)
+  if (connection->transport == NULL)
     {
       g_set_error (error, GIBBER_FILE_TRANSFER_ERROR,
           GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED, "Null transport");
       return NULL;
     }
 
-  getsockname (transport->fd, &name_addr, &name_addr_len);
+  gibber_transport_get_sockaddr (connection->transport, &name_addr,
+      &name_addr_len);
   g_object_unref (connection);
-  getnameinfo (&name_addr, name_addr_len, host_name, sizeof (host_name), NULL,
-      0, NI_NUMERICHOST);
+  getnameinfo ((struct sockaddr *) &name_addr, name_addr_len, host_name,
+      sizeof (host_name), NULL, 0, NI_NUMERICHOST);
 
   filename_escaped = g_uri_escape_string (GIBBER_FILE_TRANSFER (self)->filename,
       NULL, FALSE);
