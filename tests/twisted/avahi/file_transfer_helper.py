@@ -176,7 +176,10 @@ class ReceiveFileTest(FileTransferTest):
                 self_.end_headers()
                 self_.wfile.write(self.file.data)
 
-        self.httpd = BaseHTTPServer.HTTPServer(('', 0), HTTPHandler)
+        self.httpd = self._get_http_server_class()(('', 0), HTTPHandler)
+
+    def _get_http_server_class(self):
+        return BaseHTTPServer.HTTPServer
 
     def send_ft_offer_iq(self):
         iq = domish.Element((None, 'iq'))
