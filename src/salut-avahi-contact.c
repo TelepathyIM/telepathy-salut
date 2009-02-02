@@ -211,7 +211,7 @@ static gint
 _compare_address (GaServiceResolver *resolver,
                   struct sockaddr *addr_b)
 {
-  struct sockaddr addr_a;
+  struct sockaddr_storage addr_a;
   AvahiIfIndex ifindex;
   AvahiAddress address;
   uint16_t port;
@@ -220,12 +220,13 @@ _compare_address (GaServiceResolver *resolver,
   if (!ga_service_resolver_get_address (resolver, &address, &port))
     return -1;
 
-  _avahi_address_to_sockaddr (&address, port, ifindex, &addr_a);
+  _avahi_address_to_sockaddr (&address, port, ifindex,
+      (struct sockaddr *) &addr_a);
 
-  if (addr_a.sa_family != addr_b->sa_family)
+  if (addr_a.ss_family != addr_b->sa_family)
     return -1;
 
-  switch (addr_a.sa_family)
+  switch (addr_a.ss_family)
     {
       case AF_INET:
         {
