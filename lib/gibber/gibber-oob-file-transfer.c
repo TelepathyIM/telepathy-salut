@@ -455,7 +455,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   if (name_addr.ss_family == AF_INET6)
     {
       /* put brackets around the IP6 */
-      host_escaped = g_strdup_printf("[%s]", host_name);
+      host_escaped = g_strdup_printf ("[%s]", host_name);
     }
   else
     {
