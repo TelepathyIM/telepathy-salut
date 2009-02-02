@@ -7,12 +7,23 @@ import socket
 from saluttest import exec_test
 from file_transfer_helper import ReceiveFileTest
 
-from avahitest import AvahiListener
-from xmppstream import connect_to_stream6
+from avahitest import AvahiAnnouncer, get_host_name, AvahiListener
+from xmppstream import connect_to_stream6, setup_stream_listener6
 
 from twisted.words.xish import domish
 
 class TestReceiveFileIPv6(ReceiveFileTest):
+    CONTACT_NAME = 'test-ft'
+
+    def announce_contact(self, name=CONTACT_NAME):
+        basic_txt = { "txtvers": "1", "status": "avail" }
+
+        self.contact_name = '%s@%s' % (name, get_host_name())
+        self.listener, port = setup_stream_listener6(self.q, self.contact_name)
+
+        self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp", port,
+                basic_txt, proto=avahi.PROTO_INET6)
+
     def _resolve_salut_presence(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
         e = self.q.expect('service-added', name = self.self_handle_name,
