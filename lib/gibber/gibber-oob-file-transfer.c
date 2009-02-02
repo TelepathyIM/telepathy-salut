@@ -677,7 +677,46 @@ gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
   /* FIXME we should have only a single server */
   if (self->priv->server == NULL)
     {
-      self->priv->server = soup_server_new (NULL, NULL);
+      /* FIXME: libsoup can't listen on IPv4 and IPv6 interfaces at the same
+       * time. http://bugzilla.gnome.org/show_bug.cgi?id=522519
+       * We have to check which IP will be send when creating the stanza. */
+        GibberXmppConnection *connection;
+        struct sockaddr_storage name_addr;
+        socklen_t name_addr_len = sizeof (name_addr);
+
+        g_object_get (GIBBER_FILE_TRANSFER (self), "connection", &connection,
+            NULL);
+        if (connection->transport == NULL)
+          {
+            g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
+                GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED, "Null transport");
+            gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self),
+                error);
+            g_error_free (error);
+            return;
+          }
+
+        gibber_transport_get_sockaddr (connection->transport, &name_addr,
+            &name_addr_len);
+        g_object_unref (connection);
+
+        if (name_addr.ss_family == AF_INET6)
+          {
+            /* IPv6 server */
+            SoupAddress *addr;
+
+            addr = soup_address_new_any (SOUP_ADDRESS_FAMILY_IPV6, 0);
+            self->priv->server = soup_server_new (SOUP_SERVER_INTERFACE,
+                addr, NULL);
+
+            g_object_unref (addr);
+          }
+        else
+          {
+            /* IPv4 server */
+            self->priv->server = soup_server_new (NULL, NULL);
+          }
+
       soup_server_run_async (self->priv->server);
     }
 
