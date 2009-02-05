@@ -1553,7 +1553,6 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   TpBaseConnection *base;
   guint tube_id;
   SalutTubeIface *tube;
-  GHashTable *parameters_copied;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1574,8 +1573,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      TRUE, service, parameters_copied,
-      tube_id, 0, NULL);
+      TRUE, service, parameters, tube_id, 0, NULL);
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 }
