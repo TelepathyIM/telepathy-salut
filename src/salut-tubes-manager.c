@@ -378,7 +378,6 @@ static void
 salut_tubes_manager_close_all (SalutTubesManager *self)
 {
   SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
-  GHashTable *tmp;
 
   DEBUG ("closing 1-1 tubes tubes channels");
 
@@ -391,6 +390,8 @@ salut_tubes_manager_close_all (SalutTubesManager *self)
 
   if (priv->tubes_channels != NULL)
     {
+      GHashTable *tmp;
+
       tmp = priv->tubes_channels;
       priv->tubes_channels = NULL;
       g_hash_table_destroy (tmp);
