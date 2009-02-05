@@ -2478,35 +2478,21 @@ emit_tube_closed_signal (gpointer key,
   tp_svc_channel_type_tubes_emit_tube_closed (self, id);
 }
 
-struct _ForeachData
+void
+salut_tubes_channel_foreach (SalutTubesChannel *self,
+                             TpExportableChannelFunc foreach,
+                             gpointer user_data)
 {
-  TpExportableChannelFunc foreach;
-  gpointer user_data;
-};
-
-static void
-foreach_slave (gpointer key,
-               gpointer value,
-               gpointer user_data)
-{
-  SalutTubeIface *tube = SALUT_TUBE_IFACE (value);
-  struct _ForeachData *data = (struct _ForeachData *) user_data;
-
-  data->foreach (TP_EXPORTABLE_CHANNEL (tube), data->user_data);
-}
-
-void salut_tubes_channel_foreach (SalutTubesChannel *self,
-    TpExportableChannelFunc foreach, gpointer user_data)
-{
-  struct _ForeachData data;
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
+  GHashTableIter iter;
+  gpointer value;
 
-  data.user_data = user_data;
-  data.foreach = foreach;
-
-  g_hash_table_foreach (priv->tubes, foreach_slave, &data);
+  g_hash_table_iter_init (&iter, priv->tubes);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      foreach (TP_EXPORTABLE_CHANNEL (value), user_data);
+    }
 }
-
 
 void
 salut_tubes_channel_close (SalutTubesChannel *self)
