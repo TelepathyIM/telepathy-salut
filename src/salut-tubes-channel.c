@@ -982,44 +982,31 @@ generate_tube_id (void)
 
 SalutTubeIface *
 salut_tubes_channel_tube_request (SalutTubesChannel *self,
-                                  gpointer request_token,
-                                  GHashTable *request_properties)
+                                  const gchar *channel_type,
+                                  const gchar *service,
+                                  GHashTable *parameters)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
-  const gchar *channel_type;
-  const gchar *service;
-  GHashTable *parameters = NULL;
   guint tube_id;
   TpTubeType type;
 
   tube_id = generate_tube_id ();
 
-  channel_type = tp_asv_get_string (request_properties,
-            TP_IFACE_CHANNEL ".ChannelType");
-
   if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
       type = TP_TUBE_TYPE_STREAM;
-      service = tp_asv_get_string (request_properties,
-                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
-
     }
 /* Temporarily disabled since the implementation is incomplete */
 #if 0
   else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       type = TP_TUBE_TYPE_DBUS;
-      service = tp_asv_get_string (request_properties,
-                SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
     }
 #endif
   else
     g_assert_not_reached ();
 
-  parameters = tp_asv_get_boxed (request_properties,
-               SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
-               TP_HASH_TYPE_STRING_VARIANT_MAP);
   if (parameters == NULL)
     {
       /* If it is not included in the request, the connection manager MUST

@@ -817,6 +817,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   GError *error = NULL;
   const gchar *channel_type;
   SalutTubesChannel *tubes_channel;
+  const gchar *service;
 
   if (tp_asv_get_uint32 (request_properties,
         TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
@@ -841,8 +842,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     }
   else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
-      const gchar *service;
-
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
               stream_tube_channel_allowed_properties,
@@ -864,7 +863,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 #if 0
   else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
-      const gchar *service;
       GError *err = NULL;
 
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
@@ -941,6 +939,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       SalutTubeIface *new_channel;
       GSList *tokens = NULL;
+      GHashTable *parameters;
 
       if (tubes_channel == NULL)
         {
@@ -950,8 +949,12 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
             goto error;
         }
 
+      parameters = tp_asv_get_boxed (request_properties,
+          SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
+          TP_HASH_TYPE_STRING_VARIANT_MAP);
+
       new_channel = salut_tubes_channel_tube_request (tubes_channel,
-          request_token, request_properties);
+          channel_type, service, parameters);
       g_assert (new_channel != NULL);
 
       if (request_token != NULL)
