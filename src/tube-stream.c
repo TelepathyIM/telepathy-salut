@@ -1352,7 +1352,6 @@ salut_tube_stream_constructor (GType type,
         {
           /* Muc tube */
           priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
-          g_signal_emit (obj, signals[OPENED], 0);
         }
     }
   else
