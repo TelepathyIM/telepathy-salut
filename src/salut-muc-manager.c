@@ -40,6 +40,7 @@
 
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/util.h>
 
@@ -809,6 +810,7 @@ salut_muc_manager_request (SalutMucManager *self,
       GHashTable *channels;
       GSList *request_tokens;
       gboolean announce_text = FALSE, announce_tubes = FALSE;
+      GHashTable *parameters;
 
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               muc_tubes_channel_fixed_properties,
@@ -827,6 +829,10 @@ salut_muc_manager_request (SalutMucManager *self,
           goto error;
         }
 
+      parameters = tp_asv_get_boxed (request_properties,
+          SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
+          TP_HASH_TYPE_STRING_VARIANT_MAP);
+
       tubes_chan = g_hash_table_lookup (priv->tubes_channels,
           GUINT_TO_POINTER (handle));
       if (tubes_chan == NULL)
@@ -840,8 +846,8 @@ salut_muc_manager_request (SalutMucManager *self,
         }
 
       g_assert (tubes_chan != NULL);
-      new_channel = salut_tubes_channel_tube_request (tubes_chan,
-            request_token, request_properties);
+      new_channel = salut_tubes_channel_tube_request (tubes_chan, channel_type,
+          service, parameters);
       g_assert (new_channel != NULL);
 
       /* announce channels */
