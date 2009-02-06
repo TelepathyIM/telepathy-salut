@@ -817,7 +817,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   GError *error = NULL;
   const gchar *channel_type;
   SalutTubesChannel *tubes_channel;
-  const gchar *service;
+  const gchar *service = NULL;
 
   if (tp_asv_get_uint32 (request_properties,
         TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
