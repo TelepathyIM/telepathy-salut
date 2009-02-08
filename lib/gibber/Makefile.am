@@ -1,4 +1,4 @@
-SUBDIRS=examples
+SUBDIRS = examples tests
 
 noinst_LTLIBRARIES = libgibber.la
 
