@@ -500,9 +500,9 @@ salut_self_finalize (GObject *object)
   g_free (self->olpc_color);
   g_free (self->olpc_cur_act);
 #endif
-  g_free(self->node);
-  g_free(self->hash);
-  g_free(self->ver);
+  g_free (self->node);
+  g_free (self->hash);
+  g_free (self->ver);
 
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
