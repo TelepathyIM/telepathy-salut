@@ -192,7 +192,6 @@ salut_tube_iface_base_init (gpointer klass)
           "Tube state",
           "The SalutTubeState of this DBUS tube object",
           0, G_MAXUINT32, TP_TUBE_STATE_REMOTE_PENDING,
-          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
           G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
