@@ -506,24 +506,24 @@ def test_tube_caps_to_contact(q, bus, conn, service):
          (ft_fixed_properties, ft_allowed_properties)]})
     daap_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
-        (daap_fixed_properties, daap_allowed_properties),
-        (ft_fixed_properties, ft_allowed_properties)]})
+        (ft_fixed_properties, ft_allowed_properties),
+        (daap_fixed_properties, daap_allowed_properties)]})
     xiangqi_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
-        (xiangqi_fixed_properties, xiangqi_allowed_properties),
-        (ft_fixed_properties, ft_allowed_properties)]})
+        (ft_fixed_properties, ft_allowed_properties),
+        (xiangqi_fixed_properties, xiangqi_allowed_properties)]})
     daap_xiangqi_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
+        (ft_fixed_properties, ft_allowed_properties),
         (daap_fixed_properties, daap_allowed_properties),
-        (xiangqi_fixed_properties, xiangqi_allowed_properties),
-        (ft_fixed_properties, ft_allowed_properties)]})
+        (xiangqi_fixed_properties, xiangqi_allowed_properties)]})
     all_tubes_caps = dbus.Dictionary({1:
         [(text_fixed_properties, text_allowed_properties),
+        (ft_fixed_properties, ft_allowed_properties),
         (daap_fixed_properties, daap_allowed_properties),
         (http_fixed_properties, http_allowed_properties),
         (xiangqi_fixed_properties, xiangqi_allowed_properties),
-        (go_fixed_properties, go_allowed_properties),
-        (ft_fixed_properties, ft_allowed_properties)]})
+        (go_fixed_properties, go_allowed_properties)]})
 
     # send presence with no cap info
     txt_record = { "txtvers": "1", "status": "avail"}
@@ -593,9 +593,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == False, caps_str
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap
-    assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
-        == 'daap'
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        STREAM_TUBE_SERVICE: 'daap'}, [TARGET_HANDLE]) in signaled_caps
 
     # Check our own caps
     caps = conn_caps_iface.GetContactCapabilities([1])
@@ -621,9 +620,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap
-    assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
-        == 'com.example.Xiangqi'
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_DBUS_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        DBUS_TUBE_SERVICE_NAME: 'com.example.Xiangqi'}, [TARGET_HANDLE]) in signaled_caps
 
     # Check our own caps
     caps = conn_caps_iface.GetContactCapabilities([1])
@@ -649,12 +647,10 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 4, signaled_caps # basic caps + daap+xiangqi
-    assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
-        == 'daap'
-    assert signaled_caps[2][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
-        == 'com.example.Xiangqi'
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        STREAM_TUBE_SERVICE: 'daap'}, [TARGET_HANDLE]) in signaled_caps
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_DBUS_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        DBUS_TUBE_SERVICE_NAME: 'com.example.Xiangqi'}, [TARGET_HANDLE]) in signaled_caps
 
     # Check our own caps
     caps = conn_caps_iface.GetContactCapabilities([1])
@@ -681,18 +677,14 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 6, signaled_caps # basic caps + 4 tubes
-    assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
-        == 'daap'
-    assert signaled_caps[2][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
-        == 'http'
-    assert signaled_caps[3][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
-        == 'com.example.Xiangqi'
-    assert signaled_caps[4][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
-        == 'com.example.Go'
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        STREAM_TUBE_SERVICE: 'daap'}, [TARGET_HANDLE]) in signaled_caps
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_DBUS_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        DBUS_TUBE_SERVICE_NAME: 'com.example.Xiangqi'}, [TARGET_HANDLE]) in signaled_caps
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        STREAM_TUBE_SERVICE: 'http'}, [TARGET_HANDLE]) in signaled_caps
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_DBUS_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        DBUS_TUBE_SERVICE_NAME: 'com.example.Go'}, [TARGET_HANDLE]) in signaled_caps
 
     # Check our own caps
     caps = conn_caps_iface.GetContactCapabilities([1])
@@ -718,12 +710,10 @@ service)
     assert caps_contain(event, ns.TUBES + '/dbus#com.example.Xiangqi') \
             == True, caps_str
     assert len(signaled_caps) == 4, signaled_caps # basic caps + daap+xiangqi
-    assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
-        == 'daap'
-    assert signaled_caps[2][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
-        == 'com.example.Xiangqi'
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        STREAM_TUBE_SERVICE: 'daap'}, [TARGET_HANDLE]) in signaled_caps
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_DBUS_TUBE, TARGET_HANDLE_TYPE: HT_CONTACT,
+        DBUS_TUBE_SERVICE_NAME: 'com.example.Xiangqi'}, [TARGET_HANDLE]) in signaled_caps
 
     # Check our own caps
     caps = conn_caps_iface.GetContactCapabilities([1])
