@@ -983,13 +983,13 @@ generate_tube_id (void)
 SalutTubeIface *
 salut_tubes_channel_tube_request (SalutTubesChannel *self,
                                   const gchar *channel_type,
-                                  const gchar *service,
-                                  GHashTable *parameters)
+                                  const gchar *service)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
   guint tube_id;
   TpTubeType type;
+  GHashTable *parameters;
 
   tube_id = generate_tube_id ();
 
@@ -1007,14 +1007,6 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
   else
     g_assert_not_reached ();
 
-  if (parameters == NULL)
-    {
-      /* If it is not included in the request, the connection manager MUST
-       * consider the property to be empty. */
-      parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-          (GDestroyNotify) tp_g_value_slice_free);
-    }
-
   /* if the service property is missing, the requestotron rejects the request
    */
   g_assert (service != NULL);
@@ -1022,9 +1014,14 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
   DEBUG ("Request a tube channel with type='%s' and service='%s'",
       channel_type, service);
 
+  /* requested tubes have an empty parameters dict */
+  parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+          (GDestroyNotify) tp_g_value_slice_free);
+
   tube = create_new_tube (self, type, priv->self_handle, FALSE, service,
       parameters, tube_id, 0, NULL);
 
+  g_hash_table_destroy (parameters);
   return tube;
 }
 

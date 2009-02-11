@@ -939,7 +939,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       SalutTubeIface *new_channel;
       GSList *tokens = NULL;
-      GHashTable *parameters;
 
       if (tubes_channel == NULL)
         {
@@ -949,12 +948,8 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
             goto error;
         }
 
-      parameters = tp_asv_get_boxed (request_properties,
-          SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
-          TP_HASH_TYPE_STRING_VARIANT_MAP);
-
       new_channel = salut_tubes_channel_tube_request (tubes_channel,
-          channel_type, service, parameters);
+          channel_type, service);
       g_assert (new_channel != NULL);
 
       if (request_token != NULL)
