@@ -1087,19 +1087,41 @@ salut_tube_stream_get_property (GObject *object,
         g_value_set_boolean (value, priv->closed);
         break;
       case PROP_CHANNEL_PROPERTIES:
-        g_value_take_boxed (value,
-            tp_dbus_properties_mixin_make_properties_hash (object,
-                TP_IFACE_CHANNEL, "TargetHandle",
-                TP_IFACE_CHANNEL, "TargetHandleType",
-                TP_IFACE_CHANNEL, "ChannelType",
-                TP_IFACE_CHANNEL, "TargetID",
-                TP_IFACE_CHANNEL, "InitiatorHandle",
-                TP_IFACE_CHANNEL, "InitiatorID",
-                TP_IFACE_CHANNEL, "Requested",
-                TP_IFACE_CHANNEL, "Interfaces",
-                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
-                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
-                NULL));
+        {
+          GHashTable *properties;
+
+          properties = tp_dbus_properties_mixin_make_properties_hash (object,
+              TP_IFACE_CHANNEL, "TargetHandle",
+              TP_IFACE_CHANNEL, "TargetHandleType",
+              TP_IFACE_CHANNEL, "ChannelType",
+              TP_IFACE_CHANNEL, "TargetID",
+              TP_IFACE_CHANNEL, "InitiatorHandle",
+              TP_IFACE_CHANNEL, "InitiatorID",
+              TP_IFACE_CHANNEL, "Requested",
+              TP_IFACE_CHANNEL, "Interfaces",
+              SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
+              SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
+              NULL);
+
+          if (priv->initiator != priv->self_handle)
+            {
+              /* channel has not been requested so Parameters is immutable */
+              GValue *prop_value = g_slice_new0 (GValue);
+
+              /* FIXME: use tp_dbus_properties_mixin_add_properties once it's
+               * added in tp-glib */
+              tp_dbus_properties_mixin_get (object,
+                  SALUT_IFACE_CHANNEL_INTERFACE_TUBE, "Parameters",
+                  prop_value, NULL);
+              g_assert (G_IS_VALUE (prop_value));
+
+              g_hash_table_insert (properties,
+                  g_strdup_printf ("%s.%s", SALUT_IFACE_CHANNEL_INTERFACE_TUBE,
+                    "Parameters"), prop_value);
+            }
+
+          g_value_take_boxed (value, properties);
+        }
         break;
       case PROP_REQUESTED:
         g_value_set_boolean (value,
