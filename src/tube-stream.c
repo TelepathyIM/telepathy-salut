@@ -1379,41 +1379,6 @@ salut_tube_stream_constructor (GType type,
   return obj;
 }
 
-static gboolean
-tube_iface_props_setter (GObject *object,
-                         GQuark interface,
-                         GQuark name,
-                         const GValue *value,
-                         gpointer setter_data,
-                         GError **error)
-{
-  SalutTubeStream *self = SALUT_TUBE_STREAM (object);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  g_return_val_if_fail (interface == SALUT_IFACE_QUARK_CHANNEL_INTERFACE_TUBE,
-      FALSE);
-
-  if (name != g_quark_from_static_string ("Parameters"))
-    {
-      g_object_set_property (object, setter_data, value);
-      return TRUE;
-    }
-
-  if (priv->state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
-    {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "Can change parameters only if the tube is not offered");
-      return FALSE;
-    }
-
-  if (priv->parameters != NULL)
-    g_hash_table_destroy (priv->parameters);
-  priv->parameters = g_value_dup_boxed (value);
-
-  return TRUE;
-}
-
-
 static void
 salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 {
@@ -1434,7 +1399,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       { NULL }
   };
   static TpDBusPropertiesMixinPropImpl tube_iface_props[] = {
-      { "Parameters", "parameters", "parameters" },
+      { "Parameters", "parameters", NULL },
       { "State", "state", NULL },
       { NULL }
   };
@@ -1451,7 +1416,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       },
       { SALUT_IFACE_CHANNEL_INTERFACE_TUBE,
         tp_dbus_properties_mixin_getter_gobject_properties,
-        tube_iface_props_setter,
+        NULL,
         tube_iface_props,
       },
       { NULL }
