@@ -62,7 +62,6 @@ def check_conn_properties(q, bus, conn, channel_list=None):
              'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT,
              },
              ['org.freedesktop.Telepathy.Channel.TargetHandle',
-              'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters',
               'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service',
              ]
             ) in properties.get('RequestableChannelClasses'),\
@@ -272,9 +271,7 @@ def test(q, bus, conn):
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle,
              'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
-                "newecho",
-             'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters':
-                dbus.Dictionary({'foo': 'bar'}, signature='sv'),
+                "newecho"
             });
     ret, old_sig, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
