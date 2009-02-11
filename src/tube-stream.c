@@ -1435,7 +1435,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   };
   static TpDBusPropertiesMixinPropImpl tube_iface_props[] = {
       { "Parameters", "parameters", "parameters" },
-      { "Status", "state", NULL },
+      { "State", "state", NULL },
       { NULL }
   };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
