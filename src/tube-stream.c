@@ -2228,6 +2228,7 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
                                      const GValue *address,
                                      guint access_control,
                                      const GValue *access_control_param,
+                                     GHashTable *parameters,
                                      DBusGMethodInvocation *context)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
@@ -2266,6 +2267,8 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
   priv->access_control = access_control;
   g_assert (priv->access_control_param == NULL);
   priv->access_control_param = tp_g_value_slice_dup (access_control_param);
+
+  g_object_set (self, "parameters", parameters, NULL);
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
