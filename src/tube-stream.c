@@ -92,6 +92,12 @@ static const gchar *salut_tube_stream_interfaces[] = {
     NULL
 };
 
+static const gchar * const salut_tube_stream_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
+    SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
+    NULL
+};
 
 /* Linux glibc bits/socket.h suggests that struct sockaddr_storage is
  * not guaranteed to be big enough for AF_UNIX addresses */
@@ -2506,6 +2512,12 @@ salut_tube_stream_offer (SalutTubeStream *self,
 
   g_signal_emit (G_OBJECT (self), signals[OFFERED], 0);
   return TRUE;
+}
+
+const gchar * const *
+salut_tube_stream_channel_get_allowed_properties (void)
+{
+  return salut_tube_stream_channel_allowed_properties;
 }
 
 static void

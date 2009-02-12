@@ -784,7 +784,7 @@ salut_tubes_manager_foreach_channel_class (
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       value);
 
-  func (manager, table, salut_stream_tube_channel_allowed_properties,
+  func (manager, table, salut_tube_stream_channel_get_allowed_properties (),
       user_data);
 
   g_hash_table_destroy (table);
@@ -853,7 +853,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
-              salut_stream_tube_channel_allowed_properties,
+              salut_tube_stream_channel_get_allowed_properties (),
               &error))
         goto error;
 

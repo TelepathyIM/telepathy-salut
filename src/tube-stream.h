@@ -48,13 +48,6 @@ struct _SalutTubeStream {
 
 GType salut_tube_stream_get_type (void);
 
-static const gchar * const salut_stream_tube_channel_allowed_properties[] = {
-    TP_IFACE_CHANNEL ".TargetHandle",
-    TP_IFACE_CHANNEL ".TargetID",
-    SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
-    NULL
-};
-
 /* TYPE MACROS */
 #define SALUT_TYPE_TUBE_STREAM \
   (salut_tube_stream_get_type ())
@@ -86,6 +79,8 @@ gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,
 GHashTable * salut_tube_stream_get_supported_socket_types (void);
 
 gboolean salut_tube_stream_offer (SalutTubeStream *self, GError **error);
+
+const gchar * const * salut_tube_stream_channel_get_allowed_properties (void);
 
 G_END_DECLS
 
