@@ -1087,19 +1087,41 @@ salut_tube_stream_get_property (GObject *object,
         g_value_set_boolean (value, priv->closed);
         break;
       case PROP_CHANNEL_PROPERTIES:
-        g_value_take_boxed (value,
-            tp_dbus_properties_mixin_make_properties_hash (object,
-                TP_IFACE_CHANNEL, "TargetHandle",
-                TP_IFACE_CHANNEL, "TargetHandleType",
-                TP_IFACE_CHANNEL, "ChannelType",
-                TP_IFACE_CHANNEL, "TargetID",
-                TP_IFACE_CHANNEL, "InitiatorHandle",
-                TP_IFACE_CHANNEL, "InitiatorID",
-                TP_IFACE_CHANNEL, "Requested",
-                TP_IFACE_CHANNEL, "Interfaces",
-                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
-                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
-                NULL));
+        {
+          GHashTable *properties;
+
+          properties = tp_dbus_properties_mixin_make_properties_hash (object,
+              TP_IFACE_CHANNEL, "TargetHandle",
+              TP_IFACE_CHANNEL, "TargetHandleType",
+              TP_IFACE_CHANNEL, "ChannelType",
+              TP_IFACE_CHANNEL, "TargetID",
+              TP_IFACE_CHANNEL, "InitiatorHandle",
+              TP_IFACE_CHANNEL, "InitiatorID",
+              TP_IFACE_CHANNEL, "Requested",
+              TP_IFACE_CHANNEL, "Interfaces",
+              SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
+              SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
+              NULL);
+
+          if (priv->initiator != priv->self_handle)
+            {
+              /* channel has not been requested so Parameters is immutable */
+              GValue *prop_value = g_slice_new0 (GValue);
+
+              /* FIXME: use tp_dbus_properties_mixin_add_properties once it's
+               * added in tp-glib */
+              tp_dbus_properties_mixin_get (object,
+                  SALUT_IFACE_CHANNEL_INTERFACE_TUBE, "Parameters",
+                  prop_value, NULL);
+              g_assert (G_IS_VALUE (prop_value));
+
+              g_hash_table_insert (properties,
+                  g_strdup_printf ("%s.%s", SALUT_IFACE_CHANNEL_INTERFACE_TUBE,
+                    "Parameters"), prop_value);
+            }
+
+          g_value_take_boxed (value, properties);
+        }
         break;
       case PROP_REQUESTED:
         g_value_set_boolean (value,
@@ -1379,41 +1401,6 @@ salut_tube_stream_constructor (GType type,
   return obj;
 }
 
-static gboolean
-tube_iface_props_setter (GObject *object,
-                         GQuark interface,
-                         GQuark name,
-                         const GValue *value,
-                         gpointer setter_data,
-                         GError **error)
-{
-  SalutTubeStream *self = SALUT_TUBE_STREAM (object);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  g_return_val_if_fail (interface == SALUT_IFACE_QUARK_CHANNEL_INTERFACE_TUBE,
-      FALSE);
-
-  if (name != g_quark_from_static_string ("Parameters"))
-    {
-      g_object_set_property (object, setter_data, value);
-      return TRUE;
-    }
-
-  if (priv->state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
-    {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "Can change parameters only if the tube is not offered");
-      return FALSE;
-    }
-
-  if (priv->parameters != NULL)
-    g_hash_table_destroy (priv->parameters);
-  priv->parameters = g_value_dup_boxed (value);
-
-  return TRUE;
-}
-
-
 static void
 salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 {
@@ -1434,8 +1421,8 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       { NULL }
   };
   static TpDBusPropertiesMixinPropImpl tube_iface_props[] = {
-      { "Parameters", "parameters", "parameters" },
-      { "Status", "state", NULL },
+      { "Parameters", "parameters", NULL },
+      { "State", "state", NULL },
       { NULL }
   };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
@@ -1451,7 +1438,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       },
       { SALUT_IFACE_CHANNEL_INTERFACE_TUBE,
         tp_dbus_properties_mixin_getter_gobject_properties,
-        tube_iface_props_setter,
+        NULL,
         tube_iface_props,
       },
       { NULL }
@@ -2263,6 +2250,7 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
                                      const GValue *address,
                                      guint access_control,
                                      const GValue *access_control_param,
+                                     GHashTable *parameters,
                                      DBusGMethodInvocation *context)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
@@ -2301,6 +2289,8 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
   priv->access_control = access_control;
   g_assert (priv->access_control_param == NULL);
   priv->access_control_param = tp_g_value_slice_dup (access_control_param);
+
+  g_object_set (self, "parameters", parameters, NULL);
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {

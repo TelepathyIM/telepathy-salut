@@ -792,7 +792,6 @@ static const gchar * const old_tubes_channel_allowed_properties[] = {
 };
 static const gchar * const stream_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
-    SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
     SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
     NULL
 };
@@ -800,7 +799,6 @@ static const gchar * const stream_tube_channel_allowed_properties[] = {
 #if 0
 static const gchar * const dbus_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
-    SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
     SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
     NULL
 };
@@ -1010,7 +1008,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       SalutTubeIface *new_channel;
       GSList *tokens = NULL;
-      GHashTable *parameters;
 
       if (tubes_channel == NULL)
         {
@@ -1020,12 +1017,8 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
             goto error;
         }
 
-      parameters = tp_asv_get_boxed (request_properties,
-          SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
-          TP_HASH_TYPE_STRING_VARIANT_MAP);
-
       new_channel = salut_tubes_channel_tube_request (tubes_channel,
-          channel_type, service, parameters);
+          channel_type, service);
       g_assert (new_channel != NULL);
 
       if (request_token != NULL)

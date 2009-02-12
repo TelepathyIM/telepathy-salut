@@ -62,7 +62,6 @@ def check_conn_properties(q, bus, conn, channel_list=None):
              'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT,
              },
              ['org.freedesktop.Telepathy.Channel.TargetHandle',
-              'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters',
               'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service',
              ]
             ) in properties.get('RequestableChannelClasses'),\
@@ -95,7 +94,7 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
         tube_props = channel.GetAll(
                 'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT',
                 dbus_interface='org.freedesktop.DBus.Properties')
-        assert tube_props['Status'] == state, tube_props['Status']
+        assert tube_props['State'] == state, tube_props['State']
         # no strict check but at least check the properties exist
         assert tube_props.has_key('Parameters')
 
@@ -273,9 +272,7 @@ def test(q, bus, conn):
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle,
              'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
-                "newecho",
-             'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters':
-                dbus.Dictionary({'foo': 'bar'}, signature='sv'),
+                "newecho"
             });
     ret, old_sig, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
