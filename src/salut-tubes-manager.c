@@ -123,6 +123,8 @@ struct _TubesCapabilities
    * gchar *ServiceName -> Feature *feature
    */
   GHashTable *dbus_tube_caps;
+
+  gboolean tubes_supported;
 };
 
 static void
@@ -1202,6 +1204,76 @@ add_service_to_array (gchar *service,
 }
 
 static void
+add_generic_tube_caps (GPtrArray *arr)
+{
+  GValue monster1 = {0,};
+  GHashTable *fixed_properties;
+  GValue *channel_type_value;
+  GValue *target_handle_type_value;
+
+  /* StreamTube */
+  g_value_init (&monster1, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
+  g_value_take_boxed (&monster1,
+      dbus_g_type_specialized_construct (
+        TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS));
+
+  fixed_properties = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+
+  channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (channel_type_value,
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
+      channel_type_value);
+
+  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties,
+      TP_IFACE_CHANNEL ".TargetHandleType", target_handle_type_value);
+
+  dbus_g_type_struct_set (&monster1,
+      0, fixed_properties,
+      1, stream_tube_channel_allowed_properties,
+      G_MAXUINT);
+
+  g_hash_table_destroy (fixed_properties);
+  g_ptr_array_add (arr, g_value_get_boxed (&monster1));
+
+  /* FIXME: enable once D-Bus tube new API are implemented */
+#if 0
+  /* DBusTube */
+  g_value_init (&monster2, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
+  g_value_take_boxed (&monster2,
+      dbus_g_type_specialized_construct (
+        TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS));
+
+  fixed_properties = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+
+  channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (channel_type_value,
+      SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE);
+
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
+      channel_type_value);
+
+  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties,
+      TP_IFACE_CHANNEL ".TargetHandleType", target_handle_type_value);
+
+  dbus_g_type_struct_set (&monster2,
+      0, fixed_properties,
+      1, gabble_tube_dbus_channel_get_allowed_properties (),
+      G_MAXUINT);
+
+  g_hash_table_destroy (fixed_properties);
+  g_ptr_array_add (arr, g_value_get_boxed (&monster2));
+#endif
+}
+
+static void
 salut_tubes_manager_get_contact_caps (
     SalutCapsChannelManager *manager,
     SalutConnection *conn,
@@ -1247,6 +1319,11 @@ salut_tubes_manager_get_contact_caps (
   caps = g_hash_table_lookup (per_channel_manager_caps, manager);
   if (caps == NULL)
     return;
+
+  if (!caps->tubes_supported)
+    return;
+
+  add_generic_tube_caps (arr);
 
   stream_tube_caps = caps->stream_tube_caps;
   dbus_tube_caps = caps->dbus_tube_caps;
@@ -1309,6 +1386,12 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
 
   if (NULL == var)
     return TRUE;
+
+  if (!g_str_has_prefix (var, GIBBER_TELEPATHY_NS_TUBES))
+    return TRUE;
+
+  /* tubes generic cap or service specific */
+  caps->tubes_supported = TRUE;
 
   if (g_str_has_prefix (var, GIBBER_TELEPATHY_NS_TUBES "/"))
     {
@@ -1380,6 +1463,8 @@ salut_tubes_manager_copy_caps (
   g_hash_table_foreach (caps_in->dbus_tube_caps, copy_caps_helper,
       caps_out->dbus_tube_caps);
 
+  caps_out->tubes_supported = caps_in->tubes_supported;
+
   *specific_caps_out = caps_out;
 }
 
@@ -1433,6 +1518,9 @@ salut_tubes_manager_caps_diff (
     return FALSE;
 
   if (old_caps == NULL || new_caps == NULL)
+    return TRUE;
+
+  if (old_caps->tubes_supported != new_caps->tubes_supported)
     return TRUE;
 
   if (g_hash_table_size (old_caps->stream_tube_caps) !=
@@ -1510,6 +1598,10 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
     {
       caps = tubes_capabilities_new ();
       g_hash_table_insert (*per_channel_manager_caps, manager, caps);
+
+      if (handle == base->self_handle)
+        /* We always support generic tubes caps */
+        caps->tubes_supported = TRUE;
     }
 
   if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
