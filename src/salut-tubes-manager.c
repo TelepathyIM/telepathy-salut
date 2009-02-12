@@ -819,6 +819,7 @@ static const gchar * const old_tubes_channel_allowed_properties[] = {
 
 static const gchar * const stream_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
     TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
     NULL
 };
@@ -827,6 +828,7 @@ static const gchar * const stream_tube_channel_allowed_properties[] = {
 #if 0
 static const gchar * const dbus_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
     TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
     NULL
 };
