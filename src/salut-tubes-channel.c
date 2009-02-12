@@ -2143,13 +2143,6 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
       "access-control-param", access_control_param,
       NULL);
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      /* FIXME: this is horrible. That should be done using
-       * salut_tube_stream_offer */
-      salut_tubes_channel_send_iq_offer (self);
-    }
-
   if (!salut_tube_stream_offer (SALUT_TUBE_STREAM (tube), &error))
     {
       salut_tube_iface_close (tube, TRUE);
