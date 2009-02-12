@@ -274,13 +274,14 @@ AC_OUTPUT( Makefile                       \
            lib/Makefile                   \
            lib/gibber/Makefile            \
            lib/gibber/examples/Makefile   \
+           lib/gibber/tests/Makefile      \
+           lib/gibber/tests/inputs/Makefile \
            src/Makefile                   \
            m4/Makefile                    \
            data/Makefile                  \
            extensions/Makefile            \
            tools/Makefile                 \
            tests/Makefile                 \
-           tests/inputs/Makefile          \
            tests/twisted/Makefile         \
            tests/twisted/tools/Makefile   \
 )

@@ -63,7 +63,6 @@ def check_conn_properties(q, bus, conn, channel_list=None):
              },
              ['org.freedesktop.Telepathy.Channel.TargetHandle',
               'org.freedesktop.Telepathy.Channel.TargetID',
-              'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters',
               'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service',
              ]
             ) in properties.get('RequestableChannelClasses'),\
@@ -273,9 +272,7 @@ def test(q, bus, conn):
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle,
              'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
-                "newecho",
-             'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT.Parameters':
-                dbus.Dictionary({'foo': 'bar'}, signature='sv'),
+                "newecho"
             });
     ret, old_sig, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
@@ -314,7 +311,7 @@ def test(q, bus, conn):
             handle, contact_name, 3)
 
     tube_channel.OfferStreamTube(SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
-            SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+            SOCKET_ACCESS_CONTROL_LOCALHOST, "", {'foo': 'bar'})
 
     e = q.expect('stream-iq')
     iq_tube = xpath.queryForNodes('/iq/tube', e.stanza)[0]
