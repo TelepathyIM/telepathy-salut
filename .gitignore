@@ -109,7 +109,6 @@ src/write-mgr-file
 stamp-h1
 telepathy-salut-*.tar.gz
 tests/check-main
-tests/sasl-test.db
 tests/test-r-multicast-{packet,sender,transport-io}
 tests/twisted/config.py
 tests/twisted/tools/core
@@ -133,5 +132,6 @@ tests/telepathy-salut-debug
 
 lib/gibber/tests/check-main
 lib/gibber/tests/outputs
+lib/gibber/tests/sasl-test.db
 lib/gibber/tests/test-xmpp-connection
 lib/gibber/tests/test-r-multicast-transport-io
