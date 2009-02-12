@@ -297,6 +297,7 @@ def test(q, bus, conn):
             got_text = True
             assert props[REQUESTED] == False
             group1 = make_channel_proxy(conn, path, "Channel.Interface.Group")
+            txt_path = path
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
             got_tubes = True
             assert props[REQUESTED] == False
@@ -324,6 +325,10 @@ def test(q, bus, conn):
 
     state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State', dbus_interface=PROPERTIES_IFACE)
     assert state == TUBE_CHANNEL_STATE_NOT_OFFERED
+
+    # added as member
+    q.expect('dbus-signal', signal='MembersChanged', path=txt_path,
+        args=['', [conn1_self_handle], [], [], [], conn1_self_handle, 0])
 
     call_async(q, contact1_stream_tube, 'OfferStreamTube', SOCKET_ADDRESS_TYPE_UNIX,
             dbus.ByteArray(server_socket_address), SOCKET_ACCESS_CONTROL_LOCALHOST, "", sample_parameters)
