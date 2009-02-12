@@ -2271,11 +2271,6 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
       return;
     }
 
-  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
-    priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
-  else
-    priv->state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
-
   g_assert (address_type == TP_SOCKET_ADDRESS_TYPE_UNIX ||
       address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 ||
       address_type == TP_SOCKET_ADDRESS_TYPE_IPV6);
@@ -2289,17 +2284,11 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
 
   g_object_set (self, "parameters", parameters, NULL);
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (!salut_tube_stream_offer (self, &error))
     {
-      salut_tubes_channel_send_iq_offer (priv->tubes_channel);
-
-      salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
-          self, SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING);
-    }
-  else
-    {
-      salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
-          self, SALUT_TUBE_CHANNEL_STATE_OPEN);
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
     }
 
   salut_svc_channel_type_stream_tube_return_from_offer_stream_tube (context);
@@ -2500,13 +2489,18 @@ salut_tube_stream_offer (SalutTubeStream *self,
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      /* 1-1 tube. Send tube offer message */
-      /* TODO */
+      priv->state = SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING;
+      salut_tubes_channel_send_iq_offer (priv->tubes_channel);
+
+      salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
+          self, SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING);
     }
   else
     {
       /* muc tube is open as soon it's offered */
       priv->state = SALUT_TUBE_CHANNEL_STATE_OPEN;
+      salut_svc_channel_interface_tube_emit_tube_channel_state_changed (
+          self, SALUT_TUBE_CHANNEL_STATE_OPEN);
       g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
     }
 
