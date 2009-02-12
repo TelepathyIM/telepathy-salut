@@ -209,7 +209,7 @@ def test(q, bus, conn):
 
     assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
              TARGET_HANDLE_TYPE: HT_CONTACT},
-         [TARGET_HANDLE, TARGET_ID, TUBE_PARAMETERS, STREAM_TUBE_SERVICE]
+         [TARGET_HANDLE, TARGET_ID, STREAM_TUBE_SERVICE]
         ) in properties.get('RequestableChannelClasses'),\
                  properties['RequestableChannelClasses']
 
@@ -219,8 +219,7 @@ def test(q, bus, conn):
         CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
         TARGET_HANDLE_TYPE: HT_CONTACT,
         TARGET_ID: contact2_name,
-        STREAM_TUBE_SERVICE: 'test',
-        TUBE_PARAMETERS: sample_parameters})
+        STREAM_TUBE_SERVICE: 'test'})
 
     # tubes and tube channels are created on the first connection
     e = q.expect('dbus-signal', signal='NewChannels', path=conn.object.object_path)
@@ -257,7 +256,7 @@ def test(q, bus, conn):
     assert state == TUBE_CHANNEL_STATE_NOT_OFFERED
 
     call_async(q, contact1_stream_tube, 'OfferStreamTube', SOCKET_ADDRESS_TYPE_UNIX,
-            dbus.ByteArray(server_socket_address), SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+            dbus.ByteArray(server_socket_address), SOCKET_ACCESS_CONTROL_LOCALHOST, "", sample_parameters)
 
     _, return_event, new_chans = q.expect_many(
         EventPattern('dbus-signal', signal='TubeChannelStateChanged',
