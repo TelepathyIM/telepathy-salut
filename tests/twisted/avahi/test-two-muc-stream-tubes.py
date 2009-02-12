@@ -376,6 +376,7 @@ def test(q, bus, conn):
             assert props[REQUESTED] == False
             assert props[INTERFACES] == [CHANNEL_IFACE_GROUP, CHANNEL_IFACE_TUBE]
             assert props[STREAM_TUBE_SERVICE] == 'test'
+            assert props[TUBE_PARAMETERS] == sample_parameters
 
             contact2_tube = bus.get_object(conn.bus_name, path)
             contact2_stream_tube = make_channel_proxy(conn, path, "Channel.Type.StreamTube.DRAFT")
