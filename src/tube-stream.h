@@ -51,7 +51,6 @@ GType salut_tube_stream_get_type (void);
 static const gchar * const salut_stream_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     TP_IFACE_CHANNEL ".TargetID",
-    SALUT_IFACE_CHANNEL_INTERFACE_TUBE ".Parameters",
     SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
     NULL
 };
