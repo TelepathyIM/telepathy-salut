@@ -1973,7 +1973,8 @@ send_channel_iq_tube (gpointer key,
                 "state", &state,
                 NULL);
 
-  if (salut_tube_iface_offer_needed (tube))
+  if (state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED &&
+      salut_tube_iface_offer_needed (tube))
     {
       GError *error = NULL;
       GibberXmppNode *parameters_node;
