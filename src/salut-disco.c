@@ -454,8 +454,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
       node = gibber_xmpp_node_get_attribute (query, "node");
       if (node != NULL)
         {
-          if (0 != strncmp (node, GIBBER_TELEPATHY_NS_CAPS "#",
-                strlen (GIBBER_TELEPATHY_NS_CAPS) + 1))
+          if (!g_str_has_prefix (node, GIBBER_TELEPATHY_NS_CAPS "#"))
             suffix = "";
           else if (strlen (node) < strlen (GIBBER_TELEPATHY_NS_CAPS) + 2)
             suffix = "";
