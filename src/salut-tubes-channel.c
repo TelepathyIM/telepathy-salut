@@ -1328,7 +1328,7 @@ create_new_tube (SalutTubesChannel *self,
       update_tubes_info (self);
     }
 
-    /* The old API doesn't know the "not offered" state, so we have to wait that
+  /* The old API doesn't know the "not offered" state, so we have to wait that
    * the tube is offered before announcing it. */
   if (state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
     {
