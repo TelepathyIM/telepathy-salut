@@ -448,24 +448,17 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
 
   iq = stanza->node;
   query = gibber_xmpp_node_get_child_ns (iq, "query", NS_DISCO_INFO);
+  g_assert (query != NULL);
 
-  if (query != NULL)
+  node = gibber_xmpp_node_get_attribute (query, "node");
+  if (node != NULL)
     {
-      node = gibber_xmpp_node_get_attribute (query, "node");
-      if (node != NULL)
-        {
-          if (!g_str_has_prefix (node, GIBBER_TELEPATHY_NS_CAPS "#"))
-            suffix = "";
-          else if (strlen (node) < strlen (GIBBER_TELEPATHY_NS_CAPS) + 2)
-            suffix = "";
-          else
-            suffix = node + strlen (GIBBER_TELEPATHY_NS_CAPS) + 1;
-        }
+      if (!g_str_has_prefix (node, GIBBER_TELEPATHY_NS_CAPS "#"))
+        suffix = "";
+      else if (strlen (node) < strlen (GIBBER_TELEPATHY_NS_CAPS) + 2)
+        suffix = "";
       else
-        {
-          node = "";
-          suffix = "";
-        }
+        suffix = node + strlen (GIBBER_TELEPATHY_NS_CAPS) + 1;
     }
   else
     {
