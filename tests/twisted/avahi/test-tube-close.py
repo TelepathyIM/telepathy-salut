@@ -23,10 +23,9 @@ HT_CONTACT_LIST = 3
 SOCKET_ADDRESS_TYPE_IPV4 = dbus.UInt32(2)
 SOCKET_ACCESS_CONTROL_LOCALHOST = dbus.UInt32(0)
 
-#print "FIXME: test-tube-close.py disabled because sending a close stanza on "
-#print "disconnection is not yet implemented in telepathy-salut. It requires "
-#print "to ensure the XmppConnection and reestablish it"
-print "FIXME: test-tube-close.py disabled because 1-1 tubes are disabled for now"
+print "FIXME: test-tube-close.py disabled because sending a close stanza on "
+print "disconnection is not yet implemented in telepathy-salut. It requires "
+print "to ensure the XmppConnection and reestablish it"
 # exiting 77 causes automake to consider the test to have been skipped
 raise SystemExit(77)
 
