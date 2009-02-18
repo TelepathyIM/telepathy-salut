@@ -521,6 +521,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
     }
 
   features = capabilities_get_features (salut_self->per_channel_manager_caps);
+  g_object_unref (salut_self);
 
   /* Every entity MUST have at least one identity (XEP-0030). Salut publishs
    * one identity. If you change the identity here, you also need to change
