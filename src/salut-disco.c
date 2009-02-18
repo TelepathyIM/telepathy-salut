@@ -473,7 +473,6 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar *node;
   const gchar *suffix;
   GSList *i;
-  gchar *caps_hash;
   TpHandleRepoIface *contact_repo;
   const gchar *jid_from, *jid_to;
   SalutSelf *salut_self;
@@ -511,12 +510,10 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   g_object_get (priv->connection, "self", &salut_self, NULL);
   /* Salut only supports XEP-0115 version 1.5. Bundles from old version 1.3 are
    * not implemented. */
-  caps_hash = caps_hash_compute_from_self_presence (salut_self);
 
-  if (tp_strdiff (suffix, caps_hash))
+  if (tp_strdiff (suffix, salut_self->ver))
     {
       g_object_unref (salut_self);
-      g_free (caps_hash);
       return;
     }
 
