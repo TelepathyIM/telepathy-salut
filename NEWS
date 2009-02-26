@@ -1,3 +1,10 @@
+telepathy-salut 0.3.9 (UNRELEASED)
+==================================
+
+Enhancements:
+* Implement Connection.Interface.ContactCapabilities.DRAFT
+* Implement tube service specific contact capabilities.
+
 telepathy-salut 0.3.8 (2009-02-17)
 ==================================
 The "Thursday as if I walked in the dessert" release.
