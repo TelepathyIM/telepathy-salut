@@ -70,7 +70,7 @@ def test(q, bus, conn):
     except dbus.DBusException, e:
         assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotImplemented'
     else:
-        assert False
+        assert False, "Should raise NotImplemented error"
 
 if __name__ == '__main__':
     exec_test(test)

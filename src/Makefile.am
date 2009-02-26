@@ -15,10 +15,18 @@ libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
 CORE_SOURCES =                                          \
+    salut-capabilities.c                                \
+    salut-capabilities.h                                \
+    salut-caps-channel-manager.c                        \
+    salut-caps-channel-manager.h                        \
+    salut-caps-hash.c                                   \
+    salut-caps-hash.h                                   \
     salut-connection-manager.c                          \
     salut-connection-manager.h                          \
     salut-contact-manager.c                             \
     salut-contact-manager.h                             \
+    salut-disco.c                                       \
+    salut-disco.h                                       \
     salut-im-manager.c                                  \
     salut-im-manager.h                                  \
     salut-im-channel.c                                  \
@@ -33,6 +41,8 @@ CORE_SOURCES =                                          \
     salut-file-transfer-channel.c                       \
     salut-file-transfer-channel.h                       \
     salut-muc-channel.h                                 \
+    salut-presence-cache.c                              \
+    salut-presence-cache.h                              \
     salut-tubes-manager.c                               \
     salut-tubes-manager.h                               \
     salut-contact.h                                     \

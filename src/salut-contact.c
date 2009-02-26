@@ -24,6 +24,7 @@
 #include "salut-contact.h"
 #include "salut-signals-marshal.h"
 #include "salut-presence.h"
+#include "salut-presence-cache.h"
 #include "salut-presence-enumtypes.h"
 
 #include <telepathy-glib/util.h>
@@ -446,6 +447,15 @@ salut_contact_get_avatar (SalutContact *contact,
     SALUT_CONTACT_GET_CLASS (contact)->retrieve_avatar (contact);
 }
 
+void
+salut_contact_set_capabilities (SalutContact *contact,
+                                GHashTable *per_channel_manager_caps)
+{
+  salut_presence_cache_free_cache_entry (contact->per_channel_manager_caps);
+  contact->per_channel_manager_caps = salut_presence_cache_copy_cache_entry (
+      per_channel_manager_caps);
+}
+
 static void
 salut_contact_change (SalutContact *self, guint changes)
 {
@@ -519,6 +529,15 @@ salut_contact_change_jid (SalutContact *self, gchar *jid)
       salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
 #endif
     }
+}
+
+void salut_contact_change_capabilities (SalutContact *self,
+                                        const gchar *hash,
+                                        const gchar *node,
+                                        const gchar *ver)
+{
+  salut_presence_cache_process_caps (self->connection->presence_cache, self,
+      hash, node, ver);
 }
 
 #ifdef ENABLE_OLPC

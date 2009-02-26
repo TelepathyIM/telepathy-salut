@@ -110,6 +110,7 @@ stamp-h1
 telepathy-salut-*.tar.gz
 tests/check-main
 tests/test-r-multicast-{packet,sender,transport-io}
+tests/twisted/config.py
 tests/twisted/tools/core
 tests/twisted/tools/exec-with-log.sh
 tests/twisted/tools/salut-testing.log
@@ -134,4 +135,3 @@ lib/gibber/tests/outputs
 lib/gibber/tests/sasl-test.db
 lib/gibber/tests/test-xmpp-connection
 lib/gibber/tests/test-r-multicast-transport-io
-

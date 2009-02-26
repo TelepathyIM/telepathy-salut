@@ -238,7 +238,7 @@ def test(q, bus, conn):
     except dbus.DBusException, e:
         assert e.get_dbus_name() == NOT_IMPLEMENTED, e.get_dbus_name()
     else:
-        assert False
+        assert False, "Should raise NotImplemented error"
 
     # CreateChannel failed, we expect no new channel
     check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
@@ -257,7 +257,8 @@ def test(q, bus, conn):
     except dbus.DBusException, e:
         assert e.get_dbus_name() == INVALID_ARGUMENT, e.get_dbus_name()
     else:
-        assert False
+        assert False, "Should raise InvalidArgument error"
+
     # CreateChannel failed, we expect no new channel
     check_conn_properties(q, bus, conn, [old_tubes_channel_properties])
 

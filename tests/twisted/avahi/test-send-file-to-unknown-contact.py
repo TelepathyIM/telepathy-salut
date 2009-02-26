@@ -20,7 +20,7 @@ class SendFileTransferToUnknownContactTest(SendFileTest):
         except dbus.DBusException, e:
             assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotAvailable'
         else:
-            assert False
+            assert False, "Should raise NotAvailable error"
 
 if __name__ == '__main__':
     test = SendFileTransferToUnknownContactTest()
