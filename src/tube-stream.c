@@ -1362,16 +1362,16 @@ salut_tube_stream_constructor (GType type,
   tp_handle_ref (contact_repo, priv->initiator);
 
   if (priv->initiator == priv->self_handle)
-  {
-    /* We initiated this tube */
-    priv->state = SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED;
-    /* FIXME: we should probably remove this offer_needed */
-    priv->offer_needed = TRUE;
-  }
+    {
+      /* We initiated this tube */
+      priv->state = SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED;
+      /* FIXME: we should probably remove this offer_needed */
+      priv->offer_needed = TRUE;
+    }
   else
-  {
-    priv->state = SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING;
-  }
+    {
+      priv->state = SALUT_TUBE_CHANNEL_STATE_LOCAL_PENDING;
+    }
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
