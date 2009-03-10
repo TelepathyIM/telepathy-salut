@@ -646,14 +646,14 @@ create_tubes_channel (SalutMucManager *self,
                       TpHandle initiator,
                       gpointer request_token,
                       gboolean announce,
-                      gboolean *text_created,
+                      gboolean *text_created_out,
                       gboolean requested,
                       GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutMucChannel *text_chan;
   SalutTubesChannel *tubes_chan;
-  gboolean txt_created = FALSE;
+  gboolean text_created = FALSE;
 
   text_chan = g_hash_table_lookup (priv->text_channels,
       GUINT_TO_POINTER (handle));
@@ -667,7 +667,7 @@ create_tubes_channel (SalutMucManager *self,
       if (text_chan == NULL)
         return NULL;
 
-      txt_created = TRUE;
+      text_created = TRUE;
     }
 
   tubes_chan = new_tubes_channel (self, handle, text_chan, initiator,
@@ -686,7 +686,7 @@ create_tubes_channel (SalutMucManager *self,
       channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
           NULL, NULL);
 
-      if (txt_created)
+      if (text_created)
         {
           g_hash_table_insert (channels, text_chan, NULL);
         }
@@ -698,9 +698,8 @@ create_tubes_channel (SalutMucManager *self,
       g_slist_free (tokens);
     }
 
-
-  if (text_created != NULL)
-    *text_created = txt_created;
+  if (text_created_out != NULL)
+    *text_created_out = text_created;
 
   return tubes_chan;
 }
