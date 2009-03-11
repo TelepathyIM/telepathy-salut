@@ -379,6 +379,20 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
     tube = salut_tubes_channel_message_received (chan, service, tube_type,
         initiator_handle, parameters, tube_id, portnum, stanza);
 
+    if (tube == NULL)
+      {
+        if (tubes_channel_created)
+          {
+            /* Destroy the tubes channel we just created as it's now
+             * useless */
+            g_hash_table_remove (priv->tubes_channels, GUINT_TO_POINTER (
+                  initiator_handle));
+          }
+
+        g_hash_table_destroy (parameters);
+        return;
+      }
+
     /* announce tubes and tube channels */
     channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
         NULL, NULL);
@@ -386,11 +400,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
     if (tubes_channel_created)
       g_hash_table_insert (channels, chan, NULL);
 
-    if (tube != NULL)
-      g_hash_table_insert (channels, tube, NULL);
-
-    /* FIXME: if tube is NULL, maybe we should destroy the tubes channel
-     * instead of announcing it as it's useless? */
+    g_hash_table_insert (channels, tube, NULL);
 
     tp_channel_manager_emit_new_channels (self, channels);
 
