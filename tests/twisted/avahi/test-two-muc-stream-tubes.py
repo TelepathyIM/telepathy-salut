@@ -263,11 +263,12 @@ def test(q, bus, conn):
 
     client_transport.write(test_string)
 
-    e = q.expect('server-data-received')
-    assert e.data == test_string
+    server_received, client_received = q.expect_many(
+        EventPattern('server-data-received'),
+        EventPattern('client-data-received'))
 
-    e = q.expect('client-data-received')
-    assert e.data == string.swapcase(test_string)
+    assert server_received.data == test_string
+    assert client_received.data == string.swapcase(test_string)
 
     # contact1 closes the tube
     contact1_tubes_channel.CloseTube(conn1_tube_id)
@@ -457,11 +458,12 @@ def test(q, bus, conn):
 
     client_transport.write(test_string)
 
-    e = q.expect('server-data-received')
-    assert e.data == test_string
+    server_received, client_received = q.expect_many(
+        EventPattern('server-data-received'),
+        EventPattern('client-data-received'))
 
-    e = q.expect('client-data-received')
-    assert e.data == string.swapcase(test_string)
+    assert server_received.data == test_string
+    assert client_received.data == string.swapcase(test_string)
 
     call_async(q, contact1_tube_channel, 'Close')
     q.expect_many(
