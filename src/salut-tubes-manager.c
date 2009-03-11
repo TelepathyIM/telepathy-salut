@@ -369,6 +369,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
           {
             DEBUG ("couldn't make new tubes channel: %s", e->message);
             g_error_free (e);
+            g_hash_table_destroy (parameters);
             return;
           }
 
