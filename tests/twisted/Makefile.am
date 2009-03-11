@@ -3,6 +3,7 @@ TWISTED_TESTS =
 TWISTED_BASIC_TESTS =
 
 TWISTED_AVAHI_TESTS = \
+	avahi/caps_helper.py \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
 	avahi/test-request-im.py \
@@ -25,6 +26,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-receive-file-cancelled-immediately.py \
 	avahi/test-receive-file-decline.py \
 	avahi/test-receive-file-not-found.py \
+	avahi/test-caps-self.py \
+	avahi/test-caps-tubes.py \
 	avahi/test-text-channel.py \
 	avahi/test-ichat-composing.py \
 	avahi/test-ichat-incoming-msg.py \
@@ -75,6 +78,11 @@ check-twisted:
 		exit 1;\
 	fi
 
+config.py:
+	echo "PACKAGE_STRING = \"$(PACKAGE_STRING)\"" > config.py
+
+BUILT_SOURCES = config.py
+
 EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
@@ -82,6 +90,7 @@ EXTRA_DIST = \
 	saluttest.py \
 	servicetest.py \
         trivialstream.py \
+        config.py \
 	avahi/file_transfer_helper.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc

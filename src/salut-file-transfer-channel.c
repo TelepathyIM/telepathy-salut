@@ -64,7 +64,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel,
                            tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
                            file_transfer_iface_init);
 );
 
@@ -129,11 +129,11 @@ struct _SalutFileTransferChannelPrivate {
   gboolean remote_accepted;
 
   /* properties */
-  SalutFileTransferState state;
+  TpFileTransferState state;
   gchar *content_type;
   gchar *filename;
   guint64 size;
-  SalutFileHashType content_hash_type;
+  TpFileHashType content_hash_type;
   gchar *content_hash;
   gchar *description;
   GHashTable *available_socket_types;
@@ -167,8 +167,8 @@ salut_file_transfer_channel_init (SalutFileTransferChannel *obj)
 }
 
 static void salut_file_transfer_channel_set_state (
-    SalutSvcChannelTypeFileTransfer *iface, SalutFileTransferState state,
-    SalutFileTransferStateChangeReason reason);
+    TpSvcChannelTypeFileTransfer *iface, TpFileTransferState state,
+    TpFileTransferStateChangeReason reason);
 
 static void
 contact_lost_cb (SalutContact *contact,
@@ -176,7 +176,7 @@ contact_lost_cb (SalutContact *contact,
 {
   g_assert (contact == self->priv->contact);
 
-  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_PENDING)
+  if (self->priv->state != TP_FILE_TRANSFER_STATE_PENDING)
     {
       DEBUG ("%s was disconnected. Ignoring as there is still a chance to"
          " be able to complete the transfer", contact->name);
@@ -185,9 +185,9 @@ contact_lost_cb (SalutContact *contact,
 
   DEBUG ("%s was disconnected. Cancel file tranfer.", contact->name);
   salut_file_transfer_channel_set_state (
-      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-      SALUT_FILE_TRANSFER_STATE_CANCELLED,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
+      TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+      TP_FILE_TRANSFER_STATE_CANCELLED,
+      TP_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
 }
 
 static void
@@ -206,7 +206,7 @@ salut_file_transfer_channel_get_property (GObject *object,
         break;
       case PROP_CHANNEL_TYPE:
         g_value_set_static_string (value,
-            SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+            TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
         break;
       case PROP_HANDLE_TYPE:
         g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
@@ -299,17 +299,17 @@ salut_file_transfer_channel_get_property (GObject *object,
                 TP_IFACE_CHANNEL, "Requested",
                 TP_IFACE_CHANNEL, "InitiatorHandle",
                 TP_IFACE_CHANNEL, "InitiatorID",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "State",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentType",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Filename",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Size",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHashType",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHash",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Description",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Date",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "AvailableSocketTypes",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "TransferredBytes",
-                SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "InitialOffset",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "State",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentType",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Filename",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Size",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHashType",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHash",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Description",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Date",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "AvailableSocketTypes",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "TransferredBytes",
+                TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "InitialOffset",
                 NULL));
         break;
       default:
@@ -356,9 +356,9 @@ salut_file_transfer_channel_set_property (GObject *object,
         break;
       case PROP_STATE:
         salut_file_transfer_channel_set_state (
-            SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (object),
+            TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (object),
             g_value_get_uint (value),
-            SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+            TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
         break;
       case PROP_CONTENT_TYPE:
         g_free (self->priv->content_type);
@@ -496,7 +496,7 @@ salut_file_transfer_channel_class_init (
       NULL,
       channel_props
     },
-    { SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER,
+    { TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER,
       tp_dbus_properties_mixin_getter_gobject_properties,
       tp_dbus_properties_mixin_setter_gobject_properties,
       file_props
@@ -599,7 +599,7 @@ salut_file_transfer_channel_class_init (
 
   param_spec = g_param_spec_uint (
       "state",
-      "SalutFileTransferState state",
+      "TpFileTransferState state",
       "State of the file transfer in this channel",
       0,
       G_MAXUINT,
@@ -655,7 +655,7 @@ salut_file_transfer_channel_class_init (
       "Hash type",
       0,
       G_MAXUINT,
-      SALUT_FILE_HASH_TYPE_NONE,
+      TP_FILE_HASH_TYPE_NONE,
       G_PARAM_CONSTRUCT |
       G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK |
@@ -827,14 +827,14 @@ salut_file_transfer_channel_close (TpSvcChannel *iface,
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
-  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_COMPLETED &&
-      self->priv->state != SALUT_FILE_TRANSFER_STATE_CANCELLED)
+  if (self->priv->state != TP_FILE_TRANSFER_STATE_COMPLETED &&
+      self->priv->state != TP_FILE_TRANSFER_STATE_CANCELLED)
     {
       gibber_file_transfer_cancel (self->priv->ft, 406);
       salut_file_transfer_channel_set_state (
-          SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (iface),
-          SALUT_FILE_TRANSFER_STATE_CANCELLED,
-          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
+          TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (iface),
+          TP_FILE_TRANSFER_STATE_CANCELLED,
+          TP_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
     }
 
   salut_file_transfer_channel_do_close (SALUT_FILE_TRANSFER_CHANNEL (iface));
@@ -852,7 +852,7 @@ salut_file_transfer_channel_get_channel_type (TpSvcChannel *iface,
                                               DBusGMethodInvocation *context)
 {
   tp_svc_channel_return_from_get_channel_type (context,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
 }
 
 /**
@@ -919,11 +919,11 @@ error_cb (GibberFileTransfer *ft,
     }
 
   salut_file_transfer_channel_set_state (
-      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-      SALUT_FILE_TRANSFER_STATE_CANCELLED,
+      TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+      TP_FILE_TRANSFER_STATE_CANCELLED,
       receiver ?
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_ERROR :
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_ERROR);
+      TP_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_ERROR :
+      TP_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_ERROR);
 }
 
 static void
@@ -931,9 +931,9 @@ ft_finished_cb (GibberFileTransfer *ft,
                 SalutFileTransferChannel *self)
 {
   salut_file_transfer_channel_set_state (
-      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-      SALUT_FILE_TRANSFER_STATE_COMPLETED,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+      TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+      TP_FILE_TRANSFER_STATE_COMPLETED,
+      TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   salut_xmpp_connection_manager_release_connection (
       self->priv->xmpp_connection_manager,
@@ -946,9 +946,9 @@ ft_remote_cancelled_cb (GibberFileTransfer *ft,
 {
   gibber_file_transfer_cancel (ft, 406);
   salut_file_transfer_channel_set_state (
-      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-      SALUT_FILE_TRANSFER_STATE_CANCELLED,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
+      TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+      TP_FILE_TRANSFER_STATE_CANCELLED,
+      TP_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
 
   salut_xmpp_connection_manager_release_connection (
       self->priv->xmpp_connection_manager,
@@ -964,21 +964,21 @@ remote_accepted_cb (GibberFileTransfer *ft,
   if (self->priv->socket_path != NULL)
     {
       /* ProvideFile has already been called. Channel is Open */
-      salut_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
+      tp_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
           self->priv->initial_offset);
 
       salut_file_transfer_channel_set_state (
-          SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-          SALUT_FILE_TRANSFER_STATE_OPEN,
-          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+          TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+          TP_FILE_TRANSFER_STATE_OPEN,
+          TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
     }
   else
     {
       /* Client has to call ProvideFile to open the channel */
       salut_file_transfer_channel_set_state (
-          SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
-          SALUT_FILE_TRANSFER_STATE_ACCEPTED,
-          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+          TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+          TP_FILE_TRANSFER_STATE_ACCEPTED,
+          TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
     }
 
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
@@ -1074,9 +1074,9 @@ salut_file_transfer_channel_received_file_offer (SalutFileTransferChannel *self,
 
 static void
 salut_file_transfer_channel_set_state (
-    SalutSvcChannelTypeFileTransfer *iface,
-    SalutFileTransferState state,
-    SalutFileTransferStateChangeReason reason)
+    TpSvcChannelTypeFileTransfer *iface,
+    TpFileTransferState state,
+    TpFileTransferStateChangeReason reason)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
 
@@ -1084,19 +1084,19 @@ salut_file_transfer_channel_set_state (
     return;
 
   self->priv->state = state;
-  salut_svc_channel_type_file_transfer_emit_file_transfer_state_changed (iface,
+  tp_svc_channel_type_file_transfer_emit_file_transfer_state_changed (iface,
       state, reason);
 }
 
 static void
 emit_progress_update (SalutFileTransferChannel *self)
 {
-  SalutSvcChannelTypeFileTransfer *iface = \
-      SALUT_SVC_CHANNEL_TYPE_FILE_TRANSFER (self);
+  TpSvcChannelTypeFileTransfer *iface = \
+      TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self);
 
   g_get_current_time (&self->priv->last_transferred_bytes_emitted);
 
-  salut_svc_channel_type_file_transfer_emit_transferred_bytes_changed (
+  tp_svc_channel_type_file_transfer_emit_transferred_bytes_changed (
     iface, self->priv->transferred_bytes);
 
   if (self->priv->progress_timer != 0)
@@ -1258,7 +1258,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
  * on interface org.freedesktop.Telepathy.Channel.Type.FileTransfer
  */
 static void
-salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
+salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
                                          guint address_type,
                                          guint access_control,
                                          const GValue *access_control_param,
@@ -1277,7 +1277,7 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
       g_error_free (error);
     }
 
-  if (self->priv->state != SALUT_FILE_TRANSFER_STATE_PENDING)
+  if (self->priv->state != TP_FILE_TRANSFER_STATE_PENDING)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
         "State is not pending; cannot accept file");
@@ -1309,22 +1309,22 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
   DEBUG ("local socket %s", self->priv->socket_path);
 
   salut_file_transfer_channel_set_state (iface,
-      SALUT_FILE_TRANSFER_STATE_ACCEPTED,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
+      TP_FILE_TRANSFER_STATE_ACCEPTED,
+      TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
   g_value_init (&out_address, G_TYPE_STRING);
   g_value_set_string (&out_address, self->priv->socket_path);
 
-  salut_svc_channel_type_file_transfer_return_from_accept_file (context,
+  tp_svc_channel_type_file_transfer_return_from_accept_file (context,
       &out_address);
 
   self->priv->initial_offset = 0;
 
-  salut_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
+  tp_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
       self->priv->initial_offset);
 
-  salut_file_transfer_channel_set_state (iface, SALUT_FILE_TRANSFER_STATE_OPEN,
-      SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
+  salut_file_transfer_channel_set_state (iface, TP_FILE_TRANSFER_STATE_OPEN,
+      TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
   g_value_unset (&out_address);
 }
@@ -1337,7 +1337,7 @@ salut_file_transfer_channel_accept_file (SalutSvcChannelTypeFileTransfer *iface,
  */
 static void
 salut_file_transfer_channel_provide_file (
-    SalutSvcChannelTypeFileTransfer *iface,
+    TpSvcChannelTypeFileTransfer *iface,
     guint address_type,
     guint access_control,
     const GValue *access_control_param,
@@ -1388,15 +1388,15 @@ salut_file_transfer_channel_provide_file (
     {
       /* Remote already accepted the file. Channel is Open.
        * If not channel stay Pending. */
-      salut_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
+      tp_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
           self->priv->initial_offset);
 
       salut_file_transfer_channel_set_state (iface,
-          SALUT_FILE_TRANSFER_STATE_OPEN,
-          SALUT_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
+          TP_FILE_TRANSFER_STATE_OPEN,
+          TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
     }
 
-  salut_svc_channel_type_file_transfer_return_from_provide_file (context,
+  tp_svc_channel_type_file_transfer_return_from_provide_file (context,
       &out_address);
 
   g_value_unset (&out_address);
@@ -1406,10 +1406,10 @@ static void
 file_transfer_iface_init (gpointer g_iface,
                           gpointer iface_data)
 {
-  SalutSvcChannelTypeFileTransferClass *klass =
-      (SalutSvcChannelTypeFileTransferClass *) g_iface;
+  TpSvcChannelTypeFileTransferClass *klass =
+      (TpSvcChannelTypeFileTransferClass *) g_iface;
 
-#define IMPLEMENT(x) salut_svc_channel_type_file_transfer_implement_##x (\
+#define IMPLEMENT(x) tp_svc_channel_type_file_transfer_implement_##x (\
     klass, salut_file_transfer_channel_##x)
   IMPLEMENT (accept_file);
   IMPLEMENT (provide_file);

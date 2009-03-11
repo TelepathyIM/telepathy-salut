@@ -74,6 +74,7 @@ struct _GibberFdTransportPrivate
   guint watch_out;
   guint watch_err;
   GString *output_buffer;
+  gboolean receiving_blocked;
 };
 
 #define GIBBER_FD_TRANSPORT_GET_PRIVATE(o)  \
@@ -335,12 +336,6 @@ _channel_io_err (GIOChannel *source, GIOCondition condition, gpointer data)
       code = GIBBER_FD_TRANSPORT_ERROR_FAILED;
       msg = "Error on GIOChannel";
     }
-  else if (condition & G_IO_HUP)
-    {
-      DEBUG ("Connection has been broken. Closing the transport");
-      code = GIBBER_FD_TRANSPORT_ERROR_PIPE;
-      msg = "Connection has been broken";
-    }
   else
     {
       g_assert_not_reached ();
@@ -427,10 +422,14 @@ gibber_fd_transport_set_fd (GibberFdTransport *self, int fd)
   g_io_channel_set_encoding (priv->channel, NULL, NULL);
   g_io_channel_set_buffered (priv->channel, FALSE);
 
-  priv->watch_in =
-    g_io_add_watch (priv->channel, G_IO_IN, _channel_io_in, self);
+  if (!priv->receiving_blocked)
+    {
+      priv->watch_in =
+        g_io_add_watch (priv->channel, G_IO_IN, _channel_io_in, self);
+    }
+
   priv->watch_err =
-    g_io_add_watch (priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, self);
+    g_io_add_watch (priv->channel, G_IO_ERR, _channel_io_err, self);
 
   gibber_transport_set_state (GIBBER_TRANSPORT(self),
       GIBBER_TRANSPORT_CONNECTED);
@@ -497,4 +496,6 @@ gibber_fd_transport_block_receiving (GibberTransport *transport,
       priv->watch_in = g_io_add_watch (priv->channel, G_IO_IN,
           _channel_io_in, self);
     }
+
+  priv->receiving_blocked = block;
 }

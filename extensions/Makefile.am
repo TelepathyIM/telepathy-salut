@@ -1,7 +1,7 @@
 tools_dir = $(top_srcdir)/tools
 
 EXTRA_DIST = \
-    Channel_Type_File_Transfer.xml \
+    Connection_Interface_Contact_Capabilities.xml \
     Channel_Type_Stream_Tube.xml \
     Channel_Type_DBus_Tube.xml \
     Channel_Interface_Tube.xml \

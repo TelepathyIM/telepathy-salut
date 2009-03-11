@@ -10,8 +10,6 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
-EXTRA_DIST = simplemeshtest.py mesh.py $(check_SCRIPTS)
-
 noinst_PROGRAMS = \
         telepathy-salut-debug
 

@@ -121,10 +121,16 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
       != 0)
     return;
 
+  /* the user callback may want to free the GibberIqHelper object. Delay this.
+   */
+  g_object_ref (self);
+
   data->reply_func (self, data->sent_stanza,
       stanza, data->object, data->user_data);
 
   g_hash_table_remove (priv->id_handlers, id);
+
+  g_object_unref (self);
 }
 
 static GObject *

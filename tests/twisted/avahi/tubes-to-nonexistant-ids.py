@@ -27,7 +27,7 @@ def test(q, bus, conn):
     except dbus.DBusException, e:
         assert e.get_dbus_name() == NOT_AVAILABLE, e.get_dbus_name()
     else:
-        assert False
+        assert False, "Should raise NotAvailable error"
 
     requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
 
@@ -41,7 +41,7 @@ def test(q, bus, conn):
     except dbus.DBusException, e:
         assert e.get_dbus_name() == NOT_AVAILABLE, e.get_dbus_name()
     else:
-        assert False
+        assert False, "Should raise NotAvailable error"
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])

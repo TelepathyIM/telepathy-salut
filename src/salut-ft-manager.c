@@ -30,6 +30,7 @@
 #include "salut-signals-marshal.h"
 
 #include "salut-file-transfer-channel.h"
+#include "salut-caps-channel-manager.h"
 #include "salut-contact-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
@@ -41,6 +42,7 @@
 
 static void
 channel_manager_iface_init (gpointer, gpointer);
+static void caps_channel_manager_iface_init (gpointer, gpointer);
 
 static SalutFileTransferChannel *
 salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
@@ -48,7 +50,9 @@ salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
-      channel_manager_iface_init));
+      channel_manager_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
+      caps_channel_manager_iface_init));
 
 /* private structure */
 typedef struct _SalutFtManagerPrivate SalutFtManagerPrivate;
@@ -282,7 +286,7 @@ salut_ft_manager_new_channel (SalutFtManager *mgr,
       return NULL;
     }
 
-  state = SALUT_FILE_TRANSFER_STATE_PENDING;
+  state = TP_FILE_TRANSFER_STATE_PENDING;
   if (!requested)
     {
       /* incoming channel */
@@ -336,7 +340,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   TpHandle handle;
   const gchar *content_type, *filename, *content_hash, *description;
   guint64 size, date, initial_offset;
-  SalutFileHashType content_hash_type;
+  TpFileHashType content_hash_type;
   GError *error = NULL;
   gboolean valid;
   GSList *requests = NULL;
@@ -346,7 +350,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   /* We only support file transfer channels */
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"),
-        SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
+        TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
     return FALSE;
 
   /* And only contact handles */
@@ -370,7 +374,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   content_type = tp_asv_get_string (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType");
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType");
   if (content_type == NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -379,7 +383,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   filename = tp_asv_get_string (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename");
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename");
   if (filename == NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -388,7 +392,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   size = tp_asv_get_uint64 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size", NULL);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size", NULL);
   if (size == 0)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -397,15 +401,15 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   content_hash_type = tp_asv_get_uint32 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType", &valid);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType", &valid);
   if (!valid)
     {
       /* Assume File_Hash_Type_None */
-      content_hash_type = SALUT_FILE_HASH_TYPE_NONE;
+      content_hash_type = TP_FILE_HASH_TYPE_NONE;
     }
   else
     {
-      if (content_hash_type >= NUM_SALUT_FILE_HASH_TYPES)
+      if (content_hash_type >= NUM_TP_FILE_HASH_TYPES)
         {
           g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "%u is not a valid ContentHashType", content_hash_type);
@@ -413,10 +417,10 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
         }
     }
 
-  if (content_hash_type != SALUT_FILE_HASH_TYPE_NONE)
+  if (content_hash_type != TP_FILE_HASH_TYPE_NONE)
     {
       content_hash = tp_asv_get_string (request_properties,
-          SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash");
+          TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash");
       if (content_hash == NULL)
         {
           g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -431,13 +435,13 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   description = tp_asv_get_string (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description");
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description");
 
   date = tp_asv_get_uint64 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date", NULL);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date", NULL);
 
   initial_offset = tp_asv_get_uint64 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
 
   chan = salut_ft_manager_new_channel (self, handle, TRUE, &error);
   if (chan == NULL)
@@ -489,15 +493,15 @@ static const gchar * const file_transfer_channel_allowed_properties[] =
 {
    TP_IFACE_CHANNEL ".TargetHandle",
    TP_IFACE_CHANNEL ".TargetID",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset",
-    NULL
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset",
+   NULL
 };
 
 static void
@@ -512,7 +516,7 @@ salut_ft_manager_foreach_channel_class (TpChannelManager *manager,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
 
   value = tp_g_value_slice_new (G_TYPE_STRING);
-  g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType" , value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
@@ -566,4 +570,22 @@ salut_ft_manager_new (SalutConnection *connection,
   priv->connection = connection;
 
   return ret;
+}
+
+static void
+salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
+                                   SalutConnection *conn,
+                                   TpHandle handle,
+                                   GPtrArray *arr)
+{
+  /* TODO */
+}
+
+static void
+caps_channel_manager_iface_init (gpointer g_iface,
+                                 gpointer iface_data)
+{
+  SalutCapsChannelManagerIface *iface = g_iface;
+
+  iface->get_contact_caps = salut_ft_manager_get_contact_caps;
 }
