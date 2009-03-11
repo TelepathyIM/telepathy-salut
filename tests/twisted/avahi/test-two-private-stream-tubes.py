@@ -164,15 +164,13 @@ def test(q, bus, conn):
     client.connectUNIX(unix_socket_adr).addCallback(client_connected_cb)
 
     # server got the connection
-    _, e = q.expect_many(
+    _, e, new_conn_event, data_event = q.expect_many(
         EventPattern('server-connected'),
-        EventPattern('client-connected'))
-
-    client_transport = e.transport
-
-    new_conn_event, data_event = q.expect_many(
+        EventPattern('client-connected'),
         EventPattern('dbus-signal', signal='StreamTubeNewConnection', path=contact1_tubes_channel_path),
         EventPattern('client-data-received'))
+
+    client_transport = e.transport
 
     id, handle = new_conn_event.args
     assert id == tube_id
@@ -183,11 +181,12 @@ def test(q, bus, conn):
 
     client_transport.write(test_string)
 
-    e = q.expect('server-data-received')
-    assert e.data == test_string
+    server_received, client_received = q.expect_many(
+        EventPattern('server-data-received'),
+        EventPattern('client-data-received'))
 
-    e = q.expect('client-data-received')
-    assert e.data == string.swapcase(test_string)
+    assert server_received.data == test_string
+    assert client_received.data == string.swapcase(test_string)
 
     # Close the tube propertly
     call_async(q, contact1_tubes_channel, 'CloseTube', tube_id)
@@ -323,21 +322,24 @@ def test(q, bus, conn):
 
     client_transport = e.transport
 
-    e = q.expect('dbus-signal', signal='StreamTubeNewConnection', path=tube1_path)
-    handle = e.args[0]
+    sig, e = q.expect_many(
+        EventPattern('dbus-signal', signal='StreamTubeNewConnection', path=tube1_path),
+        EventPattern('client-data-received'))
+
+    handle = sig.args[0]
     assert handle == contact2_handle_on_conn1
 
     # client receives server's welcome message
-    e = q.expect('client-data-received')
     assert e.data == SERVER_WELCOME_MSG
 
     client_transport.write(test_string)
 
-    e = q.expect('server-data-received')
-    assert e.data == test_string
+    server_received, client_received = q.expect_many(
+        EventPattern('server-data-received'),
+        EventPattern('client-data-received'))
 
-    e = q.expect('client-data-received')
-    assert e.data == string.swapcase(test_string)
+    assert server_received.data == test_string
+    assert client_received.data == string.swapcase(test_string)
 
     # contact1 close the tube
     call_async(q, contact1_tube_channel, 'Close')
