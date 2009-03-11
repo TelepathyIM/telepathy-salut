@@ -356,6 +356,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   {
     SalutTubeIface *tube;
     GHashTable *channels;
+    gboolean tubes_channel_created = FALSE;
 
     if (chan == NULL)
       {
@@ -368,7 +369,10 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
           {
             DEBUG ("couldn't make new tubes channel: %s", e->message);
             g_error_free (e);
+            return;
           }
+
+        tubes_channel_created = TRUE;
       }
 
     tube = salut_tubes_channel_message_received (chan, service, tube_type,
@@ -377,7 +381,10 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
     /* announce tubes and tube channels */
     channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
         NULL, NULL);
-    g_hash_table_insert (channels, chan, NULL);
+
+    if (tubes_channel_created)
+      g_hash_table_insert (channels, chan, NULL);
+
     if (tube != NULL)
       g_hash_table_insert (channels, tube, NULL);
 
