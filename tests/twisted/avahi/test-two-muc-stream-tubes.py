@@ -249,14 +249,16 @@ def test(q, bus, conn):
 
     client_transport = e.transport
 
-    e = q.expect('dbus-signal', signal='StreamTubeNewConnection',
-        path=tubes1_path)
-    id, handle = e.args
+    sig, e = q.expect_many(
+        EventPattern('dbus-signal', signal='StreamTubeNewConnection',
+            path=tubes1_path),
+        EventPattern('client-data-received'))
+
+    id, handle = sig.args
     assert id == conn1_tube_id
     assert handle == contact2_handle_on_conn1
 
     # client receives server's welcome message
-    e = q.expect('client-data-received')
     assert e.data == SERVER_WELCOME_MSG
 
     client_transport.write(test_string)
@@ -442,13 +444,15 @@ def test(q, bus, conn):
 
     client_transport = e.transport
 
-    e = q.expect('dbus-signal', signal='StreamTubeNewConnection',
-        path=tube1_path)
-    handle = e.args[0]
+    sig, e = q.expect_many(
+        EventPattern('dbus-signal', signal='StreamTubeNewConnection',
+            path=tube1_path),
+        EventPattern('client-data-received'))
+
+    handle = sig.args[0]
     assert handle == contact2_handle_on_conn1
 
     # client receives server's welcome message
-    e = q.expect('client-data-received')
     assert e.data == SERVER_WELCOME_MSG
 
     client_transport.write(test_string)
