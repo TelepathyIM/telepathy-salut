@@ -398,7 +398,8 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       goto error;
     }
 
-  DEBUG ("Requested outgoing channel for handle: %d", handle);
+  DEBUG ("Requested outgoing channel with contact: %s",
+      tp_handle_inspect (contact_repo, handle));
 
   chan = salut_file_transfer_channel_new (priv->connection, contact,
       handle, priv->xmpp_connection_manager, base_connection->self_handle,
