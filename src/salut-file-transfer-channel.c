@@ -450,6 +450,13 @@ salut_file_transfer_channel_constructor (GType type,
   g_hash_table_insert (self->priv->available_socket_types,
       GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX), unix_access);
 
+  DEBUG ("New FT channel created: %s (contact: %s, initiator: %s, "
+       "file: \"%s\", size: %" G_GUINT64_FORMAT ")",
+       self->priv->object_path,
+       tp_handle_inspect (contact_repo, self->priv->handle),
+       tp_handle_inspect (contact_repo, self->priv->initiator),
+       self->priv->filename, self->priv->size);
+
   return obj;
 }
 
