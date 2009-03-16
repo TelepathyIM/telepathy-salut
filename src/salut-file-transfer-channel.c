@@ -431,6 +431,9 @@ salut_file_transfer_channel_constructor (GType type,
 
   tp_handle_ref (contact_repo, self->priv->handle);
 
+  self->priv->object_path = g_strdup_printf ("%s/FileTransferChannel/%p",
+      base_conn->object_path, self);
+
   /* Connect to the bus */
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object (bus, self->priv->object_path, obj);
@@ -1517,7 +1520,6 @@ setup_local_socket (SalutFileTransferChannel *self)
 SalutFileTransferChannel *
 salut_file_transfer_channel_new (SalutConnection *conn,
                                  SalutContact *contact,
-                                 const gchar *path,
                                  TpHandle handle,
                                  SalutXmppConnectionManager *xcm,
                                  TpHandle initiator_handle,
@@ -1534,7 +1536,6 @@ salut_file_transfer_channel_new (SalutConnection *conn,
   return g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
       "connection", conn,
       "contact", contact,
-      "object-path", path,
       "handle", handle,
       "xmpp-connection-manager", xcm,
       "initiator-handle", initiator_handle,
@@ -1553,7 +1554,6 @@ salut_file_transfer_channel_new (SalutConnection *conn,
 SalutFileTransferChannel *
 salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
                                              SalutContact *contact,
-                                             const gchar *path,
                                              TpHandle handle,
                                              SalutXmppConnectionManager *xcm,
                                              TpFileTransferState state,
@@ -1582,7 +1582,6 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
   chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
       "connection", connection,
       "contact", contact,
-      "object-path", path,
       "handle", handle,
       "xmpp-connection-manager", xcm,
       "initiator-handle", handle,

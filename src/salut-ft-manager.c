@@ -91,23 +91,6 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
   return gibber_file_transfer_is_file_offer (stanza);
 }
 
-static gchar *
-generate_object_path (SalutFtManager *self,
-                      TpHandle handle)
-{
-  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
-  /* Increasing guint to make sure object paths are random */
-  static guint id = 0;
-  gchar *path;
-
-  path = g_strdup_printf ("%s/FileTransferChannel/%u/%u",
-      base_connection->object_path, handle, id++);
-
-  DEBUG ("Object path of file channel is %s", path);
-  return path;
-}
-
 static void
 message_stanza_callback (SalutXmppConnectionManager *mgr,
                          GibberXmppConnection *conn,
@@ -122,22 +105,17 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_CONTACT);
-  gchar *path;
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
   DEBUG ("new incoming channel");
 
-  path = generate_object_path (self, handle);
-
   chan = salut_file_transfer_channel_new_from_stanza (priv->connection,
-      contact, path, handle, priv->xmpp_connection_manager,
+      contact, handle, priv->xmpp_connection_manager,
       TP_FILE_TRANSFER_STATE_PENDING, stanza, conn);
 
   salut_ft_manager_channel_created (self, chan, NULL);
-
-  g_free (path);
 }
 
 static void salut_ft_manager_dispose (GObject *object);
@@ -310,7 +288,6 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   GError *error = NULL;
   gboolean valid;
   SalutContact *contact;
-  gchar *path = NULL;
 
   DEBUG ("File transfer request");
 
@@ -423,14 +400,11 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
 
   DEBUG ("Requested outgoing channel for handle: %d", handle);
 
-  path = generate_object_path (self, handle);
-
-  chan = salut_file_transfer_channel_new (priv->connection, contact, path,
+  chan = salut_file_transfer_channel_new (priv->connection, contact,
       handle, priv->xmpp_connection_manager, base_connection->self_handle,
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
       content_hash_type, content_hash, description, date, initial_offset);
 
-  g_free (path);
   g_object_unref (contact);
 
   if (!salut_file_transfer_channel_offer_file (chan, &error))
