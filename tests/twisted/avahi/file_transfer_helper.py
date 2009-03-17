@@ -231,7 +231,7 @@ class ReceiveFileTest(FileTransferTest):
 
     def accept_file(self):
         self.address = self.ft_channel.AcceptFile(SOCKET_ADDRESS_TYPE_UNIX,
-                SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5)
+                SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5, byte_arrays=True)
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
@@ -380,7 +380,7 @@ class SendFileTest(FileTransferTest):
 
     def provide_file(self):
         self.address = self.ft_channel.ProvideFile(SOCKET_ADDRESS_TYPE_UNIX,
-                SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+                SOCKET_ACCESS_CONTROL_LOCALHOST, "", byte_arrays=True)
 
     def client_request_file(self):
         # Connect HTTP client to the CM and request the file

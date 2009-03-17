@@ -124,7 +124,7 @@ struct _SalutFileTransferChannelPrivate {
   GibberFileTransfer *ft;
   GTimeVal last_transferred_bytes_emitted;
   guint progress_timer;
-  gchar *socket_path;
+  GValue *socket_address;
   TpHandle initiator;
   gboolean remote_accepted;
 
@@ -813,7 +813,8 @@ salut_file_transfer_channel_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free (self->priv->object_path);
   g_free (self->priv->filename);
-  g_free (self->priv->socket_path);
+  if (self->priv->socket_address != NULL)
+    tp_g_value_slice_free (self->priv->socket_address);
   g_free (self->priv->content_type);
   g_free (self->priv->content_hash);
   g_free (self->priv->description);
@@ -969,7 +970,7 @@ remote_accepted_cb (GibberFileTransfer *ft,
 {
   self->priv->remote_accepted = TRUE;
 
-  if (self->priv->socket_path != NULL)
+  if (self->priv->socket_address != NULL)
     {
       /* ProvideFile has already been called. Channel is Open */
       tp_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
@@ -1235,7 +1236,6 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GError *error = NULL;
-  GValue out_address = { 0 };
   GibberFileTransfer *ft;
 
   ft = self->priv->ft;
@@ -1274,17 +1274,12 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
       dbus_g_method_return_error (context, error);
     }
 
-  DEBUG ("local socket %s", self->priv->socket_path);
-
   salut_file_transfer_channel_set_state (iface,
       TP_FILE_TRANSFER_STATE_ACCEPTED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
-  g_value_init (&out_address, G_TYPE_STRING);
-  g_value_set_string (&out_address, self->priv->socket_path);
-
   tp_svc_channel_type_file_transfer_return_from_accept_file (context,
-      &out_address);
+      self->priv->socket_address);
 
   self->priv->initial_offset = 0;
 
@@ -1293,8 +1288,6 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
 
   salut_file_transfer_channel_set_state (iface, TP_FILE_TRANSFER_STATE_OPEN,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
-
-  g_value_unset (&out_address);
 }
 
 /**
@@ -1313,8 +1306,6 @@ salut_file_transfer_channel_provide_file (
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->connection;
-  SalutFileTransferChannel *channel = SALUT_FILE_TRANSFER_CHANNEL (iface);
-  GValue out_address = { 0 };
   GError *error = NULL;
 
   if (self->priv->initiator != base_conn->self_handle)
@@ -1325,7 +1316,7 @@ salut_file_transfer_channel_provide_file (
       return;
     }
 
-  if (self->priv->socket_path != NULL)
+  if (self->priv->socket_address != NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "ProvideFile has already been called for this channel");
@@ -1349,9 +1340,6 @@ salut_file_transfer_channel_provide_file (
       dbus_g_method_return_error (context, error);
     }
 
-  g_value_init (&out_address, G_TYPE_STRING);
-  g_value_set_string (&out_address, channel->priv->socket_path);
-
   if (self->priv->remote_accepted)
     {
       /* Remote already accepted the file. Channel is Open.
@@ -1365,9 +1353,7 @@ salut_file_transfer_channel_provide_file (
     }
 
   tp_svc_channel_type_file_transfer_return_from_provide_file (context,
-      &out_address);
-
-  g_value_unset (&out_address);
+      self->priv->socket_address);
 }
 
 static void
@@ -1384,7 +1370,7 @@ file_transfer_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-static const gchar *
+static gchar *
 get_local_unix_socket_path (SalutFileTransferChannel *self)
 {
   gchar *path = NULL;
@@ -1405,11 +1391,6 @@ get_local_unix_socket_path (SalutFileTransferChannel *self)
       g_free (path);
     }
 
-  if (self->priv->socket_path)
-    g_free (self->priv->socket_path);
-
-  self->priv->socket_path = path;
-
   return path;
 }
 
@@ -1420,15 +1401,25 @@ static GIOChannel *
 get_socket_channel (SalutFileTransferChannel *self)
 {
   gint fd;
-  const gchar *path;
+  gchar *path;
   size_t path_len;
   struct sockaddr_un addr;
   GIOChannel *io_channel;
-
-  path = get_local_unix_socket_path (self);
+  GArray *array;
 
   /* FIXME: should use the socket type and access control chosen by
    * the user. */
+  path = get_local_unix_socket_path (self);
+
+  array = g_array_sized_new (TRUE, FALSE, sizeof (gchar), strlen (path));
+  g_array_insert_vals (array, 0, path, strlen (path));
+
+  self->priv->socket_address = tp_g_value_slice_new (
+          DBUS_TYPE_G_UCHAR_ARRAY);
+  g_value_take_boxed (self->priv->socket_address, array);
+
+  DEBUG ("local socket %s", path);
+
   fd = socket (PF_UNIX, SOCK_STREAM, 0);
   if (fd < 0)
     {
@@ -1441,6 +1432,7 @@ get_socket_channel (SalutFileTransferChannel *self)
   path_len = strlen (path);
   strncpy (addr.sun_path, path, path_len);
   g_unlink (path);
+  g_free (path);
 
   if (bind (fd, (struct sockaddr*) &addr,
         G_STRUCT_OFFSET (struct sockaddr_un, sun_path) + path_len) < 0)
