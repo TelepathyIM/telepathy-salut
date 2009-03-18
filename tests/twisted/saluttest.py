@@ -3,14 +3,11 @@
 Infrastructure code for testing Salut
 """
 
-import base64
 import os
-import sha
 import sys
 import time
 
 import servicetest
-import twisted
 from twisted.internet import reactor
 from constants import *
 from twisted.words.protocols.jabber.client import IQ
