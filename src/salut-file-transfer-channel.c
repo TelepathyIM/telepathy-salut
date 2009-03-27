@@ -1156,7 +1156,7 @@ check_address_and_access_control (SalutFileTransferChannel *self,
       GUINT_TO_POINTER (address_type));
   if (access_arr == NULL)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
           "AddressType %u is not implemented", address_type);
       return FALSE;
     }
@@ -1171,7 +1171,7 @@ check_address_and_access_control (SalutFileTransferChannel *self,
         return TRUE;
     }
 
-  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+  g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
       "AccesControl %u is not implemented with AddressType %u",
       access_control, address_type);
 
