@@ -50,6 +50,7 @@
 #include "salut-muc-manager.h"
 
 #include "text-helper.h"
+#include "tube-stream.h"
 
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void text_iface_init (gpointer g_iface, gpointer iface_data);
@@ -1156,14 +1157,44 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
   if (tubes_node != NULL)
     {
       SalutTubesChannel *tubes_chan;
+      GPtrArray *tubes;
+      guint i;
+      GHashTable *channels;
+      gboolean created;
 
       tubes_chan = salut_muc_manager_ensure_tubes_channel (priv->muc_manager,
-          priv->handle, from_handle);
+          priv->handle, from_handle, &created);
       g_assert (tubes_chan != NULL);
 
-      salut_tubes_channel_muc_message_received (tubes_chan, sender, stanza);
+      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+        NULL, NULL);
+
+      if (created)
+        {
+          g_hash_table_insert (channels, tubes_chan, NULL);
+        }
+
+      tubes = salut_tubes_channel_muc_message_received (tubes_chan, sender,
+          stanza);
+
+      for (i = 0; i < tubes->len; i++)
+        {
+          SalutTubeIface *tube;
+
+          tube = g_ptr_array_index (tubes, i);
+          if (SALUT_IS_TUBE_STREAM (tube))
+            /* FIXME: remove this test once D-Tube implements new API */
+            g_hash_table_insert (channels, tube, NULL);
+        }
+
+      if (g_hash_table_size (channels) > 0)
+        {
+          tp_channel_manager_emit_new_channels (priv->muc_manager, channels);
+        }
 
       g_object_unref (tubes_chan);
+      g_ptr_array_free (tubes, TRUE);
+      g_hash_table_destroy (channels);
     }
 
   if (!text_helper_parse_incoming_message (stanza, &from, &msgtype,

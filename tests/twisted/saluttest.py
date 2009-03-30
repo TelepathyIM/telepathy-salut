@@ -3,16 +3,13 @@
 Infrastructure code for testing Salut
 """
 
-import base64
 import os
-import sha
 import sys
 import time
 
 import servicetest
-import twisted
 from twisted.internet import reactor
-from constants import *
+import constants as cs
 from twisted.words.protocols.jabber.client import IQ
 import ns
 
@@ -128,23 +125,23 @@ def wait_for_contact_list(q, conn):
     This is useful to avoid these signals to interfere with your test."""
 
     #FIXME: this maybe racy if there are other contacts connected
-    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
+    requestotron = dbus.Interface(conn, cs.CONN_IFACE_REQUESTS)
 
     # publish
     requestotron.EnsureChannel({
-        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
-        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
-        TARGET_ID: 'publish'})
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_ID: 'publish'})
     q.expect('dbus-signal', signal='NewChannel')
     # subscribe
     requestotron.EnsureChannel({
-        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
-        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
-        TARGET_ID: 'subscribe'})
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_ID: 'subscribe'})
     q.expect('dbus-signal', signal='NewChannel')
     # known
     requestotron.EnsureChannel({
-        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
-        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
-        TARGET_ID: 'known'})
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_ID: 'known'})
     q.expect('dbus-signal', signal='NewChannel')

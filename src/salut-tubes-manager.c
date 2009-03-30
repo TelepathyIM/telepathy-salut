@@ -48,11 +48,12 @@
 #include "salut-self.h"
 #include "salut-util.h"
 #include "tube-iface.h"
+#include "tube-stream.h"
 
 
 static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
     TpHandle handle, TpHandle initiator, gpointer request_token,
-    GError **error);
+    gboolean requested, GError **error);
 
 static void tubes_channel_closed_cb (SalutTubesChannel *chan,
     gpointer user_data);
@@ -424,24 +425,58 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   }
   else
   {
+    SalutTubeIface *tube;
+    GHashTable *channels;
+    gboolean tubes_channel_created = FALSE;
+
     if (chan == NULL)
       {
         GError *e = NULL;
 
         chan = new_tubes_channel (self, initiator_handle, initiator_handle,
-            NULL, &e);
+            NULL, FALSE, &e);
 
         if (chan == NULL)
           {
             DEBUG ("couldn't make new tubes channel: %s", e->message);
             g_error_free (e);
+            g_hash_table_destroy (parameters);
+            return;
           }
+
+        tubes_channel_created = TRUE;
       }
 
-    salut_tubes_channel_message_received (chan, service, tube_type,
+    tube = salut_tubes_channel_message_received (chan, service, tube_type,
         initiator_handle, parameters, tube_id, portnum, stanza);
 
+    if (tube == NULL)
+      {
+        if (tubes_channel_created)
+          {
+            /* Destroy the tubes channel we just created as it's now
+             * useless */
+            g_hash_table_remove (priv->tubes_channels, GUINT_TO_POINTER (
+                  initiator_handle));
+          }
+
+        g_hash_table_destroy (parameters);
+        return;
+      }
+
+    /* announce tubes and tube channels */
+    channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+        NULL, NULL);
+
+    if (tubes_channel_created)
+      g_hash_table_insert (channels, chan, NULL);
+
+    g_hash_table_insert (channels, tube, NULL);
+
+    tp_channel_manager_emit_new_channels (self, channels);
+
     g_hash_table_destroy (parameters);
+    g_hash_table_destroy (channels);
   }
 }
 
@@ -692,6 +727,7 @@ new_tubes_channel (SalutTubesManager *fac,
                    TpHandle handle,
                    TpHandle initiator,
                    gpointer request_token,
+                   gboolean requested,
                    GError **error)
 {
   SalutTubesManagerPrivate *priv;
@@ -699,7 +735,6 @@ new_tubes_channel (SalutTubesManager *fac,
   SalutTubesChannel *chan;
   char *object_path;
   SalutContact *contact;
-  GSList *request_tokens;
 
   g_assert (SALUT_IS_TUBES_MANAGER (fac));
 
@@ -730,6 +765,7 @@ new_tubes_channel (SalutTubesManager *fac,
                        "contact", contact,
                        "initiator-handle", initiator,
                        "xmpp-connection-manager", priv->xmpp_connection_manager,
+                       "requested", requested,
                        NULL);
 
   DEBUG ("object path %s", object_path);
@@ -740,16 +776,6 @@ new_tubes_channel (SalutTubesManager *fac,
 
   g_object_unref (contact);
   g_free (object_path);
-
-  if (request_token != NULL)
-    request_tokens = g_slist_prepend (NULL, request_token);
-  else
-    request_tokens = NULL;
-
-  tp_channel_manager_emit_new_channel (fac,
-      TP_EXPORTABLE_CHANNEL (chan), request_tokens);
-
-  g_slist_free (request_tokens);
 
   return chan;
 }
@@ -790,11 +816,13 @@ static const gchar * const old_tubes_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     NULL
 };
+
 static const gchar * const stream_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
     NULL
 };
+
 /* Temporarily disabled since the implementation is incomplete. */
 #if 0
 static const gchar * const dbus_tube_channel_allowed_properties[] = {
@@ -845,7 +873,8 @@ salut_tubes_manager_foreach_channel_class (
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       value);
 
-  func (manager, table, stream_tube_channel_allowed_properties, user_data);
+  func (manager, table, salut_tube_stream_channel_get_allowed_properties (),
+      user_data);
 
   g_hash_table_destroy (table);
 
@@ -913,7 +942,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
-              stream_tube_channel_allowed_properties,
+              salut_tube_stream_channel_get_allowed_properties (),
               &error))
         goto error;
 
@@ -983,12 +1012,20 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       if (tubes_channel == NULL)
         {
+          GSList *tokens = NULL;
+
           tubes_channel = new_tubes_channel (self, handle,
-              base_conn->self_handle, request_token, &error);
+              base_conn->self_handle, request_token, TRUE, &error);
 
           if (tubes_channel == NULL)
             goto error;
 
+          tokens = g_slist_prepend (tokens, request_token);
+
+          tp_channel_manager_emit_new_channel (self,
+              TP_EXPORTABLE_CHANNEL (tubes_channel), tokens);
+
+          g_slist_free (tokens);
           return TRUE;
         }
 
@@ -1008,13 +1045,17 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       SalutTubeIface *new_channel;
       GSList *tokens = NULL;
+      gboolean tubes_channel_created = FALSE;
+      GHashTable *channels;
 
       if (tubes_channel == NULL)
         {
           tubes_channel = new_tubes_channel (self, handle,
-              base_conn->self_handle, NULL, &error);
+              base_conn->self_handle, NULL, FALSE, &error);
           if (tubes_channel == NULL)
             goto error;
+
+          tubes_channel_created = TRUE;
         }
 
       new_channel = salut_tubes_channel_tube_request (tubes_channel,
@@ -1024,9 +1065,14 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       if (request_token != NULL)
         tokens = g_slist_prepend (NULL, request_token);
 
-      tp_channel_manager_emit_new_channel (self,
-          TP_EXPORTABLE_CHANNEL (new_channel), tokens);
+      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+          NULL, NULL);
+      g_hash_table_insert (channels, tubes_channel, NULL);
+      g_hash_table_insert (channels, new_channel, tokens);
 
+      tp_channel_manager_emit_new_channels (self, channels);
+
+      g_hash_table_destroy (channels);
       g_slist_free (tokens);
       return TRUE;
     }

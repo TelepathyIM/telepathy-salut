@@ -423,6 +423,43 @@ caps_req_stanza_filter (SalutXmppConnectionManager *mgr,
 }
 
 static void
+send_item_not_found (GibberXmppConnection *conn,
+                     const gchar *node,
+                     const gchar *from,
+                     const gchar *to)
+{
+  GibberXmppStanza *result;
+
+  /* Return <item-not-found>. It is possible that the remote contact
+   * requested an old version (old hash) of our capabilities. In the
+   * meantime, it will have gotten a new hash, and query the new hash
+   * anyway. */
+  result = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+      GIBBER_STANZA_SUB_TYPE_ERROR,
+      from, to,
+      GIBBER_NODE, "query",
+        GIBBER_NODE_XMLNS, NS_DISCO_INFO,
+        GIBBER_NODE_ATTRIBUTE, "node", node,
+        GIBBER_NODE, "error",
+          GIBBER_NODE_ATTRIBUTE, "type", "cancel",
+          GIBBER_NODE, "item-not-found",
+            GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
+          GIBBER_NODE_END,
+        GIBBER_NODE_END,
+      GIBBER_NODE_END,
+      GIBBER_STANZA_END);
+
+  DEBUG ("sending item-not-found as disco response");
+
+  if (!gibber_xmpp_connection_send (conn, result, NULL))
+    {
+      DEBUG ("sending item-not-found failed");
+    }
+
+  g_object_unref (result);
+}
+
+static void
 caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
                           GibberXmppConnection *conn,
                           GibberXmppStanza *stanza,
@@ -436,10 +473,11 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar *node;
   const gchar *suffix;
   GSList *i;
-  gchar *caps_hash;
   TpHandleRepoIface *contact_repo;
   const gchar *jid_from, *jid_to;
   SalutSelf *salut_self;
+  GibberXmppStanza *result;
+  GSList *features;
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
@@ -448,30 +486,23 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
 
   iq = stanza->node;
   query = gibber_xmpp_node_get_child_ns (iq, "query", NS_DISCO_INFO);
+  g_assert (query != NULL);
 
-  if (query != NULL)
+  node = gibber_xmpp_node_get_attribute (query, "node");
+  if (node == NULL)
     {
-      node = gibber_xmpp_node_get_attribute (query, "node");
-      if (node != NULL)
-        {
-          if (0 != strncmp (node, GIBBER_TELEPATHY_NS_CAPS "#",
-                strlen (GIBBER_TELEPATHY_NS_CAPS) + 1))
-            suffix = "";
-          else if (strlen (node) < strlen (GIBBER_TELEPATHY_NS_CAPS) + 2)
-            suffix = "";
-          else
-            suffix = node + strlen (GIBBER_TELEPATHY_NS_CAPS) + 1;
-        }
-      else
-        {
-          node = "";
-          suffix = "";
-        }
+      send_item_not_found (conn, "", jid_from, jid_to);
+      return;
+    }
+
+  if (!g_str_has_prefix (node, GIBBER_TELEPATHY_NS_CAPS "#"))
+    {
+      send_item_not_found (conn, node, jid_from, jid_to);
+      return;
     }
   else
     {
-      node = "";
-      suffix = "";
+      suffix = node + strlen (GIBBER_TELEPATHY_NS_CAPS) + 1;
     }
 
   DEBUG ("got disco request for node %s", node);
@@ -479,89 +510,56 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   g_object_get (priv->connection, "self", &salut_self, NULL);
   /* Salut only supports XEP-0115 version 1.5. Bundles from old version 1.3 are
    * not implemented. */
-  caps_hash = caps_hash_compute_from_self_presence (salut_self);
 
-  if (!tp_strdiff (suffix, caps_hash))
+  if (tp_strdiff (suffix, salut_self->ver))
     {
-      GibberXmppStanza *result;
-      GSList *features = salut_self_get_features (salut_self);
-
-      /* Every entity MUST have at least one identity (XEP-0030). Salut publishs
-       * one identity. If you change the identity here, you also need to change
-       * caps_hash_compute_from_self_presence(). */
-      result = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-          GIBBER_STANZA_SUB_TYPE_RESULT,
-          jid_from, jid_to,
-          GIBBER_NODE, "query",
-            GIBBER_NODE_XMLNS, NS_DISCO_INFO,
-            GIBBER_NODE_ATTRIBUTE, "node", node,
-            GIBBER_NODE, "identity",
-              GIBBER_NODE_ATTRIBUTE, "category", "client",
-              GIBBER_NODE_ATTRIBUTE, "name", PACKAGE_STRING,
-              /* FIXME: maybe we should add a connection property allowing to
-               * set the type attribute instead of hardcoding "pc". */
-              GIBBER_NODE_ATTRIBUTE, "type", "pc",
-            GIBBER_NODE_END,
-          GIBBER_NODE_END,
-          GIBBER_STANZA_END);
-
-      result_iq = result->node;
-      result_query = gibber_xmpp_node_get_child_ns (result_iq, "query", NULL);
-
-
-      for (i = features; NULL != i; i = i->next)
-        {
-          const Feature *feature = (const Feature *) i->data;
-          GibberXmppNode *feature_node;
-
-          feature_node = gibber_xmpp_node_add_child (result_query, "feature");
-          gibber_xmpp_node_set_attribute (feature_node, "var", feature->ns);
-        }
-      g_slist_free (features);
-
-      DEBUG ("sending disco response");
-
-      if (!gibber_xmpp_connection_send (conn, result, NULL))
-        {
-          DEBUG ("sending disco response failed");
-        }
-
-      g_object_unref (result);
+      g_object_unref (salut_self);
+      return;
     }
-  else
-    {
-      GibberXmppStanza *result;
 
-      /* Return <item-not-found>. It is possible that the remote contact
-       * requested an old version (old hash) of our capabilities. In the
-       * meantime, it will have gotten a new hash, and query the new hash
-       * anyway. */
-      result = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-          GIBBER_STANZA_SUB_TYPE_ERROR,
-          jid_from, jid_to,
-          GIBBER_NODE, "query",
-            GIBBER_NODE_XMLNS, NS_DISCO_INFO,
-            GIBBER_NODE_ATTRIBUTE, "node", node,
-            GIBBER_NODE, "error",
-              GIBBER_NODE_ATTRIBUTE, "type", "cancel",
-              GIBBER_NODE, "item-not-found",
-                GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
-              GIBBER_NODE_END,
-            GIBBER_NODE_END,
-          GIBBER_NODE_END,
-          GIBBER_STANZA_END);
-
-      DEBUG ("sending item-not-found as disco response");
-
-      if (!gibber_xmpp_connection_send (conn, result, NULL))
-        {
-          DEBUG ("sending item-not-found failed");
-        }
-
-      g_object_unref (result);
-    }
-  g_free (caps_hash);
+  features = salut_self_get_features (salut_self);
   g_object_unref (salut_self);
+
+  /* Every entity MUST have at least one identity (XEP-0030). Salut publishs
+   * one identity. If you change the identity here, you also need to change
+   * caps_hash_compute_from_self_presence(). */
+  result = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+      GIBBER_STANZA_SUB_TYPE_RESULT,
+      jid_from, jid_to,
+      GIBBER_NODE, "query",
+        GIBBER_NODE_XMLNS, NS_DISCO_INFO,
+        GIBBER_NODE_ATTRIBUTE, "node", node,
+        GIBBER_NODE, "identity",
+          GIBBER_NODE_ATTRIBUTE, "category", "client",
+          GIBBER_NODE_ATTRIBUTE, "name", PACKAGE_STRING,
+          /* FIXME: maybe we should add a connection property allowing to
+           * set the type attribute instead of hardcoding "pc". */
+          GIBBER_NODE_ATTRIBUTE, "type", "pc",
+        GIBBER_NODE_END,
+      GIBBER_NODE_END,
+      GIBBER_STANZA_END);
+
+  result_iq = result->node;
+  result_query = gibber_xmpp_node_get_child_ns (result_iq, "query", NULL);
+
+  for (i = features; NULL != i; i = i->next)
+    {
+      const Feature *feature = (const Feature *) i->data;
+      GibberXmppNode *feature_node;
+
+      feature_node = gibber_xmpp_node_add_child (result_query, "feature");
+      gibber_xmpp_node_set_attribute (feature_node, "var", feature->ns);
+    }
+  g_slist_free (features);
+
+  DEBUG ("sending disco response");
+
+  if (!gibber_xmpp_connection_send (conn, result, NULL))
+    {
+      DEBUG ("sending disco response failed");
+    }
+
+  g_object_unref (result);
 }
 
 static GObject *

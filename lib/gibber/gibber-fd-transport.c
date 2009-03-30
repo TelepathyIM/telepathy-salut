@@ -74,6 +74,7 @@ struct _GibberFdTransportPrivate
   guint watch_out;
   guint watch_err;
   GString *output_buffer;
+  gboolean receiving_blocked;
 };
 
 #define GIBBER_FD_TRANSPORT_GET_PRIVATE(o)  \
@@ -193,7 +194,7 @@ _do_disconnect (GibberFdTransport *self)
 
 static gboolean
 _try_write (GibberFdTransport *self, const guint8 *data, int len,
-    gsize *written)
+    gsize *written, GError **err)
 {
   GibberFdTransportPrivate *priv = GIBBER_FD_TRANSPORT_GET_PRIVATE (self);
   GibberFdTransportClass *cls = GIBBER_FD_TRANSPORT_GET_CLASS (self);
@@ -214,6 +215,7 @@ _try_write (GibberFdTransport *self, const guint8 *data, int len,
         DEBUG ("Writing data failed, closing the transport");
         _do_disconnect (self);
 
+        g_propagate_error (err, error);
         return FALSE;
         break;
     }
@@ -221,8 +223,9 @@ _try_write (GibberFdTransport *self, const guint8 *data, int len,
     return TRUE;
 }
 
-static void
-_writeout (GibberFdTransport *self, const guint8 *data, gsize len)
+static gboolean
+_writeout (GibberFdTransport *self, const guint8 *data, gsize len,
+    GError **error)
 {
   GibberFdTransportPrivate *priv = GIBBER_FD_TRANSPORT_GET_PRIVATE (self);
   gsize written = 0;
@@ -231,16 +234,16 @@ _writeout (GibberFdTransport *self, const guint8 *data, gsize len)
   if (priv->output_buffer == NULL || priv->output_buffer->len == 0)
     {
       /* We've got nothing buffer yet so try to write out directly */
-      if (!_try_write (self, data, len, &written))
+      if (!_try_write (self, data, len, &written, error))
         {
-          return;
+          return FALSE;
         }
     }
 
   if (written == len)
     {
       gibber_transport_emit_buffer_empty (GIBBER_TRANSPORT (self));
-      return;
+      return TRUE;
     }
 
   if (priv->output_buffer)
@@ -259,6 +262,8 @@ _writeout (GibberFdTransport *self, const guint8 *data, gsize len)
       priv->watch_out =
         g_io_add_watch (priv->channel, G_IO_OUT, _channel_io_out, self);
     }
+
+  return TRUE;
 }
 
 static gboolean
@@ -299,7 +304,7 @@ _channel_io_out (GIOChannel *source, GIOCondition condition, gpointer data)
 
   g_assert (priv->output_buffer);
   if (!_try_write (self, (guint8 *) priv->output_buffer->str,
-                   priv->output_buffer->len, &written))
+                   priv->output_buffer->len, &written, NULL))
     {
       return FALSE;
     }
@@ -334,12 +339,6 @@ _channel_io_err (GIOChannel *source, GIOCondition condition, gpointer data)
        * not always set when we got a G_IO_ERR. */
       code = GIBBER_FD_TRANSPORT_ERROR_FAILED;
       msg = "Error on GIOChannel";
-    }
-  else if (condition & G_IO_HUP)
-    {
-      DEBUG ("Connection has been broken. Closing the transport");
-      code = GIBBER_FD_TRANSPORT_ERROR_PIPE;
-      msg = "Connection has been broken";
     }
   else
     {
@@ -427,10 +426,14 @@ gibber_fd_transport_set_fd (GibberFdTransport *self, int fd)
   g_io_channel_set_encoding (priv->channel, NULL, NULL);
   g_io_channel_set_buffered (priv->channel, FALSE);
 
-  priv->watch_in =
-    g_io_add_watch (priv->channel, G_IO_IN, _channel_io_in, self);
+  if (!priv->receiving_blocked)
+    {
+      priv->watch_in =
+        g_io_add_watch (priv->channel, G_IO_IN, _channel_io_in, self);
+    }
+
   priv->watch_err =
-    g_io_add_watch (priv->channel, G_IO_ERR|G_IO_HUP, _channel_io_err, self);
+    g_io_add_watch (priv->channel, G_IO_ERR, _channel_io_err, self);
 
   gibber_transport_set_state (GIBBER_TRANSPORT(self),
       GIBBER_TRANSPORT_CONNECTED);
@@ -440,8 +443,7 @@ gboolean
 gibber_fd_transport_send (GibberTransport *transport,
     const guint8 *data, gsize size, GError **error)
 {
-  _writeout (GIBBER_FD_TRANSPORT (transport), data, size);
-  return TRUE;
+  return _writeout (GIBBER_FD_TRANSPORT (transport), data, size, error);
 }
 
 void
@@ -497,4 +499,6 @@ gibber_fd_transport_block_receiving (GibberTransport *transport,
       priv->watch_in = g_io_add_watch (priv->channel, G_IO_IN,
           _channel_io_in, self);
     }
+
+  priv->receiving_blocked = block;
 }

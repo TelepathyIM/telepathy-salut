@@ -23,6 +23,7 @@
 #include <glib-object.h>
 
 #include <telepathy-glib/enums.h>
+#include <telepathy-glib/interfaces.h>
 
 #include "extensions/extensions.h"
 #include "salut-connection.h"
@@ -76,6 +77,10 @@ gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,
     const GValue *access_control_param, GError **error);
 
 GHashTable * salut_tube_stream_get_supported_socket_types (void);
+
+gboolean salut_tube_stream_offer (SalutTubeStream *self, GError **error);
+
+const gchar * const * salut_tube_stream_channel_get_allowed_properties (void);
 
 G_END_DECLS
 

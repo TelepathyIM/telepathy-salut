@@ -15,7 +15,7 @@ class ReceiveFileAndSenderDisconnectWhilePendingTest(ReceiveFileTest):
         # We can't accept the transfer now
         try:
             self.ft_channel.AcceptFile(SOCKET_ADDRESS_TYPE_UNIX,
-                SOCKET_ACCESS_CONTROL_LOCALHOST, "", 0)
+                SOCKET_ACCESS_CONTROL_LOCALHOST, "", 0, byte_arrays=True)
         except dbus.DBusException, e:
             assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotAvailable'
         else:

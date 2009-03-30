@@ -62,6 +62,7 @@ def check_conn_properties(q, bus, conn, channel_list=None):
              'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT,
              },
              ['org.freedesktop.Telepathy.Channel.TargetHandle',
+              'org.freedesktop.Telepathy.Channel.TargetID',
               'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service',
              ]
             ) in properties.get('RequestableChannelClasses'),\
@@ -282,16 +283,14 @@ def test(q, bus, conn):
 
     assert len(ret.value) == 2 # CreateChannel returns 2 values: o, a{sv}
     new_chan_path = ret.value[0]
-    new_chan_prop_asv = ret.value[1]
+    stream_tube_channel_properties = ret.value
     # The path of the Channel.Type.Tubes object MUST be different to the path
     # of the Channel.Type.StreamTube object !
     assert chan_path != new_chan_path
 
-    check_NewChannel_signal(old_sig.args, "StreamTube.DRAFT", \
-            new_chan_path, handle)
-    check_NewChannels_signal(conn, new_sig.args, "StreamTube.DRAFT", new_chan_path, \
-            handle, contact_name, conn.GetSelfHandle())
-    stream_tube_channel_properties = new_sig.args[0][0]
+    channels = new_sig.args[0]
+    # tubes and tube channels are announced
+    assert len(channels) == 2
 
     check_conn_properties(q, bus, conn,
             [old_tubes_channel_properties, stream_tube_channel_properties])
@@ -312,15 +311,14 @@ def test(q, bus, conn):
     check_channel_properties(q, bus, conn, tube_channel, "StreamTube.DRAFT",
             handle, contact_name, 3)
 
-    tube_id = tubes_channel.OfferStreamTube("http", sample_parameters,
-            SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
-            SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+    tube_channel.OfferStreamTube(SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
+            SOCKET_ACCESS_CONTROL_LOCALHOST, "", {'foo': 'bar'})
 
     e = q.expect('stream-iq')
     iq_tube = xpath.queryForNodes('/iq/tube', e.stanza)[0]
     transport = xpath.queryForNodes('/iq/tube/transport', e.stanza)[0]
     assert iq_tube.attributes['type'] == 'stream'
-    assert iq_tube.attributes['service'] == 'http', \
+    assert iq_tube.attributes['service'] == 'newecho', \
         iq_tube.attributes['service']
     assert iq_tube.attributes['id'] is not None
     port = transport.attributes['port']
@@ -335,11 +333,7 @@ def test(q, bus, conn):
     for node in parameter_nodes:
         assert node['name'] not in params
         params[node['name']] = (node['type'], str(node))
-    assert params == {'ay': ('bytes', 'aGVsbG8='),
-                      's': ('str', 'hello'),
-                      'i': ('int', '-123'),
-                      'u': ('uint', '123'),
-                     }, params
+    assert params == {'foo': ('str', 'bar')}, params
 
     # find the right host/IP address because Salut checks it
     self_handle = conn.GetSelfHandle()
