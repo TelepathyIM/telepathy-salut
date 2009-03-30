@@ -46,7 +46,7 @@ from xmppstream import setup_stream_listener, connect_to_stream
 import ns
 from constants import *
 
-from caps_helper import compute_caps_hash
+from caps_helper import compute_caps_hash, check_caps
 from config import PACKAGE_STRING
 
 text_fixed_properties = dbus.Dictionary({
@@ -111,21 +111,6 @@ go_fixed_properties = dbus.Dictionary({
 go_allowed_properties = dbus.Array([
     'org.freedesktop.Telepathy.Channel.TargetHandle',
     ])
-
-def check_caps(txt, ver):
-    for (key, val) in { "1st": "test",
-                        "last": "suite",
-                        "status": "avail",
-                        "txtvers": "1" }.iteritems():
-        v =  txt_get_key(txt, key)
-        assert v == val, (key, val, v)
-
-    assert txt_get_key(txt, "hash") == "sha-1"
-    assert txt_get_key(txt, "node") == ns.TELEPATHY_CAPS
-
-    v = txt_get_key(txt, "ver")
-    assert v == ver, (v, ver)
-
 
 def make_presence(from_jid, type, status):
     presence = domish.Element((None, 'presence'))
