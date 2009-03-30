@@ -713,6 +713,15 @@ salut_ft_manager_copy_caps (SalutCapsChannelManager *manager,
   *specific_caps_out = specific_caps_in;
 }
 
+static gboolean
+salut_ft_manager_caps_diff (SalutCapsChannelManager *manager,
+                            TpHandle handle,
+                            gpointer specific_old_caps,
+                            gpointer specific_new_caps)
+{
+  return specific_old_caps != specific_new_caps;
+}
+
 static void
 caps_channel_manager_iface_init (gpointer g_iface,
                                  gpointer iface_data)
@@ -722,4 +731,5 @@ caps_channel_manager_iface_init (gpointer g_iface,
   iface->get_contact_caps = salut_ft_manager_get_contact_caps;
   iface->parse_caps = salut_ft_manager_parse_caps;
   iface->copy_caps = salut_ft_manager_copy_caps;
+  iface->caps_diff = salut_ft_manager_caps_diff;
 }
