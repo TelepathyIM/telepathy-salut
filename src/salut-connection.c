@@ -946,7 +946,6 @@ _self_established_cb (SalutSelf *s, gpointer data)
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (self), TP_HANDLE_TYPE_CONTACT);
-  GError *error = NULL;
 
   g_free (self->name);
   self->name = g_strdup (s->name);
@@ -981,13 +980,6 @@ _self_established_cb (SalutSelf *s, gpointer data)
 
   tp_base_connection_change_status (base, TP_CONNECTION_STATUS_CONNECTED,
       TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
-
-  /* FIXME: Is it the right place to do that? */
-  if (!announce_self_caps (self, &error))
-    {
-      DEBUG ("Can't announce our capabilities: %s", error->message);
-      g_error_free (error);
-    }
 }
 
 
@@ -1007,6 +999,7 @@ discovery_client_running (SalutConnection *self)
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   gint port;
+  GError *error = NULL;
 
   priv->self = salut_discovery_client_create_self (priv->discovery_client,
       self, priv->nickname, priv->first_name, priv->last_name, priv->jid,
@@ -1025,6 +1018,12 @@ discovery_client_running (SalutConnection *self)
 
   port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager,
       NULL);
+
+  if (!announce_self_caps (self, &error))
+    {
+      DEBUG ("Can't announce our capabilities: %s", error->message);
+      g_error_free (error);
+    }
 
   if (port == -1 || !salut_self_announce (priv->self, port, NULL))
     {

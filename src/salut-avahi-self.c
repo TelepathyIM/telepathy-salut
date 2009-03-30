@@ -186,6 +186,37 @@ create_txt_record (SalutAvahiSelf *self,
 }
 
 static gboolean
+salut_avahi_self_set_caps (SalutSelf *_self,
+                           GError **error)
+{
+  SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
+  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+
+  if (priv->presence == NULL)
+    /* Service is not announced yet */
+    return TRUE;
+
+  ga_entry_group_service_freeze (priv->presence);
+
+  if (_self->node == NULL)
+      ga_entry_group_service_remove_key (priv->presence, "node", NULL);
+  else
+      ga_entry_group_service_set (priv->presence, "node", _self->node, NULL);
+
+  if (_self->hash == NULL)
+      ga_entry_group_service_remove_key (priv->presence, "hash", NULL);
+  else
+      ga_entry_group_service_set (priv->presence, "hash", _self->hash, NULL);
+
+  if (_self->ver == NULL)
+      ga_entry_group_service_remove_key (priv->presence, "ver", NULL);
+  else
+      ga_entry_group_service_set (priv->presence, "ver", _self->ver, NULL);
+
+  return ga_entry_group_service_thaw (priv->presence, error);
+}
+
+static gboolean
 salut_avahi_self_announce (SalutSelf *_self,
                            gint port,
                            GError **error)
@@ -217,6 +248,9 @@ salut_avahi_self_announce (SalutSelf *_self,
   if (priv->presence == NULL)
     goto error;
 
+  if (!salut_avahi_self_set_caps (_self, NULL))
+    goto error;
+
   if (!ga_entry_group_commit (priv->presence_group, error))
     goto error;
 
@@ -244,33 +278,6 @@ salut_avahi_self_set_presence (SalutSelf *self,
         self->status_message, NULL);
   else
     ga_entry_group_service_remove_key (priv->presence, "msg", NULL);
-
-  return ga_entry_group_service_thaw (priv->presence, error);
-}
-
-static gboolean
-salut_avahi_self_set_caps (SalutSelf *_self,
-                           GError **error)
-{
-  SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
-
-  ga_entry_group_service_freeze (priv->presence);
-
-  if (_self->node == NULL)
-      ga_entry_group_service_remove_key (priv->presence, "node", NULL);
-  else
-      ga_entry_group_service_set (priv->presence, "node", _self->node, NULL);
-
-  if (_self->hash == NULL)
-      ga_entry_group_service_remove_key (priv->presence, "hash", NULL);
-  else
-      ga_entry_group_service_set (priv->presence, "hash", _self->hash, NULL);
-
-  if (_self->ver == NULL)
-      ga_entry_group_service_remove_key (priv->presence, "ver", NULL);
-  else
-      ga_entry_group_service_set (priv->presence, "ver", _self->ver, NULL);
 
   return ga_entry_group_service_thaw (priv->presence, error);
 }
