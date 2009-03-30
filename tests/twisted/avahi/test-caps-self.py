@@ -14,7 +14,7 @@ from servicetest import make_channel_proxy
 from saluttest import fixed_features
 
 from twisted.words.xish import xpath, domish
-from caps_helper import compute_caps_hash
+from caps_helper import compute_caps_hash, check_caps
 from config import PACKAGE_STRING
 import ns
 
@@ -24,21 +24,6 @@ import dbus
 HT_CONTACT = 1
 caps_iface = 'org.freedesktop.Telepathy.' + \
              'Connection.Interface.ContactCapabilities.DRAFT'
-
-def check_caps(txt, ver):
-    for (key, val) in { "1st": "test",
-                        "last": "suite",
-                        "status": "avail",
-                        "txtvers": "1" }.iteritems():
-        v =  txt_get_key(txt, key)
-        assert v == val, (key, val, v)
-
-    assert txt_get_key(txt, "hash") == "sha-1"
-    assert txt_get_key(txt, "node") == ns.TELEPATHY_CAPS
-
-    v = txt_get_key(txt, "ver")
-    assert v == ver, (v, ver)
-
 
 def test(q, bus, conn):
     # last value of the "ver" key we resolved. We use it to be sure that the
