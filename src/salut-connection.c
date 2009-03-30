@@ -927,18 +927,15 @@ announce_self_caps (SalutConnection *self,
 {
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   gchar *caps_hash;
+  gboolean ret;
 
   caps_hash = caps_hash_compute_from_self_presence (priv->self);
 
-  if (!salut_self_set_caps (priv->self, GIBBER_TELEPATHY_NS_CAPS, "sha-1",
-        caps_hash, error))
-    {
-      g_free (caps_hash);
-      return FALSE;
-    }
+  ret = salut_self_set_caps (priv->self, GIBBER_TELEPATHY_NS_CAPS, "sha-1",
+        caps_hash, error);
 
   g_free (caps_hash);
-  return TRUE;
+  return ret;
 }
 
 static void
