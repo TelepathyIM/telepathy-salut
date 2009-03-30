@@ -46,7 +46,7 @@ capabilities_get_features (GHashTable *per_channel_manager_caps)
   const Feature *i;
 
   for (i = self_advertised_features; NULL != i->ns; i++)
-    features = g_slist_append (features, (gpointer) i);
+    features = g_slist_prepend (features, (gpointer) i);
 
   if (per_channel_manager_caps != NULL)
     {
