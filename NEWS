@@ -4,6 +4,7 @@ telepathy-salut 0.3.9 (UNRELEASED)
 Enhancements:
 * Implement Connection.Interface.ContactCapabilities.DRAFT
 * Implement tube service specific contact capabilities.
+* Implement Channel.Type.StreamTube.DRAFT
 
 Fixes:
 * As defined in the spec, {Accept,Provide}File should return an 'ay' and not
