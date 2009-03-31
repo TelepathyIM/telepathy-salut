@@ -20,7 +20,7 @@ Enhancements:
   should be trivial.
 
 Fixes:
-* Fixe a crash when receiving an incoming XMPP connection from a IPv6 address.
+* Fix a crash when receiving an incoming XMPP connection from a IPv6 address.
 
 
 telepathy-salut 0.3.7 (2009-01-05)
