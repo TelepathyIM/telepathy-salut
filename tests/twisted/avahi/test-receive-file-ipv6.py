@@ -12,6 +12,10 @@ from xmppstream import connect_to_stream6, setup_stream_listener6
 
 from twisted.words.xish import domish
 
+print "FIXME: This test disabled because it needs to have IPv6 enabled in Avahi"
+# exiting 77 causes automake to consider the test to have been skipped
+raise SystemExit(77)
+
 class TestReceiveFileIPv6(ReceiveFileTest):
     CONTACT_NAME = 'test-ft'
 
