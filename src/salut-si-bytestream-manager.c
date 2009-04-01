@@ -254,7 +254,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
   /* check OOB */
   for (l = stream_methods; l != NULL; l = l->next)
     {
-      if (!tp_strdiff (l->data, GIBBER_XMPP_NS_OOB))
+      if (!tp_strdiff (l->data, GIBBER_XMPP_NS_IQ_OOB))
         {
           DEBUG ("choose OOB in methods list");
           return g_object_new (GIBBER_TYPE_BYTESTREAM_OOB,
@@ -628,7 +628,7 @@ salut_si_bytestream_manager_make_stream_init_iq (const gchar *from,
 
               GIBBER_NODE, "option",
                 GIBBER_NODE, "value",
-                  GIBBER_NODE_TEXT, GIBBER_XMPP_NS_OOB,
+                  GIBBER_NODE_TEXT, GIBBER_XMPP_NS_IQ_OOB,
                 GIBBER_NODE_END,
               GIBBER_NODE_END,
 
@@ -821,7 +821,7 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
 
       stream_method = value->content;
 
-      if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_OOB))
+      if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_IQ_OOB))
       {
         /* Remote user have accepted the stream */
         DEBUG ("remote user chose a OOB bytestream");

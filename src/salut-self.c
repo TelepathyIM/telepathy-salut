@@ -35,6 +35,7 @@
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
+#include "salut-capabilities.h"
 #include "salut-contact-manager.h"
 #include "salut-util.h"
 #include "salut-muc-manager.h"
@@ -500,6 +501,9 @@ salut_self_finalize (GObject *object)
   g_free (self->olpc_color);
   g_free (self->olpc_cur_act);
 #endif
+  g_free (self->node);
+  g_free (self->hash);
+  g_free (self->ver);
 
   G_OBJECT_CLASS (salut_self_parent_class)->finalize (object);
 }
@@ -525,6 +529,23 @@ salut_self_set_presence (SalutSelf *self, SalutPresenceId status,
   self->status_message = g_strdup (message);
 
   return SALUT_SELF_GET_CLASS (self)->set_presence (self, error);
+}
+
+gboolean
+salut_self_set_caps (SalutSelf *self,
+                     const gchar *node,
+                     const gchar *hash,
+                     const gchar *ver,
+                     GError **error)
+{
+  g_free (self->node);
+  self->node = g_strdup (node);
+  g_free (self->hash);
+  self->hash = g_strdup (hash);
+  g_free (self->ver);
+  self->ver = g_strdup (ver);
+
+  return SALUT_SELF_GET_CLASS (self)->set_caps (self, error);
 }
 
 const gchar *
@@ -961,4 +982,10 @@ void
 salut_self_established (SalutSelf *self)
 {
   g_signal_emit (self, signals[ESTABLISHED], 0, NULL);
+}
+
+GSList *
+salut_self_get_features (SalutSelf *self)
+{
+  return capabilities_get_features (self->per_channel_manager_caps);
 }

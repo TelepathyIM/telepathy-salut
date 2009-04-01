@@ -66,6 +66,13 @@ struct _SalutContact {
     gchar *avatar_token;
     gchar *status_message;
     gchar *jid;
+
+    /* XEP-0115 Capabilities */
+    gchar *hash;
+    gchar *node;
+    gchar *ver;
+    GHashTable *per_channel_manager_caps;
+
     TpHandle handle;
 #ifdef ENABLE_OLPC
     GArray *olpc_key;
@@ -117,6 +124,9 @@ void salut_contact_get_avatar (SalutContact *contact,
                                salut_contact_get_avatar_callback callback,
                                gpointer user_data1);
 
+void salut_contact_set_capabilities (SalutContact *contact,
+    GHashTable *per_channel_manager_caps);
+
 #ifdef ENABLE_OLPC
 typedef void (*SalutContactOLPCActivityFunc)
     (SalutOlpcActivity *activity, gpointer user_data);
@@ -139,6 +149,8 @@ void salut_contact_change_status_message (SalutContact *self,
 void salut_contact_change_avatar_token (SalutContact *self,
   const gchar *avatar_token);
 void salut_contact_change_jid (SalutContact *self, gchar *jid);
+void salut_contact_change_capabilities (SalutContact *self,
+  const gchar *hash, const gchar *node, const gchar *ver);
 
 #ifdef ENABLE_OLPC
 void salut_contact_change_olpc_color (SalutContact *self,

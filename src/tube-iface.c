@@ -183,7 +183,6 @@ salut_tube_iface_base_init (gpointer klass)
           "parameters GHashTable",
           "GHashTable containing parameters of this DBUS tube object.",
           TP_HASH_TYPE_STRING_VARIANT_MAP,
-          G_PARAM_CONSTRUCT_ONLY |
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 

@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
 
 <xi:include href="channel.xml"/>
 <xi:include href="connection.xml"/>
-
+<xi:include href="Connection_Interface_Contact_Capabilities.xml"/>
 <xi:include href="Channel_Type_Stream_Tube.xml"/>
 <xi:include href="Channel_Type_DBus_Tube.xml"/>
 <xi:include href="Channel_Interface_Tube.xml"/>
@@ -46,11 +46,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
     from="Telepathy specification"/>
  <tp:external-type name="Unix_Timestamp64" type="t"
     from="Telepathy specification"/>
+  <tp:external-type name="Requestable_Channel_Class" type="a(a{sv}as)"
+    from="Telepathy specification"/>
+  <tp:external-type name="Channel_Class" type="a{sv}"
+    from="Telepathy specification"/>
 
   <!-- use types from Channel_Type_Tubes -->
   <tp:external-type name="DBus_Tube_Member" type="(us)"
     from="Telepathy specification"/>
   <tp:external-type name="Supported_Socket_Map" type="a{uau}"
+    from="Telepathy specification"/>
+  <tp:external-type name="Unix_Timestamp64" type="t"
+    from="Telepathy specification"/>
+  <tp:simple-type name="DBus_Unique_Name" type="s"
     from="Telepathy specification"/>
 </tp:generic-types>
 

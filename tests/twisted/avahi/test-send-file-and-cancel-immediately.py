@@ -30,7 +30,7 @@ class SendFileAndCancelImmediatelyTest(SendFileTest):
             code, msg = e.args
             assert errno.errorcode[code] == 'ECONNREFUSED'
         else:
-            assert False
+            assert False, "Should raise a socket error"
 
         # stop test
         return True

@@ -3,18 +3,39 @@
 Infrastructure code for testing Salut
 """
 
-import base64
 import os
-import sha
 import sys
 import time
 
 import servicetest
-import twisted
 from twisted.internet import reactor
-from constants import *
+import constants as cs
+from twisted.words.protocols.jabber.client import IQ
+import ns
 
 import dbus
+
+# keep sync with src/salut-capabilities.c:self_advertised_features
+fixed_features = [ns.SI, ns.IBB, ns.TUBES, ns.IQ_OOB, ns.X_OOB]
+
+def make_result_iq(iq):
+    result = IQ(None, "result")
+    result["id"] = iq["id"]
+    query = iq.firstChildElement()
+
+    if query:
+        result.addElement((query.uri, query.name))
+
+    return result
+
+def sync_stream(q, xmpp_connection):
+    """Used to ensure that Salut has processed all stanzas sent to it on this
+       xmpp_connection."""
+
+    iq = IQ(None, "get")
+    iq.addElement(('http://jabber.org/protocol/disco#info', 'query'))
+    xmpp_connection.send(iq)
+    q.expect('stream-iq', query_ns='http://jabber.org/protocol/disco#info')
 
 def make_connection(bus, event_func, params=None):
     default_params = {
@@ -104,23 +125,23 @@ def wait_for_contact_list(q, conn):
     This is useful to avoid these signals to interfere with your test."""
 
     #FIXME: this maybe racy if there are other contacts connected
-    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
+    requestotron = dbus.Interface(conn, cs.CONN_IFACE_REQUESTS)
 
     # publish
     requestotron.EnsureChannel({
-        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
-        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
-        TARGET_ID: 'publish'})
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_ID: 'publish'})
     q.expect('dbus-signal', signal='NewChannel')
     # subscribe
     requestotron.EnsureChannel({
-        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
-        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
-        TARGET_ID: 'subscribe'})
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_ID: 'subscribe'})
     q.expect('dbus-signal', signal='NewChannel')
     # known
     requestotron.EnsureChannel({
-        CHANNEL_TYPE: CHANNEL_TYPE_CONTACT_LIST,
-        TARGET_HANDLE_TYPE: HT_CONTACT_LIST,
-        TARGET_ID: 'known'})
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_ID: 'known'})
     q.expect('dbus-signal', signal='NewChannel')

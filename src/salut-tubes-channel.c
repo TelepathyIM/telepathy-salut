@@ -28,6 +28,7 @@
 
 #include <dbus/dbus-glib.h>
 #include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/exportable-channel.h>
@@ -49,6 +50,8 @@
 #include "salut-connection.h"
 #include "salut-contact.h"
 #include "salut-muc-channel.h"
+#include "salut-muc-manager.h"
+#include "salut-tubes-manager.h"
 #include "salut-xmpp-connection-manager.h"
 #include "tube-iface.h"
 #include "tube-dbus.h"
@@ -146,6 +149,7 @@ struct _SalutTubesChannelPrivate
   TpHandleType handle_type;
   TpHandle self_handle;
   TpHandle initiator;
+  gboolean requested;
   /* Used for MUC tubes channel only */
   GibberMucConnection *muc_connection;
 
@@ -325,7 +329,7 @@ salut_tubes_channel_get_property (GObject *object,
         }
         break;
       case PROP_REQUESTED:
-        g_value_set_boolean (value, (priv->initiator == priv->self_handle));
+        g_value_set_boolean (value, priv->requested);
         break;
       case PROP_CHANNEL_DESTROYED:
         g_value_set_boolean (value, priv->closed);
@@ -400,6 +404,9 @@ salut_tubes_channel_set_property (GObject *object,
       case PROP_INITIATOR_HANDLE:
         priv->initiator = g_value_get_uint (value);
         g_assert (priv->initiator != 0);
+        break;
+      case PROP_REQUESTED:
+        priv->requested = g_value_get_boolean (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -763,7 +770,10 @@ emit_d_bus_names_changed_foreach (gpointer key,
 }
 
 /* MUC message */
-void
+/* Return an array containing all the SalutTubeIface * channels that have been
+ * created due to this message. These channels have not been announced yet
+ * so it's the responsability of the caller to announce them. */
+GPtrArray *
 salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                                           const gchar *sender,
                                           GibberXmppStanza *stanza)
@@ -779,18 +789,19 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
   struct emit_d_bus_names_changed_foreach_data emit_data;
   GibberStanzaType stanza_type;
   GibberStanzaSubType sub_type;
+  GPtrArray *result = g_ptr_array_new ();
 
   contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
   g_assert (contact != 0);
 
   if (contact == priv->self_handle)
     /* We don't need to inspect our own tubes */
-    return;
+    return result;
 
   gibber_xmpp_stanza_get_type_info (stanza, &stanza_type, &sub_type);
   if (stanza_type != GIBBER_STANZA_TYPE_MESSAGE
       || sub_type != GIBBER_STANZA_SUB_TYPE_GROUPCHAT)
-    return;
+    return result;
 
   tubes_node = gibber_xmpp_node_get_child_ns (stanza->node, "tubes",
       GIBBER_TELEPATHY_NS_TUBES);
@@ -856,8 +867,9 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                     }
                 }
 
-              tube = create_new_tube (self, type, initiator_handle, FALSE, service, parameters,
-                  tube_id, 0, NULL);
+              tube = create_new_tube (self, type, initiator_handle, FALSE,
+                  service, parameters, id, 0, NULL);
+              g_ptr_array_add (result, tube);
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
@@ -926,10 +938,16 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
       &emit_data);
 
   g_hash_table_destroy (old_dbus_tubes);
+
+  return result;
 }
 
 /* 1-1 message */
-void
+
+/* Return a newly created SalutTubeIface channel if it has been created
+ * due to this message. This channel has not been announced yet
+ * so it's the responsability of the caller to announce it. */
+SalutTubeIface *
 salut_tubes_channel_message_received (SalutTubesChannel *self,
                                       const gchar *service,
                                       TpTubeType tube_type,
@@ -940,7 +958,6 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
                                       GibberXmppStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-
   SalutTubeIface *tube;
 
   /* do we already know this tube? */
@@ -949,7 +966,10 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
     {
       tube = create_new_tube (self, tube_type, initiator_handle, FALSE,
           service, parameters, tube_id, portnum, iq_req);
+      return tube;
     }
+
+  return NULL;
 }
 
 void
@@ -983,13 +1003,13 @@ generate_tube_id (void)
 SalutTubeIface *
 salut_tubes_channel_tube_request (SalutTubesChannel *self,
                                   const gchar *channel_type,
-                                  const gchar *service,
-                                  GHashTable *parameters)
+                                  const gchar *service)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
   guint tube_id;
   TpTubeType type;
+  GHashTable *parameters;
 
   tube_id = generate_tube_id ();
 
@@ -1007,14 +1027,6 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
   else
     g_assert_not_reached ();
 
-  if (parameters == NULL)
-    {
-      /* If it is not included in the request, the connection manager MUST
-       * consider the property to be empty. */
-      parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-          (GDestroyNotify) tp_g_value_slice_free);
-    }
-
   /* if the service property is missing, the requestotron rejects the request
    */
   g_assert (service != NULL);
@@ -1022,9 +1034,14 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
   DEBUG ("Request a tube channel with type='%s' and service='%s'",
       channel_type, service);
 
+  /* requested tubes have an empty parameters dict */
+  parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+          (GDestroyNotify) tp_g_value_slice_free);
+
   tube = create_new_tube (self, type, priv->self_handle, FALSE, service,
       parameters, tube_id, 0, NULL);
 
+  g_hash_table_destroy (parameters);
   return tube;
 }
 
@@ -1181,12 +1198,38 @@ tube_closed_cb (SalutTubeIface *tube,
 
   DEBUG ("tube %d removed", tube_id);
 
-  /* Emit the DBusNamesChanged signal */
-  d_bus_names_changed_removed (self, tube_id, priv->self_handle);
+  if (priv->handle_type == TP_HANDLE_TYPE_ROOM && SALUT_IS_TUBE_DBUS (tube))
+    {
+      /* Emit the DBusNamesChanged signal */
+      d_bus_names_changed_removed (self, tube_id, priv->self_handle);
+    }
 
   update_tubes_info (self);
 
   tp_svc_channel_type_tubes_emit_tube_closed (self, tube_id);
+
+  /* FIXME: this is a workaround while new tube API is not implemented on
+   * D-Bus tubes */
+  if (SALUT_IS_TUBE_STREAM (tube))
+    {
+      TpChannelManager *mgr;
+
+      tp_svc_channel_emit_closed (tube);
+
+      if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+        {
+          g_object_get (priv->conn, "tubes-manager", &mgr, NULL);
+        }
+      else
+        {
+          g_object_get (priv->conn, "muc-manager", &mgr, NULL);
+        }
+
+      tp_channel_manager_emit_channel_closed_for_object (mgr,
+          TP_EXPORTABLE_CHANNEL (tube));
+
+      g_object_unref (mgr);
+    }
 }
 
 static void
@@ -1200,6 +1243,42 @@ tube_opened_cb (SalutTubeIface *tube,
 
   tp_svc_channel_type_tubes_emit_tube_state_changed (self, tube_id,
       TP_TUBE_STATE_OPEN);
+}
+
+static void
+tube_offered_cb (SalutTubeIface *tube,
+                 gpointer user_data)
+{
+  SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
+  guint tube_id;
+  TpHandle initiator;
+  TpTubeType type;
+  gchar *service;
+  GHashTable *parameters;
+  TpTubeState state;
+
+  g_object_get (tube,
+      "id", &tube_id,
+      "initiator-handle", &initiator,
+      "type", &type,
+      "service", &service,
+      "parameters", &parameters,
+      "state", &state,
+      NULL);
+
+  /* tube has been offered and so can be announced using the old API */
+  tp_svc_channel_type_tubes_emit_new_tube (self,
+      tube_id,
+      initiator,
+      type,
+      service,
+      parameters,
+      state);
+
+  update_tubes_info (self);
+
+  g_free (service);
+  g_hash_table_destroy (parameters);
 }
 
 static SalutTubeIface *
@@ -1240,17 +1319,27 @@ create_new_tube (SalutTubesChannel *self,
 
   DEBUG ("create tube %u", tube_id);
   g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);
-  update_tubes_info (self);
 
   g_object_get (tube, "state", &state, NULL);
 
-  tp_svc_channel_type_tubes_emit_new_tube (self,
-      tube_id,
-      initiator,
-      type,
-      service,
-      parameters,
-      state);
+  if (state == SALUT_TUBE_CHANNEL_STATE_OPEN)
+    {
+      /* FIXME: does it still make sense to call it here? */
+      update_tubes_info (self);
+    }
+
+  /* The old API doesn't know the "not offered" state, so we have to wait that
+   * the tube is offered before announcing it. */
+  if (state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
+    {
+      tp_svc_channel_type_tubes_emit_new_tube (self,
+          tube_id,
+          initiator,
+          type,
+          service,
+          parameters,
+          state);
+    }
 
   if (type == TP_TUBE_TYPE_DBUS &&
       state != TP_TUBE_STATE_LOCAL_PENDING)
@@ -1260,6 +1349,7 @@ create_new_tube (SalutTubesChannel *self,
 
   g_signal_connect (tube, "tube-opened", G_CALLBACK (tube_opened_cb), self);
   g_signal_connect (tube, "tube-closed", G_CALLBACK (tube_closed_cb), self);
+  g_signal_connect (tube, "tube-offered", G_CALLBACK (tube_offered_cb), self);
 
   if (muc_connection != NULL)
     g_object_unref (muc_connection);
@@ -1883,7 +1973,8 @@ send_channel_iq_tube (gpointer key,
                 "state", &state,
                 NULL);
 
-  if (salut_tube_iface_offer_needed (tube))
+  if (state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED &&
+      salut_tube_iface_offer_needed (tube))
     {
       GError *error = NULL;
       GibberXmppNode *parameters_node;
@@ -2052,9 +2143,12 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
       "access-control-param", access_control_param,
       NULL);
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (!salut_tube_stream_offer (SALUT_TUBE_STREAM (tube), &error))
     {
-      salut_tubes_channel_send_iq_offer (self);
+      salut_tube_iface_close (tube, TRUE);
+
+      dbus_g_method_return_error (context, error);
+      return;
     }
 
   g_signal_connect (tube, "tube-new-connection",
@@ -2313,7 +2407,7 @@ salut_tubes_channel_class_init (
   param_spec = g_param_spec_boolean ("requested", "Requested?",
       "True if this channel was requested by the local user",
       FALSE,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
 
   param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
@@ -2370,6 +2464,7 @@ salut_tubes_channel_class_init (
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
+
   param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
       "Additional Channel.Interface.* interfaces",
       G_TYPE_STRV,

@@ -3,10 +3,12 @@ TWISTED_TESTS =
 TWISTED_BASIC_TESTS =
 
 TWISTED_AVAHI_TESTS = \
+	avahi/caps_helper.py \
 	avahi/test-register.py \
 	avahi/test-aliases.py \
 	avahi/test-request-im.py \
 	avahi/test-muc-invite.py \
+	avahi/test-caps-file-transfer.py \
 	avahi/test-close-local-pending-room.py \
 	avahi/test-disabled-1-1-tubes.py \
 	avahi/test-send-file-and-cancel-immediately.py \
@@ -27,6 +29,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-receive-file-decline.py \
 	avahi/test-receive-file-ipv6.py \
 	avahi/test-receive-file-not-found.py \
+	avahi/test-caps-self.py \
+	avahi/test-caps-tubes.py \
 	avahi/test-text-channel.py \
 	avahi/test-ichat-composing.py \
 	avahi/test-ichat-incoming-msg.py \
@@ -38,9 +42,9 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-request-muc.py \
 	avahi/test-request-muc-tubes.py \
         avahi/test-roomlist.py \
-	avahi/test-tube.py \
+	avahi/test-offer-private-stream-tube.py \
 	avahi/test-two-muc-stream-tubes.py \
-	avahi/test-two-tubes.py \
+	avahi//test-two-private-stream-tubes.py \
 	avahi/test-tube-close.py \
 	avahi/tubes-to-nonexistant-ids.py
 
@@ -77,6 +81,11 @@ check-twisted:
 		exit 1;\
 	fi
 
+config.py: Makefile
+	echo "PACKAGE_STRING = \"$(PACKAGE_STRING)\"" > config.py
+
+BUILT_SOURCES = config.py
+
 EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
@@ -84,6 +93,8 @@ EXTRA_DIST = \
 	saluttest.py \
 	servicetest.py \
         trivialstream.py \
+        config.py \
+	ns.py \
 	avahi/file_transfer_helper.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc

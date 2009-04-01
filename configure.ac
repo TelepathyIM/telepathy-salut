@@ -9,7 +9,7 @@ AC_PREREQ([2.59])
 
 m4_define([salut_major_version], [0])
 m4_define([salut_minor_version], [3])
-m4_define([salut_micro_version], [7])
+m4_define([salut_micro_version], [8])
 m4_define([salut_nano_version], [1])
 
 # Some magic
@@ -175,7 +175,7 @@ AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
 dnl Check for telepathy-glib
-PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.17])
+PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.23])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
@@ -269,18 +269,21 @@ PKG_CHECK_MODULES([CHECK], [check >= 0.9.4],
                    [ HAVE_CHECK=no ] )
 AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
 
+AC_SUBST(PACKAGE_STRING)
+
 AC_OUTPUT( Makefile                       \
            docs/Makefile                  \
            lib/Makefile                   \
            lib/gibber/Makefile            \
            lib/gibber/examples/Makefile   \
+           lib/gibber/tests/Makefile      \
+           lib/gibber/tests/inputs/Makefile \
            src/Makefile                   \
            m4/Makefile                    \
            data/Makefile                  \
            extensions/Makefile            \
            tools/Makefile                 \
            tests/Makefile                 \
-           tests/inputs/Makefile          \
            tests/twisted/Makefile         \
            tests/twisted/tools/Makefile   \
 )

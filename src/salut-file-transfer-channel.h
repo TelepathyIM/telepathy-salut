@@ -32,6 +32,9 @@
 #include <extensions/_gen/enums.h>
 
 #include "salut-contact.h"
+#include "salut-connection.h"
+#include "salut-contact.h"
+#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 
@@ -68,12 +71,22 @@ GType salut_file_transfer_channel_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_FILE_TRANSFER_CHANNEL, \
                               SalutFileTransferChannelClass))
 
-gboolean salut_file_transfer_channel_received_file_offer (
-    SalutFileTransferChannel *self, GibberXmppStanza *stanza,
-    GibberXmppConnection *conn, SalutContact *contact);
-
 gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
     GError **error);
+
+SalutFileTransferChannel * salut_file_transfer_channel_new (
+    SalutConnection *conn, SalutContact *contact,
+    TpHandle handle, SalutXmppConnectionManager *xcm, TpHandle initiator_handle,
+    TpFileTransferState state, const gchar *content_type,
+    const gchar *filename, guint64 size, TpFileHashType hash_type,
+    const gchar *content_hash, const gchar *description, guint64 date,
+    guint64 initial_offset);
+
+SalutFileTransferChannel * salut_file_transfer_channel_new_from_stanza (
+    SalutConnection *connection, SalutContact *contact,
+    TpHandle handle, SalutXmppConnectionManager *xcm,
+    TpFileTransferState state, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn);
 
 G_END_DECLS
 

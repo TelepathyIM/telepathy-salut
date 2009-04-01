@@ -29,6 +29,7 @@
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
+#include "salut-caps-channel-manager.h"
 #include "salut-roomlist-channel.h"
 #include "salut-contact-manager.h"
 #include "salut-muc-manager.h"
@@ -51,7 +52,9 @@ static void salut_roomlist_manager_iface_init (gpointer g_iface,
 G_DEFINE_TYPE_WITH_CODE(SalutRoomlistManager, salut_roomlist_manager,
                         G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
-                                        salut_roomlist_manager_iface_init));
+                                        salut_roomlist_manager_iface_init);
+                        G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
+                          NULL));
 
 /* properties */
 enum {

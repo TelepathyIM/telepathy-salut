@@ -122,9 +122,6 @@ gibber_oob_file_transfer_finalize (GObject *object)
       g_object_unref (G_OBJECT (self->priv->server));
     }
 
-  if (self->priv->msg)
-    g_object_unref (G_OBJECT (self->priv->msg));
-
   if (self->priv->session != NULL)
     g_object_unref (self->priv->session);
 
@@ -158,8 +155,11 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
     return FALSE;
 
   url = gibber_xmpp_node_get_child (query, "url");
+  if (url == NULL)
+    return FALSE;
+
   url_content = url->content;
-  if (url == NULL || url_content == NULL || strcmp (url_content, "") == 0)
+  if (url_content == NULL || strcmp (url_content, "") == 0)
     return FALSE;
 
   if (url_content[0] == '\n')
@@ -483,7 +483,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
       GIBBER_FILE_TRANSFER (self)->peer_id);
 
   query_node = gibber_xmpp_node_add_child_ns (stanza->node, "query",
-      GIBBER_XMPP_NS_OOB);
+      GIBBER_XMPP_NS_IQ_OOB);
 
   url_node = gibber_xmpp_node_add_child_with_content (query_node, "url", url);
   gibber_xmpp_node_set_attribute (url_node, "type", "file");
@@ -609,7 +609,7 @@ http_server_cb (SoupServer *server,
       size_str);
   g_free (size_str);
 
-  self->priv->msg = g_object_ref (msg);
+  self->priv->msg = msg;
 
   /* iChat accepts only AppleSingle encoding, i.e. file's contents and
    * attributes are stored in the same stream */
@@ -798,7 +798,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   gibber_xmpp_node_set_attribute (stanza->node, "id", ft->id);
 
   query = gibber_xmpp_node_add_child_ns (stanza->node, "query",
-      GIBBER_XMPP_NS_OOB);
+      GIBBER_XMPP_NS_IQ_OOB);
   gibber_xmpp_node_add_child_with_content (query, "url", self->priv->url);
 
   error_node = gibber_xmpp_node_add_child (stanza->node, "error");

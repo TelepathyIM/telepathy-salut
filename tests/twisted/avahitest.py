@@ -26,7 +26,7 @@ def get_domain_name():
 def txt_get_key(txt, key):
   for x in txt:
       if dbus.Byte('=') in x:
-        (rkey, value) = avahi.byte_array_to_string(x).split('=')
+        (rkey, value) = avahi.byte_array_to_string(x).split('=', 1)
         if rkey == key:
             return value
 

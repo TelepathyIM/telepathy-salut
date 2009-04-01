@@ -1,8 +1,29 @@
-telepathy-salut 0.3.8 (UNRELEASED)
+telepathy-salut 0.3.9 (UNRELEASED)
 ==================================
 
 Enhancements:
-* Implement org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.
+* Implement Connection.Interface.ContactCapabilities.DRAFT
+* Implement tube service specific contact capabilities.
+* Implement file transfer contact capabilities.
+* Implement Channel.Type.StreamTube.DRAFT
+
+Fixes:
+* As defined in the spec, {Accept,Provide}File should return an 'ay' and not
+  a string as UNIX socket address.
+* Fix a crash with newer versions of libsoup
+
+telepathy-salut 0.3.8 (2009-02-17)
+==================================
+The "Thursday as if I walked in the dessert" release.
+
+Enhancements:
+* Switched to the stable version of the FileTransfer interface. Clients
+  (Empathy, Sugar...) have to be modified to use the stable interface instead
+  of the DRAFT one. Just the interface name has been renamed so changes
+  should be trivial.
+
+Fixes:
+* Fix a crash when receiving an incoming XMPP connection from a IPv6 address.
 
 
 telepathy-salut 0.3.7 (2009-01-05)

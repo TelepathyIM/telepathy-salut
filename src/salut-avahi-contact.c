@@ -606,6 +606,8 @@ contact_resolved_cb (GaServiceResolver *resolver,
   SalutContact *contact = SALUT_CONTACT (self);
   char *s;
   char *nick, *first, *last;
+  /* node, hash and ver as defined by XEP-0115 */
+  char *node, *hash, *ver;
 #ifdef ENABLE_OLPC
   char *activity_id, *room_id;
   char *olpc_key_part;
@@ -653,6 +655,15 @@ contact_resolved_cb (GaServiceResolver *resolver,
   avahi_free (nick);
   avahi_free (first);
   avahi_free (last);
+
+  /* capabilities */
+  hash = _avahi_txt_get_keyval (txt, "hash");
+  node = _avahi_txt_get_keyval (txt, "node");
+  ver = _avahi_txt_get_keyval (txt, "ver");
+  salut_contact_change_capabilities (contact, hash, node, ver);
+  avahi_free (node);
+  avahi_free (hash);
+  avahi_free (ver);
 
   /* avatar token */
   s = _avahi_txt_get_keyval (txt, "phsh");

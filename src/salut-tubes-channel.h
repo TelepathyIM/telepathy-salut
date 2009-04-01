@@ -74,10 +74,10 @@ void salut_tubes_channel_close (SalutTubesChannel *channel);
 void salut_tubes_channel_bytestream_offered (SalutTubesChannel *chanel,
     GibberBytestreamIface *bytestream, GibberXmppStanza *msg);
 
-void salut_tubes_channel_muc_message_received (SalutTubesChannel *channel,
-    const gchar *sender, GibberXmppStanza *stanza);
+GPtrArray * salut_tubes_channel_muc_message_received (
+    SalutTubesChannel *channel, const gchar *sender, GibberXmppStanza *stanza);
 
-void salut_tubes_channel_message_received (SalutTubesChannel *self,
+SalutTubeIface * salut_tubes_channel_message_received (SalutTubesChannel *self,
     const gchar *service, TpTubeType tube_type, TpHandle initiator_handle,
     GHashTable *parameters, guint tube_id, guint portnum,
     GibberXmppStanza *iq_req);
@@ -86,7 +86,7 @@ void salut_tubes_channel_message_close_received (SalutTubesChannel *self,
     TpHandle initiator_handle, guint tube_id);
 
 SalutTubeIface *salut_tubes_channel_tube_request (SalutTubesChannel *self,
-    const gchar *channel_type, const gchar *service, GHashTable *parameters);
+    const gchar *channel_type, const gchar *service);
 
 void salut_tubes_channel_send_iq_offer (SalutTubesChannel *self);
 

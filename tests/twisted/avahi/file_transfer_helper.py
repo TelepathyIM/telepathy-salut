@@ -18,7 +18,7 @@ from dbus import PROPERTIES_IFACE
 
 CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
 CHANNEL_INTERFACE ='org.freedesktop.Telepathy.Channel'
-CHANNEL_TYPE_FILE_TRANSFER = 'org.freedesktop.Telepathy.Channel.Type.FileTransfer.DRAFT'
+CHANNEL_TYPE_FILE_TRANSFER = 'org.freedesktop.Telepathy.Channel.Type.FileTransfer'
 HT_CONTACT = 1
 HT_CONTACT_LIST = 3
 
@@ -117,7 +117,7 @@ class FileTransferTest(object):
 
     def create_ft_channel(self):
         self.channel = make_channel_proxy(self.conn, self.ft_path, 'Channel')
-        self.ft_channel = make_channel_proxy(self.conn, self.ft_path, 'Channel.Type.FileTransfer.DRAFT')
+        self.ft_channel = make_channel_proxy(self.conn, self.ft_path, 'Channel.Type.FileTransfer')
         self.ft_props = dbus.Interface(self.bus.get_object(
             self.conn.object.bus_name, self.ft_path), PROPERTIES_IFACE)
 
@@ -234,7 +234,7 @@ class ReceiveFileTest(FileTransferTest):
 
     def accept_file(self):
         self.address = self.ft_channel.AcceptFile(SOCKET_ADDRESS_TYPE_UNIX,
-                SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5)
+                SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5, byte_arrays=True)
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
@@ -383,7 +383,7 @@ class SendFileTest(FileTransferTest):
 
     def provide_file(self):
         self.address = self.ft_channel.ProvideFile(SOCKET_ADDRESS_TYPE_UNIX,
-                SOCKET_ACCESS_CONTROL_LOCALHOST, "")
+                SOCKET_ACCESS_CONTROL_LOCALHOST, "", byte_arrays=True)
 
     def client_request_file(self):
         # Connect HTTP client to the CM and request the file

@@ -25,30 +25,42 @@
 #include <string.h>
 
 #include <gibber/gibber-file-transfer.h>
+#include <gibber/gibber-namespaces.h>
 
 #include "salut-ft-manager.h"
 #include "salut-signals-marshal.h"
 
 #include "salut-file-transfer-channel.h"
+#include "salut-caps-channel-manager.h"
 #include "salut-contact-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/gtypes.h>
 
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
 
 static void
 channel_manager_iface_init (gpointer, gpointer);
+static void caps_channel_manager_iface_init (gpointer, gpointer);
 
-static SalutFileTransferChannel *
-salut_ft_manager_new_channel (SalutFtManager *mgr, TpHandle handle,
-    gboolean requested, GError **error);
+static void salut_ft_manager_channel_created (SalutFtManager *mgr,
+    SalutFileTransferChannel *chan, gpointer request_token);
+
+typedef enum
+{
+  FT_CAPA_UNKNOWN = 0,
+  FT_CAPA_SUPPORTED,
+  FT_CAPA_UNSUPPORTED,
+} FtCapaStatus;
 
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
-      channel_manager_iface_init));
+      channel_manager_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
+      caps_channel_manager_iface_init));
 
 /* private structure */
 typedef struct _SalutFtManagerPrivate SalutFtManagerPrivate;
@@ -106,15 +118,13 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
-  chan = salut_ft_manager_new_channel (self, handle, FALSE, NULL);
+  DEBUG ("new incoming channel");
 
-  /* This will set the extra properties on the ft channel */
-  if (salut_file_transfer_channel_received_file_offer (chan, stanza, conn,
-        contact))
-    {
-      tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
-          NULL);
-    }
+  chan = salut_file_transfer_channel_new_from_stanza (priv->connection,
+      contact, handle, priv->xmpp_connection_manager,
+      TP_FILE_TRANSFER_STATE_PENDING, stanza, conn);
+
+  salut_ft_manager_channel_created (self, chan, NULL);
 }
 
 static void salut_ft_manager_dispose (GObject *object);
@@ -248,78 +258,25 @@ file_channel_closed_cb (SalutFileTransferChannel *chan, gpointer user_data)
   file_channel_closed (self, chan);
 }
 
-static SalutFileTransferChannel *
-salut_ft_manager_new_channel (SalutFtManager *mgr,
-                              TpHandle handle,
-                              gboolean requested,
-                              GError **error)
+static void
+salut_ft_manager_channel_created (SalutFtManager *self,
+                                  SalutFileTransferChannel *chan,
+                                  gpointer request_token)
 {
-  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (mgr);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
-  TpHandleRepoIface *handle_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
-  SalutFileTransferChannel *chan;
-  SalutContact *contact;
-  gchar *path = NULL;
-  guint state;
-  TpHandle initiator;
-  /* Increasing guint to make sure object paths are random */
-  static guint id = 0;
+  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
+  GSList *requests = NULL;
 
-  if (requested)
-    DEBUG ("Outgoing channel requested for handle %d", handle);
-  else
-    DEBUG ("Incoming channel received from handle %d", handle);
-
-  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
-  if (contact == NULL)
-    {
-      const gchar *name = tp_handle_inspect (handle_repo, handle);
-
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "%s is not online", name);
-
-      return NULL;
-    }
-
-  state = SALUT_FILE_TRANSFER_STATE_PENDING;
-  if (!requested)
-    {
-      /* incoming channel */
-      initiator = handle;
-    }
-  else
-    {
-      /* outgoing channel */
-      initiator = base_connection->self_handle;
-    }
-
-  path = g_strdup_printf ("%s/FileTransferChannel/%u/%u",
-                         base_connection->object_path, handle, id++);
-
-  DEBUG ("Object path of file channel is %s", path);
-
-  chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
-      "connection", priv->connection,
-      "contact", contact,
-      "object-path", path,
-      "handle", handle,
-      "xmpp-connection-manager", priv->xmpp_connection_manager,
-      "initiator-handle", initiator,
-      "state", state,
-      NULL);
-
-  g_object_unref (contact);
-  g_free (path);
-
-  /* Don't fire the new channel signal now so the caller of this function can
-   * set the extra properties on the ft channel. */
-
-  g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), mgr);
+  g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), self);
 
   priv->channels = g_list_append (priv->channels, chan);
 
-  return chan;
+  if (request_token != NULL)
+    requests = g_slist_prepend (requests, request_token);
+
+  tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
+      requests);
+
+  g_slist_free (requests);
 }
 
 static gboolean
@@ -336,17 +293,17 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   TpHandle handle;
   const gchar *content_type, *filename, *content_hash, *description;
   guint64 size, date, initial_offset;
-  SalutFileHashType content_hash_type;
+  TpFileHashType content_hash_type;
   GError *error = NULL;
   gboolean valid;
-  GSList *requests = NULL;
+  SalutContact *contact;
 
   DEBUG ("File transfer request");
 
   /* We only support file transfer channels */
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"),
-        SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
+        TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
     return FALSE;
 
   /* And only contact handles */
@@ -370,7 +327,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   content_type = tp_asv_get_string (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType");
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType");
   if (content_type == NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -379,7 +336,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   filename = tp_asv_get_string (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename");
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename");
   if (filename == NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -388,7 +345,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   size = tp_asv_get_uint64 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size", NULL);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size", NULL);
   if (size == 0)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -397,15 +354,15 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   content_hash_type = tp_asv_get_uint32 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType", &valid);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType", &valid);
   if (!valid)
     {
       /* Assume File_Hash_Type_None */
-      content_hash_type = SALUT_FILE_HASH_TYPE_NONE;
+      content_hash_type = TP_FILE_HASH_TYPE_NONE;
     }
   else
     {
-      if (content_hash_type >= NUM_SALUT_FILE_HASH_TYPES)
+      if (content_hash_type >= NUM_TP_FILE_HASH_TYPES)
         {
           g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "%u is not a valid ContentHashType", content_hash_type);
@@ -413,10 +370,10 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
         }
     }
 
-  if (content_hash_type != SALUT_FILE_HASH_TYPE_NONE)
+  if (content_hash_type != TP_FILE_HASH_TYPE_NONE)
     {
       content_hash = tp_asv_get_string (request_properties,
-          SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash");
+          TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash");
       if (content_hash == NULL)
         {
           g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
@@ -431,30 +388,34 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   description = tp_asv_get_string (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description");
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description");
 
   date = tp_asv_get_uint64 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date", NULL);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date", NULL);
 
   initial_offset = tp_asv_get_uint64 (request_properties,
-      SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
 
-  chan = salut_ft_manager_new_channel (self, handle, TRUE, &error);
-  if (chan == NULL)
+  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
+  if (contact == NULL)
     {
+      const gchar *name = tp_handle_inspect (contact_repo, handle);
+
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "%s is not online", name);
+
       goto error;
     }
 
-  g_object_set (chan,
-      "content-type", content_type,
-      "filename", filename,
-      "size", size,
-      "content-hash-type", content_hash_type,
-      "content-hash", content_hash,
-      "description", description,
-      "date", date,
-      "initial-offset", initial_offset,
-      NULL);
+  DEBUG ("Requested outgoing channel with contact: %s",
+      tp_handle_inspect (contact_repo, handle));
+
+  chan = salut_file_transfer_channel_new (priv->connection, contact,
+      handle, priv->xmpp_connection_manager, base_connection->self_handle,
+      TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
+      content_hash_type, content_hash, description, date, initial_offset);
+
+  g_object_unref (contact);
 
   if (!salut_file_transfer_channel_offer_file (chan, &error))
     {
@@ -464,10 +425,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       goto error;
     }
 
-  requests = g_slist_prepend (requests, request_token);
-  tp_channel_manager_emit_new_channel (manager, TP_EXPORTABLE_CHANNEL (chan),
-      requests);
-  g_slist_free (requests);
+  salut_ft_manager_channel_created (self, chan, request_token);
 
   return TRUE;
 
@@ -489,15 +447,15 @@ static const gchar * const file_transfer_channel_allowed_properties[] =
 {
    TP_IFACE_CHANNEL ".TargetHandle",
    TP_IFACE_CHANNEL ".TargetID",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date",
-   SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset",
-    NULL
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date",
+   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset",
+   NULL
 };
 
 static void
@@ -512,7 +470,7 @@ salut_ft_manager_foreach_channel_class (TpChannelManager *manager,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
 
   value = tp_g_value_slice_new (G_TYPE_STRING);
-  g_value_set_static_string (value, SALUT_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType" , value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
@@ -566,4 +524,157 @@ salut_ft_manager_new (SalutConnection *connection,
   priv->connection = connection;
 
   return ret;
+}
+
+static void
+add_file_transfer_channel_class (GPtrArray *arr,
+                                 TpHandle handle)
+{
+  GValue monster = {0, };
+  GHashTable *fixed_properties;
+  GValue *channel_type_value;
+  GValue *target_handle_type_value;
+
+  g_assert (handle != 0);
+
+  g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
+  g_value_take_boxed (&monster,
+      dbus_g_type_specialized_construct (
+        TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS));
+
+  fixed_properties = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_static_string (channel_type_value,
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
+      channel_type_value);
+
+  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetHandleType",
+      target_handle_type_value);
+
+  dbus_g_type_struct_set (&monster,
+      0, fixed_properties,
+      1, file_transfer_channel_allowed_properties,
+      G_MAXUINT);
+
+  g_hash_table_destroy (fixed_properties);
+
+  g_ptr_array_add (arr, g_value_get_boxed (&monster));
+}
+
+static void
+salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
+                                   SalutConnection *conn,
+                                   TpHandle handle,
+                                   GPtrArray *arr)
+{
+  SalutFtManager *self = SALUT_FT_MANAGER (manager);
+  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) conn;
+  SalutContact *contact;
+  FtCapaStatus caps;
+
+  g_assert (handle != 0);
+
+  if (handle == base->self_handle)
+    {
+      /* We support file transfer */
+      add_file_transfer_channel_class (arr, handle);
+      return;
+    }
+
+  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
+  if (contact == NULL)
+    return;
+  g_object_unref (contact);
+
+  if (contact->per_channel_manager_caps == NULL)
+    return;
+
+  caps = GPOINTER_TO_UINT (g_hash_table_lookup (
+        contact->per_channel_manager_caps, manager));
+
+  if (caps == FT_CAPA_UNSUPPORTED)
+    return;
+
+  /* FT is supported */
+  add_file_transfer_channel_class (arr, handle);
+}
+
+static gboolean
+_parse_caps_item (GibberXmppNode *node,
+                  gpointer user_data)
+{
+  const gchar *var;
+  gboolean *support_ft = (gboolean *) user_data;
+
+  if (tp_strdiff (node->name, "feature"))
+    return TRUE;
+
+  var = gibber_xmpp_node_get_attribute (node, "var");
+  if (var == NULL)
+    return TRUE;
+
+  if (!tp_strdiff (var, GIBBER_XMPP_NS_IQ_OOB) ||
+      !tp_strdiff (var, GIBBER_XMPP_NS_X_OOB))
+    {
+      DEBUG ("found FileTransfer capability");
+      *support_ft = TRUE;
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gpointer
+salut_ft_manager_parse_caps (SalutCapsChannelManager *manager,
+                             GibberXmppNode *node)
+{
+  gboolean support_ft = FALSE;
+  FtCapaStatus caps;
+
+  if (node == NULL)
+    return FT_CAPA_UNKNOWN;
+
+  gibber_xmpp_node_each_child (node, _parse_caps_item, &support_ft);
+
+  if (support_ft)
+    caps = FT_CAPA_SUPPORTED;
+  else
+    caps = FT_CAPA_UNSUPPORTED;
+
+  return GUINT_TO_POINTER (caps);
+}
+
+static void
+salut_ft_manager_copy_caps (SalutCapsChannelManager *manager,
+                            gpointer *specific_caps_out,
+                            gpointer specific_caps_in)
+{
+  *specific_caps_out = specific_caps_in;
+}
+
+static gboolean
+salut_ft_manager_caps_diff (SalutCapsChannelManager *manager,
+                            TpHandle handle,
+                            gpointer specific_old_caps,
+                            gpointer specific_new_caps)
+{
+  return specific_old_caps != specific_new_caps;
+}
+
+static void
+caps_channel_manager_iface_init (gpointer g_iface,
+                                 gpointer iface_data)
+{
+  SalutCapsChannelManagerIface *iface = g_iface;
+
+  iface->get_contact_caps = salut_ft_manager_get_contact_caps;
+  iface->parse_caps = salut_ft_manager_parse_caps;
+  iface->copy_caps = salut_ft_manager_copy_caps;
+  iface->caps_diff = salut_ft_manager_caps_diff;
 }
