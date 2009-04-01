@@ -51,8 +51,7 @@ static void salut_ft_manager_channel_created (SalutFtManager *mgr,
 
 typedef enum
 {
-  FT_CAPA_UNKNOWN = 0,
-  FT_CAPA_SUPPORTED,
+  FT_CAPA_SUPPORTED = 1,
   FT_CAPA_UNSUPPORTED,
 } FtCapaStatus;
 
@@ -638,7 +637,9 @@ salut_ft_manager_parse_caps (SalutCapsChannelManager *manager,
   FtCapaStatus caps;
 
   if (node == NULL)
-    return FT_CAPA_UNKNOWN;
+    /* If we don't receive any capabilities info we assumed FT is supported
+     * to ensure interoperability with other clients */
+    return GUINT_TO_POINTER (FT_CAPA_SUPPORTED);
 
   gibber_xmpp_node_each_child (node, _parse_caps_item, &support_ft);
 
