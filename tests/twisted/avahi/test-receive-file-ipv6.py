@@ -8,9 +8,8 @@ from saluttest import exec_test
 from file_transfer_helper import ReceiveFileTest
 
 from avahitest import AvahiAnnouncer, get_host_name, AvahiListener,\
-    AvahiService, get_domain_name
+    check_ipv6_enabled
 from xmppstream import connect_to_stream6, setup_stream_listener6
-from servicetest import TimeoutError
 
 from twisted.words.xish import domish
 
@@ -26,17 +25,7 @@ class TestReceiveFileIPv6(ReceiveFileTest):
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp", port,
                 basic_txt, proto=avahi.PROTO_INET6)
 
-        # Avahi doesn't complain if we try to announce an IPv6 service with a
-        # not IPv6 enabled Avahi (http://www.avahi.org/ticket/264) so we try to
-        # resolve our own service to check if it has been actually announced.
-        service = AvahiService(self.q, self.contact_service.bus, self.contact_service.server,
-            avahi.IF_UNSPEC, self.contact_service.proto, self.contact_service.name,
-            self.contact_service.type, get_domain_name(), avahi.PROTO_INET6, 0)
-        service.resolve()
-
-        try:
-            self.q.expect('service-resolved', service=service)
-        except TimeoutError:
+        if not check_ipv6_enabled(self.q, self.contact_service):
             print "skip test as IPv6 doesn't seem to be enabled in Avahi"
             return True
 
