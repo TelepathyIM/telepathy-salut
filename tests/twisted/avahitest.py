@@ -3,7 +3,7 @@ Infrastructure for testing avahi
 """
 
 import servicetest
-from servicetest import Event
+from servicetest import Event, TimeoutError
 import dbus
 import dbus.glib
 import avahi
@@ -179,6 +179,21 @@ class AvahiAnnouncer:
 
     def stop(self):
         self.entry.Free()
+
+def check_ipv6_enabled(q, announcer):
+    # Avahi doesn't complain if we try to announce an IPv6 service with a
+    # not IPv6 enabled Avahi (http://www.avahi.org/ticket/264) so we try to
+    # resolve our own service to check if it has been actually announced.
+    service = AvahiService(q, announcer.bus, announcer.server,
+        avahi.IF_UNSPEC, announcer.proto, announcer.name,
+        announcer.type, get_domain_name(), avahi.PROTO_INET6, 0)
+    service.resolve()
+
+    try:
+        q.expect('service-resolved', service=service)
+        return True
+    except TimeoutError:
+        return False
 
 if __name__ == '__main__':
     from twisted.internet import reactor
