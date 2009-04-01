@@ -122,9 +122,6 @@ gibber_oob_file_transfer_finalize (GObject *object)
       g_object_unref (G_OBJECT (self->priv->server));
     }
 
-  if (self->priv->msg)
-    g_object_unref (G_OBJECT (self->priv->msg));
-
   if (self->priv->session != NULL)
     g_object_unref (self->priv->session);
 
@@ -593,7 +590,7 @@ http_server_cb (SoupServer *server,
   soup_message_headers_append (msg->response_headers, "Content-Type",
       GIBBER_FILE_TRANSFER (self)->content_type);
 
-  self->priv->msg = g_object_ref (msg);
+  self->priv->msg = msg;
 
   /* iChat accepts only AppleSingle encoding, i.e. file's contents and
    * attributes are stored in the same stream */
