@@ -9,12 +9,10 @@ from file_transfer_helper import ReceiveFileTest
 
 from avahitest import AvahiAnnouncer, get_host_name, AvahiListener
 from xmppstream import connect_to_stream6, setup_stream_listener6
+from servicetest import TimeoutError
 
 from twisted.words.xish import domish
-
-print "FIXME: This test disabled because it needs to have IPv6 enabled in Avahi"
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
+import constants as cs
 
 class TestReceiveFileIPv6(ReceiveFileTest):
     CONTACT_NAME = 'test-ft'
@@ -27,6 +25,26 @@ class TestReceiveFileIPv6(ReceiveFileTest):
 
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp", port,
                 basic_txt, proto=avahi.PROTO_INET6)
+
+    def wait_for_contact(self, name=CONTACT_NAME):
+        publish_handle = self.conn.RequestHandles(cs.HT_CONTACT_LIST, ["publish"])[0]
+        publish = self.conn.RequestChannel(
+                "org.freedesktop.Telepathy.Channel.Type.ContactList",
+                cs.HT_CONTACT_LIST, publish_handle, False)
+
+        self.handle = 0
+        # Wait until the record shows up in publish
+        while self.handle == 0:
+            try:
+                e = self.q.expect('dbus-signal', signal='MembersChanged', path=publish)
+            except TimeoutError:
+                print "skip test as IPv6 doesn't seem to be enabled in Avahi"
+                return True
+
+            for h in e.args[1]:
+                name = self.conn.InspectHandles(cs.HT_CONTACT, [h])[0]
+                if name == self.contact_name:
+                    self.handle = h
 
     def _resolve_salut_presence(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
