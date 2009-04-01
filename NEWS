@@ -8,7 +8,7 @@ Enhancements:
 Fixes:
 * As defined in the spec, {Accept,Provide}File should return an 'ay' and not
   a string as UNIX socket address.
-* Fix a crash with newer version of libsoup
+* Fix a crash with newer versions of libsoup
 
 telepathy-salut 0.3.8 (2009-02-17)
 ==================================
