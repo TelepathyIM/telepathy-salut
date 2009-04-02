@@ -42,6 +42,10 @@ static void gibber_fd_transport_disconnect (GibberTransport *transport);
 static gboolean gibber_fd_transport_get_peeraddr (GibberTransport *transport,
     struct sockaddr_storage *addr, socklen_t *len);
 
+static gboolean gibber_fd_transport_get_sockaddr (GibberTransport *transport,
+    struct sockaddr_storage *addr,
+    socklen_t *len);
+
 static void _do_disconnect (GibberFdTransport *self);
 
 static gboolean gibber_fd_transport_buffer_is_empty (
@@ -119,6 +123,7 @@ gibber_fd_transport_class_init (
   transport_class->send = gibber_fd_transport_send;
   transport_class->disconnect = gibber_fd_transport_disconnect;
   transport_class->get_peeraddr = gibber_fd_transport_get_peeraddr;
+  transport_class->get_sockaddr = gibber_fd_transport_get_sockaddr;
   transport_class->buffer_is_empty = gibber_fd_transport_buffer_is_empty;
   transport_class->block_receiving = gibber_fd_transport_block_receiving;
 
@@ -468,6 +473,24 @@ gibber_fd_transport_get_peeraddr (GibberTransport *transport,
    *len = sizeof (struct sockaddr_storage);
 
    return (getpeername (self->fd, (struct sockaddr *) addr, len) == 0);
+}
+
+static gboolean
+gibber_fd_transport_get_sockaddr (GibberTransport *transport,
+    struct sockaddr_storage *addr,
+    socklen_t *len)
+{
+  GibberFdTransport *self = GIBBER_FD_TRANSPORT (transport);
+
+  if (self->fd == -1)
+    {
+      DEBUG ("Someone requested the sockaddr while we're not connected");
+      return FALSE;
+    }
+
+   *len = sizeof (struct sockaddr_storage);
+
+   return (getsockname (self->fd, (struct sockaddr *) addr, len) == 0);
 }
 
 static gboolean
