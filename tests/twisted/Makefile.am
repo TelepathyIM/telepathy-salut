@@ -44,7 +44,7 @@ TWISTED_AVAHI_TESTS = \
         avahi/test-roomlist.py \
 	avahi/test-offer-private-stream-tube.py \
 	avahi/test-two-muc-stream-tubes.py \
-	avahi//test-two-private-stream-tubes.py \
+	avahi/test-two-private-stream-tubes.py \
 	avahi/test-tube-close.py \
 	avahi/tubes-to-nonexistant-ids.py
 
