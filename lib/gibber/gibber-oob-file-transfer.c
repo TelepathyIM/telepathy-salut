@@ -446,7 +446,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
       return NULL;
     }
 
-  gibber_transport_get_peeraddr (connection->transport, &name_addr,
+  gibber_transport_get_sockaddr (connection->transport, &name_addr,
       &name_addr_len);
   g_object_unref (connection);
   getnameinfo ((struct sockaddr *) &name_addr, name_addr_len, host_name,
