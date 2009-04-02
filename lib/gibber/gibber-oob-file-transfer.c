@@ -604,7 +604,7 @@ http_server_cb (SoupServer *server,
       GIBBER_FILE_TRANSFER (self)->content_type);
 
   size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
-  size_str = g_strdup_printf ("%llu", size);
+  size_str = g_strdup_printf ("%" G_GUINT64_FORMAT, size);
   soup_message_headers_append (msg->response_headers, "Content-Length",
       size_str);
   g_free (size_str);
