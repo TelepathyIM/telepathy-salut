@@ -97,7 +97,7 @@ EXTRA_DIST = \
 	ns.py \
 	avahi/file_transfer_helper.py
 
-CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc
+CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc config.py
 
 check_misc_sources = $(TESTS)
 
