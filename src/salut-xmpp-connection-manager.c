@@ -633,7 +633,7 @@ incoming_connection_found_contact (SalutXmppConnectionManager *self,
   g_signal_handlers_disconnect_matched (conn->transport,
      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
-  if (!gibber_transport_get_sockaddr (conn->transport, &addr, &size))
+  if (!gibber_transport_get_peeraddr (conn->transport, &addr, &size))
     {
       DEBUG ("Failed to get address of connection from %s", contact->name);
       ret = FALSE;

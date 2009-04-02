@@ -246,13 +246,13 @@ gibber_transport_set_handler (GibberTransport *transport,
 }
 
 gboolean
-gibber_transport_get_sockaddr (GibberTransport *transport,
+gibber_transport_get_peeraddr (GibberTransport *transport,
    struct sockaddr_storage *addr, socklen_t *len)
 {
   GibberTransportClass *cls = GIBBER_TRANSPORT_GET_CLASS (transport);
 
-  if (cls->get_sockaddr != NULL)
-    return cls->get_sockaddr (transport, addr, len);
+  if (cls->get_peeraddr != NULL)
+    return cls->get_peeraddr (transport, addr, len);
 
   return FALSE;
 }

@@ -52,7 +52,7 @@ struct _GibberTransportClass {
     gboolean (*send) (GibberTransport *transport,
                           const guint8 *data, gsize length, GError **error);
     void (*disconnect) (GibberTransport *transport);
-    gboolean (*get_sockaddr) (GibberTransport *transport,
+    gboolean (*get_peeraddr) (GibberTransport *transport,
         struct sockaddr_storage *addr, socklen_t *len);
     gboolean (*buffer_is_empty) (GibberTransport *transport);
     void (*block_receiving) (GibberTransport *transport, gboolean block);
@@ -110,7 +110,7 @@ void gibber_transport_disconnect (GibberTransport *transport);
 void gibber_transport_set_handler (GibberTransport *transport,
     GibberHandlerFunc func, gpointer user_data);
 
-gboolean gibber_transport_get_sockaddr (GibberTransport *transport,
+gboolean gibber_transport_get_peeraddr (GibberTransport *transport,
     struct sockaddr_storage *addr, socklen_t *len);
 
 gboolean gibber_transport_buffer_is_empty (GibberTransport *transport);

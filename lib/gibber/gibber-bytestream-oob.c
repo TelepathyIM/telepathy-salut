@@ -268,7 +268,7 @@ connect_to_url (GibberBytestreamOOB *self,
 
   /* FIXME, this is very specific to salut and won't work with a normal xmpp
    * client */
-  if (!gibber_transport_get_sockaddr (
+  if (!gibber_transport_get_peeraddr (
       GIBBER_TRANSPORT (priv->xmpp_connection->transport),
       &addr, &len))
     {
