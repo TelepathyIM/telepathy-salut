@@ -22,16 +22,21 @@ def test(q, bus, conn):
     service = e.service
 
     service.resolve()
-    e = q.expect('service-resolved', service=service)
+
+    def wait_for_presence_announce():
+        e = q.expect('service-resolved', service=service)
+        return txt_get_key(e.txt, 'status'), txt_get_key(e.txt, 'msg')
+
+    # initial presence is available
+    status, msg = wait_for_presence_announce()
+    assert status == 'avail', status
+    assert msg is None, msg
 
     statuses = conn.Get(cs.CONN_IFACE_SIMPLE_PRESENCE, 'Statuses', dbus_interface=dbus.PROPERTIES_IFACE)
     assert 'available' in statuses
     assert 'dnd' in statuses
     assert 'away' in statuses
 
-    def wait_for_presence_announce():
-        e = q.expect('service-resolved', service=service)
-        return txt_get_key(e.txt, 'status'), txt_get_key(e.txt, 'msg')
 
     simple_presence = dbus.Interface(conn, cs.CONN_IFACE_SIMPLE_PRESENCE)
     # set your status to away
