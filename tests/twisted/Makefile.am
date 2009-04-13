@@ -42,6 +42,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-request-muc.py \
 	avahi/test-request-muc-tubes.py \
         avahi/test-roomlist.py \
+	avahi/test-set-presence.py \
 	avahi/test-offer-private-stream-tube.py \
 	avahi/test-two-muc-stream-tubes.py \
 	avahi/test-two-private-stream-tubes.py \
