@@ -526,7 +526,10 @@ salut_self_set_presence (SalutSelf *self, SalutPresenceId status,
 
   self->status = status;
   g_free (self->status_message);
-  self->status_message = g_strdup (message);
+  if (tp_strdiff (message, ""))
+    self->status_message = g_strdup (message);
+  else
+    self->status_message = NULL;
 
   return SALUT_SELF_GET_CLASS (self)->set_presence (self, error);
 }
