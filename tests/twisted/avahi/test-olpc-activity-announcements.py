@@ -4,10 +4,10 @@ from avahitest import get_host_name, get_domain_name
 import avahi
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, format_event
+from servicetest import make_channel_proxy, format_event, EventPattern
 
 from twisted.words.xish import xpath, domish
-
+import constants as cs
 
 import time
 import dbus
@@ -21,9 +21,6 @@ HT_CONTACT_LIST = 3
 PUBLISHED_NAME = "acttest"
 TESTSUITE_PUBLISHED_NAME = "salutacttest"
 ACTIVITY_ID = str(time.time())
-
-joined_activity = False
-
 
 def compare_handle (name, conn, handle):
   handle_name = conn.InspectHandles(HT_CONTACT, [handle])[0]
@@ -48,16 +45,6 @@ def wait_for_handle(name, q, conn):
             if compare_handle(name, conn, h):
                 return h
 
-def activity_listener_hook(q, event):
-    # Assert that the testsuite doesn't announce the activity
-    global joined_activity
-    if joined_activity:
-        return
-
-    assert event.name != \
-      ACTIVITY_ID + ":" + TESTSUITE_PUBLISHED_NAME + "@" + get_host_name(), \
-        "salut announced the activity while it shouldn't"
-
 def announce_address(hostname, address):
     "Announce IN A record, address is assume to be ipv4"
 
@@ -68,8 +55,6 @@ def announce_address(hostname, address):
     AvahiRecordAnnouncer(hostname, 0x1, 0x01, rdata)
 
 def test(q, bus, conn):
-    global joined_activity
-
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
@@ -84,7 +69,11 @@ def test(q, bus, conn):
 
     # Listen for announcements
     l = AvahiListener(q).listen_for_service("_olpc-activity1._udp")
-    q.hook(activity_listener_hook, 'service-added')
+
+    # Assert that the testsuite doesn't announce the activity
+    service_name = ACTIVITY_ID + ":" + TESTSUITE_PUBLISHED_NAME + "@" + get_host_name()
+    forbiden_event = EventPattern('service-added', name=service_name)
+    q.forbid_events([forbiden_event])
 
     contact_name = PUBLISHED_NAME + "@" + get_host_name()
 
@@ -117,7 +106,8 @@ def test(q, bus, conn):
           activity_handle = e.args[1][0][1]
           break
 
-    act_properties = conn.ActivityProperties.GetProperties(activity_handle)
+    act_prop_iface = dbus.Interface(conn, cs.ACTIVITY_PROPERTIES)
+    act_properties = act_prop_iface.GetProperties(activity_handle)
     assert act_properties['private'] == False
     assert act_properties['color'] == activity_txt['color']
     assert act_properties['name'] == activity_txt['name']
@@ -130,14 +120,15 @@ def test(q, bus, conn):
         args = [u'', [1L], [], [], [], 1L, 0L])
 
     # Make it public that we joined the activity
-    joined_activity = True
-    conn.BuddyInfo.SetActivities([(ACTIVITY_ID, activity_handle)])
+    q.unforbid_events([forbiden_event])
+    buddy_info_iface = dbus.Interface(conn, cs.BUDDY_INFO)
+    buddy_info_iface.SetActivities([(ACTIVITY_ID, activity_handle)])
 
     q.expect('service-added',
         name = ACTIVITY_ID + ":" + TESTSUITE_PUBLISHED_NAME +
             "@" + get_host_name())
 
-    conn.BuddyInfo.SetActivities([])
+    buddy_info_iface.SetActivities([])
 
     q.expect('service-removed',
         name = ACTIVITY_ID + ":" + TESTSUITE_PUBLISHED_NAME +
