@@ -229,6 +229,10 @@ def test(q, bus, conn):
     channels = e.args[0]
     assert len(channels) == 2
 
+    # get the list of all channels to check that newly announced ones are in it
+    all_channels = conn.Get(CONN_IFACE_REQUESTS, 'Channels', dbus_interface=PROPERTIES_IFACE,
+        byte_arrays=True)
+
     got_tubes, got_tube = False, False
     for path, props in channels:
         if props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
@@ -252,6 +256,8 @@ def test(q, bus, conn):
         assert props[INITIATOR_ID] == contact1_name
         assert props[TARGET_ID] == contact2_name
 
+        assert (path, props) in all_channels, (path, props)
+
     assert got_tubes
     assert got_tube
 
@@ -273,6 +279,10 @@ def test(q, bus, conn):
     # tube and tubes channels have been created on conn2
     channels = new_chans.args[0]
     assert len(channels) == 2
+
+    # get the list of all channels to check that newly announced ones are in it
+    all_channels = conn2.Get(CONN_IFACE_REQUESTS, 'Channels', dbus_interface=PROPERTIES_IFACE,
+        byte_arrays=True)
 
     got_tubes, got_tube = False, False
     for path, props in channels:
@@ -296,6 +306,8 @@ def test(q, bus, conn):
         assert props[INITIATOR_HANDLE] == contact1_handle_on_conn2
         assert props[INITIATOR_ID] == contact1_name
         assert props[TARGET_ID] == contact1_name
+
+        assert (path, props) in all_channels, (path, props)
 
     assert got_tubes
     assert got_tube
