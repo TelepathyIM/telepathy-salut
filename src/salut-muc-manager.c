@@ -322,12 +322,27 @@ salut_muc_manager_foreach_channel (TpChannelManager *iface,
   SalutMucManager *fac = SALUT_MUC_MANAGER (iface);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (fac);
   struct _ForeachData data;
+  GHashTableIter iter;
+  gpointer value;
 
   data.user_data = user_data;
   data.foreach = foreach;
 
   g_hash_table_foreach (priv->text_channels, _foreach_slave, &data);
-  g_hash_table_foreach (priv->tubes_channels, _foreach_slave, &data);
+
+  g_hash_table_iter_init (&iter, priv->tubes_channels);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+  {
+    TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
+
+    /* Add channels of type Channel.Type.Tubes */
+    foreach (chan, user_data);
+
+    /* Add channels of type Channel.Type.{Stream|DBus}Tube which live in the
+     * SalutTubesChannel object */
+    salut_tubes_channel_foreach (SALUT_TUBES_CHANNEL (chan), foreach,
+        user_data);
+  }
 }
 
 static const gchar * const muc_channel_fixed_properties[] = {
