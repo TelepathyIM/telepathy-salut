@@ -93,7 +93,7 @@ def caps_contain(event, cap):
 
 def test_ft_caps_from_contact(q, bus, conn, client):
 
-    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPA)
+    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPS)
     conn_contacts_iface = dbus.Interface(conn, CONN_IFACE_CONTACTS)
 
     # send presence with FT capa
@@ -141,8 +141,8 @@ def test_ft_caps_from_contact(q, bus, conn, client):
 
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [CONN_IFACE_CONTACT_CAPA], False) \
-            [contact_handle][CONN_IFACE_CONTACT_CAPA + '/caps']
+            [contact_handle], [CONN_IFACE_CONTACT_CAPS], False) \
+            [contact_handle][CONN_IFACE_CONTACT_CAPS + '/caps']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # check if Salut announces the OOB capa
@@ -241,7 +241,7 @@ def test(q, bus, conn):
 
     # check our own capabilities
     self_handle = conn.GetSelfHandle()
-    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPA)
+    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPS)
     caps = conn_caps_iface.GetContactCapabilities([self_handle])[self_handle]
     assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
              TARGET_HANDLE_TYPE: HT_CONTACT},
