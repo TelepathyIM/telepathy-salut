@@ -9,7 +9,7 @@ import avahitest
 from twisted.words.xish import domish
 
 from saluttest import exec_test, wait_for_contact_list
-from servicetest import call_async, match, EventPattern, \
+from servicetest import call_async, EventPattern, \
         tp_name_prefix, tp_path_prefix, make_channel_proxy
 
 CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'

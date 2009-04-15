@@ -9,7 +9,7 @@ import avahitest
 from twisted.words.xish import domish
 
 from saluttest import exec_test, wait_for_contact_list
-from servicetest import call_async, match, EventPattern, make_channel_proxy
+from servicetest import call_async, EventPattern, make_channel_proxy
 from constants import *
 
 def test(q, bus, conn):
