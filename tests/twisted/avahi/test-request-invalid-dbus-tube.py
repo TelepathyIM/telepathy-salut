@@ -14,6 +14,7 @@ from servicetest import make_channel_proxy, Event, EventPattern, call_async, \
 from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
+import constants as cs
 
 print "FIXME: test-request-invalid-dbus-tube.py disabled because the new API"
 print "       for DBus tubes is not implemented."
@@ -53,9 +54,8 @@ def test(q, bus, conn):
                     invalid_service_name
                 });
         except dbus.DBusException, e:
-            assert e.get_dbus_name() == \
-                'org.freedesktop.Telepathy.Errors.InvalidArgument', \
-                (e.get_dbus_name(), invalid_service_name)
+            assert e.get_dbus_name() == cs.INVALID_ARGUMENT,\
+            (e.get_dbus_name(), invalid_service_name)
         else:
             assert False, "Should raise InvalidArgument error"
 

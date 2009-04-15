@@ -4,6 +4,7 @@ from saluttest import exec_test
 from file_transfer_helper import SendFileTest, HT_CONTACT
 
 from avahitest import get_host_name
+import constants as cs
 
 class SendFileTransferToUnknownContactTest(SendFileTest):
     def __init__(self):
@@ -18,7 +19,7 @@ class SendFileTransferToUnknownContactTest(SendFileTest):
         try:
             self.request_ft_channel()
         except dbus.DBusException, e:
-            assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotAvailable'
+            assert e.get_dbus_name() == cs.NOT_AVAILABLE
         else:
             assert False, "Should raise NotAvailable error"
 

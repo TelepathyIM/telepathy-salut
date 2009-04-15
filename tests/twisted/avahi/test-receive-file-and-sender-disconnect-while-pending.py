@@ -3,6 +3,7 @@ import dbus
 from saluttest import exec_test
 from file_transfer_helper import ReceiveFileTest, SOCKET_ADDRESS_TYPE_UNIX,\
     SOCKET_ACCESS_CONTROL_LOCALHOST
+import constants as cs
 
 class ReceiveFileAndSenderDisconnectWhilePendingTest(ReceiveFileTest):
     def accept_file(self):
@@ -17,7 +18,7 @@ class ReceiveFileAndSenderDisconnectWhilePendingTest(ReceiveFileTest):
             self.ft_channel.AcceptFile(SOCKET_ADDRESS_TYPE_UNIX,
                 SOCKET_ACCESS_CONTROL_LOCALHOST, "", 0, byte_arrays=True)
         except dbus.DBusException, e:
-            assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotAvailable'
+            assert e.get_dbus_name() == cs.NOT_AVAILABLE
         else:
             assert False, "Should raise NotAvailable error"
 

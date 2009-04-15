@@ -18,6 +18,8 @@ from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
 
+import constants as cs
+
 PUBLISHED_NAME="test-tube"
 
 CHANNEL_TYPE_TUBES = "org.freedesktop.Telepathy.Channel.Type.Tubes"
@@ -64,7 +66,7 @@ def test(q, bus, conn):
         conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT, handle,
             True)
     except dbus.DBusException, e:
-        assert e.get_dbus_name() == 'org.freedesktop.Telepathy.Errors.NotImplemented'
+        assert e.get_dbus_name() == cs.NOT_IMPLEMENTED
     else:
         assert False, "Should raise NotImplemented error"
 
