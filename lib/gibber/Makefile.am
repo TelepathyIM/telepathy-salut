@@ -1,3 +1,5 @@
+include $(top_srcdir)/tools/shave.mk
+
 SUBDIRS = examples tests
 
 noinst_LTLIBRARIES = libgibber.la
@@ -105,7 +107,7 @@ dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
 gibber-signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
-	( cd $(srcdir) && \
+	$(QUIET_GEN)( cd $(srcdir) && \
 	sed -n -e 's/.*_gibber_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
 	$(HANDWRITTEN_SOURCES) ) \
 	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
@@ -117,10 +119,10 @@ gibber-signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
 	fi
 
 %-signals-marshal.h: %-signals-marshal.list Makefile.am
-	glib-genmarshal --header --prefix=_$(subst -,_,$*)_signals_marshal $< > $@
+	$(QUIET_GEN)glib-genmarshal --header --prefix=_$(subst -,_,$*)_signals_marshal $< > $@
 
 %-signals-marshal.c: %-signals-marshal.list Makefile.am
-	{ echo '#include "$*-signals-marshal.h"' && \
+	$(QUIET_GEN){ echo '#include "$*-signals-marshal.h"' && \
 	glib-genmarshal --body --prefix=_$(subst -,_,$*)_signals_marshal $< ; \
 	} > $@
 
@@ -147,7 +149,7 @@ endif
 
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in
-	glib-mkenums \
+	$(QUIET_GEN)glib-mkenums \
 	--fhead "#ifndef __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n#define __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
 	--fprod "/* enumerations from \"@filename@\" */\n" \
 	--vhead "GType @enum_name@_get_type (void);\n#define $(shell echo $* | tr [:lower:]- [:upper:]_ | sed 's/_.*//')_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"         \
@@ -155,7 +157,7 @@ endif
 	$< > $@
 
 %-enumtypes.c: %.h Makefile.in
-	glib-mkenums \
+	$(QUIET_GEN)glib-mkenums \
 	--fhead "#include <$*.h>\n#include <$*-enumtypes.h>" \
 	--fprod "\n/* enumerations from \"@filename@\" */" \
 	--vhead "GType\n@enum_name@_get_type (void)\n{\n  static GType etype = 0;\n  if (etype == 0) {\n    static const G@Type@Value values[] = {"     \

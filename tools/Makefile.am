@@ -1,3 +1,5 @@
+include $(top_srcdir)/tools/shave.mk
+
 EXTRA_DIST = \
     c-constants-generator.xsl \
     c-interfaces-generator.xsl \
@@ -19,18 +21,18 @@ EXTRA_DIST = \
     xep.xsl
 
 glib-client-marshaller-gen.py: libglibcodegen.py
-	touch $@
+	$(QUIET_GEN)touch $@
 glib-ginterface-gen.py: libglibcodegen.py
-	touch $@
+	$(QUIET_GEN)touch $@
 glib-gtypes-generator.py: libglibcodegen.py
-	touch $@
+	$(QUIET_GEN)touch $@
 glib-signals-marshal-gen.py: libglibcodegen.py
-	touch $@
+	$(QUIET_GEN)touch $@
 
 glib-interfaces-generator.xsl: c-interfaces-generator.xsl
-	touch $@
+	$(QUIET_GEN)touch $@
 glib-interfaces-body-generator.xsl: c-interfaces-generator.xsl
-	touch $@
+	$(QUIET_GEN)touch $@
 
 maintainer-update-from-xmpp.org:
 	set -e; \

@@ -1,3 +1,5 @@
+include $(top_srcdir)/tools/shave.mk
+
 TWISTED_TESTS =
 
 TWISTED_BASIC_TESTS =
@@ -83,7 +85,7 @@ check-twisted:
 	fi
 
 config.py: Makefile
-	echo "PACKAGE_STRING = \"$(PACKAGE_STRING)\"" > config.py
+	$(QUIET_GEN)echo "PACKAGE_STRING = \"$(PACKAGE_STRING)\"" > config.py
 
 BUILT_SOURCES = config.py
 
