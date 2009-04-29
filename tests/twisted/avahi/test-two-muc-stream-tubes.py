@@ -352,14 +352,14 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='MembersChanged', path=txt_path,
         args=['', [conn1_self_handle], [], [], [], conn1_self_handle, 0])
 
-    call_async(q, contact1_stream_tube, 'OfferStreamTube',
+    call_async(q, contact1_stream_tube, 'Offer',
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
             SOCKET_ACCESS_CONTROL_LOCALHOST, "", sample_parameters)
 
     q.expect_many(
         EventPattern('dbus-signal', signal='TubeChannelStateChanged',
             args=[TUBE_CHANNEL_STATE_OPEN]),
-        EventPattern('dbus-return', method='OfferStreamTube'))
+        EventPattern('dbus-return', method='Offer'))
 
     state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State',
         dbus_interface=PROPERTIES_IFACE)
@@ -436,7 +436,7 @@ def test(q, bus, conn):
     assert state == TUBE_CHANNEL_STATE_LOCAL_PENDING
 
     # second connection: accept the tube (new API)
-    unix_socket_adr = contact2_stream_tube.AcceptStreamTube(
+    unix_socket_adr = contact2_stream_tube.Accept(
         SOCKET_ADDRESS_TYPE_UNIX, SOCKET_ACCESS_CONTROL_LOCALHOST, '',
         byte_arrays=True)
 
@@ -458,7 +458,7 @@ def test(q, bus, conn):
     client_transport = e.transport
 
     sig, e = q.expect_many(
-        EventPattern('dbus-signal', signal='StreamTubeNewConnection',
+        EventPattern('dbus-signal', signal='NewConnection',
             path=tube1_path),
         EventPattern('client-data-received'))
 

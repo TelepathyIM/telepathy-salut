@@ -2052,7 +2052,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 
       g_signal_emit (G_OBJECT (self), signals[NEW_CONNECTION], 0, contact);
 
-      salut_svc_channel_type_stream_tube_emit_stream_tube_new_connection (
+      salut_svc_channel_type_stream_tube_emit_new_connection (
           self, contact);
 
       tp_handle_unref (contact_repo, contact);
@@ -2242,19 +2242,19 @@ salut_tube_stream_check_params (TpSocketAddressType address_type,
 }
 
 /**
- * salut_tube_stream_offer_stream_tube
+ * salut_tube_stream_offer_async
  *
- * Implements D-Bus method OfferStreamTube
+ * Implements D-Bus method Offer
  * on org.freedesktop.Telepathy.Channel.Type.StreamTube
  */
 static void
-salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
-                                     guint address_type,
-                                     const GValue *address,
-                                     guint access_control,
-                                     const GValue *access_control_param,
-                                     GHashTable *parameters,
-                                     DBusGMethodInvocation *context)
+salut_tube_stream_offer_async (SalutSvcChannelTypeStreamTube *iface,
+    guint address_type,
+    const GValue *address,
+    guint access_control,
+    const GValue *access_control_param,
+    GHashTable *parameters,
+    DBusGMethodInvocation *context)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
@@ -2297,21 +2297,21 @@ salut_tube_stream_offer_stream_tube (SalutSvcChannelTypeStreamTube *iface,
       return;
     }
 
-  salut_svc_channel_type_stream_tube_return_from_offer_stream_tube (context);
+  salut_svc_channel_type_stream_tube_return_from_offer (context);
 }
 
 /**
- * salut_tube_stream_accept_stream_tube
+ * salut_tube_stream_accept_async
  *
- * Implements D-Bus method AcceptStreamTube
+ * Implements D-Bus method Accept
  * on org.freedesktop.Telepathy.Channel.Type.StreamTube
  */
 static void
-salut_tube_stream_accept_stream_tube (SalutSvcChannelTypeStreamTube *iface,
-                                      guint address_type,
-                                      guint access_control,
-                                      const GValue *access_control_param,
-                                      DBusGMethodInvocation *context)
+salut_tube_stream_accept_async (SalutSvcChannelTypeStreamTube *iface,
+    guint address_type,
+    guint access_control,
+    const GValue *access_control_param,
+    DBusGMethodInvocation *context)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
@@ -2366,7 +2366,7 @@ salut_tube_stream_accept_stream_tube (SalutSvcChannelTypeStreamTube *iface,
     salut_muc_channel_send_presence (self->muc, NULL);
 #endif
 
-  salut_svc_channel_type_stream_tube_return_from_accept_stream_tube (context,
+  salut_svc_channel_type_stream_tube_return_from_accept (context,
       priv->address);
 }
 
@@ -2541,10 +2541,10 @@ streamtube_iface_init (gpointer g_iface,
   SalutSvcChannelTypeStreamTubeClass *klass =
       (SalutSvcChannelTypeStreamTubeClass *) g_iface;
 
-#define IMPLEMENT(x) salut_svc_channel_type_stream_tube_implement_##x (\
-    klass, salut_tube_stream_##x)
-  IMPLEMENT(offer_stream_tube);
-  IMPLEMENT(accept_stream_tube);
+#define IMPLEMENT(x, suffix) salut_svc_channel_type_stream_tube_implement_##x (\
+    klass, salut_tube_stream_##x##suffix)
+  IMPLEMENT(offer,_async);
+  IMPLEMENT(accept,_async);
 #undef IMPLEMENT
 }
 
