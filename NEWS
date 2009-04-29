@@ -5,6 +5,10 @@ Requirements:
 * telepathy-glib >= 0.7.29 is now required so Salut emits the correct
   D-Bus errors.
 
+Enhancements:
+* Implement latest tube new API DRAFT. {Offer,Accept}StreamTube
+  methods and the StreamTubeNewConnection signal have been renamed.
+
 Fixes:
 * Include muc tube channels in Requests's Channels property.
 
