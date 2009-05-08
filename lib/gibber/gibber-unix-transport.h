@@ -75,6 +75,9 @@ GibberUnixTransport * gibber_unix_transport_new_from_fd (int fd);
 gboolean gibber_unix_transport_connect (GibberUnixTransport *transport,
     const gchar *path, GError **error);
 
+gboolean gibber_unix_transport_send_credentials (GibberUnixTransport *transport,
+    const guint8 *data, gsize size);
+
 G_END_DECLS
 
 #endif /* #ifndef __GIBBER_UNIX_TRANSPORT_H__*/

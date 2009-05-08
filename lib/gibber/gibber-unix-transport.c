@@ -19,6 +19,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+/* needed for struct ucred */
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -172,4 +175,51 @@ gibber_unix_transport_new_from_fd (int fd)
   transport = gibber_unix_transport_new ();
   gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd);
   return transport;
+}
+
+gboolean
+gibber_unix_transport_send_credentials (GibberUnixTransport *transport,
+    const guint8 *data,
+    gsize size)
+{
+  int fd, ret;
+  struct ucred *cred;
+  struct msghdr msg;
+  struct cmsghdr *ch;
+  struct iovec iov;
+  char buffer[CMSG_SPACE (sizeof (struct ucred))];
+
+  DEBUG ("send credentials");
+  fd = GIBBER_FD_TRANSPORT (transport)->fd;
+
+  /* Set the message payload */
+  memset (&iov, 0, sizeof (iov));
+  iov.iov_base = (void *) data;
+  iov.iov_len = size;
+
+  memset (&msg, 0, sizeof msg);
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = buffer;
+  msg.msg_controllen = sizeof (buffer);
+
+  /* Set the credentials */
+  ch = CMSG_FIRSTHDR (&msg);
+  ch->cmsg_len = CMSG_LEN (sizeof (struct ucred));
+  ch->cmsg_level = SOL_SOCKET;
+  ch->cmsg_type = SCM_CREDENTIALS;
+
+  cred = (struct ucred *) CMSG_DATA (ch);
+  cred->pid = getpid ();
+  cred->uid = getuid ();
+  cred->gid = getgid ();
+
+  ret = sendmsg (fd, &msg, 0);
+  if (ret == -1)
+    {
+      DEBUG ("sendmsg failed: %s", g_strerror (errno));
+      return FALSE;
+    }
+
+  return TRUE;
 }
