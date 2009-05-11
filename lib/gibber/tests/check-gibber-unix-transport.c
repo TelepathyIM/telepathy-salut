@@ -38,6 +38,7 @@
 #include "check-gibber.h"
 
 gboolean got_connection;
+gboolean received_credentials;
 GibberUnixTransport *unix_transport;
 
 #define DATA "What a nice data"
@@ -136,10 +137,81 @@ START_TEST (test_send_credentials)
   g_main_loop_unref (mainloop);
 } END_TEST
 
+
+static void
+get_credentials_cb (GibberUnixTransport *transport,
+                    GibberBuffer *buffer,
+                    GibberCredentials *credentials,
+                    gpointer user_data)
+{
+  GMainLoop *loop = (GMainLoop *) user_data;
+
+  received_credentials = TRUE;
+
+  g_assert (strcmp ((gchar *) buffer->data, DATA) == 0);
+  g_assert (credentials->pid == getpid ());
+  g_assert (credentials->uid == getuid ());
+  g_assert (credentials->gid == getgid ());
+
+  g_main_loop_quit (loop);
+}
+
+static void
+receive_new_connection_cb (GibberListener *listener,
+                           GibberTransport *connection,
+                           struct sockaddr *addr,
+                           guint size,
+                           GMainLoop *loop)
+{
+  gibber_unix_transport_wait_credentials (unix_transport,
+      get_credentials_cb, loop);
+
+  gibber_unix_transport_send_credentials (GIBBER_UNIX_TRANSPORT (connection),
+      (guint8 *) DATA, strlen (DATA));
+}
+
+START_TEST (test_receive_credentials)
+{
+  GibberListener *listener_unix;
+  int ret;
+  GMainLoop *mainloop;
+  GError *error = NULL;
+  gchar *path = "/tmp/check-gibber-unix-transport-socket";
+
+  ret = unlink (path);
+  fail_if (ret == -1 && errno != ENOENT);
+
+  received_credentials = FALSE;
+  mainloop = g_main_loop_new (NULL, FALSE);
+
+  listener_unix = gibber_listener_new ();
+  fail_if (listener_unix == NULL);
+
+  g_signal_connect (listener_unix, "new-connection",
+      G_CALLBACK (receive_new_connection_cb), mainloop);
+
+  ret = gibber_listener_listen_socket (listener_unix, path, FALSE, &error);
+  fail_if (ret != TRUE);
+
+  unix_transport = gibber_unix_transport_new ();
+  ret = gibber_unix_transport_connect (unix_transport, path, &error);
+  fail_if (ret != TRUE);
+
+  if (!received_credentials)
+    g_main_loop_run (mainloop);
+
+  fail_if (!received_credentials, "Failed to receive credentials");
+
+  g_object_unref (listener_unix);
+  g_object_unref (unix_transport);
+  g_main_loop_unref (mainloop);
+} END_TEST
+
 TCase *
 make_gibber_unix_transport_tcase (void)
 {
   TCase *tc = tcase_create ("GibberUnixTransport");
   tcase_add_test (tc, test_send_credentials);
+  tcase_add_test (tc, test_receive_credentials);
   return tc;
 }
