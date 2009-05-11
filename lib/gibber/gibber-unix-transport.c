@@ -75,17 +75,27 @@ gibber_unix_transport_init (GibberUnixTransport *self)
 }
 
 static void gibber_unix_transport_dispose (GObject *object);
+static GibberFdIOResult gibber_unix_transport_read (
+    GibberFdTransport *transport,
+    GIOChannel *channel,
+    GError **error);
+
 static void
 gibber_unix_transport_class_init (
     GibberUnixTransportClass *gibber_unix_transport_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (gibber_unix_transport_class);
+  GibberFdTransportClass *fd_class = GIBBER_FD_TRANSPORT_CLASS (
+      gibber_unix_transport_class);
 
   g_type_class_add_private (gibber_unix_transport_class,
                             sizeof (GibberUnixTransportPrivate));
 
   object_class->dispose = gibber_unix_transport_dispose;
   object_class->finalize = gibber_unix_transport_finalize;
+
+  /* override GibberFdTransport's read */
+  fd_class->read = gibber_unix_transport_read;
 }
 
 void
@@ -222,4 +232,12 @@ gibber_unix_transport_send_credentials (GibberUnixTransport *transport,
     }
 
   return TRUE;
+}
+
+static GibberFdIOResult
+gibber_unix_transport_read (GibberFdTransport *transport,
+    GIOChannel *channel,
+    GError **error)
+{
+  return gibber_fd_transport_read (transport, channel, error);
 }
