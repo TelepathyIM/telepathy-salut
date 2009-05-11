@@ -40,6 +40,8 @@
 gboolean got_connection;
 GibberUnixTransport *unix_transport;
 
+#define DATA "What a nice data"
+
 static void
 new_connection_cb (GibberListener *listener,
                    GibberTransport *connection,
@@ -54,7 +56,6 @@ new_connection_cb (GibberListener *listener,
   char control[CMSG_SPACE (sizeof (struct ucred))];
   struct cmsghdr *ch;
   struct ucred *cred;
-  const gchar *data = "What a nice data";
   gchar buffer[128];
 
   got_connection = TRUE;
@@ -63,7 +64,7 @@ new_connection_cb (GibberListener *listener,
   gibber_transport_block_receiving (connection, TRUE);
 
   g_assert (gibber_unix_transport_send_credentials (unix_transport,
-        (guint8 *) data, strlen (data) + 1));
+        (guint8 *) DATA, strlen (DATA) + 1));
 
   fd = GIBBER_FD_TRANSPORT (connection)->fd;
 
@@ -85,7 +86,7 @@ new_connection_cb (GibberListener *listener,
   received = recvmsg (fd, &msg, 0);
   /* check the received data */
   g_assert (received != -1);
-  g_assert (strcmp (data, buffer) == 0);
+  g_assert (strcmp (DATA, buffer) == 0);
 
   /* check the credentials */
   ch = CMSG_FIRSTHDR (&msg);
@@ -109,6 +110,7 @@ START_TEST (test_send_credentials)
   ret = unlink (path);
   fail_if (ret == -1 && errno != ENOENT);
 
+  got_connection = FALSE;
   mainloop = g_main_loop_new (NULL, FALSE);
 
   listener_unix = gibber_listener_new ();

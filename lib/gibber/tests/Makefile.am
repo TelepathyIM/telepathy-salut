@@ -69,7 +69,8 @@ check_main_SOURCES =                             \
     check-gibber-iq-helper.c                     \
     check-gibber-listener.c                      \
     check-gibber-xmpp-connection-listener.c      \
-    check-gibber-xmpp-error.c
+    check-gibber-xmpp-error.c                    \
+    check-gibber-unix-transport.c
 
 check_main_LDADD = \
     @CHECK_LIBS@ \

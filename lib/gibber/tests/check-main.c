@@ -30,6 +30,7 @@ make_gibber_suite (void)
     suite_add_tcase (s, make_gibber_listener_tcase ());
     suite_add_tcase (s, make_gibber_xmpp_connection_listener_tcase ());
     suite_add_tcase (s, make_gibber_xmpp_error_tcase ());
+    suite_add_tcase (s, make_gibber_unix_transport_tcase ());
 
     return s;
 }
