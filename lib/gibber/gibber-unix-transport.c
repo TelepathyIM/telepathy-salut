@@ -58,6 +58,10 @@ typedef struct _GibberUnixTransportPrivate GibberUnixTransportPrivate;
 struct _GibberUnixTransportPrivate
 {
   gboolean incoming;
+
+  GibberUnixTransportWaitCredentialsCb wait_creds_cb;
+  gpointer wait_creds_data;
+
   gboolean dispose_has_run;
 };
 
@@ -234,10 +238,105 @@ gibber_unix_transport_send_credentials (GibberUnixTransport *transport,
   return TRUE;
 }
 
+#define BUFSIZE 1024
+
 static GibberFdIOResult
 gibber_unix_transport_read (GibberFdTransport *transport,
     GIOChannel *channel,
     GError **error)
 {
-  return gibber_fd_transport_read (transport, channel, error);
+  GibberUnixTransport *self = GIBBER_UNIX_TRANSPORT (transport);
+  GibberUnixTransportPrivate *priv = GIBBER_UNIX_TRANSPORT_GET_PRIVATE (self);
+  int fd;
+  guint8 buffer[BUFSIZE];
+  ssize_t bytes_read;
+  GibberBuffer buf;
+  struct iovec iov;
+  struct msghdr msg;
+  char control[CMSG_SPACE (sizeof (struct ucred))];
+  struct cmsghdr *ch;
+  struct ucred *cred;
+  int opt;
+
+  if (priv->wait_creds_cb == NULL)
+    return gibber_fd_transport_read (transport, channel, error);
+
+  /* We are waiting for credentials */
+  fd = transport->fd;
+
+  /* set SO_PASSCRED flag */
+  opt = 1;
+  setsockopt (fd, SOL_SOCKET, SO_PASSCRED, &opt, sizeof (opt));
+
+  memset (buffer, 0, sizeof (buffer));
+  memset (&iov, 0, sizeof (iov));
+  iov.iov_base = buffer;
+  iov.iov_len = sizeof (buffer);
+
+  memset (&msg, 0, sizeof (msg));
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = control;
+  msg.msg_controllen = sizeof (control);
+
+  bytes_read = recvmsg (fd, &msg, 0);
+
+  if (bytes_read == -1)
+    {
+      g_set_error_literal (error, G_IO_CHANNEL_ERROR,
+          g_io_channel_error_from_errno (errno), "recvmsg failed");
+
+      priv->wait_creds_cb = NULL;
+      priv->wait_creds_data = NULL;
+      return GIBBER_FD_IO_RESULT_ERROR;
+    }
+
+  /* unset SO_PASSCRED flag */
+  opt = 0;
+  setsockopt (fd, SOL_SOCKET, SO_PASSCRED, &opt, sizeof (opt));
+
+  buf.data = buffer;
+  buf.length = bytes_read;
+
+  /* extract the credentials */
+  ch = CMSG_FIRSTHDR (&msg);
+  if (ch == NULL)
+    {
+      DEBUG ("Message doesn't contain credentials");
+
+      priv->wait_creds_cb (self, &buf, NULL, priv->wait_creds_data);
+    }
+  else
+    {
+      GibberCredentials credentials;
+
+      cred = (struct ucred *) CMSG_DATA (ch);
+      credentials.pid = cred->pid;
+      credentials.uid = cred->uid;
+      credentials.gid = cred->gid;
+
+      priv->wait_creds_cb (self, &buf, &credentials, priv->wait_creds_data);
+    }
+
+  priv->wait_creds_cb = NULL;
+  priv->wait_creds_data = NULL;
+  return GIBBER_FD_IO_RESULT_SUCCESS;
+}
+
+gboolean
+gibber_unix_transport_wait_credentials (GibberUnixTransport *self,
+    GibberUnixTransportWaitCredentialsCb callback,
+    gpointer user_data)
+{
+  GibberUnixTransportPrivate *priv = GIBBER_UNIX_TRANSPORT_GET_PRIVATE (self);
+
+  if (priv->wait_creds_cb != NULL)
+    {
+      DEBUG ("already waiting for credentials");
+      return FALSE;
+    }
+
+  priv->wait_creds_cb = callback;
+  priv->wait_creds_data = user_data;
+  return TRUE;
 }

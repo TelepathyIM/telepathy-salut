@@ -24,6 +24,16 @@
 
 #include <glib-object.h>
 
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/un.h>
+
 #include "gibber-fd-transport.h"
 
 G_BEGIN_DECLS
@@ -77,6 +87,22 @@ gboolean gibber_unix_transport_connect (GibberUnixTransport *transport,
 
 gboolean gibber_unix_transport_send_credentials (GibberUnixTransport *transport,
     const guint8 *data, gsize size);
+
+typedef struct {
+    pid_t pid;
+    uid_t uid;
+    gid_t gid;
+} GibberCredentials;
+
+typedef void (*GibberUnixTransportWaitCredentialsCb) (
+    GibberUnixTransport *transport,
+    GibberBuffer *buffer,
+    GibberCredentials *credentials,
+    gpointer user_data);
+
+gboolean gibber_unix_transport_wait_credentials (GibberUnixTransport *transport,
+    GibberUnixTransportWaitCredentialsCb callback,
+    gpointer user_data);
 
 G_END_DECLS
 
