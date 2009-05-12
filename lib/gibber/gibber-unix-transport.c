@@ -113,6 +113,9 @@ gibber_unix_transport_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  priv->wait_creds_cb = NULL;
+  priv->wait_creds_data = NULL;
+
   if (G_OBJECT_CLASS (gibber_unix_transport_parent_class)->dispose)
     G_OBJECT_CLASS (gibber_unix_transport_parent_class)->dispose (object);
 }
