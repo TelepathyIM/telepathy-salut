@@ -163,7 +163,7 @@ receive_new_connection_cb (GibberListener *listener,
                            guint size,
                            GMainLoop *loop)
 {
-  gibber_unix_transport_wait_credentials (unix_transport,
+  gibber_unix_transport_recv_credentials (unix_transport,
       get_credentials_cb, loop);
 
   gibber_unix_transport_send_credentials (GIBBER_UNIX_TRANSPORT (connection),

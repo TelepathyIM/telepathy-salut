@@ -59,8 +59,8 @@ struct _GibberUnixTransportPrivate
 {
   gboolean incoming;
 
-  GibberUnixTransportWaitCredentialsCb wait_creds_cb;
-  gpointer wait_creds_data;
+  GibberUnixTransportRecvCredentialsCb recv_creds_cb;
+  gpointer recv_creds_data;
 
   gboolean dispose_has_run;
 };
@@ -113,8 +113,8 @@ gibber_unix_transport_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  priv->wait_creds_cb = NULL;
-  priv->wait_creds_data = NULL;
+  priv->recv_creds_cb = NULL;
+  priv->recv_creds_data = NULL;
 
   if (G_OBJECT_CLASS (gibber_unix_transport_parent_class)->dispose)
     G_OBJECT_CLASS (gibber_unix_transport_parent_class)->dispose (object);
@@ -261,7 +261,7 @@ gibber_unix_transport_read (GibberFdTransport *transport,
   struct ucred *cred;
   int opt;
 
-  if (priv->wait_creds_cb == NULL)
+  if (priv->recv_creds_cb == NULL)
     return gibber_fd_transport_read (transport, channel, error);
 
   /* We are waiting for credentials */
@@ -289,8 +289,8 @@ gibber_unix_transport_read (GibberFdTransport *transport,
       g_set_error_literal (error, G_IO_CHANNEL_ERROR,
           g_io_channel_error_from_errno (errno), "recvmsg failed");
 
-      priv->wait_creds_cb = NULL;
-      priv->wait_creds_data = NULL;
+      priv->recv_creds_cb = NULL;
+      priv->recv_creds_data = NULL;
       return GIBBER_FD_IO_RESULT_ERROR;
     }
 
@@ -307,7 +307,7 @@ gibber_unix_transport_read (GibberFdTransport *transport,
     {
       DEBUG ("Message doesn't contain credentials");
 
-      priv->wait_creds_cb (self, &buf, NULL, priv->wait_creds_data);
+      priv->recv_creds_cb (self, &buf, NULL, priv->recv_creds_data);
     }
   else
     {
@@ -318,28 +318,28 @@ gibber_unix_transport_read (GibberFdTransport *transport,
       credentials.uid = cred->uid;
       credentials.gid = cred->gid;
 
-      priv->wait_creds_cb (self, &buf, &credentials, priv->wait_creds_data);
+      priv->recv_creds_cb (self, &buf, &credentials, priv->recv_creds_data);
     }
 
-  priv->wait_creds_cb = NULL;
-  priv->wait_creds_data = NULL;
+  priv->recv_creds_cb = NULL;
+  priv->recv_creds_data = NULL;
   return GIBBER_FD_IO_RESULT_SUCCESS;
 }
 
 gboolean
-gibber_unix_transport_wait_credentials (GibberUnixTransport *self,
-    GibberUnixTransportWaitCredentialsCb callback,
+gibber_unix_transport_recv_credentials (GibberUnixTransport *self,
+    GibberUnixTransportRecvCredentialsCb callback,
     gpointer user_data)
 {
   GibberUnixTransportPrivate *priv = GIBBER_UNIX_TRANSPORT_GET_PRIVATE (self);
 
-  if (priv->wait_creds_cb != NULL)
+  if (priv->recv_creds_cb != NULL)
     {
       DEBUG ("already waiting for credentials");
       return FALSE;
     }
 
-  priv->wait_creds_cb = callback;
-  priv->wait_creds_data = user_data;
+  priv->recv_creds_cb = callback;
+  priv->recv_creds_data = user_data;
   return TRUE;
 }

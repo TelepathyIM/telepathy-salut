@@ -94,14 +94,14 @@ typedef struct {
     gid_t gid;
 } GibberCredentials;
 
-typedef void (*GibberUnixTransportWaitCredentialsCb) (
+typedef void (*GibberUnixTransportRecvCredentialsCb) (
     GibberUnixTransport *transport,
     GibberBuffer *buffer,
     GibberCredentials *credentials,
     gpointer user_data);
 
-gboolean gibber_unix_transport_wait_credentials (GibberUnixTransport *transport,
-    GibberUnixTransportWaitCredentialsCb callback,
+gboolean gibber_unix_transport_recv_credentials (GibberUnixTransport *transport,
+    GibberUnixTransportRecvCredentialsCb callback,
     gpointer user_data);
 
 G_END_DECLS
