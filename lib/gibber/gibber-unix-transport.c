@@ -289,6 +289,8 @@ gibber_unix_transport_read (GibberFdTransport *transport,
       g_set_error_literal (error, G_IO_CHANNEL_ERROR,
           g_io_channel_error_from_errno (errno), "recvmsg failed");
 
+      priv->recv_creds_cb (self, NULL, NULL, priv->recv_creds_data);
+
       priv->recv_creds_cb = NULL;
       priv->recv_creds_data = NULL;
       return GIBBER_FD_IO_RESULT_ERROR;
