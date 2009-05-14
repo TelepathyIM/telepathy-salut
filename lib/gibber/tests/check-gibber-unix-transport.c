@@ -142,12 +142,14 @@ static void
 get_credentials_cb (GibberUnixTransport *transport,
                     GibberBuffer *buffer,
                     GibberCredentials *credentials,
+                    GError *error,
                     gpointer user_data)
 {
   GMainLoop *loop = (GMainLoop *) user_data;
 
   received_credentials = TRUE;
 
+  g_assert (error == NULL);
   g_assert (strcmp ((gchar *) buffer->data, DATA) == 0);
   g_assert (credentials->pid == getpid ());
   g_assert (credentials->uid == getuid ());

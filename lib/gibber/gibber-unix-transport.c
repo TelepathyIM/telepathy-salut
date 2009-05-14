@@ -286,10 +286,13 @@ gibber_unix_transport_read (GibberFdTransport *transport,
 
   if (bytes_read == -1)
     {
-      g_set_error_literal (error, G_IO_CHANNEL_ERROR,
+      GError *err = NULL;
+
+      g_set_error_literal (&err, G_IO_CHANNEL_ERROR,
           g_io_channel_error_from_errno (errno), "recvmsg failed");
 
-      priv->recv_creds_cb (self, NULL, NULL, priv->recv_creds_data);
+      priv->recv_creds_cb (self, NULL, NULL, err, priv->recv_creds_data);
+      g_propagate_error (error, err);
 
       priv->recv_creds_cb = NULL;
       priv->recv_creds_data = NULL;
@@ -307,9 +310,16 @@ gibber_unix_transport_read (GibberFdTransport *transport,
   ch = CMSG_FIRSTHDR (&msg);
   if (ch == NULL)
     {
+      GError *err = NULL;
+
       DEBUG ("Message doesn't contain credentials");
 
-      priv->recv_creds_cb (self, &buf, NULL, priv->recv_creds_data);
+      g_set_error_literal (&err, GIBBER_UNIX_TRANSPORT_ERROR,
+          GIBBER_UNIX_TRANSPORT_ERROR_NO_CREDENTIALS,
+          "no credentials received");
+
+      priv->recv_creds_cb (self, &buf, NULL, err, priv->recv_creds_data);
+      g_error_free (err);
     }
   else
     {
@@ -320,7 +330,8 @@ gibber_unix_transport_read (GibberFdTransport *transport,
       credentials.uid = cred->uid;
       credentials.gid = cred->gid;
 
-      priv->recv_creds_cb (self, &buf, &credentials, priv->recv_creds_data);
+      priv->recv_creds_cb (self, &buf, &credentials, NULL,
+          priv->recv_creds_data);
     }
 
   priv->recv_creds_cb = NULL;

@@ -45,6 +45,7 @@ typedef enum
 {
   GIBBER_UNIX_TRANSPORT_ERROR_CONNECT_FAILED,
   GIBBER_UNIX_TRANSPORT_ERROR_FAILED,
+  GIBBER_UNIX_TRANSPORT_ERROR_NO_CREDENTIALS,
 } GibberUnixTransportError;
 
 typedef struct _GibberUnixTransport GibberUnixTransport;
@@ -98,6 +99,7 @@ typedef void (*GibberUnixTransportRecvCredentialsCb) (
     GibberUnixTransport *transport,
     GibberBuffer *buffer,
     GibberCredentials *credentials,
+    GError *error,
     gpointer user_data);
 
 gboolean gibber_unix_transport_recv_credentials (GibberUnixTransport *transport,
