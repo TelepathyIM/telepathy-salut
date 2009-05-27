@@ -130,18 +130,18 @@ def wait_for_contact_list(q, conn):
     # publish
     requestotron.EnsureChannel({
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
         cs.TARGET_ID: 'publish'})
     q.expect('dbus-signal', signal='NewChannel')
     # subscribe
     requestotron.EnsureChannel({
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
         cs.TARGET_ID: 'subscribe'})
     q.expect('dbus-signal', signal='NewChannel')
     # known
     requestotron.EnsureChannel({
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
         cs.TARGET_ID: 'known'})
     q.expect('dbus-signal', signal='NewChannel')

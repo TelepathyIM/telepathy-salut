@@ -97,17 +97,17 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='NewChannel', path=conn2.object_path)
 
     # first connection: get the contact list
-    publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
+    publish_handle = conn.RequestHandles(HT_LIST, ["publish"])[0]
     conn1_publish = conn.RequestChannel(
         "org.freedesktop.Telepathy.Channel.Type.ContactList",
-        HT_CONTACT_LIST, publish_handle, False)
+        HT_LIST, publish_handle, False)
     conn1_publish_proxy = bus.get_object(conn.bus_name, conn1_publish)
 
     # second connection: get the contact list
-    publish_handle = conn2.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
+    publish_handle = conn2.RequestHandles(HT_LIST, ["publish"])[0]
     conn2_publish = conn2.RequestChannel(
         "org.freedesktop.Telepathy.Channel.Type.ContactList",
-        HT_CONTACT_LIST, publish_handle, False)
+        HT_LIST, publish_handle, False)
     conn2_publish_proxy = bus.get_object(conn2.bus_name, conn2_publish)
 
     # first connection: wait to see contact2

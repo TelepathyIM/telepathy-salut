@@ -83,15 +83,15 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
     # first connection: get the contact list
-    publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
+    publish_handle = conn.RequestHandles(HT_LIST, ["publish"])[0]
     conn1_publish = conn.RequestChannel(CHANNEL_TYPE_CONTACT_LIST,
-        HT_CONTACT_LIST, publish_handle, False)
+        HT_LIST, publish_handle, False)
     conn1_publish_proxy = bus.get_object(conn.bus_name, conn1_publish)
 
     # second connection: get the contact list
-    publish_handle = conn2.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
+    publish_handle = conn2.RequestHandles(HT_LIST, ["publish"])[0]
     conn2_publish = conn2.RequestChannel(CHANNEL_TYPE_CONTACT_LIST,
-        HT_CONTACT_LIST, publish_handle, False)
+        HT_LIST, publish_handle, False)
     conn2_publish_proxy = bus.get_object(conn2.bus_name, conn2_publish)
 
     # first connection: wait to see contact2
