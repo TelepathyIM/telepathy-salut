@@ -261,7 +261,7 @@ def test(q, bus, conn):
     assert state == TUBE_CHANNEL_STATE_NOT_OFFERED
 
     call_async(q, contact1_stream_tube, 'Offer', SOCKET_ADDRESS_TYPE_UNIX,
-            dbus.ByteArray(server_socket_address), SOCKET_ACCESS_CONTROL_LOCALHOST, "", sample_parameters)
+            dbus.ByteArray(server_socket_address), SOCKET_ACCESS_CONTROL_LOCALHOST, sample_parameters)
 
     _, return_event, new_chans = q.expect_many(
         EventPattern('dbus-signal', signal='TubeChannelStateChanged',
@@ -335,7 +335,7 @@ def test(q, bus, conn):
     client_transport = e.transport
 
     sig, e = q.expect_many(
-        EventPattern('dbus-signal', signal='NewConnection', path=tube1_path),
+        EventPattern('dbus-signal', signal='NewRemoteConnection', path=tube1_path),
         EventPattern('client-data-received'))
 
     handle = sig.args[0]

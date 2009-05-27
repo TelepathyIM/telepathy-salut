@@ -312,7 +312,7 @@ def test(q, bus, conn):
             handle, contact_name, 3)
 
     tube_channel.Offer(SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
-            SOCKET_ACCESS_CONTROL_LOCALHOST, "", {'foo': 'bar'})
+            SOCKET_ACCESS_CONTROL_LOCALHOST, {'foo': 'bar'})
 
     e = q.expect('stream-iq')
     iq_tube = xpath.queryForNodes('/iq/tube', e.stanza)[0]

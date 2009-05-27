@@ -354,7 +354,7 @@ def test(q, bus, conn):
 
     call_async(q, contact1_stream_tube, 'Offer',
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
-            SOCKET_ACCESS_CONTROL_LOCALHOST, "", sample_parameters)
+            SOCKET_ACCESS_CONTROL_LOCALHOST, sample_parameters)
 
     q.expect_many(
         EventPattern('dbus-signal', signal='TubeChannelStateChanged',
@@ -458,7 +458,7 @@ def test(q, bus, conn):
     client_transport = e.transport
 
     sig, e = q.expect_many(
-        EventPattern('dbus-signal', signal='NewConnection',
+        EventPattern('dbus-signal', signal='NewRemoteConnection',
             path=tube1_path),
         EventPattern('client-data-received'))
 
