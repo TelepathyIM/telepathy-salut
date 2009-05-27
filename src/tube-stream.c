@@ -2042,6 +2042,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
       gchar *peer_id;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+      GValue connection_param = {0,};
 
       if (priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING)
         {
@@ -2059,8 +2060,13 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 
       g_signal_emit (G_OBJECT (self), signals[NEW_CONNECTION], 0, contact);
 
-      salut_svc_channel_type_stream_tube_emit_new_connection (
-          self, contact);
+      /* FIXME: set connection_param */
+      g_value_init (&connection_param, G_TYPE_STRING);
+      g_value_set_string (&connection_param, "");
+
+      /* FIXME: set connection ID */
+      salut_svc_channel_type_stream_tube_emit_new_remote_connection (
+          self, contact, &connection_param, 0);
 
       tp_handle_unref (contact_repo, contact);
       g_free (peer_id);
@@ -2259,7 +2265,6 @@ salut_tube_stream_offer_async (SalutSvcChannelTypeStreamTube *iface,
     guint address_type,
     const GValue *address,
     guint access_control,
-    const GValue *access_control_param,
     GHashTable *parameters,
     DBusGMethodInvocation *context)
 {
@@ -2277,7 +2282,7 @@ salut_tube_stream_offer_async (SalutSvcChannelTypeStreamTube *iface,
     }
 
   if (!salut_tube_stream_check_params (address_type, address,
-        access_control, access_control_param, &error))
+        access_control, NULL, &error))
     {
       dbus_g_method_return_error (context, error);
       g_error_free (error);
@@ -2293,7 +2298,6 @@ salut_tube_stream_offer_async (SalutSvcChannelTypeStreamTube *iface,
   g_assert (priv->access_control == TP_SOCKET_ACCESS_CONTROL_LOCALHOST);
   priv->access_control = access_control;
   g_assert (priv->access_control_param == NULL);
-  priv->access_control_param = tp_g_value_slice_dup (access_control_param);
 
   g_object_set (self, "parameters", parameters, NULL);
 
