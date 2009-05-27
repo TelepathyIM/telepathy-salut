@@ -700,6 +700,30 @@ local_new_connection_cb (GibberListener *listener,
     }
 }
 
+static void
+fire_new_remote_connection (SalutTubeStream *self,
+    GibberTransport *transport,
+    TpHandle contact)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GValue access_control_param = {0,};
+  guint connection_id;
+
+  g_assert (priv->access_control == TP_SOCKET_ACCESS_CONTROL_LOCALHOST);
+
+  /* set a dummy value */
+  g_value_init (&access_control_param, G_TYPE_INT);
+  g_value_set_int (&access_control_param, 0);
+
+  connection_id = GPOINTER_TO_UINT (g_hash_table_lookup (priv->transport_to_id,
+        transport));
+  g_assert (connection_id != 0);
+
+  salut_svc_channel_type_stream_tube_emit_new_remote_connection (self,
+      contact, &access_control_param, connection_id);
+  g_value_unset (&access_control_param);
+}
+
 static GibberTransport *
 new_connection_to_socket (SalutTubeStream *self,
                           GibberBytestreamIface *bytestream)
@@ -2075,8 +2099,6 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
       gchar *peer_id;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
-      GValue connection_param = {0,};
-      guint connection_id;
 
       if (priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING)
         {
@@ -2094,16 +2116,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 
       g_signal_emit (G_OBJECT (self), signals[NEW_CONNECTION], 0, contact);
 
-      /* FIXME: set connection_param */
-      g_value_init (&connection_param, G_TYPE_STRING);
-      g_value_set_string (&connection_param, "");
-
-      connection_id = GPOINTER_TO_UINT (g_hash_table_lookup (
-            priv->transport_to_id, transport));
-      g_assert (connection_id != 0);
-
-      salut_svc_channel_type_stream_tube_emit_new_remote_connection (
-          self, contact, &connection_param, connection_id);
+      fire_new_remote_connection (self, transport, contact);
 
       tp_handle_unref (contact_repo, contact);
       g_free (peer_id);
