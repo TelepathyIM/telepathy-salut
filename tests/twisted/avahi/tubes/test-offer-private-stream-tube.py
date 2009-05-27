@@ -58,12 +58,12 @@ def check_conn_properties(q, bus, conn, channel_list=None):
             ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
     assert ({'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube',
              'org.freedesktop.Telepathy.Channel.TargetHandleType': HT_CONTACT,
              },
              ['org.freedesktop.Telepathy.Channel.TargetHandle',
               'org.freedesktop.Telepathy.Channel.TargetID',
-              'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service',
+              'org.freedesktop.Telepathy.Channel.Type.StreamTube.Service',
              ]
             ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
@@ -93,7 +93,7 @@ def check_channel_properties(q, bus, conn, channel, channel_type,
     else:
         assert state is not None
         tube_props = channel.GetAll(
-                'org.freedesktop.Telepathy.Channel.Interface.Tube.DRAFT',
+                'org.freedesktop.Telepathy.Channel.Interface.Tube',
                 dbus_interface='org.freedesktop.DBus.Properties')
         assert tube_props['State'] == state, tube_props['State']
         # no strict check but at least check the properties exist
@@ -228,7 +228,7 @@ def test(q, bus, conn):
     try:
         requestotron.CreateChannel(
             {'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
                 HT_CONTACT,
              'org.freedesktop.Telepathy.Channel.TargetHandle':
@@ -249,7 +249,7 @@ def test(q, bus, conn):
     try:
         requestotron.CreateChannel(
             {'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
                 HT_CONTACT,
              'org.freedesktop.Telepathy.Channel.TargetHandle':
@@ -267,12 +267,12 @@ def test(q, bus, conn):
     # Salut must succeed
     call_async(q, requestotron, 'CreateChannel',
             {'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
+                'org.freedesktop.Telepathy.Channel.Type.StreamTube',
              'org.freedesktop.Telepathy.Channel.TargetHandleType':
                 HT_CONTACT,
              'org.freedesktop.Telepathy.Channel.TargetHandle':
                 handle,
-             'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
+             'org.freedesktop.Telepathy.Channel.Type.StreamTube.Service':
                 "newecho"
             });
     ret, old_sig, new_sig = q.expect_many(
@@ -295,9 +295,9 @@ def test(q, bus, conn):
     check_conn_properties(q, bus, conn,
             [old_tubes_channel_properties, stream_tube_channel_properties])
 
-    assert stream_tube_channel_properties[1]['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] == \
+    assert stream_tube_channel_properties[1]['org.freedesktop.Telepathy.Channel.Type.StreamTube.Service'] == \
         'newecho'
-    assert stream_tube_channel_properties[1]['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.SupportedSocketTypes'] == \
+    assert stream_tube_channel_properties[1]['org.freedesktop.Telepathy.Channel.Type.StreamTube.SupportedSocketTypes'] == \
         {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST],
          SOCKET_ADDRESS_TYPE_IPV4: [SOCKET_ACCESS_CONTROL_LOCALHOST],
          SOCKET_ADDRESS_TYPE_IPV6: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
@@ -305,10 +305,10 @@ def test(q, bus, conn):
     # continue
     tubes_channel = make_channel_proxy(conn, chan_path, "Channel.Type.Tubes")
     tube_channel = make_channel_proxy(conn, new_chan_path,
-            "Channel.Type.StreamTube.DRAFT")
+            "Channel.Type.StreamTube")
     check_channel_properties(q, bus, conn, tubes_channel, "Tubes", handle,
             contact_name)
-    check_channel_properties(q, bus, conn, tube_channel, "StreamTube.DRAFT",
+    check_channel_properties(q, bus, conn, tube_channel, "StreamTube",
             handle, contact_name, 3)
 
     tube_channel.Offer(SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),

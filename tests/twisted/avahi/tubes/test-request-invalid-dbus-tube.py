@@ -24,7 +24,7 @@ raise SystemExit(77)
 PUBLISHED_NAME="test-tube"
 
 CHANNEL_TYPE_TUBES = "org.freedesktop.Telepathy.Channel.Type.Tubes"
-C_T_DTUBE = 'org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT'
+C_T_DTUBE = 'org.freedesktop.Telepathy.Channel.Type.DBusTube'
 HT_CONTACT = 1
 
 invalid_service_names = [ 'invalidServiceName'

@@ -328,7 +328,7 @@ def test(q, bus, conn):
 
             contact1_tube = bus.get_object(conn.bus_name, path)
             contact1_stream_tube = make_channel_proxy(conn, path,
-                "Channel.Type.StreamTube.DRAFT")
+                "Channel.Type.StreamTube")
             contact1_tube_channel = make_channel_proxy(conn, path, "Channel")
             tube1_path = path
         else:
@@ -416,7 +416,7 @@ def test(q, bus, conn):
 
             contact2_tube = bus.get_object(conn.bus_name, path)
             contact2_stream_tube = make_channel_proxy(conn, path,
-                "Channel.Type.StreamTube.DRAFT")
+                "Channel.Type.StreamTube")
             contact2_tube_channel = make_channel_proxy(conn, path, "Channel")
             tube2_path = path
         else:

@@ -71,8 +71,8 @@ ft_allowed_properties = dbus.Array([
 daap_fixed_properties = dbus.Dictionary({
     'org.freedesktop.Telepathy.Channel.TargetHandleType': 1L,
     'org.freedesktop.Telepathy.Channel.ChannelType':
-        'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
-    'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
+        'org.freedesktop.Telepathy.Channel.Type.StreamTube',
+    'org.freedesktop.Telepathy.Channel.Type.StreamTube.Service':
         'daap'
     })
 daap_allowed_properties = dbus.Array([
@@ -82,8 +82,8 @@ daap_allowed_properties = dbus.Array([
 http_fixed_properties = dbus.Dictionary({
     'org.freedesktop.Telepathy.Channel.TargetHandleType': 1L,
     'org.freedesktop.Telepathy.Channel.ChannelType':
-        'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT',
-    'org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service':
+        'org.freedesktop.Telepathy.Channel.Type.StreamTube',
+    'org.freedesktop.Telepathy.Channel.Type.StreamTube.Service':
         'http'
     })
 http_allowed_properties = dbus.Array([
@@ -93,8 +93,8 @@ http_allowed_properties = dbus.Array([
 xiangqi_fixed_properties = dbus.Dictionary({
     'org.freedesktop.Telepathy.Channel.TargetHandleType': 1L,
     'org.freedesktop.Telepathy.Channel.ChannelType':
-        'org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT',
-    'org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName':
+        'org.freedesktop.Telepathy.Channel.Type.DBusTube',
+    'org.freedesktop.Telepathy.Channel.Type.DBusTube.ServiceName':
         'com.example.Xiangqi'
     })
 xiangqi_allowed_properties = dbus.Array([
@@ -104,8 +104,8 @@ xiangqi_allowed_properties = dbus.Array([
 go_fixed_properties = dbus.Dictionary({
     'org.freedesktop.Telepathy.Channel.TargetHandleType': 1L,
     'org.freedesktop.Telepathy.Channel.ChannelType':
-        'org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT',
-    'org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName':
+        'org.freedesktop.Telepathy.Channel.Type.DBusTube',
+    'org.freedesktop.Telepathy.Channel.Type.DBusTube.ServiceName':
         'com.example.Go'
     })
 go_allowed_properties = dbus.Array([
@@ -279,7 +279,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 2, signaled_caps # basic caps + daap
     assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
+        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.Service'] \
         == 'daap'
 
     # daap capabilities
@@ -321,7 +321,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 2, signaled_caps # basic caps + Xiangqi
     assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
+        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.ServiceName'] \
         == 'com.example.Xiangqi'
 
     # xiangqi capabilities
@@ -366,10 +366,10 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
+        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.Service'] \
         == 'daap'
     assert signaled_caps[2][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
+        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.ServiceName'] \
         == 'com.example.Xiangqi'
 
     # daap + xiangqi capabilities
@@ -419,16 +419,16 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 5, signaled_caps # basic caps + 4 tubes
     assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
+        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.Service'] \
         == 'daap'
     assert signaled_caps[2][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
+        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.Service'] \
         == 'http'
     assert signaled_caps[3][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
+        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.ServiceName'] \
         == 'com.example.Xiangqi'
     assert signaled_caps[4][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
+        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.ServiceName'] \
         == 'com.example.Go'
 
     # http + daap + xiangqi + go capabilities
@@ -462,10 +462,10 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     signaled_caps = event.args[0][contact_handle]
     assert len(signaled_caps) == 3, signaled_caps # basic caps + daap+xiangqi
     assert signaled_caps[1][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.DRAFT.Service'] \
+        ['org.freedesktop.Telepathy.Channel.Type.StreamTube.Service'] \
         == 'daap'
     assert signaled_caps[2][0] \
-        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.DRAFT.ServiceName'] \
+        ['org.freedesktop.Telepathy.Channel.Type.DBusTube.ServiceName'] \
         == 'com.example.Xiangqi'
 
     # daap + xiangqi capabilities
