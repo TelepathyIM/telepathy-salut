@@ -4,9 +4,10 @@ Some handy constants for other tests to share and enjoy.
 
 from dbus import PROPERTIES_IFACE
 
+HT_NONE = 0
 HT_CONTACT = 1
 HT_ROOM = 2
-HT_CONTACT_LIST = 3
+HT_LIST = 3
 HT_GROUP = 4
 
 CHANNEL = "org.freedesktop.Telepathy.Channel"
@@ -63,12 +64,17 @@ NOT_AVAILABLE = ERROR + '.NotAvailable'
 PERMISSION_DENIED = ERROR + '.PermissionDenied'
 OFFLINE = ERROR + '.Offline'
 NOT_CAPABLE = ERROR + '.NotCapable'
+CONNECTION_REFUSED = ERROR + '.ConnectionRefused'
+CONNECTION_FAILED = ERROR + '.ConnectionFailed'
+CONNECTION_LOST = ERROR + '.ConnectionLost'
+CANCELLED = ERROR + '.Cancelled'
 
 TUBE_PARAMETERS = CHANNEL_IFACE_TUBE + '.Parameters'
 TUBE_STATE = CHANNEL_IFACE_TUBE + '.State'
 STREAM_TUBE_SERVICE = CHANNEL_TYPE_STREAM_TUBE + '.Service'
 DBUS_TUBE_SERVICE_NAME = CHANNEL_TYPE_DBUS_TUBE + '.ServiceName'
 DBUS_TUBE_DBUS_NAMES = CHANNEL_TYPE_DBUS_TUBE + '.DBusNames'
+DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS = CHANNEL_TYPE_DBUS_TUBE + '.SupportedAccessControls'
 
 TUBE_CHANNEL_STATE_LOCAL_PENDING = 0
 TUBE_CHANNEL_STATE_REMOTE_PENDING = 1
