@@ -462,8 +462,9 @@ def test(q, bus, conn):
             path=tube1_path),
         EventPattern('client-data-received'))
 
-    handle = sig.args[0]
+    handle, conn_param, conn_id = sig.args
     assert handle == contact2_handle_on_conn1
+    assert conn_id != 0
 
     # client receives server's welcome message
     assert e.data == SERVER_WELCOME_MSG
