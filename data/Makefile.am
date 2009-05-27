@@ -1,3 +1,5 @@
+include $(top_srcdir)/tools/shave.mk
+
 EXTRA_DIST = salut.service.in
 
 managerdir = $(datadir)/telepathy/managers
@@ -11,12 +13,12 @@ service_DATA = org.freedesktop.Telepathy.ConnectionManager.salut.service
 # non-archaic tarballs)
 org.freedesktop.Telepathy.ConnectionManager.salut.service: salut.service.in \
 		Makefile
-	@sed -e "s|[@]libexecdir[@]|$(libexecdir)|" $< > $@
+	$(QUIET_GEN)sed -e "s|[@]libexecdir[@]|$(libexecdir)|" $< > $@
 
 CLEANFILES = $(service_DATA) $(manager_DATA)
 
 $(manager_DATA): always-build
 	$(MAKE) -C ../src write-mgr-file
-	../src/write-mgr-file > $@
+	$(QUIET_GEN)../src/write-mgr-file > $@
 
 .PHONY: always-build
