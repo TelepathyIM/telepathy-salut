@@ -334,13 +334,17 @@ def test(q, bus, conn):
 
     client_transport = e.transport
 
-    sig, e = q.expect_many(
+    remote_sig, local_sig, e = q.expect_many(
         EventPattern('dbus-signal', signal='NewRemoteConnection', path=tube1_path),
+        EventPattern('dbus-signal', signal='NewLocalConnection', path=tube2_path),
         EventPattern('client-data-received'))
 
-    handle, conn_param, conn_id = sig.args
+    handle, conn_param, contact1_tube_conn_id = remote_sig.args
     assert handle == contact2_handle_on_conn1
-    assert conn_id != 0
+    assert contact1_tube_conn_id != 0
+
+    contact2_tube_conn_id = local_sig.args[0]
+    assert contact2_tube_conn_id != 0
 
     # client receives server's welcome message
     assert e.data == SERVER_WELCOME_MSG
