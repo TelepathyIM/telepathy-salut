@@ -67,14 +67,6 @@
 #include "salut-tubes-channel.h"
 #include "salut-xmpp-connection-manager.h"
 
-/* FIXME: use tp-glib errors */
-#define SALUT_ERROR_STR_CONNECTION_LOST \
-  "org.freedesktop.Telepathy.Error.ConnectionLost"
-#define SALUT_ERROR_STR_CONNECTION_REFUSED \
-  "org.freedesktop.Telepathy.Error.ConnectionRefused"
-#define SALUT_ERROR_STR_CANCELLED \
-  "org.freedesktop.Telepathy.Error.Cancelled"
-
 static void tube_iface_init (gpointer g_iface, gpointer iface_data);
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void streamtube_iface_init (gpointer g_iface, gpointer iface_data);
@@ -321,7 +313,7 @@ transport_disconnected_cb (GibberTransport *transport,
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GibberBytestreamIface *bytestream;
 
-  fire_connection_closed (self, transport, SALUT_ERROR_STR_CANCELLED,
+  fire_connection_closed (self, transport, TP_ERROR_STR_CANCELLED,
       "local socket has been disconnected");
 
   bytestream = g_hash_table_lookup (priv->transport_to_bytestream, transport);
@@ -346,7 +338,7 @@ remove_transport (SalutTubeStream *self,
 
   gibber_transport_disconnect (transport);
 
-  fire_connection_closed (self, transport, SALUT_ERROR_STR_CONNECTION_LOST,
+  fire_connection_closed (self, transport, TP_ERROR_STR_CONNECTION_LOST,
       "bytestream has been broken");
 
   /* the transport may not be in transport_to_bytestream if the bytestream was
@@ -494,7 +486,7 @@ extra_bytestream_negotiate_cb (GibberBytestreamIface *bytestream,
       DEBUG ("initiator refused new bytestream");
 
       fire_connection_closed (self, data->transport,
-          SALUT_ERROR_STR_CONNECTION_REFUSED, "connection has been refused");
+          TP_ERROR_STR_CONNECTION_REFUSED, "connection has been refused");
 
       g_object_unref (data->transport);
       g_slice_free (struct _extra_bytestream_negotiate_cb_data, data);
@@ -1007,7 +999,7 @@ close_each_extra_bytestream (gpointer key,
 
   gibber_bytestream_iface_close (bytestream, NULL);
   gibber_transport_disconnect (transport);
-  fire_connection_closed (self, transport, SALUT_ERROR_STR_CANCELLED,
+  fire_connection_closed (self, transport, TP_ERROR_STR_CANCELLED,
       "tube is closing");
 
   g_hash_table_remove (priv->transport_to_bytestream, transport);
