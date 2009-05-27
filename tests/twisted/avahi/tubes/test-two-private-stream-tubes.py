@@ -362,12 +362,22 @@ def test(q, bus, conn):
     call_async(q, contact1_tube_channel, 'Close')
 
     # tube is closed on both sides
-    q.expect_many(
+    _, e1, e2, _, _, _, _ = q.expect_many(
         EventPattern('dbus-return', method='Close'),
+        EventPattern('dbus-signal', signal='ConnectionClosed', path=tube1_path),
+        EventPattern('dbus-signal', signal='ConnectionClosed', path=tube2_path),
         EventPattern('dbus-signal', signal='Closed', path=tube1_path),
         EventPattern('dbus-signal', signal='Closed', path=tube2_path),
         EventPattern('dbus-signal', signal='ChannelClosed', path=conn.object.object_path),
         EventPattern('dbus-signal', signal='ChannelClosed', path=conn2.object.object_path))
+
+    conn_id, error, dbus_msg = e1.args
+    assert conn_id == contact1_tube_conn_id
+    assert error == CANCELLED
+
+    conn_id, error, dbus_msg = e2.args
+    assert conn_id == contact2_tube_conn_id
+    assert error == CANCELLED
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])

@@ -482,11 +482,21 @@ def test(q, bus, conn):
     assert client_received.data == string.swapcase(test_string)
 
     call_async(q, contact1_tube_channel, 'Close')
-    q.expect_many(
+    _, e1, e2, _, _, _ = q.expect_many(
         EventPattern('dbus-return', method='Close'),
+        EventPattern('dbus-signal', signal='ConnectionClosed', path=tube1_path),
+        EventPattern('dbus-signal', signal='ConnectionClosed', path=tube2_path),
         EventPattern('dbus-signal', signal='Closed'),
         EventPattern('dbus-signal', signal='TubeClosed'),
         EventPattern('dbus-signal', signal='ChannelClosed'))
+
+    conn_id, error, dbus_msg = e1.args
+    assert conn_id == contact1_tube_conn_id
+    assert error == CANCELLED
+
+    conn_id, error, dbus_msg = e2.args
+    assert conn_id == contact2_tube_conn_id
+    assert error == CONNECTION_LOST
 
     call_async(q, contact2_tube_channel, 'Close')
     q.expect_many(
