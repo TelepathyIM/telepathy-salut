@@ -10,7 +10,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/test-muc-invite.py \
 	avahi/test-caps-file-transfer.py \
 	avahi/test-close-local-pending-room.py \
-	avahi/test-disabled-1-1-tubes.py \
+	avahi/tubes/test-disabled-1-1-tubes.py \
 	avahi/file-transfer/test-send-file-and-cancel-immediately.py \
 	avahi/file-transfer/test-send-file-and-disconnect.py \
 	avahi/file-transfer/test-send-file-declined.py \
@@ -38,16 +38,16 @@ TWISTED_AVAHI_TESTS = \
 	avahi/file-transfer/test-ichat-receive-file.py \
 	avahi/file-transfer/test-ichat-send-file.py \
 	avahi/file-transfer/test-ichat-send-file-declined.py  \
-	avahi/test-request-invalid-dbus-tube.py \
+	avahi/tubes/test-request-invalid-dbus-tube.py \
 	avahi/test-request-muc.py \
-	avahi/test-request-muc-tubes.py \
+	avahi/tubes/test-request-muc-tubes.py \
         avahi/test-roomlist.py \
 	avahi/test-set-presence.py \
-	avahi/test-offer-private-stream-tube.py \
-	avahi/test-two-muc-stream-tubes.py \
-	avahi/test-two-private-stream-tubes.py \
-	avahi/test-tube-close.py \
-	avahi/tubes-to-nonexistant-ids.py
+	avahi/tubes/test-offer-private-stream-tube.py \
+	avahi/tubes/test-two-muc-stream-tubes.py \
+	avahi/tubes/test-two-private-stream-tubes.py \
+	avahi/tubes/test-tube-close.py \
+	avahi/tubes/tubes-to-nonexistant-ids.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
 	avahi/test-olpc-activity-announcements.py
