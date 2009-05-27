@@ -328,16 +328,16 @@ def test(q, bus, conn):
     client.connectUNIX(unix_socket_adr).addCallback(client_connected_cb)
 
     # server got the connection
-    _, e = q.expect_many(
+    _, client_connected, remote_sig, local_sig, data_received = q.expect_many(
         EventPattern('server-connected'),
-        EventPattern('client-connected'))
-
-    client_transport = e.transport
-
-    remote_sig, local_sig, e = q.expect_many(
-        EventPattern('dbus-signal', signal='NewRemoteConnection', path=tube1_path),
-        EventPattern('dbus-signal', signal='NewLocalConnection', path=tube2_path),
+        EventPattern('client-connected'),
+        EventPattern('dbus-signal', signal='NewRemoteConnection',
+            path=tube1_path),
+        EventPattern('dbus-signal', signal='NewLocalConnection',
+            path=tube2_path),
         EventPattern('client-data-received'))
+
+    client_transport = client_connected.transport
 
     handle, conn_param, contact1_tube_conn_id = remote_sig.args
     assert handle == contact2_handle_on_conn1
@@ -347,7 +347,7 @@ def test(q, bus, conn):
     assert contact2_tube_conn_id != 0
 
     # client receives server's welcome message
-    assert e.data == SERVER_WELCOME_MSG
+    assert data_received.data == SERVER_WELCOME_MSG
 
     client_transport.write(test_string)
 
