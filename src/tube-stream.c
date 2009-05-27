@@ -191,6 +191,10 @@ struct _SalutTubeStreamPrivate
    */
   GHashTable *transport_to_bytestream;
 
+  /* (GibberTransport *) -> guint */
+  GHashTable *transport_to_id;
+  guint last_connection_id;
+
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
@@ -311,6 +315,7 @@ remove_transport (SalutTubeStream *self,
   g_hash_table_remove (priv->transport_to_bytestream, transport);
 
   g_hash_table_remove (priv->bytestream_to_transport, bytestream);
+  g_hash_table_remove (priv->transport_to_id, transport);
 }
 
 static void
@@ -644,6 +649,20 @@ start_stream_direct (SalutTubeStream *self,
   return TRUE;
 }
 
+static guint
+generate_connection_id (SalutTubeStream *self,
+    GibberTransport *transport)
+{
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  priv->last_connection_id++;
+
+  g_hash_table_insert (priv->transport_to_id, transport,
+      GUINT_TO_POINTER (priv->last_connection_id));
+
+  return priv->last_connection_id;
+}
+
 /* callback for listening connections from the local application */
 static void
 local_new_connection_cb (GibberListener *listener,
@@ -681,7 +700,7 @@ local_new_connection_cb (GibberListener *listener,
     }
 }
 
-static gboolean
+static GibberTransport *
 new_connection_to_socket (SalutTubeStream *self,
                           GibberBytestreamIface *bytestream)
 {
@@ -729,6 +748,8 @@ new_connection_to_socket (SalutTubeStream *self,
    * its data. */
   gibber_transport_block_receiving (transport, TRUE);
 
+  generate_connection_id (self, transport);
+
   g_hash_table_insert (priv->bytestream_to_transport, g_object_ref (bytestream),
       g_object_ref (transport));
 
@@ -736,7 +757,7 @@ new_connection_to_socket (SalutTubeStream *self,
       G_CALLBACK (extra_bytestream_state_changed_cb), self);
 
   g_object_unref (transport);
-  return TRUE;
+  return transport;
 }
 
 static gboolean
@@ -869,6 +890,10 @@ salut_tube_stream_init (SalutTubeStream *self)
       g_direct_equal, (GDestroyNotify) g_object_unref,
       (GDestroyNotify) g_object_unref);
 
+  priv->transport_to_id = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, NULL, NULL);
+  priv->last_connection_id = 0;
+
   priv->address_type = TP_SOCKET_ADDRESS_TYPE_UNIX;
   priv->address = NULL;
   priv->access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
@@ -948,6 +973,12 @@ salut_tube_stream_dispose (GObject *object)
     {
       g_hash_table_destroy (priv->bytestream_to_transport);
       priv->bytestream_to_transport = NULL;
+    }
+
+  if (priv->transport_to_id != NULL)
+    {
+      g_hash_table_destroy (priv->transport_to_id);
+      priv->transport_to_id = NULL;
     }
 
   tp_handle_unref (contact_repo, priv->initiator);
@@ -2025,6 +2056,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  GibberTransport *transport;
 
   if (priv->initiator != priv->self_handle)
     {
@@ -2036,13 +2068,15 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
     }
 
   /* New bytestream, let's connect to the socket */
-  if (new_connection_to_socket (self, bytestream))
+  transport = new_connection_to_socket (self, bytestream);
+  if (transport != NULL)
     {
       TpHandle contact;
       gchar *peer_id;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
       GValue connection_param = {0,};
+      guint connection_id;
 
       if (priv->state == SALUT_TUBE_CHANNEL_STATE_REMOTE_PENDING)
         {
@@ -2064,9 +2098,12 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
       g_value_init (&connection_param, G_TYPE_STRING);
       g_value_set_string (&connection_param, "");
 
-      /* FIXME: set connection ID */
+      connection_id = GPOINTER_TO_UINT (g_hash_table_lookup (
+            priv->transport_to_id, transport));
+      g_assert (connection_id != 0);
+
       salut_svc_channel_type_stream_tube_emit_new_remote_connection (
-          self, contact, &connection_param, 0);
+          self, contact, &connection_param, connection_id);
 
       tp_handle_unref (contact_repo, contact);
       g_free (peer_id);
