@@ -1013,13 +1013,13 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
 
   tube_id = generate_tube_id ();
 
-  if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
       type = TP_TUBE_TYPE_STREAM;
     }
 /* Temporarily disabled since the implementation is incomplete */
 #if 0
-  else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       type = TP_TUBE_TYPE_DBUS;
     }
@@ -1108,7 +1108,7 @@ copy_tube_in_ptr_array (gpointer key,
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   TpTubeType type;
   GPtrArray *array = (GPtrArray *) user_data;
   GValue entry = {0,};
@@ -1294,7 +1294,7 @@ create_new_tube (SalutTubesChannel *self,
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   GibberMucConnection *muc_connection = NULL;
 
   if (self->muc != NULL)
@@ -1322,7 +1322,7 @@ create_new_tube (SalutTubesChannel *self,
 
   g_object_get (tube, "state", &state, NULL);
 
-  if (state == SALUT_TUBE_CHANNEL_STATE_OPEN)
+  if (state == TP_TUBE_CHANNEL_STATE_OPEN)
     {
       /* FIXME: does it still make sense to call it here? */
       update_tubes_info (self);
@@ -1330,7 +1330,7 @@ create_new_tube (SalutTubesChannel *self,
 
   /* The old API doesn't know the "not offered" state, so we have to wait that
    * the tube is offered before announcing it. */
-  if (state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED)
+  if (state != TP_TUBE_CHANNEL_STATE_NOT_OFFERED)
     {
       tp_svc_channel_type_tubes_emit_new_tube (self,
           tube_id,
@@ -1540,7 +1540,7 @@ publish_tubes_in_node (gpointer key,
     (struct _i_hate_g_hash_table_foreach *) user_data;
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (
       data->self);
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   GibberXmppNode *tube_node;
   TpTubeType type;
   TpHandle initiator;
@@ -1669,7 +1669,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
   SalutTubeIface *tube;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   TpTubeType type;
   gchar *addr;
 
@@ -1774,7 +1774,7 @@ salut_tubes_channel_get_d_bus_tube_address (TpSvcChannelTypeTubes *iface,
   SalutTubeIface *tube;
   gchar *addr;
   TpTubeType type;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1854,7 +1854,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
   GHashTable *names;
   GPtrArray *ret;
   TpTubeType type;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   guint i;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
@@ -1962,7 +1962,7 @@ send_channel_iq_tube (gpointer key,
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   TpTubeType type;
 
   g_object_get (tube,
@@ -1973,7 +1973,7 @@ send_channel_iq_tube (gpointer key,
                 "state", &state,
                 NULL);
 
-  if (state != SALUT_TUBE_CHANNEL_STATE_NOT_OFFERED &&
+  if (state != TP_TUBE_CHANNEL_STATE_NOT_OFFERED &&
       salut_tube_iface_offer_needed (tube))
     {
       GError *error = NULL;
@@ -2175,7 +2175,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
   SalutTubeIface *tube;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   TpTubeType type;
   GValue *address;
   GError *error = NULL;
@@ -2279,7 +2279,7 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
   SalutTubesChannelPrivate *priv  = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
   TpTubeType type;
-  SalutTubeChannelState state;
+  TpTubeChannelState state;
   GValue *address;
   TpSocketAddressType address_type;
 

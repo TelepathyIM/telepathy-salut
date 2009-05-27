@@ -395,7 +395,7 @@ salut_muc_manager_foreach_channel_class (TpChannelManager *manager,
 
   /* org.freedesktop.Telepathy.Channel.Type.StreamTube */
   g_value_set_static_string (channel_type_value,
-      SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
   func (manager, table, salut_tube_stream_channel_get_allowed_properties (),
       user_data);
 
@@ -745,7 +745,7 @@ salut_muc_manager_request (SalutMucManager *self,
 
   if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TEXT) &&
       tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
-      tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     return FALSE;
 
   /* validity already checked by TpBaseConnection */
@@ -820,7 +820,7 @@ salut_muc_manager_request (SalutMucManager *self,
 
       return TRUE;
     }
-  else if (!tp_strdiff (channel_type, SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
       const gchar *service;
       SalutTubeIface *new_channel;
@@ -836,12 +836,12 @@ salut_muc_manager_request (SalutMucManager *self,
 
       /* "Service" is a mandatory, not-fixed property */
       service = tp_asv_get_string (request_properties,
-                SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+                TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
       if (service == NULL)
         {
           g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
               "Request does not contain the mandatory property '%s'",
-              SALUT_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+              TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
           goto error;
         }
 
