@@ -663,6 +663,18 @@ generate_connection_id (SalutTubeStream *self,
   return priv->last_connection_id;
 }
 
+static void
+fire_new_local_connection (SalutTubeStream *self,
+    GibberTransport *transport)
+{
+  guint connection_id;
+
+  connection_id = generate_connection_id (self, transport);
+
+  salut_svc_channel_type_stream_tube_emit_new_local_connection (self,
+      connection_id);
+}
+
 /* callback for listening connections from the local application */
 static void
 local_new_connection_cb (GibberListener *listener,
@@ -689,6 +701,7 @@ local_new_connection_cb (GibberListener *listener,
       if (!start_stream_direct (self, transport, NULL))
         {
           DEBUG ("closing new client connection");
+          return;
         }
     }
   else
@@ -696,8 +709,11 @@ local_new_connection_cb (GibberListener *listener,
       if (!start_stream_initiation (self, transport, NULL))
         {
           DEBUG ("closing new client connection");
+          return;
         }
     }
+
+  fire_new_local_connection (self, transport);
 }
 
 static void
