@@ -38,6 +38,7 @@
 #include "salut-xmpp-connection-manager.h"
 #include "salut-discovery-client.h"
 #include "tube-stream.h"
+#include "tube-dbus.h"
 
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
@@ -397,6 +398,12 @@ salut_muc_manager_foreach_channel_class (TpChannelManager *manager,
   g_value_set_static_string (channel_type_value,
       TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
   func (manager, table, salut_tube_stream_channel_get_allowed_properties (),
+      user_data);
+
+  /* Muc Channel.Type.DBusTube */
+  g_value_set_static_string (channel_type_value,
+      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE);
+  func (manager, table, salut_tube_dbus_channel_get_allowed_properties (),
       user_data);
 
   g_hash_table_destroy (table);
