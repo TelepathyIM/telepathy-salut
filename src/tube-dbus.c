@@ -76,6 +76,7 @@ enum
 {
   OPENED,
   CLOSED,
+  OFFERED,
   LAST_SIGNAL
 };
 
@@ -867,6 +868,16 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 
   signals[CLOSED] =
     g_signal_new ("tube-closed",
+                  G_OBJECT_CLASS_TYPE (salut_tube_dbus_class),
+                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
+                  0,
+                  NULL, NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE, 0);
+
+  /* FIXME: fire this signal */
+  signals[OFFERED] =
+    g_signal_new ("tube-offered",
                   G_OBJECT_CLASS_TYPE (salut_tube_dbus_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
