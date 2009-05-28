@@ -113,7 +113,6 @@ gibber-signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
 	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
 	if cmp -s $@.tmp $@; then \
 		rm $@.tmp; \
-		touch $@; \
 	else \
 		mv $@.tmp $@; \
 	fi
