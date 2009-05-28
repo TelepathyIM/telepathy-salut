@@ -181,7 +181,6 @@ salut-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BAC
 	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
 	if cmp -s $@.tmp $@; then \
 		rm $@.tmp; \
-		touch $@; \
 	else \
 		mv $@.tmp $@; \
 	fi
