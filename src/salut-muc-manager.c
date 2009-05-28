@@ -730,6 +730,66 @@ create_tubes_channel (SalutMucManager *self,
 }
 
 static gboolean
+handle_tube_channel_request (SalutMucManager *self,
+                             gpointer request_token,
+                             GHashTable *request_properties,
+                             gboolean require_new,
+                             TpHandle handle,
+                             GError **error)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
+  SalutMucChannel *text_chan;
+  SalutTubesChannel *tubes_chan;
+  SalutTubeIface *new_channel;
+  GHashTable *channels;
+  GSList *request_tokens;
+  gboolean announce_text = FALSE, announce_tubes = FALSE;
+
+  tubes_chan = g_hash_table_lookup (priv->tubes_channels,
+      GUINT_TO_POINTER (handle));
+  if (tubes_chan == NULL)
+    {
+      tubes_chan = create_tubes_channel (self, handle,
+          base_conn->self_handle, NULL, FALSE, &announce_text,
+          FALSE, error);
+      if (tubes_chan == NULL)
+        return FALSE;
+      announce_tubes = TRUE;
+    }
+
+  g_assert (tubes_chan != NULL);
+  new_channel = salut_tubes_channel_tube_request (tubes_chan, request_token,
+      request_properties, require_new);
+  g_assert (new_channel != NULL);
+
+  /* announce channels */
+  channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, NULL);
+
+  if (announce_text)
+    {
+      text_chan = g_hash_table_lookup (priv->text_channels,
+          GINT_TO_POINTER (handle));
+      g_assert (text_chan != NULL);
+      g_hash_table_insert (channels, text_chan, NULL);
+    }
+
+  if (announce_tubes)
+    {
+      g_hash_table_insert (channels, tubes_chan, NULL);
+    }
+
+  request_tokens = g_slist_prepend (NULL, request_token);
+  g_hash_table_insert (channels, new_channel, request_tokens);
+  tp_channel_manager_emit_new_channels (self, channels);
+
+  g_hash_table_destroy (channels);
+  g_slist_free (request_tokens);
+  return TRUE;
+}
+
+static gboolean
 salut_muc_manager_request (SalutMucManager *self,
                            gpointer request_token,
                            GHashTable *request_properties,
@@ -830,10 +890,6 @@ salut_muc_manager_request (SalutMucManager *self,
   else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
       const gchar *service;
-      SalutTubeIface *new_channel;
-      GHashTable *channels;
-      GSList *request_tokens;
-      gboolean announce_text = FALSE, announce_tubes = FALSE;
 
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               muc_tubes_channel_fixed_properties,
@@ -852,47 +908,8 @@ salut_muc_manager_request (SalutMucManager *self,
           goto error;
         }
 
-      tubes_chan = g_hash_table_lookup (priv->tubes_channels,
-          GUINT_TO_POINTER (handle));
-      if (tubes_chan == NULL)
-        {
-          tubes_chan = create_tubes_channel (self, handle,
-              base_conn->self_handle, NULL, FALSE, &announce_text,
-              FALSE, &error);
-          if (tubes_chan == NULL)
-            goto error;
-          announce_tubes = TRUE;
-        }
-
-      g_assert (tubes_chan != NULL);
-      new_channel = salut_tubes_channel_tube_request (tubes_chan, request_token,
-          request_properties, require_new);
-      g_assert (new_channel != NULL);
-
-      /* announce channels */
-      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-          NULL, NULL);
-
-      if (announce_text)
-        {
-          text_chan = g_hash_table_lookup (priv->text_channels,
-              GINT_TO_POINTER (handle));
-          g_assert (text_chan != NULL);
-          g_hash_table_insert (channels, text_chan, NULL);
-        }
-
-      if (announce_tubes)
-        {
-          g_hash_table_insert (channels, tubes_chan, NULL);
-        }
-
-      request_tokens = g_slist_prepend (NULL, request_token);
-      g_hash_table_insert (channels, new_channel, request_tokens);
-      tp_channel_manager_emit_new_channels (self, channels);
-
-      g_hash_table_destroy (channels);
-      g_slist_free (request_tokens);
-      return TRUE;
+      return handle_tube_channel_request (self, request_token,
+          request_properties, require_new, handle, &error);
     }
   else
     {
