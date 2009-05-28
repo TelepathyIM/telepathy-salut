@@ -1026,15 +1026,12 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
           TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
 
     }
-/* Temporarily disabled since the implementation is incomplete */
-#if 0
   else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       type = TP_TUBE_TYPE_DBUS;
       service = tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
     }
-#endif
   else
     g_assert_not_reached ();
 
