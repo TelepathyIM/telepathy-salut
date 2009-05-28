@@ -76,8 +76,8 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubeDBus, salut_tube_dbus, G_TYPE_OBJECT,
 static const gchar *salut_tube_dbus_interfaces[] = {
     TP_IFACE_CHANNEL_INTERFACE_GROUP,
     /* If more interfaces are added, either keep Group as the first, or change
-     * the implementations of gabble_tube_dbus_get_interfaces () and
-     * gabble_tube_dbus_get_property () too */
+     * the implementations of salut_tube_dbus_get_interfaces () and
+     * salut_tube_dbus_get_property () too */
     TP_IFACE_CHANNEL_INTERFACE_TUBE,
     NULL
 };
@@ -1511,12 +1511,81 @@ salut_tube_dbus_channel_get_allowed_properties (void)
   return salut_tube_dbus_channel_allowed_properties;
 }
 
+/**
+ * salut_tube_dbus_close_async:
+ *
+ * Implements D-Bus method Close
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_dbus_close_async (TpSvcChannel *iface,
+                                  DBusGMethodInvocation *context)
+{
+  salut_tube_dbus_close (SALUT_TUBE_IFACE (iface), FALSE);
+  tp_svc_channel_return_from_close (context);
+}
+
+/**
+ * salut_tube_dbus_get_channel_type
+ *
+ * Implements D-Bus method GetChannelType
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_dbus_get_channel_type (TpSvcChannel *iface,
+                                       DBusGMethodInvocation *context)
+{
+  tp_svc_channel_return_from_get_channel_type (context,
+      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE);
+}
+
+/**
+ * salut_tube_dbus_get_handle
+ *
+ * Implements D-Bus method GetHandle
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_dbus_get_handle (TpSvcChannel *iface,
+                                 DBusGMethodInvocation *context)
+{
+  SalutTubeDBus *self = SALUT_TUBE_DBUS (iface);
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+
+  tp_svc_channel_return_from_get_handle (context, priv->handle_type,
+      priv->handle);
+}
+
+/**
+ * salut_tube_dbus_get_interfaces
+ *
+ * Implements D-Bus method GetInterfaces
+ * on interface org.freedesktop.Telepathy.Channel
+ */
+static void
+salut_tube_dbus_get_interfaces (TpSvcChannel *iface,
+                                   DBusGMethodInvocation *context)
+{
+  SalutTubeDBus *self = SALUT_TUBE_DBUS (iface);
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      /* omit the Group interface */
+      tp_svc_channel_return_from_get_interfaces (context,
+          salut_tube_dbus_interfaces + 1);
+    }
+  else
+    {
+      tp_svc_channel_return_from_get_interfaces (context,
+          salut_tube_dbus_interfaces);
+    }
+}
+
 static void
 channel_iface_init (gpointer g_iface,
                     gpointer iface_data)
 {
-  /* FIXME */
-#if 0
   TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
 
 #define IMPLEMENT(x, suffix) tp_svc_channel_implement_##x (\
@@ -1526,7 +1595,6 @@ channel_iface_init (gpointer g_iface,
   IMPLEMENT(get_handle,);
   IMPLEMENT(get_interfaces,);
 #undef IMPLEMENT
-#endif
 }
 
 static void
