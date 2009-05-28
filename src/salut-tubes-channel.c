@@ -1002,26 +1002,37 @@ generate_tube_id (void)
 
 SalutTubeIface *
 salut_tubes_channel_tube_request (SalutTubesChannel *self,
-                                  const gchar *channel_type,
-                                  const gchar *service)
+    gpointer request_token,
+    GHashTable *request_properties,
+    gboolean require_new)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
+  const gchar *channel_type;
+  const gchar *service;
   guint tube_id;
   TpTubeType type;
   GHashTable *parameters;
 
   tube_id = generate_tube_id ();
 
+  channel_type = tp_asv_get_string (request_properties,
+      TP_IFACE_CHANNEL ".ChannelType");
+
   if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
       type = TP_TUBE_TYPE_STREAM;
+      service = tp_asv_get_string (request_properties,
+          TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+
     }
 /* Temporarily disabled since the implementation is incomplete */
 #if 0
   else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       type = TP_TUBE_TYPE_DBUS;
+      service = tp_asv_get_string (request_properties,
+          TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
     }
 #endif
   else

@@ -1059,7 +1059,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
         }
 
       new_channel = salut_tubes_channel_tube_request (tubes_channel,
-          channel_type, service);
+          request_token, request_properties, require_new);
       g_assert (new_channel != NULL);
 
       if (request_token != NULL)

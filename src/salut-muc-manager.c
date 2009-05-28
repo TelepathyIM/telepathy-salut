@@ -865,8 +865,8 @@ salut_muc_manager_request (SalutMucManager *self,
         }
 
       g_assert (tubes_chan != NULL);
-      new_channel = salut_tubes_channel_tube_request (tubes_chan, channel_type,
-          service);
+      new_channel = salut_tubes_channel_tube_request (tubes_chan, request_token,
+          request_properties, require_new);
       g_assert (new_channel != NULL);
 
       /* announce channels */
