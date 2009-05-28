@@ -74,6 +74,8 @@ gboolean salut_tube_dbus_remove_name (SalutTubeDBus *self, TpHandle handle);
 gboolean salut_tube_dbus_handle_in_names (SalutTubeDBus *self,
     TpHandle handle);
 
+const gchar * const * salut_tube_dbus_channel_get_allowed_properties (void);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_TUBE_DBUS_H__ */

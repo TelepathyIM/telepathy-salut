@@ -29,7 +29,15 @@
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
-#include <telepathy-glib/util.h>
+
+#include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/exportable-channel.h>
+#include <telepathy-glib/group-mixin.h>
+#include <telepathy-glib/gtypes.h>
+#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-channel.h>
+#include <telepathy-glib/svc-generic.h>
 
 #include <gibber/gibber-bytestream-ibb.h>
 #include <gibber/gibber-bytestream-muc.h>
@@ -55,6 +63,13 @@ tube_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubeDBus, salut_tube_dbus, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init));
+
+static const gchar * const salut_tube_dbus_channel_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
+    TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
+    NULL
+};
 
 /* signals */
 enum
@@ -1257,6 +1272,12 @@ salut_tube_dbus_handle_in_names (SalutTubeDBus *self,
 
   return (g_hash_table_lookup (priv->dbus_names, GUINT_TO_POINTER (handle))
       != NULL);
+}
+
+const gchar * const *
+salut_tube_dbus_channel_get_allowed_properties (void)
+{
+  return salut_tube_dbus_channel_allowed_properties;
 }
 
 static void
