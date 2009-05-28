@@ -128,6 +128,7 @@ enum
   PROP_REQUESTED,
   PROP_TARGET_ID,
   PROP_INITIATOR_ID,
+  PROP_SUPPORTED_ACCESS_CONTROLS,
   LAST_PROPERTY
 };
 
@@ -147,6 +148,9 @@ struct _SalutTubeDBusPrivate
   TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
+  TpSocketAccessControl access_control;
+  /* GArray of guint */
+  GArray *supported_access_controls;
 
   /* our unique D-Bus name on the virtual tube bus */
   gchar *dbus_local_name;
@@ -565,6 +569,7 @@ salut_tube_dbus_finalize (GObject *object)
   g_free (priv->stream_id);
   g_free (priv->service);
   g_hash_table_destroy (priv->parameters);
+  g_array_free (priv->supported_access_controls, TRUE);
 
   G_OBJECT_CLASS (salut_tube_dbus_parent_class)->finalize (object);
 }
@@ -667,11 +672,8 @@ salut_tube_dbus_get_property (GObject *object,
               TP_IFACE_CHANNEL, "InitiatorID",
               TP_IFACE_CHANNEL, "Requested",
               TP_IFACE_CHANNEL, "Interfaces",
-              /*
-               * FIXME
               TP_IFACE_CHANNEL_TYPE_DBUS_TUBE, "ServiceName",
               TP_IFACE_CHANNEL_TYPE_DBUS_TUBE, "SupportedAccessControls",
-              */
               NULL);
 
           if (priv->initiator != priv->self_handle)
@@ -719,6 +721,9 @@ salut_tube_dbus_get_property (GObject *object,
             g_value_set_string (value,
                 tp_handle_inspect (repo, priv->handle));
           }
+        break;
+      case PROP_SUPPORTED_ACCESS_CONTROLS:
+        g_value_set_boxed (value, priv->supported_access_controls);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -814,6 +819,7 @@ salut_tube_dbus_constructor (GType type,
   DBusGConnection *bus;
   TpHandleRepoIface *contact_repo;
   TpHandleRepoIface *handles_repo;
+  TpSocketAccessControl access_control;
 
   obj = G_OBJECT_CLASS (salut_tube_dbus_parent_class)->
            constructor (type, n_props, props);
@@ -896,6 +902,16 @@ salut_tube_dbus_constructor (GType type,
       priv->reassembly_buffer = g_string_new ("");
       priv->reassembly_bytes_needed = 0;
     }
+
+  /* default access control is Credentials as that's the one used by the old
+   * tube API */
+  priv->access_control = TP_SOCKET_ACCESS_CONTROL_CREDENTIALS;
+
+  /* Set SupportedAccessesControl */
+  priv->supported_access_controls = g_array_sized_new (FALSE, FALSE,
+      sizeof (guint), 1);
+  access_control = TP_SOCKET_ACCESS_CONTROL_CREDENTIALS;
+  g_array_append_val (priv->supported_access_controls, access_control);
 
   return obj;
 }
@@ -1064,6 +1080,15 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       FALSE,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+  param_spec = g_param_spec_boxed (
+      "supported-access-controls",
+      "Supported access-controls",
+      "GArray containing supported access controls.",
+      DBUS_TYPE_G_UINT_ARRAY,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class,
+      PROP_SUPPORTED_ACCESS_CONTROLS, param_spec);
 
   signals[OPENED] =
     g_signal_new ("tube-opened",
