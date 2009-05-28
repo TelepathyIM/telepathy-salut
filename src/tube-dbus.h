@@ -22,6 +22,9 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/enums.h>
+#include <telepathy-glib/interfaces.h>
+
 #include "salut-connection.h"
 #include "salut-tubes-channel.h"
 #include <gibber/gibber-muc-connection.h>
@@ -34,6 +37,8 @@ typedef struct _SalutTubeDBusClass SalutTubeDBusClass;
 
 struct _SalutTubeDBusClass {
   GObjectClass parent_class;
+
+  TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutTubeDBus {
