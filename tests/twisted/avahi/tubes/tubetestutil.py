@@ -91,3 +91,32 @@ def join_muc(q, conn, muc_name):
     group = make_channel_proxy(conn, path, "Channel.Interface.Group")
 
     return muc_handle, group
+
+def invite_to_muc(q, group1, conn2, invited_handle, inviter_handle):
+    # first connection: invite contact
+    group1.AddMembers([invited_handle], "Let's tube!")
+
+    # channel is created on conn2
+    e = q.expect('dbus-signal', signal='NewChannel', path=conn2.object_path)
+    path = e.args[0]
+    group2 = make_channel_proxy(conn2, path, "Channel.Interface.Group")
+
+    # we are invited to the muc
+    # added as local pending
+    conn2_self_handle = conn2.GetSelfHandle()
+    q.expect('dbus-signal', signal='MembersChanged', path=path,
+        args=["Let's tube!", [], [], [conn2_self_handle], [],
+            inviter_handle, 4])
+
+    # second connection: accept the invite
+    group2.AddMembers([conn2_self_handle], "")
+
+    # added as remote pending
+    q.expect('dbus-signal', signal='MembersChanged', path=path,
+        args=['', [], [], [], [conn2_self_handle], conn2_self_handle, 0])
+
+    # added as member
+    q.expect('dbus-signal', signal='MembersChanged', path=path,
+        args=['', [conn2_self_handle], [], [], [], conn2_self_handle, 0])
+
+    return group2

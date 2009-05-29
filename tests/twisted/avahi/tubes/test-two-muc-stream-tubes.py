@@ -76,31 +76,7 @@ def test(q, bus, conn):
     # first connection: join muc
     muc_handle1, group1 = t.join_muc(q, conn, muc_name)
 
-    # first connection: invite contact2
-    group1.AddMembers([contact2_handle_on_conn1], "Let's tube!")
-
-    # channel is created on conn2
-    e = q.expect('dbus-signal', signal='NewChannel', path=conn2.object_path)
-    path = e.args[0]
-    group2 = make_channel_proxy(conn, path, "Channel.Interface.Group")
-
-    # we are invited to the muc
-    # added as local pending
-    conn2_self_handle = conn2.GetSelfHandle()
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=["Let's tube!", [], [], [conn2_self_handle], [],
-            contact1_handle_on_conn2, 4])
-
-    # second connection: accept the invite
-    group2.AddMembers([conn2_self_handle], "")
-
-    # added as remote pending
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=['', [], [], [], [conn2_self_handle], conn2_self_handle, 0])
-
-    # added as member
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=['', [conn2_self_handle], [], [], [], conn2_self_handle, 0])
+    t.invite_to_muc(q, group1, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
 
     # first connection: offer a muc stream tube (old API)
     tubes1_path = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_ROOM, muc_handle1,
@@ -281,31 +257,7 @@ def test(q, bus, conn):
         dbus_interface=PROPERTIES_IFACE)
     assert state == TUBE_CHANNEL_STATE_OPEN
 
-    # invite contact2 to the room
-    group1.AddMembers([contact2_handle_on_conn1], "Let's tube!")
-
-    # channel is created on conn2
-    e = q.expect('dbus-signal', signal='NewChannel', path=conn2.object_path)
-    path = e.args[0]
-    group2 = make_channel_proxy(conn, path, "Channel.Interface.Group")
-
-    # we are invited to the muc
-    # added as local pending
-    conn2_self_handle = conn2.GetSelfHandle()
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=["Let's tube!", [], [], [conn2_self_handle], [],
-            contact1_handle_on_conn2, 4])
-
-    # second connection: accept the invite
-    group2.AddMembers([conn2_self_handle], "")
-
-    # added as remote pending
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=['', [], [], [], [conn2_self_handle], conn2_self_handle, 0])
-
-    # added as member
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=['', [conn2_self_handle], [], [], [], conn2_self_handle, 0])
+    t.invite_to_muc(q, group1, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
 
     # tubes channel is created
     e = q.expect('dbus-signal', signal='NewChannels')
