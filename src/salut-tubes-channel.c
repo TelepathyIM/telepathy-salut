@@ -1638,6 +1638,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   TpBaseConnection *base;
   guint tube_id;
   SalutTubeIface *tube;
+  GError *err = NULL;
 
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
@@ -1659,6 +1660,15 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
 
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
       TRUE, service, parameters, tube_id, 0, NULL);
+
+  if (!salut_tube_dbus_offer (SALUT_TUBE_DBUS (tube), &err))
+    {
+      salut_tube_iface_close (tube, TRUE);
+      dbus_g_method_return_error (context, err);
+
+      g_error_free (err);
+      return;
+    }
 
   tp_svc_channel_type_tubes_return_from_offer_d_bus_tube (context, tube_id);
 }
