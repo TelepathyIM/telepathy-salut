@@ -71,17 +71,10 @@ def test(q, bus, conn):
     contact1_name, conn2, contact2_name, contact2_handle_on_conn1,\
         contact1_handle_on_conn2 = t.connect_two_accounts(q, bus, conn)
 
-    # first connection: join muc
     conn1_self_handle = conn.GetSelfHandle()
-    muc_handle1 = conn.RequestHandles(HT_ROOM, [muc_name])[0]
-    path = conn.RequestChannel(CHANNEL_TYPE_TEXT, HT_ROOM, muc_handle1, True)
-    # added as remote pending
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=['', [], [], [], [conn1_self_handle], conn1_self_handle, 0])
-    # added as member
-    q.expect('dbus-signal', signal='MembersChanged', path=path,
-        args=['', [conn1_self_handle], [], [], [], conn1_self_handle, 0])
-    group1 = make_channel_proxy(conn, path, "Channel.Interface.Group")
+
+    # first connection: join muc
+    muc_handle1, group1 = t.join_muc(q, conn, muc_name)
 
     # first connection: invite contact2
     group1.AddMembers([contact2_handle_on_conn1], "Let's tube!")

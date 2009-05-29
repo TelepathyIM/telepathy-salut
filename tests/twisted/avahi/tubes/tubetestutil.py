@@ -1,5 +1,6 @@
 from saluttest import make_connection, wait_for_contact_list
 from avahitest import get_host_name
+from servicetest import make_channel_proxy
 
 import constants as cs
 
@@ -76,3 +77,17 @@ def connect_two_accounts(q, bus, conn):
                 contact1_handle_on_conn2 = h
 
     return contact1_name, conn2, contact2_name, contact2_handle_on_conn1, contact1_handle_on_conn2
+
+def join_muc(q, conn, muc_name):
+    self_handle = conn.GetSelfHandle()
+    muc_handle = conn.RequestHandles(cs.HT_ROOM, [muc_name])[0]
+    path = conn.RequestChannel(cs.CHANNEL_TYPE_TEXT, cs.HT_ROOM, muc_handle, True)
+    # added as remote pending
+    q.expect('dbus-signal', signal='MembersChanged', path=path,
+        args=['', [], [], [], [self_handle], self_handle, 0])
+    # added as member
+    q.expect('dbus-signal', signal='MembersChanged', path=path,
+        args=['', [self_handle], [], [], [], self_handle, 0])
+    group = make_channel_proxy(conn, path, "Channel.Interface.Group")
+
+    return muc_handle, group
