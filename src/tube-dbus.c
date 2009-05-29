@@ -1697,6 +1697,66 @@ salut_tube_dbus_get_interfaces (TpSvcChannel *iface,
     }
 }
 
+static gboolean
+salut_tube_dbus_check_access_control (SalutTubeDBus *self,
+    guint access_control,
+    GError **error)
+{
+  switch (access_control)
+    {
+      case TP_SOCKET_ACCESS_CONTROL_CREDENTIALS:
+      case TP_SOCKET_ACCESS_CONTROL_LOCALHOST:
+        break;
+
+      default:
+        g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            "%u socket access control is not supported", access_control);
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+/**
+ * salut_tube_dbus_offer_async
+ *
+ * Implement D-Bus method Offer on interface
+ * org.freedesktop.Telepathy.Channel.Type.DBusTube
+ */
+static void
+salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
+    GHashTable *parameters,
+    guint access_control,
+    DBusGMethodInvocation *context)
+{
+  SalutTubeDBus *tube = SALUT_TUBE_DBUS (self);
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);
+  GError *error = NULL;
+
+  if (!salut_tube_dbus_check_access_control (tube, access_control, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  priv->access_control = access_control;
+
+  g_object_set (self, "parameters", parameters, NULL);
+
+  if (salut_tube_dbus_offer (tube, &error))
+    {
+      tp_svc_channel_type_dbus_tube_return_from_offer (context,
+          priv->dbus_srv_addr);
+    }
+  else
+    {
+      g_assert (error != NULL);
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+    }
+}
+
 static void
 channel_iface_init (gpointer g_iface,
                     gpointer iface_data)
@@ -1729,14 +1789,12 @@ dbustube_iface_init (gpointer g_iface,
                      gpointer iface_data)
 {
   /* FIXME */
-#if 0
   TpSvcChannelTypeDBusTubeClass *klass =
       (TpSvcChannelTypeDBusTubeClass *) g_iface;
 
 #define IMPLEMENT(x, suffix) tp_svc_channel_type_dbus_tube_implement_##x (\
     klass, salut_tube_dbus_##x##suffix)
   IMPLEMENT(offer,_async);
-  IMPLEMENT(accept,_async);
+  //IMPLEMENT(accept,_async);
 #undef IMPLEMENT
-#endif
 }
