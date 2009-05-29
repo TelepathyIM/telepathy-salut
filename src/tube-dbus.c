@@ -1556,6 +1556,8 @@ salut_tube_dbus_add_name (SalutTubeDBus *self,
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  GHashTable *added;
+  GArray *removed;
 
   g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
 
@@ -1588,6 +1590,18 @@ salut_tube_dbus_add_name (SalutTubeDBus *self,
       g_strdup (name));
   tp_handle_ref (contact_repo, handle);
 
+  /* Fire DBusNamesChanged (new API) */
+  added = g_hash_table_new (g_direct_hash, g_direct_equal);
+  removed = g_array_new (FALSE, FALSE, sizeof (TpHandle));
+
+  g_hash_table_insert (added, GUINT_TO_POINTER (handle), (gchar *) name);
+
+  tp_svc_channel_type_dbus_tube_emit_dbus_names_changed (self, added,
+      removed);
+
+  g_hash_table_destroy (added);
+  g_array_free (removed, TRUE);
+
   return TRUE;
 }
 
@@ -1599,6 +1613,8 @@ salut_tube_dbus_remove_name (SalutTubeDBus *self,
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
   const gchar *name;
+  GHashTable *added;
+  GArray *removed;
 
   g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
 
@@ -1608,6 +1624,17 @@ salut_tube_dbus_remove_name (SalutTubeDBus *self,
 
   g_hash_table_remove (priv->dbus_names, GUINT_TO_POINTER (handle));
 
+  /* Fire DBusNamesChanged (new API) */
+  added = g_hash_table_new (g_direct_hash, g_direct_equal);
+  removed = g_array_new (FALSE, FALSE, sizeof (TpHandle));
+
+  g_array_append_val (removed, handle);
+
+  tp_svc_channel_type_dbus_tube_emit_dbus_names_changed (self, added,
+      removed);
+
+  g_hash_table_destroy (added);
+  g_array_free (removed, TRUE);
   tp_handle_unref (contact_repo, handle);
   return TRUE;
 }
