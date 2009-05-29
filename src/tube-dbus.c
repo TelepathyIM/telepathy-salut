@@ -359,6 +359,25 @@ new_connection_cb (DBusServer *server,
 }
 
 static void
+do_close (SalutTubeDBus *self)
+{
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+
+  if (priv->closed)
+    return;
+  priv->closed = TRUE;
+
+  if (priv->bytestream != NULL)
+    {
+      gibber_bytestream_iface_close (priv->bytestream, NULL);
+    }
+  else
+    {
+      g_signal_emit (G_OBJECT (self), signals[CLOSED], 0);
+    }
+}
+
+static void
 tube_dbus_open (SalutTubeDBus *self)
 {
 #define SERVER_LISTEN_MAX_TRIES 5
@@ -1427,17 +1446,8 @@ static void
 salut_tube_dbus_close (SalutTubeIface *tube, gboolean closed_remotely)
 {
   SalutTubeDBus *self = SALUT_TUBE_DBUS (tube);
-  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
 
-  if (priv->bytestream != NULL)
-    {
-      gibber_bytestream_iface_close (priv->bytestream, NULL);
-    }
-  else
-    {
-      priv->closed = TRUE;
-      g_signal_emit (G_OBJECT (self), signals[CLOSED], 0);
-    }
+  do_close (self);
 }
 
 /**
