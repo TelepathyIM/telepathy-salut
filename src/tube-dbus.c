@@ -152,6 +152,12 @@ struct _SalutTubeDBusPrivate
   /* GArray of guint */
   GArray *supported_access_controls;
 
+  /* For outgoing tubes, TRUE if the offer has been sent over the network. For
+   * incoming tubes, always TRUE.
+   */
+  gboolean offered;
+
+
   /* our unique D-Bus name on the virtual tube bus */
   gchar *dbus_local_name;
   /* the address that we are listening for D-Bus connections on */
@@ -491,6 +497,9 @@ get_tube_state (SalutTubeDBus *self)
 {
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
   GibberBytestreamState bytestream_state;
+
+  if (!priv->offered)
+    return TP_TUBE_CHANNEL_STATE_NOT_OFFERED;
 
   if (priv->bytestream == NULL)
     /* bytestream not yet created as we're waiting for the SI reply */
@@ -912,7 +921,6 @@ salut_tube_dbus_constructor (GType type,
        * It will be when we'll receive the answer of the SI request
        */
       GibberBytestreamMuc *bytestream;
-      GibberBytestreamState state;
       const gchar *peer_id;
 
       g_assert (priv->muc_connection != NULL);
@@ -925,20 +933,9 @@ salut_tube_dbus_constructor (GType type,
       DEBUG ("local name: %s", priv->dbus_local_name);
 
       peer_id = tp_handle_inspect (handles_repo, priv->handle);
-      if (priv->initiator == priv->self_handle)
-        {
-          /* We create this tube, bytestream is open */
-          state = GIBBER_BYTESTREAM_STATE_OPEN;
-        }
-      else
-        {
-          /* We don't create this tube, bytestream is local pending */
-          state = GIBBER_BYTESTREAM_STATE_LOCAL_PENDING;
-        }
-
       bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_MUC,
             "muc-connection", priv->muc_connection,
-            "state", state,
+            "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
             "self-id", priv->conn->name,
             "peer-id", peer_id,
             NULL);
@@ -960,6 +957,16 @@ salut_tube_dbus_constructor (GType type,
       /* For contact tubes we need to be able to reassemble messages. */
       priv->reassembly_buffer = g_string_new ("");
       priv->reassembly_bytes_needed = 0;
+    }
+
+  if (priv->initiator == priv->self_handle)
+    {
+      priv->offered = FALSE;
+    }
+  else
+    {
+      /* Incoming tubes have already been offered, as it were. */
+      priv->offered = TRUE;
     }
 
   /* default access control is Credentials as that's the one used by the old
@@ -1167,7 +1174,6 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  /* FIXME: fire this signal */
   signals[OFFERED] =
     g_signal_new ("tube-offered",
                   G_OBJECT_CLASS_TYPE (salut_tube_dbus_class),
@@ -1180,6 +1186,40 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
   salut_tube_dbus_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutTubeDBusClass, dbus_props_class));
+}
+
+gboolean
+salut_tube_dbus_offer (SalutTubeDBus *self,
+    GError **error)
+{
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+
+  if (priv->offered)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Tube has already been offered");
+      return FALSE;
+    }
+
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+    {
+      /* TODO: we don't implement 1-1 D-Bus tube atm */
+      ;
+    }
+  else
+    {
+      priv->offered = TRUE;
+      g_object_set (priv->bytestream,
+          "state", GIBBER_BYTESTREAM_STATE_OPEN,
+          NULL);
+    }
+
+  if (!create_dbus_server (self, error))
+    return FALSE;
+
+  g_signal_emit (G_OBJECT (self), signals[OFFERED], 0);
+
+  return TRUE;
 }
 
 static void
