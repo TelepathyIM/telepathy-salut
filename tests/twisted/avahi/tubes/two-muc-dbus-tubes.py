@@ -102,7 +102,10 @@ def test(q, bus, conn):
     t.invite_to_muc(q, group1, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
 
     # tubes channel is created
-    e = q.expect('dbus-signal', signal='NewChannels')
+    e, dbus_names_e = q.expect_many(
+        EventPattern('dbus-signal', signal='NewChannels'),
+        EventPattern('dbus-signal', signal='DBusNamesChanged', interface=cs.CHANNEL_TYPE_DBUS_TUBE))
+
     channels = e.args[0]
     assert len(channels) == 2
 
@@ -142,6 +145,12 @@ def test(q, bus, conn):
     assert got_tubes
     assert got_tube
 
+    # second connection: check DBusNamesChanged signal
+    assert dbus_names_e.path == tube2_path
+    added, removed = dbus_names_e.args
+    assert added.keys() == [contact1_handle_on_conn2]
+    assert removed == []
+
     state = contact2_tube.Get(cs.CHANNEL_IFACE_TUBE, 'State',
         dbus_interface=cs.PROPERTIES_IFACE)
     assert state == cs.TUBE_CHANNEL_STATE_LOCAL_PENDING
@@ -153,17 +162,31 @@ def test(q, bus, conn):
         dbus_interface=cs.PROPERTIES_IFACE)
     assert state == cs.TUBE_CHANNEL_STATE_OPEN
 
-    e = q.expect('dbus-signal', signal='TubeChannelStateChanged',
-        path=tube2_path, args=[cs.TUBE_CHANNEL_STATE_OPEN])
+    e, dbus_names_e = q.expect_many(
+        EventPattern('dbus-signal', signal='TubeChannelStateChanged',
+            path=tube2_path, args=[cs.TUBE_CHANNEL_STATE_OPEN]),
+        EventPattern('dbus-signal', signal='DBusNamesChanged',
+            interface=cs.CHANNEL_TYPE_DBUS_TUBE, path=tube1_path))
+
+    added, removed = dbus_names_e.args
+    assert added.keys() == [contact2_handle_on_conn1]
+    assert removed == []
 
     # TODO: use the tube
 
     call_async(q, contact1_tube_channel, 'Close')
-    q.expect_many(
+    _, _, _, _, dbus_names_e = q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='Closed'),
         EventPattern('dbus-signal', signal='TubeClosed'),
-        EventPattern('dbus-signal', signal='ChannelClosed'))
+        EventPattern('dbus-signal', signal='ChannelClosed'),
+        EventPattern('dbus-signal', signal='DBusNamesChanged',
+            interface=cs.CHANNEL_TYPE_DBUS_TUBE, path=tube2_path))
+
+    # Contact1 is removed from the tube
+    added, removed = dbus_names_e.args
+    assert added == {}
+    assert removed == [contact1_handle_on_conn2]
 
     call_async(q, contact2_tube_channel, 'Close')
     q.expect_many(
