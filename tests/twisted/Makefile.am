@@ -98,7 +98,8 @@ EXTRA_DIST = \
         trivialstream.py \
         config.py \
 	ns.py \
-	avahi/file-transfer/file_transfer_helper.py
+	avahi/file-transfer/file_transfer_helper.py \
+	avahi/tubes/tubetestutil.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc config.py
 
