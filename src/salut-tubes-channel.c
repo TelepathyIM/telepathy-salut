@@ -1251,6 +1251,8 @@ tube_opened_cb (SalutTubeIface *tube,
       add_yourself_in_dbus_names (self, tube_id);
     }
 
+  update_tubes_info (self);
+
   tp_svc_channel_type_tubes_emit_tube_state_changed (self, tube_id,
       TP_TUBE_STATE_OPEN);
 }
@@ -1331,12 +1333,6 @@ create_new_tube (SalutTubesChannel *self,
   g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);
 
   g_object_get (tube, "state", &state, NULL);
-
-  if (state == TP_TUBE_CHANNEL_STATE_OPEN)
-    {
-      /* FIXME: does it still make sense to call it here? */
-      update_tubes_info (self);
-    }
 
   /* The old API doesn't know the "not offered" state, so we have to wait that
    * the tube is offered before announcing it. */
@@ -1726,8 +1722,6 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
     }
 
   salut_tube_iface_accept (tube, NULL);
-
-  update_tubes_info (self);
 
   g_object_get (tube,
       "dbus-address", &addr,
@@ -2269,8 +2263,6 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
       dbus_g_method_return_error (context, error);
       return;
     }
-
-  update_tubes_info (self);
 
   g_object_get (tube, "address", &address, NULL);
 
