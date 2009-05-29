@@ -49,7 +49,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/tubes/test-two-muc-stream-tubes.py \
 	avahi/tubes/test-two-private-stream-tubes.py \
 	avahi/tubes/test-tube-close.py \
-	avahi/tubes/tubes-to-nonexistant-ids.py
+	avahi/tubes/tubes-to-nonexistant-ids.py \
+	avahi/tubes/two-muc-dbus-tubes.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
 	avahi/test-olpc-activity-announcements.py
