@@ -1761,6 +1761,41 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
     }
 }
 
+/**
+ * salut_tube_dbus_accept_async
+ *
+ * Implements D-Bus method Accept on interface
+ * org.freedesktop.Telepathy.Channel.Type.DBusTube
+ */
+static void
+salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube *self,
+    guint access_control,
+    DBusGMethodInvocation *context)
+{
+  SalutTubeDBus *tube = SALUT_TUBE_DBUS (self);
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);
+  GError *error = NULL;
+
+  if (!salut_tube_dbus_check_access_control (tube, access_control, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  if (salut_tube_dbus_accept (SALUT_TUBE_IFACE (tube), &error))
+    {
+      tp_svc_channel_type_dbus_tube_return_from_accept (context,
+          priv->dbus_srv_addr);
+    }
+  else
+    {
+      g_assert (error != NULL);
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+    }
+}
+
 static void
 channel_iface_init (gpointer g_iface,
                     gpointer iface_data)
@@ -1792,13 +1827,12 @@ static void
 dbustube_iface_init (gpointer g_iface,
                      gpointer iface_data)
 {
-  /* FIXME */
   TpSvcChannelTypeDBusTubeClass *klass =
       (TpSvcChannelTypeDBusTubeClass *) g_iface;
 
 #define IMPLEMENT(x, suffix) tp_svc_channel_type_dbus_tube_implement_##x (\
     klass, salut_tube_dbus_##x##suffix)
   IMPLEMENT(offer,_async);
-  //IMPLEMENT(accept,_async);
+  IMPLEMENT(accept,_async);
 #undef IMPLEMENT
 }
