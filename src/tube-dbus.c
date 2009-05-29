@@ -1122,7 +1122,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "dbus-names",
       "D-Bus names",
       "Mapping of contact handles to D-Bus names.",
-      G_TYPE_HASH_TABLE,
+      TP_HASH_TYPE_DBUS_TUBE_PARTICIPANTS,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_DBUS_NAMES, param_spec);
 
