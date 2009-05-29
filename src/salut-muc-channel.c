@@ -1182,9 +1182,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
           SalutTubeIface *tube;
 
           tube = g_ptr_array_index (tubes, i);
-          if (SALUT_IS_TUBE_STREAM (tube))
-            /* FIXME: remove this test once D-Tube implements new API */
-            g_hash_table_insert (channels, tube, NULL);
+          g_hash_table_insert (channels, tube, NULL);
         }
 
       if (g_hash_table_size (channels) > 0)
