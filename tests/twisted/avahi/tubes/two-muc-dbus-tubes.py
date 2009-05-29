@@ -1,7 +1,8 @@
 from saluttest import exec_test
 import dbus
+from dbus.service import method, signal, Object
 
-from servicetest import make_channel_proxy, call_async, EventPattern
+from servicetest import make_channel_proxy, call_async, EventPattern, Event
 
 import constants as cs
 import tubetestutil as t
@@ -19,6 +20,25 @@ def check_dbus_names(tube, members):
     names = tube.Get(cs.CHANNEL_TYPE_DBUS_TUBE, 'DBusNames',
         dbus_interface=cs.PROPERTIES_IFACE)
     assert set(names.keys()) == set(members), names.keys()
+
+SERVICE = "org.freedesktop.Telepathy.Tube.Test"
+IFACE = SERVICE
+PATH = "/org/freedesktop/Telepathy/Tube/Test"
+
+class Test(Object):
+    def __init__(self, tube, q):
+        super(Test, self).__init__(tube, PATH)
+        self.tube = tube
+        self.q = q
+
+    @signal(dbus_interface=IFACE, signature='s')
+    def MySig(self, arg):
+        pass
+
+    @method(dbus_interface=IFACE, in_signature='u', out_signature='u')
+    def MyMethod(self, arg):
+        self.q.append(Event('tube-dbus-call', method='MyMethod', args=[arg]))
+        return arg * 10
 
 def test(q, bus, conn):
 
@@ -96,10 +116,12 @@ def test(q, bus, conn):
     call_async(q, contact1_dbus_tube, 'Offer', sample_parameters,
         cs.SOCKET_ACCESS_CONTROL_CREDENTIALS)
 
-    q.expect_many(
+    _, e = q.expect_many(
         EventPattern('dbus-signal', signal='TubeChannelStateChanged',
             args=[cs.TUBE_CHANNEL_STATE_OPEN]),
         EventPattern('dbus-return', method='Offer'))
+
+    tube_addr1 = e.value[0]
 
     state = contact1_dbus_tube.Get(cs.CHANNEL_IFACE_TUBE, 'State',
         dbus_interface=cs.PROPERTIES_IFACE)
@@ -167,7 +189,7 @@ def test(q, bus, conn):
     check_dbus_names(contact1_dbus_tube, [conn1_self_handle])
 
     # second connection: accept the tube (new API)
-    unix_socket_adr = contact2_dbus_tube.Accept(cs.SOCKET_ACCESS_CONTROL_CREDENTIALS)
+    tube_addr2 = unix_socket_adr = contact2_dbus_tube.Accept(cs.SOCKET_ACCESS_CONTROL_CREDENTIALS)
 
     state = contact2_tube.Get(cs.CHANNEL_IFACE_TUBE, 'State',
         dbus_interface=cs.PROPERTIES_IFACE)
@@ -186,7 +208,39 @@ def test(q, bus, conn):
     check_dbus_names(contact1_dbus_tube, [conn1_self_handle, contact2_handle_on_conn1])
     check_dbus_names(contact2_dbus_tube, [conn2_self_handle, contact1_handle_on_conn2])
 
-    # TODO: use the tube
+    tube2_names = contact2_dbus_tube.Get(cs.CHANNEL_TYPE_DBUS_TUBE, 'DBusNames',
+        dbus_interface=cs.PROPERTIES_IFACE)
+
+    tube_conn1 = dbus.connection.Connection(tube_addr1)
+    tube_conn2 = dbus.connection.Connection(tube_addr2)
+
+    obj1 = Test(tube_conn1, q)
+
+    # fire 'MySig' signal on the tube
+    def my_sig_cb (arg, sender=None):
+        assert tube2_names[contact1_handle_on_conn2] == sender
+
+        q.append(Event('tube-dbus-signal', signal='MySig', args=[arg]))
+
+    tube_conn2.add_signal_receiver(my_sig_cb, 'MySig', IFACE, path=PATH,
+        sender_keyword='sender')
+
+    obj1.MySig('hello')
+    q.expect('tube-dbus-signal', signal='MySig', args=['hello'])
+
+    # call remote method
+    def my_method_cb(result):
+        q.append(Event('tube-dbus-return', method='MyMethod', value=[result]))
+
+    def my_method_error(e):
+        assert False, e
+
+    tube_conn2.get_object(tube2_names[contact1_handle_on_conn2], PATH).MyMethod(
+        42, dbus_interface=IFACE,
+        reply_handler=my_method_cb, error_handler=my_method_error)
+
+    q.expect('tube-dbus-call', method='MyMethod', args=[42])
+    q.expect('tube-dbus-return', method='MyMethod', value=[420])
 
     call_async(q, contact1_tube_channel, 'Close')
     _, _, _, _, dbus_names_e = q.expect_many(
