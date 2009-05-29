@@ -1,16 +1,11 @@
-from saluttest import exec_test, make_connection
-from avahitest import AvahiAnnouncer, AvahiListener
-from avahitest import get_host_name
-import avahi
+from saluttest import exec_test
 import dbus
 import os
 import errno
 import string
 
-from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy, Event, EventPattern, call_async
 
-from twisted.words.xish import xpath, domish
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
 from constants import *
