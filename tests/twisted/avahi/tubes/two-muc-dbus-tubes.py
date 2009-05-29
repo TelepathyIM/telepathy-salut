@@ -90,7 +90,8 @@ def test(q, bus, conn):
             assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP,
                 cs.CHANNEL_IFACE_TUBE]
             assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
-            assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [cs.SOCKET_ACCESS_CONTROL_CREDENTIALS]
+            assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
+                cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
 
             contact1_tube = bus.get_object(conn.bus_name, path)
             contact1_dbus_tube = make_channel_proxy(conn, path,
@@ -156,7 +157,8 @@ def test(q, bus, conn):
                 cs.CHANNEL_IFACE_TUBE]
             assert props[cs.TUBE_PARAMETERS] == sample_parameters
             assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
-            assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [cs.SOCKET_ACCESS_CONTROL_CREDENTIALS]
+            assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
+                cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
 
             contact2_tube = bus.get_object(conn.bus_name, path)
             contact2_dbus_tube = make_channel_proxy(conn, path,
