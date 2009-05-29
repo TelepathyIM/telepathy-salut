@@ -377,15 +377,29 @@ do_close (SalutTubeDBus *self)
     }
 }
 
-static void
-tube_dbus_open (SalutTubeDBus *self)
+/* There is two step to enable receiving a D-Bus connection from the local
+ * application:
+ * - listen on the socket
+ * - add the socket in the mainloop
+ *
+ * We need to know the socket path to return from the AcceptDBusTube D-Bus
+ * call but the socket in the mainloop must be added only when we are ready
+ * to receive connections, that is when the bytestream is fully open with the
+ * remote contact.
+ *
+ * See also Bug 13891:
+ * https://bugs.freedesktop.org/show_bug.cgi?id=13891
+ * */
+static gboolean
+create_dbus_server (SalutTubeDBus *self,
+    GError **err)
 {
 #define SERVER_LISTEN_MAX_TRIES 5
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
   guint i;
 
-  g_signal_connect (priv->bytestream, "data-received",
-      G_CALLBACK (data_received_cb), self);
+  if (priv->dbus_srv != NULL)
+    return TRUE;
 
   for (i = 0; i < SERVER_LISTEN_MAX_TRIES; i++)
     {
@@ -404,7 +418,7 @@ tube_dbus_open (SalutTubeDBus *self)
       dbus_error_init (&error);
       priv->dbus_srv = dbus_server_listen (priv->dbus_srv_addr, &error);
 
-      if (priv->dbus_srv_addr != NULL)
+      if (priv->dbus_srv != NULL)
         break;
 
       DEBUG ("dbus_server_listen failed (try %u): %s: %s", i, error.name,
@@ -412,18 +426,44 @@ tube_dbus_open (SalutTubeDBus *self)
       dbus_error_free (&error);
     }
 
-  if (priv->dbus_srv_addr == NULL)
+  if (priv->dbus_srv == NULL)
     {
       DEBUG ("all attempts failed. Close the tube");
-      salut_tube_iface_accept (SALUT_TUBE_IFACE (self), NULL);
-      return;
+
+      g_free (priv->dbus_srv_addr);
+      priv->dbus_srv_addr = NULL;
+
+      g_free (priv->socket_path);
+      priv->socket_path = NULL;
+
+      g_set_error (err, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Can't create D-Bus server");
+      return FALSE;
     }
 
   DEBUG ("listening on %s", priv->dbus_srv_addr);
 
   dbus_server_set_new_connection_function (priv->dbus_srv, new_connection_cb,
       self, NULL);
-  dbus_server_setup_with_g_main (priv->dbus_srv, NULL);
+
+  return TRUE;
+}
+
+static void
+tube_dbus_open (SalutTubeDBus *self)
+{
+  SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
+
+  g_signal_connect (priv->bytestream, "data-received",
+      G_CALLBACK (data_received_cb), self);
+
+  if (!create_dbus_server (self, NULL))
+    do_close (self);
+
+  if (priv->dbus_srv != NULL)
+    {
+      dbus_server_setup_with_g_main (priv->dbus_srv, NULL);
+    }
 }
 
 static void
