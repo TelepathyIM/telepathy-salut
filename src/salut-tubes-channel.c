@@ -1194,6 +1194,7 @@ tube_closed_cb (SalutTubeIface *tube,
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (user_data);
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   guint tube_id;
+  TpChannelManager *mgr;
 
   if (priv->closed)
     return;
@@ -1215,29 +1216,21 @@ tube_closed_cb (SalutTubeIface *tube,
   update_tubes_info (self);
 
   tp_svc_channel_type_tubes_emit_tube_closed (self, tube_id);
+  tp_svc_channel_emit_closed (tube);
 
-  /* FIXME: this is a workaround while new tube API is not implemented on
-   * D-Bus tubes */
-  if (SALUT_IS_TUBE_STREAM (tube))
+  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      TpChannelManager *mgr;
-
-      tp_svc_channel_emit_closed (tube);
-
-      if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-        {
-          g_object_get (priv->conn, "tubes-manager", &mgr, NULL);
-        }
-      else
-        {
-          g_object_get (priv->conn, "muc-manager", &mgr, NULL);
-        }
-
-      tp_channel_manager_emit_channel_closed_for_object (mgr,
-          TP_EXPORTABLE_CHANNEL (tube));
-
-      g_object_unref (mgr);
+      g_object_get (priv->conn, "tubes-manager", &mgr, NULL);
     }
+  else
+    {
+      g_object_get (priv->conn, "muc-manager", &mgr, NULL);
+    }
+
+  tp_channel_manager_emit_channel_closed_for_object (mgr,
+      TP_EXPORTABLE_CHANNEL (tube));
+
+  g_object_unref (mgr);
 }
 
 static void
