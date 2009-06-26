@@ -217,7 +217,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     incoming = e.connection
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming,
+    event = q.expect('stream-iq', connection = incoming, iq_type='set',
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
@@ -261,7 +261,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming,
+    event = q.expect('stream-iq', connection = incoming, iq_type='set',
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
@@ -303,7 +303,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming,
+    event = q.expect('stream-iq', connection = incoming, iq_type='set',
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
@@ -346,7 +346,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming,
+    event = q.expect('stream-iq', connection = incoming, iq_type='set',
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
@@ -395,7 +395,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
-    event = q.expect('stream-iq', connection = incoming,
+    event = q.expect('stream-iq', connection = incoming, iq_type='set',
         query_ns='http://jabber.org/protocol/disco#info')
     query_node = xpath.queryForNodes('/iq/query', event.stanza)[0]
     assert query_node.attributes['node'] == \
