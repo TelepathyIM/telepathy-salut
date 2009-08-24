@@ -24,9 +24,11 @@
 
 #include <dbus/dbus-protocol.h>
 #include <telepathy-glib/util.h>
+#include <telepathy-glib/debug-sender.h>
 
 #include "salut-connection-manager.h"
 #include "salut-connection.h"
+#include "debug.h"
 
 /* properties */
 enum
@@ -39,6 +41,7 @@ typedef struct _SalutConnectionManagerPrivate SalutConnectionManagerPrivate;
 struct _SalutConnectionManagerPrivate
 {
   GType backend_type;
+  TpDebugSender *debug_sender;
 };
 
 #define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) \
@@ -112,6 +115,9 @@ salut_connection_manager_init (SalutConnectionManager *self)
   SalutConnectionManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       SALUT_TYPE_CONNECTION_MANAGER, SalutConnectionManagerPrivate);
 
+  priv->debug_sender = tp_debug_sender_dup ();
+  g_log_set_default_handler (tp_debug_sender_log_handler, G_LOG_DOMAIN);
+
   self->priv = priv;
 }
 
@@ -158,6 +164,21 @@ salut_connection_manager_set_property (GObject *object,
 }
 
 static void
+salut_connection_manager_finalize (GObject *object)
+{
+  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE (
+      object);
+
+  if (priv->debug_sender != NULL)
+    {
+      g_object_unref (priv->debug_sender);
+      priv->debug_sender = NULL;
+    }
+
+  debug_free ();
+}
+
+static void
 salut_connection_manager_class_init (
     SalutConnectionManagerClass *salut_connection_manager_class)
 {
@@ -171,6 +192,7 @@ salut_connection_manager_class_init (
 
   object_class->get_property = salut_connection_manager_get_property;
   object_class->set_property = salut_connection_manager_set_property;
+  object_class->finalize = salut_connection_manager_finalize;
 
   param_spec = g_param_spec_gtype (
       "backend-type",

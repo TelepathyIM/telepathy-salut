@@ -40,6 +40,7 @@ void debug_set_flags (DebugFlags flags);
 gboolean debug_flag_is_set (DebugFlags flag);
 void debug (DebugFlags flag, const gchar *format, ...)
     G_GNUC_PRINTF (2, 3);
+void debug_free (void);
 
 #ifdef DEBUG_FLAG
 
@@ -63,6 +64,8 @@ void debug (DebugFlags flag, const gchar *format, ...)
   G_STMT_START { } G_STMT_END
 
 #endif /* DEBUG_FLAG */
+
+#define debug_free() G_STMT_START { } G_STMT_END
 
 #endif /* ENABLE_DEBUG */
 
