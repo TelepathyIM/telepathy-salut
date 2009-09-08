@@ -184,6 +184,8 @@ struct _SalutConnectionPrivate
 
   /* TpHandler for our presence on the lan */
   SalutSelf *self;
+  SalutPresenceId pre_connect_presence;
+  gchar *pre_connect_message;
 
   /* XMPP connection manager */
   SalutXmppConnectionManager *xmpp_connection_manager;
@@ -292,6 +294,9 @@ salut_connection_init (SalutConnection *obj)
 
   priv->discovery_client = NULL;
   priv->self = NULL;
+
+  priv->pre_connect_presence = SALUT_PRESENCE_AVAILABLE;
+  priv->pre_connect_message = NULL;
 
   priv->contact_manager = NULL;
   priv->xmpp_connection_manager = NULL;
@@ -566,15 +571,42 @@ get_contact_statuses (GObject *obj,
   return ret;
 }
 
+static void
+set_self_presence (SalutConnection *self,
+    SalutPresenceId presence,
+    const gchar *message,
+    GError **error)
+{
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+
+  if (priv->self == NULL)
+    {
+      priv->pre_connect_presence = presence;
+      priv->pre_connect_message = g_strdup (message);
+      return;
+    }
+
+  if (salut_self_set_presence (priv->self, presence, message, error))
+    {
+      TpPresenceStatus ps = { priv->self->status,
+          make_presence_opt_args (priv->self->status,
+              priv->self->status_message) };
+
+      tp_presence_mixin_emit_one_presence_update ((GObject *) self,
+          base->self_handle, &ps);
+
+      if (ps.optional_arguments != NULL)
+        g_hash_table_destroy (ps.optional_arguments);
+    }
+}
+
 static gboolean
 set_own_status (GObject *obj,
                 const TpPresenceStatus *status,
                 GError **error)
 {
   SalutConnection *self = SALUT_CONNECTION (obj);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
-  TpBaseConnection *base = (TpBaseConnection *) self;
-  gboolean ret;
   GError *err = NULL;
   const GValue *value;
   const gchar *message = NULL;
@@ -602,25 +634,12 @@ set_own_status (GObject *obj,
         }
     }
 
-  ret = salut_self_set_presence (priv->self, presence, message, &err);
+  set_self_presence (self, presence, message, &err);
 
-  if (ret)
+  if (err != NULL)
     {
-      TpPresenceStatus ps = { priv->self->status,
-          make_presence_opt_args (priv->self->status,
-              priv->self->status_message) };
-
-      tp_presence_mixin_emit_one_presence_update ((GObject *) self,
-          base->self_handle, &ps);
-
-      if (ps.optional_arguments != NULL)
-        g_hash_table_destroy (ps.optional_arguments);
-    }
-  else
-    {
-      if (error != NULL)
-        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-            err->message);
+      *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+          err->message);
     }
 
   return TRUE;
@@ -835,6 +854,12 @@ salut_connection_dispose (GObject *object)
       self->presence_cache = NULL;
     }
 
+  if (priv->pre_connect_message != NULL)
+    {
+      g_free (priv->pre_connect_message);
+      priv->pre_connect_message = NULL;
+    }
+
   if (priv->self) {
     g_object_unref (priv->self);
     priv->self = NULL;
@@ -946,11 +971,24 @@ _self_established_cb (SalutSelf *s, gpointer data)
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (self), TP_HANDLE_TYPE_CONTACT);
+  GError *error = NULL;
 
   g_free (self->name);
   self->name = g_strdup (s->name);
 
   base->self_handle = tp_handle_ensure (handle_repo, self->name, NULL, NULL);
+
+  set_self_presence (self, priv->pre_connect_presence,
+      priv->pre_connect_message, &error);
+
+  if (error != NULL)
+    {
+      DEBUG ("Failed to set presence from pre-connection: %s", error->message);
+      g_clear_error (&error);
+    }
+
+  g_free (priv->pre_connect_message);
+  priv->pre_connect_message = NULL;
 
   if (!salut_contact_manager_start (priv->contact_manager, NULL))
     {
