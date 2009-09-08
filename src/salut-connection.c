@@ -467,7 +467,7 @@ static const TpPresenceStatusSpec presence_statuses[] = {
       { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
         presence_args },
       { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE, presence_args },
-      { "dnd", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE, presence_args },
+      { "dnd", TP_CONNECTION_PRESENCE_TYPE_BUSY, TRUE, presence_args },
       { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL },
       { NULL }
 };
