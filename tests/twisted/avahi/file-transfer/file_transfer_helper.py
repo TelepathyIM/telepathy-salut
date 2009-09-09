@@ -1,6 +1,6 @@
 import dbus
 import socket
-import md5
+import hashlib
 import avahi
 import BaseHTTPServer
 import urllib
@@ -74,9 +74,7 @@ class File(object):
         assert hash_type == FILE_HASH_TYPE_MD5
 
         self.hash_type = hash_type
-        m = md5.new()
-        m.update(self.data)
-        self.hash = m.hexdigest()
+        self.hash = hashlib.md5(self.data).hexdigest()
 
 class FileTransferTest(object):
     CONTACT_NAME = 'test-ft'
