@@ -184,6 +184,7 @@ struct _SalutConnectionPrivate
 
   /* TpHandler for our presence on the lan */
   SalutSelf *self;
+  gboolean self_established;
   SalutPresenceId pre_connect_presence;
   gchar *pre_connect_message;
 
@@ -294,6 +295,7 @@ salut_connection_init (SalutConnection *obj)
 
   priv->discovery_client = NULL;
   priv->self = NULL;
+  priv->self_established = FALSE;
 
   priv->pre_connect_presence = SALUT_PRESENCE_AVAILABLE;
   priv->pre_connect_message = NULL;
@@ -580,8 +582,9 @@ set_self_presence (SalutConnection *self,
   SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
 
-  if (priv->self == NULL)
+  if (priv->self == NULL || !priv->self_established)
     {
+      g_free (priv->pre_connect_message);
       priv->pre_connect_presence = presence;
       priv->pre_connect_message = g_strdup (message);
       return;
@@ -972,6 +975,8 @@ _self_established_cb (SalutSelf *s, gpointer data)
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (self), TP_HANDLE_TYPE_CONTACT);
   GError *error = NULL;
+
+  priv->self_established = TRUE;
 
   g_free (self->name);
   self->name = g_strdup (s->name);
