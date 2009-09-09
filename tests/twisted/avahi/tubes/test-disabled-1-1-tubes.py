@@ -37,10 +37,6 @@ sample_parameters = dbus.Dictionary({
     'i': dbus.Int32(-123),
     }, signature='sv')
 
-print "FIXME: test-disabled-1-1-tubes.py disabled because 1-1 tubes are enabled"
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
-
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
