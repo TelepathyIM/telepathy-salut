@@ -1,5 +1,6 @@
-telepathy-salut 0.3.10 (UNRELEASED)
+telepathy-salut 0.3.10 (2009-09-10)
 ===================================
+The "The lampshade of doom" release.
 
 Requirements:
 * telepathy-glib >= 0.7.36 is now required so Salut emits the correct
@@ -29,6 +30,7 @@ Fixes:
 
 * Make the "dnd" presence actually correspond to the correct telepathy
   presence type.
+
 
 telepathy-salut 0.3.9 (2009-04-02)
 ==================================
