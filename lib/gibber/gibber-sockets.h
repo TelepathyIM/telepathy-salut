@@ -40,6 +40,8 @@ void gibber_socket_set_error (GError **error, const gchar *context,
 
 GIOChannel *gibber_io_channel_new_from_socket (gint sockfd);
 
+void gibber_socket_set_nonblocking (gint sockfd);
+
 G_END_DECLS
 
 #endif
