@@ -23,8 +23,8 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/text-mixin.h>
 #include <telepathy-glib/group-mixin.h>
+#include <telepathy-glib/message-mixin.h>
 
 #include <gibber/gibber-muc-connection.h>
 
@@ -39,7 +39,6 @@ typedef struct _SalutMucChannelClass SalutMucChannelClass;
 struct _SalutMucChannelClass {
   GObjectClass parent_class;
   TpGroupMixinClass group_class;
-  TpTextMixinClass text_class;
   TpDBusPropertiesMixinClass dbus_props_class;
 
   /* Virtual method */
@@ -50,7 +49,7 @@ struct _SalutMucChannelClass {
 struct _SalutMucChannel {
     GObject parent;
     TpGroupMixin group;
-    TpTextMixin text;
+    TpMessageMixin message_mixin;
 
     /* private */
     SalutConnection *connection;
