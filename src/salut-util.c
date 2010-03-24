@@ -1,6 +1,7 @@
 /*
  * salut-util.c - Code for Salut utility functions
- * Copyright (C) 2007 Collabora Ltd.
+ * Copyright (C) 2006-2007 Collabora Ltd.
+ * Copyright (C) 2006-2007 Nokia Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,6 +26,10 @@
 #include <glib-object.h>
 #include <dbus/dbus-glib.h>
 #include <telepathy-glib/util.h>
+
+#ifdef HAVE_UUID
+# include <uuid.h>
+#endif
 
 struct _xmpp_node_extract_property_data
 {
@@ -290,4 +295,27 @@ salut_gibber_xmpp_node_add_children_from_properties (GibberXmppNode *node,
   data.prop = prop;
 
   g_hash_table_foreach (properties, set_child_from_property, &data);
+}
+
+gchar *
+salut_generate_id (void)
+{
+#ifdef HAVE_UUID
+  /* generate random UUIDs */
+  uuid_t uu;
+  gchar *str;
+
+  str = g_new0 (gchar, 37);
+  uuid_generate_random (uu);
+  uuid_unparse_lower (uu, str);
+  return str;
+#else
+  /* generate from the time, a counter, and a random integer */
+  static gulong last = 0;
+  GTimeVal tv;
+
+  g_get_current_time (&tv);
+  return g_strdup_printf ("%lx.%lx/%lx/%x", tv.tv_sec, tv.tv_usec,
+      last++, g_random_int ());
+#endif
 }

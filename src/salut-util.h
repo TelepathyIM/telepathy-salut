@@ -1,6 +1,7 @@
 /*
  * salut-util.h - Headers for Salut utility functions
- * Copyright (C) 2007 Collabora Ltd.
+ * Copyright (C) 2006-2007 Collabora Ltd.
+ * Copyright (C) 2006 Nokia Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -29,5 +30,6 @@ GHashTable *salut_gibber_xmpp_node_extract_properties (GibberXmppNode *node,
     const gchar *prop);
 void salut_gibber_xmpp_node_add_children_from_properties (GibberXmppNode *node,
     GHashTable *properties, const gchar *prop);
+gchar *salut_generate_id (void);
 
 #endif /* __SALUT_UTIL_H__ */
