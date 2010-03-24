@@ -129,7 +129,7 @@ salut_contact_channel_constructor (GType type, guint n_props,
       G_STRUCT_OFFSET (SalutContactChannel, group),
       contact_repo, base_conn->self_handle);
 
-  tp_group_mixin_change_flags (obj, 0, 0);
+  tp_group_mixin_change_flags (obj, TP_CHANNEL_GROUP_FLAG_PROPERTIES, 0);
   return obj;
 }
 
