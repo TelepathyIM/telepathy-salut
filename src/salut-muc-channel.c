@@ -416,7 +416,10 @@ salut_muc_channel_constructor (GType type, guint n_props,
       contact_repo, base_conn->self_handle);
 
   tp_group_mixin_change_flags (obj,
-       TP_CHANNEL_GROUP_FLAG_CAN_ADD|TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD, 0);
+      TP_CHANNEL_GROUP_FLAG_PROPERTIES |
+      TP_CHANNEL_GROUP_FLAG_CAN_ADD |
+      TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD,
+      0);
 
   return obj;
 }
