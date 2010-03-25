@@ -22,6 +22,7 @@
 #define __TEXT_HELPER_H__
 
 #include <telepathy-glib/enums.h>
+#include <telepathy-glib/channel.h>
 #include <gibber/gibber-xmpp-stanza.h>
 
 
@@ -39,6 +40,18 @@ text_helper_create_message (const gchar *from,
 GibberXmppStanza *
 text_helper_create_message_groupchat (const gchar *from, const gchar *to,
     TpChannelTextMessageType type, const gchar *text, GError **error);
+
+gboolean
+text_helper_validate_tp_message (TpMessage *message,
+    guint *type, gchar **token, gchar **text, GError **error);
+
+void
+text_helper_report_delivery_error (TpSvcChannel *self, guint error_type,
+    guint timestamp, guint type, const gchar *text, const gchar *token);
+
+TpMessage *
+text_helper_create_received_message (TpBaseConnection *base_conn,
+    guint sender_handle, guint timestamp, guint type, const gchar *text);
 
 G_END_DECLS
 

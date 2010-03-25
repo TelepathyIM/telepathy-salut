@@ -1,6 +1,6 @@
 /*
  * text-helper.c - Source for TextHelper
- * Copyright (C) 2006 Collabora Ltd.
+ * Copyright (C) 2006,2010 Collabora Ltd.
  * Copyright (C) 2006 Nokia Corporation
  *   @author Ole Andre Vadla Ravnaas <ole.andre.ravnaas@collabora.co.uk>
  *   @author Robert McQueen <robert.mcqueen@collabora.co.uk>
@@ -32,12 +32,16 @@
 
 #include <gibber/gibber-namespaces.h>
 
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
+#include <telepathy-glib/message-mixin.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
 
 #include "text-helper.h"
+
+#include "salut-util.h"
 
 static void
 add_text (GibberXmppStanza *stanza, const gchar *text)
@@ -216,4 +220,128 @@ text_helper_parse_incoming_message (GibberXmppStanza *stanza,
     }
 
   return TRUE;
+}
+
+gboolean
+text_helper_validate_tp_message (TpMessage *message,
+                                 guint *type,
+                                 gchar **token,
+                                 gchar **text,
+                                 GError **error)
+{
+  const GHashTable *part;
+  guint msgtype = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
+  const gchar *msgtext;
+  gchar *msgtoken;
+  gboolean valid = TRUE;
+
+  if (tp_message_count_parts (message) != 2)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Invalid number of message parts, expected 2, got %d",
+          tp_message_count_parts (message));
+      return FALSE;
+    }
+
+  part = tp_message_peek (message, 0);
+
+  if (tp_asv_lookup (part, "message-type"))
+    msgtype = tp_asv_get_uint32 (part, "message-type", &valid);
+
+  if (!valid || msgtype > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Invalid message type");
+      return FALSE;
+    }
+
+  part = tp_message_peek (message, 1);
+  msgtext = tp_asv_get_string (part, "content");
+
+  if (msgtext == NULL)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Empty message content");
+      return FALSE;
+    }
+
+  msgtoken = salut_generate_id ();
+  tp_message_set_string (message, 0, "message-token", msgtoken);
+
+  if (text != NULL)
+    *text = g_strdup (msgtext);
+
+  if (type != NULL)
+    *type = msgtype;
+
+  if (token != NULL)
+    *token = msgtoken;
+  else
+    g_free (msgtoken);
+
+  return TRUE;
+}
+
+void
+text_helper_report_delivery_error (TpSvcChannel *self,
+                                   guint error_type,
+                                   guint timestamp,
+                                   guint type,
+                                   const gchar *text,
+                                   const gchar *token)
+{
+  TpBaseConnection *base_conn;
+  TpHandle handle;
+  guint handle_type;
+  TpMessage *message;
+  TpMessage *delivery_echo;
+
+  g_object_get (self,
+      "connection", &base_conn,
+      "handle", &handle,
+      "handle-type", &handle_type,
+      NULL);
+
+  delivery_echo = tp_message_new (base_conn, 2, 2);
+  tp_message_set_handle (delivery_echo, 0, "message-sender",
+      TP_HANDLE_TYPE_CONTACT, base_conn->self_handle);
+  tp_message_set_uint32 (delivery_echo, 0, "message-type", type);
+  tp_message_set_uint64 (delivery_echo, 0, "message-sent", (guint64)time);
+  tp_message_set_string (delivery_echo, 1, "content-type", "text/plain");
+  tp_message_set_string (delivery_echo, 1, "content", text);
+
+  message = tp_message_new (base_conn, 1, 1);
+  tp_message_set_handle (message, 0, "message-sender", handle_type, handle);
+  tp_message_set_uint32 (message, 0, "message-type",
+      TP_CHANNEL_TEXT_MESSAGE_TYPE_DELIVERY_REPORT);
+  tp_message_set_uint32 (message, 0, "delivery-status",
+      TP_DELIVERY_STATUS_TEMPORARILY_FAILED);
+  tp_message_set_uint32 (message, 0, "delivery-error",
+      TP_CHANNEL_TEXT_SEND_ERROR_OFFLINE);
+  tp_message_set_string (message, 0, "delivery-token", token);
+  tp_message_take_message (message, 0, "delivery-echo", delivery_echo);
+
+  g_object_unref (base_conn);
+
+  tp_message_mixin_take_received (G_OBJECT (self), message);
+}
+
+TpMessage *
+text_helper_create_received_message (TpBaseConnection *base_conn,
+                                     guint sender_handle,
+                                     guint timestamp,
+                                     guint type,
+                                     const gchar *text)
+{
+  TpMessage *message = tp_message_new (base_conn, 2, 2);
+
+  tp_message_set_uint32 (message, 0, "message-type", type);
+  tp_message_set_handle (message, 0, "message-sender",
+      TP_HANDLE_TYPE_CONTACT, sender_handle);
+  tp_message_set_uint32 (message, 0, "message-received", timestamp);
+
+  tp_message_set_string (message, 1, "content-type", "text/plain");
+  tp_message_set_string (message, 1, "content", text);
+
+  return message;
 }
