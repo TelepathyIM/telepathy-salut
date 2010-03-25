@@ -54,7 +54,7 @@ static void xmpp_connection_manager_new_connection_cb (
     SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
     SalutContact *contact, gpointer user_data);
 
-static void _setup_connection (SalutImChannel *self);
+static gboolean _setup_connection (SalutImChannel *self, GError **error);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
@@ -747,7 +747,7 @@ connection_disconnected (SalutImChannel *self)
 
   if (g_queue_get_length (priv->out_queue) > 0)
     {
-      _setup_connection (self);
+      _setup_connection (self, NULL);
     }
 }
 
@@ -859,20 +859,21 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
   _initialise_connection (self);
 }
 
-static void
-_setup_connection (SalutImChannel *self)
+static gboolean
+_setup_connection (SalutImChannel *self,
+    GError **error)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutXmppConnectionManagerRequestConnectionResult result;
   GibberXmppConnection *conn = NULL;
 
   if (priv->state == CHANNEL_CONNECTING)
-    return;
+    return TRUE;
 
   g_assert (priv->xmpp_connection == NULL);
 
   result = salut_xmpp_connection_manager_request_connection (
-      priv->xmpp_connection_manager, priv->contact, &conn, NULL);
+      priv->xmpp_connection_manager, priv->contact, &conn, error);
 
   if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
     {
@@ -887,36 +888,15 @@ _setup_connection (SalutImChannel *self)
       priv->state = CHANNEL_CONNECTING;
       g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
           G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
-      return;
     }
   else
     {
       priv->state = CHANNEL_NOT_CONNECTED;
       _error_flush_queue (self);
-      return;
+      return FALSE;
     }
-}
 
-static void
-_send_channel_message (SalutImChannel *self,
-                       SalutImChannelMessage *msg)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  switch (priv->state)
-    {
-      case CHANNEL_NOT_CONNECTED:
-        g_queue_push_tail (priv->out_queue, msg);
-        _setup_connection (self);
-        break;
-      case CHANNEL_CLOSING:
-      case CHANNEL_CONNECTING:
-        g_queue_push_tail (priv->out_queue, msg);
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
-    }
+  return TRUE;
 }
 
 static gboolean
@@ -930,19 +910,24 @@ _send_message (SalutImChannel *self,
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   SalutImChannelMessage *msg;
 
+  if (priv->state == CHANNEL_NOT_CONNECTED
+      && !_setup_connection (self, error))
+    return FALSE;
+
   switch (priv->state)
     {
       case CHANNEL_NOT_CONNECTED:
       case CHANNEL_CONNECTING:
       case CHANNEL_CLOSING:
         msg = salut_im_channel_message_new (type, text, token, stanza);
-        _send_channel_message (self, msg);
+        g_queue_push_tail (priv->out_queue, msg);
         break;
       case CHANNEL_CONNECTED:
         /* Connected and the queue is empty, so push it out directly */
         _sendout_message (self, time (NULL), type, text, token, stanza);
         break;
-        return FALSE;
+      default:
+        g_assert_not_reached ();
         break;
     }
   return TRUE;
@@ -1091,7 +1076,7 @@ _salut_im_channel_send (GObject *channel,
   SalutImChannel *self = SALUT_IM_CHANNEL (channel);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GError *error = NULL;
-  GibberXmppStanza *stanza;
+  GibberXmppStanza *stanza = NULL;
   guint type;
   gchar *text;
   gchar *token;
@@ -1116,6 +1101,17 @@ _salut_im_channel_send (GObject *channel,
 error:
   if (stanza != NULL)
     g_object_unref (G_OBJECT (stanza));
+
+  if (error->domain != TP_ERRORS)
+    {
+      GError *e;
+      g_set_error_literal (&e, TP_ERRORS,
+        TP_ERROR_NETWORK_ERROR,
+        error->message);
+      g_error_free (error);
+      error = e;
+    }
+
   tp_message_mixin_sent (channel, message, 0, NULL, error);
   g_error_free (error);
   g_free (text);
