@@ -243,7 +243,10 @@ connect_to_url (GibberBytestreamOOB *self,
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   GibberLLTransport *ll_transport;
   gchar **tokens;
-  struct sockaddr_storage addr;
+  union {
+    struct sockaddr_storage storage;
+    struct sockaddr_in in;
+  } addr;
   socklen_t len;
   const gchar *host, *port;
   gint portnum = 0;
@@ -270,7 +273,7 @@ connect_to_url (GibberBytestreamOOB *self,
    * client */
   if (!gibber_transport_get_peeraddr (
       GIBBER_TRANSPORT (priv->xmpp_connection->transport),
-      &addr, &len))
+      &addr.storage, &len))
     {
       /* I'm too lazy to create more specific errors for this  as it should
        * never happen while using salut anyway.. */
@@ -295,11 +298,11 @@ connect_to_url (GibberBytestreamOOB *self,
       goto out;
    }
 
-  ((struct sockaddr_in *) &addr)->sin_port = g_htons ((guint16) portnum);
+  addr.in.sin_port = g_htons ((guint16) portnum);
 
   ll_transport = gibber_ll_transport_new ();
   set_transport (self, GIBBER_TRANSPORT (ll_transport));
-  gibber_ll_transport_open_sockaddr (ll_transport, &addr, NULL);
+  gibber_ll_transport_open_sockaddr (ll_transport, &addr.storage, NULL);
   g_object_unref (ll_transport);
 
 out:

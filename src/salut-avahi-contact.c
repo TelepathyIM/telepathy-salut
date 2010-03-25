@@ -211,7 +211,11 @@ static gint
 _compare_address (GaServiceResolver *resolver,
                   struct sockaddr *addr_b)
 {
-  struct sockaddr_storage addr_a;
+  union {
+    struct sockaddr_storage storage;
+    struct sockaddr_in in;
+    struct sockaddr_in6 in6;
+  } addr_a;
   AvahiIfIndex ifindex;
   AvahiAddress address;
   uint16_t port;
@@ -223,23 +227,22 @@ _compare_address (GaServiceResolver *resolver,
   _avahi_address_to_sockaddr (&address, port, ifindex,
       (struct sockaddr *) &addr_a);
 
-  if (addr_a.ss_family != addr_b->sa_family)
+  if (addr_a.storage.ss_family != addr_b->sa_family)
     return -1;
 
-  switch (addr_a.ss_family)
+  switch (addr_a.storage.ss_family)
     {
       case AF_INET:
         {
-          struct sockaddr_in *a4 = (struct sockaddr_in *) &addr_a;
           struct sockaddr_in *b4 = (struct sockaddr_in *) addr_b;
-          return b4->sin_addr.s_addr - a4->sin_addr.s_addr;
+          return b4->sin_addr.s_addr - addr_a.in.sin_addr.s_addr;
         }
       case AF_INET6:
         {
-          struct sockaddr_in6 *a6 = (struct sockaddr_in6 *) &addr_a;
           struct sockaddr_in6 *b6 = (struct sockaddr_in6 *) addr_b;
           /* FIXME should we compare the scope_id too ? */
-          return memcmp (a6->sin6_addr.s6_addr, b6->sin6_addr.s6_addr, 16);
+          return memcmp (addr_a.in6.sin6_addr.s6_addr,
+            b6->sin6_addr.s6_addr, 16);
         }
       default:
         g_assert_not_reached ();
