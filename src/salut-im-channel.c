@@ -1,6 +1,6 @@
 /*
  * salut-im-channel.c - Source for SalutImChannel
- * Copyright (C) 2005-2008 Collabora Ltd.
+ * Copyright (C) 2005-2008,2010 Collabora Ltd.
  *   @author: Sjoerd Simons <sjoerd@luon.net>
  *
  * This library is free software; you can redistribute it and/or
@@ -33,7 +33,6 @@
 #include <telepathy-glib/exportable-channel.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/svc-generic.h>
-#include <telepathy-glib/text-mixin.h>
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-namespaces.h>
@@ -46,10 +45,10 @@
 #include "salut-contact.h"
 #include "salut-xmpp-connection-manager.h"
 #include "salut-signals-marshal.h"
+#include "salut-util.h"
 #include "text-helper.h"
 
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
-static void text_iface_init (gpointer g_iface, gpointer iface_data);
 
 static void xmpp_connection_manager_new_connection_cb (
     SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
@@ -63,10 +62,14 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT,
+      tp_message_mixin_text_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MESSAGES,
+      tp_message_mixin_messages_iface_init);
 );
 
 static const gchar *salut_im_channel_interfaces[] = {
+    TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
     NULL
 };
 
@@ -135,6 +138,7 @@ struct _SalutImChannelMessage {
   guint time;
   guint type;
   gchar *text;
+  gchar *token;
   GibberXmppStanza *stanza;
 };
 
@@ -170,6 +174,7 @@ salut_im_channel_do_close (SalutImChannel *self)
 static SalutImChannelMessage *
 salut_im_channel_message_new (guint type,
                               const gchar *text,
+                              const gchar *token,
                               GibberXmppStanza *stanza)
 {
   SalutImChannelMessage *msg;
@@ -177,6 +182,7 @@ salut_im_channel_message_new (guint type,
   msg->type = type;
   msg->text = g_strdup (text);
   msg->time = time (NULL);
+  msg->token = g_strdup (token);
   msg->stanza = stanza;
   if (stanza != NULL)
     g_object_ref (G_OBJECT (stanza));
@@ -188,6 +194,7 @@ static void
 salut_im_channel_message_free (SalutImChannelMessage *message)
 {
   g_free (message->text);
+  g_free (message->token);
   if (message->stanza)
     g_object_unref (message->stanza);
 
@@ -196,7 +203,7 @@ salut_im_channel_message_free (SalutImChannelMessage *message)
 
 static gboolean
 _send_message (SalutImChannel *self, guint type, const gchar *text,
-    GibberXmppStanza *stanza, GError **error);
+    const gchar *token, GibberXmppStanza *stanza, GError **error);
 
 static void
 salut_im_channel_init (SalutImChannel *obj)
@@ -346,7 +353,12 @@ salut_im_channel_set_property (GObject *object,
     }
 }
 
+#define NUM_SUPPORTED_MESSAGE_TYPES 3
 
+static void
+_salut_im_channel_send (GObject *channel,
+                        TpMessage *message,
+                        TpMessageSendingFlags flags);
 static GObject *
 salut_im_channel_constructor (GType type,
                               guint n_props,
@@ -357,6 +369,17 @@ salut_im_channel_constructor (GType type,
   SalutImChannelPrivate *priv;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
+
+  TpChannelTextMessageType types[NUM_SUPPORTED_MESSAGE_TYPES] = {
+      TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
+      TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
+      TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE,
+  };
+
+  const gchar * supported_content_types[] = {
+      "text/plain",
+      NULL
+  };
 
   /* Parent constructor chain */
   obj = G_OBJECT_CLASS (salut_im_channel_parent_class)->
@@ -375,14 +398,14 @@ salut_im_channel_constructor (GType type,
   g_assert (priv->initiator != 0);
   tp_handle_ref (contact_repo, priv->initiator);
 
-  /* Initialize text mixin */
-  tp_text_mixin_init (obj, G_STRUCT_OFFSET (SalutImChannel, text),
-      contact_repo);
+  /* Initialize message mixin */
+  tp_message_mixin_init (obj, G_STRUCT_OFFSET (SalutImChannel, message_mixin),
+      base_conn);
 
-  tp_text_mixin_set_message_types (obj, TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
-      TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
-      TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE,
-      G_MAXUINT);
+  tp_message_mixin_implement_sending (obj, _salut_im_channel_send,
+      NUM_SUPPORTED_MESSAGE_TYPES, types, 0,
+      TP_DELIVERY_REPORTING_SUPPORT_FLAG_RECEIVE_FAILURES,
+      supported_content_types);
 
   /* Connect to the bus */
   bus = tp_get_bus ();
@@ -501,12 +524,11 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
-  tp_text_mixin_class_init (object_class,
-      G_STRUCT_OFFSET (SalutImChannelClass, text_class));
-
   salut_im_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutImChannelClass, dbus_props_class));
+
+  tp_message_mixin_init_dbus_properties (object_class);
 }
 
 void
@@ -571,7 +593,7 @@ salut_im_channel_finalize (GObject *object)
       NULL);
   g_queue_free (priv->out_queue);
 
-  tp_text_mixin_finalize (G_OBJECT (self));
+  tp_message_mixin_finalize (object);
 
   G_OBJECT_CLASS (salut_im_channel_parent_class)->finalize (object);
 }
@@ -581,20 +603,20 @@ _sendout_message (SalutImChannel *self,
                   guint timestamp,
                   guint type,
                   const gchar *text,
+                  const gchar *token,
                   GibberXmppStanza *stanza)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
   if (gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL))
     {
-      tp_svc_channel_type_text_emit_sent (self, timestamp, type, text);
       salut_xmpp_connection_manager_reset_connection_timer (
           priv->xmpp_connection_manager, priv->xmpp_connection);
     }
   else
     {
-      tp_svc_channel_type_text_emit_send_error (self,
-          TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, timestamp, type, text);
+      text_helper_report_delivery_error (TP_SVC_CHANNEL (self),
+          TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, timestamp, type, text, token);
     }
 }
 
@@ -615,7 +637,7 @@ _flush_queue (SalutImChannel *self)
       else
         {
           _sendout_message (self, msg->time, msg->type, msg->text,
-              msg->stanza);
+              msg->token, msg->stanza);
         }
 
       salut_im_channel_message_free (msg);
@@ -631,9 +653,9 @@ _error_flush_queue (SalutImChannel *self) {
     {
       DEBUG ("Sending out SendError for msg: %s", msg->text);
       if (msg->text != NULL)
-        tp_svc_channel_type_text_emit_send_error (self,
-            TP_CHANNEL_TEXT_SEND_ERROR_OFFLINE, msg->time, msg->type,
-            msg->text);
+        text_helper_report_delivery_error (TP_SVC_CHANNEL (self),
+            TP_CHANNEL_TEXT_SEND_ERROR_OFFLINE,
+            msg->time, msg->type, msg->text, msg->token);
 
       salut_im_channel_message_free (msg);
     }
@@ -644,6 +666,7 @@ salut_im_channel_received_stanza (SalutImChannel *self,
                                   GibberXmppStanza *stanza)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
   const gchar *from;
   TpChannelTextMessageType msgtype;
   const gchar *body;
@@ -664,8 +687,9 @@ salut_im_channel_received_stanza (SalutImChannel *self,
     }
 
   /* FIXME validate the from */
-  tp_text_mixin_receive (G_OBJECT (self), msgtype, priv->handle,
-      time (NULL), body_offset);
+  tp_message_mixin_take_received (G_OBJECT (self), 
+      text_helper_create_received_message (base_conn, priv->handle,
+          time (NULL), msgtype, body_offset));
 }
 
 static gboolean
@@ -899,6 +923,7 @@ static gboolean
 _send_message (SalutImChannel *self,
                guint type,
                const gchar *text,
+               const gchar *token,
                GibberXmppStanza *stanza,
                GError **error)
 {
@@ -910,12 +935,12 @@ _send_message (SalutImChannel *self,
       case CHANNEL_NOT_CONNECTED:
       case CHANNEL_CONNECTING:
       case CHANNEL_CLOSING:
-        msg = salut_im_channel_message_new (type, text, stanza);
+        msg = salut_im_channel_message_new (type, text, token, stanza);
         _send_channel_message (self, msg);
         break;
       case CHANNEL_CONNECTED:
         /* Connected and the queue is empty, so push it out directly */
-        _sendout_message (self, time (NULL), type, text, stanza);
+        _sendout_message (self, time (NULL), type, text, token, stanza);
         break;
         return FALSE;
         break;
@@ -1058,70 +1083,42 @@ channel_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-/**
- * salut_im_channel_send
- *
- * Implements DBus method Send
- * on interface org.freedesktop.Telepathy.Channel.Type.Text
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
- */
 static void
-salut_im_channel_send (TpSvcChannelTypeText *channel,
-                       guint type, const gchar * text,
-                       DBusGMethodInvocation *context)
+_salut_im_channel_send (GObject *channel,
+                        TpMessage *message,
+                        TpMessageSendingFlags flags)
 {
   SalutImChannel *self = SALUT_IM_CHANNEL (channel);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GError *error = NULL;
   GibberXmppStanza *stanza;
+  guint type;
+  gchar *text;
+  gchar *token;
 
-  if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
-    {
-      GError ierror = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-        "Invalid message type" };
-
-      dbus_g_method_return_error (context, &ierror);
-
-      return;
-    }
+  if (!text_helper_validate_tp_message (message, &type, &token, &text, &error))
+    goto error;
 
   stanza = text_helper_create_message (priv->connection->name,
     priv->contact->name, type, text, &error);
 
   if (stanza == NULL)
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-      return;
-    }
+    goto error;
 
-  if (!_send_message (self, type, text, stanza, &error))
-    {
-      g_object_unref (G_OBJECT (stanza));
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-      return;
-    }
+  if (!_send_message (self, type, text, token, stanza, &error))
+    goto error;
 
+  tp_message_mixin_sent (channel, message, 0, token, NULL);
+  g_free (token);
   g_object_unref (G_OBJECT (stanza));
-  tp_svc_channel_type_text_return_from_send (context);
-}
+  return;
 
-
-static void
-text_iface_init (gpointer g_iface,
-                 gpointer iface_data)
-{
-  TpSvcChannelTypeTextClass *klass = (TpSvcChannelTypeTextClass *) g_iface;
-
-  tp_text_mixin_iface_init (g_iface, iface_data);
-#define IMPLEMENT(x) tp_svc_channel_type_text_implement_##x (\
-    klass, salut_im_channel_##x)
-  IMPLEMENT(send);
-#undef IMPLEMENT
+error:
+  if (stanza != NULL)
+    g_object_unref (G_OBJECT (stanza));
+  tp_message_mixin_sent (channel, message, 0, NULL, error);
+  g_error_free (error);
+  g_free (text);
+  g_free (token);
+  return;
 }

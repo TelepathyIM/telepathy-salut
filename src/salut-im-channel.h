@@ -24,7 +24,7 @@
 #include <gibber/gibber-xmpp-stanza.h>
 #include <gibber/gibber-xmpp-connection.h>
 
-#include <telepathy-glib/text-mixin.h>
+#include <telepathy-glib/message-mixin.h>
 
 G_BEGIN_DECLS
 
@@ -34,13 +34,12 @@ typedef struct _SalutImChannelClass SalutImChannelClass;
 struct _SalutImChannelClass {
     GObjectClass parent_class;
 
-    TpTextMixinClass text_class;
     TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutImChannel {
     GObject parent;
-    TpTextMixin text;
+    TpMessageMixin message_mixin;
 };
 
 GType salut_im_channel_get_type (void);
