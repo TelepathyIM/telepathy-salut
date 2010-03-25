@@ -1,11 +1,13 @@
-telepathy-salut 0.3.11 (UNRELEASED)
+telepathy-salut 0.3.11 (2010-03-25)
 ===================================
-
-Requirements:
+The "Not really" release.
 
 Enhancements:
+* Implement TpMessageMixin and therefore the Channel.Interface.Messages.
 
 Fixes:
+* Fix strict aliasing warnings from gcc.
+* Fix assertion due to g_set_prgname being called twice.
 
 
 telepathy-salut 0.3.10 (2009-09-10)
