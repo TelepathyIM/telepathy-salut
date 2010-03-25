@@ -1104,7 +1104,7 @@ error:
 
   if (error->domain != TP_ERRORS)
     {
-      GError *e;
+      GError *e = NULL;
       g_set_error_literal (&e, TP_ERRORS,
         TP_ERROR_NETWORK_ERROR,
         error->message);
