@@ -687,7 +687,7 @@ salut_im_channel_received_stanza (SalutImChannel *self,
     }
 
   /* FIXME validate the from */
-  tp_message_mixin_take_received (G_OBJECT (self), 
+  tp_message_mixin_take_received (G_OBJECT (self),
       text_helper_create_received_message (base_conn, priv->handle,
           time (NULL), msgtype, body_offset));
 }
