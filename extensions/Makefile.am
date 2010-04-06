@@ -4,7 +4,6 @@ tools_dir = $(top_srcdir)/tools
 
 EXTRA_DIST = \
     Connection_Interface_Contact_Capabilities.xml \
-    channel.xml \
     OLPC_Buddy_Info.xml \
     OLPC_Activity_Properties.xml \
     connection.xml \
@@ -30,7 +29,6 @@ nodist_libsalut_extensions_la_SOURCES = \
 
 BUILT_SOURCES = \
     _gen/all.xml \
-    _gen/channel.xml \
     _gen/connection.xml \
     $(nodist_libsalut_extensions_la_SOURCES) \
     extensions.html
