@@ -149,10 +149,10 @@ endif
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in
 	$(QUIET_GEN)glib-mkenums \
-	--fhead "#ifndef __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n#define __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
+	--fhead "#ifndef __$(shell echo $* | LC_ALL=C tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n#define __$(shell echo $* | LC_ALL=C tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
 	--fprod "/* enumerations from \"@filename@\" */\n" \
-	--vhead "GType @enum_name@_get_type (void);\n#define $(shell echo $* | tr [:lower:]- [:upper:]_ | sed 's/_.*//')_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"         \
-	--ftail "G_END_DECLS\n\n#endif /* __$(shell echo $* | tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__ */" \
+	--vhead "GType @enum_name@_get_type (void);\n#define $(shell echo $* | LC_ALL=C tr [:lower:]- [:upper:]_ | sed 's/_.*//')_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"         \
+	--ftail "G_END_DECLS\n\n#endif /* __$(shell echo $* | LC_ALL=C tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__ */" \
 	$< > $@
 
 %-enumtypes.c: %.h Makefile.in
