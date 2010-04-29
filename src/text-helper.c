@@ -306,7 +306,7 @@ text_helper_report_delivery_error (TpSvcChannel *self,
   tp_message_set_handle (delivery_echo, 0, "message-sender",
       TP_HANDLE_TYPE_CONTACT, base_conn->self_handle);
   tp_message_set_uint32 (delivery_echo, 0, "message-type", type);
-  tp_message_set_uint64 (delivery_echo, 0, "message-sent", (guint64)time);
+  tp_message_set_uint64 (delivery_echo, 0, "message-sent", (guint64)timestamp);
   tp_message_set_string (delivery_echo, 1, "content-type", "text/plain");
   tp_message_set_string (delivery_echo, 1, "content", text);
 
