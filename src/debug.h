@@ -38,14 +38,30 @@ typedef enum
 void debug_set_flags_from_env (void);
 void debug_set_flags (DebugFlags flags);
 gboolean debug_flag_is_set (DebugFlags flag);
-void debug (DebugFlags flag, const gchar *format, ...)
-    G_GNUC_PRINTF (2, 3);
+void salut_log (GLogLevelFlags level, DebugFlags flag,
+    const gchar *format, ...) G_GNUC_PRINTF (3, 4);
 void debug_free (void);
 
 #ifdef DEBUG_FLAG
 
+#define ERROR(format, ...) \
+  salut_log (G_LOG_LEVEL_ERROR, DEBUG_FLAG, "%s: " format, \
+      G_STRFUNC, ##__VA_ARGS__)
+#define CRITICAL(format, ...) \
+  salut_log (G_LOG_LEVEL_CRITICAL, DEBUG_FLAG, "%s: " format, \
+      G_STRFUNC, ##__VA_ARGS__)
+#define WARNING(format, ...) \
+  salut_log (G_LOG_LEVEL_WARNING, DEBUG_FLAG, "%s: " format, \
+      G_STRFUNC, ##__VA_ARGS__)
+#define MESSAGE(format, ...) \
+  salut_log (G_LOG_LEVEL_MESSAGE, DEBUG_FLAG, "%s: " format, \
+      G_STRFUNC, ##__VA_ARGS__)
+#define INFO(format, ...) \
+  salut_log (G_LOG_LEVEL_INFO, DEBUG_FLAG, "%s: " format, \
+      G_STRFUNC, ##__VA_ARGS__)
 #define DEBUG(format, ...) \
-  debug (DEBUG_FLAG, "%s: " format, G_STRFUNC, ##__VA_ARGS__)
+  salut_log (G_LOG_LEVEL_DEBUG, DEBUG_FLAG, "%s: " format, \
+      G_STRFUNC, ##__VA_ARGS__)
 
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)
 
@@ -55,6 +71,16 @@ void debug_free (void);
 
 #ifdef DEBUG_FLAG
 
+#define DEBUG(format, ...) \
+  G_STMT_START { } G_STMT_END
+#define CRITICAL(format, ...) \
+  G_STMT_START { } G_STMT_END
+#define WARNING(format, ...) \
+  G_STMT_START { } G_STMT_END
+#define MESSAGE(format, ...) \
+  G_STMT_START { } G_STMT_END
+#define INFO(format, ...) \
+  G_STMT_START { } G_STMT_END
 #define DEBUG(format, ...) \
   G_STMT_START { } G_STMT_END
 
