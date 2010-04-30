@@ -105,8 +105,7 @@ debug_free (void)
 }
 
 static void
-log_to_debug_sender (GLogLevelFlags level,
-    DebugFlags flag,
+log_to_debug_sender (DebugFlags flag,
     const gchar *message)
 {
   TpDebugSender *dbg;
@@ -117,15 +116,14 @@ log_to_debug_sender (GLogLevelFlags level,
   g_get_current_time (&now);
 
   tp_debug_sender_add_message (dbg, &now, debug_flag_to_domain (flag),
-      level, message);
+      G_LOG_LEVEL_DEBUG, message);
 
   g_object_unref (dbg);
 }
 
-void salut_log (GLogLevelFlags level,
-    DebugFlags flag,
-    const gchar *format,
-    ...)
+void debug (DebugFlags flag,
+                   const gchar *format,
+                   ...)
 {
   gchar *message;
   va_list args;
@@ -134,10 +132,10 @@ void salut_log (GLogLevelFlags level,
   message = g_strdup_vprintf (format, args);
   va_end (args);
 
-  log_to_debug_sender (level, flag, message);
+  log_to_debug_sender (flag, message);
 
   if (flag & flags)
-    g_log (G_LOG_DOMAIN, level, "%s", message);
+    g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s", message);
 
   g_free (message);
 }
