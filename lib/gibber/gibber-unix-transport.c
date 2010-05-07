@@ -22,6 +22,10 @@
 /* needed for struct ucred */
 #define _GNU_SOURCE
 
+#include <glib.h>
+
+#ifdef G_OS_UNIX
+
 /* If you claim to be Unix but you don't have these headers, you may have
  * already lost. */
 #include <stdio.h>
@@ -405,4 +409,6 @@ gibber_unix_transport_read (GibberFdTransport *transport,
   return gibber_fd_transport_read (transport, channel, error);
 }
 
-#endif
+#endif /* OSs where we have no implementation of credentials */
+
+#endif /* G_OS_UNIX */
