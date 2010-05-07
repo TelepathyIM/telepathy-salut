@@ -17,13 +17,20 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <config.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
+
+#include "gibber-sockets.h"
+
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
 
 #include <glib.h>
 
