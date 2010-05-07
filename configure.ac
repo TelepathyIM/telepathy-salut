@@ -135,6 +135,38 @@ AC_SUBST(ENABLE_OLPC)
 AC_HEADER_STDC([])
 AC_C_INLINE
 
+AC_CHECK_HEADERS_ONCE([
+    arpa/inet.h
+    arpa/nameser.h
+    fcntl.h
+    ifaddrs.h
+    netdb.h
+    netinet/in.h
+    sys/ioctl.h
+    sys/un.h
+    unistd.h
+    ])
+
+# on Darwin, these headers are interdependent, according to autoconf.info
+AC_CHECK_HEADERS([sys/socket.h], [], [],
+[
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+])
+AC_CHECK_HEADERS([net/if.h], [], [],
+[
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#ifdef HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+])
+
+# Autoconf has a handy macro for this, since it tends to have dependencies
+AC_HEADER_RESOLV
+
 dnl Check endianness (Needed for the sha1 implementation)
 AC_C_BIGENDIAN
 
