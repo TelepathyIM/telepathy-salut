@@ -176,7 +176,7 @@ try_to_connect (GibberTCPTransport *self)
       return FALSE;
     }
 
-  if (errno == EALREADY || errno == EINPROGRESS)
+  if (gibber_connect_errno_requires_retry ())
     {
       /* We have to wait longer */
       return TRUE;
