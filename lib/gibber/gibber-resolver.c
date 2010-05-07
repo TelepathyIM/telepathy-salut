@@ -22,11 +22,8 @@
 #include <stdlib.h>
 
 #include <string.h>
-#include <netinet/in.h>
-#include <arpa/nameser.h>
-#include <resolv.h>
-#include <sys/types.h>
-#include <netdb.h>
+
+#include "gibber-sockets.h"
 
 #include <errno.h>
 

@@ -21,8 +21,8 @@
 #define __GIBBER_BYTESTREAM_DIRECT_H__
 
 #include <glib-object.h>
-#include <netdb.h>
 #include "gibber-bytestream-iface.h"
+#include "gibber-sockets.h"
 #include "gibber-transport.h"
 
 G_BEGIN_DECLS

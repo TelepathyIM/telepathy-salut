@@ -24,12 +24,11 @@
 
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 
 #include "gibber-muc-connection.h"
 #include "gibber-signals-marshal.h"
 
+#include "gibber-sockets.h"
 #include "gibber-namespaces.h"
 #include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"

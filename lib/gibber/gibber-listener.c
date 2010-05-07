@@ -21,10 +21,6 @@
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>

@@ -22,9 +22,8 @@
 
 #include <glib-object.h>
 
-#include <netdb.h>
-
 #include "gibber-bytestream-iface.h"
+#include "gibber-sockets.h"
 
 G_BEGIN_DECLS
 

@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <arpa/inet.h>
+#include "gibber-sockets.h"
 
 #include "gibber-r-multicast-packet.h"
 

@@ -24,13 +24,11 @@
 #include <time.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include <glib.h>
 
+#include "gibber-sockets.h"
 #include "gibber-bytestream-iface.h"
 #include "gibber-xmpp-connection.h"
 #include "gibber-xmpp-stanza.h"
