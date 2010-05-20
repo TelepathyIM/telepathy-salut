@@ -1,12 +1,35 @@
-telepathy-salut 0.3.12 (UNRELEASED)
+telepathy-salut 0.3.12 (2010-05-20)
 ===================================
 
-Requirements:
+The "maybe your browser has turned religious" release.
 
 Enhancements:
 
+* Merge back most of the portability improvements from Gabble's copy of Gibber
+  (smcv)
+
+* Use automake silent rules (--enable-silent-rules) instead of shave (smcv)
+
 Fixes:
 
+* fd.o #22970, Debian #565154: don't try to support credential-passing on
+  non-Linux platforms, fixing compilation there (smcv)
+
+* fd.o #27289: set the Properties flag on group channels for round-trip
+  reduction (cassidy)
+
+* fd.o #20732 (partial): allow the user to leave MUCs with RemoveMembers()
+  (smcv)
+
+* Implement the error path for ContactList channel requests correctly (smcv)
+
+* Fix compilation in the tr_TR.UTF-8 locale (Maiku)
+
+* Use the right timestamps on message delivery reports (Jonny)
+
+* Stop working around fd.o #15092, which was fixed in telepathy-glib (cassidy)
+
+* fd.o #26152: make critical warnings fatal by default (smcv)
 
 telepathy-salut 0.3.11 (2010-03-25)
 ===================================
