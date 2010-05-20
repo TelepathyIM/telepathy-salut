@@ -269,6 +269,31 @@ static void connection_capabilities_update_cb (SalutPresenceCache *cache,
     GHashTable *new_enhanced_caps, gpointer user_data);
 
 static void
+conn_avatars_properties_getter (GObject *object, GQuark interface, GQuark name,
+    GValue *value, gpointer getter_data);
+
+static const char *mimetypes[] = {
+    "image/png", "image/jpeg", NULL };
+
+#define AVATAR_MIN_PX 0
+#define AVATAR_REC_PX 64
+#define AVATAR_MAX_PX 0
+#define AVATAR_MAX_BYTES G_MAXUINT16
+
+static TpDBusPropertiesMixinPropImpl conn_avatars_properties[] = {
+      { "MinimumAvatarWidth", GUINT_TO_POINTER (AVATAR_MIN_PX), NULL },
+      { "RecommendedAvatarWidth", GUINT_TO_POINTER (AVATAR_REC_PX), NULL },
+      { "MaximumAvatarWidth", GUINT_TO_POINTER (AVATAR_MAX_PX), NULL },
+      { "MinimumAvatarHeight", GUINT_TO_POINTER (AVATAR_MIN_PX), NULL },
+      { "RecommendedAvatarHeight", GUINT_TO_POINTER (AVATAR_REC_PX), NULL },
+      { "MaximumAvatarHeight", GUINT_TO_POINTER (AVATAR_MAX_PX), NULL },
+      { "MaximumAvatarBytes", GUINT_TO_POINTER (AVATAR_MAX_BYTES), NULL },
+      /* special-cased - it's the only one with a non-guint value */
+      { "SupportedAvatarMIMETypes", NULL, NULL },
+      { NULL }
+};
+
+static void
 salut_connection_init (SalutConnection *obj)
 {
   SalutConnectionPrivate *priv =
@@ -667,6 +692,14 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
     SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
 #endif
     NULL };
+  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+        { TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+          conn_avatars_properties_getter,
+          NULL,
+          conn_avatars_properties,
+        },
+        { NULL }
+  };
 
   object_class->get_property = salut_connection_get_property;
   object_class->set_property = salut_connection_set_property;
@@ -693,7 +726,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_start_connecting;
   tp_connection_class->interfaces_always_present = interfaces;
 
-  salut_connection_class->properties_mixin.interfaces = NULL;
+  salut_connection_class->properties_mixin.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
 
@@ -1782,16 +1815,32 @@ salut_connection_request_avatar (TpSvcConnectionInterfaceAvatars *iface,
 }
 
 static void
+conn_avatars_properties_getter (GObject *object,
+                                GQuark interface,
+                                GQuark name,
+                                GValue *value,
+                                gpointer getter_data)
+{
+  GQuark q_mime_types = g_quark_from_static_string (
+      "SupportedAvatarMIMETypes");
+
+  if (name == q_mime_types)
+    {
+      g_value_set_static_boxed (value, mimetypes);
+    }
+  else
+    {
+      g_value_set_uint (value, GPOINTER_TO_UINT (getter_data));
+    }
+}
+
+static void
 salut_connection_get_avatar_requirements (
     TpSvcConnectionInterfaceAvatars *iface, DBusGMethodInvocation *context)
 {
-  const gchar *mimetypes [] = {
-    "image/png",
-    "image/jpeg",
-    NULL };
-
   tp_svc_connection_interface_avatars_return_from_get_avatar_requirements (
-      context, mimetypes, 0, 0, 0, 0, 0xffff);
+      context, mimetypes, AVATAR_MIN_PX, AVATAR_MIN_PX, AVATAR_MAX_PX,
+      AVATAR_MAX_PX, AVATAR_MAX_BYTES);
 }
 
 static void
