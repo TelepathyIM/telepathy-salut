@@ -123,7 +123,7 @@ def test(q, bus, conn):
 
     # TODO: test sending invitations
 
-    channel.Close()
+    channel.RemoveMembersWithReason([self_handle], "bored now", 0)
     q.expect('dbus-signal', signal='Closed')
 
 if __name__ == '__main__':

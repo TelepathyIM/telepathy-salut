@@ -760,6 +760,52 @@ salut_muc_channel_add_member (GObject *iface,
 }
 
 static void
+salut_muc_channel_leave (SalutMucChannel *self,
+    TpChannelGroupChangeReason reason,
+    const gchar *message)
+{
+  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
+
+  if (priv->closed)
+    return;
+
+  if (priv->connected)
+    {
+      /* FIXME: send a part-message based on reason and message first,
+       * once we've defined how */
+
+      /* priv->closed will be set in salut_muc_channel_disconnected */
+      gibber_muc_connection_disconnect (priv->muc_connection);
+    }
+  else
+    {
+      priv->closed = TRUE;
+      tp_svc_channel_emit_closed (self);
+    }
+}
+
+static gboolean
+salut_muc_channel_remove_member_with_reason (GObject *object,
+    TpHandle handle,
+    const gchar *message,
+    guint reason,
+    GError **error)
+{
+  SalutMucChannel *self = SALUT_MUC_CHANNEL (object);
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
+
+  if (handle != base_connection->self_handle)
+    {
+      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Contacts cannot be kicked from Clique chatrooms");
+      return FALSE;
+    }
+
+  salut_muc_channel_leave (self, reason, message);
+  return TRUE;
+}
+
+static void
 salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_muc_channel_class);
   GParamSpec *param_spec;
@@ -918,6 +964,10 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
       G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
       salut_muc_channel_add_member, NULL);
   tp_group_mixin_init_dbus_properties (object_class);
+
+  tp_group_mixin_class_allow_self_removal (object_class);
+  tp_group_mixin_class_set_remove_with_reason_func (object_class,
+      salut_muc_channel_remove_member_with_reason);
 
   tp_message_mixin_init_dbus_properties (object_class);
 }
@@ -1403,17 +1453,7 @@ salut_muc_channel_close (TpSvcChannel *iface, DBusGMethodInvocation *context)
       return;
     }
 
-  if (priv->connected)
-    {
-      /* priv->closed will be set in salut_muc_channel_disconnected */
-      gibber_muc_connection_disconnect (priv->muc_connection);
-    }
-  else
-    {
-      priv->closed = TRUE;
-      tp_svc_channel_emit_closed (self);
-    }
-
+  salut_muc_channel_leave (self, TP_CHANNEL_GROUP_CHANGE_REASON_NONE, "");
   tp_svc_channel_return_from_close (context);
 }
 
