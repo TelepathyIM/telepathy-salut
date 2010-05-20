@@ -11,12 +11,12 @@ service_DATA = org.freedesktop.Telepathy.ConnectionManager.salut.service
 # non-archaic tarballs)
 org.freedesktop.Telepathy.ConnectionManager.salut.service: salut.service.in \
 		Makefile
-	@sed -e "s|[@]libexecdir[@]|$(libexecdir)|" $< > $@
+	$(AM_V_GEN)sed -e "s|[@]libexecdir[@]|$(libexecdir)|" $< > $@
 
 CLEANFILES = $(service_DATA) $(manager_DATA)
 
 $(manager_DATA): always-build
 	$(MAKE) -C ../src write-mgr-file
-	../src/write-mgr-file > $@
+	$(AM_V_GEN)../src/write-mgr-file > $@
 
 .PHONY: always-build

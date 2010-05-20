@@ -19,18 +19,18 @@ EXTRA_DIST = \
     xep.xsl
 
 glib-client-marshaller-gen.py: libglibcodegen.py
-	touch $@
+	@touch $@
 glib-ginterface-gen.py: libglibcodegen.py
-	touch $@
+	@touch $@
 glib-gtypes-generator.py: libglibcodegen.py
-	touch $@
+	@touch $@
 glib-signals-marshal-gen.py: libglibcodegen.py
-	touch $@
+	@touch $@
 
 glib-interfaces-generator.xsl: c-interfaces-generator.xsl
-	touch $@
+	@touch $@
 glib-interfaces-body-generator.xsl: c-interfaces-generator.xsl
-	touch $@
+	@touch $@
 
 maintainer-update-from-xmpp.org:
 	set -e; \

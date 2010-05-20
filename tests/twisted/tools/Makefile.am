@@ -1,15 +1,15 @@
 exec-with-log.sh: exec-with-log.sh.in
-	sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
-	chmod +x $@
+	$(AM_V_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
+	@chmod +x $@
 
 %.conf: %.conf.in
-	sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
+	$(AM_V_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
 
 # We don't use the full filename for the .in because > 99 character filenames
 # in tarballs are non-portable (and automake 1.8 doesn't let us build
 # non-archaic tarballs)
 org.freedesktop.Telepathy.ConnectionManager.%.service: %.service.in
-	sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
+	$(AM_V_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
 
 # D-Bus service file for testing
 service_in_files = salut.service.in
