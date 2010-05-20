@@ -302,8 +302,6 @@ AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
 
 AC_SUBST(PACKAGE_STRING)
 
-SHAVE_INIT(.)
-
 AC_OUTPUT( Makefile                       \
            docs/Makefile                  \
            lib/Makefile                   \
@@ -319,6 +317,4 @@ AC_OUTPUT( Makefile                       \
            tests/Makefile                 \
            tests/twisted/Makefile         \
            tests/twisted/tools/Makefile   \
-           shave                          \
-           shave-libtool                  \
 )

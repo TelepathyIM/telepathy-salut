@@ -1,5 +1,3 @@
-include $(top_srcdir)/tools/shave.mk
-
 BUILT_SOURCES = \
     salut-signals-marshal.list \
     salut-signals-marshal.h \
@@ -171,12 +169,12 @@ AM_LDFLAGS = $(GCOV_LIBS) @DBUS_LIBS@ \
 
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:
-	$(QUIET_GEN)${MAKE} -C $(top_builddir)/lib/gibber libgibber.la
+	${MAKE} -C $(top_builddir)/lib/gibber libgibber.la
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
 salut-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) Makefile.am
-	$(QUIET_GEN)( cd $(srcdir) && \
+	( cd $(srcdir) && \
 	sed -n -e 's/.*salut_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
 	$(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) ) \
 	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
@@ -187,16 +185,16 @@ salut-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BAC
 	fi
 
 %-signals-marshal.h: %-signals-marshal.list Makefile.am
-	$(QUIET_GEN)glib-genmarshal --header --prefix=$(subst -,_,$*)_signals_marshal $< > $@
+	glib-genmarshal --header --prefix=$(subst -,_,$*)_signals_marshal $< > $@
 
 %-signals-marshal.c: %-signals-marshal.list Makefile.am
-	$(QUIET_GEN){ echo '#include "$*-signals-marshal.h"' && \
+	{ echo '#include "$*-signals-marshal.h"' && \
 	glib-genmarshal --body --prefix=$(subst -,_,$*)_signals_marshal $< ; \
 	} > $@
 
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in
-	$(QUIET_GEN)glib-mkenums \
+	glib-mkenums \
 	--fhead "#ifndef __$(shell echo $* | LC_ALL=C tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n#define __$(shell echo $* | LC_ALL=C tr [:lower:]- [:upper:]_)_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
 	--fprod "/* enumerations from \"@filename@\" */\n" \
 	--vhead "GType @enum_name@_get_type (void);\n#define $(shell echo $* | LC_ALL=C tr [:lower:]- [:upper:]_ | sed 's/_.*//')_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n"         \
@@ -204,7 +202,7 @@ salut-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BAC
 	$< > $@
 
 %-enumtypes.c: %.h Makefile.in
-	$(QUIET_GEN)glib-mkenums \
+	glib-mkenums \
 	--fhead "#include <$*.h>\n#include <$*-enumtypes.h>" \
 	--fprod "\n/* enumerations from \"@filename@\" */" \
 	--vhead "GType\n@enum_name@_get_type (void)\n{\n  static GType etype = 0;\n  if (etype == 0) {\n    static const G@Type@Value values[] = {"     \

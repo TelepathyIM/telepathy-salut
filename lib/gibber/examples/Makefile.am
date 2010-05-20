@@ -1,11 +1,9 @@
-include $(top_srcdir)/tools/shave.mk
-
 # All examples use SSL, so don't build anything if it's unavailable
 if HAVE_LIBSSL
 
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:
-	$(QUIET_GEN)${MAKE} -C $(top_builddir)/lib/gibber libgibber.la
+	${MAKE} -C $(top_builddir)/lib/gibber libgibber.la
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
