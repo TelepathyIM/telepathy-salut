@@ -117,12 +117,6 @@ salut_avahi_muc_channel_constructor (GType type,
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
 
-  /* FIXME: This is an ugly workaround. See fd.o #15092 */
-  tp_group_mixin_init (obj, G_STRUCT_OFFSET (SalutMucChannel, group),
-      contact_repo, base_conn->self_handle);
-  tp_group_mixin_change_flags (obj,
-       TP_CHANNEL_GROUP_FLAG_CAN_ADD|TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD, 0);
-
   return obj;
 }
 
