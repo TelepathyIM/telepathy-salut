@@ -74,6 +74,10 @@ HANDWRITTEN_SOURCES =             \
   gibber-xmpp-connection-listener.h \
   gibber-xmpp-error.h             \
   gibber-xmpp-error.c             \
+  gibber-sockets.c                \
+  gibber-sockets.h                \
+  gibber-sockets-unix.h           \
+  gibber-sockets-win32.h          \
   gibber-util.h                   \
   gibber-util.c
 

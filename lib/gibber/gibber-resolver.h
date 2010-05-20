@@ -23,8 +23,7 @@
 
 #include <glib-object.h>
 
-#include <sys/socket.h>
-#include <netdb.h>
+#include "gibber-sockets.h"
 
 G_BEGIN_DECLS
 

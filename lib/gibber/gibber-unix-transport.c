@@ -22,6 +22,12 @@
 /* needed for struct ucred */
 #define _GNU_SOURCE
 
+#include <glib.h>
+
+#ifdef G_OS_UNIX
+
+/* If you claim to be Unix but you don't have these headers, you may have
+ * already lost. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -171,7 +177,7 @@ gibber_unix_transport_connect (GibberUnixTransport *transport,
     }
   DEBUG ("Connected to socket");
 
-  gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd);
+  gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd, TRUE);
 
   return TRUE;
 
@@ -190,8 +196,19 @@ gibber_unix_transport_new_from_fd (int fd)
   GibberUnixTransport *transport;
 
   transport = gibber_unix_transport_new ();
-  gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd);
+  gibber_fd_transport_set_fd (GIBBER_FD_TRANSPORT (transport), fd, TRUE);
   return transport;
+}
+
+/* Patches that reimplement these functions for non-Linux would be welcome
+ * (please file a bug) */
+
+#if defined(__linux__)
+
+gboolean
+gibber_unix_transport_supports_credentials (void)
+{
+  return TRUE;
 }
 
 gboolean
@@ -214,11 +231,12 @@ gibber_unix_transport_send_credentials (GibberUnixTransport *transport,
   iov.iov_base = (void *) data;
   iov.iov_len = size;
 
-  memset (&msg, 0, sizeof msg);
+  memset (&msg, 0, sizeof (msg));
   msg.msg_iov = &iov;
   msg.msg_iovlen = 1;
   msg.msg_control = buffer;
   msg.msg_controllen = sizeof (buffer);
+  memset (buffer, 0, sizeof (buffer));
 
   /* Set the credentials */
   ch = CMSG_FIRSTHDR (&msg);
@@ -356,3 +374,41 @@ gibber_unix_transport_recv_credentials (GibberUnixTransport *self,
   priv->recv_creds_data = user_data;
   return TRUE;
 }
+
+#else /* OSs where we have no implementation */
+
+gboolean
+gibber_unix_transport_supports_credentials (void)
+{
+  return FALSE;
+}
+
+gboolean
+gibber_unix_transport_recv_credentials (GibberUnixTransport *self,
+    GibberUnixTransportRecvCredentialsCb callback,
+    gpointer user_data)
+{
+  DEBUG ("stub implementation, failing");
+  return FALSE;
+}
+
+gboolean
+gibber_unix_transport_send_credentials (GibberUnixTransport *transport,
+    const guint8 *data,
+    gsize size)
+{
+  DEBUG ("stub implementation, failing");
+  return FALSE;
+}
+
+static GibberFdIOResult
+gibber_unix_transport_read (GibberFdTransport *transport,
+    GIOChannel *channel,
+    GError **error)
+{
+  return gibber_fd_transport_read (transport, channel, error);
+}
+
+#endif /* OSs where we have no implementation of credentials */
+
+#endif /* G_OS_UNIX */

@@ -24,6 +24,8 @@
 
 #include <glib-object.h>
 
+#ifdef G_OS_UNIX
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,6 +81,8 @@ GType gibber_unix_transport_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_UNIX_TRANSPORT, \
    GibberUnixTransportClass))
 
+gboolean gibber_unix_transport_supports_credentials (void);
+
 GibberUnixTransport * gibber_unix_transport_new (void);
 
 GibberUnixTransport * gibber_unix_transport_new_from_fd (int fd);
@@ -107,5 +111,7 @@ gboolean gibber_unix_transport_recv_credentials (GibberUnixTransport *transport,
     gpointer user_data);
 
 G_END_DECLS
+
+#endif /* G_OS_UNIX */
 
 #endif /* #ifndef __GIBBER_UNIX_TRANSPORT_H__*/

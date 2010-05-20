@@ -50,6 +50,7 @@ new_connection_cb (GibberListener *listener,
                    guint size,
                    GMainLoop *loop)
 {
+#if defined(__linux__)
   int fd, opt, ret;
   struct iovec iov;
   struct msghdr msg;
@@ -58,12 +59,14 @@ new_connection_cb (GibberListener *listener,
   struct cmsghdr *ch;
   struct ucred *cred;
   gchar buffer[128];
+#endif
 
   got_connection = TRUE;
 
   /* Block receiving so the data won't be consummed by transport's GIOSource */
   gibber_transport_block_receiving (connection, TRUE);
 
+#if defined(__linux__)
   g_assert (gibber_unix_transport_send_credentials (unix_transport,
         (guint8 *) DATA, strlen (DATA) + 1));
 
@@ -96,6 +99,10 @@ new_connection_cb (GibberListener *listener,
   g_assert (cred->pid == getpid ());
   g_assert (cred->uid == getuid ());
   g_assert (cred->gid == getgid ());
+#else /* not Linux */
+  g_assert (!gibber_unix_transport_send_credentials (unix_transport,
+        (guint8 *) DATA, strlen (DATA) + 1));
+#endif
 
   g_main_loop_quit (loop);
 }
@@ -137,7 +144,6 @@ START_TEST (test_send_credentials)
   g_main_loop_unref (mainloop);
 } END_TEST
 
-
 static void
 get_credentials_cb (GibberUnixTransport *transport,
                     GibberBuffer *buffer,
@@ -165,11 +171,17 @@ receive_new_connection_cb (GibberListener *listener,
                            guint size,
                            GMainLoop *loop)
 {
-  gibber_unix_transport_recv_credentials (unix_transport,
+  gboolean ok;
+
+  ok = gibber_unix_transport_recv_credentials (unix_transport,
       get_credentials_cb, loop);
 
-  gibber_unix_transport_send_credentials (GIBBER_UNIX_TRANSPORT (connection),
+  g_assert (ok == gibber_unix_transport_supports_credentials ());
+
+  ok = gibber_unix_transport_send_credentials (GIBBER_UNIX_TRANSPORT (connection),
       (guint8 *) DATA, strlen (DATA));
+
+  g_assert (ok == gibber_unix_transport_supports_credentials ());
 }
 
 START_TEST (test_receive_credentials)
@@ -199,10 +211,12 @@ START_TEST (test_receive_credentials)
   ret = gibber_unix_transport_connect (unix_transport, path, &error);
   fail_if (ret != TRUE);
 
+#if defined(__linux__)
   if (!received_credentials)
     g_main_loop_run (mainloop);
 
   fail_if (!received_credentials, "Failed to receive credentials");
+#endif
 
   g_object_unref (listener_unix);
   g_object_unref (unix_transport);

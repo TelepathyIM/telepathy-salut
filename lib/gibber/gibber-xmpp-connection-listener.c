@@ -23,13 +23,12 @@
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
 
 #include <glib.h>
 
+#include "gibber-sockets.h"
 #include "gibber-xmpp-connection.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-util.h"

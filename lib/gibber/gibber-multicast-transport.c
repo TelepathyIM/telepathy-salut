@@ -23,11 +23,7 @@
 #include <errno.h>
 #include <string.h>
 
-/* Networking stuff */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
+#include "gibber-sockets.h"
 
 #include <gibber-multicast-transport.h>
 
