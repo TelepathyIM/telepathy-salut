@@ -112,7 +112,7 @@ AC_ARG_ENABLE(avahi-tests,
     enable_avahi_tests=$enableval, enable_avahi_tests=no)
 
 if test x$enable_avahi_tests = xyes; then
-  if test false == "$TEST_PYTHON"; then
+  if test false = "$TEST_PYTHON"; then
     AC_MSG_ERROR(
       [Python with twisted support is needed for avahi twisted tests])
   fi
