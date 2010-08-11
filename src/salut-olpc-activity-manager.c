@@ -228,6 +228,26 @@ salut_olpc_activity_manager_get_activity_by_room (SalutOlpcActivityManager *self
 }
 
 SalutOlpcActivity *
+salut_olpc_activity_manager_get_activity_by_id (SalutOlpcActivityManager *self,
+                                                const gchar *activity_id)
+{
+  SalutOlpcActivityManagerPrivate *priv =
+    SALUT_OLPC_ACTIVITY_MANAGER_GET_PRIVATE (self);
+  GHashTableIter iter;
+  gpointer key, value;
+
+  g_hash_table_iter_init (&iter, priv->activities_by_room);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      SalutOlpcActivity *activity = value;
+      if (strcmp (activity->id, activity_id) == 0)
+        return activity;
+    }
+
+  return NULL;
+}
+
+SalutOlpcActivity *
 salut_olpc_activity_manager_ensure_activity_by_room (
     SalutOlpcActivityManager *self,
     TpHandle room)

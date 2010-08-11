@@ -72,6 +72,9 @@ gboolean salut_olpc_activity_manager_start (SalutOlpcActivityManager *mgr,
 SalutOlpcActivity * salut_olpc_activity_manager_get_activity_by_room (
     SalutOlpcActivityManager *mgr, TpHandle room);
 
+SalutOlpcActivity * salut_olpc_activity_manager_get_activity_by_id (
+    SalutOlpcActivityManager *mgr, const gchar *activity_id);
+
 SalutOlpcActivity * salut_olpc_activity_manager_ensure_activity_by_room (
     SalutOlpcActivityManager *mgr, TpHandle room);
 

@@ -3039,6 +3039,38 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
 }
 
 static void
+salut_connection_act_get_activity (SalutSvcOLPCActivityProperties *iface,
+                                   const gchar *activity_id,
+                                   DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  GError *error = NULL;
+  SalutOlpcActivity *activity;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+  activity = salut_olpc_activity_manager_get_activity_by_id (
+      priv->olpc_activity_manager, activity_id);
+  if (activity == NULL)
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "Activity unknown: %s", activity_id);
+      goto error;
+    }
+
+  salut_svc_olpc_activity_properties_return_from_get_activity (context,
+      activity->room);
+
+  return;
+
+error:
+  dbus_g_method_return_error (context, error);
+  g_error_free (error);
+}
+
+static void
 salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
                                                       gpointer iface_data)
 {
@@ -3048,6 +3080,7 @@ salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
   (klass, salut_connection_act_##x)
   IMPLEMENT(set_properties);
   IMPLEMENT(get_properties);
+  IMPLEMENT(get_activity);
 #undef IMPLEMENT
 }
 #endif
