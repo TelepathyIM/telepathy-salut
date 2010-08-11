@@ -135,6 +135,9 @@ gboolean salut_self_set_olpc_activity_properties (SalutSelf *self,
 gboolean salut_self_set_olpc_activities (SalutSelf *self,
     GHashTable *act_id_to_room, GError **error);
 
+gboolean salut_self_add_olpc_activity (SalutSelf *self,
+    const gchar *activity_id, TpHandle room, GError **error);
+
 gboolean salut_self_set_olpc_current_activity (SalutSelf *self,
     const gchar *id, TpHandle room, GError **error);
 

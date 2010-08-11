@@ -629,21 +629,21 @@ salut_self_set_avatar (SalutSelf *self, guint8 *data,
 
 #ifdef ENABLE_OLPC
 
-static SalutOlpcActivity *
+gboolean
 salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
     TpHandle room, GError **error)
 {
   SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOlpcActivity *activity;
 
-  g_return_val_if_fail (activity_id != NULL, NULL);
-  g_return_val_if_fail (room != 0, NULL);
+  g_return_val_if_fail (activity_id != NULL, FALSE);
+  g_return_val_if_fail (room != 0, FALSE);
 
   if (strchr (activity_id, ':') != NULL)
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Activity IDs may not contain ':'");
-      return NULL;
+      return FALSE;
     }
 
   activity = salut_olpc_activity_manager_ensure_activity_by_room (
@@ -652,7 +652,7 @@ salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
   if (!salut_olpc_activity_joined (activity, error))
     {
       g_object_unref (activity);
-      return NULL;
+      return FALSE;
     }
 
   salut_olpc_activity_update (activity, room, activity_id, NULL, NULL, NULL,
@@ -661,7 +661,7 @@ salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
   g_hash_table_insert (priv->olpc_activities, GUINT_TO_POINTER (room),
       activity);
 
-  return activity;
+  return TRUE;
 }
 
 struct _set_olpc_activities_ctx
@@ -691,10 +691,7 @@ _set_olpc_activities_add (gpointer key, gpointer value, gpointer user_data)
   if (activity == NULL)
     {
       /* add the activity service if it's not in data->olpc_activities */
-      activity = salut_self_add_olpc_activity (data->self, id, room,
-          data->error);
-
-      if (activity == NULL)
+      if (!salut_self_add_olpc_activity (data->self, id, room, data->error))
         return;
     }
   else

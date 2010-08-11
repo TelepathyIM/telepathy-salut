@@ -2676,6 +2676,29 @@ finally:
 }
 
 static void
+salut_connection_olpc_add_activity (SalutSvcOLPCBuddyInfo *iface,
+                                    const gchar *id,
+                                    TpHandle handle,
+                                    DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  GError *error = NULL;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+  if (!salut_self_add_olpc_activity (priv->self, id, handle, &error))
+    {
+      dbus_g_method_return_error (context, error);
+    }
+  else
+    {
+      salut_svc_olpc_buddy_info_return_from_set_activities (context);
+    }
+}
+
+static void
 salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
                                              gpointer iface_data)
 {
@@ -2686,6 +2709,7 @@ salut_connection_olpc_buddy_info_iface_init (gpointer g_iface,
   IMPLEMENT(set_properties);
   IMPLEMENT(get_properties);
   IMPLEMENT(set_activities);
+  IMPLEMENT(add_activity);
   IMPLEMENT(get_activities);
   IMPLEMENT(set_current_activity);
   IMPLEMENT(get_current_activity);
