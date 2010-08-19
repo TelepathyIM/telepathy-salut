@@ -1,7 +1,22 @@
-telepathy-salut 0.3.13 (UNRELEASED)
+telepathy-salut 0.3.13 (2010-08-19)
 ===================================
 
-...
+The "treitter has a list somewhere on the telepathy wiki if you're stuck"
+release.
+
+Enhancements:
+
+* Implement avatar requirements properties (Zdra)
+
+* Add a ActivityProperties.GetActivity method for retrieving an activity's room
+  handle from its id (tomeu)
+
+* Add a BuddyInfo.AddActivity method so activities can advertise themselves
+  without having to track all the other shared activities (tomeu)
+
+Fixes:
+
+* Update with-session-bus.sh from telepathy-glib, fixing a bashism (smcv)
 
 telepathy-salut 0.3.12 (2010-05-20)
 ===================================
