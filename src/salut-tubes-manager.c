@@ -208,7 +208,7 @@ iq_tube_request_filter (SalutXmppConnectionManager *xcm,
 static gboolean
 extract_tube_information (TpHandleRepoIface *contact_repo,
                           GibberXmppStanza *stanza,
-                          gboolean *close,
+                          gboolean *close_out,
                           TpTubeType *type,
                           TpHandle *initiator_handle,
                           const gchar **service,
@@ -271,9 +271,9 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
     }
 
   _close = (close_node != NULL);
-  if (close != NULL)
+  if (close_out != NULL)
     {
-      *close = _close;
+      *close_out = _close;
     }
 
   if (tube_id != NULL)
@@ -390,7 +390,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   GHashTable *parameters;
   guint tube_id;
   guint portnum = 0;
-  gboolean close;
+  gboolean close_;
   GError *error = NULL;
 
   SalutTubesChannel *chan;
@@ -398,7 +398,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
   /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
 
-  if (!extract_tube_information (contact_repo, stanza, &close, &tube_type,
+  if (!extract_tube_information (contact_repo, stanza, &close_, &tube_type,
           &initiator_handle, &service, &parameters, &tube_id, &portnum,
           &error))
     {
@@ -417,7 +417,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
 
   chan = g_hash_table_lookup (priv->tubes_channels,
       GUINT_TO_POINTER (initiator_handle));
-  if (close)
+  if (close_)
   {
     if (chan != NULL)
       {
