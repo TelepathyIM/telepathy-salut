@@ -168,6 +168,8 @@ salut_connection_manager_finalize (GObject *object)
 {
   SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (object);
   SalutConnectionManagerPrivate *priv = self->priv;
+  void (*finalize) (GObject *) =
+      ((GObjectClass *) salut_connection_manager_parent_class)->finalize;
 
   if (priv->debug_sender != NULL)
     {
@@ -176,6 +178,9 @@ salut_connection_manager_finalize (GObject *object)
     }
 
   debug_free ();
+
+  if (finalize != NULL)
+    finalize (object);
 }
 
 static void
@@ -234,13 +239,14 @@ static void salut_params_free (void *params)
     }
 
 static TpBaseConnection *
-salut_connection_manager_new_connection (TpBaseConnectionManager *base,
+salut_connection_manager_new_connection (TpBaseConnectionManager *self,
                                          const gchar *proto,
                                          TpIntSet *params_present,
                                          void *parsed_params,
                                          GError **error)
 {
-  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (base);
+  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE
+      (self);
   SalutConnection *conn;
   SalutParams *params = (SalutParams *) parsed_params;
 
@@ -248,7 +254,7 @@ salut_connection_manager_new_connection (TpBaseConnectionManager *base,
 
   conn = g_object_new (SALUT_TYPE_CONNECTION,
       "protocol", proto,
-      "backend-type", self->priv->backend_type,
+      "backend-type", priv->backend_type,
       NULL);
 
   SET_PROPERTY_IF_PARAM_SET ("nickname", SALUT_PARAM_NICKNAME,
