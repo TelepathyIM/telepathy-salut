@@ -3116,11 +3116,9 @@ salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
 }
 #endif
 
-static gchar *
-handle_normalize_require_nonempty (TpHandleRepoIface *repo,
-                                   const gchar *id,
-                                   gpointer context,
-                                   GError **error)
+gchar *
+salut_normalize_non_empty (const gchar *id,
+    GError **error)
 {
   g_return_val_if_fail (id != NULL, NULL);
 
@@ -3132,6 +3130,15 @@ handle_normalize_require_nonempty (TpHandleRepoIface *repo,
     }
 
   return g_strdup (id);
+}
+
+static gchar *
+handle_normalize_require_nonempty (TpHandleRepoIface *repo G_GNUC_UNUSED,
+    const gchar *id,
+    gpointer context G_GNUC_UNUSED,
+    GError **error)
+{
+  return salut_normalize_non_empty (id, error);
 }
 
 /* Connection baseclass function implementations */
