@@ -100,6 +100,8 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self, TpHandle room,
     TpHandle sender, GibberXmppStanza *stanza);
 #endif
 
+const gchar * const *salut_connection_get_implemented_interfaces (void);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_CONNECTION_H__*/
