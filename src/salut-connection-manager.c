@@ -39,15 +39,13 @@ enum
   LAST_PROPERTY
 };
 
-typedef struct _SalutConnectionManagerPrivate SalutConnectionManagerPrivate;
 struct _SalutConnectionManagerPrivate
 {
   GType backend_type;
   TpDebugSender *debug_sender;
 };
 
-#define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) \
-    ((SalutConnectionManagerPrivate *) ((SalutConnectionManager *) obj)->priv)
+#define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) ((obj)->priv)
 
 
 typedef struct {
@@ -168,8 +166,8 @@ salut_connection_manager_set_property (GObject *object,
 static void
 salut_connection_manager_finalize (GObject *object)
 {
-  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE (
-      object);
+  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (object);
+  SalutConnectionManagerPrivate *priv = self->priv;
 
   if (priv->debug_sender != NULL)
     {
@@ -236,14 +234,13 @@ static void salut_params_free (void *params)
     }
 
 static TpBaseConnection *
-salut_connection_manager_new_connection (TpBaseConnectionManager *self,
+salut_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          const gchar *proto,
                                          TpIntSet *params_present,
                                          void *parsed_params,
                                          GError **error)
 {
-  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE
-      (self);
+  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (base);
   SalutConnection *conn;
   SalutParams *params = (SalutParams *) parsed_params;
 
@@ -251,7 +248,7 @@ salut_connection_manager_new_connection (TpBaseConnectionManager *self,
 
   conn = g_object_new (SALUT_TYPE_CONNECTION,
       "protocol", proto,
-      "backend-type", priv->backend_type,
+      "backend-type", self->priv->backend_type,
       NULL);
 
   SET_PROPERTY_IF_PARAM_SET ("nickname", SALUT_PARAM_NICKNAME,
