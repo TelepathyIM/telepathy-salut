@@ -19,6 +19,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "salut-connection-manager.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -26,7 +29,6 @@
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/debug-sender.h>
 
-#include "salut-connection-manager.h"
 #include "salut-connection.h"
 #include "debug.h"
 
