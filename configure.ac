@@ -218,40 +218,6 @@ AC_SUBST(LIBSSL_CFLAGS)
 AC_SUBST(LIBSSL_LIBS)
 AM_CONDITIONAL(HAVE_LIBSSL, test "x$HAVE_LIBSSL" = "xyes")
 
-AC_CHECK_FUNC(res_query, ,
-  [AC_CHECK_LIB(resolv, res_query, [ RESOLV_LIBS="-lresolv" ],
-    [ save_libs="$LIBS"
-      LIBS="-lresolv $LIBS"
-      AC_MSG_CHECKING([for res_query in -lresolv (alternate version)])
-      AC_LINK_IFELSE(
-        [AC_LANG_PROGRAM([[#include <resolv.h>]], [[res_query(0,0,0,0,0)]])],
-        [ AC_MSG_RESULT(yes)
-          LIBS="$save_libs"
-          RESOLV_LIBS="-lresolv"
-        ],
-        [ AC_MSG_RESULT(no)
-          LIBS="$save_libs"
-          AC_CHECK_LIB(bind, res_query,
-            [ RESOLV_LIBS="-lbind" ],
-            [ AC_MSG_ERROR(res_query not found) ] ) ] ) ] )
-  ]
-)
-
-AC_SUBST(RESOLV_LIBS)
-
-dnl Check for libasyncns
-PKG_CHECK_MODULES(LIBASYNCNS, [libasyncns >= 0.3],
-  [ HAVE_LIBASYNCNS="yes"
-    AC_DEFINE(HAVE_LIBASYNCNS, 1, [Define if asyncns support is available])
-  ],
-  [ AC_MSG_NOTICE(libasyncns not found: Resolving will be synchronous!)
-    AC_MSG_NOTICE((Salut does not make DNS lookups, so this does not matter.))
-  ] )
-
-AC_SUBST(LIBASYNCNS_CFLAGS)
-AC_SUBST(LIBASYNCNS_LIBS)
-AM_CONDITIONAL(HAVE_LIBASYNCNS, test "x$HAVE_LIBASYNCNS" = "xyes")
-
 dnl Check for Avahi
 PKG_CHECK_MODULES(AVAHI, [avahi-gobject, avahi-client])
 AC_SUBST(AVAHI_CFLAGS)
