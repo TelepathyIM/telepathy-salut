@@ -34,8 +34,6 @@ HANDWRITTEN_SOURCES =             \
   gibber-xmpp-stanza.h            \
   gibber-xmpp-writer.c            \
   gibber-xmpp-writer.h            \
-  gibber-resolver.c               \
-  gibber-resolver.h               \
   gibber-transport.c              \
   gibber-transport.h              \
   gibber-fd-transport.c           \
@@ -91,12 +89,6 @@ libgibber_la_SOURCES +=     \
     gibber-ssl-transport.h
 endif
 
-if HAVE_LIBASYNCNS
-libgibber_la_SOURCES +=       \
-  gibber-resolver-asyncns.c   \
-  gibber-resolver-asyncns.h
-endif
-
 # Coding style checks
 check_c_sources = \
     $(HANDWRITTEN_SOURCES)
@@ -134,18 +126,10 @@ if HAVE_LIBSSL
   AM_CFLAGS += @LIBSSL_CFLAGS@
 endif
 
-if HAVE_LIBASYNCNS
-  AM_CFLAGS += @LIBASYNCNS_CFLAGS@
-endif
-
-AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @RESOLV_LIBS@ @LIBSOUP_LIBS@
+AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @LIBSOUP_LIBS@
 
 if HAVE_LIBSSL
   AM_LDFLAGS += @LIBSSL_LIBS@
-endif
-
-if HAVE_LIBASYNCNS
-  AM_LDFLAGS += @LIBASYNCNS_LIBS@
 endif
 
 # rules for making the glib enum objects

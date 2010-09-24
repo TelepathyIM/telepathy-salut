@@ -57,9 +57,6 @@ check_main_SOURCES =                             \
     check-gibber-xmpp-node.c                     \
     check-gibber-xmpp-reader.c                   \
     check-gibber-r-multicast-causal-transport.c  \
-    check-gibber-resolver.c                      \
-    test-resolver.c                              \
-    test-resolver.h                              \
     test-transport.c                             \
     test-transport.h                             \
     check-gibber-xmpp-connection.c               \

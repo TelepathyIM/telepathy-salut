@@ -673,6 +673,25 @@ set_own_status (GObject *obj,
   return TRUE;
 }
 
+static const gchar *interfaces [] = {
+  TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+  TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+  TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
+  TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+  TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+  TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
+#ifdef ENABLE_OLPC
+  SALUT_IFACE_OLPC_BUDDY_INFO,
+  SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
+#endif
+  NULL };
+
+const gchar * const *
+salut_connection_get_implemented_interfaces (void)
+{
+  return interfaces;
+}
+
 static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 {
@@ -680,18 +699,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   TpBaseConnectionClass *tp_connection_class =
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
   GParamSpec *param_spec;
-  static const gchar *interfaces [] = {
-    TP_IFACE_CONNECTION_INTERFACE_ALIASING,
-    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
-    TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
-    TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
-    TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
-    TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
-#ifdef ENABLE_OLPC
-    SALUT_IFACE_OLPC_BUDDY_INFO,
-    SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
-#endif
-    NULL };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
         { TP_IFACE_CONNECTION_INTERFACE_AVATARS,
           conn_avatars_properties_getter,
@@ -3109,11 +3116,9 @@ salut_connection_olpc_activity_properties_iface_init (gpointer g_iface,
 }
 #endif
 
-static gchar *
-handle_normalize_require_nonempty (TpHandleRepoIface *repo,
-                                   const gchar *id,
-                                   gpointer context,
-                                   GError **error)
+gchar *
+salut_normalize_non_empty (const gchar *id,
+    GError **error)
 {
   g_return_val_if_fail (id != NULL, NULL);
 
@@ -3125,6 +3130,15 @@ handle_normalize_require_nonempty (TpHandleRepoIface *repo,
     }
 
   return g_strdup (id);
+}
+
+static gchar *
+handle_normalize_require_nonempty (TpHandleRepoIface *repo G_GNUC_UNUSED,
+    const gchar *id,
+    gpointer context G_GNUC_UNUSED,
+    GError **error)
+{
+  return salut_normalize_non_empty (id, error);
 }
 
 /* Connection baseclass function implementations */

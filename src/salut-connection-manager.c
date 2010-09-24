@@ -19,6 +19,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "salut-connection-manager.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -26,7 +29,6 @@
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/debug-sender.h>
 
-#include "salut-connection-manager.h"
 #include "salut-connection.h"
 #include "debug.h"
 
@@ -37,15 +39,13 @@ enum
   LAST_PROPERTY
 };
 
-typedef struct _SalutConnectionManagerPrivate SalutConnectionManagerPrivate;
 struct _SalutConnectionManagerPrivate
 {
   GType backend_type;
   TpDebugSender *debug_sender;
 };
 
-#define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) \
-    ((SalutConnectionManagerPrivate *) ((SalutConnectionManager *) obj)->priv)
+#define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) ((obj)->priv)
 
 
 typedef struct {
@@ -166,8 +166,10 @@ salut_connection_manager_set_property (GObject *object,
 static void
 salut_connection_manager_finalize (GObject *object)
 {
-  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE (
-      object);
+  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (object);
+  SalutConnectionManagerPrivate *priv = self->priv;
+  void (*finalize) (GObject *) =
+      ((GObjectClass *) salut_connection_manager_parent_class)->finalize;
 
   if (priv->debug_sender != NULL)
     {
@@ -176,6 +178,9 @@ salut_connection_manager_finalize (GObject *object)
     }
 
   debug_free ();
+
+  if (finalize != NULL)
+    finalize (object);
 }
 
 static void

@@ -28,6 +28,7 @@ G_BEGIN_DECLS
 
 typedef struct _SalutConnectionManager SalutConnectionManager;
 typedef struct _SalutConnectionManagerClass SalutConnectionManagerClass;
+typedef struct _SalutConnectionManagerPrivate SalutConnectionManagerPrivate;
 
 struct _SalutConnectionManagerClass {
   TpBaseConnectionManagerClass parent_class;
@@ -36,7 +37,7 @@ struct _SalutConnectionManagerClass {
 struct _SalutConnectionManager {
   TpBaseConnectionManager parent;
 
-  gpointer priv;
+  SalutConnectionManagerPrivate *priv;
 };
 
 extern const TpCMProtocolSpec salut_protocols[];
