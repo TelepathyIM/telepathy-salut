@@ -1,6 +1,8 @@
 TWISTED_TESTS =
 
-TWISTED_BASIC_TESTS =
+TWISTED_BASIC_TESTS = \
+	cm/protocol.py \
+	$(NULL)
 
 TWISTED_AVAHI_TESTS = \
 	avahi/caps_helper.py \
