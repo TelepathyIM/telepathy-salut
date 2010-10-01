@@ -50,19 +50,25 @@ def make_connection(bus, event_func, params=None):
     return servicetest.make_connection(bus, event_func, 'salut',
         'local-xmpp', default_params)
 
-def exec_test_deferred (fun, params, protocol=None, timeout=None):
+def exec_test_deferred (fun, params, protocol=None, timeout=None,
+        make_conn=True):
     colourer = None
 
     if sys.stdout.isatty() or 'CHECK_FORCE_COLOR' in os.environ:
         colourer = servicetest.install_colourer()
+
+    bus = dbus.SessionBus()
 
     queue = servicetest.IteratingEventQueue(timeout)
     queue.verbose = (
         os.environ.get('CHECK_TWISTED_VERBOSE', '') != ''
         or '-v' in sys.argv)
 
-    bus = dbus.SessionBus()
-    conn = make_connection(bus, queue.append, params)
+    if make_conn:
+        conn = make_connection(bus, queue.append, params)
+    else:
+        conn = None
+
     error = None
 
     try:
@@ -82,7 +88,8 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
           # please ignore the POSIX behind the curtain
           os._exit(1)
 
-        conn.Disconnect()
+        if conn is not None:
+            conn.Disconnect()
     except dbus.DBusException, e:
         pass
 
@@ -91,8 +98,10 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
         # exited and refdbg can generates its report
         time.sleep(5.5)
 
-def exec_test(fun, params=None, protocol=None, timeout=None):
-  reactor.callWhenRunning (exec_test_deferred, fun, params, protocol, timeout)
+def exec_test(fun, params=None, protocol=None, timeout=None,
+        make_conn=True):
+  reactor.callWhenRunning (exec_test_deferred, fun, params, protocol, timeout,
+          make_conn)
   reactor.run()
 
 def wait_for_contact_list(q, conn):
