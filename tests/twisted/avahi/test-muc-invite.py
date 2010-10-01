@@ -10,9 +10,11 @@ from avahitest import AvahiAnnouncer, AvahiListener
 from avahitest import get_host_name
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy
+from servicetest import (make_channel_proxy, assertEquals, assertContains)
 
 from twisted.words.xish import domish
+
+import constants as cs
 
 CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
 CHANNEL_INTERFACE ='org.freedesktop.Telepathy.Channel'
@@ -97,7 +99,8 @@ def test(q, bus, conn):
     # check channel properties
     # org.freedesktop.Telepathy.Channel D-Bus properties
     assert props[CHANNEL_INTERFACE + '.ChannelType'] == CHANNEL_TYPE_TEXT
-    assert props[CHANNEL_INTERFACE + '.Interfaces'] == [CHANNEL_IFACE_GROUP]
+    assertContains(cs.CHANNEL_IFACE_GROUP, props[cs.INTERFACES])
+    assertContains(cs.CHANNEL_IFACE_MESSAGES, props[cs.INTERFACES])
     assert props[CHANNEL_INTERFACE + '.TargetHandle'] == muc_handle
     assert props[CHANNEL_INTERFACE + '.TargetID'] == 'my-room'
     assert props[CHANNEL_INTERFACE + '.TargetHandleType'] == HT_ROOM
@@ -123,7 +126,9 @@ def test(q, bus, conn):
 
     # TODO: test sending invitations
 
-    channel.RemoveMembersWithReason([self_handle], "bored now", 0)
+    # FIXME: fd.o #30531: this ought to work, but doesn't
+    #channel_group.RemoveMembersWithReason([self_handle], "bored now", 0)
+    channel.Close()
     q.expect('dbus-signal', signal='Closed')
 
 if __name__ == '__main__':

@@ -50,44 +50,25 @@ def make_connection(bus, event_func, params=None):
     return servicetest.make_connection(bus, event_func, 'salut',
         'local-xmpp', default_params)
 
-def install_colourer():
-    def red(s):
-        return '\x1b[31m%s\x1b[0m' % s
-
-    def green(s):
-        return '\x1b[32m%s\x1b[0m' % s
-
-    patterns = {
-        'handled': green,
-        'not handled': red,
-        }
-
-    class Colourer:
-        def __init__(self, fh, patterns):
-            self.fh = fh
-            self.patterns = patterns
-
-        def write(self, s):
-            f = self.patterns.get(s, lambda x: x)
-            self.fh.write(f(s))
-
-    sys.stdout = Colourer(sys.stdout, patterns)
-    return sys.stdout
-
-
-def exec_test_deferred (fun, params, protocol=None, timeout=None):
+def exec_test_deferred (fun, params, protocol=None, timeout=None,
+        make_conn=True):
     colourer = None
 
-    if sys.stdout.isatty():
-        colourer = install_colourer()
+    if sys.stdout.isatty() or 'CHECK_FORCE_COLOR' in os.environ:
+        colourer = servicetest.install_colourer()
+
+    bus = dbus.SessionBus()
 
     queue = servicetest.IteratingEventQueue(timeout)
     queue.verbose = (
         os.environ.get('CHECK_TWISTED_VERBOSE', '') != ''
         or '-v' in sys.argv)
 
-    bus = dbus.SessionBus()
-    conn = make_connection(bus, queue.append, params)
+    if make_conn:
+        conn = make_connection(bus, queue.append, params)
+    else:
+        conn = None
+
     error = None
 
     try:
@@ -107,7 +88,8 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
           # please ignore the POSIX behind the curtain
           os._exit(1)
 
-        conn.Disconnect()
+        if conn is not None:
+            conn.Disconnect()
     except dbus.DBusException, e:
         pass
 
@@ -116,8 +98,10 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None):
         # exited and refdbg can generates its report
         time.sleep(5.5)
 
-def exec_test(fun, params=None, protocol=None, timeout=None):
-  reactor.callWhenRunning (exec_test_deferred, fun, params, protocol, timeout)
+def exec_test(fun, params=None, protocol=None, timeout=None,
+        make_conn=True):
+  reactor.callWhenRunning (exec_test_deferred, fun, params, protocol, timeout,
+          make_conn)
   reactor.run()
 
 def wait_for_contact_list(q, conn):

@@ -41,9 +41,10 @@ def test(q, bus, conn):
     handle = 0
     # Wait until the record shows up in publish
     while handle == 0:
-        e = q.expect('dbus-signal', signal='MembersChanged', path=publish)
-        for h in e.args[1]:
-            name = conn.InspectHandles(HT_CONTACT, [h])[0]
+        e = q.expect('dbus-signal', signal='MembersChangedDetailed',
+                path=publish)
+        for h in e.args[0]:
+            name = e.args[4]['member-ids'][h]
             if name == contact_name:
                 handle = h
 
