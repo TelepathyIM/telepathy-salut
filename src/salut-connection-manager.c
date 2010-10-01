@@ -239,14 +239,14 @@ static void salut_params_free (void *params)
     }
 
 static TpBaseConnection *
-salut_connection_manager_new_connection (TpBaseConnectionManager *self,
+salut_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          const gchar *proto,
                                          TpIntSet *params_present,
                                          void *parsed_params,
                                          GError **error)
 {
-  SalutConnectionManagerPrivate *priv = SALUT_CONNECTION_MANAGER_GET_PRIVATE
-      (self);
+  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (base);
+  SalutConnectionManagerPrivate *priv = self->priv;
   SalutConnection *conn;
   SalutParams *params = (SalutParams *) parsed_params;
 
