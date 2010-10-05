@@ -1,4 +1,4 @@
-SUBDIRS = examples tests
+SUBDIRS = tests
 
 noinst_LTLIBRARIES = libgibber.la
 
@@ -83,12 +83,6 @@ MD5_SOURCES =                     \
 
 libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES) $(MD5_SOURCES)
 
-if HAVE_LIBSSL
-libgibber_la_SOURCES +=     \
-    gibber-ssl-transport.c  \
-    gibber-ssl-transport.h
-endif
-
 # Coding style checks
 check_c_sources = \
     $(HANDWRITTEN_SOURCES)
@@ -122,15 +116,7 @@ gibber-signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
 
 AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @LIBSOUP_CFLAGS@
 
-if HAVE_LIBSSL
-  AM_CFLAGS += @LIBSSL_CFLAGS@
-endif
-
 AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @LIBSOUP_LIBS@
-
-if HAVE_LIBSSL
-  AM_LDFLAGS += @LIBSSL_LIBS@
-endif
 
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in

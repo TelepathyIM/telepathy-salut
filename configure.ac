@@ -201,23 +201,6 @@ PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.36])
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
-dnl Check for OpenSSL
-AC_ARG_ENABLE(ssl,
-  AC_HELP_STRING([--enable-ssl],[enable gibber ssl transport [[default=no]]]),
-    enable_ssl=$enableval, enable_ssl=no )
-
-if test x$enable_ssl = xyes; then
-  PKG_CHECK_MODULES(LIBSSL, [openssl], 
-              [ HAVE_LIBSSL="yes" ],
-              [ AC_MSG_ERROR(openssl not found) ] )
-else
-  AC_MSG_NOTICE([openssl support disabled by default])
-fi
-
-AC_SUBST(LIBSSL_CFLAGS)
-AC_SUBST(LIBSSL_LIBS)
-AM_CONDITIONAL(HAVE_LIBSSL, test "x$HAVE_LIBSSL" = "xyes")
-
 dnl Check for Avahi
 PKG_CHECK_MODULES(AVAHI, [avahi-gobject, avahi-client])
 AC_SUBST(AVAHI_CFLAGS)
@@ -272,7 +255,6 @@ AC_OUTPUT( Makefile                       \
            docs/Makefile                  \
            lib/Makefile                   \
            lib/gibber/Makefile            \
-           lib/gibber/examples/Makefile   \
            lib/gibber/tests/Makefile      \
            lib/gibber/tests/inputs/Makefile \
            src/Makefile                   \
