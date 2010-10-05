@@ -163,9 +163,6 @@ AC_CHECK_HEADERS([net/if.h], [], [],
 # Autoconf has a handy macro for this, since it tends to have dependencies
 AC_HEADER_RESOLV
 
-dnl Check endianness (Needed for the sha1 implementation)
-AC_C_BIGENDIAN
-
 dnl GTK docs
 GTK_DOC_CHECK
 
