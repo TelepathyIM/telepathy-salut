@@ -43,6 +43,7 @@ typedef struct _SalutDisco SalutDisco;
 
 typedef struct _SalutConnection SalutConnection;
 typedef struct _SalutConnectionClass SalutConnectionClass;
+typedef struct _SalutConnectionPrivate SalutConnectionPrivate;
 
 struct _SalutConnectionClass {
   TpBaseConnectionClass parent_class;
@@ -62,7 +63,7 @@ struct _SalutConnection {
   /* Our name on the network */
   gchar *name;
 
-  gpointer priv;
+  SalutConnectionPrivate *priv;
 };
 
 GType salut_connection_get_type (void);
