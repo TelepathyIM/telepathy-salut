@@ -75,11 +75,7 @@ HANDWRITTEN_SOURCES =             \
   gibber-util.h                   \
   gibber-util.c
 
-MD5_SOURCES =                     \
-  libmd5-rfc/md5.c                \
-  libmd5-rfc/md5.h
-
-libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES) $(MD5_SOURCES)
+libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES)
 
 # Coding style checks
 check_c_sources = \
