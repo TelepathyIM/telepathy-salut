@@ -203,10 +203,6 @@ PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4])
 AC_SUBST(LIBSOUP_CFLAGS)
 AC_SUBST(LIBSOUP_LIBS)
 
-dnl glibc backtrace functions
-AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
-AC_CHECK_HEADERS(execinfo.h)
-
 dnl check for libuuid
 PKG_CHECK_MODULES([UUID], [uuid], [HAVE_UUID=yes], [HAVE_UUID=no])
 AC_SUBST([UUID_CFLAGS])
