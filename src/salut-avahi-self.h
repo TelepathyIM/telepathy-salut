@@ -31,6 +31,7 @@ G_BEGIN_DECLS
 
 typedef struct _SalutAvahiSelf SalutAvahiSelf;
 typedef struct _SalutAvahiSelfClass SalutAvahiSelfClass;
+typedef struct _SalutAvahiSelfPrivate SalutAvahiSelfPrivate;
 
 struct _SalutAvahiSelfClass {
     SalutSelfClass parent_class;
@@ -39,7 +40,7 @@ struct _SalutAvahiSelfClass {
 struct _SalutAvahiSelf {
     SalutSelf parent;
 
-    gpointer priv;
+    SalutAvahiSelfPrivate *priv;
 };
 
 
