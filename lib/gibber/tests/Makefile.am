@@ -78,16 +78,6 @@ check_main_CFLAGS = \
     @CHECK_CFLAGS@ \
     $(AM_CFLAGS)
 
-if HAVE_LIBSASL2
-  check_main_SOURCES += \
-      check-gibber-sasl-auth.c   \
-      test-sasl-auth-server.c    \
-      test-sasl-auth-server.h
-
-  check_main_LDADD += @LIBSASL2_LIBS@
-  check_main_CFLAGS += @LIBSASL2_CFLAGS@
-endif
-
 endif
 
 AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @DBUS_CFLAGS@ \
@@ -110,7 +100,6 @@ check-local: check-coding-style
 
 clean-local:
 	-rm -rf outputs
-	-rm -f sasl-test.db
 
 SUBDIRS = inputs
 

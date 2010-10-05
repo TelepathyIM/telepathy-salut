@@ -53,8 +53,6 @@ HANDWRITTEN_SOURCES =             \
   gibber-r-multicast-packet.h     \
   gibber-r-multicast-sender.c     \
   gibber-r-multicast-sender.h     \
-  gibber-sasl-auth.c              \
-  gibber-sasl-auth.h              \
   gibber-linklocal-transport.c    \
   gibber-linklocal-transport.h    \
   gibber-namespaces.h             \
