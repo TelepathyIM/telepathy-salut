@@ -35,6 +35,9 @@ BitKeeper
 ChangeSet
 .svn
 *.pyc
+*.gcda
+*.gcno
+*.gcov
 
 *.pyo
 *#
@@ -71,6 +74,8 @@ m4/ltoptions.m4
 m4/ltsugar.m4
 m4/ltversion.m4
 m4/lt~obsolete.m4
+
+/coverage/
 
 data/org.freedesktop.Telepathy.ConnectionManager.salut.service
 data/*.service
@@ -117,6 +122,8 @@ tests/twisted/tools/salut-testing.log
 tests/twisted/tools/tmp-session-bus.conf
 tests/twisted/tools/org.freedesktop.Telepathy.ConnectionManager.salut.service
 tests/twisted/tools/refdbg.log
+/tests/twisted/with-session-bus*.address
+/tests/twisted/with-session-bus*.pid
 
 tools/libglibcodegen.pyc
 
@@ -125,6 +132,7 @@ src/write-mgr-file
 
 /telepathy-salut-*/
 /telepathy-salut-*.tar.gz
+/telepathy-salut-*.tar.gz.asc
 tests/test-r-multicast-packet
 tests/test-r-sender
 tests/test-r-transport-io
