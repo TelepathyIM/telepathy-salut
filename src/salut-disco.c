@@ -103,8 +103,6 @@ salut_disco_error_quark (void)
   return quark;
 }
 
-#define SALUT_DISCO_GET_PRIVATE(o) ((o)->priv)
-
 static void
 salut_disco_init (SalutDisco *obj)
 {
@@ -148,7 +146,7 @@ delete_request (SalutDiscoRequest *request)
   g_assert (NULL != request);
   g_assert (SALUT_IS_DISCO (disco));
 
-  priv = SALUT_DISCO_GET_PRIVATE (disco);
+  priv = disco->priv;
 
   g_assert (NULL != g_list_find (priv->requests, request));
 
@@ -195,7 +193,7 @@ request_reply_cb (GibberIqHelper *helper,
 {
   SalutDiscoRequest *request = (SalutDiscoRequest *) user_data;
   SalutDisco *disco = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (disco);
+  SalutDiscoPrivate *priv = disco->priv;
   GibberXmppNode *query_node;
   GError *err = NULL;
   GibberStanzaSubType sub_type;
@@ -241,7 +239,7 @@ send_disco_request (SalutDisco *self,
                     SalutContact *contact,
                     SalutDiscoRequest *request)
 {
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+  SalutDiscoPrivate *priv = self->priv;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   GibberXmppStanza *stanza;
   TpHandleRepoIface *contact_repo;
@@ -285,7 +283,7 @@ xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
                                            gpointer user_data)
 {
   SalutDisco *self = SALUT_DISCO (user_data);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+  SalutDiscoPrivate *priv = self->priv;
   GList *req = priv->requests;
 
   /* send all pending requests on this connection */
@@ -358,8 +356,8 @@ salut_disco_get_property (GObject    *object,
                                 GValue     *value,
                                 GParamSpec *pspec)
 {
-  SalutDisco *chan = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (chan);
+  SalutDisco *self = SALUT_DISCO (object);
+  SalutDiscoPrivate *priv = self->priv;
 
   switch (property_id)
     {
@@ -381,8 +379,8 @@ salut_disco_set_property (GObject     *object,
                            const GValue *value,
                            GParamSpec   *pspec)
 {
-  SalutDisco *chan = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (chan);
+  SalutDisco *self = SALUT_DISCO (object);
+  SalutDiscoPrivate *priv = self->priv;
 
   switch (property_id)
     {
@@ -467,7 +465,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
                           gpointer user_data)
 {
   SalutDisco *self = SALUT_DISCO (user_data);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+  SalutDiscoPrivate *priv = self->priv;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   GibberXmppNode *iq, *result_iq, *query, *result_query;
   const gchar *node;
@@ -573,7 +571,7 @@ salut_disco_constructor (GType type, guint n_props,
   obj = G_OBJECT_CLASS (salut_disco_parent_class)-> constructor (type,
       n_props, props);
   disco = SALUT_DISCO (obj);
-  priv = SALUT_DISCO_GET_PRIVATE (disco);
+  priv = disco->priv;
 
   g_signal_connect (priv->xmpp_connection_manager, "new-connection",
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
@@ -592,7 +590,7 @@ static void
 salut_disco_dispose (GObject *object)
 {
   SalutDisco *self = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+  SalutDiscoPrivate *priv = self->priv;
 
   if (priv->dispose_has_run)
     return;
@@ -693,7 +691,7 @@ salut_disco_request (SalutDisco *self, SalutDiscoType type,
                      gpointer user_data, GObject *object,
                      GError **error)
 {
-  SalutDiscoPrivate *priv = SALUT_DISCO_GET_PRIVATE (self);
+  SalutDiscoPrivate *priv = self->priv;
   SalutDiscoRequest *request;
   SalutXmppConnectionManagerRequestConnectionResult result;
   GibberXmppConnection *conn = NULL;
@@ -753,7 +751,7 @@ salut_disco_cancel_request (SalutDisco *disco, SalutDiscoRequest *request)
   g_return_if_fail (SALUT_IS_DISCO (disco));
   g_return_if_fail (NULL != request);
 
-  priv = SALUT_DISCO_GET_PRIVATE (disco);
+  priv = disco->priv;
 
   g_return_if_fail (NULL != g_list_find (priv->requests, request));
 
