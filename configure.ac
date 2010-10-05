@@ -150,15 +150,6 @@ AC_CHECK_HEADERS([sys/socket.h], [], [],
 #include <stdlib.h>
 #include <sys/types.h>
 ])
-AC_CHECK_HEADERS([net/if.h], [], [],
-[
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#ifdef HAVE_SYS_SOCKET_H
-# include <sys/socket.h>
-#endif
-])
 
 # Autoconf has a handy macro for this, since it tends to have dependencies
 AC_HEADER_RESOLV
