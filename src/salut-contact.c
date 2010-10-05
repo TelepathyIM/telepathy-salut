@@ -62,9 +62,6 @@ typedef struct {
   gpointer user_data;
 } AvatarRequest;
 
-/* private structure */
-typedef struct _SalutContactPrivate SalutContactPrivate;
-
 struct _SalutContactPrivate
 {
   gboolean dispose_has_run;
@@ -78,8 +75,6 @@ struct _SalutContactPrivate
   gboolean frozen;
   guint pending_changes;
 };
-
-#define SALUT_CONTACT_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_CONTACT, SalutContactPrivate))
 
 static GObject *
 salut_contact_constructor (GType type,
@@ -95,7 +90,7 @@ salut_contact_constructor (GType type,
     constructor (type, n_props, props);
 
   self = SALUT_CONTACT (obj);
-  priv = SALUT_CONTACT_GET_PRIVATE (self);
+  priv = self->priv;
 
   g_assert (self->connection != NULL);
   g_assert (self->name != NULL);
@@ -111,7 +106,10 @@ salut_contact_constructor (GType type,
 static void
 salut_contact_init (SalutContact *obj)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (obj);
+  SalutContactPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (obj,
+      SALUT_TYPE_CONTACT, SalutContactPrivate);
+
+  obj->priv = priv;
 
   /* allocate any data required by the object here */
   obj->name = NULL;
@@ -256,7 +254,7 @@ void
 salut_contact_dispose (GObject *object)
 {
   SalutContact *self = SALUT_CONTACT (object);
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
       ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
 
@@ -297,7 +295,7 @@ void
 salut_contact_finalize (GObject *object)
 {
   SalutContact *self = SALUT_CONTACT (object);
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   /* free any data held directly by the object here */
   g_free (self->name);
@@ -324,7 +322,7 @@ static void
 purge_cached_avatar (SalutContact *self,
                     const gchar *token)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   g_free (self->avatar_token);
   self->avatar_token = g_strdup (token);
@@ -361,7 +359,7 @@ salut_contact_foreach_olpc_activity (SalutContact *self,
                                      SalutContactOLPCActivityFunc foreach,
                                      gpointer user_data)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
   foreach_olpc_activity_ctx ctx = { foreach, user_data };
 
   DEBUG ("called");
@@ -391,7 +389,7 @@ salut_contact_has_address (SalutContact *self,
 const gchar *
 salut_contact_get_alias (SalutContact *contact)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+  SalutContactPrivate *priv = contact->priv;
   if (priv->alias == NULL)
     {
       return contact->name;
@@ -404,7 +402,7 @@ salut_contact_avatar_request_flush (SalutContact *contact,
                                     guint8 *data,
                                     gsize size)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE(contact);
+  SalutContactPrivate *priv = contact->priv;
   GList *list, *liststart;
   AvatarRequest *request;
 
@@ -423,7 +421,7 @@ void
 salut_contact_get_avatar (SalutContact *contact,
     salut_contact_get_avatar_callback callback, gpointer user_data)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (contact);
+  SalutContactPrivate *priv = contact->priv;
   AvatarRequest *request;
   gboolean retrieve;
 
@@ -459,7 +457,7 @@ salut_contact_set_capabilities (SalutContact *contact,
 static void
 salut_contact_change (SalutContact *self, guint changes)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   priv->pending_changes |= changes;
 
@@ -475,7 +473,7 @@ salut_contact_change (SalutContact *self, guint changes)
 void
 salut_contact_change_alias (SalutContact *self, const gchar *alias)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   if (tp_strdiff (priv->alias, alias))
     {
@@ -661,7 +659,7 @@ salut_contact_change_current_activity (SalutContact *self,
 void
 salut_contact_found (SalutContact *self)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
   if (priv->found)
     return;
 
@@ -675,7 +673,7 @@ salut_contact_found (SalutContact *self)
 void
 salut_contact_lost (SalutContact *self)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   self->status = SALUT_PRESENCE_OFFLINE;
   g_free (self->status_message);
@@ -695,7 +693,7 @@ salut_contact_lost (SalutContact *self)
 void
 salut_contact_freeze (SalutContact *self)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   priv->frozen = TRUE;
 }
@@ -703,7 +701,7 @@ salut_contact_freeze (SalutContact *self)
 void
 salut_contact_thaw (SalutContact *self)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   if (!priv->frozen)
     return;
@@ -728,7 +726,7 @@ gboolean
 salut_contact_joined_activity (SalutContact *self,
                                SalutOlpcActivity *activity)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   if (g_hash_table_lookup (priv->olpc_activities,
         GUINT_TO_POINTER (activity->room)) != NULL)
@@ -760,7 +758,7 @@ void
 salut_contact_left_activity (SalutContact *self,
                              SalutOlpcActivity *activity)
 {
-  SalutContactPrivate *priv = SALUT_CONTACT_GET_PRIVATE (self);
+  SalutContactPrivate *priv = self->priv;
 
   g_signal_handlers_disconnect_matched (activity, G_SIGNAL_MATCH_DATA, 0, 0,
       NULL, NULL, self);

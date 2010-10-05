@@ -46,6 +46,7 @@ G_BEGIN_DECLS
 
 typedef struct _SalutContact SalutContact;
 typedef struct _SalutContactClass SalutContactClass;
+typedef struct _SalutContactPrivate SalutContactPrivate;
 
 struct _SalutContactClass {
     GObjectClass parent_class;
@@ -85,6 +86,7 @@ struct _SalutContact {
 
     /* private */
     SalutConnection *connection;
+    SalutContactPrivate *priv;
 };
 
 GType salut_contact_get_type (void);
