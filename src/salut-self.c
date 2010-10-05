@@ -664,6 +664,22 @@ salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
   return TRUE;
 }
 
+gboolean
+salut_self_remove_olpc_activity (SalutSelf *self, SalutOlpcActivity *activity)
+{
+  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+
+  g_return_val_if_fail (activity != NULL, FALSE);
+
+  g_hash_table_remove (priv->olpc_activities,
+      GUINT_TO_POINTER (activity->room));
+
+  salut_olpc_activity_left (activity);
+  salut_olpc_activity_revoke_invitations (activity);
+
+  return TRUE;
+}
+
 struct _set_olpc_activities_ctx
 {
   SalutSelf *self;

@@ -3352,6 +3352,71 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   return factories;
 }
 
+#ifdef ENABLE_OLPC
+static void
+muc_channel_closed_cb (SalutMucChannel *chan,
+                       SalutOlpcActivity *activity)
+{
+  SalutConnection *conn;
+  SalutConnectionPrivate *priv;
+  TpBaseConnection *base;
+  GPtrArray *activities = g_ptr_array_new ();
+
+  g_signal_handlers_disconnect_by_func (chan,
+      G_CALLBACK (muc_channel_closed_cb), activity);
+
+  g_object_get (activity,
+      "connection", &conn,
+      NULL);
+
+  priv = SALUT_CONNECTION_GET_PRIVATE (conn);
+  base = (TpBaseConnection *) conn;
+
+  salut_self_remove_olpc_activity (priv->self, activity);
+
+  salut_self_foreach_olpc_activity (priv->self, append_activity, activities);
+  salut_svc_olpc_buddy_info_emit_activities_changed (conn, base->self_handle,
+      activities);
+  free_olpc_activities (activities);
+
+  /* we were holding a ref since the channel was opened */
+  g_object_unref (activity);
+
+  g_object_unref (conn);
+}
+
+static void
+muc_manager_new_channels_cb (TpChannelManager *channel_manager,
+                             GHashTable *channels,
+                             SalutConnection *conn)
+{
+  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (conn);
+  GHashTableIter iter;
+  gpointer chan;
+
+  g_hash_table_iter_init (&iter, channels);
+  while (g_hash_table_iter_next (&iter, &chan, NULL))
+    {
+      SalutOlpcActivity *activity;
+      TpHandle room_handle;
+
+      if (!SALUT_IS_MUC_CHANNEL (chan))
+        return;
+
+      g_object_get (chan,
+          "handle", &room_handle,
+          NULL);
+
+      /* ref the activity as long as we have a channel open */
+      activity = salut_olpc_activity_manager_ensure_activity_by_room (
+          priv->olpc_activity_manager,
+          room_handle);
+
+      g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb),
+          activity);
+    }
+}
+#endif
 
 static GPtrArray *
 salut_connection_create_channel_managers (TpBaseConnection *base)
@@ -3388,6 +3453,11 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   g_ptr_array_add (managers, priv->roomlist_manager);
 #if 0
   g_ptr_array_add (managers, priv->tubes_manager);
+#endif
+
+#ifdef ENABLE_OLPC
+  g_signal_connect (TP_CHANNEL_MANAGER (priv->muc_manager), "new-channels",
+      G_CALLBACK (muc_manager_new_channels_cb), self);
 #endif
 
   return managers;
