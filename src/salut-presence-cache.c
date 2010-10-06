@@ -181,22 +181,6 @@ capability_info_free (CapabilityInfo *info)
   g_slice_free (CapabilityInfo, info);
 }
 
-static void
-capability_info_recvd (SalutPresenceCache *cache, const gchar *node,
-        SalutContact *contact, GHashTable *per_channel_manager_caps)
-{
-  CapabilityInfo *info = capability_info_get (cache, node);
-
-  if (! info->caps_set)
-    {
-      /* The caps are not valid because this is the first caps report and the
-       * caps were never set.
-       */
-      info->per_channel_manager_caps = per_channel_manager_caps;
-      info->caps_set = TRUE;
-    }
-}
-
 static void salut_presence_cache_init (SalutPresenceCache *presence_cache);
 static GObject * salut_presence_cache_constructor (GType type, guint n_props,
     GObjectConstructParam *props);
@@ -483,8 +467,16 @@ _caps_disco_cb (SalutDisco *disco,
 
       if (!bad_hash)
         {
-          capability_info_recvd (cache, node, contact,
-              per_channel_manager_caps);
+          CapabilityInfo *info = capability_info_get (cache, node);
+
+          if (! info->caps_set)
+            {
+              /* The caps are not valid because this is the first caps report
+               * and the caps were never set.
+               */
+              info->per_channel_manager_caps = per_channel_manager_caps;
+              info->caps_set = TRUE;
+            }
         }
       else
         {
