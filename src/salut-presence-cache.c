@@ -372,9 +372,9 @@ _caps_disco_cb (SalutDisco *disco,
   SalutPresenceCache *cache;
   SalutPresenceCachePrivate *priv;
   TpHandleRepoIface *contact_repo;
-  GHashTable *per_channel_manager_caps;
   gboolean bad_hash = FALSE;
   TpBaseConnection *base_conn;
+  CapabilityInfo *info = NULL;
 
   cache = SALUT_PRESENCE_CACHE (user_data);
   priv = SALUT_PRESENCE_CACHE_PRIV (cache);
@@ -428,9 +428,6 @@ _caps_disco_cb (SalutDisco *disco,
       return;
     }
 
-  per_channel_manager_caps = create_per_channel_manager_caps (cache,
-      query_result);
-
   waiter_self = NULL;
   for (i = waiters; NULL != i;  i = i->next)
     {
@@ -446,8 +443,6 @@ _caps_disco_cb (SalutDisco *disco,
   if (NULL == waiter_self)
     {
       DEBUG ("Ignoring non requested disco reply");
-      salut_presence_cache_free_cache_entry (per_channel_manager_caps);
-      per_channel_manager_caps = NULL;
       return;
     }
 
@@ -467,15 +462,16 @@ _caps_disco_cb (SalutDisco *disco,
 
       if (!bad_hash)
         {
-          CapabilityInfo *info = capability_info_get (cache, node);
+          info = capability_info_get (cache, node);
 
           if (! info->caps_set)
             {
               /* The caps are not valid because this is the first caps report
                * and the caps were never set.
                */
-              info->per_channel_manager_caps = per_channel_manager_caps;
               info->caps_set = TRUE;
+              info->per_channel_manager_caps =
+                create_per_channel_manager_caps (cache, query_result);
             }
         }
       else
@@ -483,8 +479,6 @@ _caps_disco_cb (SalutDisco *disco,
           /* The received reply does not match the */
           DEBUG ("The announced verification string '%s' does not match "
               "our hash '%s'.", waiter_self->ver, computed_hash);
-          salut_presence_cache_free_cache_entry (per_channel_manager_caps);
-          per_channel_manager_caps = NULL;
         }
 
       g_free (computed_hash);
@@ -494,8 +488,8 @@ _caps_disco_cb (SalutDisco *disco,
       /* Do not allow tubes caps if the contact does not observe XEP-0115
        * version 1.5: we don't need to bother being compatible with both version
        * 1.3 and tubes caps */
-      salut_presence_cache_free_cache_entry (per_channel_manager_caps);
-      per_channel_manager_caps = NULL;
+      DEBUG ("Unsupported hash algorithm, ignoring caps: %s",
+          waiter_self->hash == NULL ? "(none)" : waiter_self->hash);
     }
 
   for (i = waiters; NULL != i;)
@@ -520,7 +514,7 @@ _caps_disco_cb (SalutDisco *disco,
               DEBUG ("setting caps for %s (thanks to %s)",
                   waiter->contact->name, contact->name);
               salut_contact_set_capabilities (waiter->contact,
-                  per_channel_manager_caps);
+                  info == NULL ? NULL : info->per_channel_manager_caps);
               g_signal_emit (cache, signals[CAPABILITIES_UPDATE], 0,
                 contact->handle, save_enhanced_caps,
                 waiter->contact->per_channel_manager_caps);
