@@ -131,13 +131,11 @@ disco_waiter_list_free (GSList *list)
 
 typedef struct _CapabilityInfo CapabilityInfo;
 
+/* struct _CapabilityInfo can be allocated before receiving the contact's
+ * caps. In this case, its members are NULL, and are set when the caps are
+ * received */
 struct _CapabilityInfo
 {
-  /* struct _CapabilityInfo can be allocated before receiving the contact's
-   * caps. In this case, caps_set is FALSE and set to TRUE when the caps are
-   * received */
-  gboolean caps_set;
-
   /* key: SalutCapsChannelFactory -> value: gpointer
    *
    * The type of the value depends on the SalutCapsChannelFactory. It is an
@@ -166,7 +164,7 @@ capability_info_get (SalutPresenceCache *cache, const gchar *uri)
   if (NULL == info)
     {
       info = g_slice_new0 (CapabilityInfo);
-      info->caps_set = FALSE;
+      info->per_channel_manager_caps = NULL;
       g_hash_table_insert (priv->capabilities, g_strdup (uri), info);
     }
 
@@ -464,12 +462,8 @@ _caps_disco_cb (SalutDisco *disco,
         {
           info = capability_info_get (cache, node);
 
-          if (! info->caps_set)
+          if (info->per_channel_manager_caps == NULL)
             {
-              /* The caps are not valid because this is the first caps report
-               * and the caps were never set.
-               */
-              info->caps_set = TRUE;
               info->per_channel_manager_caps =
                 create_per_channel_manager_caps (cache, query_result);
             }
@@ -594,7 +588,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
     {
       uri = g_strdup_printf ("%s#%s", node, ver);
       info = capability_info_get (self, uri);
-      caps_set = info->caps_set;
+      caps_set = (info->per_channel_manager_caps != NULL);
       per_channel_manager_caps = info->per_channel_manager_caps;
     }
 
