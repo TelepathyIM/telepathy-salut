@@ -1145,8 +1145,7 @@ salut_tubes_manager_iface_init (gpointer g_iface,
 static void
 add_service_to_array (gchar *service,
                       GPtrArray *arr,
-                      TpTubeType type,
-                      TpHandle handle)
+                      TpTubeType type)
 {
   GValue monster = {0, };
   GHashTable *fixed_properties;
@@ -1335,7 +1334,7 @@ salut_tubes_manager_get_contact_caps (
       while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
-          add_service_to_array (service, arr, TP_TUBE_TYPE_STREAM, handle);
+          add_service_to_array (service, arr, TP_TUBE_TYPE_STREAM);
         }
     }
 
@@ -1345,7 +1344,7 @@ salut_tubes_manager_get_contact_caps (
       while (g_hash_table_iter_next (&tube_caps_iter, &service,
             NULL))
         {
-          add_service_to_array (service, arr, TP_TUBE_TYPE_DBUS, handle);
+          add_service_to_array (service, arr, TP_TUBE_TYPE_DBUS);
         }
     }
 }
