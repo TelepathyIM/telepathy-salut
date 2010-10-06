@@ -88,8 +88,9 @@ struct _SalutPresenceCachePrivate
 {
   SalutConnection *conn;
 
-  /* CapabilityInfo representing anyone with no caps */
-  CapabilityInfo no_capabilities;
+  /* CapabilityInfo representing anyone without XEP-0115 capabilities (to
+   * interoperate, we actually assume they can do iChat-compatible FT) */
+  CapabilityInfo not_xep_capabilities;
 
   /* gchar *uri -> CapabilityInfo */
   GHashTable *capabilities;
@@ -252,9 +253,11 @@ salut_presence_cache_constructor (GType type, guint n_props,
            constructor (type, n_props, props);
   self = SALUT_PRESENCE_CACHE (obj);
 
-  self->priv->no_capabilities.per_channel_manager_caps =
+  self->priv->not_xep_capabilities.per_channel_manager_caps =
     create_per_channel_manager_caps (self, NULL);
-  self->priv->no_capabilities.caps = gabble_capability_set_new ();
+  self->priv->not_xep_capabilities.caps = gabble_capability_set_new ();
+  gabble_capability_set_add (self->priv->not_xep_capabilities.caps,
+      QUIRK_NOT_XEP_CAPABILITIES);
 
   return obj;
 }
@@ -278,9 +281,10 @@ salut_presence_cache_dispose (GObject *object)
   g_hash_table_destroy (priv->disco_pending);
   priv->disco_pending = NULL;
 
-  tp_clear_pointer (&(priv->no_capabilities.per_channel_manager_caps),
+  tp_clear_pointer (&(priv->not_xep_capabilities.per_channel_manager_caps),
       salut_presence_cache_free_cache_entry);
-  tp_clear_pointer (&(priv->no_capabilities.caps), gabble_capability_set_free);
+  tp_clear_pointer (&(priv->not_xep_capabilities.caps),
+      gabble_capability_set_free);
 
   if (G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose)
     G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose (object);
@@ -520,7 +524,7 @@ _caps_disco_cb (SalutDisco *disco,
     }
 
   if (info == NULL)
-    info = &priv->no_capabilities;
+    info = &priv->not_xep_capabilities;
 
   for (i = waiters; NULL != i;)
     {
@@ -603,7 +607,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
       /* if the contact does not support capabilities, we consider the default
        * basic ones */
       caps_source = "the default capabilities";
-      info = &priv->no_capabilities;
+      info = &priv->not_xep_capabilities;
     }
   else
     {

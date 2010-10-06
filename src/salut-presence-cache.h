@@ -24,6 +24,7 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#include "capabilities.h"
 #include "salut-connection.h"
 #include "salut-contact.h"
 #include "salut-xmpp-connection-manager.h"
@@ -89,6 +90,9 @@ G_GNUC_WARN_UNUSED_RESULT GHashTable * salut_presence_cache_copy_cache_entry (
  * salut_caps_channel_manager_update_capabilities */
 void salut_presence_cache_update_cache_entry (GHashTable *out,
     GHashTable *in);
+
+/* Salut-specific pseudo-capability: llXMPP clients without XEP-0115 caps */
+#define QUIRK_NOT_XEP_CAPABILITIES QUIRK_PREFIX "not-xep-capabilities"
 
 G_END_DECLS
 
