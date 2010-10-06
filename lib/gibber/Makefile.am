@@ -1,4 +1,4 @@
-SUBDIRS = examples tests
+SUBDIRS = tests
 
 noinst_LTLIBRARIES = libgibber.la
 
@@ -53,8 +53,6 @@ HANDWRITTEN_SOURCES =             \
   gibber-r-multicast-packet.h     \
   gibber-r-multicast-sender.c     \
   gibber-r-multicast-sender.h     \
-  gibber-sasl-auth.c              \
-  gibber-sasl-auth.h              \
   gibber-linklocal-transport.c    \
   gibber-linklocal-transport.h    \
   gibber-namespaces.h             \
@@ -77,17 +75,7 @@ HANDWRITTEN_SOURCES =             \
   gibber-util.h                   \
   gibber-util.c
 
-MD5_SOURCES =                     \
-  libmd5-rfc/md5.c                \
-  libmd5-rfc/md5.h
-
-libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES) $(MD5_SOURCES)
-
-if HAVE_LIBSSL
-libgibber_la_SOURCES +=     \
-    gibber-ssl-transport.c  \
-    gibber-ssl-transport.h
-endif
+libgibber_la_SOURCES = $(HANDWRITTEN_SOURCES) $(BUILT_SOURCES)
 
 # Coding style checks
 check_c_sources = \
@@ -122,15 +110,7 @@ gibber-signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
 
 AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @LIBSOUP_CFLAGS@
 
-if HAVE_LIBSSL
-  AM_CFLAGS += @LIBSSL_CFLAGS@
-endif
-
 AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @LIBSOUP_LIBS@
-
-if HAVE_LIBSSL
-  AM_LDFLAGS += @LIBSSL_LIBS@
-endif
 
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in

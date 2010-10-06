@@ -161,8 +161,6 @@ enum {
   LAST_PROP
 };
 
-typedef struct _SalutConnectionPrivate SalutConnectionPrivate;
-
 struct _SalutConnectionPrivate
 {
   gboolean dispose_has_run;
@@ -219,9 +217,6 @@ struct _SalutConnectionPrivate
   /* Backend type: avahi or dummy */
   GType backend_type;
 };
-
-#define SALUT_CONNECTION_GET_PRIVATE(o) \
-  ((SalutConnectionPrivate *)((SalutConnection *) o)->priv)
 
 typedef struct _ChannelRequest ChannelRequest;
 
@@ -341,7 +336,7 @@ salut_connection_constructor (GType type,
   obj = G_OBJECT_CLASS (salut_connection_parent_class)->
            constructor (type, n_props, props);
   self = SALUT_CONNECTION (obj);
-  priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  priv = self->priv;
 
   self->disco = salut_disco_new (self, priv->xmpp_connection_manager);
   self->presence_cache = salut_presence_cache_new (self);
@@ -376,7 +371,7 @@ salut_connection_get_property (GObject *object,
                                GParamSpec *pspec)
 {
   SalutConnection *self = SALUT_CONNECTION(object);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE(self);
+  SalutConnectionPrivate *priv = self->priv;
 
   switch (property_id)
     {
@@ -442,7 +437,7 @@ salut_connection_set_property (GObject *object,
                                GParamSpec *pspec)
 {
   SalutConnection *self = SALUT_CONNECTION(object);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   switch (property_id)
     {
@@ -550,7 +545,7 @@ get_contact_statuses (GObject *obj,
                       GError **error)
 {
   SalutConnection *self = SALUT_CONNECTION (obj);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
     TP_HANDLE_TYPE_CONTACT);
@@ -604,7 +599,7 @@ set_self_presence (SalutConnection *self,
     const gchar *message,
     GError **error)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
 
   if (priv->self == NULL || !priv->self_established)
@@ -878,7 +873,7 @@ void
 salut_connection_dispose (GObject *object)
 {
   SalutConnection *self = SALUT_CONNECTION (object);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   if (priv->dispose_has_run)
     return;
@@ -952,7 +947,7 @@ void
 salut_connection_finalize (GObject *object)
 {
   SalutConnection *self = SALUT_CONNECTION (object);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   /* free any data held directly by the object here */
   tp_presence_mixin_finalize (object);
@@ -993,7 +988,7 @@ static gboolean
 announce_self_caps (SalutConnection *self,
                     GError **error)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   gchar *caps_hash;
   gboolean ret;
 
@@ -1010,7 +1005,7 @@ static void
 _self_established_cb (SalutSelf *s, gpointer data)
 {
   SalutConnection *self = SALUT_CONNECTION (data);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (self), TP_HANDLE_TYPE_CONTACT);
@@ -1080,7 +1075,7 @@ _self_failed_cb (SalutSelf *s, GError *error, gpointer data)
 static void
 discovery_client_running (SalutConnection *self)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   gint port;
   GError *error = NULL;
 
@@ -1127,7 +1122,7 @@ _discovery_client_state_changed_cb (SalutDiscoveryClient *client,
                                     SalutDiscoveryClientState state,
                                     SalutConnection *self)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   g_assert (client == priv->discovery_client);
 
@@ -1148,7 +1143,7 @@ _discovery_client_state_changed_cb (SalutDiscoveryClient *client,
 static void
 _salut_connection_disconnect (SalutConnection *self)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   if (priv->self)
     {
@@ -1188,7 +1183,7 @@ salut_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
 static const gchar *
 salut_connection_get_alias (SalutConnection *self, TpHandle handle)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base,
     TP_HANDLE_TYPE_CONTACT);
@@ -1382,7 +1377,7 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GError *error = NULL;
   const gchar *alias = g_hash_table_lookup (aliases,
       GUINT_TO_POINTER (base->self_handle));
@@ -1463,7 +1458,7 @@ salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *iface,
     DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GError *error = NULL;
   TpBaseConnection *base = (TpBaseConnection *) self;
 
@@ -1484,7 +1479,7 @@ salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars *iface,
     DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GError *error = NULL;
   TpBaseConnection *base = (TpBaseConnection *) self;
 
@@ -1513,7 +1508,7 @@ salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
   gchar **ret;
   GError *err = NULL;
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo;
 
@@ -1569,7 +1564,7 @@ salut_connection_get_known_avatar_tokens (
   GHashTable *ret;
   GError *err = NULL;
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo;
 
@@ -1629,7 +1624,7 @@ salut_connection_avatars_fill_contact_attributes (GObject *obj,
   guint i;
   SalutConnection *self = SALUT_CONNECTION (obj);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   for (i = 0; i < contacts->len; i++)
     {
@@ -1697,7 +1692,7 @@ salut_connection_request_avatars (
   guint i;
   GError *err = NULL;
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo;
 
@@ -1780,7 +1775,7 @@ salut_connection_request_avatar (TpSvcConnectionInterfaceAvatars *iface,
     guint handle, DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   SalutContact *contact;
   GError *err = NULL;
@@ -2026,7 +2021,7 @@ salut_connection_set_self_capabilities (
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   guint i;
   GHashTable *save_caps;
   GError *error = NULL;
@@ -2265,7 +2260,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
                                       DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   GHashTable *properties = NULL;
 
@@ -2322,7 +2317,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
                                       DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   GError *error = NULL;
   /* Only a few known properties, so handle it quite naively */
@@ -2485,7 +2480,7 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -2534,7 +2529,7 @@ salut_connection_olpc_set_current_activity (SalutSvcOLPCBuddyInfo *iface,
                                             DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   GError *error = NULL;
 
@@ -2576,7 +2571,7 @@ salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
                                       DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   GPtrArray *arr;
 
@@ -2621,7 +2616,7 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
                                       DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_ROOM);
@@ -2689,7 +2684,7 @@ salut_connection_olpc_add_activity (SalutSvcOLPCBuddyInfo *iface,
                                     DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   GError *error = NULL;
 
@@ -2729,7 +2724,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
                                      DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base,
       TP_HANDLE_TYPE_ROOM);
@@ -2928,7 +2923,7 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
                                      DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   GError *error = NULL;
   const gchar *known_properties[] = { "color", "name", "type", "private",
@@ -3024,7 +3019,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
                                           TpHandle inviter_handle,
                                           GibberXmppNode *invite_node)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GibberXmppNode *props_node;
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
@@ -3075,7 +3070,7 @@ salut_connection_act_get_activity (SalutSvcOLPCActivityProperties *iface,
                                    DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   GError *error = NULL;
   SalutOlpcActivity *activity;
@@ -3220,7 +3215,7 @@ gboolean
 salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
     TpHandle room, TpHandle sender, GibberXmppStanza *stanza)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GibberXmppNode *props_node;
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
@@ -3273,7 +3268,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
   gpointer user_data)
 {
   SalutConnection *self = SALUT_CONNECTION (user_data);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
   GibberXmppNode *node;
@@ -3323,7 +3318,7 @@ static GPtrArray *
 salut_connection_create_channel_factories (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GPtrArray *factories = g_ptr_array_sized_new (4);
 
   /* Create the contact manager */
@@ -3422,7 +3417,7 @@ static GPtrArray *
 salut_connection_create_channel_managers (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GPtrArray *managers = g_ptr_array_sized_new (1);
 
   /* FIXME: The second and third arguments depend on create_channel_factories
@@ -3468,7 +3463,7 @@ static gchar *
 salut_connection_get_unique_connection_name (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
 
   return g_strdup (priv->published_name);
 }
@@ -3484,7 +3479,7 @@ static gboolean
 salut_connection_start_connecting (TpBaseConnection *base, GError **error)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (self);
+  SalutConnectionPrivate *priv = self->priv;
   GError *client_error = NULL;
 
   g_signal_connect (priv->discovery_client, "state-changed",

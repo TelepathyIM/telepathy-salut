@@ -87,9 +87,6 @@ struct _SalutAvahiContactPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_AVAHI_CONTACT_GET_PRIVATE(obj) \
-    ((SalutAvahiContactPrivate *) ((SalutAvahiContact *) obj)->priv)
-
 static void
 salut_avahi_contact_init (SalutAvahiContact *self)
 {
@@ -108,7 +105,7 @@ salut_avahi_contact_get_property (GObject *object,
                                   GParamSpec *pspec)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (object);
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   switch (property_id)
     {
@@ -128,7 +125,7 @@ salut_avahi_contact_set_property (GObject *object,
                                   GParamSpec *pspec)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (object);
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   switch (property_id)
     {
@@ -197,7 +194,7 @@ static GArray *
 salut_avahi_contact_get_addresses (SalutContact *contact)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (contact);
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
   GArray *addresses;
 
   addresses = g_array_sized_new (TRUE, TRUE, sizeof (salut_contact_address_t),
@@ -257,7 +254,7 @@ salut_avahi_contact_has_address (SalutContact *contact,
                                  guint size)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (contact);
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   return (g_slist_find_custom (priv->resolvers, address,
         (GCompareFunc) _compare_address) != NULL);
@@ -268,7 +265,7 @@ salut_avahi_contact_avatar_request_flush (SalutAvahiContact *self,
                                           guint8 *data,
                                           gsize size)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   if (priv->record_browser != NULL)
     g_object_unref (priv->record_browser);
@@ -322,7 +319,7 @@ static void
 salut_avahi_contact_retrieve_avatar (SalutContact *contact)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (contact);
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
   gchar *name;
   GError *error = NULL;
 
@@ -397,7 +394,7 @@ void
 salut_avahi_contact_dispose (GObject *object)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (object);
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   if (priv->dispose_has_run)
     return;
@@ -445,7 +442,7 @@ static void
 contact_drop_resolver (SalutAvahiContact *self,
                        GaServiceResolver *resolver)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
   SalutContact *contact = SALUT_CONTACT (self);
   gint resolvers_left;
 
@@ -513,7 +510,7 @@ find_resolver (SalutAvahiContact *contact,
                const gchar *type,
                const gchar *domain)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (contact);
+  SalutAvahiContactPrivate *priv = contact->priv;
   struct resolverinfo info;
   GSList *ret;
   info.interface = interface;
@@ -605,7 +602,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
                      AvahiLookupResultFlags flags,
                      SalutAvahiContact *self)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
   SalutContact *contact = SALUT_CONTACT (self);
   char *s;
   char *nick, *first, *last;
@@ -752,7 +749,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
 static gboolean
 presence_resolver_failed_timeout (SalutAvahiContact *self)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   DEBUG_CONTACT (self, "presence resolver timer expired. Remove contact");
   priv->presence_resolver_failed_timer = 0;
@@ -766,7 +763,7 @@ contact_failed_cb (GaServiceResolver *resolver,
                    GError *error,
                    SalutAvahiContact *self)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   if (priv->presence_resolver_failed_timer != 0)
     /* There is already a timer running */
@@ -788,7 +785,7 @@ salut_avahi_contact_add_service (SalutAvahiContact *self,
                                  const char *type,
                                  const char *domain)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
   GaServiceResolver *resolver;
   GError *error = NULL;
 
@@ -840,7 +837,7 @@ salut_avahi_contact_remove_service (SalutAvahiContact *self,
 gboolean
 salut_avahi_contact_has_services (SalutAvahiContact *self)
 {
-  SalutAvahiContactPrivate *priv = SALUT_AVAHI_CONTACT_GET_PRIVATE (self);
+  SalutAvahiContactPrivate *priv = self->priv;
 
   return priv->resolvers != NULL;
 }

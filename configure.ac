@@ -70,7 +70,7 @@ AC_ARG_ENABLE(coding-style-checks,
     [ # Salut is version x.y.z.1 - enable coding style checks by default
 AC_ARG_ENABLE(coding-style-checks,
   AC_HELP_STRING([--disable-coding-style-checks],
-                 [don't check coding style using grep]),
+                 [do not check coding style using grep]),
     [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=yes])
     ])
 
@@ -85,11 +85,6 @@ XSLTPROC=
 AC_CHECK_PROGS([XSLTPROC], [xsltproc])
 if test -z "$XSLTPROC"; then
   AC_MSG_ERROR([xsltproc (from the libxslt source package) is required])
-fi
-DBUS_BINDING_TOOL=
-AC_CHECK_PROGS([DBUS_BINDING_TOOL], [dbus-binding-tool])
-if test -z "$DBUS_BINDING_TOOL"; then
-  AC_MSG_ERROR([dbus-binding-tool (from dbus-glib) is required])
 fi
 
 AM_PATH_PYTHON([2.5])
@@ -155,21 +150,9 @@ AC_CHECK_HEADERS([sys/socket.h], [], [],
 #include <stdlib.h>
 #include <sys/types.h>
 ])
-AC_CHECK_HEADERS([net/if.h], [], [],
-[
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#ifdef HAVE_SYS_SOCKET_H
-# include <sys/socket.h>
-#endif
-])
 
 # Autoconf has a handy macro for this, since it tends to have dependencies
 AC_HEADER_RESOLV
-
-dnl Check endianness (Needed for the sha1 implementation)
-AC_C_BIGENDIAN
 
 dnl GTK docs
 GTK_DOC_CHECK
@@ -201,23 +184,6 @@ PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.7.36])
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
-dnl Check for OpenSSL
-AC_ARG_ENABLE(ssl,
-  AC_HELP_STRING([--enable-ssl],[enable gibber ssl transport [[default=no]]]),
-    enable_ssl=$enableval, enable_ssl=no )
-
-if test x$enable_ssl = xyes; then
-  PKG_CHECK_MODULES(LIBSSL, [openssl], 
-              [ HAVE_LIBSSL="yes" ],
-              [ AC_MSG_ERROR(openssl not found) ] )
-else
-  AC_MSG_NOTICE([openssl support disabled by default])
-fi
-
-AC_SUBST(LIBSSL_CFLAGS)
-AC_SUBST(LIBSSL_LIBS)
-AM_CONDITIONAL(HAVE_LIBSSL, test "x$HAVE_LIBSSL" = "xyes")
-
 dnl Check for Avahi
 PKG_CHECK_MODULES(AVAHI, [avahi-gobject, avahi-client])
 AC_SUBST(AVAHI_CFLAGS)
@@ -228,24 +194,6 @@ PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4])
 AC_SUBST(LIBSOUP_CFLAGS)
 AC_SUBST(LIBSOUP_LIBS)
 
-dnl glibc backtrace functions
-AC_CHECK_FUNCS(backtrace backtrace_symbols_fd)
-AC_CHECK_HEADERS(execinfo.h)
-
-dnl check for libsasl2 (for sasl test)
-AC_CHECK_LIB(sasl2, sasl_server_new,
-             [LIBSASL2_LIBS="-lsasl2"
-              LIBSASL2_CFLAGS=""
-              HAVE_LIBSASL2=yes
-              AC_DEFINE(HAVE_LIBSASL2, 1,
-                        [Define if libsasl2 support is available])
-             ],
-             [ AC_MSG_WARN(libsasl2 not found: not building sasl tests) ] )
-
-AC_SUBST(LIBSASL2_LIBS)
-AC_SUBST(LIBSASL2_CFLAGS)
-AM_CONDITIONAL(HAVE_LIBSASL2, test "x$HAVE_LIBSASL2" = "xyes")
-
 dnl check for libuuid
 PKG_CHECK_MODULES([UUID], [uuid], [HAVE_UUID=yes], [HAVE_UUID=no])
 AC_SUBST([UUID_CFLAGS])
@@ -255,10 +203,6 @@ if test x"$HAVE_UUID" = xyes; then
 else
   AC_MSG_WARN([libuuid not found, falling back to generating random IDs])
 fi
-
-dnl signal functions
-AC_CHECK_FUNCS(signal)
-AC_CHECK_HEADERS(signal.h)
 
 # Checks for the 'check' unit testing library
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4], 
@@ -272,7 +216,6 @@ AC_OUTPUT( Makefile                       \
            docs/Makefile                  \
            lib/Makefile                   \
            lib/gibber/Makefile            \
-           lib/gibber/examples/Makefile   \
            lib/gibber/tests/Makefile      \
            lib/gibber/tests/inputs/Makefile \
            src/Makefile                   \

@@ -38,6 +38,7 @@ G_BEGIN_DECLS
 
 typedef struct _SalutSelf SalutSelf;
 typedef struct _SalutSelfClass SalutSelfClass;
+typedef struct _SalutSelfPrivate SalutSelfPrivate;
 
 struct _SalutSelfClass {
     GObjectClass parent_class;
@@ -88,6 +89,8 @@ struct _SalutSelf {
     gchar *email;
     gchar *published_name;
     gchar *alias;
+
+    SalutSelfPrivate *priv;
 };
 
 GType salut_self_get_type (void);

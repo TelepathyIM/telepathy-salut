@@ -128,7 +128,8 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     incoming.send(result)
 
     # FT capa is announced
-    e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
+    e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged',
+            predicate=lambda e: contact_handle in e.args[0])
     caps = e.args[0][contact_handle]
     assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
              TARGET_HANDLE_TYPE: HT_CONTACT},

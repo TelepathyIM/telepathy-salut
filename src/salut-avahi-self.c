@@ -44,9 +44,6 @@ enum
   LAST_PROPERTY
 };
 
-/* private structure */
-typedef struct _SalutAvahiSelfPrivate SalutAvahiSelfPrivate;
-
 struct _SalutAvahiSelfPrivate
 {
   SalutAvahiDiscoveryClient *discovery_client;
@@ -57,19 +54,14 @@ struct _SalutAvahiSelfPrivate
   gboolean dispose_has_run;
 };
 
-#define SALUT_AVAHI_SELF_GET_PRIVATE(obj) \
-    ((SalutAvahiSelfPrivate *) ((SalutAvahiSelf *) obj)->priv)
-
-
 static void
 salut_avahi_self_get_property (GObject *object,
                                guint property_id,
                                GValue *value,
                                GParamSpec *pspec)
 {
-  SalutAvahiSelf *chan = SALUT_AVAHI_SELF (object);
-  SalutAvahiSelfPrivate *priv =
-    SALUT_AVAHI_SELF_GET_PRIVATE (chan);
+  SalutAvahiSelf *self = SALUT_AVAHI_SELF (object);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   switch (property_id) {
     case PROP_DISCOVERY_CLIENT:
@@ -87,9 +79,8 @@ salut_avahi_self_set_property (GObject *object,
                                const GValue *value,
                                GParamSpec *pspec)
 {
-  SalutAvahiSelf *chan = SALUT_AVAHI_SELF (object);
-  SalutAvahiSelfPrivate *priv =
-    SALUT_AVAHI_SELF_GET_PRIVATE (chan);
+  SalutAvahiSelf *self = SALUT_AVAHI_SELF (object);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   switch (property_id) {
     case PROP_DISCOVERY_CLIENT:
@@ -190,7 +181,7 @@ salut_avahi_self_set_caps (SalutSelf *_self,
                            GError **error)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   if (priv->presence == NULL)
     /* Service is not announced yet */
@@ -222,7 +213,7 @@ salut_avahi_self_announce (SalutSelf *_self,
                            GError **error)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
   AvahiStringList *txt_record = NULL;
 
   priv->presence_group = ga_entry_group_new ();
@@ -267,7 +258,7 @@ salut_avahi_self_set_presence (SalutSelf *self,
                                GError **error)
 {
   SalutAvahiSelf *avahi_self = SALUT_AVAHI_SELF (self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (avahi_self);
+  SalutAvahiSelfPrivate *priv = avahi_self->priv;
 
   ga_entry_group_service_freeze (priv->presence);
   ga_entry_group_service_set (priv->presence, "status",
@@ -287,7 +278,7 @@ salut_avahi_self_set_alias (SalutSelf *_self,
                             GError **error)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   return ga_entry_group_service_set (priv->presence, "nick",
       _self->alias, error);
@@ -297,7 +288,7 @@ static void
 salut_avahi_self_remove_avatar (SalutSelf *_self)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   ga_entry_group_service_remove_key (priv->presence, "phsh", NULL);
   if (priv->avatar_group != NULL)
@@ -313,7 +304,7 @@ salut_avahi_self_publish_avatar (SalutAvahiSelf *self,
                                  gsize size,
                                  GError **error)
 {
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
   SalutSelf *_self = SALUT_SELF (self);
   gchar *name;
   gboolean ret;
@@ -346,7 +337,7 @@ salut_avahi_self_set_avatar (SalutSelf *_self,
                              GError **error)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   if (!salut_avahi_self_publish_avatar (self, data, size, error))
     return FALSE;
@@ -368,7 +359,7 @@ salut_avahi_self_update_current_activity (SalutSelf *_self,
                                           GError **error)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   ga_entry_group_service_freeze (priv->presence);
 
@@ -389,7 +380,7 @@ salut_avahi_self_set_olpc_properties (SalutSelf *_self,
                                       GError **error)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   ga_entry_group_service_freeze (priv->presence);
 
@@ -499,8 +490,7 @@ void
 salut_avahi_self_dispose (GObject *object)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (object);
-  SalutAvahiSelfPrivate *priv =
-    SALUT_AVAHI_SELF_GET_PRIVATE (self);
+  SalutAvahiSelfPrivate *priv = self->priv;
 
   if (priv->dispose_has_run)
     return;

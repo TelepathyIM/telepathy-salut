@@ -78,7 +78,6 @@ enum
 static guint signals[LAST_SIGNAL] = {0};
 
 /* private structure */
-typedef struct _SalutSelfPrivate SalutSelfPrivate;
 
 struct _SalutSelfPrivate
 {
@@ -105,12 +104,13 @@ contact_manager_contact_change_cb (SalutContactManager *mgr,
     SalutContact *contact, int changes, gpointer user_data);
 #endif
 
-#define SALUT_SELF_GET_PRIVATE(o)     (G_TYPE_INSTANCE_GET_PRIVATE ((o), SALUT_TYPE_SELF, SalutSelfPrivate))
-
 static void
 salut_self_init (SalutSelf *obj)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (obj);
+  SalutSelfPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (obj, SALUT_TYPE_SELF,
+      SalutSelfPrivate);
+
+  obj->priv = priv;
 
   /* allocate any data required by the object here */
   obj->status = SALUT_PRESENCE_AVAILABLE;
@@ -257,7 +257,7 @@ salut_self_constructor (GType type,
     constructor (type, n_props, props);
 
   self = SALUT_SELF (obj);
-  priv = SALUT_SELF_GET_PRIVATE (self);
+  priv = self->priv;
 
   g_assert (self->connection != NULL);
   g_object_get (self->connection,
@@ -435,7 +435,7 @@ void
 salut_self_dispose (GObject *object)
 {
   SalutSelf *self = SALUT_SELF (object);
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  SalutSelfPrivate *priv = self->priv;
 
   if (priv->dispose_has_run)
     return;
@@ -633,9 +633,9 @@ gboolean
 salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
     TpHandle room, GError **error)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOlpcActivity *activity;
 
+  g_return_val_if_fail (SALUT_IS_SELF (self), FALSE);
   g_return_val_if_fail (activity_id != NULL, FALSE);
   g_return_val_if_fail (room != 0, FALSE);
 
@@ -647,7 +647,7 @@ salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
     }
 
   activity = salut_olpc_activity_manager_ensure_activity_by_room (
-      priv->olpc_activity_manager, room);
+      self->priv->olpc_activity_manager, room);
 
   if (!salut_olpc_activity_joined (activity, error))
     {
@@ -658,7 +658,7 @@ salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
   salut_olpc_activity_update (activity, room, activity_id, NULL, NULL, NULL,
       NULL, activity->is_private);
 
-  g_hash_table_insert (priv->olpc_activities, GUINT_TO_POINTER (room),
+  g_hash_table_insert (self->priv->olpc_activities, GUINT_TO_POINTER (room),
       activity);
 
   return TRUE;
@@ -667,7 +667,7 @@ salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
 gboolean
 salut_self_remove_olpc_activity (SalutSelf *self, SalutOlpcActivity *activity)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  SalutSelfPrivate *priv = self->priv;
 
   g_return_val_if_fail (activity != NULL, FALSE);
 
@@ -743,12 +743,13 @@ salut_self_set_olpc_activities (SalutSelf *self,
                                 GError **error)
 {
   GError *e = NULL;
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
-  struct _set_olpc_activities_ctx data = { self, priv->room_repo,
-      priv->olpc_activities, room_to_act_id, &e };
+  struct _set_olpc_activities_ctx data = { self, self->priv->room_repo,
+      self->priv->olpc_activities, room_to_act_id, &e };
+
+  g_return_val_if_fail (SALUT_IS_SELF (self), FALSE);
 
   /* delete any which aren't in room_to_act_id. Can't fail */
-  g_hash_table_foreach_remove (priv->olpc_activities,
+  g_hash_table_foreach_remove (self->priv->olpc_activities,
       _set_olpc_activities_delete, &data);
 
   /* add any which aren't in olpc_activities */
@@ -765,10 +766,10 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
                                       TpHandle room,
                                       GError **error)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   GError *err = NULL;
   const gchar *room_name;
 
+  g_return_val_if_fail (SALUT_IS_SELF (self), FALSE);
   g_return_val_if_fail (id != NULL, FALSE);
 
   /* if one of id and room is empty, require the other to be */
@@ -786,7 +787,7 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
     }
   else
     {
-      room_name = tp_handle_inspect (priv->room_repo, room);
+      room_name = tp_handle_inspect (self->priv->room_repo, room);
 
       if (id[0] == '\0')
         {
@@ -801,10 +802,10 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
   self->olpc_cur_act = g_strdup (id);
 
   if (self->olpc_cur_act_room != 0)
-    tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
+    tp_handle_unref (self->priv->room_repo, self->olpc_cur_act_room);
   self->olpc_cur_act_room = room;
   if (room != 0)
-    tp_handle_ref (priv->room_repo, room);
+    tp_handle_ref (self->priv->room_repo, room);
 
   if (!SALUT_SELF_GET_CLASS (self)->update_current_activity (self, room_name,
         &err))
@@ -828,8 +829,12 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
                                          gboolean is_private,
                                          GError **error)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  SalutSelfPrivate *priv;
   SalutOlpcActivity *activity;
+
+  g_return_val_if_fail (SALUT_IS_SELF (self), FALSE);
+
+  priv = self->priv;
 
   activity = g_hash_table_lookup (priv->olpc_activities,
       GUINT_TO_POINTER (handle));
@@ -917,12 +922,13 @@ salut_self_foreach_olpc_activity (SalutSelf *self,
                                   SalutSelfOLPCActivityFunc foreach,
                                   gpointer user_data)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   foreach_olpc_activity_ctx ctx = { foreach, user_data };
+
+  g_return_if_fail (SALUT_IS_SELF (self));
 
   DEBUG ("called");
 
-  g_hash_table_foreach (priv->olpc_activities, foreach_olpc_activity,
+  g_hash_table_foreach (self->priv->olpc_activities, foreach_olpc_activity,
       &ctx);
 
   DEBUG ("end");
@@ -934,10 +940,11 @@ salut_self_olpc_augment_invitation (SalutSelf *self,
                                     TpHandle contact,
                                     GibberXmppNode *invite_node)
 {
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
   SalutOlpcActivity *activity;
 
-  activity = g_hash_table_lookup (priv->olpc_activities,
+  g_return_if_fail (SALUT_IS_SELF (self));
+
+  activity = g_hash_table_lookup (self->priv->olpc_activities,
       GUINT_TO_POINTER (room));
   if (activity == NULL)
     return;
@@ -977,7 +984,7 @@ contact_manager_contact_change_cb (SalutContactManager *mgr,
                                    gpointer user_data)
 {
   SalutSelf *self = SALUT_SELF (user_data);
-  SalutSelfPrivate *priv = SALUT_SELF_GET_PRIVATE (self);
+  SalutSelfPrivate *priv = self->priv;
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
       TP_BASE_CONNECTION (self->connection), TP_HANDLE_TYPE_CONTACT);
   TpHandle handle;
