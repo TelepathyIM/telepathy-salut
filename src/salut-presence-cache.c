@@ -369,6 +369,7 @@ static void
 salut_presence_cache_change_caps (SalutPresenceCache *self,
     SalutContact *contact,
     const gchar *thanked,
+    const GabbleCapabilitySet *caps,
     GHashTable *per_channel_manager_caps)
 {
   GHashTable *save_enhanced_caps;
@@ -378,7 +379,7 @@ salut_presence_cache_change_caps (SalutPresenceCache *self,
 
   DEBUG ("setting caps for %s (thanks to %s)", contact->name, thanked);
 
-  salut_contact_set_capabilities (contact, per_channel_manager_caps);
+  salut_contact_set_capabilities (contact, caps, per_channel_manager_caps);
   g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0, contact->handle,
       save_enhanced_caps, contact->per_channel_manager_caps);
   salut_presence_cache_free_cache_entry (save_enhanced_caps);
@@ -518,6 +519,9 @@ _caps_disco_cb (SalutDisco *disco,
           waiter_self->hash == NULL ? "(none)" : waiter_self->hash);
     }
 
+  if (info == NULL)
+    info = &priv->no_capabilities;
+
   for (i = waiters; NULL != i;)
     {
       DiscoWaiter *waiter;
@@ -533,8 +537,7 @@ _caps_disco_cb (SalutDisco *disco,
           if (!bad_hash)
             {
               salut_presence_cache_change_caps (cache, waiter->contact,
-                  contact->name,
-                  info == NULL ? NULL : info->per_channel_manager_caps);
+                  contact->name, info->caps, info->per_channel_manager_caps);
             }
 
           tmp = i;
@@ -614,7 +617,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
   if (info != NULL)
     {
       salut_presence_cache_change_caps (self, contact, caps_source,
-          info->per_channel_manager_caps);
+          info->caps, info->per_channel_manager_caps);
     }
   else
     {

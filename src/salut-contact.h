@@ -27,6 +27,7 @@
 
 #include <telepathy-glib/handle-repo.h>
 
+#include "capabilities-set.h"
 #include "salut-presence.h"
 #include "salut-connection.h"
 #ifdef ENABLE_OLPC
@@ -72,6 +73,7 @@ struct _SalutContact {
     gchar *hash;
     gchar *node;
     gchar *ver;
+    GabbleCapabilitySet *caps;
     GHashTable *per_channel_manager_caps;
 
     TpHandle handle;
@@ -127,6 +129,7 @@ void salut_contact_get_avatar (SalutContact *contact,
                                gpointer user_data1);
 
 void salut_contact_set_capabilities (SalutContact *contact,
+    const GabbleCapabilitySet *caps,
     GHashTable *per_channel_manager_caps);
 
 #ifdef ENABLE_OLPC

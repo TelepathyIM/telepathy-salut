@@ -100,6 +100,8 @@ salut_contact_constructor (GType type,
 
   self->handle = tp_handle_ensure (contact_repo, self->name, NULL, NULL);
 
+  self->caps = gabble_capability_set_new ();
+
   return obj;
 }
 
@@ -447,8 +449,12 @@ salut_contact_get_avatar (SalutContact *contact,
 
 void
 salut_contact_set_capabilities (SalutContact *contact,
-                                GHashTable *per_channel_manager_caps)
+    const GabbleCapabilitySet *caps,
+    GHashTable *per_channel_manager_caps)
 {
+  gabble_capability_set_free (contact->caps);
+  contact->caps = gabble_capability_set_copy (caps);
+
   salut_presence_cache_free_cache_entry (contact->per_channel_manager_caps);
   contact->per_channel_manager_caps = salut_presence_cache_copy_cache_entry (
       per_channel_manager_caps);
