@@ -58,9 +58,38 @@ static guint signals[LAST_SIGNAL] = { 0 };
 
 #define SALUT_PRESENCE_CACHE_PRIV(cache) ((cache)->priv)
 
+typedef struct _CapabilityInfo CapabilityInfo;
+
+struct _CapabilityInfo
+{
+  /* key: SalutCapsChannelFactory -> value: gpointer
+   *
+   * The type of the value depends on the SalutCapsChannelFactory. It is an
+   * opaque pointer used by the channel manager to store the capabilities.
+   * Some channel manager do not need to store anything, in this case the
+   * value can just be NULL.
+   *
+   * Since the type of the value is not public, the value is allocated, copied
+   * and freed by helper functions on the SalutCapsChannelManager interface.
+   *
+   * For example:
+   *   * SalutPrivateTubesFactory -> TubesCapabilities
+   *
+   * At the moment, only SalutPrivateTubesFactory use this mechanism to store
+   * the list of supported tube types (example: stream tube for daap).
+   */
+  GHashTable *per_channel_manager_caps;
+
+  /* The same information, as a GabbleCapabilitySet. This is the future. */
+  GabbleCapabilitySet *caps;
+};
+
 struct _SalutPresenceCachePrivate
 {
   SalutConnection *conn;
+
+  /* CapabilityInfo representing anyone with no caps */
+  CapabilityInfo no_capabilities;
 
   /* gchar *uri -> CapabilityInfo */
   GHashTable *capabilities;
@@ -130,32 +159,6 @@ disco_waiter_list_free (GSList *list)
   g_slist_free (list);
 }
 
-typedef struct _CapabilityInfo CapabilityInfo;
-
-struct _CapabilityInfo
-{
-  /* key: SalutCapsChannelFactory -> value: gpointer
-   *
-   * The type of the value depends on the SalutCapsChannelFactory. It is an
-   * opaque pointer used by the channel manager to store the capabilities.
-   * Some channel manager do not need to store anything, in this case the
-   * value can just be NULL.
-   *
-   * Since the type of the value is not public, the value is allocated, copied
-   * and freed by helper functions on the SalutCapsChannelManager interface.
-   *
-   * For example:
-   *   * SalutPrivateTubesFactory -> TubesCapabilities
-   *
-   * At the moment, only SalutPrivateTubesFactory use this mechanism to store
-   * the list of supported tube types (example: stream tube for daap).
-   */
-  GHashTable *per_channel_manager_caps;
-
-  /* The same information, as a GabbleCapabilitySet. This is the future. */
-  GabbleCapabilitySet *caps;
-};
-
 static CapabilityInfo *
 capability_info_get (SalutPresenceCache *cache, const gchar *uri)
 {
@@ -220,6 +223,9 @@ salut_presence_cache_class_init (SalutPresenceCacheClass *klass)
     3, G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_POINTER);
 }
 
+static GHashTable *create_per_channel_manager_caps (SalutPresenceCache *self,
+    GibberXmppNode *query_result);
+
 static void
 salut_presence_cache_init (SalutPresenceCache *cache)
 {
@@ -240,9 +246,15 @@ salut_presence_cache_constructor (GType type, guint n_props,
                                    GObjectConstructParam *props)
 {
   GObject *obj;
+  SalutPresenceCache *self;
 
   obj = G_OBJECT_CLASS (salut_presence_cache_parent_class)->
            constructor (type, n_props, props);
+  self = SALUT_PRESENCE_CACHE (obj);
+
+  self->priv->no_capabilities.per_channel_manager_caps =
+    create_per_channel_manager_caps (self, NULL);
+  self->priv->no_capabilities.caps = gabble_capability_set_new ();
 
   return obj;
 }
@@ -265,6 +277,10 @@ salut_presence_cache_dispose (GObject *object)
 
   g_hash_table_destroy (priv->disco_pending);
   priv->disco_pending = NULL;
+
+  tp_clear_pointer (&(priv->no_capabilities.per_channel_manager_caps),
+      salut_presence_cache_free_cache_entry);
+  tp_clear_pointer (&(priv->no_capabilities.caps), gabble_capability_set_free);
 
   if (G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose)
     G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose (object);
@@ -571,9 +587,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
   gchar *uri;
   SalutPresenceCachePrivate *priv;
   CapabilityInfo *info;
-  GHashTable *per_channel_manager_caps = NULL;
-  const gchar *caps_source = NULL;
-  gboolean hash_table_created = FALSE;
+  const gchar *caps_source;
 
   DEBUG ("Called for %s with '%s' '%s' '%s'",
     contact->name, hash, node, ver);
@@ -586,8 +600,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
       /* if the contact does not support capabilities, we consider the default
        * basic ones */
       caps_source = "the default capabilities";
-      per_channel_manager_caps = create_per_channel_manager_caps (self, NULL);
-      hash_table_created = TRUE;
+      info = &priv->no_capabilities;
     }
   else
     {
@@ -595,16 +608,13 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
       info = capability_info_get (self, uri);
 
       if (info != NULL)
-        {
-          caps_source = "an existing cache entry";
-          per_channel_manager_caps = info->per_channel_manager_caps;
-        }
+        caps_source = "an existing cache entry";
     }
 
-  if (caps_source != NULL)
+  if (info != NULL)
     {
       salut_presence_cache_change_caps (self, contact, caps_source,
-          per_channel_manager_caps);
+          info->per_channel_manager_caps);
     }
   else
     {
@@ -645,9 +655,6 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
           waiter->disco_requested = TRUE;
         }
     }
-
-  if (hash_table_created)
-    g_hash_table_destroy (per_channel_manager_caps);
 }
 
 SalutPresenceCache *
