@@ -3364,7 +3364,7 @@ muc_channel_closed_cb (SalutMucChannel *chan,
       "connection", &conn,
       NULL);
 
-  priv = SALUT_CONNECTION_GET_PRIVATE (conn);
+  priv = conn->priv;
   base = (TpBaseConnection *) conn;
 
   salut_self_remove_olpc_activity (priv->self, activity);
@@ -3385,7 +3385,7 @@ muc_manager_new_channels_cb (TpChannelManager *channel_manager,
                              GHashTable *channels,
                              SalutConnection *conn)
 {
-  SalutConnectionPrivate *priv = SALUT_CONNECTION_GET_PRIVATE (conn);
+  SalutConnectionPrivate *priv = conn->priv;
   GHashTableIter iter;
   gpointer chan;
 
