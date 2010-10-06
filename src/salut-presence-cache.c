@@ -363,6 +363,25 @@ create_per_channel_manager_caps (SalutPresenceCache *self,
 }
 
 static void
+salut_presence_cache_change_caps (SalutPresenceCache *self,
+    SalutContact *contact,
+    const gchar *thanked,
+    GHashTable *per_channel_manager_caps)
+{
+  GHashTable *save_enhanced_caps;
+
+  save_enhanced_caps = salut_presence_cache_copy_cache_entry (
+      contact->per_channel_manager_caps);
+
+  DEBUG ("setting caps for %s (thanks to %s)", contact->name, thanked);
+
+  salut_contact_set_capabilities (contact, per_channel_manager_caps);
+  g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0, contact->handle,
+      save_enhanced_caps, contact->per_channel_manager_caps);
+  salut_presence_cache_free_cache_entry (save_enhanced_caps);
+}
+
+static void
 _caps_disco_cb (SalutDisco *disco,
                 SalutDiscoRequest *request,
                 SalutContact *contact,
@@ -512,19 +531,9 @@ _caps_disco_cb (SalutDisco *disco,
 
           if (!bad_hash)
             {
-              GHashTable *save_enhanced_caps;
-
-              save_enhanced_caps = salut_presence_cache_copy_cache_entry (
-                  waiter->contact->per_channel_manager_caps);
-
-              DEBUG ("setting caps for %s (thanks to %s)",
-                  waiter->contact->name, contact->name);
-              salut_contact_set_capabilities (waiter->contact,
+              salut_presence_cache_change_caps (cache, waiter->contact,
+                  contact->name,
                   info == NULL ? NULL : info->per_channel_manager_caps);
-              g_signal_emit (cache, signals[CAPABILITIES_UPDATE], 0,
-                contact->handle, save_enhanced_caps,
-                waiter->contact->per_channel_manager_caps);
-              salut_presence_cache_free_cache_entry (save_enhanced_caps);
             }
 
           tmp = i;
@@ -577,8 +586,8 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
   gchar *uri;
   SalutPresenceCachePrivate *priv;
   CapabilityInfo *info;
-  GHashTable *per_channel_manager_caps;
-  gboolean caps_set;
+  GHashTable *per_channel_manager_caps = NULL;
+  const gchar *caps_source = NULL;
   gboolean hash_table_created = FALSE;
 
   DEBUG ("Called for %s with '%s' '%s' '%s'",
@@ -591,8 +600,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
     {
       /* if the contact does not support capabilities, we consider the default
        * basic ones */
-      caps_set = TRUE;
-      /* get the default capabilities */
+      caps_source = "the default capabilities";
       per_channel_manager_caps = create_per_channel_manager_caps (self, NULL);
       hash_table_created = TRUE;
     }
@@ -600,27 +608,18 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
     {
       uri = g_strdup_printf ("%s#%s", node, ver);
       info = capability_info_get (self, uri);
-      caps_set = (info->per_channel_manager_caps != NULL);
-      per_channel_manager_caps = info->per_channel_manager_caps;
+
+      if (info->per_channel_manager_caps != NULL)
+        {
+          caps_source = "an existing cache entry";
+          per_channel_manager_caps = info->per_channel_manager_caps;
+        }
     }
 
-  if (caps_set)
+  if (caps_source != NULL)
     {
-      /* we have a caps to apply on the contact */
-      GHashTable *save_enhanced_caps;
-
-      DEBUG ("setting caps for %s", contact->name);
-
-      save_enhanced_caps = salut_presence_cache_copy_cache_entry (
-          contact->per_channel_manager_caps);
-
-      DEBUG ("setting caps for %s (thanks to %s)",
-          contact->name, contact->name);
-      salut_contact_set_capabilities (contact, per_channel_manager_caps);
-      g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0,
-          contact->handle, save_enhanced_caps,
-          contact->per_channel_manager_caps);
-      salut_presence_cache_free_cache_entry (save_enhanced_caps);
+      salut_presence_cache_change_caps (cache, contact, caps_source,
+          per_channel_manager_caps);
     }
   else
     {
