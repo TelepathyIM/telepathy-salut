@@ -30,9 +30,11 @@
 #include "salut-ft-manager.h"
 #include "salut-signals-marshal.h"
 
+#include "caps-channel-manager.h"
 #include "salut-file-transfer-channel.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-contact-manager.h"
+#include "salut-presence-cache.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -45,6 +47,8 @@
 static void
 channel_manager_iface_init (gpointer, gpointer);
 static void caps_channel_manager_iface_init (gpointer, gpointer);
+static void gabble_caps_channel_manager_iface_init (
+    GabbleCapsChannelManagerIface *);
 
 static void salut_ft_manager_channel_created (SalutFtManager *mgr,
     SalutFileTransferChannel *chan, gpointer request_token);
@@ -59,7 +63,9 @@ G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       channel_manager_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
-      caps_channel_manager_iface_init));
+      caps_channel_manager_iface_init);
+    G_IMPLEMENT_INTERFACE (GABBLE_TYPE_CAPS_CHANNEL_MANAGER,
+      gabble_caps_channel_manager_iface_init))
 
 /* private structure */
 typedef struct _SalutFtManagerPrivate SalutFtManagerPrivate;
@@ -679,4 +685,70 @@ caps_channel_manager_iface_init (gpointer g_iface,
   iface->parse_caps = salut_ft_manager_parse_caps;
   iface->copy_caps = salut_ft_manager_copy_caps;
   iface->caps_diff = salut_ft_manager_caps_diff;
+}
+
+static void
+salut_ft_manager_get_contact_caps_from_set (
+    GabbleCapsChannelManager *iface,
+    TpHandle handle G_GNUC_UNUSED,
+    const GabbleCapabilitySet *caps,
+    GPtrArray *arr)
+{
+  SalutFtManager *self = SALUT_FT_MANAGER (iface);
+  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (priv->connection);
+
+  if (handle == base->self_handle)
+    {
+      /* we currently always advertise FT ourselves */
+      add_file_transfer_channel_class (arr);
+      return;
+    }
+
+  /* If we don't receive any capabilities info (QUIRK_NOT_XEP_CAPABILITIES)
+   * we assume FT is supported to ensure interoperability with other clients */
+  if (gabble_capability_set_has (caps, GIBBER_XMPP_NS_IQ_OOB) ||
+      gabble_capability_set_has (caps, GIBBER_XMPP_NS_X_OOB) ||
+      gabble_capability_set_has (caps, QUIRK_NOT_XEP_CAPABILITIES))
+    add_file_transfer_channel_class (arr);
+}
+
+static void
+salut_ft_manager_represent_client (
+    GabbleCapsChannelManager *iface G_GNUC_UNUSED,
+    const gchar *client_name,
+    const GPtrArray *filters,
+    const gchar * const *cap_tokens G_GNUC_UNUSED,
+    GabbleCapabilitySet *cap_set)
+{
+  guint i;
+
+  for (i = 0; i < filters->len; i++)
+    {
+      GHashTable *channel_class = g_ptr_array_index (filters, i);
+
+      if (tp_strdiff (tp_asv_get_string (channel_class,
+              TP_IFACE_CHANNEL ".ChannelType"),
+            TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
+        continue;
+
+      if (tp_asv_get_uint32 (channel_class,
+            TP_IFACE_CHANNEL ".TargetHandleType", NULL)
+          != TP_HANDLE_TYPE_CONTACT)
+        continue;
+
+      DEBUG ("client %s supports file transfer", client_name);
+      gabble_capability_set_add (cap_set, GIBBER_XMPP_NS_IQ_OOB);
+      gabble_capability_set_add (cap_set, GIBBER_XMPP_NS_X_OOB);
+      /* there's no point in looking at the subsequent filters if we've
+       * already added the FT capability */
+      break;
+    }
+}
+
+static void
+gabble_caps_channel_manager_iface_init (GabbleCapsChannelManagerIface *iface)
+{
+  iface->get_contact_caps = salut_ft_manager_get_contact_caps_from_set;
+  iface->represent_client = salut_ft_manager_represent_client;
 }

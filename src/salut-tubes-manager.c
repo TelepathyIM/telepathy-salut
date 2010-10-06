@@ -37,6 +37,7 @@
 
 #define DEBUG_FLAG DEBUG_TUBES
 
+#include "caps-channel-manager.h"
 #include "debug.h"
 #include "extensions/extensions.h"
 #include "salut-connection.h"
@@ -61,6 +62,8 @@ static void tubes_channel_closed_cb (SalutTubesChannel *chan,
 static void salut_tubes_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
 static void caps_channel_manager_iface_init (gpointer, gpointer);
+static void gabble_caps_channel_manager_iface_init (
+    GabbleCapsChannelManagerIface *);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     salut_tubes_manager,
@@ -68,7 +71,9 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
         salut_tubes_manager_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
-      caps_channel_manager_iface_init));
+      caps_channel_manager_iface_init);
+    G_IMPLEMENT_INTERFACE (GABBLE_TYPE_CAPS_CHANNEL_MANAGER,
+      gabble_caps_channel_manager_iface_init))
 
 /* properties */
 enum
@@ -1143,7 +1148,7 @@ salut_tubes_manager_iface_init (gpointer g_iface,
 }
 
 static void
-add_service_to_array (gchar *service,
+add_service_to_array (const gchar *service,
                       GPtrArray *arr,
                       TpTubeType type)
 {
@@ -1644,4 +1649,126 @@ caps_channel_manager_iface_init (gpointer g_iface,
   iface->update_caps = salut_tubes_manager_update_caps;
   iface->caps_diff = salut_tubes_manager_caps_diff;
   iface->add_cap = salut_tubes_manager_add_cap;
+}
+
+#define STREAM_CAP_PREFIX (GIBBER_TELEPATHY_NS_TUBES "/stream#")
+#define DBUS_CAP_PREFIX (GIBBER_TELEPATHY_NS_TUBES "/dbus#")
+
+typedef struct {
+    gboolean supports_tubes;
+    GPtrArray *arr;
+    TpHandle handle;
+} GetContactCapsClosure;
+
+static void
+get_contact_caps_foreach (gpointer data,
+    gpointer user_data)
+{
+  const gchar *ns = data;
+  GetContactCapsClosure *closure = user_data;
+
+  if (!g_str_has_prefix (ns, GIBBER_TELEPATHY_NS_TUBES))
+    return;
+
+  closure->supports_tubes = TRUE;
+
+  if (g_str_has_prefix (ns, STREAM_CAP_PREFIX))
+    add_service_to_array (ns + strlen (STREAM_CAP_PREFIX), closure->arr,
+        TP_TUBE_TYPE_STREAM);
+  else if (g_str_has_prefix (ns, DBUS_CAP_PREFIX))
+    add_service_to_array (ns + strlen (DBUS_CAP_PREFIX), closure->arr,
+        TP_TUBE_TYPE_DBUS);
+}
+
+static void
+salut_tubes_manager_get_contact_caps_from_set (
+    GabbleCapsChannelManager *iface G_GNUC_UNUSED,
+    TpHandle handle G_GNUC_UNUSED,
+    const GabbleCapabilitySet *caps,
+    GPtrArray *arr)
+{
+  SalutTubesManager *self = SALUT_TUBES_MANAGER (iface);
+  SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  TpBaseConnection *base = TP_BASE_CONNECTION (priv->conn);
+  GetContactCapsClosure closure = { FALSE, arr, handle };
+
+  /* Always claim that we support tubes. */
+  closure.supports_tubes = (handle == base->self_handle);
+
+  gabble_capability_set_foreach (caps, get_contact_caps_foreach, &closure);
+
+  if (closure.supports_tubes)
+    add_generic_tube_caps (arr);
+}
+
+/* stolen directly from Gabble... */
+static void
+gabble_private_tubes_factory_add_cap (GabbleCapsChannelManager *manager,
+    const gchar *client_name,
+    GHashTable *cap,
+    GabbleCapabilitySet *cap_set)
+{
+  const gchar *channel_type, *service;
+  gchar *ns = NULL;
+
+  channel_type = tp_asv_get_string (cap,
+            TP_IFACE_CHANNEL ".ChannelType");
+
+  /* this channel is not for this factory */
+  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    return;
+
+  if (tp_asv_get_uint32 (cap,
+        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+    return;
+
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      service = tp_asv_get_string (cap,
+          TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+
+      if (service != NULL)
+        ns = g_strconcat (STREAM_CAP_PREFIX, service, NULL);
+    }
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      service = tp_asv_get_string (cap,
+          TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+
+      if (service != NULL)
+        ns = g_strconcat (DBUS_CAP_PREFIX, service, NULL);
+    }
+
+  if (ns != NULL)
+    {
+      DEBUG ("%s: adding capability %s", client_name, ns);
+      gabble_capability_set_add (cap_set, ns);
+      g_free (ns);
+    }
+}
+
+static void
+salut_tubes_manager_represent_client (
+    GabbleCapsChannelManager *iface G_GNUC_UNUSED,
+    const gchar *client_name,
+    const GPtrArray *filters,
+    const gchar * const *cap_tokens G_GNUC_UNUSED,
+    GabbleCapabilitySet *cap_set)
+{
+  guint i;
+
+  for (i = 0; i < filters->len; i++)
+    {
+      gabble_private_tubes_factory_add_cap (iface, client_name,
+          g_ptr_array_index (filters, i), cap_set);
+    }
+}
+
+static void
+gabble_caps_channel_manager_iface_init (GabbleCapsChannelManagerIface *iface)
+{
+  iface->get_contact_caps = salut_tubes_manager_get_contact_caps_from_set;
+  iface->represent_client = salut_tubes_manager_represent_client;
 }
