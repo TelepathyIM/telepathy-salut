@@ -530,15 +530,12 @@ salut_ft_manager_new (SalutConnection *connection,
 }
 
 static void
-add_file_transfer_channel_class (GPtrArray *arr,
-                                 TpHandle handle)
+add_file_transfer_channel_class (GPtrArray *arr)
 {
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
   GValue *target_handle_type_value;
-
-  g_assert (handle != 0);
 
   g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
   g_value_take_boxed (&monster,
@@ -586,7 +583,7 @@ salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
   if (handle == base->self_handle)
     {
       /* We support file transfer */
-      add_file_transfer_channel_class (arr, handle);
+      add_file_transfer_channel_class (arr);
       return;
     }
 
@@ -605,7 +602,7 @@ salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
     return;
 
   /* FT is supported */
-  add_file_transfer_channel_class (arr, handle);
+  add_file_transfer_channel_class (arr);
 }
 
 static gboolean
