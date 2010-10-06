@@ -1,3 +1,20 @@
+telepathy-salut 0.4.0 (2010-09-06)
+===================================
+
+The "a stable branch that doesn't go anywhere is the most stable of all"
+release.
+
+Fixes:
+
+* Remove the GibberResolver and all its infrastructure (smcv)
+* Use the normal, safer telepathy-glib priv idioms (smcv)
+* Add salut_connection_get_implemented_interfaces (smcv)
+* Make tests more robust (smcv)
+* Remove examples and OpenSSL support from libgibber (smcv)
+* remove SASL support (smcv)
+* remove now-unused MD5 implementation (smcv)
+* Remove the activity when its channel has been closed, as Gabble does (tomeu)
+
 telepathy-salut 0.3.13 (2010-08-19)
 ===================================
 
