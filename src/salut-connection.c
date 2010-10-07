@@ -2028,7 +2028,7 @@ salut_connection_set_self_capabilities (
   TpBaseConnection *base = (TpBaseConnection *) self;
   SalutConnectionPrivate *priv = self->priv;
   guint i;
-  GHashTable *save_caps;
+  GHashTable *save_caps, *per_channel_manager_caps;
   GError *error = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -2036,6 +2036,8 @@ salut_connection_set_self_capabilities (
   /* reset the caps, and fill with the given parameter but keep a backup for
    * diffing: we don't want to emit a signal if nothing has changed */
   save_caps = salut_self_steal_per_channel_manager_caps (priv->self);
+  per_channel_manager_caps =
+    salut_self_ensure_per_channel_manager_caps (priv->self);
 
   for (i = 0; i < caps->len; i++)
     {
@@ -2051,7 +2053,7 @@ salut_connection_set_self_capabilities (
 
           salut_caps_channel_manager_add_capability (
               SALUT_CAPS_CHANNEL_MANAGER (manager), self,
-              base->self_handle, cap_to_add);
+              cap_to_add, per_channel_manager_caps);
         }
     }
 
@@ -2065,7 +2067,7 @@ salut_connection_set_self_capabilities (
     }
 
   _emit_contact_capabilities_changed (self, base->self_handle, save_caps,
-      salut_self_get_per_channel_manager_caps (priv->self));
+      per_channel_manager_caps);
   salut_presence_cache_free_cache_entry (save_caps);
 
 

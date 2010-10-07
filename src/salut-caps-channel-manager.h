@@ -59,8 +59,8 @@ typedef void (*SalutCapsChannelManagerGetContactCapsFunc) (
     GPtrArray *arr);
 
 typedef void (*SalutCapsChannelManagerAddCapFunc) (
-    SalutCapsChannelManager *manager, SalutConnection *conn, TpHandle handle,
-    GHashTable *cap);
+    SalutCapsChannelManager *manager, SalutConnection *conn,
+    GHashTable *cap, GHashTable *per_channel_manager_caps);
 
 /* Specific to Salut */
 typedef void (*SalutCapsChannelManagerGetFeatureListFunc) (
@@ -112,8 +112,8 @@ gboolean salut_caps_channel_manager_capabilities_diff (
     gpointer specific_old_caps, gpointer specific_new_caps);
 
 void salut_caps_channel_manager_add_capability (
-    SalutCapsChannelManager *manager, SalutConnection *conn, TpHandle handle,
-    GHashTable *cap);
+    SalutCapsChannelManager *manager, SalutConnection *conn,
+    GHashTable *cap, GHashTable *per_channel_manager_caps);
 
 
 struct _SalutCapsChannelManagerIface {

@@ -175,8 +175,8 @@ void
 salut_caps_channel_manager_add_capability (
     SalutCapsChannelManager *caps_manager,
     SalutConnection *conn,
-    TpHandle handle,
-    GHashTable *cap)
+    GHashTable *cap,
+    GHashTable *per_channel_manager_caps)
 {
   SalutCapsChannelManagerIface *iface =
     SALUT_CAPS_CHANNEL_MANAGER_GET_INTERFACE (caps_manager);
@@ -184,7 +184,7 @@ salut_caps_channel_manager_add_capability (
 
   if (method != NULL)
     {
-      method (caps_manager, conn, handle, cap);
+      method (caps_manager, conn, cap, per_channel_manager_caps);
     }
   /* ... else, nothing to do */
 }
