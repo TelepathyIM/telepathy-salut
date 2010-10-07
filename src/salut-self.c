@@ -95,6 +95,8 @@ struct _SalutSelfPrivate
   GHashTable *olpc_activities;
 #endif
 
+  GabbleCapabilitySet *caps;
+
   gboolean dispose_has_run;
 };
 
@@ -300,6 +302,8 @@ salut_self_constructor (GType type,
       G_CALLBACK (contact_manager_contact_change_cb), self);
 #endif
 
+  priv->caps = gabble_capability_set_new ();
+
   return obj;
 }
 
@@ -443,6 +447,8 @@ salut_self_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
   /* release any references held by the object here */
+
+  gabble_capability_set_free (self->priv->caps);
 
   if (priv->contact_manager != NULL)
     {
@@ -1011,4 +1017,34 @@ GSList *
 salut_self_get_features (SalutSelf *self)
 {
   return capabilities_get_features (self->per_channel_manager_caps);
+}
+
+static void
+salut_self_update_caps (SalutSelf *self)
+{
+  GSList *features, *i;
+
+  DEBUG ("Resetting capabilities");
+  gabble_capability_set_clear (self->priv->caps);
+  features = salut_self_get_features (self);
+
+  for (i = features; i != NULL; i = i->next)
+    {
+      const Feature *feature = i->data;
+
+      DEBUG ("Adding capability: %s", feature->ns);
+      gabble_capability_set_add (self->priv->caps, feature->ns);
+    }
+
+  g_slist_free (features);
+}
+
+const GabbleCapabilitySet *
+salut_self_get_caps (SalutSelf *self)
+{
+  /* Because the rest of Salut currently pokes per_channel_manager_caps
+   * directly, this is about the best we can do right now. */
+  salut_self_update_caps (self);
+
+  return self->priv->caps;
 }

@@ -28,6 +28,7 @@
 
 #include <gibber/gibber-xmpp-stanza.h>
 
+#include "capabilities-set.h"
 #include "salut-connection.h"
 #include "salut-presence.h"
 #ifdef ENABLE_OLPC
@@ -158,6 +159,7 @@ void salut_self_olpc_augment_invitation (SalutSelf *self,
 #endif
 
 GSList * salut_self_get_features (SalutSelf *self);
+const GabbleCapabilitySet *salut_self_get_caps (SalutSelf *self);
 
 /* protected methods */
 void salut_self_established (SalutSelf *self);
