@@ -39,6 +39,7 @@
 #include "salut-contact-manager.h"
 #include "salut-util.h"
 #include "salut-muc-manager.h"
+#include "salut-presence-cache.h"
 #include "salut-xmpp-connection-manager.h"
 
 #ifdef ENABLE_OLPC
@@ -1056,13 +1057,11 @@ salut_self_get_per_channel_manager_caps (SalutSelf *self)
   return self->priv->per_channel_manager_caps;
 }
 
-GHashTable *
-salut_self_swap_per_channel_manager_caps (SalutSelf *self,
+void
+salut_self_take_per_channel_manager_caps (SalutSelf *self,
     GHashTable *new_caps)
 {
-  GHashTable *ret = self->priv->per_channel_manager_caps;
-
+  salut_presence_cache_free_cache_entry (self->priv->per_channel_manager_caps);
   self->priv->per_channel_manager_caps = new_caps;
   salut_self_update_caps (self);
-  return ret;
 }

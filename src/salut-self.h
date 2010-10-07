@@ -161,7 +161,7 @@ const GabbleCapabilitySet *salut_self_get_caps (SalutSelf *self);
 
 GHashTable *salut_self_get_per_channel_manager_caps (SalutSelf *self);
 
-GHashTable *salut_self_swap_per_channel_manager_caps (SalutSelf *self,
+void salut_self_take_per_channel_manager_caps (SalutSelf *self,
     GHashTable *new_caps);
 
 /* protected methods */

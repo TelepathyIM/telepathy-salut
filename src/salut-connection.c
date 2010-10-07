@@ -2012,7 +2012,7 @@ salut_connection_set_self_capabilities (
   SalutConnectionPrivate *priv = self->priv;
   guint i;
   GabbleCapabilitySet *before;
-  GHashTable *save_caps, *per_channel_manager_caps;
+  GHashTable *per_channel_manager_caps;
   GError *error = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -2038,9 +2038,8 @@ salut_connection_set_self_capabilities (
     }
 
   before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
-  save_caps = salut_self_swap_per_channel_manager_caps (priv->self,
+  salut_self_take_per_channel_manager_caps (priv->self,
       per_channel_manager_caps);
-  salut_presence_cache_free_cache_entry (save_caps);
 
   /* XEP-0115 version 1.5 uses a verification string in the 'ver' attribute */
   if (!announce_self_caps (self, &error))
