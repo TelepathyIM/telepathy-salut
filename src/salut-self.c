@@ -1013,7 +1013,7 @@ salut_self_established (SalutSelf *self)
   g_signal_emit (self, signals[ESTABLISHED], 0, NULL);
 }
 
-GSList *
+static GSList *
 salut_self_get_features (SalutSelf *self)
 {
   return capabilities_get_features (self->per_channel_manager_caps);
