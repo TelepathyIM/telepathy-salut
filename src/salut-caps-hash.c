@@ -438,6 +438,13 @@ caps_hash_compute_from_stanza (GibberXmppNode *node)
   return str;
 }
 
+static void
+add_to_pointer_array_foreach (gpointer ns,
+    gpointer arr)
+{
+  g_ptr_array_add (arr, g_strdup (ns));
+}
+
 /**
  * Compute our hash as defined by the XEP-0115.
  *
@@ -446,21 +453,16 @@ caps_hash_compute_from_stanza (GibberXmppNode *node)
 gchar *
 caps_hash_compute_from_self_presence (SalutSelf *self)
 {
-  GSList *features_list = salut_self_get_features (self);
+  const GabbleCapabilitySet *caps = salut_self_get_caps (self);
   GPtrArray *features = g_ptr_array_new ();
   GPtrArray *identities = g_ptr_array_new ();
   GPtrArray *dataforms = g_ptr_array_new ();
   gchar *str;
-  GSList *i;
 
-  /* get our features list  */
-  for (i = features_list; NULL != i; i = i->next)
-    {
-      const Feature *feat = (const Feature *) i->data;
-      g_ptr_array_add (features, g_strdup (feat->ns));
-    }
+  gabble_capability_set_foreach (caps, add_to_pointer_array_foreach, features);
 
-  /* XEP-0030 requires at least 1 identity. We don't need more. */
+  /* XEP-0030 requires at least 1 identity. We don't need more.
+   * (Must be kept in sync with caps_req_stanza_callback in salut-disco.c) */
   g_ptr_array_add (identities, g_strdup ("client/pc//" PACKAGE_STRING));
 
   /* Salut does not use dataforms, let 'dataforms' be empty */
@@ -468,7 +470,6 @@ caps_hash_compute_from_self_presence (SalutSelf *self)
   str = caps_hash_compute (features, identities, dataforms);
 
   salut_presence_free_xep0115_hash (features, identities, dataforms);
-  g_slist_free (features_list);
 
   return str;
 }

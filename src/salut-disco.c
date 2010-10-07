@@ -464,6 +464,16 @@ send_item_not_found (GibberXmppConnection *conn,
 }
 
 static void
+add_feature_foreach (gpointer ns,
+    gpointer result_query)
+{
+  GibberXmppNode *feature_node;
+
+  feature_node = gibber_xmpp_node_add_child (result_query, "feature");
+  gibber_xmpp_node_set_attribute (feature_node, "var", ns);
+}
+
+static void
 caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
                           GibberXmppConnection *conn,
                           GibberXmppStanza *stanza,
@@ -476,12 +486,11 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   GibberXmppNode *iq, *result_iq, *query, *result_query;
   const gchar *node;
   const gchar *suffix;
-  GSList *i;
   TpHandleRepoIface *contact_repo;
   const gchar *jid_from, *jid_to, *id;
   SalutSelf *salut_self;
   GibberXmppStanza *result;
-  GSList *features;
+  const GabbleCapabilitySet *caps;
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
@@ -522,9 +531,6 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
       return;
     }
 
-  features = salut_self_get_features (salut_self);
-  g_object_unref (salut_self);
-
   /* Every entity MUST have at least one identity (XEP-0030). Salut publishs
    * one identity. If you change the identity here, you also need to change
    * caps_hash_compute_from_self_presence(). */
@@ -547,15 +553,8 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   result_iq = wocky_stanza_get_top_node (result);
   result_query = gibber_xmpp_node_get_child_ns (result_iq, "query", NULL);
 
-  for (i = features; NULL != i; i = i->next)
-    {
-      const Feature *feature = (const Feature *) i->data;
-      GibberXmppNode *feature_node;
-
-      feature_node = gibber_xmpp_node_add_child (result_query, "feature");
-      gibber_xmpp_node_set_attribute (feature_node, "var", feature->ns);
-    }
-  g_slist_free (features);
+  caps = salut_self_get_caps (salut_self);
+  gabble_capability_set_foreach (caps, add_feature_foreach, result_query);
 
   DEBUG ("sending disco response");
 
@@ -568,6 +567,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
     }
 
   g_object_unref (result);
+  g_object_unref (salut_self);
 }
 
 static GObject *
