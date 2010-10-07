@@ -263,8 +263,7 @@ static void conn_contact_capabilities_fill_contact_attributes (GObject *obj,
   const GArray *contacts, GHashTable *attributes_hash);
 
 static void connection_capabilities_update_cb (SalutPresenceCache *cache,
-    TpHandle handle, GHashTable *old_enhanced_caps,
-    GHashTable *new_enhanced_caps, gpointer user_data);
+    TpHandle handle, gpointer user_data);
 
 static void
 conn_avatars_properties_getter (GObject *object, GQuark interface, GQuark name,
@@ -1978,8 +1977,6 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
 static void
 connection_capabilities_update_cb (SalutPresenceCache *cache,
                                    TpHandle handle,
-                                   GHashTable *old_enhanced_caps,
-                                   GHashTable *new_enhanced_caps,
                                    gpointer user_data)
 {
   SalutConnection *conn = SALUT_CONNECTION (user_data);

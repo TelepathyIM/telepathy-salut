@@ -220,8 +220,7 @@ salut_presence_cache_class_init (SalutPresenceCacheClass *klass)
     G_SIGNAL_RUN_LAST,
     0,
     NULL, NULL,
-    salut_signals_marshal_VOID__UINT_POINTER_POINTER, G_TYPE_NONE,
-    3, G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_POINTER);
+    g_cclosure_marshal_VOID__UINT, G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
 static GHashTable *create_per_channel_manager_caps (SalutPresenceCache *self,
@@ -390,9 +389,8 @@ salut_presence_cache_change_caps (SalutPresenceCache *self,
   DEBUG ("setting caps for %s (thanks to %s)", contact->name, thanked);
 
   salut_contact_set_capabilities (contact, caps, per_channel_manager_caps);
-  g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0, contact->handle,
-      save_enhanced_caps, contact->per_channel_manager_caps);
   salut_presence_cache_free_cache_entry (save_enhanced_caps);
+  g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0, contact->handle);
 }
 
 static void
