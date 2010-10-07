@@ -19,7 +19,7 @@ m4_define([salut_version],
           [m4_if(salut_nano_version, 0, [salut_base_version], [salut_base_version].[salut_nano_version])])dnl
 
 AC_INIT([Telepathy Salut], [salut_version],
-[https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-salut])
+[https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-salut&version=0.4])
 
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -57,6 +57,7 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$official_release" = xno],
    format-security \
    init-self],
   [missing-field-initializers \
+   deprecated-declarations \
    unused-parameter])
 AC_SUBST([ERROR_CFLAGS])
 
