@@ -22,6 +22,7 @@
 #define __SALUT_CAPABILITIES__H__
 
 #include <glib-object.h>
+#include "capabilities-set.h"
 
 typedef struct _Feature Feature;
 
@@ -41,6 +42,8 @@ struct _Feature
  * caps.
  */
 GSList *capabilities_get_features (GHashTable *per_channel_manager_caps);
+
+GabbleCapabilitySet *salut_dup_self_advertised_caps (void);
 
 #endif  /* __SALUT_CAPABILITIES__H__ */
 

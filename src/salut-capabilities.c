@@ -65,3 +65,14 @@ capabilities_get_features (GHashTable *per_channel_manager_caps)
   return features;
 }
 
+GabbleCapabilitySet *
+salut_dup_self_advertised_caps (void)
+{
+  GabbleCapabilitySet *ret = gabble_capability_set_new ();
+  const Feature *i;
+
+  for (i = self_advertised_features; NULL != i->ns; i++)
+    gabble_capability_set_add (ret, i->ns);
+
+  return ret;
+}

@@ -96,7 +96,6 @@ struct _SalutSelfPrivate
   GHashTable *olpc_activities;
 #endif
 
-  GHashTable *per_channel_manager_caps;
   GabbleCapabilitySet *caps;
 
   gboolean dispose_has_run;
@@ -248,8 +247,6 @@ salut_self_set_property (GObject *object,
     }
 }
 
-static void salut_self_update_caps (SalutSelf *self);
-
 static GObject *
 salut_self_constructor (GType type,
                         guint n_props,
@@ -306,9 +303,7 @@ salut_self_constructor (GType type,
       G_CALLBACK (contact_manager_contact_change_cb), self);
 #endif
 
-  priv->caps = gabble_capability_set_new ();
-  priv->per_channel_manager_caps = g_hash_table_new (NULL, NULL);
-  salut_self_update_caps (self);
+  priv->caps = salut_dup_self_advertised_caps ();
 
   return obj;
 }
@@ -1019,49 +1014,19 @@ salut_self_established (SalutSelf *self)
   g_signal_emit (self, signals[ESTABLISHED], 0, NULL);
 }
 
-static GSList *
-salut_self_get_features (SalutSelf *self)
-{
-  return capabilities_get_features (self->priv->per_channel_manager_caps);
-}
-
-static void
-salut_self_update_caps (SalutSelf *self)
-{
-  GSList *features, *i;
-
-  DEBUG ("Resetting capabilities");
-  gabble_capability_set_clear (self->priv->caps);
-  features = salut_self_get_features (self);
-
-  for (i = features; i != NULL; i = i->next)
-    {
-      const Feature *feature = i->data;
-
-      DEBUG ("Adding capability: %s", feature->ns);
-      gabble_capability_set_add (self->priv->caps, feature->ns);
-    }
-
-  g_slist_free (features);
-}
-
 const GabbleCapabilitySet *
 salut_self_get_caps (SalutSelf *self)
 {
   return self->priv->caps;
 }
 
-GHashTable *
-salut_self_get_per_channel_manager_caps (SalutSelf *self)
-{
-  return self->priv->per_channel_manager_caps;
-}
-
 void
-salut_self_take_per_channel_manager_caps (SalutSelf *self,
-    GHashTable *new_caps)
+salut_self_take_caps (SalutSelf *self,
+    GabbleCapabilitySet *set)
 {
-  salut_presence_cache_free_cache_entry (self->priv->per_channel_manager_caps);
-  self->priv->per_channel_manager_caps = new_caps;
-  salut_self_update_caps (self);
+  g_return_if_fail (SALUT_IS_SELF (self));
+  g_return_if_fail (set != NULL);
+
+  gabble_capability_set_free (self->priv->caps);
+  self->priv->caps = set;
 }

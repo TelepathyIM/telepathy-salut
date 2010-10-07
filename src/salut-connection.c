@@ -45,6 +45,7 @@
 #include "capabilities.h"
 #include "caps-channel-manager.h"
 #include "salut-avahi-discovery-client.h"
+#include "salut-capabilities.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
 #include "salut-contact-channel.h"
@@ -2010,36 +2011,29 @@ salut_connection_set_self_capabilities (
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
   SalutConnectionPrivate *priv = self->priv;
-  guint i;
-  GabbleCapabilitySet *before;
-  GHashTable *per_channel_manager_caps;
+  GabbleCapabilitySet *before, *after;
   GError *error = NULL;
+  TpChannelManagerIter iter;
+  TpChannelManager *manager;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+  after = salut_dup_self_advertised_caps ();
 
-  for (i = 0; i < caps->len; i++)
+  tp_base_connection_channel_manager_iter_init (&iter, base);
+
+  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
     {
-      GHashTable *cap_to_add = g_ptr_array_index (caps, i);
-      TpChannelManagerIter iter;
-      TpChannelManager *manager;
+      /* all channel managers must implement the capability interface */
+      g_assert (GABBLE_IS_CAPS_CHANNEL_MANAGER (manager));
 
-      tp_base_connection_channel_manager_iter_init (&iter, base);
-      while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
-        {
-          /* all channel managers must implement the capability interface */
-          g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
-
-          salut_caps_channel_manager_add_capability (
-              SALUT_CAPS_CHANNEL_MANAGER (manager), self,
-              cap_to_add, per_channel_manager_caps);
-        }
+      gabble_caps_channel_manager_represent_client (
+          GABBLE_CAPS_CHANNEL_MANAGER (manager),
+          "<ContactCapabilities draft 1>", caps, NULL, after);
     }
 
   before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
-  salut_self_take_per_channel_manager_caps (priv->self,
-      per_channel_manager_caps);
+  salut_self_take_caps (priv->self, after);
 
   /* XEP-0115 version 1.5 uses a verification string in the 'ver' attribute */
   if (!announce_self_caps (self, &error))
@@ -2050,12 +2044,13 @@ salut_connection_set_self_capabilities (
       return;
     }
 
-  if (!gabble_capability_set_equals (before, salut_self_get_caps (priv->self)))
+  if (!gabble_capability_set_equals (before, after))
     {
       _emit_contact_capabilities_changed (self, base->self_handle);
     }
 
   gabble_capability_set_free (before);
+  /* after is now owned by the SalutSelf */
 
   salut_svc_connection_interface_contact_capabilities_return_from_set_self_capabilities
       (context);
