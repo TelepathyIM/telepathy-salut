@@ -1301,7 +1301,8 @@ salut_tubes_manager_get_contact_caps (
     {
       SalutSelf *salut_self;
       g_object_get (conn, "self", &salut_self, NULL);
-      per_channel_manager_caps = salut_self->per_channel_manager_caps;
+      per_channel_manager_caps =
+        salut_self_get_per_channel_manager_caps (salut_self);
       g_object_unref (salut_self);
     }
   else
@@ -1557,11 +1558,10 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
   SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
   SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *base = (TpBaseConnection *) conn;
-  /* if the GHashTable is not allocated, we want to do it and update the
-   * pointer in SalutSelf or SalutContact. Hence the type "GHashTable **" */
-  GHashTable **per_channel_manager_caps;
+  GHashTable *per_channel_manager_caps;
   TubesCapabilities *caps;
   const gchar *channel_type;
+  SalutSelf *salut_self = NULL;
   SalutContact *contact = NULL;
 
   channel_type = tp_asv_get_string (cap,
@@ -1579,10 +1579,11 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
 
   if (handle == base->self_handle)
     {
-      SalutSelf *salut_self;
-      g_object_get (conn, "self", &salut_self, NULL);
-      per_channel_manager_caps = &salut_self->per_channel_manager_caps;
-      g_object_unref (salut_self);
+      g_object_get (conn,
+          "self", &salut_self,
+          NULL);
+      per_channel_manager_caps =
+        salut_self_ensure_per_channel_manager_caps (salut_self);
     }
   else
     {
@@ -1592,17 +1593,17 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
       if (contact == NULL)
         return;
 
-      per_channel_manager_caps = &contact->per_channel_manager_caps;
+      if (contact->per_channel_manager_caps == NULL)
+        contact->per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+
+      per_channel_manager_caps = contact->per_channel_manager_caps;
     }
 
-  if (*per_channel_manager_caps == NULL)
-    *per_channel_manager_caps = g_hash_table_new (NULL, NULL);
-
-  caps = g_hash_table_lookup (*per_channel_manager_caps, manager);
+  caps = g_hash_table_lookup (per_channel_manager_caps, manager);
   if (caps == NULL)
     {
       caps = tubes_capabilities_new ();
-      g_hash_table_insert (*per_channel_manager_caps, manager, caps);
+      g_hash_table_insert (per_channel_manager_caps, manager, caps);
 
       if (handle == base->self_handle)
         /* We always support generic tubes caps */
@@ -1630,8 +1631,8 @@ salut_tubes_manager_add_cap (SalutCapsChannelManager *manager,
       g_hash_table_insert (caps->dbus_tube_caps, service, feat);
     }
 
-  if (contact != NULL)
-    g_object_unref (contact);
+  tp_clear_object (&contact);
+  tp_clear_object (&salut_self);
 }
 
 

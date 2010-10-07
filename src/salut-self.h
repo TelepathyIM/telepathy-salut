@@ -77,7 +77,6 @@ struct _SalutSelf {
     TpHandle olpc_cur_act_room;
     gchar *olpc_color;
 #endif
-    GHashTable *per_channel_manager_caps;
     gchar *node;
     gchar *hash;
     gchar *ver;
@@ -159,6 +158,10 @@ void salut_self_olpc_augment_invitation (SalutSelf *self,
 #endif
 
 const GabbleCapabilitySet *salut_self_get_caps (SalutSelf *self);
+
+GHashTable *salut_self_get_per_channel_manager_caps (SalutSelf *self);
+GHashTable *salut_self_ensure_per_channel_manager_caps (SalutSelf *self);
+GHashTable *salut_self_steal_per_channel_manager_caps (SalutSelf *self);
 
 /* protected methods */
 void salut_self_established (SalutSelf *self);

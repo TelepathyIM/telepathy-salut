@@ -2035,8 +2035,7 @@ salut_connection_set_self_capabilities (
 
   /* reset the caps, and fill with the given parameter but keep a backup for
    * diffing: we don't want to emit a signal if nothing has changed */
-  save_caps = priv->self->per_channel_manager_caps;
-  priv->self->per_channel_manager_caps = NULL;
+  save_caps = salut_self_steal_per_channel_manager_caps (priv->self);
 
   for (i = 0; i < caps->len; i++)
     {
@@ -2065,9 +2064,8 @@ salut_connection_set_self_capabilities (
       return;
     }
 
-  _emit_contact_capabilities_changed (self, base->self_handle,
-                                      save_caps,
-                                      priv->self->per_channel_manager_caps);
+  _emit_contact_capabilities_changed (self, base->self_handle, save_caps,
+      salut_self_get_per_channel_manager_caps (priv->self));
   salut_presence_cache_free_cache_entry (save_caps);
 
 

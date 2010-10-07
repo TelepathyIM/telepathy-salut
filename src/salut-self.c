@@ -95,6 +95,7 @@ struct _SalutSelfPrivate
   GHashTable *olpc_activities;
 #endif
 
+  GHashTable *per_channel_manager_caps;
   GabbleCapabilitySet *caps;
 
   gboolean dispose_has_run;
@@ -1016,7 +1017,7 @@ salut_self_established (SalutSelf *self)
 static GSList *
 salut_self_get_features (SalutSelf *self)
 {
-  return capabilities_get_features (self->per_channel_manager_caps);
+  return capabilities_get_features (self->priv->per_channel_manager_caps);
 }
 
 static void
@@ -1047,4 +1048,28 @@ salut_self_get_caps (SalutSelf *self)
   salut_self_update_caps (self);
 
   return self->priv->caps;
+}
+
+GHashTable *
+salut_self_get_per_channel_manager_caps (SalutSelf *self)
+{
+  return self->priv->per_channel_manager_caps;
+}
+
+GHashTable *
+salut_self_ensure_per_channel_manager_caps (SalutSelf *self)
+{
+  if (self->priv->per_channel_manager_caps == NULL)
+    self->priv->per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+
+  return self->priv->per_channel_manager_caps;
+}
+
+GHashTable *
+salut_self_steal_per_channel_manager_caps (SalutSelf *self)
+{
+  GHashTable *ret = self->priv->per_channel_manager_caps;
+
+  self->priv->per_channel_manager_caps = NULL;
+  return ret;
 }
