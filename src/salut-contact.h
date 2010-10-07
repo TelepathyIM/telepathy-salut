@@ -74,7 +74,6 @@ struct _SalutContact {
     gchar *node;
     gchar *ver;
     GabbleCapabilitySet *caps;
-    GHashTable *per_channel_manager_caps;
 
     TpHandle handle;
 #ifdef ENABLE_OLPC
@@ -129,8 +128,7 @@ void salut_contact_get_avatar (SalutContact *contact,
                                gpointer user_data1);
 
 void salut_contact_set_capabilities (SalutContact *contact,
-    const GabbleCapabilitySet *caps,
-    GHashTable *per_channel_manager_caps);
+    const GabbleCapabilitySet *caps);
 
 #ifdef ENABLE_OLPC
 typedef void (*SalutContactOLPCActivityFunc)

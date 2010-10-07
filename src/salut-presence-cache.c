@@ -375,21 +375,15 @@ salut_presence_cache_change_caps (SalutPresenceCache *self,
     const GabbleCapabilitySet *caps,
     GHashTable *per_channel_manager_caps)
 {
-  GHashTable *save_enhanced_caps;
-
   if (gabble_capability_set_equals (caps, contact->caps))
     {
       DEBUG ("capabilities of %s did not actually change", contact->name);
       return;
     }
 
-  save_enhanced_caps = salut_presence_cache_copy_cache_entry (
-      contact->per_channel_manager_caps);
-
   DEBUG ("setting caps for %s (thanks to %s)", contact->name, thanked);
 
-  salut_contact_set_capabilities (contact, caps, per_channel_manager_caps);
-  salut_presence_cache_free_cache_entry (save_enhanced_caps);
+  salut_contact_set_capabilities (contact, caps);
   g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0, contact->handle);
 }
 
