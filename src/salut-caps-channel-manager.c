@@ -57,23 +57,6 @@ salut_caps_channel_manager_get_type (void)
 
 /* Virtual-method wrappers */
 
-void salut_caps_channel_manager_get_contact_capabilities (
-    SalutCapsChannelManager *caps_manager,
-    SalutConnection *conn,
-    TpHandle handle,
-    GPtrArray *arr)
-{
-  SalutCapsChannelManagerIface *iface =
-    SALUT_CAPS_CHANNEL_MANAGER_GET_INTERFACE (caps_manager);
-  SalutCapsChannelManagerGetContactCapsFunc method = iface->get_contact_caps;
-
-  if (method != NULL)
-    {
-      method (caps_manager, conn, handle, arr);
-    }
-  /* ... else assume there is not caps for this kind of channels */
-}
-
 void salut_caps_channel_manager_get_feature_list (
     SalutCapsChannelManager *caps_manager,
     gpointer specific_caps,

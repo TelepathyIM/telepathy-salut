@@ -572,45 +572,6 @@ add_file_transfer_channel_class (GPtrArray *arr)
   g_ptr_array_add (arr, g_value_get_boxed (&monster));
 }
 
-static void
-salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
-                                   SalutConnection *conn,
-                                   TpHandle handle,
-                                   GPtrArray *arr)
-{
-  SalutFtManager *self = SALUT_FT_MANAGER (manager);
-  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base = (TpBaseConnection *) conn;
-  SalutContact *contact;
-  FtCapaStatus caps;
-
-  g_assert (handle != 0);
-
-  if (handle == base->self_handle)
-    {
-      /* We support file transfer */
-      add_file_transfer_channel_class (arr);
-      return;
-    }
-
-  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
-  if (contact == NULL)
-    return;
-  g_object_unref (contact);
-
-  if (contact->per_channel_manager_caps == NULL)
-    return;
-
-  caps = GPOINTER_TO_UINT (g_hash_table_lookup (
-        contact->per_channel_manager_caps, manager));
-
-  if (caps == FT_CAPA_UNSUPPORTED)
-    return;
-
-  /* FT is supported */
-  add_file_transfer_channel_class (arr);
-}
-
 static gboolean
 _parse_caps_item (GibberXmppNode *node,
                   gpointer user_data)
@@ -681,7 +642,6 @@ caps_channel_manager_iface_init (gpointer g_iface,
 {
   SalutCapsChannelManagerIface *iface = g_iface;
 
-  iface->get_contact_caps = salut_ft_manager_get_contact_caps;
   iface->parse_caps = salut_ft_manager_parse_caps;
   iface->copy_caps = salut_ft_manager_copy_caps;
   iface->caps_diff = salut_ft_manager_caps_diff;

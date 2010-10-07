@@ -1279,83 +1279,6 @@ add_generic_tube_caps (GPtrArray *arr)
 }
 
 static void
-salut_tubes_manager_get_contact_caps (
-    SalutCapsChannelManager *manager,
-    SalutConnection *conn,
-    TpHandle handle,
-    GPtrArray *arr)
-{
-  SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
-  SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base = (TpBaseConnection *) conn;
-  TubesCapabilities *caps;
-  GHashTable *stream_tube_caps;
-  GHashTable *dbus_tube_caps;
-  GHashTableIter tube_caps_iter;
-  gpointer service;
-  GHashTable *per_channel_manager_caps;
-
-  g_assert (handle != 0);
-
-  if (handle == base->self_handle)
-    {
-      SalutSelf *salut_self;
-      g_object_get (conn, "self", &salut_self, NULL);
-      per_channel_manager_caps =
-        salut_self_get_per_channel_manager_caps (salut_self);
-      g_object_unref (salut_self);
-    }
-  else
-    {
-      SalutContact *contact;
-
-      contact = salut_contact_manager_get_contact (
-          priv->contact_manager, handle);
-
-      if (contact == NULL)
-        return;
-
-      per_channel_manager_caps = contact->per_channel_manager_caps;
-      g_object_unref (contact);
-    }
-
-  if (per_channel_manager_caps == NULL)
-    return;
-
-  caps = g_hash_table_lookup (per_channel_manager_caps, manager);
-  if (caps == NULL)
-    return;
-
-  if (!caps->tubes_supported)
-    return;
-
-  add_generic_tube_caps (arr);
-
-  stream_tube_caps = caps->stream_tube_caps;
-  dbus_tube_caps = caps->dbus_tube_caps;
-
-  if (stream_tube_caps != NULL)
-    {
-      g_hash_table_iter_init (&tube_caps_iter, stream_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, &service,
-            NULL))
-        {
-          add_service_to_array (service, arr, TP_TUBE_TYPE_STREAM);
-        }
-    }
-
-  if (dbus_tube_caps != NULL)
-    {
-      g_hash_table_iter_init (&tube_caps_iter, dbus_tube_caps);
-      while (g_hash_table_iter_next (&tube_caps_iter, &service,
-            NULL))
-        {
-          add_service_to_array (service, arr, TP_TUBE_TYPE_DBUS);
-        }
-    }
-}
-
-static void
 salut_tubes_manager_get_feature_list (
     SalutCapsChannelManager *manager,
     gpointer specific_caps,
@@ -1610,7 +1533,6 @@ caps_channel_manager_iface_init (gpointer g_iface,
 {
   SalutCapsChannelManagerIface *iface = g_iface;
 
-  iface->get_contact_caps = salut_tubes_manager_get_contact_caps;
   iface->get_feature_list = salut_tubes_manager_get_feature_list;
   iface->parse_caps = salut_tubes_manager_parse_caps;
   iface->free_caps = salut_tubes_manager_free_caps;

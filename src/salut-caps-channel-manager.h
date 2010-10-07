@@ -53,11 +53,6 @@ typedef struct _SalutCapsChannelManagerIface SalutCapsChannelManagerIface;
 
 /* virtual methods */
 
-/* May be moved to TpChannelManager later */
-typedef void (*SalutCapsChannelManagerGetContactCapsFunc) (
-    SalutCapsChannelManager *manager, SalutConnection *conn, TpHandle handle,
-    GPtrArray *arr);
-
 typedef void (*SalutCapsChannelManagerAddCapFunc) (
     SalutCapsChannelManager *manager, SalutConnection *conn,
     GHashTable *cap, GHashTable *per_channel_manager_caps);
@@ -119,7 +114,6 @@ void salut_caps_channel_manager_add_capability (
 struct _SalutCapsChannelManagerIface {
     GTypeInterface parent;
 
-    SalutCapsChannelManagerGetContactCapsFunc get_contact_caps;
     SalutCapsChannelManagerAddCapFunc add_cap;
 
     SalutCapsChannelManagerGetFeatureListFunc get_feature_list;

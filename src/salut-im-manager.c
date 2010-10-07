@@ -44,7 +44,6 @@
 
 static void salut_im_manager_channel_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
-static void caps_channel_manager_iface_init (gpointer, gpointer);
 static void gabble_caps_channel_manager_iface_init (
     GabbleCapsChannelManagerIface *);
 
@@ -55,8 +54,7 @@ salut_im_manager_new_channel (SalutImManager *mgr, TpHandle handle,
 G_DEFINE_TYPE_WITH_CODE (SalutImManager, salut_im_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       salut_im_manager_channel_manager_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
-      caps_channel_manager_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER, NULL);
     G_IMPLEMENT_INTERFACE (GABBLE_TYPE_CAPS_CHANNEL_MANAGER,
       gabble_caps_channel_manager_iface_init))
 
@@ -698,27 +696,6 @@ salut_im_manager_add_contact_caps (GPtrArray *arr)
   g_hash_table_destroy (fixed_properties);
 
   g_ptr_array_add (arr, g_value_get_boxed (&monster));
-}
-
-static void
-salut_im_factory_get_contact_caps (
-    SalutCapsChannelManager *manager G_GNUC_UNUSED,
-    SalutConnection *conn G_GNUC_UNUSED,
-    TpHandle handle G_GNUC_UNUSED,
-    GPtrArray *arr)
-{
-  /* We don't need to check this contact's capabilities, we assume every
-   * contact support text channels. */
-  salut_im_manager_add_contact_caps (arr);
-}
-
-static void
-caps_channel_manager_iface_init (gpointer g_iface,
-                                 gpointer iface_data)
-{
-  SalutCapsChannelManagerIface *iface = g_iface;
-
-  iface->get_contact_caps = salut_im_factory_get_contact_caps;
 }
 
 static void
