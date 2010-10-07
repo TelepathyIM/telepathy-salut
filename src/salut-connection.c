@@ -1959,9 +1959,7 @@ salut_connection_get_contact_capabilities (
 
 static void
 _emit_contact_capabilities_changed (SalutConnection *conn,
-                                    TpHandle handle,
-                                    GHashTable *old_caps,
-                                    GHashTable *new_caps)
+                                    TpHandle handle)
 {
   GPtrArray *ret = g_ptr_array_new ();
   GHashTable *caps = g_hash_table_new (g_direct_hash, g_direct_equal);
@@ -1987,8 +1985,7 @@ connection_capabilities_update_cb (SalutPresenceCache *cache,
 
   g_assert (SALUT_IS_CONNECTION (user_data));
 
-  _emit_contact_capabilities_changed (conn, handle, old_enhanced_caps,
-      new_enhanced_caps);
+  _emit_contact_capabilities_changed (conn, handle);
 }
 
 /**
@@ -2043,12 +2040,12 @@ salut_connection_set_self_capabilities (
   before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
   save_caps = salut_self_swap_per_channel_manager_caps (priv->self,
       per_channel_manager_caps);
+  salut_presence_cache_free_cache_entry (save_caps);
 
   /* XEP-0115 version 1.5 uses a verification string in the 'ver' attribute */
   if (!announce_self_caps (self, &error))
     {
       gabble_capability_set_free (before);
-      salut_presence_cache_free_cache_entry (save_caps);
       dbus_g_method_return_error (context, error);
       g_error_free (error);
       return;
@@ -2056,11 +2053,9 @@ salut_connection_set_self_capabilities (
 
   if (!gabble_capability_set_equals (before, salut_self_get_caps (priv->self)))
     {
-      _emit_contact_capabilities_changed (self, base->self_handle, save_caps,
-          per_channel_manager_caps);
+      _emit_contact_capabilities_changed (self, base->self_handle);
     }
 
-  salut_presence_cache_free_cache_entry (save_caps);
   gabble_capability_set_free (before);
 
   salut_svc_connection_interface_contact_capabilities_return_from_set_self_capabilities
