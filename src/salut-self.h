@@ -160,8 +160,9 @@ void salut_self_olpc_augment_invitation (SalutSelf *self,
 const GabbleCapabilitySet *salut_self_get_caps (SalutSelf *self);
 
 GHashTable *salut_self_get_per_channel_manager_caps (SalutSelf *self);
-GHashTable *salut_self_ensure_per_channel_manager_caps (SalutSelf *self);
-GHashTable *salut_self_steal_per_channel_manager_caps (SalutSelf *self);
+
+GHashTable *salut_self_swap_per_channel_manager_caps (SalutSelf *self,
+    GHashTable *new_caps);
 
 /* protected methods */
 void salut_self_established (SalutSelf *self);

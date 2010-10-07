@@ -247,6 +247,8 @@ salut_self_set_property (GObject *object,
     }
 }
 
+static void salut_self_update_caps (SalutSelf *self);
+
 static GObject *
 salut_self_constructor (GType type,
                         guint n_props,
@@ -304,6 +306,8 @@ salut_self_constructor (GType type,
 #endif
 
   priv->caps = gabble_capability_set_new ();
+  priv->per_channel_manager_caps = g_hash_table_new (NULL, NULL);
+  salut_self_update_caps (self);
 
   return obj;
 }
@@ -1043,10 +1047,6 @@ salut_self_update_caps (SalutSelf *self)
 const GabbleCapabilitySet *
 salut_self_get_caps (SalutSelf *self)
 {
-  /* Because the rest of Salut currently pokes per_channel_manager_caps
-   * directly, this is about the best we can do right now. */
-  salut_self_update_caps (self);
-
   return self->priv->caps;
 }
 
@@ -1057,19 +1057,12 @@ salut_self_get_per_channel_manager_caps (SalutSelf *self)
 }
 
 GHashTable *
-salut_self_ensure_per_channel_manager_caps (SalutSelf *self)
-{
-  if (self->priv->per_channel_manager_caps == NULL)
-    self->priv->per_channel_manager_caps = g_hash_table_new (NULL, NULL);
-
-  return self->priv->per_channel_manager_caps;
-}
-
-GHashTable *
-salut_self_steal_per_channel_manager_caps (SalutSelf *self)
+salut_self_swap_per_channel_manager_caps (SalutSelf *self,
+    GHashTable *new_caps)
 {
   GHashTable *ret = self->priv->per_channel_manager_caps;
 
-  self->priv->per_channel_manager_caps = NULL;
+  self->priv->per_channel_manager_caps = new_caps;
+  salut_self_update_caps (self);
   return ret;
 }

@@ -2033,11 +2033,7 @@ salut_connection_set_self_capabilities (
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  /* reset the caps, and fill with the given parameter but keep a backup for
-   * diffing: we don't want to emit a signal if nothing has changed */
-  save_caps = salut_self_steal_per_channel_manager_caps (priv->self);
-  per_channel_manager_caps =
-    salut_self_ensure_per_channel_manager_caps (priv->self);
+  per_channel_manager_caps = g_hash_table_new (NULL, NULL);
 
   for (i = 0; i < caps->len; i++)
     {
@@ -2056,6 +2052,9 @@ salut_connection_set_self_capabilities (
               cap_to_add, per_channel_manager_caps);
         }
     }
+
+  save_caps = salut_self_swap_per_channel_manager_caps (priv->self,
+      per_channel_manager_caps);
 
   /* XEP-0115 version 1.5 uses a verification string in the 'ver' attribute */
   if (!announce_self_caps (self, &error))
