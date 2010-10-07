@@ -378,6 +378,12 @@ salut_presence_cache_change_caps (SalutPresenceCache *self,
 {
   GHashTable *save_enhanced_caps;
 
+  if (gabble_capability_set_equals (caps, contact->caps))
+    {
+      DEBUG ("capabilities of %s did not actually change", contact->name);
+      return;
+    }
+
   save_enhanced_caps = salut_presence_cache_copy_cache_entry (
       contact->per_channel_manager_caps);
 
