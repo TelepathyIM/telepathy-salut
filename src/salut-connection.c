@@ -2021,9 +2021,8 @@ connection_capabilities_update_cb (SalutPresenceCache *cache,
 
   g_assert (SALUT_IS_CONNECTION (user_data));
 
-  if (old_enhanced_caps != NULL || new_enhanced_caps != NULL)
-    _emit_contact_capabilities_changed (conn, handle,
-        old_enhanced_caps, new_enhanced_caps);
+  _emit_contact_capabilities_changed (conn, handle, old_enhanced_caps,
+      new_enhanced_caps);
 }
 
 /**
