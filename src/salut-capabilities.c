@@ -27,6 +27,17 @@
 
 #include "salut-caps-channel-manager.h"
 
+typedef struct _Feature Feature;
+
+struct _Feature
+{
+  enum {
+    FEATURE_FIXED,
+    FEATURE_OPTIONAL,
+  } feature_type;
+  gchar *ns;
+};
+
 static const Feature self_advertised_features[] =
 {
   { FEATURE_FIXED, GIBBER_XMPP_NS_SI},
@@ -37,33 +48,6 @@ static const Feature self_advertised_features[] =
 
   { 0, NULL}
 };
-
-GSList *
-capabilities_get_features (GHashTable *per_channel_manager_caps)
-{
-  GHashTableIter channel_manager_iter;
-  GSList *features = NULL;
-  const Feature *i;
-
-  for (i = self_advertised_features; NULL != i->ns; i++)
-    features = g_slist_prepend (features, (gpointer) i);
-
-  if (per_channel_manager_caps != NULL)
-    {
-      gpointer manager;
-      gpointer cap;
-
-      g_hash_table_iter_init (&channel_manager_iter, per_channel_manager_caps);
-      while (g_hash_table_iter_next (&channel_manager_iter,
-            &manager, &cap))
-        {
-          salut_caps_channel_manager_get_feature_list (manager, cap,
-              &features);
-        }
-    }
-
-  return features;
-}
 
 GabbleCapabilitySet *
 salut_dup_self_advertised_caps (void)

@@ -24,25 +24,6 @@
 #include <glib-object.h>
 #include "capabilities-set.h"
 
-typedef struct _Feature Feature;
-
-struct _Feature
-{
-  enum {
-    FEATURE_FIXED,
-    FEATURE_OPTIONAL,
-  } feature_type;
-  gchar *ns;
-};
-
-/*
- * capabilities_get_features
- *
- * Return a linked list of const Feature structs corresponding to the given
- * caps.
- */
-GSList *capabilities_get_features (GHashTable *per_channel_manager_caps);
-
 GabbleCapabilitySet *salut_dup_self_advertised_caps (void);
 
 #endif  /* __SALUT_CAPABILITIES__H__ */

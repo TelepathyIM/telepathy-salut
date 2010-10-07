@@ -53,15 +53,6 @@ typedef struct _SalutCapsChannelManagerIface SalutCapsChannelManagerIface;
 
 /* virtual methods */
 
-typedef void (*SalutCapsChannelManagerAddCapFunc) (
-    SalutCapsChannelManager *manager, SalutConnection *conn,
-    GHashTable *cap, GHashTable *per_channel_manager_caps);
-
-/* Specific to Salut */
-typedef void (*SalutCapsChannelManagerGetFeatureListFunc) (
-    SalutCapsChannelManager *manager, gpointer specific_caps,
-    GSList **features);
-
 typedef gpointer (*SalutCapsChannelManagerParseCapsFunc) (
     SalutCapsChannelManager *manager, GibberXmppNode *children);
 
@@ -76,19 +67,6 @@ typedef void (*SalutCapsChannelManagerUpdateCapsFunc) (
     SalutCapsChannelManager *manager, gpointer *specific_caps_out,
     gpointer specific_caps_in);
 
-typedef gboolean (*SalutCapsChannelManagerCapsDiffFunc) (
-    SalutCapsChannelManager *manager, TpHandle handle,
-    gpointer specific_old_caps, gpointer specific_new_caps);
-
-
-void salut_caps_channel_manager_get_contact_capabilities (
-    SalutCapsChannelManager *manager, SalutConnection *conn, TpHandle handle,
-    GPtrArray *arr);
-
-void salut_caps_channel_manager_get_feature_list (
-    SalutCapsChannelManager *manager, gpointer specific_caps,
-    GSList **features);
-
 gpointer salut_caps_channel_manager_parse_capabilities (
     SalutCapsChannelManager *manager, GibberXmppNode *children);
 
@@ -102,26 +80,13 @@ void salut_caps_channel_manager_update_capabilities (
     SalutCapsChannelManager *manager, gpointer specific_caps_out,
     gpointer specific_caps_in);
 
-gboolean salut_caps_channel_manager_capabilities_diff (
-    SalutCapsChannelManager *manager, TpHandle handle,
-    gpointer specific_old_caps, gpointer specific_new_caps);
-
-void salut_caps_channel_manager_add_capability (
-    SalutCapsChannelManager *manager, SalutConnection *conn,
-    GHashTable *cap, GHashTable *per_channel_manager_caps);
-
-
 struct _SalutCapsChannelManagerIface {
     GTypeInterface parent;
 
-    SalutCapsChannelManagerAddCapFunc add_cap;
-
-    SalutCapsChannelManagerGetFeatureListFunc get_feature_list;
     SalutCapsChannelManagerParseCapsFunc parse_caps;
     SalutCapsChannelManagerFreeCapsFunc free_caps;
     SalutCapsChannelManagerCopyCapsFunc copy_caps;
     SalutCapsChannelManagerUpdateCapsFunc update_caps;
-    SalutCapsChannelManagerCapsDiffFunc caps_diff;
 
     gpointer priv;
 };

@@ -57,22 +57,6 @@ salut_caps_channel_manager_get_type (void)
 
 /* Virtual-method wrappers */
 
-void salut_caps_channel_manager_get_feature_list (
-    SalutCapsChannelManager *caps_manager,
-    gpointer specific_caps,
-    GSList **features)
-{
-  SalutCapsChannelManagerIface *iface =
-    SALUT_CAPS_CHANNEL_MANAGER_GET_INTERFACE (caps_manager);
-  SalutCapsChannelManagerGetFeatureListFunc method = iface->get_feature_list;
-
-  if (method != NULL)
-    {
-      method (caps_manager, specific_caps, features);
-    }
-  /* ... else nothing to do */
-}
-
 gpointer salut_caps_channel_manager_parse_capabilities (
     SalutCapsChannelManager *caps_manager,
     GibberXmppNode *child)
@@ -134,41 +118,3 @@ void salut_caps_channel_manager_update_capabilities (
   g_assert (method != NULL);
   method (caps_manager, specific_caps_out, specific_caps_in);
 }
-
-gboolean salut_caps_channel_manager_capabilities_diff (
-    SalutCapsChannelManager *caps_manager,
-    TpHandle handle,
-    gpointer specific_old_caps,
-    gpointer specific_new_caps)
-{
-  SalutCapsChannelManagerIface *iface =
-    SALUT_CAPS_CHANNEL_MANAGER_GET_INTERFACE (caps_manager);
-  SalutCapsChannelManagerCapsDiffFunc method = iface->caps_diff;
-
-  if (method != NULL)
-    {
-      return method (caps_manager, handle, specific_old_caps,
-          specific_new_caps);
-    }
-  /* ... else, nothing to do */
-  return FALSE;
-}
-
-void
-salut_caps_channel_manager_add_capability (
-    SalutCapsChannelManager *caps_manager,
-    SalutConnection *conn,
-    GHashTable *cap,
-    GHashTable *per_channel_manager_caps)
-{
-  SalutCapsChannelManagerIface *iface =
-    SALUT_CAPS_CHANNEL_MANAGER_GET_INTERFACE (caps_manager);
-  SalutCapsChannelManagerAddCapFunc method = iface->add_cap;
-
-  if (method != NULL)
-    {
-      method (caps_manager, conn, cap, per_channel_manager_caps);
-    }
-  /* ... else, nothing to do */
-}
-
