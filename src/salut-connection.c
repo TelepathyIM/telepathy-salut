@@ -43,6 +43,7 @@
 #include <gibber/gibber-namespaces.h>
 
 #include "capabilities.h"
+#include "caps-channel-manager.h"
 #include "salut-avahi-discovery-client.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
@@ -1328,16 +1329,36 @@ salut_connection_get_handle_contact_capabilities (SalutConnection *self,
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self);
   TpChannelManagerIter iter;
   TpChannelManager *manager;
+  const GabbleCapabilitySet *set;
+  SalutContact *contact = NULL;
+
+  if (handle == base_conn->self_handle)
+    {
+      set = salut_self_get_caps (self->priv->self);
+    }
+  else
+    {
+      contact = salut_contact_manager_get_contact (
+          self->priv->contact_manager, handle);
+
+      if (contact == NULL)
+        return;
+
+      set = contact->caps;
+    }
 
   tp_base_connection_channel_manager_iter_init (&iter, base_conn);
+
   while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
     {
       /* all channel managers must implement the capability interface */
-      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
+      g_assert (GABBLE_IS_CAPS_CHANNEL_MANAGER (manager));
 
-      salut_caps_channel_manager_get_contact_capabilities (
-          SALUT_CAPS_CHANNEL_MANAGER (manager), self, handle, arr);
+      gabble_caps_channel_manager_get_contact_capabilities (
+          GABBLE_CAPS_CHANNEL_MANAGER (manager), handle, set, arr);
     }
+
+  tp_clear_object (&contact);
 }
 
 static void
