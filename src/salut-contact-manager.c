@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "caps-channel-manager.h"
-#include "salut-caps-channel-manager.h"
 #include "salut-connection.h"
 #include "salut-contact-channel.h"
 #include "salut-contact-manager.h"
@@ -54,7 +53,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
     G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       salut_contact_manager_manager_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER, NULL);
     G_IMPLEMENT_INTERFACE (GABBLE_TYPE_CAPS_CHANNEL_MANAGER, NULL))
 
 enum

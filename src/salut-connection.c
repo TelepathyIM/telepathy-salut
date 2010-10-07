@@ -46,7 +46,6 @@
 #include "caps-channel-manager.h"
 #include "salut-avahi-discovery-client.h"
 #include "salut-capabilities.h"
-#include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
 #include "salut-contact-channel.h"
 #include "salut-contact.h"

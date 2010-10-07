@@ -25,8 +25,6 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-manager.h>
 
-#include "salut-caps-channel-manager.h"
-
 typedef struct _Feature Feature;
 
 struct _Feature

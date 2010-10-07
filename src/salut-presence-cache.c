@@ -33,7 +33,6 @@
 
 #include "capabilities.h"
 #include "debug.h"
-#include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
 #include "salut-disco.h"
 #include "salut-signals-marshal.h"

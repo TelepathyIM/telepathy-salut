@@ -24,8 +24,6 @@ CORE_SOURCES =                                          \
     namespaces.h \
     salut-capabilities.c                                \
     salut-capabilities.h                                \
-    salut-caps-channel-manager.c                        \
-    salut-caps-channel-manager.h                        \
     salut-caps-hash.c                                   \
     salut-caps-hash.h                                   \
     salut-connection-manager.c                          \

@@ -30,7 +30,6 @@
 #include <gibber/gibber-xmpp-error.h>
 
 #include "caps-channel-manager.h"
-#include "salut-caps-channel-manager.h"
 #include "salut-roomlist-channel.h"
 #include "salut-contact-manager.h"
 #include "salut-muc-manager.h"
@@ -54,8 +53,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutRoomlistManager, salut_roomlist_manager,
                         G_TYPE_OBJECT,
                         G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
                                         salut_roomlist_manager_iface_init);
-                        G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
-                          NULL);
                         G_IMPLEMENT_INTERFACE (
                           GABBLE_TYPE_CAPS_CHANNEL_MANAGER, NULL))
 

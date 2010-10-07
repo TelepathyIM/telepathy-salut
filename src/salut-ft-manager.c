@@ -32,7 +32,6 @@
 
 #include "caps-channel-manager.h"
 #include "salut-file-transfer-channel.h"
-#include "salut-caps-channel-manager.h"
 #include "salut-contact-manager.h"
 #include "salut-presence-cache.h"
 
@@ -46,7 +45,6 @@
 
 static void
 channel_manager_iface_init (gpointer, gpointer);
-static void caps_channel_manager_iface_init (gpointer, gpointer);
 static void gabble_caps_channel_manager_iface_init (
     GabbleCapsChannelManagerIface *);
 
@@ -62,8 +60,6 @@ typedef enum
 G_DEFINE_TYPE_WITH_CODE (SalutFtManager, salut_ft_manager, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       channel_manager_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
-      caps_channel_manager_iface_init);
     G_IMPLEMENT_INTERFACE (GABBLE_TYPE_CAPS_CHANNEL_MANAGER,
       gabble_caps_channel_manager_iface_init))
 
@@ -570,71 +566,6 @@ add_file_transfer_channel_class (GPtrArray *arr)
   g_hash_table_destroy (fixed_properties);
 
   g_ptr_array_add (arr, g_value_get_boxed (&monster));
-}
-
-static gboolean
-_parse_caps_item (GibberXmppNode *node,
-                  gpointer user_data)
-{
-  const gchar *var;
-  gboolean *support_ft = (gboolean *) user_data;
-
-  if (tp_strdiff (node->name, "feature"))
-    return TRUE;
-
-  var = gibber_xmpp_node_get_attribute (node, "var");
-  if (var == NULL)
-    return TRUE;
-
-  if (!tp_strdiff (var, GIBBER_XMPP_NS_IQ_OOB) ||
-      !tp_strdiff (var, GIBBER_XMPP_NS_X_OOB))
-    {
-      DEBUG ("found FileTransfer capability");
-      *support_ft = TRUE;
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-static gpointer
-salut_ft_manager_parse_caps (SalutCapsChannelManager *manager,
-                             GibberXmppNode *node)
-{
-  gboolean support_ft = FALSE;
-  FtCapaStatus caps;
-
-  if (node == NULL)
-    /* If we don't receive any capabilities info we assumed FT is supported
-     * to ensure interoperability with other clients */
-    return GUINT_TO_POINTER (FT_CAPA_SUPPORTED);
-
-  gibber_xmpp_node_each_child (node, _parse_caps_item, &support_ft);
-
-  if (support_ft)
-    caps = FT_CAPA_SUPPORTED;
-  else
-    caps = FT_CAPA_UNSUPPORTED;
-
-  return GUINT_TO_POINTER (caps);
-}
-
-static void
-salut_ft_manager_copy_caps (SalutCapsChannelManager *manager,
-                            gpointer *specific_caps_out,
-                            gpointer specific_caps_in)
-{
-  *specific_caps_out = specific_caps_in;
-}
-
-static void
-caps_channel_manager_iface_init (gpointer g_iface,
-                                 gpointer iface_data)
-{
-  SalutCapsChannelManagerIface *iface = g_iface;
-
-  iface->parse_caps = salut_ft_manager_parse_caps;
-  iface->copy_caps = salut_ft_manager_copy_caps;
 }
 
 static void
