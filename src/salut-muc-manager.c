@@ -29,6 +29,7 @@
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
+#include "caps-channel-manager.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
@@ -68,7 +69,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       salut_muc_manager_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_CAPS_CHANNEL_MANAGER,
-      NULL));
+      NULL);
+    G_IMPLEMENT_INTERFACE (GABBLE_TYPE_CAPS_CHANNEL_MANAGER, NULL))
 
 /* properties */
 enum {
