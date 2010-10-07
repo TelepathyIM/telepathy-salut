@@ -1963,42 +1963,8 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
                                     GHashTable *old_caps,
                                     GHashTable *new_caps)
 {
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
-  TpChannelManagerIter iter;
-  TpChannelManager *manager;
-  GPtrArray *ret;
-  gboolean diff = FALSE;
-  GHashTable *caps;
-
-  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
-  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
-    {
-      gpointer per_channel_manager_caps_old = NULL;
-      gpointer per_channel_manager_caps_new = NULL;
-
-      /* all channel managers must implement the capability interface */
-      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
-
-      if (old_caps != NULL)
-        per_channel_manager_caps_old = g_hash_table_lookup (old_caps, manager);
-      if (new_caps != NULL)
-        per_channel_manager_caps_new = g_hash_table_lookup (new_caps, manager);
-
-      if (salut_caps_channel_manager_capabilities_diff (
-            SALUT_CAPS_CHANNEL_MANAGER (manager), handle,
-            per_channel_manager_caps_old, per_channel_manager_caps_new))
-        {
-          diff = TRUE;
-          break;
-        }
-    }
-
-  /* Don't emit the D-Bus signal if there is no change */
-  if (! diff)
-    return;
-
-  caps = g_hash_table_new (g_direct_hash, g_direct_equal);
-  ret = g_ptr_array_new ();
+  GPtrArray *ret = g_ptr_array_new ();
+  GHashTable *caps = g_hash_table_new (g_direct_hash, g_direct_equal);
 
   salut_connection_get_handle_contact_capabilities (conn, handle, ret);
   g_hash_table_insert (caps, GUINT_TO_POINTER (handle), ret);
