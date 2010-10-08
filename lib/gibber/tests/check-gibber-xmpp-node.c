@@ -11,12 +11,7 @@
 START_TEST (test_instantiation)
 {
   GibberXmppNode *node;
-  node = gibber_xmpp_node_new ("test");
-  fail_unless (node != NULL);
-
-  gibber_xmpp_node_free (node);
-
-  node = gibber_xmpp_node_new (NULL);
+  node = gibber_xmpp_node_new_ns ("test", "http://example.com/badgers/");
   fail_unless (node != NULL);
 
   gibber_xmpp_node_free (node);
@@ -28,13 +23,7 @@ START_TEST (test_language)
   GibberXmppNode *node;
   const gchar *lang;
 
-  /* Unit test are not examples of how to use an API! Don't rely on the
-   * following in your applications! (or better yet, don't give invalid input)
-   * */
-  fail_unless_critical (lang = gibber_xmpp_node_get_language (NULL));
-  fail_unless (lang == NULL);
-
-  node = gibber_xmpp_node_new ("test");
+  node = gibber_xmpp_node_new_ns ("test", "http://example.com/badgers/");
   lang = gibber_xmpp_node_get_language (node);
   fail_unless (lang == NULL);
 
@@ -63,19 +52,9 @@ START_TEST (test_namespace)
   GibberXmppNode *node;
   const gchar *ns;
 
-  node = gibber_xmpp_node_new ("test");
-  ns = gibber_xmpp_node_get_ns (node);
-  fail_unless (ns == NULL);
-  gibber_xmpp_node_free (node);
-
   node = gibber_xmpp_node_new_ns ("test", "foo");
   ns = gibber_xmpp_node_get_ns (node);
   fail_unless (strcmp (ns, "foo") == 0);
-  gibber_xmpp_node_free (node);
-
-  node = gibber_xmpp_node_new_ns ("test", NULL);
-  ns = gibber_xmpp_node_get_ns (node);
-  fail_unless (ns == NULL);
   gibber_xmpp_node_free (node);
 }
 END_TEST
@@ -86,7 +65,7 @@ START_TEST (test_attribute)
   GibberXmppNode *node;
   const gchar *attribute;
 
-  node = gibber_xmpp_node_new ("test");
+  node = gibber_xmpp_node_new_ns ("test", "about:blank");
 
   attribute = gibber_xmpp_node_get_attribute (node, "foo");
   fail_unless (attribute == NULL);
@@ -124,7 +103,7 @@ START_TEST (test_child)
 {
   GibberXmppNode *node, *child;
 
-  node = gibber_xmpp_node_new ("test");
+  node = gibber_xmpp_node_new_ns ("test", "about:blank");
 
   child = gibber_xmpp_node_get_child (node, "foo");
   fail_unless (child == NULL);
