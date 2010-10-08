@@ -4,6 +4,7 @@
 
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-transport.h>
+#include <wocky/wocky.h>
 #include "test-transport.h"
 
 #define BUFSIZE 10
@@ -103,6 +104,7 @@ main (int argc, char **argv)
 
 
   g_type_init ();
+  wocky_init ();
 
   transport = test_transport_new (send_hook, NULL);
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT(transport));
@@ -153,5 +155,6 @@ main (int argc, char **argv)
   g_assert (parsing_failed || ret == 0);
   fclose (file);
 
+  wocky_deinit ();
   return parsing_failed ? 1 : 0;
 }

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <glib-object.h>
 
+#include <wocky/wocky.h>
+
 #include <check.h>
 
 #include "check-gibber.h"
@@ -40,6 +42,7 @@ main (void)
 
     check_helpers_init ();
     g_type_init ();
+    wocky_init ();
 
     s = make_gibber_suite ();
     sr = srunner_create (s);
@@ -47,5 +50,6 @@ main (void)
     number_failed += srunner_ntests_failed (sr);
     srunner_free (sr);
 
+    wocky_deinit ();
     return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
