@@ -80,7 +80,8 @@ check_main_CFLAGS = \
 
 endif
 
-AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @DBUS_CFLAGS@ \
+AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @WOCKY_CFLAGS@ \
+    @DBUS_CFLAGS@ \
     -I $(top_srcdir) -I $(top_builddir) \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib
 
