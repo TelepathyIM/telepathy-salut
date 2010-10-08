@@ -64,18 +64,18 @@ START_TEST (test_namespace)
   const gchar *ns;
 
   node = gibber_xmpp_node_new ("test");
-
   ns = gibber_xmpp_node_get_ns (node);
   fail_unless (ns == NULL);
+  gibber_xmpp_node_free (node);
 
-  gibber_xmpp_node_set_ns (node, "foo");
+  node = gibber_xmpp_node_new_ns ("test", "foo");
   ns = gibber_xmpp_node_get_ns (node);
   fail_unless (strcmp (ns, "foo") == 0);
+  gibber_xmpp_node_free (node);
 
-  gibber_xmpp_node_set_ns (node, NULL);
+  node = gibber_xmpp_node_new_ns ("test", NULL);
   ns = gibber_xmpp_node_get_ns (node);
   fail_unless (ns == NULL);
-
   gibber_xmpp_node_free (node);
 }
 END_TEST
