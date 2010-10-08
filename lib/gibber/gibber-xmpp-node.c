@@ -251,10 +251,9 @@ GibberXmppNode *
 gibber_xmpp_node_add_child_with_content_ns (GibberXmppNode *node,
     const gchar *name, const gchar *content, const gchar *ns)
 {
-  GibberXmppNode *result = gibber_xmpp_node_new (name);
+  GibberXmppNode *result = gibber_xmpp_node_new_ns (name, ns);
 
   gibber_xmpp_node_set_content (result, content);
-  gibber_xmpp_node_set_ns (result, ns);
 
   node->children = g_slist_append (node->children, result);
   return result;

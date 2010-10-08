@@ -28,6 +28,8 @@
 #define DEBUG_FLAG DEBUG_XMPP
 #include <gibber/gibber-debug.h>
 
+#include <wocky/wocky-namespaces.h>
+
 #include <check.h>
 #include "check-gibber.h"
 
@@ -127,7 +129,7 @@ START_TEST (test_get_type_info_with_unknown_type)
   GibberXmppStanza *stanza;
   GibberStanzaType type;
 
-  stanza = gibber_xmpp_stanza_new ("goat");
+  stanza = gibber_xmpp_stanza_new_ns ("goat", WOCKY_XMPP_NS_JABBER_CLIENT);
   fail_if (stanza == NULL);
 
   gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
@@ -141,7 +143,7 @@ START_TEST (test_get_type_info_with_unknown_sub_type)
   GibberXmppStanza *stanza;
   GibberStanzaSubType sub_type;
 
-  stanza = gibber_xmpp_stanza_new ("iq");
+  stanza = gibber_xmpp_stanza_new_ns ("iq", WOCKY_XMPP_NS_JABBER_CLIENT);
   fail_if (stanza == NULL);
   gibber_xmpp_node_set_attribute (stanza->node, "type", "goat");
 

@@ -289,15 +289,16 @@ _start_element_ns (void *user_data, const xmlChar *localname,
 
   if (priv->stanza == NULL)
     {
-      priv->stanza = gibber_xmpp_stanza_new ((gchar *) localname);
+      priv->stanza = gibber_xmpp_stanza_new_ns ((gchar *) localname,
+          (gchar *) uri);
       priv->node = priv->stanza->node;
     }
   else
     {
       g_queue_push_tail (priv->nodes, priv->node);
-      priv->node = gibber_xmpp_node_add_child (priv->node, (gchar *) localname);
+      priv->node = gibber_xmpp_node_add_child_ns (priv->node,
+          (gchar *) localname, (gchar *) uri);
     }
-  gibber_xmpp_node_set_ns (priv->node, (gchar *) uri);
 
   for (i = 0; i < nb_attributes * 5; i+=5)
     {

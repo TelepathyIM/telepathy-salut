@@ -35,6 +35,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/message-mixin.h>
+#include <wocky/wocky-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -73,7 +74,7 @@ create_message_stanza (const gchar *from,
 
       return NULL;
     }
-  stanza = gibber_xmpp_stanza_new ("message");
+  stanza = gibber_xmpp_stanza_new_ns ("message", WOCKY_XMPP_NS_JABBER_CLIENT);
 
   gibber_xmpp_node_set_attribute (stanza->node, "from", from);
   gibber_xmpp_node_set_attribute (stanza->node, "to", to);

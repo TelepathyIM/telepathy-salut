@@ -721,8 +721,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
     {
       GibberXmppStanza *stanza;
       /* Send empty stream features */
-      stanza = gibber_xmpp_stanza_new ("features");
-      gibber_xmpp_node_set_ns (stanza->node, GIBBER_XMPP_NS_STREAM);
+      stanza = gibber_xmpp_stanza_new_ns ("features", GIBBER_XMPP_NS_STREAM);
       gibber_xmpp_connection_send (conn, stanza, NULL);
       g_object_unref (stanza);
     }

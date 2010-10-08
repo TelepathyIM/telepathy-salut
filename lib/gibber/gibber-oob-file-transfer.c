@@ -360,14 +360,12 @@ http_client_finished_chunks_cb (SoupSession *session,
       return;
     }
 
-  stanza = gibber_xmpp_stanza_new ("iq");
-  gibber_xmpp_node_set_attribute (stanza->node, "type", "result");
-  gibber_xmpp_node_set_attribute (stanza->node, "from",
-      GIBBER_FILE_TRANSFER (self)->self_id);
-  gibber_xmpp_node_set_attribute (stanza->node, "to",
-      GIBBER_FILE_TRANSFER (self)->peer_id);
-  gibber_xmpp_node_set_attribute (stanza->node, "id",
-      GIBBER_FILE_TRANSFER (self)->id);
+  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+      GIBBER_STANZA_SUB_TYPE_RESULT,
+      GIBBER_FILE_TRANSFER (self)->self_id,
+      GIBBER_FILE_TRANSFER (self)->peer_id,
+      GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
+      GIBBER_STANZA_END);
 
   if (!gibber_file_transfer_send_stanza (GIBBER_FILE_TRANSFER (self), stanza,
         &error))
@@ -473,14 +471,12 @@ create_transfer_offer (GibberOobFileTransfer *self,
   served_name = g_strdup_printf ("/%s/%s", GIBBER_FILE_TRANSFER (self)->id,
       GIBBER_FILE_TRANSFER (self)->filename);
 
-  stanza = gibber_xmpp_stanza_new ("iq");
-  gibber_xmpp_node_set_attribute (stanza->node, "type", "set");
-  gibber_xmpp_node_set_attribute (stanza->node, "id",
-      GIBBER_FILE_TRANSFER (self)->id);
-  gibber_xmpp_node_set_attribute (stanza->node, "from",
-      GIBBER_FILE_TRANSFER (self)->self_id);
-  gibber_xmpp_node_set_attribute (stanza->node, "to",
-      GIBBER_FILE_TRANSFER (self)->peer_id);
+  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+      GIBBER_STANZA_SUB_TYPE_SET,
+      GIBBER_FILE_TRANSFER (self)->self_id,
+      GIBBER_FILE_TRANSFER (self)->peer_id,
+      GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
+      GIBBER_STANZA_END);
 
   query_node = gibber_xmpp_node_add_child_ns (stanza->node, "query",
       GIBBER_XMPP_NS_IQ_OOB);
@@ -791,11 +787,12 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
      * sender cancelled the transfer. */
     return;
 
-  stanza = gibber_xmpp_stanza_new ("iq");
-  gibber_xmpp_node_set_attribute (stanza->node, "type", "error");
-  gibber_xmpp_node_set_attribute (stanza->node, "from", ft->self_id);
-  gibber_xmpp_node_set_attribute (stanza->node, "to", ft->peer_id);
-  gibber_xmpp_node_set_attribute (stanza->node, "id", ft->id);
+  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+      GIBBER_STANZA_SUB_TYPE_ERROR,
+      GIBBER_FILE_TRANSFER (self)->self_id,
+      GIBBER_FILE_TRANSFER (self)->peer_id,
+      GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
+      GIBBER_STANZA_END);
 
   query = gibber_xmpp_node_add_child_ns (stanza->node, "query",
       GIBBER_XMPP_NS_IQ_OOB);

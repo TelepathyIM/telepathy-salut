@@ -194,7 +194,8 @@ START_TEST (test_add_children_from_properties)
   GSList *l;
 
   properties = create_sample_properties ();
-  stanza = gibber_xmpp_stanza_new ("properties");
+  stanza = gibber_xmpp_stanza_new_ns ("properties",
+      "http://example.com/stoats");
 
   salut_gibber_xmpp_node_add_children_from_properties (stanza->node,
       properties, "prop");

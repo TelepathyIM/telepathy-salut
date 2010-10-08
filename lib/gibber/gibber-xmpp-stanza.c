@@ -321,8 +321,8 @@ gibber_xmpp_stanza_new_with_sub_type (GibberStanzaType type,
   if (!check_sub_type (type, sub_type))
     return NULL;
 
-  stanza = gibber_xmpp_stanza_new (get_type_name (type));
-  gibber_xmpp_node_set_ns (stanza->node, get_type_ns (type));
+  stanza = gibber_xmpp_stanza_new_ns (get_type_name (type),
+      get_type_ns (type));
 
   sub_type_name = get_sub_type_name (sub_type);
   if (sub_type_name != NULL)
