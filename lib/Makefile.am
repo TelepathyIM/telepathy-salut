@@ -1,1 +1,1 @@
-SUBDIRS=gibber
+SUBDIRS=ext gibber
