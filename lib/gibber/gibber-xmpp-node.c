@@ -44,6 +44,17 @@ gibber_xmpp_node_new (const char *name)
   return result;
 }
 
+GibberXmppNode *
+gibber_xmpp_node_new_ns (const char *name,
+    const char *ns)
+{
+  GibberXmppNode *result = gibber_xmpp_node_new (name);
+
+  gibber_xmpp_node_set_ns (result, ns);
+
+  return result;
+}
+
 /* Frees the node and all it's children */
 void
 gibber_xmpp_node_free (GibberXmppNode *node)

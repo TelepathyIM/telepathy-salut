@@ -116,6 +116,7 @@ gchar *gibber_xmpp_node_to_string (GibberXmppNode *node);
 
 /* Create a new standalone node, usually only used by the stanza object */
 GibberXmppNode *gibber_xmpp_node_new (const char *name);
+GibberXmppNode *gibber_xmpp_node_new_ns (const char *name, const gchar *ns);
 
 /* Frees the node and all it's children! */
 void gibber_xmpp_node_free (GibberXmppNode *node);
