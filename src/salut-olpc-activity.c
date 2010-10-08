@@ -279,6 +279,7 @@ send_properties_change_msg (SalutOlpcActivity *self,
   GHashTable *properties;
   GValue *activity_id_val;
   GibberXmppStanza *stanza;
+  WockyNode *top_node;
   GibberXmppNode *properties_node;
   gchar *muc_name;
   GibberMucConnection *muc_connection;
@@ -316,8 +317,9 @@ send_properties_change_msg (SalutOlpcActivity *self,
       GIBBER_NODE, "properties",
         GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
       GIBBER_NODE_END, GIBBER_STANZA_END);
+  top_node = wocky_stanza_get_top_node (stanza);
 
-  properties_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
+  properties_node = gibber_xmpp_node_get_child_ns (top_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
 
   salut_gibber_xmpp_node_add_children_from_properties (properties_node,
@@ -689,6 +691,7 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
         priv->invited));
   SalutContactManager *contact_mgr;
   SalutXmppConnectionManager *xmpp_connection_manager;
+  WockyNode *top_node;
 
   if (tp_handle_set_size (priv->invited) <= 0)
     return;
@@ -702,6 +705,7 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
           self->room),
         GIBBER_NODE_ATTRIBUTE, "id", self->id,
       GIBBER_NODE_END, GIBBER_STANZA_END);
+  top_node = wocky_stanza_get_top_node (msg);
 
   g_object_get (self->connection,
       "contact-manager", &contact_mgr,
@@ -728,7 +732,7 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
         }
 
       to = tp_handle_inspect (contact_repo, contact_handle);
-      gibber_xmpp_node_set_attribute (msg->node, "to", to);
+      gibber_xmpp_node_set_attribute (top_node, "to", to);
 
       request_result = salut_xmpp_connection_manager_request_connection (
           xmpp_connection_manager, contact, &connection, NULL);

@@ -187,6 +187,7 @@ iq_tube_request_filter (SalutXmppConnectionManager *xcm,
                         SalutContact *contact,
                         gpointer user_data)
 {
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberStanzaType type;
   GibberStanzaSubType sub_type;
 
@@ -197,9 +198,9 @@ iq_tube_request_filter (SalutXmppConnectionManager *xcm,
   if (sub_type != GIBBER_STANZA_SUB_TYPE_SET)
     return FALSE;
 
-  return (gibber_xmpp_node_get_child_ns (stanza->node, "tube",
+  return (gibber_xmpp_node_get_child_ns (node, "tube",
         GIBBER_TELEPATHY_NS_TUBES) != NULL) ||
-         (gibber_xmpp_node_get_child_ns (stanza->node, "close",
+         (gibber_xmpp_node_get_child_ns (node, "close",
                  GIBBER_TELEPATHY_NS_TUBES) != NULL);
 }
 
@@ -221,12 +222,12 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
   GibberXmppNode *tube_node, *close_node, *node;
   gboolean _close;
 
-  iq = stanza->node;
+  iq = wocky_stanza_get_top_node (stanza);
 
   if (initiator_handle != NULL)
     {
       const gchar *from;
-      from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+      from = gibber_xmpp_node_get_attribute (iq, "from");
       if (from == NULL)
         {
           g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,

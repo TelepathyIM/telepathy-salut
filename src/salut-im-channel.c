@@ -959,7 +959,7 @@ salut_im_channel_is_text_message (GibberXmppStanza *stanza)
   if (type != GIBBER_STANZA_TYPE_MESSAGE)
     return FALSE;
 
-  if (gibber_xmpp_node_get_child_ns (stanza->node, "invite",
+  if (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "invite",
         GIBBER_TELEPATHY_NS_CLIQUE) != NULL)
     /* discard Clique MUC invite */
     return FALSE;

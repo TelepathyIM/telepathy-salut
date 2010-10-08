@@ -775,11 +775,12 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
                                                 gpointer userdata)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   const gchar *from;
 
   /* If the identity wasn't clear from the stream opening we only wait to the
    * very first message */
-  from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  from = gibber_xmpp_node_get_attribute (node, "from");
   if (incoming_pending_connection_got_from (self, conn, from))
     {
       /* We can filter the stanza now */

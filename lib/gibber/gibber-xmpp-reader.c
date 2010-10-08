@@ -291,7 +291,7 @@ _start_element_ns (void *user_data, const xmlChar *localname,
     {
       priv->stanza = gibber_xmpp_stanza_new_ns ((gchar *) localname,
           (gchar *) uri);
-      priv->node = priv->stanza->node;
+      priv->node = wocky_stanza_get_top_node (priv->stanza);
     }
   else
     {

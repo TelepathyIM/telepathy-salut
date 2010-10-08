@@ -316,6 +316,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
   GibberStanzaType type;
   GibberStanzaSubType sub_type;
   const gchar *stream_id, *url;
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
 
   gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
 
@@ -323,7 +324,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
       sub_type != GIBBER_STANZA_SUB_TYPE_SET)
     return FALSE;
 
-  query_node = gibber_xmpp_node_get_child_ns (stanza->node, "query",
+  query_node = gibber_xmpp_node_get_child_ns (node, "query",
       GIBBER_XMPP_NS_IQ_OOB);
   if (query_node == NULL)
     return FALSE;
@@ -339,7 +340,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
 
   priv->recipient = TRUE;
   priv->stream_open_id = g_strdup (gibber_xmpp_node_get_attribute (
-        stanza->node, "id"));
+        node, "id"));
 
   connect_to_url (self, url);
 
@@ -354,6 +355,7 @@ parse_oob_iq_result (GibberBytestreamOOB *self,
   GibberStanzaType type;
   GibberStanzaSubType sub_type;
   const gchar *id;
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
 
   if (priv->recipient)
     /* Only the sender have to wait for the IQ reply */
@@ -366,7 +368,7 @@ parse_oob_iq_result (GibberBytestreamOOB *self,
     return FALSE;
 
   /* FIXME: we should check if it's the right sender */
-  id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  id = gibber_xmpp_node_get_attribute (node, "id");
 
   if (id == NULL || strcmp (id, priv->stream_open_id) != 0)
     return FALSE;
@@ -382,10 +384,11 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
                                     gpointer user_data)
 {
   GibberBytestreamOOB *self = (GibberBytestreamOOB *) user_data;
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   const gchar *from;
 
   /* discard invalid stanza */
-  from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  from = gibber_xmpp_node_get_attribute (node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field");
@@ -751,6 +754,7 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (bytestream);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   GibberXmppStanza *stanza;
+  WockyNode *node;
   GibberXmppNode *si;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
@@ -761,7 +765,8 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
     }
 
   stanza = create_si_accept_iq (self);
-  si = gibber_xmpp_node_get_child_ns (stanza->node, "si", GIBBER_XMPP_NS_SI);
+  node = wocky_stanza_get_top_node (stanza);
+  si = gibber_xmpp_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
   if (func != NULL)
@@ -829,6 +834,7 @@ gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
  {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   GibberXmppStanza *stanza;
+  WockyNode *node;
 
   g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
@@ -837,14 +843,15 @@ gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
       priv->self_id, priv->peer_id,
       GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
       GIBBER_STANZA_END);
+  node = wocky_stanza_get_top_node (stanza);
 
   if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
     {
-      gibber_xmpp_error_to_node (error->code, stanza->node, error->message);
+      gibber_xmpp_error_to_node (error->code, node, error->message);
     }
   else
     {
-      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, stanza->node,
+      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, node,
           "Offer Declined");
     }
 
@@ -947,6 +954,7 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (bytestream);
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   GibberXmppStanza *stanza;
+  WockyNode *node;
   GError *error = NULL;
   const gchar *id;
   int port;
@@ -980,13 +988,14 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   stanza = make_oob_init_iq (priv->self_id, priv->peer_id,
       priv->stream_id, url);
   g_free (url);
+  node = wocky_stanza_get_top_node (stanza);
 
-  id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  id = gibber_xmpp_node_get_attribute (node, "id");
   if (id == NULL)
     {
       priv->stream_open_id = gibber_xmpp_connection_new_id (
           priv->xmpp_connection);
-      gibber_xmpp_node_set_attribute (stanza->node, "id",
+      gibber_xmpp_node_set_attribute (node, "id",
           priv->stream_open_id);
     }
   else

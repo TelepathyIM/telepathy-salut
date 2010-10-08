@@ -1202,9 +1202,10 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
   const gchar *from, *to, *body, *body_offset;
   TpChannelTextMessageType msgtype;
   TpHandle from_handle;
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberXmppNode *tubes_node;
 
-  to = gibber_xmpp_node_get_attribute (stanza->node, "to");
+  to = gibber_xmpp_node_get_attribute (node, "to");
   if (strcmp (to, priv->muc_name)) {
     DEBUG("Stanza to another muc group, discarding");
     return;
@@ -1225,7 +1226,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
     return;
 #endif
 
-  tubes_node = gibber_xmpp_node_get_child_ns (stanza->node, "tubes",
+  tubes_node = gibber_xmpp_node_get_child_ns (node, "tubes",
       GIBBER_TELEPATHY_NS_TUBES);
   if (tubes_node != NULL)
     {

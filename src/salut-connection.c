@@ -3215,6 +3215,7 @@ gboolean
 salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
     TpHandle room, TpHandle sender, GibberXmppStanza *stanza)
 {
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   SalutConnectionPrivate *priv = self->priv;
   GibberXmppNode *props_node;
   GHashTable *properties;
@@ -3223,7 +3224,7 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
   gboolean is_private = FALSE;
   SalutOlpcActivity *activity;
 
-  props_node = gibber_xmpp_node_get_child_ns (stanza->node, "properties",
+  props_node = gibber_xmpp_node_get_child_ns (node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
 
   if (props_node == NULL)
@@ -3258,7 +3259,9 @@ uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
   GibberXmppConnection *conn, GibberXmppStanza *stanza, SalutContact *contact,
   gpointer user_data)
 {
-  return (gibber_xmpp_node_get_child_ns (stanza->node, "uninvite",
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
+
+  return (wocky_node_get_child_ns (node, "uninvite",
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS) != NULL);
 }
 
@@ -3275,8 +3278,9 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
   TpHandle room_handle;
   const gchar *room, *activity_id;
   SalutOlpcActivity *activity;
+  WockyNode *top_node = wocky_stanza_get_top_node (stanza);
 
-  node = gibber_xmpp_node_get_child_ns (stanza->node, "uninvite",
+  node = wocky_node_get_child_ns (top_node, "uninvite",
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
   g_assert (node != NULL);
 

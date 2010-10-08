@@ -84,6 +84,7 @@ si_request_filter (SalutXmppConnectionManager *xcm,
                    SalutContact *contact,
                    gpointer user_data)
 {
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberStanzaType type;
   GibberStanzaSubType sub_type;
 
@@ -94,7 +95,7 @@ si_request_filter (SalutXmppConnectionManager *xcm,
   if (sub_type != GIBBER_STANZA_SUB_TYPE_SET)
     return FALSE;
 
-  return (gibber_xmpp_node_get_child_ns (stanza->node, "si",
+  return (gibber_xmpp_node_get_child_ns (node, "si",
         GIBBER_XMPP_NS_SI) != NULL);
 }
 
@@ -110,11 +111,11 @@ streaminit_parse_request (GibberXmppStanza *stanza,
   GibberXmppNode *iq, *si, *feature, *x;
   GSList *x_children, *field_children;
 
-  iq = stanza->node;
+  iq = wocky_stanza_get_top_node (stanza);
 
   *stream_init_id = gibber_xmpp_node_get_attribute (iq, "id");
 
-  *from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  *from = gibber_xmpp_node_get_attribute (iq, "from");
   if (*from == NULL)
     {
       DEBUG ("got a message without a from field");
@@ -304,6 +305,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
   TpHandle peer_handle;
   GibberBytestreamIface *bytestream = NULL;
+  WockyNode *top_node = wocky_stanza_get_top_node (stanza);
   GibberXmppNode *si, *node;
   const gchar *profile, *from, *stream_id, *stream_init_id, *mime_type;
   GSList *stream_methods = NULL;
@@ -324,7 +326,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       return;
     }
 
-  si = gibber_xmpp_node_get_child_ns (stanza->node, "si", GIBBER_XMPP_NS_SI);
+  si = gibber_xmpp_node_get_child_ns (top_node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
   DEBUG ("received a SI request");
@@ -685,6 +687,7 @@ si_request_reply_filter (SalutXmppConnectionManager *manager,
 {
   struct streaminit_reply_cb_data *data =
     (struct streaminit_reply_cb_data *) user_data;
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberStanzaType type;
   GibberStanzaSubType sub_type;
   const gchar *iq_id;
@@ -697,7 +700,7 @@ si_request_reply_filter (SalutXmppConnectionManager *manager,
       sub_type != GIBBER_STANZA_SUB_TYPE_ERROR)
     return FALSE;
 
-  iq_id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  iq_id = gibber_xmpp_node_get_attribute (node, "id");
   return (!tp_strdiff (iq_id, data->iq_id));
 }
 
@@ -755,6 +758,7 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
   GibberBytestreamIface *bytestream = NULL;
   const gchar *from, *stream_method, *stream_init_id;
   GSList *x_children;
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
 
   salut_xmpp_connection_manager_remove_stanza_filter (
       manager, connection, si_request_reply_filter, si_request_reply_cb, data);
@@ -769,16 +773,16 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
     }
 
   /* stream accepted */
-  stream_init_id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  stream_init_id = gibber_xmpp_node_get_attribute (node, "id");
 
-  from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  from = gibber_xmpp_node_get_attribute (node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field");
       goto END;
     }
 
-  si = gibber_xmpp_node_get_child_ns (stanza->node, "si",
+  si = gibber_xmpp_node_get_child_ns (node, "si",
       GIBBER_XMPP_NS_SI);
   if (si == NULL)
     {
@@ -900,9 +904,10 @@ send_si_request (SalutSiBytestreamManager *self,
 {
   SalutSiBytestreamManagerPrivate *priv =
     SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
+  WockyNode *node = wocky_stanza_get_top_node (data->stanza);
   const gchar *iq_id;
 
-  iq_id = gibber_xmpp_node_get_attribute (data->stanza->node, "id");
+  iq_id = gibber_xmpp_node_get_attribute (node, "id");
   if (iq_id != NULL)
     {
       data->iq_id = g_strdup (iq_id);
@@ -910,7 +915,7 @@ send_si_request (SalutSiBytestreamManager *self,
   else
     {
       data->iq_id = gibber_xmpp_connection_new_id (connection);
-      gibber_xmpp_node_set_attribute (data->stanza->node, "id", data->iq_id);
+      gibber_xmpp_node_set_attribute (node, "id", data->iq_id);
     }
 
   /* Register a filter to catch the response of the SI request */

@@ -85,7 +85,7 @@ START_TEST (test_simple_message)
 
   fail_unless (event->reader == reader);
 
-  node = event->stanza->node;
+  node = wocky_stanza_get_top_node (event->stanza);
   fail_if (node == NULL);
   fail_unless (strcmp (node->name, "message") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_language (node), "en") == 0);
@@ -101,7 +101,7 @@ START_TEST (test_simple_message)
 
   fail_unless (event->reader == reader);
 
-  node = event->stanza->node;
+  node = wocky_stanza_get_top_node (event->stanza);
   fail_unless (strcmp (node->name, "message") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_language (node), "en") == 0);
   fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "to"),

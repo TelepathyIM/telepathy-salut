@@ -150,7 +150,8 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
       return FALSE;
     }
 
-  query = gibber_xmpp_node_get_child (stanza->node, "query");
+  query = gibber_xmpp_node_get_child (wocky_stanza_get_top_node (stanza),
+      "query");
   if (query == NULL)
     return FALSE;
 
@@ -179,6 +180,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
     GibberXmppConnection *connection,
     const gchar *peer_id)
 {
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberOobFileTransfer *self;
   GibberXmppNode *query;
   GibberXmppNode *url_node;
@@ -193,22 +195,22 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   gchar *url;
   gchar *filename;
 
-  if (strcmp (stanza->node->name, "iq") != 0)
+  if (strcmp (node->name, "iq") != 0)
     return NULL;
 
-  self_id = gibber_xmpp_node_get_attribute (stanza->node, "to");
+  self_id = gibber_xmpp_node_get_attribute (node, "to");
   if (peer_id == NULL || self_id == NULL)
     return NULL;
 
-  type = gibber_xmpp_node_get_attribute (stanza->node, "type");
+  type = gibber_xmpp_node_get_attribute (node, "type");
   if (type == NULL || strcmp (type, "set") != 0)
     return NULL;
 
-  id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  id = gibber_xmpp_node_get_attribute (node, "id");
   if (id == NULL)
     return NULL;
 
-  query = gibber_xmpp_node_get_child (stanza->node, "query");
+  query = gibber_xmpp_node_get_child (node, "query");
   if (query == NULL)
     return NULL;
 
@@ -426,6 +428,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   gchar *host_escaped;
 
   GibberXmppStanza *stanza;
+  WockyNode *node;
   GibberXmppNode *query_node;
   GibberXmppNode *url_node;
   GibberXmppNode *desc_node;
@@ -477,8 +480,9 @@ create_transfer_offer (GibberOobFileTransfer *self,
       GIBBER_FILE_TRANSFER (self)->peer_id,
       GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
       GIBBER_STANZA_END);
+  node = wocky_stanza_get_top_node (stanza);
 
-  query_node = gibber_xmpp_node_add_child_ns (stanza->node, "query",
+  query_node = gibber_xmpp_node_add_child_ns (node, "query",
       GIBBER_XMPP_NS_IQ_OOB);
 
   url_node = gibber_xmpp_node_add_child_with_content (query_node, "url", url);
@@ -773,6 +777,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
   GibberXmppStanza *stanza;
+  WockyNode *node;
   GibberXmppNode *query;
   GibberXmppNode *error_node;
   GibberXmppNode *error_desc;
@@ -793,12 +798,13 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
       GIBBER_FILE_TRANSFER (self)->peer_id,
       GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
       GIBBER_STANZA_END);
+  node = wocky_stanza_get_top_node (stanza);
 
-  query = gibber_xmpp_node_add_child_ns (stanza->node, "query",
+  query = gibber_xmpp_node_add_child_ns (node, "query",
       GIBBER_XMPP_NS_IQ_OOB);
   gibber_xmpp_node_add_child_with_content (query, "url", self->priv->url);
 
-  error_node = gibber_xmpp_node_add_child (stanza->node, "error");
+  error_node = gibber_xmpp_node_add_child (node, "error");
   code_string = g_strdup_printf ("%d", error_code);
 
   switch (error_code)
@@ -831,13 +837,14 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
                                           GibberXmppStanza *stanza)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   const gchar *type;
   GibberXmppNode *error_node;
 
-  if (strcmp (stanza->node->name, "iq") != 0)
+  if (strcmp (node->name, "iq") != 0)
     return;
 
-  type = gibber_xmpp_node_get_attribute (stanza->node, "type");
+  type = gibber_xmpp_node_get_attribute (node, "type");
   if (type == NULL)
     return;
 
@@ -847,7 +854,7 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
       return;
     }
 
-  error_node = gibber_xmpp_node_get_child (stanza->node, "error");
+  error_node = gibber_xmpp_node_get_child (node, "error");
   if (error_node != NULL)
     {
       GError *error = NULL;

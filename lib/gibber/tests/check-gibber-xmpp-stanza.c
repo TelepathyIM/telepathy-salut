@@ -62,7 +62,7 @@ START_TEST (test_build_with_html_message)
 
   fail_if (stanza == NULL);
   /* <message> */
-  node = stanza->node;
+  node = wocky_stanza_get_top_node (stanza);
   fail_if (node == NULL);
   fail_unless (strcmp (node->name, "message") == 0);
   value = gibber_xmpp_node_get_attribute (node, "type");
@@ -145,7 +145,8 @@ START_TEST (test_get_type_info_with_unknown_sub_type)
 
   stanza = gibber_xmpp_stanza_new_ns ("iq", WOCKY_XMPP_NS_JABBER_CLIENT);
   fail_if (stanza == NULL);
-  gibber_xmpp_node_set_attribute (stanza->node, "type", "goat");
+  gibber_xmpp_node_set_attribute (wocky_stanza_get_top_node (stanza),
+      "type", "goat");
 
   gibber_xmpp_stanza_get_type_info (stanza, NULL, &sub_type);
   fail_if (sub_type != GIBBER_STANZA_SUB_TYPE_UNKNOWN);

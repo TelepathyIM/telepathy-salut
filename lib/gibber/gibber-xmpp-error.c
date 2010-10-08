@@ -461,8 +461,8 @@ gibber_message_get_xmpp_error (GibberXmppStanza *msg)
 
   if (sub_type == GIBBER_STANZA_SUB_TYPE_ERROR)
     {
-      GibberXmppNode *error_node = gibber_xmpp_node_get_child (msg->node,
-          "error");
+      GibberXmppNode *error_node = gibber_xmpp_node_get_child (
+          wocky_stanza_get_top_node (msg), "error");
 
       if (error_node != NULL)
         {

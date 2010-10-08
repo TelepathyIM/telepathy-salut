@@ -194,6 +194,7 @@ request_reply_cb (GibberIqHelper *helper,
   SalutDiscoRequest *request = (SalutDiscoRequest *) user_data;
   SalutDisco *disco = SALUT_DISCO (object);
   SalutDiscoPrivate *priv = disco->priv;
+  WockyNode *reply_node = wocky_stanza_get_top_node (reply_stanza);
   GibberXmppNode *query_node;
   GError *err = NULL;
   GibberStanzaSubType sub_type;
@@ -203,7 +204,7 @@ request_reply_cb (GibberIqHelper *helper,
   if (!g_list_find (priv->requests, request))
     return;
 
-  query_node = gibber_xmpp_node_get_child_ns (reply_stanza->node,
+  query_node = gibber_xmpp_node_get_child_ns (reply_node,
       "query", disco_type_to_xmlns (request->type));
 
   gibber_xmpp_stanza_get_type_info (reply_stanza, NULL, &sub_type);
@@ -412,7 +413,8 @@ caps_req_stanza_filter (SalutXmppConnectionManager *mgr,
   if (sub_type != GIBBER_STANZA_SUB_TYPE_GET)
     return FALSE;
 
-  query = gibber_xmpp_node_get_child_ns (stanza->node, "query", NS_DISCO_INFO);
+  query = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "query",
+      NS_DISCO_INFO);
 
   if (!query)
     return FALSE;
@@ -482,7 +484,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   jid_from = tp_handle_inspect (contact_repo, base_conn->self_handle);
   jid_to = tp_handle_inspect (contact_repo, contact->handle);
 
-  iq = stanza->node;
+  iq = wocky_stanza_get_top_node (stanza);
   query = gibber_xmpp_node_get_child_ns (iq, "query", NS_DISCO_INFO);
   g_assert (query != NULL);
 
@@ -537,7 +539,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
       GIBBER_NODE_END,
       GIBBER_STANZA_END);
 
-  result_iq = result->node;
+  result_iq = wocky_stanza_get_top_node (result);
   result_query = gibber_xmpp_node_get_child_ns (result_iq, "query", NULL);
 
   for (i = features; NULL != i; i = i->next)

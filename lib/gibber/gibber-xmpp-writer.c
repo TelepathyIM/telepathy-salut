@@ -193,8 +193,8 @@ static void
 _xml_write_node (GibberXmppWriter *writer, GibberXmppNode *node);
 
 static gboolean
-_write_attr (const gchar *key, const gchar *value, const gchar *ns,
-    gpointer user_data)
+_write_attr (const gchar *key, const gchar *value, const gchar *pref,
+    const gchar *ns, gpointer user_data)
 {
   GibberXmppWriter *self = GIBBER_XMPP_WRITER (user_data);
   GibberXmppWriterPrivate *priv = GIBBER_XMPP_WRITER_GET_PRIVATE (self);
@@ -262,7 +262,7 @@ _xml_write_node (GibberXmppWriter *writer, GibberXmppNode *node)
           (const xmlChar *) gibber_xmpp_node_get_ns (node));
     }
 
-  gibber_xmpp_node_each_attribute (node, _write_attr, writer);
+  wocky_node_each_attribute (node, _write_attr, writer);
 
   l = gibber_xmpp_node_get_language (node);
 
@@ -299,7 +299,7 @@ gibber_xmpp_writer_write_stanza (GibberXmppWriter *writer,
       xmlTextWriterStartDocument (priv->xmlwriter, "1.0", "utf-8", NULL);
     }
 
-  _xml_write_node (writer, stanza->node);
+  _xml_write_node (writer, wocky_stanza_get_top_node (stanza));
 
   if (!priv->stream_mode)
     {

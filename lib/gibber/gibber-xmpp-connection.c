@@ -301,15 +301,16 @@ gibber_xmpp_connection_send (GibberXmppConnection *connection,
 {
   GibberXmppConnectionPrivate *priv =
     GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   const guint8 *data;
   gsize length;
   const gchar *id;
 
-  id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  id = wocky_node_get_attribute (node, "id");
   if (id == NULL)
     {
       gchar *tmp = gibber_xmpp_connection_new_id (connection);
-      gibber_xmpp_node_set_attribute (stanza->node, "id", tmp);
+      wocky_node_set_attribute (node, "id", tmp);
       g_free (tmp);
     }
 
