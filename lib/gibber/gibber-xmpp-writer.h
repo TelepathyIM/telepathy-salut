@@ -23,56 +23,45 @@
 
 #include <glib-object.h>
 
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-xmpp-writer.h>
 
 G_BEGIN_DECLS
 
-typedef struct _GibberXmppWriter GibberXmppWriter;
-typedef struct _GibberXmppWriterClass GibberXmppWriterClass;
+typedef WockyXmppWriter GibberXmppWriter;
+typedef WockyXmppWriterClass GibberXmppWriterClass;
 
-struct _GibberXmppWriterClass {
-    GObjectClass parent_class;
-};
+#define GIBBER_TYPE_XMPP_WRITER         (WOCKY_TYPE_XMPP_WRITER)
+#define GIBBER_XMPP_WRITER(o)           (WOCKY_XMPP_WRITER (o))
+#define GIBBER_XMPP_WRITER_CLASS(c)     (WOCKY_XMPP_WRITER_CLASS (c))
+#define GIBBER_IS_XMPP_WRITER(o)        (WOCKY_IS_XMPP_WRITER (o))
+#define GIBBER_IS_XMPP_WRITER_CLASS(c)  (WOCKY_IS_XMPP_WRITER_CLASS (c))
+#define GIBBER_XMPP_WRITER_GET_CLASS(o) (WOCKY_XMPP_WRITER_GET_CLASS (o))
 
-struct _GibberXmppWriter {
-    GObject parent;
-};
+#define gibber_xmpp_writer_new            wocky_xmpp_writer_new
+#define gibber_xmpp_writer_new_no_stream  wocky_xmpp_writer_new_no_stream
+#define gibber_xmpp_writer_stream_close   wocky_xmpp_writer_stream_close
+#define gibber_xmpp_writer_flush          wocky_xmpp_writer_flush
 
-GType gibber_xmpp_writer_get_type (void);
-
-/* TYPE MACROS */
-#define GIBBER_TYPE_XMPP_WRITER \
-  (gibber_xmpp_writer_get_type ())
-#define GIBBER_XMPP_WRITER(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), GIBBER_TYPE_XMPP_WRITER, \
-  GibberXmppWriter))
-#define GIBBER_XMPP_WRITER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), GIBBER_TYPE_XMPP_WRITER, \
-   GibberXmppWriterClass))
-#define GIBBER_IS_XMPP_WRITER(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE((obj), GIBBER_TYPE_XMPP_WRITER))
-#define GIBBER_IS_XMPP_WRITER_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE((klass), GIBBER_TYPE_XMPP_WRITER))
-#define GIBBER_XMPP_WRITER_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_WRITER, \
-   GibberXmppWriterClass))
-
-
-GibberXmppWriter *gibber_xmpp_writer_new (void);
-GibberXmppWriter *gibber_xmpp_writer_new_no_stream (void);
-
-void gibber_xmpp_writer_stream_open (GibberXmppWriter *writer,
+static inline void
+gibber_xmpp_writer_stream_open (GibberXmppWriter *writer,
     const gchar *to, const gchar *from, const gchar *version,
-    const guint8 **data, gsize *length);
+    const guint8 **data, gsize *length)
+{
+  /* set dummy language and ID */
+  wocky_xmpp_writer_stream_open (writer, to, from, version, NULL, NULL, data,
+      length);
+}
 
-void gibber_xmpp_writer_stream_close (GibberXmppWriter *writer,
-    const guint8 **data, gsize *length);
 
-gboolean gibber_xmpp_writer_write_stanza (GibberXmppWriter *writer,
+static inline gboolean
+gibber_xmpp_writer_write_stanza (GibberXmppWriter *writer,
     GibberXmppStanza *stanza, const guint8 **data, gsize *length,
-    GError **error);
-
-void gibber_xmpp_writer_flush (GibberXmppWriter *writer);
+    GError **error)
+{
+  /* can't fail */
+  wocky_xmpp_writer_write_stanza (writer, stanza, data, length);
+  return TRUE;
+}
 
 G_END_DECLS
 
