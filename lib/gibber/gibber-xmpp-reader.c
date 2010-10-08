@@ -289,8 +289,18 @@ _start_element_ns (void *user_data, const xmlChar *localname,
 
   if (priv->stanza == NULL)
     {
-      priv->stanza = gibber_xmpp_stanza_new_ns ((gchar *) localname,
-          (gchar *) uri);
+      if (uri != NULL)
+        {
+          priv->stanza = wocky_stanza_new ((gchar *) localname, (gchar *) uri);
+        }
+      else
+        {
+          /* This can only happy in non-streaming mode when the top node
+           * of the document doesn't have a namespace. */
+          DEBUG ("Stanza without a namespace, using dummy namespace..");
+          priv->stanza = wocky_stanza_new ((gchar *) localname, (gchar *) "");
+        }
+
       priv->node = wocky_stanza_get_top_node (priv->stanza);
     }
   else
