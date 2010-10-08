@@ -170,6 +170,18 @@ gibber_xmpp_stanza_new (const gchar *name)
   return result;
 }
 
+GibberXmppStanza *
+gibber_xmpp_stanza_new_ns (const gchar *name,
+    const gchar *ns)
+{
+  GibberXmppStanza *result;
+
+  result = GIBBER_XMPP_STANZA (g_object_new (GIBBER_TYPE_XMPP_STANZA, NULL));
+  result->node = gibber_xmpp_node_new_ns (name, ns);
+
+  return result;
+}
+
 static gboolean
 gibber_xmpp_stanza_add_build_va (GibberXmppNode *node,
                                  GibberBuildTag arg,

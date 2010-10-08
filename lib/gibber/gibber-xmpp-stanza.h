@@ -107,6 +107,8 @@ typedef enum
 } GibberBuildTag;
 
 GibberXmppStanza * gibber_xmpp_stanza_new (const gchar *name);
+GibberXmppStanza * gibber_xmpp_stanza_new_ns (const gchar *name,
+    const gchar *ns);
 
 GibberXmppStanza * gibber_xmpp_stanza_build (GibberStanzaType type,
     GibberStanzaSubType sub_type, const gchar *from, const gchar *to,
