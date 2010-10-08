@@ -75,7 +75,7 @@ check-local: check-coding-style check-twisted
 check-twisted:
 	$(MAKE) -C tools
 	rm -f tools/core
-	sh $(srcdir)/tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf -- $(MAKE) check-TESTS \
+	sh $(srcdir)/tools/with-session-bus.sh --also-for-system --config-file=tools/tmp-session-bus.conf -- $(MAKE) check-TESTS \
 		TESTS="$(TWISTED_TESTS)" \
 		TESTS_ENVIRONMENT="$(TESTS_ENVIRONMENT) $(TEST_PYTHON)"
 	@if test -e tools/core; then\
