@@ -65,7 +65,13 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None,
         or '-v' in sys.argv)
 
     if make_conn:
-        conn = make_connection(bus, queue.append, params)
+        try:
+            conn = make_connection(bus, queue.append, params)
+        except Exception, e:
+            # This is normally because the connection's still kicking around
+            # on the bus from a previous test. Let's bail out unceremoniously.
+            print e
+            os._exit(1)
     else:
         conn = None
 
