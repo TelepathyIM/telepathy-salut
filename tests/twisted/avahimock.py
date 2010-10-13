@@ -42,12 +42,12 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetHostNameFqdn(self):
-        raise NotImplementedError()
+        return 'avahimock_hostname.local'
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetDomainName(self):
-        raise NotImplementedError()
+        return 'local'
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='b')
