@@ -17,6 +17,8 @@ class Avahi(dbus.service.Object):
         dbus.service.Object.__init__(self, conn=bus, object_path='/',
                                      bus_name=name)
 
+        self._entry_groups = []
+
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetVersionString(self):
@@ -105,7 +107,9 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='o')
     def EntryGroupNew(self):
-        raise NotImplementedError()
+        entry_group = EntryGroup()
+        self._entry_groups.append(entry_group)
+        return entry_group.object_path
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='iisiu', out_signature='o')
@@ -141,6 +145,13 @@ class Avahi(dbus.service.Object):
                          in_signature='iisqqu', out_signature='o')
     def RecordBrowserNew(self, interface, protocol, name, clazz, type_, flags):
         raise NotImplementedError()
+
+class EntryGroup(dbus.service.Object):
+    def __init__(self):
+        bus = dbus.SystemBus()
+        self.object_path = '/Client%u/EntryGroup%u' % (1, 1)
+        dbus.service.Object.__init__(self, conn=bus,
+                                     object_path=self.object_path)
 
 avahi = Avahi()
 
