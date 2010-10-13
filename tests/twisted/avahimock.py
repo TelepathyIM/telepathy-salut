@@ -30,7 +30,7 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetHostName(self):
-        raise NotImplementedError()
+        return 'avahimock_hostname'
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='s', out_signature='')
