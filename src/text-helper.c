@@ -35,6 +35,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/message-mixin.h>
+#include <wocky/wocky-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -46,12 +47,13 @@
 static void
 add_text (GibberXmppStanza *stanza, const gchar *text)
 {
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberXmppNode *htmlnode;
 
-  gibber_xmpp_node_add_child_with_content (stanza->node, "body", text);
+  gibber_xmpp_node_add_child_with_content (node, "body", text);
 
   /* Add plain xhtml-im node */
-  htmlnode = gibber_xmpp_node_add_child_ns (stanza->node, "html",
+  htmlnode = gibber_xmpp_node_add_child_ns (node, "html",
       GIBBER_XMPP_NS_XHTML_IM);
   gibber_xmpp_node_add_child_with_content_ns (htmlnode, "body", text,
       GIBBER_W3C_NS_XHTML);
@@ -63,6 +65,7 @@ create_message_stanza (const gchar *from,
   GError **error)
 {
   GibberXmppStanza *stanza;
+  WockyNode *node;
 
   if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
     {
@@ -73,10 +76,11 @@ create_message_stanza (const gchar *from,
 
       return NULL;
     }
-  stanza = gibber_xmpp_stanza_new ("message");
+  stanza = gibber_xmpp_stanza_new_ns ("message", WOCKY_XMPP_NS_JABBER_CLIENT);
+  node = wocky_stanza_get_top_node (stanza);
 
-  gibber_xmpp_node_set_attribute (stanza->node, "from", from);
-  gibber_xmpp_node_set_attribute (stanza->node, "to", to);
+  gibber_xmpp_node_set_attribute (node, "from", from);
+  gibber_xmpp_node_set_attribute (node, "to", to);
 
   if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION)
     {
@@ -101,8 +105,11 @@ text_helper_create_message (const gchar *from,
                             GError **error)
 {
   GibberXmppStanza *stanza;
+  WockyNode *node;
 
   stanza = create_message_stanza (from, to, type, text, error);
+  node = wocky_stanza_get_top_node (stanza);
+
   if (stanza == NULL)
     return NULL;
 
@@ -110,10 +117,10 @@ text_helper_create_message (const gchar *from,
     {
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-        gibber_xmpp_node_set_attribute (stanza->node, "type", "chat");
+        gibber_xmpp_node_set_attribute (node, "type", "chat");
         break;
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-        gibber_xmpp_node_set_attribute (stanza->node, "type", "normal");
+        gibber_xmpp_node_set_attribute (node, "type", "normal");
         break;
       default:
         g_assert_not_reached ();
@@ -131,19 +138,22 @@ text_helper_create_message_groupchat (const gchar *from,
                                       GError **error)
 {
   GibberXmppStanza *stanza;
+  WockyNode *node;
 
   stanza = create_message_stanza (from, to, type, text, error);
   if (stanza == NULL)
     return NULL;
 
+  node = wocky_stanza_get_top_node (stanza);
+
   switch (type)
     {
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-        gibber_xmpp_node_set_attribute (stanza->node, "type", "groupchat");
+        gibber_xmpp_node_set_attribute (node, "type", "groupchat");
         break;
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-        gibber_xmpp_node_set_attribute (stanza->node, "type", "normal");
+        gibber_xmpp_node_set_attribute (node, "type", "normal");
         break;
       default:
         g_assert_not_reached ();
@@ -163,11 +173,12 @@ text_helper_parse_incoming_message (GibberXmppStanza *stanza,
   const gchar *type;
   GibberXmppNode *node;
   GibberXmppNode *event;
+  WockyNode *top_node = wocky_stanza_get_top_node (stanza);
 
-  *from = gibber_xmpp_node_get_attribute (stanza->node, "from");
-  type = gibber_xmpp_node_get_attribute (stanza->node, "type");
+  *from = gibber_xmpp_node_get_attribute (top_node, "from");
+  type = gibber_xmpp_node_get_attribute (top_node, "type");
   /* Work around iChats strange way of doing typing notification */
-  event = gibber_xmpp_node_get_child_ns (stanza->node, "x",
+  event = gibber_xmpp_node_get_child_ns (top_node, "x",
     GIBBER_XMPP_NS_EVENT);
 
   if (event != NULL)
@@ -183,7 +194,7 @@ text_helper_parse_incoming_message (GibberXmppStanza *stanza,
   /*
    * Parse body if it exists.
    */
-  node = gibber_xmpp_node_get_child (stanza->node, "body");
+  node = gibber_xmpp_node_get_child (top_node, "body");
 
   if (node)
     {

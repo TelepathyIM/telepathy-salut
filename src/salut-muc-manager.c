@@ -1035,8 +1035,8 @@ invite_stanza_filter (SalutXmppConnectionManager *mgr,
   if (type != GIBBER_STANZA_TYPE_MESSAGE)
     return FALSE;
 
-  return (gibber_xmpp_node_get_child_ns (stanza->node, "invite",
-        GIBBER_TELEPATHY_NS_CLIQUE) != NULL);
+  return (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
+        "invite", GIBBER_TELEPATHY_NS_CLIQUE) != NULL);
 }
 
 static void
@@ -1064,8 +1064,8 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   GHashTable *params_hash;
   GibberMucConnection *connection = NULL;
 
-  invite = gibber_xmpp_node_get_child_ns (stanza->node, "invite",
-      GIBBER_TELEPATHY_NS_CLIQUE);
+  invite = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
+        "invite", GIBBER_TELEPATHY_NS_CLIQUE);
   g_assert (invite != NULL);
 
   DEBUG("Got an invitation");

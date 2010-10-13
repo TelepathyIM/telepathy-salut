@@ -86,7 +86,8 @@ START_TEST (test_extract_properties)
   gboolean prop5_value;
 
   stanza = create_sample_stanza ();
-  node = gibber_xmpp_node_get_child (stanza->node, "properties");
+  node = gibber_xmpp_node_get_child (wocky_stanza_get_top_node (stanza),
+      "properties");
 
   fail_unless (node != NULL);
   properties = salut_gibber_xmpp_node_extract_properties (node, "prop");
@@ -191,16 +192,19 @@ START_TEST (test_add_children_from_properties)
 {
   GHashTable *properties;
   GibberXmppStanza *stanza;
+  WockyNode *top_node;
   GSList *l;
 
   properties = create_sample_properties ();
-  stanza = gibber_xmpp_stanza_new ("properties");
+  stanza = gibber_xmpp_stanza_new_ns ("properties",
+      "http://example.com/stoats");
+  top_node = wocky_stanza_get_top_node (stanza);
 
-  salut_gibber_xmpp_node_add_children_from_properties (stanza->node,
+  salut_gibber_xmpp_node_add_children_from_properties (top_node,
       properties, "prop");
 
-  fail_unless (g_slist_length (stanza->node->children) == 5);
-  for (l = stanza->node->children; l != NULL; l = l->next)
+  fail_unless (g_slist_length (top_node->children) == 5);
+  for (l = top_node->children; l != NULL; l = l->next)
     {
       GibberXmppNode *node = (GibberXmppNode *) l->data;
       const gchar *name, *type;

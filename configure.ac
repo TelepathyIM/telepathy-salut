@@ -210,11 +210,19 @@ PKG_CHECK_MODULES([CHECK], [check >= 0.9.4],
                    [ HAVE_CHECK=no ] )
 AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
 
+AX_CONFIG_DIR([lib/ext/wocky])
+PKG_CONFIG_PATH="${PKG_CONFIG_PATH:+"$PKG_CONFIG_PATH:"}${ac_abs_top_builddir}/lib/ext/wocky/wocky"
+export PKG_CONFIG_PATH
+PKG_CHECK_MODULES([WOCKY], [wocky >= 0.0.0])
+AC_SUBST([WOCKY_CFLAGS])
+AC_SUBST([WOCKY_LIBS])
+
 AC_SUBST(PACKAGE_STRING)
 
 AC_OUTPUT( Makefile                       \
            docs/Makefile                  \
            lib/Makefile                   \
+           lib/ext/Makefile               \
            lib/gibber/Makefile            \
            lib/gibber/tests/Makefile      \
            lib/gibber/tests/inputs/Makefile \

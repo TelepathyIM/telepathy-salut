@@ -43,8 +43,8 @@ test_xmpp_error_to_node_with_bad_request (void)
       GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
       "from", "to",
       GIBBER_STANZA_END);
-  node = gibber_xmpp_error_to_node (XMPP_ERROR_BAD_REQUEST, stanza->node,
-      NULL);
+  node = gibber_xmpp_error_to_node (XMPP_ERROR_BAD_REQUEST,
+      wocky_stanza_get_top_node (stanza), NULL);
 
   fail_if (node == NULL);
   fail_if (strcmp (node->name, "error") != 0);
@@ -73,8 +73,8 @@ test_xmpp_error_to_node_with_si_bad_profile (void)
       GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
       "from", "to",
       GIBBER_STANZA_END);
-  node = gibber_xmpp_error_to_node (XMPP_ERROR_SI_BAD_PROFILE, stanza->node,
-      NULL);
+  node = gibber_xmpp_error_to_node (XMPP_ERROR_SI_BAD_PROFILE,
+      wocky_stanza_get_top_node (stanza), NULL);
 
   fail_if (node == NULL);
   fail_if (strcmp (node->name, "error") != 0);
@@ -113,7 +113,8 @@ START_TEST (test_message_get_xmpp_error)
           GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
           "from", "to",
           GIBBER_STANZA_END);
-      gibber_xmpp_error_to_node (xmpp_error, stanza->node, NULL);
+      gibber_xmpp_error_to_node (xmpp_error,
+          wocky_stanza_get_top_node (stanza), NULL);
 
       error = gibber_message_get_xmpp_error (stanza);
       fail_if (error == NULL);

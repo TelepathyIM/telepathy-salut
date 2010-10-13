@@ -97,12 +97,13 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
                                     GibberXmppStanza *stanza,
                                     gpointer user_data)
 {
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberIqHelper *self = GIBBER_IQ_HELPER (user_data);
   GibberIqHelperPrivate *priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);
   const gchar *id;
   ReplyHandlerData *data;
 
-  id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  id = gibber_xmpp_node_get_attribute (node, "id");
   if (id == NULL)
     return;
 
@@ -111,13 +112,13 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
     return;
 
   /* Reply have to be an iq stanza */
-  if (strcmp (stanza->node->name, "iq"))
+  if (strcmp (node->name, "iq"))
     return;
 
   /* Its subtype have to be "result" or "error" */
-  if (strcmp (gibber_xmpp_node_get_attribute (stanza->node, "type"), "result")
+  if (strcmp (gibber_xmpp_node_get_attribute (node, "type"), "result")
       != 0 &&
-      strcmp (gibber_xmpp_node_get_attribute (stanza->node, "type"), "error")
+      strcmp (gibber_xmpp_node_get_attribute (node, "type"), "error")
       != 0)
     return;
 
@@ -300,6 +301,7 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
                                   gpointer user_data,
                                   GError **error)
 {
+  WockyNode *node = wocky_stanza_get_top_node (iq);
   GibberIqHelperPrivate *priv;
   const gchar *tmp;
   gchar *id;
@@ -308,15 +310,15 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
   g_return_val_if_fail (self != NULL, FALSE);
   g_return_val_if_fail (iq != NULL, FALSE);
   g_return_val_if_fail (reply_func != NULL, FALSE);
-  g_return_val_if_fail (strcmp (iq->node->name, "iq") == 0, FALSE);
+  g_return_val_if_fail (strcmp (node->name, "iq") == 0, FALSE);
 
   priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);
 
-  tmp = gibber_xmpp_node_get_attribute (iq->node, "id");
+  tmp = gibber_xmpp_node_get_attribute (node, "id");
   if (tmp == NULL)
     {
       id = gibber_xmpp_connection_new_id (priv->xmpp_connection);
-      gibber_xmpp_node_set_attribute (iq->node, "id", id);
+      gibber_xmpp_node_set_attribute (node, "id", id);
     }
   else
     {
@@ -354,18 +356,19 @@ new_reply (GibberXmppStanza *iq,
            GibberStanzaSubType sub_type)
 {
   GibberXmppStanza *reply;
+  WockyNode *node = wocky_stanza_get_top_node (iq);
   const gchar *id;
   const gchar *iq_from, *iq_to;
 
   g_return_val_if_fail (sub_type == GIBBER_STANZA_SUB_TYPE_RESULT ||
       sub_type == GIBBER_STANZA_SUB_TYPE_ERROR, NULL);
-  g_return_val_if_fail (strcmp (iq->node->name, "iq") == 0, NULL);
+  g_return_val_if_fail (strcmp (node->name, "iq") == 0, NULL);
 
-  id = gibber_xmpp_node_get_attribute (iq->node, "id");
+  id = gibber_xmpp_node_get_attribute (node, "id");
   g_return_val_if_fail (id != NULL, NULL);
 
-  iq_from = gibber_xmpp_node_get_attribute (iq->node, "from");
-  iq_to = gibber_xmpp_node_get_attribute (iq->node, "to");
+  iq_from = gibber_xmpp_node_get_attribute (node, "from");
+  iq_to = gibber_xmpp_node_get_attribute (node, "to");
 
   reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
       sub_type,
@@ -388,9 +391,11 @@ gibber_iq_helper_new_error_reply (GibberXmppStanza *iq,
                                   const gchar *errmsg)
 {
   GibberXmppStanza *stanza;
+  WockyNode *node;
 
   stanza = new_reply (iq, GIBBER_STANZA_SUB_TYPE_ERROR);
-  gibber_xmpp_error_to_node (error, stanza->node, errmsg);
+  node = wocky_stanza_get_top_node (stanza);
+  gibber_xmpp_error_to_node (error, node, errmsg);
 
   /* TODO: Would be cool to copy <iq> children as in Gabble */
 

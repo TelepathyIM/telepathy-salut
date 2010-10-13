@@ -415,13 +415,13 @@ gibber_xmpp_error_to_node (GibberXmppError error,
       gibber_xmpp_node_set_attribute (error_node, "type", spec->type);
     }
 
-  node = gibber_xmpp_node_add_child (error_node, spec->name);
-  gibber_xmpp_node_set_ns (node, GIBBER_XMPP_NS_STANZAS);
+  node = gibber_xmpp_node_add_child_ns (error_node, spec->name,
+      GIBBER_XMPP_NS_STANZAS);
 
   if (extra != NULL)
     {
-      node = gibber_xmpp_node_add_child (error_node, extra->name);
-      gibber_xmpp_node_set_ns (node, extra->namespace);
+      node = gibber_xmpp_node_add_child_ns (error_node, extra->name,
+          extra->namespace);
     }
 
   if (NULL != errmsg)
@@ -461,8 +461,8 @@ gibber_message_get_xmpp_error (GibberXmppStanza *msg)
 
   if (sub_type == GIBBER_STANZA_SUB_TYPE_ERROR)
     {
-      GibberXmppNode *error_node = gibber_xmpp_node_get_child (msg->node,
-          "error");
+      GibberXmppNode *error_node = gibber_xmpp_node_get_child (
+          wocky_stanza_get_top_node (msg), "error");
 
       if (error_node != NULL)
         {

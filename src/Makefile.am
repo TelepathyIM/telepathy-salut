@@ -155,17 +155,29 @@ noinst_LTLIBRARIES = libsalut-convenience.la \
 		     libsalut-backend-avahi.la \
 		     libsalut-backend-dummy.la
 
-AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @DBUS_CFLAGS@ \
-  @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ \
-  @TELEPATHY_GLIB_CFLAGS@ \
-  @AVAHI_CFLAGS@ \
-  -I $(top_srcdir) -I $(top_builddir) \
-  -I $(top_srcdir)/lib -I $(top_builddir)/lib \
-  -DG_LOG_DOMAIN=\"salut\"
+AM_CFLAGS = \
+	-I $(top_srcdir) -I $(top_builddir) \
+	-I $(top_srcdir)/lib -I $(top_builddir)/lib \
+	-DG_LOG_DOMAIN=\"salut\" \
+	$(ERROR_CFLAGS) \
+	$(GCOV_CFLAGS) \
+	@LIBXML2_CFLAGS@ \
+	@GLIB_CFLAGS@ \
+	@WOCKY_CFLAGS@ \
+	@DBUS_CFLAGS@ \
+	@AVAHI_CFLAGS@ \
+	@TELEPATHY_GLIB_CFLAGS@ \
+	$(NULL)
 
-AM_LDFLAGS = $(GCOV_LIBS) @DBUS_LIBS@ \
-             @TELEPATHY_GLIB_LIBS@ \
-             @GLIB_LIBS@ @LIBXML2_LIBS@ @AVAHI_LIBS@
+AM_LDFLAGS = \
+	$(GCOV_LIBS) \
+	@LIBXML2_LIBS@ \
+	@GLIB_LIBS@ \
+	@WOCKY_LIBS@ \
+	@DBUS_LIBS@ \
+	@AVAHI_LIBS@ \
+	@TELEPATHY_GLIB_LIBS@ \
+	$(NULL)
 
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:

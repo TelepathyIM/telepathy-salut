@@ -533,6 +533,7 @@ start_stream_initiation (SalutTubeStream *self,
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GibberXmppNode *node, *si_node;
   GibberXmppStanza *msg;
+  WockyNode *msg_node;
   TpHandleRepoIface *contact_repo;
   const gchar *jid;
   gchar *stream_id, *id_str;
@@ -553,8 +554,9 @@ start_stream_initiation (SalutTubeStream *self,
 
   msg = salut_si_bytestream_manager_make_stream_init_iq (priv->conn->name, jid,
       stream_id, GIBBER_TELEPATHY_NS_TUBES);
+  msg_node = wocky_stanza_get_top_node (msg);
 
-  si_node = gibber_xmpp_node_get_child_ns (msg->node, "si", GIBBER_XMPP_NS_SI);
+  si_node = gibber_xmpp_node_get_child_ns (msg_node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si_node != NULL);
 
   id_str = g_strdup_printf ("%u", priv->id);
@@ -562,11 +564,11 @@ start_stream_initiation (SalutTubeStream *self,
   g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
 
   /* FIXME: this needs standardizing */
-  node = gibber_xmpp_node_add_child (si_node, "muc-stream");
+  node = gibber_xmpp_node_add_child_ns (si_node, "muc-stream",
+      GIBBER_TELEPATHY_NS_TUBES);
   gibber_xmpp_node_set_attribute (node, "muc", tp_handle_inspect (
         room_repo, priv->handle));
 
-  gibber_xmpp_node_set_ns (node, GIBBER_TELEPATHY_NS_TUBES);
   gibber_xmpp_node_set_attribute (node, "tube", id_str);
 
   data = g_slice_new (struct _extra_bytestream_negotiate_cb_data);

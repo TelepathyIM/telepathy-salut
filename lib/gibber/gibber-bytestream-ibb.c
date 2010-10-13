@@ -24,6 +24,7 @@
 #include <time.h>
 
 #include <glib.h>
+#include <wocky/wocky-namespaces.h>
 
 #include "gibber-xmpp-connection.h"
 #include "gibber-muc-connection.h"
@@ -97,20 +98,20 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
 {
   GibberBytestreamIBB *self = (GibberBytestreamIBB *) user_data;
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberXmppNode *data;
   GString *str;
   guchar *decoded;
   gsize len;
   const gchar *from, *stream_id;
 
-  data = gibber_xmpp_node_get_child_ns (stanza->node, "data",
-      GIBBER_XMPP_NS_IBB);
+  data = wocky_node_get_child_ns (node, "data", WOCKY_XMPP_NS_IBB);
   if (data == NULL)
     {
       return;
     }
 
-  stream_id = gibber_xmpp_node_get_attribute (data, "sid");
+  stream_id = wocky_node_get_attribute (data, "sid");
   if (stream_id == NULL || strcmp (stream_id, priv->stream_id) != 0)
     {
       DEBUG ("bad stream id");
@@ -124,7 +125,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
       return;
     }
 
-  from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  from = gibber_xmpp_node_get_attribute (node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field, ignoring");
@@ -429,6 +430,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GibberXmppStanza *stanza;
+  WockyNode *node;
   GibberXmppNode *si;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
@@ -439,7 +441,8 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
     }
 
   stanza = create_si_accept_iq (self);
-  si = gibber_xmpp_node_get_child_ns (stanza->node, "si", GIBBER_XMPP_NS_SI);
+  node = wocky_stanza_get_top_node (stanza);
+  si = gibber_xmpp_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
   if (func != NULL)
@@ -460,6 +463,7 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   GibberXmppStanza *stanza;
+  WockyNode *node;
 
   g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
@@ -468,14 +472,15 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
       priv->self_id, priv->peer_id,
       GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
       GIBBER_STANZA_END);
+  node = wocky_stanza_get_top_node (stanza);
 
   if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
     {
-      gibber_xmpp_error_to_node (error->code, stanza->node, error->message);
+      gibber_xmpp_error_to_node (error->code, node, error->message);
     }
   else
     {
-      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, stanza->node,
+      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, node,
           "Offer Declined");
     }
 

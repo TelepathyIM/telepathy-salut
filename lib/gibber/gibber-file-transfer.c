@@ -337,7 +337,8 @@ received_stanza_cb (GibberXmppConnection *conn,
   GibberFileTransfer *self = user_data;
   const gchar *id;
 
-  id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  id = gibber_xmpp_node_get_attribute (wocky_stanza_get_top_node (stanza),
+      "id");
   if (id != NULL && strcmp (id, self->id) == 0)
     GIBBER_FILE_TRANSFER_GET_CLASS (self)->received_stanza (self, stanza);
 }
@@ -376,7 +377,7 @@ gibber_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
 {
   const gchar *from;
 
-  from = gibber_xmpp_node_get_attribute (stanza->node, "from");
+  from = wocky_node_get_attribute (wocky_stanza_get_top_node (stanza), "from");
 
   return gibber_file_transfer_new_from_stanza_with_from (stanza, connection,
       from);

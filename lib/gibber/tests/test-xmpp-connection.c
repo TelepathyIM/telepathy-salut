@@ -4,6 +4,7 @@
 
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-transport.h>
+#include <wocky/wocky.h>
 #include "test-transport.h"
 
 #define BUFSIZE 10
@@ -49,8 +50,8 @@ stream_closed (GibberXmppConnection *connection, gpointer user_data)
 }
 
 static gboolean
-print_attribute (const gchar *key, const gchar *value, const gchar *ns,
-    gpointer user_data)
+print_attribute (const gchar *key, const gchar *value, const gchar *pref,
+    const gchar *ns, gpointer user_data)
 {
   fprintf (treefile, "%*s |-- Attribute: %s -> %s (ns: %s)\n",
     GPOINTER_TO_INT (user_data), " ", key, value, ns);
@@ -71,7 +72,7 @@ print_node (GibberXmppNode *node, gint ident)
 {
   fprintf (treefile, "%*s`-+-- Name: %s (ns: %s)\n", ident - 1, " ",
       node->name, gibber_xmpp_node_get_ns (node));
-  gibber_xmpp_node_each_attribute (node, print_attribute,
+  wocky_node_each_attribute (node, print_attribute,
       GINT_TO_POINTER(ident));
 
   if (node->content)
@@ -88,7 +89,7 @@ received_stanza (GibberXmppConnection *connection, GibberXmppStanza *stanza,
     gpointer user_data)
 {
   fprintf (treefile, "-|\n");
-  print_node (stanza->node, 2);
+  print_node (wocky_stanza_get_top_node (stanza), 2);
   g_assert (gibber_xmpp_connection_send (connection, stanza, NULL));
 }
 
@@ -103,6 +104,7 @@ main (int argc, char **argv)
 
 
   g_type_init ();
+  wocky_init ();
 
   transport = test_transport_new (send_hook, NULL);
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT(transport));
@@ -153,5 +155,6 @@ main (int argc, char **argv)
   g_assert (parsing_failed || ret == 0);
   fclose (file);
 
+  wocky_deinit ();
   return parsing_failed ? 1 : 0;
 }

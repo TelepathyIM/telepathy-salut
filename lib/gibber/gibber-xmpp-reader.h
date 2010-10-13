@@ -22,6 +22,7 @@
 #define __GIBBER_XMPP_READER_H__
 
 #include <glib-object.h>
+#include <wocky/wocky-xmpp-reader.h>
 
 G_BEGIN_DECLS
 
@@ -29,11 +30,11 @@ typedef struct _GibberXmppReader GibberXmppReader;
 typedef struct _GibberXmppReaderClass GibberXmppReaderClass;
 
 struct _GibberXmppReaderClass {
-    GObjectClass parent_class;
+    WockyXmppReaderClass parent_class;
 };
 
 struct _GibberXmppReader {
-    GObject parent;
+    WockyXmppReader parent;
 };
 
 GType gibber_xmpp_reader_get_type (void);
@@ -54,7 +55,6 @@ GType gibber_xmpp_reader_get_type (void);
 #define GIBBER_XMPP_READER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_XMPP_READER, \
    GibberXmppReaderClass))
-
 
 GibberXmppReader * gibber_xmpp_reader_new (void);
 GibberXmppReader * gibber_xmpp_reader_new_no_stream (void);

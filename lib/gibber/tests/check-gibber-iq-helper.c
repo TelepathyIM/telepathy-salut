@@ -214,7 +214,8 @@ START_TEST (test_send_without_id)
   fail_unless (result);
 
   /* gibber_iq_helper_send_with_reply generated an id */
-  id = gibber_xmpp_node_get_attribute (stanza->node, "id");
+  id = gibber_xmpp_node_get_attribute (wocky_stanza_get_top_node (stanza),
+      "id");
 
   reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
       GIBBER_STANZA_SUB_TYPE_RESULT,
@@ -257,8 +258,10 @@ START_TEST (test_new_result_reply)
 
   reply = gibber_iq_helper_new_result_reply (stanza);
   fail_unless (reply != NULL);
-  fail_unless (strcmp (reply->node->name, "iq") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_attribute (reply->node, "type"),
+  fail_unless (strcmp (wocky_stanza_get_top_node (reply)->name, "iq") == 0);
+  fail_unless (strcmp (
+        gibber_xmpp_node_get_attribute (wocky_stanza_get_top_node (reply),
+          "type"),
         "result") == 0);
   result = gibber_xmpp_connection_send (xmpp_connection, reply, NULL);
   fail_unless (result);
@@ -297,11 +300,13 @@ START_TEST (test_new_error_reply)
   reply = gibber_iq_helper_new_error_reply (stanza,
       XMPP_ERROR_BAD_REQUEST, "test");
   fail_unless (reply != NULL);
-  fail_unless (strcmp (reply->node->name, "iq") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_attribute (reply->node, "type"),
+  fail_unless (strcmp (wocky_stanza_get_top_node (reply)->name, "iq") == 0);
+  fail_unless (strcmp (gibber_xmpp_node_get_attribute (
+          wocky_stanza_get_top_node (reply), "type"),
         "error") == 0);
 
-  error_node = gibber_xmpp_node_get_child (reply->node, "error");
+  error_node = gibber_xmpp_node_get_child (wocky_stanza_get_top_node (reply),
+      "error");
   fail_if (error_node == NULL);
   fail_if (strcmp (gibber_xmpp_node_get_attribute (error_node, "code"),
         "400") != 0);

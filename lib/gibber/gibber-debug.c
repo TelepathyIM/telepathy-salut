@@ -74,6 +74,8 @@ gibber_debug_stanza (DebugFlags flag,
                      const gchar *format,
                      ...)
 {
+  WockyNode *node = wocky_stanza_get_top_node (stanza);
+
   if (G_UNLIKELY(!initialized))
     gibber_debug_set_flags_from_env ();
   if (flag & flags)
@@ -85,7 +87,7 @@ gibber_debug_stanza (DebugFlags flag,
       msg = g_strdup_vprintf (format, args);
       va_end (args);
 
-      node_str = gibber_xmpp_node_to_string (stanza->node);
+      node_str = gibber_xmpp_node_to_string (node);
 
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s\n%s", msg, node_str);
 
