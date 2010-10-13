@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = tools extensions lib src data m4 tests docs
 
-DISTCHECK_CONFIGURE_FLAGS = --disable-debug
+DISTCHECK_CONFIGURE_FLAGS = --disable-debug --enable-gtk-doc
 
 dist-hook:
 	chmod u+w ${distdir}/ChangeLog
