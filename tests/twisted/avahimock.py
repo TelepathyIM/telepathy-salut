@@ -9,6 +9,7 @@ DBusGMainLoop(set_as_default=True)
 
 AVAHI_NAME = 'org.freedesktop.Avahi'
 AVAHI_IFACE_SERVER = 'org.freedesktop.Avahi.Server'
+AVAHI_IFACE_ENTRY_GROUP = 'org.freedesktop.Avahi.EntryGroup'
 
 class Avahi(dbus.service.Object):
     def __init__(self):
@@ -146,12 +147,24 @@ class Avahi(dbus.service.Object):
     def RecordBrowserNew(self, interface, protocol, name, clazz, type_, flags):
         raise NotImplementedError()
 
+
 class EntryGroup(dbus.service.Object):
     def __init__(self):
         bus = dbus.SystemBus()
         self.object_path = '/Client%u/EntryGroup%u' % (1, 1)
         dbus.service.Object.__init__(self, conn=bus,
                                      object_path=self.object_path)
+
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
+                         in_signature='iiussssqaay', out_signature='')
+    def AddService(self, interface, protocol, flags, name, type_, domain, host,
+                   port, txt):
+        pass
+
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
+                         in_signature='', out_signature='')
+    def Commit(self):
+        pass
 
 avahi = Avahi()
 
