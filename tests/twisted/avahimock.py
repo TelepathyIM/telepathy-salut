@@ -155,6 +155,8 @@ class EntryGroup(dbus.service.Object):
         dbus.service.Object.__init__(self, conn=bus,
                                      object_path=self.object_path)
 
+        self._state = 0
+
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='iiussssqaay', out_signature='')
     def AddService(self, interface, protocol, flags, name, type_, domain, host,
@@ -162,9 +164,19 @@ class EntryGroup(dbus.service.Object):
         pass
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
+                         in_signature='iiusssaay', out_signature='')
+    def UpdateServiceTxt(self, interface, protocol, flags, name, type_, domain, txt):
+        pass
+
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
     def Commit(self):
         pass
+
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
+                         in_signature='', out_signature='i')
+    def GetState(self):
+        return self._state
 
 avahi = Avahi()
 
