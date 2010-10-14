@@ -28,7 +28,7 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='u')
     def GetAPIVersion(self):
-        raise NotImplementedError()
+        return 515
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
@@ -58,7 +58,7 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='i')
     def GetState(self):
-        raise NotImplementedError()
+        return 2
 
     @dbus.service.signal(dbus_interface=AVAHI_IFACE_SERVER, signature='is')
     def StateChanged(self, state, error):
