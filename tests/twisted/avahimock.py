@@ -2,6 +2,7 @@
 
 import dbus
 import dbus.service
+from dbus.lowlevel import SignalMessage
 import gobject
 import glib
 
@@ -186,17 +187,20 @@ class EntryGroup(dbus.service.Object):
 
     def _set_state(self, new_state):
         self._state = new_state
-        self.StateChanged(new_state, 'org.freedesktop.Avahi.Success',
-                          destination=self._client)
+
+        message = SignalMessage(self.object_path,
+                                AVAHI_IFACE_ENTRY_GROUP,
+                                'StateChanged')
+        message.append(self._state, 'org.freedesktop.Avahi.Success',
+                       signature='is')
+        message.set_destination(self._client)
+
+        dbus.SystemBus().send_message(message)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='i')
     def GetState(self):
         return self._state
-
-    @dbus.service.signal(dbus_interface=AVAHI_IFACE_ENTRY_GROUP, signature='is')
-    def StateChanged(self, state, error, **kwargs):
-        pass
 
 
 class ServiceBrowser(dbus.service.Object):
