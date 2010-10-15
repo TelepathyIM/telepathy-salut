@@ -110,7 +110,8 @@ class Avahi(dbus.service.Object):
                          in_signature='', out_signature='o',
                          sender_keyword='sender')
     def EntryGroupNew(self, sender):
-        entry_group = EntryGroup(sender)
+        index = len(self._entry_groups) + 1
+        entry_group = EntryGroup(sender, index)
         self._entry_groups.append(entry_group)
         return entry_group.object_path
 
@@ -151,9 +152,9 @@ class Avahi(dbus.service.Object):
 
 
 class EntryGroup(dbus.service.Object):
-    def __init__(self, client):
+    def __init__(self, client, index):
         bus = dbus.SystemBus()
-        self.object_path = '/Client%u/EntryGroup%u' % (1, 1)
+        self.object_path = '/Client%u/EntryGroup%u' % (1, index)
         dbus.service.Object.__init__(self, conn=bus,
                                      object_path=self.object_path)
 
