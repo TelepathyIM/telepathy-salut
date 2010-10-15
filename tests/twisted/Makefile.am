@@ -56,7 +56,7 @@ TWISTED_AVAHI_OLPC_TESTS = \
 TESTS =
 
 TESTS_ENVIRONMENT = \
-	PYTHONPATH=@abs_top_srcdir@/tests/twisted:@abs_top_builddir@/tests/twisted
+	PYTHONPATH=@abs_top_srcdir@/tests/twisted:@abs_top_builddir@/tests/twisted:$(PYTHONPATH)
 
 if WANT_TWISTED_TESTS
   TWISTED_TESTS += $(TWISTED_BASIC_TESTS)
