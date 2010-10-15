@@ -3,6 +3,7 @@
 import dbus
 import dbus.service
 import gobject
+import glib
 
 from dbus.mainloop.glib import DBusGMainLoop
 DBusGMainLoop(set_as_default=True)
@@ -106,9 +107,10 @@ class Avahi(dbus.service.Object):
         raise NotImplementedError()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='', out_signature='o')
-    def EntryGroupNew(self):
-        entry_group = EntryGroup()
+                         in_signature='', out_signature='o',
+                         sender_keyword='sender')
+    def EntryGroupNew(self, sender):
+        entry_group = EntryGroup(sender)
         self._entry_groups.append(entry_group)
         return entry_group.object_path
 
@@ -149,13 +151,14 @@ class Avahi(dbus.service.Object):
 
 
 class EntryGroup(dbus.service.Object):
-    def __init__(self):
+    def __init__(self, client):
         bus = dbus.SystemBus()
         self.object_path = '/Client%u/EntryGroup%u' % (1, 1)
         dbus.service.Object.__init__(self, conn=bus,
                                      object_path=self.object_path)
 
         self._state = 0
+        self._client = client
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='iiussssqaay', out_signature='')
@@ -171,12 +174,22 @@ class EntryGroup(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
     def Commit(self):
-        pass
+        self._set_state(1)
+        glib.timeout_add(1000, lambda: self._set_state(2))
+
+    def _set_state(self, new_state):
+        self._state = new_state
+        self.StateChanged(new_state, 'org.freedesktop.Avahi.Success',
+                          destination=self._client)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='i')
     def GetState(self):
         return self._state
+
+    @dbus.service.signal(dbus_interface=AVAHI_IFACE_ENTRY_GROUP, signature='is')
+    def StateChanged(self, state, error, **kwargs):
+        pass
 
 avahi = Avahi()
 
