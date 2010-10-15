@@ -20,6 +20,7 @@ class Avahi(dbus.service.Object):
                                      bus_name=name)
 
         self._entry_groups = []
+        self._service_browsers = []
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
@@ -126,9 +127,14 @@ class Avahi(dbus.service.Object):
         raise NotImplementedError()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iissu', out_signature='o')
-    def ServiceBrowserNew(self, interface, protocol, type_, domain, flags):
-        raise NotImplementedError()
+                         in_signature='iissu', out_signature='o',
+                         sender_keyword='sender')
+    def ServiceBrowserNew(self, interface, protocol, type_, domain, flags, sender):
+        index = len(self._service_browsers) + 1
+        service_browser = ServiceBrowser(sender, index)
+        self._service_browsers.append(service_browser)
+
+        return service_browser.object_path
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='iisssiu', out_signature='o')
@@ -191,6 +197,17 @@ class EntryGroup(dbus.service.Object):
     @dbus.service.signal(dbus_interface=AVAHI_IFACE_ENTRY_GROUP, signature='is')
     def StateChanged(self, state, error, **kwargs):
         pass
+
+
+class ServiceBrowser(dbus.service.Object):
+    def __init__(self, client, index):
+        bus = dbus.SystemBus()
+        self.object_path = '/Client%u/ServiceBrowser%u' % (1, index)
+        dbus.service.Object.__init__(self, conn=bus,
+                                     object_path=self.object_path)
+
+        self._client = client
+
 
 avahi = Avahi()
 
