@@ -29,6 +29,7 @@
 #include <telepathy-glib/util.h>
 #include <telepathy-glib/debug-sender.h>
 
+#include "protocol.h"
 #include "salut-connection.h"
 #include "debug.h"
 
@@ -42,69 +43,11 @@ enum
 struct _SalutConnectionManagerPrivate
 {
   GType backend_type;
+  TpBaseProtocol *protocol;
   TpDebugSender *debug_sender;
 };
 
 #define SALUT_CONNECTION_MANAGER_GET_PRIVATE(obj) ((obj)->priv)
-
-
-typedef struct {
-  guint set_mask;
-
-  gchar *nickname;
-  gchar *first_name;
-  gchar *last_name;
-  gchar *email;
-  gchar *jid;
-  gchar *published_name;
-} SalutParams;
-
-enum {
-  SALUT_PARAM_NICKNAME = 0,
-  SALUT_PARAM_FIRST_NAME,
-  SALUT_PARAM_LAST_NAME,
-  SALUT_PARAM_JID,
-  SALUT_PARAM_EMAIL,
-  SALUT_PARAM_PUBLISHED_NAME,
-  SALUT_NR_PARAMS
-};
-
-static const TpCMParamSpec salut_params[] = {
-  { "nickname", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-     0, NULL,
-     G_STRUCT_OFFSET(SalutParams, nickname),
-     tp_cm_param_filter_string_nonempty, NULL },
-  { "first-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
-     G_STRUCT_OFFSET(SalutParams, first_name)},
-  { "last-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
-     G_STRUCT_OFFSET(SalutParams, last_name)},
-  { "jid", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
-     G_STRUCT_OFFSET(SalutParams, jid)},
-  { "email", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
-     G_STRUCT_OFFSET(SalutParams, email)},
-  { "published-name", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
-     G_STRUCT_OFFSET(SalutParams, published_name),
-     tp_cm_param_filter_string_nonempty, NULL },
-  {NULL, NULL, 0, 0, NULL, 0}
-};
-
-static void *salut_params_new (void);
-static void salut_params_free (void *params);
-
-const TpCMProtocolSpec salut_protocols[] = {
-  {"local-xmpp", salut_params, salut_params_new, salut_params_free },
-  { NULL, NULL}
-};
-
-static TpBaseConnection *
-salut_connection_manager_new_connection (TpBaseConnectionManager *self,
-                                         const gchar *proto,
-                                         TpIntSet *params_present,
-                                         void *parsed_params,
-                                         GError **error);
-
 
 G_DEFINE_TYPE(SalutConnectionManager, salut_connection_manager,
               TP_TYPE_BASE_CONNECTION_MANAGER)
@@ -156,11 +99,44 @@ salut_connection_manager_set_property (GObject *object,
     {
       case PROP_BACKEND:
         priv->backend_type = g_value_get_gtype (value);
+
+        if (priv->protocol != NULL)
+          g_object_set (priv->protocol,
+              "backend-type", priv->backend_type,
+              NULL);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
     }
+}
+
+static void
+salut_connection_manager_constructed (GObject *object)
+{
+  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (object);
+  TpBaseConnectionManager *base = (TpBaseConnectionManager *) self;
+  void (*constructed) (GObject *) =
+      ((GObjectClass *) salut_connection_manager_parent_class)->constructed;
+
+  if (constructed != NULL)
+    constructed (object);
+
+  self->priv->protocol = salut_protocol_new (self->priv->backend_type);
+  tp_base_connection_manager_add_protocol (base, self->priv->protocol);
+}
+
+static void
+salut_connection_manager_dispose (GObject *object)
+{
+  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (object);
+  void (*dispose) (GObject *) =
+      ((GObjectClass *) salut_connection_manager_parent_class)->dispose;
+
+  tp_clear_object (&self->priv->protocol);
+
+  if (dispose != NULL)
+    dispose (object);
 }
 
 static void
@@ -197,6 +173,8 @@ salut_connection_manager_class_init (
 
   object_class->get_property = salut_connection_manager_get_property;
   object_class->set_property = salut_connection_manager_set_property;
+  object_class->constructed = salut_connection_manager_constructed;
+  object_class->dispose = salut_connection_manager_dispose;
   object_class->finalize = salut_connection_manager_finalize;
 
   param_spec = g_param_spec_gtype (
@@ -209,65 +187,4 @@ salut_connection_manager_class_init (
       param_spec);
 
   base_cm_class->cm_dbus_name = "salut";
-  base_cm_class->protocol_params = salut_protocols;
-  base_cm_class->new_connection = salut_connection_manager_new_connection;
-
 }
-
-static void *salut_params_new (void) {
-  return g_slice_new0(SalutParams);
-};
-
-static void salut_params_free (void *params)
-{
-  SalutParams *p = (SalutParams *) params;
-
-  g_free (p->nickname);
-  g_free (p->first_name);
-  g_free (p->last_name);
-  g_free (p->email);
-  g_free (p->jid);
-  g_free (p->published_name);
-
-  g_slice_free (SalutParams, params);
-};
-
-#define SET_PROPERTY_IF_PARAM_SET(prop, param, member) \
-  if (tp_intset_is_member (params_present, param)) \
-    { \
-      g_object_set (conn, prop, member, NULL); \
-    }
-
-static TpBaseConnection *
-salut_connection_manager_new_connection (TpBaseConnectionManager *base,
-                                         const gchar *proto,
-                                         TpIntSet *params_present,
-                                         void *parsed_params,
-                                         GError **error)
-{
-  SalutConnectionManager *self = SALUT_CONNECTION_MANAGER (base);
-  SalutConnectionManagerPrivate *priv = self->priv;
-  SalutConnection *conn;
-  SalutParams *params = (SalutParams *) parsed_params;
-
-  g_assert (!tp_strdiff (proto, "local-xmpp"));
-
-  conn = g_object_new (SALUT_TYPE_CONNECTION,
-      "protocol", proto,
-      "backend-type", priv->backend_type,
-      NULL);
-
-  SET_PROPERTY_IF_PARAM_SET ("nickname", SALUT_PARAM_NICKNAME,
-                              params->nickname);
-  SET_PROPERTY_IF_PARAM_SET ("first-name", SALUT_PARAM_FIRST_NAME,
-                              params->first_name);
-  SET_PROPERTY_IF_PARAM_SET ("last-name", SALUT_PARAM_LAST_NAME,
-                              params->last_name);
-  SET_PROPERTY_IF_PARAM_SET ("jid", SALUT_PARAM_EMAIL, params->jid);
-  SET_PROPERTY_IF_PARAM_SET ("email", SALUT_PARAM_JID, params->email);
-  SET_PROPERTY_IF_PARAM_SET ("published-name", SALUT_PARAM_PUBLISHED_NAME,
-                             params->published_name);
-
-  return TP_BASE_CONNECTION (conn);
-}
-

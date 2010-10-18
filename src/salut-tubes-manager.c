@@ -838,9 +838,8 @@ static const gchar * const dbus_tube_channel_allowed_properties[] = {
 #endif
 
 static void
-salut_tubes_manager_foreach_channel_class (
-    TpChannelManager *manager,
-    TpChannelManagerChannelClassFunc func,
+salut_tubes_manager_type_foreach_channel_class (GType type,
+    TpChannelManagerTypeChannelClassFunc func,
     gpointer user_data)
 {
   GHashTable *table;
@@ -860,7 +859,7 @@ salut_tubes_manager_foreach_channel_class (
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       value);
 
-  func (manager, table, old_tubes_channel_allowed_properties, user_data);
+  func (type, table, old_tubes_channel_allowed_properties, user_data);
 
   g_hash_table_destroy (table);
 
@@ -878,7 +877,7 @@ salut_tubes_manager_foreach_channel_class (
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       value);
 
-  func (manager, table, salut_tube_stream_channel_get_allowed_properties (),
+  func (type, table, salut_tube_stream_channel_get_allowed_properties (),
       user_data);
 
   g_hash_table_destroy (table);
@@ -899,7 +898,7 @@ salut_tubes_manager_foreach_channel_class (
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       value);
 
-  func (manager, table, dbus_tube_channel_allowed_properties, user_data);
+  func (type, table, dbus_tube_channel_allowed_properties, user_data);
 
   g_hash_table_destroy (table);
 #endif
@@ -1137,7 +1136,8 @@ salut_tubes_manager_iface_init (gpointer g_iface,
   TpChannelManagerIface *iface = (TpChannelManagerIface *) g_iface;
 
   iface->foreach_channel = salut_tubes_manager_foreach_channel;
-  iface->foreach_channel_class = salut_tubes_manager_foreach_channel_class;
+  iface->type_foreach_channel_class =
+    salut_tubes_manager_type_foreach_channel_class;
   iface->create_channel = salut_tubes_manager_create_channel;
   iface->request_channel = salut_tubes_manager_request_channel;
 }

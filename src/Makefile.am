@@ -77,7 +77,9 @@ CORE_SOURCES =                                          \
     salut-util.h                                        \
     salut-util.c                                        \
     debug.c                                             \
-    debug.h
+    debug.h                                             \
+    protocol.c                                          \
+    protocol.h
 
 AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.h                      \

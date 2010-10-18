@@ -435,7 +435,8 @@ error:
   return TRUE;
 }
 
-/* Keep in sync with values set in salut_ft_manager_foreach_channel_class */
+/* Keep in sync with values set in
+ * salut_ft_manager_type_foreach_channel_class */
 static const gchar * const file_transfer_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
     TP_IFACE_CHANNEL ".TargetHandleType",
@@ -458,9 +459,9 @@ static const gchar * const file_transfer_channel_allowed_properties[] =
 };
 
 static void
-salut_ft_manager_foreach_channel_class (TpChannelManager *manager,
-                                        TpChannelManagerChannelClassFunc func,
-                                        gpointer user_data)
+salut_ft_manager_type_foreach_channel_class (GType type,
+    TpChannelManagerTypeChannelClassFunc func,
+    gpointer user_data)
 {
   GHashTable *table;
   GValue *value;
@@ -476,7 +477,7 @@ salut_ft_manager_foreach_channel_class (TpChannelManager *manager,
   g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
 
-  func (manager, table, file_transfer_channel_allowed_properties,
+  func (type, table, file_transfer_channel_allowed_properties,
       user_data);
 
   g_hash_table_destroy (table);
@@ -489,7 +490,8 @@ channel_manager_iface_init (gpointer g_iface,
   TpChannelManagerIface *iface = g_iface;
 
   iface->foreach_channel = salut_ft_manager_foreach_channel;
-  iface->foreach_channel_class = salut_ft_manager_foreach_channel_class;
+  iface->type_foreach_channel_class =
+    salut_ft_manager_type_foreach_channel_class;
   iface->request_channel = salut_ft_manager_handle_request;
   iface->create_channel = salut_ft_manager_handle_request;
   iface->ensure_channel = salut_ft_manager_handle_request;

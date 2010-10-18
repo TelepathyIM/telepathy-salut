@@ -366,9 +366,9 @@ static const gchar * const * muc_tubes_channel_allowed_properties =
 
 
 static void
-salut_muc_manager_foreach_channel_class (TpChannelManager *manager,
-                                         TpChannelManagerChannelClassFunc func,
-                                         gpointer user_data)
+salut_muc_manager_type_foreach_channel_class (GType type,
+    TpChannelManagerTypeChannelClassFunc func,
+    gpointer user_data)
 {
   GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
@@ -386,24 +386,24 @@ salut_muc_manager_foreach_channel_class (TpChannelManager *manager,
 
   /* org.freedesktop.Telepathy.Channel.Type.Text */
   g_value_set_static_string (channel_type_value, TP_IFACE_CHANNEL_TYPE_TEXT);
-  func (manager, table, muc_channel_allowed_properties,
+  func (type, table, muc_channel_allowed_properties,
       user_data);
 
   /* org.freedesktop.Telepathy.Channel.Type.Tubes */
   g_value_set_static_string (channel_type_value, TP_IFACE_CHANNEL_TYPE_TUBES);
-  func (manager, table, muc_tubes_channel_allowed_properties,
+  func (type, table, muc_tubes_channel_allowed_properties,
       user_data);
 
   /* org.freedesktop.Telepathy.Channel.Type.StreamTube */
   g_value_set_static_string (channel_type_value,
       TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
-  func (manager, table, salut_tube_stream_channel_get_allowed_properties (),
+  func (type, table, salut_tube_stream_channel_get_allowed_properties (),
       user_data);
 
   /* Muc Channel.Type.DBusTube */
   g_value_set_static_string (channel_type_value,
       TP_IFACE_CHANNEL_TYPE_DBUS_TUBE);
-  func (manager, table, salut_tube_dbus_channel_get_allowed_properties (),
+  func (type, table, salut_tube_dbus_channel_get_allowed_properties (),
       user_data);
 
   g_hash_table_destroy (table);
@@ -1016,7 +1016,8 @@ static void salut_muc_manager_iface_init (gpointer g_iface,
   TpChannelManagerIface *iface = g_iface;
 
   iface->foreach_channel = salut_muc_manager_foreach_channel;
-  iface->foreach_channel_class = salut_muc_manager_foreach_channel_class;
+  iface->type_foreach_channel_class =
+    salut_muc_manager_type_foreach_channel_class;
   iface->request_channel = salut_muc_manager_request_channel;
   iface->create_channel = salut_muc_manager_create_channel;
   iface->ensure_channel = salut_muc_manager_ensure_channel;
