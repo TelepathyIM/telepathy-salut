@@ -255,6 +255,11 @@ class EntryGroup(dbus.service.Object):
     def GetState(self):
         return self._state
 
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
+                         in_signature='', out_signature='')
+    def Free(self):
+        pass
+
 
 class ServiceBrowser(dbus.service.Object):
     def __init__(self, client, index, type_):
@@ -275,6 +280,12 @@ class ServiceBrowser(dbus.service.Object):
         message.set_destination(self._client)
 
         dbus.SystemBus().send_message(message)
+
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVICE_BROWSER,
+                         in_signature='', out_signature='')
+    def Free(self):
+        pass
+
 
 class ServiceResolver(dbus.service.Object):
     def __init__(self, client, index, type_, parameters):
@@ -304,6 +315,11 @@ class ServiceResolver(dbus.service.Object):
         message.set_destination(self._client)
 
         dbus.SystemBus().send_message(message)
+
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVICE_RESOLVER,
+                         in_signature='', out_signature='')
+    def Free(self):
+        pass
 
 
 avahi = Avahi()
