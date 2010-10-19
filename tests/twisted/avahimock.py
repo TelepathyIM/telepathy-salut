@@ -23,7 +23,7 @@ class Avahi(dbus.service.Object):
                                      bus_name=name)
 
         self._entry_groups = []
-        self._service_browsers = {}
+        self._service_browsers = []
         self._service_resolvers = []
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
@@ -120,12 +120,17 @@ class Avahi(dbus.service.Object):
         self._entry_groups.append(entry_group)
         return entry_group.object_path
 
-    def _item_new_cb(self, interface, protocol, flags, name, type_, domain):
-        if type_ not in self._service_browsers:
-            return
+    def _item_new_cb(self, interface, protocol, flags, name, type_, domain, txt):
+        for service_browser in self._service_browsers:
+            if service_browser.type == type_:
+                service_browser.new_item(interface, protocol, flags, name,
+                                         type_, domain)
 
-        self._service_browsers[type_].new_item(interface, protocol, flags, name,
-                                               type_, domain)
+        for service_resolver in self._service_resolvers:
+            if service_resolver.type == type_:
+                service_resolver.update(interface, protocol, name, type_,
+                                        domain, 'host', 0,
+                                        '192.168.0.1', 99, txt, flags)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='iisiu', out_signature='o')
@@ -142,8 +147,8 @@ class Avahi(dbus.service.Object):
                          sender_keyword='sender')
     def ServiceBrowserNew(self, interface, protocol, type_, domain, flags, sender):
         index = len(self._service_browsers) + 1
-        service_browser = ServiceBrowser(sender, index)
-        self._service_browsers[type_] = service_browser
+        service_browser = ServiceBrowser(sender, index, type_)
+        self._service_browsers.append(service_browser)
 
         return service_browser.object_path
 
@@ -165,7 +170,7 @@ class Avahi(dbus.service.Object):
                       aprotocol, '192.168.0.1', service.port, service.txt,
                       flags)
 
-        service_resolver = ServiceResolver(sender, index, parameters)
+        service_resolver = ServiceResolver(sender, index, type_, parameters)
         self._service_resolvers.append(service_resolver)
 
         return service_resolver.object_path
@@ -220,12 +225,12 @@ class EntryGroup(dbus.service.Object):
                    port, txt):
         self._services[name] = Service(interface, protocol, flags, name, type_,
                                        domain, host, port, txt)
-        self._item_new_cb(interface, protocol, flags, name, type_, domain)
+        self._item_new_cb(interface, protocol, flags, name, type_, domain, txt)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='iiusssaay', out_signature='')
     def UpdateServiceTxt(self, interface, protocol, flags, name, type_, domain, txt):
-        self._item_new_cb(interface, protocol, flags, name, type_, domain)
+        self._item_new_cb(interface, protocol, flags, name, type_, domain, txt)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
@@ -252,13 +257,14 @@ class EntryGroup(dbus.service.Object):
 
 
 class ServiceBrowser(dbus.service.Object):
-    def __init__(self, client, index):
+    def __init__(self, client, index, type_):
         bus = dbus.SystemBus()
         self.object_path = '/Client%u/ServiceBrowser%u' % (1, index)
         dbus.service.Object.__init__(self, conn=bus,
                                      object_path=self.object_path)
 
         self._client = client
+        self.type = type_
 
     def new_item(self, interface, protocol, flags, name, type_, domain):
         message = SignalMessage(self.object_path,
@@ -271,18 +277,26 @@ class ServiceBrowser(dbus.service.Object):
         dbus.SystemBus().send_message(message)
 
 class ServiceResolver(dbus.service.Object):
-    def __init__(self, client, index, parameters):
+    def __init__(self, client, index, type_, parameters):
         bus = dbus.SystemBus()
         self.object_path = '/Client%u/ServiceResolver%u' % (1, index)
         dbus.service.Object.__init__(self, conn=bus,
                                      object_path=self.object_path)
 
         self._client = client
+        self.type = type_
         self._parameters = parameters
 
         glib.idle_add(self._idle_cb)
 
     def _idle_cb(self):
+        self._emit_found()
+
+    def update(self, *parameters):
+        self._parameters = parameters
+        self._emit_found()
+
+    def _emit_found(self):
         message = SignalMessage(self.object_path,
                                 AVAHI_IFACE_SERVICE_RESOLVER,
                                 'Found')
