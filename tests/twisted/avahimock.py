@@ -79,13 +79,19 @@ class Model(object):
     def update_entry(self, interface, protocol, flags, name, type_, domain,
                      host, port, txt):
 
+        entry = self._find_entry(type_, name)
+
         if interface == -1:
             interface = 0
 
         if protocol == -1:
             protocol = 0
 
-        entry = self._find_entry(type_, name)
+        if host is None:
+            host = entry.host
+
+        if port is None:
+            port = entry.port
 
         if entry is None:
             entry = Entry(interface, protocol, flags, name, type_, domain,
@@ -311,7 +317,7 @@ class EntryGroup(dbus.service.Object):
                          in_signature='iiusssaay', out_signature='')
     def UpdateServiceTxt(self, interface, protocol, flags, name, type_, domain, txt):
         self._model.update_entry(interface, protocol, flags, name, type_, domain,
-                                 '', 0, txt)
+                                 None, None, txt)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
