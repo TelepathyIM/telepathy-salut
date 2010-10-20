@@ -37,7 +37,14 @@ class Model(object):
         service_browser = ServiceBrowser(client, index, type_)
         self._service_browsers.append(service_browser)
 
+        glib.idle_add(self.__browse_idle_cb, service_browser)
+
         return service_browser.object_path
+
+    def __browse_idle_cb(self, service_browser):
+        for entry in self._entries:
+            if entry.type == service_browser.type:
+                self._emit_new_item(service_browser, entry)
 
     def _find_entry(self, type_, name):
         for entry in self._entries:
@@ -51,11 +58,11 @@ class Model(object):
         service_resolver = ServiceResolver(index, client, type_, name)
         self._service_resolvers.append(service_resolver)
 
-        glib.idle_add(self._idle_cb, service_resolver, entry)
+        glib.idle_add(self.__entry_found_idle_cb, service_resolver, entry)
 
         return service_resolver.object_path
 
-    def _idle_cb(self, service_resolver, entry):
+    def __entry_found_idle_cb(self, service_resolver, entry):
         if entry is None:
             emit_signal(service_resolver.object_path,
                         AVAHI_IFACE_SERVICE_RESOLVER, 'Failure',
@@ -71,6 +78,13 @@ class Model(object):
 
     def update_entry(self, interface, protocol, flags, name, type_, domain,
                      host, port, txt):
+
+        if interface == -1:
+            interface = 0
+
+        if protocol == -1:
+            protocol = 0
+
         entry = self._find_entry(type_, name)
 
         if entry is None:
