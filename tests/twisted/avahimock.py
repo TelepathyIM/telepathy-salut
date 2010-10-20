@@ -308,7 +308,7 @@ class EntryGroup(dbus.service.Object):
                          in_signature='', out_signature='')
     def Commit(self):
         self._set_state(1)
-        glib.timeout_add(1000, lambda: self._set_state(2))
+        glib.idle_add(lambda: self._set_state(2))
 
     def _set_state(self, new_state):
         self._state = new_state
