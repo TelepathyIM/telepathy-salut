@@ -174,11 +174,6 @@ class Avahi(dbus.service.Object):
         self._model = Model()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='', out_signature='s')
-    def GetVersionString(self):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='u')
     def GetAPIVersion(self):
         return 515
@@ -187,11 +182,6 @@ class Avahi(dbus.service.Object):
                          in_signature='', out_signature='s')
     def GetHostName(self):
         return socket.gethostname()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='s', out_signature='')
-    def SetHostName(self, name):
-        raise NotImplementedError()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
@@ -204,11 +194,6 @@ class Avahi(dbus.service.Object):
         return get_domain()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='', out_signature='b')
-    def IsNSSSupportAvailable(self):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='i')
     def GetState(self):
         return 2
@@ -218,47 +203,6 @@ class Avahi(dbus.service.Object):
         pass
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='', out_signature='u')
-    def GetLocalServiceCookie(self):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='s', out_signature='s')
-    def GetAlternativeHostName(self, name):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='s', out_signature='s')
-    def GetAlternativeServiceName(self, name):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='i', out_signature='s')
-    def GetNetworkInterfaceNameByIndex(self, index):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='s', out_signature='i')
-    def GetNetworkInterfaceIndexByName(self, name):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisiu', out_signature='iisisu')
-    def ResolveHostName(self, interface, protocol, name, aprotocol, flags):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisu', out_signature='iiissu')
-    def ResolveAddress(self, interface, protocol, address, flags):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisssiu', out_signature='iissssisqaayu')
-    def ResolveService(self, interface, protocol, name, type_, domain, aprotocol,
-                       flags):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='o',
                          sender_keyword='sender')
     def EntryGroupNew(self, sender):
@@ -266,16 +210,6 @@ class Avahi(dbus.service.Object):
         entry_group = EntryGroup(sender, index, self._model)
         self._entry_groups.append(entry_group)
         return entry_group.object_path
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisiu', out_signature='o')
-    def DomainBrowserNew(self, interface, protocol, domain, btype, flags):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisu', out_signature='o')
-    def ServiceTypeBrowserNew(self, interface, protocol, domain, flags):
-        raise NotImplementedError()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='iissu', out_signature='o',
@@ -288,21 +222,6 @@ class Avahi(dbus.service.Object):
                          sender_keyword='sender')
     def ServiceResolverNew(self, interface, protocol, name, type_, domain, aprotocol, flags, sender):
         return self._model.new_service_resolver(type_, name, sender)
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisiu', out_signature='o')
-    def HostNameResolverNew(self, interface, protocol, name, aprotocol, flags):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisu', out_signature='o')
-    def AddressResolverNew(self, interface, protocol, address, flags):
-        raise NotImplementedError()
-
-    @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
-                         in_signature='iisqqu', out_signature='o')
-    def RecordBrowserNew(self, interface, protocol, name, clazz, type_, flags):
-        raise NotImplementedError()
 
 
 class EntryGroup(dbus.service.Object):
