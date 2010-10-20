@@ -17,6 +17,9 @@ AVAHI_IFACE_ENTRY_GROUP = 'org.freedesktop.Avahi.EntryGroup'
 AVAHI_IFACE_SERVICE_BROWSER = 'org.freedesktop.Avahi.ServiceBrowser'
 AVAHI_IFACE_SERVICE_RESOLVER = 'org.freedesktop.Avahi.ServiceResolver'
 
+AVAHI_DNS_CLASS_IN = 1
+AVAHI_DNS_TYPE_A = 1
+
 
 def emit_signal(object_path, interface, name, destination, signature, *args):
     message = SignalMessage(object_path, interface, name)
@@ -40,6 +43,7 @@ class Model(object):
         self._service_browsers = []
         self._service_resolvers = []
         self._entries = []
+        self._address_records = {}
 
     def new_service_browser(self, type_, client):
         index = len(self._service_browsers) + 1
@@ -78,12 +82,19 @@ class Model(object):
                         service_resolver.client, 's',
                         'fill with a proper error string')
         else:
+            address = self._resolve_hostname(entry.host)
             emit_signal(service_resolver.object_path,
                         AVAHI_IFACE_SERVICE_RESOLVER, 'Found',
                         service_resolver.client, 'iissssisqaayu',
                         entry.interface, entry.protocol, entry.name, entry.type,
                         entry.domain, entry.host, entry.aprotocol,
-                        entry.address, entry.port, entry.txt, entry.flags)
+                        address, entry.port, entry.txt, entry.flags)
+
+    def _resolve_hostname(self, hostname):
+        if hostname in self._address_records:
+            return self._address_records[hostname]
+        else:
+            return socket.gethostbyname(hostname)
 
     def update_entry(self, interface, protocol, flags, name, type_, domain,
                      host, port, txt):
@@ -118,6 +129,11 @@ class Model(object):
                 service_resolver.name == name:
                 self._emit_found(service_resolver, entry)
 
+    def add_record(self, interface, protocol, flags, name, clazz, type_, ttl,
+                   rdata):
+        if clazz == AVAHI_DNS_CLASS_IN and type_ == AVAHI_DNS_TYPE_A:
+            self._address_records[name] = socket.inet_ntoa(rdata)
+
     def remove_entry(self, type_, name):
         entry = self._find_entry(type_, name)
 
@@ -145,12 +161,13 @@ class Model(object):
                     entry.domain, entry.flags)
 
     def _emit_found(self, service_resolver, entry):
+        address = self._resolve_hostname(entry.host)
         emit_signal(service_resolver.object_path,
                     AVAHI_IFACE_SERVICE_RESOLVER, 'Found',
                     service_resolver.client, 'iissssisqaayu',
                     entry.interface, entry.protocol, entry.name, entry.type,
                     entry.domain, entry.host, entry.aprotocol,
-                    entry.address, entry.port, entry.txt, entry.flags)
+                    address, entry.port, entry.txt, entry.flags)
 
     def remove_client(self, client):
         for service_browser in self._service_browsers[:]:
@@ -178,7 +195,6 @@ class Entry(object):
         self.flags = None
         self.domain = None
         self.host = None
-        self.address = None
         self.port = None
         self.txt = None
 
@@ -191,7 +207,6 @@ class Entry(object):
         self.flags = flags
         self.domain = domain
         self.host = host
-        self.address = socket.gethostbyname(host)
         self.port = port
         self.txt = txt
 
@@ -326,6 +341,14 @@ class EntryGroup(dbus.service.Object):
                          in_signature='', out_signature='i')
     def GetState(self):
         return self._state
+
+    @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
+                         in_signature='iiusqquay', out_signature='',
+                         byte_arrays=True)
+    def AddRecord(self, interface, protocol, flags, name, clazz, type_, ttl,
+                  rdata):
+        self._model.add_record(interface, protocol, flags, name, clazz, type_,
+                               ttl, rdata)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
