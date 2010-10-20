@@ -152,6 +152,19 @@ class Model(object):
                     entry.domain, entry.host, entry.aprotocol,
                     entry.address, entry.port, entry.txt, entry.flags)
 
+    def remove_client(self, client):
+        for service_browser in self._service_browsers[:]:
+            if service_browser.client == client:
+                service_browser.Free()
+                service_browser.remove_from_connection()
+                self._service_browsers.remove(service_browser)
+
+        for service_resolver in self._service_resolvers[:]:
+            if service_resolver.client == client:
+                service_resolver.Free()
+                service_resolver.remove_from_connection()
+                self._service_resolvers.remove(service_resolver)
+
 
 class Entry(object):
     def __init__(self, interface, protocol, flags, name, type_, domain, host,
@@ -201,6 +214,7 @@ class Avahi(dbus.service.Object):
             for entry_group in self._entry_groups[:]:
                 if entry_group.client == name:
                     entry_group.Free()
+                    entry_group.remove_from_connection()
                     self._entry_groups.remove(entry_group)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
@@ -316,8 +330,9 @@ class EntryGroup(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
     def Free(self):
-        for type_, name in self._entries:
+        for type_, name in self._entries[:]:
             self._model.remove_entry(type_, name)
+            self._entries.remove((type_, name))
 
 
 class ServiceBrowser(dbus.service.Object):
