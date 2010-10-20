@@ -121,6 +121,9 @@ class Model(object):
     def remove_entry(self, type_, name):
         entry = self._find_entry(type_, name)
 
+        if entry is None:
+            raise ValueError('No entry for type %s and name %s' % (type_, name))
+
         for service_browser in self._service_browsers:
             if service_browser.type == type_:
                 self._emit_item_remove(service_browser, entry)
@@ -186,8 +189,19 @@ class Avahi(dbus.service.Object):
         dbus.service.Object.__init__(self, conn=bus, object_path='/',
                                      bus_name=name)
 
+        bus.add_signal_receiver(self.__name_owner_changed_cb,
+                                signal_name='NameOwnerChanged',
+                                dbus_interface='org.freedesktop.DBus')
+
         self._entry_groups = []
         self._model = Model()
+
+    def __name_owner_changed_cb(self, name, old_owner, new_owner):
+        if new_owner == '':
+            for entry_group in self._entry_groups[:]:
+                if entry_group.client == name:
+                    entry_group.Free()
+                    self._entry_groups.remove(entry_group)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='u')
@@ -248,7 +262,7 @@ class EntryGroup(dbus.service.Object):
                                      object_path=self.object_path)
 
         self._state = 0
-        self._client = client
+        self.client = client
         self._model = model
 
         self._entries = []
@@ -290,7 +304,7 @@ class EntryGroup(dbus.service.Object):
                                 'StateChanged')
         message.append(self._state, 'org.freedesktop.Avahi.Success',
                        signature='is')
-        message.set_destination(self._client)
+        message.set_destination(self.client)
 
         dbus.SystemBus().send_message(message)
 
