@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import socket
+
 import dbus
 import dbus.service
 from dbus.lowlevel import SignalMessage
@@ -25,6 +27,13 @@ def emit_signal(object_path, interface, name, destination, signature, *args):
 
     dbus.SystemBus().send_message(message)
 
+
+def get_domain():
+    full_domain = socket.getfqdn()
+    if '.' in full_domain:
+        return full_domain.split('.', 1)[1]
+    else:
+        return ''
 
 class Model(object):
     def __init__(self):
@@ -128,17 +137,20 @@ class Model(object):
 class Entry(object):
     def __init__(self, interface, protocol, flags, name, type_, domain, host,
                  port, txt):
-        self.interface = interface
-        self.protocol = protocol
-        self.aprotocol = protocol
-        self.flags = flags
         self.name = name
         self.type = type_
-        self.domain = domain
-        self.host = host
-        self.address = '192.168.1.1'
-        self.port = port
-        self.txt = txt
+
+        self.interface = None
+        self.protocol = None
+        self.aprotocol = None
+        self.flags = None
+        self.domain = None
+        self.host = None
+        self.address = None
+        self.port = None
+        self.txt = None
+
+        self.update(interface, protocol, flags, domain, host, port, txt)
 
     def update(self, interface, protocol, flags, domain, host, port, txt):
         self.interface = interface
@@ -147,6 +159,7 @@ class Entry(object):
         self.flags = flags
         self.domain = domain
         self.host = host
+        self.address = socket.gethostbyname(host)
         self.port = port
         self.txt = txt
 
@@ -173,7 +186,7 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetHostName(self):
-        return 'avahimock_hostname'
+        return socket.gethostname()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='s', out_signature='')
@@ -183,12 +196,12 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetHostNameFqdn(self):
-        return 'avahimock_hostname.local'
+        return socket.getfqdn()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetDomainName(self):
-        return 'local'
+        return get_domain()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='b')
@@ -310,6 +323,12 @@ class EntryGroup(dbus.service.Object):
                          in_signature='iiussssqaay', out_signature='')
     def AddService(self, interface, protocol, flags, name, type_, domain, host,
                    port, txt):
+        if not host:
+            host = socket.gethostname()
+
+        if not domain:
+            domain = get_domain()
+
         self._model.update_entry(interface, protocol, flags, name, type_, domain,
                                  host, port, txt)
 
