@@ -118,9 +118,25 @@ class Model(object):
                 service_resolver.name == name:
                 self._emit_found(service_resolver, entry)
 
+    def remove_entry(self, type_, name):
+        entry = self._find_entry(type_, name)
+
+        for service_browser in self._service_browsers:
+            if service_browser.type == type_:
+                self._emit_item_remove(service_browser, entry)
+
+        self._entries.remove(entry)
+
     def _emit_new_item(self, service_browser, entry):
         emit_signal(service_browser.object_path,
                     AVAHI_IFACE_SERVICE_BROWSER, 'ItemNew',
+                    service_browser.client, 'iisssu',
+                    entry.interface, entry.protocol, entry.name, entry.type,
+                    entry.domain, entry.flags)
+
+    def _emit_item_remove(self, service_browser, entry):
+        emit_signal(service_browser.object_path,
+                    AVAHI_IFACE_SERVICE_BROWSER, 'ItemRemove',
                     service_browser.client, 'iisssu',
                     entry.interface, entry.protocol, entry.name, entry.type,
                     entry.domain, entry.flags)
@@ -235,6 +251,8 @@ class EntryGroup(dbus.service.Object):
         self._client = client
         self._model = model
 
+        self._entries = []
+
     def get_service(self, name):
         return self._services.get(name, None)
 
@@ -250,6 +268,7 @@ class EntryGroup(dbus.service.Object):
 
         self._model.update_entry(interface, protocol, flags, name, type_, domain,
                                  host, port, txt)
+        self._entries.append((type_, name))
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='iiusssaay', out_signature='')
@@ -283,7 +302,8 @@ class EntryGroup(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
     def Free(self):
-        pass
+        for type_, name in self._entries:
+            self._model.remove_entry(type_, name)
 
 
 class ServiceBrowser(dbus.service.Object):
