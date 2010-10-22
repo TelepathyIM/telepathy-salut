@@ -136,9 +136,9 @@ class Model(object):
 
     def remove_entry(self, type_, name):
         entry = self._find_entry(type_, name)
-
         if entry is None:
-            raise ValueError('No entry for type %s and name %s' % (type_, name))
+            # Entry may have been created by more than one EntryGroup
+            return
 
         for service_browser in self._service_browsers:
             if service_browser.type == type_:
