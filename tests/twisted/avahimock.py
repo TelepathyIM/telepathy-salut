@@ -85,13 +85,7 @@ class Model(object):
                         service_resolver.client, 's',
                         'fill with a proper error string')
         else:
-            address = self._resolve_hostname(entry.protocol, entry.host)
-            emit_signal(service_resolver.object_path,
-                        AVAHI_IFACE_SERVICE_RESOLVER, 'Found',
-                        service_resolver.client, 'iissssisqaayu',
-                        entry.interface, entry.protocol, entry.name, entry.type,
-                        entry.domain, entry.host, entry.aprotocol,
-                        address, entry.port, entry.txt, entry.flags)
+            self._emit_found(service_resolver, entry)
 
     def _resolve_hostname(self, protocol, hostname):
         if hostname in self._address_records:
@@ -111,14 +105,10 @@ class Model(object):
 
     def update_entry(self, interface, protocol, flags, name, type_, domain,
                      host, port, txt):
-
         entry = self._find_entry(type_, name)
 
         if interface == -1:
             interface = 0
-
-        if protocol == -1:
-            protocol = 0
 
         if host is None:
             host = entry.host
@@ -160,27 +150,45 @@ class Model(object):
         self._entries.remove(entry)
 
     def _emit_new_item(self, service_browser, entry):
-        emit_signal(service_browser.object_path,
-                    AVAHI_IFACE_SERVICE_BROWSER, 'ItemNew',
-                    service_browser.client, 'iisssu',
-                    entry.interface, entry.protocol, entry.name, entry.type,
-                    entry.domain, entry.flags)
+        if entry.protocol == AVAHI_PROTO_UNSPEC:
+            protocols = (AVAHI_PROTO_INET, AVAHI_PROTO_INET6)
+        else:
+            protocols = (entry.protocol,)
+
+        for protocol in protocols:
+            emit_signal(service_browser.object_path,
+                        AVAHI_IFACE_SERVICE_BROWSER, 'ItemNew',
+                        service_browser.client, 'iisssu',
+                        entry.interface, protocol, entry.name, entry.type,
+                        entry.domain, entry.flags)
 
     def _emit_item_remove(self, service_browser, entry):
-        emit_signal(service_browser.object_path,
-                    AVAHI_IFACE_SERVICE_BROWSER, 'ItemRemove',
-                    service_browser.client, 'iisssu',
-                    entry.interface, entry.protocol, entry.name, entry.type,
-                    entry.domain, entry.flags)
+        if entry.protocol == AVAHI_PROTO_UNSPEC:
+            protocols = (AVAHI_PROTO_INET, AVAHI_PROTO_INET6)
+        else:
+            protocols = (entry.protocol,)
+
+        for protocol in protocols:
+            emit_signal(service_browser.object_path,
+                        AVAHI_IFACE_SERVICE_BROWSER, 'ItemRemove',
+                        service_browser.client, 'iisssu',
+                        entry.interface, protocol, entry.name, entry.type,
+                        entry.domain, entry.flags)
 
     def _emit_found(self, service_resolver, entry):
-        address = self._resolve_hostname(entry.host)
-        emit_signal(service_resolver.object_path,
-                    AVAHI_IFACE_SERVICE_RESOLVER, 'Found',
-                    service_resolver.client, 'iissssisqaayu',
-                    entry.interface, entry.protocol, entry.name, entry.type,
-                    entry.domain, entry.host, entry.aprotocol,
-                    address, entry.port, entry.txt, entry.flags)
+        if entry.protocol == AVAHI_PROTO_UNSPEC:
+            protocols = (AVAHI_PROTO_INET, AVAHI_PROTO_INET6)
+        else:
+            protocols = (entry.protocol,)
+
+        for protocol in protocols:
+            address = self._resolve_hostname(protocol, entry.host)
+            emit_signal(service_resolver.object_path,
+                        AVAHI_IFACE_SERVICE_RESOLVER, 'Found',
+                        service_resolver.client, 'iissssisqaayu',
+                        entry.interface, protocol, entry.name, entry.type,
+                        entry.domain, entry.host, entry.aprotocol,
+                        address, entry.port, entry.txt, entry.flags)
 
     def remove_client(self, client):
         for service_browser in self._service_browsers[:]:
