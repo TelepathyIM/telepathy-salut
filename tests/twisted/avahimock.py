@@ -20,6 +20,9 @@ AVAHI_IFACE_SERVICE_RESOLVER = 'org.freedesktop.Avahi.ServiceResolver'
 AVAHI_DNS_CLASS_IN = 1
 AVAHI_DNS_TYPE_A = 1
 
+AVAHI_PROTO_INET = 0
+AVAHI_PROTO_INET6 = 1
+AVAHI_PROTO_UNSPEC = -1
 
 def emit_signal(object_path, interface, name, destination, signature, *args):
     message = SignalMessage(object_path, interface, name)
@@ -82,7 +85,7 @@ class Model(object):
                         service_resolver.client, 's',
                         'fill with a proper error string')
         else:
-            address = self._resolve_hostname(entry.host)
+            address = self._resolve_hostname(entry.protocol, entry.host)
             emit_signal(service_resolver.object_path,
                         AVAHI_IFACE_SERVICE_RESOLVER, 'Found',
                         service_resolver.client, 'iissssisqaayu',
@@ -90,11 +93,21 @@ class Model(object):
                         entry.domain, entry.host, entry.aprotocol,
                         address, entry.port, entry.txt, entry.flags)
 
-    def _resolve_hostname(self, hostname):
+    def _resolve_hostname(self, protocol, hostname):
         if hostname in self._address_records:
             return self._address_records[hostname]
         else:
-            return socket.gethostbyname(hostname)
+            if protocol == AVAHI_PROTO_INET6:
+                for family, _, _, _, address in socket.getaddrinfo(hostname, None):
+                    if family == socket.AF_INET6:
+                        return address[0]
+
+                # HACK: If resolving the given name doesn't give us an ip6
+                # address, return '::1' if it is the local hostname.
+                if hostname == socket.gethostname():
+                    return '::1'
+            else:
+                return socket.gethostbyname(hostname)
 
     def update_entry(self, interface, protocol, flags, name, type_, domain,
                      host, port, txt):
