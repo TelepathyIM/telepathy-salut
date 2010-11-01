@@ -1,12 +1,9 @@
 from saluttest import exec_test
+from avahitest import skip_if_another_llxmpp
 from xmppstream import connect_to_stream, OutgoingXmppiChatStream
 from twisted.words.xish import domish
 
 from file_transfer_helper import ReceiveFileTest
-
-print "FIXME: This test fails if there is another LL XMPP instance running on the machine."
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
 
 class IChatReceiveDirectory(ReceiveFileTest):
     def connect_to_salut(self):
@@ -41,5 +38,6 @@ class IChatReceiveDirectory(ReceiveFileTest):
         return True
 
 if __name__ == '__main__':
+    skip_if_another_llxmpp()
     test = IChatReceiveDirectory()
     exec_test(test.test)
