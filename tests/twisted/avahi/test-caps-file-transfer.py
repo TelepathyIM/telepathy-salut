@@ -207,22 +207,14 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     # no capabilites announced (assume FT is supported to insure interop)
     txt_record = { "txtvers": "1", "status": "avail"}
     contact_name = "test-caps-ft-no-capa2@" + get_host_name()
+    contact_handle = conn.RequestHandles(HT_CONTACT, [contact_name])[0]
     listener, port = setup_stream_listener(q, contact_name)
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
             txt_record)
 
     # FT capa is announced
-    contact_handle = 0
-    while contact_handle == 0:
-        e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
-        handles = e.args[0].keys()
-        ids = conn.InspectHandles(HT_CONTACT, handles)
-        if contact_name not in ids:
-            continue
-
-        for handle, id in zip(handles, ids):
-            if id == contact_name:
-                contact_handle = handle
+    e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged',
+            predicate=lambda e: contact_handle in e.args[0].keys())
 
     caps = e.args[0][contact_handle]
     assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
