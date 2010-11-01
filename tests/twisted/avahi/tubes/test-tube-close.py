@@ -3,7 +3,7 @@ Offer a 1-1 stream tube and close the connection. Salut must just send a
 stanza to close the tube and disconnect.
 """
 
-from saluttest import exec_test
+from saluttest import exec_test, wait_for_contact_in_publish
 from avahitest import AvahiAnnouncer, AvahiListener
 from avahitest import get_host_name
 import avahi
@@ -43,19 +43,7 @@ def test(q, bus, conn):
 
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
 
-    publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-    publish = conn.RequestChannel(
-        "org.freedesktop.Telepathy.Channel.Type.ContactList",
-        HT_CONTACT_LIST, publish_handle, False)
-
-    handle = 0
-    # Wait until the record shows up in publish
-    while handle == 0:
-        e = q.expect('dbus-signal', signal='MembersChanged', path=publish)
-        for h in e.args[1]:
-            name = conn.InspectHandles(HT_CONTACT, [h])[0]
-            if name == contact_name:
-                handle = h
+    handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
     t = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_CONTACT, handle,
         True)
