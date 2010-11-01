@@ -1564,7 +1564,8 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
   SalutFileTransferChannel *chan;
 
   salut_xmpp_connection_manager_take_connection (xcm , conn);
-  ft = gibber_file_transfer_new_from_stanza (stanza, conn, &error);
+  ft = gibber_file_transfer_new_from_stanza_with_from (stanza, conn,
+      contact->name, &error);
 
   if (ft == NULL)
     {
