@@ -1,6 +1,6 @@
 from saluttest import exec_test
 from avahitest import AvahiAnnouncer, AvahiListener
-from avahitest import get_host_name
+from avahitest import get_host_name, skip_if_another_llxmpp
 import avahi
 
 from xmppstream import setup_stream_listener, connect_to_stream, OutgoingXmppiChatStream
@@ -18,10 +18,6 @@ HT_CONTACT_LIST = 3
 TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
 
 INCOMING_MESSAGE = "Test 123"
-
-print "FIXME: This test fails if there is another LL XMPP instance running on the machine."
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
 
 def test(q, bus, conn):
     conn.Connect()
@@ -78,4 +74,5 @@ def test(q, bus, conn):
     assert e.args[5] == "hi"
 
 if __name__ == '__main__':
+    skip_if_another_llxmpp()
     exec_test(test)
