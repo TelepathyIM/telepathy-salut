@@ -42,6 +42,7 @@
 
 #include <gibber/gibber-namespaces.h>
 
+#include "capabilities.h"
 #include "salut-avahi-discovery-client.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
@@ -297,6 +298,8 @@ salut_connection_init (SalutConnection *obj)
 
   obj->priv = priv;
   obj->name = NULL;
+
+  gabble_capabilities_init (obj);
 
   tp_presence_mixin_init ((GObject *) obj,
       G_STRUCT_OFFSET (SalutConnection, presence_mixin));
@@ -964,6 +967,8 @@ salut_connection_finalize (GObject *object)
 #endif
 
   tp_contacts_mixin_finalize (G_OBJECT(self));
+
+  gabble_capabilities_finalize (self);
 
   DEBUG("Finalizing connection");
 

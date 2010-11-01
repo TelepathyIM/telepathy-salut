@@ -31,6 +31,7 @@
 
 #define DEBUG_FLAG DEBUG_PRESENCE
 
+#include "capabilities.h"
 #include "debug.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
@@ -153,6 +154,9 @@ struct _CapabilityInfo
    * the list of supported tube types (example: stream tube for daap).
    */
   GHashTable *per_channel_manager_caps;
+
+  /* The same information, as a GabbleCapabilitySet. This is the future. */
+  GabbleCapabilitySet *caps;
 };
 
 static CapabilityInfo *
@@ -165,6 +169,7 @@ capability_info_get (SalutPresenceCache *cache, const gchar *uri)
     {
       info = g_slice_new0 (CapabilityInfo);
       info->per_channel_manager_caps = NULL;
+      info->caps = NULL;
       g_hash_table_insert (priv->capabilities, g_strdup (uri), info);
     }
 
@@ -176,6 +181,7 @@ capability_info_free (CapabilityInfo *info)
 {
   salut_presence_cache_free_cache_entry (info->per_channel_manager_caps);
   info->per_channel_manager_caps = NULL;
+  tp_clear_pointer (&info->caps, gabble_capability_set_free);
   g_slice_free (CapabilityInfo, info);
 }
 
@@ -466,6 +472,12 @@ _caps_disco_cb (SalutDisco *disco,
             {
               info->per_channel_manager_caps =
                 create_per_channel_manager_caps (cache, query_result);
+            }
+
+          if (info->caps == NULL)
+            {
+              info->caps = gabble_capability_set_new_from_stanza (
+                  query_result);
             }
         }
       else
