@@ -106,10 +106,11 @@ GType gibber_file_transfer_get_type (void);
 gboolean gibber_file_transfer_is_file_offer (GibberXmppStanza *stanza);
 
 GibberFileTransfer *gibber_file_transfer_new_from_stanza (
-    GibberXmppStanza *stanza, GibberXmppConnection *connection);
+    GibberXmppStanza *stanza, GibberXmppConnection *connection,
+    GError **error);
 GibberFileTransfer *gibber_file_transfer_new_from_stanza_with_from (
     GibberXmppStanza *stanza, GibberXmppConnection *connection,
-    const gchar *from);
+    const gchar *from, GError **error);
 
 void gibber_file_transfer_offer (GibberFileTransfer *self);
 void gibber_file_transfer_send (GibberFileTransfer *self, GIOChannel *src);

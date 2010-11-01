@@ -178,7 +178,8 @@ GibberFileTransfer *
 gibber_oob_file_transfer_new_from_stanza_with_from (
     GibberXmppStanza *stanza,
     GibberXmppConnection *connection,
-    const gchar *peer_id)
+    const gchar *peer_id,
+    GError **error)
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberOobFileTransfer *self;
@@ -196,32 +197,80 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   gchar *filename;
 
   if (strcmp (node->name, "iq") != 0)
-    return NULL;
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "Not an IQ: %s", node->name);
+      return NULL;
+    }
 
   self_id = gibber_xmpp_node_get_attribute (node, "to");
-  if (peer_id == NULL || self_id == NULL)
-    return NULL;
+
+  if (peer_id == NULL)
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "No 'from' attribute");
+      return NULL;
+    }
+
+  if (self_id == NULL)
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "No 'to' attribute");
+      return NULL;
+    }
 
   type = gibber_xmpp_node_get_attribute (node, "type");
+
   if (type == NULL || strcmp (type, "set") != 0)
-    return NULL;
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "type != 'set': '%s'", (type == NULL ? "(null)" : type));
+      return NULL;
+    }
 
   id = gibber_xmpp_node_get_attribute (node, "id");
+
   if (id == NULL)
-    return NULL;
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "no 'id' attribute");
+      return NULL;
+    }
 
   query = gibber_xmpp_node_get_child (node, "query");
+
   if (query == NULL)
-    return NULL;
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "no <query> node");
+      return NULL;
+    }
 
   url_node = gibber_xmpp_node_get_child (query, "url");
-  if (url_node == NULL || url_node->content == NULL)
-    return NULL;
+
+  if (url_node == NULL)
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "no <query><url> node");
+      return NULL;
+    }
+
+  if (url_node->content == NULL)
+    {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<query><url> node has no content");
+      return NULL;
+    }
 
   ft_type = gibber_xmpp_node_get_attribute (url_node, "type");
+
   if (ft_type != NULL && gibber_strdiff (ft_type, "file"))
-    /* We don't support directory transfer */
-    return NULL;
+    {
+      /* We don't support directory transfer */
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<url> has a 'type' attribute other than 'file': '%s'", ft_type);
+      return NULL;
+    }
 
   /* The file name is extracted from the address */
   url = g_strdup (url_node->content);
@@ -229,6 +278,8 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   filename = g_strrstr (url, "/");
   if (filename == NULL)
     {
+      g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<url> has no '/': '%s'", url);
       g_free (url);
       return NULL;
     }

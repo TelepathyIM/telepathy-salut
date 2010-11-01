@@ -355,14 +355,15 @@ GibberFileTransfer *
 gibber_file_transfer_new_from_stanza_with_from (
     GibberXmppStanza *stanza,
     GibberXmppConnection *connection,
-    const gchar *from)
+    const gchar *from,
+    GError **error)
 {
   /* FIXME put the known backends in a list and stop when the first one
    * can handle the stanza */
   GibberFileTransfer *ft;
 
   ft = gibber_oob_file_transfer_new_from_stanza_with_from (stanza, connection,
-      from);
+      from, error);
   /* it's not possible to have an outgoing transfer created from
    * a stanza */
   g_assert (ft == NULL ||
@@ -373,14 +374,15 @@ gibber_file_transfer_new_from_stanza_with_from (
 
 GibberFileTransfer *
 gibber_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
-                                      GibberXmppConnection *connection)
+    GibberXmppConnection *connection,
+    GError **error)
 {
   const gchar *from;
 
   from = wocky_node_get_attribute (wocky_stanza_get_top_node (stanza), "from");
 
   return gibber_file_transfer_new_from_stanza_with_from (stanza, connection,
-      from);
+      from, error);
 }
 
 void
