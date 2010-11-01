@@ -15,6 +15,13 @@ libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
 CORE_SOURCES =                                          \
+    capabilities.c \
+    capabilities.h \
+    capabilities-set.h \
+    caps-channel-manager.c \
+    caps-channel-manager.h \
+    gabble_namespaces.h \
+    namespaces.h \
     salut-capabilities.c                                \
     salut-capabilities.h                                \
     salut-caps-channel-manager.c                        \
