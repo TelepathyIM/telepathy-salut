@@ -62,25 +62,6 @@ typedef struct _CapabilityInfo CapabilityInfo;
 
 struct _CapabilityInfo
 {
-  /* key: SalutCapsChannelFactory -> value: gpointer
-   *
-   * The type of the value depends on the SalutCapsChannelFactory. It is an
-   * opaque pointer used by the channel manager to store the capabilities.
-   * Some channel manager do not need to store anything, in this case the
-   * value can just be NULL.
-   *
-   * Since the type of the value is not public, the value is allocated, copied
-   * and freed by helper functions on the SalutCapsChannelManager interface.
-   *
-   * For example:
-   *   * SalutPrivateTubesFactory -> TubesCapabilities
-   *
-   * At the moment, only SalutPrivateTubesFactory use this mechanism to store
-   * the list of supported tube types (example: stream tube for daap).
-   */
-  GHashTable *per_channel_manager_caps;
-
-  /* The same information, as a GabbleCapabilitySet. This is the future. */
   GabbleCapabilitySet *caps;
 };
 
@@ -170,8 +151,6 @@ capability_info_get (SalutPresenceCache *cache, const gchar *uri)
 static void
 capability_info_free (CapabilityInfo *info)
 {
-  salut_presence_cache_free_cache_entry (info->per_channel_manager_caps);
-  info->per_channel_manager_caps = NULL;
   tp_clear_pointer (&info->caps, gabble_capability_set_free);
   g_slice_free (CapabilityInfo, info);
 }
@@ -223,9 +202,6 @@ salut_presence_cache_class_init (SalutPresenceCacheClass *klass)
     g_cclosure_marshal_VOID__UINT, G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
-static GHashTable *create_per_channel_manager_caps (SalutPresenceCache *self,
-    GibberXmppNode *query_result);
-
 static void
 salut_presence_cache_init (SalutPresenceCache *cache)
 {
@@ -252,8 +228,6 @@ salut_presence_cache_constructor (GType type, guint n_props,
            constructor (type, n_props, props);
   self = SALUT_PRESENCE_CACHE (obj);
 
-  self->priv->not_xep_capabilities.per_channel_manager_caps =
-    create_per_channel_manager_caps (self, NULL);
   self->priv->not_xep_capabilities.caps = gabble_capability_set_new ();
   gabble_capability_set_add (self->priv->not_xep_capabilities.caps,
       QUIRK_NOT_XEP_CAPABILITIES);
@@ -280,8 +254,6 @@ salut_presence_cache_dispose (GObject *object)
   g_hash_table_destroy (priv->disco_pending);
   priv->disco_pending = NULL;
 
-  tp_clear_pointer (&(priv->not_xep_capabilities.per_channel_manager_caps),
-      salut_presence_cache_free_cache_entry);
   tp_clear_pointer (&(priv->not_xep_capabilities.caps),
       gabble_capability_set_free);
 
@@ -337,43 +309,11 @@ salut_presence_cache_set_property (GObject     *object,
     }
 }
 
-static GHashTable *
-create_per_channel_manager_caps (SalutPresenceCache *self,
-                                 GibberXmppNode *query_result)
-{
-  SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (self);
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
-  GHashTable *per_channel_manager_caps;
-  TpChannelManagerIter iter;
-  TpChannelManager *manager;
-
-  per_channel_manager_caps = g_hash_table_new (NULL, NULL);
-
-  /* parsing for Connection.Interface.ContactCapabilities.DRAFT */
-  tp_base_connection_channel_manager_iter_init (&iter, base_conn);
-  while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
-    {
-      gpointer *factory_caps;
-
-      /* all channel managers must implement the capability interface */
-      g_assert (SALUT_IS_CAPS_CHANNEL_MANAGER (manager));
-
-      factory_caps = salut_caps_channel_manager_parse_capabilities
-          (SALUT_CAPS_CHANNEL_MANAGER (manager), query_result);
-      if (factory_caps != NULL)
-        g_hash_table_insert (per_channel_manager_caps,
-            SALUT_CAPS_CHANNEL_MANAGER (manager), factory_caps);
-    }
-
-  return per_channel_manager_caps;
-}
-
 static void
 salut_presence_cache_change_caps (SalutPresenceCache *self,
     SalutContact *contact,
     const gchar *thanked,
-    const GabbleCapabilitySet *caps,
-    GHashTable *per_channel_manager_caps)
+    const GabbleCapabilitySet *caps)
 {
   if (gabble_capability_set_equals (caps, contact->caps))
     {
@@ -496,8 +436,6 @@ _caps_disco_cb (SalutDisco *disco,
           if (info == NULL)
             {
               info = g_slice_new0 (CapabilityInfo);
-              info->per_channel_manager_caps =
-                create_per_channel_manager_caps (cache, query_result);
               info->caps = gabble_capability_set_new_from_stanza (
                   query_result);
               g_hash_table_insert (priv->capabilities, g_strdup (node), info);
@@ -539,7 +477,7 @@ _caps_disco_cb (SalutDisco *disco,
           if (!bad_hash)
             {
               salut_presence_cache_change_caps (cache, waiter->contact,
-                  contact->name, info->caps, info->per_channel_manager_caps);
+                  contact->name, info->caps);
             }
 
           tmp = i;
@@ -619,7 +557,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
   if (info != NULL)
     {
       salut_presence_cache_change_caps (self, contact, caps_source,
-          info->caps, info->per_channel_manager_caps);
+          info->caps);
     }
   else
     {
@@ -669,76 +607,3 @@ salut_presence_cache_new (SalutConnection *connection)
                        "connection", connection,
                        NULL);
 }
-
-
-/* helper functions */
-
-static void
-free_caps_helper (gpointer key, gpointer value, gpointer user_data)
-{
-  SalutCapsChannelManager *manager = SALUT_CAPS_CHANNEL_MANAGER (key);
-  salut_caps_channel_manager_free_capabilities (manager, value);
-}
-
-void
-salut_presence_cache_free_cache_entry (
-    GHashTable *per_channel_manager_caps)
-{
-  if (per_channel_manager_caps == NULL)
-    return;
-
-  g_hash_table_foreach (per_channel_manager_caps, free_caps_helper,
-      NULL);
-  g_hash_table_destroy (per_channel_manager_caps);
-}
-
-static void
-copy_caps_helper (gpointer key, gpointer value, gpointer user_data)
-{
-  GHashTable *table_out = user_data;
-  SalutCapsChannelManager *manager = SALUT_CAPS_CHANNEL_MANAGER (key);
-  gpointer out;
-  salut_caps_channel_manager_copy_capabilities (manager, &out, value);
-  g_hash_table_insert (table_out, key, out);
-}
-
-GHashTable *
-salut_presence_cache_copy_cache_entry (GHashTable *in)
-{
-  GHashTable *out;
-
-  out = g_hash_table_new (NULL, NULL);
-  if (in != NULL)
-    g_hash_table_foreach (in, copy_caps_helper,
-        out);
-
-  return out;
-}
-
-static void
-update_caps_helper (gpointer key, gpointer value, gpointer user_data)
-{
-  GHashTable *table_out = user_data;
-  SalutCapsChannelManager *manager = SALUT_CAPS_CHANNEL_MANAGER (key);
-  gpointer out;
-
-  out = g_hash_table_lookup (table_out, key);
-  if (out == NULL)
-    {
-      salut_caps_channel_manager_copy_capabilities (manager, &out, value);
-      g_hash_table_insert (table_out, key, out);
-    }
-  else
-    {
-      salut_caps_channel_manager_update_capabilities (manager, out, value);
-    }
-}
-
-void
-salut_presence_cache_update_cache_entry (
-    GHashTable *out, GHashTable *in)
-{
-  g_hash_table_foreach (in, update_caps_helper,
-      out);
-}
-

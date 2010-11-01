@@ -75,22 +75,6 @@ void salut_presence_cache_process_caps (SalutPresenceCache *self,
     SalutContact *contact, const gchar *hash, const gchar *node,
     const gchar *ver);
 
-
-/* loop on CapabilityInfo::per_channel_manager_caps and call
- * salut_caps_channel_manager_free_capabilities */
-void salut_presence_cache_free_cache_entry (
-    GHashTable *per_channel_manager_caps);
-
-/* loop on CapabilityInfo::per_channel_manager_caps and call
- * salut_caps_channel_manager_copy_capabilities */
-G_GNUC_WARN_UNUSED_RESULT GHashTable * salut_presence_cache_copy_cache_entry (
-    GHashTable *in);
-
-/* loop on CapabilityInfo::per_channel_manager_caps and call
- * salut_caps_channel_manager_update_capabilities */
-void salut_presence_cache_update_cache_entry (GHashTable *out,
-    GHashTable *in);
-
 /* Salut-specific pseudo-capability: llXMPP clients without XEP-0115 caps */
 #define QUIRK_NOT_XEP_CAPABILITIES QUIRK_PREFIX "not-xep-capabilities"
 
