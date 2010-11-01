@@ -6,6 +6,7 @@ import avahi
 import dbus
 
 from saluttest import exec_test
+from saluttest import (exec_test, wait_for_contact_in_publish)
 from avahitest import AvahiAnnouncer, AvahiListener
 from avahitest import get_host_name
 
@@ -23,7 +24,6 @@ CHANNEL_IFACE_GROUP = 'org.freedesktop.Telepathy.Channel.Interface.Group'
 
 HT_CONTACT = 1
 HT_ROOM = 2
-HT_CONTACT_LIST = 3
 
 NS_CLIQUE = "http://telepathy.freedesktop.org/xmpp/clique"
 
@@ -40,19 +40,7 @@ def test(q, bus, conn):
 
     AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
 
-    publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-    publish = conn.RequestChannel(
-        "org.freedesktop.Telepathy.Channel.Type.ContactList",
-        HT_CONTACT_LIST, publish_handle, False)
-
-    handle = 0
-    # Wait until the record shows up in publish
-    while handle == 0:
-        e = q.expect('dbus-signal', signal='MembersChanged', path=publish)
-        for h in e.args[1]:
-            name = conn.InspectHandles(HT_CONTACT, [h])[0]
-            if name == contact_name:
-                handle = h
+    handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
     requests_iface = dbus.Interface(conn, CONNECTION_INTERFACE_REQUESTS)
 
