@@ -1573,7 +1573,7 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
       reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
           "failed to parse file offer");
       gibber_xmpp_connection_send (conn, reply, NULL);
-      return FALSE;
+      return NULL;
     }
 
   DEBUG ("Received file offer with id '%s'", ft->id);
