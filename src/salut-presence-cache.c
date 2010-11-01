@@ -132,9 +132,6 @@ disco_waiter_list_free (GSList *list)
 
 typedef struct _CapabilityInfo CapabilityInfo;
 
-/* struct _CapabilityInfo can be allocated before receiving the contact's
- * caps. In this case, its members are NULL, and are set when the caps are
- * received */
 struct _CapabilityInfo
 {
   /* key: SalutCapsChannelFactory -> value: gpointer
@@ -163,17 +160,7 @@ static CapabilityInfo *
 capability_info_get (SalutPresenceCache *cache, const gchar *uri)
 {
   SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (cache);
-  CapabilityInfo *info = g_hash_table_lookup (priv->capabilities, uri);
-
-  if (NULL == info)
-    {
-      info = g_slice_new0 (CapabilityInfo);
-      info->per_channel_manager_caps = NULL;
-      info->caps = NULL;
-      g_hash_table_insert (priv->capabilities, g_strdup (uri), info);
-    }
-
-  return info;
+  return g_hash_table_lookup (priv->capabilities, uri);
 }
 
 static void
@@ -487,16 +474,14 @@ _caps_disco_cb (SalutDisco *disco,
         {
           info = capability_info_get (cache, node);
 
-          if (info->per_channel_manager_caps == NULL)
+          if (info == NULL)
             {
+              info = g_slice_new0 (CapabilityInfo);
               info->per_channel_manager_caps =
                 create_per_channel_manager_caps (cache, query_result);
-            }
-
-          if (info->caps == NULL)
-            {
               info->caps = gabble_capability_set_new_from_stanza (
                   query_result);
+              g_hash_table_insert (priv->capabilities, g_strdup (node), info);
             }
         }
       else
@@ -609,7 +594,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
       uri = g_strdup_printf ("%s#%s", node, ver);
       info = capability_info_get (self, uri);
 
-      if (info->per_channel_manager_caps != NULL)
+      if (info != NULL)
         {
           caps_source = "an existing cache entry";
           per_channel_manager_caps = info->per_channel_manager_caps;
@@ -618,7 +603,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
 
   if (caps_source != NULL)
     {
-      salut_presence_cache_change_caps (cache, contact, caps_source,
+      salut_presence_cache_change_caps (self, contact, caps_source,
           per_channel_manager_caps);
     }
   else
