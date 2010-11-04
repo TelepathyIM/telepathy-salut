@@ -68,10 +68,10 @@ class Model(object):
                 return entry
         return None
 
-    def new_service_resolver(self, type_, name, client):
+    def new_service_resolver(self, type_, name, protocol, client):
         index = len(self._service_resolvers) + 1
         entry = self._find_entry(type_, name)
-        service_resolver = ServiceResolver(index, client, type_, name)
+        service_resolver = ServiceResolver(index, client, type_, name, protocol)
         self._service_resolvers.append(service_resolver)
 
         glib.idle_add(self.__entry_found_idle_cb, service_resolver, entry)
@@ -176,10 +176,14 @@ class Model(object):
                         entry.domain, entry.flags)
 
     def _emit_found(self, service_resolver, entry):
-        if entry.protocol == AVAHI_PROTO_UNSPEC:
-            protocols = (AVAHI_PROTO_INET, AVAHI_PROTO_INET6)
-        else:
-            protocols = (entry.protocol,)
+        protocols = []
+        if service_resolver.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET]:
+            if entry.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET]:
+                protocols.append(AVAHI_PROTO_INET)
+
+        if service_resolver.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET6]:
+            if entry.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET6]:
+                protocols.append(AVAHI_PROTO_INET6)
 
         for protocol in protocols:
             address = self._resolve_hostname(protocol, entry.host)
@@ -301,7 +305,7 @@ class Avahi(dbus.service.Object):
                          in_signature='iisssiu', out_signature='o',
                          sender_keyword='sender')
     def ServiceResolverNew(self, interface, protocol, name, type_, domain, aprotocol, flags, sender):
-        return self._model.new_service_resolver(type_, name, sender)
+        return self._model.new_service_resolver(type_, name, protocol, sender)
 
 
 class EntryGroup(dbus.service.Object):
@@ -321,7 +325,8 @@ class EntryGroup(dbus.service.Object):
         return self._services.get(name, None)
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
-                         in_signature='iiussssqaay', out_signature='')
+                         in_signature='iiussssqaay', out_signature='',
+                         byte_arrays=True)
     def AddService(self, interface, protocol, flags, name, type_, domain, host,
                    port, txt):
         if not host:
@@ -335,7 +340,8 @@ class EntryGroup(dbus.service.Object):
         self._entries.append((type_, name))
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
-                         in_signature='iiusssaay', out_signature='')
+                         in_signature='iiusssaay', out_signature='',
+                         byte_arrays=True)
     def UpdateServiceTxt(self, interface, protocol, flags, name, type_, domain, txt):
         self._model.update_entry(interface, protocol, flags, name, type_, domain,
                                  None, None, txt)
@@ -396,7 +402,7 @@ class ServiceBrowser(dbus.service.Object):
 
 
 class ServiceResolver(dbus.service.Object):
-    def __init__(self, index, client, type_, name):
+    def __init__(self, index, client, type_, name, protocol):
         bus = dbus.SystemBus()
         self.object_path = '/Client%u/ServiceResolver%u' % (1, index)
         dbus.service.Object.__init__(self, conn=bus,
@@ -404,6 +410,7 @@ class ServiceResolver(dbus.service.Object):
         self.client = client
         self.type = type_
         self.name = name
+        self.protocol = protocol
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVICE_RESOLVER,
                          in_signature='', out_signature='')
