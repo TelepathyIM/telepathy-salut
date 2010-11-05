@@ -36,7 +36,8 @@ class TestReceiveFileIPv6(ReceiveFileTest):
         service = e.service
         service.resolve()
 
-        e = self.q.expect('service-resolved', service = service)
+        e = self.q.expect('service-resolved', service = service,
+                          protocol = avahi.PROTO_INET6)
         return str(e.pt), e.port
 
     def connect_to_salut(self):
