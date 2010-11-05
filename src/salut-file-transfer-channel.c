@@ -1559,21 +1559,25 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
                                              GibberXmppStanza *stanza,
                                              GibberXmppConnection *conn)
 {
+  GError *error = NULL;
   GibberFileTransfer *ft;
   SalutFileTransferChannel *chan;
 
   salut_xmpp_connection_manager_take_connection (xcm , conn);
-  ft = gibber_file_transfer_new_from_stanza (stanza, conn);
+  ft = gibber_file_transfer_new_from_stanza_with_from (stanza, conn,
+      contact->name, &error);
 
   if (ft == NULL)
     {
       /* Reply with an error */
       GibberXmppStanza *reply;
 
+      DEBUG ("%s", error->message);
       reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
           "failed to parse file offer");
       gibber_xmpp_connection_send (conn, reply, NULL);
-      return FALSE;
+      g_clear_error (&error);
+      return NULL;
     }
 
   DEBUG ("Received file offer with id '%s'", ft->id);

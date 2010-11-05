@@ -5,17 +5,16 @@ Test requesting of text 1-1 channels using the old and new request API.
 
 import dbus
 
-from saluttest import exec_test, wait_for_contact_list
+from saluttest import (exec_test, wait_for_contact_list,
+        wait_for_contact_in_publish)
 from servicetest import call_async, EventPattern, \
         tp_name_prefix, make_channel_proxy
 from avahitest import get_host_name, AvahiAnnouncer
 from xmppstream import setup_stream_listener
 
 CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
-CHANNEL_TYPE_CONTACT_LIST = 'org.freedesktop.Telepathy.Channel.Type.ContactList'
 
 HT_CONTACT = 1
-HT_CONTACT_LIST = 3
 
 def test(q, bus, conn):
     self_name = 'testsuite' + '@' + get_host_name()
@@ -33,20 +32,7 @@ def test(q, bus, conn):
 
     AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
 
-    publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-    publish = conn.RequestChannel(
-        "org.freedesktop.Telepathy.Channel.Type.ContactList",
-        HT_CONTACT_LIST, publish_handle, False)
-
-    handle = 0
-    # Wait until the record shows up in publish
-    while handle == 0:
-        e = q.expect('dbus-signal', signal='MembersChangedDetailed',
-                path=publish)
-        for h in e.args[0]:
-            name = e.args[4]['member-ids'][h]
-            if name == contact_name:
-                handle = h
+    handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
     # check if we can request roomlist channels
     properties = conn.GetAll(

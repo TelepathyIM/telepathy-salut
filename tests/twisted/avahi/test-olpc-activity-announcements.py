@@ -1,4 +1,4 @@
-from saluttest import exec_test
+from saluttest import exec_test, wait_for_contact_in_publish
 from avahitest import AvahiAnnouncer, AvahiRecordAnnouncer, AvahiListener
 from avahitest import get_host_name, get_domain_name
 import avahi
@@ -21,29 +21,6 @@ HT_CONTACT_LIST = 3
 PUBLISHED_NAME = "acttest"
 TESTSUITE_PUBLISHED_NAME = "salutacttest"
 ACTIVITY_ID = str(time.time())
-
-def compare_handle (name, conn, handle):
-  handle_name = conn.InspectHandles(HT_CONTACT, [handle])[0]
-  return name == handle_name
-
-def wait_for_handle(name, q, conn):
-    publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-    publish = conn.RequestChannel(
-        "org.freedesktop.Telepathy.Channel.Type.ContactList",
-        HT_CONTACT_LIST, publish_handle, False)
-
-    proxy = make_channel_proxy(conn, publish, "Channel.Interface.Group")
-
-    for h in proxy.GetMembers():
-        if compare_handle(name, conn, h):
-            return h
-
-    # Wait until the record shows up in publish
-    while True:
-        e = q.expect('dbus-signal', signal='MembersChanged', path=publish)
-        for h in e.args[1]:
-            if compare_handle(name, conn, h):
-                return h
 
 def announce_address(hostname, address):
     "Announce IN A record, address is assume to be ipv4"
@@ -95,7 +72,7 @@ def test(q, bus, conn):
       0, activity_txt)
 
     # Publish a contact, now get it's handle
-    handle = wait_for_handle (contact_name, q, conn)
+    handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
     # Assert that the remote handles signals it joined the activity
     while True:

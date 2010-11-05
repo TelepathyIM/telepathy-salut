@@ -426,7 +426,8 @@ static void
 send_item_not_found (GibberXmppConnection *conn,
                      const gchar *node,
                      const gchar *from,
-                     const gchar *to)
+                     const gchar *to,
+                     const gchar *id)
 {
   GibberXmppStanza *result;
 
@@ -448,6 +449,9 @@ send_item_not_found (GibberXmppConnection *conn,
         GIBBER_NODE_END,
       GIBBER_NODE_END,
       GIBBER_STANZA_END);
+
+  if (id != NULL)
+    wocky_node_set_attribute (wocky_stanza_get_top_node (result), "id", id);
 
   DEBUG ("sending item-not-found as disco response");
 
@@ -474,7 +478,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar *suffix;
   GSList *i;
   TpHandleRepoIface *contact_repo;
-  const gchar *jid_from, *jid_to;
+  const gchar *jid_from, *jid_to, *id;
   SalutSelf *salut_self;
   GibberXmppStanza *result;
   GSList *features;
@@ -485,19 +489,20 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   jid_to = tp_handle_inspect (contact_repo, contact->handle);
 
   iq = wocky_stanza_get_top_node (stanza);
+  id = wocky_node_get_attribute (iq, "id");
   query = gibber_xmpp_node_get_child_ns (iq, "query", NS_DISCO_INFO);
   g_assert (query != NULL);
 
   node = gibber_xmpp_node_get_attribute (query, "node");
   if (node == NULL)
     {
-      send_item_not_found (conn, "", jid_from, jid_to);
+      send_item_not_found (conn, "", jid_from, jid_to, id);
       return;
     }
 
   if (!g_str_has_prefix (node, GIBBER_TELEPATHY_NS_CAPS "#"))
     {
-      send_item_not_found (conn, node, jid_from, jid_to);
+      send_item_not_found (conn, node, jid_from, jid_to, id);
       return;
     }
   else
@@ -553,6 +558,9 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   g_slist_free (features);
 
   DEBUG ("sending disco response");
+
+  if (id != NULL)
+    wocky_node_set_attribute (result_iq, "id", id);
 
   if (!gibber_xmpp_connection_send (conn, result, NULL))
     {

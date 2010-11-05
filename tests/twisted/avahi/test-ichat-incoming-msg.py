@@ -1,6 +1,6 @@
-from saluttest import exec_test
+from saluttest import exec_test, wait_for_contact_in_publish
 from avahitest import AvahiAnnouncer, AvahiListener
-from avahitest import get_host_name
+from avahitest import get_host_name, skip_if_another_llxmpp
 import avahi
 
 from xmppstream import setup_stream_listener, connect_to_stream, OutgoingXmppiChatStream
@@ -19,10 +19,6 @@ TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
 
 INCOMING_MESSAGE = "Test 123"
 
-print "FIXME: This test fails if there is another LL XMPP instance running on the machine."
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
-
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
@@ -36,19 +32,7 @@ def test(q, bus, conn):
 
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
 
-    publish_handle = conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-    publish = conn.RequestChannel(
-        "org.freedesktop.Telepathy.Channel.Type.ContactList",
-        HT_CONTACT_LIST, publish_handle, False)
-
-    handle = 0
-    # Wait until the record shows up in publish
-    while handle == 0:
-        e = q.expect('dbus-signal', signal='MembersChanged', path=publish)
-        for h in e.args[1]:
-            name = conn.InspectHandles(HT_CONTACT, [h])[0]
-            if name == contact_name:
-                handle = h
+    handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
     # Create a connection to send msg stanza
     AvahiListener(q).listen_for_service("_presence._tcp")
@@ -78,4 +62,5 @@ def test(q, bus, conn):
     assert e.args[5] == "hi"
 
 if __name__ == '__main__':
+    skip_if_another_llxmpp()
     exec_test(test)

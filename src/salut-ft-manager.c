@@ -119,11 +119,13 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
 
   DEBUG ("new incoming channel");
 
+  /* this can fail if the stanza isn't valid */
   chan = salut_file_transfer_channel_new_from_stanza (priv->connection,
       contact, handle, priv->xmpp_connection_manager,
       TP_FILE_TRANSFER_STATE_PENDING, stanza, conn);
 
-  salut_ft_manager_channel_created (self, chan, NULL);
+  if (chan != NULL)
+    salut_ft_manager_channel_created (self, chan, NULL);
 }
 
 static void salut_ft_manager_dispose (GObject *object);

@@ -53,10 +53,11 @@ def receive_presence_and_ask_caps(q, stream, service, contact_name):
     assert hash == 'sha-1'
 
     # ask caps
+    # FIXME: this only works because Salut ignores @to
     request = """
 <iq from='""" + contact_name + """'
-    id='disco1'
-    to='salut@jabber.org/resource' 
+    id='receive-presence-and-ask-caps'
+    to='salut@jabber.org/resource'
     type='get'>
   <query xmlns='http://jabber.org/protocol/disco#info'
          node='""" + node + '#' + ver + """'/>
@@ -65,8 +66,9 @@ def receive_presence_and_ask_caps(q, stream, service, contact_name):
     stream.send(request)
 
     # receive caps
-    event = q.expect('stream-iq',
-        query_ns='http://jabber.org/protocol/disco#info')
+    event = q.expect('stream-iq', iq_type='result',
+            to=contact_name, iq_id='receive-presence-and-ask-caps',
+            query_ns='http://jabber.org/protocol/disco#info')
     caps_str = str(xpath.queryForNodes('/iq/query/feature', event.stanza))
 
     features = []
@@ -205,22 +207,14 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     # no capabilites announced (assume FT is supported to insure interop)
     txt_record = { "txtvers": "1", "status": "avail"}
     contact_name = "test-caps-ft-no-capa2@" + get_host_name()
+    contact_handle = conn.RequestHandles(HT_CONTACT, [contact_name])[0]
     listener, port = setup_stream_listener(q, contact_name)
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
             txt_record)
 
     # FT capa is announced
-    contact_handle = 0
-    while contact_handle == 0:
-        e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
-        handles = e.args[0].keys()
-        ids = conn.InspectHandles(HT_CONTACT, handles)
-        if contact_name not in ids:
-            continue
-
-        for handle, id in zip(handles, ids):
-            if id == contact_name:
-                contact_handle = handle
+    e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged',
+            predicate=lambda e: contact_handle in e.args[0].keys())
 
     caps = e.args[0][contact_handle]
     assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,

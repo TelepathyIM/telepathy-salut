@@ -8,6 +8,7 @@ import httplib
 import urlparse
 
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
+from saluttest import wait_for_contact_in_publish
 
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy, EventPattern
@@ -98,20 +99,9 @@ class FileTransferTest(object):
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp",
                 port, basic_txt)
 
-    def wait_for_contact(self, name=CONTACT_NAME):
-        publish_handle = self.conn.RequestHandles(HT_CONTACT_LIST, ["publish"])[0]
-        publish = self.conn.RequestChannel(
-                "org.freedesktop.Telepathy.Channel.Type.ContactList",
-                HT_CONTACT_LIST, publish_handle, False)
-
-        self.handle = 0
-        # Wait until the record shows up in publish
-        while self.handle == 0:
-            e = self.q.expect('dbus-signal', signal='MembersChanged', path=publish)
-            for h in e.args[1]:
-                name = self.conn.InspectHandles(HT_CONTACT, [h])[0]
-                if name == self.contact_name:
-                    self.handle = h
+    def wait_for_contact(self):
+        self.handle = wait_for_contact_in_publish(self.q, self.bus, self.conn,
+                self.contact_name)
 
     def create_ft_channel(self):
         self.channel = make_channel_proxy(self.conn, self.ft_path, 'Channel')

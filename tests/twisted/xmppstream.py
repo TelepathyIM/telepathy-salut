@@ -18,14 +18,24 @@ NS_STREAMS = 'http://etherx.jabber.org/streams'
 def make_stream_event(type, stanza):
     event = servicetest.Event(type, stanza=stanza)
     if stanza.hasAttribute("to"):
-        event.name = stanza.getAttribute("to")
+        event.to = stanza.getAttribute("to")
+    else:
+        event.to = None
+
     if stanza.hasAttribute("from"):
-        event.remote_name = stanza.getAttribute("from")
+        event.from_ = stanza.getAttribute("from")
+    else:
+        event.from_ = None
+
+    event.name = event.to
+    event.remote_name = event.from_
+
     return event
 
 def make_iq_event(iq):
     event = make_stream_event('stream-iq', iq)
     event.iq_type = iq.getAttribute("type")
+    event.iq_id = iq.getAttribute("id")
     query = iq.firstChildElement()
 
     if query:
@@ -35,12 +45,20 @@ def make_iq_event(iq):
 
         if query.getAttribute("node"):
             event.query_node = query.getAttribute("node")
+    else:
+        event.query = None
 
     return event
 
 def make_presence_event(stanza):
     event = make_stream_event('stream-presence', stanza)
     event.presence_type = stanza.getAttribute('type')
+
+    statuses = xpath.queryForNodes('/presence/status', stanza)
+
+    if statuses:
+        event.presence_status = str(statuses[0])
+
     return event
 
 def make_message_event(stanza):

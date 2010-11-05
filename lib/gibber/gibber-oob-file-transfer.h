@@ -64,7 +64,7 @@ gboolean gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza);
 
 GibberFileTransfer *gibber_oob_file_transfer_new_from_stanza_with_from (
     GibberXmppStanza *stanza, GibberXmppConnection *connection,
-    const gchar *from);
+    const gchar *from, GError **error);
 
 G_END_DECLS
 

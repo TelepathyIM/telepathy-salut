@@ -135,3 +135,20 @@ def wait_for_contact_list(q, conn):
         cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
         cs.TARGET_ID: 'known'})
     q.expect('dbus-signal', signal='NewChannel')
+
+def wait_for_contact_in_publish(q, bus, conn, contact_name):
+    publish_handle = conn.RequestHandles(cs.HT_LIST, ["publish"])[0]
+    publish = conn.RequestChannel(cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.HT_LIST, publish_handle, False)
+
+    handle = 0
+    # Wait until the record shows up in publish
+    while handle == 0:
+        e = q.expect('dbus-signal', signal='MembersChangedDetailed',
+                path=publish)
+        for h in e.args[0]:
+            name = e.args[4]['member-ids'][h]
+            if name == contact_name:
+                handle = h
+
+    return handle

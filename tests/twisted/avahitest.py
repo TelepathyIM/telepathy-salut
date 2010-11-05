@@ -103,6 +103,9 @@ class AvahiListener:
           domain=domain, flags=flags)
         self.event_queue.append(e)
 
+    def _all_for_now_cb(self):
+        self.event_queue.append(Event('service-all-for-now'))
+
     def listen_for_service(self, sname):
         browser_path = self.server.ServiceBrowserNew(avahi.IF_UNSPEC,
             avahi.PROTO_UNSPEC, sname, "local", dbus.UInt32(0));
@@ -112,6 +115,7 @@ class AvahiListener:
 
         browser.connect_to_signal('ItemNew', self._service_added_cb)
         browser.connect_to_signal('ItemRemove', self._service_removed_cb)
+        browser.connect_to_signal('AllForNow', self._all_for_now_cb)
 
         self.browsers.append(browser)
         return self
@@ -194,6 +198,32 @@ def check_ipv6_enabled(q, announcer):
         return True
     except TimeoutError:
         return False
+
+def has_another_llxmpp():
+    q = servicetest.IteratingEventQueue()
+
+    l = AvahiListener(q)
+    l.listen_for_service('_presence._tcp')
+
+    has = False
+
+    while True:
+        e = q.wait(['service'])
+
+        if (e.type == 'service-added' and
+            e.flags & (avahi.LOOKUP_RESULT_LOCAL|avahi.LOOKUP_RESULT_OUR_OWN)):
+            has = True
+        elif e.type == 'service-all-for-now':
+            break
+
+    return has
+
+def skip_if_another_llxmpp():
+    if has_another_llxmpp():
+        print ("SKIP: This test fails if there is another LL XMPP instance "
+                "running on the machine.")
+        # exiting 77 causes automake to consider the test to have been skipped
+        raise SystemExit(77)
 
 if __name__ == '__main__':
     from twisted.internet import reactor
