@@ -106,14 +106,16 @@ salut_roomlist_channel_constructor (GType type,
 {
   GObject *obj;
   SalutRoomlistChannelPrivate *priv;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
+  TpBaseConnection *base_conn;
 
   obj = G_OBJECT_CLASS (salut_roomlist_channel_parent_class)->constructor (
       type, n_props, props);
   priv = SALUT_ROOMLIST_CHANNEL_GET_PRIVATE (SALUT_ROOMLIST_CHANNEL (obj));
 
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  base_conn = TP_BASE_CONNECTION (priv->connection);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   return obj;
 }

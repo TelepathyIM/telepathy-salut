@@ -211,7 +211,8 @@ salut_tubes_channel_constructor (GType type,
   GObject *obj;
   SalutTubesChannel *self;
   SalutTubesChannelPrivate *priv;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
+  TpBaseConnection *base_conn;
   TpHandleRepoIface *handle_repo;
 
   obj = G_OBJECT_CLASS (salut_tubes_channel_parent_class)->
@@ -220,9 +221,9 @@ salut_tubes_channel_constructor (GType type,
   self = SALUT_TUBES_CHANNEL (obj);
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
-  g_assert (priv->conn != NULL);
+  base_conn = TP_BASE_CONNECTION (priv->conn);
   handle_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, priv->handle_type);
+      base_conn, priv->handle_type);
 
   tp_handle_ref (handle_repo, priv->handle);
 
@@ -258,8 +259,8 @@ salut_tubes_channel_constructor (GType type,
     }
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   DEBUG ("Registering at '%s'", priv->object_path);
 

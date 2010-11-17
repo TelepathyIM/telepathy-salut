@@ -98,7 +98,7 @@ salut_contact_channel_constructor (GType type, guint n_props,
                                    GObjectConstructParam *props)
 {
   GObject *obj;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
   SalutContactChannelPrivate *priv;
   TpHandleRepoIface *handle_repo;
   TpHandleRepoIface *contact_repo;
@@ -111,12 +111,11 @@ salut_contact_channel_constructor (GType type, guint n_props,
   priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE (SALUT_CONTACT_CHANNEL (obj));
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  base_conn = TP_BASE_CONNECTION (priv->conn);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   /* Ref our handle */
-  base_conn = TP_BASE_CONNECTION(priv->conn);
-
   handle_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_LIST);
   contact_repo = tp_base_connection_get_handles (base_conn,
