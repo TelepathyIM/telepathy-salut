@@ -1463,7 +1463,8 @@ salut_tube_stream_constructor (GType type,
   GObject *obj;
   SalutTubeStreamPrivate *priv;
   TpHandleRepoIface *contact_repo;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
+  TpBaseConnection *base_conn;
 
   obj = G_OBJECT_CLASS (salut_tube_stream_parent_class)->
            constructor (type, n_props, props);
@@ -1471,10 +1472,10 @@ salut_tube_stream_constructor (GType type,
   priv = SALUT_TUBE_STREAM_GET_PRIVATE (SALUT_TUBE_STREAM (obj));
 
   /* Ref the initiator handle */
-  g_assert (priv->conn != NULL);
+  base_conn = TP_BASE_CONNECTION (priv->conn);
   g_assert (priv->initiator != 0);
-  contact_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
   tp_handle_ref (contact_repo, priv->initiator);
 
   if (priv->initiator == priv->self_handle)
@@ -1501,8 +1502,8 @@ salut_tube_stream_constructor (GType type,
       g_assert (priv->xmpp_connection_manager == NULL);
     }
 
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   DEBUG ("Registering at '%s'", priv->object_path);
 

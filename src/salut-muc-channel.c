@@ -369,7 +369,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
     GObjectConstructParam *props)
 {
   GObject *obj;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
   SalutMucChannel *self;
   SalutMucChannelPrivate *priv;
   TpBaseConnection *base_conn;
@@ -428,8 +428,8 @@ salut_muc_channel_constructor (GType type, guint n_props,
   g_object_unref (priv->muc_manager);
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);

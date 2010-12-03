@@ -411,7 +411,7 @@ salut_file_transfer_channel_constructor (GType type,
 {
   GObject *obj;
   SalutFileTransferChannel *self;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
   GArray *unix_access;
@@ -435,8 +435,8 @@ salut_file_transfer_channel_constructor (GType type,
       base_conn->object_path, self);
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, self->priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, self->priv->object_path, obj);
 
   /* Initialise the available socket types hash table */
   self->priv->available_socket_types = g_hash_table_new_full (g_direct_hash,

@@ -365,7 +365,7 @@ salut_im_channel_constructor (GType type,
                               GObjectConstructParam *props)
 {
   GObject *obj;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
   SalutImChannelPrivate *priv;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
@@ -408,8 +408,8 @@ salut_im_channel_constructor (GType type,
       supported_content_types);
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   g_signal_connect (priv->xmpp_connection_manager, "new-connection",
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
