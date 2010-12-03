@@ -2,6 +2,7 @@ from saluttest import exec_test, wait_for_contact_in_publish
 from avahitest import AvahiAnnouncer, AvahiListener
 from avahitest import get_host_name
 import avahi
+import constants as cs
 
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy
@@ -9,12 +10,6 @@ from servicetest import make_channel_proxy
 from twisted.words.xish import domish
 
 import dbus
-
-from dbus import PROPERTIES_IFACE
-
-CHANNEL_TYPE_TEXT = "org.freedesktop.Telepathy.Channel.Type.Text"
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
 
 NS_CLIQUE = "http://telepathy.freedesktop.org/xmpp/clique"
 
@@ -24,7 +19,7 @@ def test(q, bus, conn):
     basic_txt = { "txtvers": "1", "status": "avail" }
 
     self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
 
     contact_name = "test-text-channel@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
@@ -70,7 +65,7 @@ def test(q, bus, conn):
     path = e.args[0]
     channel = make_channel_proxy(conn, path, 'Channel')
     props_iface = dbus.Interface(bus.get_object(conn.object.bus_name, path),
-        PROPERTIES_IFACE)
+        dbus.PROPERTIES_IFACE)
 
     q.expect('dbus-signal', signal='MembersChanged')
 
