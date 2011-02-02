@@ -137,7 +137,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
              TARGET_HANDLE_TYPE: HT_CONTACT},
             [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME,
                 FT_SIZE, FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET]) in caps
+                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) in caps
 
     caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
     assert caps == caps_get
@@ -198,7 +198,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
              TARGET_HANDLE_TYPE: HT_CONTACT},
             [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME, FT_SIZE,
                 FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET]) not in caps
+                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) not in caps
 
     caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
     assert caps == caps_get
@@ -221,7 +221,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
              TARGET_HANDLE_TYPE: HT_CONTACT},
             [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME,
                 FT_SIZE, FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET]) in caps
+                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) in caps
 
     caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
     assert caps == caps_get
@@ -242,7 +242,7 @@ def test(q, bus, conn):
              TARGET_HANDLE_TYPE: HT_CONTACT},
             [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME,
                 FT_SIZE, FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET]) in caps
+                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) in caps
 
     client = 'http://telepathy.freedesktop.org/fake-client'
     test_ft_caps_from_contact(q, bus, conn, client)

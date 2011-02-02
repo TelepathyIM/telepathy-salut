@@ -80,7 +80,7 @@ SalutFileTransferChannel * salut_file_transfer_channel_new (
     TpFileTransferState state, const gchar *content_type,
     const gchar *filename, guint64 size, TpFileHashType hash_type,
     const gchar *content_hash, const gchar *description, guint64 date,
-    guint64 initial_offset);
+    guint64 initial_offset, const gchar *file_uri);
 
 SalutFileTransferChannel * salut_file_transfer_channel_new_from_stanza (
     SalutConnection *connection, SalutContact *contact,

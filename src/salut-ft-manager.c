@@ -294,6 +294,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   TpHandle handle;
   const gchar *content_type, *filename, *content_hash, *description;
   guint64 size, date, initial_offset;
+  const gchar *file_uri;
   TpFileHashType content_hash_type;
   GError *error = NULL;
   gboolean valid;
@@ -397,6 +398,9 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   initial_offset = tp_asv_get_uint64 (request_properties,
       TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
 
+  file_uri = tp_asv_get_string (request_properties,
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI);
+
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
     {
@@ -414,7 +418,8 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   chan = salut_file_transfer_channel_new (priv->connection, contact,
       handle, priv->xmpp_connection_manager, base_connection->self_handle,
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
-      content_hash_type, content_hash, description, date, initial_offset);
+      content_hash_type, content_hash, description, date, initial_offset,
+      file_uri);
 
   g_object_unref (contact);
 
@@ -458,6 +463,7 @@ static const gchar * const file_transfer_channel_allowed_properties[] =
   TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DESCRIPTION,
   TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DATE,
   TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_INITIAL_OFFSET,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI,
   NULL
 };
 

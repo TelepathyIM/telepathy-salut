@@ -69,7 +69,7 @@ ft_fixed_properties = dbus.Dictionary({
 ft_allowed_properties = dbus.Array([
     FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME,
     FT_SIZE, FT_CONTENT_HASH, FT_DESCRIPTION,
-    FT_DATE, FT_INITIAL_OFFSET
+    FT_DATE, FT_INITIAL_OFFSET, FT_URI
     ])
 
 stream_tube_fixed_properties = dbus.Dictionary({

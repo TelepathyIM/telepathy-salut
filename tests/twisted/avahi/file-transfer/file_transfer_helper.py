@@ -262,7 +262,8 @@ class SendFileTest(FileTransferTest):
                  cs.FT_CONTENT_HASH,
                  cs.FT_DESCRIPTION,
                  cs.FT_DATE,
-                 cs.FT_INITIAL_OFFSET],
+                 cs.FT_INITIAL_OFFSET,
+                 cs.FT_URI],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
