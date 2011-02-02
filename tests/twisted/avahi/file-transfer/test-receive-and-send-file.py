@@ -15,8 +15,8 @@ class ReceiveAndSendFileTest(ReceiveFileTest, SendFileTest):
                 self.connect_to_salut,
                 # receive file
                 self.setup_http_server, self.send_ft_offer_iq, self.check_new_channel,
-                self.create_ft_channel, self.accept_file, self.receive_file,
-                self.close_channel,
+                self.create_ft_channel, self.set_uri, self.accept_file,
+                self.receive_file, self.close_channel,
 
                 # now send a file. We'll reuse the same XMPP connection
                self.request_ft_channel, self.create_ft_channel, self.got_send_iq,

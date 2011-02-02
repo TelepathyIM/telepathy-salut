@@ -11,7 +11,7 @@ from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, EventPattern
+from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async
 import constants as cs
 
 from twisted.words.xish import domish, xpath
@@ -36,6 +36,8 @@ class File(object):
         self.date = 0
 
         self.compute_hash(hash_type)
+
+        self.uri = 'file:///tmp/%s' % self.name
 
     def compute_hash(self, hash_type):
         assert hash_type == cs.FILE_HASH_TYPE_MD5
@@ -95,8 +97,8 @@ class ReceiveFileTest(FileTransferTest):
 
         self._actions = [self.connect, self.announce_contact, self.wait_for_contact,
             self.connect_to_salut, self.setup_http_server, self.send_ft_offer_iq,
-            self.check_new_channel, self.create_ft_channel, self.accept_file,
-            self.receive_file, self.close_channel]
+            self.check_new_channel, self.create_ft_channel, self.set_uri,
+            self.accept_file, self.receive_file, self.close_channel]
 
     def _resolve_salut_presence(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
@@ -186,6 +188,30 @@ class ReceiveFileTest(FileTransferTest):
 
         self.ft_path = path
 
+    def set_uri(self):
+        ft_props = dbus.Interface(self.ft_channel, cs.PROPERTIES_IFACE)
+
+        # URI is not set yet
+        uri = ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI')
+        assertEquals('', uri)
+
+        # Setting URI
+        call_async(self.q, ft_props, 'Set',
+            cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI', self.file.uri)
+
+        self.q.expect('dbus-signal', signal='URIDefined', args=[self.file.uri])
+
+        self.q.expect('dbus-return', method='Set')
+
+        # Check it has the right value now
+        uri = ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI')
+        assertEquals(self.file.uri, uri)
+
+        # We can't change it once it has been set
+        call_async(self.q, ft_props, 'Set',
+            cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI', 'badger://snake')
+        self.q.expect('dbus-error', method='Set', name=cs.INVALID_ARGUMENT)
+
     def accept_file(self):
         self.address = self.ft_channel.AcceptFile(cs.SOCKET_ADDRESS_TYPE_UNIX,
                 cs.SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5, byte_arrays=True)
@@ -267,11 +293,10 @@ class SendFileTest(FileTransferTest):
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
-    def request_ft_channel(self):
+    def request_ft_channel(self, uri=True):
         requests_iface = dbus.Interface(self.conn, cs.CONN_IFACE_REQUESTS)
 
-        self.ft_path, props = requests_iface.CreateChannel({
-            cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_FILE_TRANSFER,
+        request = { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_FILE_TRANSFER,
             cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
             cs.TARGET_HANDLE: self.handle,
 
@@ -282,8 +307,12 @@ class SendFileTest(FileTransferTest):
             cs.FT_CONTENT_HASH:self.file.hash,
             cs.FT_DESCRIPTION: self.file.description,
             cs.FT_DATE: self.file.date,
-            cs.FT_INITIAL_OFFSET: 0,
-            })
+            cs.FT_INITIAL_OFFSET: 0 }
+
+        if uri:
+            request[cs.FT_URI] = self.file.uri
+
+        self.ft_path, props = requests_iface.CreateChannel(request)
 
         # org.freedesktop.Telepathy.Channel D-Bus properties
         assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
@@ -308,6 +337,10 @@ class SendFileTest(FileTransferTest):
             {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
         assert props[cs.FT_TRANSFERRED_BYTES] == 0
         assert props[cs.FT_INITIAL_OFFSET] == 0
+        if uri:
+            assertEquals(self.file.uri, props[cs.FT_URI])
+        else:
+            assertEquals('', props[cs.FT_URI])
 
     def got_send_iq(self):
         conn_event, iq_event = self.q.expect_many(
