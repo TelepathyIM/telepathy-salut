@@ -1,7 +1,7 @@
 from saluttest import exec_test
-from file_transfer_helper import SendFileTest, CHANNEL_TYPE_FILE_TRANSFER, \
-    FT_STATE_PENDING, FT_STATE_ACCEPTED, FT_STATE_OPEN, FT_STATE_CHANGE_REASON_REQUESTED, \
-    FT_STATE_CHANGE_REASON_NONE
+from file_transfer_helper import SendFileTest
+
+import constants as cs
 
 class SendFileTransferWaitToProvideTest(SendFileTest):
     def __init__(self):
@@ -13,16 +13,16 @@ class SendFileTransferWaitToProvideTest(SendFileTest):
 
     def client_request_file(self):
         # state is still Pending as remote didn't accept the transfer yet
-        state = self.ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'State')
-        assert state == FT_STATE_PENDING
+        state = self.ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'State')
+        assert state == cs.FT_STATE_PENDING
 
         SendFileTest.client_request_file(self)
 
         # Remote accepted the transfer
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_ACCEPTED, state
-        assert reason == FT_STATE_CHANGE_REASON_NONE
+        assert state == cs.FT_STATE_ACCEPTED, state
+        assert reason == cs.FT_STATE_CHANGE_REASON_NONE
 
     def provide_file(self):
         SendFileTest.provide_file(self)
@@ -35,8 +35,8 @@ class SendFileTransferWaitToProvideTest(SendFileTest):
         # Channel is open. We can start to send the file
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_OPEN
-        assert reason == FT_STATE_CHANGE_REASON_REQUESTED
+        assert state == cs.FT_STATE_OPEN
+        assert reason == cs.FT_STATE_CHANGE_REASON_REQUESTED
 
 if __name__ == '__main__':
     test = SendFileTransferWaitToProvideTest()

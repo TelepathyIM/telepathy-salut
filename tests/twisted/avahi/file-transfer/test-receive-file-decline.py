@@ -1,8 +1,9 @@
 from servicetest import make_channel_proxy
 from saluttest import exec_test
 
-from file_transfer_helper import ReceiveFileTest, FT_STATE_CANCELLED, \
-    FT_STATE_CHANGE_REASON_LOCAL_STOPPED
+from file_transfer_helper import ReceiveFileTest
+
+import constants as cs
 
 class ReceiveFileDeclineTest(ReceiveFileTest):
     def accept_file(self):
@@ -11,8 +12,8 @@ class ReceiveFileDeclineTest(ReceiveFileTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_CANCELLED
-        assert reason == FT_STATE_CHANGE_REASON_LOCAL_STOPPED
+        assert state == cs.FT_STATE_CANCELLED
+        assert reason == cs.FT_STATE_CHANGE_REASON_LOCAL_STOPPED
         self.q.expect('dbus-signal', signal='Closed')
 
         # Re send offer (this is a regression test as Salut used to crash at this
@@ -31,8 +32,8 @@ class ReceiveFileDeclineTest(ReceiveFileTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_CANCELLED
-        assert reason == FT_STATE_CHANGE_REASON_LOCAL_STOPPED
+        assert state == cs.FT_STATE_CANCELLED
+        assert reason == cs.FT_STATE_CHANGE_REASON_LOCAL_STOPPED
         self.q.expect('dbus-signal', signal='Closed')
 
         # stop test

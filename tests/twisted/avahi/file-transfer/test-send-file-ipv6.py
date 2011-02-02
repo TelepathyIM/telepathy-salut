@@ -2,8 +2,9 @@ import avahi
 from saluttest import exec_test
 from avahitest import AvahiAnnouncer, get_host_name
 from xmppstream import setup_stream_listener6
-from file_transfer_helper import SendFileTest, CHANNEL_TYPE_FILE_TRANSFER, FT_STATE_PENDING, \
-    FT_STATE_CHANGE_REASON_NONE, FT_STATE_OPEN
+from file_transfer_helper import SendFileTest
+
+import constants as cs
 
 print "FIXME: This is disabled because of a bug in Python's httplib. http://bugs.python.org/issue5111"
 # exiting 77 causes automake to consider the test to have been skipped
@@ -25,8 +26,8 @@ class SendFileTransferIPv6(SendFileTest):
         SendFileTest.provide_file(self)
 
         # state is still Pending as remote didn't accept the transfer yet
-        state = self.ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'State')
-        assert state == FT_STATE_PENDING
+        state = self.ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'State')
+        assert state == cs.FT_STATE_PENDING
 
     def client_request_file(self):
         SendFileTest.client_request_file(self)
@@ -39,8 +40,8 @@ class SendFileTransferIPv6(SendFileTest):
         # Channel is open. We can start to send the file
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_OPEN
-        assert reason == FT_STATE_CHANGE_REASON_NONE
+        assert state == cs.FT_STATE_OPEN
+        assert reason == cs.FT_STATE_CHANGE_REASON_NONE
 
 if __name__ == '__main__':
     test = SendFileTransferIPv6()

@@ -3,8 +3,7 @@ import dbus
 import socket
 
 from saluttest import exec_test
-from file_transfer_helper import ReceiveFileTest, SOCKET_ADDRESS_TYPE_UNIX,\
-    SOCKET_ACCESS_CONTROL_LOCALHOST
+from file_transfer_helper import ReceiveFileTest
 
 class ReceiveFileAndXmppDisconnectTest(ReceiveFileTest):
     def accept_file(self):

@@ -3,8 +3,9 @@ import httplib
 import socket
 
 from saluttest import exec_test
-from file_transfer_helper import SendFileTest, FT_STATE_CANCELLED, \
-    FT_STATE_CHANGE_REASON_LOCAL_STOPPED
+from file_transfer_helper import SendFileTest
+
+import constants as cs
 
 class SendFileAndCancelImmediatelyTest(SendFileTest):
     def provide_file(self):
@@ -15,8 +16,8 @@ class SendFileAndCancelImmediatelyTest(SendFileTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_CANCELLED
-        assert reason == FT_STATE_CHANGE_REASON_LOCAL_STOPPED
+        assert state == cs.FT_STATE_CANCELLED
+        assert reason == cs.FT_STATE_CHANGE_REASON_LOCAL_STOPPED
 
         self.q.expect('dbus-signal', signal='Closed')
 

@@ -1,8 +1,9 @@
 from saluttest import exec_test
-from file_transfer_helper import SendFileTest, FT_STATE_CANCELLED, \
-    FT_STATE_CHANGE_REASON_REMOTE_ERROR, CHANNEL_TYPE_FILE_TRANSFER
+from file_transfer_helper import SendFileTest
 
 from twisted.words.xish import domish
+
+import constants as cs
 
 class SendFileItemNotFound(SendFileTest):
     def client_request_file(self):
@@ -24,10 +25,10 @@ class SendFileItemNotFound(SendFileTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_CANCELLED, state
-        assert reason == FT_STATE_CHANGE_REASON_REMOTE_ERROR
+        assert state == cs.FT_STATE_CANCELLED, state
+        assert reason == cs.FT_STATE_CHANGE_REASON_REMOTE_ERROR
 
-        transferred = self.ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'TransferredBytes')
+        transferred = self.ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'TransferredBytes')
         # no byte has been transferred as the transfer failed
         assert transferred == 0
 
