@@ -28,6 +28,7 @@
 #include <gibber/gibber-namespaces.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/intset.h>
+#include <wocky/wocky-caps-hash.h>
 
 #define DEBUG_FLAG DEBUG_PRESENCE
 
@@ -476,7 +477,7 @@ _caps_disco_cb (SalutDisco *disco,
     {
       gchar *computed_hash;
 
-      computed_hash = caps_hash_compute_from_stanza (query_result);
+      computed_hash = wocky_caps_hash_compute_from_node (query_result);
 
       if (!g_str_equal (waiter_self->ver, computed_hash))
         bad_hash = TRUE;
