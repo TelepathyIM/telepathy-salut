@@ -452,7 +452,8 @@ static const gchar * const file_transfer_channel_fixed_properties[] = {
 
 static const gchar * const file_transfer_channel_allowed_properties[] =
 {
-  /* ContentHashType has to be first so we can easily skip it when needed */
+  /* ContentHashType has to be first so we can easily skip it if needed (we
+   * currently don't as Salut doesn't support any hash mechanism) */
   TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH_TYPE,
   TP_PROP_CHANNEL_TARGET_HANDLE,
   TP_PROP_CHANNEL_TARGET_ID,
