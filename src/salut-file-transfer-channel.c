@@ -289,7 +289,7 @@ salut_file_transfer_channel_get_property (GObject *object,
         break;
       case PROP_URI:
         g_value_set_string (value,
-            self->priv->uri != NULL ? self->priv->uri: "");
+            self->priv->uri != NULL ? self->priv->uri : "");
         break;
      case PROP_CHANNEL_DESTROYED:
         g_value_set_boolean (value, self->priv->closed);
