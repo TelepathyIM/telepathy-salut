@@ -31,6 +31,10 @@ initialize (SalutPlugin *plugin,
     TpBaseConnectionManager *connection_manager)
 {
   DEBUG ("%p on connection manager %p", plugin, connection_manager);
+
+  /* If you wanted to add another protocol you could do it here by
+   * creating the protocol object and then calling
+   * tp_base_connection_manager_add_protocol(). */
 }
 
 static GPtrArray *
