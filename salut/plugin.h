@@ -46,9 +46,22 @@ typedef GPtrArray * (*SalutPluginCreateChannelManagersImpl) (
     SalutPlugin *plugin,
     TpBaseConnection *connection);
 
+#define SALUT_PLUGIN_CURRENT_VERSION 1
+
 struct _SalutPluginInterface
 {
   GTypeInterface parent;
+
+  /**
+   * The version of the SalutPluginInterface struct design. The
+   * current version is at %SALUT_PLUGIN_CURRENT_VERSION.
+   */
+  guint api_version;
+
+  /**
+   * An arbitrary human-readable name identifying this plugin.
+   */
+  const gchar *name;
 
   /**
    * The plugin's version, conventionally a "."-separated sequence of
@@ -57,14 +70,11 @@ struct _SalutPluginInterface
   const gchar *version;
 
   /**
-   * An arbitrary human-readable name identifying this plugin.
-   */
-  const gchar *name;
-
-  /**
    * An implementation of salut_plugin_create_channel_managers().
    */
   SalutPluginCreateChannelManagersImpl create_channel_managers;
+
+  GCallback _padding[7];
 };
 
 GType salut_plugin_get_type (void);

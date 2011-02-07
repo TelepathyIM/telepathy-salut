@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "test.h"
 
 #include <salut/plugin.h>
@@ -40,7 +42,9 @@ plugin_iface_init (
 {
   SalutPluginInterface *iface = g_iface;
 
+  iface->api_version = SALUT_PLUGIN_CURRENT_VERSION;
   iface->name = "Salut test plugin";
+  iface->version = PACKAGE_VERSION;
 
   iface->create_channel_managers = create_channel_managers;
 }
