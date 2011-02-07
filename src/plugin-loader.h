@@ -22,6 +22,7 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-connection-manager.h>
 #include <telepathy-glib/base-connection.h>
 
 typedef struct _SalutPluginLoader SalutPluginLoader;
@@ -58,6 +59,10 @@ GType salut_plugin_loader_get_type (void);
                               SalutPluginLoaderClass))
 
 SalutPluginLoader * salut_plugin_loader_dup (void);
+
+void salut_plugin_loader_initialize (
+    SalutPluginLoader *self,
+    TpBaseConnectionManager *connection_manager);
 
 GPtrArray * salut_plugin_loader_create_channel_managers (
     SalutPluginLoader *self,

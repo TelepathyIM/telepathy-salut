@@ -226,6 +226,20 @@ salut_plugin_loader_dup ()
   return g_object_new (SALUT_TYPE_PLUGIN_LOADER, NULL);
 }
 
+void
+salut_plugin_loader_initialize (SalutPluginLoader *self,
+    TpBaseConnectionManager *connection_manager)
+{
+  guint i;
+
+  for (i = 0; i < self->priv->plugins->len; i++)
+    {
+      SalutPlugin *plugin = g_ptr_array_index (self->priv->plugins, i);
+
+      salut_plugin_initialize (plugin, connection_manager);
+    }
+}
+
 static void
 copy_to_other_array (gpointer data,
     gpointer user_data)

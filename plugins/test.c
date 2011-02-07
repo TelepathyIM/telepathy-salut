@@ -26,6 +26,13 @@ test_plugin_class_init (TestPluginClass *klass)
 {
 }
 
+static void
+initialize (SalutPlugin *plugin,
+    TpBaseConnectionManager *connection_manager)
+{
+  DEBUG ("%p on connection manager %p", plugin, connection_manager);
+}
+
 static GPtrArray *
 create_channel_managers (SalutPlugin *plugin,
     TpBaseConnection *connection)
@@ -46,6 +53,7 @@ plugin_iface_init (
   iface->name = "Salut test plugin";
   iface->version = PACKAGE_VERSION;
 
+  iface->initialize = initialize;
   iface->create_channel_managers = create_channel_managers;
 }
 

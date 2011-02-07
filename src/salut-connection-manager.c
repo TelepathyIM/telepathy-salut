@@ -32,6 +32,7 @@
 #include "protocol.h"
 #include "salut-connection.h"
 #include "debug.h"
+#include "plugin-loader.h"
 
 /* properties */
 enum
@@ -118,12 +119,19 @@ salut_connection_manager_constructed (GObject *object)
   TpBaseConnectionManager *base = (TpBaseConnectionManager *) self;
   void (*constructed) (GObject *) =
       ((GObjectClass *) salut_connection_manager_parent_class)->constructed;
+  SalutPluginLoader *loader;
 
   if (constructed != NULL)
     constructed (object);
 
   self->priv->protocol = salut_protocol_new (self->priv->backend_type);
   tp_base_connection_manager_add_protocol (base, self->priv->protocol);
+
+  loader = salut_plugin_loader_dup ();
+
+  salut_plugin_loader_initialize (loader, base);
+
+  g_object_unref (loader);
 }
 
 static void
