@@ -79,7 +79,11 @@ CORE_SOURCES =                                          \
     debug.c                                             \
     debug.h                                             \
     protocol.c                                          \
-    protocol.h
+    protocol.h                                          \
+    plugin-loader.c                                     \
+    plugin-loader.h                                     \
+    $(top_srcdir)/salut/plugin.h                        \
+    plugin.c
 
 AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.h                      \
