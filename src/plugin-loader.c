@@ -225,3 +225,35 @@ salut_plugin_loader_dup ()
 {
   return g_object_new (SALUT_TYPE_PLUGIN_LOADER, NULL);
 }
+
+static void
+copy_to_other_array (gpointer data,
+    gpointer user_data)
+{
+  g_ptr_array_add (user_data, data);
+}
+
+GPtrArray *
+salut_plugin_loader_create_channel_managers (
+    SalutPluginLoader *self,
+    TpBaseConnection *connection)
+{
+  GPtrArray *out = g_ptr_array_new ();
+  guint i;
+
+  for (i = 0; i < self->priv->plugins->len; i++)
+    {
+      SalutPlugin *plugin = g_ptr_array_index (self->priv->plugins, i);
+      GPtrArray *managers;
+
+      managers = salut_plugin_create_channel_managers (plugin, connection);
+
+      if (managers == NULL)
+        continue;
+
+      g_ptr_array_foreach (managers, copy_to_other_array, out);
+      g_ptr_array_free (managers, TRUE);
+    }
+
+  return out;
+}
