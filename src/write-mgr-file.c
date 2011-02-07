@@ -334,7 +334,10 @@ main (void)
   g_type_init ();
   dbus_g_type_specialized_init ();
 
-  protocols = g_slist_prepend (protocols, salut_protocol_new (G_TYPE_INVALID));
+  protocols = g_slist_prepend (protocols, salut_protocol_new (G_TYPE_INVALID,
+          SALUT_PROTOCOL_LOCAL_XMPP_NAME,
+          SALUT_PROTOCOL_LOCAL_XMPP_ENGLISH_NAME,
+          SALUT_PROTOCOL_LOCAL_XMPP_ICON_NAME));
 
   s = mgr_file_contents (TP_CM_BUS_NAME_BASE "salut",
       TP_CM_OBJECT_PATH_BASE "salut",

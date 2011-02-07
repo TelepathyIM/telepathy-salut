@@ -62,7 +62,14 @@ GType salut_protocol_get_type (void);
         SALUT_TYPE_PROTOCOL, \
         SalutProtocolClass))
 
-TpBaseProtocol *salut_protocol_new (GType backend_type);
+#define SALUT_PROTOCOL_LOCAL_XMPP_NAME "local-xmpp"
+#define SALUT_PROTOCOL_LOCAL_XMPP_ENGLISH_NAME "Link-local XMPP"
+#define SALUT_PROTOCOL_LOCAL_XMPP_ICON_NAME "Link-local XMPP"
+
+TpBaseProtocol *salut_protocol_new (GType backend_type,
+    const gchar *protocol_name,
+    const gchar *english_name,
+    const gchar *icon_name);
 
 G_END_DECLS
 

@@ -124,7 +124,10 @@ salut_connection_manager_constructed (GObject *object)
   if (constructed != NULL)
     constructed (object);
 
-  self->priv->protocol = salut_protocol_new (self->priv->backend_type);
+  self->priv->protocol = salut_protocol_new (self->priv->backend_type,
+      SALUT_PROTOCOL_LOCAL_XMPP_NAME,
+      SALUT_PROTOCOL_LOCAL_XMPP_ENGLISH_NAME,
+      SALUT_PROTOCOL_LOCAL_XMPP_ICON_NAME);
   tp_base_connection_manager_add_protocol (base, self->priv->protocol);
 
   loader = salut_plugin_loader_dup ();
