@@ -44,6 +44,7 @@
 #include "salut-avahi-olpc-activity-manager.h"
 #endif
 
+#include "salut-presence.h"
 #include "salut-signals-marshal.h"
 
 static void
@@ -67,6 +68,7 @@ static guint signals[LAST_SIGNAL] = {0};
 enum
 {
   PROP_STATE = 1,
+  PROP_DNSSD_NAME,
   LAST_PROPERTY
 };
 
@@ -75,6 +77,8 @@ typedef struct _SalutAvahiDiscoveryClientPrivate \
 struct _SalutAvahiDiscoveryClientPrivate
 {
   SalutDiscoveryClientState state;
+
+  gchar *dnssd_name;
 
   gboolean dispose_has_run;
 };
@@ -135,6 +139,8 @@ salut_avahi_discovery_client_dispose (GObject *object)
       self->avahi_client = NULL;
     }
 
+  tp_clear_pointer (&priv->dnssd_name, g_free);
+
   G_OBJECT_CLASS (salut_avahi_discovery_client_parent_class)->dispose (object);
 }
 
@@ -152,6 +158,30 @@ salut_avahi_discovery_client_get_property (GObject *object,
     {
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
+        break;
+      case PROP_DNSSD_NAME:
+        g_value_set_string (value, priv->dnssd_name);
+        break;
+      default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+salut_avahi_discovery_client_set_property (GObject *object,
+                                           guint property_id,
+                                           const GValue *value,
+                                           GParamSpec *pspec)
+{
+  SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (object);
+  SalutAvahiDiscoveryClientPrivate *priv =
+    SALUT_AVAHI_DISCOVERY_CLIENT_GET_PRIVATE (self);
+
+  switch (property_id)
+    {
+      case PROP_DNSSD_NAME:
+        priv->dnssd_name = g_value_dup_string (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -172,9 +202,12 @@ salut_avahi_discovery_client_class_init (
   object_class->dispose = salut_avahi_discovery_client_dispose;
 
   object_class->get_property = salut_avahi_discovery_client_get_property;
+  object_class->set_property = salut_avahi_discovery_client_set_property;
 
   g_object_class_override_property (object_class, PROP_STATE,
       "state");
+  g_object_class_override_property (object_class, PROP_DNSSD_NAME,
+      "dnssd-name");
 
   signals[STATE_CHANGED] =
     g_signal_new ("state-changed",
@@ -322,6 +355,18 @@ salut_avahi_discovery_client_get_host_name_fqdn (SalutDiscoveryClient *clt)
 {
   return avahi_client_get_host_name_fqdn (
         SALUT_AVAHI_DISCOVERY_CLIENT (clt)->avahi_client->avahi_client);
+}
+
+const gchar *
+salut_avahi_discovery_client_get_dnssd_name (SalutAvahiDiscoveryClient *clt)
+{
+  SalutAvahiDiscoveryClientPrivate *priv =
+    SALUT_AVAHI_DISCOVERY_CLIENT_GET_PRIVATE (clt);
+
+  if (priv->dnssd_name != NULL)
+    return priv->dnssd_name;
+  else
+    return SALUT_DNSSD_PRESENCE;
 }
 
 static void
