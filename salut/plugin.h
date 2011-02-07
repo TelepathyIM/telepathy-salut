@@ -23,6 +23,8 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-connection.h>
+
 G_BEGIN_DECLS
 
 #define SALUT_TYPE_PLUGIN (salut_plugin_get_type ())
@@ -36,6 +38,10 @@ G_BEGIN_DECLS
 
 typedef struct _SalutPlugin SalutPlugin;
 typedef struct _SalutPluginInterface SalutPluginInterface;
+
+typedef GPtrArray * (*SalutPluginCreateChannelManagersImpl) (
+    SalutPlugin *plugin,
+    TpBaseConnection *connection);
 
 struct _SalutPluginInterface
 {
@@ -51,6 +57,11 @@ struct _SalutPluginInterface
    * An arbitrary human-readable name identifying this plugin.
    */
   const gchar *name;
+
+  /**
+   * An implementation of salut_plugin_create_channel_managers().
+   */
+  SalutPluginCreateChannelManagersImpl create_channel_managers;
 };
 
 GType salut_plugin_get_type (void);
@@ -59,6 +70,10 @@ const gchar * salut_plugin_get_name (
     SalutPlugin *plugin);
 const gchar * salut_plugin_get_version (
     SalutPlugin *plugin);
+
+GPtrArray * salut_plugin_create_channel_managers (
+    SalutPlugin *plugin,
+    TpBaseConnection *connection);
 
 /**
  * salut_plugin_create:

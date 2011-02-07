@@ -65,3 +65,17 @@ salut_plugin_get_version (SalutPlugin *plugin)
   return iface->version;
 }
 
+GPtrArray *
+salut_plugin_create_channel_managers (SalutPlugin *plugin,
+    TpBaseConnection *connection)
+{
+  SalutPluginInterface *iface = SALUT_PLUGIN_GET_INTERFACE (plugin);
+  SalutPluginCreateChannelManagersImpl func = iface->create_channel_managers;
+  GPtrArray *out = NULL;
+
+  if (func != NULL)
+    out = func (plugin, connection);
+
+  return out;
+}
+
