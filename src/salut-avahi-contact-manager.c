@@ -108,7 +108,6 @@ salut_avahi_contact_manager_init (SalutAvahiContactManager *self)
 
   self->priv = priv;
 
-  priv->presence_browser = ga_service_browser_new (SALUT_DNSSD_PRESENCE);
   priv->discovery_client = NULL;
 }
 
@@ -259,6 +258,18 @@ salut_avahi_contact_manager_close_all (SalutContactManager *mgr)
 }
 
 static void
+salut_avahi_contact_manager_constructed (GObject *object)
+{
+  SalutAvahiContactManager *self = SALUT_AVAHI_CONTACT_MANAGER (object);
+  SalutAvahiContactManagerPrivate *priv =
+    SALUT_AVAHI_CONTACT_MANAGER_GET_PRIVATE (self);
+  const gchar *dnssd_name = salut_avahi_discovery_client_get_dnssd_name (
+      priv->discovery_client);
+
+  priv->presence_browser = ga_service_browser_new ((gchar *) dnssd_name);
+}
+
+static void
 salut_avahi_contact_manager_class_init (
     SalutAvahiContactManagerClass *salut_avahi_contact_manager_class) {
   GObjectClass *object_class = G_OBJECT_CLASS (salut_avahi_contact_manager_class);
@@ -271,6 +282,7 @@ salut_avahi_contact_manager_class_init (
 
   object_class->get_property = salut_avahi_contact_manager_get_property;
   object_class->set_property = salut_avahi_contact_manager_set_property;
+  object_class->constructed = salut_avahi_contact_manager_constructed;
 
   contact_manager_class->start = salut_avahi_contact_manager_start;
   contact_manager_class->create_contact =

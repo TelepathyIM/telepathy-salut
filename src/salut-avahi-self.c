@@ -215,6 +215,7 @@ salut_avahi_self_announce (SalutSelf *_self,
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
   SalutAvahiSelfPrivate *priv = self->priv;
   AvahiStringList *txt_record = NULL;
+  const char *dnssd_name;
 
   priv->presence_group = ga_entry_group_new ();
 
@@ -234,8 +235,11 @@ salut_avahi_self_announce (SalutSelf *_self,
 
   txt_record = create_txt_record (self, port);
 
+  dnssd_name = salut_avahi_discovery_client_get_dnssd_name (
+      priv->discovery_client);
+
   priv->presence = ga_entry_group_add_service_strlist (priv->presence_group,
-      _self->name, SALUT_DNSSD_PRESENCE, port, error, txt_record);
+      _self->name, dnssd_name, port, error, txt_record);
   if (priv->presence == NULL)
     goto error;
 
@@ -309,7 +313,12 @@ salut_avahi_self_publish_avatar (SalutAvahiSelf *self,
   gchar *name;
   gboolean ret;
   gboolean is_new = FALSE;
-  name = g_strdup_printf ("%s." SALUT_DNSSD_PRESENCE ".local", _self->name);
+  const gchar *dnssd_name;
+
+  dnssd_name = salut_avahi_discovery_client_get_dnssd_name (
+      priv->discovery_client);
+
+  name = g_strdup_printf ("%s.%s.local", dnssd_name, _self->name);
 
   if (priv->avatar_group == NULL)
     {

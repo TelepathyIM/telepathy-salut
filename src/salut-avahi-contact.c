@@ -322,6 +322,7 @@ salut_avahi_contact_retrieve_avatar (SalutContact *contact)
   SalutAvahiContactPrivate *priv = self->priv;
   gchar *name;
   GError *error = NULL;
+  const gchar *dnssd_name;
 
   if (priv->record_browser != NULL)
     {
@@ -335,7 +336,9 @@ salut_avahi_contact_retrieve_avatar (SalutContact *contact)
       return;
     }
 
-  name = g_strdup_printf ("%s." SALUT_DNSSD_PRESENCE ".local", contact->name);
+  dnssd_name = salut_avahi_discovery_client_get_dnssd_name (
+      priv->discovery_client);
+  name = g_strdup_printf ("%s.%s.local", dnssd_name, contact->name);
   priv->record_browser = ga_record_browser_new (name, 0xA);
   g_free (name);
 
