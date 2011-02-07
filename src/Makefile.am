@@ -161,10 +161,12 @@ AM_CFLAGS = \
 	-I $(top_srcdir) -I $(top_builddir) \
 	-I $(top_srcdir)/lib -I $(top_builddir)/lib \
 	-DG_LOG_DOMAIN=\"salut\" \
+	-DPLUGIN_DIR=\"$(libdir)/telepathy/salut-0\" \
 	$(ERROR_CFLAGS) \
 	$(GCOV_CFLAGS) \
 	@LIBXML2_CFLAGS@ \
 	@GLIB_CFLAGS@ \
+	@GMODULE_CFLAGS@ \
 	@WOCKY_CFLAGS@ \
 	@DBUS_CFLAGS@ \
 	@AVAHI_CFLAGS@ \
@@ -175,6 +177,7 @@ AM_LDFLAGS = \
 	$(GCOV_LIBS) \
 	@LIBXML2_LIBS@ \
 	@GLIB_LIBS@ \
+	@GMODULE_LIBS@ \
 	@WOCKY_LIBS@ \
 	@DBUS_LIBS@ \
 	@AVAHI_LIBS@ \

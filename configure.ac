@@ -204,6 +204,31 @@ else
   AC_MSG_WARN([libuuid not found, falling back to generating random IDs])
 fi
 
+dnl plugins
+AC_ARG_ENABLE(plugins,
+  AC_HELP_STRING([--disable-plugins],
+                 [disable plugin loader]),
+    [enable_plugins=$enableval], [enable_plugins=yes])
+
+if test x$enable_plugins = xyes; then
+  AC_DEFINE(ENABLE_PLUGINS, [], [Enable plugins])
+  PKG_CHECK_MODULES(GMODULE, [gmodule-2.0])
+
+  AC_ARG_ENABLE(plugin-api,
+    AC_HELP_STRING([--enable-plugin-api],
+                   [install headers for third-party plugins (experimental)]),
+    [enable_plugin_api=$enableval],
+    [enable_plugin_api=no])
+fi
+
+AC_SUBST(GMODULE_CFLAGS)
+AC_SUBST(GMODULE_LIBS)
+
+AM_CONDITIONAL(ENABLE_PLUGINS, test x$enable_plugins = xyes)
+AC_SUBST(ENABLE_PLUGINS)
+
+AM_CONDITIONAL(ENABLE_PLUGIN_API, test x$enable_plugin_api = xyes)
+
 # Checks for the 'check' unit testing library
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4], 
                    [ HAVE_CHECK=yes ],
