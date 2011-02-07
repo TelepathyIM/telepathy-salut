@@ -259,6 +259,7 @@ AC_OUTPUT( Makefile                       \
            tests/Makefile                 \
            tests/twisted/Makefile         \
            tests/twisted/tools/Makefile   \
+           plugins/Makefile               \
            salut/Makefile                 \
            salut/telepathy-salut-uninstalled.pc \
            salut/telepathy-salut.pc
