@@ -24,6 +24,15 @@ test_plugin_class_init (TestPluginClass *klass)
 {
 }
 
+static GPtrArray *
+create_channel_managers (SalutPlugin *plugin,
+    TpBaseConnection *connection)
+{
+  DEBUG ("%p on connection %p", plugin, connection);
+
+  return NULL;
+}
+
 static void
 plugin_iface_init (
     gpointer g_iface,
@@ -32,6 +41,8 @@ plugin_iface_init (
   SalutPluginInterface *iface = g_iface;
 
   iface->name = "Salut test plugin";
+
+  iface->create_channel_managers = create_channel_managers;
 }
 
 SalutPlugin *
