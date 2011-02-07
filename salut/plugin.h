@@ -39,6 +39,9 @@ G_BEGIN_DECLS
 typedef struct _SalutPlugin SalutPlugin;
 typedef struct _SalutPluginInterface SalutPluginInterface;
 
+/* The return type should be a new GPtrArray* which will be freed
+ * straight after this function is called, so the pointer array must
+ * not have a free function. */
 typedef GPtrArray * (*SalutPluginCreateChannelManagersImpl) (
     SalutPlugin *plugin,
     TpBaseConnection *connection);
