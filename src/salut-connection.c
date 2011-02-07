@@ -63,6 +63,8 @@
 #include "salut-util.h"
 #include "salut-xmpp-connection-manager.h"
 
+#include "plugin-loader.h"
+
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity-manager.h"
 #endif
@@ -3417,12 +3419,21 @@ muc_manager_new_channels_cb (TpChannelManager *channel_manager,
 }
 #endif
 
+static void
+add_to_array (gpointer data,
+    gpointer user_data)
+{
+  g_ptr_array_add (user_data, data);
+}
+
 static GPtrArray *
 salut_connection_create_channel_managers (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
   SalutConnectionPrivate *priv = self->priv;
   GPtrArray *managers = g_ptr_array_sized_new (1);
+  GPtrArray *tmp;
+  SalutPluginLoader *loader;
 
   /* FIXME: The second and third arguments depend on create_channel_factories
    *        being called before this; should telepathy-glib guarantee that or
@@ -3458,6 +3469,14 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   g_signal_connect (TP_CHANNEL_MANAGER (priv->muc_manager), "new-channels",
       G_CALLBACK (muc_manager_new_channels_cb), self);
 #endif
+
+  /* plugin channel managers */
+  loader = salut_plugin_loader_dup ();
+  tmp = salut_plugin_loader_create_channel_managers (loader, base);
+  g_object_unref (loader);
+
+  g_ptr_array_foreach (tmp, add_to_array, managers);
+  g_ptr_array_free (tmp, FALSE);
 
   return managers;
 }
