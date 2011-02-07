@@ -143,3 +143,6 @@ lib/gibber/tests/outputs
 lib/gibber/tests/sasl-test.db
 lib/gibber/tests/test-xmpp-connection
 lib/gibber/tests/test-r-multicast-transport-io
+
+salut/telepathy-salut.pc
+salut/telepathy-salut-uninstalled.pc
