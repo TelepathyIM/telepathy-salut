@@ -79,7 +79,7 @@ CORE_SOURCES =                                          \
     debug.c                                             \
     debug.h                                             \
     protocol.c                                          \
-    protocol.h                                          \
+    $(top_srcdir)/salut/protocol.h                      \
     plugin-loader.c                                     \
     plugin-loader.h                                     \
     $(top_srcdir)/salut/plugin.h                        \
@@ -156,6 +156,7 @@ noinst_LTLIBRARIES = libsalut-convenience.la
 AM_CFLAGS = \
 	-I $(top_srcdir) -I $(top_builddir) \
 	-I $(top_srcdir)/lib -I $(top_builddir)/lib \
+	-I $(top_srcdir)/salut \
 	-DG_LOG_DOMAIN=\"salut\" \
 	-DPLUGIN_DIR=\"$(libdir)/telepathy/salut-0\" \
 	$(ERROR_CFLAGS) \
