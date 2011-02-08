@@ -1,15 +1,14 @@
-prefix=
-exec_prefix=
+prefix=@prefix@
+exec_prefix=@exec_prefix@
 abs_top_srcdir=@abs_top_srcdir@
 abs_top_builddir=@abs_top_builddir@
 libdir=@libdir@
 
 plugindir=${libdir}/telepathy/salut-0
-salutpath=@abs_top_builddir@/src/telepathy-salut # For plugins' tests
 
-Name: Telepathy-Salut
-Description: XMPP backend for the Telepathy framework
+Name: Telepathy-Salut (uninstalled)
+Description: XMPP backend for the Telepathy framework (uninstalled)
 Version: @VERSION@
 Requires: pkg-config >= 0.21
-Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, gio-2.0, telepathy-glib >= 0.7.37
-Cflags: -I${abs_top_srcdir} -I${abs_top_srcdir}/lib/ext/wocky
+Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib >= 0.13.12
+Cflags: -I${abs_top_srcdir}
