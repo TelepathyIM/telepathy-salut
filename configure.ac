@@ -217,7 +217,10 @@ if test x$enable_plugins = xyes; then
   AC_ARG_ENABLE(plugin-api,
     AC_HELP_STRING([--enable-plugin-api],
                    [install headers for third-party plugins (experimental)]),
-    [enable_plugin_api=$enableval],
+    [
+      enable_plugin_api=$enableval
+      wocky_install_headers_dir="${includedir}/telepathy-salut-0"
+    ],
     [enable_plugin_api=no])
 fi
 
@@ -235,7 +238,23 @@ PKG_CHECK_MODULES([CHECK], [check >= 0.9.4],
                    [ HAVE_CHECK=no ] )
 AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
 
+# We have to run Wocky's configure *before* looking for it with
+# PKG_CHECK_MODULES so wocky-uninstalled.pc has been generated
+
+# We tell Wocky to install its headers alongside gabble's so that an actual
+# separate Wocky installation won't clash with them. This is a bit of a hack.
+# AX_CONFIG_DIR doesn't make it very easy to pass extra arguments to the
+# submodule's configure.
+
+prev_ac_configure_args=$ac_configure_args
+ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir}"
+
+prev_top_build_prefix=$ac_top_build_prefix
 AX_CONFIG_DIR([lib/ext/wocky])
+ac_top_build_prefix=$prev_top_build_prefix
+
+ac_configure_args=$prev_ac_configure_args
+
 PKG_CONFIG_PATH="${PKG_CONFIG_PATH:+"$PKG_CONFIG_PATH:"}${ac_abs_top_builddir}/lib/ext/wocky/wocky"
 export PKG_CONFIG_PATH
 PKG_CHECK_MODULES([WOCKY], [wocky >= 0.0.0])
