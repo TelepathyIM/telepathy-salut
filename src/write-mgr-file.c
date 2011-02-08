@@ -335,6 +335,7 @@ main (void)
   dbus_g_type_specialized_init ();
 
   protocols = g_slist_prepend (protocols, salut_protocol_new (G_TYPE_INVALID,
+          NULL,
           SALUT_PROTOCOL_LOCAL_XMPP_NAME,
           SALUT_PROTOCOL_LOCAL_XMPP_ENGLISH_NAME,
           SALUT_PROTOCOL_LOCAL_XMPP_ICON_NAME));
