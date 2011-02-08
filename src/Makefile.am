@@ -124,15 +124,10 @@ SHA1_SOURCES =                                          \
     sha1/sha1-util.c
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
-    $(SHA1_SOURCES)
-
-libsalut_backend_avahi_la_SOURCES = $(AVAHI_BACKEND_SOURCES)
-
-libsalut_backend_dummy_la_SOURCES = $(DUMMY_BACKEND_SOURCES)
+    $(SHA1_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES)
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
-		       libsalut-backend-avahi.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
                        -ltelepathy-glib
@@ -152,14 +147,11 @@ check-local: check-coding-style
 
 # TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
 telepathy_salut_LDADD = libsalut-convenience.la \
-			libsalut-backend-avahi.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         $(top_builddir)/extensions/libsalut-extensions.la \
                         -ltelepathy-glib
 
-noinst_LTLIBRARIES = libsalut-convenience.la \
-		     libsalut-backend-avahi.la \
-		     libsalut-backend-dummy.la
+noinst_LTLIBRARIES = libsalut-convenience.la
 
 AM_CFLAGS = \
 	-I $(top_srcdir) -I $(top_builddir) \
