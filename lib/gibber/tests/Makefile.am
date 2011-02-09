@@ -54,7 +54,6 @@ check_main_SOURCES =                             \
     check-helpers.c                              \
     check-helpers.h                              \
     check-gibber.h                               \
-    check-gibber-xmpp-node.c                     \
     check-gibber-xmpp-reader.c                   \
     check-gibber-r-multicast-causal-transport.c  \
     test-transport.c                             \
@@ -62,7 +61,6 @@ check_main_SOURCES =                             \
     check-gibber-xmpp-connection.c               \
     check-gibber-r-multicast-packet.c            \
     check-gibber-r-multicast-sender.c            \
-    check-wocky-stanza.c                   \
     check-gibber-iq-helper.c                     \
     check-gibber-listener.c                      \
     check-gibber-xmpp-connection-listener.c      \
