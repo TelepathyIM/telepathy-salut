@@ -465,8 +465,8 @@ static void salut_muc_channel_finalize (GObject *object);
 static void
 invitation_append_parameter (gpointer key, gpointer value, gpointer data)
 {
-  GibberXmppNode *node = (GibberXmppNode *) data;
-  gibber_xmpp_node_add_child_with_content (node, (gchar *) key,
+  WockyNode *node = (WockyNode *) data;
+  wocky_node_add_child_with_content (node, (gchar *) key,
       (gchar *) value);
 }
 
@@ -481,7 +481,7 @@ create_invitation (SalutMucChannel *self, TpHandle handle,
   TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   WockyStanza *msg;
-  GibberXmppNode *invite_node;
+  WockyNode *invite_node;
 
   const gchar *name = tp_handle_inspect (contact_repo, handle);
 
@@ -502,7 +502,7 @@ create_invitation (SalutMucChannel *self, TpHandle handle,
 
   if (message != NULL && *message != '\0')
     {
-      gibber_xmpp_node_add_child_with_content (invite_node, "reason", message);
+      wocky_node_add_child_with_content (invite_node, "reason", message);
     }
 
   g_hash_table_foreach (
@@ -1203,9 +1203,9 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
   TpChannelTextMessageType msgtype;
   TpHandle from_handle;
   WockyNode *node = wocky_stanza_get_top_node (stanza);
-  GibberXmppNode *tubes_node;
+  WockyNode *tubes_node;
 
-  to = gibber_xmpp_node_get_attribute (node, "to");
+  to = wocky_node_get_attribute (node, "to");
   if (strcmp (to, priv->muc_name)) {
     DEBUG("Stanza to another muc group, discarding");
     return;
@@ -1226,7 +1226,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
     return;
 #endif
 
-  tubes_node = gibber_xmpp_node_get_child_ns (node, "tubes",
+  tubes_node = wocky_node_get_child_ns (node, "tubes",
       GIBBER_TELEPATHY_NS_TUBES);
   if (tubes_node != NULL)
     {

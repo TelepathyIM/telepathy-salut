@@ -26,7 +26,6 @@
 
 #include <glib-object.h>
 #include <wocky/wocky-stanza.h>
-#include <gibber/gibber-xmpp-node.h>
 
 #include "salut-contact.h"
 #include "salut-connection.h"
@@ -86,7 +85,7 @@ struct _SalutDisco {
 };
 
 typedef void (*SalutDiscoCb)(SalutDisco *self, SalutDiscoRequest *request,
-    SalutContact *contact, const gchar *node, GibberXmppNode *query_result,
+    SalutContact *contact, const gchar *node, WockyNode *query_result,
     GError* error, gpointer user_data);
 
 SalutDisco *salut_disco_new (SalutConnection *connection,

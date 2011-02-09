@@ -94,7 +94,7 @@ typedef enum {
 #ifdef ENABLE_OLPC
 void
 salut_connection_olpc_observe_invitation (SalutConnection *connection,
-    TpHandle room, TpHandle invitor_handle, GibberXmppNode *invite_node);
+    TpHandle room, TpHandle invitor_handle, WockyNode *invite_node);
 
 gboolean
 salut_connection_olpc_observe_muc_stanza (SalutConnection *self, TpHandle room,

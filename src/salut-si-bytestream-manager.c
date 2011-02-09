@@ -95,7 +95,7 @@ si_request_filter (SalutXmppConnectionManager *xcm,
   if (sub_type != WOCKY_STANZA_SUB_TYPE_SET)
     return FALSE;
 
-  return (gibber_xmpp_node_get_child_ns (node, "si",
+  return (wocky_node_get_child_ns (node, "si",
         GIBBER_XMPP_NS_SI) != NULL);
 }
 
@@ -108,14 +108,14 @@ streaminit_parse_request (WockyStanza *stanza,
                           const gchar **mime_type,
                           GSList **stream_methods)
 {
-  GibberXmppNode *iq, *si, *feature, *x;
+  WockyNode *iq, *si, *feature, *x;
   GSList *x_children, *field_children;
 
   iq = wocky_stanza_get_top_node (stanza);
 
-  *stream_init_id = gibber_xmpp_node_get_attribute (iq, "id");
+  *stream_init_id = wocky_node_get_attribute (iq, "id");
 
-  *from = gibber_xmpp_node_get_attribute (iq, "from");
+  *from = wocky_node_get_attribute (iq, "from");
   if (*from == NULL)
     {
       DEBUG ("got a message without a from field");
@@ -123,22 +123,22 @@ streaminit_parse_request (WockyStanza *stanza,
     }
 
   /* Parse <si> */
-  si = gibber_xmpp_node_get_child_ns (iq, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (iq, "si", GIBBER_XMPP_NS_SI);
   if (si == NULL)
     return FALSE;
 
-  *stream_id = gibber_xmpp_node_get_attribute (si, "id");
+  *stream_id = wocky_node_get_attribute (si, "id");
   if (*stream_id == NULL)
     {
       DEBUG ("got a SI request without a stream id field");
       return FALSE;
     }
 
-  *mime_type = gibber_xmpp_node_get_attribute (si, "mime-type");
+  *mime_type = wocky_node_get_attribute (si, "mime-type");
   /* if no mime_type is defined, XEP-0095 says to assume
    * "application/octet-stream" */
 
-  *profile = gibber_xmpp_node_get_attribute (si, "profile");
+  *profile = wocky_node_get_attribute (si, "profile");
   if (*profile == NULL)
     {
       DEBUG ("got a SI request without a profile field");
@@ -146,7 +146,7 @@ streaminit_parse_request (WockyStanza *stanza,
     }
 
   /* Parse <feature> */
-  feature = gibber_xmpp_node_get_child_ns (si, "feature",
+  feature = wocky_node_get_child_ns (si, "feature",
       GIBBER_XMPP_NS_FEATURENEG);
   if (feature == NULL)
     {
@@ -154,7 +154,7 @@ streaminit_parse_request (WockyStanza *stanza,
       return FALSE;
     }
 
-  x = gibber_xmpp_node_get_child_ns (feature, "x", GIBBER_XMPP_NS_DATA);
+  x = wocky_node_get_child_ns (feature, "x", GIBBER_XMPP_NS_DATA);
   if (x == NULL)
     {
       DEBUG ("got a SI request without a X data field");
@@ -164,14 +164,14 @@ streaminit_parse_request (WockyStanza *stanza,
   for (x_children = x->children; x_children;
       x_children = g_slist_next (x_children))
     {
-      GibberXmppNode *field = x_children->data;
+      WockyNode *field = x_children->data;
 
-      if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "var"),
+      if (tp_strdiff (wocky_node_get_attribute (field, "var"),
             "stream-method"))
         /* some future field, ignore it */
         continue;
 
-      if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "type"),
+      if (tp_strdiff (wocky_node_get_attribute (field, "type"),
             "list-single"))
         {
           DEBUG ( "SI request's stream-method field was "
@@ -184,12 +184,12 @@ streaminit_parse_request (WockyStanza *stanza,
       for (field_children = field->children; field_children;
           field_children = g_slist_next (field_children))
         {
-          GibberXmppNode *stream_method, *value;
+          WockyNode *stream_method, *value;
           const gchar *stream_method_str;
 
-          stream_method = (GibberXmppNode *) field_children->data;
+          stream_method = (WockyNode *) field_children->data;
 
-          value = gibber_xmpp_node_get_child (stream_method, "value");
+          value = wocky_node_get_child (stream_method, "value");
           if (value == NULL)
             continue;
 
@@ -306,7 +306,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
   TpHandle peer_handle;
   GibberBytestreamIface *bytestream = NULL;
   WockyNode *top_node = wocky_stanza_get_top_node (stanza);
-  GibberXmppNode *si, *node;
+  WockyNode *si, *node;
   const gchar *profile, *from, *stream_id, *stream_init_id, *mime_type;
   GSList *stream_methods = NULL;
 
@@ -326,7 +326,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
       return;
     }
 
-  si = gibber_xmpp_node_get_child_ns (top_node, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (top_node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
   DEBUG ("received a SI request");
@@ -381,14 +381,14 @@ si_request_cb (SalutXmppConnectionManager *xcm,
    * We don't use SI for 1-1 tubes
    */
 
-  if ((node = gibber_xmpp_node_get_child_ns (si, "muc-stream",
+  if ((node = wocky_node_get_child_ns (si, "muc-stream",
           GIBBER_TELEPATHY_NS_TUBES)))
     {
       const gchar *muc;
       TpHandle room_handle;
       SalutMucManager *muc_mgr;
 
-      muc = gibber_xmpp_node_get_attribute (node, "muc");
+      muc = wocky_node_get_attribute (node, "muc");
       if (muc == NULL)
         {
           DEBUG ("muc-stream SI doesn't contain muc attribute");
@@ -700,7 +700,7 @@ si_request_reply_filter (SalutXmppConnectionManager *manager,
       sub_type != WOCKY_STANZA_SUB_TYPE_ERROR)
     return FALSE;
 
-  iq_id = gibber_xmpp_node_get_attribute (node, "id");
+  iq_id = wocky_node_get_attribute (node, "id");
   return (!tp_strdiff (iq_id, data->iq_id));
 }
 
@@ -754,7 +754,7 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
   SalutSiBytestreamManagerPrivate *priv =
     SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (data->self);
   WockyStanzaSubType sub_type;
-  GibberXmppNode *si, *feature, *x;
+  WockyNode *si, *feature, *x;
   GibberBytestreamIface *bytestream = NULL;
   const gchar *from, *stream_method, *stream_init_id;
   GSList *x_children;
@@ -773,16 +773,16 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
     }
 
   /* stream accepted */
-  stream_init_id = gibber_xmpp_node_get_attribute (node, "id");
+  stream_init_id = wocky_node_get_attribute (node, "id");
 
-  from = gibber_xmpp_node_get_attribute (node, "from");
+  from = wocky_node_get_attribute (node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field");
       goto END;
     }
 
-  si = gibber_xmpp_node_get_child_ns (node, "si",
+  si = wocky_node_get_child_ns (node, "si",
       GIBBER_XMPP_NS_SI);
   if (si == NULL)
     {
@@ -790,7 +790,7 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
       goto END;
     }
 
-  feature = gibber_xmpp_node_get_child_ns (si, "feature",
+  feature = wocky_node_get_child_ns (si, "feature",
       GIBBER_XMPP_NS_FEATURENEG);
   if (feature == NULL)
     {
@@ -798,7 +798,7 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
       goto END;
     }
 
-  x = gibber_xmpp_node_get_child_ns (feature, "x", GIBBER_XMPP_NS_DATA);
+  x = wocky_node_get_child_ns (feature, "x", GIBBER_XMPP_NS_DATA);
   if (x == NULL)
     {
       DEBUG ("got a SI reply without a x field");
@@ -808,14 +808,14 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
   for (x_children = x->children; x_children;
       x_children = g_slist_next (x_children))
     {
-      GibberXmppNode *value, *field = x_children->data;
+      WockyNode *value, *field = x_children->data;
 
-      if (tp_strdiff (gibber_xmpp_node_get_attribute (field, "var"),
+      if (tp_strdiff (wocky_node_get_attribute (field, "var"),
             "stream-method"))
         /* some future field, ignore it */
         continue;
 
-      value = gibber_xmpp_node_get_child (field, "value");
+      value = wocky_node_get_child (field, "value");
       if (value == NULL)
         {
           DEBUG ("SI reply's stream-method field "
@@ -907,7 +907,7 @@ send_si_request (SalutSiBytestreamManager *self,
   WockyNode *node = wocky_stanza_get_top_node (data->stanza);
   const gchar *iq_id;
 
-  iq_id = gibber_xmpp_node_get_attribute (node, "id");
+  iq_id = wocky_node_get_attribute (node, "id");
   if (iq_id != NULL)
     {
       data->iq_id = g_strdup (iq_id);
@@ -915,7 +915,7 @@ send_si_request (SalutSiBytestreamManager *self,
   else
     {
       data->iq_id = gibber_xmpp_connection_new_id (connection);
-      gibber_xmpp_node_set_attribute (node, "id", data->iq_id);
+      wocky_node_set_attribute (node, "id", data->iq_id);
     }
 
   /* Register a filter to catch the response of the SI request */

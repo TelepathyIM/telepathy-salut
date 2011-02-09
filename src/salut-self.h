@@ -154,7 +154,7 @@ void salut_self_foreach_olpc_activity (SalutSelf *self,
     SalutSelfOLPCActivityFunc foreach, gpointer user_data);
 
 void salut_self_olpc_augment_invitation (SalutSelf *self,
-    TpHandle room, TpHandle contact, GibberXmppNode *invite_node);
+    TpHandle room, TpHandle contact, WockyNode *invite_node);
 #endif
 
 GSList * salut_self_get_features (SalutSelf *self);

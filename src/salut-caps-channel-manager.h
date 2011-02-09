@@ -28,8 +28,6 @@
 #include <telepathy-glib/exportable-channel.h>
 #include <telepathy-glib/handle.h>
 
-#include <gibber/gibber-xmpp-node.h>
-
 #include "salut-connection.h"
 
 G_BEGIN_DECLS
@@ -70,7 +68,7 @@ typedef void (*SalutCapsChannelManagerGetFeatureListFunc) (
     GSList **features);
 
 typedef gpointer (*SalutCapsChannelManagerParseCapsFunc) (
-    SalutCapsChannelManager *manager, GibberXmppNode *children);
+    SalutCapsChannelManager *manager, WockyNode *children);
 
 typedef void (*SalutCapsChannelManagerFreeCapsFunc) (
     SalutCapsChannelManager *manager, gpointer specific_caps);
@@ -97,7 +95,7 @@ void salut_caps_channel_manager_get_feature_list (
     GSList **features);
 
 gpointer salut_caps_channel_manager_parse_capabilities (
-    SalutCapsChannelManager *manager, GibberXmppNode *children);
+    SalutCapsChannelManager *manager, WockyNode *children);
 
 void salut_caps_channel_manager_free_capabilities (SalutCapsChannelManager *manager,
     gpointer specific_caps);

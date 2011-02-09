@@ -280,7 +280,7 @@ send_properties_change_msg (SalutOlpcActivity *self,
   GValue *activity_id_val;
   WockyStanza *stanza;
   WockyNode *top_node;
-  GibberXmppNode *properties_node;
+  WockyNode *properties_node;
   gchar *muc_name;
   GibberMucConnection *muc_connection;
   gboolean result;
@@ -319,10 +319,10 @@ send_properties_change_msg (SalutOlpcActivity *self,
       WOCKY_NODE_END, NULL);
   top_node = wocky_stanza_get_top_node (stanza);
 
-  properties_node = gibber_xmpp_node_get_child_ns (top_node, "properties",
+  properties_node = wocky_node_get_child_ns (top_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
 
-  salut_gibber_xmpp_node_add_children_from_properties (properties_node,
+  salut_wocky_node_add_children_from_properties (properties_node,
       properties, "property");
 
   result = gibber_muc_connection_send (muc_connection, stanza, &err);
@@ -732,7 +732,7 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
         }
 
       to = tp_handle_inspect (contact_repo, contact_handle);
-      gibber_xmpp_node_set_attribute (top_node, "to", to);
+      wocky_node_set_attribute (top_node, "to", to);
 
       request_result = salut_xmpp_connection_manager_request_connection (
           xmpp_connection_manager, contact, &connection, NULL);
@@ -772,16 +772,16 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
 void
 salut_olpc_activity_augment_invitation (SalutOlpcActivity *self,
                                         TpHandle contact,
-                                        GibberXmppNode *invite_node)
+                                        WockyNode *invite_node)
 {
   SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
-  GibberXmppNode *properties_node;
+  WockyNode *properties_node;
   GHashTable *properties;
   GValue *activity_id_val;
 
   properties = salut_olpc_activity_create_properties_table (self);
 
-  properties_node = gibber_xmpp_node_add_child_ns (invite_node, "properties",
+  properties_node = wocky_node_add_child_ns (invite_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
 
   /* add the activity id */
@@ -790,7 +790,7 @@ salut_olpc_activity_augment_invitation (SalutOlpcActivity *self,
   g_value_set_static_string (activity_id_val, self->id);
   g_hash_table_insert (properties, "id", activity_id_val);
 
-  salut_gibber_xmpp_node_add_children_from_properties (properties_node,
+  salut_wocky_node_add_children_from_properties (properties_node,
       properties, "property");
 
   tp_handle_set_add (priv->invited, contact);

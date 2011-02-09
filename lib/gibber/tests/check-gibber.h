@@ -3,7 +3,7 @@
 
 #include <check.h>
 
-TCase *make_gibber_xmpp_node_tcase (void);
+TCase *make_wocky_node_tcase (void);
 TCase *make_gibber_xmpp_reader_tcase (void);
 TCase *make_gibber_xmpp_connection_tcase (void);
 TCase *make_gibber_r_multicast_packet_tcase (void);

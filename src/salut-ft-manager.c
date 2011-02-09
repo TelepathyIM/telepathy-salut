@@ -617,7 +617,7 @@ salut_ft_manager_get_contact_caps (SalutCapsChannelManager *manager,
 }
 
 static gboolean
-_parse_caps_item (GibberXmppNode *node,
+_parse_caps_item (WockyNode *node,
                   gpointer user_data)
 {
   const gchar *var;
@@ -626,7 +626,7 @@ _parse_caps_item (GibberXmppNode *node,
   if (tp_strdiff (node->name, "feature"))
     return TRUE;
 
-  var = gibber_xmpp_node_get_attribute (node, "var");
+  var = wocky_node_get_attribute (node, "var");
   if (var == NULL)
     return TRUE;
 
@@ -643,7 +643,7 @@ _parse_caps_item (GibberXmppNode *node,
 
 static gpointer
 salut_ft_manager_parse_caps (SalutCapsChannelManager *manager,
-                             GibberXmppNode *node)
+                             WockyNode *node)
 {
   gboolean support_ft = FALSE;
   FtCapaStatus caps;
@@ -653,7 +653,7 @@ salut_ft_manager_parse_caps (SalutCapsChannelManager *manager,
      * to ensure interoperability with other clients */
     return GUINT_TO_POINTER (FT_CAPA_SUPPORTED);
 
-  gibber_xmpp_node_each_child (node, _parse_caps_item, &support_ft);
+  wocky_node_each_child (node, _parse_caps_item, &support_ft);
 
   if (support_ft)
     caps = FT_CAPA_SUPPORTED;

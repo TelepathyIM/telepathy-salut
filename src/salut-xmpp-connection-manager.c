@@ -780,7 +780,7 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
 
   /* If the identity wasn't clear from the stream opening we only wait to the
    * very first message */
-  from = gibber_xmpp_node_get_attribute (node, "from");
+  from = wocky_node_get_attribute (node, "from");
   if (incoming_pending_connection_got_from (self, conn, from))
     {
       /* We can filter the stanza now */

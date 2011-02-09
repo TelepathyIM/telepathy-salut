@@ -7,7 +7,6 @@
 #include <glib.h>
 
 #include <wocky/wocky-stanza.h>
-#include "gibber-xmpp-node.h"
 
 G_BEGIN_DECLS
 

@@ -1,7 +1,7 @@
 /*
  * check-xmpp-node-properties.c - Test for
- * salut_gibber_xmpp_node_extract_properties and
- * salut_gibber_xmpp_node_add_children_from_properties
+ * salut_wocky_node_extract_properties and
+ * salut_wocky_node_add_children_from_properties
  * Copyright (C) 2007 Collabora Ltd.
  * @author Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
  *
@@ -76,7 +76,7 @@ create_sample_stanza (void)
 START_TEST (test_extract_properties)
 {
   WockyStanza *stanza;
-  GibberXmppNode *node;
+  WockyNode *node;
   GHashTable *properties;
   GValue *value;
   const gchar *prop1_value;
@@ -86,11 +86,11 @@ START_TEST (test_extract_properties)
   gboolean prop5_value;
 
   stanza = create_sample_stanza ();
-  node = gibber_xmpp_node_get_child (wocky_stanza_get_top_node (stanza),
+  node = wocky_node_get_child (wocky_stanza_get_top_node (stanza),
       "properties");
 
   fail_unless (node != NULL);
-  properties = salut_gibber_xmpp_node_extract_properties (node, "prop");
+  properties = salut_wocky_node_extract_properties (node, "prop");
 
   fail_unless (properties != NULL);
   fail_unless (g_hash_table_size (properties) == 5);
@@ -200,17 +200,17 @@ START_TEST (test_add_children_from_properties)
       "http://example.com/stoats");
   top_node = wocky_stanza_get_top_node (stanza);
 
-  salut_gibber_xmpp_node_add_children_from_properties (top_node,
+  salut_wocky_node_add_children_from_properties (top_node,
       properties, "prop");
 
   fail_unless (g_slist_length (top_node->children) == 5);
   for (l = top_node->children; l != NULL; l = l->next)
     {
-      GibberXmppNode *node = (GibberXmppNode *) l->data;
+      WockyNode *node = (WockyNode *) l->data;
       const gchar *name, *type;
 
-      name = gibber_xmpp_node_get_attribute (node, "name");
-      type = gibber_xmpp_node_get_attribute (node, "type");
+      name = wocky_node_get_attribute (node, "name");
+      type = wocky_node_get_attribute (node, "type");
 
       if (strcmp (name, "prop1") == 0)
         {
@@ -247,7 +247,7 @@ START_TEST (test_add_children_from_properties)
 END_TEST
 
 TCase *
-make_salut_gibber_xmpp_node_properties_tcase (void)
+make_salut_wocky_node_properties_tcase (void)
 {
   TCase *tc = tcase_create ("XMPP Node");
 

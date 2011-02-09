@@ -99,7 +99,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
   GibberBytestreamIBB *self = (GibberBytestreamIBB *) user_data;
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   WockyNode *node = wocky_stanza_get_top_node (stanza);
-  GibberXmppNode *data;
+  WockyNode *data;
   GString *str;
   guchar *decoded;
   gsize len;
@@ -125,7 +125,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
       return;
     }
 
-  from = gibber_xmpp_node_get_attribute (node, "from");
+  from = wocky_node_get_attribute (node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field, ignoring");
@@ -431,7 +431,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   WockyStanza *stanza;
   WockyNode *node;
-  GibberXmppNode *si;
+  WockyNode *si;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
@@ -442,7 +442,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
 
   stanza = create_si_accept_iq (self);
   node = wocky_stanza_get_top_node (stanza);
-  si = gibber_xmpp_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
   if (func != NULL)

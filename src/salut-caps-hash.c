@@ -220,7 +220,7 @@ caps_hash_compute (
  * helper function for _parse_dataform_field
  */
 static gboolean
-_parse_dataform_field_form_type (GibberXmppNode *value_node, gpointer user_data)
+_parse_dataform_field_form_type (WockyNode *value_node, gpointer user_data)
 {
   DataformFieldParsingContext *dataform_field_context =
     (DataformFieldParsingContext *) user_data;
@@ -245,7 +245,7 @@ _parse_dataform_field_form_type (GibberXmppNode *value_node, gpointer user_data)
  * helper function for _parse_caps_item
  */
 static gboolean
-_parse_dataform_field_values (GibberXmppNode *value_node, gpointer user_data)
+_parse_dataform_field_values (WockyNode *value_node, gpointer user_data)
 {
   DataformFieldParsingContext *dataform_field_context =
     (DataformFieldParsingContext *) user_data;
@@ -265,7 +265,7 @@ _parse_dataform_field_values (GibberXmppNode *value_node, gpointer user_data)
  * helper function for _parse_caps_item
  */
 static gboolean
-_parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
+_parse_dataform_field (WockyNode *field_node, gpointer user_data)
 {
   DataformParsingContext *dataform_context =
     (DataformParsingContext *) user_data;
@@ -274,7 +274,7 @@ _parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
   if (tp_strdiff (field_node->name, "field"))
     return TRUE;
 
-  var = gibber_xmpp_node_get_attribute (field_node, "var");
+  var = wocky_node_get_attribute (field_node, "var");
 
   if (NULL == var)
     return TRUE;
@@ -286,7 +286,7 @@ _parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
       dataform_field_context->dataform_context = dataform_context;
       dataform_field_context->field = NULL;
 
-      gibber_xmpp_node_each_child (field_node,
+      wocky_node_each_child (field_node,
           _parse_dataform_field_form_type, dataform_field_context);
 
       g_slice_free (DataformFieldParsingContext, dataform_field_context);
@@ -304,7 +304,7 @@ _parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
       dataform_field_context->dataform_context = dataform_context;
       dataform_field_context->field = field;
 
-      gibber_xmpp_node_each_child (field_node,
+      wocky_node_each_child (field_node,
           _parse_dataform_field_values, dataform_field_context);
 
       g_slice_free (DataformFieldParsingContext, dataform_field_context);
@@ -321,7 +321,7 @@ _parse_dataform_field (GibberXmppNode *field_node, gpointer user_data)
  * helper function for _parse_caps_item
  */
 static DataForm *
-_parse_dataform (GibberXmppNode *node)
+_parse_dataform (WockyNode *node)
 {
   DataForm *form;
   DataformParsingContext *dataform_context;
@@ -333,7 +333,7 @@ _parse_dataform (GibberXmppNode *node)
   dataform_context = g_slice_new0 (DataformParsingContext);
   dataform_context->form = form;
 
-  gibber_xmpp_node_each_child (node, _parse_dataform_field, dataform_context);
+  wocky_node_each_child (node, _parse_dataform_field, dataform_context);
 
   g_slice_free (DataformParsingContext, dataform_context);
 
@@ -350,7 +350,7 @@ _parse_dataform (GibberXmppNode *node)
  * helper function for caps_hash_compute_from_stanza
  */
 static gboolean
-_parse_caps_item (GibberXmppNode *node, gpointer user_data)
+_parse_caps_item (WockyNode *node, gpointer user_data)
 {
   AllCapsData *caps_data = (AllCapsData *) user_data;
 
@@ -361,10 +361,10 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
       const gchar *type;
       const gchar *xmllang;
 
-      category = gibber_xmpp_node_get_attribute (node, "category");
-      name = gibber_xmpp_node_get_attribute (node, "name");
-      type = gibber_xmpp_node_get_attribute (node, "type");
-      xmllang = gibber_xmpp_node_get_attribute (node, "xml:lang");
+      category = wocky_node_get_attribute (node, "category");
+      name = wocky_node_get_attribute (node, "name");
+      type = wocky_node_get_attribute (node, "type");
+      xmllang = wocky_node_get_attribute (node, "xml:lang");
 
       if (NULL == category)
         return FALSE;
@@ -381,7 +381,7 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
   else if (!tp_strdiff (node->name, "feature"))
     {
       const gchar *var;
-      var = gibber_xmpp_node_get_attribute (node, "var");
+      var = wocky_node_get_attribute (node, "var");
 
       if (NULL == var)
         return FALSE;
@@ -393,8 +393,8 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
       const gchar *xmlns;
       const gchar *type;
 
-      xmlns = gibber_xmpp_node_get_attribute (node, "xmlns");
-      type = gibber_xmpp_node_get_attribute (node, "type");
+      xmlns = wocky_node_get_attribute (node, "xmlns");
+      type = wocky_node_get_attribute (node, "type");
 
       if (tp_strdiff (xmlns, "jabber:x:data"))
         return FALSE;
@@ -416,7 +416,7 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
  * Returns: the hash. The called must free the returned hash with g_free().
  */
 gchar *
-caps_hash_compute_from_stanza (GibberXmppNode *node)
+caps_hash_compute_from_stanza (WockyNode *node)
 {
   gchar *str;
   AllCapsData *caps_data;
@@ -426,7 +426,7 @@ caps_hash_compute_from_stanza (GibberXmppNode *node)
   caps_data->identities = g_ptr_array_new ();
   caps_data->dataforms = g_ptr_array_new ();
 
-  gibber_xmpp_node_each_child (node, _parse_caps_item, caps_data);
+  wocky_node_each_child (node, _parse_caps_item, caps_data);
 
   str = caps_hash_compute (caps_data->features, caps_data->identities,
       caps_data->dataforms);

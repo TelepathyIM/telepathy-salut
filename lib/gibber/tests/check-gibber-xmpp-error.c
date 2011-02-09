@@ -35,7 +35,7 @@ static void
 test_xmpp_error_to_node_with_bad_request (void)
 {
   WockyStanza *stanza;
-  GibberXmppNode *node;
+  WockyNode *node;
   const gchar *code;
   const gchar *type;
 
@@ -49,13 +49,13 @@ test_xmpp_error_to_node_with_bad_request (void)
   fail_if (node == NULL);
   fail_if (strcmp (node->name, "error") != 0);
 
-  code = gibber_xmpp_node_get_attribute (node, "code");
+  code = wocky_node_get_attribute (node, "code");
   fail_if (code == NULL || strcmp (code, "400") != 0);
 
-  type = gibber_xmpp_node_get_attribute (node, "type");
+  type = wocky_node_get_attribute (node, "type");
   fail_if (type == NULL || strcmp (type, "modify") != 0);
 
-  fail_if (gibber_xmpp_node_get_child_ns (node, "bad-request",
+  fail_if (wocky_node_get_child_ns (node, "bad-request",
         "urn:ietf:params:xml:ns:xmpp-stanzas") == NULL);
 
   g_object_unref (stanza);
@@ -65,7 +65,7 @@ static void
 test_xmpp_error_to_node_with_si_bad_profile (void)
 {
   WockyStanza *stanza;
-  GibberXmppNode *node;
+  WockyNode *node;
   const gchar *code;
   const gchar *type;
 
@@ -79,16 +79,16 @@ test_xmpp_error_to_node_with_si_bad_profile (void)
   fail_if (node == NULL);
   fail_if (strcmp (node->name, "error") != 0);
 
-  code = gibber_xmpp_node_get_attribute (node, "code");
+  code = wocky_node_get_attribute (node, "code");
   fail_if (code == NULL || strcmp (code, "400") != 0);
 
-  type = gibber_xmpp_node_get_attribute (node, "type");
+  type = wocky_node_get_attribute (node, "type");
   fail_if (type == NULL || strcmp (type, "modify") != 0);
 
-  fail_if (gibber_xmpp_node_get_child_ns (node, "bad-request",
+  fail_if (wocky_node_get_child_ns (node, "bad-request",
         "urn:ietf:params:xml:ns:xmpp-stanzas") == NULL);
 
-  fail_if (gibber_xmpp_node_get_child_ns (node, "bad-profile",
+  fail_if (wocky_node_get_child_ns (node, "bad-profile",
         "http://jabber.org/protocol/si") == NULL);
 
   g_object_unref (stanza);

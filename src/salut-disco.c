@@ -195,7 +195,7 @@ request_reply_cb (GibberIqHelper *helper,
   SalutDisco *disco = SALUT_DISCO (object);
   SalutDiscoPrivate *priv = disco->priv;
   WockyNode *reply_node = wocky_stanza_get_top_node (reply_stanza);
-  GibberXmppNode *query_node;
+  WockyNode *query_node;
   GError *err = NULL;
   WockyStanzaSubType sub_type;
 
@@ -204,7 +204,7 @@ request_reply_cb (GibberIqHelper *helper,
   if (!g_list_find (priv->requests, request))
     return;
 
-  query_node = gibber_xmpp_node_get_child_ns (reply_node,
+  query_node = wocky_node_get_child_ns (reply_node,
       "query", disco_type_to_xmlns (request->type));
 
   wocky_stanza_get_type_info (reply_stanza, NULL, &sub_type);
@@ -406,7 +406,7 @@ caps_req_stanza_filter (SalutXmppConnectionManager *mgr,
                         gpointer user_data)
 {
   WockyStanzaSubType sub_type;
-  GibberXmppNode *query;
+  WockyNode *query;
 
   wocky_stanza_get_type_info (stanza, NULL, &sub_type);
 
@@ -473,7 +473,7 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   SalutDisco *self = SALUT_DISCO (user_data);
   SalutDiscoPrivate *priv = self->priv;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
-  GibberXmppNode *iq, *result_iq, *query, *result_query;
+  WockyNode *iq, *result_iq, *query, *result_query;
   const gchar *node;
   const gchar *suffix;
   GSList *i;
@@ -490,10 +490,10 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
 
   iq = wocky_stanza_get_top_node (stanza);
   id = wocky_node_get_attribute (iq, "id");
-  query = gibber_xmpp_node_get_child_ns (iq, "query", NS_DISCO_INFO);
+  query = wocky_node_get_child_ns (iq, "query", NS_DISCO_INFO);
   g_assert (query != NULL);
 
-  node = gibber_xmpp_node_get_attribute (query, "node");
+  node = wocky_node_get_attribute (query, "node");
   if (node == NULL)
     {
       send_item_not_found (conn, "", jid_from, jid_to, id);
@@ -545,15 +545,15 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
       NULL);
 
   result_iq = wocky_stanza_get_top_node (result);
-  result_query = gibber_xmpp_node_get_child_ns (result_iq, "query", NULL);
+  result_query = wocky_node_get_child_ns (result_iq, "query", NULL);
 
   for (i = features; NULL != i; i = i->next)
     {
       const Feature *feature = (const Feature *) i->data;
-      GibberXmppNode *feature_node;
+      WockyNode *feature_node;
 
-      feature_node = gibber_xmpp_node_add_child (result_query, "feature");
-      gibber_xmpp_node_set_attribute (feature_node, "var", feature->ns);
+      feature_node = wocky_node_add_child (result_query, "feature");
+      wocky_node_set_attribute (feature_node, "var", feature->ns);
     }
   g_slist_free (features);
 

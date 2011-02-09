@@ -15,7 +15,7 @@ make_salut_suite (void)
 {
     Suite *s = suite_create ("Salut");
 
-    suite_add_tcase (s, make_salut_gibber_xmpp_node_properties_tcase ());
+    suite_add_tcase (s, make_salut_wocky_node_properties_tcase ());
 
     return s;
 }

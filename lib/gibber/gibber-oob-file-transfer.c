@@ -139,8 +139,8 @@ gibber_oob_file_transfer_is_file_offer (WockyStanza *stanza)
 {
   WockyStanzaType type;
   WockyStanzaSubType sub_type;
-  GibberXmppNode *query;
-  GibberXmppNode *url;
+  WockyNode *query;
+  WockyNode *url;
   const gchar *url_content;
 
   wocky_stanza_get_type_info (stanza, &type, &sub_type);
@@ -150,12 +150,12 @@ gibber_oob_file_transfer_is_file_offer (WockyStanza *stanza)
       return FALSE;
     }
 
-  query = gibber_xmpp_node_get_child (wocky_stanza_get_top_node (stanza),
+  query = wocky_node_get_child (wocky_stanza_get_top_node (stanza),
       "query");
   if (query == NULL)
     return FALSE;
 
-  url = gibber_xmpp_node_get_child (query, "url");
+  url = wocky_node_get_child (query, "url");
   if (url == NULL)
     return FALSE;
 
@@ -183,9 +183,9 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberOobFileTransfer *self;
-  GibberXmppNode *query;
-  GibberXmppNode *url_node;
-  GibberXmppNode *desc_node;
+  WockyNode *query;
+  WockyNode *url_node;
+  WockyNode *desc_node;
   const gchar *self_id;
   const gchar *type;
   const gchar *id;
@@ -203,7 +203,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       return NULL;
     }
 
-  self_id = gibber_xmpp_node_get_attribute (node, "to");
+  self_id = wocky_node_get_attribute (node, "to");
 
   if (peer_id == NULL)
     {
@@ -219,7 +219,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       return NULL;
     }
 
-  type = gibber_xmpp_node_get_attribute (node, "type");
+  type = wocky_node_get_attribute (node, "type");
 
   if (type == NULL || strcmp (type, "set") != 0)
     {
@@ -228,7 +228,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       return NULL;
     }
 
-  id = gibber_xmpp_node_get_attribute (node, "id");
+  id = wocky_node_get_attribute (node, "id");
 
   if (id == NULL)
     {
@@ -237,7 +237,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       return NULL;
     }
 
-  query = gibber_xmpp_node_get_child (node, "query");
+  query = wocky_node_get_child (node, "query");
 
   if (query == NULL)
     {
@@ -246,7 +246,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       return NULL;
     }
 
-  url_node = gibber_xmpp_node_get_child (query, "url");
+  url_node = wocky_node_get_child (query, "url");
 
   if (url_node == NULL)
     {
@@ -262,7 +262,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       return NULL;
     }
 
-  ft_type = gibber_xmpp_node_get_attribute (url_node, "type");
+  ft_type = wocky_node_get_attribute (url_node, "type");
 
   if (ft_type != NULL && gibber_strdiff (ft_type, "file"))
     {
@@ -286,13 +286,13 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   filename++; /* move after the last "/" */
   filename = g_uri_unescape_string (filename, NULL);
 
-  desc_node = gibber_xmpp_node_get_child (query, "desc");
+  desc_node = wocky_node_get_child (query, "desc");
   if (desc_node != NULL)
     {
       description = desc_node->content;
     }
 
-  content_type = gibber_xmpp_node_get_attribute (url_node, "mimeType");
+  content_type = wocky_node_get_attribute (url_node, "mimeType");
   if (content_type == NULL)
     {
       content_type = "application/octet-stream";
@@ -309,7 +309,7 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       "content-type", content_type,
       NULL);
 
-  size = gibber_xmpp_node_get_attribute (url_node, "size");
+  size = wocky_node_get_attribute (url_node, "size");
   if (size != NULL)
     gibber_file_transfer_set_size (GIBBER_FILE_TRANSFER (self),
       g_ascii_strtoull (size, NULL, 0));
@@ -480,9 +480,9 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   WockyStanza *stanza;
   WockyNode *node;
-  GibberXmppNode *query_node;
-  GibberXmppNode *url_node;
-  GibberXmppNode *desc_node;
+  WockyNode *query_node;
+  WockyNode *url_node;
+  WockyNode *desc_node;
 
   gchar *filename_escaped;
   gchar *url;
@@ -533,15 +533,15 @@ create_transfer_offer (GibberOobFileTransfer *self,
       NULL);
   node = wocky_stanza_get_top_node (stanza);
 
-  query_node = gibber_xmpp_node_add_child_ns (node, "query",
+  query_node = wocky_node_add_child_ns (node, "query",
       GIBBER_XMPP_NS_IQ_OOB);
 
-  url_node = gibber_xmpp_node_add_child_with_content (query_node, "url", url);
-  gibber_xmpp_node_set_attribute (url_node, "type", "file");
-  gibber_xmpp_node_set_attribute (url_node, "mimeType",
+  url_node = wocky_node_add_child_with_content (query_node, "url", url);
+  wocky_node_set_attribute (url_node, "type", "file");
+  wocky_node_set_attribute (url_node, "mimeType",
       GIBBER_FILE_TRANSFER (self)->content_type);
 
-  desc_node = gibber_xmpp_node_add_child_with_content (query_node, "desc",
+  desc_node = wocky_node_add_child_with_content (query_node, "desc",
       GIBBER_FILE_TRANSFER (self)->description);
 
   size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
@@ -551,7 +551,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
     {
       gchar *size_str = g_strdup_printf ("%" G_GUINT64_FORMAT,
           size);
-      gibber_xmpp_node_set_attribute (url_node, "size", size_str);
+      wocky_node_set_attribute (url_node, "size", size_str);
       g_free (size_str);
     }
 
@@ -829,9 +829,9 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
   WockyStanza *stanza;
   WockyNode *node;
-  GibberXmppNode *query;
-  GibberXmppNode *error_node;
-  GibberXmppNode *error_desc;
+  WockyNode *query;
+  WockyNode *error_node;
+  WockyNode *error_desc;
   gchar *code_string;
 
   if (self->priv->cancelled)
@@ -851,25 +851,25 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
       NULL);
   node = wocky_stanza_get_top_node (stanza);
 
-  query = gibber_xmpp_node_add_child_ns (node, "query",
+  query = wocky_node_add_child_ns (node, "query",
       GIBBER_XMPP_NS_IQ_OOB);
-  gibber_xmpp_node_add_child_with_content (query, "url", self->priv->url);
+  wocky_node_add_child_with_content (query, "url", self->priv->url);
 
-  error_node = gibber_xmpp_node_add_child (node, "error");
+  error_node = wocky_node_add_child (node, "error");
   code_string = g_strdup_printf ("%d", error_code);
 
   switch (error_code)
     {
       case HTTP_STATUS_CODE_NOT_FOUND:
-        gibber_xmpp_node_set_attribute (error_node, "code", code_string);
-        gibber_xmpp_node_set_attribute (error_node, "type", "cancel");
-        error_desc = gibber_xmpp_node_add_child_ns (error_node,
+        wocky_node_set_attribute (error_node, "code", code_string);
+        wocky_node_set_attribute (error_node, "type", "cancel");
+        error_desc = wocky_node_add_child_ns (error_node,
             "item-not-found", GIBBER_XMPP_NS_STANZAS);
         break;
       case HTTP_STATUS_CODE_NOT_ACCEPTABLE:
-        gibber_xmpp_node_set_attribute (error_node, "code", code_string);
-        gibber_xmpp_node_set_attribute (error_node, "type", "modify");
-        error_desc = gibber_xmpp_node_add_child_ns (error_node,
+        wocky_node_set_attribute (error_node, "code", code_string);
+        wocky_node_set_attribute (error_node, "type", "modify");
+        error_desc = wocky_node_add_child_ns (error_node,
             "not-acceptable", GIBBER_XMPP_NS_STANZAS);
         break;
       default:
@@ -890,12 +890,12 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
   WockyNode *node = wocky_stanza_get_top_node (stanza);
   const gchar *type;
-  GibberXmppNode *error_node;
+  WockyNode *error_node;
 
   if (strcmp (node->name, "iq") != 0)
     return;
 
-  type = gibber_xmpp_node_get_attribute (node, "type");
+  type = wocky_node_get_attribute (node, "type");
   if (type == NULL)
     return;
 
@@ -905,7 +905,7 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
       return;
     }
 
-  error_node = gibber_xmpp_node_get_child (node, "error");
+  error_node = wocky_node_get_child (node, "error");
   if (error_node != NULL)
     {
       GError *error = NULL;
@@ -914,10 +914,10 @@ gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
       self->priv->cancelled = TRUE;
 
       /* FIXME copy the error handling code from gabble */
-      error_code_str = gibber_xmpp_node_get_attribute (error_node, "code");
+      error_code_str = wocky_node_get_attribute (error_node, "code");
       if (error_code_str == NULL)
         /* iChat uses the 'type' attribute to transmit the error code */
-        error_code_str = gibber_xmpp_node_get_attribute (error_node, "type");
+        error_code_str = wocky_node_get_attribute (error_node, "type");
 
       if (error_code_str != NULL && g_ascii_strtoll (error_code_str, NULL,
             10) == HTTP_STATUS_CODE_NOT_ACCEPTABLE)

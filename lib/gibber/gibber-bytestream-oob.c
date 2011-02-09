@@ -312,7 +312,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
                    WockyStanza *stanza)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  GibberXmppNode *query_node, *url_node;
+  WockyNode *query_node, *url_node;
   WockyStanzaType type;
   WockyStanzaSubType sub_type;
   const gchar *stream_id, *url;
@@ -324,22 +324,22 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
       sub_type != WOCKY_STANZA_SUB_TYPE_SET)
     return FALSE;
 
-  query_node = gibber_xmpp_node_get_child_ns (node, "query",
+  query_node = wocky_node_get_child_ns (node, "query",
       GIBBER_XMPP_NS_IQ_OOB);
   if (query_node == NULL)
     return FALSE;
 
-  stream_id = gibber_xmpp_node_get_attribute (query_node, "sid");
+  stream_id = wocky_node_get_attribute (query_node, "sid");
   if (stream_id == NULL || strcmp (stream_id, priv->stream_id) != 0)
     return FALSE;
 
-  url_node = gibber_xmpp_node_get_child (query_node, "url");
+  url_node = wocky_node_get_child (query_node, "url");
   if (url_node == NULL)
     return FALSE;
   url = url_node->content;
 
   priv->recipient = TRUE;
-  priv->stream_open_id = g_strdup (gibber_xmpp_node_get_attribute (
+  priv->stream_open_id = g_strdup (wocky_node_get_attribute (
         node, "id"));
 
   connect_to_url (self, url);
@@ -368,7 +368,7 @@ parse_oob_iq_result (GibberBytestreamOOB *self,
     return FALSE;
 
   /* FIXME: we should check if it's the right sender */
-  id = gibber_xmpp_node_get_attribute (node, "id");
+  id = wocky_node_get_attribute (node, "id");
 
   if (id == NULL || strcmp (id, priv->stream_open_id) != 0)
     return FALSE;
@@ -388,7 +388,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
   const gchar *from;
 
   /* discard invalid stanza */
-  from = gibber_xmpp_node_get_attribute (node, "from");
+  from = wocky_node_get_attribute (node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field");
@@ -755,7 +755,7 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   WockyStanza *stanza;
   WockyNode *node;
-  GibberXmppNode *si;
+  WockyNode *si;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
@@ -766,7 +766,7 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
 
   stanza = create_si_accept_iq (self);
   node = wocky_stanza_get_top_node (stanza);
-  si = gibber_xmpp_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
   if (func != NULL)
@@ -990,12 +990,12 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   g_free (url);
   node = wocky_stanza_get_top_node (stanza);
 
-  id = gibber_xmpp_node_get_attribute (node, "id");
+  id = wocky_node_get_attribute (node, "id");
   if (id == NULL)
     {
       priv->stream_open_id = gibber_xmpp_connection_new_id (
           priv->xmpp_connection);
-      gibber_xmpp_node_set_attribute (node, "id",
+      wocky_node_set_attribute (node, "id",
           priv->stream_open_id);
     }
   else

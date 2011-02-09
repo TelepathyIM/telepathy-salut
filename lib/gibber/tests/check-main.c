@@ -17,7 +17,7 @@ make_gibber_suite (void)
 {
     Suite *s = suite_create ("Gibber");
 
-    suite_add_tcase (s, make_gibber_xmpp_node_tcase ());
+    suite_add_tcase (s, make_wocky_node_tcase ());
     suite_add_tcase (s, make_gibber_xmpp_reader_tcase ());
     suite_add_tcase (s, make_gibber_xmpp_connection_tcase ());
     suite_add_tcase (s, make_gibber_r_multicast_packet_tcase ());

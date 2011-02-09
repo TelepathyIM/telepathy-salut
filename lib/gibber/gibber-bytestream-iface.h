@@ -24,8 +24,6 @@
 
 #include <wocky/wocky-stanza.h>
 
-#include "gibber-xmpp-node.h"
-
 G_BEGIN_DECLS
 
 typedef enum
@@ -46,7 +44,7 @@ typedef enum
 } GibberBytestreamState;
 
 typedef void (* GibberBytestreamAugmentSiAcceptReply) (
-    GibberXmppNode *si, gpointer user_data);
+    WockyNode *si, gpointer user_data);
 
 typedef struct _GibberBytestreamIface GibberBytestreamIface;
 typedef struct _GibberBytestreamIfaceClass GibberBytestreamIfaceClass;

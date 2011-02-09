@@ -345,7 +345,7 @@ salut_presence_cache_set_property (GObject     *object,
 
 static GHashTable *
 create_per_channel_manager_caps (SalutPresenceCache *self,
-                                 GibberXmppNode *query_result)
+                                 WockyNode *query_result)
 {
   SalutPresenceCachePrivate *priv = SALUT_PRESENCE_CACHE_PRIV (self);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
@@ -379,7 +379,7 @@ _caps_disco_cb (SalutDisco *disco,
                 SalutDiscoRequest *request,
                 SalutContact *contact,
                 const gchar *node,
-                GibberXmppNode *query_result,
+                WockyNode *query_result,
                 GError *error,
                 gpointer user_data)
 {

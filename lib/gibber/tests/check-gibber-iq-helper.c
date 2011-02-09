@@ -214,7 +214,7 @@ START_TEST (test_send_without_id)
   fail_unless (result);
 
   /* gibber_iq_helper_send_with_reply generated an id */
-  id = gibber_xmpp_node_get_attribute (wocky_stanza_get_top_node (stanza),
+  id = wocky_node_get_attribute (wocky_stanza_get_top_node (stanza),
       "id");
 
   reply = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
@@ -260,7 +260,7 @@ START_TEST (test_new_result_reply)
   fail_unless (reply != NULL);
   fail_unless (strcmp (wocky_stanza_get_top_node (reply)->name, "iq") == 0);
   fail_unless (strcmp (
-        gibber_xmpp_node_get_attribute (wocky_stanza_get_top_node (reply),
+        wocky_node_get_attribute (wocky_stanza_get_top_node (reply),
           "type"),
         "result") == 0);
   result = gibber_xmpp_connection_send (xmpp_connection, reply, NULL);
@@ -283,7 +283,7 @@ START_TEST (test_new_error_reply)
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
   WockyStanza *stanza, *reply;
-  GibberXmppNode *error_node, *node;
+  WockyNode *error_node, *node;
   gboolean result;
 
   received_reply = FALSE;
@@ -301,23 +301,23 @@ START_TEST (test_new_error_reply)
       XMPP_ERROR_BAD_REQUEST, "test");
   fail_unless (reply != NULL);
   fail_unless (strcmp (wocky_stanza_get_top_node (reply)->name, "iq") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_attribute (
+  fail_unless (strcmp (wocky_node_get_attribute (
           wocky_stanza_get_top_node (reply), "type"),
         "error") == 0);
 
-  error_node = gibber_xmpp_node_get_child (wocky_stanza_get_top_node (reply),
+  error_node = wocky_node_get_child (wocky_stanza_get_top_node (reply),
       "error");
   fail_if (error_node == NULL);
-  fail_if (strcmp (gibber_xmpp_node_get_attribute (error_node, "code"),
+  fail_if (strcmp (wocky_node_get_attribute (error_node, "code"),
         "400") != 0);
-  fail_if (strcmp (gibber_xmpp_node_get_attribute (error_node, "type"),
+  fail_if (strcmp (wocky_node_get_attribute (error_node, "type"),
         "modify") != 0);
 
-  node = gibber_xmpp_node_get_child_ns (error_node, "bad-request",
+  node = wocky_node_get_child_ns (error_node, "bad-request",
       GIBBER_XMPP_NS_STANZAS);
   fail_if (node == NULL);
 
-  node = gibber_xmpp_node_get_child (error_node, "text");
+  node = wocky_node_get_child (error_node, "text");
   fail_if (node == NULL);
   fail_if (strcmp (node->content, "test") != 0);
 

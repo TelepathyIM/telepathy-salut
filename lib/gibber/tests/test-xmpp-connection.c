@@ -58,30 +58,30 @@ print_attribute (const gchar *key, const gchar *value, const gchar *pref,
   return TRUE;
 }
 
-static void print_node (GibberXmppNode *node, gint ident);
+static void print_node (WockyNode *node, gint ident);
 
 static gboolean
-print_child (GibberXmppNode *node, gpointer user_data)
+print_child (WockyNode *node, gpointer user_data)
 {
   print_node (node, GPOINTER_TO_INT(user_data));
   return TRUE;
 }
 
 static void
-print_node (GibberXmppNode *node, gint ident)
+print_node (WockyNode *node, gint ident)
 {
   fprintf (treefile, "%*s`-+-- Name: %s (ns: %s)\n", ident - 1, " ",
-      node->name, gibber_xmpp_node_get_ns (node));
+      node->name, wocky_node_get_ns (node));
   wocky_node_each_attribute (node, print_attribute,
       GINT_TO_POINTER(ident));
 
   if (node->content)
     fprintf (treefile, "%*s |-- Content: %s\n", ident, " ", node->content);
-  if (gibber_xmpp_node_get_language (node))
+  if (wocky_node_get_language (node))
     fprintf (treefile, "%*s |-- Language: %s\n", ident, " ",
-      gibber_xmpp_node_get_language (node));
+      wocky_node_get_language (node));
 
-  gibber_xmpp_node_each_child (node, print_child, GINT_TO_POINTER (ident + 2));
+  wocky_node_each_child (node, print_child, GINT_TO_POINTER (ident + 2));
 }
 
 static void

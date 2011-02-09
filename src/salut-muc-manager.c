@@ -1054,7 +1054,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
-  GibberXmppNode *invite, *room_node, *reason_node;
+  WockyNode *invite, *room_node, *reason_node;
   SalutMucChannel *chan;
   const gchar *room = NULL;
   const gchar *reason = NULL;
@@ -1071,7 +1071,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
 
   DEBUG("Got an invitation");
 
-  room_node = gibber_xmpp_node_get_child (invite, "roomname");
+  room_node = wocky_node_get_child (invite, "roomname");
   if (room_node == NULL)
     {
       DEBUG ("Invalid invitation, discarding");
@@ -1079,7 +1079,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
     }
   room = room_node->content;
 
-  reason_node = gibber_xmpp_node_get_child (invite, "reason");
+  reason_node = wocky_node_get_child (invite, "reason");
   if (reason_node != NULL)
     reason = reason_node->content;
 
@@ -1097,9 +1097,9 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   params_hash = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, g_free);
   for (p = params ; *p != NULL; p++)
     {
-      GibberXmppNode *param;
+      WockyNode *param;
 
-      param = gibber_xmpp_node_get_child (invite, *p);
+      param = wocky_node_get_child (invite, *p);
       if (param == NULL)
         {
           DEBUG("Invalid invitation, (missing parameter) discarding");

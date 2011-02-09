@@ -48,7 +48,7 @@ END_TEST
 START_TEST (test_simple_message)
 {
   GibberXmppReader *reader;
-  GibberXmppNode *node;
+  WockyNode *node;
   gchar *data;
   gsize length;
   gboolean valid;
@@ -88,10 +88,10 @@ START_TEST (test_simple_message)
   node = wocky_stanza_get_top_node (event->stanza);
   fail_if (node == NULL);
   fail_unless (strcmp (node->name, "message") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_language (node), "en") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "to"),
+  fail_unless (strcmp (wocky_node_get_language (node), "en") == 0);
+  fail_unless (strcmp (wocky_node_get_attribute (node, "to"),
                        "juliet@example.com") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "id"),
+  fail_unless (strcmp (wocky_node_get_attribute (node, "id"),
                        "0") == 0);
 
   g_object_unref (event->stanza);
@@ -103,10 +103,10 @@ START_TEST (test_simple_message)
 
   node = wocky_stanza_get_top_node (event->stanza);
   fail_unless (strcmp (node->name, "message") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_language (node), "en") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "to"),
+  fail_unless (strcmp (wocky_node_get_language (node), "en") == 0);
+  fail_unless (strcmp (wocky_node_get_attribute (node, "to"),
                        "juliet@example.com") == 0);
-  fail_unless (strcmp (gibber_xmpp_node_get_attribute (node, "id"),
+  fail_unless (strcmp (wocky_node_get_attribute (node, "id"),
                        "1") == 0);
 
   g_free (data);

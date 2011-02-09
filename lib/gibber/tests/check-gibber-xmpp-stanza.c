@@ -38,7 +38,7 @@ START_TEST (test_build_with_html_message)
   WockyStanza *stanza;
   const gchar *body = "Telepathy rocks!",
         *xhtml_ns = "http://www.w3.org/1999/xhtml";
-  GibberXmppNode *node;
+  WockyNode *node;
   const gchar *value;
 
   g_type_init ();
@@ -65,21 +65,21 @@ START_TEST (test_build_with_html_message)
   node = wocky_stanza_get_top_node (stanza);
   fail_if (node == NULL);
   fail_unless (strcmp (node->name, "message") == 0);
-  value = gibber_xmpp_node_get_attribute (node, "type");
+  value = wocky_node_get_attribute (node, "type");
   fail_unless (value == NULL);
-  value = gibber_xmpp_node_get_attribute (node, "from");
+  value = wocky_node_get_attribute (node, "from");
   fail_unless (strcmp (value, "alice@collabora.co.uk") == 0);
-  value = gibber_xmpp_node_get_attribute (node, "to");
+  value = wocky_node_get_attribute (node, "to");
   fail_unless (strcmp (value, "bob@collabora.co.uk") == 0);
 
   /* <html> */
-  node = gibber_xmpp_node_get_child_ns (node, "html", xhtml_ns);
+  node = wocky_node_get_child_ns (node, "html", xhtml_ns);
   fail_if (node == NULL);
 
   /* <body> */
-  node = gibber_xmpp_node_get_child (node, "body");
+  node = wocky_node_get_child (node, "body");
   fail_if (node == NULL);
-  value = gibber_xmpp_node_get_attribute (node, "textcolor");
+  value = wocky_node_get_attribute (node, "textcolor");
   fail_unless (strcmp (value, "red") == 0);
   fail_unless (strcmp (node->content, body) == 0);
 
@@ -145,7 +145,7 @@ START_TEST (test_get_type_info_with_unknown_sub_type)
 
   stanza = wocky_stanza_new ("iq", WOCKY_XMPP_NS_JABBER_CLIENT);
   fail_if (stanza == NULL);
-  gibber_xmpp_node_set_attribute (wocky_stanza_get_top_node (stanza),
+  wocky_node_set_attribute (wocky_stanza_get_top_node (stanza),
       "type", "goat");
 
   wocky_stanza_get_type_info (stanza, NULL, &sub_type);

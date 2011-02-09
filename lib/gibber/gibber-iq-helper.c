@@ -103,7 +103,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
   const gchar *id;
   ReplyHandlerData *data;
 
-  id = gibber_xmpp_node_get_attribute (node, "id");
+  id = wocky_node_get_attribute (node, "id");
   if (id == NULL)
     return;
 
@@ -116,9 +116,9 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
     return;
 
   /* Its subtype have to be "result" or "error" */
-  if (strcmp (gibber_xmpp_node_get_attribute (node, "type"), "result")
+  if (strcmp (wocky_node_get_attribute (node, "type"), "result")
       != 0 &&
-      strcmp (gibber_xmpp_node_get_attribute (node, "type"), "error")
+      strcmp (wocky_node_get_attribute (node, "type"), "error")
       != 0)
     return;
 
@@ -314,11 +314,11 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
 
   priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);
 
-  tmp = gibber_xmpp_node_get_attribute (node, "id");
+  tmp = wocky_node_get_attribute (node, "id");
   if (tmp == NULL)
     {
       id = gibber_xmpp_connection_new_id (priv->xmpp_connection);
-      gibber_xmpp_node_set_attribute (node, "id", id);
+      wocky_node_set_attribute (node, "id", id);
     }
   else
     {
@@ -364,11 +364,11 @@ new_reply (WockyStanza *iq,
       sub_type == WOCKY_STANZA_SUB_TYPE_ERROR, NULL);
   g_return_val_if_fail (strcmp (node->name, "iq") == 0, NULL);
 
-  id = gibber_xmpp_node_get_attribute (node, "id");
+  id = wocky_node_get_attribute (node, "id");
   g_return_val_if_fail (id != NULL, NULL);
 
-  iq_from = gibber_xmpp_node_get_attribute (node, "from");
-  iq_to = gibber_xmpp_node_get_attribute (node, "to");
+  iq_from = wocky_node_get_attribute (node, "from");
+  iq_to = wocky_node_get_attribute (node, "to");
 
   reply = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
       sub_type,

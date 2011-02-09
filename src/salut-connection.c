@@ -3017,10 +3017,10 @@ void
 salut_connection_olpc_observe_invitation (SalutConnection *self,
                                           TpHandle room,
                                           TpHandle inviter_handle,
-                                          GibberXmppNode *invite_node)
+                                          WockyNode *invite_node)
 {
   SalutConnectionPrivate *priv = self->priv;
-  GibberXmppNode *props_node;
+  WockyNode *props_node;
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL, *tags = NULL;
@@ -3029,7 +3029,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   SalutMucChannel *muc;
   muc_ready_ctx *ctx;
 
-  props_node = gibber_xmpp_node_get_child_ns (invite_node, "properties",
+  props_node = wocky_node_get_child_ns (invite_node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
 
   if (props_node == NULL)
@@ -3040,7 +3040,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   if (inviter == NULL)
     return;
 
-  properties = salut_gibber_xmpp_node_extract_properties (props_node,
+  properties = salut_wocky_node_extract_properties (props_node,
       "property");
 
   if (!extract_properties_from_hash (properties, &activity_id, &color,
@@ -3217,14 +3217,14 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
   SalutConnectionPrivate *priv = self->priv;
-  GibberXmppNode *props_node;
+  WockyNode *props_node;
   GHashTable *properties;
   const gchar *activity_id, *color = NULL, *activity_name = NULL,
         *activity_type = NULL, *tags = NULL;
   gboolean is_private = FALSE;
   SalutOlpcActivity *activity;
 
-  props_node = gibber_xmpp_node_get_child_ns (node, "properties",
+  props_node = wocky_node_get_child_ns (node, "properties",
       GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
 
   if (props_node == NULL)
@@ -3239,7 +3239,7 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
       return FALSE;
     }
 
-  properties = salut_gibber_xmpp_node_extract_properties (props_node,
+  properties = salut_wocky_node_extract_properties (props_node,
       "property");
 
   if (!extract_properties_from_hash (properties, &activity_id, &color,
@@ -3274,7 +3274,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
   SalutConnectionPrivate *priv = self->priv;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) self, TP_HANDLE_TYPE_ROOM);
-  GibberXmppNode *node;
+  WockyNode *node;
   TpHandle room_handle;
   const gchar *room, *activity_id;
   SalutOlpcActivity *activity;
@@ -3284,7 +3284,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
   g_assert (node != NULL);
 
-  room = gibber_xmpp_node_get_attribute (node, "room");
+  room = wocky_node_get_attribute (node, "room");
   if (room == NULL)
     {
       DEBUG ("No room attribute");
@@ -3298,7 +3298,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
       return;
     }
 
-  activity_id = gibber_xmpp_node_get_attribute (node, "id");
+  activity_id = wocky_node_get_attribute (node, "id");
   if (activity_id == NULL)
     {
       DEBUG ("No id attribute");
