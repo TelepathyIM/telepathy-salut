@@ -452,14 +452,14 @@ gibber_xmpp_error_description (GibberXmppError error)
 }
 
 GError *
-gibber_message_get_xmpp_error (GibberXmppStanza *msg)
+gibber_message_get_xmpp_error (WockyStanza *msg)
 {
-  GibberStanzaSubType sub_type;
+  WockyStanzaSubType sub_type;
   g_return_val_if_fail (msg != NULL, NULL);
 
-  gibber_xmpp_stanza_get_type_info (msg, NULL, &sub_type);
+  wocky_stanza_get_type_info (msg, NULL, &sub_type);
 
-  if (sub_type == GIBBER_STANZA_SUB_TYPE_ERROR)
+  if (sub_type == WOCKY_STANZA_SUB_TYPE_ERROR)
     {
       GibberXmppNode *error_node = gibber_xmpp_node_get_child (
           wocky_stanza_get_top_node (msg), "error");

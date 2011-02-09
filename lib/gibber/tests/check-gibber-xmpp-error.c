@@ -34,15 +34,15 @@
 static void
 test_xmpp_error_to_node_with_bad_request (void)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   GibberXmppNode *node;
   const gchar *code;
   const gchar *type;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
   node = gibber_xmpp_error_to_node (XMPP_ERROR_BAD_REQUEST,
       wocky_stanza_get_top_node (stanza), NULL);
 
@@ -64,15 +64,15 @@ test_xmpp_error_to_node_with_bad_request (void)
 static void
 test_xmpp_error_to_node_with_si_bad_profile (void)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   GibberXmppNode *node;
   const gchar *code;
   const gchar *type;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
   node = gibber_xmpp_error_to_node (XMPP_ERROR_SI_BAD_PROFILE,
       wocky_stanza_get_top_node (stanza), NULL);
 
@@ -106,13 +106,13 @@ START_TEST (test_message_get_xmpp_error)
 
   for (xmpp_error = 1; xmpp_error < NUM_XMPP_ERRORS; xmpp_error++)
     {
-      GibberXmppStanza *stanza;
+      WockyStanza *stanza;
       GError *error = NULL;
 
-      stanza = gibber_xmpp_stanza_build (
-          GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+      stanza = wocky_stanza_build (
+          WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
           "from", "to",
-          GIBBER_STANZA_END);
+          NULL);
       gibber_xmpp_error_to_node (xmpp_error,
           wocky_stanza_get_top_node (stanza), NULL);
 

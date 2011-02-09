@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include <gibber/gibber-xmpp-reader.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #include <check.h>
 
@@ -13,11 +13,11 @@ typedef struct _ReceivedStanzaEvent ReceivedStanzaEvent;
 
 struct _ReceivedStanzaEvent {
   GibberXmppReader *reader;
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
 };
 
 static void received_stanza_cb (GibberXmppReader *reader,
-    GibberXmppStanza *stanza, gpointer user_data)
+    WockyStanza *stanza, gpointer user_data)
 {
   GQueue *events_queue = (GQueue *) user_data;
   ReceivedStanzaEvent *event;

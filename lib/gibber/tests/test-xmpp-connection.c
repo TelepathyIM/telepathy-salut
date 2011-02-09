@@ -85,7 +85,7 @@ print_node (GibberXmppNode *node, gint ident)
 }
 
 static void
-received_stanza (GibberXmppConnection *connection, GibberXmppStanza *stanza,
+received_stanza (GibberXmppConnection *connection, WockyStanza *stanza,
     gpointer user_data)
 {
   fprintf (treefile, "-|\n");

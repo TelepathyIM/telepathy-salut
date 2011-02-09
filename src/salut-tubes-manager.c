@@ -183,19 +183,19 @@ salut_tubes_manager_init (SalutTubesManager *self)
 static gboolean
 iq_tube_request_filter (SalutXmppConnectionManager *xcm,
                         GibberXmppConnection *conn,
-                        GibberXmppStanza *stanza,
+                        WockyStanza *stanza,
                         SalutContact *contact,
                         gpointer user_data)
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
-  GibberStanzaType type;
-  GibberStanzaSubType sub_type;
+  WockyStanzaType type;
+  WockyStanzaSubType sub_type;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
-  if (type != GIBBER_STANZA_TYPE_IQ)
+  wocky_stanza_get_type_info (stanza, &type, &sub_type);
+  if (type != WOCKY_STANZA_TYPE_IQ)
     return FALSE;
 
-  if (sub_type != GIBBER_STANZA_SUB_TYPE_SET)
+  if (sub_type != WOCKY_STANZA_SUB_TYPE_SET)
     return FALSE;
 
   return (gibber_xmpp_node_get_child_ns (node, "tube",
@@ -208,7 +208,7 @@ iq_tube_request_filter (SalutXmppConnectionManager *xcm,
  * information from a 1-1 <iq> message */
 static gboolean
 extract_tube_information (TpHandleRepoIface *contact_repo,
-                          GibberXmppStanza *stanza,
+                          WockyStanza *stanza,
                           gboolean *close_out,
                           TpTubeType *type,
                           TpHandle *initiator_handle,
@@ -375,7 +375,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
 static void
 iq_tube_request_cb (SalutXmppConnectionManager *xcm,
                     GibberXmppConnection *conn,
-                    GibberXmppStanza *stanza,
+                    WockyStanza *stanza,
                     SalutContact *contact,
                     gpointer user_data)
 {
@@ -403,7 +403,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
           &initiator_handle, &service, &parameters, &tube_id, &portnum,
           &error))
     {
-      GibberXmppStanza *reply;
+      WockyStanza *reply;
 
       reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
           error->message);

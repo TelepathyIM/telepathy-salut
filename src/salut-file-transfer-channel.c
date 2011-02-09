@@ -41,7 +41,7 @@
 #include "salut-im-manager.h"
 #include "salut-contact.h"
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
 #include <gibber/gibber-iq-helper.h>
@@ -1643,7 +1643,7 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
                                              TpHandle handle,
                                              SalutXmppConnectionManager *xcm,
                                              TpFileTransferState state,
-                                             GibberXmppStanza *stanza,
+                                             WockyStanza *stanza,
                                              GibberXmppConnection *conn)
 {
   GError *error = NULL;
@@ -1657,7 +1657,7 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
   if (ft == NULL)
     {
       /* Reply with an error */
-      GibberXmppStanza *reply;
+      WockyStanza *reply;
 
       DEBUG ("%s", error->message);
       reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,

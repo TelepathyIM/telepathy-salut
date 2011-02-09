@@ -92,7 +92,7 @@ salut_ft_manager_init (SalutFtManager *obj)
 static gboolean
 message_stanza_filter (SalutXmppConnectionManager *mgr,
                        GibberXmppConnection *conn,
-                       GibberXmppStanza *stanza,
+                       WockyStanza *stanza,
                        SalutContact *contact,
                        gpointer user_data)
 {
@@ -102,7 +102,7 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
 static void
 message_stanza_callback (SalutXmppConnectionManager *mgr,
                          GibberXmppConnection *conn,
-                         GibberXmppStanza *stanza,
+                         WockyStanza *stanza,
                          SalutContact *contact,
                          gpointer user_data)
 {

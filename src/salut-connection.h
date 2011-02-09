@@ -33,7 +33,7 @@
 #include <telepathy-glib/presence-mixin.h>
 #include <telepathy-glib/svc-connection.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 
 G_BEGIN_DECLS
@@ -98,7 +98,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *connection,
 
 gboolean
 salut_connection_olpc_observe_muc_stanza (SalutConnection *self, TpHandle room,
-    TpHandle sender, GibberXmppStanza *stanza);
+    TpHandle sender, WockyStanza *stanza);
 #endif
 
 const gchar * const *salut_connection_get_implemented_interfaces (void);

@@ -26,7 +26,7 @@
 
 #include <telepathy-glib/handle-repo.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #include "salut-connection.h"
 #include "salut-presence.h"

@@ -85,7 +85,7 @@ SalutFileTransferChannel * salut_file_transfer_channel_new (
 SalutFileTransferChannel * salut_file_transfer_channel_new_from_stanza (
     SalutConnection *connection, SalutContact *contact,
     TpHandle handle, SalutXmppConnectionManager *xcm,
-    TpFileTransferState state, GibberXmppStanza *stanza,
+    TpFileTransferState state, WockyStanza *stanza,
     GibberXmppConnection *conn);
 
 G_END_DECLS

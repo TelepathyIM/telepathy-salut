@@ -130,11 +130,11 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
 
 #ifdef ENABLE_OLPC
 static gboolean uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
 static void uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 #endif
 
@@ -3213,7 +3213,7 @@ _olpc_activity_manager_activity_modified_cb (SalutOlpcActivityManager *mgr,
 
 gboolean
 salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
-    TpHandle room, TpHandle sender, GibberXmppStanza *stanza)
+    TpHandle room, TpHandle sender, WockyStanza *stanza)
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
   SalutConnectionPrivate *priv = self->priv;
@@ -3256,7 +3256,7 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
 
 static gboolean
 uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
-  GibberXmppConnection *conn, GibberXmppStanza *stanza, SalutContact *contact,
+  GibberXmppConnection *conn, WockyStanza *stanza, SalutContact *contact,
   gpointer user_data)
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
@@ -3267,7 +3267,7 @@ uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
 
 static void
 uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
-  GibberXmppConnection *conn, GibberXmppStanza *stanza, SalutContact *contact,
+  GibberXmppConnection *conn, WockyStanza *stanza, SalutContact *contact,
   gpointer user_data)
 {
   SalutConnection *self = SALUT_CONNECTION (user_data);

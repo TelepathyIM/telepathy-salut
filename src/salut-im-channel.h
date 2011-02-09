@@ -21,7 +21,7 @@
 #define __SALUT_IM_CHANNEL_H__
 
 #include <glib-object.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-xmpp-connection.h>
 
 #include <telepathy-glib/message-mixin.h>
@@ -64,10 +64,10 @@ void salut_im_channel_add_connection (SalutImChannel *chan,
     GibberXmppConnection *conn);
 
 void salut_im_channel_received_stanza (SalutImChannel *chan,
-    GibberXmppStanza *stanza);
+    WockyStanza *stanza);
 
 gboolean
-salut_im_channel_is_text_message (GibberXmppStanza *stanza);
+salut_im_channel_is_text_message (WockyStanza *stanza);
 
 G_END_DECLS
 

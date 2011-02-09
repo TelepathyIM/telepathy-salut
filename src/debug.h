@@ -6,7 +6,7 @@
 
 #include <glib.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #ifdef ENABLE_DEBUG
 

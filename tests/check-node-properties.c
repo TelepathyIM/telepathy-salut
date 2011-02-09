@@ -26,56 +26,56 @@
 #include <string.h>
 #include <dbus/dbus-glib.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include "salut-util.h"
 
 #include <check.h>
 #include "check-helpers.h"
 #include "check-salut.h"
 
-static GibberXmppStanza *
+static WockyStanza *
 create_sample_stanza (void)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
       "alice@collabora.co.uk", "bob@collabora.co.uk",
-      GIBBER_NODE, "properties",
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop1",
-          GIBBER_NODE_ATTRIBUTE, "type", "str",
-          GIBBER_NODE_TEXT, "prop1_value",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop2",
-          GIBBER_NODE_ATTRIBUTE, "type", "int",
-          GIBBER_NODE_TEXT, "-7",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop3",
-          GIBBER_NODE_ATTRIBUTE, "type", "uint",
-          GIBBER_NODE_TEXT, "10",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop4",
-          GIBBER_NODE_ATTRIBUTE, "type", "bytes",
-          GIBBER_NODE_TEXT, "YWJjZGU=",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop5",
-          GIBBER_NODE_ATTRIBUTE, "type", "bool",
-          GIBBER_NODE_TEXT, "1",
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-     GIBBER_STANZA_END);
+      WOCKY_NODE_START, "properties",
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop1",
+          WOCKY_NODE_ATTRIBUTE, "type", "str",
+          WOCKY_NODE_TEXT, "prop1_value",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop2",
+          WOCKY_NODE_ATTRIBUTE, "type", "int",
+          WOCKY_NODE_TEXT, "-7",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop3",
+          WOCKY_NODE_ATTRIBUTE, "type", "uint",
+          WOCKY_NODE_TEXT, "10",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop4",
+          WOCKY_NODE_ATTRIBUTE, "type", "bytes",
+          WOCKY_NODE_TEXT, "YWJjZGU=",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop5",
+          WOCKY_NODE_ATTRIBUTE, "type", "bool",
+          WOCKY_NODE_TEXT, "1",
+        WOCKY_NODE_END,
+      WOCKY_NODE_END,
+     NULL);
 
   return stanza;
 }
 
 START_TEST (test_extract_properties)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   GibberXmppNode *node;
   GHashTable *properties;
   GValue *value;
@@ -191,12 +191,12 @@ create_sample_properties (void)
 START_TEST (test_add_children_from_properties)
 {
   GHashTable *properties;
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *top_node;
   GSList *l;
 
   properties = create_sample_properties ();
-  stanza = gibber_xmpp_stanza_new_ns ("properties",
+  stanza = wocky_stanza_new ("properties",
       "http://example.com/stoats");
   top_node = wocky_stanza_get_top_node (stanza);
 

@@ -22,7 +22,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 #include "gibber-xmpp-connection.h"
 
 G_BEGIN_DECLS
@@ -59,7 +59,7 @@ struct _GibberFileTransferClass
   void (*cancel) (GibberFileTransfer *ft,
                   guint error_code);
   void (*received_stanza) (GibberFileTransfer *ft,
-                           GibberXmppStanza *stanza);
+                           WockyStanza *stanza);
 };
 
 typedef struct _GibberFileTransferPrivate GibberFileTransferPrivate;
@@ -103,13 +103,13 @@ GType gibber_file_transfer_get_type (void);
                               GibberFileTransferClass))
 
 
-gboolean gibber_file_transfer_is_file_offer (GibberXmppStanza *stanza);
+gboolean gibber_file_transfer_is_file_offer (WockyStanza *stanza);
 
 GibberFileTransfer *gibber_file_transfer_new_from_stanza (
-    GibberXmppStanza *stanza, GibberXmppConnection *connection,
+    WockyStanza *stanza, GibberXmppConnection *connection,
     GError **error);
 GibberFileTransfer *gibber_file_transfer_new_from_stanza_with_from (
-    GibberXmppStanza *stanza, GibberXmppConnection *connection,
+    WockyStanza *stanza, GibberXmppConnection *connection,
     const gchar *from, GError **error);
 
 void gibber_file_transfer_offer (GibberFileTransfer *self);
@@ -121,7 +121,7 @@ void gibber_file_transfer_cancel (GibberFileTransfer *self, guint error_code);
 /* FIXME move to a private header if gibber becomes a public library */
 
 gboolean gibber_file_transfer_send_stanza (GibberFileTransfer *self,
-    GibberXmppStanza *stanza, GError **error);
+    WockyStanza *stanza, GError **error);
 
 void gibber_file_transfer_emit_error (GibberFileTransfer *self, GError *error);
 

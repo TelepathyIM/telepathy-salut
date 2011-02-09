@@ -23,7 +23,7 @@
 #include <string.h>
 
 #include <gibber/gibber-namespaces.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #include "salut-olpc-activity.h"
 #include "salut-muc-manager.h"
@@ -278,7 +278,7 @@ send_properties_change_msg (SalutOlpcActivity *self,
   SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
   GHashTable *properties;
   GValue *activity_id_val;
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *top_node;
   GibberXmppNode *properties_node;
   gchar *muc_name;
@@ -311,12 +311,12 @@ send_properties_change_msg (SalutOlpcActivity *self,
   g_value_set_static_string (activity_id_val, self->id);
   g_hash_table_insert (properties, "id", activity_id_val);
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
-      GIBBER_STANZA_SUB_TYPE_GROUPCHAT,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_MESSAGE,
+      WOCKY_STANZA_SUB_TYPE_GROUPCHAT,
       self->connection->name, muc_name,
-      GIBBER_NODE, "properties",
-        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
+      WOCKY_NODE_START, "properties",
+        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+      WOCKY_NODE_END, NULL);
   top_node = wocky_stanza_get_top_node (stanza);
 
   properties_node = gibber_xmpp_node_get_child_ns (top_node, "properties",
@@ -602,13 +602,13 @@ typedef struct
 {
   SalutOlpcActivity *self;
   SalutContact *contact;
-  GibberXmppStanza *msg;
+  WockyStanza *msg;
 } pending_connection_for_uninvite_ctx;
 
 static pending_connection_for_uninvite_ctx *
 pending_connection_for_uninvite_ctx_new (SalutOlpcActivity *self,
                                          SalutContact *contact,
-                                         GibberXmppStanza *msg)
+                                         WockyStanza *msg)
 {
   pending_connection_for_uninvite_ctx *ctx;
 
@@ -682,7 +682,7 @@ void
 salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
 {
   SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
-  GibberXmppStanza *msg;
+  WockyStanza *msg;
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
@@ -696,15 +696,15 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
   if (tp_handle_set_size (priv->invited) <= 0)
     return;
 
-  msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
-      GIBBER_STANZA_SUB_TYPE_NONE,
+  msg = wocky_stanza_build (WOCKY_STANZA_TYPE_MESSAGE,
+      WOCKY_STANZA_SUB_TYPE_NONE,
       self->connection->name, NULL,
-      GIBBER_NODE, "uninvite",
-        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
-        GIBBER_NODE_ATTRIBUTE, "room", tp_handle_inspect (room_repo,
+      WOCKY_NODE_START, "uninvite",
+        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+        WOCKY_NODE_ATTRIBUTE, "room", tp_handle_inspect (room_repo,
           self->room),
-        GIBBER_NODE_ATTRIBUTE, "id", self->id,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
+        WOCKY_NODE_ATTRIBUTE, "id", self->id,
+      WOCKY_NODE_END, NULL);
   top_node = wocky_stanza_get_top_node (msg);
 
   g_object_get (self->connection,

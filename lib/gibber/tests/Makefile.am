@@ -62,7 +62,7 @@ check_main_SOURCES =                             \
     check-gibber-xmpp-connection.c               \
     check-gibber-r-multicast-packet.c            \
     check-gibber-r-multicast-sender.c            \
-    check-gibber-xmpp-stanza.c                   \
+    check-wocky-stanza.c                   \
     check-gibber-iq-helper.c                     \
     check-gibber-listener.c                      \
     check-gibber-xmpp-connection-listener.c      \

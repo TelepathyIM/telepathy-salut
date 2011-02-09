@@ -22,7 +22,7 @@
 
 #include <glib-object.h>
 #include "gibber-bytestream-iface.h"
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 
 G_BEGIN_DECLS
 

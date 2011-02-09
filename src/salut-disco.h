@@ -25,7 +25,7 @@
 #define __SALUT_DISCO_H__
 
 #include <glib-object.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-xmpp-node.h>
 
 #include "salut-contact.h"

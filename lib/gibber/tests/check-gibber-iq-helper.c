@@ -24,7 +24,7 @@
 #include <string.h>
 #include <dbus/dbus-glib.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-iq-helper.h>
 #include <gibber/gibber-xmpp-error.h>
 #include <gibber/gibber-namespaces.h>
@@ -75,8 +75,8 @@ END_TEST
 
 static void
 reply_func (GibberIqHelper *helper,
-            GibberXmppStanza *sent_stanza,
-            GibberXmppStanza *reply_stanza,
+            WockyStanza *sent_stanza,
+            WockyStanza *reply_stanza,
             GObject *object,
             gpointer user_data)
 {
@@ -86,8 +86,8 @@ reply_func (GibberIqHelper *helper,
 static void
 send_stanza_and_reply (GibberXmppConnection *xmpp_connection,
                        GibberIqHelper *iq_helper,
-                       GibberXmppStanza *stanza,
-                       GibberXmppStanza *reply)
+                       WockyStanza *stanza,
+                       WockyStanza *reply)
 {
   gboolean result;
 
@@ -113,22 +113,22 @@ START_TEST (test_send_with_reply)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza, *reply;
+  WockyStanza *stanza, *reply;
 
   received_reply = FALSE;
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_NODE_ATTRIBUTE, "id", "69",
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", "69",
+      NULL);
 
   /* Reply of the stanza */
-  reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_RESULT,
+  reply = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_RESULT,
       "to", "from",
-      GIBBER_NODE_ATTRIBUTE, "id", "69",
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", "69",
+      NULL);
 
   send_stanza_and_reply (xmpp_connection, iq_helper, stanza, reply);
   fail_unless (received_reply);
@@ -144,15 +144,15 @@ START_TEST (test_send_without_reply)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
 
   received_reply = FALSE;
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_NODE_ATTRIBUTE, "id", "69",
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", "69",
+      NULL);
 
   send_stanza_and_reply (xmpp_connection, iq_helper, stanza, NULL);
   fail_unless (!received_reply);
@@ -167,22 +167,22 @@ START_TEST (test_send_with_bad_reply_type)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza, *reply;
+  WockyStanza *stanza, *reply;
 
   received_reply = FALSE;
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_NODE_ATTRIBUTE, "id", "69",
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", "69",
+      NULL);
 
   /* Reply can't be of sub type "get" */
-  reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_GET,
+  reply = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_GET,
       "to", "from",
-      GIBBER_NODE_ATTRIBUTE, "id", "69",
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", "69",
+      NULL);
 
   send_stanza_and_reply (xmpp_connection, iq_helper, stanza, reply);
   fail_unless (!received_reply);
@@ -198,16 +198,16 @@ START_TEST (test_send_without_id)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza, *reply;
+  WockyStanza *stanza, *reply;
   gboolean result;
   const gchar *id;
 
   received_reply = FALSE;
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
       NULL, NULL, NULL);
@@ -217,11 +217,11 @@ START_TEST (test_send_without_id)
   id = gibber_xmpp_node_get_attribute (wocky_stanza_get_top_node (stanza),
       "id");
 
-  reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_RESULT,
+  reply = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_RESULT,
       "to", "from",
-      GIBBER_NODE_ATTRIBUTE, "id", id,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", id,
+      NULL);
 
   result = gibber_xmpp_connection_send (xmpp_connection, reply, NULL);
   fail_unless (result);
@@ -242,15 +242,15 @@ START_TEST (test_new_result_reply)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza, *reply;
+  WockyStanza *stanza, *reply;
   gboolean result;
 
   received_reply = FALSE;
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
       NULL, NULL, NULL);
@@ -282,16 +282,16 @@ START_TEST (test_new_error_reply)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza, *reply;
+  WockyStanza *stanza, *reply;
   GibberXmppNode *error_node, *node;
   gboolean result;
 
   received_reply = FALSE;
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
       NULL, NULL, NULL);
@@ -340,7 +340,7 @@ START_TEST (test_send_with_object_living)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza, *reply;
+  WockyStanza *stanza, *reply;
   gboolean result;
   GObject *object;
 
@@ -349,10 +349,10 @@ START_TEST (test_send_with_object_living)
   /* We don't care about the TestTransport, we just need a GObject */
   object = g_object_new (TEST_TYPE_TRANSPORT, NULL);
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
       object, NULL, NULL);
@@ -380,7 +380,7 @@ START_TEST (test_send_with_object_destroyed)
 {
   GibberXmppConnection *xmpp_connection = create_xmpp_connection ();
   GibberIqHelper *iq_helper = gibber_iq_helper_new (xmpp_connection);
-  GibberXmppStanza *stanza, *reply;
+  WockyStanza *stanza, *reply;
   gboolean result;
   GObject *object;
 
@@ -389,10 +389,10 @@ START_TEST (test_send_with_object_destroyed)
   /* We don't care about the TestTransport, we just need a GObject */
   object = g_object_new (TEST_TYPE_TRANSPORT, NULL);
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
 
   result = gibber_iq_helper_send_with_reply (iq_helper, stanza, reply_func,
       object, NULL, NULL);

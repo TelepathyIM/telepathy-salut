@@ -42,7 +42,7 @@
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-generic.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-bytestream-iface.h>
@@ -54,7 +54,7 @@
 #include <gibber/gibber-tcp-transport.h>
 #include <gibber/gibber-transport.h>
 #include <gibber/gibber-unix-transport.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
 
@@ -166,7 +166,7 @@ struct _SalutTubeStreamPrivate
   guint id;
   guint port;
   GibberXmppConnection *xmpp_connection;
-  GibberXmppStanza *iq_req;
+  WockyStanza *iq_req;
   gchar *object_path;
 
   /* Bytestreams for MUC tubes (using stream initiation) or 1-1 tubes (using
@@ -532,7 +532,7 @@ start_stream_initiation (SalutTubeStream *self,
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GibberXmppNode *node, *si_node;
-  GibberXmppStanza *msg;
+  WockyStanza *msg;
   WockyNode *msg_node;
   TpHandleRepoIface *contact_repo;
   const gchar *jid;
@@ -1815,7 +1815,7 @@ salut_tube_stream_new (SalutConnection *conn,
                        GHashTable *parameters,
                        guint id,
                        guint portnum,
-                       GibberXmppStanza *iq_req)
+                       WockyStanza *iq_req)
 {
   SalutTubeStream *obj;
   char *object_path;
@@ -1891,7 +1891,7 @@ salut_tube_stream_accept (SalutTubeIface *tube,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GibberXmppStanza *reply;
+  WockyStanza *reply;
 
   if (priv->state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     return TRUE;
@@ -2035,8 +2035,8 @@ salut_tube_stream_listen (SalutTubeIface *tube)
 
 static void
 iq_close_reply_cb (GibberIqHelper *helper,
-                   GibberXmppStanza *sent_stanza,
-                   GibberXmppStanza *reply_stanza,
+                   WockyStanza *sent_stanza,
+                   WockyStanza *reply_stanza,
                    GObject *object,
                    gpointer user_data)
 {
@@ -2064,7 +2064,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
    * contact */
   if (!closed_remotely && priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      GibberXmppStanza *stanza;
+      WockyStanza *stanza;
       const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -2075,14 +2075,14 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
       tube_id_str = g_strdup_printf ("%u", priv->id);
 
-      stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-          GIBBER_STANZA_SUB_TYPE_SET,
+      stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_SET,
           jid_from, jid_to,
-          GIBBER_NODE, "close",
-            GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
-            GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
-          GIBBER_NODE_END,
-          GIBBER_STANZA_END);
+          WOCKY_NODE_START, "close",
+            WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+            WOCKY_NODE_ATTRIBUTE, "id", tube_id_str,
+          WOCKY_NODE_END,
+          NULL);
 
       ensure_iq_helper (self);
 

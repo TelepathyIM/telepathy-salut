@@ -22,7 +22,8 @@
 #define __GIBBER_XMPP_ERROR_H__
 
 #include <glib.h>
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
+#include "gibber-xmpp-node.h"
 
 typedef enum {
     XMPP_ERROR_UNDEFINED_CONDITION = 0, /* 500 */
@@ -81,6 +82,6 @@ GibberXmppNode *gibber_xmpp_error_to_node (GibberXmppError error,
     GibberXmppNode *parent_node, const gchar *errmsg);
 const gchar *gibber_xmpp_error_string (GibberXmppError error);
 const gchar *gibber_xmpp_error_description (GibberXmppError error);
-GError *gibber_message_get_xmpp_error (GibberXmppStanza *msg);
+GError *gibber_message_get_xmpp_error (WockyStanza *msg);
 
 #endif /* __GIBBER_XMPP_ERROR_H__ */

@@ -45,7 +45,7 @@
 #include "salut-util.h"
 
 static void
-add_text (GibberXmppStanza *stanza, const gchar *text)
+add_text (WockyStanza *stanza, const gchar *text)
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
   GibberXmppNode *htmlnode;
@@ -59,12 +59,12 @@ add_text (GibberXmppStanza *stanza, const gchar *text)
       GIBBER_W3C_NS_XHTML);
 }
 
-static GibberXmppStanza *
+static WockyStanza *
 create_message_stanza (const gchar *from,
   const gchar *to, TpChannelTextMessageType type, const gchar *text,
   GError **error)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
   if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
@@ -76,7 +76,7 @@ create_message_stanza (const gchar *from,
 
       return NULL;
     }
-  stanza = gibber_xmpp_stanza_new_ns ("message", WOCKY_XMPP_NS_JABBER_CLIENT);
+  stanza = wocky_stanza_new ("message", WOCKY_XMPP_NS_JABBER_CLIENT);
   node = wocky_stanza_get_top_node (stanza);
 
   gibber_xmpp_node_set_attribute (node, "from", from);
@@ -97,14 +97,14 @@ create_message_stanza (const gchar *from,
   return stanza;
 }
 
-GibberXmppStanza *
+WockyStanza *
 text_helper_create_message (const gchar *from,
                             const gchar *to,
                             TpChannelTextMessageType type,
                             const gchar *text,
                             GError **error)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
   stanza = create_message_stanza (from, to, type, text, error);
@@ -130,14 +130,14 @@ text_helper_create_message (const gchar *from,
   return stanza;
 }
 
-GibberXmppStanza *
+WockyStanza *
 text_helper_create_message_groupchat (const gchar *from,
                                       const gchar *to,
                                       TpChannelTextMessageType type,
                                       const gchar *text,
                                       GError **error)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
   stanza = create_message_stanza (from, to, type, text, error);
@@ -164,7 +164,7 @@ text_helper_create_message_groupchat (const gchar *from,
 }
 
 gboolean
-text_helper_parse_incoming_message (GibberXmppStanza *stanza,
+text_helper_parse_incoming_message (WockyStanza *stanza,
                         const gchar **from,
                         TpChannelTextMessageType *msgtype,
                         const gchar **body,

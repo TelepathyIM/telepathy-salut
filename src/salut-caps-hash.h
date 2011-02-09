@@ -24,7 +24,9 @@
 
 #include "salut-self.h"
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
+#include <gibber/gibber-xmpp-node.h>
+
 
 gchar *caps_hash_compute_from_stanza (GibberXmppNode *node);
 gchar *caps_hash_compute_from_self_presence (SalutSelf *self);

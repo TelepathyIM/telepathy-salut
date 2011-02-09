@@ -41,6 +41,7 @@ ChangeSet
 
 *.pyo
 *#
+.\#*
 .cvsignore
 Thumbs.db
 autom4te.cache

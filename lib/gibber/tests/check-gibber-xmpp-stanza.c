@@ -1,5 +1,5 @@
 /*
- * check-gibber-xmpp-stanza.c - Test for gibber-xmpp-stanza functions
+ * check-wocky-stanza.c - Test for wocky-stanza functions
  * Copyright (C) 2007 Collabora Ltd.
  * @author Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
  *
@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #define DEBUG_FLAG DEBUG_XMPP
 #include <gibber/gibber-debug.h>
@@ -35,7 +35,7 @@
 
 START_TEST (test_build_with_html_message)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   const gchar *body = "Telepathy rocks!",
         *xhtml_ns = "http://www.w3.org/1999/xhtml";
   GibberXmppNode *node;
@@ -46,17 +46,17 @@ START_TEST (test_build_with_html_message)
   gibber_debug_set_flags_from_env ();
 #endif
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
       "alice@collabora.co.uk", "bob@collabora.co.uk",
-      GIBBER_NODE, "html",
-        GIBBER_NODE_XMLNS, xhtml_ns,
-        GIBBER_NODE, "body",
-          GIBBER_NODE_ATTRIBUTE, "textcolor", "red",
-          GIBBER_NODE_TEXT, body,
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-     GIBBER_STANZA_END);
+      WOCKY_NODE_START, "html",
+        WOCKY_NODE_XMLNS, xhtml_ns,
+        WOCKY_NODE_START, "body",
+          WOCKY_NODE_ATTRIBUTE, "textcolor", "red",
+          WOCKY_NODE_TEXT, body,
+        WOCKY_NODE_END,
+      WOCKY_NODE_END,
+     NULL);
 
   DEBUG_STANZA (stanza, "check");
 
@@ -88,68 +88,68 @@ START_TEST (test_build_with_html_message)
 
 START_TEST (test_get_type_info_with_simple_message)
 {
-  GibberXmppStanza *stanza;
-  GibberStanzaType type;
-  GibberStanzaSubType sub_type;
+  WockyStanza *stanza;
+  WockyStanzaType type;
+  WockyStanzaSubType sub_type;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
       "alice@collabora.co.uk", "bob@collabora.co.uk",
-     GIBBER_STANZA_END);
+     NULL);
   fail_if (stanza == NULL);
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
-  fail_if (type != GIBBER_STANZA_TYPE_MESSAGE);
-  fail_if (sub_type != GIBBER_STANZA_SUB_TYPE_NONE);
+  wocky_stanza_get_type_info (stanza, &type, &sub_type);
+  fail_if (type != WOCKY_STANZA_TYPE_MESSAGE);
+  fail_if (sub_type != WOCKY_STANZA_SUB_TYPE_NONE);
 
   g_object_unref (stanza);
 } END_TEST
 
 START_TEST (test_get_type_info_with_iq_set)
 {
-  GibberXmppStanza *stanza;
-  GibberStanzaType type;
-  GibberStanzaSubType sub_type;
+  WockyStanza *stanza;
+  WockyStanzaType type;
+  WockyStanzaSubType sub_type;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
       "alice@collabora.co.uk", "bob@collabora.co.uk",
-     GIBBER_STANZA_END);
+     NULL);
   fail_if (stanza == NULL);
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
-  fail_if (type != GIBBER_STANZA_TYPE_IQ);
-  fail_if (sub_type != GIBBER_STANZA_SUB_TYPE_SET);
+  wocky_stanza_get_type_info (stanza, &type, &sub_type);
+  fail_if (type != WOCKY_STANZA_TYPE_IQ);
+  fail_if (sub_type != WOCKY_STANZA_SUB_TYPE_SET);
 
   g_object_unref (stanza);
 } END_TEST
 
 START_TEST (test_get_type_info_with_unknown_type)
 {
-  GibberXmppStanza *stanza;
-  GibberStanzaType type;
+  WockyStanza *stanza;
+  WockyStanzaType type;
 
-  stanza = gibber_xmpp_stanza_new_ns ("goat", WOCKY_XMPP_NS_JABBER_CLIENT);
+  stanza = wocky_stanza_new ("goat", WOCKY_XMPP_NS_JABBER_CLIENT);
   fail_if (stanza == NULL);
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
-  fail_if (type != GIBBER_STANZA_TYPE_UNKNOWN);
+  wocky_stanza_get_type_info (stanza, &type, NULL);
+  fail_if (type != WOCKY_STANZA_TYPE_UNKNOWN);
 
   g_object_unref (stanza);
 } END_TEST
 
 START_TEST (test_get_type_info_with_unknown_sub_type)
 {
-  GibberXmppStanza *stanza;
-  GibberStanzaSubType sub_type;
+  WockyStanza *stanza;
+  WockyStanzaSubType sub_type;
 
-  stanza = gibber_xmpp_stanza_new_ns ("iq", WOCKY_XMPP_NS_JABBER_CLIENT);
+  stanza = wocky_stanza_new ("iq", WOCKY_XMPP_NS_JABBER_CLIENT);
   fail_if (stanza == NULL);
   gibber_xmpp_node_set_attribute (wocky_stanza_get_top_node (stanza),
       "type", "goat");
 
-  gibber_xmpp_stanza_get_type_info (stanza, NULL, &sub_type);
-  fail_if (sub_type != GIBBER_STANZA_SUB_TYPE_UNKNOWN);
+  wocky_stanza_get_type_info (stanza, NULL, &sub_type);
+  fail_if (sub_type != WOCKY_STANZA_SUB_TYPE_UNKNOWN);
 
   g_object_unref (stanza);
 } END_TEST

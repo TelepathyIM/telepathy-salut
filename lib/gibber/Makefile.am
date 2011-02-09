@@ -30,8 +30,6 @@ HANDWRITTEN_SOURCES =             \
   gibber-xmpp-node.h              \
   gibber-xmpp-reader.c            \
   gibber-xmpp-reader.h            \
-  gibber-xmpp-stanza.c            \
-  gibber-xmpp-stanza.h            \
   gibber-xmpp-writer.c            \
   gibber-xmpp-writer.h            \
   gibber-transport.c              \

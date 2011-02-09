@@ -23,7 +23,8 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
+#include <gibber/gibber-xmpp-node.h>
 
 /* Mapping a XMPP node with a GHashTable */
 GHashTable *salut_gibber_xmpp_node_extract_properties (GibberXmppNode *node,

@@ -23,21 +23,21 @@
 
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/channel.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 
 /* Utility functions for the helper user */
 gboolean
-text_helper_parse_incoming_message (GibberXmppStanza *stanza,
+text_helper_parse_incoming_message (WockyStanza *stanza,
     const gchar **from, TpChannelTextMessageType *msgtype,
     const gchar **body, const gchar **body_offset);
 
-GibberXmppStanza *
+WockyStanza *
 text_helper_create_message (const gchar *from,
     const gchar *to, TpChannelTextMessageType type,
     const gchar *text, GError **error);
 
-GibberXmppStanza *
+WockyStanza *
 text_helper_create_message_groupchat (const gchar *from, const gchar *to,
     TpChannelTextMessageType type, const gchar *text, GError **error);
 

@@ -26,7 +26,7 @@
 #include <libsoup/soup-server.h>
 #include <libsoup/soup-message.h>
 
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 #include "gibber-oob-file-transfer.h"
 #include "gibber-fd-transport.h"
 #include "gibber-namespaces.h"
@@ -86,7 +86,7 @@ static void gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
 static void gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
     guint error_code);
 static void gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
-    GibberXmppStanza *stanza);
+    WockyStanza *stanza);
 
 static void
 gibber_oob_file_transfer_class_init (
@@ -135,17 +135,17 @@ gibber_oob_file_transfer_finalize (GObject *object)
 }
 
 gboolean
-gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
+gibber_oob_file_transfer_is_file_offer (WockyStanza *stanza)
 {
-  GibberStanzaType type;
-  GibberStanzaSubType sub_type;
+  WockyStanzaType type;
+  WockyStanzaSubType sub_type;
   GibberXmppNode *query;
   GibberXmppNode *url;
   const gchar *url_content;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, &sub_type);
-  if (type != GIBBER_STANZA_TYPE_IQ ||
-      sub_type != GIBBER_STANZA_SUB_TYPE_SET)
+  wocky_stanza_get_type_info (stanza, &type, &sub_type);
+  if (type != WOCKY_STANZA_TYPE_IQ ||
+      sub_type != WOCKY_STANZA_SUB_TYPE_SET)
     {
       return FALSE;
     }
@@ -176,7 +176,7 @@ gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza)
 
 GibberFileTransfer *
 gibber_oob_file_transfer_new_from_stanza_with_from (
-    GibberXmppStanza *stanza,
+    WockyStanza *stanza,
     GibberXmppConnection *connection,
     const gchar *peer_id,
     GError **error)
@@ -369,7 +369,7 @@ http_client_finished_chunks_cb (SoupSession *session,
                                 gpointer user_data)
 {
   GibberOobFileTransfer *self = user_data;
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   GError *error = NULL;
   guint64 size;
 
@@ -413,12 +413,12 @@ http_client_finished_chunks_cb (SoupSession *session,
       return;
     }
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_RESULT,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_RESULT,
       GIBBER_FILE_TRANSFER (self)->self_id,
       GIBBER_FILE_TRANSFER (self)->peer_id,
-      GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
+      NULL);
 
   if (!gibber_file_transfer_send_stanza (GIBBER_FILE_TRANSFER (self), stanza,
         &error))
@@ -466,7 +466,7 @@ gibber_oob_file_transfer_receive (GibberFileTransfer *ft,
       http_client_finished_chunks_cb, self);
 }
 
-static GibberXmppStanza *
+static WockyStanza *
 create_transfer_offer (GibberOobFileTransfer *self,
                        GError **error)
 {
@@ -478,7 +478,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   socklen_t name_addr_len = sizeof (name_addr);
   gchar *host_escaped;
 
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
   GibberXmppNode *query_node;
   GibberXmppNode *url_node;
@@ -525,12 +525,12 @@ create_transfer_offer (GibberOobFileTransfer *self,
   served_name = g_strdup_printf ("/%s/%s", GIBBER_FILE_TRANSFER (self)->id,
       GIBBER_FILE_TRANSFER (self)->filename);
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       GIBBER_FILE_TRANSFER (self)->self_id,
       GIBBER_FILE_TRANSFER (self)->peer_id,
-      GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
+      NULL);
   node = wocky_stanza_get_top_node (stanza);
 
   query_node = gibber_xmpp_node_add_child_ns (node, "query",
@@ -721,7 +721,7 @@ static void
 gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   GError *error = NULL;
 
   /* start the server if not running */
@@ -827,7 +827,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
                                  guint error_code)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
   GibberXmppNode *query;
   GibberXmppNode *error_node;
@@ -843,12 +843,12 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
      * sender cancelled the transfer. */
     return;
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_ERROR,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_ERROR,
       GIBBER_FILE_TRANSFER (self)->self_id,
       GIBBER_FILE_TRANSFER (self)->peer_id,
-      GIBBER_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", GIBBER_FILE_TRANSFER (self)->id,
+      NULL);
   node = wocky_stanza_get_top_node (stanza);
 
   query = gibber_xmpp_node_add_child_ns (node, "query",
@@ -885,7 +885,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
 
 static void
 gibber_oob_file_transfer_received_stanza (GibberFileTransfer *ft,
-                                          GibberXmppStanza *stanza)
+                                          WockyStanza *stanza)
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
   WockyNode *node = wocky_stanza_get_top_node (stanza);

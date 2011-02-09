@@ -22,7 +22,9 @@
 
 #include <glib-object.h>
 
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
+
+#include "gibber-xmpp-node.h"
 
 G_BEGIN_DECLS
 

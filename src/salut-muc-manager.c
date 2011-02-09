@@ -51,12 +51,12 @@
 
 static gboolean
 invite_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
 static void
 invite_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
 
@@ -1026,14 +1026,14 @@ static void salut_muc_manager_iface_init (gpointer g_iface,
 static gboolean
 invite_stanza_filter (SalutXmppConnectionManager *mgr,
                       GibberXmppConnection *conn,
-                      GibberXmppStanza *stanza,
+                      WockyStanza *stanza,
                       SalutContact *contact,
                       gpointer user_data)
 {
-  GibberStanzaType type;
+  WockyStanzaType type;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
-  if (type != GIBBER_STANZA_TYPE_MESSAGE)
+  wocky_stanza_get_type_info (stanza, &type, NULL);
+  if (type != WOCKY_STANZA_TYPE_MESSAGE)
     return FALSE;
 
   return (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
@@ -1043,7 +1043,7 @@ invite_stanza_filter (SalutXmppConnectionManager *mgr,
 static void
 invite_stanza_callback (SalutXmppConnectionManager *mgr,
                         GibberXmppConnection *conn,
-                        GibberXmppStanza *stanza,
+                        WockyStanza *stanza,
                         SalutContact *contact,
                         gpointer user_data)
 {
@@ -1184,7 +1184,7 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
                                             GibberBytestreamIface *bytestream,
                                             TpHandle room_handle,
                                             const gchar *stream_id,
-                                            GibberXmppStanza *msg)
+                                            WockyStanza *msg)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (

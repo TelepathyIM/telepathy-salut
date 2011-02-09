@@ -70,7 +70,7 @@ void gibber_debug (DebugFlags flag,
 
 void
 gibber_debug_stanza (DebugFlags flag,
-                     GibberXmppStanza *stanza,
+                     WockyStanza *stanza,
                      const gchar *format,
                      ...)
 {

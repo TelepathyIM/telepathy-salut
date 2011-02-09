@@ -69,13 +69,13 @@ SalutSiBytestreamManager *
 salut_si_bytestream_manager_new (SalutConnection *connection,
     const gchar *host_name_fqdn);
 
-GibberXmppStanza *
+WockyStanza *
 salut_si_bytestream_manager_make_stream_init_iq (const gchar *from,
     const gchar *to, const gchar *stream_id, const gchar *profile);
 
 gboolean
 salut_si_bytestream_manager_negotiate_stream (SalutSiBytestreamManager *self,
-    SalutContact *contact, GibberXmppStanza *stanza, const gchar *stream_id,
+    SalutContact *contact, WockyStanza *stanza, const gchar *stream_id,
     SalutSiBytestreamManagerNegotiateReplyFunc func, gpointer user_data,
     GError **error);
 

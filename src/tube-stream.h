@@ -70,7 +70,7 @@ SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
     TpHandleType handle_type, TpHandle self_handle, TpHandle initiator,
     gboolean offered, const gchar *service,
     GHashTable *parameters, guint id, guint portnum,
-    GibberXmppStanza *iq_req);
+    WockyStanza *iq_req);
 
 gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,
     const GValue *address, TpSocketAccessControl access_control,

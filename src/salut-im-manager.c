@@ -30,7 +30,7 @@
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-namespaces.h>
 
 #include <telepathy-glib/channel-manager.h>
@@ -111,7 +111,7 @@ salut_im_manager_init (SalutImManager *obj)
 static gboolean
 message_stanza_filter (SalutXmppConnectionManager *mgr,
                        GibberXmppConnection *conn,
-                       GibberXmppStanza *stanza,
+                       WockyStanza *stanza,
                        SalutContact *contact,
                        gpointer user_data)
 {
@@ -137,7 +137,7 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
 static void
 message_stanza_callback (SalutXmppConnectionManager *mgr,
                          GibberXmppConnection *conn,
-                         GibberXmppStanza *stanza,
+                         WockyStanza *stanza,
                          SalutContact *contact,
                          gpointer user_data)
 {

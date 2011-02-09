@@ -24,9 +24,11 @@
 #define SALUT_CAPS_CHANNEL_MANAGER_H
 
 #include <glib-object.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <telepathy-glib/exportable-channel.h>
 #include <telepathy-glib/handle.h>
+
+#include <gibber/gibber-xmpp-node.h>
 
 #include "salut-connection.h"
 

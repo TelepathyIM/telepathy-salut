@@ -21,7 +21,7 @@
 #define __SALUT_TUBES_CHANNEL_H__
 
 #include <glib-object.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-bytestream-iface.h>
 #include <gibber/gibber-iq-helper.h>
@@ -72,15 +72,15 @@ void salut_tubes_channel_foreach (SalutTubesChannel *self,
 void salut_tubes_channel_close (SalutTubesChannel *channel);
 
 void salut_tubes_channel_bytestream_offered (SalutTubesChannel *chanel,
-    GibberBytestreamIface *bytestream, GibberXmppStanza *msg);
+    GibberBytestreamIface *bytestream, WockyStanza *msg);
 
 GPtrArray * salut_tubes_channel_muc_message_received (
-    SalutTubesChannel *channel, const gchar *sender, GibberXmppStanza *stanza);
+    SalutTubesChannel *channel, const gchar *sender, WockyStanza *stanza);
 
 SalutTubeIface * salut_tubes_channel_message_received (SalutTubesChannel *self,
     const gchar *service, TpTubeType tube_type, TpHandle initiator_handle,
     GHashTable *parameters, guint tube_id, guint portnum,
-    GibberXmppStanza *iq_req);
+    WockyStanza *iq_req);
 
 void salut_tubes_channel_message_close_received (SalutTubesChannel *self,
     TpHandle initiator_handle, guint tube_id);

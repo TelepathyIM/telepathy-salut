@@ -345,7 +345,7 @@ _parse_dataform (GibberXmppNode *node)
 }
 
 /**
- * parse a XML child node from from a received GibberXmppStanza
+ * parse a XML child node from from a received WockyStanza
  *
  * helper function for caps_hash_compute_from_stanza
  */
@@ -411,7 +411,7 @@ _parse_caps_item (GibberXmppNode *node, gpointer user_data)
 
 /**
  * Compute the hash as defined by the XEP-0115 from a received
- * GibberXmppStanza
+ * WockyStanza
  *
  * Returns: the hash. The called must free the returned hash with g_free().
  */

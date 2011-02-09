@@ -138,7 +138,7 @@ generate_id (void)
 }
 
 static void received_stanza_cb (GibberXmppConnection *conn,
-    GibberXmppStanza *stanza, gpointer user_data);
+    WockyStanza *stanza, gpointer user_data);
 
 static void
 gibber_file_transfer_set_property (GObject *object,
@@ -331,7 +331,7 @@ gibber_file_transfer_finalize (GObject *object)
 
 static void
 received_stanza_cb (GibberXmppConnection *conn,
-                    GibberXmppStanza *stanza,
+                    WockyStanza *stanza,
                     gpointer user_data)
 {
   GibberFileTransfer *self = user_data;
@@ -344,7 +344,7 @@ received_stanza_cb (GibberXmppConnection *conn,
 }
 
 gboolean
-gibber_file_transfer_is_file_offer (GibberXmppStanza *stanza)
+gibber_file_transfer_is_file_offer (WockyStanza *stanza)
 {
   /* FIXME put the known backends in a list and stop when the first one
    * can handle the stanza */
@@ -353,7 +353,7 @@ gibber_file_transfer_is_file_offer (GibberXmppStanza *stanza)
 
 GibberFileTransfer *
 gibber_file_transfer_new_from_stanza_with_from (
-    GibberXmppStanza *stanza,
+    WockyStanza *stanza,
     GibberXmppConnection *connection,
     const gchar *from,
     GError **error)
@@ -373,7 +373,7 @@ gibber_file_transfer_new_from_stanza_with_from (
 }
 
 GibberFileTransfer *
-gibber_file_transfer_new_from_stanza (GibberXmppStanza *stanza,
+gibber_file_transfer_new_from_stanza (WockyStanza *stanza,
     GibberXmppConnection *connection,
     GError **error)
 {
@@ -455,7 +455,7 @@ gibber_file_transfer_get_size (GibberFileTransfer *self)
 
 gboolean
 gibber_file_transfer_send_stanza (GibberFileTransfer *self,
-                                  GibberXmppStanza *stanza,
+                                  WockyStanza *stanza,
                                   GError **error)
 {
   if (self->priv->connection->transport == NULL ||

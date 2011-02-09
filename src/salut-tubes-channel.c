@@ -38,7 +38,7 @@
 
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-bytestream-muc.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 #include <gibber/gibber-iq-helper.h>
@@ -181,7 +181,7 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
     TpTubeType type, TpHandle initiator, gboolean offered,
     const gchar *service, GHashTable *parameters, guint tube_id, guint portnum,
-    GibberXmppStanza *iq_req);
+    WockyStanza *iq_req);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -777,7 +777,7 @@ emit_d_bus_names_changed_foreach (gpointer key,
 GPtrArray *
 salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                                           const gchar *sender,
-                                          GibberXmppStanza *stanza)
+                                          WockyStanza *stanza)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
@@ -789,8 +789,8 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
   GHashTable *old_dbus_tubes;
   struct _add_in_old_dbus_tubes_data add_data;
   struct emit_d_bus_names_changed_foreach_data emit_data;
-  GibberStanzaType stanza_type;
-  GibberStanzaSubType sub_type;
+  WockyStanzaType stanza_type;
+  WockyStanzaSubType sub_type;
   GPtrArray *result = g_ptr_array_new ();
 
   contact = tp_handle_lookup (contact_repo, sender, NULL, NULL);
@@ -800,9 +800,9 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
     /* We don't need to inspect our own tubes */
     return result;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &stanza_type, &sub_type);
-  if (stanza_type != GIBBER_STANZA_TYPE_MESSAGE
-      || sub_type != GIBBER_STANZA_SUB_TYPE_GROUPCHAT)
+  wocky_stanza_get_type_info (stanza, &stanza_type, &sub_type);
+  if (stanza_type != WOCKY_STANZA_TYPE_MESSAGE
+      || sub_type != WOCKY_STANZA_SUB_TYPE_GROUPCHAT)
     return result;
 
   tubes_node = gibber_xmpp_node_get_child_ns (top_node, "tubes",
@@ -957,7 +957,7 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
                                       GHashTable *parameters,
                                       guint tube_id,
                                       guint portnum,
-                                      GibberXmppStanza *iq_req)
+                                      WockyStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
@@ -1304,7 +1304,7 @@ create_new_tube (SalutTubesChannel *self,
                  GHashTable *parameters,
                  guint tube_id,
                  guint portnum,
-                 GibberXmppStanza *iq_req)
+                 WockyStanza *iq_req)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
@@ -1574,7 +1574,7 @@ update_tubes_info (SalutTubesChannel *self)
   TpBaseConnection *conn = (TpBaseConnection *) priv->conn;
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
       conn, TP_HANDLE_TYPE_ROOM);
-  GibberXmppStanza *msg;
+  WockyStanza *msg;
   WockyNode *msg_node;
   GibberXmppNode *node;
   const gchar *jid;
@@ -1587,12 +1587,12 @@ update_tubes_info (SalutTubesChannel *self)
   /* build the message */
   jid = tp_handle_inspect (room_repo, priv->handle);
 
-  msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
-      GIBBER_STANZA_SUB_TYPE_GROUPCHAT,
+  msg = wocky_stanza_build (WOCKY_STANZA_TYPE_MESSAGE,
+      WOCKY_STANZA_SUB_TYPE_GROUPCHAT,
       priv->conn->name, jid,
-      GIBBER_NODE, "tubes",
-        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
+      WOCKY_NODE_START, "tubes",
+        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+      WOCKY_NODE_END, NULL);
   msg_node = wocky_stanza_get_top_node (msg);
 
   node = gibber_xmpp_node_get_child_ns (msg_node, "tubes",
@@ -1940,16 +1940,16 @@ stream_tube_new_connection_cb (SalutTubeIface *tube,
 
 static void
 iq_reply_cb (GibberIqHelper *helper,
-             GibberXmppStanza *sent_stanza,
-             GibberXmppStanza *reply_stanza,
+             WockyStanza *sent_stanza,
+             WockyStanza *reply_stanza,
              GObject *object,
              gpointer user_data)
 {
   SalutTubeIface *tube = (SalutTubeIface *) user_data;
-  GibberStanzaSubType sub_type;
+  WockyStanzaSubType sub_type;
 
-  gibber_xmpp_stanza_get_type_info (reply_stanza, NULL, &sub_type);
-  if (sub_type != GIBBER_STANZA_SUB_TYPE_RESULT)
+  wocky_stanza_get_type_info (reply_stanza, NULL, &sub_type);
+  if (sub_type != WOCKY_STANZA_SUB_TYPE_RESULT)
     {
       DEBUG ("The contact has declined our tube offer");
       salut_tube_iface_close (tube, TRUE);
@@ -1991,7 +1991,7 @@ send_channel_iq_tube (gpointer key,
       GError *error = NULL;
       GibberXmppNode *parameters_node;
       const char *tube_type_str;
-      GibberXmppStanza *stanza;
+      WockyStanza *stanza;
       WockyNode *top_node;
       const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo;
@@ -2029,19 +2029,19 @@ send_channel_iq_tube (gpointer key,
       port_str = g_strdup_printf ("%d", port);
       tube_id_str = g_strdup_printf ("%d", tube_id);
 
-      stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-          GIBBER_STANZA_SUB_TYPE_SET,
+      stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_SET,
           jid_from, jid_to,
-          GIBBER_NODE, "tube",
-            GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
-            GIBBER_NODE_ATTRIBUTE, "type", tube_type_str,
-            GIBBER_NODE_ATTRIBUTE, "service", service,
-            GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
-            GIBBER_NODE, "transport",
-              GIBBER_NODE_ATTRIBUTE, "port", port_str,
-            GIBBER_NODE_END,
-          GIBBER_NODE_END,
-          GIBBER_STANZA_END);
+          WOCKY_NODE_START, "tube",
+            WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+            WOCKY_NODE_ATTRIBUTE, "type", tube_type_str,
+            WOCKY_NODE_ATTRIBUTE, "service", service,
+            WOCKY_NODE_ATTRIBUTE, "id", tube_id_str,
+            WOCKY_NODE_START, "transport",
+              WOCKY_NODE_ATTRIBUTE, "port", port_str,
+            WOCKY_NODE_END,
+          WOCKY_NODE_END,
+          NULL);
       top_node = wocky_stanza_get_top_node (stanza);
 
       parameters_node = gibber_xmpp_node_add_child (
@@ -2697,7 +2697,7 @@ salut_tubes_channel_get_interfaces (TpSvcChannel *iface,
 void
 salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
                                         GibberBytestreamIface *bytestream,
-                                        GibberXmppStanza *msg)
+                                        WockyStanza *msg)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   WockyNode *node = wocky_stanza_get_top_node (msg);
@@ -2707,15 +2707,15 @@ salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
   guint tube_id;
   unsigned long tube_id_tmp;
   SalutTubeIface *tube;
-  GibberStanzaType type;
-  GibberStanzaSubType sub_type;
+  WockyStanzaType type;
+  WockyStanzaSubType sub_type;
 
   /* Caller is expected to have checked that we have a stream or muc-stream
    * node with a stream ID and the TUBES profile
    */
-  gibber_xmpp_stanza_get_type_info (msg, &type, &sub_type);
-  g_return_if_fail (type == GIBBER_STANZA_TYPE_IQ);
-  g_return_if_fail (sub_type == GIBBER_STANZA_SUB_TYPE_SET);
+  wocky_stanza_get_type_info (msg, &type, &sub_type);
+  g_return_if_fail (type == WOCKY_STANZA_TYPE_IQ);
+  g_return_if_fail (sub_type == WOCKY_STANZA_SUB_TYPE_SET);
 
   si_node = gibber_xmpp_node_get_child_ns (node, "si",
       GIBBER_XMPP_NS_SI);
