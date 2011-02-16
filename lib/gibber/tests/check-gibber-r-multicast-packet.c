@@ -3,11 +3,8 @@
 
 #include <gibber/gibber-r-multicast-packet.h>
 
-#include <check.h>
-#include "check-gibber.h"
-
 #define COMPARE(x) G_STMT_START { \
-  fail_unless (a->x == b->x); \
+  g_assert (a->x == b->x); \
 } G_STMT_END
 
 typedef struct {
@@ -24,7 +21,8 @@ typedef struct {
 
 #define NUMBER_OF_DIFF_TESTS 15
 
-START_TEST (test_r_multicast_packet_diff)
+static void
+test_r_multicast_packet_diff (gint _i)
 {
   diff_testcase cases[NUMBER_OF_DIFF_TESTS] =
     { {                 0,                 0,            0 },
@@ -47,11 +45,19 @@ START_TEST (test_r_multicast_packet_diff)
 
   diff_testcase *c = cases + _i;
   gint32 result = gibber_r_multicast_packet_diff (c->a, c->b);
-  fail_unless (c->result == result);
+  g_assert (c->result == result);
 }
-END_TEST
 
-START_TEST (test_data_packet)
+static void
+test_r_multicast_packet_diff_loop (void)
+{
+  gint i;
+  for (i = 0; i < NUMBER_OF_DIFF_TESTS; ++i)
+    test_r_multicast_packet_diff (i);
+}
+
+static void
+test_data_packet (void)
 {
   GibberRMulticastPacket *a;
   GibberRMulticastPacket *b;
@@ -87,7 +93,7 @@ START_TEST (test_data_packet)
   data = gibber_r_multicast_packet_get_raw_data (a, &len);
 
   b = gibber_r_multicast_packet_parse (data, len, NULL);
-  fail_unless (b != NULL);
+  g_assert (b != NULL);
 
   COMPARE (type);
   COMPARE (version);
@@ -96,7 +102,7 @@ START_TEST (test_data_packet)
   COMPARE (packet_id);
   COMPARE (data.data.stream_id);
 
-  fail_unless (a->sender == b->sender);
+  g_assert (a->sender == b->sender);
 
   for (n = 0 ; n < b->depends->len; n++)
     {
@@ -106,32 +112,33 @@ START_TEST (test_data_packet)
                   GibberRMulticastPacketSenderInfo *, n);
           if (senders[i].sender_id == s->sender_id)
             {
-              fail_unless (senders[i].packet_id == s->packet_id);
-              fail_unless (senders[i].seen == FALSE);
+              g_assert (senders[i].packet_id == s->packet_id);
+              g_assert (senders[i].seen == FALSE);
               senders[i].seen = TRUE;
               break;
             }
         }
 
-      fail_unless (senders[i].sender_id != 0);
+      g_assert (senders[i].sender_id != 0);
     }
 
   for (i = 0; senders[i].sender_id != 0 ; i++)
     {
-      fail_unless (senders[i].seen == TRUE);
+      g_assert (senders[i].seen == TRUE);
     }
 
 
   pdata = gibber_r_multicast_packet_get_payload (b, &plen);
-  fail_unless (plen == strlen (payload));
+  g_assert (plen == strlen (payload));
 
-  fail_unless (memcmp (payload, pdata, plen) == 0);
+  g_assert (memcmp (payload, pdata, plen) == 0);
 
   g_object_unref (a);
   g_object_unref (b);
-} END_TEST
+}
 
-START_TEST (test_attempt_join_packet)
+static void
+test_attempt_join_packet (void)
 {
   GibberRMulticastPacket *a;
   GibberRMulticastPacket *b;
@@ -166,14 +173,14 @@ START_TEST (test_attempt_join_packet)
 
   b = gibber_r_multicast_packet_parse (data, len, NULL);
 
-  fail_unless (b != NULL);
+  g_assert (b != NULL);
 
   COMPARE (type);
   COMPARE (version);
   COMPARE (packet_id);
   COMPARE (data.attempt_join.senders->len);
 
-  fail_unless (a->sender == b->sender);
+  g_assert (a->sender == b->sender);
 
   for (n = 0; n < b->depends->len; n++)
     {
@@ -183,24 +190,24 @@ START_TEST (test_attempt_join_packet)
                   GibberRMulticastPacketSenderInfo *, n);
           if (senders[i].sender_id == s->sender_id)
             {
-              fail_unless (senders[i].packet_id == s->packet_id);
-              fail_unless (senders[i].seen == FALSE);
+              g_assert (senders[i].packet_id == s->packet_id);
+              g_assert (senders[i].seen == FALSE);
               senders[i].seen = TRUE;
               break;
             }
         }
 
-      fail_unless (senders[i].sender_id != 0);
+      g_assert (senders[i].sender_id != 0);
     }
 
   for (i = 0; senders[i].sender_id != 0; i++)
     {
-      fail_unless (senders[i].seen == TRUE);
+      g_assert (senders[i].seen == TRUE);
     }
 
   for (i = 0; new_senders[i].sender_id != 0; i++)
     {
-       fail_unless (new_senders[i].sender_id ==
+       g_assert (new_senders[i].sender_id ==
            g_array_index (b->data.attempt_join.senders, guint32, i));
        new_senders[i].seen = TRUE;
        break;
@@ -208,21 +215,25 @@ START_TEST (test_attempt_join_packet)
 
   for (i = 0; new_senders[i].sender_id != 0; i++)
     {
-      fail_unless (senders[i].seen == TRUE);
+      g_assert (senders[i].seen == TRUE);
     }
 
   g_object_unref (a);
   g_object_unref (b);
 }
-END_TEST
 
-TCase *
-make_gibber_r_multicast_packet_tcase (void)
+int
+main (int argc,
+      char **argv)
 {
-    TCase *tc = tcase_create ("RMulticast Packet");
-    tcase_add_test (tc, test_data_packet);
-    tcase_add_test (tc, test_attempt_join_packet);
-    tcase_add_loop_test (tc, test_r_multicast_packet_diff, 0,
-        NUMBER_OF_DIFF_TESTS);
-    return tc;
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  g_test_add_func ("/gibber/r-multicast-packet/data-packet", test_data_packet);
+  g_test_add_func ("/gibber/r-multicast-packet/attempt-join-packet",
+      test_attempt_join_packet);
+  g_test_add_func ("/gibber/r-multicast-packet/diff",
+      test_r_multicast_packet_diff_loop);
+
+  return g_test_run ();
 }

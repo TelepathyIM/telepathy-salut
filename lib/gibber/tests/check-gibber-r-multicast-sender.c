@@ -1,11 +1,28 @@
+/*
+ * check-gibber-r-multicast-sender.c
+ * Copyright (C) 2007 Collabora Ltd.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <gibber/gibber-r-multicast-sender.h>
-
-#include <check.h>
-#include "check-gibber.h"
 
 #define SENDER 4321
 #define SENDER_NAME "testsender"
@@ -98,13 +115,13 @@ data_received_cb (GibberRMulticastSender *sender, guint8 stream_id,
   for (i = 0 ; lines[i] != NULL && *lines[i] != '\0'; i++) {
     guint32 v = atoi (lines[i]);
 
-    fail_unless (v == expected);
-    fail_unless ((v % G_MAXUINT8) - i == stream_id);
+    g_assert (v == expected);
+    g_assert ((v % G_MAXUINT8) - i == stream_id);
     expected++;
   }
   /* serial % 3 is send out in a single packet the other two together.
    * So expected can't be  % 3 == 2 here */
-  fail_if (expected % 3 == 2);
+  g_assert_cmpuint (expected % 3, !=, 2);
 
   if (expected == serial_offset + NR_PACKETS
       || expected == serial_offset + NR_PACKETS + EXTRA_SEEN) {
@@ -121,7 +138,7 @@ repair_request_cb (GibberRMulticastSender *sender, guint id, gpointer data)
 {
   GibberRMulticastPacket *p;
 
-  fail_unless (gibber_r_multicast_packet_diff (serial_offset, id) >= 0
+  g_assert (gibber_r_multicast_packet_diff (serial_offset, id) >= 0
                || gibber_r_multicast_packet_diff (id,
                   serial_offset + NR_PACKETS + EXTRA_SEEN) < 0);
 
@@ -135,8 +152,8 @@ repair_message_cb (GibberRMulticastSender *sender,
     GibberRMulticastPacket *packet, gpointer user_data)
 {
 
-  fail_unless (packet->type == PACKET_TYPE_DATA);
-  fail_unless (packet->packet_id == REPAIR_PACKET + serial_offset);
+  g_assert (packet->type == PACKET_TYPE_DATA);
+  g_assert (packet->packet_id == REPAIR_PACKET + serial_offset);
 
   g_main_loop_quit ((GMainLoop *) user_data);
 }
@@ -168,7 +185,8 @@ add_packet (gpointer data)
 
 #define NUMBER_OF_TESTS 3
 
-START_TEST (test_sender)
+static void
+test_sender (gint _i)
 {
   GibberRMulticastSender *s;
   GibberRMulticastSenderGroup *group;
@@ -227,7 +245,15 @@ START_TEST (test_sender)
   g_main_loop_run (loop);
 
   gibber_r_multicast_sender_group_free (group);
-} END_TEST
+}
+
+static void
+test_sender_loop (void)
+{
+  gint i;
+  for (i = 0; i < NUMBER_OF_TESTS; ++i)
+    test_sender (i);
+}
 
 /* Holding test */
 guint32 idle_timer = 0;
@@ -297,12 +323,12 @@ h_idle_next_step (gpointer user_data)
     case START_DATA:
     case FAIL:
     case EXPECT:
-      fail ("Should not be reached");
+      g_assert_not_reached ();
       break;
     case HOLD:
       s = g_hash_table_find (d->group->senders,
           h_find_sender, e->expected_node);
-      fail_unless (s != NULL);
+      g_assert (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_hold_data (s, e->hold_id);
       h_next_test_step (d);
@@ -310,7 +336,7 @@ h_idle_next_step (gpointer user_data)
     case UNHOLD:
       s = g_hash_table_find (d->group->senders,
           h_find_sender, e->expected_node);
-      fail_unless (s != NULL);
+      g_assert (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_release_data (s);
       h_next_test_step (d);
@@ -336,7 +362,7 @@ h_next_test_step (h_data_t *d)
     case UNHOLD_IMMEDIATE:
       s = g_hash_table_find (d->group->senders,
           h_find_sender, e->expected_node);
-      fail_unless (s != NULL);
+      g_assert (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_release_data (s);
       h_next_test_step (d);
@@ -344,7 +370,7 @@ h_next_test_step (h_data_t *d)
     case START_DATA:
       s = g_hash_table_find (d->group->senders,
           h_find_sender, e->expected_node);
-      fail_unless (s != NULL);
+      g_assert (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_set_data_start (s, e->hold_id);
       h_next_test_step (d);
@@ -352,7 +378,7 @@ h_next_test_step (h_data_t *d)
     case FAIL:
       s = g_hash_table_find (d->group->senders,
           h_find_sender, e->expected_node);
-      fail_unless (s != NULL);
+      g_assert (s != NULL);
       d->test_step++;
       gibber_r_multicast_sender_set_failed (s);
       h_next_test_step (d);
@@ -373,11 +399,11 @@ h_received_data_cb (GibberRMulticastSender *sender, guint16 stream_id,
 {
   h_data_t *d = (h_data_t *) user_data;
 
-  fail_unless (d->expectation[d->test_step].type == EXPECT);
-  fail_unless (d->expectation[d->test_step].packet_type == PACKET_TYPE_DATA);
-  fail_unless (
-    strcmp (d->expectation[d->test_step].expected_node, sender->name) == 0);
-  fail_unless (d->expectation[d->test_step].data_stream_id == stream_id);
+  g_assert (d->expectation[d->test_step].type == EXPECT);
+  g_assert (d->expectation[d->test_step].packet_type == PACKET_TYPE_DATA);
+  g_assert_cmpstr (d->expectation[d->test_step].expected_node, ==,
+      sender->name);
+  g_assert (d->expectation[d->test_step].data_stream_id == stream_id);
 
   d->test_step++;
   h_next_test_step (d);
@@ -389,10 +415,10 @@ h_received_control_packet_cb (GibberRMulticastSender *sender,
 {
   h_data_t *d = (h_data_t *) user_data;
 
-  fail_unless (d->expectation[d->test_step].type == EXPECT);
-  fail_unless (d->expectation[d->test_step].packet_type == packet->type);
-  fail_unless (
-    strcmp (d->expectation[d->test_step].expected_node, sender->name) == 0);
+  g_assert (d->expectation[d->test_step].type == EXPECT);
+  g_assert (d->expectation[d->test_step].packet_type == packet->type);
+  g_assert_cmpstr (d->expectation[d->test_step].expected_node, ==,
+      sender->name);
 
   d->test_step++;
   h_next_test_step (d);
@@ -565,7 +591,9 @@ add_h_sender (guint32 sender, gchar *name, GibberRMulticastSenderGroup *group,
      G_CALLBACK (h_received_control_packet_cb), data);
 }
 
-START_TEST (test_holding) {
+static void
+test_holding (gint _i)
+{
   GibberRMulticastSenderGroup *group;
   guint32 sender_offset = 0xf00;
      /* control packets aren't hold back, thus we get them interleaved at first
@@ -599,7 +627,7 @@ START_TEST (test_holding) {
 
       s0 = g_hash_table_find (group->senders, h_find_sender,
           test->setup[i].name);
-      fail_unless (s0 != NULL);
+      g_assert (s0 != NULL);
 
       p = gibber_r_multicast_packet_new (test->setup[i].packet_type, s0->id,
           1500);
@@ -609,13 +637,13 @@ START_TEST (test_holding) {
         {
           s1 = g_hash_table_find (group->senders, h_find_sender,
               test->setup[i].depend_node);
-          fail_unless (s1 != NULL);
-          fail_unless (gibber_r_multicast_packet_add_sender_info (p, s1->id,
+          g_assert (s1 != NULL);
+          g_assert (gibber_r_multicast_packet_add_sender_info (p, s1->id,
               test->setup[i].depend_packet_id, NULL));
         }
       if (test->setup[i].packet_type == PACKET_TYPE_DATA)
         {
-          fail_unless (test->setup[i].data != NULL);
+          g_assert (test->setup[i].data != NULL);
 
           gibber_r_multicast_packet_set_data_info (p,
             test->setup[i].data_stream_id,
@@ -637,16 +665,29 @@ START_TEST (test_holding) {
       }
     while (data.expectation[data.test_step].type != DONE);
 
-  fail_unless (idle_timer == 0);
+  g_assert (idle_timer == 0);
+}
 
-} END_TEST
-
-TCase *
-make_gibber_r_multicast_sender_tcase (void)
+static void
+test_holding_loop (void)
 {
-    TCase *tc = tcase_create ("RMulticast Sender");
-    tcase_set_timeout (tc, 20);
-    tcase_add_loop_test (tc, test_sender, 0, NUMBER_OF_TESTS);
-    tcase_add_loop_test (tc, test_holding, 0, NUMBER_OF_H_TESTS );
-    return tc;
+  gint i;
+  for (i = 0; i < NUMBER_OF_H_TESTS; ++i)
+    test_holding (i);
+}
+
+int
+main (int argc,
+      char **argv)
+{
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  /* Kill this process after 20 seconds */
+  alarm (20);
+
+  g_test_add_func ("/gibber/r-multicast-sender/sender", test_sender_loop);
+  g_test_add_func ("/gibber/r-multicast-sender/holding", test_holding_loop);
+
+  return g_test_run ();
 }
