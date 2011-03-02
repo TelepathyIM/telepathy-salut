@@ -30,7 +30,6 @@
 #include <wocky/wocky-namespaces.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
-#include <gibber/gibber-iq-helper.h>
 
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
