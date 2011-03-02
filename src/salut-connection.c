@@ -3456,8 +3456,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
       priv->discovery_client, self);
 
 #if 0
-  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
+  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
 #endif
 
   g_ptr_array_add (managers, priv->im_manager);
