@@ -5,10 +5,6 @@
 #include <gibber/gibber-xmpp-reader.h>
 #include <wocky/wocky-stanza.h>
 
-#include <check.h>
-
-#include "check-gibber.h"
-
 typedef struct _ReceivedStanzaEvent ReceivedStanzaEvent;
 
 struct _ReceivedStanzaEvent {
@@ -22,9 +18,9 @@ static void received_stanza_cb (GibberXmppReader *reader,
   GQueue *events_queue = (GQueue *) user_data;
   ReceivedStanzaEvent *event;
 
-  fail_if (reader == NULL);
-  fail_if (stanza == NULL);
-  fail_if (events_queue == NULL);
+  g_assert (reader != NULL);
+  g_assert (stanza != NULL);
+  g_assert (events_queue != NULL);
 
   g_object_ref (stanza);
 
@@ -36,16 +32,17 @@ static void received_stanza_cb (GibberXmppReader *reader,
 }
 
 
-START_TEST (test_instantiation)
+static void
+test_instantiation (void)
 {
   GibberXmppReader *reader;
   reader = gibber_xmpp_reader_new_no_stream ();
-  fail_if (reader == NULL);
+  g_assert (reader != NULL);
   g_object_unref (reader);
 }
-END_TEST
 
-START_TEST (test_simple_message)
+static void
+test_simple_message (void)
 {
   GibberXmppReader *reader;
   WockyNode *node;
@@ -73,41 +70,39 @@ START_TEST (test_simple_message)
       file = g_strdup_printf ("%s/inputs/simple-message.input", srcdir);
     }
 
-  fail_unless (g_file_get_contents (file, &data, &length, NULL));
+  g_assert (g_file_get_contents (file, &data, &length, NULL));
   g_free (file);
 
   valid = gibber_xmpp_reader_push (reader, (guint8 *) data, length, NULL);
-  fail_unless (valid);
+  g_assert (valid);
 
-  fail_unless (g_queue_get_length (received_stanzas) == 2);
+  g_assert (g_queue_get_length (received_stanzas) == 2);
 
   event = g_queue_pop_head (received_stanzas);
 
-  fail_unless (event->reader == reader);
+  g_assert (event->reader == reader);
 
   node = wocky_stanza_get_top_node (event->stanza);
-  fail_if (node == NULL);
-  fail_unless (strcmp (node->name, "message") == 0);
-  fail_unless (strcmp (wocky_node_get_language (node), "en") == 0);
-  fail_unless (strcmp (wocky_node_get_attribute (node, "to"),
-                       "juliet@example.com") == 0);
-  fail_unless (strcmp (wocky_node_get_attribute (node, "id"),
-                       "0") == 0);
+  g_assert (node != NULL);
+  g_assert_cmpstr (node->name, ==, "message");
+  g_assert_cmpstr (wocky_node_get_language (node), ==, "en");
+  g_assert_cmpstr (wocky_node_get_attribute (node, "to"), ==,
+      "juliet@example.com");
+  g_assert_cmpstr (wocky_node_get_attribute (node, "id"), ==, "0");
 
   g_object_unref (event->stanza);
   g_free (event);
 
   event = g_queue_pop_head (received_stanzas);
 
-  fail_unless (event->reader == reader);
+  g_assert (event->reader == reader);
 
   node = wocky_stanza_get_top_node (event->stanza);
-  fail_unless (strcmp (node->name, "message") == 0);
-  fail_unless (strcmp (wocky_node_get_language (node), "en") == 0);
-  fail_unless (strcmp (wocky_node_get_attribute (node, "to"),
-                       "juliet@example.com") == 0);
-  fail_unless (strcmp (wocky_node_get_attribute (node, "id"),
-                       "1") == 0);
+  g_assert_cmpstr (node->name, ==, "message");
+  g_assert_cmpstr (wocky_node_get_language (node), ==, "en");
+  g_assert_cmpstr (wocky_node_get_attribute (node, "to"), ==,
+      "juliet@example.com");
+  g_assert_cmpstr (wocky_node_get_attribute (node, "id"), ==, "1");
 
   g_free (data);
   g_queue_free (received_stanzas);
@@ -115,13 +110,18 @@ START_TEST (test_simple_message)
   g_free (event);
   g_object_unref (reader);
 }
-END_TEST
 
-TCase *
-make_gibber_xmpp_reader_tcase (void)
+int
+main (int argc,
+      char **argv)
 {
-    TCase *tc = tcase_create ("XMPP Reader");
-    tcase_add_test (tc, test_instantiation);
-    tcase_add_test (tc, test_simple_message);
-    return tc;
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  g_test_add_func ("/gibber/xmpp-reader/instantiation",
+      test_instantiation);
+  g_test_add_func ("/gibber/xmpp-reader/simple-message",
+      test_simple_message);
+
+  return g_test_run ();
 }

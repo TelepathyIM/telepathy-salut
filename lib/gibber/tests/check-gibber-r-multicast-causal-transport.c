@@ -24,9 +24,6 @@
 #include <gibber/gibber-r-multicast-causal-transport.h>
 #include <gibber/gibber-r-multicast-packet.h>
 #include "test-transport.h"
-#include "check-gibber.h"
-
-#include <check.h>
 
 /* Numer of polls we expect the id generation to do */
 #define ID_GENERATION_EXPECTED_POLLS 3
@@ -45,7 +42,7 @@ create_rmulticast_transport (TestTransport **testtransport,
   GibberRMulticastCausalTransport *rmctransport;
 
   t = test_transport_new (test_send_hook, user_data);
-  fail_unless (t != NULL);
+  g_assert (t != NULL);
   GIBBER_TRANSPORT (t)->max_packet_size = 150;
 
   rmctransport = gibber_r_multicast_causal_transport_new
@@ -66,9 +63,9 @@ static void
 rmulticast_connect (GibberRMulticastCausalTransport *transport)
 {
 
-  fail_unless (transport != NULL);
+  g_assert (transport != NULL);
 
-  fail_unless (gibber_r_multicast_causal_transport_connect (transport,
+  g_assert (gibber_r_multicast_causal_transport_connect (transport,
       FALSE, NULL));
 }
 
@@ -99,7 +96,7 @@ depends_send_hook (GibberTransport *transport,
   guint i, n;
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
-  fail_unless (packet != NULL);
+  g_assert (packet != NULL);
 
   if (packet->type == PACKET_TYPE_WHOIS_REQUEST)
     {
@@ -121,7 +118,7 @@ depends_send_hook (GibberTransport *transport,
           goto out;
         }
 
-      fail_unless (senders[i].name != NULL);
+      g_assert (senders[i].name != NULL);
 
       reply = gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REPLY,
           senders[i].sender_id, transport->max_packet_size);
@@ -139,7 +136,7 @@ depends_send_hook (GibberTransport *transport,
       goto out;
     }
 
-  fail_unless (packet->depends->len > 0);
+  g_assert (packet->depends->len > 0);
 
   for (n = 0; n < packet->depends->len; n++)
     {
@@ -150,18 +147,18 @@ depends_send_hook (GibberTransport *transport,
                   GibberRMulticastPacketSenderInfo *, n);
           if (senders[i].sender_id == sender_info->sender_id)
             {
-              fail_unless (senders[i].seen == FALSE);
-              fail_unless (senders[i].packet_id + 1 == sender_info->packet_id);
+              g_assert (senders[i].seen == FALSE);
+              g_assert (senders[i].packet_id + 1 == sender_info->packet_id);
               senders[i].seen = TRUE;
               break;
             }
         }
-        fail_unless (senders[i].name != NULL);
+        g_assert (senders[i].name != NULL);
       }
 
   for (i = 0; senders[i].name != NULL ; i++)
     {
-      fail_unless (senders[i].seen, "Not all senders in depends");
+      g_assert (senders[i].seen && "Not all senders in depends");
     }
 
   g_main_loop_quit (loop);
@@ -177,7 +174,7 @@ depends_send_test_data (gpointer data)
       GIBBER_R_MULTICAST_CAUSAL_TRANSPORT (data);
   guint8 testdata[] = { 1, 2, 3 };
 
-  fail_unless (gibber_transport_send (GIBBER_TRANSPORT (t), testdata,
+  g_assert (gibber_transport_send (GIBBER_TRANSPORT (t), testdata,
       3, NULL));
 
   return FALSE;
@@ -221,7 +218,8 @@ depends_connected (GibberTransport *transport,
   g_timeout_add (300, depends_send_test_data, rmctransport);
 }
 
-START_TEST (test_depends)
+static void
+test_depends (void)
 {
   GibberRMulticastCausalTransport *rmctransport;
   TestTransport *testtransport;
@@ -242,12 +240,11 @@ START_TEST (test_depends)
 
   for (i = 0 ; senders[i].name != NULL; i++)
     {
-      fail_unless (senders[i].seen);
+      g_assert (senders[i].seen);
     }
 
   g_object_unref (rmctransport);
 }
-END_TEST
 
 
 /* test fragmentation testing */
@@ -266,7 +263,7 @@ fragmentation_send_hook (GibberTransport *transport,
   guint8 *payload;
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
-  fail_unless (packet != NULL);
+  g_assert (packet != NULL);
 
   if (packet->type != PACKET_TYPE_DATA)
     {
@@ -276,24 +273,24 @@ fragmentation_send_hook (GibberTransport *transport,
   payload = gibber_r_multicast_packet_get_payload (packet, &size);
 
   if (bytes == 0)
-    fail_unless
+    g_assert
       (packet->data.data.flags == GIBBER_R_MULTICAST_DATA_PACKET_START);
   else if (bytes + size < TEST_DATA_SIZE)
-    fail_unless (packet->data.data.flags == 0);
+    g_assert (packet->data.data.flags == 0);
 
   bytes += size;
-  fail_unless (bytes <= TEST_DATA_SIZE);
+  g_assert (bytes <= TEST_DATA_SIZE);
 
   /* check our bytes */
   for (i = 0; i < size; i++)
     {
-      fail_unless (payload[i] == next_byte);
+      g_assert (payload[i] == next_byte);
       next_byte++;
     }
 
   if (bytes == TEST_DATA_SIZE)
     {
-      fail_unless
+      g_assert
         (packet->data.data.flags == GIBBER_R_MULTICAST_DATA_PACKET_END);
       g_object_unref (packet);
       g_main_loop_quit (loop);
@@ -319,11 +316,12 @@ fragmentation_connected (GibberTransport *transport,
       testdata[i] = (guint8) (i & 0xff);
     }
 
-  fail_unless (gibber_transport_send (GIBBER_TRANSPORT (rmctransport),
+  g_assert (gibber_transport_send (GIBBER_TRANSPORT (rmctransport),
       (guint8 *) testdata, TEST_DATA_SIZE, NULL));
 }
 
-START_TEST (test_fragmentation)
+static void
+test_fragmentation (void)
 {
   GibberRMulticastCausalTransport *rmctransport;
 
@@ -342,7 +340,6 @@ START_TEST (test_fragmentation)
 
   g_object_unref (rmctransport);
 }
-END_TEST
 
 
 /* test unique id */
@@ -358,7 +355,7 @@ unique_id_send_hook (GibberTransport *transport,
 
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
-  fail_unless (packet != NULL);
+  g_assert (packet != NULL);
 
   if (*test_id == 0)
     {
@@ -368,9 +365,9 @@ unique_id_send_hook (GibberTransport *transport,
       gsize psize;
 
       /* First packet must be a whois request to see if the id is taken */
-      fail_unless (packet->type == PACKET_TYPE_WHOIS_REQUEST);
+      g_assert (packet->type == PACKET_TYPE_WHOIS_REQUEST);
       /* Sender must be 0 as it couldn't choose a id just yet */
-      fail_unless (packet->sender == 0);
+      g_assert (packet->sender == 0);
 
       *test_id = packet->data.whois_request.sender_id;
 
@@ -385,11 +382,11 @@ unique_id_send_hook (GibberTransport *transport,
     }
   else
     {
-      fail_unless (*test_id != packet->sender);
+      g_assert (*test_id != packet->sender);
       switch (packet->type)
         {
           case PACKET_TYPE_WHOIS_REQUEST:
-            fail_unless (*test_id != packet->data.whois_request.sender_id);
+            g_assert (*test_id != packet->data.whois_request.sender_id);
             break;
           case PACKET_TYPE_WHOIS_REPLY:
             /* transport sends a unsolicited whois reply after choosing a
@@ -397,7 +394,9 @@ unique_id_send_hook (GibberTransport *transport,
             g_main_loop_quit (loop);
             break;
           default:
-            fail ("Unexpected packet type: %x", packet->type);
+            g_warning ("Unexpected packet type: %x", packet->type);
+            g_assert_not_reached ();
+            break;
         }
     }
 
@@ -405,7 +404,8 @@ unique_id_send_hook (GibberTransport *transport,
   return TRUE;
 }
 
-START_TEST (test_unique_id)
+static void
+test_unique_id (void)
 {
   /* Test if the multicast transport correctly handles the case that it gets a
    * WHOIS_REPLY on one of it's WHOIS_REQUESTS when it's determining a unique
@@ -426,7 +426,6 @@ START_TEST (test_unique_id)
 
   g_object_unref (rmctransport);
 }
-END_TEST
 
 /* test id generation conflict */
 typedef struct {
@@ -446,14 +445,14 @@ id_generation_conflict_send_hook (GibberTransport *transport,
   unique_id_conflict_test_t *test = (unique_id_conflict_test_t *) user_data;
 
   packet = gibber_r_multicast_packet_parse (data, length, NULL);
-  fail_unless (packet != NULL);
+  g_assert (packet != NULL);
 
   if (test->id == 0)
     {
       /* First packet must be a whois request to see if the id is taken */
-      fail_unless (packet->type == PACKET_TYPE_WHOIS_REQUEST);
+      g_assert (packet->type == PACKET_TYPE_WHOIS_REQUEST);
       /* Sender must be 0 as it couldn't choose a id just yet */
-      fail_unless (packet->sender == 0);
+      g_assert (packet->sender == 0);
 
       test->id = packet->data.whois_request.sender_id;
     }
@@ -465,7 +464,7 @@ id_generation_conflict_send_hook (GibberTransport *transport,
 
         if (test->count < test->wait)
           {
-            fail_unless (test->id == packet->data.whois_request.sender_id);
+            g_assert (test->id == packet->data.whois_request.sender_id);
           }
         else if (test->count == test->wait)
           {
@@ -474,7 +473,7 @@ id_generation_conflict_send_hook (GibberTransport *transport,
             guint8 *pdata;
             gsize psize;
 
-            fail_unless (test->id == packet->data.whois_request.sender_id);
+            g_assert (test->id == packet->data.whois_request.sender_id);
 
             reply = gibber_r_multicast_packet_new (PACKET_TYPE_WHOIS_REQUEST,
               0, transport->max_packet_size);
@@ -487,7 +486,7 @@ id_generation_conflict_send_hook (GibberTransport *transport,
           }
         else if (test->count > test->wait)
           {
-            fail_unless (test->id != packet->data.whois_request.sender_id);
+            g_assert (test->id != packet->data.whois_request.sender_id);
           }
 
         break;
@@ -495,21 +494,24 @@ id_generation_conflict_send_hook (GibberTransport *transport,
       case PACKET_TYPE_WHOIS_REPLY:
         /* transport sends a unsolicited whois reply after choosing a
          * identifier */
-        fail_unless (packet->sender != test->id);
-        fail_unless (test->count ==
+        g_assert (packet->sender != test->id);
+        g_assert_cmpuint (test->count, ==,
             ID_GENERATION_EXPECTED_POLLS + test->wait);
         g_main_loop_quit (loop);
         break;
 
       default:
-        fail ("Unexpected packet type: %x", packet->type);
+        g_warning ("Unexpected packet type: %x", packet->type);
+        g_assert_not_reached ();
+        break;
     }
 
   g_object_unref (packet);
   return TRUE;
 }
 
-START_TEST (test_id_generation_conflict)
+static void
+test_id_generation_conflict (gint _i)
 {
   /* Test if the multicast transport correctly handles the case that it sees
    * another WHOIS_REQUEST on one of its WHOIS_REQUESTS when it's determining
@@ -533,18 +535,33 @@ START_TEST (test_id_generation_conflict)
 
   g_object_unref (rmtransport);
 }
-END_TEST
 
-
-TCase *
-make_gibber_r_multicast_causal_transport_tcase (void)
+static void
+test_id_generation_conflict_loop (void)
 {
-  TCase *tc = tcase_create ("Gibber R Multicast Causal transport");
-  tcase_add_test (tc, test_unique_id);
-  tcase_add_loop_test (tc, test_id_generation_conflict, 0,
-      ID_GENERATION_EXPECTED_POLLS);
-  tcase_add_test (tc, test_fragmentation);
-  tcase_add_test (tc, test_depends);
-
-  return tc;
+  gint i;
+  for (i = 0; i < ID_GENERATION_EXPECTED_POLLS; ++i)
+    test_id_generation_conflict (i);
 }
+
+int
+main (int argc,
+      char **argv)
+{
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  g_test_add_func ("/gibber/r-multicast-casual-transport/unique-id",
+      test_unique_id);
+  g_test_add_func (
+      "/gibber/r-multicast-casual-transport/id-generation-conflict",
+      test_id_generation_conflict_loop);
+  g_test_add_func ("/gibber/r-multicast-casual-transport/fragmentation",
+      test_fragmentation);
+  g_test_add_func ("/gibber/r-multicast-casual-transport/depends",
+      test_depends);
+
+  return g_test_run ();
+}
+
+#include "test-transport.c"

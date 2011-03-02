@@ -4,11 +4,12 @@ include $(top_srcdir)/rules/check.mak
 
 SUPPRESSIONS=valgrind.supp dlopen.supp
 
-# Teach it how to make libgibber.la
-$(top_builddir)/lib/gibber/libgibber.la:
-	${MAKE} -C $(top_builddir)/lib/gibber libgibber.la
+SUBDIRS = twisted
 
-.PHONY: $(top_builddir)/lib/gibber/libgibber.la
+.PHONY: always-run test test-report
+
+# ------------------------------------------------------------------------------
+# telepathy-salut-debug
 
 noinst_PROGRAMS = \
         telepathy-salut-debug
@@ -23,28 +24,16 @@ telepathy_salut_debug_LDADD = \
     $(top_builddir)/extensions/libsalut-extensions.la \
     -ltelepathy-glib
 
-if HAVE_CHECK
-check_PROGRAMS = check-main
-TESTS = check-main
-check_main_SOURCES =                             \
-    check-main.c                                 \
-    check-helpers.c                              \
-    check-helpers.h                              \
-    check-node-properties.c                      \
-    check-salut.h
+# Teach it how to make libgibber.la
+$(top_builddir)/lib/gibber/libgibber.la:
+	${MAKE} -C $(top_builddir)/lib/gibber libgibber.la
 
-check_main_LDADD = \
-    @CHECK_LIBS@ \
-    $(top_builddir)/lib/gibber/libgibber.la \
-    $(top_builddir)/src/libsalut-convenience.la \
-    $(top_builddir)/src/libsalut-backend-avahi.la \
-    $(AM_LDFLAGS)
+.PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
-check_main_CFLAGS = \
-    @CHECK_CFLAGS@ \
-    $(AM_CFLAGS)
+# ------------------------------------------------------------------------------
+# TESTS
 
-endif
+check_PROGRAMS = check-node-properties
 
 AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @WOCKY_CFLAGS@ \
     @DBUS_CFLAGS@ @TELEPATHY_GLIB_CFLAGS@ \
@@ -54,22 +43,28 @@ AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @WOCKY_CFLAGS@ \
 
 AM_LDFLAGS = @GLIB_LIBS@ @TELEPATHY_GLIB_LIBS@
 
+check_node_properties_LDADD = \
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(top_builddir)/src/libsalut-convenience.la \
+    $(top_builddir)/src/libsalut-backend-avahi.la \
+    $(AM_LDFLAGS)
+
+check_node_properties_CFLAGS = \
+    $(AM_CFLAGS)
+
+test: ${TEST_PROGS}
+	gtester -k --verbose $(check_PROGRAMS)
+
+# ------------------------------------------------------------------------------
+# CODING STYLE
+
 # Coding style checks
 check_c_sources = \
     $(telepathy_salut_debug_SOURCES) \
     $(test_xmpp_connection_SOURCES) \
-    $(test_r_multicast_transport_io_SOURCES)
-
-if HAVE_CHECK
-    check_c_sources += $(check_main_SOURCES)
-endif
+    $(test_r_multicast_transport_io_SOURCES) \
+    $(check_main_SOURCES)
 
 include $(top_srcdir)/tools/check-coding-style.mk
-check-local: check-coding-style
 
-SUBDIRS = twisted
-
-$(check_SCRIPTS): always-run
-	chmod +x $(srcdir)/$@
-
-.PHONY: always-run
+check-local: check-coding-style test

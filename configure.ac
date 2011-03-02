@@ -204,12 +204,6 @@ else
   AC_MSG_WARN([libuuid not found, falling back to generating random IDs])
 fi
 
-# Checks for the 'check' unit testing library
-PKG_CHECK_MODULES([CHECK], [check >= 0.9.4], 
-                   [ HAVE_CHECK=yes ],
-                   [ HAVE_CHECK=no ] )
-AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
-
 AX_CONFIG_DIR([lib/ext/wocky])
 PKG_CONFIG_PATH="${PKG_CONFIG_PATH:+"$PKG_CONFIG_PATH:"}${ac_abs_top_builddir}/lib/ext/wocky/wocky"
 export PKG_CONFIG_PATH

@@ -30,8 +30,6 @@ At build time, it also requires:
   pkg-config <http://ftp.gnome.org/pub/GNOME/sources/pkg-config/>
   libxslt, xsltproc <http://xmlsoft.org/XSLT/>
   Python <http://www.python.org/>
-and optionally makes use of:
-  Check <http://check.sourceforge.net/>
 
 See configure.ac for full details, including versions required.
 

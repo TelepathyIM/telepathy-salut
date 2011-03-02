@@ -33,9 +33,6 @@
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-xmpp-connection-listener.h>
 
-#include <check.h>
-#include "check-gibber.h"
-
 gboolean got_connection;
 
 static void
@@ -69,7 +66,8 @@ connect_to_port (int port)
   return result;
 }
 
-START_TEST (test_listen)
+static void
+test_listen (void)
 {
   GibberXmppConnectionListener *listener;
   int port;
@@ -78,7 +76,7 @@ START_TEST (test_listen)
   got_connection = FALSE;
 
   listener = gibber_xmpp_connection_listener_new ();
-  fail_if (listener == NULL);
+  g_assert (listener != NULL);
 
   g_signal_connect (listener, "new-connection", G_CALLBACK (new_connection_cb),
       NULL);
@@ -89,32 +87,37 @@ START_TEST (test_listen)
       if (gibber_xmpp_connection_listener_listen (listener, port, &error))
         break;
 
-      fail_if (!g_error_matches (error, GIBBER_LISTENER_ERROR,
-          GIBBER_LISTENER_ERROR_ADDRESS_IN_USE));
+      g_assert_error (error, GIBBER_LISTENER_ERROR,
+          GIBBER_LISTENER_ERROR_ADDRESS_IN_USE);
       g_error_free (error);
       error = NULL;
     }
-  fail_if (port >= 5400);
+  g_assert (port < 5400);
 
   result = connect_to_port (port);
-  fail_if (result == FALSE);
+  g_assert (result != FALSE);
 
   while (g_main_context_iteration (NULL, FALSE))
     ;
-  fail_if (got_connection == FALSE);
+  g_assert (got_connection);
 
   g_object_unref (listener);
 
   /* listener is destroyed, connection should be refused now */
   got_connection = FALSE;
   result = connect_to_port (port);
-  fail_if (result == TRUE);
-} END_TEST
+  g_assert (result != TRUE);
+}
 
-TCase *
-make_gibber_xmpp_connection_listener_tcase (void)
+int
+main (int argc,
+      char **argv)
 {
-  TCase *tc = tcase_create ("GibberXmppConnectionListener");
-  tcase_add_test (tc, test_listen);
-  return tc;
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  g_test_add_func ("/gibber/xmpp-connection-listener/listen",
+      test_listen);
+
+  return g_test_run ();
 }
