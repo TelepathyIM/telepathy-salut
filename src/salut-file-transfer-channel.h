@@ -34,7 +34,6 @@
 #include "salut-contact.h"
 #include "salut-connection.h"
 #include "salut-contact.h"
-#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 
@@ -76,7 +75,7 @@ gboolean salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
 
 SalutFileTransferChannel * salut_file_transfer_channel_new (
     SalutConnection *conn, SalutContact *contact,
-    TpHandle handle, SalutXmppConnectionManager *xcm, TpHandle initiator_handle,
+    TpHandle handle, TpHandle initiator_handle,
     TpFileTransferState state, const gchar *content_type,
     const gchar *filename, guint64 size, TpFileHashType hash_type,
     const gchar *content_hash, const gchar *description, guint64 date,
@@ -84,9 +83,8 @@ SalutFileTransferChannel * salut_file_transfer_channel_new (
 
 SalutFileTransferChannel * salut_file_transfer_channel_new_from_stanza (
     SalutConnection *connection, SalutContact *contact,
-    TpHandle handle, SalutXmppConnectionManager *xcm,
-    TpFileTransferState state, WockyStanza *stanza,
-    GibberXmppConnection *conn);
+    TpHandle handle,
+    TpFileTransferState state, WockyStanza *stanza);
 
 G_END_DECLS
 

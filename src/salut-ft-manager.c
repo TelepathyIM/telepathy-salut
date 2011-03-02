@@ -68,9 +68,9 @@ struct _SalutFtManagerPrivate
 {
   gboolean dispose_has_run;
   SalutConnection *connection;
-  SalutXmppConnectionManager *xmpp_connection_manager;
   SalutContactManager *contact_manager;
   GList *channels;
+  guint message_handler_id;
 };
 
 #define SALUT_FT_MANAGER_GET_PRIVATE(o) \
@@ -81,7 +81,6 @@ static void
 salut_ft_manager_init (SalutFtManager *obj)
 {
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (obj);
-  priv->xmpp_connection_manager = NULL;
   priv->contact_manager = NULL;
   priv->connection = NULL;
 
@@ -90,21 +89,9 @@ salut_ft_manager_init (SalutFtManager *obj)
 }
 
 static gboolean
-message_stanza_filter (SalutXmppConnectionManager *mgr,
-                       GibberXmppConnection *conn,
-                       WockyStanza *stanza,
-                       SalutContact *contact,
-                       gpointer user_data)
-{
-  return gibber_file_transfer_is_file_offer (stanza);
-}
-
-static void
-message_stanza_callback (SalutXmppConnectionManager *mgr,
-                         GibberXmppConnection *conn,
-                         WockyStanza *stanza,
-                         SalutContact *contact,
-                         gpointer user_data)
+message_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza,
+    gpointer user_data)
 {
   SalutFtManager *self = SALUT_FT_MANAGER (user_data);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
@@ -113,6 +100,11 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_CONTACT);
+  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
+
+  /* make sure we can support this kind of ft */
+  if (!gibber_file_transfer_is_file_offer (stanza))
+    return FALSE;
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
@@ -121,11 +113,13 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
 
   /* this can fail if the stanza isn't valid */
   chan = salut_file_transfer_channel_new_from_stanza (priv->connection,
-      contact, handle, priv->xmpp_connection_manager,
-      TP_FILE_TRANSFER_STATE_PENDING, stanza, conn);
+      contact, handle,
+      TP_FILE_TRANSFER_STATE_PENDING, stanza);
 
   if (chan != NULL)
     salut_ft_manager_channel_created (self, chan, NULL);
+
+  return TRUE;
 }
 
 static void salut_ft_manager_dispose (GObject *object);
@@ -155,14 +149,11 @@ salut_ft_manager_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  if (priv->xmpp_connection_manager != NULL)
+  if (priv->connection->porter != NULL)
     {
-      salut_xmpp_connection_manager_remove_stanza_filter (
-          priv->xmpp_connection_manager, NULL,
-          message_stanza_filter, message_stanza_callback, self);
-
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
+      wocky_porter_unregister_handler (priv->connection->porter,
+          priv->message_handler_id);
+      priv->message_handler_id = 0;
     }
 
   if (priv->contact_manager != NULL)
@@ -416,7 +407,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       tp_handle_inspect (contact_repo, handle));
 
   chan = salut_file_transfer_channel_new (priv->connection, contact,
-      handle, priv->xmpp_connection_manager, base_connection->self_handle,
+      handle, base_connection->self_handle,
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
       content_hash_type, content_hash, description, date, initial_offset,
       file_uri);
@@ -510,14 +501,12 @@ channel_manager_iface_init (gpointer g_iface,
 /* public functions */
 SalutFtManager *
 salut_ft_manager_new (SalutConnection *connection,
-                      SalutContactManager *contact_manager,
-                      SalutXmppConnectionManager *xmpp_connection_manager)
+                      SalutContactManager *contact_manager)
 {
   SalutFtManager *ret = NULL;
   SalutFtManagerPrivate *priv;
 
   g_assert (connection != NULL);
-  g_assert (xmpp_connection_manager != NULL);
 
   ret = g_object_new (SALUT_TYPE_FT_MANAGER, NULL);
   priv = SALUT_FT_MANAGER_GET_PRIVATE (ret);
@@ -525,14 +514,13 @@ salut_ft_manager_new (SalutConnection *connection,
   priv->contact_manager = contact_manager;
   g_object_ref (contact_manager);
 
-  priv->xmpp_connection_manager = xmpp_connection_manager;
-  g_object_ref (xmpp_connection_manager);
-
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      message_stanza_filter, message_stanza_callback, ret);
-
   priv->connection = connection;
+
+  priv->message_handler_id = wocky_porter_register_handler_from_anyone (
+      priv->connection->porter,
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      message_stanza_callback, ret, NULL);
 
   return ret;
 }

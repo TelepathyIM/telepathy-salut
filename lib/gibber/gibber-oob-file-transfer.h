@@ -22,7 +22,6 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include "gibber-xmpp-connection.h"
 #include "gibber-file-transfer.h"
 
 G_BEGIN_DECLS
@@ -63,7 +62,7 @@ GType gibber_oob_file_transfer_get_type (void);
 gboolean gibber_oob_file_transfer_is_file_offer (WockyStanza *stanza);
 
 GibberFileTransfer *gibber_oob_file_transfer_new_from_stanza_with_from (
-    WockyStanza *stanza, GibberXmppConnection *connection,
+    WockyStanza *stanza, WockyPorter *porter, WockyContact *contact,
     const gchar *from, GError **error);
 
 G_END_DECLS

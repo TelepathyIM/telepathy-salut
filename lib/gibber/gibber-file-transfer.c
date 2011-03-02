@@ -55,7 +55,8 @@ enum
   PROP_PEER_ID,
   PROP_FILENAME,
   PROP_DIRECTION,
-  PROP_CONNECTION,
+  PROP_PORTER,
+  PROP_CONTACT,
   PROP_DESCRIPTION,
   PROP_CONTENT_TYPE,
   LAST_PROPERTY
@@ -64,7 +65,10 @@ enum
 /* private structure */
 struct _GibberFileTransferPrivate
 {
-  GibberXmppConnection *connection;
+  WockyPorter *porter;
+  WockyContact *contact;
+
+  guint stanza_id;
 
   guint64 size;
 };
@@ -114,8 +118,11 @@ gibber_file_transfer_get_property (GObject *object,
       case PROP_DIRECTION:
         g_value_set_enum (value, self->direction);
         break;
-      case PROP_CONNECTION:
-        g_value_set_object (value, self->priv->connection);
+      case PROP_PORTER:
+        g_value_set_object (value, self->priv->porter);
+        break;
+      case PROP_CONTACT:
+        g_value_set_object (value, self->priv->contact);
         break;
       case PROP_DESCRIPTION:
         g_value_set_string (value, self->description);
@@ -137,7 +144,7 @@ generate_id (void)
   return g_strdup_printf ("gibber-file-transfer-%d", id_num++);
 }
 
-static void received_stanza_cb (GibberXmppConnection *conn,
+static gboolean received_stanza_cb (WockyPorter *porter,
     WockyStanza *stanza, gpointer user_data);
 
 static void
@@ -171,11 +178,22 @@ gibber_file_transfer_set_property (GObject *object,
       case PROP_DIRECTION:
         self->direction = g_value_get_enum (value);
         break;
-      case PROP_CONNECTION:
-        self->priv->connection = g_value_dup_object (value);
-        if (self->priv->connection != NULL)
-          g_signal_connect (self->priv->connection, "received-stanza",
-              G_CALLBACK (received_stanza_cb), self);
+      case PROP_PORTER:
+        {
+          self->priv->porter = g_value_dup_object (value);
+
+          if (self->priv->porter != NULL)
+            {
+              self->priv->stanza_id =
+                wocky_porter_register_handler_from_anyone (self->priv->porter,
+                    WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_NONE,
+                    WOCKY_PORTER_HANDLER_PRIORITY_NORMAL, received_stanza_cb,
+                    self, NULL);
+            }
+        }
+        break;
+      case PROP_CONTACT:
+        self->priv->contact = g_value_dup_object (value);
         break;
       case PROP_DESCRIPTION:
         self->description = g_value_dup_string (value);
@@ -241,12 +259,19 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
       G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_DIRECTION, param_spec);
 
-  param_spec = g_param_spec_object ("connection",
-      "GibberXmppConnection object", "Gibber Connection used to send stanzas",
-      GIBBER_TYPE_XMPP_CONNECTION,
+  param_spec = g_param_spec_object ("porter",
+      "WockyPorter object", "Wocky porter used to send stanzas",
+      WOCKY_TYPE_PORTER,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+  g_object_class_install_property (object_class, PROP_PORTER, param_spec);
+
+  param_spec = g_param_spec_object ("contact",
+      "WockyContact object", "Wocky Contact",
+      WOCKY_TYPE_CONTACT,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_CONTACT, param_spec);
 
   param_spec = g_param_spec_string ("description",
       "Description",
@@ -303,12 +328,18 @@ gibber_file_transfer_dispose (GObject *object)
 {
   GibberFileTransfer *self = GIBBER_FILE_TRANSFER (object);
 
-  if (self->priv->connection != NULL)
+  if (self->priv->porter != NULL)
     {
-      g_signal_handlers_disconnect_matched (self->priv->connection,
-          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-      g_object_unref (self->priv->connection);
-      self->priv->connection = NULL;
+      wocky_porter_unregister_handler (self->priv->porter,
+          self->priv->stanza_id);
+      g_object_unref (self->priv->porter);
+      self->priv->porter = NULL;
+    }
+
+  if (self->priv->contact != NULL)
+    {
+      g_object_unref (self->priv->contact);
+      self->priv->contact = NULL;
     }
 
   G_OBJECT_CLASS (gibber_file_transfer_parent_class)->dispose (object);
@@ -329,8 +360,8 @@ gibber_file_transfer_finalize (GObject *object)
   G_OBJECT_CLASS (gibber_file_transfer_parent_class)->finalize (object);
 }
 
-static void
-received_stanza_cb (GibberXmppConnection *conn,
+static gboolean
+received_stanza_cb (WockyPorter *porter,
                     WockyStanza *stanza,
                     gpointer user_data)
 {
@@ -340,7 +371,12 @@ received_stanza_cb (GibberXmppConnection *conn,
   id = wocky_node_get_attribute (wocky_stanza_get_top_node (stanza),
       "id");
   if (id != NULL && strcmp (id, self->id) == 0)
-    GIBBER_FILE_TRANSFER_GET_CLASS (self)->received_stanza (self, stanza);
+    {
+      GIBBER_FILE_TRANSFER_GET_CLASS (self)->received_stanza (self, stanza);
+      return TRUE;
+    }
+
+  return FALSE;
 }
 
 gboolean
@@ -354,7 +390,8 @@ gibber_file_transfer_is_file_offer (WockyStanza *stanza)
 GibberFileTransfer *
 gibber_file_transfer_new_from_stanza_with_from (
     WockyStanza *stanza,
-    GibberXmppConnection *connection,
+    WockyPorter *porter,
+    WockyContact *contact,
     const gchar *from,
     GError **error)
 {
@@ -362,8 +399,8 @@ gibber_file_transfer_new_from_stanza_with_from (
    * can handle the stanza */
   GibberFileTransfer *ft;
 
-  ft = gibber_oob_file_transfer_new_from_stanza_with_from (stanza, connection,
-      from, error);
+  ft = gibber_oob_file_transfer_new_from_stanza_with_from (stanza, porter,
+      contact, from, error);
   /* it's not possible to have an outgoing transfer created from
    * a stanza */
   g_assert (ft == NULL ||
@@ -374,15 +411,16 @@ gibber_file_transfer_new_from_stanza_with_from (
 
 GibberFileTransfer *
 gibber_file_transfer_new_from_stanza (WockyStanza *stanza,
-    GibberXmppConnection *connection,
+    WockyPorter *porter,
+    WockyContact *contact,
     GError **error)
 {
   const gchar *from;
 
   from = wocky_node_get_attribute (wocky_stanza_get_top_node (stanza), "from");
 
-  return gibber_file_transfer_new_from_stanza_with_from (stanza, connection,
-      from, error);
+  return gibber_file_transfer_new_from_stanza_with_from (stanza, porter,
+      contact, from, error);
 }
 
 void
@@ -458,14 +496,10 @@ gibber_file_transfer_send_stanza (GibberFileTransfer *self,
                                   WockyStanza *stanza,
                                   GError **error)
 {
-  if (self->priv->connection->transport == NULL ||
-      self->priv->connection->transport->state != GIBBER_TRANSPORT_CONNECTED)
-    {
-      g_set_error (error, GIBBER_FILE_TRANSFER_ERROR,
-          GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED,
-          "XMPP connection not connected");
-      return FALSE;
-    }
+  if (wocky_stanza_get_contact (stanza) == NULL)
+    wocky_stanza_set_contact (stanza, self->priv->contact);
 
-  return gibber_xmpp_connection_send (self->priv->connection, stanza, error);
+  wocky_porter_send (self->priv->porter, stanza);
+
+  return TRUE;
 }
