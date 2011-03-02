@@ -100,11 +100,13 @@ message_stanza_callback (WockyPorter *porter,
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_CONTACT);
-  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
+  SalutContact *contact;
 
   /* make sure we can support this kind of ft */
   if (!gibber_file_transfer_is_file_offer (stanza))
     return FALSE;
+
+  contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
