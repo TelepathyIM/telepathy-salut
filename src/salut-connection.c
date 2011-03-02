@@ -302,7 +302,7 @@ salut_connection_init (SalutConnection *obj)
 
   /* create this now so channel managers can use it when created from
    * parent->constructor */
-  obj->session = wocky_session_new (NULL);
+  obj->session = wocky_session_new_ll (NULL);
   obj->porter = wocky_session_get_porter (obj->session);
 
   /* allocate any data required by the object here */
