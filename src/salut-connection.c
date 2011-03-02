@@ -42,6 +42,8 @@
 
 #include <gibber/gibber-namespaces.h>
 
+#include <wocky/wocky-meta-porter.h>
+
 #include "salut-avahi-discovery-client.h"
 #include "salut-caps-channel-manager.h"
 #include "salut-caps-hash.h"
@@ -301,6 +303,11 @@ salut_connection_init (SalutConnection *obj)
   tp_presence_mixin_init ((GObject *) obj,
       G_STRUCT_OFFSET (SalutConnection, presence_mixin));
 
+  /* create this now so channel managers can use it when created from
+   * parent->constructor */
+  obj->session = wocky_session_new (NULL);
+  obj->porter = wocky_session_get_porter (obj->session);
+
   /* allocate any data required by the object here */
   priv->published_name = g_strdup (g_get_user_name ());
   priv->nickname = NULL;
@@ -338,7 +345,7 @@ salut_connection_constructor (GType type,
   self = SALUT_CONNECTION (obj);
   priv = self->priv;
 
-  self->disco = salut_disco_new (self, priv->xmpp_connection_manager);
+  self->disco = salut_disco_new (self, NULL);
   self->presence_cache = salut_presence_cache_new (self);
   g_signal_connect (self->presence_cache, "capabilities-update", G_CALLBACK
       (connection_capabilities_update_cb), self);
@@ -915,6 +922,13 @@ salut_connection_dispose (GObject *object)
     }
 #endif
 
+  if (self->session != NULL)
+    {
+      g_object_unref (self->session);
+      self->session = NULL;
+      self->porter = NULL;
+    }
+
   if (priv->xmpp_connection_manager)
     {
       g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
@@ -1018,6 +1032,8 @@ _self_established_cb (SalutSelf *s, gpointer data)
 
   base->self_handle = tp_handle_ensure (handle_repo, self->name, NULL, NULL);
 
+  wocky_session_set_jid (self->session, self->name);
+
   set_self_presence (self, priv->pre_connect_presence,
       priv->pre_connect_message, &error);
 
@@ -1076,8 +1092,8 @@ static void
 discovery_client_running (SalutConnection *self)
 {
   SalutConnectionPrivate *priv = self->priv;
-  gint port;
   GError *error = NULL;
+  guint16 port;
 
   priv->self = salut_discovery_client_create_self (priv->discovery_client,
       self, priv->nickname, priv->first_name, priv->last_name, priv->jid,
@@ -1094,8 +1110,9 @@ discovery_client_running (SalutConnection *self)
   g_signal_connect (priv->self, "failure",
                     G_CALLBACK(_self_failed_cb), self);
 
-  port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager,
-      NULL);
+  wocky_session_start (self->session);
+
+  port = wocky_meta_porter_get_port (WOCKY_META_PORTER (self->porter));
 
   if (!announce_self_caps (self, &error))
     {
@@ -1103,7 +1120,7 @@ discovery_client_running (SalutConnection *self)
       g_error_free (error);
     }
 
-  if (port == -1 || !salut_self_announce (priv->self, port, NULL))
+  if (port == 0 || !salut_self_announce (priv->self, port, NULL))
     {
       tp_base_connection_change_status (
             TP_BASE_CONNECTION (self),

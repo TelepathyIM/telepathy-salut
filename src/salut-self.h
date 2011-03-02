@@ -44,7 +44,7 @@ struct _SalutSelfClass {
     GObjectClass parent_class;
 
     /* public abstract methods */
-    gboolean (*announce) (SalutSelf *self, gint port, GError **error);
+    gboolean (*announce) (SalutSelf *self, guint16 port, GError **error);
     gboolean (*set_presence) (SalutSelf *self, GError **error);
     gboolean (*set_caps) (SalutSelf *self, GError **error);
     gboolean (*set_alias) (SalutSelf *self, GError **error);
@@ -110,7 +110,7 @@ GType salut_self_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_SELF, SalutSelfClass))
 
 /* Start announcing our presence on the network */
-gboolean salut_self_announce (SalutSelf *self, gint port, GError **error);
+gboolean salut_self_announce (SalutSelf *self, guint16 port, GError **error);
 
 gboolean salut_self_set_presence (SalutSelf *self,
     SalutPresenceId status, const gchar *message, GError **error);

@@ -39,7 +39,6 @@
 #include "salut-contact-manager.h"
 #include "salut-util.h"
 #include "salut-muc-manager.h"
-#include "salut-xmpp-connection-manager.h"
 
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity.h"
@@ -511,7 +510,7 @@ salut_self_finalize (GObject *object)
 /* Start announcing our presence on the network */
 gboolean
 salut_self_announce (SalutSelf *self,
-                     gint port,
+                     guint16 port,
                      GError **error)
 {
   return SALUT_SELF_GET_CLASS (self)->announce (self, port, error);
