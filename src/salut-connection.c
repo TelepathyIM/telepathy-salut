@@ -133,13 +133,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     )
 
 #ifdef ENABLE_OLPC
-static gboolean uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
-
-static void uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
+static gboolean uninvite_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza, gpointer user_data);
 #endif
 
 /* properties */
@@ -216,6 +211,7 @@ struct _SalutConnectionPrivate
 
 #ifdef ENABLE_OLPC
   SalutOlpcActivityManager *olpc_activity_manager;
+  guint uninvite_handler_id;
 #endif
 
   /* timer used when trying to properly disconnect */
@@ -910,15 +906,17 @@ salut_connection_dispose (GObject *object)
       priv->pre_connect_message = NULL;
     }
 
-  if (priv->self) {
-    g_object_unref (priv->self);
-    priv->self = NULL;
-  }
+  if (priv->self)
+    {
+      g_object_unref (priv->self);
+      priv->self = NULL;
+    }
 
 #ifdef ENABLE_OLPC
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      uninvite_stanza_filter, uninvite_stanza_callback, self);
+  {
+    wocky_porter_unregister_handler (self->porter, priv->uninvite_handler_id);
+    priv->uninvite_handler_id = 0;
+  }
 
   if (priv->olpc_activity_manager != NULL)
     {
@@ -3277,20 +3275,9 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
 }
 
 static gboolean
-uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
-  GibberXmppConnection *conn, WockyStanza *stanza, SalutContact *contact,
-  gpointer user_data)
-{
-  WockyNode *node = wocky_stanza_get_top_node (stanza);
-
-  return (wocky_node_get_child_ns (node, "uninvite",
-        GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS) != NULL);
-}
-
-static void
-uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
-  GibberXmppConnection *conn, WockyStanza *stanza, SalutContact *contact,
-  gpointer user_data)
+uninvite_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza,
+    gpointer user_data)
 {
   SalutConnection *self = SALUT_CONNECTION (user_data);
   SalutConnectionPrivate *priv = self->priv;
@@ -3301,6 +3288,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar *room, *activity_id;
   SalutOlpcActivity *activity;
   WockyNode *top_node = wocky_stanza_get_top_node (stanza);
+  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
 
   node = wocky_node_get_child_ns (top_node, "uninvite",
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
@@ -3310,21 +3298,21 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
   if (room == NULL)
     {
       DEBUG ("No room attribute");
-      return;
+      return FALSE;
     }
 
   room_handle = tp_handle_lookup (room_repo, room, NULL, NULL);
   if (room_handle == 0)
     {
       DEBUG ("room %s unknown", room);
-      return;
+      return FALSE;
     }
 
   activity_id = wocky_node_get_attribute (node, "id");
   if (activity_id == NULL)
     {
       DEBUG ("No id attribute");
-      return;
+      return FALSE;
     }
 
   DEBUG ("received uninvite from %s", contact->name);
@@ -3333,9 +3321,11 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
       priv->olpc_activity_manager, room_handle);
 
   if (activity == NULL)
-    return;
+    return FALSE;
 
   salut_contact_left_activity (contact, activity);
+
+  return TRUE;
 }
 
 #endif
@@ -3358,9 +3348,14 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       priv->contact_manager);
 
 #ifdef ENABLE_OLPC
-  salut_xmpp_connection_manager_add_stanza_filter (
-    priv->xmpp_connection_manager, NULL,
-    uninvite_stanza_filter, uninvite_stanza_callback, self);
+  priv->uninvite_handler_id = wocky_porter_register_handler_from_anyone (
+      self->porter,
+      WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      uninvite_stanza_callback, self,
+      '(', "uninvite",
+        ':', GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+      ')', NULL);
 
   /* create the OLPC activity manager */
   priv->olpc_activity_manager =
