@@ -26,7 +26,6 @@
 
 #include "salut-connection.h"
 #include "salut-contact.h"
-#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 
