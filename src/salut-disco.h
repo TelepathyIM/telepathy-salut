@@ -29,7 +29,6 @@
 
 #include "salut-contact.h"
 #include "salut-connection.h"
-#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 
@@ -88,15 +87,15 @@ typedef void (*SalutDiscoCb)(SalutDisco *self, SalutDiscoRequest *request,
     SalutContact *contact, const gchar *node, WockyNode *query_result,
     GError* error, gpointer user_data);
 
-SalutDisco *salut_disco_new (SalutConnection *connection,
-    SalutXmppConnectionManager *xmpp_connection_manager);
+SalutDisco *salut_disco_new (SalutConnection *connection);
 
 SalutDiscoRequest *salut_disco_request (SalutDisco *self,
     SalutDiscoType type, SalutContact *contact, const char *node,
     SalutDiscoCb callback, gpointer user_data, GObject *object,
     GError **error);
 
-void salut_disco_cancel_request (SalutDisco *, SalutDiscoRequest *);
+void salut_disco_cancel_request (SalutDisco *disco,
+    SalutDiscoRequest *request);
 
 
 G_END_DECLS

@@ -350,7 +350,7 @@ salut_connection_constructor (GType type,
   self = SALUT_CONNECTION (obj);
   priv = self->priv;
 
-  self->disco = salut_disco_new (self, NULL);
+  self->disco = salut_disco_new (self);
   self->presence_cache = salut_presence_cache_new (self);
   g_signal_connect (self->presence_cache, "capabilities-update", G_CALLBACK
       (connection_capabilities_update_cb), self);
