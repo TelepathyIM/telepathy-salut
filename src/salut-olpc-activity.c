@@ -25,6 +25,7 @@
 #include <gibber/gibber-namespaces.h>
 #include <wocky/wocky-stanza.h>
 
+#include "salut-contact-manager.h"
 #include "salut-olpc-activity.h"
 #include "salut-muc-manager.h"
 #include "salut-util.h"
@@ -598,86 +599,6 @@ salut_olpc_activity_left (SalutOlpcActivity *self)
   priv->muc = NULL;
 }
 
-typedef struct
-{
-  SalutOlpcActivity *self;
-  SalutContact *contact;
-  WockyStanza *msg;
-} pending_connection_for_uninvite_ctx;
-
-static pending_connection_for_uninvite_ctx *
-pending_connection_for_uninvite_ctx_new (SalutOlpcActivity *self,
-                                         SalutContact *contact,
-                                         WockyStanza *msg)
-{
-  pending_connection_for_uninvite_ctx *ctx;
-
-  ctx = g_slice_new (pending_connection_for_uninvite_ctx);
-  ctx->self = g_object_ref (self);
-  ctx->contact = g_object_ref (contact);
-  ctx->msg = g_object_ref (msg);
-
-  return ctx;
-}
-
-static void
-pending_connection_for_uninvite_ctx_free (
-    pending_connection_for_uninvite_ctx *ctx)
-{
-  g_object_unref (ctx->self);
-  g_object_unref (ctx->contact);
-  g_object_unref (ctx->msg);
-  g_slice_free (pending_connection_for_uninvite_ctx, ctx);
-}
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *connection,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  pending_connection_for_uninvite_ctx *ctx =
-    (pending_connection_for_uninvite_ctx *) user_data;
-
-  if (ctx->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
-
-  DEBUG ("got awaited connection with %s. Send uninvite", contact->name);
-
-  gibber_xmpp_connection_send (connection, ctx->msg, NULL);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, ctx);
-
-  pending_connection_for_uninvite_ctx_free (ctx);
-}
-
-static void
-xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *connection,
-                                              SalutContact *contact,
-                                              GQuark domain,
-                                              gint code,
-                                              gchar *message,
-                                              gpointer user_data)
-{
-  pending_connection_for_uninvite_ctx *ctx =
-    (pending_connection_for_uninvite_ctx *) user_data;
-
-  if (ctx->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
-
-  DEBUG ("awaited connection with %s failed: %s. Can't send uninvite",
-    contact->name, message);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, ctx);
-
-  pending_connection_for_uninvite_ctx_free (ctx);
-}
-
 void
 salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
 {
@@ -690,7 +611,6 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
   TpIntSetIter iter = TP_INTSET_ITER_INIT (tp_handle_set_peek (
         priv->invited));
   SalutContactManager *contact_mgr;
-  SalutXmppConnectionManager *xmpp_connection_manager;
   WockyNode *top_node;
 
   if (tp_handle_set_size (priv->invited) <= 0)
@@ -709,18 +629,14 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
 
   g_object_get (self->connection,
       "contact-manager", &contact_mgr,
-      "xmpp-connection-manager", &xmpp_connection_manager,
       NULL);
   g_assert (contact_mgr != NULL);
-  g_assert (xmpp_connection_manager != NULL);
 
   DEBUG ("revoke invitations for activity %s", self->id);
   while (tp_intset_iter_next (&iter))
     {
       TpHandle contact_handle;
       SalutContact *contact;
-      SalutXmppConnectionManagerRequestConnectionResult request_result;
-      GibberXmppConnection *connection = NULL;
       const gchar *to;
 
       contact_handle = iter.element;
@@ -734,39 +650,14 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
       to = tp_handle_inspect (contact_repo, contact_handle);
       wocky_node_set_attribute (top_node, "to", to);
 
-      request_result = salut_xmpp_connection_manager_request_connection (
-          xmpp_connection_manager, contact, &connection, NULL);
-
-      if (request_result ==
-          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
-        {
-          DEBUG ("request connection to %s failed", to);
-        }
-      else if (request_result ==
-          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-        {
-          DEBUG ("send uninvite to %s", to);
-          if (!gibber_xmpp_connection_send (connection, msg, NULL))
-            DEBUG ("can't send uninvite to %s", to);
-        }
-      else
-        {
-          pending_connection_for_uninvite_ctx *ctx;
-
-          ctx = pending_connection_for_uninvite_ctx_new (self, contact, msg);
-
-          g_signal_connect (xmpp_connection_manager, "new-connection",
-              G_CALLBACK (xmpp_connection_manager_new_connection_cb), ctx);
-          g_signal_connect (xmpp_connection_manager, "connection-failed",
-              G_CALLBACK (xmpp_connection_manager_connection_failed_cb), ctx);
-        }
+      wocky_stanza_set_contact (msg, WOCKY_CONTACT (contact));
+      wocky_porter_send (self->connection->porter, msg);
 
       g_object_unref (contact);
     }
 
   g_object_unref (msg);
   g_object_unref (contact_mgr);
-  g_object_unref (xmpp_connection_manager);
 }
 
 void
