@@ -392,6 +392,9 @@ _caps_disco_cb (SalutDisco *disco,
   gboolean bad_hash = FALSE;
   TpBaseConnection *base_conn;
 
+  if (query_result == NULL)
+    return;
+
   cache = SALUT_PRESENCE_CACHE (user_data);
   priv = SALUT_PRESENCE_CACHE_PRIV (cache);
   base_conn = TP_BASE_CONNECTION (priv->conn);
