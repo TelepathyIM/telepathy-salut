@@ -185,9 +185,6 @@ struct _SalutConnectionPrivate
   SalutPresenceId pre_connect_presence;
   gchar *pre_connect_message;
 
-  /* XMPP connection manager */
-  SalutXmppConnectionManager *xmpp_connection_manager;
-
   /* Contact manager */
   SalutContactManager *contact_manager;
 
@@ -329,7 +326,6 @@ salut_connection_init (SalutConnection *obj)
   priv->pre_connect_message = NULL;
 
   priv->contact_manager = NULL;
-  priv->xmpp_connection_manager = NULL;
 }
 
 static GObject *
@@ -418,9 +414,6 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_SELF:
       g_value_set_object (value, priv->self);
-      break;
-    case PROP_XCM:
-      g_value_set_object (value, priv->xmpp_connection_manager);
       break;
     case PROP_SI_BYTESTREAM_MANAGER:
       g_value_set_object (value, priv->si_bytestream_manager);
@@ -836,16 +829,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "The Salut XMPP Connection Manager associated with this Salut "
-      "Connection",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_XCM,
-      param_spec);
-
-  param_spec = g_param_spec_object (
       "si-bytestream-manager",
       "SalutSiBytestreamManager object",
       "The Salut SI Bytestream Manager associated with this Salut Connection",
@@ -930,15 +913,6 @@ salut_connection_dispose (GObject *object)
       g_object_unref (self->session);
       self->session = NULL;
       self->porter = NULL;
-    }
-
-  if (priv->xmpp_connection_manager)
-    {
-      g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
-          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
     }
 
   if (priv->discovery_client != NULL)
@@ -3342,10 +3316,6 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       priv->discovery_client, self);
   g_signal_connect (priv->contact_manager, "contact-change",
       G_CALLBACK (_contact_manager_contact_change_cb), self);
-
-  /* Create the XMPP connection manager */
-  priv->xmpp_connection_manager = salut_xmpp_connection_manager_new (self,
-      priv->contact_manager);
 
 #ifdef ENABLE_OLPC
   priv->uninvite_handler_id = wocky_porter_register_handler_from_anyone (
