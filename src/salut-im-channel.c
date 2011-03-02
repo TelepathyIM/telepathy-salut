@@ -296,6 +296,10 @@ salut_im_channel_get_property (GObject *object,
                 TP_IFACE_CHANNEL, "InitiatorID",
                 TP_IFACE_CHANNEL, "Requested",
                 TP_IFACE_CHANNEL, "Interfaces",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessagePartSupportFlags",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "DeliveryReportingSupport",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "SupportedContentTypes",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessageTypes",
                 NULL));
         break;
       default:
