@@ -63,7 +63,6 @@
 #include "salut-si-bytestream-manager.h"
 #include "salut-tubes-manager.h"
 #include "salut-util.h"
-#include "salut-xmpp-connection-manager.h"
 
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity-manager.h"
