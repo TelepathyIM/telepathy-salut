@@ -3450,7 +3450,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager);
 
   priv->muc_manager = salut_discovery_client_create_muc_manager (
-      priv->discovery_client, self, priv->xmpp_connection_manager);
+      priv->discovery_client, self);
 
   priv->roomlist_manager = salut_discovery_client_create_roomlist_manager (
       priv->discovery_client, self);

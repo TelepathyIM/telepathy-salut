@@ -46,8 +46,8 @@
 #include <gibber/gibber-muc-connection.h>
 
 #include "salut-connection.h"
+#include "salut-contact-manager.h"
 #include "salut-self.h"
-#include "salut-xmpp-connection-manager.h"
 #include "salut-muc-manager.h"
 #include "salut-util.h"
 
@@ -97,7 +97,6 @@ enum
   PROP_CONNECTION,
   PROP_NAME,
   PROP_CREATOR,
-  PROP_XMPP_CONNECTION_MANAGER,
   PROP_INTERFACES,
   PROP_TARGET_ID,
   PROP_REQUESTED,
@@ -117,7 +116,6 @@ struct _SalutMucChannelPrivate
   gchar *object_path;
   TpHandle handle;
   SalutSelf *self;
-  SalutXmppConnectionManager *xmpp_connection_manager;
   GibberMucConnection *muc_connection;
   gchar *muc_name;
   gboolean connected;
@@ -186,9 +184,6 @@ salut_muc_channel_get_property (GObject    *object,
       break;
     case PROP_CREATOR:
       g_value_set_boolean (value, priv->creator);
-      break;
-    case PROP_XMPP_CONNECTION_MANAGER:
-      g_value_set_object (value, priv->xmpp_connection_manager);
       break;
     case PROP_INTERFACES:
       g_value_set_static_boxed (value, salut_muc_channel_interfaces);
@@ -283,9 +278,6 @@ salut_muc_channel_set_property (GObject     *object,
       break;
     case PROP_INITIATOR_HANDLE:
       priv->initiator = g_value_get_uint (value);
-      break;
-    case PROP_XMPP_CONNECTION_MANAGER:
-      priv->xmpp_connection_manager = g_value_get_object (value);
       break;
     case PROP_REQUESTED:
       priv->requested = g_value_get_boolean (value);
@@ -452,7 +444,6 @@ salut_muc_channel_init (SalutMucChannel *self)
   /* allocate any data required by the object here */
   priv->object_path = NULL;
   self->connection = NULL;
-  priv->xmpp_connection_manager = NULL;
   priv->muc_name = NULL;
   priv->timeout = 0;
   priv->senders = g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -471,33 +462,29 @@ invitation_append_parameter (gpointer key, gpointer value, gpointer data)
 }
 
 static WockyStanza *
-create_invitation (SalutMucChannel *self, TpHandle handle,
+create_invitation (SalutMucChannel *self, SalutContact *contact,
     const gchar *message)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(self->connection);
-  TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   WockyStanza *msg;
   WockyNode *invite_node;
 
-  const gchar *name = tp_handle_inspect (contact_repo, handle);
-
-  msg = wocky_stanza_build (WOCKY_STANZA_TYPE_MESSAGE,
+  msg = wocky_stanza_build_to_contact (WOCKY_STANZA_TYPE_MESSAGE,
       WOCKY_STANZA_SUB_TYPE_NORMAL,
-      self->connection->name, name,
-      WOCKY_NODE_START, "body",
-        WOCKY_NODE_TEXT, "You got a Clique chatroom invitation",
-      WOCKY_NODE_END,
-      WOCKY_NODE_START, "invite",
-        WOCKY_NODE_ASSIGN_TO, &invite_node,
-        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_CLIQUE,
-        WOCKY_NODE_START, "roomname",
-          WOCKY_NODE_TEXT, tp_handle_inspect (room_repo, priv->handle),
-        WOCKY_NODE_END,
-      WOCKY_NODE_END,
+      self->connection->name, WOCKY_CONTACT (contact),
+      '(', "body",
+        '$', "You got a Clique chatroom invitation",
+      ')',
+      '(', "invite",
+        '*', &invite_node,
+        ':', GIBBER_TELEPATHY_NS_CLIQUE,
+        '(', "roomname",
+          '$', tp_handle_inspect (room_repo, priv->handle),
+        ')',
+      ')',
       NULL);
 
   if (message != NULL && *message != '\0')
@@ -511,7 +498,7 @@ create_invitation (SalutMucChannel *self, TpHandle handle,
       invitation_append_parameter, invite_node);
 
 #ifdef ENABLE_OLPC
-  salut_self_olpc_augment_invitation (priv->self, priv->handle, handle,
+  salut_self_olpc_augment_invitation (priv->self, priv->handle, contact->handle,
       invite_node);
 #endif
 
@@ -527,94 +514,49 @@ salut_muc_channel_publish_service (SalutMucChannel *self)
       priv->muc_connection, priv->muc_name);
 }
 
-struct
-pending_connection_for_invite_data
+typedef struct
 {
   SalutMucChannel *self;
   SalutContact *contact;
-  WockyStanza *invite;
-};
-
-static struct pending_connection_for_invite_data *
-pending_connection_for_invite_data_new (void)
-{
-  return g_slice_new (struct pending_connection_for_invite_data);
-}
+} SendInviteData;
 
 static void
-pending_connection_for_invite_data_free (
-    struct pending_connection_for_invite_data *data)
+send_invite_cb (GObject *source_object,
+    GAsyncResult *result,
+    gpointer user_data)
 {
-  g_object_unref (data->invite);
-  g_object_unref (data->contact);
-  g_slice_free (struct pending_connection_for_invite_data, data);
-}
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *connection,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  struct pending_connection_for_invite_data *data =
-    (struct pending_connection_for_invite_data *) user_data;
-
-  if (data->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
-
-  DEBUG ("got awaited connection with %s. Send invite", contact->name);
-
-  gibber_xmpp_connection_send (connection, data->invite, NULL);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, data);
-
-  pending_connection_for_invite_data_free (data);
-}
-
-static void
-xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *connection,
-                                              SalutContact *contact,
-                                              GQuark domain,
-                                              gint code,
-                                              gchar *message,
-                                              gpointer user_data)
-{
-  SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
-  TpBaseConnection *base_connection = TP_BASE_CONNECTION (self->connection);
-  TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
-  struct pending_connection_for_invite_data *data =
-    (struct pending_connection_for_invite_data *) user_data;
+  WockyPorter *porter = WOCKY_PORTER (source_object);
+  SendInviteData *data = user_data;
+  TpBaseConnection *base_connection = TP_BASE_CONNECTION (
+      data->self->connection);
+  GError *error = NULL;
   TpHandle handle;
   TpIntSet *empty, *removed;
 
-  if (data->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
+  if (wocky_porter_send_finish (porter, result, &error))
+    /* success */
+    goto out;
 
-  DEBUG ("awaited connection with %s failed: %s. Can't send invite",
-      contact->name, message);
+  /* failure */
+  DEBUG ("Failed to send stanza: %s", error->message);
+  g_clear_error (&error);
 
+  handle = data->contact->handle;
 
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, data);
-
-  pending_connection_for_invite_data_free (data);
-
-  handle = tp_handle_lookup (contact_repo, contact->name, NULL, NULL);
-  if (handle == 0)
-    return;
-
-  /* Can't invite the contact, remove it from remote pending */
   empty = tp_intset_new ();
   removed = tp_intset_new ();
   tp_intset_add (removed, handle);
-  tp_group_mixin_change_members (G_OBJECT(self), "", empty, removed, empty,
+
+  tp_group_mixin_change_members (G_OBJECT (data->self), "", empty, removed, empty,
       empty, base_connection->self_handle,
       TP_CHANNEL_GROUP_CHANGE_REASON_ERROR);
+
+  tp_intset_destroy (empty);
+  tp_intset_destroy (removed);
+
+out:
+  g_object_unref (data->contact);
+  g_slice_free (SendInviteData, data);
 }
 
 gboolean
@@ -623,14 +565,11 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
                                    const gchar *message,
                                    GError **error)
 {
-  SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
   WockyStanza *stanza;
   SalutContactManager *contact_manager = NULL;
   SalutContact *contact;
-  SalutXmppConnectionManagerRequestConnectionResult request_result;
-  gboolean result;
-  struct pending_connection_for_invite_data *data;
-  GibberXmppConnection *connection = NULL;
+  WockyPorter *porter = self->connection->porter;
+  SendInviteData *data;
 
   g_object_get (G_OBJECT (self->connection), "contact-manager",
       &contact_manager, NULL);
@@ -647,40 +586,16 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
     }
 
   DEBUG ("request XMPP connection with contact %s", contact->name);
-  request_result = salut_xmpp_connection_manager_request_connection (
-      priv->xmpp_connection_manager, contact, &connection, error);
 
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_FAILURE)
-    {
-      DEBUG ("request connection failed");
-      g_object_unref (contact);
-      return FALSE;
-    }
+  stanza = create_invitation (self, contact, message);
 
-  stanza = create_invitation (self, handle, message);
-
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      DEBUG ("got an existing connection. Send the invite");
-      result = gibber_xmpp_connection_send (connection, stanza, error);
-      g_object_unref (stanza);
-      g_object_unref (contact);
-      return TRUE;
-    }
-
-  DEBUG ("requested connection pending. We have to wait to send the invite");
-  data = pending_connection_for_invite_data_new ();
+  data = g_slice_new0 (SendInviteData);
   data->self = self;
-  data->contact = contact;
-  data->invite = stanza;
+  data->contact = contact; /* steal the ref */
 
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), data);
-  g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
-      G_CALLBACK (xmpp_connection_manager_connection_failed_cb), data);
+  wocky_porter_send_async (porter, stanza, NULL, send_invite_cb, data);
 
+  g_object_unref (stanza);
   return TRUE;
 }
 
@@ -908,17 +823,6 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class) {
                                     G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class,
                                    PROP_CONNECTION, param_spec);
-
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "Salut XMPP Connection manager used for this MUC channel",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
-      param_spec);
 
   param_spec = g_param_spec_boolean (
       "creator",

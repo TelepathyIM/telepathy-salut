@@ -24,7 +24,6 @@
 
 #include "salut-muc-manager.h"
 #include "salut-connection.h"
-#include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-discovery-client.h"
 
 G_BEGIN_DECLS
@@ -63,7 +62,6 @@ GType salut_avahi_muc_manager_get_type (void);
 
 SalutAvahiMucManager *
 salut_avahi_muc_manager_new (SalutConnection *connection,
-    SalutXmppConnectionManager *xmpp_connection_manager,
     SalutAvahiDiscoveryClient *discovery_client);
 
 G_END_DECLS
