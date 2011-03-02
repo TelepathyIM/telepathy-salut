@@ -52,8 +52,6 @@ HANDWRITTEN_SOURCES =             \
   gibber-linklocal-transport.c    \
   gibber-linklocal-transport.h    \
   gibber-namespaces.h             \
-  gibber-iq-helper.c              \
-  gibber-iq-helper.h              \
   gibber-file-transfer.c          \
   gibber-file-transfer.h          \
   gibber-oob-file-transfer.c      \

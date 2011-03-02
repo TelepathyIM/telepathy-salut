@@ -38,7 +38,6 @@
 #include "gibber-namespaces.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-xmpp-error.h"
-#include "gibber-iq-helper.h"
 #include "gibber-util.h"
 #include "gibber-transport.h"
 #include "gibber-fd-transport.h"

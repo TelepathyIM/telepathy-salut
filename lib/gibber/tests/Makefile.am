@@ -79,7 +79,6 @@ check_PROGRAMS = \
 	check-gibber-xmpp-connection \
 	check-gibber-r-multicast-packet \
 	check-gibber-r-multicast-sender \
-	check-gibber-iq-helper \
 	check-gibber-listener \
 	check-gibber-xmpp-error \
 	check-gibber-unix-transport
