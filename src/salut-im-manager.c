@@ -28,7 +28,6 @@
 #include "salut-contact.h"
 
 #include <gibber/gibber-linklocal-transport.h>
-#include <gibber/gibber-xmpp-connection.h>
 #include <wocky/wocky-stanza.h>
 #include <gibber/gibber-namespaces.h>
 

@@ -26,7 +26,6 @@
 #include <glib.h>
 
 #include "gibber-sockets.h"
-#include "gibber-xmpp-connection.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-util.h"
 #include "gibber-xmpp-error.h"

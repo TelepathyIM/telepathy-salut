@@ -10,8 +10,6 @@ BUILT_SOURCES = \
   gibber-signals-marshal.c
 
 HANDWRITTEN_SOURCES =             \
-  gibber-xmpp-connection.c        \
-  gibber-xmpp-connection.h        \
   gibber-muc-connection.c         \
   gibber-muc-connection.h         \
   gibber-bytestream-ibb.h         \

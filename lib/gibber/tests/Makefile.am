@@ -35,28 +35,15 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
-TESTS = \
-	run-xmpp-connection-test.sh
+TESTS =
 
 noinst_PROGRAMS = \
-	test-xmpp-connection    \
 	test-r-multicast-transport-io
 
-check_SCRIPTS = run-xmpp-connection-test.sh
+check_SCRIPTS =
 
 EXTRA_DIST += \
 	simplemeshtest.py mesh.py $(check_SCRIPTS)
-
-test_xmpp_connection_SOURCES = \
-    test-xmpp-connection.c     \
-    test-transport.c           \
-    test-transport.h
-
-test_xmpp_connection_LDADD = \
-    $(AM_LDFLAGS)
-
-test_xmpp_connection_CFLAGS = \
-    $(AM_CFLAGS)
 
 test_r_multicast_transport_io_SOURCES = \
     test-r-multicast-transport-io.c     \
@@ -76,7 +63,6 @@ test_r_multicast_transport_io_CFLAGS = \
 check_PROGRAMS = \
 	check-gibber-xmpp-reader \
 	check-gibber-r-multicast-causal-transport \
-	check-gibber-xmpp-connection \
 	check-gibber-r-multicast-packet \
 	check-gibber-r-multicast-sender \
 	check-gibber-listener \
@@ -91,7 +77,6 @@ test: ${TEST_PROGS}
 
 # Coding style checks
 check_c_sources = \
-    $(test_xmpp_connection_SOURCES) \
     $(test_r_multicast_transport_io_SOURCES)
 
 include $(top_srcdir)/tools/check-coding-style.mk

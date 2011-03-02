@@ -22,7 +22,6 @@
 
 #include <glib-object.h>
 #include <wocky/wocky-stanza.h>
-#include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-bytestream-iface.h>
 
 #include "salut-muc-channel.h"

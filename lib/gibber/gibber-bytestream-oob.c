@@ -34,7 +34,6 @@
 
 #include "gibber-sockets.h"
 #include "gibber-bytestream-iface.h"
-#include "gibber-xmpp-connection.h"
 #include "gibber-namespaces.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-xmpp-error.h"

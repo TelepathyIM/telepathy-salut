@@ -151,6 +151,5 @@ lib/gibber/tests/check-gibber-r-multicast-causal-transport
 lib/gibber/tests/check-gibber-r-multicast-packet
 lib/gibber/tests/check-gibber-r-multicast-sender
 lib/gibber/tests/check-gibber-unix-transport
-lib/gibber/tests/check-gibber-xmpp-connection
 lib/gibber/tests/check-gibber-xmpp-error
 lib/gibber/tests/check-gibber-xmpp-reader
