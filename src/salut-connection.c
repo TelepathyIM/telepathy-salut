@@ -3493,7 +3493,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   g_object_unref (loader);
 
   g_ptr_array_foreach (tmp, add_to_array, managers);
-  g_ptr_array_free (tmp, FALSE);
+  g_ptr_array_free (tmp, TRUE);
 
   return managers;
 }
