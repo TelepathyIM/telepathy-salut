@@ -318,7 +318,7 @@ salut_avahi_self_publish_avatar (SalutAvahiSelf *self,
   dnssd_name = salut_avahi_discovery_client_get_dnssd_name (
       priv->discovery_client);
 
-  name = g_strdup_printf ("%s.%s.local", dnssd_name, _self->name);
+  name = g_strdup_printf ("%s.%s.local", _self->name, dnssd_name);
 
   if (priv->avatar_group == NULL)
     {
