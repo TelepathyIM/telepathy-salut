@@ -36,25 +36,18 @@
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-namespaces.h>
-#include <gibber/gibber-xmpp-connection.h>
 #include <wocky/wocky-stanza.h>
+#include <wocky/wocky-meta-porter.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
 #include "salut-connection.h"
 #include "salut-contact.h"
-#include "salut-xmpp-connection-manager.h"
 #include "salut-signals-marshal.h"
 #include "salut-util.h"
 #include "text-helper.h"
 
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
-
-static void xmpp_connection_manager_new_connection_cb (
-    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
-    SalutContact *contact, gpointer user_data);
-
-static gboolean _setup_connection (SalutImChannel *self, GError **error);
 
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
@@ -73,23 +66,6 @@ static const gchar *salut_im_channel_interfaces[] = {
     NULL
 };
 
-static gboolean message_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
-
-static void message_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
-
-/* Channel state */
-typedef enum
-{
-  CHANNEL_NOT_CONNECTED = 0,
-  CHANNEL_CONNECTING,
-  CHANNEL_CONNECTED,
-  CHANNEL_CLOSING,
-} ChannelState;
-
 /* properties */
 enum
 {
@@ -99,7 +75,6 @@ enum
   PROP_HANDLE,
   PROP_CONTACT,
   PROP_CONNECTION,
-  PROP_XMPP_CONNECTION_MANAGER,
   PROP_INTERFACES,
   PROP_TARGET_ID,
   PROP_INITIATOR_HANDLE,
@@ -121,89 +96,33 @@ struct _SalutImChannelPrivate
   TpHandle initiator;
   SalutContact *contact;
   SalutConnection *connection;
-  GibberXmppConnection *xmpp_connection;
-  SalutXmppConnectionManager *xmpp_connection_manager;
-  /* Outcoming and incoming message queues */
-  GQueue *out_queue;
-  ChannelState state;
+  guint message_handler_id;
   gboolean closed;
 };
 
 #define SALUT_IM_CHANNEL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE \
     ((o), SALUT_TYPE_IM_CHANNEL, SalutImChannelPrivate))
 
-typedef struct _SalutImChannelMessage SalutImChannelMessage;
-
-struct _SalutImChannelMessage {
-  guint time;
-  guint type;
-  gchar *text;
-  gchar *token;
-  WockyStanza *stanza;
-};
-
 static void
 salut_im_channel_do_close (SalutImChannel *self)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  ChannelState oldstate = priv->state;
+  WockyPorter *porter = priv->connection->porter;
 
   if (priv->closed)
     return;
   priv->closed = TRUE;
 
-  priv->state = CHANNEL_NOT_CONNECTED;
+  wocky_porter_unregister_handler (porter,
+      priv->message_handler_id);
+  priv->message_handler_id = 0;
 
-  switch (oldstate)
-    {
-      case CHANNEL_NOT_CONNECTED:
-        break;
-      case CHANNEL_CONNECTING:
-        break;
-      case CHANNEL_CLOSING:
-        break;
-      case CHANNEL_CONNECTED:
-        g_assert (priv->xmpp_connection != NULL);
-        break;
-    }
+  wocky_meta_porter_unref (WOCKY_META_PORTER (porter),
+      WOCKY_CONTACT (priv->contact));
 
   DEBUG ("Emitting closed signal for %s", priv->object_path);
   tp_svc_channel_emit_closed (self);
 }
-
-static SalutImChannelMessage *
-salut_im_channel_message_new (guint type,
-                              const gchar *text,
-                              const gchar *token,
-                              WockyStanza *stanza)
-{
-  SalutImChannelMessage *msg;
-  msg = g_new0 (SalutImChannelMessage, 1);
-  msg->type = type;
-  msg->text = g_strdup (text);
-  msg->time = time (NULL);
-  msg->token = g_strdup (token);
-  msg->stanza = stanza;
-  if (stanza != NULL)
-    g_object_ref (G_OBJECT (stanza));
-
-  return msg;
-}
-
-static void
-salut_im_channel_message_free (SalutImChannelMessage *message)
-{
-  g_free (message->text);
-  g_free (message->token);
-  if (message->stanza)
-    g_object_unref (message->stanza);
-
-  g_free (message);
-}
-
-static gboolean
-_send_message (SalutImChannel *self, guint type, const gchar *text,
-    const gchar *token, WockyStanza *stanza, GError **error);
 
 static void
 salut_im_channel_init (SalutImChannel *obj)
@@ -212,10 +131,6 @@ salut_im_channel_init (SalutImChannel *obj)
   /* allocate any data required by the object here */
   priv->object_path = NULL;
   priv->contact = NULL;
-  priv->xmpp_connection = NULL;
-  priv->out_queue = g_queue_new ();
-  priv->state = CHANNEL_NOT_CONNECTED;
-  priv->xmpp_connection_manager = NULL;
 }
 
 
@@ -248,9 +163,6 @@ salut_im_channel_get_property (GObject *object,
         break;
       case PROP_CONNECTION:
         g_value_set_object (value, priv->connection);
-        break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        g_value_set_object (value, priv->xmpp_connection_manager);
         break;
       case PROP_INTERFACES:
         g_value_set_static_boxed (value, salut_im_channel_interfaces);
@@ -328,8 +240,7 @@ salut_im_channel_set_property (GObject *object,
         g_assert (priv->initiator != 0);
         break;
       case PROP_CONTACT:
-        priv->contact = g_value_get_object (value);
-        g_object_ref (priv->contact);
+        priv->contact = g_value_dup_object (value);
         break;
       case PROP_CONNECTION:
         priv->connection = g_value_get_object (value);
@@ -343,10 +254,6 @@ salut_im_channel_set_property (GObject *object,
         g_assert (tmp == NULL || !tp_strdiff (g_value_get_string (value),
               TP_IFACE_CHANNEL_TYPE_TEXT));
         break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        priv->xmpp_connection_manager = g_value_get_object (value);
-        g_object_ref (priv->xmpp_connection_manager);
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -359,6 +266,10 @@ static void
 _salut_im_channel_send (GObject *channel,
                         TpMessage *message,
                         TpMessageSendingFlags flags);
+
+static gboolean new_message_cb (WockyPorter *porter,
+    WockyStanza *stanza, gpointer user_data);
+
 static GObject *
 salut_im_channel_constructor (GType type,
                               guint n_props,
@@ -369,6 +280,8 @@ salut_im_channel_constructor (GType type,
   SalutImChannelPrivate *priv;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
+  WockyPorter *porter;
+  gchar *jid;
 
   TpChannelTextMessageType types[NUM_SUPPORTED_MESSAGE_TYPES] = {
       TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
@@ -386,6 +299,7 @@ salut_im_channel_constructor (GType type,
         constructor (type, n_props, props);
 
   priv = SALUT_IM_CHANNEL_GET_PRIVATE (SALUT_IM_CHANNEL (obj));
+  porter = priv->connection->porter;
 
   /* Ref our handle and initiator handle */
   base_conn = TP_BASE_CONNECTION (priv->connection);
@@ -411,8 +325,19 @@ salut_im_channel_constructor (GType type,
   bus = tp_base_connection_get_dbus_daemon (base_conn);
   tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
+  /* Connect to further messages */
+  jid = wocky_contact_dup_jid (WOCKY_CONTACT (priv->contact));
+
+  priv->message_handler_id = wocky_porter_register_handler_from (
+      porter, WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
+      jid, WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      new_message_cb, obj, NULL);
+
+  g_free (jid);
+
+  /* ensure the connection doesn't close */
+  wocky_meta_porter_ref (WOCKY_META_PORTER (porter),
+      WOCKY_CONTACT (priv->contact));
 
   return obj;
 }
@@ -509,15 +434,6 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "Salut XMPP Connection manager used for this IM channel",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
-      param_spec);
-
   param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
       "Additional Channel.Interface.* interfaces",
       G_TYPE_STRV,
@@ -545,9 +461,6 @@ salut_im_channel_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
-      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-
   tp_handle_unref (handle_repo, priv->handle);
 
   if (priv->initiator != 0)
@@ -555,24 +468,8 @@ salut_im_channel_dispose (GObject *object)
 
   salut_im_channel_do_close (self);
 
-  if (priv->xmpp_connection)
-    {
-      salut_xmpp_connection_manager_remove_stanza_filter (
-          priv->xmpp_connection_manager, priv->xmpp_connection,
-          message_stanza_filter, message_stanza_callback, self);
-
-      g_object_unref (priv->xmpp_connection);
-      priv->xmpp_connection = NULL;
-    }
-
   g_object_unref (priv->contact);
   priv->contact = NULL;
-
-  if (priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
-    }
 
   /* release any references held by the object here */
 
@@ -589,76 +486,9 @@ salut_im_channel_finalize (GObject *object)
   /* free any data held directly by the object here */
   g_free (priv->object_path);
 
-  g_queue_foreach (priv->out_queue, (GFunc) salut_im_channel_message_free,
-      NULL);
-  g_queue_free (priv->out_queue);
-
   tp_message_mixin_finalize (object);
 
   G_OBJECT_CLASS (salut_im_channel_parent_class)->finalize (object);
-}
-
-static void
-_sendout_message (SalutImChannel *self,
-                  guint timestamp,
-                  guint type,
-                  const gchar *text,
-                  const gchar *token,
-                  WockyStanza *stanza)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL))
-    {
-      salut_xmpp_connection_manager_reset_connection_timer (
-          priv->xmpp_connection_manager, priv->xmpp_connection);
-    }
-  else
-    {
-      text_helper_report_delivery_error (TP_SVC_CHANNEL (self),
-          TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, timestamp, type, text, token);
-    }
-}
-
-static void
-_flush_queue (SalutImChannel *self)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutImChannelMessage *msg;
-  /*Connected!, flusch the queue ! */
-  while ((msg = g_queue_pop_head (priv->out_queue)) != NULL)
-    {
-      if (msg->text == NULL)
-        {
-          if (!gibber_xmpp_connection_send (priv->xmpp_connection,
-                msg->stanza, NULL))
-            g_warning ("Sending message failed");
-        }
-      else
-        {
-          _sendout_message (self, msg->time, msg->type, msg->text,
-              msg->token, msg->stanza);
-        }
-
-      salut_im_channel_message_free (msg);
-    }
-}
-
-static void
-_error_flush_queue (SalutImChannel *self) {
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutImChannelMessage *msg;
-  /*Connection failed!, flusch the queue ! */
-  while ((msg = g_queue_pop_head (priv->out_queue)) != NULL)
-    {
-      DEBUG ("Sending out SendError for msg: %s", msg->text);
-      if (msg->text != NULL)
-        text_helper_report_delivery_error (TP_SVC_CHANNEL (self),
-            TP_CHANNEL_TEXT_SEND_ERROR_OFFLINE,
-            msg->time, msg->type, msg->text, msg->token);
-
-      salut_im_channel_message_free (msg);
-    }
 }
 
 void
@@ -693,276 +523,77 @@ salut_im_channel_received_stanza (SalutImChannel *self,
 }
 
 static gboolean
-message_stanza_filter (SalutXmppConnectionManager *mgr,
-                       GibberXmppConnection *conn,
-                       WockyStanza *stanza,
-                       SalutContact *contact,
-                       gpointer user_data)
+new_message_cb (WockyPorter *porter,
+    WockyStanza *stanza,
+    gpointer user_data)
 {
   SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (priv->contact != contact)
-    return FALSE;
-
-  return salut_im_channel_is_text_message (stanza);
-}
-
-static void
-message_stanza_callback (SalutXmppConnectionManager *mgr,
-                         GibberXmppConnection *conn,
-                         WockyStanza *stanza,
-                         SalutContact *contact,
-                         gpointer user_data)
-{
-  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
-
-  salut_im_channel_received_stanza (self, stanza);
-}
-
-static void
-connection_disconnected (SalutImChannel *self)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (priv->xmpp_connection != NULL)
-    {
-      DEBUG ("connection closed. Remove filters");
-
-      salut_xmpp_connection_manager_remove_stanza_filter (
-          priv->xmpp_connection_manager, priv->xmpp_connection,
-          message_stanza_filter, message_stanza_callback, self);
-
-      g_object_unref (priv->xmpp_connection);
-      priv->xmpp_connection = NULL;
-    }
-
-  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
-      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-
-  priv->state = CHANNEL_NOT_CONNECTED;
-
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
-
-  if (g_queue_get_length (priv->out_queue) > 0)
-    {
-      _setup_connection (self, NULL);
-    }
-}
-
-static void
-xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *conn,
-                                              SalutContact *contact,
-                                              gpointer user_data)
-{
-  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (priv->contact != contact)
-    return;
-
-  g_assert (priv->xmpp_connection == conn);
-  connection_disconnected (self);
-}
-
-static void
-xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *conn,
-                                              SalutContact *contact,
-                                              GQuark domain,
-                                              gint code,
-                                              gchar *message,
-                                              gpointer user_data)
-{
-  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (contact != priv->contact)
-    return;
-
-  DEBUG ("connection failed, flush messages queue");
-  g_assert (priv->xmpp_connection == NULL || priv->xmpp_connection == conn);
-  _error_flush_queue (self);
-  connection_disconnected (self);
-}
-
-static void
-xmpp_connection_manager_connection_closing_cb (SalutXmppConnectionManager *mgr,
-                                               GibberXmppConnection *conn,
-                                               SalutContact *contact,
-                                               gpointer user_data)
-{
-  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (priv->contact != contact)
-    return;
-
-  DEBUG ("connection closing");
-  g_assert (priv->xmpp_connection == conn);
-  priv->state = CHANNEL_CLOSING;
-}
-
-static void
-_initialise_connection (SalutImChannel *self)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  g_assert (priv->xmpp_connection != NULL);
-  g_assert (
-     (priv->xmpp_connection->stream_flags &
-       ~(GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN
-         |GIBBER_XMPP_CONNECTION_CLOSE_SENT)) == 0);
-
-
-  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
-      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-  g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
-      G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
-  g_signal_connect (priv->xmpp_connection_manager, "connection-closed",
-      G_CALLBACK (xmpp_connection_manager_connection_closed_cb), self);
-  g_signal_connect (priv->xmpp_connection_manager, "connection-closing",
-      G_CALLBACK (xmpp_connection_manager_connection_closing_cb), self);
-
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, priv->xmpp_connection,
-      message_stanza_filter, message_stanza_callback, self);
-
-  if (priv->xmpp_connection->stream_flags
-        & GIBBER_XMPP_CONNECTION_CLOSE_SENT) {
-    priv->state = CHANNEL_CLOSING;
-  } else {
-    priv->state = CHANNEL_CONNECTED;
-    _flush_queue (self);
-  }
-}
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *conn,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-
-  if (contact != priv->contact)
-    /* This new connection is not for this channel */
-    return;
-
-  DEBUG ("pending connection fully open");
-
-  priv->xmpp_connection = conn;
-  g_object_ref (priv->xmpp_connection);
-  _initialise_connection (self);
-}
-
-static gboolean
-_setup_connection (SalutImChannel *self,
-    GError **error)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutXmppConnectionManagerRequestConnectionResult result;
-  GibberXmppConnection *conn = NULL;
-
-  if (priv->state == CHANNEL_CONNECTING)
-    return TRUE;
-
-  g_assert (priv->xmpp_connection == NULL);
-
-  result = salut_xmpp_connection_manager_request_connection (
-      priv->xmpp_connection_manager, priv->contact, &conn, error);
-
-  if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      priv->xmpp_connection = conn;
-      g_object_ref (priv->xmpp_connection);
-      _initialise_connection (self);
-    }
-  else if (result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
-    {
-      DEBUG ("Requested connection pending");
-      priv->state = CHANNEL_CONNECTING;
-      g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
-          G_CALLBACK (xmpp_connection_manager_connection_failed_cb), self);
-    }
-  else
-    {
-      priv->state = CHANNEL_NOT_CONNECTED;
-      _error_flush_queue (self);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-static gboolean
-_send_message (SalutImChannel *self,
-               guint type,
-               const gchar *text,
-               const gchar *token,
-               WockyStanza *stanza,
-               GError **error)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
-  SalutImChannelMessage *msg;
-
-  if (priv->state == CHANNEL_NOT_CONNECTED
-      && !_setup_connection (self, error))
-    return FALSE;
-
-  switch (priv->state)
-    {
-      case CHANNEL_NOT_CONNECTED:
-      case CHANNEL_CONNECTING:
-      case CHANNEL_CLOSING:
-        msg = salut_im_channel_message_new (type, text, token, stanza);
-        g_queue_push_tail (priv->out_queue, msg);
-        break;
-      case CHANNEL_CONNECTED:
-        /* Connected and the queue is empty, so push it out directly */
-        _sendout_message (self, time (NULL), type, text, token, stanza);
-        break;
-      default:
-        g_assert_not_reached ();
-        break;
-    }
-  return TRUE;
-}
-
-void
-salut_im_channel_add_connection (SalutImChannel *chan,
-                                 GibberXmppConnection *conn)
-{
-  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (chan);
-  /* FIXME if we already have a connection, we throw this one out..
-   * Which can be not quite what the other side expects.. And strange things
-   * can happen when two * sides try to initiate at the same time */
-
-  g_assert (priv->xmpp_connection == NULL);
-  DEBUG ("New connection for: %s", priv->contact->name);
-
-  priv->xmpp_connection = conn;
-  g_object_ref (priv->xmpp_connection);
-  _initialise_connection (chan);
-}
-
-gboolean
-salut_im_channel_is_text_message (WockyStanza *stanza)
-{
-  WockyStanzaType type;
-
-  wocky_stanza_get_type_info (stanza, &type, NULL);
-  if (type != WOCKY_STANZA_TYPE_MESSAGE)
-    return FALSE;
 
   if (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "invite",
         GIBBER_TELEPATHY_NS_CLIQUE) != NULL)
     /* discard Clique MUC invite */
     return FALSE;
+
+  salut_im_channel_received_stanza (self, stanza);
+
+  return TRUE;
+}
+
+typedef struct
+{
+  SalutImChannel *self;
+  guint timestamp;
+  TpChannelTextMessageType type;
+  gchar *text;
+  gchar *token;
+} SendMessageData;
+
+static void
+sent_message_cb (GObject *source_object,
+    GAsyncResult *result,
+    gpointer user_data)
+{
+  WockyPorter *porter = WOCKY_PORTER (source_object);
+  GError *error = NULL;
+  SendMessageData *data = user_data;
+
+  if (!wocky_porter_send_finish (porter, result, &error))
+    {
+      DEBUG ("Failed to send message: %s", error->message);
+      g_clear_error (&error);
+
+      text_helper_report_delivery_error (TP_SVC_CHANNEL (data->self),
+          TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, data->timestamp,
+          data->type, data->text, data->token);
+    }
+
+  /* successfully sent message */
+
+  g_free (data->text);
+  g_free (data->token);
+  g_slice_free (SendMessageData, data);
+}
+
+static gboolean
+_send_message (SalutImChannel *self,
+    WockyStanza *stanza,
+    guint timestamp,
+    TpChannelTextMessageType type,
+    const gchar *text,
+    const gchar *token)
+{
+  SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
+  SendMessageData *data;
+
+  data = g_slice_new0 (SendMessageData);
+  data->self = self;
+  data->timestamp = timestamp;
+  data->type = type;
+  data->text = g_strdup (text);
+  data->token = g_strdup (token);
+
+  wocky_porter_send_async (priv->connection->porter,
+      stanza, NULL, sent_message_cb, data);
 
   return TRUE;
 }
@@ -1061,12 +692,12 @@ _salut_im_channel_send (GObject *channel,
     goto error;
 
   stanza = text_helper_create_message (priv->connection->name,
-    priv->contact->name, type, text, &error);
+    priv->contact, type, text, &error);
 
   if (stanza == NULL)
     goto error;
 
-  if (!_send_message (self, type, text, token, stanza, &error))
+  if (!_send_message (self, stanza, time (NULL), type, text, token))
     goto error;
 
   tp_message_mixin_sent (channel, message, 0, token, NULL);
@@ -1078,7 +709,7 @@ error:
   if (stanza != NULL)
     g_object_unref (G_OBJECT (stanza));
 
-  if (error->domain != TP_ERRORS)
+  if (error != NULL && error->domain != TP_ERRORS)
     {
       GError *e = NULL;
       g_set_error_literal (&e, TP_ERRORS,
@@ -1088,8 +719,11 @@ error:
       error = e;
     }
 
-  tp_message_mixin_sent (channel, message, 0, NULL, error);
-  g_error_free (error);
+  if (error != NULL)
+    {
+      tp_message_mixin_sent (channel, message, 0, NULL, error);
+      g_error_free (error);
+    }
   g_free (text);
   g_free (token);
   return;

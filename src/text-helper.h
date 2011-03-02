@@ -25,6 +25,8 @@
 #include <telepathy-glib/channel.h>
 #include <wocky/wocky-stanza.h>
 
+#include "salut-contact.h"
+
 
 /* Utility functions for the helper user */
 gboolean
@@ -34,7 +36,7 @@ text_helper_parse_incoming_message (WockyStanza *stanza,
 
 WockyStanza *
 text_helper_create_message (const gchar *from,
-    const gchar *to, TpChannelTextMessageType type,
+    SalutContact *to, TpChannelTextMessageType type,
     const gchar *text, GError **error);
 
 WockyStanza *

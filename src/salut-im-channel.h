@@ -22,7 +22,6 @@
 
 #include <glib-object.h>
 #include <wocky/wocky-stanza.h>
-#include <gibber/gibber-xmpp-connection.h>
 
 #include <telepathy-glib/message-mixin.h>
 
@@ -59,9 +58,6 @@ GType salut_im_channel_get_type (void);
 #define SALUT_IM_CHANNEL_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_IM_CHANNEL, \
                               SalutImChannelClass))
-
-void salut_im_channel_add_connection (SalutImChannel *chan,
-    GibberXmppConnection *conn);
 
 void salut_im_channel_received_stanza (SalutImChannel *chan,
     WockyStanza *stanza);
