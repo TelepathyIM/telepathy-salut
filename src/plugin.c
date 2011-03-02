@@ -25,28 +25,11 @@
 #define DEBUG_FLAG DEBUG_PLUGINS
 #include "debug.h"
 
-GType
-salut_plugin_get_type (void)
+G_DEFINE_INTERFACE (SalutPlugin, salut_plugin, G_TYPE_OBJECT)
+
+static void
+salut_plugin_default_init (SalutPluginInterface *iface)
 {
-  static GType type = 0;
-
-  if (type == 0) {
-    static const GTypeInfo info = {
-      sizeof (SalutPluginInterface),
-      NULL,   /* base_init */
-      NULL,   /* base_finalize */
-      NULL,   /* class_init */
-      NULL,   /* class_finalize */
-      NULL,   /* class_data */
-      0,
-      0,      /* n_preallocs */
-      NULL    /* instance_init */
-    };
-
-    type = g_type_register_static (G_TYPE_INTERFACE, "SalutPlugin", &info, 0);
-  }
-
-  return type;
 }
 
 const gchar *
