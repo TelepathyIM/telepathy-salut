@@ -104,6 +104,8 @@ salut_connection_avatar_service_iface_init (gpointer g_iface,
 static void
 salut_conn_contact_caps_iface_init (gpointer, gpointer);
 
+#define DISCONNECT_TIMEOUT 5
+
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
@@ -215,6 +217,9 @@ struct _SalutConnectionPrivate
 #ifdef ENABLE_OLPC
   SalutOlpcActivityManager *olpc_activity_manager;
 #endif
+
+  /* timer used when trying to properly disconnect */
+  guint disconnect_timer;
 
   /* Backend type: avahi or dummy */
   GType backend_type;
@@ -3490,10 +3495,106 @@ salut_connection_get_unique_connection_name (TpBaseConnection *base)
 }
 
 static void
-salut_connection_shut_down (TpBaseConnection *self)
+force_close_cb (GObject *source,
+    GAsyncResult *res,
+    gpointer user_data)
 {
-  _salut_connection_disconnect (SALUT_CONNECTION (self));
-  tp_base_connection_finish_shutdown (self);
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  GError *error = NULL;
+
+  if (!wocky_porter_force_close_finish (WOCKY_PORTER (source),
+          res, &error))
+    {
+      DEBUG ("force close failed: %s", error->message);
+      g_error_free (error);
+    }
+  else
+    {
+      DEBUG ("connection properly closed (forced)");
+    }
+
+  tp_base_connection_finish_shutdown (base);
+}
+
+static void
+closed_cb (GObject *source,
+    GAsyncResult *res,
+    gpointer user_data)
+{
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+  SalutConnectionPrivate *priv = self->priv;
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  GError *error = NULL;
+
+  if (priv->disconnect_timer != 0)
+    {
+      /* stop the timer */
+      g_source_remove (priv->disconnect_timer);
+      priv->disconnect_timer = 0;
+    }
+
+  if (!wocky_porter_close_finish (WOCKY_PORTER (source), res, &error))
+    {
+      DEBUG ("close failed: %s", error->message);
+
+      if (g_error_matches (error, WOCKY_PORTER_ERROR,
+            WOCKY_PORTER_ERROR_FORCIBLY_CLOSED))
+        {
+          /* Close operation has been aborted because a force_close operation
+           * has been started. tp_base_connection_finish_shutdown will be
+           * called once this force_close operation is completed so we don't
+           * do it here. */
+
+          g_error_free (error);
+          return;
+        }
+
+      g_error_free (error);
+    }
+  else
+    {
+      DEBUG ("connection properly closed");
+    }
+
+  tp_base_connection_finish_shutdown (base);
+}
+
+static gboolean
+disconnect_timeout_cb (gpointer data)
+{
+  SalutConnection *self = SALUT_CONNECTION (data);
+  SalutConnectionPrivate *priv = self->priv;
+
+  DEBUG ("Close operation timed out. Force closing");
+  priv->disconnect_timer = 0;
+
+  wocky_porter_force_close_async (self->porter, NULL, force_close_cb, self);
+  return FALSE;
+}
+
+static void
+salut_connection_shut_down (TpBaseConnection *base)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
+  SalutConnectionPrivate *priv = self->priv;
+
+  _salut_connection_disconnect (self);
+
+  if (self->session != NULL)
+    {
+      DEBUG ("connection may still be open; closing it: %p", self);
+
+      g_assert (priv->disconnect_timer == 0);
+      priv->disconnect_timer = g_timeout_add_seconds (DISCONNECT_TIMEOUT,
+          disconnect_timeout_cb, self);
+
+      wocky_porter_close_async (self->porter, NULL, closed_cb, self);
+      return;
+    }
+
+  DEBUG ("session is not alive; clean up the base connection");
+  tp_base_connection_finish_shutdown (base);
 }
 
 static gboolean
