@@ -249,13 +249,12 @@ salut_avahi_discovery_client_create_muc_manager (SalutDiscoveryClient *client,
 static SalutRoomlistManager *
 salut_avahi_discovery_client_create_roomlist_manager (
     SalutDiscoveryClient *client,
-    SalutConnection *connection,
-    SalutXmppConnectionManager *xcm)
+    SalutConnection *connection)
 {
   SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (client);
 
   return SALUT_ROOMLIST_MANAGER (salut_avahi_roomlist_manager_new (connection,
-        xcm, self));
+        self));
 }
 
 /*

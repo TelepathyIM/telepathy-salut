@@ -3458,7 +3458,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
       priv->discovery_client, self, priv->xmpp_connection_manager);
 
   priv->roomlist_manager = salut_discovery_client_create_roomlist_manager (
-      priv->discovery_client, self, priv->xmpp_connection_manager);
+      priv->discovery_client, self);
 
 #if 0
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager,
