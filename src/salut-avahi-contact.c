@@ -204,6 +204,59 @@ salut_avahi_contact_get_addresses (SalutContact *contact)
   return addresses;
 }
 
+static gchar *
+salut_avahi_contact_dup_jid (WockyContact *contact)
+{
+  SalutContact *self = SALUT_CONTACT (contact);
+
+  return g_strdup (self->name);
+}
+
+static GList *
+salut_avahi_contact_ll_get_addresses (WockyLLContact *contact)
+{
+  SalutAvahiContact *self = SALUT_AVAHI_CONTACT (contact);
+  SalutAvahiContactPrivate *priv = self->priv;
+  GList *addresses = NULL;
+  GSList *l;
+
+  for (l = priv->resolvers; l != NULL; l = l->next)
+    {
+      GaServiceResolver *resolver = l->data;
+      AvahiAddress address;
+      guint16 port;
+      AvahiIfIndex ifindex;
+
+      g_object_get (resolver, "interface", &ifindex, NULL);
+      if (ga_service_resolver_get_address (resolver, &address, &port))
+        {
+          GInetAddress *addr;
+          GSocketAddress *socket_address;
+
+          if (address.proto == AVAHI_PROTO_INET)
+            {
+              addr = g_inet_address_new_from_bytes (
+                  (guint8 *) &(address.data.ipv4.address), G_SOCKET_FAMILY_IPV4);
+            }
+          else if (address.proto == AVAHI_PROTO_INET6)
+            {
+              addr = g_inet_address_new_from_bytes (
+                  (guint8 *) &(address.data.ipv6.address), G_SOCKET_FAMILY_IPV6);
+            }
+          else
+            g_assert_not_reached ();
+
+          socket_address = g_inet_socket_address_new (addr, port);
+          /* socket_address owns addr now */
+          g_object_unref (addr);
+
+          addresses = g_list_append (addresses, socket_address);
+        }
+    }
+
+  return addresses;
+}
+
 static gint
 _compare_address (GaServiceResolver *resolver,
                   struct sockaddr *addr_b)
@@ -365,6 +418,10 @@ salut_avahi_contact_class_init (
   GObjectClass *object_class = G_OBJECT_CLASS (salut_avahi_contact_class);
   SalutContactClass *contact_class = SALUT_CONTACT_CLASS (
       salut_avahi_contact_class);
+  WockyContactClass *w_contact_class = WOCKY_CONTACT_CLASS (
+      salut_avahi_contact_class);
+  WockyLLContactClass *ll_contact_class = WOCKY_LL_CONTACT_CLASS (
+      salut_avahi_contact_class);
   GParamSpec *param_spec;
 
   g_type_class_add_private (salut_avahi_contact_class,
@@ -378,6 +435,9 @@ salut_avahi_contact_class_init (
   contact_class->get_addresses = salut_avahi_contact_get_addresses;
   contact_class->has_address = salut_avahi_contact_has_address;
   contact_class->retrieve_avatar = salut_avahi_contact_retrieve_avatar;
+
+  w_contact_class->dup_jid = salut_avahi_contact_dup_jid;
+  ll_contact_class->get_addresses = salut_avahi_contact_ll_get_addresses;
 
   param_spec = g_param_spec_object (
       "discovery-client",

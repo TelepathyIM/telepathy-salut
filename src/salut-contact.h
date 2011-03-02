@@ -33,6 +33,8 @@
 #include "salut-olpc-activity.h"
 #endif
 
+#include <wocky/wocky-ll-contact.h>
+
 G_BEGIN_DECLS
 
 #define  SALUT_CONTACT_ALIAS_CHANGED  0x1
@@ -49,7 +51,7 @@ typedef struct _SalutContactClass SalutContactClass;
 typedef struct _SalutContactPrivate SalutContactPrivate;
 
 struct _SalutContactClass {
-    GObjectClass parent_class;
+    WockyLLContactClass parent_class;
 
     /* public abstract methods */
     GArray * (*get_addresses) (SalutContact *contact);
@@ -61,7 +63,7 @@ struct _SalutContactClass {
 };
 
 struct _SalutContact {
-    GObject parent;
+    WockyLLContact parent;
     gchar *name;
     SalutPresenceId status;
     gchar *avatar_token;

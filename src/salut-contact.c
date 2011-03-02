@@ -36,7 +36,7 @@
   DEBUG ("Contact %s: " format, contact->name, ##__VA_ARGS__);  \
 } G_STMT_END
 
-G_DEFINE_TYPE(SalutContact, salut_contact, G_TYPE_OBJECT)
+G_DEFINE_TYPE(SalutContact, salut_contact, WOCKY_TYPE_LL_CONTACT)
 
 /* properties */
 enum {
