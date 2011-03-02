@@ -26,7 +26,6 @@
 #include "salut-im-channel.h"
 #include "salut-im-manager.h"
 #include "salut-contact.h"
-#include "salut-xmpp-connection-manager.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
@@ -60,7 +59,6 @@ enum
 {
   PROP_CONNECTION = 1,
   PROP_CONTACT_MANAGER,
-  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -71,9 +69,9 @@ struct _SalutImManagerPrivate
 {
   SalutContactManager *contact_manager;
   SalutConnection *connection;
-  SalutXmppConnectionManager *xmpp_connection_manager;
   GHashTable *channels;
   gulong status_changed_id;
+  guint message_handler_id;
   gboolean dispose_has_run;
 };
 
@@ -91,37 +89,9 @@ salut_im_manager_init (SalutImManager *obj)
 }
 
 static gboolean
-message_stanza_filter (SalutXmppConnectionManager *mgr,
-                       GibberXmppConnection *conn,
-                       WockyStanza *stanza,
-                       SalutContact *contact,
-                       gpointer user_data)
-{
-  SalutImManager *self = SALUT_IM_MANAGER (user_data);
-  SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
-  TpHandle handle;
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
-       TP_HANDLE_TYPE_CONTACT);
-
-  if (!salut_im_channel_is_text_message (stanza))
-    return FALSE;
-
-  handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
-  g_assert (handle != 0);
-
-  /* We are interested by this stanza only if we need to create a new text
-   * channel to handle it */
-  return (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle))
-        == NULL);
-}
-
-static void
-message_stanza_callback (SalutXmppConnectionManager *mgr,
-                         GibberXmppConnection *conn,
-                         WockyStanza *stanza,
-                         SalutContact *contact,
-                         gpointer user_data)
+message_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza,
+    gpointer user_data)
 {
   SalutImManager *self = SALUT_IM_MANAGER (user_data);
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
@@ -130,13 +100,20 @@ message_stanza_callback (SalutXmppConnectionManager *mgr,
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
        TP_HANDLE_TYPE_CONTACT);
+  SalutContact *contact;
+
+  contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);
 
+  if (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle)) != NULL)
+    return FALSE; /* we only care about opening new channels */
+
   chan = salut_im_manager_new_channel (self, handle, handle, NULL);
-  salut_im_channel_add_connection (chan, conn);
   salut_im_channel_received_stanza (chan, stanza);
+
+  return TRUE;
 }
 
 static void
@@ -193,9 +170,6 @@ salut_im_manager_get_property (GObject *object,
       case PROP_CONTACT_MANAGER:
         g_value_set_object (value, priv->contact_manager);
         break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        g_value_set_object (value, priv->xmpp_connection_manager);
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -219,9 +193,6 @@ salut_im_manager_set_property (GObject *object,
       case PROP_CONTACT_MANAGER:
         priv->contact_manager = g_value_dup_object (value);
         break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        priv->xmpp_connection_manager = g_value_dup_object (value);
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -243,9 +214,11 @@ salut_im_manager_constructor (GType type,
   self = SALUT_IM_MANAGER (obj);
   priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
 
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      message_stanza_filter, message_stanza_callback, self);
+  priv->message_handler_id = wocky_porter_register_handler_from_anyone (
+      priv->connection->porter, WOCKY_STANZA_TYPE_MESSAGE,
+      WOCKY_STANZA_SUB_TYPE_NONE,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      message_stanza_callback, self, NULL);
 
   priv->status_changed_id = g_signal_connect (priv->connection,
       "status-changed", (GCallback) connection_status_changed_cb, self);
@@ -287,17 +260,6 @@ salut_im_manager_class_init (SalutImManagerClass *salut_im_manager_class)
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
       param_spec);
-
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "Salut Xmpp Connection Manager associated with the Salut Connection "
-      "of this manager",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
-      param_spec);
 }
 
 void
@@ -311,20 +273,17 @@ salut_im_manager_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      message_stanza_filter, message_stanza_callback, self);
+  if (priv->connection->porter != NULL)
+    {
+      wocky_porter_unregister_handler (priv->connection->porter,
+          priv->message_handler_id);
+      priv->message_handler_id = 0;
+    }
 
   if (priv->contact_manager)
     {
       g_object_unref (priv->contact_manager);
       priv->contact_manager = NULL;
-    }
-
-  if (priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
     }
 
   salut_im_factory_close_all (self);
@@ -598,7 +557,6 @@ salut_im_manager_new_channel (SalutImManager *mgr,
       "object-path", path,
       "handle", handle,
       "initiator-handle", initiator,
-      "xmpp-connection-manager", priv->xmpp_connection_manager,
       NULL);
   g_object_unref (contact);
   g_free (path);
@@ -620,13 +578,11 @@ salut_im_manager_new_channel (SalutImManager *mgr,
 /* public functions */
 SalutImManager *
 salut_im_manager_new (SalutConnection *connection,
-                      SalutContactManager *contact_manager,
-                      SalutXmppConnectionManager *xmpp_connection_manager)
+                      SalutContactManager *contact_manager)
 {
   return g_object_new (SALUT_TYPE_IM_MANAGER,
       "connection", connection,
       "contact-manager", contact_manager,
-      "xmpp-connection-manager", xmpp_connection_manager,
       NULL);
 }
 

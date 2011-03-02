@@ -3450,8 +3450,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
    *        being called before this; should telepathy-glib guarantee that or
    *        should we be defensive?
    */
-  priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
+  priv->im_manager = salut_im_manager_new (self, priv->contact_manager);
 
   priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
       priv->xmpp_connection_manager);
