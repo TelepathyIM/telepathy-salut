@@ -24,6 +24,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <wocky/wocky-stanza.h>
+#include <wocky/wocky-session.h>
 
 /* Mapping a XMPP node with a GHashTable */
 GHashTable *salut_wocky_node_extract_properties (WockyNode *node,
@@ -31,5 +32,8 @@ GHashTable *salut_wocky_node_extract_properties (WockyNode *node,
 void salut_wocky_node_add_children_from_properties (WockyNode *node,
     GHashTable *properties, const gchar *prop);
 gchar *salut_generate_id (void);
+
+void salut_send_ll_pep_event (WockySession *session,
+    WockyStanza *stanza);
 
 #endif /* __SALUT_UTIL_H__ */
