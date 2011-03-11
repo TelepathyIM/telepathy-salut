@@ -1,0 +1,12 @@
+prefix=
+exec_prefix=
+abs_top_srcdir=@abs_top_srcdir@
+abs_top_builddir=@abs_top_builddir@
+libdir=@libdir@
+
+salutpath=@abs_top_builddir@/src/telepathy-salut
+
+Name: Telepathy-Salut
+Description: Local XMPP backend for the Telepathy framework
+Version: @VERSION@
+Requires: pkg-config >= 0.21

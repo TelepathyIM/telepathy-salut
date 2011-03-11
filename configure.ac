@@ -221,6 +221,8 @@ AC_OUTPUT( Makefile                       \
            lib/gibber/tests/Makefile      \
            lib/gibber/tests/inputs/Makefile \
            src/Makefile                   \
+           src/telepathy-salut-uninstalled.pc \
+           src/telepathy-salut.pc         \
            m4/Makefile                    \
            data/Makefile                  \
            extensions/Makefile            \
