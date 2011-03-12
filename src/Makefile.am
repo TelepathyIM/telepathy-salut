@@ -14,6 +14,10 @@ dist-hook:
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = telepathy-salut.pc
 
+EXTRA_DIST = \
+    telepathy-salut.pc.in \
+    telepathy-salut-uninstalled.pc.in
+
 libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 

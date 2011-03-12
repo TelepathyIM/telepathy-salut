@@ -6,7 +6,7 @@ libdir=@libdir@
 
 salutpath=@abs_top_builddir@/src/telepathy-salut
 
-Name: Telepathy-Salut
-Description: Local XMPP backend for the Telepathy framework
+Name: Telepathy-Salut (uninstalled)
+Description: Local XMPP backend for the Telepathy framework (uninstalled)
 Version: @VERSION@
 Requires: pkg-config >= 0.21
