@@ -1022,7 +1022,7 @@ invite_stanza_callback (WockyPorter *porter,
   const gchar **p;
   GHashTable *params_hash;
   GibberMucConnection *connection = NULL;
-  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
+  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   invite = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
         "invite", GIBBER_TELEPATHY_NS_CLIQUE);

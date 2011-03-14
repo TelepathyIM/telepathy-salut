@@ -101,7 +101,7 @@ message_stanza_callback (WockyPorter *porter,
        TP_HANDLE_TYPE_CONTACT);
   SalutContact *contact;
 
-  contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
+  contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
   g_assert (handle != 0);

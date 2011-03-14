@@ -650,7 +650,7 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
       to = tp_handle_inspect (contact_repo, contact_handle);
       wocky_node_set_attribute (top_node, "to", to);
 
-      wocky_stanza_set_contact (msg, WOCKY_CONTACT (contact));
+      wocky_stanza_set_to_contact (msg, WOCKY_CONTACT (contact));
       wocky_porter_send (self->connection->porter, msg);
 
       g_object_unref (contact);

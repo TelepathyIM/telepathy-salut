@@ -496,8 +496,8 @@ gibber_file_transfer_send_stanza (GibberFileTransfer *self,
                                   WockyStanza *stanza,
                                   GError **error)
 {
-  if (wocky_stanza_get_contact (stanza) == NULL)
-    wocky_stanza_set_contact (stanza, self->priv->contact);
+  if (wocky_stanza_get_to_contact (stanza) == NULL)
+    wocky_stanza_set_to_contact (stanza, self->priv->contact);
 
   wocky_porter_send (self->priv->porter, stanza);
 

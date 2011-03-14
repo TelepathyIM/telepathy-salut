@@ -3261,7 +3261,7 @@ uninvite_stanza_callback (WockyPorter *porter,
   const gchar *room, *activity_id;
   SalutOlpcActivity *activity;
   WockyNode *top_node = wocky_stanza_get_top_node (stanza);
-  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_contact (stanza));
+  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   node = wocky_node_get_child_ns (top_node, "uninvite",
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);

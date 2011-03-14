@@ -95,7 +95,7 @@ create_message_stanza (const gchar *from, const gchar *to,
     }
 
   if (contact != NULL)
-    wocky_stanza_set_contact (stanza, WOCKY_CONTACT (contact));
+    wocky_stanza_set_to_contact (stanza, WOCKY_CONTACT (contact));
 
   return stanza;
 }

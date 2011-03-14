@@ -271,7 +271,7 @@ caps_req_stanza_callback (WockyPorter *porter,
   GSList *features;
   WockyContact *contact;
 
-  contact = wocky_stanza_get_contact (stanza);
+  contact = wocky_stanza_get_from_contact (stanza);
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);

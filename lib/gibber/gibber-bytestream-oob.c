@@ -858,7 +858,7 @@ bytestream_closed (GibberBytestreamOOB *self)
        * finished to use the OOB */
       stanza = make_iq_oob_sucess_response (priv->self_id,
           priv->peer_id, priv->stream_open_id);
-      wocky_stanza_set_contact (stanza, priv->contact);
+      wocky_stanza_set_to_contact (stanza, priv->contact);
 
       DEBUG ("send OOB close stanza");
 
@@ -1041,7 +1041,7 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   stanza = make_oob_init_iq (priv->self_id, priv->peer_id,
       priv->stream_id, url);
   g_free (url);
-  wocky_stanza_set_contact (stanza, priv->contact);
+  wocky_stanza_set_to_contact (stanza, priv->contact);
   node = wocky_stanza_get_top_node (stanza);
 
   id = wocky_node_get_attribute (node, "id");

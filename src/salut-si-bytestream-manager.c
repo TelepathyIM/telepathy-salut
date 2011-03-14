@@ -286,7 +286,7 @@ si_request_cb (WockyPorter *porter,
   WockyNode *si, *node;
   const gchar *profile, *from, *stream_id, *stream_init_id, *mime_type;
   GSList *stream_methods = NULL;
-  WockyContact *contact = wocky_stanza_get_contact (stanza);
+  WockyContact *contact = wocky_stanza_get_from_contact (stanza);
 
    /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
