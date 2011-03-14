@@ -209,7 +209,7 @@ bytestream_state_changed (GibberBytestreamIface *bytestream,
       DEBUG ("bytestream closed, release the connection");
       g_object_get (bytestream, "porter", &porter, NULL);
 
-      wocky_meta_porter_unref (porter, contact);
+      wocky_meta_porter_unhold (porter, contact);
 
       g_object_unref (porter);
       g_object_unref (bytestream);
@@ -345,7 +345,7 @@ si_request_cb (WockyPorter *porter,
   /* As bytestreams are not porter aware, they can't take/release
    * the connection so we do it for them.
    * We'll release it when the bytestream will be closed */
-  wocky_meta_porter_ref (WOCKY_META_PORTER (porter), contact);
+  wocky_meta_porter_hold (WOCKY_META_PORTER (porter), contact);
 
   g_signal_connect (bytestream, "state-changed",
      G_CALLBACK (bytestream_state_changed), contact);
@@ -848,7 +848,7 @@ si_request_sent_cb (GObject *source_object,
   /* As bytestreams are not porter aware, they can't take/release
    * the connection so we do it for them.
    * We'll release it when the bytestream will be closed */
-  wocky_meta_porter_ref (WOCKY_META_PORTER (porter),
+  wocky_meta_porter_hold (WOCKY_META_PORTER (porter),
       WOCKY_CONTACT (data->contact));
 
   g_signal_connect (bytestream, "state-changed",

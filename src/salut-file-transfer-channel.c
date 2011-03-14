@@ -438,7 +438,7 @@ salut_file_transfer_channel_constructor (GType type,
   base_conn = TP_BASE_CONNECTION (self->priv->connection);
 
   /* ref our porter */
-  wocky_meta_porter_ref (WOCKY_META_PORTER (self->priv->connection->porter),
+  wocky_meta_porter_hold (WOCKY_META_PORTER (self->priv->connection->porter),
       WOCKY_CONTACT (self->priv->contact));
 
   contact_repo = tp_base_connection_get_handles (base_conn,
@@ -1001,7 +1001,7 @@ ft_finished_cb (GibberFileTransfer *ft,
       TP_FILE_TRANSFER_STATE_COMPLETED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
-  wocky_meta_porter_unref (WOCKY_META_PORTER (porter),
+  wocky_meta_porter_unhold (WOCKY_META_PORTER (porter),
       WOCKY_CONTACT (self->priv->contact));
 }
 
@@ -1018,7 +1018,7 @@ ft_remote_cancelled_cb (GibberFileTransfer *ft,
       TP_FILE_TRANSFER_STATE_CANCELLED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
 
-  wocky_meta_porter_unref (WOCKY_META_PORTER (porter),
+  wocky_meta_porter_unhold (WOCKY_META_PORTER (porter),
       WOCKY_CONTACT (self->priv->contact));
 }
 

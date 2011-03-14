@@ -117,7 +117,7 @@ salut_im_channel_do_close (SalutImChannel *self)
       priv->message_handler_id);
   priv->message_handler_id = 0;
 
-  wocky_meta_porter_unref (WOCKY_META_PORTER (porter),
+  wocky_meta_porter_unhold (WOCKY_META_PORTER (porter),
       WOCKY_CONTACT (priv->contact));
 
   DEBUG ("Emitting closed signal for %s", priv->object_path);
@@ -336,7 +336,7 @@ salut_im_channel_constructor (GType type,
   g_free (jid);
 
   /* ensure the connection doesn't close */
-  wocky_meta_porter_ref (WOCKY_META_PORTER (porter),
+  wocky_meta_porter_hold (WOCKY_META_PORTER (porter),
       WOCKY_CONTACT (priv->contact));
 
   return obj;

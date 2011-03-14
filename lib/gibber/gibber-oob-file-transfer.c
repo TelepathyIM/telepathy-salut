@@ -838,7 +838,7 @@ porter_open_cb (GObject *source_object,
 
 out:
   /* this was reffed when calling open_async */
-  wocky_meta_porter_unref (porter, contact);
+  wocky_meta_porter_unhold (porter, contact);
   g_object_unref (contact);
 }
 

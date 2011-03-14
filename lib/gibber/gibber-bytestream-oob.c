@@ -341,7 +341,7 @@ opened_cb (GObject *source_object,
 
   g_free (priv->url);
 
-  wocky_meta_porter_unref (porter, priv->contact);
+  wocky_meta_porter_unhold (porter, priv->contact);
 }
 
 static gboolean
