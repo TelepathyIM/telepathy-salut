@@ -35,14 +35,13 @@
 
 #include <wocky/wocky-stanza.h>
 
+#include "salut/connection.h"
 
 G_BEGIN_DECLS
 
 typedef struct _SalutPresenceCache SalutPresenceCache;
 typedef struct _SalutDisco SalutDisco;
 
-typedef struct _SalutConnection SalutConnection;
-typedef struct _SalutConnectionClass SalutConnectionClass;
 typedef struct _SalutConnectionPrivate SalutConnectionPrivate;
 
 struct _SalutConnectionClass {
@@ -65,22 +64,6 @@ struct _SalutConnection {
 
   SalutConnectionPrivate *priv;
 };
-
-GType salut_connection_get_type (void);
-
-/* TYPE MACROS */
-#define SALUT_TYPE_CONNECTION \
-  (salut_connection_get_type ())
-#define SALUT_CONNECTION(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONNECTION, SalutConnection))
-#define SALUT_CONNECTION_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_CONNECTION, SalutConnectionClass))
-#define SALUT_IS_CONNECTION(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_CONNECTION))
-#define SALUT_IS_CONNECTION_CLASS(klass) \
-  (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_CONNECTION))
-#define SALUT_CONNECTION_GET_CLASS(obj) \
-  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONNECTION, SalutConnectionClass))
 
 typedef enum {
   LIST_HANDLE_PUBLISH = 1,
