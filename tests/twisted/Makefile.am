@@ -2,6 +2,7 @@ TWISTED_TESTS =
 
 TWISTED_BASIC_TESTS = \
 	cm/protocol.py \
+	sidecars.py \
 	$(NULL)
 
 TWISTED_AVAHI_TESTS = \
@@ -85,8 +86,17 @@ check-twisted:
 		exit 1;\
 	fi
 
+if ENABLE_PLUGINS
+PLUGINS_ENABLED_PYBOOL = True
+else
+PLUGINS_ENABLED_PYBOOL = False
+endif
+
 config.py: Makefile
-	$(AM_V_GEN)echo "PACKAGE_STRING = \"$(PACKAGE_STRING)\"" > config.py
+	$(AM_V_GEN) { \
+		echo "PACKAGE_STRING = \"$(PACKAGE_STRING)\""; \
+		echo "PLUGINS_ENABLED = $(PLUGINS_ENABLED_PYBOOL)"; \
+	} > $@
 
 BUILT_SOURCES = config.py
 
