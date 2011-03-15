@@ -27,6 +27,6 @@ test_la_LDFLAGS = $(AM_LDFLAGS) -rpath $(plugindir)
 
 AM_CFLAGS = $(ERROR_CFLAGS) \
     -I $(top_srcdir) -I $(top_builddir) \
-    @GLIB_CFLAGS@ @TELEPATHY_GLIB_CFLAGS@ \
+    @GLIB_CFLAGS@ @TELEPATHY_GLIB_CFLAGS@ @WOCKY_CFLAGS@ \
     -I $(top_srcdir)/salut -I $(top_builddir)/salut \
     -I $(top_srcdir)/plugins

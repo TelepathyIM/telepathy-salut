@@ -90,13 +90,17 @@ plugin_loader_try_to_load (
     }
   else
     {
+      gchar *sidecars = g_strjoinv (", ",
+          (gchar **) salut_plugin_get_sidecar_interfaces (plugin));
       const gchar *version = salut_plugin_get_version (plugin);
 
       if (version == NULL)
         version = "(unspecified)";
 
-      DEBUG ("loaded '%s' version %s (%s)",
-          salut_plugin_get_name (plugin), version, path);
+      DEBUG ("loaded '%s' version %s (%s), implementing these sidecars: %s",
+          salut_plugin_get_name (plugin), version, path, sidecars);
+
+      g_free (sidecars);
 
       g_ptr_array_add (self->priv->plugins, plugin);
     }
@@ -224,6 +228,86 @@ SalutPluginLoader *
 salut_plugin_loader_dup ()
 {
   return g_object_new (SALUT_TYPE_PLUGIN_LOADER, NULL);
+}
+
+static void
+create_sidecar_cb (
+    GObject *plugin_obj,
+    GAsyncResult *nested_result,
+    gpointer user_data)
+{
+  GSimpleAsyncResult *result = user_data;
+  SalutSidecar *sidecar;
+  GError *error = NULL;
+
+  sidecar = salut_plugin_create_sidecar_finish (SALUT_PLUGIN (plugin_obj),
+      nested_result, &error);
+
+  if (sidecar == NULL)
+    {
+      g_simple_async_result_set_from_error (result, error);
+      g_clear_error (&error);
+    }
+  else
+    {
+      g_simple_async_result_set_op_res_gpointer (result, sidecar,
+          g_object_unref);
+    }
+
+  g_simple_async_result_complete (result);
+  g_object_unref (result);
+}
+
+void
+salut_plugin_loader_create_sidecar_async (
+    SalutPluginLoader *self,
+    const gchar *sidecar_interface,
+    SalutConnection *connection,
+    WockySession *session,
+    GAsyncReadyCallback callback,
+    gpointer user_data)
+{
+  SalutPluginLoaderPrivate *priv = self->priv;
+  guint i;
+
+  for (i = 0; i < priv->plugins->len; i++)
+    {
+      SalutPlugin *p = g_ptr_array_index (priv->plugins, i);
+
+      if (salut_plugin_implements_sidecar (p, sidecar_interface))
+        {
+          GSimpleAsyncResult *res = g_simple_async_result_new (G_OBJECT (self),
+              callback, user_data, salut_plugin_loader_create_sidecar_async);
+
+          salut_plugin_create_sidecar_async (p, sidecar_interface, connection, session,
+              create_sidecar_cb, res);
+          return;
+        }
+    }
+
+  g_simple_async_report_error_in_idle (G_OBJECT (self), callback, user_data,
+      TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED, "No plugin implements sidecar '%s'",
+      sidecar_interface);
+}
+
+SalutSidecar *
+salut_plugin_loader_create_sidecar_finish (
+    SalutPluginLoader *self,
+    GAsyncResult *result,
+    GError **error)
+{
+  SalutSidecar *sidecar;
+
+  if (g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (result),
+          error))
+    return NULL;
+
+  g_return_val_if_fail (g_simple_async_result_is_valid (result,
+          G_OBJECT (self), salut_plugin_loader_create_sidecar_async), NULL);
+
+  sidecar = SALUT_SIDECAR (g_simple_async_result_get_op_res_gpointer (
+      G_SIMPLE_ASYNC_RESULT (result)));
+  return g_object_ref (sidecar);
 }
 
 void

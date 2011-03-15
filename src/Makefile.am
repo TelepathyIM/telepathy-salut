@@ -90,7 +90,10 @@ CORE_SOURCES =                                          \
     plugin-loader.c                                     \
     plugin-loader.h                                     \
     $(top_srcdir)/salut/plugin.h                        \
-    plugin.c
+    plugin.c						\
+    $(top_srcdir)/salut/connection.h			\
+    $(top_srcdir)/salut/sidecar.h			\
+    sidecar.c
 
 AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.h                      \

@@ -6,6 +6,7 @@ salutincludedir = $(includedir)/telepathy-salut-0/salut
 salutinclude_HEADERS = \
     connection.h \
     plugin.h \
-    protocol.h
+    protocol.h \
+    sidecar.h
 
 endif

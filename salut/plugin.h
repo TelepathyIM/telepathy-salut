@@ -26,6 +26,11 @@
 #include <telepathy-glib/base-connection-manager.h>
 #include <telepathy-glib/base-connection.h>
 
+#include <wocky/wocky-session.h>
+
+#include <salut/connection.h>
+#include <salut/sidecar.h>
+
 G_BEGIN_DECLS
 
 #define SALUT_TYPE_PLUGIN (salut_plugin_get_type ())
@@ -39,6 +44,14 @@ G_BEGIN_DECLS
 
 typedef struct _SalutPlugin SalutPlugin;
 typedef struct _SalutPluginInterface SalutPluginInterface;
+
+typedef void (*SalutPluginCreateSidecarImpl) (
+    SalutPlugin *plugin,
+    const gchar *sidecar_interface,
+    SalutConnection *connection,
+    WockySession *session,
+    GAsyncReadyCallback callback,
+    gpointer user_data);
 
 /* The caller of this function takes ownership of the returned
  * GPtrArray and the channel managers inside the array. This has the
@@ -75,6 +88,17 @@ struct _SalutPluginInterface
   const gchar *version;
 
   /**
+   * A %NULL-terminated array of strings listing the sidecar D-Bus interfaces
+   * implemented by this plugin.
+   */
+  const gchar * const *sidecar_interfaces;
+
+  /**
+   * An implementation of salut_plugin_create_sidecar().
+   */
+  SalutPluginCreateSidecarImpl create_sidecar;
+
+  /**
    * An implementation of salut_plugin_initialize().
    */
   SalutPluginInitializeImpl initialize;
@@ -93,6 +117,25 @@ const gchar * salut_plugin_get_name (
     SalutPlugin *plugin);
 const gchar * salut_plugin_get_version (
     SalutPlugin *plugin);
+const gchar * const *salut_plugin_get_sidecar_interfaces (
+    SalutPlugin *plugin);
+
+gboolean salut_plugin_implements_sidecar (
+    SalutPlugin *plugin,
+    const gchar *sidecar_interface);
+
+void salut_plugin_create_sidecar_async (
+    SalutPlugin *plugin,
+    const gchar *sidecar_interface,
+    SalutConnection *connection,
+    WockySession *session,
+    GAsyncReadyCallback callback,
+    gpointer user_data);
+
+SalutSidecar * salut_plugin_create_sidecar_finish (
+    SalutPlugin *plugin,
+    GAsyncResult *result,
+    GError **error);
 
 void salut_plugin_initialize (
     SalutPlugin *plugin,

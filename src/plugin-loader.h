@@ -25,6 +25,10 @@
 #include <telepathy-glib/base-connection-manager.h>
 #include <telepathy-glib/base-connection.h>
 
+#include <wocky/wocky-session.h>
+
+#include "salut/sidecar.h"
+
 typedef struct _SalutPluginLoader SalutPluginLoader;
 typedef struct _SalutPluginLoaderClass SalutPluginLoaderClass;
 typedef struct _SalutPluginLoaderPrivate SalutPluginLoaderPrivate;
@@ -59,6 +63,19 @@ GType salut_plugin_loader_get_type (void);
                               SalutPluginLoaderClass))
 
 SalutPluginLoader * salut_plugin_loader_dup (void);
+
+void salut_plugin_loader_create_sidecar_async (
+    SalutPluginLoader *self,
+    const gchar *sidecar_interface,
+    SalutConnection *connection,
+    WockySession *session,
+    GAsyncReadyCallback callback,
+    gpointer user_data);
+
+SalutSidecar *salut_plugin_loader_create_sidecar_finish (
+    SalutPluginLoader *self,
+    GAsyncResult *result,
+    GError **error);
 
 void salut_plugin_loader_initialize (
     SalutPluginLoader *self,
