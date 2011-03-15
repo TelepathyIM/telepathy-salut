@@ -149,13 +149,5 @@ lib/gibber/tests/sasl-test.db
 lib/gibber/tests/test-xmpp-connection
 lib/gibber/tests/test-r-multicast-transport-io
 
-lib/gibber/tests/check-gibber-iq-helper
-lib/gibber/tests/check-gibber-listener
-lib/gibber/tests/check-gibber-r-multicast-causal-transport
-lib/gibber/tests/check-gibber-r-multicast-packet
-lib/gibber/tests/check-gibber-r-multicast-sender
-lib/gibber/tests/check-gibber-unix-transport
-lib/gibber/tests/check-gibber-xmpp-connection
-lib/gibber/tests/check-gibber-xmpp-connection-listener
-lib/gibber/tests/check-gibber-xmpp-error
-lib/gibber/tests/check-gibber-xmpp-reader
+salut/telepathy-salut.pc
+salut/telepathy-salut-uninstalled.pc

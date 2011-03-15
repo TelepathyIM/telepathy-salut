@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = tools extensions lib src data m4 tests docs
+SUBDIRS = tools extensions lib src data m4 tests docs plugins salut
 
 DISTCHECK_CONFIGURE_FLAGS = --disable-debug --enable-gtk-doc
 

@@ -31,10 +31,8 @@
 #include "salut-muc-manager.h"
 #include "salut-roomlist-manager.h"
 #include "salut-tubes-manager.h"
+#include "salut-avahi-discovery-client.h"
 
-#define PROTOCOL_NAME "local-xmpp"
-#define ICON_NAME "im-" PROTOCOL_NAME
-#define ENGLISH_NAME "Link-local XMPP"
 /* there is no appropriate vCard field for this protocol */
 #define VCARD_FIELD_NAME ""
 
@@ -44,11 +42,17 @@ G_DEFINE_TYPE (SalutProtocol,
 
 enum {
     PROP_BACKEND = 1,
+    PROP_DNSSD_NAME,
+    PROP_ENGLISH_NAME,
+    PROP_ICON_NAME
 };
 
 struct _SalutProtocolPrivate
 {
   GType backend_type;
+  gchar *english_name;
+  gchar *icon_name;
+  gchar *dnssd_name;
 };
 
 static const TpCMParamSpec salut_params[] = {
@@ -88,7 +92,9 @@ new_connection (TpBaseProtocol *protocol,
   guint i;
 
   obj = g_object_new (SALUT_TYPE_CONNECTION,
-      "protocol", PROTOCOL_NAME,
+      "protocol", tp_base_protocol_get_name (protocol),
+      /* deliberately set :dnssd-name before backend-type */
+      "dnssd-name", self->priv->dnssd_name,
       "backend-type", self->priv->backend_type,
       NULL);
 
@@ -138,6 +144,8 @@ get_connection_details (TpBaseProtocol *self,
     gchar **english_name,
     gchar **vcard_field)
 {
+  SalutProtocolPrivate *priv = SALUT_PROTOCOL (self)->priv;
+
   if (connection_interfaces != NULL)
     {
       *connection_interfaces = g_strdupv (
@@ -160,7 +168,7 @@ get_connection_details (TpBaseProtocol *self,
 
   if (icon_name != NULL)
     {
-      *icon_name = g_strdup (ICON_NAME);
+      *icon_name = g_strdup (priv->icon_name);
     }
 
   if (vcard_field != NULL)
@@ -170,7 +178,7 @@ get_connection_details (TpBaseProtocol *self,
 
   if (english_name != NULL)
     {
-      *english_name = g_strdup (ENGLISH_NAME);
+      *english_name = g_strdup (priv->english_name);
     }
 }
 
@@ -186,6 +194,18 @@ salut_protocol_get_property (GObject *object,
     {
       case PROP_BACKEND:
         g_value_set_gtype (value, self->priv->backend_type);
+        break;
+
+      case PROP_DNSSD_NAME:
+        g_value_set_string (value, self->priv->dnssd_name);
+        break;
+
+      case PROP_ENGLISH_NAME:
+        g_value_set_string (value, self->priv->english_name);
+        break;
+
+      case PROP_ICON_NAME:
+        g_value_set_string (value, self->priv->icon_name);
         break;
 
       default:
@@ -205,7 +225,26 @@ salut_protocol_set_property (GObject *object,
   switch (property_id)
     {
       case PROP_BACKEND:
-        self->priv->backend_type = g_value_get_gtype (value);
+        {
+          GType type = g_value_get_gtype (value);
+
+          if (type == G_TYPE_NONE)
+            type = SALUT_TYPE_AVAHI_DISCOVERY_CLIENT;
+
+          self->priv->backend_type = type;
+        }
+        break;
+
+      case PROP_DNSSD_NAME:
+        self->priv->dnssd_name = g_value_dup_string (value);
+        break;
+
+      case PROP_ENGLISH_NAME:
+        self->priv->english_name = g_value_dup_string (value);
+        break;
+
+      case PROP_ICON_NAME:
+        self->priv->icon_name = g_value_dup_string (value);
         break;
 
       default:
@@ -213,6 +252,20 @@ salut_protocol_set_property (GObject *object,
         break;
     }
 }
+
+static void
+salut_protocol_finalize (GObject *object)
+{
+  SalutProtocol *self = SALUT_PROTOCOL (object);
+
+  tp_clear_pointer (&self->priv->english_name, g_free);
+  tp_clear_pointer (&self->priv->icon_name, g_free);
+  tp_clear_pointer (&self->priv->dnssd_name, g_free);
+
+  if (G_OBJECT_CLASS (salut_protocol_parent_class)->finalize)
+    G_OBJECT_CLASS (salut_protocol_parent_class)->finalize (object);
+}
+
 
 static void
 salut_protocol_class_init (SalutProtocolClass *klass)
@@ -232,19 +285,45 @@ salut_protocol_class_init (SalutProtocolClass *klass)
 
   object_class->get_property = salut_protocol_get_property;
   object_class->set_property = salut_protocol_set_property;
+  object_class->finalize = salut_protocol_finalize;
 
   param_spec = g_param_spec_gtype ("backend-type", "backend type",
       "a G_TYPE_GTYPE of the backend to use", G_TYPE_NONE,
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_BACKEND,
       param_spec);
+
+  param_spec = g_param_spec_string ("dnssd-name", "DNS-SD name",
+      "The DNS-SD name of the protocol", "",
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_DNSSD_NAME,
+      param_spec);
+
+  param_spec = g_param_spec_string ("english-name", "English name",
+      "The English name of the protocol", "",
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_ENGLISH_NAME,
+      param_spec);
+
+  param_spec = g_param_spec_string ("icon-name", "Icon name",
+      "The icon name of the protocol", "",
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_ICON_NAME,
+      param_spec);
 }
 
 TpBaseProtocol *
-salut_protocol_new (GType backend_type)
+salut_protocol_new (GType backend_type,
+    const gchar *dnssd_name,
+    const gchar *protocol_name,
+    const gchar *english_name,
+    const gchar *icon_name)
 {
   return g_object_new (SALUT_TYPE_PROTOCOL,
-      "name", PROTOCOL_NAME,
+      "name", protocol_name,
+      "dnssd-name", dnssd_name,
+      "english-name", english_name,
       "backend-type", backend_type,
+      "icon-name", icon_name,
       NULL);
 }

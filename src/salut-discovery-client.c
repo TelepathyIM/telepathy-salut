@@ -130,6 +130,16 @@ salut_discovery_client_base_init (gpointer klass)
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
+      /* Defined here so we can g_object_set this property on the
+       * discovery client without needing to define it everywhere. Now
+       * classes which implement this interface just need to override
+       * the property to use it.. */
+      param_spec = g_param_spec_string (
+          "dnssd-name", "DNS-SD name",
+          "The DNS-SD name of the protocol", "",
+          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+      g_object_interface_install_property (klass, param_spec);
+
       initialized = TRUE;
     }
 }

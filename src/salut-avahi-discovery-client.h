@@ -47,6 +47,9 @@ struct _SalutAvahiDiscoveryClient {
 
 GType salut_avahi_discovery_client_get_type (void);
 
+const gchar * salut_avahi_discovery_client_get_dnssd_name (
+    SalutAvahiDiscoveryClient *self);
+
 /* TYPE MACROS */
 #define SALUT_TYPE_AVAHI_DISCOVERY_CLIENT \
   (salut_avahi_discovery_client_get_type ())

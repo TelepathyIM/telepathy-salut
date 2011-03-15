@@ -63,6 +63,8 @@
 #include "salut-util.h"
 #include "salut-xmpp-connection-manager.h"
 
+#include "plugin-loader.h"
+
 #ifdef ENABLE_OLPC
 #include "salut-olpc-activity-manager.h"
 #endif
@@ -158,6 +160,7 @@ enum {
   PROP_OLPC_ACTIVITY_MANAGER,
 #endif
   PROP_BACKEND,
+  PROP_DNSSD_NAME,
   LAST_PROP
 };
 
@@ -216,6 +219,9 @@ struct _SalutConnectionPrivate
 
   /* Backend type: avahi or dummy */
   GType backend_type;
+
+  /* DNS-SD name, used for the avahi backend */
+  gchar *dnssd_name;
 };
 
 typedef struct _ChannelRequest ChannelRequest;
@@ -425,6 +431,9 @@ salut_connection_get_property (GObject *object,
     case PROP_BACKEND:
       g_value_set_gtype (value, priv->backend_type);
       break;
+    case PROP_DNSSD_NAME:
+      g_value_set_string (value, priv->dnssd_name);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
     }
@@ -469,8 +478,12 @@ salut_connection_set_property (GObject *object,
       priv->backend_type = g_value_get_gtype (value);
       /* Create the backend object */
       priv->discovery_client = g_object_new (priv->backend_type,
+          "dnssd-name", priv->dnssd_name,
           NULL);
       g_assert (priv->discovery_client != NULL);
+      break;
+    case PROP_DNSSD_NAME:
+      priv->dnssd_name = g_value_dup_string (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -867,6 +880,11 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   g_object_class_install_property (object_class, PROP_BACKEND,
       param_spec);
 
+  param_spec = g_param_spec_string ("dnssd-name", "DNS-SD name",
+      "The DNS-SD name of the protocol", "",
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_DNSSD_NAME,
+      param_spec);
 }
 
 void
@@ -962,6 +980,7 @@ salut_connection_finalize (GObject *object)
     g_array_free (priv->olpc_key, TRUE);
   g_free (priv->olpc_color);
 #endif
+  g_free (priv->dnssd_name);
 
   tp_contacts_mixin_finalize (G_OBJECT(self));
 
@@ -3417,12 +3436,21 @@ muc_manager_new_channels_cb (TpChannelManager *channel_manager,
 }
 #endif
 
+static void
+add_to_array (gpointer data,
+    gpointer user_data)
+{
+  g_ptr_array_add (user_data, data);
+}
+
 static GPtrArray *
 salut_connection_create_channel_managers (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
   SalutConnectionPrivate *priv = self->priv;
   GPtrArray *managers = g_ptr_array_sized_new (1);
+  GPtrArray *tmp;
+  SalutPluginLoader *loader;
 
   /* FIXME: The second and third arguments depend on create_channel_factories
    *        being called before this; should telepathy-glib guarantee that or
@@ -3458,6 +3486,14 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   g_signal_connect (TP_CHANNEL_MANAGER (priv->muc_manager), "new-channels",
       G_CALLBACK (muc_manager_new_channels_cb), self);
 #endif
+
+  /* plugin channel managers */
+  loader = salut_plugin_loader_dup ();
+  tmp = salut_plugin_loader_create_channel_managers (loader, base);
+  g_object_unref (loader);
+
+  g_ptr_array_foreach (tmp, add_to_array, managers);
+  g_ptr_array_free (tmp, TRUE);
 
   return managers;
 }
