@@ -1,6 +1,6 @@
 /*
  * sidecar.h — sidecar API available to telepathy-salut plugins
- * Copyright © 2009 Collabora Ltd.
+ * Copyright © 2009-2011 Collabora Ltd.
  * Copyright © 2009 Nokia Corporation
  *
  * This library is free software; you can redistribute it and/or
