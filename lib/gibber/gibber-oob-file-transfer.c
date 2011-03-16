@@ -501,7 +501,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
       "contact", &contact,
       NULL);
 
-  conn = wocky_meta_porter_borrow_connection (porter, contact);
+  conn = wocky_meta_porter_borrow_connection (porter, WOCKY_LL_CONTACT (contact));
 
   g_object_unref (porter);
   g_object_unref (contact);
@@ -799,7 +799,8 @@ porter_open_cb (GObject *source_object,
    * time. http://bugzilla.gnome.org/show_bug.cgi?id=522519
    * We have to check which IP will be send when creating the stanza. */
 
-  conn = wocky_meta_porter_borrow_connection (porter, contact);
+  conn = wocky_meta_porter_borrow_connection (porter,
+      WOCKY_LL_CONTACT (contact));
 
   if (conn == NULL)
     {
@@ -862,7 +863,8 @@ gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
       "contact", &contact,
       NULL);
 
-  wocky_meta_porter_open_async (porter, contact, NULL, porter_open_cb, ft);
+  wocky_meta_porter_open_async (porter, WOCKY_LL_CONTACT (contact),
+      NULL, porter_open_cb, ft);
 
   g_object_unref (contact);
   g_object_unref (porter);

@@ -279,7 +279,7 @@ connect_to_url (GibberBytestreamOOB *self)
    }
 
   conn = wocky_meta_porter_borrow_connection (WOCKY_META_PORTER (priv->porter),
-      priv->contact);
+      WOCKY_LL_CONTACT (priv->contact));
 
   if (conn != NULL)
     socket_address = g_socket_connection_get_remote_address (conn, NULL);
@@ -392,7 +392,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
   priv->url = g_strdup (url);
 
   wocky_meta_porter_open_async (WOCKY_META_PORTER (priv->porter),
-      priv->contact, NULL, opened_cb, self);
+      WOCKY_LL_CONTACT (priv->contact), NULL, opened_cb, self);
 
   return TRUE;
 }
