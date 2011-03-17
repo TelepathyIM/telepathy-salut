@@ -1238,8 +1238,8 @@ get_contact_caps_foreach (gpointer data,
 
 static void
 salut_tubes_manager_get_contact_caps_from_set (
-    GabbleCapsChannelManager *iface G_GNUC_UNUSED,
-    TpHandle handle G_GNUC_UNUSED,
+    GabbleCapsChannelManager *iface,
+    TpHandle handle,
     const GabbleCapabilitySet *caps,
     GPtrArray *arr)
 {
@@ -1307,7 +1307,7 @@ gabble_private_tubes_factory_add_cap (GabbleCapsChannelManager *manager,
 
 static void
 salut_tubes_manager_represent_client (
-    GabbleCapsChannelManager *iface G_GNUC_UNUSED,
+    GabbleCapsChannelManager *iface,
     const gchar *client_name,
     const GPtrArray *filters,
     const gchar * const *cap_tokens G_GNUC_UNUSED,

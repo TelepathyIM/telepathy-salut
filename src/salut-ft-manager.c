@@ -571,7 +571,7 @@ add_file_transfer_channel_class (GPtrArray *arr)
 static void
 salut_ft_manager_get_contact_caps_from_set (
     GabbleCapsChannelManager *iface,
-    TpHandle handle G_GNUC_UNUSED,
+    TpHandle handle,
     const GabbleCapabilitySet *caps,
     GPtrArray *arr)
 {
