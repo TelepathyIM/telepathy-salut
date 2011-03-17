@@ -23,7 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
 </tp:license>
 
 <xi:include href="connection.xml"/>
-<xi:include href="Connection_Interface_Contact_Capabilities.xml"/>
 
 <tp:generic-types>
   <tp:external-type name="Contact_Handle" type="u"
