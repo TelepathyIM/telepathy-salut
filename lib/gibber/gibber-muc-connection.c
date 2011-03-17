@@ -43,7 +43,7 @@
 #include "gibber-debug.h"
 
 static void _reader_received_stanza_cb (GibberXmppReader *reader,
-    GibberXmppStanza *stanza, gpointer user_data);
+    WockyStanza *stanza, gpointer user_data);
 
 static void _connection_received_data (GibberTransport *transport,
     GibberBuffer *buffer, gpointer user_data);
@@ -147,7 +147,7 @@ gibber_muc_connection_class_init (
       0,
       NULL, NULL,
       _gibber_signals_marshal_VOID__STRING_OBJECT,
-      G_TYPE_NONE, 2, G_TYPE_STRING, GIBBER_TYPE_XMPP_STANZA);
+      G_TYPE_NONE, 2, G_TYPE_STRING, WOCKY_TYPE_STANZA);
   /*  UINT: 16 bit stream id
    *  POINTER: guint8 * data buffer
    *  ULONG: data buffer size
@@ -631,7 +631,7 @@ gibber_muc_connection_get_parameters (GibberMucConnection *connection)
 }
 
 static void
-_reader_received_stanza_cb (GibberXmppReader *reader, GibberXmppStanza *stanza,
+_reader_received_stanza_cb (GibberXmppReader *reader, WockyStanza *stanza,
     gpointer user_data)
 {
   GibberMucConnection *self = GIBBER_MUC_CONNECTION (user_data);
@@ -680,7 +680,7 @@ _connection_received_data (GibberTransport *transport, GibberBuffer *buffer,
 
 gboolean
 gibber_muc_connection_send (GibberMucConnection *connection,
-    GibberXmppStanza *stanza, GError **error)
+    WockyStanza *stanza, GError **error)
 {
   GibberMucConnectionPrivate *priv =
     GIBBER_MUC_CONNECTION_GET_PRIVATE (connection);

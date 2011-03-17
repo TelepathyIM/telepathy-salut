@@ -62,7 +62,29 @@ GType salut_protocol_get_type (void);
         SALUT_TYPE_PROTOCOL, \
         SalutProtocolClass))
 
-TpBaseProtocol *salut_protocol_new (GType backend_type);
+#define SALUT_PROTOCOL_LOCAL_XMPP_NAME "local-xmpp"
+#define SALUT_PROTOCOL_LOCAL_XMPP_ENGLISH_NAME "Link-local XMPP"
+#define SALUT_PROTOCOL_LOCAL_XMPP_ICON_NAME "Link-local XMPP"
+
+/**
+ * salut_protocol_new:
+ * @backend_type: the #GType of the discovery client to use, or
+ *                %G_TYPE_NONE for the avahi backend.
+ * @dnssd_name: The DNS-SD name to use (only used in avahi backend),
+ *              or %NULL for the default avahi DNS-SD name.
+ * @protocol_name: Name of the protocol.
+ * @english_name: English name of the protocol.
+ * @icon_name: Icon name of the protocol.
+ *
+ * <!-- -->
+ *
+ * Returns: a new #TpBaseProtocol oject for the supplied arguments
+ */
+TpBaseProtocol *salut_protocol_new (GType backend_type,
+    const gchar *dnssd_name,
+    const gchar *protocol_name,
+    const gchar *english_name,
+    const gchar *icon_name);
 
 G_END_DECLS
 

@@ -945,7 +945,7 @@ void
 salut_self_olpc_augment_invitation (SalutSelf *self,
                                     TpHandle room,
                                     TpHandle contact,
-                                    GibberXmppNode *invite_node)
+                                    WockyNode *invite_node)
 {
   SalutOlpcActivity *activity;
 

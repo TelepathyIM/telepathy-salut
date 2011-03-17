@@ -38,7 +38,7 @@ struct _xmpp_node_extract_property_data
 };
 
 static gboolean
-xmpp_node_extract_property (GibberXmppNode *node,
+xmpp_node_extract_property (WockyNode *node,
                             gpointer user_data)
 {
   struct _xmpp_node_extract_property_data *data =
@@ -51,12 +51,12 @@ xmpp_node_extract_property (GibberXmppNode *node,
   if (tp_strdiff (node->name, data->prop))
     return TRUE;
 
-  name = gibber_xmpp_node_get_attribute (node, "name");
+  name = wocky_node_get_attribute (node, "name");
 
   if (!name)
     return TRUE;
 
-  type = gibber_xmpp_node_get_attribute (node, "type");
+  type = wocky_node_get_attribute (node, "type");
   value = node->content;
 
   if (type == NULL || value == NULL)
@@ -124,7 +124,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
 }
 
 /**
- * salut_gibber_xmpp_node_extract_properties
+ * salut_wocky_node_extract_properties
  *
  * Map a XML node to a properties hash table
  *
@@ -135,7 +135,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
  *   <prop name="prop2" type="uint">7</prop>
  * </node>
  *
- * salut_gibber_xmpp_node_extract_properties (node, "prop");
+ * salut_wocky_node_extract_properties (node, "prop");
  *
  * --> { "prop1" : "prop1_value", "prop2" : 7 }
  *
@@ -144,7 +144,7 @@ xmpp_node_extract_property (GibberXmppNode *node,
  *
  */
 GHashTable *
-salut_gibber_xmpp_node_extract_properties (GibberXmppNode *node,
+salut_wocky_node_extract_properties (WockyNode *node,
                                            const gchar *prop)
 {
   GHashTable *properties;
@@ -159,14 +159,14 @@ salut_gibber_xmpp_node_extract_properties (GibberXmppNode *node,
   data.prop = prop;
   data.properties = properties;
 
-  gibber_xmpp_node_each_child (node, xmpp_node_extract_property, &data);
+  wocky_node_each_child (node, xmpp_node_extract_property, &data);
 
   return properties;
 }
 
 struct _set_child_from_property_data
 {
-  GibberXmppNode *node;
+  WockyNode *node;
   const gchar *prop;
 };
 
@@ -178,7 +178,7 @@ set_child_from_property (gpointer key,
   GValue *gvalue = value;
   struct _set_child_from_property_data *data =
     (struct _set_child_from_property_data *) user_data;
-  GibberXmppNode *child;
+  WockyNode *child;
   const char *type = NULL;
 
   if (G_VALUE_TYPE (gvalue) == G_TYPE_STRING)
@@ -209,11 +209,11 @@ set_child_from_property (gpointer key,
       return;
     }
 
-  child = gibber_xmpp_node_add_child (data->node, data->prop);
+  child = wocky_node_add_child (data->node, data->prop);
 
   if (G_VALUE_TYPE (gvalue) == G_TYPE_STRING)
     {
-      gibber_xmpp_node_set_content (child,
+      wocky_node_set_content (child,
         g_value_get_string (gvalue));
     }
   else if (G_VALUE_TYPE (gvalue) == G_TYPE_INT)
@@ -221,7 +221,7 @@ set_child_from_property (gpointer key,
       gchar *str;
 
       str = g_strdup_printf ("%d", g_value_get_int (gvalue));
-      gibber_xmpp_node_set_content (child, str);
+      wocky_node_set_content (child, str);
 
       g_free (str);
     }
@@ -230,7 +230,7 @@ set_child_from_property (gpointer key,
       gchar *str;
 
       str = g_strdup_printf ("%u", g_value_get_uint (gvalue));
-      gibber_xmpp_node_set_content (child, str);
+      wocky_node_set_content (child, str);
 
       g_free (str);
     }
@@ -242,7 +242,7 @@ set_child_from_property (gpointer key,
       type = "bytes";
       arr = g_value_get_boxed (gvalue);
       str = g_base64_encode ((const guchar *) arr->data, arr->len);
-      gibber_xmpp_node_set_content (child, str);
+      wocky_node_set_content (child, str);
 
       g_free (str);
     }
@@ -252,22 +252,22 @@ set_child_from_property (gpointer key,
 
       val = g_value_get_boolean (gvalue);
       if (val)
-        gibber_xmpp_node_set_content (child, "1");
+        wocky_node_set_content (child, "1");
       else
-        gibber_xmpp_node_set_content (child, "0");
+        wocky_node_set_content (child, "0");
     }
   else
     {
       g_assert_not_reached ();
     }
 
-  gibber_xmpp_node_set_attribute (child, "name", key);
-  gibber_xmpp_node_set_attribute (child, "type", type);
+  wocky_node_set_attribute (child, "name", key);
+  wocky_node_set_attribute (child, "type", type);
 }
 
 /**
  *
- * gibber_xmpp_node_set_children_from_properties
+ * wocky_node_set_children_from_properties
  *
  * Map a properties hash table to a XML node.
  *
@@ -275,7 +275,7 @@ set_child_from_property (gpointer key,
  *
  * properties = { "prop1" : "prop1_value", "prop2" : 7 }
  *
- * salut_gibber_xmpp_node_add_children_from_properties (node, properties,
+ * salut_wocky_node_add_children_from_properties (node, properties,
  *     "prop");
  *
  * --> <node>
@@ -285,7 +285,7 @@ set_child_from_property (gpointer key,
  *
  */
 void
-salut_gibber_xmpp_node_add_children_from_properties (GibberXmppNode *node,
+salut_wocky_node_add_children_from_properties (WockyNode *node,
                                                      GHashTable *properties,
                                                      const gchar *prop)
 {

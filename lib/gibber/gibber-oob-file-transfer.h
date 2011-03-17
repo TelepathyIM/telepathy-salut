@@ -60,10 +60,10 @@ GType gibber_oob_file_transfer_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), GIBBER_TYPE_OOB_FILE_TRANSFER, GibberOobFileTransferClass))
 
 
-gboolean gibber_oob_file_transfer_is_file_offer (GibberXmppStanza *stanza);
+gboolean gibber_oob_file_transfer_is_file_offer (WockyStanza *stanza);
 
 GibberFileTransfer *gibber_oob_file_transfer_new_from_stanza_with_from (
-    GibberXmppStanza *stanza, GibberXmppConnection *connection,
+    WockyStanza *stanza, GibberXmppConnection *connection,
     const gchar *from, GError **error);
 
 G_END_DECLS

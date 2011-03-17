@@ -28,7 +28,7 @@
 
 #include "gibber-xmpp-connection.h"
 #include "gibber-muc-connection.h"
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 #include "gibber-namespaces.h"
 #include "gibber-xmpp-error.h"
 
@@ -93,13 +93,13 @@ gibber_bytestream_ibb_init (GibberBytestreamIBB *self)
 
 static void
 xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
-                                    GibberXmppStanza *stanza,
+                                    WockyStanza *stanza,
                                     gpointer user_data)
 {
   GibberBytestreamIBB *self = (GibberBytestreamIBB *) user_data;
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
   WockyNode *node = wocky_stanza_get_top_node (stanza);
-  GibberXmppNode *data;
+  WockyNode *data;
   GString *str;
   guchar *decoded;
   gsize len;
@@ -125,7 +125,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
       return;
     }
 
-  from = gibber_xmpp_node_get_attribute (node, "from");
+  from = wocky_node_get_attribute (node, "from");
   if (from == NULL)
     {
       DEBUG ("got a message without a from field, ignoring");
@@ -341,7 +341,7 @@ gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   gchar *seq, *encoded;
   gboolean ret;
 
@@ -356,29 +356,29 @@ gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
 
   encoded = g_base64_encode ((const guchar *) str, len);
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
-      GIBBER_STANZA_SUB_TYPE_NONE,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_MESSAGE,
+      WOCKY_STANZA_SUB_TYPE_NONE,
       priv->self_id, priv->peer_id,
-      GIBBER_NODE, "data",
-        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_IBB,
-        GIBBER_NODE_ATTRIBUTE, "sid", priv->stream_id,
-        GIBBER_NODE_ATTRIBUTE, "seq", seq,
-        GIBBER_NODE_TEXT, encoded,
-      GIBBER_NODE_END,
-      GIBBER_NODE, "amp",
-        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_AMP,
-        GIBBER_NODE, "rule",
-          GIBBER_NODE_ATTRIBUTE, "condition", "deliver-at",
-          GIBBER_NODE_ATTRIBUTE, "value", "stored",
-          GIBBER_NODE_ATTRIBUTE, "action", "error",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "rule",
-          GIBBER_NODE_ATTRIBUTE, "condition", "match-resource",
-          GIBBER_NODE_ATTRIBUTE, "value", "exact",
-          GIBBER_NODE_ATTRIBUTE, "action", "error",
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_START, "data",
+        WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_IBB,
+        WOCKY_NODE_ATTRIBUTE, "sid", priv->stream_id,
+        WOCKY_NODE_ATTRIBUTE, "seq", seq,
+        WOCKY_NODE_TEXT, encoded,
+      WOCKY_NODE_END,
+      WOCKY_NODE_START, "amp",
+        WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_AMP,
+        WOCKY_NODE_START, "rule",
+          WOCKY_NODE_ATTRIBUTE, "condition", "deliver-at",
+          WOCKY_NODE_ATTRIBUTE, "value", "stored",
+          WOCKY_NODE_ATTRIBUTE, "action", "error",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "rule",
+          WOCKY_NODE_ATTRIBUTE, "condition", "match-resource",
+          WOCKY_NODE_ATTRIBUTE, "value", "exact",
+          WOCKY_NODE_ATTRIBUTE, "action", "error",
+        WOCKY_NODE_END,
+      WOCKY_NODE_END,
+      NULL);
 
   DEBUG ("send %d bytes", len);
   ret = gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
@@ -390,31 +390,31 @@ gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
   return ret;
 }
 
-static GibberXmppStanza *
+static WockyStanza *
 create_si_accept_iq (GibberBytestreamIBB *self)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
-  return gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_RESULT,
+  return wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_RESULT,
       priv->self_id, priv->peer_id,
-      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
-      GIBBER_NODE, "si",
-        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_SI,
-        GIBBER_NODE, "feature",
-          GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_FEATURENEG,
-          GIBBER_NODE, "x",
-            GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_DATA,
-            GIBBER_NODE_ATTRIBUTE, "type", "submit",
-            GIBBER_NODE, "field",
-              GIBBER_NODE_ATTRIBUTE, "var", "stream-method",
-              GIBBER_NODE, "value",
-                GIBBER_NODE_TEXT, GIBBER_XMPP_NS_IBB,
-              GIBBER_NODE_END,
-            GIBBER_NODE_END,
-          GIBBER_NODE_END,
-        GIBBER_NODE_END,
-      GIBBER_NODE_END, GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      WOCKY_NODE_START, "si",
+        WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_SI,
+        WOCKY_NODE_START, "feature",
+          WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_FEATURENEG,
+          WOCKY_NODE_START, "x",
+            WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_DATA,
+            WOCKY_NODE_ATTRIBUTE, "type", "submit",
+            WOCKY_NODE_START, "field",
+              WOCKY_NODE_ATTRIBUTE, "var", "stream-method",
+              WOCKY_NODE_START, "value",
+                WOCKY_NODE_TEXT, GIBBER_XMPP_NS_IBB,
+              WOCKY_NODE_END,
+            WOCKY_NODE_END,
+          WOCKY_NODE_END,
+        WOCKY_NODE_END,
+      WOCKY_NODE_END, NULL);
 }
 
 /*
@@ -429,9 +429,9 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
-  GibberXmppNode *si;
+  WockyNode *si;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     {
@@ -442,7 +442,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
 
   stanza = create_si_accept_iq (self);
   node = wocky_stanza_get_top_node (stanza);
-  si = gibber_xmpp_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si != NULL);
 
   if (func != NULL)
@@ -462,16 +462,16 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
                                GError *error)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
   g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
       priv->self_id, priv->peer_id,
-      GIBBER_NODE_ATTRIBUTE, "id", priv->stream_init_id,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      NULL);
   node = wocky_stanza_get_top_node (stanza);
 
   if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
@@ -515,17 +515,17 @@ gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream,
 
   else if (priv->xmpp_connection != NULL)
     {
-      GibberXmppStanza *stanza;
+      WockyStanza *stanza;
 
       DEBUG ("send IBB close stanza");
 
-      stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-          GIBBER_STANZA_SUB_TYPE_SET,
+      stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_SET,
           priv->self_id, priv->peer_id,
-          GIBBER_NODE, "close",
-            GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_IBB,
-            GIBBER_NODE_ATTRIBUTE, "sid", priv->stream_id,
-          GIBBER_NODE_END, GIBBER_STANZA_END);
+          WOCKY_NODE_START, "close",
+            WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_IBB,
+            WOCKY_NODE_ATTRIBUTE, "sid", priv->stream_id,
+          WOCKY_NODE_END, NULL);
 
       gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
 
@@ -571,7 +571,7 @@ gibber_bytestream_ibb_initiate (GibberBytestreamIface *bytestream)
 {
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (bytestream);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  GibberXmppStanza *msg;
+  WockyStanza *msg;
   GError *error = NULL;
 
   if (priv->state != GIBBER_BYTESTREAM_STATE_INITIATING)
@@ -593,14 +593,14 @@ gibber_bytestream_ibb_initiate (GibberBytestreamIface *bytestream)
       return FALSE;
     }
 
-  msg = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_SET,
+  msg = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
       priv->self_id, priv->peer_id,
-      GIBBER_NODE, "open",
-        GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_IBB,
-        GIBBER_NODE_ATTRIBUTE, "sid", priv->stream_id,
-        GIBBER_NODE_ATTRIBUTE, "block-size", "4096",
-      GIBBER_NODE_END, GIBBER_STANZA_END);
+      WOCKY_NODE_START, "open",
+        WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_IBB,
+        WOCKY_NODE_ATTRIBUTE, "sid", priv->stream_id,
+        WOCKY_NODE_ATTRIBUTE, "block-size", "4096",
+      WOCKY_NODE_END, NULL);
 
   /* XXX should send using _with_reply (ibb_init_reply_cb) */
   if (!gibber_xmpp_connection_send (priv->xmpp_connection, msg, &error))

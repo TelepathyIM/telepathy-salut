@@ -1,7 +1,7 @@
 /*
  * check-xmpp-node-properties.c - Test for
- * salut_gibber_xmpp_node_extract_properties and
- * salut_gibber_xmpp_node_add_children_from_properties
+ * salut_wocky_node_extract_properties and
+ * salut_wocky_node_add_children_from_properties
  * Copyright (C) 2007 Collabora Ltd.
  * @author Guillaume Desmottes <guillaume.desmottes@collabora.co.uk>
  *
@@ -26,57 +26,54 @@
 #include <string.h>
 #include <dbus/dbus-glib.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include "salut-util.h"
 
-#include <check.h>
-#include "check-helpers.h"
-#include "check-salut.h"
-
-static GibberXmppStanza *
+static WockyStanza *
 create_sample_stanza (void)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_MESSAGE, GIBBER_STANZA_SUB_TYPE_NONE,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
       "alice@collabora.co.uk", "bob@collabora.co.uk",
-      GIBBER_NODE, "properties",
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop1",
-          GIBBER_NODE_ATTRIBUTE, "type", "str",
-          GIBBER_NODE_TEXT, "prop1_value",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop2",
-          GIBBER_NODE_ATTRIBUTE, "type", "int",
-          GIBBER_NODE_TEXT, "-7",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop3",
-          GIBBER_NODE_ATTRIBUTE, "type", "uint",
-          GIBBER_NODE_TEXT, "10",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop4",
-          GIBBER_NODE_ATTRIBUTE, "type", "bytes",
-          GIBBER_NODE_TEXT, "YWJjZGU=",
-        GIBBER_NODE_END,
-        GIBBER_NODE, "prop",
-          GIBBER_NODE_ATTRIBUTE, "name", "prop5",
-          GIBBER_NODE_ATTRIBUTE, "type", "bool",
-          GIBBER_NODE_TEXT, "1",
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-     GIBBER_STANZA_END);
+      WOCKY_NODE_START, "properties",
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop1",
+          WOCKY_NODE_ATTRIBUTE, "type", "str",
+          WOCKY_NODE_TEXT, "prop1_value",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop2",
+          WOCKY_NODE_ATTRIBUTE, "type", "int",
+          WOCKY_NODE_TEXT, "-7",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop3",
+          WOCKY_NODE_ATTRIBUTE, "type", "uint",
+          WOCKY_NODE_TEXT, "10",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop4",
+          WOCKY_NODE_ATTRIBUTE, "type", "bytes",
+          WOCKY_NODE_TEXT, "YWJjZGU=",
+        WOCKY_NODE_END,
+        WOCKY_NODE_START, "prop",
+          WOCKY_NODE_ATTRIBUTE, "name", "prop5",
+          WOCKY_NODE_ATTRIBUTE, "type", "bool",
+          WOCKY_NODE_TEXT, "1",
+        WOCKY_NODE_END,
+      WOCKY_NODE_END,
+     NULL);
 
   return stanza;
 }
 
-START_TEST (test_extract_properties)
+static void
+test_extract_properties (void)
 {
-  GibberXmppStanza *stanza;
-  GibberXmppNode *node;
+  WockyStanza *stanza;
+  WockyNode *node;
   GHashTable *properties;
   GValue *value;
   const gchar *prop1_value;
@@ -86,59 +83,58 @@ START_TEST (test_extract_properties)
   gboolean prop5_value;
 
   stanza = create_sample_stanza ();
-  node = gibber_xmpp_node_get_child (wocky_stanza_get_top_node (stanza),
+  node = wocky_node_get_child (wocky_stanza_get_top_node (stanza),
       "properties");
 
-  fail_unless (node != NULL);
-  properties = salut_gibber_xmpp_node_extract_properties (node, "prop");
+  g_assert (node != NULL);
+  properties = salut_wocky_node_extract_properties (node, "prop");
 
-  fail_unless (properties != NULL);
-  fail_unless (g_hash_table_size (properties) == 5);
+  g_assert (properties != NULL);
+  g_assert_cmpuint (g_hash_table_size (properties), ==, 5);
 
   /* prop1 */
   value = g_hash_table_lookup (properties, "prop1");
-  fail_unless (value != NULL);
-  fail_unless (G_VALUE_TYPE (value) == G_TYPE_STRING);
+  g_assert (value != NULL);
+  g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
   prop1_value = g_value_get_string (value);
-  fail_unless (prop1_value != NULL);
-  fail_unless (strcmp (prop1_value, "prop1_value") == 0);
+  g_assert (prop1_value != NULL);
+  g_assert_cmpstr (prop1_value, ==, "prop1_value");
 
   /* prop2 */
   value = g_hash_table_lookup (properties, "prop2");
-  fail_unless (value != NULL);
-  fail_unless (G_VALUE_TYPE (value) == G_TYPE_INT);
+  g_assert (value != NULL);
+  g_assert (G_VALUE_TYPE (value) == G_TYPE_INT);
   prop2_value = g_value_get_int (value);
-  fail_unless (prop2_value == -7);
+  g_assert_cmpuint (prop2_value, ==, -7);
 
   /* prop3 */
   value = g_hash_table_lookup (properties, "prop3");
-  fail_unless (value != NULL);
-  fail_unless (G_VALUE_TYPE (value) == G_TYPE_UINT);
+  g_assert (value != NULL);
+  g_assert (G_VALUE_TYPE (value) == G_TYPE_UINT);
   prop3_value = g_value_get_uint (value);
-  fail_unless (prop3_value == 10);
+  g_assert_cmpuint (prop3_value, ==, 10);
 
   /* prop4 */
   value = g_hash_table_lookup (properties, "prop4");
-  fail_unless (value != NULL);
-  fail_unless (G_VALUE_TYPE (value) == DBUS_TYPE_G_UCHAR_ARRAY);
+  g_assert (value != NULL);
+  g_assert (G_VALUE_TYPE (value) == DBUS_TYPE_G_UCHAR_ARRAY);
   prop4_value = g_value_get_boxed (value);
-  fail_unless (g_array_index (prop4_value, gchar, 0) == 'a');
-  fail_unless (g_array_index (prop4_value, gchar, 1) == 'b');
-  fail_unless (g_array_index (prop4_value, gchar, 2) == 'c');
-  fail_unless (g_array_index (prop4_value, gchar, 3) == 'd');
-  fail_unless (g_array_index (prop4_value, gchar, 4) == 'e');
+  g_assert (g_array_index (prop4_value, gchar, 0) == 'a');
+  g_assert (g_array_index (prop4_value, gchar, 1) == 'b');
+  g_assert (g_array_index (prop4_value, gchar, 2) == 'c');
+  g_assert (g_array_index (prop4_value, gchar, 3) == 'd');
+  g_assert (g_array_index (prop4_value, gchar, 4) == 'e');
 
   /* prop 5 */
   value = g_hash_table_lookup (properties, "prop5");
-  fail_unless (value != NULL);
-  fail_unless (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN);
+  g_assert (value != NULL);
+  g_assert (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN);
   prop5_value = g_value_get_boolean (value);
-  fail_unless (prop5_value == TRUE);
+  g_assert (prop5_value == TRUE);
 
   g_object_unref (stanza);
   g_hash_table_destroy (properties);
 }
-END_TEST
 
 static void
 test_g_value_slice_free (GValue *value)
@@ -187,55 +183,55 @@ create_sample_properties (void)
   return properties;
 }
 
-
-START_TEST (test_add_children_from_properties)
+static void
+test_add_children_from_properties (void)
 {
   GHashTable *properties;
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *top_node;
   GSList *l;
 
   properties = create_sample_properties ();
-  stanza = gibber_xmpp_stanza_new_ns ("properties",
+  stanza = wocky_stanza_new ("properties",
       "http://example.com/stoats");
   top_node = wocky_stanza_get_top_node (stanza);
 
-  salut_gibber_xmpp_node_add_children_from_properties (top_node,
+  salut_wocky_node_add_children_from_properties (top_node,
       properties, "prop");
 
-  fail_unless (g_slist_length (top_node->children) == 5);
+  g_assert_cmpuint (g_slist_length (top_node->children), ==, 5);
   for (l = top_node->children; l != NULL; l = l->next)
     {
-      GibberXmppNode *node = (GibberXmppNode *) l->data;
+      WockyNode *node = (WockyNode *) l->data;
       const gchar *name, *type;
 
-      name = gibber_xmpp_node_get_attribute (node, "name");
-      type = gibber_xmpp_node_get_attribute (node, "type");
+      name = wocky_node_get_attribute (node, "name");
+      type = wocky_node_get_attribute (node, "type");
 
       if (strcmp (name, "prop1") == 0)
         {
-          fail_unless (strcmp (type, "str") == 0);
-          fail_unless (strcmp (node->content, "prop1_value") == 0);
+          g_assert_cmpstr (type, ==, "str");
+          g_assert_cmpstr (node->content, ==, "prop1_value");
         }
       else if (strcmp (name, "prop2") == 0)
         {
-          fail_unless (strcmp (type, "int") == 0);
-          fail_unless (strcmp (node->content, "-7") == 0);
+          g_assert_cmpstr (type, ==, "int");
+          g_assert_cmpstr (node->content, ==, "-7");
         }
       else if (strcmp (name, "prop3") == 0)
         {
-          fail_unless (strcmp (type, "uint") == 0);
-          fail_unless (strcmp (node->content, "10") == 0);
+          g_assert_cmpstr (type, ==, "uint");
+          g_assert_cmpstr (node->content, ==, "10");
         }
       else if (strcmp (name, "prop4") == 0)
         {
-          fail_unless (strcmp (type, "bytes") == 0);
-          fail_unless (strcmp (node->content, "YWJjZGU=") == 0);
+          g_assert_cmpstr (type, ==, "bytes");
+          g_assert_cmpstr (node->content, ==, "YWJjZGU=");
         }
       else if (strcmp (name, "prop5") == 0)
         {
-          fail_unless (strcmp (type, "bool") == 0);
-          fail_unless (strcmp (node->content, "1") == 0);
+          g_assert_cmpstr (type, ==, "bool");
+          g_assert_cmpstr (node->content, ==, "1");
         }
       else
         g_assert_not_reached ();
@@ -244,17 +240,21 @@ START_TEST (test_add_children_from_properties)
   g_hash_table_destroy (properties);
   g_object_unref (stanza);
 }
-END_TEST
 
-TCase *
-make_salut_gibber_xmpp_node_properties_tcase (void)
+int
+main (int argc,
+      char **argv)
 {
-  TCase *tc = tcase_create ("XMPP Node");
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
 
   /* to initiate D-Bus types */
   dbus_g_bus_get (DBUS_BUS_STARTER, NULL);
 
-  tcase_add_test (tc, test_extract_properties);
-  tcase_add_test (tc, test_add_children_from_properties);
-  return tc;
+  g_test_add_func ("/node-properties/extract-properties",
+      test_extract_properties);
+  g_test_add_func ("/node-properties/add-children-from-properties",
+      test_add_children_from_properties);
+
+  return g_test_run ();
 }

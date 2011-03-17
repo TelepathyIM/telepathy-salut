@@ -1,8 +1,9 @@
 import socket
 
 from saluttest import exec_test
-from file_transfer_helper import ReceiveFileTest, FT_STATE_CANCELLED, \
-    FT_STATE_CHANGE_REASON_REMOTE_STOPPED
+from file_transfer_helper import ReceiveFileTest
+
+import constants as cs
 
 class ReceiveFileCancelledImmediatelyTest(ReceiveFileTest):
     def accept_file(self):
@@ -20,8 +21,8 @@ class ReceiveFileCancelledImmediatelyTest(ReceiveFileTest):
         # Salut can't connect to download the file
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_CANCELLED
-        assert reason == FT_STATE_CHANGE_REASON_REMOTE_STOPPED
+        assert state == cs.FT_STATE_CANCELLED
+        assert reason == cs.FT_STATE_CHANGE_REASON_REMOTE_STOPPED
 
 if __name__ == '__main__':
     test = ReceiveFileCancelledImmediatelyTest()

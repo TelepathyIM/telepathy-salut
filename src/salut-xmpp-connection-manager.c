@@ -348,7 +348,7 @@ static void
 apply_filters (SalutXmppConnectionManager *self,
                GibberXmppConnection *conn,
                GSList *list,
-               GibberXmppStanza *stanza,
+               WockyStanza *stanza,
                SalutContact *contact)
 {
   GSList *l;
@@ -472,7 +472,7 @@ add_refcount_timeout (SalutXmppConnectionManager *self,
 
 static void
 connection_stanza_received_cb (GibberXmppConnection *conn,
-                               GibberXmppStanza *stanza,
+                               WockyStanza *stanza,
                                gpointer user_data)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (user_data);
@@ -719,9 +719,9 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
 
   if (!tp_strdiff (version, "1.0"))
     {
-      GibberXmppStanza *stanza;
+      WockyStanza *stanza;
       /* Send empty stream features */
-      stanza = gibber_xmpp_stanza_new_ns ("features", GIBBER_XMPP_NS_STREAM);
+      stanza = wocky_stanza_new ("features", GIBBER_XMPP_NS_STREAM);
       gibber_xmpp_connection_send (conn, stanza, NULL);
       g_object_unref (stanza);
     }
@@ -771,7 +771,7 @@ incoming_pending_connection_stream_opened_cb (GibberXmppConnection *conn,
 
 static void
 incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
-                                                GibberXmppStanza *stanza,
+                                                WockyStanza *stanza,
                                                 gpointer userdata)
 {
   SalutXmppConnectionManager *self = SALUT_XMPP_CONNECTION_MANAGER (userdata);
@@ -780,7 +780,7 @@ incoming_pending_connection_stanza_received_cb (GibberXmppConnection *conn,
 
   /* If the identity wasn't clear from the stream opening we only wait to the
    * very first message */
-  from = gibber_xmpp_node_get_attribute (node, "from");
+  from = wocky_node_get_attribute (node, "from");
   if (incoming_pending_connection_got_from (self, conn, from))
     {
       /* We can filter the stanza now */

@@ -11,6 +11,13 @@ CLEANFILES = $(BUILT_SOURCES)
 dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = telepathy-salut.pc
+
+EXTRA_DIST = \
+    telepathy-salut.pc.in \
+    telepathy-salut-uninstalled.pc.in
+
 libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
@@ -84,7 +91,11 @@ CORE_SOURCES =                                          \
     debug.c                                             \
     debug.h                                             \
     protocol.c                                          \
-    protocol.h
+    $(top_srcdir)/salut/protocol.h                      \
+    plugin-loader.c                                     \
+    plugin-loader.h                                     \
+    $(top_srcdir)/salut/plugin.h                        \
+    plugin.c
 
 AVAHI_BACKEND_SOURCES = 				\
     salut-avahi-discovery-client.h                      \
@@ -125,15 +136,10 @@ SHA1_SOURCES =                                          \
     sha1/sha1-util.c
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
-    $(SHA1_SOURCES)
-
-libsalut_backend_avahi_la_SOURCES = $(AVAHI_BACKEND_SOURCES)
-
-libsalut_backend_dummy_la_SOURCES = $(DUMMY_BACKEND_SOURCES)
+    $(SHA1_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES)
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
-		       libsalut-backend-avahi.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
                        -ltelepathy-glib
@@ -153,23 +159,23 @@ check-local: check-coding-style
 
 # TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
 telepathy_salut_LDADD = libsalut-convenience.la \
-			libsalut-backend-avahi.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         $(top_builddir)/extensions/libsalut-extensions.la \
                         -ltelepathy-glib
 
-noinst_LTLIBRARIES = libsalut-convenience.la \
-		     libsalut-backend-avahi.la \
-		     libsalut-backend-dummy.la
+noinst_LTLIBRARIES = libsalut-convenience.la
 
 AM_CFLAGS = \
 	-I $(top_srcdir) -I $(top_builddir) \
 	-I $(top_srcdir)/lib -I $(top_builddir)/lib \
+	-I $(top_srcdir)/salut \
 	-DG_LOG_DOMAIN=\"salut\" \
+	-DPLUGIN_DIR=\"$(libdir)/telepathy/salut-0\" \
 	$(ERROR_CFLAGS) \
 	$(GCOV_CFLAGS) \
 	@LIBXML2_CFLAGS@ \
 	@GLIB_CFLAGS@ \
+	@GMODULE_CFLAGS@ \
 	@WOCKY_CFLAGS@ \
 	@DBUS_CFLAGS@ \
 	@AVAHI_CFLAGS@ \
@@ -180,6 +186,7 @@ AM_LDFLAGS = \
 	$(GCOV_LIBS) \
 	@LIBXML2_LIBS@ \
 	@GLIB_LIBS@ \
+	@GMODULE_LIBS@ \
 	@WOCKY_LIBS@ \
 	@DBUS_LIBS@ \
 	@AVAHI_LIBS@ \

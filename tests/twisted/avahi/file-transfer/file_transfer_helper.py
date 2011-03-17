@@ -11,46 +11,12 @@ from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, EventPattern
+from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async
+import constants as cs
 
 from twisted.words.xish import domish, xpath
 
 from dbus import PROPERTIES_IFACE
-
-CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
-CHANNEL_INTERFACE ='org.freedesktop.Telepathy.Channel'
-CHANNEL_TYPE_FILE_TRANSFER = 'org.freedesktop.Telepathy.Channel.Type.FileTransfer'
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
-
-FT_STATE_NONE = 0
-FT_STATE_PENDING = 1
-FT_STATE_ACCEPTED = 2
-FT_STATE_OPEN = 3
-FT_STATE_COMPLETED = 4
-FT_STATE_CANCELLED = 5
-
-FT_STATE_CHANGE_REASON_NONE = 0
-FT_STATE_CHANGE_REASON_REQUESTED = 1
-FT_STATE_CHANGE_REASON_LOCAL_STOPPED = 2
-FT_STATE_CHANGE_REASON_REMOTE_STOPPED = 3
-FT_STATE_CHANGE_REASON_LOCAL_ERROR = 4
-FT_STATE_CHANGE_REASON_REMOTE_ERROR = 5
-
-FILE_HASH_TYPE_NONE = 0
-FILE_HASH_TYPE_MD5 = 1
-FILE_HASH_TYPE_SHA1 = 2
-FILE_HASH_TYPE_SHA256 = 3
-
-SOCKET_ADDRESS_TYPE_UNIX = 0
-SOCKET_ADDRESS_TYPE_ABSTRACT_UNIX = 1
-SOCKET_ADDRESS_TYPE_IPV4 = 2
-SOCKET_ADDRESS_TYPE_IPV6 = 3
-
-SOCKET_ACCESS_CONTROL_LOCALHOST = 0
-SOCKET_ACCESS_CONTROL_PORT = 1
-SOCKET_ACCESS_CONTROL_NETMASK = 2
-SOCKET_ACCESS_CONTROL_CREDENTIALS = 3
 
 class File(object):
     DEFAULT_DATA = "What a nice file"
@@ -60,7 +26,7 @@ class File(object):
 
     def __init__(self, data=DEFAULT_DATA, name=DEFAULT_NAME,
             content_type=DEFAULT_CONTENT_TYPE, description=DEFAULT_DESCRIPTION,
-            hash_type=FILE_HASH_TYPE_MD5):
+            hash_type=cs.FILE_HASH_TYPE_MD5):
         self.data = data
         self.size = len(self.data)
         self.name = name
@@ -71,8 +37,10 @@ class File(object):
 
         self.compute_hash(hash_type)
 
+        self.uri = 'file:///tmp/%s' % self.name
+
     def compute_hash(self, hash_type):
-        assert hash_type == FILE_HASH_TYPE_MD5
+        assert hash_type == cs.FILE_HASH_TYPE_MD5
 
         self.hash_type = hash_type
         self.hash = hashlib.md5(self.data).hexdigest()
@@ -88,7 +56,7 @@ class FileTransferTest(object):
         self.q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
         self.self_handle = self.conn.GetSelfHandle()
-        self.self_handle_name =  self.conn.InspectHandles(HT_CONTACT, [self.self_handle])[0]
+        self.self_handle_name =  self.conn.InspectHandles(cs.HT_CONTACT, [self.self_handle])[0]
 
     def announce_contact(self, name=CONTACT_NAME):
         basic_txt = { "txtvers": "1", "status": "avail" }
@@ -129,8 +97,8 @@ class ReceiveFileTest(FileTransferTest):
 
         self._actions = [self.connect, self.announce_contact, self.wait_for_contact,
             self.connect_to_salut, self.setup_http_server, self.send_ft_offer_iq,
-            self.check_new_channel, self.create_ft_channel, self.accept_file,
-            self.receive_file, self.close_channel]
+            self.check_new_channel, self.create_ft_channel, self.set_uri,
+            self.accept_file, self.receive_file, self.close_channel]
 
     def _resolve_salut_presence(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
@@ -193,41 +161,65 @@ class ReceiveFileTest(FileTransferTest):
 
         # check channel properties
         # org.freedesktop.Telepathy.Channel D-Bus properties
-        assert props[CHANNEL_INTERFACE + '.ChannelType'] == CHANNEL_TYPE_FILE_TRANSFER
-        assert props[CHANNEL_INTERFACE + '.Interfaces'] == []
-        assert props[CHANNEL_INTERFACE + '.TargetHandle'] == self.handle
-        assert props[CHANNEL_INTERFACE + '.TargetID'] == self.contact_name
-        assert props[CHANNEL_INTERFACE + '.TargetHandleType'] == HT_CONTACT
-        assert props[CHANNEL_INTERFACE + '.Requested'] == False
-        assert props[CHANNEL_INTERFACE + '.InitiatorHandle'] == self.handle
-        assert props[CHANNEL_INTERFACE + '.InitiatorID'] == self.contact_name
+        assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
+        assert props[cs.INTERFACES] == []
+        assert props[cs.TARGET_HANDLE] == self.handle
+        assert props[cs.TARGET_ID] == self.contact_name
+        assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_CONTACT
+        assert props[cs.REQUESTED] == False
+        assert props[cs.INITIATOR_HANDLE] == self.handle
+        assert props[cs.INITIATOR_ID] == self.contact_name
 
         # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.State'] == FT_STATE_PENDING
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentType'] == self.file.content_type
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Filename'] == self.file.name
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Size'] == self.file.size
+        assert props[cs.FT_STATE] == cs.FT_STATE_PENDING
+        assert props[cs.FT_CONTENT_TYPE] == self.file.content_type
+        assert props[cs.FT_FILENAME] == self.file.name
+        assert props[cs.FT_SIZE] == self.file.size
         # FT's protocol doesn't allow us the send the hash info
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType'] == FILE_HASH_TYPE_NONE
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash'] == ''
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Description'] == self.file.description
+        assert props[cs.FT_CONTENT_HASH_TYPE] == cs.FILE_HASH_TYPE_NONE
+        assert props[cs.FT_CONTENT_HASH] == ''
+        assert props[cs.FT_DESCRIPTION] == self.file.description
         # FT's protocol doesn't allow us the send the date info
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Date'] == 0
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.AvailableSocketTypes'] == \
-            {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.TransferredBytes'] == 0
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'] == 0
+        assert props[cs.FT_DATE] == 0
+        assert props[cs.FT_AVAILABLE_SOCKET_TYPES] == \
+            {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
+        assert props[cs.FT_TRANSFERRED_BYTES] == 0
+        assert props[cs.FT_INITIAL_OFFSET] == 0
 
         self.ft_path = path
 
+    def set_uri(self):
+        ft_props = dbus.Interface(self.ft_channel, cs.PROPERTIES_IFACE)
+
+        # URI is not set yet
+        uri = ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI')
+        assertEquals('', uri)
+
+        # Setting URI
+        call_async(self.q, ft_props, 'Set',
+            cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI', self.file.uri)
+
+        self.q.expect('dbus-signal', signal='URIDefined', args=[self.file.uri])
+
+        self.q.expect('dbus-return', method='Set')
+
+        # Check it has the right value now
+        uri = ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI')
+        assertEquals(self.file.uri, uri)
+
+        # We can't change it once it has been set
+        call_async(self.q, ft_props, 'Set',
+            cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI', 'badger://snake')
+        self.q.expect('dbus-error', method='Set', name=cs.INVALID_ARGUMENT)
+
     def accept_file(self):
-        self.address = self.ft_channel.AcceptFile(SOCKET_ADDRESS_TYPE_UNIX,
-                SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5, byte_arrays=True)
+        self.address = self.ft_channel.AcceptFile(cs.SOCKET_ADDRESS_TYPE_UNIX,
+                cs.SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5, byte_arrays=True)
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_ACCEPTED
-        assert reason == FT_STATE_CHANGE_REASON_REQUESTED
+        assert state == cs.FT_STATE_ACCEPTED
+        assert reason == cs.FT_STATE_CHANGE_REASON_REQUESTED
 
         e = self.q.expect('dbus-signal', signal='InitialOffsetDefined')
         offset = e.args[0]
@@ -236,8 +228,8 @@ class ReceiveFileTest(FileTransferTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_OPEN
-        assert reason == FT_STATE_CHANGE_REASON_NONE
+        assert state == cs.FT_STATE_OPEN
+        assert reason == cs.FT_STATE_CHANGE_REASON_NONE
 
     def _read_file_from_socket(self, s):
         # Read the file from Salut's socket
@@ -257,8 +249,8 @@ class ReceiveFileTest(FileTransferTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_COMPLETED
-        assert reason == FT_STATE_CHANGE_REASON_NONE
+        assert state == cs.FT_STATE_COMPLETED
+        assert reason == cs.FT_STATE_CHANGE_REASON_NONE
 
     def receive_file(self):
         # Connect to Salut's socket
@@ -282,65 +274,73 @@ class SendFileTest(FileTransferTest):
             self.close_channel]
 
     def check_ft_available(self):
-        properties = self.conn.GetAll(
-                CONNECTION_INTERFACE_REQUESTS,
+        properties = self.conn.GetAll(cs.CONN_IFACE_REQUESTS,
                 dbus_interface=PROPERTIES_IFACE)
 
-        assert ({CHANNEL_INTERFACE + '.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
-                 CHANNEL_INTERFACE + '.TargetHandleType': HT_CONTACT},
-                [CHANNEL_INTERFACE + '.TargetHandle',
-                 CHANNEL_INTERFACE + '.TargetID',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.ContentType',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.Filename',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.Size',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.Description',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.Date',
-                 CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'],
+        assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_FILE_TRANSFER,
+                 cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT},
+                [cs.FT_CONTENT_HASH_TYPE,
+                 cs.TARGET_HANDLE,
+                 cs.TARGET_ID,
+                 cs.FT_CONTENT_TYPE,
+                 cs.FT_FILENAME,
+                 cs.FT_SIZE,
+                 cs.FT_CONTENT_HASH,
+                 cs.FT_DESCRIPTION,
+                 cs.FT_DATE,
+                 cs.FT_INITIAL_OFFSET,
+                 cs.FT_URI],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
-    def request_ft_channel(self):
-        requests_iface = dbus.Interface(self.conn, CONNECTION_INTERFACE_REQUESTS)
+    def request_ft_channel(self, uri=True):
+        requests_iface = dbus.Interface(self.conn, cs.CONN_IFACE_REQUESTS)
 
-        self.ft_path, props = requests_iface.CreateChannel({
-            CHANNEL_INTERFACE + '.ChannelType': CHANNEL_TYPE_FILE_TRANSFER,
-            CHANNEL_INTERFACE + '.TargetHandleType': HT_CONTACT,
-            CHANNEL_INTERFACE + '.TargetHandle': self.handle,
-            CHANNEL_TYPE_FILE_TRANSFER + '.ContentType': self.file.content_type,
-            CHANNEL_TYPE_FILE_TRANSFER + '.Filename': self.file.name,
-            CHANNEL_TYPE_FILE_TRANSFER + '.Size': self.file.size,
-            CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType': self.file.hash_type,
-            CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash': self.file.hash,
-            CHANNEL_TYPE_FILE_TRANSFER + '.Description': self.file.description,
-            CHANNEL_TYPE_FILE_TRANSFER + '.Date':  self.file.date,
-            CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset': 0,
-            })
+        request = { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_FILE_TRANSFER,
+            cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+            cs.TARGET_HANDLE: self.handle,
+
+            cs.FT_CONTENT_TYPE: self.file.content_type,
+            cs.FT_FILENAME: self.file.name,
+            cs.FT_SIZE: self.file.size,
+            cs.FT_CONTENT_HASH_TYPE: self.file.hash_type,
+            cs.FT_CONTENT_HASH:self.file.hash,
+            cs.FT_DESCRIPTION: self.file.description,
+            cs.FT_DATE: self.file.date,
+            cs.FT_INITIAL_OFFSET: 0 }
+
+        if uri:
+            request[cs.FT_URI] = self.file.uri
+
+        self.ft_path, props = requests_iface.CreateChannel(request)
 
         # org.freedesktop.Telepathy.Channel D-Bus properties
-        assert props[CHANNEL_INTERFACE + '.ChannelType'] == CHANNEL_TYPE_FILE_TRANSFER
-        assert props[CHANNEL_INTERFACE + '.Interfaces'] == []
-        assert props[CHANNEL_INTERFACE + '.TargetHandle'] == self.handle
-        assert props[CHANNEL_INTERFACE + '.TargetID'] == self.contact_name
-        assert props[CHANNEL_INTERFACE + '.TargetHandleType'] == HT_CONTACT
-        assert props[CHANNEL_INTERFACE + '.Requested'] == True
-        assert props[CHANNEL_INTERFACE + '.InitiatorHandle'] == self.self_handle
-        assert props[CHANNEL_INTERFACE + '.InitiatorID'] == self.self_handle_name
+        assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
+        assert props[cs.INTERFACES] == []
+        assert props[cs.TARGET_HANDLE] == self.handle
+        assert props[cs.TARGET_ID] == self.contact_name
+        assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_CONTACT
+        assert props[cs.REQUESTED] == True
+        assert props[cs.INITIATOR_HANDLE] == self.self_handle
+        assert props[cs.INITIATOR_ID] == self.self_handle_name
 
         # org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.State'] == FT_STATE_PENDING
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentType'] == self.file.content_type
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Filename'] == self.file.name
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Size'] == self.file.size
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHashType'] == self.file.hash_type
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash'] == self.file.hash
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Description'] == self.file.description
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.Date'] == self.file.date
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.AvailableSocketTypes'] == \
-            {SOCKET_ADDRESS_TYPE_UNIX: [SOCKET_ACCESS_CONTROL_LOCALHOST]}
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.TransferredBytes'] == 0
-        assert props[CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'] == 0
+        assert props[cs.FT_STATE] == cs.FT_STATE_PENDING
+        assert props[cs.FT_CONTENT_TYPE] == self.file.content_type
+        assert props[cs.FT_FILENAME] == self.file.name
+        assert props[cs.FT_SIZE] == self.file.size
+        assert props[cs.FT_CONTENT_HASH_TYPE] == self.file.hash_type
+        assert props[cs.FT_CONTENT_HASH] == self.file.hash
+        assert props[cs.FT_DESCRIPTION] == self.file.description
+        assert props[cs.FT_DATE] == self.file.date
+        assert props[cs.FT_AVAILABLE_SOCKET_TYPES] == \
+            {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
+        assert props[cs.FT_TRANSFERRED_BYTES] == 0
+        assert props[cs.FT_INITIAL_OFFSET] == 0
+        if uri:
+            assertEquals(self.file.uri, props[cs.FT_URI])
+        else:
+            assertEquals('', props[cs.FT_URI])
 
     def got_send_iq(self):
         conn_event, iq_event = self.q.expect_many(
@@ -370,8 +370,8 @@ class SendFileTest(FileTransferTest):
         assert self.desc == self.file.description
 
     def provide_file(self):
-        self.address = self.ft_channel.ProvideFile(SOCKET_ADDRESS_TYPE_UNIX,
-                SOCKET_ACCESS_CONTROL_LOCALHOST, "", byte_arrays=True)
+        self.address = self.ft_channel.ProvideFile(cs.SOCKET_ADDRESS_TYPE_UNIX,
+                cs.SOCKET_ACCESS_CONTROL_LOCALHOST, "", byte_arrays=True)
 
     def client_request_file(self):
         # Connect HTTP client to the CM and request the file
@@ -410,5 +410,5 @@ class SendFileTest(FileTransferTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_COMPLETED
-        assert reason == FT_STATE_CHANGE_REASON_NONE
+        assert state == cs.FT_STATE_COMPLETED
+        assert reason == cs.FT_STATE_CHANGE_REASON_NONE

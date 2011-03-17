@@ -8,6 +8,7 @@
 #include "salut-connection-manager.h"
 #include "salut-avahi-discovery-client.h"
 #include "debug.h"
+#include "plugin-loader.h"
 
 static TpBaseConnectionManager *
 salut_create_connection_manager (void)
@@ -22,6 +23,8 @@ int
 main (int argc, char **argv)
 {
   GLogLevelFlags fatal_mask;
+  gint ret;
+  SalutPluginLoader *loader;
 
   g_type_init ();
   g_thread_init (NULL);
@@ -39,9 +42,15 @@ main (int argc, char **argv)
     tp_debug_set_persistent (TRUE);
 #endif
 
-  return tp_run_connection_manager ("telepathy-salut", VERSION,
+  loader = salut_plugin_loader_dup ();
+
+  ret = tp_run_connection_manager ("telepathy-salut", VERSION,
                                     salut_create_connection_manager,
                                     argc, argv);
+
+  g_object_unref (loader);
+
+  return ret;
 }
 
 

@@ -28,7 +28,7 @@
 #include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"
 #include "gibber-transport.h"
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 
 G_DEFINE_TYPE (GibberIqHelper, gibber_iq_helper, G_TYPE_OBJECT);
 
@@ -58,7 +58,7 @@ typedef struct
   GibberIqHelper *self;
   gchar *id;
   GibberIqHelperStanzaReplyFunc reply_func;
-  GibberXmppStanza *sent_stanza;
+  WockyStanza *sent_stanza;
   GObject *object;
   gpointer user_data;
 } ReplyHandlerData;
@@ -94,7 +94,7 @@ gibber_iq_helper_init (GibberIqHelper *self)
 
 static void
 xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
-                                    GibberXmppStanza *stanza,
+                                    WockyStanza *stanza,
                                     gpointer user_data)
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
@@ -103,7 +103,7 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
   const gchar *id;
   ReplyHandlerData *data;
 
-  id = gibber_xmpp_node_get_attribute (node, "id");
+  id = wocky_node_get_attribute (node, "id");
   if (id == NULL)
     return;
 
@@ -116,9 +116,9 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
     return;
 
   /* Its subtype have to be "result" or "error" */
-  if (strcmp (gibber_xmpp_node_get_attribute (node, "type"), "result")
+  if (strcmp (wocky_node_get_attribute (node, "type"), "result")
       != 0 &&
-      strcmp (gibber_xmpp_node_get_attribute (node, "type"), "error")
+      strcmp (wocky_node_get_attribute (node, "type"), "error")
       != 0)
     return;
 
@@ -287,7 +287,7 @@ reply_handler_object_destroy_notify_cb (gpointer _data,
 /*
  * gibber_iq_send_with_reply
  *
- * Send a GibberXmppStanza and call reply_func when we receive
+ * Send a WockyStanza and call reply_func when we receive
  * its reply.
  *
  * If object is non-NULL the handler will follow the lifetime of that object,
@@ -295,7 +295,7 @@ reply_handler_object_destroy_notify_cb (gpointer _data,
  */
 gboolean
 gibber_iq_helper_send_with_reply (GibberIqHelper *self,
-                                  GibberXmppStanza *iq,
+                                  WockyStanza *iq,
                                   GibberIqHelperStanzaReplyFunc reply_func,
                                   GObject *object,
                                   gpointer user_data,
@@ -314,11 +314,11 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
 
   priv = GIBBER_IQ_HELPER_GET_PRIVATE (self);
 
-  tmp = gibber_xmpp_node_get_attribute (node, "id");
+  tmp = wocky_node_get_attribute (node, "id");
   if (tmp == NULL)
     {
       id = gibber_xmpp_connection_new_id (priv->xmpp_connection);
-      gibber_xmpp_node_set_attribute (node, "id", id);
+      wocky_node_set_attribute (node, "id", id);
     }
   else
     {
@@ -351,49 +351,49 @@ gibber_iq_helper_send_with_reply (GibberIqHelper *self,
   return TRUE;
 }
 
-static GibberXmppStanza *
-new_reply (GibberXmppStanza *iq,
-           GibberStanzaSubType sub_type)
+static WockyStanza *
+new_reply (WockyStanza *iq,
+           WockyStanzaSubType sub_type)
 {
-  GibberXmppStanza *reply;
+  WockyStanza *reply;
   WockyNode *node = wocky_stanza_get_top_node (iq);
   const gchar *id;
   const gchar *iq_from, *iq_to;
 
-  g_return_val_if_fail (sub_type == GIBBER_STANZA_SUB_TYPE_RESULT ||
-      sub_type == GIBBER_STANZA_SUB_TYPE_ERROR, NULL);
+  g_return_val_if_fail (sub_type == WOCKY_STANZA_SUB_TYPE_RESULT ||
+      sub_type == WOCKY_STANZA_SUB_TYPE_ERROR, NULL);
   g_return_val_if_fail (strcmp (node->name, "iq") == 0, NULL);
 
-  id = gibber_xmpp_node_get_attribute (node, "id");
+  id = wocky_node_get_attribute (node, "id");
   g_return_val_if_fail (id != NULL, NULL);
 
-  iq_from = gibber_xmpp_node_get_attribute (node, "from");
-  iq_to = gibber_xmpp_node_get_attribute (node, "to");
+  iq_from = wocky_node_get_attribute (node, "from");
+  iq_to = wocky_node_get_attribute (node, "to");
 
-  reply = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
+  reply = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
       sub_type,
       iq_to, iq_from,
-      GIBBER_NODE_ATTRIBUTE, "id", id,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_ATTRIBUTE, "id", id,
+      NULL);
 
   return reply;
 }
 
-GibberXmppStanza *
-gibber_iq_helper_new_result_reply (GibberXmppStanza *iq)
+WockyStanza *
+gibber_iq_helper_new_result_reply (WockyStanza *iq)
 {
-  return new_reply (iq, GIBBER_STANZA_SUB_TYPE_RESULT);
+  return new_reply (iq, WOCKY_STANZA_SUB_TYPE_RESULT);
 }
 
-GibberXmppStanza *
-gibber_iq_helper_new_error_reply (GibberXmppStanza *iq,
+WockyStanza *
+gibber_iq_helper_new_error_reply (WockyStanza *iq,
                                   GibberXmppError error,
                                   const gchar *errmsg)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
-  stanza = new_reply (iq, GIBBER_STANZA_SUB_TYPE_ERROR);
+  stanza = new_reply (iq, WOCKY_STANZA_SUB_TYPE_ERROR);
   node = wocky_stanza_get_top_node (stanza);
   gibber_xmpp_error_to_node (error, node, errmsg);
 

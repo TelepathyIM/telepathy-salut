@@ -1,0 +1,14 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+libexecdir=@libexecdir@
+
+plugindir=${libdir}/telepathy/salut-0
+
+Name: Telepathy-Salut
+Description: XMPP backend for the Telepathy framework
+Version: @VERSION@
+Requires: pkg-config >= 0.21
+Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib >= 0.13.12
+Cflags: -I${includedir}/telepathy-salut-0

@@ -30,7 +30,7 @@
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-xmpp-connection.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-namespaces.h>
 
 #include <telepathy-glib/channel-manager.h>
@@ -74,7 +74,6 @@ struct _SalutImManagerPrivate
   SalutConnection *connection;
   SalutXmppConnectionManager *xmpp_connection_manager;
   GHashTable *channels;
-  GHashTable *pending_connections;
   gulong status_changed_id;
   gboolean dispose_has_run;
 };
@@ -84,35 +83,18 @@ struct _SalutImManagerPrivate
                                 SalutImManagerPrivate))
 
 static void
-contact_list_destroy (gpointer data)
-{
-  GList *list = (GList *) data;
-  GList *t = list;
-  while (t != NULL)
-    {
-      SalutContact *contact;
-      contact= SALUT_CONTACT (t->data);
-      g_object_unref (contact);
-      t = g_list_next (t);
-    }
-  g_list_free (list);
-}
-
-static void
 salut_im_manager_init (SalutImManager *obj)
 {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (obj);
   /* allocate any data required by the object here */
   priv->channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, g_object_unref);
-  priv->pending_connections = g_hash_table_new_full (g_direct_hash,
-      g_direct_equal, g_object_unref, contact_list_destroy);
 }
 
 static gboolean
 message_stanza_filter (SalutXmppConnectionManager *mgr,
                        GibberXmppConnection *conn,
-                       GibberXmppStanza *stanza,
+                       WockyStanza *stanza,
                        SalutContact *contact,
                        gpointer user_data)
 {
@@ -138,7 +120,7 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
 static void
 message_stanza_callback (SalutXmppConnectionManager *mgr,
                          GibberXmppConnection *conn,
-                         GibberXmppStanza *stanza,
+                         WockyStanza *stanza,
                          SalutContact *contact,
                          gpointer user_data)
 {
@@ -347,12 +329,6 @@ salut_im_manager_dispose (GObject *object)
     }
 
   salut_im_factory_close_all (self);
-
-  if (priv->pending_connections)
-    {
-      g_hash_table_destroy (priv->pending_connections);
-      priv->pending_connections = NULL;
-    }
 
   if (G_OBJECT_CLASS (salut_im_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_im_manager_parent_class)->dispose (object);

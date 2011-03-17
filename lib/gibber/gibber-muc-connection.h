@@ -24,7 +24,7 @@
 #include <glib-object.h>
 
 #include "gibber-r-multicast-transport.h"
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 
 G_BEGIN_DECLS
 
@@ -101,7 +101,7 @@ const GHashTable * gibber_muc_connection_get_parameters (
 GType gibber_muc_connection_get_type (void);
 
 gboolean gibber_muc_connection_send (GibberMucConnection *connection,
-    GibberXmppStanza *stanza, GError **error);
+    WockyStanza *stanza, GError **error);
 
 gboolean
 gibber_muc_connection_send_raw (GibberMucConnection *connection,

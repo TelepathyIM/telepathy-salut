@@ -26,7 +26,7 @@
 
 #include <telepathy-glib/handle-repo.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #include "capabilities-set.h"
 #include "salut-connection.h"
@@ -154,7 +154,7 @@ void salut_self_foreach_olpc_activity (SalutSelf *self,
     SalutSelfOLPCActivityFunc foreach, gpointer user_data);
 
 void salut_self_olpc_augment_invitation (SalutSelf *self,
-    TpHandle room, TpHandle contact, GibberXmppNode *invite_node);
+    TpHandle room, TpHandle contact, WockyNode *invite_node);
 #endif
 
 const GabbleCapabilitySet *salut_self_get_caps (SalutSelf *self);

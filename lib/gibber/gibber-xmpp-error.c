@@ -317,7 +317,7 @@ gibber_xmpp_error_quark (void)
 }
 
 GibberXmppError
-gibber_xmpp_error_from_node (GibberXmppNode *error_node)
+gibber_xmpp_error_from_node (WockyNode *error_node)
 {
   gint i, j;
   const gchar *error_code_str;
@@ -331,7 +331,7 @@ gibber_xmpp_error_from_node (GibberXmppNode *error_node)
        * numbers; the >= 0 test is OK because i is signed */
       for (i = NUM_XMPP_ERRORS - 1; i >= 0; i--)
         {
-          if (gibber_xmpp_node_get_child_ns (error_node, xmpp_errors[i].name,
+          if (wocky_node_get_child_ns (error_node, xmpp_errors[i].name,
                 xmpp_errors[i].namespace))
             {
               return i;
@@ -340,7 +340,7 @@ gibber_xmpp_error_from_node (GibberXmppNode *error_node)
     }
 
   /* Ok, do it the legacy way */
-  error_code_str = gibber_xmpp_node_get_attribute (error_node, "code");
+  error_code_str = wocky_node_get_attribute (error_node, "code");
   if (error_code_str)
     {
       gint error_code;
@@ -382,13 +382,13 @@ gibber_xmpp_error_to_g_error (GibberXmppError error)
 /*
  * See RFC 3920: 4.7 Stream Errors, 9.3 Stanza Errors.
  */
-GibberXmppNode *
+WockyNode *
 gibber_xmpp_error_to_node (GibberXmppError error,
-                           GibberXmppNode *parent_node,
+                           WockyNode *parent_node,
                            const gchar *errmsg)
 {
   const XmppErrorSpec *spec, *extra;
-  GibberXmppNode *error_node, *node;
+  WockyNode *error_node, *node;
   gchar str[6];
 
   g_return_val_if_fail (error != XMPP_ERROR_UNDEFINED_CONDITION &&
@@ -405,29 +405,29 @@ gibber_xmpp_error_to_node (GibberXmppError error,
       spec = &xmpp_errors[error];
     }
 
-  error_node = gibber_xmpp_node_add_child (parent_node, "error");
+  error_node = wocky_node_add_child (parent_node, "error");
 
   sprintf (str, "%d", spec->legacy_errors[0]);
-  gibber_xmpp_node_set_attribute (error_node, "code", str);
+  wocky_node_set_attribute (error_node, "code", str);
 
   if (spec->type)
     {
-      gibber_xmpp_node_set_attribute (error_node, "type", spec->type);
+      wocky_node_set_attribute (error_node, "type", spec->type);
     }
 
-  node = gibber_xmpp_node_add_child_ns (error_node, spec->name,
+  node = wocky_node_add_child_ns (error_node, spec->name,
       GIBBER_XMPP_NS_STANZAS);
 
   if (extra != NULL)
     {
-      node = gibber_xmpp_node_add_child_ns (error_node, extra->name,
+      node = wocky_node_add_child_ns (error_node, extra->name,
           extra->namespace);
     }
 
   if (NULL != errmsg)
     {
-      node = gibber_xmpp_node_add_child (error_node, "text");
-      gibber_xmpp_node_set_content (node, errmsg);
+      node = wocky_node_add_child (error_node, "text");
+      wocky_node_set_content (node, errmsg);
     }
 
   return error_node;
@@ -452,16 +452,16 @@ gibber_xmpp_error_description (GibberXmppError error)
 }
 
 GError *
-gibber_message_get_xmpp_error (GibberXmppStanza *msg)
+gibber_message_get_xmpp_error (WockyStanza *msg)
 {
-  GibberStanzaSubType sub_type;
+  WockyStanzaSubType sub_type;
   g_return_val_if_fail (msg != NULL, NULL);
 
-  gibber_xmpp_stanza_get_type_info (msg, NULL, &sub_type);
+  wocky_stanza_get_type_info (msg, NULL, &sub_type);
 
-  if (sub_type == GIBBER_STANZA_SUB_TYPE_ERROR)
+  if (sub_type == WOCKY_STANZA_SUB_TYPE_ERROR)
     {
-      GibberXmppNode *error_node = gibber_xmpp_node_get_child (
+      WockyNode *error_node = wocky_node_get_child (
           wocky_stanza_get_top_node (msg), "error");
 
       if (error_node != NULL)

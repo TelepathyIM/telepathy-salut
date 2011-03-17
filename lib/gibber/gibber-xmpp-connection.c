@@ -30,7 +30,7 @@
 #include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"
 #include "gibber-transport.h"
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 
 #define XMPP_STREAM_NAMESPACE "http://etherx.jabber.org/streams"
 
@@ -59,7 +59,7 @@ static void _reader_stream_closed_cb (GibberXmppReader *reader,
     gpointer user_data);
 
 static void _reader_received_stanza_cb (GibberXmppReader *reader,
-    GibberXmppStanza *stanza, gpointer user_data);
+    WockyStanza *stanza, gpointer user_data);
 
 /* private structure */
 typedef struct _GibberXmppConnectionPrivate GibberXmppConnectionPrivate;
@@ -148,7 +148,7 @@ gibber_xmpp_connection_class_init (
       0,
       NULL, NULL,
       g_cclosure_marshal_VOID__OBJECT,
-      G_TYPE_NONE, 1, GIBBER_TYPE_XMPP_STANZA);
+      G_TYPE_NONE, 1, WOCKY_TYPE_STANZA);
 
   signals[PARSE_ERROR] = g_signal_new ("parse-error",
       G_OBJECT_CLASS_TYPE(gibber_xmpp_connection_class),
@@ -297,7 +297,7 @@ gibber_xmpp_connection_disengage (GibberXmppConnection *connection)
 
 gboolean
 gibber_xmpp_connection_send (GibberXmppConnection *connection,
-    GibberXmppStanza *stanza, GError **error)
+    WockyStanza *stanza, GError **error)
 {
   GibberXmppConnectionPrivate *priv =
     GIBBER_XMPP_CONNECTION_GET_PRIVATE (connection);
@@ -369,7 +369,7 @@ _reader_stream_closed_cb (GibberXmppReader *reader, gpointer user_data)
 }
 
 static void
-_reader_received_stanza_cb (GibberXmppReader *reader, GibberXmppStanza *stanza,
+_reader_received_stanza_cb (GibberXmppReader *reader, WockyStanza *stanza,
     gpointer user_data)
 {
   GibberXmppConnection *self = GIBBER_XMPP_CONNECTION (user_data);

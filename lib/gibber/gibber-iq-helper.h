@@ -22,7 +22,7 @@
 
 #include <glib-object.h>
 
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 #include "gibber-xmpp-connection.h"
 #include "gibber-xmpp-error.h"
 
@@ -62,8 +62,8 @@ GType gibber_iq_helper_get_type (void);
                               GibberIqHelperClass))
 
 typedef void (*GibberIqHelperStanzaReplyFunc) (GibberIqHelper *helper,
-                                               GibberXmppStanza *sent_stanza,
-                                               GibberXmppStanza *reply_stanza,
+                                               WockyStanza *sent_stanza,
+                                               WockyStanza *reply_stanza,
                                                GObject *object,
                                                gpointer user_data);
 
@@ -72,14 +72,14 @@ gibber_iq_helper_new (GibberXmppConnection *xmpp_connection);
 
 gboolean
 gibber_iq_helper_send_with_reply (GibberIqHelper *helper,
-    GibberXmppStanza *iq, GibberIqHelperStanzaReplyFunc reply_func,
+    WockyStanza *iq, GibberIqHelperStanzaReplyFunc reply_func,
     GObject *object, gpointer user_data, GError **error);
 
-GibberXmppStanza *
-gibber_iq_helper_new_result_reply (GibberXmppStanza *iq);
+WockyStanza *
+gibber_iq_helper_new_result_reply (WockyStanza *iq);
 
-GibberXmppStanza *
-gibber_iq_helper_new_error_reply (GibberXmppStanza *iq, GibberXmppError error,
+WockyStanza *
+gibber_iq_helper_new_error_reply (WockyStanza *iq, GibberXmppError error,
     const gchar *errmsg);
 
 G_END_DECLS

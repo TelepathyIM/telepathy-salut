@@ -70,7 +70,7 @@ void gibber_debug (DebugFlags flag,
 
 void
 gibber_debug_stanza (DebugFlags flag,
-                     GibberXmppStanza *stanza,
+                     WockyStanza *stanza,
                      const gchar *format,
                      ...)
 {
@@ -87,7 +87,7 @@ gibber_debug_stanza (DebugFlags flag,
       msg = g_strdup_vprintf (format, args);
       va_end (args);
 
-      node_str = gibber_xmpp_node_to_string (node);
+      node_str = wocky_node_to_string (node);
 
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s\n%s", msg, node_str);
 

@@ -45,26 +45,26 @@
 #include "salut-util.h"
 
 static void
-add_text (GibberXmppStanza *stanza, const gchar *text)
+add_text (WockyStanza *stanza, const gchar *text)
 {
   WockyNode *node = wocky_stanza_get_top_node (stanza);
-  GibberXmppNode *htmlnode;
+  WockyNode *htmlnode;
 
-  gibber_xmpp_node_add_child_with_content (node, "body", text);
+  wocky_node_add_child_with_content (node, "body", text);
 
   /* Add plain xhtml-im node */
-  htmlnode = gibber_xmpp_node_add_child_ns (node, "html",
+  htmlnode = wocky_node_add_child_ns (node, "html",
       GIBBER_XMPP_NS_XHTML_IM);
-  gibber_xmpp_node_add_child_with_content_ns (htmlnode, "body", text,
+  wocky_node_add_child_with_content_ns (htmlnode, "body", text,
       GIBBER_W3C_NS_XHTML);
 }
 
-static GibberXmppStanza *
+static WockyStanza *
 create_message_stanza (const gchar *from,
   const gchar *to, TpChannelTextMessageType type, const gchar *text,
   GError **error)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
   if (type > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
@@ -76,11 +76,11 @@ create_message_stanza (const gchar *from,
 
       return NULL;
     }
-  stanza = gibber_xmpp_stanza_new_ns ("message", WOCKY_XMPP_NS_JABBER_CLIENT);
+  stanza = wocky_stanza_new ("message", WOCKY_XMPP_NS_JABBER_CLIENT);
   node = wocky_stanza_get_top_node (stanza);
 
-  gibber_xmpp_node_set_attribute (node, "from", from);
-  gibber_xmpp_node_set_attribute (node, "to", to);
+  wocky_node_set_attribute (node, "from", from);
+  wocky_node_set_attribute (node, "to", to);
 
   if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION)
     {
@@ -97,14 +97,14 @@ create_message_stanza (const gchar *from,
   return stanza;
 }
 
-GibberXmppStanza *
+WockyStanza *
 text_helper_create_message (const gchar *from,
                             const gchar *to,
                             TpChannelTextMessageType type,
                             const gchar *text,
                             GError **error)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
   stanza = create_message_stanza (from, to, type, text, error);
@@ -117,10 +117,10 @@ text_helper_create_message (const gchar *from,
     {
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-        gibber_xmpp_node_set_attribute (node, "type", "chat");
+        wocky_node_set_attribute (node, "type", "chat");
         break;
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-        gibber_xmpp_node_set_attribute (node, "type", "normal");
+        wocky_node_set_attribute (node, "type", "normal");
         break;
       default:
         g_assert_not_reached ();
@@ -130,14 +130,14 @@ text_helper_create_message (const gchar *from,
   return stanza;
 }
 
-GibberXmppStanza *
+WockyStanza *
 text_helper_create_message_groupchat (const gchar *from,
                                       const gchar *to,
                                       TpChannelTextMessageType type,
                                       const gchar *text,
                                       GError **error)
 {
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   WockyNode *node;
 
   stanza = create_message_stanza (from, to, type, text, error);
@@ -150,10 +150,10 @@ text_helper_create_message_groupchat (const gchar *from,
     {
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-        gibber_xmpp_node_set_attribute (node, "type", "groupchat");
+        wocky_node_set_attribute (node, "type", "groupchat");
         break;
       case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-        gibber_xmpp_node_set_attribute (node, "type", "normal");
+        wocky_node_set_attribute (node, "type", "normal");
         break;
       default:
         g_assert_not_reached ();
@@ -164,29 +164,29 @@ text_helper_create_message_groupchat (const gchar *from,
 }
 
 gboolean
-text_helper_parse_incoming_message (GibberXmppStanza *stanza,
+text_helper_parse_incoming_message (WockyStanza *stanza,
                         const gchar **from,
                         TpChannelTextMessageType *msgtype,
                         const gchar **body,
                         const gchar **body_offset)
 {
   const gchar *type;
-  GibberXmppNode *node;
-  GibberXmppNode *event;
+  WockyNode *node;
+  WockyNode *event;
   WockyNode *top_node = wocky_stanza_get_top_node (stanza);
 
-  *from = gibber_xmpp_node_get_attribute (top_node, "from");
-  type = gibber_xmpp_node_get_attribute (top_node, "type");
+  *from = wocky_node_get_attribute (top_node, "from");
+  type = wocky_node_get_attribute (top_node, "type");
   /* Work around iChats strange way of doing typing notification */
-  event = gibber_xmpp_node_get_child_ns (top_node, "x",
+  event = wocky_node_get_child_ns (top_node, "x",
     GIBBER_XMPP_NS_EVENT);
 
   if (event != NULL)
     {
       /* If the event has a composing and an id child, this is a typing
        * notification and it should be dropped */
-      if (gibber_xmpp_node_get_child (event, "composing") != NULL &&
-          gibber_xmpp_node_get_child (event, "id") != NULL)
+      if (wocky_node_get_child (event, "composing") != NULL &&
+          wocky_node_get_child (event, "id") != NULL)
         {
           return FALSE;
         }
@@ -194,7 +194,7 @@ text_helper_parse_incoming_message (GibberXmppStanza *stanza,
   /*
    * Parse body if it exists.
    */
-  node = gibber_xmpp_node_get_child (top_node, "body");
+  node = wocky_node_get_child (top_node, "body");
 
   if (node)
     {
@@ -317,7 +317,7 @@ text_helper_report_delivery_error (TpSvcChannel *self,
   tp_message_set_handle (delivery_echo, 0, "message-sender",
       TP_HANDLE_TYPE_CONTACT, base_conn->self_handle);
   tp_message_set_uint32 (delivery_echo, 0, "message-type", type);
-  tp_message_set_uint64 (delivery_echo, 0, "message-sent", (guint64)timestamp);
+  tp_message_set_int64 (delivery_echo, 0, "message-sent", (gint64)timestamp);
   tp_message_set_string (delivery_echo, 1, "content-type", "text/plain");
   tp_message_set_string (delivery_echo, 1, "content", text);
 
@@ -349,7 +349,7 @@ text_helper_create_received_message (TpBaseConnection *base_conn,
   tp_message_set_uint32 (message, 0, "message-type", type);
   tp_message_set_handle (message, 0, "message-sender",
       TP_HANDLE_TYPE_CONTACT, sender_handle);
-  tp_message_set_uint32 (message, 0, "message-received", timestamp);
+  tp_message_set_int64 (message, 0, "message-received", timestamp);
 
   tp_message_set_string (message, 1, "content-type", "text/plain");
   tp_message_set_string (message, 1, "content", text);

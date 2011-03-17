@@ -24,7 +24,7 @@
 #include <glib-object.h>
 
 #include "gibber-transport.h"
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 
 G_BEGIN_DECLS
 
@@ -90,7 +90,7 @@ void gibber_xmpp_connection_engage (GibberXmppConnection *connection,
 void gibber_xmpp_connection_disengage (GibberXmppConnection *connection);
 
 gboolean gibber_xmpp_connection_send (GibberXmppConnection *connection,
-  GibberXmppStanza *stanza, GError **error);
+  WockyStanza *stanza, GError **error);
 
 gchar * gibber_xmpp_connection_new_id (GibberXmppConnection *connection);
 

@@ -37,7 +37,7 @@
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-connection.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -74,11 +74,11 @@ static const gchar *salut_im_channel_interfaces[] = {
 };
 
 static gboolean message_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
 static void message_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
 /* Channel state */
@@ -139,7 +139,7 @@ struct _SalutImChannelMessage {
   guint type;
   gchar *text;
   gchar *token;
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
 };
 
 static void
@@ -175,7 +175,7 @@ static SalutImChannelMessage *
 salut_im_channel_message_new (guint type,
                               const gchar *text,
                               const gchar *token,
-                              GibberXmppStanza *stanza)
+                              WockyStanza *stanza)
 {
   SalutImChannelMessage *msg;
   msg = g_new0 (SalutImChannelMessage, 1);
@@ -203,7 +203,7 @@ salut_im_channel_message_free (SalutImChannelMessage *message)
 
 static gboolean
 _send_message (SalutImChannel *self, guint type, const gchar *text,
-    const gchar *token, GibberXmppStanza *stanza, GError **error);
+    const gchar *token, WockyStanza *stanza, GError **error);
 
 static void
 salut_im_channel_init (SalutImChannel *obj)
@@ -296,6 +296,10 @@ salut_im_channel_get_property (GObject *object,
                 TP_IFACE_CHANNEL, "InitiatorID",
                 TP_IFACE_CHANNEL, "Requested",
                 TP_IFACE_CHANNEL, "Interfaces",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessagePartSupportFlags",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "DeliveryReportingSupport",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "SupportedContentTypes",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessageTypes",
                 NULL));
         break;
       default:
@@ -365,7 +369,7 @@ salut_im_channel_constructor (GType type,
                               GObjectConstructParam *props)
 {
   GObject *obj;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
   SalutImChannelPrivate *priv;
   TpBaseConnection *base_conn;
   TpHandleRepoIface *contact_repo;
@@ -408,8 +412,8 @@ salut_im_channel_constructor (GType type,
       supported_content_types);
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   g_signal_connect (priv->xmpp_connection_manager, "new-connection",
       G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
@@ -604,7 +608,7 @@ _sendout_message (SalutImChannel *self,
                   guint type,
                   const gchar *text,
                   const gchar *token,
-                  GibberXmppStanza *stanza)
+                  WockyStanza *stanza)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
 
@@ -663,7 +667,7 @@ _error_flush_queue (SalutImChannel *self) {
 
 void
 salut_im_channel_received_stanza (SalutImChannel *self,
-                                  GibberXmppStanza *stanza)
+                                  WockyStanza *stanza)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
@@ -695,7 +699,7 @@ salut_im_channel_received_stanza (SalutImChannel *self,
 static gboolean
 message_stanza_filter (SalutXmppConnectionManager *mgr,
                        GibberXmppConnection *conn,
-                       GibberXmppStanza *stanza,
+                       WockyStanza *stanza,
                        SalutContact *contact,
                        gpointer user_data)
 {
@@ -711,7 +715,7 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
 static void
 message_stanza_callback (SalutXmppConnectionManager *mgr,
                          GibberXmppConnection *conn,
-                         GibberXmppStanza *stanza,
+                         WockyStanza *stanza,
                          SalutContact *contact,
                          gpointer user_data)
 {
@@ -904,7 +908,7 @@ _send_message (SalutImChannel *self,
                guint type,
                const gchar *text,
                const gchar *token,
-               GibberXmppStanza *stanza,
+               WockyStanza *stanza,
                GError **error)
 {
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
@@ -951,12 +955,12 @@ salut_im_channel_add_connection (SalutImChannel *chan,
 }
 
 gboolean
-salut_im_channel_is_text_message (GibberXmppStanza *stanza)
+salut_im_channel_is_text_message (WockyStanza *stanza)
 {
-  GibberStanzaType type;
+  WockyStanzaType type;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
-  if (type != GIBBER_STANZA_TYPE_MESSAGE)
+  wocky_stanza_get_type_info (stanza, &type, NULL);
+  if (type != WOCKY_STANZA_TYPE_MESSAGE)
     return FALSE;
 
   if (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "invite",
@@ -972,12 +976,6 @@ salut_im_channel_is_text_message (GibberXmppStanza *stanza)
  *
  * Implements DBus method Close
  * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 salut_im_channel_close (TpSvcChannel *iface,
@@ -993,12 +991,6 @@ salut_im_channel_close (TpSvcChannel *iface,
  *
  * Implements DBus method GetChannelType
  * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 salut_im_channel_get_channel_type (TpSvcChannel *iface,
@@ -1014,12 +1006,6 @@ salut_im_channel_get_channel_type (TpSvcChannel *iface,
  *
  * Implements DBus method GetHandle
  * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 salut_im_channel_get_handle (TpSvcChannel *iface,
@@ -1038,12 +1024,6 @@ salut_im_channel_get_handle (TpSvcChannel *iface,
  *
  * Implements DBus method GetInterfaces
  * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 salut_im_channel_get_interfaces (TpSvcChannel *iface,
@@ -1076,7 +1056,7 @@ _salut_im_channel_send (GObject *channel,
   SalutImChannel *self = SALUT_IM_CHANNEL (channel);
   SalutImChannelPrivate *priv = SALUT_IM_CHANNEL_GET_PRIVATE (self);
   GError *error = NULL;
-  GibberXmppStanza *stanza = NULL;
+  WockyStanza *stanza = NULL;
   guint type;
   gchar *text;
   gchar *token;

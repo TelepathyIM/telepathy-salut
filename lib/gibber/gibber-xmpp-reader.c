@@ -22,7 +22,7 @@
 
 #include "gibber-signals-marshal.h"
 
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 
 #define XMPP_STREAM_NAMESPACE "http://etherx.jabber.org/streams"
 
@@ -75,7 +75,7 @@ gibber_xmpp_reader_class_init (GibberXmppReaderClass *gibber_xmpp_reader_class)
       0,
       NULL, NULL,
       g_cclosure_marshal_VOID__OBJECT,
-      G_TYPE_NONE, 1, GIBBER_TYPE_XMPP_STANZA);
+      G_TYPE_NONE, 1, WOCKY_TYPE_STANZA);
 
   signals[STREAM_OPENED] = g_signal_new ("stream-opened",
       G_OBJECT_CLASS_TYPE(gibber_xmpp_reader_class),

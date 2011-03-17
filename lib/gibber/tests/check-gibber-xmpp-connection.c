@@ -5,9 +5,6 @@
 #include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-transport.h>
 #include "test-transport.h"
-#include "check-gibber.h"
-
-#include <check.h>
 
 struct _FileChunker {
   gchar *contents;
@@ -51,7 +48,8 @@ file_chunker_get_chunk (FileChunker *fc,
 }
 
 
-START_TEST (test_instantiation)
+static void
+test_instantiation (void)
 {
   GibberXmppConnection *connection;
   TestTransport *transport;
@@ -59,13 +57,12 @@ START_TEST (test_instantiation)
   transport = test_transport_new (NULL, NULL);
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT(transport));
 
-  fail_if (connection == NULL);
+  g_assert (connection != NULL);
 
   connection = gibber_xmpp_connection_new (NULL);
 
-  fail_if (connection == NULL);
+  g_assert (connection != NULL);
 }
-END_TEST
 
 static void
 parse_error_cb (GibberXmppConnection *connection, gpointer user_data)
@@ -74,7 +71,8 @@ parse_error_cb (GibberXmppConnection *connection, gpointer user_data)
   *parse_error_found = TRUE;
 }
 
-START_TEST (test_simple_message)
+static void
+test_simple_message (void)
 {
   GibberXmppConnection *connection;
   TestTransport *transport;
@@ -96,7 +94,7 @@ START_TEST (test_simple_message)
     }
 
   fc = file_chunker_new (file, 10);
-  fail_if (fc == NULL);
+  g_assert (fc != NULL);
 
   transport = test_transport_new (NULL, NULL);
   connection = gibber_xmpp_connection_new (GIBBER_TRANSPORT(transport));
@@ -110,17 +108,28 @@ START_TEST (test_simple_message)
       test_transport_write (transport, (guint8 *) chunk, chunk_length);
     }
 
-  fail_if (parse_error_found);
+  g_assert (!parse_error_found);
 
   g_free (file);
   file_chunker_destroy (fc);
-} END_TEST
-
-TCase *
-make_gibber_xmpp_connection_tcase (void)
-{
-    TCase *tc = tcase_create ("XMPP Connection");
-    tcase_add_test (tc, test_instantiation);
-    tcase_add_test (tc, test_simple_message);
-    return tc;
 }
+
+int
+main (int argc,
+      char **argv)
+{
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  /* Kill tests in 20 seconds */
+  alarm (20);
+
+  g_test_add_func ("/gibber/xmpp-connection/instantiation",
+      test_instantiation);
+  g_test_add_func ("/gibber/xmpp-connection/simple-message",
+      test_simple_message);
+
+  return g_test_run ();
+}
+
+#include "test-transport.c"

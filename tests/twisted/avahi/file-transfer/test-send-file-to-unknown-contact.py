@@ -1,7 +1,7 @@
 import dbus
 
 from saluttest import exec_test
-from file_transfer_helper import SendFileTest, HT_CONTACT
+from file_transfer_helper import SendFileTest
 
 from avahitest import get_host_name
 import constants as cs
@@ -14,7 +14,7 @@ class SendFileTransferToUnknownContactTest(SendFileTest):
 
     def my_request_ft_channel(self):
         self.contact_name = '%s@%s' % (self.CONTACT_NAME, get_host_name())
-        self.handle = self.conn.RequestHandles(HT_CONTACT, [self.contact_name])[0]
+        self.handle = self.conn.RequestHandles(cs.HT_CONTACT, [self.contact_name])[0]
 
         try:
             self.request_ft_channel()

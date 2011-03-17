@@ -23,12 +23,12 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 /* Mapping a XMPP node with a GHashTable */
-GHashTable *salut_gibber_xmpp_node_extract_properties (GibberXmppNode *node,
+GHashTable *salut_wocky_node_extract_properties (WockyNode *node,
     const gchar *prop);
-void salut_gibber_xmpp_node_add_children_from_properties (GibberXmppNode *node,
+void salut_wocky_node_add_children_from_properties (WockyNode *node,
     GHashTable *properties, const gchar *prop);
 gchar *salut_generate_id (void);
 

@@ -138,11 +138,11 @@ static gboolean salut_muc_channel_send_stanza (SalutMucChannel *self,
                                                guint type,
                                                const gchar *token,
                                                const gchar *text,
-                                               GibberXmppStanza *stanza,
+                                               WockyStanza *stanza,
                                                GError **error);
 static void salut_muc_channel_received_stanza (GibberMucConnection *conn,
                                                const gchar *sender,
-                                               GibberXmppStanza *stanza,
+                                               WockyStanza *stanza,
                                                gpointer user_data);
 static gboolean
 salut_muc_channel_connect (SalutMucChannel *channel, GError **error);
@@ -232,6 +232,10 @@ salut_muc_channel_get_property (GObject    *object,
                 TP_IFACE_CHANNEL, "InitiatorID",
                 TP_IFACE_CHANNEL, "Requested",
                 TP_IFACE_CHANNEL, "Interfaces",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessagePartSupportFlags",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "DeliveryReportingSupport",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "SupportedContentTypes",
+                TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessageTypes",
                 NULL));
         break;
     default:
@@ -369,7 +373,7 @@ salut_muc_channel_constructor (GType type, guint n_props,
     GObjectConstructParam *props)
 {
   GObject *obj;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
   SalutMucChannel *self;
   SalutMucChannelPrivate *priv;
   TpBaseConnection *base_conn;
@@ -428,8 +432,8 @@ salut_muc_channel_constructor (GType type, guint n_props,
   g_object_unref (priv->muc_manager);
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
@@ -465,12 +469,12 @@ static void salut_muc_channel_finalize (GObject *object);
 static void
 invitation_append_parameter (gpointer key, gpointer value, gpointer data)
 {
-  GibberXmppNode *node = (GibberXmppNode *) data;
-  gibber_xmpp_node_add_child_with_content (node, (gchar *) key,
+  WockyNode *node = (WockyNode *) data;
+  wocky_node_add_child_with_content (node, (gchar *) key,
       (gchar *) value);
 }
 
-static GibberXmppStanza *
+static WockyStanza *
 create_invitation (SalutMucChannel *self, TpHandle handle,
     const gchar *message)
 {
@@ -480,29 +484,29 @@ create_invitation (SalutMucChannel *self, TpHandle handle,
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
-  GibberXmppStanza *msg;
-  GibberXmppNode *invite_node;
+  WockyStanza *msg;
+  WockyNode *invite_node;
 
   const gchar *name = tp_handle_inspect (contact_repo, handle);
 
-  msg = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_MESSAGE,
-      GIBBER_STANZA_SUB_TYPE_NORMAL,
+  msg = wocky_stanza_build (WOCKY_STANZA_TYPE_MESSAGE,
+      WOCKY_STANZA_SUB_TYPE_NORMAL,
       self->connection->name, name,
-      GIBBER_NODE, "body",
-        GIBBER_NODE_TEXT, "You got a Clique chatroom invitation",
-      GIBBER_NODE_END,
-      GIBBER_NODE, "invite",
-        GIBBER_NODE_ASSIGN_TO, &invite_node,
-        GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_CLIQUE,
-        GIBBER_NODE, "roomname",
-          GIBBER_NODE_TEXT, tp_handle_inspect (room_repo, priv->handle),
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_START, "body",
+        WOCKY_NODE_TEXT, "You got a Clique chatroom invitation",
+      WOCKY_NODE_END,
+      WOCKY_NODE_START, "invite",
+        WOCKY_NODE_ASSIGN_TO, &invite_node,
+        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_CLIQUE,
+        WOCKY_NODE_START, "roomname",
+          WOCKY_NODE_TEXT, tp_handle_inspect (room_repo, priv->handle),
+        WOCKY_NODE_END,
+      WOCKY_NODE_END,
+      NULL);
 
   if (message != NULL && *message != '\0')
     {
-      gibber_xmpp_node_add_child_with_content (invite_node, "reason", message);
+      wocky_node_add_child_with_content (invite_node, "reason", message);
     }
 
   g_hash_table_foreach (
@@ -532,7 +536,7 @@ pending_connection_for_invite_data
 {
   SalutMucChannel *self;
   SalutContact *contact;
-  GibberXmppStanza *invite;
+  WockyStanza *invite;
 };
 
 static struct pending_connection_for_invite_data *
@@ -624,7 +628,7 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
                                    GError **error)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   SalutContactManager *contact_manager = NULL;
   SalutContact *contact;
   SalutXmppConnectionManagerRequestConnectionResult request_result;
@@ -1091,7 +1095,7 @@ static gboolean
 salut_muc_channel_send_stanza (SalutMucChannel *self, guint type,
                               const gchar *token,
                               const gchar *text,
-                              GibberXmppStanza *stanza,
+                              WockyStanza *stanza,
                               GError **error)
 {
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE (self);
@@ -1190,7 +1194,7 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
 static void
 salut_muc_channel_received_stanza (GibberMucConnection *conn,
                                    const gchar *sender,
-                                   GibberXmppStanza *stanza,
+                                   WockyStanza *stanza,
                                    gpointer user_data)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL (user_data);
@@ -1203,9 +1207,9 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
   TpChannelTextMessageType msgtype;
   TpHandle from_handle;
   WockyNode *node = wocky_stanza_get_top_node (stanza);
-  GibberXmppNode *tubes_node;
+  WockyNode *tubes_node;
 
-  to = gibber_xmpp_node_get_attribute (node, "to");
+  to = wocky_node_get_attribute (node, "to");
   if (strcmp (to, priv->muc_name)) {
     DEBUG("Stanza to another muc group, discarding");
     return;
@@ -1226,7 +1230,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
     return;
 #endif
 
-  tubes_node = gibber_xmpp_node_get_child_ns (node, "tubes",
+  tubes_node = wocky_node_get_child_ns (node, "tubes",
       GIBBER_TELEPATHY_NS_TUBES);
   if (tubes_node != NULL)
     {
@@ -1480,7 +1484,7 @@ salut_muc_channel_send (GObject *channel,
   SalutMucChannel *self = SALUT_MUC_CHANNEL(channel);
   SalutMucChannelPrivate *priv = SALUT_MUC_CHANNEL_GET_PRIVATE(self);
   GError *error = NULL;
-  GibberXmppStanza *stanza = NULL;
+  WockyStanza *stanza = NULL;
   guint type;
   gchar *text = NULL;
   gchar *token = NULL;

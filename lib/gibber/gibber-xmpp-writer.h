@@ -55,7 +55,7 @@ gibber_xmpp_writer_stream_open (GibberXmppWriter *writer,
 
 static inline gboolean
 gibber_xmpp_writer_write_stanza (GibberXmppWriter *writer,
-    GibberXmppStanza *stanza, const guint8 **data, gsize *length,
+    WockyStanza *stanza, const guint8 **data, gsize *length,
     GError **error)
 {
   /* can't fail */

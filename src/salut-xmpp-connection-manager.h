@@ -22,7 +22,7 @@
 
 #include <glib-object.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-xmpp-connection.h>
 
 #include "salut-connection.h"
@@ -88,11 +88,11 @@ typedef enum
 
 typedef gboolean (* SalutXmppConnectionManagerStanzaFilterFunc) (
     SalutXmppConnectionManager *manager, GibberXmppConnection *conn,
-    GibberXmppStanza *stanza, SalutContact *contact, gpointer user_data);
+    WockyStanza *stanza, SalutContact *contact, gpointer user_data);
 
 typedef void (* SalutXmppConnectionManagerStanzaCallbackFunc) (
     SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
-    GibberXmppStanza *stanza, SalutContact *contact, gpointer user_data);
+    WockyStanza *stanza, SalutContact *contact, gpointer user_data);
 
 SalutXmppConnectionManager * salut_xmpp_connection_manager_new (
     SalutConnection *connection, SalutContactManager *contact_manager);

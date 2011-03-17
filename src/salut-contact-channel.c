@@ -98,7 +98,7 @@ salut_contact_channel_constructor (GType type, guint n_props,
                                    GObjectConstructParam *props)
 {
   GObject *obj;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
   SalutContactChannelPrivate *priv;
   TpHandleRepoIface *handle_repo;
   TpHandleRepoIface *contact_repo;
@@ -111,12 +111,11 @@ salut_contact_channel_constructor (GType type, guint n_props,
   priv = SALUT_CONTACT_CHANNEL_GET_PRIVATE (SALUT_CONTACT_CHANNEL (obj));
 
   /* Connect to the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  base_conn = TP_BASE_CONNECTION (priv->conn);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   /* Ref our handle */
-  base_conn = TP_BASE_CONNECTION(priv->conn);
-
   handle_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_LIST);
   contact_repo = tp_base_connection_get_handles (base_conn,
@@ -387,12 +386,6 @@ salut_contact_channel_finalize (GObject *object)
  *
  * Implements DBus method GetChannelType
  * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 salut_contact_channel_get_channel_type (TpSvcChannel *iface,
@@ -408,12 +401,6 @@ salut_contact_channel_get_channel_type (TpSvcChannel *iface,
  *
  * Implements DBus method GetHandle
  * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 salut_contact_channel_get_handle (TpSvcChannel *iface,
@@ -432,12 +419,6 @@ salut_contact_channel_get_handle (TpSvcChannel *iface,
  *
  * Implements DBus method GetInterfaces
  * on interface org.freedesktop.Telepathy.Channel
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occured, DBus will throw the error only if this
- *         function returns false.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 salut_contact_channel_get_interfaces (TpSvcChannel *iface,

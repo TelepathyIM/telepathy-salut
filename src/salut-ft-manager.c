@@ -94,7 +94,7 @@ salut_ft_manager_init (SalutFtManager *obj)
 static gboolean
 message_stanza_filter (SalutXmppConnectionManager *mgr,
                        GibberXmppConnection *conn,
-                       GibberXmppStanza *stanza,
+                       WockyStanza *stanza,
                        SalutContact *contact,
                        gpointer user_data)
 {
@@ -104,7 +104,7 @@ message_stanza_filter (SalutXmppConnectionManager *mgr,
 static void
 message_stanza_callback (SalutXmppConnectionManager *mgr,
                          GibberXmppConnection *conn,
-                         GibberXmppStanza *stanza,
+                         WockyStanza *stanza,
                          SalutContact *contact,
                          gpointer user_data)
 {
@@ -296,6 +296,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   TpHandle handle;
   const gchar *content_type, *filename, *content_hash, *description;
   guint64 size, date, initial_offset;
+  const gchar *file_uri;
   TpFileHashType content_hash_type;
   GError *error = NULL;
   gboolean valid;
@@ -399,6 +400,9 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   initial_offset = tp_asv_get_uint64 (request_properties,
       TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
 
+  file_uri = tp_asv_get_string (request_properties,
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI);
+
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
     {
@@ -416,7 +420,8 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   chan = salut_file_transfer_channel_new (priv->connection, contact,
       handle, priv->xmpp_connection_manager, base_connection->self_handle,
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
-      content_hash_type, content_hash, description, date, initial_offset);
+      content_hash_type, content_hash, description, date, initial_offset,
+      file_uri);
 
   g_object_unref (contact);
 
@@ -449,17 +454,20 @@ static const gchar * const file_transfer_channel_fixed_properties[] = {
 
 static const gchar * const file_transfer_channel_allowed_properties[] =
 {
-   TP_IFACE_CHANNEL ".TargetHandle",
-   TP_IFACE_CHANNEL ".TargetID",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date",
-   TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset",
-   NULL
+  /* ContentHashType has to be first so we can easily skip it if needed (we
+   * currently don't as Salut doesn't support any hash mechanism) */
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH_TYPE,
+  TP_PROP_CHANNEL_TARGET_HANDLE,
+  TP_PROP_CHANNEL_TARGET_ID,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_TYPE,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_FILENAME,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_SIZE,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DESCRIPTION,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DATE,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_INITIAL_OFFSET,
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI,
+  NULL
 };
 
 static void

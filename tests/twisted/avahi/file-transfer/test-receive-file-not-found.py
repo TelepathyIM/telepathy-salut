@@ -5,8 +5,9 @@ import urllib
 from twisted.words.xish import xpath
 
 from saluttest import exec_test
-from file_transfer_helper import ReceiveFileTest,FT_STATE_CANCELLED, \
-    FT_STATE_CHANGE_REASON_LOCAL_ERROR, CHANNEL_TYPE_FILE_TRANSFER
+from file_transfer_helper import ReceiveFileTest
+
+import constants as cs
 
 class ReceiveFileNotFound(ReceiveFileTest):
     def setup_http_server(self):
@@ -40,10 +41,10 @@ class ReceiveFileNotFound(ReceiveFileTest):
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
         state, reason = e.args
-        assert state == FT_STATE_CANCELLED
-        assert reason == FT_STATE_CHANGE_REASON_LOCAL_ERROR
+        assert state == cs.FT_STATE_CANCELLED
+        assert reason == cs.FT_STATE_CHANGE_REASON_LOCAL_ERROR
 
-        transferred = self.ft_props.Get(CHANNEL_TYPE_FILE_TRANSFER, 'TransferredBytes')
+        transferred = self.ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'TransferredBytes')
         # no byte has been transferred as the transfer failed
         assert transferred == 0
 

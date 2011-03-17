@@ -90,7 +90,7 @@ GHashTable * salut_olpc_activity_create_properties_table (
     SalutOlpcActivity *activity);
 
 void salut_olpc_activity_augment_invitation (SalutOlpcActivity *activity,
-    TpHandle contact, GibberXmppNode *invite_node);
+    TpHandle contact, WockyNode *invite_node);
 
 gboolean salut_olpc_activity_remove_invited (SalutOlpcActivity *activity,
     TpHandle contact);

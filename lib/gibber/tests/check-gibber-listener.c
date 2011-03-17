@@ -34,9 +34,6 @@
 #include <gibber/gibber-unix-transport.h>
 #include <gibber/gibber-listener.h>
 
-#include <check.h>
-#include "check-gibber.h"
-
 gboolean got_connection;
 gboolean signalled;
 
@@ -77,7 +74,8 @@ connect_to_port (int port, GMainLoop *loop)
   return GIBBER_TRANSPORT (transport);
 }
 
-START_TEST (test_unix_listen)
+static void
+test_unix_listen (void)
 {
   GibberListener *listener_unix;
   GibberUnixTransport *unix_transport;
@@ -87,34 +85,35 @@ START_TEST (test_unix_listen)
   gchar *path = "/tmp/check-gibber-listener-socket";
 
   ret = unlink (path);
-  fail_if (ret == -1 && errno != ENOENT);
+  g_assert (!(ret == -1 && errno != ENOENT));
 
   mainloop = g_main_loop_new (NULL, FALSE);
 
   listener_unix = gibber_listener_new ();
-  fail_if (listener_unix == NULL);
+  g_assert (listener_unix != NULL);
 
   g_signal_connect (listener_unix, "new-connection",
       G_CALLBACK (new_connection_cb), mainloop);
 
   ret = gibber_listener_listen_socket (listener_unix, path, FALSE, &error);
-  fail_if (ret != TRUE);
+  g_assert (ret == TRUE);
 
   unix_transport = gibber_unix_transport_new ();
   ret = gibber_unix_transport_connect (unix_transport, path, &error);
-  fail_if (ret != TRUE);
+  g_assert (ret == TRUE);
 
   if (!signalled)
     g_main_loop_run (mainloop);
 
-  fail_if (!got_connection, "Failed to connect");
+  g_assert (got_connection && "Failed to connect");
 
   g_object_unref (listener_unix);
   g_object_unref (unix_transport);
   g_main_loop_unref (mainloop);
-} END_TEST
+}
 
-START_TEST (test_tcp_listen)
+static void
+test_tcp_listen (void)
 {
   GibberListener *listener;
   GibberListener *listener_without_port;
@@ -128,13 +127,13 @@ START_TEST (test_tcp_listen)
 
   /* tcp socket tests without a specified port */
   listener_without_port = gibber_listener_new ();
-  fail_if (listener_without_port == NULL);
+  g_assert (listener_without_port != NULL);
 
   g_signal_connect (listener_without_port, "new-connection",
       G_CALLBACK (new_connection_cb), mainloop);
 
   ret = gibber_listener_listen_tcp (listener_without_port, 0, &error);
-  fail_if (ret != TRUE);
+  g_assert (ret == TRUE);
   port = gibber_listener_get_port (listener_without_port);
 
   signalled = FALSE;
@@ -142,14 +141,14 @@ START_TEST (test_tcp_listen)
   if (!signalled)
     g_main_loop_run (mainloop);
 
-  fail_if (!got_connection, "Failed to connect");
+  g_assert (got_connection);
 
   g_object_unref (listener_without_port);
   g_object_unref (transport);
 
   /* tcp socket tests with a specified port */
   listener = gibber_listener_new ();
-  fail_if (listener == NULL);
+  g_assert (listener != NULL);
 
   g_signal_connect (listener, "new-connection", G_CALLBACK (new_connection_cb),
       mainloop);
@@ -159,20 +158,20 @@ START_TEST (test_tcp_listen)
       if (gibber_listener_listen_tcp (listener, port, &error))
         break;
 
-      fail_if (!g_error_matches (error, GIBBER_LISTENER_ERROR,
-            GIBBER_LISTENER_ERROR_ADDRESS_IN_USE));
+      g_assert_error (error, GIBBER_LISTENER_ERROR,
+          GIBBER_LISTENER_ERROR_ADDRESS_IN_USE);
       g_error_free (error);
       error = NULL;
     }
-  fail_if (port >= 5400);
-  fail_if (port != gibber_listener_get_port (listener));
+  g_assert (port < 5400);
+  g_assert (port == gibber_listener_get_port (listener));
 
   /* try a second listener on the same port */
   listener2 = gibber_listener_new ();
-  fail_if (listener2 == NULL);
-  fail_if (gibber_listener_listen_tcp (listener2, port, &error));
-  fail_if (!g_error_matches (error, GIBBER_LISTENER_ERROR,
-        GIBBER_LISTENER_ERROR_ADDRESS_IN_USE));
+  g_assert (listener2 != NULL);
+  g_assert (!gibber_listener_listen_tcp (listener2, port, &error));
+  g_assert_error (error, GIBBER_LISTENER_ERROR,
+        GIBBER_LISTENER_ERROR_ADDRESS_IN_USE);
   g_object_unref (listener2);
   g_error_free (error);
   error = NULL;
@@ -182,7 +181,7 @@ START_TEST (test_tcp_listen)
   if (!signalled)
     g_main_loop_run (mainloop);
 
-  fail_if (!got_connection, "Failed to connect");
+  g_assert (got_connection);
 
   g_object_unref (listener);
   g_object_unref (transport);
@@ -194,18 +193,23 @@ START_TEST (test_tcp_listen)
   if (!signalled)
     g_main_loop_run (mainloop);
 
-  fail_if (got_connection, "Connected while listening should have stopped");
+  /* Connected while listening should have stopped */
+  g_assert (!got_connection);
 
   g_object_unref (transport);
   g_main_loop_unref (mainloop);
 
-} END_TEST
+}
 
-TCase *
-make_gibber_listener_tcase (void)
+int
+main (int argc,
+      char **argv)
 {
-  TCase *tc = tcase_create ("GibberListener");
-  tcase_add_test (tc, test_tcp_listen);
-  tcase_add_test (tc, test_unix_listen);
-  return tc;
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  g_test_add_func ("/gibber/listener/tcp-listen", test_tcp_listen);
+  g_test_add_func ("/gibber/listener/unix-listen", test_unix_listen);
+
+  return g_test_run ();
 }

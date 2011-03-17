@@ -28,35 +28,32 @@
 #define DEBUG_FLAG DEBUG_XMPP
 #include <gibber/gibber-debug.h>
 
-#include <check.h>
-#include "check-gibber.h"
-
 static void
 test_xmpp_error_to_node_with_bad_request (void)
 {
-  GibberXmppStanza *stanza;
-  GibberXmppNode *node;
+  WockyStanza *stanza;
+  WockyNode *node;
   const gchar *code;
   const gchar *type;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
   node = gibber_xmpp_error_to_node (XMPP_ERROR_BAD_REQUEST,
       wocky_stanza_get_top_node (stanza), NULL);
 
-  fail_if (node == NULL);
-  fail_if (strcmp (node->name, "error") != 0);
+  g_assert (node != NULL);
+  g_assert_cmpstr (node->name, ==, "error");
 
-  code = gibber_xmpp_node_get_attribute (node, "code");
-  fail_if (code == NULL || strcmp (code, "400") != 0);
+  code = wocky_node_get_attribute (node, "code");
+  g_assert (!(code == NULL || strcmp (code, "400") != 0));
 
-  type = gibber_xmpp_node_get_attribute (node, "type");
-  fail_if (type == NULL || strcmp (type, "modify") != 0);
+  type = wocky_node_get_attribute (node, "type");
+  g_assert (!(type == NULL || strcmp (type, "modify") != 0));
 
-  fail_if (gibber_xmpp_node_get_child_ns (node, "bad-request",
-        "urn:ietf:params:xml:ns:xmpp-stanzas") == NULL);
+  g_assert (wocky_node_get_child_ns (node, "bad-request",
+        "urn:ietf:params:xml:ns:xmpp-stanzas") != NULL);
 
   g_object_unref (stanza);
 }
@@ -64,77 +61,85 @@ test_xmpp_error_to_node_with_bad_request (void)
 static void
 test_xmpp_error_to_node_with_si_bad_profile (void)
 {
-  GibberXmppStanza *stanza;
-  GibberXmppNode *node;
+  WockyStanza *stanza;
+  WockyNode *node;
   const gchar *code;
   const gchar *type;
 
-  stanza = gibber_xmpp_stanza_build (
-      GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+  stanza = wocky_stanza_build (
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
       "from", "to",
-      GIBBER_STANZA_END);
+      NULL);
   node = gibber_xmpp_error_to_node (XMPP_ERROR_SI_BAD_PROFILE,
       wocky_stanza_get_top_node (stanza), NULL);
 
-  fail_if (node == NULL);
-  fail_if (strcmp (node->name, "error") != 0);
+  g_assert (node != NULL);
+  g_assert_cmpstr (node->name, ==, "error");
 
-  code = gibber_xmpp_node_get_attribute (node, "code");
-  fail_if (code == NULL || strcmp (code, "400") != 0);
+  code = wocky_node_get_attribute (node, "code");
+  g_assert (!(code == NULL || strcmp (code, "400") != 0));
 
-  type = gibber_xmpp_node_get_attribute (node, "type");
-  fail_if (type == NULL || strcmp (type, "modify") != 0);
+  type = wocky_node_get_attribute (node, "type");
+  g_assert (!(type == NULL || strcmp (type, "modify") != 0));
 
-  fail_if (gibber_xmpp_node_get_child_ns (node, "bad-request",
-        "urn:ietf:params:xml:ns:xmpp-stanzas") == NULL);
+  g_assert (wocky_node_get_child_ns (node, "bad-request",
+        "urn:ietf:params:xml:ns:xmpp-stanzas") != NULL);
 
-  fail_if (gibber_xmpp_node_get_child_ns (node, "bad-profile",
-        "http://jabber.org/protocol/si") == NULL);
+  g_assert (wocky_node_get_child_ns (node, "bad-profile",
+        "http://jabber.org/protocol/si") != NULL);
 
   g_object_unref (stanza);
 }
 
-START_TEST (test_xmpp_error_to_node)
+static void
+test_xmpp_error_to_node (void)
 {
   test_xmpp_error_to_node_with_bad_request ();
   test_xmpp_error_to_node_with_si_bad_profile ();
-} END_TEST
+}
 
-START_TEST (test_message_get_xmpp_error)
+static void
+test_message_get_xmpp_error (void)
 {
   GibberXmppError xmpp_error;
 
   for (xmpp_error = 1; xmpp_error < NUM_XMPP_ERRORS; xmpp_error++)
     {
-      GibberXmppStanza *stanza;
+      WockyStanza *stanza;
       GError *error = NULL;
 
-      stanza = gibber_xmpp_stanza_build (
-          GIBBER_STANZA_TYPE_IQ, GIBBER_STANZA_SUB_TYPE_ERROR,
+      stanza = wocky_stanza_build (
+          WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
           "from", "to",
-          GIBBER_STANZA_END);
+          NULL);
       gibber_xmpp_error_to_node (xmpp_error,
           wocky_stanza_get_top_node (stanza), NULL);
 
       error = gibber_message_get_xmpp_error (stanza);
-      fail_if (error == NULL);
+      g_assert (error != NULL);
 
-      fail_if (error->domain != GIBBER_XMPP_ERROR);
-      fail_if (error->code != (gint) xmpp_error);
-      fail_if (strcmp (error->message, gibber_xmpp_error_description (
-              xmpp_error)) != 0);
+      g_assert (error->domain == GIBBER_XMPP_ERROR);
+      g_assert (error->code == (gint) xmpp_error);
+      g_assert_cmpstr (error->message, ==,
+           gibber_xmpp_error_description (xmpp_error));
 
       g_object_unref (stanza);
       g_error_free (error);
     }
 
-} END_TEST
+}
 
-TCase *
-make_gibber_xmpp_error_tcase (void)
+int
+main (int argc,
+      char **argv)
 {
-  TCase *tc = tcase_create ("XMPP Error");
-  tcase_add_test (tc, test_xmpp_error_to_node);
-  tcase_add_test (tc, test_message_get_xmpp_error);
-  return tc;
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  g_test_add_func ("/gibber/xmpp-error/to-node",
+      test_xmpp_error_to_node);
+  g_test_add_func ("/gibber/xmpp-error/message-get-xmpp-error",
+      test_message_get_xmpp_error);
+
+  return g_test_run ();
 }

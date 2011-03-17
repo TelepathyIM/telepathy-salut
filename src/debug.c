@@ -38,6 +38,7 @@ GDebugKey keys[] = {
   { "discovery",      DEBUG_DISCO },
   { "olpc-activity",      DEBUG_OLPC_ACTIVITY },
   { "ft",             DEBUG_FT },
+  { "plugin",         DEBUG_PLUGIN },
   { "all",            ~0 },
   { 0, },
 };

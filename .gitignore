@@ -41,6 +41,7 @@ ChangeSet
 
 *.pyo
 *#
+.\#*
 .cvsignore
 Thumbs.db
 autom4te.cache
@@ -130,6 +131,9 @@ tools/libglibcodegen.pyc
 src/telepathy-salut
 src/write-mgr-file
 
+src/telepathy-salut-uninstalled.pc
+src/telepathy-salut.pc
+
 /telepathy-salut-*/
 /telepathy-salut-*.tar.gz
 /telepathy-salut-*.tar.gz.asc
@@ -137,9 +141,13 @@ tests/test-r-multicast-packet
 tests/test-r-sender
 tests/test-r-transport-io
 tests/telepathy-salut-debug
+tests/check-node-properties
 
 lib/gibber/tests/check-main
 lib/gibber/tests/outputs
 lib/gibber/tests/sasl-test.db
 lib/gibber/tests/test-xmpp-connection
 lib/gibber/tests/test-r-multicast-transport-io
+
+salut/telepathy-salut.pc
+salut/telepathy-salut-uninstalled.pc

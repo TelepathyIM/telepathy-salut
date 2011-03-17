@@ -51,12 +51,12 @@
 
 static gboolean
 invite_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
 static void
 invite_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, GibberXmppStanza *stanza,
+    GibberXmppConnection *conn, WockyStanza *stanza,
     SalutContact *contact, gpointer user_data);
 
 
@@ -1025,14 +1025,14 @@ static void salut_muc_manager_iface_init (gpointer g_iface,
 static gboolean
 invite_stanza_filter (SalutXmppConnectionManager *mgr,
                       GibberXmppConnection *conn,
-                      GibberXmppStanza *stanza,
+                      WockyStanza *stanza,
                       SalutContact *contact,
                       gpointer user_data)
 {
-  GibberStanzaType type;
+  WockyStanzaType type;
 
-  gibber_xmpp_stanza_get_type_info (stanza, &type, NULL);
-  if (type != GIBBER_STANZA_TYPE_MESSAGE)
+  wocky_stanza_get_type_info (stanza, &type, NULL);
+  if (type != WOCKY_STANZA_TYPE_MESSAGE)
     return FALSE;
 
   return (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
@@ -1042,7 +1042,7 @@ invite_stanza_filter (SalutXmppConnectionManager *mgr,
 static void
 invite_stanza_callback (SalutXmppConnectionManager *mgr,
                         GibberXmppConnection *conn,
-                        GibberXmppStanza *stanza,
+                        WockyStanza *stanza,
                         SalutContact *contact,
                         gpointer user_data)
 {
@@ -1053,7 +1053,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
-  GibberXmppNode *invite, *room_node, *reason_node;
+  WockyNode *invite, *room_node, *reason_node;
   SalutMucChannel *chan;
   const gchar *room = NULL;
   const gchar *reason = NULL;
@@ -1070,7 +1070,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
 
   DEBUG("Got an invitation");
 
-  room_node = gibber_xmpp_node_get_child (invite, "roomname");
+  room_node = wocky_node_get_child (invite, "roomname");
   if (room_node == NULL)
     {
       DEBUG ("Invalid invitation, discarding");
@@ -1078,7 +1078,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
     }
   room = room_node->content;
 
-  reason_node = gibber_xmpp_node_get_child (invite, "reason");
+  reason_node = wocky_node_get_child (invite, "reason");
   if (reason_node != NULL)
     reason = reason_node->content;
 
@@ -1096,9 +1096,9 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   params_hash = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, g_free);
   for (p = params ; *p != NULL; p++)
     {
-      GibberXmppNode *param;
+      WockyNode *param;
 
-      param = gibber_xmpp_node_get_child (invite, *p);
+      param = wocky_node_get_child (invite, *p);
       if (param == NULL)
         {
           DEBUG("Invalid invitation, (missing parameter) discarding");
@@ -1183,7 +1183,7 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
                                             GibberBytestreamIface *bytestream,
                                             TpHandle room_handle,
                                             const gchar *stream_id,
-                                            GibberXmppStanza *msg)
+                                            WockyStanza *msg)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (

@@ -6,7 +6,7 @@
 
 #include <glib.h>
 
-#include "gibber-xmpp-stanza.h"
+#include <wocky/wocky-stanza.h>
 
 G_BEGIN_DECLS
 
@@ -34,7 +34,7 @@ void gibber_debug_set_flags (DebugFlags flags);
 gboolean gibber_debug_flag_is_set (DebugFlags flag);
 void gibber_debug (DebugFlags flag, const gchar *format, ...)
     G_GNUC_PRINTF (2, 3);
-void gibber_debug_stanza (DebugFlags flag, GibberXmppStanza *stanza,
+void gibber_debug_stanza (DebugFlags flag, WockyStanza *stanza,
     const gchar *format, ...)
     G_GNUC_PRINTF (3, 4);
 

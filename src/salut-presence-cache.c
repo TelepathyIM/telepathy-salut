@@ -331,7 +331,7 @@ _caps_disco_cb (SalutDisco *disco,
                 SalutDiscoRequest *request,
                 SalutContact *contact,
                 const gchar *node,
-                GibberXmppNode *query_result,
+                WockyNode *query_result,
                 GError *error,
                 gpointer user_data)
 {

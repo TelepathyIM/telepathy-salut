@@ -186,8 +186,8 @@ notify_delete_request (gpointer data, GObject *obj)
 
 static void
 request_reply_cb (GibberIqHelper *helper,
-                  GibberXmppStanza *sent_stanza,
-                  GibberXmppStanza *reply_stanza,
+                  WockyStanza *sent_stanza,
+                  WockyStanza *reply_stanza,
                   GObject *object,
                   gpointer user_data)
 {
@@ -195,21 +195,21 @@ request_reply_cb (GibberIqHelper *helper,
   SalutDisco *disco = SALUT_DISCO (object);
   SalutDiscoPrivate *priv = disco->priv;
   WockyNode *reply_node = wocky_stanza_get_top_node (reply_stanza);
-  GibberXmppNode *query_node;
+  WockyNode *query_node;
   GError *err = NULL;
-  GibberStanzaSubType sub_type;
+  WockyStanzaSubType sub_type;
 
   g_assert (request);
 
   if (!g_list_find (priv->requests, request))
     return;
 
-  query_node = gibber_xmpp_node_get_child_ns (reply_node,
+  query_node = wocky_node_get_child_ns (reply_node,
       "query", disco_type_to_xmlns (request->type));
 
-  gibber_xmpp_stanza_get_type_info (reply_stanza, NULL, &sub_type);
+  wocky_stanza_get_type_info (reply_stanza, NULL, &sub_type);
 
-  if (sub_type == GIBBER_STANZA_SUB_TYPE_ERROR)
+  if (sub_type == WOCKY_STANZA_SUB_TYPE_ERROR)
     {
       err = gibber_message_get_xmpp_error (reply_stanza);
 
@@ -242,7 +242,7 @@ send_disco_request (SalutDisco *self,
 {
   SalutDiscoPrivate *priv = self->priv;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
-  GibberXmppStanza *stanza;
+  WockyStanza *stanza;
   TpHandleRepoIface *contact_repo;
   const gchar *jid_from, *jid_to;
   GError *error = NULL;
@@ -253,14 +253,14 @@ send_disco_request (SalutDisco *self,
   jid_from = tp_handle_inspect (contact_repo, base_conn->self_handle);
   jid_to = tp_handle_inspect (contact_repo, contact->handle);
 
-  stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_SET,
+  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET,
       jid_from, jid_to,
-      GIBBER_NODE, "query",
-        GIBBER_NODE_XMLNS, disco_type_to_xmlns (request->type),
-        GIBBER_NODE_ATTRIBUTE, "node", request->node,
-      GIBBER_NODE_END,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_START, "query",
+        WOCKY_NODE_XMLNS, disco_type_to_xmlns (request->type),
+        WOCKY_NODE_ATTRIBUTE, "node", request->node,
+      WOCKY_NODE_END,
+      NULL);
 
   request->requested = TRUE;
 
@@ -401,16 +401,16 @@ salut_disco_set_property (GObject     *object,
 static gboolean
 caps_req_stanza_filter (SalutXmppConnectionManager *mgr,
                         GibberXmppConnection *conn,
-                        GibberXmppStanza *stanza,
+                        WockyStanza *stanza,
                         SalutContact *contact,
                         gpointer user_data)
 {
-  GibberStanzaSubType sub_type;
-  GibberXmppNode *query;
+  WockyStanzaSubType sub_type;
+  WockyNode *query;
 
-  gibber_xmpp_stanza_get_type_info (stanza, NULL, &sub_type);
+  wocky_stanza_get_type_info (stanza, NULL, &sub_type);
 
-  if (sub_type != GIBBER_STANZA_SUB_TYPE_GET)
+  if (sub_type != WOCKY_STANZA_SUB_TYPE_GET)
     return FALSE;
 
   query = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "query",
@@ -429,26 +429,26 @@ send_item_not_found (GibberXmppConnection *conn,
                      const gchar *to,
                      const gchar *id)
 {
-  GibberXmppStanza *result;
+  WockyStanza *result;
 
   /* Return <item-not-found>. It is possible that the remote contact
    * requested an old version (old hash) of our capabilities. In the
    * meantime, it will have gotten a new hash, and query the new hash
    * anyway. */
-  result = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_ERROR,
+  result = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_ERROR,
       from, to,
-      GIBBER_NODE, "query",
-        GIBBER_NODE_XMLNS, NS_DISCO_INFO,
-        GIBBER_NODE_ATTRIBUTE, "node", node,
-        GIBBER_NODE, "error",
-          GIBBER_NODE_ATTRIBUTE, "type", "cancel",
-          GIBBER_NODE, "item-not-found",
-            GIBBER_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
-          GIBBER_NODE_END,
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-      GIBBER_STANZA_END);
+      WOCKY_NODE_START, "query",
+        WOCKY_NODE_XMLNS, NS_DISCO_INFO,
+        WOCKY_NODE_ATTRIBUTE, "node", node,
+        WOCKY_NODE_START, "error",
+          WOCKY_NODE_ATTRIBUTE, "type", "cancel",
+          WOCKY_NODE_START, "item-not-found",
+            WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
+          WOCKY_NODE_END,
+        WOCKY_NODE_END,
+      WOCKY_NODE_END,
+      NULL);
 
   if (id != NULL)
     wocky_node_set_attribute (wocky_stanza_get_top_node (result), "id", id);
@@ -476,20 +476,20 @@ add_feature_foreach (gpointer ns,
 static void
 caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
                           GibberXmppConnection *conn,
-                          GibberXmppStanza *stanza,
+                          WockyStanza *stanza,
                           SalutContact *contact,
                           gpointer user_data)
 {
   SalutDisco *self = SALUT_DISCO (user_data);
   SalutDiscoPrivate *priv = self->priv;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
-  GibberXmppNode *iq, *result_iq, *query, *result_query;
+  WockyNode *iq, *result_iq, *query, *result_query;
   const gchar *node;
   const gchar *suffix;
   TpHandleRepoIface *contact_repo;
   const gchar *jid_from, *jid_to, *id;
   SalutSelf *salut_self;
-  GibberXmppStanza *result;
+  WockyStanza *result;
   const GabbleCapabilitySet *caps;
 
   contact_repo = tp_base_connection_get_handles (base_conn,
@@ -499,10 +499,10 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
 
   iq = wocky_stanza_get_top_node (stanza);
   id = wocky_node_get_attribute (iq, "id");
-  query = gibber_xmpp_node_get_child_ns (iq, "query", NS_DISCO_INFO);
+  query = wocky_node_get_child_ns (iq, "query", NS_DISCO_INFO);
   g_assert (query != NULL);
 
-  node = gibber_xmpp_node_get_attribute (query, "node");
+  node = wocky_node_get_attribute (query, "node");
   if (node == NULL)
     {
       send_item_not_found (conn, "", jid_from, jid_to, id);
@@ -534,24 +534,24 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   /* Every entity MUST have at least one identity (XEP-0030). Salut publishs
    * one identity. If you change the identity here, you also need to change
    * caps_hash_compute_from_self_presence(). */
-  result = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-      GIBBER_STANZA_SUB_TYPE_RESULT,
+  result = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_RESULT,
       jid_from, jid_to,
-      GIBBER_NODE, "query",
-        GIBBER_NODE_XMLNS, NS_DISCO_INFO,
-        GIBBER_NODE_ATTRIBUTE, "node", node,
-        GIBBER_NODE, "identity",
-          GIBBER_NODE_ATTRIBUTE, "category", "client",
-          GIBBER_NODE_ATTRIBUTE, "name", PACKAGE_STRING,
+      WOCKY_NODE_START, "query",
+        WOCKY_NODE_XMLNS, NS_DISCO_INFO,
+        WOCKY_NODE_ATTRIBUTE, "node", node,
+        WOCKY_NODE_START, "identity",
+          WOCKY_NODE_ATTRIBUTE, "category", "client",
+          WOCKY_NODE_ATTRIBUTE, "name", PACKAGE_STRING,
           /* FIXME: maybe we should add a connection property allowing to
            * set the type attribute instead of hardcoding "pc". */
-          GIBBER_NODE_ATTRIBUTE, "type", "pc",
-        GIBBER_NODE_END,
-      GIBBER_NODE_END,
-      GIBBER_STANZA_END);
+          WOCKY_NODE_ATTRIBUTE, "type", "pc",
+        WOCKY_NODE_END,
+      WOCKY_NODE_END,
+      NULL);
 
   result_iq = wocky_stanza_get_top_node (result);
-  result_query = gibber_xmpp_node_get_child_ns (result_iq, "query", NULL);
+  result_query = wocky_node_get_child_ns (result_iq, "query", NULL);
 
   caps = salut_self_get_caps (salut_self);
   gabble_capability_set_foreach (caps, add_feature_foreach, result_query);

@@ -42,7 +42,7 @@
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-generic.h>
 
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-bytestream-iface.h>
@@ -54,7 +54,7 @@
 #include <gibber/gibber-tcp-transport.h>
 #include <gibber/gibber-transport.h>
 #include <gibber/gibber-unix-transport.h>
-#include <gibber/gibber-xmpp-stanza.h>
+#include <wocky/wocky-stanza.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
 
@@ -166,7 +166,7 @@ struct _SalutTubeStreamPrivate
   guint id;
   guint port;
   GibberXmppConnection *xmpp_connection;
-  GibberXmppStanza *iq_req;
+  WockyStanza *iq_req;
   gchar *object_path;
 
   /* Bytestreams for MUC tubes (using stream initiation) or 1-1 tubes (using
@@ -531,8 +531,8 @@ start_stream_initiation (SalutTubeStream *self,
                          GError **error)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GibberXmppNode *node, *si_node;
-  GibberXmppStanza *msg;
+  WockyNode *node, *si_node;
+  WockyStanza *msg;
   WockyNode *msg_node;
   TpHandleRepoIface *contact_repo;
   const gchar *jid;
@@ -556,7 +556,7 @@ start_stream_initiation (SalutTubeStream *self,
       stream_id, GIBBER_TELEPATHY_NS_TUBES);
   msg_node = wocky_stanza_get_top_node (msg);
 
-  si_node = gibber_xmpp_node_get_child_ns (msg_node, "si", GIBBER_XMPP_NS_SI);
+  si_node = wocky_node_get_child_ns (msg_node, "si", GIBBER_XMPP_NS_SI);
   g_assert (si_node != NULL);
 
   id_str = g_strdup_printf ("%u", priv->id);
@@ -564,12 +564,12 @@ start_stream_initiation (SalutTubeStream *self,
   g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
 
   /* FIXME: this needs standardizing */
-  node = gibber_xmpp_node_add_child_ns (si_node, "muc-stream",
+  node = wocky_node_add_child_ns (si_node, "muc-stream",
       GIBBER_TELEPATHY_NS_TUBES);
-  gibber_xmpp_node_set_attribute (node, "muc", tp_handle_inspect (
+  wocky_node_set_attribute (node, "muc", tp_handle_inspect (
         room_repo, priv->handle));
 
-  gibber_xmpp_node_set_attribute (node, "tube", id_str);
+  wocky_node_set_attribute (node, "tube", id_str);
 
   data = g_slice_new (struct _extra_bytestream_negotiate_cb_data);
   data->self = self;
@@ -1463,7 +1463,8 @@ salut_tube_stream_constructor (GType type,
   GObject *obj;
   SalutTubeStreamPrivate *priv;
   TpHandleRepoIface *contact_repo;
-  DBusGConnection *bus;
+  TpDBusDaemon *bus;
+  TpBaseConnection *base_conn;
 
   obj = G_OBJECT_CLASS (salut_tube_stream_parent_class)->
            constructor (type, n_props, props);
@@ -1471,10 +1472,10 @@ salut_tube_stream_constructor (GType type,
   priv = SALUT_TUBE_STREAM_GET_PRIVATE (SALUT_TUBE_STREAM (obj));
 
   /* Ref the initiator handle */
-  g_assert (priv->conn != NULL);
+  base_conn = TP_BASE_CONNECTION (priv->conn);
   g_assert (priv->initiator != 0);
-  contact_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
   tp_handle_ref (contact_repo, priv->initiator);
 
   if (priv->initiator == priv->self_handle)
@@ -1501,8 +1502,8 @@ salut_tube_stream_constructor (GType type,
       g_assert (priv->xmpp_connection_manager == NULL);
     }
 
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  bus = tp_base_connection_get_dbus_daemon (base_conn);
+  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   DEBUG ("Registering at '%s'", priv->object_path);
 
@@ -1814,7 +1815,7 @@ salut_tube_stream_new (SalutConnection *conn,
                        GHashTable *parameters,
                        guint id,
                        guint portnum,
-                       GibberXmppStanza *iq_req)
+                       WockyStanza *iq_req)
 {
   SalutTubeStream *obj;
   char *object_path;
@@ -1890,7 +1891,7 @@ salut_tube_stream_accept (SalutTubeIface *tube,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  GibberXmppStanza *reply;
+  WockyStanza *reply;
 
   if (priv->state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     return TRUE;
@@ -2034,8 +2035,8 @@ salut_tube_stream_listen (SalutTubeIface *tube)
 
 static void
 iq_close_reply_cb (GibberIqHelper *helper,
-                   GibberXmppStanza *sent_stanza,
-                   GibberXmppStanza *reply_stanza,
+                   WockyStanza *sent_stanza,
+                   WockyStanza *reply_stanza,
                    GObject *object,
                    gpointer user_data)
 {
@@ -2063,7 +2064,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
    * contact */
   if (!closed_remotely && priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      GibberXmppStanza *stanza;
+      WockyStanza *stanza;
       const gchar *jid_from, *jid_to;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
@@ -2074,14 +2075,14 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
       tube_id_str = g_strdup_printf ("%u", priv->id);
 
-      stanza = gibber_xmpp_stanza_build (GIBBER_STANZA_TYPE_IQ,
-          GIBBER_STANZA_SUB_TYPE_SET,
+      stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_SET,
           jid_from, jid_to,
-          GIBBER_NODE, "close",
-            GIBBER_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
-            GIBBER_NODE_ATTRIBUTE, "id", tube_id_str,
-          GIBBER_NODE_END,
-          GIBBER_STANZA_END);
+          WOCKY_NODE_START, "close",
+            WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+            WOCKY_NODE_ATTRIBUTE, "id", tube_id_str,
+          WOCKY_NODE_END,
+          NULL);
 
       ensure_iq_helper (self);
 
@@ -2117,10 +2118,10 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
 }
 
 static void
-augment_si_accept_iq (GibberXmppNode *si,
+augment_si_accept_iq (WockyNode *si,
                       gpointer user_data)
 {
-  gibber_xmpp_node_add_child_ns (si, "tube", GIBBER_TELEPATHY_NS_TUBES);
+  wocky_node_add_child_ns (si, "tube", GIBBER_TELEPATHY_NS_TUBES);
 }
 
 /**

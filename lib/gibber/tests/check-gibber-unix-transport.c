@@ -34,9 +34,6 @@
 #include <gibber/gibber-unix-transport.h>
 #include <gibber/gibber-listener.h>
 
-#include <check.h>
-#include "check-gibber.h"
-
 gboolean got_connection;
 gboolean received_credentials;
 GibberUnixTransport *unix_transport;
@@ -107,7 +104,8 @@ new_connection_cb (GibberListener *listener,
   g_main_loop_quit (loop);
 }
 
-START_TEST (test_send_credentials)
+static void
+test_send_credentials (void)
 {
   GibberListener *listener_unix;
   int ret;
@@ -116,33 +114,34 @@ START_TEST (test_send_credentials)
   gchar *path = "/tmp/check-gibber-unix-transport-socket";
 
   ret = unlink (path);
-  fail_if (ret == -1 && errno != ENOENT);
+  g_assert (!(ret == -1 && errno != ENOENT));
 
   got_connection = FALSE;
   mainloop = g_main_loop_new (NULL, FALSE);
 
   listener_unix = gibber_listener_new ();
-  fail_if (listener_unix == NULL);
+  g_assert (listener_unix != NULL);
 
   g_signal_connect (listener_unix, "new-connection",
       G_CALLBACK (new_connection_cb), mainloop);
 
   ret = gibber_listener_listen_socket (listener_unix, path, FALSE, &error);
-  fail_if (ret != TRUE);
+  g_assert (ret == TRUE);
 
   unix_transport = gibber_unix_transport_new ();
   ret = gibber_unix_transport_connect (unix_transport, path, &error);
-  fail_if (ret != TRUE);
+  g_assert (ret == TRUE);
 
   if (!got_connection)
     g_main_loop_run (mainloop);
 
-  fail_if (!got_connection, "Failed to connect");
+  /* "Failed to connect" */
+  g_assert (got_connection);
 
   g_object_unref (listener_unix);
   g_object_unref (unix_transport);
   g_main_loop_unref (mainloop);
-} END_TEST
+}
 
 static void
 get_credentials_cb (GibberUnixTransport *transport,
@@ -184,7 +183,8 @@ receive_new_connection_cb (GibberListener *listener,
   g_assert (ok == gibber_unix_transport_supports_credentials ());
 }
 
-START_TEST (test_receive_credentials)
+static void
+test_receive_credentials (void)
 {
   GibberListener *listener_unix;
   int ret;
@@ -193,41 +193,50 @@ START_TEST (test_receive_credentials)
   gchar *path = "/tmp/check-gibber-unix-transport-socket";
 
   ret = unlink (path);
-  fail_if (ret == -1 && errno != ENOENT);
+  g_assert (!(ret == -1 && errno != ENOENT));
 
   received_credentials = FALSE;
   mainloop = g_main_loop_new (NULL, FALSE);
 
   listener_unix = gibber_listener_new ();
-  fail_if (listener_unix == NULL);
+  g_assert (listener_unix != NULL);
 
   g_signal_connect (listener_unix, "new-connection",
       G_CALLBACK (receive_new_connection_cb), mainloop);
 
   ret = gibber_listener_listen_socket (listener_unix, path, FALSE, &error);
-  fail_if (ret != TRUE);
+  g_assert (ret == TRUE);
 
   unix_transport = gibber_unix_transport_new ();
   ret = gibber_unix_transport_connect (unix_transport, path, &error);
-  fail_if (ret != TRUE);
+  g_assert (ret == TRUE);
 
 #if defined(__linux__)
   if (!received_credentials)
     g_main_loop_run (mainloop);
 
-  fail_if (!received_credentials, "Failed to receive credentials");
+  /* Failed to receive credentials */
+  g_assert (received_credentials);
 #endif
 
   g_object_unref (listener_unix);
   g_object_unref (unix_transport);
   g_main_loop_unref (mainloop);
-} END_TEST
+}
 
-TCase *
-make_gibber_unix_transport_tcase (void)
+int
+main (int argc,
+      char **argv)
 {
-  TCase *tc = tcase_create ("GibberUnixTransport");
-  tcase_add_test (tc, test_send_credentials);
-  tcase_add_test (tc, test_receive_credentials);
-  return tc;
+  g_test_init (&argc, &argv, NULL);
+  g_type_init ();
+
+  alarm (20);
+
+  g_test_add_func ("/gibber/unix-transport/send-credentials",
+      test_send_credentials);
+  g_test_add_func ("/gibber/unix-transport/receive-credentials",
+      test_receive_credentials);
+
+  return g_test_run ();
 }
