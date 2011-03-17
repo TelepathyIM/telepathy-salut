@@ -352,6 +352,16 @@ salut_connection_constructor (GType type,
   g_signal_connect (self->presence_cache, "capabilities-update", G_CALLBACK
       (connection_capabilities_update_cb), self);
 
+  priv->self = salut_discovery_client_create_self (priv->discovery_client,
+      self, priv->nickname, priv->first_name, priv->last_name, priv->jid,
+      priv->email, priv->published_name,
+#ifdef ENABLE_OLPC
+      priv->olpc_key, priv->olpc_color
+#else
+      NULL, NULL
+#endif
+      );
+
   tp_contacts_mixin_init (obj,
       G_STRUCT_OFFSET (SalutConnection, contacts_mixin));
 
@@ -1102,16 +1112,6 @@ discovery_client_running (SalutConnection *self)
   SalutConnectionPrivate *priv = self->priv;
   gint port;
   GError *error = NULL;
-
-  priv->self = salut_discovery_client_create_self (priv->discovery_client,
-      self, priv->nickname, priv->first_name, priv->last_name, priv->jid,
-      priv->email, priv->published_name,
-#ifdef ENABLE_OLPC
-      priv->olpc_key, priv->olpc_color
-#else
-      NULL, NULL
-#endif
-      );
 
   g_signal_connect (priv->self, "established",
                     G_CALLBACK(_self_established_cb), self);
