@@ -122,7 +122,7 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
        salut_connection_avatar_service_iface_init);
     G_IMPLEMENT_INTERFACE
-      (SALUT_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+      (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
       salut_conn_contact_caps_iface_init);
 #ifdef ENABLE_OLPC
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
@@ -377,7 +377,7 @@ salut_connection_constructor (GType type,
       salut_connection_aliasing_fill_contact_attributes);
 
   tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (self),
-      SALUT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+      TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
           conn_contact_capabilities_fill_contact_attributes);
 
   return obj;
@@ -701,6 +701,7 @@ static const gchar *interfaces [] = {
   TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
   TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
   TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
+  TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
 #ifdef ENABLE_OLPC
   SALUT_IFACE_OLPC_BUDDY_INFO,
   SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
@@ -1404,7 +1405,7 @@ conn_contact_capabilities_fill_contact_attributes (GObject *obj,
           g_value_take_boxed (val, array);
           tp_contacts_mixin_set_contact_attribute (attributes_hash,
               handle,
-              SALUT_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES"/caps",
+              TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES"/capabilities",
               val);
 
           array = NULL;
@@ -1934,7 +1935,7 @@ salut_free_enhanced_contact_capabilities (GPtrArray *caps)
  */
 static void
 salut_connection_get_contact_capabilities (
-    SalutSvcConnectionInterfaceContactCapabilities *iface,
+    TpSvcConnectionInterfaceContactCapabilities *iface,
     const GArray *handles,
     DBusGMethodInvocation *context)
 {
@@ -1968,7 +1969,7 @@ salut_connection_get_contact_capabilities (
       g_hash_table_insert (ret, GINT_TO_POINTER (handle), arr);
     }
 
-  salut_svc_connection_interface_contact_capabilities_return_from_get_contact_capabilities
+  tp_svc_connection_interface_contact_capabilities_return_from_get_contact_capabilities
       (context, ret);
 
   g_hash_table_destroy (ret);
@@ -1985,7 +1986,7 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
   salut_connection_get_handle_contact_capabilities (conn, handle, ret);
   g_hash_table_insert (caps, GUINT_TO_POINTER (handle), ret);
 
-  salut_svc_connection_interface_contact_capabilities_emit_contact_capabilities_changed (
+  tp_svc_connection_interface_contact_capabilities_emit_contact_capabilities_changed (
       conn, caps);
 
   salut_free_enhanced_contact_capabilities (ret);
@@ -2005,35 +2006,30 @@ connection_capabilities_update_cb (SalutPresenceCache *cache,
 }
 
 /**
- * salut_connection_set_self_capabilities
+ * salut_connection_update_capabilities
  *
- * Implements D-Bus method SetSelfCapabilities
+ * Implements D-Bus method UpdateCapabilities
  * on interface
  * org.freedesktop.Telepathy.Connection.Interface.ContactCapabilities
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred, D-Bus will throw the error only if this
- *         function returns FALSE.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
-salut_connection_set_self_capabilities (
-    SalutSvcConnectionInterfaceContactCapabilities *iface,
-    const GPtrArray *caps,
+salut_connection_update_capabilities (
+    TpSvcConnectionInterfaceContactCapabilities *iface,
+    const GPtrArray *clients,
     DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
   SalutConnectionPrivate *priv = self->priv;
   GabbleCapabilitySet *before, *after;
-  GError *error = NULL;
   TpChannelManagerIter iter;
   TpChannelManager *manager;
+  guint i;
+  GError *error = NULL;
 
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
-
-  after = salut_dup_self_advertised_caps ();
+  /* these are the caps we were advertising before UpdateCapabilities
+   * was called */
+  before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
 
   tp_base_connection_channel_manager_iter_init (&iter, base);
 
@@ -2042,15 +2038,56 @@ salut_connection_set_self_capabilities (
       /* all channel managers must implement the capability interface */
       g_assert (GABBLE_IS_CAPS_CHANNEL_MANAGER (manager));
 
-      gabble_caps_channel_manager_represent_client (
-          GABBLE_CAPS_CHANNEL_MANAGER (manager),
-          "<ContactCapabilities draft 1>", caps, NULL, after);
+      gabble_caps_channel_manager_reset_capabilities (
+          GABBLE_CAPS_CHANNEL_MANAGER (manager));
     }
 
-  before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
+  DEBUG ("enter");
+
+  /* we're going to reset our self caps to the bare caps that we
+   * advertise and then add to it after iterating the clients.  */
+  after = salut_dup_self_advertised_caps ();
   salut_self_take_caps (priv->self, after);
 
-  /* XEP-0115 version 1.5 uses a verification string in the 'ver' attribute */
+  for (i = 0; i < clients->len; i++)
+    {
+      GValueArray *va = g_ptr_array_index (clients, i);
+      const gchar *client_name = g_value_get_string (va->values + 0);
+      const GPtrArray *filters = g_value_get_boxed (va->values + 1);
+      const gchar * const * cap_tokens = g_value_get_boxed (va->values + 2);
+
+      if ((cap_tokens == NULL || cap_tokens[0] != NULL) &&
+          filters->len == 0)
+        {
+          /* no capabilities */
+          DEBUG ("client %s can't do anything", client_name);
+          continue;
+        }
+
+      tp_base_connection_channel_manager_iter_init (&iter, base);
+
+      while (tp_base_connection_channel_manager_iter_next (&iter, &manager))
+        {
+          /* all channel managers must implement the capability interface */
+          g_assert (GABBLE_IS_CAPS_CHANNEL_MANAGER (manager));
+
+          gabble_caps_channel_manager_represent_client (
+              GABBLE_CAPS_CHANNEL_MANAGER (manager), client_name, filters,
+              cap_tokens, after);
+        }
+    }
+
+  if (DEBUGGING)
+    {
+      gchar *dump;
+
+      dump = gabble_capability_set_dump (after, "  ");
+
+      DEBUG ("updated caps:\n%s", dump);
+
+      g_free (dump);
+    }
+
   if (!announce_self_caps (self, &error))
     {
       gabble_capability_set_free (before);
@@ -2064,25 +2101,24 @@ salut_connection_set_self_capabilities (
       _emit_contact_capabilities_changed (self, base->self_handle);
     }
 
+  /* after now belongs to SalutSelf */
   gabble_capability_set_free (before);
-  /* after is now owned by the SalutSelf */
 
-  salut_svc_connection_interface_contact_capabilities_return_from_set_self_capabilities
-      (context);
+  tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
+      context);
 }
-
 
 static void
 salut_conn_contact_caps_iface_init (gpointer g_iface, gpointer iface_data)
 {
-  SalutSvcConnectionInterfaceContactCapabilitiesClass *klass =
-    (SalutSvcConnectionInterfaceContactCapabilitiesClass *) g_iface;
+  TpSvcConnectionInterfaceContactCapabilitiesClass *klass =
+    (TpSvcConnectionInterfaceContactCapabilitiesClass *) g_iface;
 
 #define IMPLEMENT(x) \
-    salut_svc_connection_interface_contact_capabilities_implement_##x (\
+    tp_svc_connection_interface_contact_capabilities_implement_##x (\
     klass, salut_connection_##x)
   IMPLEMENT(get_contact_capabilities);
-  IMPLEMENT(set_self_capabilities);
+  IMPLEMENT(update_capabilities);
 #undef IMPLEMENT
 }
 

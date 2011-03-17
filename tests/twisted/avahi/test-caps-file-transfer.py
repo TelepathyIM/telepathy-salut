@@ -145,7 +145,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
             [contact_handle], [CONN_IFACE_CONTACT_CAPS], False) \
-            [contact_handle][CONN_IFACE_CONTACT_CAPS + '/caps']
+            [contact_handle][CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # check if Salut announces the OOB capa

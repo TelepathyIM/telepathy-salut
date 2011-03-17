@@ -15,7 +15,7 @@ results.
 - 1 stream tube + 1 D-Bus tube caps, again, to test whether the caps cache
   works with tubes
 
-2. Test SetSelfCapabilities and test that the avahi txt record is updated test
+2. Test UpdateCapabilities and test that the avahi txt record is updated test
 that the D-Bus signal ContactCapabilitiesChanged is fired for the self handle,
 ask Salut for its caps with an iq request, check the reply is correct, and ask
 Salut for its caps using D-Bus method GetContactCapabilities. Also check that
@@ -586,7 +586,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     assert caps_via_contacts_iface == caps[1], caps_via_contacts_iface
 
     # Advertise nothing
-    conn_caps_iface.SetSelfCapabilities([])
+    conn_caps_iface.UpdateCapabilities([])
 
     # Check our own caps
     caps = conn_caps_iface.GetContactCapabilities([1])
@@ -600,8 +600,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
     sync_stream(q, outbound)
 
     # Advertise daap
-    ret_caps = conn_caps_iface.SetSelfCapabilities(
-        [daap_fixed_properties])
+    ret_caps = conn_caps_iface.UpdateCapabilities(
+        [('bigclient', [daap_fixed_properties], [])])
 
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
@@ -628,7 +628,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
 
     # Advertise xiangqi
     ret_caps = conn_caps_iface.SetSelfCapabilities(
-        [xiangqi_fixed_properties])
+        [('bigclient', [xiangqi_fixed_properties], [])])
 
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
@@ -655,7 +655,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
 
     # Advertise daap + xiangqi
     ret_caps = conn_caps_iface.SetSelfCapabilities(
-        [daap_fixed_properties, xiangqi_fixed_properties])
+        [('bigclient', [daap_fixed_properties + xiangqi_fixed_properties], [])])
 
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
@@ -684,8 +684,8 @@ def test_tube_caps_to_contact(q, bus, conn, service):
 
     # Advertise 4 tubes
     ret_caps = conn_caps_iface.SetSelfCapabilities(
-        [daap_fixed_properties, http_fixed_properties,
-         go_fixed_properties, xiangqi_fixed_properties])
+        [('bigclient', [daap_fixed_properties, http_fixed_properties,
+         go_fixed_properties, xiangqi_fixed_properties], [])])
 
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,
@@ -718,7 +718,7 @@ def test_tube_caps_to_contact(q, bus, conn, service):
 
     # Advertise daap + xiangqi
     ret_caps = conn_caps_iface.SetSelfCapabilities(
-        [daap_fixed_properties, xiangqi_fixed_properties])
+        [('bigclient', [daap_fixed_properties + xiangqi_fixed_properties], [])])
 
     # Expect Salut to reply with the correct caps
     event, caps_str, signaled_caps = receive_presence_and_ask_caps(q, outbound,

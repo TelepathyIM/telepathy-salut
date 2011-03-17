@@ -17,13 +17,12 @@ from twisted.words.xish import xpath, domish
 from caps_helper import compute_caps_hash, check_caps
 from config import PACKAGE_STRING
 import ns
+import constants as cs
 
 import time
 import dbus
 
 HT_CONTACT = 1
-caps_iface = 'org.freedesktop.Telepathy.' + \
-             'Connection.Interface.ContactCapabilities.DRAFT'
 
 def test(q, bus, conn):
     # last value of the "ver" key we resolved. We use it to be sure that the
@@ -56,10 +55,10 @@ def test(q, bus, conn):
         fixed_features, [])
     check_caps(e.txt, caps)
 
-    conn_caps_iface = dbus.Interface(conn, caps_iface)
+    conn_caps_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACT_CAPS)
 
     # Advertise nothing
-    conn_caps_iface.SetSelfCapabilities([])
+    conn_caps_iface.UpdateCapabilities([])
 
     service.resolve()
     e = q.expect('service-resolved', service = service)
