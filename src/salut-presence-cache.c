@@ -526,7 +526,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
                                    const gchar *node,
                                    const gchar *ver)
 {
-  gchar *uri;
+  gchar *uri = NULL;
   SalutPresenceCachePrivate *priv;
   CapabilityInfo *info;
   const gchar *caps_source;
@@ -597,6 +597,8 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
           waiter->disco_requested = TRUE;
         }
     }
+
+  g_free (uri);
 }
 
 SalutPresenceCache *
