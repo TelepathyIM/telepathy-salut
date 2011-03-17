@@ -467,10 +467,10 @@ static void
 add_feature_foreach (gpointer ns,
     gpointer result_query)
 {
-  GibberXmppNode *feature_node;
+  WockyNode *feature_node;
 
-  feature_node = gibber_xmpp_node_add_child (result_query, "feature");
-  gibber_xmpp_node_set_attribute (feature_node, "var", ns);
+  feature_node = wocky_node_add_child (result_query, "feature");
+  wocky_node_set_attribute (feature_node, "var", ns);
 }
 
 static void
