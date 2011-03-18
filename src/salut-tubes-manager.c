@@ -37,7 +37,8 @@
 
 #define DEBUG_FLAG DEBUG_TUBES
 
-#include "caps-channel-manager.h"
+#include <salut/caps-channel-manager.h>
+
 #include "debug.h"
 #include "extensions/extensions.h"
 #include "salut-connection.h"

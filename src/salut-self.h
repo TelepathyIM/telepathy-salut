@@ -28,7 +28,8 @@
 
 #include <wocky/wocky-stanza.h>
 
-#include "capabilities-set.h"
+#include <salut/capabilities-set.h>
+
 #include "salut-connection.h"
 #include "salut-presence.h"
 #ifdef ENABLE_OLPC

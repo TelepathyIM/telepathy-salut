@@ -29,7 +29,8 @@
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
-#include "caps-channel-manager.h"
+#include <salut/caps-channel-manager.h>
+
 #include "salut-muc-channel.h"
 #include "salut-contact-manager.h"
 #include "salut-tubes-channel.h"

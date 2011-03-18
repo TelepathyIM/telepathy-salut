@@ -21,8 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <salut/caps-channel-manager.h>
+
 #include "extensions/extensions.h"
-#include "caps-channel-manager.h"
 #include "salut-im-channel.h"
 #include "salut-im-manager.h"
 #include "salut-contact.h"

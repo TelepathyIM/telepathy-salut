@@ -23,7 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "caps-channel-manager.h"
+#include <salut/caps-channel-manager.h>
+
 #include "salut-connection.h"
 #include "salut-contact-channel.h"
 #include "salut-contact-manager.h"

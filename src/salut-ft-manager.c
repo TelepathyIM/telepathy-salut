@@ -30,7 +30,8 @@
 #include "salut-ft-manager.h"
 #include "salut-signals-marshal.h"
 
-#include "caps-channel-manager.h"
+#include <salut/caps-channel-manager.h>
+
 #include "salut-file-transfer-channel.h"
 #include "salut-contact-manager.h"
 #include "salut-presence-cache.h"

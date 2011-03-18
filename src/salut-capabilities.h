@@ -22,7 +22,7 @@
 #define __SALUT_CAPABILITIES__H__
 
 #include <glib-object.h>
-#include "capabilities-set.h"
+#include <salut/capabilities-set.h>
 
 GabbleCapabilitySet *salut_dup_self_advertised_caps (void);
 
