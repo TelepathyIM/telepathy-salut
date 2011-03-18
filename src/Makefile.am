@@ -16,7 +16,7 @@ noinst_PROGRAMS = write-mgr-file
 
 CORE_SOURCES =                                          \
     capabilities.c \
-    capabilities.h \
+    $(top_srcdir)/salut/capabilities.h \
     $(top_srcdir)/salut/capabilities-set.h \
     caps-channel-manager.c \
     $(top_srcdir)/salut/caps-channel-manager.h \

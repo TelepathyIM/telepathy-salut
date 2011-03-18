@@ -7,6 +7,7 @@ salutinclude_HEADERS = \
     plugin.h \
     protocol.h \
     capabilities-set.h \
-    caps-channel-manager.h
+    caps-channel-manager.h \
+    capabilities.h
 
 endif
