@@ -2088,16 +2088,16 @@ salut_connection_update_capabilities (
       g_free (dump);
     }
 
-  if (!announce_self_caps (self, &error))
-    {
-      gabble_capability_set_free (before);
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-      return;
-    }
-
   if (!gabble_capability_set_equals (before, after))
     {
+      if (!announce_self_caps (self, &error))
+        {
+          gabble_capability_set_free (before);
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+          return;
+        }
+
       _emit_contact_capabilities_changed (self, base->self_handle);
     }
 
