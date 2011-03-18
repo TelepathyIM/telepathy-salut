@@ -2078,19 +2078,15 @@ salut_connection_update_capabilities (
         }
     }
 
-  if (DEBUGGING)
-    {
-      gchar *dump;
-
-      dump = gabble_capability_set_dump (after, "  ");
-
-      DEBUG ("updated caps:\n%s", dump);
-
-      g_free (dump);
-    }
-
   if (!gabble_capability_set_equals (before, after))
     {
+      if (DEBUGGING)
+        {
+          gchar *dump = gabble_capability_set_dump (after, "  ");
+          DEBUG ("updated caps:\n%s", dump);
+          g_free (dump);
+        }
+
       if (!announce_self_caps (self, &error))
         {
           gabble_capability_set_free (before);
