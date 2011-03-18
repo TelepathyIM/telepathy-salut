@@ -508,7 +508,7 @@ unref_handle_foreach (gpointer key,
   tp_handle_unref (contact_repo, handle);
 }
 
-static TpTubeState
+static TpTubeChannelState
 get_tube_state (SalutTubeDBus *self)
 {
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);

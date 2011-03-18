@@ -1556,7 +1556,7 @@ publish_tubes_in_node (gpointer key,
       "initiator-handle", &initiator,
       NULL);
 
-  if (state != TP_TUBE_STATE_OPEN)
+  if (state != TP_TUBE_CHANNEL_STATE_OPEN)
     return;
 
   if (type == TP_TUBE_TYPE_STREAM && initiator != priv->self_handle)
@@ -1715,7 +1715,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  if (state != TP_TUBE_STATE_LOCAL_PENDING)
+  if (state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     {
       GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the local pending state" };
@@ -1816,7 +1816,7 @@ salut_tubes_channel_get_d_bus_tube_address (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  if (state != TP_TUBE_STATE_OPEN)
+  if (state != TP_TUBE_CHANNEL_STATE_OPEN)
     {
       GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Tube is not open" };
@@ -1895,7 +1895,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  if (state != TP_TUBE_STATE_OPEN)
+  if (state != TP_TUBE_CHANNEL_STATE_OPEN)
     {
       GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Tube is not open" };
@@ -2249,7 +2249,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
       return;
     }
 
-  if (state != TP_TUBE_STATE_LOCAL_PENDING)
+  if (state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     {
       GError err = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the local pending state" };
@@ -2318,7 +2318,7 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
       return;
     }
 
-  if (state != TP_TUBE_STATE_OPEN)
+  if (state != TP_TUBE_CHANNEL_STATE_OPEN)
     {
       GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Tube is not open" };
