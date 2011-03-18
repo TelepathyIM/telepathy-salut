@@ -5,9 +5,10 @@ abs_top_builddir=@abs_top_builddir@
 libdir=@libdir@
 
 plugindir=${libdir}/telepathy/salut-0
+salutpath=${abs_top_builddir}/src/telepathy-salut
 
 Name: Telepathy-Salut (uninstalled)
-Description: XMPP backend for the Telepathy framework (uninstalled)
+Description: Link-local XMPP backend for the Telepathy framework (uninstalled)
 Version: @VERSION@
 Requires: pkg-config >= 0.21
 Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib >= 0.13.12

@@ -11,13 +11,6 @@ CLEANFILES = $(BUILT_SOURCES)
 dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = telepathy-salut.pc
-
-EXTRA_DIST = \
-    telepathy-salut.pc.in \
-    telepathy-salut-uninstalled.pc.in
-
 libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
