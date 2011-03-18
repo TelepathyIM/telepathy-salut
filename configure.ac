@@ -90,8 +90,8 @@ fi
 AM_PATH_PYTHON([2.5])
 
 # Check for a python >= 2.5 with twisted to run python tests
-AC_MSG_CHECKING([for Python with Twisted and XMPP protocol support])
-if $PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor" >/dev/null 2>&1; then
+AC_MSG_CHECKING([for Python with Avahi, Twisted and XMPP protocol support])
+if $PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor, avahi" >/dev/null 2>&1; then
     TEST_PYTHON="$PYTHON"
 else
     TEST_PYTHON=false
