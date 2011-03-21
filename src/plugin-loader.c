@@ -90,15 +90,20 @@ plugin_loader_try_to_load (
     }
   else
     {
-      gchar *sidecars = g_strjoinv (", ",
-          (gchar **) salut_plugin_get_sidecar_interfaces (plugin));
+      gchar *sidecars = NULL;
+      const gchar * const *ifaces = salut_plugin_get_sidecar_interfaces (plugin);
       const gchar *version = salut_plugin_get_version (plugin);
 
       if (version == NULL)
         version = "(unspecified)";
 
-      DEBUG ("loaded '%s' version %s (%s), implementing these sidecars: %s",
-          salut_plugin_get_name (plugin), version, path, sidecars);
+      if (ifaces != NULL)
+        sidecars = g_strjoinv (", ", (gchar **) ifaces);
+
+      DEBUG ("loaded '%s' version %s (%s), implementing %s sidecars: (%s)",
+          salut_plugin_get_name (plugin), version, path,
+          sidecars != NULL ? "these" : "no",
+          sidecars != NULL ? sidecars : "");
 
       g_free (sidecars);
 
