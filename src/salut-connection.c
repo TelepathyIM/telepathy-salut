@@ -195,6 +195,7 @@ struct _SalutConnectionPrivate
   gboolean self_established;
   SalutPresenceId pre_connect_presence;
   gchar *pre_connect_message;
+  GabbleCapabilitySet *pre_connect_caps;
 
   /* XMPP connection manager */
   SalutXmppConnectionManager *xmpp_connection_manager;
@@ -340,6 +341,7 @@ salut_connection_init (SalutConnection *obj)
 
   priv->pre_connect_presence = SALUT_PRESENCE_AVAILABLE;
   priv->pre_connect_message = NULL;
+  priv->pre_connect_caps = NULL;
 
   priv->contact_manager = NULL;
   priv->xmpp_connection_manager = NULL;
@@ -945,10 +947,17 @@ salut_connection_dispose (GObject *object)
       priv->pre_connect_message = NULL;
     }
 
-  if (priv->self) {
-    g_object_unref (priv->self);
-    priv->self = NULL;
-  }
+  if (priv->pre_connect_caps != NULL)
+    {
+      gabble_capability_set_free (priv->pre_connect_caps);
+      priv->pre_connect_caps = NULL;
+    }
+
+  if (priv->self)
+    {
+      g_object_unref (priv->self);
+      priv->self = NULL;
+    }
 
 #ifdef ENABLE_OLPC
   salut_xmpp_connection_manager_remove_stanza_filter (
@@ -1144,6 +1153,12 @@ discovery_client_running (SalutConnection *self)
       NULL, NULL
 #endif
       );
+
+  if (priv->pre_connect_caps != NULL)
+    {
+      salut_self_take_caps (priv->self, priv->pre_connect_caps);
+      priv->pre_connect_caps = NULL;
+    }
 
   g_signal_connect (priv->self, "established",
                     G_CALLBACK(_self_established_cb), self);
@@ -2052,15 +2067,17 @@ salut_connection_update_capabilities (
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
   SalutConnectionPrivate *priv = self->priv;
-  GabbleCapabilitySet *before, *after;
+  GabbleCapabilitySet *before = NULL, *after;
   TpChannelManagerIter iter;
   TpChannelManager *manager;
   guint i;
   GError *error = NULL;
 
   /* these are the caps we were advertising before UpdateCapabilities
-   * was called */
-  before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
+   * was called. we'll only have created the salut self once we've
+   * connected */
+  if (priv->self != NULL)
+    before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
 
   tp_base_connection_channel_manager_iter_init (&iter, base);
 
@@ -2078,7 +2095,6 @@ salut_connection_update_capabilities (
   /* we're going to reset our self caps to the bare caps that we
    * advertise and then add to it after iterating the clients.  */
   after = salut_dup_self_advertised_caps ();
-  salut_self_take_caps (priv->self, after);
 
   for (i = 0; i < clients->len; i++)
     {
@@ -2128,8 +2144,23 @@ salut_connection_update_capabilities (
       _emit_contact_capabilities_changed (self, base->self_handle);
     }
 
-  /* after now belongs to SalutSelf */
-  gabble_capability_set_free (before);
+  if (priv->self != NULL)
+    {
+      /* we've connected and have a SalutSelf, so give the caps to it
+       * right now */
+      salut_self_take_caps (priv->self, after);
+    }
+  else
+    {
+      if (priv->pre_connect_caps != NULL)
+        gabble_capability_set_free (priv->pre_connect_caps);
+
+      priv->pre_connect_caps = after;
+    }
+
+  /* after now belongs to SalutSelf, or priv->pre_connect_caps */
+  if (before != NULL)
+    gabble_capability_set_free (before);
 
   tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
       context);
