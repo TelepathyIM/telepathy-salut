@@ -45,7 +45,6 @@ AM_LDFLAGS = @GLIB_LIBS@ @TELEPATHY_GLIB_LIBS@
 check_node_properties_LDADD = \
     $(top_builddir)/lib/gibber/libgibber.la \
     $(top_builddir)/src/libsalut-convenience.la \
-    $(top_builddir)/src/libsalut-backend-avahi.la \
     $(AM_LDFLAGS)
 
 check_node_properties_CFLAGS = \
