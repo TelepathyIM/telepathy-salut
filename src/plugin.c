@@ -48,6 +48,70 @@ salut_plugin_get_version (SalutPlugin *plugin)
   return iface->version;
 }
 
+const gchar * const *
+salut_plugin_get_sidecar_interfaces (SalutPlugin *plugin)
+{
+  SalutPluginInterface *iface = SALUT_PLUGIN_GET_INTERFACE (plugin);
+
+  return iface->sidecar_interfaces;
+}
+
+gboolean
+salut_plugin_implements_sidecar (
+    SalutPlugin *plugin,
+    const gchar *sidecar_interface)
+{
+  SalutPluginInterface *iface = SALUT_PLUGIN_GET_INTERFACE (plugin);
+
+  return tp_strv_contains (iface->sidecar_interfaces, sidecar_interface);
+}
+
+void
+salut_plugin_create_sidecar_async (
+    SalutPlugin *plugin,
+    const gchar *sidecar_interface,
+    SalutConnection *connection,
+    WockySession *session,
+    GAsyncReadyCallback callback,
+    gpointer user_data)
+{
+  SalutPluginInterface *iface = SALUT_PLUGIN_GET_INTERFACE (plugin);
+
+  if (!salut_plugin_implements_sidecar (plugin, sidecar_interface))
+    g_simple_async_report_error_in_idle (G_OBJECT (plugin), callback,
+        user_data, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+        "Salut is buggy: '%s' doesn't implement sidecar %s",
+        iface->name, sidecar_interface);
+  else if (iface->create_sidecar == NULL)
+    g_simple_async_report_error_in_idle (G_OBJECT (plugin), callback,
+        user_data, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+        "'%s' is buggy: it claims to implement %s, but does not implement "
+        "create_sidecar", iface->name, sidecar_interface);
+  else
+    iface->create_sidecar (plugin, sidecar_interface, connection, session,
+        callback, user_data);
+}
+
+SalutSidecar *
+salut_plugin_create_sidecar_finish (
+    SalutPlugin *plugin,
+    GAsyncResult *result,
+    GError **error)
+{
+  SalutSidecar *sidecar;
+
+  if (g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (result),
+          error))
+    return NULL;
+
+  g_return_val_if_fail (g_simple_async_result_is_valid (result,
+    G_OBJECT (plugin), salut_plugin_create_sidecar_async), NULL);
+
+  sidecar = SALUT_SIDECAR (g_simple_async_result_get_op_res_gpointer (
+      G_SIMPLE_ASYNC_RESULT (result)));
+  return g_object_ref (sidecar);
+}
+
 void
 salut_plugin_initialize (SalutPlugin *plugin,
     TpBaseConnectionManager *connection_manager)
