@@ -2124,7 +2124,7 @@ salut_connection_update_capabilities (
         }
     }
 
-  if (!gabble_capability_set_equals (before, after))
+  if (before != NULL && !gabble_capability_set_equals (before, after))
     {
       if (DEBUGGING)
         {
