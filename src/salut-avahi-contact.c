@@ -247,11 +247,11 @@ salut_avahi_contact_ll_get_addresses (WockyLLContact *contact)
           socket_address = g_inet_socket_address_new (addr, port);
           g_object_unref (addr);
 
-          addresses = g_list_append (addresses, socket_address);
+          addresses = g_list_prepend (addresses, socket_address);
         }
     }
 
-  return addresses;
+  return g_list_reverse (addresses);
 }
 
 static gint
