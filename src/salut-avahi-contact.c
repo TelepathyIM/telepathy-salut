@@ -245,7 +245,6 @@ salut_avahi_contact_ll_get_addresses (WockyLLContact *contact)
             g_assert_not_reached ();
 
           socket_address = g_inet_socket_address_new (addr, port);
-          /* socket_address owns addr now */
           g_object_unref (addr);
 
           addresses = g_list_append (addresses, socket_address);
