@@ -182,14 +182,11 @@ gibber_file_transfer_set_property (GObject *object,
         {
           self->priv->porter = g_value_dup_object (value);
 
-          if (self->priv->porter != NULL)
-            {
-              self->priv->stanza_id =
-                wocky_porter_register_handler_from_anyone (self->priv->porter,
-                    WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_NONE,
-                    WOCKY_PORTER_HANDLER_PRIORITY_NORMAL, received_stanza_cb,
-                    self, NULL);
-            }
+          self->priv->stanza_id =
+            wocky_porter_register_handler_from_anyone (self->priv->porter,
+                WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_NONE,
+                WOCKY_PORTER_HANDLER_PRIORITY_NORMAL, received_stanza_cb,
+                self, NULL);
         }
         break;
       case PROP_CONTACT:

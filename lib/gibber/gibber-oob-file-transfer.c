@@ -198,6 +198,8 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   gchar *url;
   gchar *filename;
 
+  g_return_val_if_fail (WOCKY_IS_PORTER (porter), NULL);
+
   if (strcmp (node->name, "iq") != 0)
     {
       g_set_error (error, WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
