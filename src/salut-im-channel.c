@@ -531,7 +531,8 @@ new_message_cb (WockyPorter *porter,
 
   if (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "invite",
         GIBBER_TELEPATHY_NS_CLIQUE) != NULL)
-    /* discard Clique MUC invite */
+    /* we don't handle Clique MUC invites here, so pass it on to the
+     * next handler */
     return FALSE;
 
   salut_im_channel_received_stanza (self, stanza);
