@@ -225,9 +225,7 @@ salut_avahi_contact_ll_get_addresses (WockyLLContact *contact)
       GaServiceResolver *resolver = l->data;
       AvahiAddress address;
       guint16 port;
-      AvahiIfIndex ifindex;
 
-      g_object_get (resolver, "interface", &ifindex, NULL);
       if (ga_service_resolver_get_address (resolver, &address, &port))
         {
           GInetAddress *addr;
