@@ -564,11 +564,7 @@ static void
 make_porter_connections (GibberBytestreamOOB *self)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  static gboolean done = FALSE;
   gchar *jid;
-
-  if (done)
-    return;
 
   jid = wocky_contact_dup_jid (priv->contact);
 
@@ -577,8 +573,6 @@ make_porter_connections (GibberBytestreamOOB *self)
       WOCKY_PORTER_HANDLER_PRIORITY_NORMAL, received_stanza_cb, self, NULL);
 
   g_free (jid);
-
-  done = TRUE;
 }
 
 static void
@@ -594,15 +588,9 @@ gibber_bytestream_oob_set_property (GObject *object,
     {
       case PROP_PORTER:
         priv->porter = g_value_dup_object (value);
-
-        if (priv->porter != NULL && priv->contact != NULL)
-          make_porter_connections (self);
         break;
       case PROP_CONTACT:
         priv->contact = g_value_dup_object (value);
-
-        if (priv->porter != NULL && priv->contact != NULL)
-          make_porter_connections (self);
         break;
       case PROP_SELF_ID:
         g_free (priv->self_id);
@@ -660,6 +648,17 @@ gibber_bytestream_oob_constructor (GType type,
 }
 
 static void
+gibber_bytestream_oob_constructed (GObject *obj)
+{
+  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (obj);
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+
+  if (priv->porter != NULL && priv->contact != NULL)
+    make_porter_connections (self);
+}
+
+
+static void
 gibber_bytestream_oob_class_init (
     GibberBytestreamOOBClass *gibber_bytestream_oob_class)
 {
@@ -675,6 +674,7 @@ gibber_bytestream_oob_class_init (
   object_class->get_property = gibber_bytestream_oob_get_property;
   object_class->set_property = gibber_bytestream_oob_set_property;
   object_class->constructor = gibber_bytestream_oob_constructor;
+  object_class->constructed = gibber_bytestream_oob_constructed;
 
   g_object_class_override_property (object_class, PROP_SELF_ID,
       "self-id");
