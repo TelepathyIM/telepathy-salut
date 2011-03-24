@@ -217,7 +217,8 @@ salut_avahi_contact_ll_get_addresses (WockyLLContact *contact)
 {
   SalutAvahiContact *self = SALUT_AVAHI_CONTACT (contact);
   SalutAvahiContactPrivate *priv = self->priv;
-  GList *addresses = NULL;
+  /* omg, GQueue! */
+  GQueue queue = G_QUEUE_INIT;
   GSList *l;
 
   for (l = priv->resolvers; l != NULL; l = l->next)
@@ -247,11 +248,11 @@ salut_avahi_contact_ll_get_addresses (WockyLLContact *contact)
           socket_address = g_inet_socket_address_new (addr, port);
           g_object_unref (addr);
 
-          addresses = g_list_prepend (addresses, socket_address);
+          g_queue_push_tail (&queue, socket_address);
         }
     }
 
-  return g_list_reverse (addresses);
+  return queue.head;
 }
 
 static gint
