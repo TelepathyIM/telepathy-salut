@@ -1867,6 +1867,7 @@ iq_close_reply_cb (GObject *source_object,
     {
       DEBUG ("Failed to close IQ: %s", error->message);
       g_clear_error (&error);
+      return;
     }
 
   g_object_unref (stanza);
