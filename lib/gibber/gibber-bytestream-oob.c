@@ -305,8 +305,6 @@ connect_to_url (GibberBytestreamOOB *self)
       goto out;
     }
 
-  g_object_unref (socket_address);
-
   addr.in.sin_port = g_htons ((guint16) portnum);
 
   ll_transport = gibber_ll_transport_new ();
@@ -315,6 +313,9 @@ connect_to_url (GibberBytestreamOOB *self)
   g_object_unref (ll_transport);
 
 out:
+  if (socket_address != NULL)
+    g_object_unref (socket_address);
+
   g_strfreev (tokens);
 }
 
