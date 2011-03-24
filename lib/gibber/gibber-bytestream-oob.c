@@ -246,7 +246,6 @@ connect_to_url (GibberBytestreamOOB *self)
   GibberLLTransport *ll_transport;
   GSocketConnection *conn;
   GSocketAddress *socket_address = NULL;
-  GInetAddress *address;
   gchar **tokens;
   union {
     struct sockaddr_storage storage;
@@ -295,7 +294,7 @@ connect_to_url (GibberBytestreamOOB *self)
       goto out;
     }
 
-  if (!g_socket_address_to_native (G_SOCKET_ADDRESS (address), &(addr.storage),
+  if (!g_socket_address_to_native (G_SOCKET_ADDRESS (socket_address), &(addr.storage),
           sizeof (addr.storage), &error))
     {
       GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
