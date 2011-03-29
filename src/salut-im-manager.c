@@ -101,6 +101,11 @@ message_stanza_callback (WockyPorter *porter,
        TP_HANDLE_TYPE_CONTACT);
   SalutContact *contact;
 
+  /* ignore clique MUC invites and leave them for the MUC manager */
+  if (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
+          "invite", GIBBER_TELEPATHY_NS_CLIQUE) != NULL)
+    return FALSE;
+
   contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);
