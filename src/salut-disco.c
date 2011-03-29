@@ -480,7 +480,7 @@ out:
   /* the cancellable is cancelled if the object given to
    * salut_disco_request is disposed, which claims to not call the
    * callback, so let's not. */
-  if (g_cancellable_is_cancelled (request->cancellable))
+  if (!g_cancellable_is_cancelled (request->cancellable))
     {
       request->callback (request->disco, request, request->contact, request->node,
           query_node, error, request->user_data);
