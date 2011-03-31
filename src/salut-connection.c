@@ -3493,6 +3493,8 @@ force_close_cb (GObject *source,
     }
 
   tp_base_connection_finish_shutdown (base);
+
+  g_object_unref (self);
 }
 
 static void
@@ -3504,6 +3506,7 @@ closed_cb (GObject *source,
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   GError *error = NULL;
+  gboolean force_called = priv->disconnect_timer != 0;
 
   if (priv->disconnect_timer != 0)
     {
@@ -3525,7 +3528,7 @@ closed_cb (GObject *source,
            * do it here. */
 
           g_error_free (error);
-          return;
+          goto out;
         }
 
       g_error_free (error);
@@ -3535,7 +3538,11 @@ closed_cb (GObject *source,
       DEBUG ("connection properly closed");
     }
 
-  tp_base_connection_finish_shutdown (base);
+  if (force_called)
+    tp_base_connection_finish_shutdown (base);
+
+out:
+  g_object_unref (self);
 }
 
 static gboolean
@@ -3547,7 +3554,7 @@ disconnect_timeout_cb (gpointer data)
   DEBUG ("Close operation timed out. Force closing");
   priv->disconnect_timer = 0;
 
-  wocky_porter_force_close_async (self->porter, NULL, force_close_cb, self);
+  wocky_porter_force_close_async (self->porter, NULL, force_close_cb, g_object_ref (self));
   return FALSE;
 }
 
@@ -3567,7 +3574,7 @@ salut_connection_shut_down (TpBaseConnection *base)
       priv->disconnect_timer = g_timeout_add_seconds (DISCONNECT_TIMEOUT,
           disconnect_timeout_cb, self);
 
-      wocky_porter_close_async (self->porter, NULL, closed_cb, self);
+      wocky_porter_close_async (self->porter, NULL, closed_cb, g_object_ref (self));
       return;
     }
 
