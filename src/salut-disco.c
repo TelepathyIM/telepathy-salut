@@ -304,6 +304,9 @@ caps_req_stanza_callback (WockyPorter *porter,
   /* Salut only supports XEP-0115 version 1.5. Bundles from old version 1.3 are
    * not implemented. */
 
+  if (salut_self == NULL)
+    return TRUE;
+
   if (tp_strdiff (suffix, salut_self->ver))
     {
       g_object_unref (salut_self);
