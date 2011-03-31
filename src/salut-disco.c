@@ -487,9 +487,16 @@ out:
     {
       request->callback (request->disco, request, request->contact, request->node,
           query_node, error, request->user_data);
-    }
 
-  delete_request (request);
+      /* if we really are cancelled, then don't delete the request as
+       * clearing the disco waiters is what caused us to be
+       * cancelled. */
+      if (error != NULL
+          && (error->domain != G_IO_ERROR || error->code != G_IO_ERROR_CANCELLED))
+        {
+          delete_request (request);
+        }
+    }
 
   if (error != NULL)
     g_clear_error (&error);
