@@ -8,6 +8,7 @@ import sys
 import time
 
 import servicetest
+from servicetest import call_async, EventPattern
 from twisted.internet import reactor
 import constants as cs
 from twisted.words.protocols.jabber.client import IQ
@@ -85,20 +86,39 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None,
         error = e
         queue.verbose = False
 
-    try:
-        if colourer:
-          sys.stdout = colourer.fh
+    if colourer:
+        sys.stdout = colourer.fh
 
-        if error is None:
-          reactor.callLater(0, reactor.stop)
-        else:
-          # please ignore the POSIX behind the curtain
-          os._exit(1)
+    if bus.name_has_owner(conn.object.bus_name):
+        # Connection hasn't already been disconnected and destroyed
+        try:
+            if conn.GetStatus() == cs.CONN_STATUS_CONNECTED:
+                # Connection is connected, properly disconnect it
+                call_async(queue, conn, 'Disconnect')
+                queue.expect_many(EventPattern('dbus-signal', signal='StatusChanged',
+                                           args=[cs.CONN_STATUS_DISCONNECTED, cs.CSR_REQUESTED]),
+                                  EventPattern('dbus-return', method='Disconnect'))
+            else:
+                # Connection is not connected, call Disconnect() to destroy it
+                conn.Disconnect()
+        except dbus.DBusException, e:
+            pass
 
-        if conn is not None:
+        try:
             conn.Disconnect()
-    except dbus.DBusException, e:
-        pass
+            raise AssertionError("Connection didn't disappear; "
+                                 "all subsequent tests will probably fail")
+        except dbus.DBusException, e:
+            pass
+        except Exception, e:
+            traceback.print_exc()
+            error = e
+
+    if error is None:
+        reactor.callLater(0, reactor.stop)
+    else:
+        # please ignore the POSIX behind the curtain
+        os._exit(1)
 
     if 'SALUT_TEST_REFDBG' in os.environ:
         # we have to wait that Salut timeouts so the process is properly
