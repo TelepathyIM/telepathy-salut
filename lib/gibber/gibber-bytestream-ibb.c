@@ -309,6 +309,9 @@ gibber_bytestream_ibb_constructed (GObject *obj)
   GibberBytestreamIBB *self = GIBBER_BYTESTREAM_IBB (obj);
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
+  if (G_OBJECT_CLASS (gibber_bytestream_ibb_parent_class)->constructed != NULL)
+    G_OBJECT_CLASS (gibber_bytestream_ibb_parent_class)->constructed (obj);
+
   if (priv->porter != NULL && priv->contact != NULL)
     make_porter_connections (self);
 }

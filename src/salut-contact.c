@@ -118,6 +118,9 @@ salut_contact_constructed (GObject *obj)
 {
   SalutContact *self = SALUT_CONTACT (obj);
 
+  if (G_OBJECT_CLASS (salut_contact_parent_class)->constructed != NULL)
+    G_OBJECT_CLASS (salut_contact_parent_class)->constructed (obj);
+
   tp_g_signal_connect_object (self->connection,
       "status-changed", G_CALLBACK (connection_status_changed_cb), self, 0);
 }

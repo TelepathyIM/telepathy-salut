@@ -362,6 +362,9 @@ salut_disco_constructed (GObject *obj)
   SalutDiscoPrivate *priv = disco->priv;
   WockyPorter *porter = priv->connection->porter;
 
+  if (G_OBJECT_CLASS (salut_disco_parent_class)->constructed != NULL)
+    G_OBJECT_CLASS (salut_disco_parent_class)->constructed (obj);
+
   priv->requests = NULL;
 
   /* receive discovery requests */
