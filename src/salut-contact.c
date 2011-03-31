@@ -104,6 +104,25 @@ salut_contact_constructor (GType type,
 }
 
 static void
+connection_status_changed_cb (SalutConnection *connection,
+    guint status,
+    guint reason,
+    SalutContact *self)
+{
+  if (status == TP_CONNECTION_STATUS_DISCONNECTED)
+    self->connection = NULL;
+}
+
+static void
+salut_contact_constructed (GObject *obj)
+{
+  SalutContact *self = SALUT_CONTACT (obj);
+
+  tp_g_signal_connect_object (self->connection,
+      "status-changed", G_CALLBACK (connection_status_changed_cb), self, 0);
+}
+
+static void
 salut_contact_init (SalutContact *obj)
 {
   SalutContactPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (obj,
@@ -187,6 +206,7 @@ salut_contact_class_init (SalutContactClass *salut_contact_class)
   g_type_class_add_private (salut_contact_class, sizeof (SalutContactPrivate));
 
   object_class->constructor = salut_contact_constructor;
+  object_class->constructed = salut_contact_constructed;
   object_class->get_property = salut_contact_get_property;
   object_class->set_property = salut_contact_set_property;
 
@@ -255,8 +275,6 @@ salut_contact_dispose (GObject *object)
 {
   SalutContact *self = SALUT_CONTACT (object);
   SalutContactPrivate *priv = self->priv;
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
 
   DEBUG_CONTACT (self, "Disposing contact");
 
@@ -266,7 +284,7 @@ salut_contact_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
 #ifdef ENABLE_OLPC
-  if (self->olpc_cur_act_room != 0)
+  if (self->olpc_cur_act_room != 0 && self->connection != NULL)
     {
       TpHandleRepoIface *room_repo = tp_base_connection_get_handles
           ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
@@ -284,8 +302,12 @@ salut_contact_dispose (GObject *object)
 
   /* release any references held by the object here */
 
-  if (self->handle != 0)
-    tp_handle_unref (contact_repo, self->handle);
+  if (self->handle != 0 && self->connection != NULL)
+    {
+      TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
+        ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
+      tp_handle_unref (contact_repo, self->handle);
+    }
 
   if (G_OBJECT_CLASS (salut_contact_parent_class)->dispose)
     G_OBJECT_CLASS (salut_contact_parent_class)->dispose (object);
@@ -534,6 +556,9 @@ void salut_contact_change_capabilities (SalutContact *self,
                                         const gchar *node,
                                         const gchar *ver)
 {
+  if (self->connection == NULL)
+    return;
+
   salut_presence_cache_process_caps (self->connection->presence_cache, self,
       hash, node, ver);
 }
@@ -598,9 +623,14 @@ void
 salut_contact_change_current_activity (SalutContact *self,
   const gchar *current_activity_id, const gchar *current_activity_room)
 {
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
+  TpHandleRepoIface *room_repo;
   TpHandle room_handle = 0;
+
+  if (self->connection != NULL)
+    return;
+
+  room_repo = tp_base_connection_get_handles
+    ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
 
   if (current_activity_room != NULL && *current_activity_room != '\0')
     {
