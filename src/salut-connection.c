@@ -1022,16 +1022,22 @@ _self_established_cb (SalutSelf *s, gpointer data)
   g_free (priv->pre_connect_message);
   priv->pre_connect_message = NULL;
 
-  if (!salut_contact_manager_start (priv->contact_manager, NULL))
+  if (!salut_contact_manager_start (priv->contact_manager, &error))
     {
+      DEBUG ("failed to start contact manager: %s", error->message);
+      g_clear_error (&error);
+
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
   }
 
-  if (!salut_roomlist_manager_start (priv->roomlist_manager, NULL))
+  if (!salut_roomlist_manager_start (priv->roomlist_manager, &error))
     {
+      DEBUG ("failed to start roomlist manager: %s", error->message);
+      g_clear_error (&error);
+
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
@@ -1039,8 +1045,11 @@ _self_established_cb (SalutSelf *s, gpointer data)
     }
 
 #ifdef ENABLE_OLPC
-  if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, NULL))
+  if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, &error))
     {
+      DEBUG ("failed to start olpc activity manager: %s", error->message);
+      g_clear_error (&error);
+
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
@@ -1096,12 +1105,19 @@ discovery_client_running (SalutConnection *self)
       g_error_free (error);
     }
 
-  if (port == 0 || !salut_self_announce (priv->self, port, NULL))
+  if (port == 0 || !salut_self_announce (priv->self, port, &error))
     {
+      DEBUG ("failed to announce: %s",
+          error != NULL ? error->message : "(no error message)");
+
       tp_base_connection_change_status (
             TP_BASE_CONNECTION (self),
             TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
+
+      if (error != NULL)
+        g_error_free (error);
+
       return;
     }
 
@@ -1127,6 +1143,7 @@ _discovery_client_state_changed_cb (SalutDiscoveryClient *client,
     {
       /* FIXME better error messages */
       /* FIXME instead of full disconnect we could handle the avahi restart */
+      DEBUG ("discovery client got disconnected");
       tp_base_connection_change_status (TP_BASE_CONNECTION (self),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
@@ -3571,8 +3588,9 @@ salut_connection_start_connecting (TpBaseConnection *base, GError **error)
   if (!salut_discovery_client_start (priv->discovery_client, &client_error))
     {
       *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "Unstable to initialize the avahi client: %s",
+          "Unable to initialize the avahi client: %s",
           client_error->message);
+      DEBUG ("%s", (*error)->message);
       g_error_free (client_error);
       goto error;
     }
