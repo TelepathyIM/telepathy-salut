@@ -1026,7 +1026,8 @@ invite_stanza_callback (WockyPorter *porter,
 
   invite = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
         "invite", GIBBER_TELEPATHY_NS_CLIQUE);
-  g_assert (invite != NULL);
+  if (invite == NULL)
+    return FALSE;
 
   DEBUG("Got an invitation");
 
