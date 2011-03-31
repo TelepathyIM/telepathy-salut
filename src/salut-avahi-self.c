@@ -239,7 +239,7 @@ salut_avahi_self_announce (SalutSelf *_self,
   if (priv->presence == NULL)
     goto error;
 
-  if (!salut_avahi_self_set_caps (_self, NULL))
+  if (!salut_avahi_self_set_caps (_self, error))
     goto error;
 
   if (!ga_entry_group_commit (priv->presence_group, error))
