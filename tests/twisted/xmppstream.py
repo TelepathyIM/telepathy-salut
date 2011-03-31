@@ -69,6 +69,7 @@ def make_message_event(stanza):
 class BaseXmlStream(xmlstream.XmlStream):
     prefixes = { NS_STREAMS: 'stream' }
     version = "1.0"
+    namespace = 'jabber:client'
 
     def __init__(self, event_function, name = None, remote_name = None):
         xmlstream.XmlStream.__init__(self)
@@ -90,7 +91,7 @@ class BaseXmlStream(xmlstream.XmlStream):
             make_presence_event(x)))
 
     def send_header(self):
-        root = domish.Element((NS_STREAMS, 'stream'))
+        root = domish.Element((NS_STREAMS, 'stream'), 'jabber:client')
         if self.name is not None:
             root['from'] = self.name
         if self.remote_name is not None:
