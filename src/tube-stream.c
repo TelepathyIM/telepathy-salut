@@ -575,6 +575,8 @@ start_stream_initiation (SalutTubeStream *self,
     }
   else
     {
+      wocky_stanza_set_to_contact (msg, WOCKY_CONTACT (contact));
+
       result = salut_si_bytestream_manager_negotiate_stream (
         si_bytestream_mgr,
         contact,
