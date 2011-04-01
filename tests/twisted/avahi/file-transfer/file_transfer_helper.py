@@ -297,8 +297,8 @@ class SendFileTest(FileTransferTest):
                  cs.FT_DATE,
                  cs.FT_INITIAL_OFFSET,
                  cs.FT_URI],
-             ) in properties.get('RequestableChannelClasses'),\
-                     properties['RequestableChannelClasses']
+             ) in properties.get('RequestableChannelClasses', []),\
+                     properties.get('RequestableChannelClasses')
 
     def request_ft_channel(self, uri=True):
         requests_iface = dbus.Interface(self.conn, cs.CONN_IFACE_REQUESTS)
