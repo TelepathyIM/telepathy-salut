@@ -64,7 +64,14 @@ class FileTransferTest(object):
     def announce_contact(self, name=CONTACT_NAME):
         basic_txt = { "txtvers": "1", "status": "avail" }
 
-        self.contact_name = '%s@%s' % (name, get_host_name())
+        suffix = '@%s' % get_host_name()
+        name += ('-' + re.sub(r'.*/', '', sys.argv[0])[:-3])
+
+        self.contact_name = name + suffix
+        if len(self.contact_name) > 63:
+            allowed = 63 - len(suffix)
+            self.contact_name = name[:allowed] + suffix
+
         self.listener, port = setup_stream_listener(self.q, self.contact_name)
 
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp",
