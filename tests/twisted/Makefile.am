@@ -43,7 +43,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/tubes/test-request-invalid-dbus-tube.py \
 	avahi/test-request-muc.py \
 	avahi/tubes/test-request-muc-tubes.py \
-        avahi/test-roomlist.py \
+	avahi/test-roomlist.py \
 	avahi/test-set-presence.py \
 	avahi/tubes/test-offer-private-stream-tube.py \
 	avahi/tubes/test-two-muc-stream-tubes.py \
