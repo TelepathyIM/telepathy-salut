@@ -867,6 +867,9 @@ END:
   data->func (bytestream, data->user_data);
 
   streaminit_reply_cb_data_free (data);
+
+  if (stanza != NULL)
+    g_object_unref (stanza);
 }
 
 /*
