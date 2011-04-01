@@ -525,7 +525,7 @@ salut_si_bytestream_manager_constructor (GType type,
 
   priv->si_request_id = wocky_porter_register_handler_from_anyone (
       priv->connection->porter, WOCKY_STANZA_TYPE_IQ,
-      WOCKY_STANZA_SUB_TYPE_GET, WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      WOCKY_STANZA_SUB_TYPE_SET, WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
       si_request_cb, self,
       '(', "si",
         ':', WOCKY_XMPP_NS_SI,
