@@ -125,6 +125,7 @@ struct _SalutFileTransferChannelPrivate {
   GValue *socket_address;
   TpHandle initiator;
   gboolean remote_accepted;
+  gchar *path;
 
   /* properties */
   TpFileTransferState state;
@@ -874,6 +875,12 @@ salut_file_transfer_channel_finalize (GObject *object)
   g_hash_table_destroy (self->priv->available_socket_types);
   g_free (self->priv->uri);
 
+  if (self->priv->path != NULL)
+    {
+      g_unlink (self->priv->path);
+      g_free (self->priv->path);
+    }
+
   G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
 }
 
@@ -1448,7 +1455,9 @@ get_socket_channel (SalutFileTransferChannel *self)
   path_len = strlen (path);
   strncpy (addr.sun_path, path, path_len);
   g_unlink (path);
-  g_free (path);
+
+  /* save this so we can delete the actual socket later if it exists */
+  self->priv->path = path;
 
   if (bind (fd, (struct sockaddr*) &addr,
         G_STRUCT_OFFSET (struct sockaddr_un, sun_path) + path_len) < 0)
