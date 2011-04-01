@@ -6,7 +6,7 @@ from file_transfer_helper import SendFileTest
 
 import constants as cs
 
-print "FIXME: This is disabled because of a bug in Python's httplib. http://bugs.python.org/issue5111"
+print "FIXME: disabled because of a bug in Python's httplib. http://bugs.python.org/issue5111"
 # exiting 77 causes automake to consider the test to have been skipped
 raise SystemExit(77)
 
