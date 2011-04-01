@@ -1134,6 +1134,9 @@ salut_muc_manager_get_text_channel (SalutMucManager *self,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutMucChannel *muc;
 
+  if (priv->text_channels == NULL)
+    return NULL;
+
   muc = g_hash_table_lookup (priv->text_channels, GUINT_TO_POINTER (handle));
   if (muc == NULL)
     return NULL;
