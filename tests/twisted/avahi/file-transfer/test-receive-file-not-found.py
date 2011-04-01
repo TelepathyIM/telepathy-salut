@@ -1,3 +1,4 @@
+import os
 import socket
 import BaseHTTPServer
 import urllib
@@ -20,6 +21,10 @@ class ReceiveFileNotFound(ReceiveFileTest):
                 self_.send_response(404)
                 self_.end_headers()
                 self_.wfile.write(self.file.data)
+
+            def log_message(self, format, *args):
+                if 'CHECK_TWISTED_VERBOSE' in os.environ:
+                    BaseHTTPServer.BaseHTTPRequestHandler.log_message(self, format, *args)
 
         self.httpd = BaseHTTPServer.HTTPServer(('', 0), HTTPHandler)
 

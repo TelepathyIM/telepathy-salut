@@ -6,6 +6,9 @@ import BaseHTTPServer
 import urllib
 import httplib
 import urlparse
+import re
+import sys
+import os
 
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
@@ -131,6 +134,10 @@ class ReceiveFileTest(FileTransferTest):
                 self_.send_header('Content-type', self.file.content_type)
                 self_.end_headers()
                 self_.wfile.write(self.file.data)
+
+            def log_message(self, format, *args):
+                if 'CHECK_TWISTED_VERBOSE' in os.environ:
+                    BaseHTTPServer.BaseHTTPRequestHandler.log_message(self, format, *args)
 
         self.httpd = self._get_http_server_class()(('', 0), HTTPHandler)
 
