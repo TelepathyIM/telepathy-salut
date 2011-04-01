@@ -243,6 +243,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
               "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
               "self-id", priv->connection->name,
               "peer-id", contact->name,
+              "contact", contact,
               "stream-init-id", stream_init_id,
               NULL);
         }
@@ -260,6 +261,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
               "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
               "self-id", priv->connection->name,
               "peer-id", contact->name,
+              "contact", contact,
               "stream-init-id", stream_init_id,
               NULL);
         }
@@ -808,6 +810,7 @@ si_request_sent_cb (GObject *source_object,
               "state", GIBBER_BYTESTREAM_STATE_INITIATING,
               "self-id", priv->connection->name,
               "peer-id", from,
+              "contact", wocky_stanza_get_from_contact (stanza),
               "stream-init-id", NULL,
               "host", priv->host_name_fqdn,
               NULL);
@@ -825,6 +828,7 @@ si_request_sent_cb (GObject *source_object,
               "state", GIBBER_BYTESTREAM_STATE_INITIATING,
               "self-id", priv->connection->name,
               "peer-id", from,
+              "contact", wocky_stanza_get_from_contact (stanza),
               "stream-init-id", NULL,
               NULL);
       }
