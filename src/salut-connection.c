@@ -3504,7 +3504,7 @@ closed_cb (GObject *source,
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   GError *error = NULL;
-  gboolean force_called = priv->disconnect_timer != 0;
+  gboolean force_called = priv->disconnect_timer == 0;
 
   if (priv->disconnect_timer != 0)
     {
@@ -3536,7 +3536,7 @@ closed_cb (GObject *source,
       DEBUG ("connection properly closed");
     }
 
-  if (force_called)
+  if (!force_called)
     tp_base_connection_finish_shutdown (base);
 
 out:
