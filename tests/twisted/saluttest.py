@@ -6,7 +6,6 @@ Infrastructure code for testing Salut
 import os
 import sys
 import time
-import re
 
 import servicetest
 from servicetest import call_async, EventPattern
@@ -44,7 +43,7 @@ def make_connection(bus, event_func, params=None):
         'published-name': 'testsuite',
         'first-name': 'test',
         'last-name': 'suite',
-        'nickname': re.sub(r'.*/', '', sys.argv[0]),
+        'nickname': os.path.basename(sys.argv[0]),
         }
 
     if params:

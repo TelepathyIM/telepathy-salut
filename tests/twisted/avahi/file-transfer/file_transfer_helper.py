@@ -6,7 +6,6 @@ import BaseHTTPServer
 import urllib
 import httplib
 import urlparse
-import re
 import sys
 import os
 
@@ -65,7 +64,7 @@ class FileTransferTest(object):
         basic_txt = { "txtvers": "1", "status": "avail" }
 
         suffix = '@%s' % get_host_name()
-        name += ('-' + re.sub(r'.*/', '', sys.argv[0])[:-3])
+        name += ('-' + os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
         self.contact_name = name + suffix
         if len(self.contact_name) > 63:
