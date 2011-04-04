@@ -1115,9 +1115,7 @@ discovery_client_running (SalutConnection *self)
             TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
 
-      if (error != NULL)
-        g_error_free (error);
-
+      g_clear_error (&error);
       return;
     }
 
