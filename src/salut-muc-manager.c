@@ -206,7 +206,8 @@ salut_muc_manager_constructor (GType type,
   porter = priv->connection->porter;
   priv->invite_handler_id = wocky_porter_register_handler_from_anyone (
       porter, WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
-      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL, invite_stanza_callback, obj,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL + 1, /* so we get called before the IM manager */
+      invite_stanza_callback, obj,
       '(', "invite",
         ':', GIBBER_TELEPATHY_NS_CLIQUE,
       ')', NULL);
