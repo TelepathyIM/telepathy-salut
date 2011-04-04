@@ -123,14 +123,18 @@ delete_request (SalutDiscoRequest *request)
   SalutDisco *disco = request->disco;
   SalutDiscoPrivate *priv;
 
-  g_assert (NULL != request);
-  g_assert (SALUT_IS_DISCO (disco));
+  /* if we've already disposed the SalutDisco object, we should not
+   * mess around with anything referenced by that. */
+  if (disco != NULL)
+    {
+      g_assert (SALUT_IS_DISCO (disco));
 
-  priv = disco->priv;
+      priv = disco->priv;
 
-  g_assert (NULL != g_list_find (priv->requests, request));
+      g_assert (NULL != g_list_find (priv->requests, request));
 
-  priv->requests = g_list_remove (priv->requests, request);
+      priv->requests = g_list_remove (priv->requests, request);
+    }
 
   if (NULL != request->bound_object)
     {
@@ -413,6 +417,8 @@ salut_disco_dispose (GObject *object)
   for (l = priv->requests; l != NULL; l = l->next)
     {
       SalutDiscoRequest *r = l->data;
+
+      r->disco = NULL;
       g_cancellable_cancel (r->cancellable);
     }
 
@@ -490,16 +496,9 @@ out:
     {
       request->callback (request->disco, request, request->contact, request->node,
           query_node, error, request->user_data);
-
-      /* if we really are cancelled, then don't delete the request as
-       * clearing the disco waiters is what caused us to be
-       * cancelled. */
-      if (error != NULL
-          && (error->domain != G_IO_ERROR || error->code != G_IO_ERROR_CANCELLED))
-        {
-          delete_request (request);
-        }
     }
+
+    delete_request (request);
 
   if (error != NULL)
     g_clear_error (&error);
