@@ -498,7 +498,7 @@ out:
           query_node, error, request->user_data);
     }
 
-    delete_request (request);
+  delete_request (request);
 
   if (error != NULL)
     g_clear_error (&error);
