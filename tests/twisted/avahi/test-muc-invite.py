@@ -17,11 +17,6 @@ from twisted.words.xish import domish
 
 import constants as cs
 
-CONNECTION_INTERFACE_REQUESTS = 'org.freedesktop.Telepathy.Connection.Interface.Requests'
-CHANNEL_INTERFACE ='org.freedesktop.Telepathy.Channel'
-CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
-CHANNEL_IFACE_GROUP = 'org.freedesktop.Telepathy.Channel.Interface.Group'
-
 HT_CONTACT = 1
 HT_ROOM = 2
 
@@ -42,7 +37,7 @@ def test(q, bus, conn):
 
     handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
-    requests_iface = dbus.Interface(conn, CONNECTION_INTERFACE_REQUESTS)
+    requests_iface = dbus.Interface(conn, cs.CONN_IFACE_REQUESTS)
 
     # Create a connection to send the muc invite
     AvahiListener(q).listen_for_service("_presence._tcp")
@@ -75,7 +70,9 @@ def test(q, bus, conn):
     invite.addElement('port', content='62472')
     outbound.send(msg)
 
-    e =q.expect('dbus-signal', signal='NewChannels')
+    e = q.expect('dbus-signal', signal='NewChannels',
+            predicate=lambda e:
+                e.args[0][0][1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT)
     channels = e.args[0]
     assert len(channels) == 1
     path, props = channels[0]
@@ -86,15 +83,15 @@ def test(q, bus, conn):
 
     # check channel properties
     # org.freedesktop.Telepathy.Channel D-Bus properties
-    assert props[CHANNEL_INTERFACE + '.ChannelType'] == CHANNEL_TYPE_TEXT
+    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
     assertContains(cs.CHANNEL_IFACE_GROUP, props[cs.INTERFACES])
     assertContains(cs.CHANNEL_IFACE_MESSAGES, props[cs.INTERFACES])
-    assert props[CHANNEL_INTERFACE + '.TargetHandle'] == muc_handle
-    assert props[CHANNEL_INTERFACE + '.TargetID'] == 'my-room'
-    assert props[CHANNEL_INTERFACE + '.TargetHandleType'] == HT_ROOM
-    assert props[CHANNEL_INTERFACE + '.Requested'] == False
-    assert props[CHANNEL_INTERFACE + '.InitiatorHandle'] == handle
-    assert props[CHANNEL_INTERFACE + '.InitiatorID'] == contact_name
+    assert props[cs.TARGET_HANDLE] == muc_handle
+    assert props[cs.TARGET_ID] == 'my-room'
+    assert props[cs.TARGET_HANDLE_TYPE] == HT_ROOM
+    assert props[cs.REQUESTED] == False
+    assert props[cs.INITIATOR_HANDLE] == handle
+    assert props[cs.INITIATOR_ID] == contact_name
 
     # we are added to local pending
     e = q.expect('dbus-signal', signal='MembersChanged')
