@@ -1407,6 +1407,9 @@ salut_connection_get_handle_contact_capabilities (SalutConnection *self,
 
   if (handle == base_conn->self_handle)
     {
+      if (self->priv->self == NULL)
+        return;
+
       set = salut_self_get_caps (self->priv->self);
     }
   else
