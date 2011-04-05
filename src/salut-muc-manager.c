@@ -1035,7 +1035,7 @@ invite_stanza_callback (WockyPorter *porter,
   if (room_node == NULL)
     {
       DEBUG ("Invalid invitation, discarding");
-      return FALSE;
+      return TRUE;
     }
   room = room_node->content;
 
@@ -1051,7 +1051,7 @@ invite_stanza_callback (WockyPorter *porter,
   if (params == NULL)
     {
       DEBUG ("Invalid invitation, (unknown protocol) discarding");
-      return FALSE;
+      return TRUE;
     }
 
   params_hash = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, g_free);
@@ -1122,7 +1122,7 @@ invite_stanza_callback (WockyPorter *porter,
 discard:
   if (params_hash != NULL)
     g_hash_table_destroy (params_hash);
-  return FALSE;
+  return TRUE;
 }
 
 /* public functions */
