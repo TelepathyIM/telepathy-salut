@@ -20,5 +20,8 @@ elif test -n "$SALUT_TEST_REFDBG"; then
         fi
 fi
 
+# The bus-daemon that is activating us doesn't know it's also the system bus
+export DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"
+
 export G_DEBUG=fatal-warnings" ${G_DEBUG}"
 exec @abs_top_builddir@/libtool --mode=execute $SALUT_WRAPPER @abs_top_builddir@/src/telepathy-salut

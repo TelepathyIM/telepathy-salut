@@ -6,6 +6,7 @@ Infrastructure code for testing Salut
 import os
 import sys
 import time
+from subprocess import Popen
 
 import servicetest
 from servicetest import call_async, EventPattern
@@ -15,6 +16,7 @@ from twisted.words.protocols.jabber.client import IQ
 import ns
 
 import dbus
+import glib
 
 # keep sync with src/salut-capabilities.c:self_advertised_features
 fixed_features = [ns.SI, ns.IBB, ns.TUBES, ns.IQ_OOB, ns.X_OOB]
@@ -52,9 +54,37 @@ def make_connection(bus, event_func, params=None):
     return servicetest.make_connection(bus, event_func, 'salut',
         'local-xmpp', default_params)
 
+def ensure_avahi_is_running():
+    bus = dbus.SystemBus()
+    bus_obj = bus.get_object('org.freedesktop.DBus', '/org/freedesktop/DBus')
+    if bus_obj.NameHasOwner('org.freedesktop.Avahi',
+                            dbus_interface='org.freedesktop.DBus'):
+        return
+
+    loop = glib.MainLoop()
+    def name_owner_changed_cb(name, old_owner, new_owner):
+        loop.quit()
+
+    bus.add_signal_receiver(name_owner_changed_cb,
+                            signal_name='NameOwnerChanged',
+                            dbus_interface='org.freedesktop.DBus',
+                            arg0='org.freedesktop.Avahi')
+
+    # Cannot use D-Bus activation because we have no way to pass to activated
+    # clients the address of the system bus and we cannot host the service in
+    # this process because we are going to make blocking calls and we would
+    # deadlock.
+    tests_dir = os.path.dirname(__file__)
+    avahimock_path = os.path.join(tests_dir, 'avahimock.py')
+    Popen([avahimock_path])
+
+    loop.run()
+
 def exec_test_deferred (fun, params, protocol=None, timeout=None,
         make_conn=True):
     colourer = None
+
+    ensure_avahi_is_running()
 
     if sys.stdout.isatty() or 'CHECK_FORCE_COLOR' in os.environ:
         colourer = servicetest.install_colourer()
