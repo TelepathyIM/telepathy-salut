@@ -3928,9 +3928,8 @@ salut_connection_ensure_sidecar (
       SalutPluginLoader *loader = salut_plugin_loader_dup ();
 
       DEBUG ("requesting %s from the plugin loader", sidecar_iface);
-      /* set NULL to session once we start using one */
       salut_plugin_loader_create_sidecar_async (loader, sidecar_iface, conn,
-          NULL, create_sidecar_cb, grr_new (conn, sidecar_iface));
+          conn->session, create_sidecar_cb, grr_new (conn, sidecar_iface));
       g_object_unref (loader);
     }
   else
@@ -3992,9 +3991,8 @@ sidecars_conn_status_changed_cb (
           const gchar *sidecar_iface = key;
 
           DEBUG ("requesting %s from the plugin loader", sidecar_iface);
-          /* TODO: set NULL to session we start using the session */
           salut_plugin_loader_create_sidecar_async (loader, sidecar_iface, conn,
-              NULL, create_sidecar_cb, grr_new (conn, sidecar_iface));
+              conn->session, create_sidecar_cb, grr_new (conn, sidecar_iface));
         }
 
       g_object_unref (loader);
