@@ -103,7 +103,7 @@ AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 dnl enable avahi tests
 AC_ARG_ENABLE(avahi-tests,
   AC_HELP_STRING([ --enable-avahi-tests],
-    [Enable tests that use the system avahi ]),
+    [Enable tests that use the system avahi to hit the network ]),
     enable_avahi_tests=$enableval, enable_avahi_tests=no)
 
 if test x$enable_avahi_tests = xyes; then
