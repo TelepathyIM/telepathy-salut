@@ -102,8 +102,7 @@ test_unix_listen (void)
   ret = gibber_unix_transport_connect (unix_transport, path, &error);
   g_assert (ret == TRUE);
 
-  if (!signalled)
-    g_main_loop_run (mainloop);
+  g_main_loop_run (mainloop);
 
   g_assert (got_connection && "Failed to connect");
 
