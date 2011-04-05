@@ -523,7 +523,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   g_object_unref (address);
 
-  if (family == SOUP_ADDRESS_FAMILY_IPV6)
+  if (family == G_SOCKET_FAMILY_IPV6)
     {
       /* put brackets around the IP6 */
       host_escaped = g_strdup_printf ("[%s]", host_name);
