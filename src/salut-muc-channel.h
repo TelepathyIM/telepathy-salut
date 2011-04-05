@@ -29,7 +29,6 @@
 #include <gibber/gibber-muc-connection.h>
 
 #include "salut-connection.h"
-#include "salut-xmpp-connection-manager.h"
 
 G_BEGIN_DECLS
 

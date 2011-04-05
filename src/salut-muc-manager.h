@@ -25,7 +25,6 @@
 #include <gibber/gibber-bytestream-iface.h>
 
 #include <salut-connection.h>
-#include "salut-xmpp-connection-manager.h"
 #include "salut-muc-channel.h"
 #include "salut-tubes-channel.h"
 #include "salut-muc-channel.h"
@@ -42,7 +41,7 @@ struct _SalutMucManagerClass {
         SalutConnection *connection, const gchar *path,
         GibberMucConnection *muc_connection, TpHandle handle,
         const gchar *name, TpHandle initiator, gboolean creator,
-        SalutXmppConnectionManager *xcm, gboolean requested);
+        gboolean requested);
 };
 
 struct _SalutMucManager {

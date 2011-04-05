@@ -16,7 +16,7 @@ import dbus
 
 arbitrary_ids = [ "DooN4Bei@TheeK6bo-Tegh4aci", "ahrui1iM@Dai6igho-ADetaes3" ]
 
-print "FIXME: test-to-nonexistant-ids.py disabled because 1-1 tubes are disabled for now"
+print "FIXME: disabled because 1-1 tubes are disabled for now"
 # exiting 77 causes automake to consider the test to have been skipped
 raise SystemExit(77)
 

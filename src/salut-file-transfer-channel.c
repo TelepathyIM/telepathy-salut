@@ -42,9 +42,9 @@
 #include "salut-contact.h"
 
 #include <wocky/wocky-stanza.h>
+#include <wocky/wocky-meta-porter.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
-#include <gibber/gibber-iq-helper.h>
 #include <gibber/gibber-xmpp-error.h>
 
 #include <telepathy-glib/channel-iface.h>
@@ -108,7 +108,6 @@ enum
 
   PROP_CONTACT,
   PROP_CONNECTION,
-  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -120,14 +119,13 @@ struct _SalutFileTransferChannelPrivate {
   TpHandle handle;
   SalutContact *contact;
   SalutConnection *connection;
-  SalutXmppConnectionManager *xmpp_connection_manager;
-  GibberXmppConnection *xmpp_connection;
   GibberFileTransfer *ft;
   GTimeVal last_transferred_bytes_emitted;
   guint progress_timer;
   GValue *socket_address;
   TpHandle initiator;
   gboolean remote_accepted;
+  gchar *path;
 
   /* properties */
   TpFileTransferState state;
@@ -163,8 +161,6 @@ salut_file_transfer_channel_init (SalutFileTransferChannel *obj)
 
   /* allocate any data required by the object here */
   obj->priv->object_path = NULL;
-  obj->priv->connection = NULL;
-  obj->priv->xmpp_connection_manager = NULL;
   obj->priv->contact = NULL;
 }
 
@@ -250,9 +246,6 @@ salut_file_transfer_channel_get_property (GObject *object,
         break;
       case PROP_INTERFACES:
         g_value_set_boxed (value, salut_file_transfer_channel_interfaces);
-        break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        g_value_set_object (value, self->priv->xmpp_connection_manager);
         break;
       case PROP_STATE:
         g_value_set_uint (value, self->priv->state);
@@ -369,9 +362,6 @@ salut_file_transfer_channel_set_property (GObject *object,
         /* these properties are writable in the interface, but not actually
          * meaningfully changeable on this channel, so we do nothing */
         break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        self->priv->xmpp_connection_manager = g_value_dup_object (value);
-        break;
       case PROP_STATE:
         salut_file_transfer_channel_set_state (
             TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (object),
@@ -447,6 +437,10 @@ salut_file_transfer_channel_constructor (GType type,
 
   /* Ref our handle */
   base_conn = TP_BASE_CONNECTION (self->priv->connection);
+
+  /* ref our porter */
+  wocky_meta_porter_hold (WOCKY_META_PORTER (self->priv->connection->porter),
+      WOCKY_CONTACT (self->priv->contact));
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
@@ -671,18 +665,6 @@ salut_file_transfer_channel_class_init (
       G_PARAM_STATIC_NAME);
   g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "Salut XMPP Connection manager used for this file channel",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
-      param_spec);
-
   param_spec = g_param_spec_uint (
       "state",
       "TpFileTransferState state",
@@ -865,18 +847,6 @@ salut_file_transfer_channel_dispose (GObject *object)
       self->priv->contact = NULL;
     }
 
-  if (self->priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (self->priv->xmpp_connection_manager);
-      self->priv->xmpp_connection_manager = NULL;
-    }
-
-  if (self->priv->xmpp_connection != NULL)
-    {
-      g_object_unref (self->priv->xmpp_connection);
-      self->priv->xmpp_connection = NULL;
-    }
-
   if (self->priv->ft != NULL)
     {
       g_object_unref (self->priv->ft);
@@ -904,6 +874,12 @@ salut_file_transfer_channel_finalize (GObject *object)
   g_free (self->priv->description);
   g_hash_table_destroy (self->priv->available_socket_types);
   g_free (self->priv->uri);
+
+  if (self->priv->path != NULL)
+    {
+      g_unlink (self->priv->path);
+      g_free (self->priv->path);
+    }
 
   G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
 }
@@ -1024,29 +1000,33 @@ static void
 ft_finished_cb (GibberFileTransfer *ft,
                 SalutFileTransferChannel *self)
 {
+  SalutFileTransferChannelPrivate *priv = self->priv;
+  WockyPorter *porter = priv->connection->porter;
+
   salut_file_transfer_channel_set_state (
       TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
       TP_FILE_TRANSFER_STATE_COMPLETED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_NONE);
 
-  salut_xmpp_connection_manager_release_connection (
-      self->priv->xmpp_connection_manager,
-      self->priv->xmpp_connection);
+  wocky_meta_porter_unhold (WOCKY_META_PORTER (porter),
+      WOCKY_CONTACT (self->priv->contact));
 }
 
 static void
 ft_remote_cancelled_cb (GibberFileTransfer *ft,
                         SalutFileTransferChannel *self)
 {
+  SalutFileTransferChannelPrivate *priv = self->priv;
+  WockyPorter *porter = priv->connection->porter;
+
   gibber_file_transfer_cancel (ft, 406);
   salut_file_transfer_channel_set_state (
       TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
       TP_FILE_TRANSFER_STATE_CANCELLED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_REMOTE_STOPPED);
 
-  salut_xmpp_connection_manager_release_connection (
-      self->priv->xmpp_connection_manager,
-      self->priv->xmpp_connection);
+  wocky_meta_porter_unhold (WOCKY_META_PORTER (porter),
+      WOCKY_CONTACT (self->priv->contact));
 }
 
 static void
@@ -1091,7 +1071,8 @@ send_file_offer (SalutFileTransferChannel *self)
       "self-id", self->priv->connection->name,
       "peer-id", self->priv->contact->name,
       "filename", self->priv->filename,
-      "connection", self->priv->xmpp_connection,
+      "porter", self->priv->connection->porter,
+      "contact", self->priv->contact,
       "description", self->priv->description,
       "content-type", self->priv->content_type,
       NULL);
@@ -1109,21 +1090,6 @@ send_file_offer (SalutFileTransferChannel *self)
   gibber_file_transfer_set_size (ft, self->priv->size);
 
   gibber_file_transfer_offer (ft);
-}
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *connection,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  SalutFileTransferChannel *channel = user_data;
-
-  channel->priv->xmpp_connection = g_object_ref (connection);
-  salut_xmpp_connection_manager_take_connection (mgr, connection);
-  g_signal_handlers_disconnect_by_func (mgr,
-      xmpp_connection_manager_new_connection_cb, user_data);
-  send_file_offer (channel);
 }
 
 static void
@@ -1267,40 +1233,12 @@ gboolean
 salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
                                         GError **error)
 {
-  SalutXmppConnectionManagerRequestConnectionResult request_result;
-  GibberXmppConnection *connection = NULL;
-  GError *e = NULL;
-
   g_assert (!CHECK_STR_EMPTY (self->priv->filename));
   g_assert (self->priv->size != SALUT_UNDEFINED_FILE_SIZE);
 
   DEBUG ("Offering file transfer");
 
-  request_result = salut_xmpp_connection_manager_request_connection (
-      self->priv->xmpp_connection_manager, self->priv->contact,
-      &connection, &e);
-
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      self->priv->xmpp_connection = g_object_ref (connection);
-      send_file_offer (self);
-    }
-  else if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
-    {
-      g_signal_connect (self->priv->xmpp_connection_manager,
-          "new-connection",
-          G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
-    }
-  else
-    {
-      DEBUG ("Request connection failed");
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
-        "Request connection failed: %s", e->message);
-      g_error_free (e);
-      return FALSE;
-    }
+  send_file_offer (self);
 
   return TRUE;
 }
@@ -1517,7 +1455,9 @@ get_socket_channel (SalutFileTransferChannel *self)
   path_len = strlen (path);
   strncpy (addr.sun_path, path, path_len);
   g_unlink (path);
-  g_free (path);
+
+  /* save this so we can delete the actual socket later if it exists */
+  self->priv->path = path;
 
   if (bind (fd, (struct sockaddr*) &addr,
         G_STRUCT_OFFSET (struct sockaddr_un, sun_path) + path_len) < 0)
@@ -1605,7 +1545,6 @@ SalutFileTransferChannel *
 salut_file_transfer_channel_new (SalutConnection *conn,
                                  SalutContact *contact,
                                  TpHandle handle,
-                                 SalutXmppConnectionManager *xcm,
                                  TpHandle initiator_handle,
                                  TpFileTransferState state,
                                  const gchar *content_type,
@@ -1622,7 +1561,6 @@ salut_file_transfer_channel_new (SalutConnection *conn,
       "connection", conn,
       "contact", contact,
       "handle", handle,
-      "xmpp-connection-manager", xcm,
       "initiator-handle", initiator_handle,
       "state", state,
       "content-type", content_type,
@@ -1641,28 +1579,30 @@ SalutFileTransferChannel *
 salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
                                              SalutContact *contact,
                                              TpHandle handle,
-                                             SalutXmppConnectionManager *xcm,
                                              TpFileTransferState state,
-                                             WockyStanza *stanza,
-                                             GibberXmppConnection *conn)
+                                             WockyStanza *stanza)
 {
   GError *error = NULL;
   GibberFileTransfer *ft;
   SalutFileTransferChannel *chan;
 
-  salut_xmpp_connection_manager_take_connection (xcm , conn);
-  ft = gibber_file_transfer_new_from_stanza_with_from (stanza, conn,
-      contact->name, &error);
+  ft = gibber_file_transfer_new_from_stanza_with_from (stanza, connection->porter,
+      WOCKY_CONTACT (contact), contact->name, &error);
 
   if (ft == NULL)
     {
       /* Reply with an error */
       WockyStanza *reply;
+      GError err = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+                      "failed to parse file offer" };
 
       DEBUG ("%s", error->message);
-      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
-          "failed to parse file offer");
-      gibber_xmpp_connection_send (conn, reply, NULL);
+      reply = wocky_stanza_build_iq_error (stanza, NULL);
+      wocky_stanza_error_to_node (&err, wocky_stanza_get_top_node (reply));
+
+      wocky_porter_send (connection->porter, reply);
+
+      g_object_unref (reply);
       g_clear_error (&error);
       return NULL;
     }
@@ -1673,7 +1613,6 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
       "connection", connection,
       "contact", contact,
       "handle", handle,
-      "xmpp-connection-manager", xcm,
       "initiator-handle", handle,
       "state", state,
       "filename", ft->filename,

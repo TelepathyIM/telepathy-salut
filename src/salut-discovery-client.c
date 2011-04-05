@@ -33,26 +33,24 @@ salut_discovery_client_start (SalutDiscoveryClient *self,
 
 SalutMucManager *
 salut_discovery_client_create_muc_manager (SalutDiscoveryClient *self,
-                                           SalutConnection *connection,
-                                           SalutXmppConnectionManager *xcm)
+                                           SalutConnection *connection)
 {
   SalutMucManager * (*virtual_method)(SalutDiscoveryClient *,
-    SalutConnection *, SalutXmppConnectionManager *) =
+    SalutConnection *) =
     SALUT_DISCOVERY_CLIENT_GET_CLASS (self)->create_muc_manager;
   g_assert (virtual_method != NULL);
-  return virtual_method (self, connection, xcm);
+  return virtual_method (self, connection);
 }
 
 SalutRoomlistManager *
 salut_discovery_client_create_roomlist_manager (SalutDiscoveryClient *self,
-                                                SalutConnection *connection,
-                                                SalutXmppConnectionManager *xcm)
+                                                SalutConnection *connection)
 {
   SalutRoomlistManager * (*virtual_method)(SalutDiscoveryClient *,
-    SalutConnection *, SalutXmppConnectionManager *) =
+    SalutConnection *) =
     SALUT_DISCOVERY_CLIENT_GET_CLASS (self)->create_roomlist_manager;
   g_assert (virtual_method != NULL);
-  return virtual_method (self, connection, xcm);
+  return virtual_method (self, connection);
 }
 
 SalutContactManager *

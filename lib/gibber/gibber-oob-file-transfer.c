@@ -27,6 +27,7 @@
 #include <libsoup/soup-message.h>
 
 #include <wocky/wocky-stanza.h>
+#include <wocky/wocky-meta-porter.h>
 #include "gibber-oob-file-transfer.h"
 #include "gibber-fd-transport.h"
 #include "gibber-namespaces.h"
@@ -177,7 +178,8 @@ gibber_oob_file_transfer_is_file_offer (WockyStanza *stanza)
 GibberFileTransfer *
 gibber_oob_file_transfer_new_from_stanza_with_from (
     WockyStanza *stanza,
-    GibberXmppConnection *connection,
+    WockyPorter *porter,
+    WockyContact *contact,
     const gchar *peer_id,
     GError **error)
 {
@@ -195,6 +197,8 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   const gchar *ft_type;
   gchar *url;
   gchar *filename;
+
+  g_return_val_if_fail (WOCKY_IS_PORTER (porter), NULL);
 
   if (strcmp (node->name, "iq") != 0)
     {
@@ -303,7 +307,8 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
       "self-id", self_id,
       "peer-id", peer_id,
       "filename", filename,
-      "connection", connection,
+      "porter", porter,
+      "contact", contact,
       "direction", GIBBER_FILE_TRANSFER_DIRECTION_INCOMING,
       "description", description,
       "content-type", content_type,
@@ -470,12 +475,15 @@ static WockyStanza *
 create_transfer_offer (GibberOobFileTransfer *self,
                        GError **error)
 {
-  GibberXmppConnection *connection;
+  WockyMetaPorter *porter;
+  WockyContact *contact;
+  GSocketConnection *conn;
+  GSocketAddress *address;
+  GInetAddress *addr;
+  GSocketFamily family;
 
   /* local host name */
-  gchar host_name[NI_MAXHOST];
-  struct sockaddr_storage name_addr;
-  socklen_t name_addr_len = sizeof (name_addr);
+  gchar *host_name;
   gchar *host_escaped;
 
   WockyStanza *stanza;
@@ -490,21 +498,32 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   guint64 size;
 
-  g_object_get (GIBBER_FILE_TRANSFER (self), "connection", &connection, NULL);
-  if (connection->transport == NULL)
+  g_object_get (GIBBER_FILE_TRANSFER (self),
+      "porter", &porter,
+      "contact", &contact,
+      NULL);
+
+  conn = wocky_meta_porter_borrow_connection (porter, WOCKY_LL_CONTACT (contact));
+
+  g_object_unref (porter);
+  g_object_unref (contact);
+
+  if (conn == NULL)
     {
       g_set_error (error, GIBBER_FILE_TRANSFER_ERROR,
           GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED, "Null transport");
       return NULL;
     }
 
-  gibber_transport_get_sockaddr (connection->transport, &name_addr,
-      &name_addr_len);
-  g_object_unref (connection);
-  getnameinfo ((struct sockaddr *) &name_addr, name_addr_len, host_name,
-      sizeof (host_name), NULL, 0, NI_NUMERICHOST);
+  address = g_socket_connection_get_local_address (conn, NULL);
+  addr = g_inet_socket_address_get_address (G_INET_SOCKET_ADDRESS (address));
+  family = g_socket_address_get_family (address);
 
-  if (name_addr.ss_family == AF_INET6)
+  host_name = g_inet_address_to_string (addr);
+
+  g_object_unref (address);
+
+  if (family == SOUP_ADDRESS_FAMILY_IPV6)
     {
       /* put brackets around the IP6 */
       host_escaped = g_strdup_printf ("[%s]", host_name);
@@ -514,6 +533,8 @@ create_transfer_offer (GibberOobFileTransfer *self,
       /* IPv4: No need to modify the host_name */
       host_escaped = g_strdup (host_name);
     }
+
+  g_free (host_name);
 
   filename_escaped = g_uri_escape_string (GIBBER_FILE_TRANSFER (self)->filename,
       NULL, FALSE);
@@ -718,58 +739,10 @@ http_server_cb (SoupServer *server,
 }
 
 static void
-gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
+create_and_send_transfer_offer (GibberOobFileTransfer *self)
 {
-  GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
-  WockyStanza *stanza;
   GError *error = NULL;
-
-  /* start the server if not running */
-  /* FIXME we should have only a single server */
-  if (self->priv->server == NULL)
-    {
-      /* FIXME: libsoup can't listen on IPv4 and IPv6 interfaces at the same
-       * time. http://bugzilla.gnome.org/show_bug.cgi?id=522519
-       * We have to check which IP will be send when creating the stanza. */
-        GibberXmppConnection *connection;
-        struct sockaddr_storage name_addr;
-        socklen_t name_addr_len = sizeof (name_addr);
-
-        g_object_get (GIBBER_FILE_TRANSFER (self), "connection", &connection,
-            NULL);
-        if (connection->transport == NULL)
-          {
-            g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
-                GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED, "Null transport");
-            gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self),
-                error);
-            g_error_free (error);
-            return;
-          }
-
-        gibber_transport_get_peeraddr (connection->transport, &name_addr,
-            &name_addr_len);
-        g_object_unref (connection);
-
-        if (name_addr.ss_family == AF_INET6)
-          {
-            /* IPv6 server */
-            SoupAddress *addr;
-
-            addr = soup_address_new_any (SOUP_ADDRESS_FAMILY_IPV6, 0);
-            self->priv->server = soup_server_new (SOUP_SERVER_INTERFACE,
-                addr, NULL);
-
-            g_object_unref (addr);
-          }
-        else
-          {
-            /* IPv4 server */
-            self->priv->server = soup_server_new (NULL, NULL);
-          }
-
-      soup_server_run_async (self->priv->server);
-    }
+  WockyStanza *stanza;
 
   stanza = create_transfer_offer (self, &error);
   if (stanza == NULL)
@@ -788,6 +761,115 @@ gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
     }
 
   g_object_unref (stanza);
+}
+
+static void
+porter_open_cb (GObject *source_object,
+    GAsyncResult *result,
+    gpointer user_data)
+{
+  WockyMetaPorter *porter = WOCKY_META_PORTER (source_object);
+  GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (user_data);
+  GError *error = NULL;
+
+  WockyContact *contact;
+
+  GSocketConnection *conn;
+  GSocketAddress *address;
+  GSocketFamily family;
+
+  if (!wocky_meta_porter_open_finish (porter, result, &error))
+    {
+      DEBUG ("Failed to open connection: %s", error->message);
+      g_clear_error (&error);
+
+      g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
+          GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED, "Couldn't open connection");
+      gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self),
+          error);
+      g_error_free (error);
+      return;
+    }
+
+  g_object_get (GIBBER_FILE_TRANSFER (self),
+      "contact", &contact,
+      NULL);
+
+  /* FIXME we should have only a single server */
+
+  /* FIXME: libsoup can't listen on IPv4 and IPv6 interfaces at the same
+   * time. http://bugzilla.gnome.org/show_bug.cgi?id=522519
+   * We have to check which IP will be send when creating the stanza. */
+
+  conn = wocky_meta_porter_borrow_connection (porter,
+      WOCKY_LL_CONTACT (contact));
+
+  if (conn == NULL)
+    {
+      g_set_error (&error, GIBBER_FILE_TRANSFER_ERROR,
+          GIBBER_FILE_TRANSFER_ERROR_NOT_CONNECTED, "Null transport");
+      gibber_file_transfer_emit_error (GIBBER_FILE_TRANSFER (self),
+          error);
+      g_error_free (error);
+      goto out;
+    }
+
+  address = g_socket_connection_get_remote_address (conn, NULL);
+  family = g_socket_address_get_family (address);
+  g_object_unref (address);
+
+  if (family == G_SOCKET_FAMILY_IPV6)
+    {
+      /* IPv6 server */
+      SoupAddress *addr;
+
+      addr = soup_address_new_any (SOUP_ADDRESS_FAMILY_IPV6, 0);
+      self->priv->server = soup_server_new (SOUP_SERVER_INTERFACE,
+          addr, NULL);
+
+      g_object_unref (addr);
+    }
+  else
+    {
+      /* IPv4 server */
+      self->priv->server = soup_server_new (NULL, NULL);
+    }
+
+  soup_server_run_async (self->priv->server);
+
+  create_and_send_transfer_offer (self);
+
+out:
+  /* this was reffed when calling open_async */
+  wocky_meta_porter_unhold (porter, contact);
+  g_object_unref (contact);
+}
+
+static void
+gibber_oob_file_transfer_offer (GibberFileTransfer *ft)
+{
+  GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
+  WockyMetaPorter *porter;
+  WockyContact *contact;
+
+  if (self->priv->server != NULL)
+    {
+      create_and_send_transfer_offer (self);
+      return;
+    }
+
+  /* we need to create the soup server */
+
+  g_object_get (ft,
+      "porter", &porter,
+      "contact", &contact,
+      NULL);
+
+  wocky_meta_porter_open_async (porter, WOCKY_LL_CONTACT (contact),
+      NULL, porter_open_cb, ft);
+
+  g_object_unref (contact);
+  g_object_unref (porter);
 }
 
 static void

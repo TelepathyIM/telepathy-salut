@@ -16,8 +16,7 @@ from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
 import constants as cs
 
-print "FIXME: test-request-invalid-dbus-tube.py disabled because the new API"
-print "       for DBus tubes is not implemented."
+print "FIXME: disabled because new DBus tube API is not implemented"
 # exiting 77 causes automake to consider the test to have been skipped
 raise SystemExit(77)
 

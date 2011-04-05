@@ -44,6 +44,9 @@
 
 #include <salut/caps-channel-manager.h>
 
+#include <wocky/wocky-meta-porter.h>
+
+
 #include "capabilities.h"
 #include "salut-avahi-discovery-client.h"
 #include "salut-capabilities.h"
@@ -64,7 +67,6 @@
 #include "salut-si-bytestream-manager.h"
 #include "salut-tubes-manager.h"
 #include "salut-util.h"
-#include "salut-xmpp-connection-manager.h"
 
 #include "plugin-loader.h"
 
@@ -109,6 +111,8 @@ salut_conn_contact_caps_iface_init (gpointer, gpointer);
 
 static void salut_conn_future_iface_init (gpointer, gpointer);
 
+#define DISCONNECT_TIMEOUT 5
+
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
@@ -138,13 +142,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     )
 
 #ifdef ENABLE_OLPC
-static gboolean uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
-
-static void uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
+static gboolean uninvite_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza, gpointer user_data);
 #endif
 
 /* properties */
@@ -197,9 +196,6 @@ struct _SalutConnectionPrivate
   gchar *pre_connect_message;
   GabbleCapabilitySet *pre_connect_caps;
 
-  /* XMPP connection manager */
-  SalutXmppConnectionManager *xmpp_connection_manager;
-
   /* Contact manager */
   SalutContactManager *contact_manager;
 
@@ -230,7 +226,11 @@ struct _SalutConnectionPrivate
 
 #ifdef ENABLE_OLPC
   SalutOlpcActivityManager *olpc_activity_manager;
+  guint uninvite_handler_id;
 #endif
+
+  /* timer used when trying to properly disconnect */
+  guint disconnect_timer;
 
   /* Backend type: avahi or dummy */
   GType backend_type;
@@ -323,6 +323,11 @@ salut_connection_init (SalutConnection *obj)
   tp_presence_mixin_init ((GObject *) obj,
       G_STRUCT_OFFSET (SalutConnection, presence_mixin));
 
+  /* create this now so channel managers can use it when created from
+   * parent->constructor */
+  obj->session = wocky_session_new_ll (NULL);
+  obj->porter = wocky_session_get_porter (obj->session);
+
   /* allocate any data required by the object here */
   priv->published_name = g_strdup (g_get_user_name ());
   priv->nickname = NULL;
@@ -344,7 +349,6 @@ salut_connection_init (SalutConnection *obj)
   priv->pre_connect_caps = NULL;
 
   priv->contact_manager = NULL;
-  priv->xmpp_connection_manager = NULL;
 }
 
 static void
@@ -365,7 +369,7 @@ salut_connection_constructor (GType type,
   self = SALUT_CONNECTION (obj);
   priv = self->priv;
 
-  self->disco = salut_disco_new (self, priv->xmpp_connection_manager);
+  self->disco = salut_disco_new (self);
   self->presence_cache = salut_presence_cache_new (self);
   g_signal_connect (self->presence_cache, "capabilities-update", G_CALLBACK
       (connection_capabilities_update_cb), self);
@@ -445,9 +449,6 @@ salut_connection_get_property (GObject *object,
       break;
     case PROP_SELF:
       g_value_set_object (value, priv->self);
-      break;
-    case PROP_XCM:
-      g_value_set_object (value, priv->xmpp_connection_manager);
       break;
     case PROP_SI_BYTESTREAM_MANAGER:
       g_value_set_object (value, priv->si_bytestream_manager);
@@ -872,16 +873,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 
   param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "The Salut XMPP Connection Manager associated with this Salut "
-      "Connection",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_XCM,
-      param_spec);
-
-  param_spec = g_param_spec_object (
       "si-bytestream-manager",
       "SalutSiBytestreamManager object",
       "The Salut SI Bytestream Manager associated with this Salut Connection",
@@ -960,9 +951,10 @@ salut_connection_dispose (GObject *object)
     }
 
 #ifdef ENABLE_OLPC
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      uninvite_stanza_filter, uninvite_stanza_callback, self);
+  {
+    wocky_porter_unregister_handler (self->porter, priv->uninvite_handler_id);
+    priv->uninvite_handler_id = 0;
+  }
 
   if (priv->olpc_activity_manager != NULL)
     {
@@ -971,13 +963,11 @@ salut_connection_dispose (GObject *object)
     }
 #endif
 
-  if (priv->xmpp_connection_manager)
+  if (self->session != NULL)
     {
-      g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
-          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
+      g_object_unref (self->session);
+      self->session = NULL;
+      self->porter = NULL;
     }
 
   if (priv->discovery_client != NULL)
@@ -1083,6 +1073,8 @@ _self_established_cb (SalutSelf *s, gpointer data)
 
   base->self_handle = tp_handle_ensure (handle_repo, self->name, NULL, NULL);
 
+  wocky_session_set_jid (self->session, self->name);
+
   set_self_presence (self, priv->pre_connect_presence,
       priv->pre_connect_message, &error);
 
@@ -1095,16 +1087,22 @@ _self_established_cb (SalutSelf *s, gpointer data)
   g_free (priv->pre_connect_message);
   priv->pre_connect_message = NULL;
 
-  if (!salut_contact_manager_start (priv->contact_manager, NULL))
+  if (!salut_contact_manager_start (priv->contact_manager, &error))
     {
+      DEBUG ("failed to start contact manager: %s", error->message);
+      g_clear_error (&error);
+
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
   }
 
-  if (!salut_roomlist_manager_start (priv->roomlist_manager, NULL))
+  if (!salut_roomlist_manager_start (priv->roomlist_manager, &error))
     {
+      DEBUG ("failed to start roomlist manager: %s", error->message);
+      g_clear_error (&error);
+
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
@@ -1112,8 +1110,11 @@ _self_established_cb (SalutSelf *s, gpointer data)
     }
 
 #ifdef ENABLE_OLPC
-  if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, NULL))
+  if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, &error))
     {
+      DEBUG ("failed to start olpc activity manager: %s", error->message);
+      g_clear_error (&error);
+
       tp_base_connection_change_status ( TP_BASE_CONNECTION (base),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
@@ -1141,8 +1142,8 @@ static void
 discovery_client_running (SalutConnection *self)
 {
   SalutConnectionPrivate *priv = self->priv;
-  gint port;
   GError *error = NULL;
+  guint16 port;
 
   priv->self = salut_discovery_client_create_self (priv->discovery_client,
       self, priv->nickname, priv->first_name, priv->last_name, priv->jid,
@@ -1165,8 +1166,9 @@ discovery_client_running (SalutConnection *self)
   g_signal_connect (priv->self, "failure",
                     G_CALLBACK(_self_failed_cb), self);
 
-  port = salut_xmpp_connection_manager_listen (priv->xmpp_connection_manager,
-      NULL);
+  wocky_session_start (self->session);
+
+  port = wocky_meta_porter_get_port (WOCKY_META_PORTER (self->porter));
 
   if (!announce_self_caps (self, &error))
     {
@@ -1174,12 +1176,17 @@ discovery_client_running (SalutConnection *self)
       g_error_free (error);
     }
 
-  if (port == -1 || !salut_self_announce (priv->self, port, NULL))
+  if (port == 0 || !salut_self_announce (priv->self, port, &error))
     {
+      DEBUG ("failed to announce: %s",
+          error != NULL ? error->message : "(no error message)");
+
       tp_base_connection_change_status (
             TP_BASE_CONNECTION (self),
             TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
+
+      g_clear_error (&error);
       return;
     }
 
@@ -1205,6 +1212,7 @@ _discovery_client_state_changed_cb (SalutDiscoveryClient *client,
     {
       /* FIXME better error messages */
       /* FIXME instead of full disconnect we could handle the avahi restart */
+      DEBUG ("discovery client got disconnected");
       tp_base_connection_change_status (TP_BASE_CONNECTION (self),
           TP_CONNECTION_STATUS_DISCONNECTED,
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
@@ -3350,20 +3358,9 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
 }
 
 static gboolean
-uninvite_stanza_filter (SalutXmppConnectionManager *mgr,
-  GibberXmppConnection *conn, WockyStanza *stanza, SalutContact *contact,
-  gpointer user_data)
-{
-  WockyNode *node = wocky_stanza_get_top_node (stanza);
-
-  return (wocky_node_get_child_ns (node, "uninvite",
-        GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS) != NULL);
-}
-
-static void
-uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
-  GibberXmppConnection *conn, WockyStanza *stanza, SalutContact *contact,
-  gpointer user_data)
+uninvite_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza,
+    gpointer user_data)
 {
   SalutConnection *self = SALUT_CONNECTION (user_data);
   SalutConnectionPrivate *priv = self->priv;
@@ -3374,6 +3371,7 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar *room, *activity_id;
   SalutOlpcActivity *activity;
   WockyNode *top_node = wocky_stanza_get_top_node (stanza);
+  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   node = wocky_node_get_child_ns (top_node, "uninvite",
         GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
@@ -3383,21 +3381,21 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
   if (room == NULL)
     {
       DEBUG ("No room attribute");
-      return;
+      return FALSE;
     }
 
   room_handle = tp_handle_lookup (room_repo, room, NULL, NULL);
   if (room_handle == 0)
     {
       DEBUG ("room %s unknown", room);
-      return;
+      return FALSE;
     }
 
   activity_id = wocky_node_get_attribute (node, "id");
   if (activity_id == NULL)
     {
       DEBUG ("No id attribute");
-      return;
+      return FALSE;
     }
 
   DEBUG ("received uninvite from %s", contact->name);
@@ -3406,9 +3404,11 @@ uninvite_stanza_callback (SalutXmppConnectionManager *mgr,
       priv->olpc_activity_manager, room_handle);
 
   if (activity == NULL)
-    return;
+    return FALSE;
 
   salut_contact_left_activity (contact, activity);
+
+  return TRUE;
 }
 
 #endif
@@ -3426,14 +3426,15 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
   g_signal_connect (priv->contact_manager, "contact-change",
       G_CALLBACK (_contact_manager_contact_change_cb), self);
 
-  /* Create the XMPP connection manager */
-  priv->xmpp_connection_manager = salut_xmpp_connection_manager_new (self,
-      priv->contact_manager);
-
 #ifdef ENABLE_OLPC
-  salut_xmpp_connection_manager_add_stanza_filter (
-    priv->xmpp_connection_manager, NULL,
-    uninvite_stanza_filter, uninvite_stanza_callback, self);
+  priv->uninvite_handler_id = wocky_porter_register_handler_from_anyone (
+      self->porter,
+      WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      uninvite_stanza_callback, self,
+      '(', "uninvite",
+        ':', GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+      ')', NULL);
 
   /* create the OLPC activity manager */
   priv->olpc_activity_manager =
@@ -3532,21 +3533,18 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
    *        being called before this; should telepathy-glib guarantee that or
    *        should we be defensive?
    */
-  priv->im_manager = salut_im_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
+  priv->im_manager = salut_im_manager_new (self, priv->contact_manager);
 
-  priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
+  priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager);
 
   priv->muc_manager = salut_discovery_client_create_muc_manager (
-      priv->discovery_client, self, priv->xmpp_connection_manager);
+      priv->discovery_client, self);
 
   priv->roomlist_manager = salut_discovery_client_create_roomlist_manager (
-      priv->discovery_client, self, priv->xmpp_connection_manager);
+      priv->discovery_client, self);
 
 #if 0
-  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager,
-      priv->xmpp_connection_manager);
+  priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
 #endif
 
   g_ptr_array_add (managers, priv->im_manager);
@@ -3585,10 +3583,113 @@ salut_connection_get_unique_connection_name (TpBaseConnection *base)
 }
 
 static void
-salut_connection_shut_down (TpBaseConnection *self)
+force_close_cb (GObject *source,
+    GAsyncResult *res,
+    gpointer user_data)
 {
-  _salut_connection_disconnect (SALUT_CONNECTION (self));
-  tp_base_connection_finish_shutdown (self);
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  GError *error = NULL;
+
+  if (!wocky_porter_force_close_finish (WOCKY_PORTER (source),
+          res, &error))
+    {
+      DEBUG ("force close failed: %s", error->message);
+      g_error_free (error);
+    }
+  else
+    {
+      DEBUG ("connection properly closed (forced)");
+    }
+
+  tp_base_connection_finish_shutdown (base);
+
+  g_object_unref (self);
+}
+
+static void
+closed_cb (GObject *source,
+    GAsyncResult *res,
+    gpointer user_data)
+{
+  SalutConnection *self = SALUT_CONNECTION (user_data);
+  SalutConnectionPrivate *priv = self->priv;
+  TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  GError *error = NULL;
+  gboolean force_called = priv->disconnect_timer == 0;
+
+  if (priv->disconnect_timer != 0)
+    {
+      /* stop the timer */
+      g_source_remove (priv->disconnect_timer);
+      priv->disconnect_timer = 0;
+    }
+
+  if (!wocky_porter_close_finish (WOCKY_PORTER (source), res, &error))
+    {
+      DEBUG ("close failed: %s", error->message);
+
+      if (g_error_matches (error, WOCKY_PORTER_ERROR,
+            WOCKY_PORTER_ERROR_FORCIBLY_CLOSED))
+        {
+          /* Close operation has been aborted because a force_close operation
+           * has been started. tp_base_connection_finish_shutdown will be
+           * called once this force_close operation is completed so we don't
+           * do it here. */
+
+          g_error_free (error);
+          goto out;
+        }
+
+      g_error_free (error);
+    }
+  else
+    {
+      DEBUG ("connection properly closed");
+    }
+
+  if (!force_called)
+    tp_base_connection_finish_shutdown (base);
+
+out:
+  g_object_unref (self);
+}
+
+static gboolean
+disconnect_timeout_cb (gpointer data)
+{
+  SalutConnection *self = SALUT_CONNECTION (data);
+  SalutConnectionPrivate *priv = self->priv;
+
+  DEBUG ("Close operation timed out. Force closing");
+  priv->disconnect_timer = 0;
+
+  wocky_porter_force_close_async (self->porter, NULL, force_close_cb, g_object_ref (self));
+  return FALSE;
+}
+
+static void
+salut_connection_shut_down (TpBaseConnection *base)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
+  SalutConnectionPrivate *priv = self->priv;
+
+  _salut_connection_disconnect (self);
+
+  if (self->session != NULL)
+    {
+      DEBUG ("connection may still be open; closing it: %p", self);
+
+      g_assert (priv->disconnect_timer == 0);
+      priv->disconnect_timer = g_timeout_add_seconds (DISCONNECT_TIMEOUT,
+          disconnect_timeout_cb, self);
+
+      wocky_porter_close_async (self->porter, NULL, closed_cb, g_object_ref (self));
+      return;
+    }
+
+  DEBUG ("session is not alive; clean up the base connection");
+  tp_base_connection_finish_shutdown (base);
 }
 
 static gboolean
@@ -3604,8 +3705,9 @@ salut_connection_start_connecting (TpBaseConnection *base, GError **error)
   if (!salut_discovery_client_start (priv->discovery_client, &client_error))
     {
       *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-          "Unstable to initialize the avahi client: %s",
+          "Unable to initialize the avahi client: %s",
           client_error->message);
+      DEBUG ("%s", (*error)->message);
       g_error_free (client_error);
       goto error;
     }

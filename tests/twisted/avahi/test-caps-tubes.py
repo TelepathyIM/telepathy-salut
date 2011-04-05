@@ -49,7 +49,7 @@ from constants import *
 from caps_helper import compute_caps_hash, check_caps
 from config import PACKAGE_STRING
 
-print "FIXME: test-caps-tubes.py disabled because 1-1 tubes are disabled for now"
+print "FIXME: disabled because 1-1 tubes are disabled for now"
 # exiting 77 causes automake to consider the test to have been skipped
 raise SystemExit(77)
 

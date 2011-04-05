@@ -29,7 +29,6 @@
 #include <dbus/dbus-glib-lowlevel.h>
 
 #include <gibber/gibber-namespaces.h>
-#include <gibber/gibber-iq-helper.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/gtypes.h>
@@ -77,7 +76,6 @@ enum
 {
   PROP_CONNECTION = 1,
   PROP_CONTACT_MANAGER,
-  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -87,8 +85,8 @@ struct _SalutTubesManagerPrivate
 {
   SalutConnection *conn;
   gulong status_changed_id;
+  guint iq_tube_handler_id;
   SalutContactManager *contact_manager;
-  SalutXmppConnectionManager *xmpp_connection_manager;
 
   GHashTable *tubes_channels;
 
@@ -111,32 +109,6 @@ salut_tubes_manager_init (SalutTubesManager *self)
 
   priv->conn = NULL;
   priv->dispose_has_run = FALSE;
-}
-
-/* Filter for 1-1 tube request (XEP-proto-tubes)
- * http://telepathy.freedesktop.org/xmpp/tubes.html */
-static gboolean
-iq_tube_request_filter (SalutXmppConnectionManager *xcm,
-                        GibberXmppConnection *conn,
-                        WockyStanza *stanza,
-                        SalutContact *contact,
-                        gpointer user_data)
-{
-  WockyNode *node = wocky_stanza_get_top_node (stanza);
-  WockyStanzaType type;
-  WockyStanzaSubType sub_type;
-
-  wocky_stanza_get_type_info (stanza, &type, &sub_type);
-  if (type != WOCKY_STANZA_TYPE_IQ)
-    return FALSE;
-
-  if (sub_type != WOCKY_STANZA_SUB_TYPE_SET)
-    return FALSE;
-
-  return (wocky_node_get_child_ns (node, "tube",
-        GIBBER_TELEPATHY_NS_TUBES) != NULL) ||
-         (wocky_node_get_child_ns (node, "close",
-                 GIBBER_TELEPATHY_NS_TUBES) != NULL);
 }
 
 /* similar to the same function in salut-tubes-channel.c but extract
@@ -307,11 +279,9 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
   return TRUE;
 }
 
-static void
-iq_tube_request_cb (SalutXmppConnectionManager *xcm,
-                    GibberXmppConnection *conn,
+static gboolean
+iq_tube_request_cb (WockyPorter *porter,
                     WockyStanza *stanza,
-                    SalutContact *contact,
                     gpointer user_data)
 {
   SalutTubesManager *self = SALUT_TUBES_MANAGER (user_data);
@@ -339,14 +309,17 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
           &error))
     {
       WockyStanza *reply;
+      GError err = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+                     error->message };
 
-      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
-          error->message);
-      gibber_xmpp_connection_send (conn, reply, NULL);
+      reply = wocky_stanza_build_iq_error (stanza, NULL);
+      wocky_stanza_error_to_node (&err, wocky_stanza_get_top_node (reply));
+
+      wocky_porter_send (priv->conn->porter, reply);
 
       g_error_free (error);
       g_object_unref (reply);
-      return;
+      return TRUE;
     }
 
   DEBUG ("received a tube request, tube id %d", tube_id);
@@ -379,7 +352,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
             DEBUG ("couldn't make new tubes channel: %s", e->message);
             g_error_free (e);
             g_hash_table_destroy (parameters);
-            return;
+            return TRUE;
           }
 
         tubes_channel_created = TRUE;
@@ -399,7 +372,7 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
           }
 
         g_hash_table_destroy (parameters);
-        return;
+        return TRUE;
       }
 
     /* announce tubes and tube channels */
@@ -416,6 +389,8 @@ iq_tube_request_cb (SalutXmppConnectionManager *xcm,
     g_hash_table_destroy (parameters);
     g_hash_table_destroy (channels);
   }
+
+  return TRUE;
 }
 
 static void
@@ -471,9 +446,10 @@ salut_tubes_manager_constructor (GType type,
   self = SALUT_TUBES_MANAGER (obj);
   priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
 
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      iq_tube_request_filter, iq_tube_request_cb, self);
+  priv->iq_tube_handler_id = wocky_porter_register_handler_from_anyone (
+      priv->conn->porter, WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET, WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      iq_tube_request_cb, self, NULL);
 
   priv->status_changed_id = g_signal_connect (priv->conn,
       "status-changed", (GCallback) connection_status_changed_cb, obj);
@@ -496,20 +472,14 @@ salut_tubes_manager_dispose (GObject *object)
 
   salut_tubes_manager_close_all (fac);
 
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      iq_tube_request_filter, iq_tube_request_cb, object);
+  wocky_porter_unregister_handler (priv->conn->porter,
+      priv->iq_tube_handler_id);
+  priv->iq_tube_handler_id = 0;
 
   if (priv->contact_manager != NULL)
     {
       g_object_unref (priv->contact_manager);
       priv->contact_manager = NULL;
-    }
-
-  if (priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
     }
 
   if (G_OBJECT_CLASS (salut_tubes_manager_parent_class)->dispose)
@@ -535,9 +505,6 @@ salut_tubes_manager_get_property (GObject *object,
       case PROP_CONTACT_MANAGER:
         g_value_set_object (value, priv->contact_manager);
         break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        g_value_set_object (value, priv->xmpp_connection_manager);
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -561,9 +528,6 @@ salut_tubes_manager_set_property (GObject *object,
         break;
       case PROP_CONTACT_MANAGER:
         priv->contact_manager = g_value_dup_object (value);
-        break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        priv->xmpp_connection_manager = g_value_dup_object (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -612,20 +576,6 @@ salut_tubes_manager_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTACT_MANAGER,
-      param_spec);
-
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "Salut Xmpp Connection Manager associated with the Salut Connection of this "
-      "manager",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NAME |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
       param_spec);
 }
 
@@ -702,7 +652,6 @@ new_tubes_channel (SalutTubesManager *fac,
                        "handle-type", TP_HANDLE_TYPE_CONTACT,
                        "contact", contact,
                        "initiator-handle", initiator,
-                       "xmpp-connection-manager", priv->xmpp_connection_manager,
                        "requested", requested,
                        NULL);
 
@@ -1048,19 +997,15 @@ salut_tubes_manager_request_channel (TpChannelManager *manager,
 SalutTubesManager *
 salut_tubes_manager_new (
     SalutConnection *conn,
-    SalutContactManager *contact_manager,
-    SalutXmppConnectionManager *xmpp_connection_manager)
+    SalutContactManager *contact_manager)
 {
   g_return_val_if_fail (SALUT_IS_CONNECTION (conn), NULL);
   g_return_val_if_fail (SALUT_IS_CONTACT_MANAGER (contact_manager), NULL);
-  g_return_val_if_fail (
-      SALUT_IS_XMPP_CONNECTION_MANAGER (xmpp_connection_manager), NULL);
 
   return g_object_new (
       SALUT_TYPE_TUBES_MANAGER,
       "connection", conn,
       "contact-manager", contact_manager,
-      "xmpp-connection-manager", xmpp_connection_manager,
       NULL);
 }
 

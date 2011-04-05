@@ -122,7 +122,7 @@ _avahi_presence_group_failed (GaEntryGroup *group,
 
 static AvahiStringList *
 create_txt_record (SalutAvahiSelf *self,
-                   int port)
+                   guint16 port)
 {
   SalutSelf *_self = SALUT_SELF (self);
   AvahiStringList *ret;
@@ -130,7 +130,7 @@ create_txt_record (SalutAvahiSelf *self,
   ret = avahi_string_list_new ("txtvers=1", NULL);
 
   /* Some silly clients still use this */
-  ret = avahi_string_list_add_printf (ret, "port.p2pj=%d", port);
+  ret = avahi_string_list_add_printf (ret, "port.p2pj=%" G_GUINT16_FORMAT, port);
 
   if (_self->nickname != NULL)
     ret = avahi_string_list_add_printf (ret, "nick=%s", _self->nickname);
@@ -209,7 +209,7 @@ salut_avahi_self_set_caps (SalutSelf *_self,
 
 static gboolean
 salut_avahi_self_announce (SalutSelf *_self,
-                           gint port,
+                           guint16 port,
                            GError **error)
 {
   SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
@@ -243,7 +243,7 @@ salut_avahi_self_announce (SalutSelf *_self,
   if (priv->presence == NULL)
     goto error;
 
-  if (!salut_avahi_self_set_caps (_self, NULL))
+  if (!salut_avahi_self_set_caps (_self, error))
     goto error;
 
   if (!ga_entry_group_commit (priv->presence_group, error))

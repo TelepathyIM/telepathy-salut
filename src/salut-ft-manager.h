@@ -59,8 +59,7 @@ GType salut_ft_manager_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_FT_MANAGER, SalutFtManagerClass))
 
 SalutFtManager *salut_ft_manager_new (SalutConnection *connection,
-    SalutContactManager *contact_manager,
-    SalutXmppConnectionManager *xmpp_connection_manager);
+    SalutContactManager *contact_manager);
 
 G_END_DECLS
 

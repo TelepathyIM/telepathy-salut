@@ -29,7 +29,6 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 #include <telepathy-glib/dbus.h>
-#include <gibber/gibber-iq-helper.h>
 #include <gibber/gibber-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_DISCO
@@ -38,25 +37,11 @@
 #include "salut-capabilities.h"
 #include "salut-caps-hash.h"
 #include "salut-connection.h"
-#include "salut-xmpp-connection-manager.h"
-#include "salut-signals-marshal.h"
-
-#define DEFAULT_REQUEST_TIMEOUT 20000
-
-/* signals */
-enum
-{
-  ITEM_FOUND,
-  LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = {0};
 
 /* Properties */
 enum
 {
   PROP_CONNECTION = 1,
-  PROP_XMPP_CONNECTION_MANAGER,
   LAST_PROPERTY
 };
 
@@ -65,10 +50,12 @@ G_DEFINE_TYPE(SalutDisco, salut_disco, G_TYPE_OBJECT);
 struct _SalutDiscoPrivate
 {
   SalutConnection *connection;
-  SalutXmppConnectionManager *xmpp_connection_manager;
 
-  /* list of SalutDiscoRequest* */
+  guint caps_req_stanza_id;
+  guint caps_req_stanza_id_broken;
+
   GList *requests;
+
   gboolean dispose_has_run;
 };
 
@@ -76,15 +63,10 @@ struct _SalutDiscoRequest
 {
   SalutDisco *disco;
 
-  /* The request cannot be sent immediately, we have to wait the
-   * XmppConnection to be established. Meanwhile, requested=FALSE. */
-  gboolean requested;
-
-  GibberIqHelper *iq_helper;
-  guint timer_id;
   SalutDiscoType type;
   SalutContact *contact;
-  GibberXmppConnection *conn;
+
+  GCancellable *cancellable;
 
   /* uri as in XEP-0115 */
   gchar *node;
@@ -111,14 +93,12 @@ salut_disco_init (SalutDisco *obj)
   obj->priv = priv;
 }
 
-static GObject *salut_disco_constructor (GType type, guint n_props,
-    GObjectConstructParam *props);
+static void salut_disco_constructed (GObject *obj);
 static void salut_disco_set_property (GObject *object, guint property_id,
     const GValue *value, GParamSpec *pspec);
 static void salut_disco_get_property (GObject *object, guint property_id,
     GValue *value, GParamSpec *pspec);
 static void salut_disco_dispose (GObject *object);
-static void salut_disco_finalize (GObject *object);
 
 static const char *
 disco_type_to_xmlns (SalutDiscoType type)
@@ -143,14 +123,18 @@ delete_request (SalutDiscoRequest *request)
   SalutDisco *disco = request->disco;
   SalutDiscoPrivate *priv;
 
-  g_assert (NULL != request);
-  g_assert (SALUT_IS_DISCO (disco));
+  /* if we've already disposed the SalutDisco object, we should not
+   * mess around with anything referenced by that. */
+  if (disco != NULL)
+    {
+      g_assert (SALUT_IS_DISCO (disco));
 
-  priv = disco->priv;
+      priv = disco->priv;
 
-  g_assert (NULL != g_list_find (priv->requests, request));
+      g_assert (NULL != g_list_find (priv->requests, request));
 
-  priv->requests = g_list_remove (priv->requests, request);
+      priv->requests = g_list_remove (priv->requests, request);
+    }
 
   if (NULL != request->bound_object)
     {
@@ -158,20 +142,8 @@ delete_request (SalutDiscoRequest *request)
           request);
     }
 
-  if (0 != request->timer_id)
-    {
-      g_source_remove (request->timer_id);
-    }
-
-  if (request->conn != NULL)
-    {
-      salut_xmpp_connection_manager_release_connection
-        (priv->xmpp_connection_manager, request->conn);
-    }
-  if (request->iq_helper != NULL)
-    g_object_unref (request->iq_helper);
-
   g_object_unref (request->contact);
+  g_object_unref (request->cancellable);
   g_free (request->node);
   g_slice_free (SalutDiscoRequest, request);
 }
@@ -181,126 +153,10 @@ notify_delete_request (gpointer data, GObject *obj)
 {
   SalutDiscoRequest *request = (SalutDiscoRequest *) data;
   request->bound_object = NULL;
-  delete_request (request);
-}
 
-static void
-request_reply_cb (GibberIqHelper *helper,
-                  WockyStanza *sent_stanza,
-                  WockyStanza *reply_stanza,
-                  GObject *object,
-                  gpointer user_data)
-{
-  SalutDiscoRequest *request = (SalutDiscoRequest *) user_data;
-  SalutDisco *disco = SALUT_DISCO (object);
-  SalutDiscoPrivate *priv = disco->priv;
-  WockyNode *reply_node = wocky_stanza_get_top_node (reply_stanza);
-  WockyNode *query_node;
-  GError *err = NULL;
-  WockyStanzaSubType sub_type;
-
-  g_assert (request);
-
-  if (!g_list_find (priv->requests, request))
-    return;
-
-  query_node = wocky_node_get_child_ns (reply_node,
-      "query", disco_type_to_xmlns (request->type));
-
-  wocky_stanza_get_type_info (reply_stanza, NULL, &sub_type);
-
-  if (sub_type == WOCKY_STANZA_SUB_TYPE_ERROR)
-    {
-      err = gibber_message_get_xmpp_error (reply_stanza);
-
-      if (err == NULL)
-        {
-          err = g_error_new (SALUT_DISCO_ERROR,
-                             SALUT_DISCO_ERROR_UNKNOWN,
-                             "an unknown error occurred");
-        }
-    }
-  else if (NULL == query_node)
-    {
-      err = g_error_new (SALUT_DISCO_ERROR, SALUT_DISCO_ERROR_UNKNOWN,
-          "disco response contained no <query> node");
-    }
-
-  request->callback (request->disco, request, request->contact, request->node,
-                     query_node, err, request->user_data);
-  delete_request (request);
-
-  if (err)
-    g_error_free (err);
-}
-
-static void
-send_disco_request (SalutDisco *self,
-                    GibberXmppConnection *conn,
-                    SalutContact *contact,
-                    SalutDiscoRequest *request)
-{
-  SalutDiscoPrivate *priv = self->priv;
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
-  WockyStanza *stanza;
-  TpHandleRepoIface *contact_repo;
-  const gchar *jid_from, *jid_to;
-  GError *error = NULL;
-
-  contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
-
-  jid_from = tp_handle_inspect (contact_repo, base_conn->self_handle);
-  jid_to = tp_handle_inspect (contact_repo, contact->handle);
-
-  stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
-      WOCKY_STANZA_SUB_TYPE_SET,
-      jid_from, jid_to,
-      WOCKY_NODE_START, "query",
-        WOCKY_NODE_XMLNS, disco_type_to_xmlns (request->type),
-        WOCKY_NODE_ATTRIBUTE, "node", request->node,
-      WOCKY_NODE_END,
-      NULL);
-
-  request->requested = TRUE;
-
-  request->iq_helper = gibber_iq_helper_new (conn);
-  g_assert (request->iq_helper);
-
-  if (!gibber_iq_helper_send_with_reply (request->iq_helper, stanza,
-      request_reply_cb, G_OBJECT(self), request, &error))
-    {
-      DEBUG ("Failed to send caps request: '%s'", error->message);
-      g_error_free (error);
-    }
-
-  g_object_unref (stanza);
-}
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *conn,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  SalutDisco *self = SALUT_DISCO (user_data);
-  SalutDiscoPrivate *priv = self->priv;
-  GList *req = priv->requests;
-
-  /* send all pending requests on this connection */
-  while (req != NULL)
-    {
-      SalutDiscoRequest *request = req->data;
-
-      if (request->contact == contact && !request->requested)
-        {
-          request->conn = conn;
-          salut_xmpp_connection_manager_take_connection
-            (priv->xmpp_connection_manager, request->conn);
-          send_disco_request (self, conn, contact, request);
-        }
-      req = g_list_next (req);
-    }
+  /* This will cause the callback to be called with the cancelled
+     error. */
+  g_cancellable_cancel (request->cancellable);
 }
 
 static void
@@ -311,13 +167,12 @@ salut_disco_class_init (SalutDiscoClass *salut_disco_class)
 
   g_type_class_add_private (salut_disco_class, sizeof (SalutDiscoPrivate));
 
-  object_class->constructor = salut_disco_constructor;
+  object_class->constructed = salut_disco_constructed;
 
   object_class->get_property = salut_disco_get_property;
   object_class->set_property = salut_disco_set_property;
 
   object_class->dispose = salut_disco_dispose;
-  object_class->finalize = salut_disco_finalize;
 
   param_spec = g_param_spec_object ("connection", "SalutConnection object",
                                     "Salut connection object that owns this "
@@ -328,27 +183,6 @@ salut_disco_class_init (SalutDiscoClass *salut_disco_class)
                                     G_PARAM_STATIC_NICK |
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
-
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "Salut XMPP Connection manager used for disco to send caps requests",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
-      param_spec);
-
-  signals[ITEM_FOUND] =
-    g_signal_new ("item-found",
-                  G_OBJECT_CLASS_TYPE (salut_disco_class),
-                  G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-                  0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__POINTER,
-                  G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
 static void
@@ -364,9 +198,6 @@ salut_disco_get_property (GObject    *object,
     {
       case PROP_CONNECTION:
         g_value_set_object (value, priv->connection);
-        break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        g_value_set_object (value, priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -388,46 +219,16 @@ salut_disco_set_property (GObject     *object,
       case PROP_CONNECTION:
         priv->connection = g_value_get_object (value);
         break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        priv->xmpp_connection_manager = g_value_get_object (value);
-        g_object_ref (priv->xmpp_connection_manager);
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
     }
 }
 
-static gboolean
-caps_req_stanza_filter (SalutXmppConnectionManager *mgr,
-                        GibberXmppConnection *conn,
-                        WockyStanza *stanza,
-                        SalutContact *contact,
-                        gpointer user_data)
-{
-  WockyStanzaSubType sub_type;
-  WockyNode *query;
-
-  wocky_stanza_get_type_info (stanza, NULL, &sub_type);
-
-  if (sub_type != WOCKY_STANZA_SUB_TYPE_GET)
-    return FALSE;
-
-  query = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "query",
-      NS_DISCO_INFO);
-
-  if (!query)
-    return FALSE;
-
-  return TRUE;
-}
-
 static void
-send_item_not_found (GibberXmppConnection *conn,
-                     const gchar *node,
-                     const gchar *from,
-                     const gchar *to,
-                     const gchar *id)
+send_item_not_found (WockyPorter *porter,
+    WockyStanza *iq,
+    const gchar *node)
 {
   WockyStanza *result;
 
@@ -435,30 +236,22 @@ send_item_not_found (GibberXmppConnection *conn,
    * requested an old version (old hash) of our capabilities. In the
    * meantime, it will have gotten a new hash, and query the new hash
    * anyway. */
-  result = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
-      WOCKY_STANZA_SUB_TYPE_ERROR,
-      from, to,
-      WOCKY_NODE_START, "query",
-        WOCKY_NODE_XMLNS, NS_DISCO_INFO,
-        WOCKY_NODE_ATTRIBUTE, "node", node,
-        WOCKY_NODE_START, "error",
-          WOCKY_NODE_ATTRIBUTE, "type", "cancel",
-          WOCKY_NODE_START, "item-not-found",
-            WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_STANZAS,
-          WOCKY_NODE_END,
-        WOCKY_NODE_END,
-      WOCKY_NODE_END,
+  result = wocky_stanza_build_iq_error (iq,
+      '(', "query",
+        ':', NS_DISCO_INFO,
+        '@', "node", node,
+        '(', "error",
+          '@', "type", "cancel",
+          '(', "item-not-found",
+            ':', GIBBER_XMPP_NS_STANZAS,
+          ')',
+        ')',
+      ')',
       NULL);
-
-  if (id != NULL)
-    wocky_node_set_attribute (wocky_stanza_get_top_node (result), "id", id);
 
   DEBUG ("sending item-not-found as disco response");
 
-  if (!gibber_xmpp_connection_send (conn, result, NULL))
-    {
-      DEBUG ("sending item-not-found failed");
-    }
+  wocky_porter_send_async (porter, result, NULL, NULL, NULL);
 
   g_object_unref (result);
 }
@@ -473,12 +266,10 @@ add_feature_foreach (gpointer ns,
   wocky_node_set_attribute (feature_node, "var", ns);
 }
 
-static void
-caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
-                          GibberXmppConnection *conn,
-                          WockyStanza *stanza,
-                          SalutContact *contact,
-                          gpointer user_data)
+static gboolean
+caps_req_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza,
+    gpointer user_data)
 {
   SalutDisco *self = SALUT_DISCO (user_data);
   SalutDiscoPrivate *priv = self->priv;
@@ -487,15 +278,13 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar *node;
   const gchar *suffix;
   TpHandleRepoIface *contact_repo;
-  const gchar *jid_from, *jid_to, *id;
+  const gchar *id;
   SalutSelf *salut_self;
   WockyStanza *result;
   const GabbleCapabilitySet *caps;
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
-  jid_from = tp_handle_inspect (contact_repo, base_conn->self_handle);
-  jid_to = tp_handle_inspect (contact_repo, contact->handle);
 
   iq = wocky_stanza_get_top_node (stanza);
   id = wocky_node_get_attribute (iq, "id");
@@ -505,14 +294,14 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   node = wocky_node_get_attribute (query, "node");
   if (node == NULL)
     {
-      send_item_not_found (conn, "", jid_from, jid_to, id);
-      return;
+      send_item_not_found (porter, stanza, "");
+      return TRUE;
     }
 
   if (!g_str_has_prefix (node, GIBBER_TELEPATHY_NS_CAPS "#"))
     {
-      send_item_not_found (conn, node, jid_from, jid_to, id);
-      return;
+      send_item_not_found (porter, stanza, node);
+      return TRUE;
     }
   else
     {
@@ -525,29 +314,30 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
   /* Salut only supports XEP-0115 version 1.5. Bundles from old version 1.3 are
    * not implemented. */
 
+  if (salut_self == NULL)
+    return TRUE;
+
   if (tp_strdiff (suffix, salut_self->ver))
     {
       g_object_unref (salut_self);
-      return;
+      return TRUE;
     }
 
   /* Every entity MUST have at least one identity (XEP-0030). Salut publishs
    * one identity. If you change the identity here, you also need to change
    * caps_hash_compute_from_self_presence(). */
-  result = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
-      WOCKY_STANZA_SUB_TYPE_RESULT,
-      jid_from, jid_to,
-      WOCKY_NODE_START, "query",
-        WOCKY_NODE_XMLNS, NS_DISCO_INFO,
-        WOCKY_NODE_ATTRIBUTE, "node", node,
-        WOCKY_NODE_START, "identity",
-          WOCKY_NODE_ATTRIBUTE, "category", "client",
-          WOCKY_NODE_ATTRIBUTE, "name", PACKAGE_STRING,
+  result = wocky_stanza_build_iq_result (stanza,
+      '(', "query",
+        ':', NS_DISCO_INFO,
+        '@', "node", node,
+        '(', "identity",
+          '@', "category", "client",
+          '@', "name", PACKAGE_STRING,
           /* FIXME: maybe we should add a connection property allowing to
            * set the type attribute instead of hardcoding "pc". */
-          WOCKY_NODE_ATTRIBUTE, "type", "pc",
-        WOCKY_NODE_END,
-      WOCKY_NODE_END,
+          '@', "type", "pc",
+        ')',
+      ')',
       NULL);
 
   result_iq = wocky_stanza_get_top_node (result);
@@ -558,49 +348,54 @@ caps_req_stanza_callback (SalutXmppConnectionManager *mgr,
 
   DEBUG ("sending disco response");
 
-  if (id != NULL)
-    wocky_node_set_attribute (result_iq, "id", id);
-
-  if (!gibber_xmpp_connection_send (conn, result, NULL))
-    {
-      DEBUG ("sending disco response failed");
-    }
+  wocky_porter_send_async (porter, result, NULL, NULL, NULL);
 
   g_object_unref (result);
   g_object_unref (salut_self);
+
+  return TRUE;
 }
 
-static GObject *
-salut_disco_constructor (GType type, guint n_props,
-                          GObjectConstructParam *props)
+static void
+salut_disco_constructed (GObject *obj)
 {
-  GObject *obj;
-  SalutDisco *disco;
-  SalutDiscoPrivate *priv;
+  SalutDisco *disco = SALUT_DISCO (obj);
+  SalutDiscoPrivate *priv = disco->priv;
+  WockyPorter *porter = priv->connection->porter;
 
-  obj = G_OBJECT_CLASS (salut_disco_parent_class)-> constructor (type,
-      n_props, props);
-  disco = SALUT_DISCO (obj);
-  priv = disco->priv;
+  if (G_OBJECT_CLASS (salut_disco_parent_class)->constructed != NULL)
+    G_OBJECT_CLASS (salut_disco_parent_class)->constructed (obj);
 
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
+  priv->requests = NULL;
 
   /* receive discovery requests */
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      caps_req_stanza_filter, caps_req_stanza_callback, obj);
+  priv->caps_req_stanza_id = wocky_porter_register_handler_from_anyone (porter,
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_GET,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      caps_req_stanza_callback, obj,
+      '(', "query",
+        ':', NS_DISCO_INFO,
+      ')', NULL);
 
-  return obj;
+  /* Salut used to send disco requests with <iq type='set' ...> so we
+   * should listen for that too. */
+  priv->caps_req_stanza_id_broken =
+    wocky_porter_register_handler_from_anyone (porter,
+        WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
+        WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+        caps_req_stanza_callback, obj,
+        '(', "query",
+          ':', NS_DISCO_INFO,
+        ')', NULL);
 }
-
-static void cancel_request (SalutDiscoRequest *request);
 
 static void
 salut_disco_dispose (GObject *object)
 {
   SalutDisco *self = SALUT_DISCO (object);
   SalutDiscoPrivate *priv = self->priv;
+  WockyPorter *porter = priv->connection->porter;
+  GList *l;
 
   if (priv->dispose_has_run)
     return;
@@ -609,33 +404,25 @@ salut_disco_dispose (GObject *object)
 
   DEBUG ("dispose called");
 
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      caps_req_stanza_filter, caps_req_stanza_callback, self);
+  wocky_porter_unregister_handler (porter, priv->caps_req_stanza_id);
+  priv->caps_req_stanza_id = 0;
 
-  /* cancel request removes the element from the list after cancelling */
-  while (priv->requests)
-    cancel_request (priv->requests->data);
+  wocky_porter_unregister_handler (porter,
+      priv->caps_req_stanza_id_broken);
+  priv->caps_req_stanza_id_broken = 0;
 
-  if (priv->xmpp_connection_manager != NULL)
+  for (l = priv->requests; l != NULL; l = l->next)
     {
-      g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
-          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
+      SalutDiscoRequest *r = l->data;
 
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
+      r->disco = NULL;
+      g_cancellable_cancel (r->cancellable);
     }
+
+  g_list_free (priv->requests);
 
   if (G_OBJECT_CLASS (salut_disco_parent_class)->dispose)
     G_OBJECT_CLASS (salut_disco_parent_class)->dispose (object);
-}
-
-static void
-salut_disco_finalize (GObject *object)
-{
-  DEBUG ("called with %p", object);
-
-  G_OBJECT_CLASS (salut_disco_parent_class)->finalize (object);
 }
 
 /**
@@ -646,8 +433,7 @@ salut_disco_finalize (GObject *object)
  * There should be one of these per connection
  */
 SalutDisco *
-salut_disco_new (SalutConnection *connection,
-                 SalutXmppConnectionManager *xmpp_connection_manager)
+salut_disco_new (SalutConnection *connection)
 {
   SalutDisco *disco;
 
@@ -655,28 +441,58 @@ salut_disco_new (SalutConnection *connection,
 
   disco = SALUT_DISCO (g_object_new (SALUT_TYPE_DISCO,
         "connection", connection,
-        "xmpp-connection-manager", xmpp_connection_manager,
         NULL));
 
   return disco;
 }
 
 static void
-cancel_request (SalutDiscoRequest *request)
+disco_request_sent_cb (GObject *source_object,
+    GAsyncResult *result,
+    gpointer user_data)
 {
-  GError *err /* doesn't need initializing */;
+  WockyPorter *porter = WOCKY_PORTER (source_object);
+  GError *error = NULL;
+  WockyStanza *reply;
+  WockyNode *reply_node, *query_node = NULL;
+  SalutDiscoRequest *request = user_data;
 
-  g_assert (request != NULL);
+  reply = wocky_porter_send_iq_finish (porter, result, &error);
 
-  err = g_error_new (SALUT_DISCO_ERROR, SALUT_DISCO_ERROR_CANCELLED,
-      "Request for %s on %s cancelled",
-      (request->type == SALUT_DISCO_TYPE_INFO)?"info":"items",
-      request->contact->name);
-  (request->callback)(request->disco, request, request->contact, request->node,
-                      NULL, err, request->user_data);
-  g_error_free (err);
+  if (reply == NULL)
+    {
+      DEBUG ("error: %s", error->message);
+      goto out;
+    }
+
+  if (wocky_stanza_extract_errors (reply, NULL, &error, NULL, NULL))
+    goto out;
+
+  reply_node = wocky_stanza_get_top_node (reply);
+  query_node = wocky_node_get_child_ns (reply_node, "query",
+      disco_type_to_xmlns (request->type));
+
+  if (query_node == NULL)
+    {
+      error = g_error_new (SALUT_DISCO_ERROR, SALUT_DISCO_ERROR_UNKNOWN,
+          "disco response contained no <query> node");
+      goto out;
+    }
+
+out:
+  /* the cancellable is cancelled if the object given to
+   * salut_disco_request is disposed, which claims to not call the
+   * callback, so let's not. */
+  if (!g_cancellable_is_cancelled (request->cancellable))
+    {
+      request->callback (request->disco, request, request->contact, request->node,
+          query_node, error, request->user_data);
+    }
 
   delete_request (request);
+
+  if (error != NULL)
+    g_clear_error (&error);
 }
 
 /**
@@ -691,27 +507,29 @@ cancel_request (SalutDiscoRequest *request)
  * @error: #GError to return a telepathy error in if unable to make
  *         request, NULL if unneeded.
  *
- * Make a disco request on the given jid, which will fail unless a reply
- * is received within the given timeout interval.
+ * Make a disco request on the given jid.
  */
 SalutDiscoRequest *
-salut_disco_request (SalutDisco *self, SalutDiscoType type,
-                     SalutContact *contact, const char *node,
-                     SalutDiscoCb callback,
-                     gpointer user_data, GObject *object,
-                     GError **error)
+salut_disco_request (SalutDisco *self,
+    SalutDiscoType type,
+    SalutContact *contact,
+    const char *node,
+    SalutDiscoCb callback,
+    gpointer user_data,
+    GObject *object,
+    GError **error)
 {
   SalutDiscoPrivate *priv = self->priv;
   SalutDiscoRequest *request;
-  SalutXmppConnectionManagerRequestConnectionResult result;
-  GibberXmppConnection *conn = NULL;
+  TpHandleRepoIface *contact_repo;
+  WockyPorter *porter = priv->connection->porter;
+  WockyStanza *stanza;
 
   g_assert (node != NULL);
   g_assert (strlen (node) > 0);
 
   request = g_slice_new0 (SalutDiscoRequest);
   request->disco = self;
-  request->requested = FALSE;
   request->type = type;
   request->contact = g_object_ref (contact);
   if (node)
@@ -719,8 +537,7 @@ salut_disco_request (SalutDisco *self, SalutDiscoType type,
   request->callback = callback;
   request->user_data = user_data;
   request->bound_object = object;
-  request->conn = NULL;
-  request->iq_helper = NULL;
+  request->cancellable = g_cancellable_new ();
 
   if (NULL != object)
     g_object_weak_ref (object, notify_delete_request, request);
@@ -728,33 +545,32 @@ salut_disco_request (SalutDisco *self, SalutDiscoType type,
   DEBUG ("Creating disco request %p for %s",
            request, request->contact->name);
 
-  priv->requests = g_list_prepend (priv->requests, request);
+  contact_repo = tp_base_connection_get_handles (
+      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
 
-  result = salut_xmpp_connection_manager_request_connection (
-      priv->xmpp_connection_manager, contact, &conn, NULL);
+  stanza = wocky_stanza_build_to_contact (WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_GET,
+      NULL, WOCKY_CONTACT (contact),
+      '(', "query",
+        ':', disco_type_to_xmlns (request->type),
+        '@', "node", request->node,
+      ')',
+      NULL);
 
-  if (result == SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      DEBUG ("connection done.");
-      request->conn = conn;
-      send_disco_request (self, conn, contact, request);
-      return request;
-    }
-  else if (result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
-    {
-      DEBUG ("Requested connection pending");
-      return request;
-    }
-  else
-    {
-      delete_request (request);
-      return NULL;
-    }
+  wocky_porter_send_iq_async (porter, stanza, request->cancellable,
+      disco_request_sent_cb, request);
+
+  priv->requests = g_list_append (priv->requests,
+      request);
+
+  g_object_unref (stanza);
+
+  return request;
 }
 
 void
-salut_disco_cancel_request (SalutDisco *disco, SalutDiscoRequest *request)
+salut_disco_cancel_request (SalutDisco *disco,
+    SalutDiscoRequest *request)
 {
   SalutDiscoPrivate *priv;
 
@@ -765,6 +581,5 @@ salut_disco_cancel_request (SalutDisco *disco, SalutDiscoRequest *request)
 
   g_return_if_fail (NULL != g_list_find (priv->requests, request));
 
-  cancel_request (request);
+  g_cancellable_cancel (request->cancellable);
 }
-

@@ -10,8 +10,6 @@ BUILT_SOURCES = \
   gibber-signals-marshal.c
 
 HANDWRITTEN_SOURCES =             \
-  gibber-xmpp-connection.c        \
-  gibber-xmpp-connection.h        \
   gibber-muc-connection.c         \
   gibber-muc-connection.h         \
   gibber-bytestream-ibb.h         \
@@ -52,16 +50,12 @@ HANDWRITTEN_SOURCES =             \
   gibber-linklocal-transport.c    \
   gibber-linklocal-transport.h    \
   gibber-namespaces.h             \
-  gibber-iq-helper.c              \
-  gibber-iq-helper.h              \
   gibber-file-transfer.c          \
   gibber-file-transfer.h          \
   gibber-oob-file-transfer.c      \
   gibber-oob-file-transfer.h      \
   gibber-listener.c               \
   gibber-listener.h               \
-  gibber-xmpp-connection-listener.c \
-  gibber-xmpp-connection-listener.h \
   gibber-xmpp-error.h             \
   gibber-xmpp-error.c             \
   gibber-sockets.c                \

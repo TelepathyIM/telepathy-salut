@@ -26,7 +26,6 @@
 
 #include "salut-muc-channel.h"
 #include "salut-connection.h"
-#include "salut-xmpp-connection-manager.h"
 #include "salut-avahi-discovery-client.h"
 
 G_BEGIN_DECLS
@@ -65,7 +64,7 @@ GType salut_avahi_muc_channel_get_type (void);
 SalutAvahiMucChannel * salut_avahi_muc_channel_new (SalutConnection *connection,
     const gchar *path, GibberMucConnection *muc_connection, TpHandle handle,
     const gchar *name, SalutAvahiDiscoveryClient *discovery_client,
-    TpHandle initiator, gboolean creator, SalutXmppConnectionManager *xcm,
+    TpHandle initiator, gboolean creator,
     gboolean requested);
 
 G_END_DECLS

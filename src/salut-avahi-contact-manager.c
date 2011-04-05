@@ -154,11 +154,22 @@ browser_found (GaServiceBrowser *browser,
     }
 
   if (!salut_avahi_contact_add_service (SALUT_AVAHI_CONTACT (contact),
-        interface, protocol, name, type, domain)) {
-    /* If we couldn't add the server check the refcounting */
-    if (!salut_avahi_contact_has_services (SALUT_AVAHI_CONTACT (contact)))
-         g_object_unref (contact);
-  }
+        interface, protocol, name, type, domain))
+    {
+      /* If we couldn't add the server check the refcounting */
+      if (!salut_avahi_contact_has_services (SALUT_AVAHI_CONTACT (contact)))
+        g_object_unref (contact);
+    }
+  else
+    {
+      WockyContactFactory *contact_factory;
+
+      contact_factory = wocky_session_get_contact_factory (
+          mgr->connection->session);
+
+      wocky_contact_factory_add_ll_contact (contact_factory,
+          WOCKY_LL_CONTACT (contact));
+    }
 }
 
 static void

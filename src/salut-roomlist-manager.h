@@ -25,7 +25,6 @@
 #include <gibber/gibber-bytestream-iface.h>
 
 #include <salut-connection.h>
-#include "salut-xmpp-connection-manager.h"
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
 

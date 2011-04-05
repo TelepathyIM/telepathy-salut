@@ -34,6 +34,7 @@
 #include <telepathy-glib/svc-connection.h>
 
 #include <wocky/wocky-stanza.h>
+#include <wocky/wocky-session.h>
 
 #include "salut/connection.h"
 
@@ -58,6 +59,9 @@ struct _SalutConnection {
 
   SalutPresenceCache *presence_cache;
   SalutDisco *disco;
+
+  WockySession *session;
+  WockyPorter *porter;
 
   /* Our name on the network */
   gchar *name;

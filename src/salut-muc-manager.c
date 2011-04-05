@@ -36,7 +36,6 @@
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
 #include "salut-roomlist-manager.h"
-#include "salut-xmpp-connection-manager.h"
 #include "salut-discovery-client.h"
 #include "tube-stream.h"
 #include "tube-dbus.h"
@@ -51,14 +50,8 @@
 #include "debug.h"
 
 static gboolean
-invite_stanza_filter (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
-
-static void
-invite_stanza_callback (SalutXmppConnectionManager *mgr,
-    GibberXmppConnection *conn, WockyStanza *stanza,
-    SalutContact *contact, gpointer user_data);
+invite_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza, gpointer user_data);
 
 
 static void salut_muc_manager_iface_init (gpointer g_iface,
@@ -73,7 +66,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucManager, salut_muc_manager,
 /* properties */
 enum {
   PROP_CONNECTION = 1,
-  PROP_XCM,
   LAST_PROP
 };
 
@@ -84,7 +76,8 @@ struct _SalutMucManagerPrivate
 {
   SalutConnection *connection;
   gulong status_changed_id;
-  SalutXmppConnectionManager *xmpp_connection_manager;
+
+  guint invite_handler_id;
 
   /* GUINT_TO_POINTER (room_handle) => (SalutMucChannel *) */
   GHashTable *text_channels;
@@ -128,9 +121,6 @@ salut_muc_manager_get_property (GObject *object,
       case PROP_CONNECTION:
         g_value_set_object (value, priv->connection);
         break;
-      case PROP_XCM:
-        g_value_set_object (value, priv->xmpp_connection_manager);
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -150,10 +140,6 @@ salut_muc_manager_set_property (GObject *object,
     {
       case PROP_CONNECTION:
         priv->connection = g_value_get_object (value);
-        break;
-      case PROP_XCM:
-        priv->xmpp_connection_manager = g_value_get_object (value);
-        g_object_ref (priv->xmpp_connection_manager);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -210,15 +196,21 @@ salut_muc_manager_constructor (GType type,
 {
   GObject *obj;
   SalutMucManagerPrivate *priv;
+  WockyPorter *porter;
 
   obj = G_OBJECT_CLASS (salut_muc_manager_parent_class)->
     constructor (type, n_props, props);
 
   priv = SALUT_MUC_MANAGER_GET_PRIVATE (obj);
 
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      invite_stanza_filter, invite_stanza_callback, obj);
+  porter = priv->connection->porter;
+  priv->invite_handler_id = wocky_porter_register_handler_from_anyone (
+      porter, WOCKY_STANZA_TYPE_MESSAGE, WOCKY_STANZA_SUB_TYPE_NONE,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL + 1, /* so we get called before the IM manager */
+      invite_stanza_callback, obj,
+      '(', "invite",
+        ':', GIBBER_TELEPATHY_NS_CLIQUE,
+      ')', NULL);
 
   priv->status_changed_id = g_signal_connect (priv->connection,
       "status-changed", (GCallback) connection_status_changed_cb, obj);
@@ -252,17 +244,6 @@ salut_muc_manager_class_init (SalutMucManagerClass *salut_muc_manager_class)
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CONNECTION,
       param_spec);
-
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "The Salut XMPP Connection Manager associated with this muc "
-      "manager",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_XCM,
-      param_spec);
 }
 
 void
@@ -276,19 +257,16 @@ salut_muc_manager_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      priv->xmpp_connection_manager, NULL,
-      invite_stanza_filter, invite_stanza_callback, self);
+  if (priv->connection->porter != NULL)
+    {
+      wocky_porter_unregister_handler (priv->connection->porter,
+          priv->invite_handler_id);
+      priv->invite_handler_id = 0;
+    }
 
   salut_muc_manager_close_all (self);
   g_assert (priv->text_channels == NULL);
   g_assert (priv->tubes_channels == NULL);
-
-  if (priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
-    }
 
   /* release any references held by the object here */
 
@@ -511,7 +489,7 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 
   chan = SALUT_MUC_MANAGER_GET_CLASS (mgr)->create_muc_channel (mgr,
       priv->connection, path, connection, handle, name, initiator,
-      new_connection, priv->xmpp_connection_manager, requested);
+      new_connection, requested);
   g_free (path);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
@@ -1024,28 +1002,9 @@ static void salut_muc_manager_iface_init (gpointer g_iface,
 }
 
 static gboolean
-invite_stanza_filter (SalutXmppConnectionManager *mgr,
-                      GibberXmppConnection *conn,
-                      WockyStanza *stanza,
-                      SalutContact *contact,
-                      gpointer user_data)
-{
-  WockyStanzaType type;
-
-  wocky_stanza_get_type_info (stanza, &type, NULL);
-  if (type != WOCKY_STANZA_TYPE_MESSAGE)
-    return FALSE;
-
-  return (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
-        "invite", GIBBER_TELEPATHY_NS_CLIQUE) != NULL);
-}
-
-static void
-invite_stanza_callback (SalutXmppConnectionManager *mgr,
-                        GibberXmppConnection *conn,
-                        WockyStanza *stanza,
-                        SalutContact *contact,
-                        gpointer user_data)
+invite_stanza_callback (WockyPorter *porter,
+    WockyStanza *stanza,
+    gpointer user_data)
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (user_data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -1064,6 +1023,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   const gchar **p;
   GHashTable *params_hash;
   GibberMucConnection *connection = NULL;
+  SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   invite = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
         "invite", GIBBER_TELEPATHY_NS_CLIQUE);
@@ -1075,7 +1035,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   if (room_node == NULL)
     {
       DEBUG ("Invalid invitation, discarding");
-      return;
+      return TRUE;
     }
   room = room_node->content;
 
@@ -1091,7 +1051,7 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   if (params == NULL)
     {
       DEBUG ("Invalid invitation, (unknown protocol) discarding");
-      return;
+      return TRUE;
     }
 
   params_hash = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, g_free);
@@ -1157,9 +1117,12 @@ invite_stanza_callback (SalutXmppConnectionManager *mgr,
   salut_muc_channel_invited (chan, inviter_handle, reason, NULL);
   tp_handle_unref (contact_repo, inviter_handle);
 
+  return TRUE;
+
 discard:
   if (params_hash != NULL)
     g_hash_table_destroy (params_hash);
+  return TRUE;
 }
 
 /* public functions */
@@ -1170,6 +1133,9 @@ salut_muc_manager_get_text_channel (SalutMucManager *self,
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutMucChannel *muc;
+
+  if (priv->text_channels == NULL)
+    return NULL;
 
   muc = g_hash_table_lookup (priv->text_channels, GUINT_TO_POINTER (handle));
   if (muc == NULL)

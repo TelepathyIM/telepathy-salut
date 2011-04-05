@@ -26,9 +26,10 @@
 #include <gibber/gibber-bytestream-ibb.h>
 #include <gibber/gibber-bytestream-oob.h>
 #include <wocky/wocky-stanza.h>
+#include <wocky/wocky-meta-porter.h>
+#include <wocky/wocky-namespaces.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
-#include <gibber/gibber-iq-helper.h>
 
 #include "salut-im-manager.h"
 #include "salut-muc-manager.h"
@@ -56,8 +57,9 @@ struct _SalutSiBytestreamManagerPrivate
   SalutConnection *connection;
   SalutImManager *im_manager;
   SalutMucManager *muc_manager;
-  SalutXmppConnectionManager *xmpp_connection_manager;
   gchar *host_name_fqdn;
+
+  guint si_request_id;
 
   gboolean dispose_has_run;
 };
@@ -74,29 +76,6 @@ salut_si_bytestream_manager_init (SalutSiBytestreamManager *self)
   self->priv = priv;
 
   priv->dispose_has_run = FALSE;
-}
-
-/* Filter for SI request (XEP-0095) */
-static gboolean
-si_request_filter (SalutXmppConnectionManager *xcm,
-                   GibberXmppConnection *conn,
-                   WockyStanza *stanza,
-                   SalutContact *contact,
-                   gpointer user_data)
-{
-  WockyNode *node = wocky_stanza_get_top_node (stanza);
-  WockyStanzaType type;
-  WockyStanzaSubType sub_type;
-
-  wocky_stanza_get_type_info (stanza, &type, &sub_type);
-  if (type != WOCKY_STANZA_TYPE_IQ)
-    return FALSE;
-
-  if (sub_type != WOCKY_STANZA_SUB_TYPE_SET)
-    return FALSE;
-
-  return (wocky_node_get_child_ns (node, "si",
-        GIBBER_XMPP_NS_SI) != NULL);
 }
 
 static gboolean
@@ -221,18 +200,18 @@ streaminit_parse_request (WockyStanza *stanza,
 static void
 bytestream_state_changed (GibberBytestreamIface *bytestream,
                           GibberBytestreamState state,
-                          SalutXmppConnectionManager *mgr)
+                          WockyContact *contact)
 {
   if (state == GIBBER_BYTESTREAM_STATE_CLOSED)
     {
-      GibberXmppConnection *connection;
+      WockyMetaPorter *porter;
 
       DEBUG ("bytestream closed, release the connection");
-      g_object_get (bytestream, "xmpp-connection", &connection, NULL);
+      g_object_get (bytestream, "porter", &porter, NULL);
 
-      salut_xmpp_connection_manager_release_connection (mgr, connection);
+      wocky_meta_porter_unhold (porter, contact);
 
-      g_object_unref (connection);
+      g_object_unref (porter);
       g_object_unref (bytestream);
     }
 }
@@ -240,7 +219,7 @@ bytestream_state_changed (GibberBytestreamIface *bytestream,
 static GibberBytestreamIface *
 choose_bytestream_method (SalutSiBytestreamManager *self,
                           GSList *stream_methods,
-                          GibberXmppConnection *connection,
+                          WockyPorter *porter,
                           SalutContact *contact,
                           const gchar *stream_id,
                           const gchar *stream_init_id)
@@ -259,11 +238,12 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
         {
           DEBUG ("choose OOB in methods list");
           return g_object_new (GIBBER_TYPE_BYTESTREAM_OOB,
-              "xmpp-connection", connection,
+              "porter", porter,
               "stream-id", stream_id,
               "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
               "self-id", priv->connection->name,
               "peer-id", contact->name,
+              "contact", contact,
               "stream-init-id", stream_init_id,
               NULL);
         }
@@ -276,11 +256,12 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
         {
           DEBUG ("choose IBB in methods list");
           return g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
-              "xmpp-connection", connection,
+              "porter", porter,
               "stream-id", stream_id,
               "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
               "self-id", priv->connection->name,
               "peer-id", contact->name,
+              "contact", contact,
               "stream-init-id", stream_init_id,
               NULL);
         }
@@ -289,11 +270,9 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
   return NULL;
 }
 
-static void
-si_request_cb (SalutXmppConnectionManager *xcm,
-               GibberXmppConnection *connection,
+static gboolean
+si_request_cb (WockyPorter *porter,
                WockyStanza *stanza,
-               SalutContact *contact,
                gpointer user_data)
 {
   SalutSiBytestreamManager *self = SALUT_SI_BYTESTREAM_MANAGER (user_data);
@@ -309,6 +288,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
   WockyNode *si, *node;
   const gchar *profile, *from, *stream_id, *stream_init_id, *mime_type;
   GSList *stream_methods = NULL;
+  WockyContact *contact = wocky_stanza_get_from_contact (stanza);
 
    /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
@@ -316,14 +296,17 @@ si_request_cb (SalutXmppConnectionManager *xcm,
   if (!streaminit_parse_request (stanza, &profile, &from, &stream_id,
         &stream_init_id, &mime_type, &stream_methods))
     {
+      GError err = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+                      "failed to parse SI request" };
       WockyStanza *reply;
 
-      reply = gibber_iq_helper_new_error_reply (stanza, XMPP_ERROR_BAD_REQUEST,
-          "failed to parse SI request");
-      gibber_xmpp_connection_send (connection, reply, NULL);
+      reply = wocky_stanza_build_iq_error (stanza, NULL);
+      wocky_stanza_error_to_node (&err, wocky_stanza_get_top_node (reply));
+
+      wocky_porter_send (porter, reply);
 
       g_object_unref (reply);
-      return;
+      return TRUE;
     }
 
   si = wocky_node_get_child_ns (top_node, "si", GIBBER_XMPP_NS_SI);
@@ -338,18 +321,21 @@ si_request_cb (SalutXmppConnectionManager *xcm,
     }
 
   /* check stream method */
-  bytestream = choose_bytestream_method (self, stream_methods, connection,
-      contact, stream_id, stream_init_id);
+  bytestream = choose_bytestream_method (self, stream_methods, porter,
+      SALUT_CONTACT (contact), stream_id, stream_init_id);
 
   if (bytestream == NULL)
     {
+      GError err = { WOCKY_XMPP_ERROR, WOCKY_SI_ERROR_NO_VALID_STREAMS,
+                      NULL };
       WockyStanza *reply;
 
       DEBUG ("SI request doesn't contain any supported stream method.");
-      reply = gibber_iq_helper_new_error_reply (stanza,
-          XMPP_ERROR_SI_NO_VALID_STREAMS, NULL);
 
-      gibber_xmpp_connection_send (connection, reply, NULL);
+      reply = wocky_stanza_build_iq_error (stanza, NULL);
+      wocky_stanza_error_to_node (&err, wocky_stanza_get_top_node (reply));
+
+      wocky_porter_send (porter, reply);
 
       g_object_unref (reply);
       goto out;
@@ -358,14 +344,13 @@ si_request_cb (SalutXmppConnectionManager *xcm,
   /* Now that we have a bytestream, it's responsible for declining the IQ
    * if needed. */
 
-  /* As bytestreams are not XCM aware, they can't take/release
+  /* As bytestreams are not porter aware, they can't take/release
    * the connection so we do it for them.
    * We'll release it when the bytestream will be closed */
-  salut_xmpp_connection_manager_take_connection (priv->xmpp_connection_manager,
-      connection);
+  wocky_meta_porter_hold (WOCKY_META_PORTER (porter), contact);
 
   g_signal_connect (bytestream, "state-changed",
-     G_CALLBACK (bytestream_state_changed), priv->xmpp_connection_manager);
+     G_CALLBACK (bytestream_state_changed), contact);
 
   /* We inform the right manager we received a SI request */
   if (tp_strdiff (profile, GIBBER_TELEPATHY_NS_TUBES))
@@ -424,7 +409,7 @@ si_request_cb (SalutXmppConnectionManager *xcm,
 
 out:
   g_slist_free (stream_methods);
-  return;
+  return TRUE;
 }
 
 static void
@@ -439,9 +424,15 @@ salut_si_bytestream_manager_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  if (priv->connection->porter != NULL)
+    {
+      wocky_porter_unregister_handler (priv->connection->porter,
+          priv->si_request_id);
+      priv->si_request_id = 0;
+    }
+
   g_object_unref (priv->im_manager);
   g_object_unref (priv->muc_manager);
-  g_object_unref (priv->xmpp_connection_manager);
 
   if (G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->dispose)
     G_OBJECT_CLASS (salut_si_bytestream_manager_parent_class)->dispose (object);
@@ -529,16 +520,18 @@ salut_si_bytestream_manager_constructor (GType type,
   g_object_get (priv->connection,
       "im-manager", &(priv->im_manager),
       "muc-manager", &(priv->muc_manager),
-      "xmpp-connection-manager", &(priv->xmpp_connection_manager),
       NULL);
   g_assert (priv->im_manager != NULL);
   g_assert (priv->muc_manager != NULL);
-  g_assert (priv->xmpp_connection_manager != NULL);
   g_assert (priv->host_name_fqdn != NULL);
 
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, NULL, si_request_filter,
-      si_request_cb, self);
+  priv->si_request_id = wocky_porter_register_handler_from_anyone (
+      priv->connection->porter, WOCKY_STANZA_TYPE_IQ,
+      WOCKY_STANZA_SUB_TYPE_SET, WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
+      si_request_cb, self,
+      '(', "si",
+        ':', WOCKY_XMPP_NS_SI,
+      ')', NULL);
 
   return obj;
 }
@@ -614,36 +607,36 @@ salut_si_bytestream_manager_make_stream_init_iq (const gchar *from,
   return wocky_stanza_build (
       WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
       from, to,
-      WOCKY_NODE_START, "si",
-        WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_SI,
-        WOCKY_NODE_ATTRIBUTE, "id", stream_id,
-        WOCKY_NODE_ATTRIBUTE, "profile", profile,
-        WOCKY_NODE_ATTRIBUTE, "mime-type", "application/octet-stream",
-        WOCKY_NODE_START, "feature",
-          WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_FEATURENEG,
-          WOCKY_NODE_START, "x",
-            WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_DATA,
-            WOCKY_NODE_ATTRIBUTE, "type", "form",
-            WOCKY_NODE_START, "field",
-              WOCKY_NODE_ATTRIBUTE, "var", "stream-method",
-              WOCKY_NODE_ATTRIBUTE, "type", "list-single",
+      '(', "si",
+        ':', WOCKY_XMPP_NS_SI,
+        '@', "id", stream_id,
+        '@', "profile", profile,
+        '@', "mime-type", "application/octet-stream",
+        '(', "feature",
+          ':', WOCKY_XMPP_NS_FEATURENEG,
+          '(', "x",
+            ':', WOCKY_XMPP_NS_DATA,
+            '@', "type", "form",
+            '(', "field",
+              '@', "var", "stream-method",
+              '@', "type", "list-single",
 
-              WOCKY_NODE_START, "option",
-                WOCKY_NODE_START, "value",
-                  WOCKY_NODE_TEXT, GIBBER_XMPP_NS_IQ_OOB,
-                WOCKY_NODE_END,
-              WOCKY_NODE_END,
+              '(', "option",
+                '(', "value",
+                  '$', GIBBER_XMPP_NS_IQ_OOB,
+                ')',
+              ')',
 
-              WOCKY_NODE_START, "option",
-                WOCKY_NODE_START, "value",
-                  WOCKY_NODE_TEXT, GIBBER_XMPP_NS_IBB,
-                WOCKY_NODE_END,
-              WOCKY_NODE_END,
+              '(', "option",
+                '(', "value",
+                  '$', GIBBER_XMPP_NS_IBB,
+                ')',
+              ')',
 
-            WOCKY_NODE_END,
-          WOCKY_NODE_END,
-        WOCKY_NODE_END,
-      WOCKY_NODE_END, NULL);
+            ')',
+          ')',
+        ')',
+      ')', NULL);
 }
 
 struct streaminit_reply_cb_data
@@ -652,7 +645,6 @@ struct streaminit_reply_cb_data
   gchar *stream_id;
   SalutSiBytestreamManagerNegotiateReplyFunc func;
   gpointer user_data;
-  gchar *iq_id;
   SalutContact *contact;
   WockyStanza *stanza;
 };
@@ -667,7 +659,6 @@ static void
 streaminit_reply_cb_data_free (struct streaminit_reply_cb_data *data)
 {
   g_free (data->stream_id);
-  g_free (data->iq_id);
 
   if (data->contact != NULL)
     g_object_unref (data->contact);
@@ -676,32 +667,6 @@ streaminit_reply_cb_data_free (struct streaminit_reply_cb_data *data)
     g_object_unref (data->stanza);
 
   g_slice_free (struct streaminit_reply_cb_data, data);
-}
-
-static gboolean
-si_request_reply_filter (SalutXmppConnectionManager *manager,
-                         GibberXmppConnection *connection,
-                         WockyStanza *stanza,
-                         SalutContact *contact,
-                         gpointer user_data)
-{
-  struct streaminit_reply_cb_data *data =
-    (struct streaminit_reply_cb_data *) user_data;
-  WockyNode *node = wocky_stanza_get_top_node (stanza);
-  WockyStanzaType type;
-  WockyStanzaSubType sub_type;
-  const gchar *iq_id;
-
-  wocky_stanza_get_type_info (stanza, &type, &sub_type);
-  if (type != WOCKY_STANZA_TYPE_IQ)
-    return FALSE;
-
-  if (sub_type != WOCKY_STANZA_SUB_TYPE_RESULT &&
-      sub_type != WOCKY_STANZA_SUB_TYPE_ERROR)
-    return FALSE;
-
-  iq_id = wocky_node_get_attribute (node, "id");
-  return (!tp_strdiff (iq_id, data->iq_id));
 }
 
 static gboolean
@@ -743,27 +708,37 @@ check_bytestream_oob_peer_addr (GibberBytestreamOOB *bytestream,
 }
 
 static void
-si_request_reply_cb (SalutXmppConnectionManager *manager,
-                     GibberXmppConnection *connection,
-                     WockyStanza *stanza,
-                     SalutContact *contact,
-                     gpointer user_data)
+si_request_sent_cb (GObject *source_object,
+    GAsyncResult *result,
+    gpointer user_data)
 {
+  WockyPorter *porter = WOCKY_PORTER (source_object);
   struct streaminit_reply_cb_data *data =
     (struct streaminit_reply_cb_data *) user_data;
   SalutSiBytestreamManagerPrivate *priv =
     SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (data->self);
+  WockyStanza *stanza;
+  GError *error = NULL;
+
   WockyStanzaSubType sub_type;
   WockyNode *si, *feature, *x;
   GibberBytestreamIface *bytestream = NULL;
   const gchar *from, *stream_method, *stream_init_id;
   GSList *x_children;
-  WockyNode *node = wocky_stanza_get_top_node (stanza);
+  WockyNode *node;
 
-  salut_xmpp_connection_manager_remove_stanza_filter (
-      manager, connection, si_request_reply_filter, si_request_reply_cb, data);
+  stanza = wocky_porter_send_iq_finish (porter, result, &error);
+
+  if (result == NULL)
+    {
+      DEBUG ("sending SI request failed: %s", error->message);
+      g_clear_error (&error);
+      goto END;
+    }
 
   DEBUG ("received SI request response");
+
+  node = wocky_stanza_get_top_node (stanza);
 
   wocky_stanza_get_type_info (stanza, NULL, &sub_type);
   if (sub_type != WOCKY_STANZA_SUB_TYPE_RESULT)
@@ -830,11 +805,12 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
         /* Remote user have accepted the stream */
         DEBUG ("remote user chose a OOB bytestream");
         bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_OOB,
-              "xmpp-connection", connection,
+              "porter", porter,
               "stream-id", data->stream_id,
               "state", GIBBER_BYTESTREAM_STATE_INITIATING,
               "self-id", priv->connection->name,
               "peer-id", from,
+              "contact", wocky_stanza_get_from_contact (stanza),
               "stream-init-id", NULL,
               "host", priv->host_name_fqdn,
               NULL);
@@ -847,11 +823,12 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
         /* Remote user have accepted the stream */
         DEBUG ("remote user chose a IBB bytestream");
         bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
-              "xmpp-connection", connection,
+              "porter", porter,
               "stream-id", data->stream_id,
               "state", GIBBER_BYTESTREAM_STATE_INITIATING,
               "self-id", priv->connection->name,
               "peer-id", from,
+              "contact", wocky_stanza_get_from_contact (stanza),
               "stream-init-id", NULL,
               NULL);
       }
@@ -872,14 +849,14 @@ si_request_reply_cb (SalutXmppConnectionManager *manager,
 
   DEBUG ("stream %s accepted. Start to initiate it", data->stream_id);
 
-  /* As bytestreams are not XCM aware, they can't take/release
+  /* As bytestreams are not porter aware, they can't take/release
    * the connection so we do it for them.
    * We'll release it when the bytestream will be closed */
-  salut_xmpp_connection_manager_take_connection (priv->xmpp_connection_manager,
-      connection);
+  wocky_meta_porter_hold (WOCKY_META_PORTER (porter),
+      WOCKY_CONTACT (data->contact));
 
   g_signal_connect (bytestream, "state-changed",
-     G_CALLBACK (bytestream_state_changed), priv->xmpp_connection_manager);
+     G_CALLBACK (bytestream_state_changed), data->contact);
 
   /* Let's start the initiation of the stream */
   if (!gibber_bytestream_iface_initiate (bytestream))
@@ -894,97 +871,9 @@ END:
   data->func (bytestream, data->user_data);
 
   streaminit_reply_cb_data_free (data);
-}
 
-static gboolean
-send_si_request (SalutSiBytestreamManager *self,
-                 GibberXmppConnection *connection,
-                 struct streaminit_reply_cb_data *data,
-                 GError **error)
-{
-  SalutSiBytestreamManagerPrivate *priv =
-    SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
-  WockyNode *node = wocky_stanza_get_top_node (data->stanza);
-  const gchar *iq_id;
-
-  iq_id = wocky_node_get_attribute (node, "id");
-  if (iq_id != NULL)
-    {
-      data->iq_id = g_strdup (iq_id);
-    }
-  else
-    {
-      data->iq_id = gibber_xmpp_connection_new_id (connection);
-      wocky_node_set_attribute (node, "id", data->iq_id);
-    }
-
-  /* Register a filter to catch the response of the SI request */
-  salut_xmpp_connection_manager_add_stanza_filter (
-      priv->xmpp_connection_manager, connection,
-      si_request_reply_filter, si_request_reply_cb, data);
-
-  /* FIXME: set a timer ?
-   * Or we could listen for the XMPP connection closed signal and so use
-   * XCM's timer as we didn't ref the connection yet */
-  if (!gibber_xmpp_connection_send (connection, data->stanza, error))
-    {
-      salut_xmpp_connection_manager_remove_stanza_filter (
-          priv->xmpp_connection_manager, connection,
-          si_request_reply_filter, si_request_reply_cb, data);
-
-      streaminit_reply_cb_data_free (data);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *connection,
-                                           SalutContact *contact,
-                                           gpointer user_data)
-{
-  struct streaminit_reply_cb_data *data =
-    (struct streaminit_reply_cb_data *) user_data;
-
-  if (data->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
-
-  DEBUG ("got connection with %s. Send SI request", contact->name);
-  send_si_request (data->self, connection, data, NULL);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, data);
-}
-
-static void
-xmpp_connection_manager_connection_failed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *connection,
-                                              SalutContact *contact,
-                                              GQuark domain,
-                                              gint code,
-                                              gchar *message,
-                                              gpointer user_data)
-{
-  struct streaminit_reply_cb_data *data =
-    (struct streaminit_reply_cb_data *) user_data;
-
-  if (data->contact != contact)
-    /* Not the connection we are waiting for */
-    return;
-
-  DEBUG ("connection with %s failed: %s. Can't send SI request", contact->name,
-      message);
-
- /* Call the user callback without bytestream to inform him the SI request
-  * failed */
-  data->func (NULL, data->user_data);
-
-  g_signal_handlers_disconnect_matched (mgr, G_SIGNAL_MATCH_DATA, 0, 0, NULL,
-      NULL, data);
-  streaminit_reply_cb_data_free (data);
+  if (stanza != NULL)
+    g_object_unref (stanza);
 }
 
 /*
@@ -1011,8 +900,6 @@ salut_si_bytestream_manager_negotiate_stream (SalutSiBytestreamManager *self,
 {
   SalutSiBytestreamManagerPrivate *priv;
   struct streaminit_reply_cb_data *data;
-  GibberXmppConnection *connection = NULL;
-  SalutXmppConnectionManagerRequestConnectionResult request_result;
 
   g_assert (SALUT_IS_SI_BYTESTREAM_MANAGER (self));
   g_assert (stream_id != NULL);
@@ -1028,38 +915,10 @@ salut_si_bytestream_manager_negotiate_stream (SalutSiBytestreamManager *self,
   data->contact = g_object_ref (contact);
   data->stanza = g_object_ref (stanza);
 
-  DEBUG ("request XMPP connection with %s to send the SI request",
-      contact->name);
+  DEBUG ("send an SI request to %s", contact->name);
 
-  /* We need a XMPP connection to send the SI request */
-  request_result = salut_xmpp_connection_manager_request_connection (
-      priv->xmpp_connection_manager, contact, &connection, error);
+  wocky_porter_send_iq_async (priv->connection->porter,
+      stanza, NULL, si_request_sent_cb, data);
 
-  if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-    {
-      DEBUG ("got the connection with %s, send the SI request",
-          data->contact->name);
-
-      return send_si_request (self, connection, data, error);
-    }
-  else if (request_result ==
-      SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_PENDING)
-    {
-      DEBUG ("connection with %s pending. Wait before send the SI request",
-          contact->name);
-
-      g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-          G_CALLBACK (xmpp_connection_manager_new_connection_cb), data);
-      g_signal_connect (priv->xmpp_connection_manager, "connection-failed",
-          G_CALLBACK (xmpp_connection_manager_connection_failed_cb), data);
-
-      return TRUE;
-    }
-  else
-    {
-      DEBUG ("can't request connection with %s", contact->name);
-      streaminit_reply_cb_data_free (data);
-      return FALSE;
-    }
+  return TRUE;
 }

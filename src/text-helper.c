@@ -60,9 +60,9 @@ add_text (WockyStanza *stanza, const gchar *text)
 }
 
 static WockyStanza *
-create_message_stanza (const gchar *from,
-  const gchar *to, TpChannelTextMessageType type, const gchar *text,
-  GError **error)
+create_message_stanza (const gchar *from, const gchar *to,
+    SalutContact *contact, TpChannelTextMessageType type, const gchar *text,
+    GError **error)
 {
   WockyStanza *stanza;
   WockyNode *node;
@@ -94,12 +94,15 @@ create_message_stanza (const gchar *from,
       add_text (stanza, text);
     }
 
+  if (contact != NULL)
+    wocky_stanza_set_to_contact (stanza, WOCKY_CONTACT (contact));
+
   return stanza;
 }
 
 WockyStanza *
 text_helper_create_message (const gchar *from,
-                            const gchar *to,
+                            SalutContact *to,
                             TpChannelTextMessageType type,
                             const gchar *text,
                             GError **error)
@@ -107,7 +110,7 @@ text_helper_create_message (const gchar *from,
   WockyStanza *stanza;
   WockyNode *node;
 
-  stanza = create_message_stanza (from, to, type, text, error);
+  stanza = create_message_stanza (from, to->name, to, type, text, error);
   node = wocky_stanza_get_top_node (stanza);
 
   if (stanza == NULL)
@@ -140,7 +143,7 @@ text_helper_create_message_groupchat (const gchar *from,
   WockyStanza *stanza;
   WockyNode *node;
 
-  stanza = create_message_stanza (from, to, type, text, error);
+  stanza = create_message_stanza (from, to, NULL, type, text, error);
   if (stanza == NULL)
     return NULL;
 

@@ -25,7 +25,6 @@
 #include <telepathy-glib/base-connection.h>
 #include "salut-connection.h"
 #include "salut-contact-manager.h"
-#include "salut-xmpp-connection-manager.h"
 #include "salut-tubes-channel.h"
 
 G_BEGIN_DECLS
@@ -64,8 +63,7 @@ GType salut_tubes_manager_get_type (void);
 
 SalutTubesManager * salut_tubes_manager_new (
     SalutConnection *conn,
-    SalutContactManager *contact_manager,
-    SalutXmppConnectionManager *xmpp_connection_manager);
+    SalutContactManager *contact_manager);
 
 G_END_DECLS
 

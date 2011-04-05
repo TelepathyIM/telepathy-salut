@@ -21,7 +21,6 @@
 #define __SALUT_SI_BYTESTREAM_MANAGER_H__
 
 #include <glib-object.h>
-#include "salut-xmpp-connection-manager.h"
 #include "salut-contact.h"
 
 #include <gibber/gibber-linklocal-transport.h>

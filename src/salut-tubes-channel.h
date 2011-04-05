@@ -22,9 +22,7 @@
 
 #include <glib-object.h>
 #include <wocky/wocky-stanza.h>
-#include <gibber/gibber-xmpp-connection.h>
 #include <gibber/gibber-bytestream-iface.h>
-#include <gibber/gibber-iq-helper.h>
 
 #include "salut-muc-channel.h"
 #include "tube-iface.h"

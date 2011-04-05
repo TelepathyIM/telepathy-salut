@@ -339,7 +339,6 @@ salut_avahi_muc_channel_new (SalutConnection *connection,
                        SalutAvahiDiscoveryClient *discovery_client,
                        TpHandle initiator,
                        gboolean creator,
-                       SalutXmppConnectionManager *xcm,
                        gboolean requested)
 {
   return g_object_new (SALUT_TYPE_AVAHI_MUC_CHANNEL,
@@ -351,7 +350,6 @@ salut_avahi_muc_channel_new (SalutConnection *connection,
       "discovery-client", discovery_client,
       "initiator-handle", initiator,
       "creator", creator,
-      "xmpp-connection-manager", xcm,
       "requested", requested,
       NULL);
 }

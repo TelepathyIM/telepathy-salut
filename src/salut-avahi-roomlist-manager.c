@@ -35,7 +35,6 @@
 #include "salut-contact-manager.h"
 #include "salut-tubes-channel.h"
 #include "salut-roomlist-channel.h"
-#include "salut-xmpp-connection-manager.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -431,16 +430,13 @@ salut_avahi_roomlist_manager_dispose (GObject *object)
 SalutAvahiRoomlistManager *
 salut_avahi_roomlist_manager_new (
     SalutConnection *connection,
-    SalutXmppConnectionManager *xmpp_connection_manager,
     SalutAvahiDiscoveryClient *discovery_client)
 {
   g_assert (connection != NULL);
-  g_assert (xmpp_connection_manager != NULL);
   g_assert (discovery_client != NULL);
 
   return g_object_new (SALUT_TYPE_AVAHI_ROOMLIST_MANAGER,
       "connection", connection,
-      "xmpp-connection-manager", xmpp_connection_manager,
       "discovery-client", discovery_client,
       NULL);
 }

@@ -28,14 +28,15 @@
 
 #include <glib.h>
 
+#include <wocky/wocky-stanza.h>
+#include <wocky/wocky-porter.h>
+#include <wocky/wocky-meta-porter.h>
+
 #include "gibber-sockets.h"
 #include "gibber-bytestream-iface.h"
-#include "gibber-xmpp-connection.h"
-#include <wocky/wocky-stanza.h>
 #include "gibber-namespaces.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-xmpp-error.h"
-#include "gibber-iq-helper.h"
 #include "gibber-util.h"
 #include "gibber-transport.h"
 #include "gibber-fd-transport.h"
@@ -57,7 +58,8 @@ G_DEFINE_TYPE_WITH_CODE (GibberBytestreamOOB, gibber_bytestream_oob,
 /* properties */
 enum
 {
-  PROP_XMPP_CONNECTION = 1,
+  PROP_PORTER = 1,
+  PROP_CONTACT,
   PROP_SELF_ID,
   PROP_PEER_ID,
   PROP_STREAM_ID,
@@ -71,7 +73,8 @@ enum
 typedef struct _GibberBytestreamIBBPrivate GibberBytestreamOOBPrivate;
 struct _GibberBytestreamIBBPrivate
 {
-  GibberXmppConnection *xmpp_connection;
+  WockyPorter *porter;
+  WockyContact *contact;
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
@@ -79,8 +82,10 @@ struct _GibberBytestreamIBBPrivate
   /* ID of the OOB opening stanza. We'll reply to
    * it when we the bytestream is closed */
   gchar *stream_open_id;
+  guint stanza_received_id;
   GibberBytestreamState state;
   gchar *host;
+  gchar *url;
 
   /* Are we the recipient of this bytestream?
    * If not we are the sender */
@@ -235,52 +240,28 @@ set_transport (GibberBytestreamOOB *self,
 }
 
 static void
-connect_to_url (GibberBytestreamOOB *self,
-                const gchar *url)
+connect_to_url (GibberBytestreamOOB *self)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   GibberLLTransport *ll_transport;
+  GSocketConnection *conn;
+  GSocketAddress *socket_address = NULL;
   gchar **tokens;
   union {
     struct sockaddr_storage storage;
     struct sockaddr_in in;
   } addr;
-  socklen_t len;
-  const gchar *host, *port;
+  const gchar *port;
   gint portnum = 0;
-
-  if (!g_str_has_prefix (url, "x-tcp://"))
-    {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
-          "URL is not a TCP URL" };
-
-      DEBUG ("URL is not a TCP URL: %s. Close the bytestream", url);
-      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
-      return;
-    }
+  const gchar *url;
+  GError *error = NULL;
 
   /* TODO: if we want to support IPv6 literals, we have to remove
    * [] around the address */
 
-  url += strlen ("x-tcp://");
+  url = priv->url + strlen ("x-tcp://");
   tokens = g_strsplit (url, ":", 2);
-  host = tokens[0];
   port = tokens[1];
-
-  /* FIXME, this is very specific to salut and won't work with a normal xmpp
-   * client */
-  if (!gibber_transport_get_peeraddr (
-      GIBBER_TRANSPORT (priv->xmpp_connection->transport),
-      &addr.storage, &len))
-    {
-      /* I'm too lazy to create more specific errors for this  as it should
-       * never happen while using salut anyway.. */
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
-          "Unsable get socket address for the control connection" };
-      DEBUG ("Could not get socket address for the control connection" );
-      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
-      goto out;
-    }
 
   if (port != NULL)
     portnum = atoi (port);
@@ -296,6 +277,34 @@ connect_to_url (GibberBytestreamOOB *self,
       goto out;
    }
 
+  conn = wocky_meta_porter_borrow_connection (WOCKY_META_PORTER (priv->porter),
+      WOCKY_LL_CONTACT (priv->contact));
+
+  if (conn != NULL)
+    socket_address = g_socket_connection_get_remote_address (conn, NULL);
+
+  if (conn == NULL || socket_address == NULL)
+    {
+      /* I'm too lazy to create more specific errors for this  as it should
+       * never happen while using salut anyway.. */
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+          "Unsable get socket address for the control connection" };
+      DEBUG ("Could not get socket address for the control connection" );
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+      goto out;
+    }
+
+  if (!g_socket_address_to_native (G_SOCKET_ADDRESS (socket_address), &(addr.storage),
+          sizeof (addr.storage), &error))
+    {
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+          "Failed to turn socket address into bytes" };
+      DEBUG ("Failed to get native socket address: %s", error->message);
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+      g_clear_error (&error);
+      goto out;
+    }
+
   addr.in.sin_port = g_htons ((guint16) portnum);
 
   ll_transport = gibber_ll_transport_new ();
@@ -304,7 +313,35 @@ connect_to_url (GibberBytestreamOOB *self,
   g_object_unref (ll_transport);
 
 out:
+  if (socket_address != NULL)
+    g_object_unref (socket_address);
+
   g_strfreev (tokens);
+}
+
+static void
+opened_cb (GObject *source_object,
+    GAsyncResult *result,
+    gpointer user_data)
+{
+  WockyMetaPorter *porter = WOCKY_META_PORTER (source_object);
+  GibberBytestreamOOB *self = user_data;
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+  GError *error = NULL;
+
+  if (!wocky_meta_porter_open_finish (porter, result, &error))
+    {
+      DEBUG ("failed to open connection to contact");
+      g_clear_error (&error);
+    }
+  else
+    {
+      connect_to_url (self);
+    }
+
+  g_free (priv->url);
+
+  wocky_meta_porter_unhold (porter, priv->contact);
 }
 
 static gboolean
@@ -342,7 +379,20 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
   priv->stream_open_id = g_strdup (wocky_node_get_attribute (
         node, "id"));
 
-  connect_to_url (self, url);
+  if (!g_str_has_prefix (url, "x-tcp://"))
+    {
+      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+                   "URL is not a TCP URL" };
+
+      DEBUG ("URL is not a TCP URL: %s. Close the bytestream", priv->url);
+      gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
+      return TRUE;
+    }
+
+  priv->url = g_strdup (url);
+
+  wocky_meta_porter_open_async (WOCKY_META_PORTER (priv->porter),
+      WOCKY_LL_CONTACT (priv->contact), NULL, opened_cb, self);
 
   return TRUE;
 }
@@ -378,10 +428,10 @@ parse_oob_iq_result (GibberBytestreamOOB *self,
   return TRUE;
 }
 
-static void
-xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
-                                    WockyStanza *stanza,
-                                    gpointer user_data)
+static gboolean
+received_stanza_cb (WockyPorter *porter,
+                    WockyStanza *stanza,
+                    gpointer user_data)
 {
   GibberBytestreamOOB *self = (GibberBytestreamOOB *) user_data;
   WockyNode *node = wocky_stanza_get_top_node (stanza);
@@ -392,44 +442,16 @@ xmpp_connection_received_stanza_cb (GibberXmppConnection *conn,
   if (from == NULL)
     {
       DEBUG ("got a message without a from field");
-      return;
+      return FALSE;
     }
 
   if (parse_oob_init_iq (self, stanza))
-    return;
+    return TRUE;
 
   if (parse_oob_iq_result (self, stanza))
-    return;
-}
+    return TRUE;
 
-static void
-xmpp_connection_stream_closed_cb (GibberXmppConnection *connection,
-                                  gpointer userdata)
-{
-  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (userdata);
-  DEBUG ("XMPP connection: stream closed. Close the OOB bytestream");
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
-  bytestream_closed (self);
-}
-
-static void
-xmpp_connection_transport_disconnected_cb (GibberLLTransport *transport,
-                                           gpointer userdata)
-{
-  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (userdata);
-  DEBUG ("XMPP connection transport closed. Close the OOB bytestream");
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
-  bytestream_closed (self);
-}
-
-static void
-xmpp_connection_parse_error_cb (GibberXmppConnection *connection,
-                                gpointer userdata)
-{
-  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (userdata);
-  DEBUG ("XMPP connection: parse error. Close the OOB bytestream");
-  g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_CLOSING, NULL);
-  bytestream_closed (self);
+  return FALSE;
 }
 
 static void
@@ -461,13 +483,18 @@ gibber_bytestream_oob_dispose (GObject *object)
       priv->listener = NULL;
     }
 
-  if (priv->xmpp_connection != NULL)
+  if (priv->porter != NULL)
     {
-      g_signal_handlers_disconnect_matched (priv->xmpp_connection->transport,
-          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-      g_signal_handlers_disconnect_matched (priv->xmpp_connection,
-          G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-      g_object_unref (priv->xmpp_connection);
+      wocky_porter_unregister_handler (priv->porter, priv->stanza_received_id);
+      priv->stanza_received_id = 0;
+      g_object_unref (priv->porter);
+      priv->porter = NULL;
+    }
+
+  if (priv->contact != NULL)
+    {
+      g_object_unref (priv->contact);
+      priv->contact = NULL;
     }
 
   G_OBJECT_CLASS (gibber_bytestream_oob_parent_class)->dispose (object);
@@ -500,8 +527,11 @@ gibber_bytestream_oob_get_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_XMPP_CONNECTION:
-        g_value_set_object (value, priv->xmpp_connection);
+      case PROP_PORTER:
+        g_value_set_object (value, priv->porter);
+        break;
+      case PROP_CONTACT:
+        g_value_set_object (value, priv->contact);
         break;
       case PROP_SELF_ID:
         g_value_set_string (value, priv->self_id);
@@ -531,6 +561,21 @@ gibber_bytestream_oob_get_property (GObject *object,
 }
 
 static void
+make_porter_connections (GibberBytestreamOOB *self)
+{
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+  gchar *jid;
+
+  jid = wocky_contact_dup_jid (priv->contact);
+
+  priv->stanza_received_id = wocky_porter_register_handler_from (priv->porter,
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_TYPE_NONE, jid,
+      WOCKY_PORTER_HANDLER_PRIORITY_NORMAL, received_stanza_cb, self, NULL);
+
+  g_free (jid);
+}
+
+static void
 gibber_bytestream_oob_set_property (GObject *object,
                                     guint property_id,
                                     const GValue *value,
@@ -541,17 +586,11 @@ gibber_bytestream_oob_set_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_XMPP_CONNECTION:
-        priv->xmpp_connection = g_value_get_object (value);
-        g_signal_connect (priv->xmpp_connection, "received-stanza",
-            G_CALLBACK (xmpp_connection_received_stanza_cb), self);
-        g_signal_connect (priv->xmpp_connection, "stream-closed",
-            G_CALLBACK (xmpp_connection_stream_closed_cb), self);
-        g_signal_connect (priv->xmpp_connection->transport, "disconnected",
-           G_CALLBACK (xmpp_connection_transport_disconnected_cb), self);
-        g_signal_connect (priv->xmpp_connection, "parse-error",
-           G_CALLBACK (xmpp_connection_parse_error_cb), self);
-        g_object_ref (priv->xmpp_connection);
+      case PROP_PORTER:
+        priv->porter = g_value_dup_object (value);
+        break;
+      case PROP_CONTACT:
+        priv->contact = g_value_dup_object (value);
         break;
       case PROP_SELF_ID:
         g_free (priv->self_id);
@@ -602,10 +641,25 @@ gibber_bytestream_oob_constructor (GType type,
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
   g_assert (priv->stream_id != NULL);
-  g_assert (priv->xmpp_connection != NULL);
+  g_assert (priv->porter != NULL);
+  g_assert (priv->contact != NULL);
 
   return obj;
 }
+
+static void
+gibber_bytestream_oob_constructed (GObject *obj)
+{
+  GibberBytestreamOOB *self = GIBBER_BYTESTREAM_OOB (obj);
+  GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
+
+  if (G_OBJECT_CLASS (gibber_bytestream_oob_parent_class)->constructed != NULL)
+    G_OBJECT_CLASS (gibber_bytestream_oob_parent_class)->constructed (obj);
+
+  if (priv->porter != NULL && priv->contact != NULL)
+    make_porter_connections (self);
+}
+
 
 static void
 gibber_bytestream_oob_class_init (
@@ -623,6 +677,7 @@ gibber_bytestream_oob_class_init (
   object_class->get_property = gibber_bytestream_oob_get_property;
   object_class->set_property = gibber_bytestream_oob_set_property;
   object_class->constructor = gibber_bytestream_oob_constructor;
+  object_class->constructed = gibber_bytestream_oob_constructed;
 
   g_object_class_override_property (object_class, PROP_SELF_ID,
       "self-id");
@@ -636,14 +691,25 @@ gibber_bytestream_oob_class_init (
       "protocol");
 
   param_spec = g_param_spec_object (
-      "xmpp-connection",
-      "GibberXmppConnection object",
-      "Gibber XMPP connection object used for communication by this "
+      "porter",
+      "WockyPorter object",
+      "Wocky porter object used for communication by this "
       "bytestream if it's a private one",
-      GIBBER_TYPE_XMPP_CONNECTION,
+      WOCKY_TYPE_PORTER,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION,
+  g_object_class_install_property (object_class, PROP_PORTER,
+      param_spec);
+
+  param_spec = g_param_spec_object (
+      "contact",
+      "WockyContact object",
+      "Contact object used for communication by this "
+      "bytestream if it's a private one",
+      WOCKY_TYPE_CONTACT,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_CONTACT,
       param_spec);
 
   param_spec = g_param_spec_string (
@@ -719,26 +785,26 @@ create_si_accept_iq (GibberBytestreamOOB *self)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
 
-  return wocky_stanza_build (
+  return wocky_stanza_build_to_contact (
       WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_RESULT,
-      priv->self_id, priv->peer_id,
-      WOCKY_NODE_ATTRIBUTE, "id", priv->stream_init_id,
-      WOCKY_NODE_START, "si",
-        WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_SI,
-        WOCKY_NODE_START, "feature",
-          WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_FEATURENEG,
-          WOCKY_NODE_START, "x",
-            WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_DATA,
-            WOCKY_NODE_ATTRIBUTE, "type", "submit",
-            WOCKY_NODE_START, "field",
-              WOCKY_NODE_ATTRIBUTE, "var", "stream-method",
-              WOCKY_NODE_START, "value",
-                WOCKY_NODE_TEXT, GIBBER_XMPP_NS_IQ_OOB,
-              WOCKY_NODE_END,
-            WOCKY_NODE_END,
-          WOCKY_NODE_END,
-        WOCKY_NODE_END,
-      WOCKY_NODE_END, NULL);
+      priv->self_id, priv->contact,
+      '@', "id", priv->stream_init_id,
+      '(', "si",
+        ':', GIBBER_XMPP_NS_SI,
+        '(', "feature",
+          ':', GIBBER_XMPP_NS_FEATURENEG,
+          '(', "x",
+            ':', GIBBER_XMPP_NS_DATA,
+            '@', "type", "submit",
+            '(', "field",
+              '@', "var", "stream-method",
+              '(', "value",
+                '$', GIBBER_XMPP_NS_IQ_OOB,
+              ')',
+            ')',
+          ')',
+        ')',
+      ')', NULL);
 }
 
 /*
@@ -775,7 +841,7 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
       func (si, user_data);
     }
 
-  gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
+  wocky_porter_send (priv->porter, stanza);
 
   DEBUG ("stream is now accepted");
   g_object_set (self, "state", GIBBER_BYTESTREAM_STATE_ACCEPTED, NULL);
@@ -789,27 +855,18 @@ bytestream_closed (GibberBytestreamOOB *self)
 
   if (priv->recipient)
     {
-      /* We are the recipient and so have to send the reply
-       * to the OOB opening IQ */
-      if (priv->xmpp_connection->stream_flags ==
-          GIBBER_XMPP_CONNECTION_STREAM_FULLY_OPEN)
-        {
-          WockyStanza *stanza;
+      WockyStanza *stanza;
 
-          /* As described in the XEP, we send result IQ when we have
-           * finished to use the OOB */
-          stanza = make_iq_oob_sucess_response (priv->self_id,
-              priv->peer_id, priv->stream_open_id);
+      /* As described in the XEP, we send result IQ when we have
+       * finished to use the OOB */
+      stanza = make_iq_oob_sucess_response (priv->self_id,
+          priv->peer_id, priv->stream_open_id);
+      wocky_stanza_set_to_contact (stanza, priv->contact);
 
-          DEBUG ("send OOB close stanza");
+      DEBUG ("send OOB close stanza");
 
-          gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
-          g_object_unref (stanza);
-        }
-      else
-        {
-          DEBUG ("XMPP connection is closed. Don't send OOB close stanza");
-        }
+      wocky_porter_send (priv->porter, stanza);
+      g_object_unref (stanza);
     }
   else
     {
@@ -838,10 +895,10 @@ gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
 
   g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
-  stanza = wocky_stanza_build (
+  stanza = wocky_stanza_build_to_contact (
       WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
-      priv->self_id, priv->peer_id,
-      WOCKY_NODE_ATTRIBUTE, "id", priv->stream_init_id,
+      priv->self_id, priv->contact,
+      '@', "id", priv->stream_init_id,
       NULL);
   node = wocky_stanza_get_top_node (stanza);
 
@@ -855,7 +912,7 @@ gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
           "Offer Declined");
     }
 
-  gibber_xmpp_connection_send (priv->xmpp_connection, stanza, NULL);
+  wocky_porter_send (priv->porter, stanza);
 
   g_object_unref (stanza);
 }
@@ -912,13 +969,13 @@ make_oob_init_iq (const gchar *from,
   return wocky_stanza_build (
       WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
       from, to,
-      WOCKY_NODE_START, "query",
-        WOCKY_NODE_XMLNS, GIBBER_XMPP_NS_IQ_OOB,
-        WOCKY_NODE_ATTRIBUTE, "sid", stream_id,
-        WOCKY_NODE_START, "url",
-          WOCKY_NODE_TEXT, url,
-        WOCKY_NODE_END,
-      WOCKY_NODE_END, NULL);
+      '(', "query",
+        ':', GIBBER_XMPP_NS_IQ_OOB,
+        '@', "sid", stream_id,
+        '(', "url",
+          '$', url,
+        ')',
+      ')', NULL);
 }
 
 static void
@@ -955,7 +1012,6 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
   WockyStanza *stanza;
   WockyNode *node;
-  GError *error = NULL;
   const gchar *id;
   int port;
   gchar *url;
@@ -988,25 +1044,25 @@ gibber_bytestream_oob_initiate (GibberBytestreamIface *bytestream)
   stanza = make_oob_init_iq (priv->self_id, priv->peer_id,
       priv->stream_id, url);
   g_free (url);
+  wocky_stanza_set_to_contact (stanza, priv->contact);
   node = wocky_stanza_get_top_node (stanza);
 
   id = wocky_node_get_attribute (node, "id");
   if (id == NULL)
     {
-      priv->stream_open_id = gibber_xmpp_connection_new_id (
-          priv->xmpp_connection);
-      wocky_node_set_attribute (node, "id",
-          priv->stream_open_id);
+      /* let the porter generate the IQ id for us */
+      wocky_porter_send_iq_async (priv->porter, stanza,
+          NULL, NULL, NULL);
+
+      priv->stream_open_id = g_strdup (
+          wocky_node_get_attribute (node, "id"));
     }
   else
     {
+      /* save the stream open ID */
       priv->stream_open_id = g_strdup (id);
-    }
 
-  if (!gibber_xmpp_connection_send (priv->xmpp_connection, stanza, &error))
-    {
-      DEBUG ("can't send OOB init stanza: %s", error->message);
-      return FALSE;
+      wocky_porter_send (priv->porter, stanza);
     }
 
   g_object_unref (stanza);

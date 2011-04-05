@@ -22,11 +22,12 @@ class Ipv6Port(tcp.Port):
     def getHost(self):
         return IPv6Address('TCP', *(self.socket.getsockname()))
 
-def listenTCP6(port,factory,backlog=5,interface='::',reactor = None):
-  if reactor is None:
-    from twisted.internet import reactor
-  return reactor.listenWith(Ipv6Port,port,factory,backlog,interface)
-
+def listenTCP6(port, factory, backlog=5, interface='::', reactor=None):
+    if reactor is None:
+        from twisted.internet import reactor
+    p = Ipv6Port(port, factory, backlog, interface, reactor=reactor)
+    p.startListening()
+    return p
 
 # stolen from http://twistedmatrix.com/trac/attachment/ticket/3014/ipv6.2.patch
 from zope.interface import implements

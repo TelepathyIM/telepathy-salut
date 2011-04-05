@@ -48,7 +48,6 @@
 #include <gibber/gibber-bytestream-iface.h>
 #include <gibber/gibber-bytestream-oob.h>
 #include <gibber/gibber-fd-transport.h>
-#include <gibber/gibber-iq-helper.h>
 #include <gibber/gibber-listener.h>
 #include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-tcp-transport.h>
@@ -65,7 +64,6 @@
 #include "salut-si-bytestream-manager.h"
 #include "salut-contact-manager.h"
 #include "salut-tubes-channel.h"
-#include "salut-xmpp-connection-manager.h"
 
 static void tube_iface_init (gpointer g_iface, gpointer iface_data);
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
@@ -141,7 +139,6 @@ enum
   PROP_ADDRESS,
   PROP_ACCESS_CONTROL,
   PROP_ACCESS_CONTROL_PARAM,
-  PROP_XMPP_CONNECTION_MANAGER,
   PROP_PORT,
   PROP_IQ_REQ,
   PROP_CHANNEL_DESTROYED,
@@ -165,7 +162,6 @@ struct _SalutTubeStreamPrivate
   TpHandle self_handle;
   guint id;
   guint port;
-  GibberXmppConnection *xmpp_connection;
   WockyStanza *iq_req;
   gchar *object_path;
 
@@ -216,10 +212,6 @@ struct _SalutTubeStreamPrivate
 
   gboolean closed;
 
-  /* we need to send an iq stanza to close the tube on 1-1 tube */
-  GibberIqHelper *iq_helper;
-  SalutXmppConnectionManager *xmpp_connection_manager;
-
   gboolean offer_needed;
 
   gboolean dispose_has_run;
@@ -230,16 +222,6 @@ struct _SalutTubeStreamPrivate
 
 static void data_received_cb (GibberBytestreamIface *ibb, TpHandle sender,
     GString *data, gpointer user_data);
-
-static void xmpp_connection_manager_new_connection_cb (
-    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
-    SalutContact *new_contact, gpointer user_data);
-
-static void xmpp_connection_manager_connection_closed_cb (
-    SalutXmppConnectionManager *mgr, GibberXmppConnection *conn,
-    SalutContact *old_contact, gpointer user_data);
-
-static void ensure_iq_helper (SalutTubeStream *tube);
 
 static void salut_tube_stream_add_bytestream (SalutTubeIface *tube,
     GibberBytestreamIface *bytestream);
@@ -593,6 +575,8 @@ start_stream_initiation (SalutTubeStream *self,
     }
   else
     {
+      wocky_stanza_set_to_contact (msg, WOCKY_CONTACT (contact));
+
       result = salut_si_bytestream_manager_negotiate_stream (
         si_bytestream_mgr,
         contact,
@@ -1073,18 +1057,6 @@ salut_tube_stream_dispose (GObject *object)
       priv->contact_listener = NULL;
     }
 
-  if (priv->iq_helper != NULL)
-    {
-      g_object_unref (priv->iq_helper);
-      priv->iq_helper = NULL;
-    }
-
-  if (priv->xmpp_connection_manager != NULL)
-    {
-      g_object_unref (priv->xmpp_connection_manager);
-      priv->xmpp_connection_manager = NULL;
-    }
-
   priv->dispose_has_run = TRUE;
 
   if (G_OBJECT_CLASS (salut_tube_stream_parent_class)->dispose)
@@ -1197,9 +1169,6 @@ salut_tube_stream_get_property (GObject *object,
         break;
       case PROP_ACCESS_CONTROL_PARAM:
         g_value_set_pointer (value, priv->access_control_param);
-        break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        g_value_set_object (value, priv->xmpp_connection_manager);
         break;
       case PROP_PORT:
         g_value_set_uint (value, priv->port);
@@ -1360,12 +1329,6 @@ salut_tube_stream_set_property (GObject *object,
                 g_value_get_pointer (value));
           }
         break;
-      case PROP_XMPP_CONNECTION_MANAGER:
-        priv->xmpp_connection_manager = g_value_get_object (value);
-        /* xmpp_connection_manager is set only for 1-1 tubes */
-        if (priv->xmpp_connection_manager != NULL)
-          g_object_ref (priv->xmpp_connection_manager);
-        break;
       case PROP_PORT:
         priv->port = g_value_get_uint (value);
         break;
@@ -1378,81 +1341,6 @@ salut_tube_stream_set_property (GObject *object,
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
     }
-}
-
-static void
-xmpp_connection_manager_connection_closed_cb (SalutXmppConnectionManager *mgr,
-                                              GibberXmppConnection *conn,
-                                              SalutContact *old_contact,
-                                              gpointer user_data)
-{
-  SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  SalutContactManager *contact_mgr;
-  SalutContact *contact;
-
-  g_object_get (priv->conn, "contact-manager", &contact_mgr, NULL);
-  g_assert (contact_mgr != NULL);
-
-  contact = salut_contact_manager_get_contact (contact_mgr,
-      priv->handle);
-
-  if (contact != old_contact)
-    {
-      /* This connection is not for this tube */
-      g_object_unref (contact);
-      g_object_unref (contact_mgr);
-      return;
-    }
-
-  g_assert (priv->xmpp_connection == conn);
-  priv->xmpp_connection = NULL;
-
-  g_signal_handlers_disconnect_matched (priv->xmpp_connection_manager,
-      G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
-
-  g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-      G_CALLBACK (xmpp_connection_manager_new_connection_cb), self);
-
-  g_object_unref (contact);
-  g_object_unref (contact_mgr);
-}
-
-static void
-xmpp_connection_manager_new_connection_cb (SalutXmppConnectionManager *mgr,
-                                           GibberXmppConnection *conn,
-                                           SalutContact *new_contact,
-                                           gpointer user_data)
-{
-  SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  SalutContactManager *contact_mgr;
-  SalutContact *contact;
-
-  g_object_get (priv->conn, "contact-manager", &contact_mgr, NULL);
-  g_assert (contact_mgr != NULL);
-
-  contact = salut_contact_manager_get_contact (contact_mgr,
-      priv->handle);
-
-  if (contact != new_contact)
-    {
-      /* This new connection is not for this tube */
-      g_object_unref (contact);
-      g_object_unref (contact_mgr);
-      return;
-    }
-
-  DEBUG ("pending connection fully open");
-
-  g_assert (conn != NULL);
-  priv->xmpp_connection = conn;
-
-  g_signal_connect (priv->xmpp_connection_manager, "connection-closed",
-      G_CALLBACK (xmpp_connection_manager_connection_closed_cb), self);
-
-  g_object_unref (contact);
-  g_object_unref (contact_mgr);
 }
 
 static GObject *
@@ -1488,18 +1376,6 @@ salut_tube_stream_constructor (GType type,
   else
     {
       priv->state = TP_TUBE_CHANNEL_STATE_LOCAL_PENDING;
-    }
-
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      g_assert (priv->xmpp_connection_manager != NULL);
-      g_signal_connect (priv->xmpp_connection_manager, "new-connection",
-          G_CALLBACK (xmpp_connection_manager_new_connection_cb), obj);
-      ensure_iq_helper (SALUT_TUBE_STREAM (obj));
-    }
-  else
-    {
-      g_assert (priv->xmpp_connection_manager == NULL);
     }
 
   bus = tp_base_connection_get_dbus_daemon (base_conn);
@@ -1652,19 +1528,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
   g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
-  param_spec = g_param_spec_object (
-      "xmpp-connection-manager",
-      "SalutXmppConnectionManager object",
-      "Salut XMPP Connection manager used for this tube channel in case of "
-          "1-1 tube",
-      SALUT_TYPE_XMPP_CONNECTION_MANAGER,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_XMPP_CONNECTION_MANAGER,
-      param_spec);
-
   param_spec = g_param_spec_uint (
       "port",
       "port on the initiator's CM",
@@ -1805,7 +1668,6 @@ data_received_cb (GibberBytestreamIface *bytestream,
 SalutTubeStream *
 salut_tube_stream_new (SalutConnection *conn,
                        SalutTubesChannel *tubes_channel,
-                       SalutXmppConnectionManager *xmpp_connection_manager,
                        TpHandle handle,
                        TpHandleType handle_type,
                        TpHandle self_handle,
@@ -1827,7 +1689,6 @@ salut_tube_stream_new (SalutConnection *conn,
       "connection", conn,
       "tubes-channel", tubes_channel,
       "object-path", object_path,
-      "xmpp-connection-manager", xmpp_connection_manager,
       "handle", handle,
       "handle-type", handle_type,
       "self-handle", self_handle,
@@ -1843,41 +1704,6 @@ salut_tube_stream_new (SalutConnection *conn,
   g_free (object_path);
 
   return obj;
-}
-
-static void
-ensure_iq_helper (SalutTubeStream *tube)
-{
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (tube);
-
-  g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
-
-  if (priv->iq_helper == NULL)
-    {
-      SalutXmppConnectionManagerRequestConnectionResult result;
-      SalutContactManager *contact_mgr;
-      SalutContact *contact;
-
-      g_object_get (priv->conn, "contact-manager", &contact_mgr, NULL);
-      g_assert (contact_mgr != NULL);
-
-      contact = salut_contact_manager_get_contact (contact_mgr,
-          priv->handle);
-
-      g_assert (priv->xmpp_connection_manager != NULL);
-      result = salut_xmpp_connection_manager_request_connection (
-          priv->xmpp_connection_manager, contact, &priv->xmpp_connection, NULL);
-
-      if (result ==
-          SALUT_XMPP_CONNECTION_MANAGER_REQUEST_CONNECTION_RESULT_DONE)
-        {
-          priv->iq_helper = gibber_iq_helper_new (priv->xmpp_connection);
-          g_assert (priv->iq_helper);
-        }
-
-      g_object_unref (contact);
-      g_object_unref (contact_mgr);
-    }
 }
 
 /**
@@ -1904,17 +1730,12 @@ salut_tube_stream_accept (SalutTubeIface *tube,
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      ensure_iq_helper (self);
+      reply = wocky_stanza_build_iq_result (priv->iq_req, NULL);
+      wocky_porter_send (priv->conn->porter, reply);
 
-      if (priv->xmpp_connection && priv->iq_helper)
-        {
-          reply = gibber_iq_helper_new_result_reply (priv->iq_req);
-          gibber_xmpp_connection_send (priv->xmpp_connection, reply, NULL);
-
-          g_object_unref (priv->iq_req);
-          priv->iq_req = NULL;
-          g_object_unref (reply);
-        }
+      g_object_unref (priv->iq_req);
+      priv->iq_req = NULL;
+      g_object_unref (reply);
     }
 
   priv->state = TP_TUBE_CHANNEL_STATE_OPEN;
@@ -2034,12 +1855,24 @@ salut_tube_stream_listen (SalutTubeIface *tube)
 }
 
 static void
-iq_close_reply_cb (GibberIqHelper *helper,
-                   WockyStanza *sent_stanza,
-                   WockyStanza *reply_stanza,
-                   GObject *object,
+iq_close_reply_cb (GObject *source_object,
+                   GAsyncResult *result,
                    gpointer user_data)
 {
+  WockyPorter *porter = WOCKY_PORTER (source_object);
+  GError *error = NULL;
+  WockyStanza *stanza;
+
+  stanza = wocky_porter_send_iq_finish (porter, result, &error);
+
+  if (stanza == NULL)
+    {
+      DEBUG ("Failed to close IQ: %s", error->message);
+      g_clear_error (&error);
+      return;
+    }
+
+  g_object_unref (stanza);
 }
 
 /**
@@ -2069,37 +1902,35 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
       gchar *tube_id_str;
-      GError *error = NULL;
+      SalutContactManager *contact_mgr;
+      SalutContact *contact;
 
       jid_to = tp_handle_inspect (contact_repo, priv->handle);
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
       tube_id_str = g_strdup_printf ("%u", priv->id);
 
-      stanza = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+      g_object_get (priv->conn, "contact-manager", &contact_mgr, NULL);
+      g_assert (contact_mgr != NULL);
+
+      contact = salut_contact_manager_get_contact (contact_mgr,
+          priv->handle);
+
+      stanza = wocky_stanza_build_to_contact (WOCKY_STANZA_TYPE_IQ,
           WOCKY_STANZA_SUB_TYPE_SET,
-          jid_from, jid_to,
-          WOCKY_NODE_START, "close",
-            WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
-            WOCKY_NODE_ATTRIBUTE, "id", tube_id_str,
-          WOCKY_NODE_END,
-          NULL);
+          jid_from, WOCKY_CONTACT (contact),
+          '(', "close",
+            ':', GIBBER_TELEPATHY_NS_TUBES,
+            '@', "id", tube_id_str,
+          ')', NULL);
 
-      ensure_iq_helper (self);
-
-      if (priv->iq_helper != NULL)
-        {
-          if (!gibber_iq_helper_send_with_reply (priv->iq_helper, stanza,
-              iq_close_reply_cb, G_OBJECT(self), tube, &error))
-            {
-              DEBUG ("ERROR: Failed to send the close iq stanza: '%s'",
-                  error->message);
-              g_error_free (error);
-            }
-        }
+      wocky_porter_send_iq_async (priv->conn->porter, stanza,
+          NULL, iq_close_reply_cb, tube);
 
       g_free (tube_id_str);
 
       g_object_unref (stanza);
+      g_object_unref (contact);
+      g_object_unref (contact_mgr);
     }
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)

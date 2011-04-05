@@ -6,6 +6,8 @@ import BaseHTTPServer
 import urllib
 import httplib
 import urlparse
+import sys
+import os
 
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
@@ -61,7 +63,14 @@ class FileTransferTest(object):
     def announce_contact(self, name=CONTACT_NAME):
         basic_txt = { "txtvers": "1", "status": "avail" }
 
-        self.contact_name = '%s@%s' % (name, get_host_name())
+        suffix = '@%s' % get_host_name()
+        name += ('-' + os.path.splitext(os.path.basename(sys.argv[0]))[0])
+
+        self.contact_name = name + suffix
+        if len(self.contact_name) > 63:
+            allowed = 63 - len(suffix)
+            self.contact_name = name[:allowed] + suffix
+
         self.listener, port = setup_stream_listener(self.q, self.contact_name)
 
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp",
@@ -131,6 +140,10 @@ class ReceiveFileTest(FileTransferTest):
                 self_.send_header('Content-type', self.file.content_type)
                 self_.end_headers()
                 self_.wfile.write(self.file.data)
+
+            def log_message(self, format, *args):
+                if 'CHECK_TWISTED_VERBOSE' in os.environ:
+                    BaseHTTPServer.BaseHTTPRequestHandler.log_message(self, format, *args)
 
         self.httpd = self._get_http_server_class()(('', 0), HTTPHandler)
 
@@ -290,8 +303,8 @@ class SendFileTest(FileTransferTest):
                  cs.FT_DATE,
                  cs.FT_INITIAL_OFFSET,
                  cs.FT_URI],
-             ) in properties.get('RequestableChannelClasses'),\
-                     properties['RequestableChannelClasses']
+             ) in properties.get('RequestableChannelClasses', []),\
+                     properties.get('RequestableChannelClasses')
 
     def request_ft_channel(self, uri=True):
         requests_iface = dbus.Interface(self.conn, cs.CONN_IFACE_REQUESTS)

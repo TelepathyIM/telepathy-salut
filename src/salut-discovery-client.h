@@ -50,9 +50,9 @@ struct _SalutDiscoveryClientClass
 
   gboolean (*start) (SalutDiscoveryClient *clt, GError **error);
   SalutMucManager * (*create_muc_manager) (SalutDiscoveryClient *clt,
-      SalutConnection *connection, SalutXmppConnectionManager *xcm);
+      SalutConnection *connection);
   SalutRoomlistManager * (*create_roomlist_manager) (SalutDiscoveryClient *clt,
-      SalutConnection *connection, SalutXmppConnectionManager *xcm);
+      SalutConnection *connection);
   SalutContactManager * (*create_contact_manager) (SalutDiscoveryClient *clt,
       SalutConnection *connection);
 #ifdef ENABLE_OLPC
@@ -85,12 +85,10 @@ gboolean salut_discovery_client_start (SalutDiscoveryClient *clt,
     GError **error);
 
 SalutMucManager * salut_discovery_client_create_muc_manager (
-    SalutDiscoveryClient *clt, SalutConnection *connection,
-    SalutXmppConnectionManager *xcm);
+    SalutDiscoveryClient *clt, SalutConnection *connection);
 
 SalutRoomlistManager * salut_discovery_client_create_roomlist_manager (
-    SalutDiscoveryClient *clt, SalutConnection *connection,
-    SalutXmppConnectionManager *xcm);
+    SalutDiscoveryClient *clt, SalutConnection *connection);
 
 SalutContactManager * salut_discovery_client_create_contact_manager (
     SalutDiscoveryClient *clt, SalutConnection *connection);
