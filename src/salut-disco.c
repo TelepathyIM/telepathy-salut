@@ -458,7 +458,6 @@ disco_request_sent_cb (GObject *source_object,
   GError *error = NULL;
   WockyStanza *reply;
   WockyNode *reply_node, *query_node = NULL;
-  WockyStanzaSubType sub_type;
   SalutDiscoRequest *request = user_data;
 
   reply = wocky_porter_send_iq_finish (porter, result, &error);
@@ -469,13 +468,8 @@ disco_request_sent_cb (GObject *source_object,
       goto out;
     }
 
-  wocky_stanza_get_type_info (reply, NULL, &sub_type);
-
-  if (sub_type == WOCKY_STANZA_SUB_TYPE_ERROR)
-    {
-      wocky_stanza_extract_errors (reply, NULL, &error, NULL, NULL);
-      goto out;
-    }
+  if (wocky_stanza_extract_errors (reply, NULL, &error, NULL, NULL))
+    goto out;
 
   reply_node = wocky_stanza_get_top_node (reply);
   query_node = wocky_node_get_child_ns (reply_node, "query",
