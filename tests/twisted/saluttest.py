@@ -6,6 +6,7 @@ Infrastructure code for testing Salut
 import os
 import sys
 import time
+import re
 from subprocess import Popen
 
 import servicetest
@@ -45,7 +46,7 @@ def make_connection(bus, event_func, params=None):
         'published-name': 'testsuite',
         'first-name': 'test',
         'last-name': 'suite',
-        'nickname': os.path.basename(sys.argv[0]),
+        'nickname': re.sub('(.*tests/twisted/|\./)', '', sys.argv[0]),
         }
 
     if params:
