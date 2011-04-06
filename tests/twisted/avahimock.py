@@ -24,6 +24,8 @@ AVAHI_PROTO_INET = 0
 AVAHI_PROTO_INET6 = 1
 AVAHI_PROTO_UNSPEC = -1
 
+DOMAIN = 'local'
+
 def emit_signal(object_path, interface, name, destination, signature, *args):
     message = SignalMessage(object_path, interface, name)
     message.append(*args, signature=signature)
@@ -32,10 +34,6 @@ def emit_signal(object_path, interface, name, destination, signature, *args):
         message.set_destination(destination)
 
     dbus.SystemBus().send_message(message)
-
-
-def get_domain():
-    return 'local'
 
 class Model(object):
     def __init__(self):
@@ -271,7 +269,7 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetDomainName(self):
-        return get_domain()
+        return DOMAIN
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='i')
@@ -329,7 +327,7 @@ class EntryGroup(dbus.service.Object):
             host = socket.gethostname()
 
         if not domain:
-            domain = get_domain()
+            domain = DOMAIN
 
         self._model.update_entry(interface, protocol, flags, name, type_, domain,
                                  host, port, txt)
