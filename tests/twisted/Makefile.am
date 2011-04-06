@@ -78,7 +78,11 @@ check-local: check-coding-style check-twisted
 check-twisted:
 	$(MAKE) -C tools
 	rm -f tools/core
-	sh $(srcdir)/tools/with-session-bus.sh --also-for-system --config-file=tools/tmp-session-bus.conf -- $(MAKE) check-TESTS \
+	rm -f tools/salut-testing.log*
+	if ! test -n "$$SALUT_TEST_REAL_AVAHI"; then \
+		also_for_system="--also-for-system"; \
+	fi; \
+	sh $(srcdir)/tools/with-session-bus.sh $$also_for_system --config-file=tools/tmp-session-bus.conf -- $(MAKE) check-TESTS \
 		TESTS="$(TWISTED_TESTS)" \
 		TESTS_ENVIRONMENT="$(TESTS_ENVIRONMENT) $(TEST_PYTHON)"
 	@if test -e tools/core; then\

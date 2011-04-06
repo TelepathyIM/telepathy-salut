@@ -7,6 +7,7 @@ from servicetest import Event, TimeoutError
 import dbus
 import dbus.glib
 import avahi
+import os
 
 def get_server():
   bus = dbus.SystemBus()
@@ -203,6 +204,9 @@ def check_ipv6_enabled(q, announcer):
         return False
 
 def has_another_llxmpp():
+    if 'SALUT_TEST_REAL_AVAHI' not in os.environ:
+        return False
+
     q = servicetest.IteratingEventQueue()
 
     l = AvahiListener(q)

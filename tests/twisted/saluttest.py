@@ -85,7 +85,8 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None,
         make_conn=True):
     colourer = None
 
-    ensure_avahi_is_running()
+    if 'SALUT_TEST_REAL_AVAHI' not in os.environ:
+        ensure_avahi_is_running()
 
     if sys.stdout.isatty() or 'CHECK_FORCE_COLOR' in os.environ:
         colourer = servicetest.install_colourer()
