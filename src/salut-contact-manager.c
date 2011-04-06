@@ -655,6 +655,9 @@ salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle)
 
   g_return_val_if_fail (name, NULL);
 
+  if (mgr->contacts == NULL)
+    return NULL;
+
   DEBUG ("Getting contact for: %s", name);
   ret = g_hash_table_lookup (mgr->contacts, name);
 
