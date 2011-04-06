@@ -35,11 +35,7 @@ def emit_signal(object_path, interface, name, destination, signature, *args):
 
 
 def get_domain():
-    full_domain = socket.getfqdn()
-    if '.' in full_domain:
-        return full_domain.split('.', 1)[1]
-    else:
-        return ''
+    return 'local'
 
 class Model(object):
     def __init__(self):
