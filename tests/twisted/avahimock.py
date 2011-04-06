@@ -92,16 +92,9 @@ class Model(object):
             return self._address_records[hostname]
         else:
             if protocol == AVAHI_PROTO_INET6:
-                for family, _, _, _, address in socket.getaddrinfo(hostname, None):
-                    if family == socket.AF_INET6:
-                        return address[0]
-
-                # HACK: If resolving the given name doesn't give us an ip6
-                # address, return '::1' if it is the local hostname.
-                if hostname == socket.gethostname():
-                    return '::1'
+                return '::1'
             else:
-                return socket.gethostbyname(hostname)
+                return '127.0.0.1'
 
     def update_entry(self, interface, protocol, flags, name, type_, domain,
                      host, port, txt):
