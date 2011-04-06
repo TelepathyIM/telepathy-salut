@@ -79,7 +79,7 @@ class Model(object):
             emit_signal(service_resolver.object_path,
                         AVAHI_IFACE_SERVICE_RESOLVER, 'Failure',
                         service_resolver.client, 's',
-                        'fill with a proper error string')
+                        'no entry could be found')
         else:
             self._emit_found(service_resolver, entry)
 
