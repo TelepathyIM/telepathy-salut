@@ -24,6 +24,12 @@ AVAHI_PROTO_INET = 0
 AVAHI_PROTO_INET6 = 1
 AVAHI_PROTO_UNSPEC = -1
 
+AVAHI_SERVER_INVALID = 0
+AVAHI_SERVER_REGISTERING = 1
+AVAHI_SERVER_RUNNING = 2
+AVAHI_SERVER_COLLISION = 3
+AVAHI_SERVER_FAILURE = 4
+
 DOMAIN = 'local'
 
 def emit_signal(object_path, interface, name, destination, signature, *args):
@@ -274,7 +280,7 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='i')
     def GetState(self):
-        return 2
+        return AVAHI_SERVER_RUNNING
 
     @dbus.service.signal(dbus_interface=AVAHI_IFACE_SERVER, signature='is')
     def StateChanged(self, state, error):
@@ -343,8 +349,8 @@ class EntryGroup(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_ENTRY_GROUP,
                          in_signature='', out_signature='')
     def Commit(self):
-        self._set_state(1)
-        glib.idle_add(lambda: self._set_state(2))
+        self._set_state(AVAHI_SERVER_REGISTERING)
+        glib.idle_add(lambda: self._set_state(AVAHI_SERVER_RUNNING))
 
     def _set_state(self, new_state):
         self._state = new_state
