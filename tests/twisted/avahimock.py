@@ -259,12 +259,12 @@ class Avahi(dbus.service.Object):
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetHostName(self):
-        return socket.gethostname()
+        return 'testsuite'
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
     def GetHostNameFqdn(self):
-        return socket.getfqdn()
+        return self.GetHostName() + '.' + self.GetDomainName()
 
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVER,
                          in_signature='', out_signature='s')
