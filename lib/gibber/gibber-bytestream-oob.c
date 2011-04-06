@@ -305,6 +305,10 @@ connect_to_url (GibberBytestreamOOB *self)
       goto out;
     }
 
+  /* FIXME: this is a hack until we get the normalization of v6-in-v4
+   * addresses in GLib. See bgo#646082 */
+  gibber_normalize_address (&(addr.storage));
+
   addr.in.sin_port = g_htons ((guint16) portnum);
 
   ll_transport = gibber_ll_transport_new ();

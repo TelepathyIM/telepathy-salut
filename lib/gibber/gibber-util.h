@@ -23,10 +23,12 @@
 #include "gibber-sockets.h"
 
 #include <glib.h>
+#include <gio/gio.h>
 
 G_BEGIN_DECLS
 
 void gibber_normalize_address (struct sockaddr_storage *addr);
+GSocketAddress * gibber_normalize_socket_address (GSocketAddress *addr);
 gboolean gibber_strdiff (const gchar *left, const gchar *right);
 
 G_END_DECLS
