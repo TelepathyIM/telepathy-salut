@@ -19,6 +19,7 @@
  */
 
 #include "salut-util.h"
+#include "util.h"
 
 #include <stdlib.h>
 #include <string.h>

@@ -81,6 +81,7 @@ CORE_SOURCES =                                          \
     salut-tubes-channel.c                               \
     salut-util.h                                        \
     salut-util.c                                        \
+    $(top_srcdir)/salut/util.h                          \
     debug.c                                             \
     debug.h                                             \
     protocol.c                                          \

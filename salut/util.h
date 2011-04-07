@@ -1,7 +1,6 @@
 /*
- * salut-util.h - Headers for Salut utility functions
- * Copyright (C) 2006-2007 Collabora Ltd.
- * Copyright (C) 2006 Nokia Corporation
+ * util.h - Headers for Salut utility functions
+ * Copyright (C) 2011 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,18 +17,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef __SALUT_UTIL_H__
-#define __SALUT_UTIL_H__
+#ifndef SALUT_UTIL_H
+#define SALUT_UTIL_H
 
-#include <glib.h>
-#include <glib-object.h>
 #include <wocky/wocky-stanza.h>
+#include <wocky/wocky-session.h>
 
-/* Mapping a XMPP node with a GHashTable */
-GHashTable *salut_wocky_node_extract_properties (WockyNode *node,
-    const gchar *prop);
-void salut_wocky_node_add_children_from_properties (WockyNode *node,
-    GHashTable *properties, const gchar *prop);
-gchar *salut_generate_id (void);
+void salut_send_ll_pep_event (WockySession *session,
+    WockyStanza *stanza);
 
-#endif /* __SALUT_UTIL_H__ */
+#endif /* SALUT_UTIL_H */

@@ -10,6 +10,7 @@ salutinclude_HEADERS = \
     capabilities-set.h \
     caps-channel-manager.h \
     capabilities.h \
-    sidecar.h
+    sidecar.h \
+    util.h
 
 endif
