@@ -516,6 +516,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
     }
 
   address = g_socket_connection_get_local_address (conn, NULL);
+  address = gibber_normalize_socket_address (address);
   addr = g_inet_socket_address_get_address (G_INET_SOCKET_ADDRESS (address));
   family = g_socket_address_get_family (address);
 

@@ -26,6 +26,12 @@ or:
   sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
         -- python avahi/test-aliases.py
 
+To run on the real system avahi instead of the mock avahi, set the
+SALUT_TEST_REAL_AVAHI environment variable to a nonzero value. E.g.
+
+  SALUT_TEST_REAL_AVAHI=1 make -C tests/twisted check-twisted \
+        TWISTED_TESTS=avahi/test-aliases.py
+
 To run with debug information:
 
   make -C tests/twisted check-twisted TWISTED_TESTS=avahi/test-aliases.py \

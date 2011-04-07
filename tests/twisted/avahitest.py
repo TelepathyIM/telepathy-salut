@@ -7,6 +7,7 @@ from servicetest import Event, TimeoutError
 import dbus
 import dbus.glib
 import avahi
+import os
 
 def get_server():
   bus = dbus.SystemBus()
@@ -144,7 +145,7 @@ class AvahiRecordAnnouncer:
         self.entry = entry
 
 class AvahiAnnouncer:
-    def __init__(self, name, type, port, txt, hostname = get_host_name_fqdn(),
+    def __init__(self, name, type, port, txt, hostname=None,
             proto=avahi.PROTO_INET):
         self.name = name
         self.type = type
@@ -160,6 +161,9 @@ class AvahiAnnouncer:
         entry_obj = self.bus.get_object(avahi.DBUS_NAME, entry_path)
         entry = dbus.Interface(entry_obj,
             avahi.DBUS_INTERFACE_ENTRY_GROUP)
+
+        if hostname is None:
+            hostname = get_host_name_fqdn()
 
         entry.AddService(avahi.IF_UNSPEC, self.proto,
             dbus.UInt32(0), name, type, get_domain_name(), hostname,
@@ -200,6 +204,9 @@ def check_ipv6_enabled(q, announcer):
         return False
 
 def has_another_llxmpp():
+    if 'SALUT_TEST_REAL_AVAHI' not in os.environ:
+        return False
+
     q = servicetest.IteratingEventQueue()
 
     l = AvahiListener(q)

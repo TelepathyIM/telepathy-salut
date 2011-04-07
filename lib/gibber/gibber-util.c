@@ -50,6 +50,26 @@ gibber_normalize_address (struct sockaddr_storage *addr)
     }
 }
 
+/* FIXME: this is a hack until we get the normalization of v6-in-v4
+ * addresses in GLib. See bgo#646082 */
+GSocketAddress *
+gibber_normalize_socket_address (GSocketAddress *addr)
+{
+  struct sockaddr_storage ss;
+
+  if (g_socket_address_get_family (addr) != G_SOCKET_FAMILY_IPV6)
+    return addr;
+
+  if (!g_socket_address_to_native (addr, &ss, sizeof (ss), NULL))
+    return addr;
+
+  g_object_unref (addr);
+
+  gibber_normalize_address (&ss);
+
+  return g_socket_address_new_from_native (&ss, sizeof (ss));
+}
+
 /**
  * gibber_strdiff:
  * @left: The first string to compare (may be NULL)
