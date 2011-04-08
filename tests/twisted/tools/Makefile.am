@@ -25,7 +25,8 @@ EXTRA_DIST = \
 	$(service_in_files) \
 	$(conf_in_files) \
 	exec-with-log.sh.in \
-	with-session-bus.sh
+	with-session-bus.sh \
+	run_and_bt.gdb
 
 CLEANFILES = \
     $(BUILT_SOURCES) \

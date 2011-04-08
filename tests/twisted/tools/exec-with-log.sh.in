@@ -18,6 +18,8 @@ elif test -n "$SALUT_TEST_REFDBG"; then
         if test -z "$SALUT_WRAPPER" ; then
                 SALUT_WRAPPER="refdbg"
         fi
+elif test -n "$SALUT_TEST_BACKTRACE"; then
+        SALUT_WRAPPER="gdb -q -x run_and_bt.gdb"
 fi
 
 if ! test -n "$SALUT_TEST_REAL_AVAHI"; then
