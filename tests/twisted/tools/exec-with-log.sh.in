@@ -5,7 +5,7 @@ cd "@abs_top_builddir@/tests/twisted/tools"
 export SALUT_DEBUG=all GIBBER_DEBUG=all WOCKY_DEBUG=all
 export SALUT_PLUGIN_DIR="@abs_top_builddir@/plugins/.libs"
 ulimit -c unlimited
-exec > salut-testing.log 2>&1
+exec >> salut-testing.log 2>&1
 
 if test -n "$SALUT_TEST_VALGRIND"; then
 	export G_DEBUG=gc-friendly

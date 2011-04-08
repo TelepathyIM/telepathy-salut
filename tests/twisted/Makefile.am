@@ -78,7 +78,7 @@ check-local: check-coding-style check-twisted
 check-twisted:
 	$(MAKE) -C tools
 	rm -f tools/core
-	rm -f tools/salut-testing.log*
+	rm -f tools/salut-testing.log
 	if ! test -n "$$SALUT_TEST_REAL_AVAHI"; then \
 		also_for_system="--also-for-system"; \
 	fi; \
