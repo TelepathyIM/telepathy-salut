@@ -4022,3 +4022,11 @@ salut_connection_get_session (SalutConnection *connection)
 
   return connection->session;
 }
+
+const gchar *
+salut_connection_get_name (SalutConnection *connection)
+{
+  g_return_val_if_fail (SALUT_IS_CONNECTION (connection), NULL);
+
+  return connection->name;
+}

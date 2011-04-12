@@ -46,6 +46,8 @@ GType salut_connection_get_type (void);
 
 WockySession * salut_connection_get_session (SalutConnection *connection);
 
+const gchar * salut_connection_get_name (SalutConnection *connection);
+
 G_END_DECLS
 
 #endif
