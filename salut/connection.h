@@ -21,6 +21,8 @@
 #ifndef SALUT_PLUGINS_CONNECTION_H
 #define SALUT_PLUGINS_CONNECTION_H
 
+#include <wocky/wocky-session.h>
+
 G_BEGIN_DECLS
 
 #define SALUT_TYPE_CONNECTION (salut_connection_get_type ())
@@ -41,6 +43,8 @@ typedef struct _SalutConnection SalutConnection;
 typedef struct _SalutConnectionClass SalutConnectionClass;
 
 GType salut_connection_get_type (void);
+
+WockySession * salut_connection_get_session (SalutConnection *connection);
 
 G_END_DECLS
 

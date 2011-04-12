@@ -4014,3 +4014,11 @@ salut_conn_future_iface_init (gpointer g_iface,
   IMPLEMENT(ensure_sidecar);
 #undef IMPLEMENT
 }
+
+WockySession *
+salut_connection_get_session (SalutConnection *connection)
+{
+  g_return_val_if_fail (SALUT_IS_CONNECTION (connection), NULL);
+
+  return connection->session;
+}
