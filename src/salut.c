@@ -9,6 +9,7 @@
 #include "salut-avahi-discovery-client.h"
 #include "debug.h"
 #include "plugin-loader.h"
+#include "symbol-hacks.h"
 
 static TpBaseConnectionManager *
 salut_create_connection_manager (void)
@@ -28,6 +29,8 @@ main (int argc, char **argv)
 
   g_type_init ();
   g_thread_init (NULL);
+
+  salut_symbol_hacks ();
 
   /* treat criticals as, well, critical */
   fatal_mask = g_log_set_always_fatal (G_LOG_FATAL_MASK);

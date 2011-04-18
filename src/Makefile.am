@@ -15,6 +15,8 @@ libexec_PROGRAMS=telepathy-salut
 noinst_PROGRAMS = write-mgr-file
 
 CORE_SOURCES =                                          \
+    symbol-hacks.c \
+    symbol-hacks.h \
     capabilities.c \
     $(top_srcdir)/salut/capabilities.h \
     $(top_srcdir)/salut/capabilities-set.h \
@@ -139,6 +141,8 @@ write_mgr_file_LDADD = libsalut-convenience.la \
                        -ltelepathy-glib
 telepathy_salut_SOURCES = \
     salut.c
+
+telepathy_salut_LDFLAGS = -export-dynamic
 
 # Coding style checks
 check_c_sources = \
