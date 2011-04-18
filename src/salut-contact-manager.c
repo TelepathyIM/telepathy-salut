@@ -30,7 +30,7 @@
 #include "salut-contact-manager.h"
 #include "salut-signals-marshal.h"
 #include "salut-contact.h"
-#include "salut-presence-enumtypes.h"
+#include "salut-enumtypes.h"
 
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>

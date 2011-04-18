@@ -25,7 +25,7 @@
 #include "salut-signals-marshal.h"
 #include "salut-presence.h"
 #include "salut-presence-cache.h"
-#include "salut-presence-enumtypes.h"
+#include "salut-enumtypes.h"
 
 #include <telepathy-glib/util.h>
 
