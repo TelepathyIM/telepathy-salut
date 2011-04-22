@@ -114,7 +114,8 @@ gabble_caps_channel_manager_represent_client (
     const gchar *client_name,
     const GPtrArray *filters,
     const gchar * const *cap_tokens,
-    GabbleCapabilitySet *cap_set)
+    GabbleCapabilitySet *cap_set,
+    GPtrArray *data_forms)
 {
   GabbleCapsChannelManagerIface *iface =
     GABBLE_CAPS_CHANNEL_MANAGER_GET_INTERFACE (caps_manager);
@@ -122,6 +123,6 @@ gabble_caps_channel_manager_represent_client (
 
   if (method != NULL)
     {
-      method (caps_manager, client_name, filters, cap_tokens, cap_set);
+      method (caps_manager, client_name, filters, cap_tokens, cap_set, data_forms);
     }
 }

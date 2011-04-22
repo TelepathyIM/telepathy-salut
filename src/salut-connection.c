@@ -2129,9 +2129,10 @@ salut_connection_update_capabilities (
           /* all channel managers must implement the capability interface */
           g_assert (GABBLE_IS_CAPS_CHANNEL_MANAGER (manager));
 
+          /* TODO: data form pointer array */
           gabble_caps_channel_manager_represent_client (
               GABBLE_CAPS_CHANNEL_MANAGER (manager), client_name, filters,
-              cap_tokens, after);
+              cap_tokens, after, NULL);
         }
     }
 
