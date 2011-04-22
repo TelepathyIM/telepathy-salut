@@ -323,12 +323,25 @@ salut_generate_id (void)
 
 #include "salut-contact.h"
 
+static void
+send_stanza_to_contact (WockyPorter *porter,
+    WockyContact *contact,
+    WockyStanza *stanza)
+{
+  WockyStanza *to_send = wocky_stanza_copy (stanza);
+
+  wocky_stanza_set_to_contact (to_send, contact);
+  wocky_porter_send (porter, to_send);
+  g_object_unref (to_send);
+}
+
 void
 salut_send_ll_pep_event (WockySession *session,
     WockyStanza *stanza)
 {
   WockyContactFactory *contact_factory;
   WockyPorter *porter;
+  WockyLLContact *self_contact;
   GList *contacts, *l;
   WockyNode *message, *event, *items;
   gchar *node;
@@ -355,35 +368,16 @@ salut_send_ll_pep_event (WockySession *session,
       SalutContact *contact = l->data;
 
       if (gabble_capability_set_has (contact->caps, node))
-        {
-          WockyStanza *to_send = wocky_stanza_copy (stanza);
-
-          wocky_stanza_set_to_contact (to_send, WOCKY_CONTACT (contact));
-          wocky_porter_send (porter, to_send);
-          g_object_unref (to_send);
-        }
+        send_stanza_to_contact (porter, WOCKY_CONTACT (contact), stanza);
     }
 
   /* now send to self */
-  {
-    WockyContactFactory *factory;
-    WockyLLContact *contact;
-    WockyStanza *copy;
+  self_contact = wocky_contact_factory_ensure_ll_contact (contact_factory,
+      wocky_porter_get_full_jid (porter));
 
-    factory = wocky_session_get_contact_factory (session);
+  send_stanza_to_contact (porter, WOCKY_CONTACT (self_contact), stanza);
 
-    contact = wocky_contact_factory_ensure_ll_contact (factory,
-        wocky_porter_get_full_jid (porter));
-
-    copy = wocky_stanza_copy (stanza);
-    wocky_stanza_set_to_contact (copy, WOCKY_CONTACT (contact));
-
-    wocky_porter_send (porter, copy);
-
-    g_object_unref (copy);
-    g_object_unref (contact);
-  }
-
+  g_object_unref (self_contact);
   g_list_free (contacts);
   g_free (node);
 }
