@@ -87,6 +87,13 @@ if test -z "$XSLTPROC"; then
   AC_MSG_ERROR([xsltproc (from the libxslt source package) is required])
 fi
 
+dnl check for xmldiff
+XMLDIFF=
+AC_CHECK_PROGS([XMLDIFF], [xmldiff])
+if test -z "$XMLDIFF"; then
+  AC_MSG_ERROR([xmldiff is required for the gibber tests])
+fi
+
 AM_PATH_PYTHON([2.5])
 
 # Check for a python >= 2.5 with twisted to run python tests
