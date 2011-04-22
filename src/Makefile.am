@@ -179,6 +179,7 @@ AM_CFLAGS = \
 	@DBUS_CFLAGS@ \
 	@AVAHI_CFLAGS@ \
 	@TELEPATHY_GLIB_CFLAGS@ \
+	@UUID_CFLAGS@ \
 	$(NULL)
 
 AM_LDFLAGS = \
@@ -190,6 +191,7 @@ AM_LDFLAGS = \
 	@DBUS_LIBS@ \
 	@AVAHI_LIBS@ \
 	@TELEPATHY_GLIB_LIBS@ \
+	@UUID_LIBS@ \
 	$(NULL)
 
 # Teach it how to make libgibber.la
