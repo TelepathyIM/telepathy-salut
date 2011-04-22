@@ -20,8 +20,6 @@
 #ifndef __SALUT_CONTACT_H__
 #define __SALUT_CONTACT_H__
 
-#include "config.h"
-
 #include <netinet/in.h>
 #include <glib-object.h>
 
