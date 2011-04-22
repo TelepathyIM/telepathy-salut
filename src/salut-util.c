@@ -28,6 +28,8 @@
 #include <dbus/dbus-glib.h>
 #include <telepathy-glib/util.h>
 
+#include "salut-contact.h"
+
 #ifdef HAVE_UUID
 # include <uuid.h>
 #endif
@@ -320,8 +322,6 @@ salut_generate_id (void)
       last++, g_random_int ());
 #endif
 }
-
-#include "salut-contact.h"
 
 static void
 send_stanza_to_contact (WockyPorter *porter,
