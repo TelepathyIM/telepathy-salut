@@ -29,8 +29,9 @@
 
 #include <string.h>
 
-#include <wocky/wocky-disco-identity.h>
 #include <wocky/wocky-caps-hash.h>
+#include <wocky/wocky-disco-identity.h>
+#include <wocky/wocky-xep-0115-capabilities.h>
 
 #define DEBUG_FLAG SALUT_DEBUG_PRESENCE
 
@@ -57,6 +58,8 @@ caps_hash_compute_from_self_presence (SalutSelf *self)
   const GabbleCapabilitySet *caps = salut_self_get_caps (self);
   GPtrArray *features = g_ptr_array_new ();
   GPtrArray *identities = wocky_disco_identity_array_new ();
+  const GPtrArray *dataforms =
+    wocky_xep_0115_capabilities_get_data_forms (WOCKY_XEP_0115_CAPABILITIES (self));
   gchar *str;
 
   gabble_capability_set_foreach (caps, add_to_pointer_array_foreach, features);
@@ -66,7 +69,8 @@ caps_hash_compute_from_self_presence (SalutSelf *self)
       wocky_disco_identity_new ("client", "pc",
           NULL, PACKAGE_STRING));
 
-  str = wocky_caps_hash_compute_from_lists (features, identities, NULL);
+  str = wocky_caps_hash_compute_from_lists (features, identities,
+      (GPtrArray *) dataforms);
 
   g_ptr_array_free (features, TRUE);
   wocky_disco_identity_array_free (identities);
