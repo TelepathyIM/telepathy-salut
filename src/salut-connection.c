@@ -45,7 +45,8 @@
 #include <salut/caps-channel-manager.h>
 
 #include <wocky/wocky-meta-porter.h>
-
+#include <wocky/wocky-data-form.h>
+#include <wocky/wocky-xep-0115-capabilities.h>
 
 #include "capabilities.h"
 #include "salut-avahi-discovery-client.h"
@@ -195,6 +196,7 @@ struct _SalutConnectionPrivate
   SalutPresenceId pre_connect_presence;
   gchar *pre_connect_message;
   GabbleCapabilitySet *pre_connect_caps;
+  GPtrArray *pre_connect_data_forms;
 
   /* Contact manager */
   SalutContactManager *contact_manager;
@@ -944,6 +946,12 @@ salut_connection_dispose (GObject *object)
       priv->pre_connect_caps = NULL;
     }
 
+  if (priv->pre_connect_data_forms != NULL)
+    {
+      g_ptr_array_unref (priv->pre_connect_data_forms);
+      priv->pre_connect_data_forms = NULL;
+    }
+
   if (priv->self)
     {
       g_object_unref (priv->self);
@@ -1159,6 +1167,12 @@ discovery_client_running (SalutConnection *self)
     {
       salut_self_take_caps (priv->self, priv->pre_connect_caps);
       priv->pre_connect_caps = NULL;
+    }
+
+  if (priv->pre_connect_data_forms != NULL)
+    {
+      salut_self_take_data_forms (priv->self, priv->pre_connect_data_forms);
+      priv->pre_connect_data_forms = NULL;
     }
 
   g_signal_connect (priv->self, "established",
@@ -2062,6 +2076,48 @@ connection_capabilities_update_cb (SalutPresenceCache *cache,
   _emit_contact_capabilities_changed (conn, handle);
 }
 
+static gboolean
+data_forms_equal (GPtrArray *one,
+    GPtrArray *two)
+{
+  guint i;
+
+  if (one->len != two->len)
+    return FALSE;
+
+  for (i = 0; i < one->len; i++)
+    {
+      WockyDataForm *form = g_ptr_array_index (one, i);
+      WockyDataFormField *type_field;
+      const gchar *type;
+      guint j;
+      gboolean found = FALSE;
+
+      type_field = g_hash_table_lookup (form->fields, "FORM_TYPE");
+      type = g_value_get_string (type_field->default_value);
+
+      for (j = 0; j < two->len; j++)
+        {
+          WockyDataForm *two_form = g_ptr_array_index (two, i);
+          WockyDataFormField *two_type;
+
+          two_type = g_hash_table_lookup (two_form->fields,
+              "FORM_TYPE");
+
+          if (!tp_strdiff (g_value_get_string (two_type->default_value), type))
+            {
+              found = TRUE;
+              break;
+            }
+        }
+
+      if (!found)
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
 /**
  * salut_connection_update_capabilities
  *
@@ -2079,6 +2135,7 @@ salut_connection_update_capabilities (
   TpBaseConnection *base = (TpBaseConnection *) self;
   SalutConnectionPrivate *priv = self->priv;
   GabbleCapabilitySet *before = NULL, *after;
+  GPtrArray *before_forms = NULL, *after_forms;
   TpChannelManagerIter iter;
   TpChannelManager *manager;
   guint i;
@@ -2088,7 +2145,12 @@ salut_connection_update_capabilities (
    * was called. we'll only have created the salut self once we've
    * connected */
   if (priv->self != NULL)
-    before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
+    {
+      before = gabble_capability_set_copy (salut_self_get_caps (priv->self));
+      before_forms = g_ptr_array_ref (
+          (GPtrArray *) wocky_xep_0115_capabilities_get_data_forms (
+              WOCKY_XEP_0115_CAPABILITIES (priv->self)));
+    }
 
   tp_base_connection_channel_manager_iter_init (&iter, base);
 
@@ -2106,6 +2168,7 @@ salut_connection_update_capabilities (
   /* we're going to reset our self caps to the bare caps that we
    * advertise and then add to it after iterating the clients.  */
   after = salut_dup_self_advertised_caps ();
+  after_forms = g_ptr_array_new ();
 
   for (i = 0; i < clients->len; i++)
     {
@@ -2129,14 +2192,32 @@ salut_connection_update_capabilities (
           /* all channel managers must implement the capability interface */
           g_assert (GABBLE_IS_CAPS_CHANNEL_MANAGER (manager));
 
-          /* TODO: data form pointer array */
           gabble_caps_channel_manager_represent_client (
               GABBLE_CAPS_CHANNEL_MANAGER (manager), client_name, filters,
-              cap_tokens, after, NULL);
+              cap_tokens, after, after_forms);
         }
     }
 
-  if (before != NULL && !gabble_capability_set_equals (before, after))
+  if (priv->self != NULL)
+    {
+      /* we've connected and have a SalutSelf, so give the caps to it
+       * right now */
+      salut_self_take_caps (priv->self, after);
+      salut_self_take_data_forms (priv->self, after_forms);
+    }
+  else
+    {
+      if (priv->pre_connect_caps != NULL)
+        gabble_capability_set_free (priv->pre_connect_caps);
+      if (priv->pre_connect_data_forms != NULL)
+        g_ptr_array_unref (priv->pre_connect_data_forms);
+
+      priv->pre_connect_caps = after;
+      priv->pre_connect_data_forms = after_forms;
+    }
+
+  if ((before != NULL && !gabble_capability_set_equals (before, after))
+      || (before_forms != NULL && !data_forms_equal (before_forms, after_forms)))
     {
       if (DEBUGGING)
         {
@@ -2156,23 +2237,12 @@ salut_connection_update_capabilities (
       _emit_contact_capabilities_changed (self, base->self_handle);
     }
 
-  if (priv->self != NULL)
-    {
-      /* we've connected and have a SalutSelf, so give the caps to it
-       * right now */
-      salut_self_take_caps (priv->self, after);
-    }
-  else
-    {
-      if (priv->pre_connect_caps != NULL)
-        gabble_capability_set_free (priv->pre_connect_caps);
-
-      priv->pre_connect_caps = after;
-    }
-
   /* after now belongs to SalutSelf, or priv->pre_connect_caps */
   if (before != NULL)
     gabble_capability_set_free (before);
+
+  if (before_forms != NULL)
+    g_ptr_array_unref (before_forms);
 
   tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
       context);
