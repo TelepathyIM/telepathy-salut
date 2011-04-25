@@ -666,3 +666,25 @@ salut_presence_cache_new (SalutConnection *connection)
                        "connection", connection,
                        NULL);
 }
+
+void
+salut_presence_cache_learn_caps (SalutPresenceCache *self,
+    const gchar *node,
+    const gchar *ver,
+    const GabbleCapabilitySet *caps,
+    const GPtrArray *data_forms)
+{
+  SalutPresenceCachePrivate *priv;
+  CapabilityInfo *info;
+  gchar *tmp;
+
+  priv = SALUT_PRESENCE_CACHE_PRIV (self);
+
+  tmp = g_strdup_printf ("%s#%s", node, ver);
+  DEBUG ("learning %s\n", tmp);
+
+  info = g_slice_new0 (CapabilityInfo);
+  info->caps = gabble_capability_set_copy (caps);
+  info->data_forms = g_ptr_array_ref ((GPtrArray *) data_forms);
+  g_hash_table_insert (priv->capabilities, tmp, info);
+}

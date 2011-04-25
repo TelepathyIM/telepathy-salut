@@ -74,6 +74,10 @@ void salut_presence_cache_process_caps (SalutPresenceCache *self,
     SalutContact *contact, const gchar *hash, const gchar *node,
     const gchar *ver);
 
+void salut_presence_cache_learn_caps (SalutPresenceCache *self,
+    const gchar *node, const gchar *ver,
+    const GabbleCapabilitySet *caps, const GPtrArray *data_forms);
+
 /* Salut-specific pseudo-capability: llXMPP clients without XEP-0115 caps */
 #define QUIRK_NOT_XEP_CAPABILITIES QUIRK_PREFIX "not-xep-capabilities"
 

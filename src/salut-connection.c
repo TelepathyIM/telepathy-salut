@@ -1060,6 +1060,13 @@ announce_self_caps (SalutConnection *self,
   ret = salut_self_set_caps (priv->self, GIBBER_TELEPATHY_NS_CAPS, "sha-1",
         caps_hash, error);
 
+  if (ret)
+    {
+      salut_presence_cache_learn_caps (self->presence_cache,
+          GIBBER_TELEPATHY_NS_CAPS, caps_hash, salut_self_get_caps (priv->self),
+          wocky_xep_0115_capabilities_get_data_forms (WOCKY_XEP_0115_CAPABILITIES (priv->self)));
+    }
+
   g_free (caps_hash);
   return ret;
 }
