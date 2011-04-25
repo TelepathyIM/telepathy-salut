@@ -108,7 +108,7 @@ salut_contact_constructor (GType type,
   self->handle = tp_handle_ensure (contact_repo, self->name, NULL, NULL);
 
   self->caps = gabble_capability_set_new ();
-  self->data_forms = g_ptr_array_new ();
+  self->data_forms = g_ptr_array_new_with_free_func (g_object_unref);
 
   return obj;
 }

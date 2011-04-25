@@ -237,7 +237,8 @@ salut_presence_cache_constructor (GType type, guint n_props,
   self->priv->not_xep_capabilities.caps = gabble_capability_set_new ();
   gabble_capability_set_add (self->priv->not_xep_capabilities.caps,
       QUIRK_NOT_XEP_CAPABILITIES);
-  self->priv->not_xep_capabilities.data_forms = g_ptr_array_new ();
+  self->priv->not_xep_capabilities.data_forms =
+    g_ptr_array_new_with_free_func (g_object_unref);
 
   return obj;
 }
