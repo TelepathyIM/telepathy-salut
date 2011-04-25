@@ -2177,7 +2177,7 @@ salut_connection_update_capabilities (
       const GPtrArray *filters = g_value_get_boxed (va->values + 1);
       const gchar * const * cap_tokens = g_value_get_boxed (va->values + 2);
 
-      if ((cap_tokens == NULL || cap_tokens[0] != NULL) &&
+      if ((cap_tokens == NULL || cap_tokens[0] == NULL) &&
           filters->len == 0)
         {
           /* no capabilities */
