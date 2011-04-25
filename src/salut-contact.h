@@ -74,6 +74,7 @@ struct _SalutContact {
     gchar *node;
     gchar *ver;
     GabbleCapabilitySet *caps;
+    GPtrArray *data_forms; /* of owned WockyDataForm*s */
 
     TpHandle handle;
 #ifdef ENABLE_OLPC

@@ -34,6 +34,7 @@
 #include <gibber/gibber-muc-connection.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
+#include <wocky/wocky-xep-0115-capabilities.h>
 
 #include "salut-capabilities.h"
 #include "salut-contact-manager.h"
@@ -48,7 +49,12 @@
 #define DEBUG_FLAG DEBUG_SELF
 #include <debug.h>
 
-G_DEFINE_TYPE (SalutSelf, salut_self, G_TYPE_OBJECT)
+static void xep_0115_capabilities_iface_init (gpointer, gpointer);
+
+G_DEFINE_TYPE_WITH_CODE (SalutSelf, salut_self, G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE (WOCKY_TYPE_XEP_0115_CAPABILITIES,
+        xep_0115_capabilities_iface_init);
+)
 
 /* properties */
 enum
@@ -95,6 +101,7 @@ struct _SalutSelfPrivate
 #endif
 
   GabbleCapabilitySet *caps;
+  GPtrArray *data_forms;
 
   gboolean dispose_has_run;
 };
@@ -302,6 +309,7 @@ salut_self_constructor (GType type,
 #endif
 
   priv->caps = salut_dup_self_advertised_caps ();
+  priv->data_forms = g_ptr_array_new ();
 
   return obj;
 }
@@ -481,6 +489,13 @@ salut_self_dispose (GObject *object)
       priv->listener = NULL;
     }
 
+  if (priv->data_forms != NULL)
+    {
+      g_ptr_array_unref (priv->data_forms);
+      priv->data_forms = NULL;
+    }
+
+
   if (G_OBJECT_CLASS (salut_self_parent_class)->dispose)
     G_OBJECT_CLASS (salut_self_parent_class)->dispose (object);
 }
@@ -546,6 +561,8 @@ salut_self_set_caps (SalutSelf *self,
                      const gchar *ver,
                      GError **error)
 {
+  gboolean out;
+
   g_free (self->node);
   self->node = g_strdup (node);
   g_free (self->hash);
@@ -553,7 +570,11 @@ salut_self_set_caps (SalutSelf *self,
   g_free (self->ver);
   self->ver = g_strdup (ver);
 
-  return SALUT_SELF_GET_CLASS (self)->set_caps (self, error);
+  out = SALUT_SELF_GET_CLASS (self)->set_caps (self, error);
+
+  g_signal_emit_by_name (self, "capabilities-changed");
+
+  return out;
 }
 
 const gchar *
@@ -1018,6 +1039,14 @@ salut_self_get_caps (SalutSelf *self)
   return self->priv->caps;
 }
 
+static const GPtrArray *
+salut_self_get_data_forms (WockyXep0115Capabilities *caps)
+{
+  SalutSelf *self = SALUT_SELF (caps);
+
+  return self->priv->data_forms;
+}
+
 void
 salut_self_take_caps (SalutSelf *self,
     GabbleCapabilitySet *set)
@@ -1027,4 +1056,24 @@ salut_self_take_caps (SalutSelf *self,
 
   gabble_capability_set_free (self->priv->caps);
   self->priv->caps = set;
+}
+
+void
+salut_self_take_data_forms (SalutSelf *self,
+    GPtrArray *data_forms)
+{
+  g_return_if_fail (SALUT_IS_SELF (self));
+  g_return_if_fail (data_forms != NULL);
+
+  g_ptr_array_unref (self->priv->data_forms);
+  self->priv->data_forms = data_forms;
+}
+
+static void
+xep_0115_capabilities_iface_init (gpointer g_iface,
+    gpointer iface_data)
+{
+  WockyXep0115CapabilitiesInterface *iface = g_iface;
+
+  iface->get_data_forms = salut_self_get_data_forms;
 }

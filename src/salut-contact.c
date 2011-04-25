@@ -29,6 +29,8 @@
 
 #include <telepathy-glib/util.h>
 
+#include <wocky/wocky-xep-0115-capabilities.h>
+
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include <debug.h>
 
@@ -36,7 +38,12 @@
   DEBUG ("Contact %s: " format, contact->name, ##__VA_ARGS__);  \
 } G_STMT_END
 
-G_DEFINE_TYPE(SalutContact, salut_contact, WOCKY_TYPE_LL_CONTACT)
+static void xep_0115_capabilities_iface_init (gpointer, gpointer);
+
+G_DEFINE_TYPE_WITH_CODE (SalutContact, salut_contact, WOCKY_TYPE_LL_CONTACT,
+    G_IMPLEMENT_INTERFACE (WOCKY_TYPE_XEP_0115_CAPABILITIES,
+        xep_0115_capabilities_iface_init);
+)
 
 /* properties */
 enum {
@@ -101,6 +108,7 @@ salut_contact_constructor (GType type,
   self->handle = tp_handle_ensure (contact_repo, self->name, NULL, NULL);
 
   self->caps = gabble_capability_set_new ();
+  self->data_forms = g_ptr_array_new ();
 
   return obj;
 }
@@ -312,6 +320,12 @@ salut_contact_dispose (GObject *object)
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
         ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
       tp_handle_unref (contact_repo, self->handle);
+    }
+
+  if (self->data_forms != NULL)
+    {
+      g_ptr_array_unref (self->data_forms);
+      self->data_forms = NULL;
     }
 
   if (G_OBJECT_CLASS (salut_contact_parent_class)->dispose)
@@ -806,3 +820,20 @@ salut_contact_left_activity (SalutContact *self,
       SALUT_CONTACT_OLPC_ACTIVITIES);
 }
 #endif
+
+static const GPtrArray *
+salut_contact_get_data_forms (WockyXep0115Capabilities *caps)
+{
+  SalutContact *self = SALUT_CONTACT (caps);
+
+  return self->data_forms;
+}
+
+static void
+xep_0115_capabilities_iface_init (gpointer g_iface,
+    gpointer iface_data)
+{
+  WockyXep0115CapabilitiesInterface *iface = g_iface;
+
+  iface->get_data_forms = salut_contact_get_data_forms;
+}

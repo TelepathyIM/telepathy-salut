@@ -162,6 +162,8 @@ const GabbleCapabilitySet *salut_self_get_caps (SalutSelf *self);
 
 void salut_self_take_caps (SalutSelf *self, GabbleCapabilitySet *caps);
 
+void salut_self_take_data_forms (SalutSelf *self, GPtrArray *data_forms);
+
 /* protected methods */
 void salut_self_established (SalutSelf *self);
 
