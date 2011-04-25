@@ -25,6 +25,9 @@
 #include <string.h>
 #include <glib.h>
 
+#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-data-form.h>
+
 #include <gibber/gibber-namespaces.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/intset.h>
@@ -63,6 +66,7 @@ typedef struct _CapabilityInfo CapabilityInfo;
 struct _CapabilityInfo
 {
   GabbleCapabilitySet *caps;
+  GPtrArray *data_forms;
 };
 
 struct _SalutPresenceCachePrivate
@@ -152,6 +156,8 @@ static void
 capability_info_free (CapabilityInfo *info)
 {
   tp_clear_pointer (&info->caps, gabble_capability_set_free);
+  tp_clear_pointer (&info->data_forms, g_ptr_array_unref);
+
   g_slice_free (CapabilityInfo, info);
 }
 
@@ -231,6 +237,7 @@ salut_presence_cache_constructor (GType type, guint n_props,
   self->priv->not_xep_capabilities.caps = gabble_capability_set_new ();
   gabble_capability_set_add (self->priv->not_xep_capabilities.caps,
       QUIRK_NOT_XEP_CAPABILITIES);
+  self->priv->not_xep_capabilities.data_forms = g_ptr_array_new ();
 
   return obj;
 }
@@ -256,6 +263,8 @@ salut_presence_cache_dispose (GObject *object)
 
   tp_clear_pointer (&(priv->not_xep_capabilities.caps),
       gabble_capability_set_free);
+  tp_clear_pointer (&(priv->not_xep_capabilities.data_forms),
+      g_ptr_array_unref);
 
   if (G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose)
     G_OBJECT_CLASS (salut_presence_cache_parent_class)->dispose (object);
@@ -309,13 +318,34 @@ salut_presence_cache_set_property (GObject     *object,
     }
 }
 
+static gboolean
+data_forms_equal (GPtrArray *one,
+    GPtrArray *two)
+{
+  guint i;
+
+  if (one->len != two->len)
+    return FALSE;
+
+  for (i = 0; i < one->len; i++)
+    {
+      gpointer data = g_ptr_array_index (one, i);
+
+      if (!tp_g_ptr_array_contains (two, data))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
 static void
 salut_presence_cache_change_caps (SalutPresenceCache *self,
     SalutContact *contact,
     const gchar *thanked,
-    const GabbleCapabilitySet *caps)
+    CapabilityInfo *info)
 {
-  if (gabble_capability_set_equals (caps, contact->caps))
+  if (gabble_capability_set_equals (info->caps, contact->caps)
+      && data_forms_equal (info->data_forms, contact->data_forms))
     {
       DEBUG ("capabilities of %s did not actually change", contact->name);
       return;
@@ -323,8 +353,31 @@ salut_presence_cache_change_caps (SalutPresenceCache *self,
 
   DEBUG ("setting caps for %s (thanks to %s)", contact->name, thanked);
 
-  salut_contact_set_capabilities (contact, caps);
+  salut_contact_set_capabilities (contact, info->caps, info->data_forms);
   g_signal_emit (self, signals[CAPABILITIES_UPDATE], 0, contact->handle);
+}
+
+static GPtrArray *
+get_data_forms (WockyNode *node)
+{
+  GPtrArray *out = g_ptr_array_new_with_free_func (g_object_unref);
+
+  WockyNodeIter iter;
+  WockyNode *x_node = NULL;
+
+  wocky_node_iter_init (&iter, node, "x", WOCKY_XMPP_NS_DATA);
+  while (wocky_node_iter_next (&iter, &x_node))
+    {
+      WockyDataForm *form  = wocky_data_form_new_from_node (x_node, NULL);
+
+      /* we've already parsed the reply to check the hash matches, so
+       * we can already guarantee these data forms will be parsed
+       * fine */
+      if (G_LIKELY (form != NULL))
+        g_ptr_array_add (out, form);
+   }
+
+  return out;
 }
 
 static void
@@ -441,6 +494,7 @@ _caps_disco_cb (SalutDisco *disco,
               info = g_slice_new0 (CapabilityInfo);
               info->caps = gabble_capability_set_new_from_stanza (
                   query_result);
+              info->data_forms = get_data_forms (query_result);
               g_hash_table_insert (priv->capabilities, g_strdup (node), info);
             }
         }
@@ -480,7 +534,7 @@ _caps_disco_cb (SalutDisco *disco,
           if (!bad_hash)
             {
               salut_presence_cache_change_caps (cache, waiter->contact,
-                  contact->name, info->caps);
+                  contact->name, info);
             }
 
           tmp = i;
@@ -560,7 +614,7 @@ salut_presence_cache_process_caps (SalutPresenceCache *self,
   if (info != NULL)
     {
       salut_presence_cache_change_caps (self, contact, caps_source,
-          info->caps);
+          info);
     }
   else
     {

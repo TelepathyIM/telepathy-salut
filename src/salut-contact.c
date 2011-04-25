@@ -488,10 +488,29 @@ salut_contact_get_avatar (SalutContact *contact,
 
 void
 salut_contact_set_capabilities (SalutContact *contact,
-    const GabbleCapabilitySet *caps)
+    const GabbleCapabilitySet *caps,
+    const GPtrArray *data_forms)
 {
+  guint i;
+  GPtrArray *old;
+
   gabble_capability_set_free (contact->caps);
   contact->caps = gabble_capability_set_copy (caps);
+
+  /* don't unref them now, they might be new so will only have one
+   * ref */
+  old = contact->data_forms;
+  contact->data_forms = g_ptr_array_new_with_free_func (g_object_unref);
+
+  for (i = 0; i < data_forms->len; i++)
+    {
+      GObject *form = g_ptr_array_index (data_forms, i);
+      g_ptr_array_add (contact->data_forms, g_object_ref (form));
+    }
+
+  g_ptr_array_unref (old);
+
+  g_signal_emit_by_name (contact, "capabilities-changed");
 }
 
 static void

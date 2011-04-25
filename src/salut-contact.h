@@ -129,7 +129,8 @@ void salut_contact_get_avatar (SalutContact *contact,
                                gpointer user_data1);
 
 void salut_contact_set_capabilities (SalutContact *contact,
-    const GabbleCapabilitySet *caps);
+    const GabbleCapabilitySet *caps,
+    const GPtrArray *data_forms);
 
 #ifdef ENABLE_OLPC
 typedef void (*SalutContactOLPCActivityFunc)
