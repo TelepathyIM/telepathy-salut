@@ -30,6 +30,8 @@
 #include <dbus/dbus-glib-lowlevel.h>
 #include <telepathy-glib/dbus.h>
 #include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-data-form.h>
+#include <wocky/wocky-xep-0115-capabilities.h>
 
 #define DEBUG_FLAG DEBUG_DISCO
 
@@ -266,6 +268,16 @@ add_feature_foreach (gpointer ns,
   wocky_node_set_attribute (feature_node, "var", ns);
 }
 
+static void
+add_data_form_foreach (gpointer data,
+    gpointer user_data)
+{
+  WockyDataForm *form = data;
+  WockyNode *query = user_data;
+
+  wocky_data_form_add_to_node (form, query);
+}
+
 static gboolean
 caps_req_stanza_callback (WockyPorter *porter,
     WockyStanza *stanza,
@@ -282,6 +294,7 @@ caps_req_stanza_callback (WockyPorter *porter,
   SalutSelf *salut_self;
   WockyStanza *result;
   const GabbleCapabilitySet *caps;
+  const GPtrArray *data_forms;
 
   contact_repo = tp_base_connection_get_handles (base_conn,
       TP_HANDLE_TYPE_CONTACT);
@@ -345,6 +358,11 @@ caps_req_stanza_callback (WockyPorter *porter,
 
   caps = salut_self_get_caps (salut_self);
   gabble_capability_set_foreach (caps, add_feature_foreach, result_query);
+
+  data_forms = wocky_xep_0115_capabilities_get_data_forms (
+      WOCKY_XEP_0115_CAPABILITIES (salut_self));
+  g_ptr_array_foreach ((GPtrArray *) data_forms, add_data_form_foreach,
+      result_query);
 
   DEBUG ("sending disco response");
 
