@@ -2089,6 +2089,11 @@ data_forms_equal (GPtrArray *one,
 {
   guint i;
 
+  /* These data form lists come from the channel managers returning
+   * from represent_client so they'll be created new every time
+   * represent_client is called. As a result, we can't just look at
+   * the object pointers, like how we can in the presence cache. */
+
   if (one->len != two->len)
     return FALSE;
 

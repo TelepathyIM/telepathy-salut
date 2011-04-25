@@ -325,6 +325,11 @@ data_forms_equal (GPtrArray *one,
 {
   guint i;
 
+  /* We don't bother looking into each data form at its FORM_TYPE
+   * because object pointers make sense here -- the arrays are stored
+   * in the CapabilityInfo structs, so a completely equal array could
+   * be handed over. */
+
   if (one->len != two->len)
     return FALSE;
 
