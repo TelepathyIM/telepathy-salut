@@ -365,7 +365,12 @@ salut_send_ll_pep_event (WockySession *session,
 
   for (l = contacts; l != NULL; l = l->next)
     {
-      SalutContact *contact = l->data;
+      SalutContact *contact;
+
+      if (!SALUT_IS_CONTACT (l->data))
+        continue;
+
+      contact = l->data;
 
       if (gabble_capability_set_has (contact->caps, node))
         send_stanza_to_contact (porter, WOCKY_CONTACT (contact), stanza);
