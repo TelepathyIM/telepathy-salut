@@ -24,14 +24,14 @@
 #include <telepathy-glib/base-connection-manager.h>
 #include <telepathy-glib/telepathy-glib.h>
 
-#include "salut-connection.h"
-#include "salut-contact-manager.h"
-#include "salut-ft-manager.h"
-#include "salut-im-manager.h"
-#include "salut-muc-manager.h"
-#include "salut-roomlist-manager.h"
-#include "salut-tubes-manager.h"
-#include "salut-avahi-discovery-client.h"
+#include "connection.h"
+#include "contact-manager.h"
+#include "ft-manager.h"
+#include "im-manager.h"
+#include "muc-manager.h"
+#include "roomlist-manager.h"
+#include "tubes-manager.h"
+#include "avahi-discovery-client.h"
 
 /* there is no appropriate vCard field for this protocol */
 #define VCARD_FIELD_NAME ""

@@ -15,7 +15,7 @@ noinst_PROGRAMS = \
         telepathy-salut-debug
 
 telepathy_salut_debug_SOURCES = \
-    salut-debug.c
+    debug.c
 
 telepathy_salut_debug_LDADD = \
     $(top_builddir)/src/libsalut-convenience.la \

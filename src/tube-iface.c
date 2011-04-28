@@ -21,8 +21,8 @@
 
 #include <telepathy-glib/gtypes.h>
 
-#include "salut-connection.h"
-#include "salut-tubes-channel.h"
+#include "connection.h"
+#include "tubes-channel.h"
 
 #include <glib.h>
 

@@ -44,7 +44,7 @@
 
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
-#include "salut-connection.h"
+#include "connection.h"
 #include "tube-iface.h"
 #include "sha1/sha1-util.h"
 
@@ -432,7 +432,7 @@ create_dbus_server (SalutTubeDBus *self,
       g_free (priv->socket_path);
 
       generate_ascii_string (8, suffix);
-      priv->socket_path = g_strdup_printf ("%s/dbus-salut-%.8s",
+      priv->socket_path = g_strdup_printf ("%s/dbus-%.8s",
           g_get_tmp_dir (), suffix);
       priv->dbus_srv_addr = g_strdup_printf ("unix:path=%s",
           priv->socket_path);

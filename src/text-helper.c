@@ -42,7 +42,7 @@
 
 #include "text-helper.h"
 
-#include "salut-util.h"
+#include "util.h"
 
 static void
 add_text (WockyStanza *stanza, const gchar *text)

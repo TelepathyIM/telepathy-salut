@@ -27,7 +27,7 @@
 #include <dbus/dbus-glib.h>
 
 #include <wocky/wocky-stanza.h>
-#include "salut-util.h"
+#include "util.h"
 
 static WockyStanza *
 create_sample_stanza (void)

@@ -25,8 +25,8 @@
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/interfaces.h>
 
-#include "salut-connection.h"
-#include "salut-tubes-channel.h"
+#include "connection.h"
+#include "tubes-channel.h"
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-bytestream-iface.h>
 

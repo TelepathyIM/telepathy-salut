@@ -1,9 +1,9 @@
 BUILT_SOURCES = \
-    salut-signals-marshal.list \
-    salut-signals-marshal.h \
-    salut-signals-marshal.c \
-    salut-enumtypes.h \
-    salut-enumtypes.c
+    signals-marshal.list \
+    signals-marshal.h \
+    signals-marshal.c \
+    enumtypes.h \
+    enumtypes.c
 
 # correctly clean the generated source files
 CLEANFILES = $(BUILT_SOURCES)
@@ -24,63 +24,63 @@ CORE_SOURCES =                                          \
     $(top_srcdir)/salut/caps-channel-manager.h \
     gabble_namespaces.h \
     namespaces.h \
-    salut-capabilities.c                                \
-    salut-capabilities.h                                \
-    salut-caps-hash.c                                   \
-    salut-caps-hash.h                                   \
-    salut-connection-manager.c                          \
-    salut-connection-manager.h                          \
-    salut-contact-manager.c                             \
-    salut-contact-manager.h                             \
-    salut-disco.c                                       \
-    salut-disco.h                                       \
-    salut-im-manager.c                                  \
-    salut-im-manager.h                                  \
-    salut-im-channel.c                                  \
-    salut-im-channel.h                                  \
-    salut-muc-manager.c                                 \
-    salut-muc-manager.h                                 \
-    salut-roomlist-manager.c                            \
-    salut-roomlist-manager.h                            \
-    salut-muc-channel.c                                 \
-    salut-ft-manager.c                                  \
-    salut-ft-manager.h                                  \
-    salut-file-transfer-channel.c                       \
-    salut-file-transfer-channel.h                       \
-    salut-muc-channel.h                                 \
-    salut-presence-cache.c                              \
-    salut-presence-cache.h                              \
-    salut-tubes-manager.c                               \
-    salut-tubes-manager.h                               \
-    salut-contact.h                                     \
-    salut-contact.c                                     \
-    salut-self.h                                        \
-    salut-self.c                                        \
-    salut-contact-channel.c                             \
-    salut-contact-channel.h                             \
-    salut-connection.c                                  \
-    salut-connection.h                                  \
-    salut-presence.h                                    \
-    salut-contact-channel.h                             \
-    salut-contact-channel.c                             \
-    salut-si-bytestream-manager.h                       \
-    salut-si-bytestream-manager.c                       \
-    text-helper.c                                       \
-    text-helper.h                                       \
-    salut-roomlist-channel.h                            \
-    salut-roomlist-channel.c                            \
-    salut-discovery-client.h                            \
-    salut-discovery-client.c                            \
-    tube-dbus.h                                         \
-    tube-dbus.c                                         \
-    tube-iface.h                                        \
-    tube-iface.c                                        \
-    tube-stream.h                                       \
-    tube-stream.c                                       \
-    salut-tubes-channel.h                               \
-    salut-tubes-channel.c                               \
-    salut-util.h                                        \
-    salut-util.c                                        \
+    capabilities.c                                \
+    capabilities.h                                \
+    caps-hash.c                                   \
+    caps-hash.h                                   \
+    connection-manager.c                          \
+    connection-manager.h                          \
+    contact-manager.c                             \
+    contact-manager.h                             \
+    disco.c                                       \
+    disco.h                                       \
+    im-manager.c                                  \
+    im-manager.h                                  \
+    im-channel.c                                  \
+    im-channel.h                                  \
+    muc-manager.c                                 \
+    muc-manager.h                                 \
+    roomlist-manager.c                            \
+    roomlist-manager.h                            \
+    muc-channel.c                                 \
+    ft-manager.c                                  \
+    ft-manager.h                                  \
+    file-transfer-channel.c                       \
+    file-transfer-channel.h                       \
+    muc-channel.h                                 \
+    presence-cache.c                              \
+    presence-cache.h                              \
+    tubes-manager.c                               \
+    tubes-manager.h                               \
+    contact.h                                     \
+    contact.c                                     \
+    self.h                                        \
+    self.c                                        \
+    contact-channel.c                             \
+    contact-channel.h                             \
+    connection.c                                  \
+    connection.h                                  \
+    presence.h                                    \
+    contact-channel.h                             \
+    contact-channel.c                             \
+    si-bytestream-manager.h                       \
+    si-bytestream-manager.c                       \
+    text-helper.c                                 \
+    text-helper.h                                 \
+    roomlist-channel.h                            \
+    roomlist-channel.c                            \
+    discovery-client.h                            \
+    discovery-client.c                            \
+    tube-dbus.h                                   \
+    tube-dbus.c                                   \
+    tube-iface.h                                  \
+    tube-iface.c                                  \
+    tube-stream.h                                 \
+    tube-stream.c                                 \
+    tubes-channel.h                               \
+    tubes-channel.c                               \
+    util.h                                        \
+    util.c                                        \
     $(top_srcdir)/salut/util.h                          \
     debug.c                                             \
     debug.h                                             \
@@ -95,38 +95,38 @@ CORE_SOURCES =                                          \
     sidecar.c
 
 AVAHI_BACKEND_SOURCES = 				\
-    salut-avahi-discovery-client.h                      \
-    salut-avahi-discovery-client.c                      \
-    salut-avahi-muc-manager.h                           \
-    salut-avahi-muc-manager.c                           \
-    salut-avahi-roomlist-manager.h                      \
-    salut-avahi-roomlist-manager.c                      \
-    salut-avahi-muc-channel.h                           \
-    salut-avahi-muc-channel.c                           \
-    salut-avahi-contact-manager.h                       \
-    salut-avahi-contact-manager.c                       \
-    salut-avahi-contact.h                               \
-    salut-avahi-contact.c                               \
-    salut-avahi-self.h                                  \
-    salut-avahi-self.c
+    avahi-discovery-client.h                      \
+    avahi-discovery-client.c                      \
+    avahi-muc-manager.h                           \
+    avahi-muc-manager.c                           \
+    avahi-roomlist-manager.h                      \
+    avahi-roomlist-manager.c                      \
+    avahi-muc-channel.h                           \
+    avahi-muc-channel.c                           \
+    avahi-contact-manager.h                       \
+    avahi-contact-manager.c                       \
+    avahi-contact.h                               \
+    avahi-contact.c                               \
+    avahi-self.h                                  \
+    avahi-self.c
 
 if ENABLE_OLPC
   CORE_SOURCES +=                                       \
-    salut-olpc-activity.h                               \
-    salut-olpc-activity.c                               \
-    salut-olpc-activity-manager.h                       \
-    salut-olpc-activity-manager.c
+    olpc-activity.h                               \
+    olpc-activity.c                               \
+    olpc-activity-manager.h                       \
+    olpc-activity-manager.c
 
   AVAHI_BACKEND_SOURCES +=                              \
-    salut-avahi-olpc-activity-manager.h                 \
-    salut-avahi-olpc-activity-manager.c                 \
-    salut-avahi-olpc-activity.h                         \
-    salut-avahi-olpc-activity.c
+    avahi-olpc-activity-manager.h                 \
+    avahi-olpc-activity-manager.c                 \
+    avahi-olpc-activity.h                         \
+    avahi-olpc-activity.c
 endif
 
 DUMMY_BACKEND_SOURCES = 				\
-    salut-dummy-discovery-client.h                      \
-    salut-dummy-discovery-client.c
+    dummy-discovery-client.h                      \
+    dummy-discovery-client.c
 
 SHA1_SOURCES =                                          \
     sha1/sha1-util.h                                    \
@@ -200,7 +200,7 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
-salut-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) Makefile.am
+signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) Makefile.am
 	$(AM_V_GEN)( cd $(srcdir) && \
 	sed -n -e 's/.*salut_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
 	$(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) ) \
@@ -211,19 +211,19 @@ salut-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BAC
 		mv $@.tmp $@; \
 	fi
 
-%-signals-marshal.h: %-signals-marshal.list Makefile.am
-	$(AM_V_GEN)glib-genmarshal --header --prefix=$(subst -,_,$*)_signals_marshal $< > $@
+signals-marshal.h: signals-marshal.list Makefile.am
+	$(AM_V_GEN)glib-genmarshal --header --prefix=salut_signals_marshal $< > $@
 
-%-signals-marshal.c: %-signals-marshal.list Makefile.am
-	$(AM_V_GEN){ echo '#include "$*-signals-marshal.h"' && \
-	glib-genmarshal --body --prefix=$(subst -,_,$*)_signals_marshal $< ; \
+signals-marshal.c: signals-marshal.list Makefile.am
+	$(AM_V_GEN){ echo '#include "signals-marshal.h"' && \
+	glib-genmarshal --body --prefix=salut_signals_marshal $< ; \
 	} > $@
 
 # rules for making the glib enum objects
 enumtype_sources = \
-    $(top_srcdir)/src/salut-presence.h
+    $(top_srcdir)/src/presence.h
 
-salut-enumtypes.h: $(enumtype_sources) Makefile.in
+enumtypes.h: $(enumtype_sources) Makefile.in
 	$(AM_V_GEN)glib-mkenums \
 	--fhead "#ifndef __SALUT_ENUM_TYPES_H__\n#define __SALUT_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
 	--fprod "/* enumerations from \"@filename@\" */\n" \
@@ -231,7 +231,7 @@ salut-enumtypes.h: $(enumtype_sources) Makefile.in
 	--ftail "G_END_DECLS\n\n#endif /* __SALUT_ENUM_TYPES_H__ */" \
 	$(enumtype_sources) > $@
 
-salut-enumtypes.c: $(enumtype_sources) Makefile.in
+enumtypes.c: $(enumtype_sources) Makefile.in
 	$(AM_V_GEN)glib-mkenums \
 	--fhead "#include <$*.h>" \
 	--fprod "\n/* enumerations from \"@filename@\" */\n#include \"@filename@\"" \

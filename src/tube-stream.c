@@ -58,12 +58,12 @@
 #define DEBUG_FLAG DEBUG_TUBES
 
 #include "debug.h"
-#include "salut-signals-marshal.h"
-#include "salut-connection.h"
+#include "signals-marshal.h"
+#include "connection.h"
 #include "tube-iface.h"
-#include "salut-si-bytestream-manager.h"
-#include "salut-contact-manager.h"
-#include "salut-tubes-channel.h"
+#include "si-bytestream-manager.h"
+#include "contact-manager.h"
+#include "tubes-channel.h"
 
 static void tube_iface_init (gpointer g_iface, gpointer iface_data);
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
@@ -850,7 +850,7 @@ tube_stream_open (SalutTubeStream *self,
       int ret;
 
       generate_ascii_string (8, suffix);
-      path = g_strdup_printf ("/tmp/stream-salut-%.8s", suffix);
+      path = g_strdup_printf ("/tmp/stream-%.8s", suffix);
 
       DEBUG ("create socket: %s", path);
 

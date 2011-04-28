@@ -25,7 +25,7 @@
 #include <telepathy-glib/channel.h>
 #include <wocky/wocky-stanza.h>
 
-#include "salut-contact.h"
+#include "contact.h"
 
 
 /* Utility functions for the helper user */

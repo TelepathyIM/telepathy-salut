@@ -20,7 +20,7 @@ import ns
 import dbus
 import glib
 
-# keep sync with src/salut-capabilities.c:self_advertised_features
+# keep sync with src/capabilities.c:self_advertised_features
 fixed_features = [ns.SI, ns.IBB, ns.TUBES, ns.IQ_OOB, ns.X_OOB]
 
 def make_result_iq(iq):

@@ -26,8 +26,8 @@
 #include <telepathy-glib/interfaces.h>
 
 #include "extensions/extensions.h"
-#include "salut-connection.h"
-#include "salut-tubes-channel.h"
+#include "connection.h"
+#include "tubes-channel.h"
 
 G_BEGIN_DECLS
 

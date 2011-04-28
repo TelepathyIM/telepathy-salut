@@ -5,8 +5,8 @@
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
 
-#include "salut-connection-manager.h"
-#include "salut-avahi-discovery-client.h"
+#include "connection-manager.h"
+#include "avahi-discovery-client.h"
 #include "debug.h"
 #include "plugin-loader.h"
 #include "symbol-hacks.h"
