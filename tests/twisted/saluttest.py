@@ -66,10 +66,10 @@ def ensure_avahi_is_running():
     def name_owner_changed_cb(name, old_owner, new_owner):
         loop.quit()
 
-    bus.add_signal_receiver(name_owner_changed_cb,
-                            signal_name='NameOwnerChanged',
-                            dbus_interface='org.freedesktop.DBus',
-                            arg0='org.freedesktop.Avahi')
+    noc = bus.add_signal_receiver(name_owner_changed_cb,
+                                  signal_name='NameOwnerChanged',
+                                  dbus_interface='org.freedesktop.DBus',
+                                  arg0='org.freedesktop.Avahi')
 
     # Cannot use D-Bus activation because we have no way to pass to activated
     # clients the address of the system bus and we cannot host the service in
@@ -80,6 +80,8 @@ def ensure_avahi_is_running():
     Popen([avahimock_path])
 
     loop.run()
+
+    noc.remove()
 
 def exec_test_deferred (fun, params, protocol=None, timeout=None,
         make_conn=True):
