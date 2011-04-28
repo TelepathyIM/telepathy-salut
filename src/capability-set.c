@@ -19,7 +19,8 @@
  */
 
 #include "config.h"
-#include "capabilities.h"
+
+#include <salut/capabilities.h>
 
 #include <stdlib.h>
 #include <string.h>

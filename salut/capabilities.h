@@ -23,7 +23,7 @@
 
 #include <glib-object.h>
 
-#include <salut/capabilities-set.h>
+#include <salut/capability-set.h>
 
 /* Pseudo-capabilities for buggy or strange implementations, represented as
  * strings starting with a character not allowed in XML (the ASCII beep :-) */

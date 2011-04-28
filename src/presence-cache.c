@@ -32,6 +32,7 @@
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/intset.h>
 #include <wocky/wocky-caps-hash.h>
+#include <salut/capabilities.h>
 
 #define DEBUG_FLAG DEBUG_PRESENCE
 
