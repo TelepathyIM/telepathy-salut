@@ -1,6 +1,6 @@
 """
 Basic test of SetSelfCapabilities on interface
-org.freedesktop.Telepathy.Connection.Interface.ContactCapabilities.DRAFT
+org.freedesktop.Telepathy.Connection.Interface.ContactCapabilities
 """
 
 from saluttest import exec_test
@@ -14,7 +14,7 @@ from servicetest import make_channel_proxy
 from saluttest import fixed_features
 
 from twisted.words.xish import xpath, domish
-from caps_helper import compute_caps_hash, check_caps
+from caps_helper import compute_caps_hash, check_caps_txt
 from config import PACKAGE_STRING
 import ns
 import constants as cs
@@ -52,8 +52,8 @@ def test(q, bus, conn):
 
     # We support OOB file transfer
     caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
-        fixed_features, [])
-    check_caps(e.txt, caps)
+        fixed_features, {})
+    check_caps_txt(e.txt, caps)
 
     conn_caps_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACT_CAPS)
 
@@ -65,9 +65,9 @@ def test(q, bus, conn):
 
     # Announced capa didn't change
     caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
-        fixed_features, [])
+        fixed_features, {})
 
-    check_caps(e.txt, caps)
+    check_caps_txt(e.txt, caps)
 
 if __name__ == '__main__':
     exec_test(test)

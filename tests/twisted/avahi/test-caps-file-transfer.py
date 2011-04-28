@@ -76,7 +76,7 @@ def receive_presence_and_ask_caps(q, stream, service, contact_name):
         features.append(feature['var'])
 
     # Check if the hash matches the announced capabilities
-    assert ver == compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], features, [])
+    assert ver == compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], features, {})
     assert ns.X_OOB in features
     assert ns.IQ_OOB in features
 
@@ -99,7 +99,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     conn_contacts_iface = dbus.Interface(conn, CONN_IFACE_CONTACTS)
 
     # send presence with FT capa
-    ver = compute_caps_hash([], [ns.IQ_OOB], [])
+    ver = compute_caps_hash([], [ns.IQ_OOB], {})
     txt_record = { "txtvers": "1", "status": "avail",
         "node": client, "ver": ver, "hash": "sha-1"}
     contact_name = "test-caps-ft@" + get_host_name()
@@ -161,7 +161,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     receive_presence_and_ask_caps(q, incoming, service, contact_name)
 
     # capa announced without FT
-    ver = compute_caps_hash([], ["http://telepathy.freedesktop.org/xmpp/pony"], [])
+    ver = compute_caps_hash([], ["http://telepathy.freedesktop.org/xmpp/pony"], {})
     txt_record = { "txtvers": "1", "status": "avail",
         "node": client, "ver": ver, "hash": "sha-1"}
     contact_name = "test-caps-ft2@" + get_host_name()

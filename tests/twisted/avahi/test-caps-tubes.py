@@ -198,7 +198,7 @@ def receive_presence_and_ask_caps(q, stream, service):
         features.append(feature['var'])
 
     # Check if the hash matches the announced capabilities
-    assert ver == compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], features, [])
+    assert ver == compute_caps_hash(['client/pc//%s' % PACKAGE_STRING], features, {})
 
     return (event, caps_str, signaled_caps)
 
@@ -222,7 +222,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     conn_contacts_iface = dbus.Interface(conn, CONN_IFACE_CONTACTS)
 
     # send presence with no tube cap
-    ver = compute_caps_hash([], [], [])
+    ver = compute_caps_hash([], [], {})
     txt_record = { "txtvers": "1", "status": "avail",
         "node": client, "ver": ver, "hash": "sha-1"}
     contact_name = "test-caps-tube@" + get_host_name()
@@ -275,7 +275,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
             caps_via_contacts_iface
 
     # send presence with generic tube capability
-    txt_record['ver'] = compute_caps_hash([], [ns.TUBES], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES], {})
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -304,7 +304,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
     assert event.args[0] == generic_tubes_caps, generic_tubes_caps
 
     # send presence with 1 stream tube cap
-    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/stream#daap'], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/stream#daap'], {})
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -345,7 +345,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
         caps_via_contacts_iface
 
     # send presence with 1 D-Bus tube cap
-    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi'], [])
+    txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi'], {})
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -387,7 +387,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
 
     # send presence with both D-Bus and stream tube caps
     txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi',
-        ns.TUBES + '/stream#daap'], [])
+        ns.TUBES + '/stream#daap'], {})
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -433,7 +433,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
 
     # send presence with 4 tube caps
     txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi',
-        ns.TUBES + '/dbus#com.example.Go', ns.TUBES + '/stream#daap', ns.TUBES + '/stream#http'], [])
+        ns.TUBES + '/dbus#com.example.Go', ns.TUBES + '/stream#daap', ns.TUBES + '/stream#http'], {})
     announcer.update(txt_record)
 
     # Salut looks up our capabilities
@@ -488,7 +488,7 @@ def test_tube_caps_from_contact(q, bus, conn, service,
 
     # send presence with both D-Bus and stream tube caps
     txt_record['ver'] = compute_caps_hash([], [ns.TUBES + '/dbus#com.example.Xiangqi',
-         ns.TUBES + '/stream#daap'], [])
+         ns.TUBES + '/stream#daap'], {})
     announcer.update(txt_record)
 
     # Salut does not look up our capabilities because of the cache
@@ -772,7 +772,7 @@ def test(q, bus, conn):
     old_ver = ver
 
     caps = compute_caps_hash(['client/pc//%s' % PACKAGE_STRING],
-        fixed_features, [])
+        fixed_features, {})
     check_caps(e.txt, caps)
 
     client = 'http://telepathy.freedesktop.org/fake-client'
