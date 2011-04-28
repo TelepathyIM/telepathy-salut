@@ -7,9 +7,9 @@ salutinclude_HEADERS = \
     connection.h \
     plugin.h \
     protocol.h \
-    capabilities-set.h \
     caps-channel-manager.h \
     capabilities.h \
+    capability-set.h \
     sidecar.h \
     util.h
 

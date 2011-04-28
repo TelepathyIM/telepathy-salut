@@ -28,7 +28,7 @@
 
 #include <wocky/wocky-stanza.h>
 
-#include <salut/capabilities-set.h>
+#include <salut/capability-set.h>
 
 #include "salut-connection.h"
 #include "salut-presence.h"

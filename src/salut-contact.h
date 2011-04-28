@@ -25,7 +25,7 @@
 
 #include <telepathy-glib/handle-repo.h>
 
-#include <salut/capabilities-set.h>
+#include <salut/capability-set.h>
 #include "salut-presence.h"
 #include "salut-connection.h"
 #ifdef ENABLE_OLPC
