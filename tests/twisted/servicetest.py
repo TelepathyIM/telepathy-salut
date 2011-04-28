@@ -21,6 +21,25 @@ import constants as cs
 tp_name_prefix = 'org.freedesktop.Telepathy'
 tp_path_prefix = '/org/freedesktop/Telepathy'
 
+class DictionarySupersetOf (object):
+    """Utility class for expecting "a dictionary with at least these keys"."""
+    def __init__(self, dictionary):
+        self._dictionary = dictionary
+    def __repr__(self):
+        return "DictionarySupersetOf(%s)" % self._dictionary
+    def __eq__(self, other):
+        """would like to just do:
+        return set(other.items()).issuperset(self._dictionary.items())
+        but it turns out that this doesn't work if you have another dict
+        nested in the values of your dicts"""
+        try:
+            for k,v in self._dictionary.items():
+                if k not in other or other[k] != v:
+                    return False
+            return True
+        except TypeError: # other is not iterable
+            return False
+
 class Event:
     def __init__(self, type, **kw):
         self.__dict__.update(kw)
@@ -79,6 +98,14 @@ class EventPattern:
 class TimeoutError(Exception):
     pass
 
+class ForbiddenEventOccurred(Exception):
+    def __init__(self, event):
+        Exception.__init__(self)
+        self.event = event
+
+    def __str__(self):
+        return '\n' + '\n'.join(format_event(self.event))
+
 class BaseEventQueue:
     """Abstract event queue base class.
 
@@ -127,10 +154,7 @@ class BaseEventQueue:
     def _check_forbidden(self, event):
         for e in self.forbidden_events:
             if e.match(event):
-                print "forbidden event occurred:"
-                for x in format_event(event):
-                    print x
-                assert False
+                raise ForbiddenEventOccurred(event)
 
     def expect(self, type, **kw):
         """
@@ -395,8 +419,8 @@ def sync_dbus(bus, q, conn):
     assert conn.object.bus_name.startswith(':')
     root_object = bus.get_object(conn.object.bus_name, '/')
     call_async(
-        q, dbus.Interface(root_object, 'org.freedesktop.DBus.Peer'), 'Ping')
-    q.expect('dbus-return', method='Ping')
+        q, dbus.Interface(root_object, 'org.freedesktop.Telepathy.Tests'), 'DummySyncDBus')
+    q.expect('dbus-error', method='DummySyncDBus')
 
 class ProxyWrapper:
     def __init__(self, object, default, others):
@@ -432,6 +456,7 @@ def wrap_connection(conn):
          ('MailNotification', cs.CONN_IFACE_MAIL_NOTIFICATION),
          ('ContactList', cs.CONN_IFACE_CONTACT_LIST),
          ('ContactGroups', cs.CONN_IFACE_CONTACT_GROUPS),
+         ('PowerSaving', cs.CONN_IFACE_POWER_SAVING),
         ]))
 
 def wrap_channel(chan, type_, extra=None):
@@ -456,22 +481,6 @@ def make_connection(bus, event_func, name, proto, params):
     connection_name, connection_path = cm_iface.RequestConnection(
         proto, params)
     conn = wrap_connection(bus.get_object(connection_name, connection_path))
-
-    bus.add_signal_receiver(
-        lambda *args, **kw:
-            event_func(
-                Event('dbus-signal',
-                    path=unwrap(kw['path']),
-                    signal=kw['member'], args=map(unwrap, args),
-                    interface=kw['interface'])),
-        None,       # signal name
-        None,       # interface
-        cm._named_service,
-        path_keyword='path',
-        member_keyword='member',
-        interface_keyword='interface',
-        byte_arrays=True
-        )
 
     return conn
 
@@ -582,6 +591,12 @@ def assertFlagsUnset(flags, value):
         raise AssertionError(
             "expected none of flags %u, but %u are set in %u" % (
             flags, masked, value))
+
+def assertDBusError(name, error):
+    if error.get_dbus_name() != name:
+        raise AssertionError(
+            "expected DBus error named:\n  %s\ngot:\n  %s\n(with message: %s)"
+            % (name, error.get_dbus_name(), error.message))
 
 def install_colourer():
     def red(s):

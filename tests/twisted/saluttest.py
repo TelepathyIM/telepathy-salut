@@ -10,7 +10,7 @@ import re
 from subprocess import Popen
 
 import servicetest
-from servicetest import call_async, EventPattern
+from servicetest import call_async, EventPattern, Event, unwrap
 from twisted.internet import reactor
 import constants as cs
 from twisted.words.protocols.jabber.client import IQ
@@ -111,6 +111,23 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None,
             os._exit(1)
     else:
         conn = None
+
+    def signal_receiver(*args, **kw):
+        queue.append(Event('dbus-signal',
+                           path=unwrap(kw['path']),
+                           signal=kw['member'], args=map(unwrap, args),
+                           interface=kw['interface']))
+
+    bus.add_signal_receiver(
+        signal_receiver,
+        None,       # signal name
+        None,       # interface
+        None,
+        path_keyword='path',
+        member_keyword='member',
+        interface_keyword='interface',
+        byte_arrays=True
+        )
 
     error = None
 
