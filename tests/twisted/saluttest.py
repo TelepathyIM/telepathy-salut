@@ -14,6 +14,7 @@ from servicetest import call_async, EventPattern
 from twisted.internet import reactor
 import constants as cs
 from twisted.words.protocols.jabber.client import IQ
+from twisted.words.xish import domish, xpath
 import ns
 
 import dbus
@@ -208,3 +209,106 @@ def wait_for_contact_in_publish(q, bus, conn, contact_name):
                 handle = h
 
     return handle
+
+def _elem_add(elem, *children):
+    for child in children:
+        if isinstance(child, domish.Element):
+            elem.addChild(child)
+        elif isinstance(child, unicode):
+            elem.addContent(child)
+        else:
+            raise ValueError(
+                'invalid child object %r (must be element or unicode)', child)
+
+def elem(a, b=None, attrs={}, **kw):
+    r"""
+    >>> elem('foo')().toXml()
+    u'<foo/>'
+    >>> elem('foo', x='1')().toXml()
+    u"<foo x='1'/>"
+    >>> elem('foo', x='1')(u'hello').toXml()
+    u"<foo x='1'>hello</foo>"
+    >>> elem('foo', x='1')(u'hello',
+    ...         elem('http://foo.org', 'bar', y='2')(u'bye')).toXml()
+    u"<foo x='1'>hello<bar xmlns='http://foo.org' y='2'>bye</bar></foo>"
+    >>> elem('foo', attrs={'xmlns:bar': 'urn:bar', 'bar:cake': 'yum'})(
+    ...   elem('bar:e')(u'i')
+    ... ).toXml()
+    u"<foo xmlns:bar='urn:bar' bar:cake='yum'><bar:e>i</bar:e></foo>"
+    """
+
+    class _elem(domish.Element):
+        def __call__(self, *children):
+            _elem_add(self, *children)
+            return self
+
+    if b is not None:
+        elem = _elem((a, b))
+    else:
+        elem = _elem((None, a))
+
+    # Can't just update kw into attrs, because that *modifies the parameter's
+    # default*. Thanks python.
+    allattrs = {}
+    allattrs.update(kw)
+    allattrs.update(attrs)
+
+    # First, let's pull namespaces out
+    realattrs = {}
+    for k, v in allattrs.iteritems():
+        if k.startswith('xmlns:'):
+            abbr = k[len('xmlns:'):]
+            elem.localPrefixes[abbr] = v
+        else:
+            realattrs[k] = v
+
+    for k, v in realattrs.iteritems():
+        if k == 'from_':
+            elem['from'] = v
+        else:
+            elem[k] = v
+
+    return elem
+
+def elem_iq(server, type, **kw):
+    class _iq(IQ):
+        def __call__(self, *children):
+            _elem_add(self, *children)
+            return self
+
+    iq = _iq(server, type)
+
+    for k, v in kw.iteritems():
+        if k == 'from_':
+            iq['from'] = v
+        else:
+            iq[k] = v
+
+    return iq
+
+def make_presence(_from, to, type=None, show=None,
+        status=None, caps=None, photo=None):
+    presence = domish.Element((None, 'presence'))
+    presence['from'] = _from
+    presence['to'] = to
+
+    if type is not None:
+        presence['type'] = type
+
+    if show is not None:
+        presence.addElement('show', content=show)
+
+    if status is not None:
+        presence.addElement('status', content=status)
+
+    if caps is not None:
+        cel = presence.addElement(('http://jabber.org/protocol/caps', 'c'))
+        for key,value in caps.items():
+            cel[key] = value
+
+    # <x xmlns="vcard-temp:x:update"><photo>4a1...</photo></x>
+    if photo is not None:
+        x = presence.addElement((ns.VCARD_TEMP_UPDATE, 'x'))
+        x.addElement('photo').addContent(photo)
+
+    return presence
