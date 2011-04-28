@@ -18,30 +18,30 @@ To run Twisted tests:
 
 To run an individual Twisted test:
 
-  make -C tests/twisted check-twisted TWISTED_TESTS=avahi/test-aliases.py
+  make -C tests/twisted check-twisted TWISTED_TESTS=avahi/aliases.py
 
 or:
 
   cd tests/twisted
   sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
-        -- python avahi/test-aliases.py
+        -- python avahi/aliases.py
 
 To run on the real system avahi instead of the mock avahi, set the
 SALUT_TEST_REAL_AVAHI environment variable to a nonzero value. E.g.
 
   SALUT_TEST_REAL_AVAHI=1 make -C tests/twisted check-twisted \
-        TWISTED_TESTS=avahi/test-aliases.py
+        TWISTED_TESTS=avahi/aliases.py
 
 To run with debug information:
 
-  make -C tests/twisted check-twisted TWISTED_TESTS=avahi/test-aliases.py \
+  make -C tests/twisted check-twisted TWISTED_TESTS=avahi/aliases.py \
         CHECK_TWISTED_VERBOSE=1
 
 or:
 
   cd tests/twisted
   sh tools/with-session-bus.sh --config-file=tools/tmp-session-bus.conf \
-        -- python avahi/test-aliases.py -v
+        -- python avahi/aliases.py -v
 
 To debug an individual test you can set one of the following env variable:
 

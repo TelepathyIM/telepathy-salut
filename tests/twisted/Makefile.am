@@ -7,54 +7,54 @@ TWISTED_BASIC_TESTS = \
 
 TWISTED_AVAHI_TESTS = \
 	avahi/caps_helper.py \
-	avahi/test-register.py \
-	avahi/test-aliases.py \
-	avahi/test-request-im.py \
-	avahi/test-muc-invite.py \
-	avahi/test-caps-file-transfer.py \
-	avahi/test-close-local-pending-room.py \
-	avahi/tubes/test-disabled-1-1-tubes.py \
-	avahi/file-transfer/test-send-file-and-cancel-immediately.py \
-	avahi/file-transfer/test-send-file-and-disconnect.py \
-	avahi/file-transfer/test-send-file-declined.py \
-	avahi/file-transfer/test-send-file-item-not-found.py \
-	avahi/file-transfer/test-send-file-ipv6.py \
-	avahi/file-transfer/test-send-file-provide-immediately.py \
-	avahi/file-transfer/test-send-file-to-unknown-contact.py \
-	avahi/file-transfer/test-send-file-wait-to-provide.py \
-	avahi/file-transfer/test-receive-and-send-file.py \
-	avahi/file-transfer/test-receive-file.py \
-	avahi/file-transfer/test-receive-file-and-disconnect.py \
-	avahi/file-transfer/test-receive-file-and-sender-disconnect-while-pending.py \
-	avahi/file-transfer/test-receive-file-and-sender-disconnect-while-transfering.py \
-	avahi/file-transfer/test-receive-file-and-xmpp-disconnect.py \
-	avahi/file-transfer/test-receive-file-cancelled-immediately.py \
-	avahi/file-transfer/test-receive-file-decline.py \
-	avahi/file-transfer/test-receive-file-ipv6.py \
-	avahi/file-transfer/test-receive-file-not-found.py \
-	avahi/test-caps-self.py \
-	avahi/test-caps-tubes.py \
-	avahi/test-text-channel.py \
-	avahi/test-ichat-composing.py \
-	avahi/test-ichat-incoming-msg.py \
-	avahi/file-transfer/test-ichat-receive-directory.py \
-	avahi/file-transfer/test-ichat-receive-file.py \
-	avahi/file-transfer/test-ichat-send-file.py \
-	avahi/file-transfer/test-ichat-send-file-declined.py  \
-	avahi/tubes/test-request-invalid-dbus-tube.py \
-	avahi/test-request-muc.py \
-	avahi/tubes/test-request-muc-tubes.py \
-	avahi/test-roomlist.py \
-	avahi/test-set-presence.py \
-	avahi/tubes/test-offer-private-stream-tube.py \
-	avahi/tubes/test-two-muc-stream-tubes.py \
-	avahi/tubes/test-two-private-stream-tubes.py \
-	avahi/tubes/test-tube-close.py \
+	avahi/register.py \
+	avahi/aliases.py \
+	avahi/request-im.py \
+	avahi/muc-invite.py \
+	avahi/caps-file-transfer.py \
+	avahi/close-local-pending-room.py \
+	avahi/tubes/disabled-1-1-tubes.py \
+	avahi/file-transfer/send-file-and-cancel-immediately.py \
+	avahi/file-transfer/send-file-and-disconnect.py \
+	avahi/file-transfer/send-file-declined.py \
+	avahi/file-transfer/send-file-item-not-found.py \
+	avahi/file-transfer/send-file-ipv6.py \
+	avahi/file-transfer/send-file-provide-immediately.py \
+	avahi/file-transfer/send-file-to-unknown-contact.py \
+	avahi/file-transfer/send-file-wait-to-provide.py \
+	avahi/file-transfer/receive-and-send-file.py \
+	avahi/file-transfer/receive-file.py \
+	avahi/file-transfer/receive-file-and-disconnect.py \
+	avahi/file-transfer/receive-file-and-sender-disconnect-while-pending.py \
+	avahi/file-transfer/receive-file-and-sender-disconnect-while-transfering.py \
+	avahi/file-transfer/receive-file-and-xmpp-disconnect.py \
+	avahi/file-transfer/receive-file-cancelled-immediately.py \
+	avahi/file-transfer/receive-file-decline.py \
+	avahi/file-transfer/receive-file-ipv6.py \
+	avahi/file-transfer/receive-file-not-found.py \
+	avahi/caps-self.py \
+	avahi/caps-tubes.py \
+	avahi/text-channel.py \
+	avahi/ichat-composing.py \
+	avahi/ichat-incoming-msg.py \
+	avahi/file-transfer/ichat-receive-directory.py \
+	avahi/file-transfer/ichat-receive-file.py \
+	avahi/file-transfer/ichat-send-file.py \
+	avahi/file-transfer/ichat-send-file-declined.py  \
+	avahi/tubes/request-invalid-dbus-tube.py \
+	avahi/request-muc.py \
+	avahi/tubes/request-muc-tubes.py \
+	avahi/roomlist.py \
+	avahi/set-presence.py \
+	avahi/tubes/offer-private-stream-tube.py \
+	avahi/tubes/two-muc-stream-tubes.py \
+	avahi/tubes/two-private-stream-tubes.py \
+	avahi/tubes/tube-close.py \
 	avahi/tubes/tubes-to-nonexistant-ids.py \
 	avahi/tubes/two-muc-dbus-tubes.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
-	avahi/test-olpc-activity-announcements.py
+	avahi/olpc-activity-announcements.py
 
 TESTS =
 
