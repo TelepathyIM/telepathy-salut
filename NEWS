@@ -1,11 +1,60 @@
 telepathy-salut 0.5.0 (UNRELEASED)
 ==================================
 
+Enhancements:
+
+ * The wocky library used in telepathy-gabble has been added as a
+   submodule and is starting to replace bits of Gibber such As
+   GibberXmppNode → WockyNode, and GibberXmppStanza →
+   WockyStanza. Keep on reading for more. (smcv, jonny)
+
+ * The test suite now has a mock Avahi service, so running the tests
+   no longer uses the system avahi and therefore doesn't pop up
+   contacts on other users' contact lists. You can hit the actual
+   network if you want though, see tests/README. (tomeu, smcv, jonny)
+
+ * Implement ofdT.Protocol objects for exposed protocols. (smcv)
+
+ * Replace the capability channel manager interfaces with the new ones
+   already used in Gabble which make the caps situation a lot more
+   sane. (smcv)
+
+ * Implement ContactCapabilities. (jonny)
+
+ * fd.o#33833: Implement FileTransfer.FileURI (cassidy)
+
+ * Use Wocky's caps hashing code, and so throw out Salut's own code
+   for this. (jonny)
+
+ * Give Salut a plugin API, based on the Gabble one. The API consists
+   of a little bit of Salut, Wocky and tp-glib. Plugins can expose new
+   protocols and can add channel managers. Brill. (jonny)
+
+ * The C tests now use GLib instead of check. (stefw)
+
+ * Salut's XMPP connection manager has been replaced with Wocky's Meta
+   Porter. This is better in many ways. (jonny)
+
+ * Add salut_send_ll_pep_event() function to send a pep message (this
+   is basically the only step needed for link-local PEP
+   support). (jonny)
+
+Fixes:
+
+ * Ensure to reply to disco requests with the same id attribute and
+   other test reliability fixes. (smcv)
+
+ * fd.o#31665: use TpDBusDaemon, not tp_get_bus(). (smcv)
+
 Dependencies:
 
  * xmldiff is now a required dependency otherwise the gibber tests
    fail. It has always been required but it was never checked at
    configure time.
+
+ * GLib ≥ 2.24 is now required.
+
+ * telepathy-glib ≥ 0.13.12 is now required.
 
 telepathy-salut 0.4.0 (2010-09-06)
 ===================================
