@@ -111,6 +111,8 @@ EXTRA_DIST = \
 	saluttest.py \
 	servicetest.py \
         trivialstream.py \
+	avahitest.py \
+	avahimock.py \
         config.py \
 	ns.py \
 	avahi/file-transfer/file_transfer_helper.py \
