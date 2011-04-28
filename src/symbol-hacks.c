@@ -22,7 +22,6 @@
 #include <wocky/wocky-contact-factory.h>
 #include <wocky/wocky-contact.h>
 #include <wocky/wocky-data-form.h>
-#include <wocky/wocky-debug.h>
 #include <wocky/wocky.h>
 #include <wocky/wocky-heartbeat-source.h>
 #include <wocky/wocky-jabber-auth-digest.h>
@@ -71,7 +70,6 @@ static void *hacks[] = {
   wocky_contact_factory_get_type,
   wocky_contact_get_type,
   wocky_data_form_get_type,
-  wocky_debug,
   wocky_init,
   wocky_heartbeat_source_new,
   wocky_jabber_auth_digest_get_type,
