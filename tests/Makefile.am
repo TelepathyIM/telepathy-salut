@@ -40,15 +40,13 @@ AM_CFLAGS = $(ERROR_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @WOCKY_CFLAGS@ \
     -I $(top_srcdir)/lib -I $(top_builddir)/lib \
     -I $(top_srcdir)/src -I $(top_builddir)/src
 
-AM_LDFLAGS = @GLIB_LIBS@ @TELEPATHY_GLIB_LIBS@
+AM_LDFLAGS = \
+    @GLIB_LIBS@ @TELEPATHY_GLIB_LIBS@ @LIBSOUP_LIBS@ @WOCKY_LIBS@ @UUID_LIBS@
 
 check_node_properties_LDADD = \
-    $(top_builddir)/lib/gibber/libgibber.la \
     $(top_builddir)/src/libsalut-convenience.la \
-    $(AM_LDFLAGS)
-
-check_node_properties_CFLAGS = \
-    $(AM_CFLAGS)
+    $(top_builddir)/lib/gibber/libgibber.la \
+    $(top_builddir)/extensions/libsalut-extensions.la
 
 test: ${TEST_PROGS}
 	gtester -k --verbose $(check_PROGRAMS)
