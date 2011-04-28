@@ -17,7 +17,7 @@ noinst_PROGRAMS = write-mgr-file
 CORE_SOURCES =                                          \
     symbol-hacks.c \
     symbol-hacks.h \
-    capabilities.c \
+    capabilities-set.c \
     $(top_srcdir)/salut/capabilities.h \
     $(top_srcdir)/salut/capabilities-set.h \
     caps-channel-manager.c \
