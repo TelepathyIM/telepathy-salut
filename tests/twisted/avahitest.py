@@ -194,7 +194,7 @@ def check_ipv6_enabled():
 
     try:
         s.bind(('::1', 0))
-    except:
+    except socket.error:
         return False
 
     return True
