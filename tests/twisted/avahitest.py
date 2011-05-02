@@ -193,9 +193,7 @@ def check_ipv6_enabled():
     s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 
     try:
-        # just try to bind on a random port, what's the worst that can
-        # happen?
-        s.bind(('::1', 9832))
+        s.bind(('::1', 0))
     except:
         return False
 

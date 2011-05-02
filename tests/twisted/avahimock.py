@@ -11,6 +11,8 @@ import glib
 from dbus.mainloop.glib import DBusGMainLoop
 DBusGMainLoop(set_as_default=True)
 
+from avahitest import check_ipv6_enabled
+
 AVAHI_NAME = 'org.freedesktop.Avahi'
 AVAHI_IFACE_SERVER = 'org.freedesktop.Avahi.Server'
 AVAHI_IFACE_ENTRY_GROUP = 'org.freedesktop.Avahi.EntryGroup'
@@ -174,7 +176,8 @@ class Model(object):
             if entry.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET]:
                 protocols.append(AVAHI_PROTO_INET)
 
-        if service_resolver.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET6]:
+        if check_ipv6_enabled() and \
+                service_resolver.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET6]:
             if entry.protocol in [AVAHI_PROTO_UNSPEC, AVAHI_PROTO_INET6]:
                 protocols.append(AVAHI_PROTO_INET6)
 
