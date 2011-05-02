@@ -8,6 +8,7 @@ import dbus
 import dbus.glib
 import avahi
 import os
+import socket
 
 def get_server():
   bus = dbus.SystemBus()
@@ -188,20 +189,17 @@ class AvahiAnnouncer:
     def stop(self):
         self.entry.Free()
 
-def check_ipv6_enabled(q, announcer):
-    # Avahi doesn't complain if we try to announce an IPv6 service with a
-    # not IPv6 enabled Avahi (http://www.avahi.org/ticket/264) so we try to
-    # resolve our own service to check if it has been actually announced.
-    service = AvahiService(q, announcer.bus, announcer.server,
-        avahi.IF_UNSPEC, announcer.proto, announcer.name,
-        announcer.type, get_domain_name(), avahi.PROTO_INET6, 0)
-    service.resolve()
+def check_ipv6_enabled():
+    s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 
     try:
-        q.expect('service-resolved', service=service)
-        return True
-    except TimeoutError:
+        # just try to bind on a random port, what's the worst that can
+        # happen?
+        s.bind(('::1', 9832))
+    except:
         return False
+
+    return True
 
 def has_another_llxmpp():
     if 'SALUT_TEST_REAL_AVAHI' not in os.environ:

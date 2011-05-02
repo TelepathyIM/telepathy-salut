@@ -25,8 +25,8 @@ class TestReceiveFileIPv6(ReceiveFileTest):
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp", port,
                 basic_txt, proto=avahi.PROTO_INET6)
 
-        if not check_ipv6_enabled(self.q, self.contact_service):
-            print "skip test as IPv6 doesn't seem to be enabled in Avahi"
+        if not check_ipv6_enabled():
+            print "Skipped test as IPv6 doesn't seem to be available"
             return True
 
     def _resolve_salut_presence(self):
