@@ -933,7 +933,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     {
       SalutTubeIface *new_channel;
       GSList *tokens = NULL;
-      gboolean tubes_channel_created = FALSE;
       GHashTable *channels;
 
       if (tubes_channel == NULL)
@@ -942,8 +941,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
               base_conn->self_handle, NULL, FALSE, &error);
           if (tubes_channel == NULL)
             goto error;
-
-          tubes_channel_created = TRUE;
         }
 
       new_channel = salut_tubes_channel_tube_request (tubes_channel,

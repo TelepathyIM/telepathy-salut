@@ -98,28 +98,6 @@ salut_avahi_muc_channel_set_property (GObject *object,
   }
 }
 
-static GObject *
-salut_avahi_muc_channel_constructor (GType type,
-                                     guint n_props,
-                                     GObjectConstructParam *props)
-{
-  GObject *obj;
-  TpHandleRepoIface *contact_repo;
-  TpBaseConnection *base_conn;
-  SalutMucChannel *chan;
-
-  obj = G_OBJECT_CLASS (salut_avahi_muc_channel_parent_class)->
-    constructor (type, n_props, props);
-
-  chan = SALUT_MUC_CHANNEL (obj);
-
-  base_conn = TP_BASE_CONNECTION (chan->connection);
-  contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
-
-  return obj;
-}
-
 static void
 salut_avahi_muc_channel_init (SalutAvahiMucChannel *self)
 {
@@ -280,7 +258,6 @@ salut_avahi_muc_channel_class_init (
 
   object_class->dispose = salut_avahi_muc_channel_dispose;
 
-  object_class->constructor = salut_avahi_muc_channel_constructor;
   object_class->get_property = salut_avahi_muc_channel_get_property;
   object_class->set_property = salut_avahi_muc_channel_set_property;
 

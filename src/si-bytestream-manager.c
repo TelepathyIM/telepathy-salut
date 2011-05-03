@@ -723,7 +723,7 @@ si_request_sent_cb (GObject *source_object,
   WockyStanzaSubType sub_type;
   WockyNode *si, *feature, *x;
   GibberBytestreamIface *bytestream = NULL;
-  const gchar *from, *stream_method, *stream_init_id;
+  const gchar *from, *stream_method;
   GSList *x_children;
   WockyNode *node;
 
@@ -748,8 +748,6 @@ si_request_sent_cb (GObject *source_object,
     }
 
   /* stream accepted */
-  stream_init_id = wocky_node_get_attribute (node, "id");
-
   from = wocky_node_get_attribute (node, "from");
   if (from == NULL)
     {

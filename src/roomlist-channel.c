@@ -608,11 +608,9 @@ salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList *iface,
                                           DBusGMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
-  SalutRoomlistChannelPrivate *priv;
 
   g_assert (SALUT_IS_ROOMLIST_CHANNEL (self));
 
-  priv = SALUT_ROOMLIST_CHANNEL_GET_PRIVATE (self);
   tp_svc_channel_type_room_list_return_from_get_listing_rooms (
       context, FALSE);
 }

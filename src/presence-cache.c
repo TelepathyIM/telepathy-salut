@@ -400,9 +400,7 @@ _caps_disco_cb (SalutDisco *disco,
   DiscoWaiter *waiter_self;
   SalutPresenceCache *cache;
   SalutPresenceCachePrivate *priv;
-  TpHandleRepoIface *contact_repo;
   gboolean bad_hash = FALSE;
-  TpBaseConnection *base_conn;
   CapabilityInfo *info = NULL;
 
   if (query_result == NULL)
@@ -410,9 +408,6 @@ _caps_disco_cb (SalutDisco *disco,
 
   cache = SALUT_PRESENCE_CACHE (user_data);
   priv = SALUT_PRESENCE_CACHE_PRIV (cache);
-  base_conn = TP_BASE_CONNECTION (priv->conn);
-  contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
   if (NULL == node)
     {

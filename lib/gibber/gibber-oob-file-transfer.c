@@ -490,7 +490,6 @@ create_transfer_offer (GibberOobFileTransfer *self,
   WockyNode *node;
   WockyNode *query_node;
   WockyNode *url_node;
-  WockyNode *desc_node;
 
   gchar *filename_escaped;
   gchar *url;
@@ -563,7 +562,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   wocky_node_set_attribute (url_node, "mimeType",
       GIBBER_FILE_TRANSFER (self)->content_type);
 
-  desc_node = wocky_node_add_child_with_content (query_node, "desc",
+  wocky_node_add_child_with_content (query_node, "desc",
       GIBBER_FILE_TRANSFER (self)->description);
 
   size = gibber_file_transfer_get_size (GIBBER_FILE_TRANSFER (self));
@@ -914,7 +913,6 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   WockyNode *node;
   WockyNode *query;
   WockyNode *error_node;
-  WockyNode *error_desc;
   gchar *code_string;
 
   if (self->priv->cancelled)
@@ -946,13 +944,13 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
       case HTTP_STATUS_CODE_NOT_FOUND:
         wocky_node_set_attribute (error_node, "code", code_string);
         wocky_node_set_attribute (error_node, "type", "cancel");
-        error_desc = wocky_node_add_child_ns (error_node,
+        wocky_node_add_child_ns (error_node,
             "item-not-found", GIBBER_XMPP_NS_STANZAS);
         break;
       case HTTP_STATUS_CODE_NOT_ACCEPTABLE:
         wocky_node_set_attribute (error_node, "code", code_string);
         wocky_node_set_attribute (error_node, "type", "modify");
-        error_desc = wocky_node_add_child_ns (error_node,
+        wocky_node_add_child_ns (error_node,
             "not-acceptable", GIBBER_XMPP_NS_STANZAS);
         break;
       default:

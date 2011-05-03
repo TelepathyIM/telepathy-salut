@@ -285,22 +285,15 @@ caps_req_stanza_callback (WockyPorter *porter,
 {
   SalutDisco *self = SALUT_DISCO (user_data);
   SalutDiscoPrivate *priv = self->priv;
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   WockyNode *iq, *result_iq, *query, *result_query;
   const gchar *node;
   const gchar *suffix;
-  TpHandleRepoIface *contact_repo;
-  const gchar *id;
   SalutSelf *salut_self;
   WockyStanza *result;
   const GabbleCapabilitySet *caps;
   const GPtrArray *data_forms;
 
-  contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
-
   iq = wocky_stanza_get_top_node (stanza);
-  id = wocky_node_get_attribute (iq, "id");
   query = wocky_node_get_child_ns (iq, "query", NS_DISCO_INFO);
   g_assert (query != NULL);
 
@@ -539,7 +532,6 @@ salut_disco_request (SalutDisco *self,
 {
   SalutDiscoPrivate *priv = self->priv;
   SalutDiscoRequest *request;
-  TpHandleRepoIface *contact_repo;
   WockyPorter *porter = priv->connection->porter;
   WockyStanza *stanza;
 
@@ -562,9 +554,6 @@ salut_disco_request (SalutDisco *self,
 
   DEBUG ("Creating disco request %p for %s",
            request, request->contact->name);
-
-  contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
 
   stanza = wocky_stanza_build_to_contact (WOCKY_STANZA_TYPE_IQ,
       WOCKY_STANZA_SUB_TYPE_GET,

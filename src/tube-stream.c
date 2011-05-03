@@ -1898,14 +1898,13 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
   if (!closed_remotely && priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       WockyStanza *stanza;
-      const gchar *jid_from, *jid_to;
+      const gchar *jid_from;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
       gchar *tube_id_str;
       SalutContactManager *contact_mgr;
       SalutContact *contact;
 
-      jid_to = tp_handle_inspect (contact_repo, priv->handle);
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
       tube_id_str = g_strdup_printf ("%u", priv->id);
 

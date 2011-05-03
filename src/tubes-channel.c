@@ -1466,7 +1466,6 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
 {
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
-  TpBaseConnection *base;
   guint tube_id;
   SalutTubeIface *tube;
   GError *err = NULL;
@@ -1474,7 +1473,6 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   g_assert (SALUT_IS_TUBES_CHANNEL (self));
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  base = (TpBaseConnection *) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
     && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,
@@ -1838,7 +1836,7 @@ send_channel_iq_tube (gpointer key,
       const char *tube_type_str;
       WockyStanza *stanza;
       WockyNode *top_node;
-      const gchar *jid_from, *jid_to;
+      const gchar *jid_from;
       TpHandleRepoIface *contact_repo;
       gchar *tube_id_str;
       int port;
@@ -1856,7 +1854,6 @@ send_channel_iq_tube (gpointer key,
          (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
-      jid_to = tp_handle_inspect (contact_repo, priv->handle);
 
       switch (type)
         {
@@ -1953,13 +1950,11 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
 {
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (iface);
   SalutTubesChannelPrivate *priv;
-  TpBaseConnection *base;
   guint tube_id;
   SalutTubeIface *tube;
   GError *error = NULL;
 
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  base = (TpBaseConnection *) priv->conn;
 
   if (priv->handle_type == TP_HANDLE_TYPE_ROOM
     && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,

@@ -90,14 +90,12 @@ salut_contact_constructor (GType type,
 {
   GObject *obj;
   SalutContact *self;
-  SalutContactPrivate *priv;
   TpHandleRepoIface *contact_repo;
 
   obj = G_OBJECT_CLASS (salut_contact_parent_class)->
     constructor (type, n_props, props);
 
   self = SALUT_CONTACT (obj);
-  priv = self->priv;
 
   g_assert (self->connection != NULL);
   g_assert (self->name != NULL);
