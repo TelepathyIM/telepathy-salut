@@ -30,20 +30,18 @@
 
 #include "gibber-sockets.h"
 #include "gibber-namespaces.h"
-#include "gibber-xmpp-reader.h"
 #include "gibber-xmpp-writer.h"
 #include "gibber-multicast-transport.h"
 #include "gibber-r-multicast-transport.h"
 #include "gibber-r-multicast-causal-transport.h"
+
+#include <wocky/wocky-xmpp-reader.h>
 
 #define ADDRESS_KEY "address"
 #define PORT_KEY "port"
 
 #define DEBUG_FLAG DEBUG_MUC_CONNECTION
 #include "gibber-debug.h"
-
-static void _reader_received_stanza_cb (GibberXmppReader *reader,
-    WockyStanza *stanza, gpointer user_data);
 
 static void _connection_received_data (GibberTransport *transport,
     GibberBuffer *buffer, gpointer user_data);
@@ -79,7 +77,7 @@ struct _GibberMucConnectionPrivate
   gchar *address;
   gchar *port;
 
-  GibberXmppReader *reader;
+  WockyXmppReader *reader;
   GibberXmppWriter *writer;
 
   GHashTable *parameters;
@@ -88,7 +86,6 @@ struct _GibberMucConnectionPrivate
   GibberRMulticastCausalTransport *rmctransport;
   GibberRMulticastTransport *rmtransport;
 
-  const gchar *current_sender;
   GArray *streams_used;
   guint16 last_stream_allocated;
   gulong rmc_connected_handler;
@@ -114,10 +111,8 @@ gibber_muc_connection_init (GibberMucConnection *obj)
   guint16 stream_id;
 
   /* allocate any data required by the object here */
-  priv->reader = gibber_xmpp_reader_new_no_stream ();
+  priv->reader = wocky_xmpp_reader_new_no_stream ();
   priv->writer = gibber_xmpp_writer_new_no_stream ();
-  g_signal_connect (priv->reader, "received-stanza",
-                   G_CALLBACK (_reader_received_stanza_cb), obj);
 
   priv->streams_used = g_array_sized_new (FALSE, TRUE, sizeof (guint16), 1);
   /* 0 is the "default" stream */
@@ -631,26 +626,13 @@ gibber_muc_connection_get_parameters (GibberMucConnection *connection)
 }
 
 static void
-_reader_received_stanza_cb (GibberXmppReader *reader, WockyStanza *stanza,
-    gpointer user_data)
-{
-  GibberMucConnection *self = GIBBER_MUC_CONNECTION (user_data);
-  GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
-
-  g_assert (priv->current_sender != NULL);
-  g_signal_emit (self, signals[RECEIVED_STANZA], 0,
-      priv->current_sender, stanza);
-}
-
-
-static void
 _connection_received_data (GibberTransport *transport, GibberBuffer *buffer,
     gpointer user_data)
 {
   GibberMucConnection *self = GIBBER_MUC_CONNECTION (user_data);
   GibberMucConnectionPrivate *priv = GIBBER_MUC_CONNECTION_GET_PRIVATE (self);
   GibberRMulticastBuffer *rmbuffer = (GibberRMulticastBuffer *) buffer;
-  gboolean ret;
+  WockyStanza *stanza;
   GError *error = NULL;
 
   g_assert (buffer->length > 0);
@@ -663,19 +645,31 @@ _connection_received_data (GibberTransport *transport, GibberBuffer *buffer,
       return;
     }
 
-  /* Ensure we're not disposed inside while running the reader is busy */
-  g_object_ref (self);
-  priv->current_sender = rmbuffer->sender;
-  ret = gibber_xmpp_reader_push (priv->reader, buffer->data, buffer->length,
-      &error);
-  priv->current_sender = NULL;
+  /* push the data into the reader */
+  wocky_xmpp_reader_push (priv->reader, buffer->data, buffer->length);
 
-  if (!ret)
+  error = wocky_xmpp_reader_get_error (priv->reader);
+
+  if (error != NULL)
     {
+      DEBUG ("reader error: %s", error->message);
       g_signal_emit (self, signals[PARSE_ERROR], 0);
+      g_clear_error (&error);
+
+      wocky_xmpp_reader_reset (priv->reader);
     }
 
-  g_object_unref (self);
+  /* now check if we got a stanza out of it */
+  stanza = wocky_xmpp_reader_pop_stanza (priv->reader);
+
+  if (stanza != NULL)
+    {
+      g_signal_emit (self, signals[RECEIVED_STANZA], 0,
+          rmbuffer->sender, stanza);
+      g_object_unref (stanza);
+
+      wocky_xmpp_reader_reset (priv->reader);
+    }
 }
 
 gboolean
