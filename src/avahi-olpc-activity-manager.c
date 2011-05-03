@@ -142,14 +142,18 @@ browser_found (GaServiceBrowser *browser,
   SalutOlpcActivity *activity;
   gchar *room_name = NULL;
   gchar *contact_name = NULL;
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) mgr->connection, TP_HANDLE_TYPE_ROOM);
+  TpBaseConnection *base_conn = (TpBaseConnection *) mgr->connection;
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_ROOM);
   TpHandle room;
   GError *error = NULL;
   SalutContactManager *contact_manager;
   SalutContact *contact;
 
   if (flags & AVAHI_LOOKUP_RESULT_OUR_OWN)
+    return;
+
+  if (base_conn->status == TP_CONNECTION_STATUS_DISCONNECTED)
     return;
 
   if (!split_activity_name (name, &room_name, &contact_name))
