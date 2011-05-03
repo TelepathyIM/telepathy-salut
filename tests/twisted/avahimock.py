@@ -46,13 +46,15 @@ def emit_signal(object_path, interface, name, destination, signature, *args):
 class Model(object):
     def __init__(self):
         self._service_browsers = []
+        self._service_browser_index = 1
         self._service_resolvers = []
+        self._service_resolver_index = 1
         self._entries = []
         self._address_records = {}
 
     def new_service_browser(self, type_, client):
-        index = len(self._service_browsers) + 1
-        service_browser = ServiceBrowser(client, index, type_)
+        service_browser = ServiceBrowser(client, self._service_browser_index, type_)
+        self._service_browser_index += 1
         self._service_browsers.append(service_browser)
 
         glib.idle_add(self.__browse_idle_cb, service_browser)
@@ -71,9 +73,10 @@ class Model(object):
         return None
 
     def new_service_resolver(self, type_, name, protocol, client):
-        index = len(self._service_resolvers) + 1
         entry = self._find_entry(type_, name)
-        service_resolver = ServiceResolver(index, client, type_, name, protocol)
+        service_resolver = ServiceResolver(self._service_resolver_index,
+                                           client, type_, name, protocol)
+        self._service_resolver_index += 1
         self._service_resolvers.append(service_resolver)
 
         glib.idle_add(self.__entry_found_idle_cb, service_resolver, entry)
@@ -243,6 +246,7 @@ class Avahi(dbus.service.Object):
                                 dbus_interface='org.freedesktop.DBus')
 
         self._entry_groups = []
+        self._entry_group_index = 1
         self._model = Model()
 
     def __name_owner_changed_cb(self, name, old_owner, new_owner):
@@ -286,8 +290,8 @@ class Avahi(dbus.service.Object):
                          in_signature='', out_signature='o',
                          sender_keyword='sender')
     def EntryGroupNew(self, sender):
-        index = len(self._entry_groups) + 1
-        entry_group = EntryGroup(sender, index, self._model)
+        entry_group = EntryGroup(sender, self._entry_group_index, self._model)
+        self._entry_group_index += 1
         self._entry_groups.append(entry_group)
         return entry_group.object_path
 
