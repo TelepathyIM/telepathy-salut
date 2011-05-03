@@ -24,8 +24,6 @@ HANDWRITTEN_SOURCES =             \
   gibber-bytestream-direct.c      \
   gibber-debug.c                  \
   gibber-debug.h                  \
-  gibber-xmpp-writer.c            \
-  gibber-xmpp-writer.h            \
   gibber-transport.c              \
   gibber-transport.h              \
   gibber-fd-transport.c           \
