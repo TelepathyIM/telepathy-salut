@@ -30,12 +30,12 @@
 
 #include "gibber-sockets.h"
 #include "gibber-namespaces.h"
-#include "gibber-xmpp-writer.h"
 #include "gibber-multicast-transport.h"
 #include "gibber-r-multicast-transport.h"
 #include "gibber-r-multicast-causal-transport.h"
 
 #include <wocky/wocky-xmpp-reader.h>
+#include <wocky/wocky-xmpp-writer.h>
 
 #define ADDRESS_KEY "address"
 #define PORT_KEY "port"
@@ -78,7 +78,7 @@ struct _GibberMucConnectionPrivate
   gchar *port;
 
   WockyXmppReader *reader;
-  GibberXmppWriter *writer;
+  WockyXmppWriter *writer;
 
   GHashTable *parameters;
 
@@ -112,7 +112,7 @@ gibber_muc_connection_init (GibberMucConnection *obj)
 
   /* allocate any data required by the object here */
   priv->reader = wocky_xmpp_reader_new_no_stream ();
-  priv->writer = gibber_xmpp_writer_new_no_stream ();
+  priv->writer = wocky_xmpp_writer_new_no_stream ();
 
   priv->streams_used = g_array_sized_new (FALSE, TRUE, sizeof (guint16), 1);
   /* 0 is the "default" stream */
@@ -681,11 +681,8 @@ gibber_muc_connection_send (GibberMucConnection *connection,
   const guint8 *data;
   gsize length;
 
-  if (!gibber_xmpp_writer_write_stanza (priv->writer, stanza,
-      &data, &length, error))
-    {
-      return FALSE;
-    }
+  wocky_xmpp_writer_write_stanza (priv->writer, stanza,
+      &data, &length);
 
   return gibber_transport_send (GIBBER_TRANSPORT (priv->rmtransport),
       data, length, error);
