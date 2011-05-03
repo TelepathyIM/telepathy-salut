@@ -61,7 +61,6 @@ test_r_multicast_transport_io_CFLAGS = \
 # Checks
 
 check_PROGRAMS = \
-	check-gibber-xmpp-reader \
 	check-gibber-r-multicast-causal-transport \
 	check-gibber-r-multicast-packet \
 	check-gibber-r-multicast-sender \
