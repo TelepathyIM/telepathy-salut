@@ -22,7 +22,7 @@ AC_INIT([Telepathy Salut], [salut_version],
 [https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-salut])
 
 AC_CONFIG_MACRO_DIR([m4])
-
+AC_LANG([C])
 AM_INIT_AUTOMAKE([1.9 -Wno-portability tar-ustar])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AM_PROG_LIBTOOL
