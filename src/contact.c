@@ -652,12 +652,13 @@ salut_contact_change_ipv6_addr (SalutContact *self, const gchar *ipv6_addr)
 
 void
 salut_contact_change_current_activity (SalutContact *self,
-  const gchar *current_activity_id, const gchar *current_activity_room)
+    const gchar *current_activity_id,
+    const gchar *current_activity_room)
 {
   TpHandleRepoIface *room_repo;
   TpHandle room_handle = 0;
 
-  if (self->connection != NULL)
+  if (self->connection == NULL)
     return;
 
   room_repo = tp_base_connection_get_handles
