@@ -1360,7 +1360,7 @@ data_received_cb (GibberBytestreamIface *stream,
   sender = tp_handle_lookup (contact_repo, from, NULL, NULL);
   if (sender == 0)
     {
-      DEBUG ("unkown sender: %s", from);
+      DEBUG ("unknown sender: %s", from);
       return;
     }
 
