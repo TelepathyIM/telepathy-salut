@@ -28,9 +28,10 @@
 
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
+#include <wocky/wocky-namespaces.h>
+
 #include "gibber-oob-file-transfer.h"
 #include "gibber-fd-transport.h"
-#include "gibber-namespaces.h"
 #include "gibber-util.h"
 
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
@@ -555,7 +556,7 @@ create_transfer_offer (GibberOobFileTransfer *self,
   node = wocky_stanza_get_top_node (stanza);
 
   query_node = wocky_node_add_child_ns (node, "query",
-      GIBBER_XMPP_NS_IQ_OOB);
+      WOCKY_XMPP_NS_IQ_OOB);
 
   url_node = wocky_node_add_child_with_content (query_node, "url", url);
   wocky_node_set_attribute (url_node, "type", "file");
@@ -933,7 +934,7 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
   node = wocky_stanza_get_top_node (stanza);
 
   query = wocky_node_add_child_ns (node, "query",
-      GIBBER_XMPP_NS_IQ_OOB);
+      WOCKY_XMPP_NS_IQ_OOB);
   wocky_node_add_child_with_content (query, "url", self->priv->url);
 
   error_node = wocky_node_add_child (node, "error");
@@ -945,13 +946,13 @@ gibber_oob_file_transfer_cancel (GibberFileTransfer *ft,
         wocky_node_set_attribute (error_node, "code", code_string);
         wocky_node_set_attribute (error_node, "type", "cancel");
         wocky_node_add_child_ns (error_node,
-            "item-not-found", GIBBER_XMPP_NS_STANZAS);
+            "item-not-found", WOCKY_XMPP_NS_STANZAS);
         break;
       case HTTP_STATUS_CODE_NOT_ACCEPTABLE:
         wocky_node_set_attribute (error_node, "code", code_string);
         wocky_node_set_attribute (error_node, "type", "modify");
         wocky_node_add_child_ns (error_node,
-            "not-acceptable", GIBBER_XMPP_NS_STANZAS);
+            "not-acceptable", WOCKY_XMPP_NS_STANZAS);
         break;
       default:
         g_assert_not_reached ();

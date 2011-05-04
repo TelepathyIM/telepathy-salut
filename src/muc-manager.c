@@ -25,8 +25,9 @@
 
 #include "muc-manager.h"
 
+#include <wocky/wocky-namespaces.h>
+
 #include <gibber/gibber-muc-connection.h>
-#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
 #include <salut/caps-channel-manager.h>
@@ -209,7 +210,7 @@ salut_muc_manager_constructor (GType type,
       WOCKY_PORTER_HANDLER_PRIORITY_NORMAL + 1, /* so we get called before the IM manager */
       invite_stanza_callback, obj,
       '(', "invite",
-        ':', GIBBER_TELEPATHY_NS_CLIQUE,
+        ':', WOCKY_TELEPATHY_NS_CLIQUE,
       ')', NULL);
 
   priv->status_changed_id = g_signal_connect (priv->connection,
@@ -1026,7 +1027,7 @@ invite_stanza_callback (WockyPorter *porter,
   SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   invite = wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza),
-        "invite", GIBBER_TELEPATHY_NS_CLIQUE);
+        "invite", WOCKY_TELEPATHY_NS_CLIQUE);
   g_assert (invite != NULL);
 
   DEBUG("Got an invitation");
@@ -1047,7 +1048,7 @@ invite_stanza_callback (WockyPorter *porter,
     reason = "";
 
   params = gibber_muc_connection_get_required_parameters (
-      GIBBER_TELEPATHY_NS_CLIQUE);
+      WOCKY_TELEPATHY_NS_CLIQUE);
   if (params == NULL)
     {
       DEBUG ("Invalid invitation, (unknown protocol) discarding");
@@ -1084,7 +1085,7 @@ invite_stanza_callback (WockyPorter *porter,
 
   if (chan == NULL)
     {
-      connection = _get_connection (self, GIBBER_TELEPATHY_NS_CLIQUE,
+      connection = _get_connection (self, WOCKY_TELEPATHY_NS_CLIQUE,
           params_hash, NULL);
       if (connection == NULL)
         {

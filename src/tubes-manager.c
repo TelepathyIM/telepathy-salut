@@ -28,7 +28,8 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
-#include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-namespaces.h>
+
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/gtypes.h>
@@ -153,9 +154,9 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
     }
 
   tube_node = wocky_node_get_child_ns (iq, "tube",
-      GIBBER_TELEPATHY_NS_TUBES);
+      WOCKY_TELEPATHY_NS_TUBES);
   close_node = wocky_node_get_child_ns (iq, "close",
-      GIBBER_TELEPATHY_NS_TUBES);
+      WOCKY_TELEPATHY_NS_TUBES);
 
   if (tube_node == NULL && close_node == NULL)
     {
@@ -1150,8 +1151,8 @@ add_generic_tube_caps (GPtrArray *arr)
 #endif
 }
 
-#define STREAM_CAP_PREFIX (GIBBER_TELEPATHY_NS_TUBES "/stream#")
-#define DBUS_CAP_PREFIX (GIBBER_TELEPATHY_NS_TUBES "/dbus#")
+#define STREAM_CAP_PREFIX (WOCKY_TELEPATHY_NS_TUBES "/stream#")
+#define DBUS_CAP_PREFIX (WOCKY_TELEPATHY_NS_TUBES "/dbus#")
 
 typedef struct {
     gboolean supports_tubes;
@@ -1166,7 +1167,7 @@ get_contact_caps_foreach (gpointer data,
   const gchar *ns = data;
   GetContactCapsClosure *closure = user_data;
 
-  if (!g_str_has_prefix (ns, GIBBER_TELEPATHY_NS_TUBES))
+  if (!g_str_has_prefix (ns, WOCKY_TELEPATHY_NS_TUBES))
     return;
 
   closure->supports_tubes = TRUE;

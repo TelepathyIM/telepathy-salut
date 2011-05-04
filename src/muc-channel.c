@@ -33,8 +33,7 @@
 
 #include "muc-channel.h"
 
-#include <gibber/gibber-namespaces.h>
-#include <gibber/gibber-transport.h>
+#include <wocky/wocky-namespaces.h>
 
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -44,6 +43,7 @@
 #include <telepathy-glib/util.h>
 
 #include <gibber/gibber-muc-connection.h>
+#include <gibber/gibber-transport.h>
 
 #include "connection.h"
 #include "contact-manager.h"
@@ -484,7 +484,7 @@ create_invitation (SalutMucChannel *self, SalutContact *contact,
       ')',
       '(', "invite",
         '*', &invite_node,
-        ':', GIBBER_TELEPATHY_NS_CLIQUE,
+        ':', WOCKY_TELEPATHY_NS_CLIQUE,
         '(', "roomname",
           '$', tp_handle_inspect (room_repo, priv->handle),
         ')',
@@ -1135,7 +1135,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
 #endif
 
   tubes_node = wocky_node_get_child_ns (node, "tubes",
-      GIBBER_TELEPATHY_NS_TUBES);
+      WOCKY_TELEPATHY_NS_TUBES);
   if (tubes_node != NULL)
     {
       SalutTubesChannel *tubes_chan;

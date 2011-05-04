@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-namespaces.h>
 #include <wocky/wocky-stanza.h>
 
 #include "contact-manager.h"

@@ -29,12 +29,14 @@
 
 #include "self.h"
 
+#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-xep-0115-capabilities.h>
+
 #include <gibber/gibber-linklocal-transport.h>
-#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-muc-connection.h>
+
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
-#include <wocky/wocky-xep-0115-capabilities.h>
 
 #include "capabilities.h"
 #include "contact-manager.h"

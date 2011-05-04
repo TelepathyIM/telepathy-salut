@@ -29,13 +29,13 @@
 #include "gibber-signals-marshal.h"
 
 #include "gibber-sockets.h"
-#include "gibber-namespaces.h"
 #include "gibber-multicast-transport.h"
 #include "gibber-r-multicast-transport.h"
 #include "gibber-r-multicast-causal-transport.h"
 
 #include <wocky/wocky-xmpp-reader.h>
 #include <wocky/wocky-xmpp-writer.h>
+#include <wocky/wocky-namespaces.h>
 
 #define ADDRESS_KEY "address"
 #define PORT_KEY "port"
@@ -269,7 +269,7 @@ gibber_muc_connection_finalize (GObject *object)
 const gchar **
 gibber_muc_connection_get_protocols (void)
 {
-  static const gchar *protocols[] = { GIBBER_TELEPATHY_NS_CLIQUE, NULL };
+  static const gchar *protocols[] = { WOCKY_TELEPATHY_NS_CLIQUE, NULL };
   return protocols;
 }
 
@@ -283,7 +283,7 @@ gibber_muc_connection_get_required_parameters (const gchar *protocol)
   struct {
     const gchar *protocol;
     const gchar **parameters;
-  } protocols[] = { { GIBBER_TELEPATHY_NS_CLIQUE, parameters },
+  } protocols[] = { { WOCKY_TELEPATHY_NS_CLIQUE, parameters },
                     { NULL, NULL }
                   };
 
@@ -389,7 +389,7 @@ gibber_muc_connection_new (const gchar *name, const gchar *protocol,
   GibberMucConnection *result;
   GibberMucConnectionPrivate *priv;
 
-  if (protocol != NULL && strcmp (protocol, GIBBER_TELEPATHY_NS_CLIQUE) != 0)
+  if (protocol != NULL && strcmp (protocol, WOCKY_TELEPATHY_NS_CLIQUE) != 0)
     {
       g_set_error (error, GIBBER_MUC_CONNECTION_ERROR,
           GIBBER_MUC_CONNECTION_ERROR_INVALID_PROTOCOL,
@@ -426,7 +426,7 @@ gibber_muc_connection_new (const gchar *name, const gchar *protocol,
     }
   else
     {
-      priv->protocol = g_strdup (GIBBER_TELEPATHY_NS_CLIQUE);
+      priv->protocol = g_strdup (WOCKY_TELEPATHY_NS_CLIQUE);
     }
 
   priv->address = g_strdup (address);

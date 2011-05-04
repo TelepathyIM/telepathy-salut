@@ -35,7 +35,7 @@
 #include <telepathy-glib/svc-generic.h>
 
 #include <gibber/gibber-linklocal-transport.h>
-#include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-namespaces.h>
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
 
@@ -534,7 +534,7 @@ new_message_cb (WockyPorter *porter,
   SalutImChannel *self = SALUT_IM_CHANNEL (user_data);
 
   if (wocky_node_get_child_ns (wocky_stanza_get_top_node (stanza), "invite",
-        GIBBER_TELEPATHY_NS_CLIQUE) != NULL)
+        WOCKY_TELEPATHY_NS_CLIQUE) != NULL)
     /* we don't handle Clique MUC invites here, so pass it on to the
      * next handler */
     return FALSE;

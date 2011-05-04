@@ -36,10 +36,11 @@
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-generic.h>
 
+#include <wocky/wocky-stanza.h>
+#include <wocky/wocky-namespaces.h>
+
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-bytestream-muc.h>
-#include <wocky/wocky-stanza.h>
-#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
@@ -641,7 +642,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
     return result;
 
   tubes_node = wocky_node_get_child_ns (top_node, "tubes",
-      GIBBER_TELEPATHY_NS_TUBES);
+      WOCKY_TELEPATHY_NS_TUBES);
   g_assert (tubes_node != NULL);
 
   /* Fill old_dbus_tubes with D-BUS tubes previoulsy announced by
@@ -1426,12 +1427,12 @@ update_tubes_info (SalutTubesChannel *self)
       WOCKY_STANZA_SUB_TYPE_GROUPCHAT,
       priv->conn->name, jid,
       WOCKY_NODE_START, "tubes",
-        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+        WOCKY_NODE_XMLNS, WOCKY_TELEPATHY_NS_TUBES,
       WOCKY_NODE_END, NULL);
   msg_node = wocky_stanza_get_top_node (msg);
 
   node = wocky_node_get_child_ns (msg_node, "tubes",
-      GIBBER_TELEPATHY_NS_TUBES);
+      WOCKY_TELEPATHY_NS_TUBES);
 
   data.self = self;
   data.tubes_node = node;
@@ -1875,7 +1876,7 @@ send_channel_iq_tube (gpointer key,
           WOCKY_STANZA_SUB_TYPE_SET,
           jid_from, WOCKY_CONTACT (priv->contact),
           WOCKY_NODE_START, "tube",
-            WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_TUBES,
+            WOCKY_NODE_XMLNS, WOCKY_TELEPATHY_NS_TUBES,
             WOCKY_NODE_ATTRIBUTE, "type", tube_type_str,
             WOCKY_NODE_ATTRIBUTE, "service", service,
             WOCKY_NODE_ATTRIBUTE, "id", tube_id_str,
@@ -2514,15 +2515,15 @@ salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
   g_return_if_fail (sub_type == WOCKY_STANZA_SUB_TYPE_SET);
 
   si_node = wocky_node_get_child_ns (node, "si",
-      GIBBER_XMPP_NS_SI);
+      WOCKY_XMPP_NS_SI);
   g_return_if_fail (si_node != NULL);
 
   if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
     stream_node = wocky_node_get_child_ns (si_node,
-        "stream", GIBBER_TELEPATHY_NS_TUBES);
+        "stream", WOCKY_TELEPATHY_NS_TUBES);
   else
     stream_node = wocky_node_get_child_ns (si_node,
-        "muc-stream", GIBBER_TELEPATHY_NS_TUBES);
+        "muc-stream", WOCKY_TELEPATHY_NS_TUBES);
   g_return_if_fail (stream_node != NULL);
 
   stream_id = wocky_node_get_attribute (si_node, "id");

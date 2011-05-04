@@ -24,8 +24,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <wocky/wocky-namespaces.h>
+
 #include <gibber/gibber-file-transfer.h>
-#include <gibber/gibber-namespaces.h>
 
 #include "ft-manager.h"
 #include "signals-marshal.h"
@@ -587,8 +588,8 @@ salut_ft_manager_get_contact_caps_from_set (
 
   /* If we don't receive any capabilities info (QUIRK_NOT_XEP_CAPABILITIES)
    * we assume FT is supported to ensure interoperability with other clients */
-  if (gabble_capability_set_has (caps, GIBBER_XMPP_NS_IQ_OOB) ||
-      gabble_capability_set_has (caps, GIBBER_XMPP_NS_X_OOB) ||
+  if (gabble_capability_set_has (caps, WOCKY_XMPP_NS_IQ_OOB) ||
+      gabble_capability_set_has (caps, WOCKY_XMPP_NS_X_OOB) ||
       gabble_capability_set_has (caps, QUIRK_NOT_XEP_CAPABILITIES))
     add_file_transfer_channel_class (arr);
 }
@@ -619,8 +620,8 @@ salut_ft_manager_represent_client (
         continue;
 
       DEBUG ("client %s supports file transfer", client_name);
-      gabble_capability_set_add (cap_set, GIBBER_XMPP_NS_IQ_OOB);
-      gabble_capability_set_add (cap_set, GIBBER_XMPP_NS_X_OOB);
+      gabble_capability_set_add (cap_set, WOCKY_XMPP_NS_IQ_OOB);
+      gabble_capability_set_add (cap_set, WOCKY_XMPP_NS_X_OOB);
       /* there's no point in looking at the subsequent filters if we've
        * already added the FT capability */
       break;

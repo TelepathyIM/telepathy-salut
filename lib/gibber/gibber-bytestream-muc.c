@@ -28,7 +28,8 @@
 #include "gibber-bytestream-iface.h"
 #include "gibber-muc-connection.h"
 #include "gibber-linklocal-transport.h"
-#include "gibber-namespaces.h"
+
+#include <wocky/wocky-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -199,7 +200,7 @@ gibber_bytestream_muc_get_property (GObject *object,
       case PROP_PROTOCOL:
         /* We use the Clique namespace to signify that we're using streams
          * 1 to 65535 of the reliable multicast layer */
-        g_value_set_string (value, GIBBER_TELEPATHY_NS_CLIQUE);
+        g_value_set_string (value, WOCKY_TELEPATHY_NS_CLIQUE);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);

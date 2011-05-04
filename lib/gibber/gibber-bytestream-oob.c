@@ -31,10 +31,10 @@
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-porter.h>
 #include <wocky/wocky-meta-porter.h>
+#include <wocky/wocky-namespaces.h>
 
 #include "gibber-sockets.h"
 #include "gibber-bytestream-iface.h"
-#include "gibber-namespaces.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-xmpp-error.h"
 #include "gibber-util.h"
@@ -366,7 +366,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
     return FALSE;
 
   query_node = wocky_node_get_child_ns (node, "query",
-      GIBBER_XMPP_NS_IQ_OOB);
+      WOCKY_XMPP_NS_IQ_OOB);
   if (query_node == NULL)
     return FALSE;
 
@@ -556,7 +556,7 @@ gibber_bytestream_oob_get_property (GObject *object,
         g_value_set_string (value, priv->host);
         break;
       case PROP_PROTOCOL:
-        g_value_set_string (value, GIBBER_XMPP_NS_IQ_OOB);
+        g_value_set_string (value, WOCKY_XMPP_NS_IQ_OOB);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -794,16 +794,16 @@ create_si_accept_iq (GibberBytestreamOOB *self)
       priv->self_id, priv->contact,
       '@', "id", priv->stream_init_id,
       '(', "si",
-        ':', GIBBER_XMPP_NS_SI,
+        ':', WOCKY_XMPP_NS_SI,
         '(', "feature",
-          ':', GIBBER_XMPP_NS_FEATURENEG,
+          ':', WOCKY_XMPP_NS_FEATURENEG,
           '(', "x",
-            ':', GIBBER_XMPP_NS_DATA,
+            ':', WOCKY_XMPP_NS_DATA,
             '@', "type", "submit",
             '(', "field",
               '@', "var", "stream-method",
               '(', "value",
-                '$', GIBBER_XMPP_NS_IQ_OOB,
+                '$', WOCKY_XMPP_NS_IQ_OOB,
               ')',
             ')',
           ')',
@@ -836,7 +836,7 @@ gibber_bytestream_oob_accept (GibberBytestreamIface *bytestream,
 
   stanza = create_si_accept_iq (self);
   node = wocky_stanza_get_top_node (stanza);
-  si = wocky_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (node, "si", WOCKY_XMPP_NS_SI);
   g_assert (si != NULL);
 
   if (func != NULL)
@@ -974,7 +974,7 @@ make_oob_init_iq (const gchar *from,
       WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
       from, to,
       '(', "query",
-        ':', GIBBER_XMPP_NS_IQ_OOB,
+        ':', WOCKY_XMPP_NS_IQ_OOB,
         '@', "sid", stream_id,
         '(', "url",
           '$', url,

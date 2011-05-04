@@ -30,12 +30,12 @@
 #include <string.h>
 #include <time.h>
 
-#include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-namespaces.h>
 
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/message-mixin.h>
-#include <wocky/wocky-namespaces.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -54,9 +54,9 @@ add_text (WockyStanza *stanza, const gchar *text)
 
   /* Add plain xhtml-im node */
   htmlnode = wocky_node_add_child_ns (node, "html",
-      GIBBER_XMPP_NS_XHTML_IM);
+      WOCKY_XMPP_NS_XHTML_IM);
   wocky_node_add_child_with_content_ns (htmlnode, "body", text,
-      GIBBER_W3C_NS_XHTML);
+      WOCKY_W3C_NS_XHTML);
 }
 
 static WockyStanza *
@@ -182,7 +182,7 @@ text_helper_parse_incoming_message (WockyStanza *stanza,
   type = wocky_node_get_attribute (top_node, "type");
   /* Work around iChats strange way of doing typing notification */
   event = wocky_node_get_child_ns (top_node, "x",
-    GIBBER_XMPP_NS_EVENT);
+    WOCKY_XMPP_NS_EVENT);
 
   if (event != NULL)
     {

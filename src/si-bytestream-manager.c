@@ -25,11 +25,12 @@
 
 #include <gibber/gibber-bytestream-ibb.h>
 #include <gibber/gibber-bytestream-oob.h>
+#include <gibber/gibber-xmpp-error.h>
+
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
 #include <wocky/wocky-namespaces.h>
-#include <gibber/gibber-namespaces.h>
-#include <gibber/gibber-xmpp-error.h>
+#include <wocky/wocky-namespaces.h>
 
 #include "im-manager.h"
 #include "muc-manager.h"
@@ -102,7 +103,7 @@ streaminit_parse_request (WockyStanza *stanza,
     }
 
   /* Parse <si> */
-  si = wocky_node_get_child_ns (iq, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (iq, "si", WOCKY_XMPP_NS_SI);
   if (si == NULL)
     return FALSE;
 
@@ -126,14 +127,14 @@ streaminit_parse_request (WockyStanza *stanza,
 
   /* Parse <feature> */
   feature = wocky_node_get_child_ns (si, "feature",
-      GIBBER_XMPP_NS_FEATURENEG);
+      WOCKY_XMPP_NS_FEATURENEG);
   if (feature == NULL)
     {
       DEBUG ("got a SI request without a feature field");
       return FALSE;
     }
 
-  x = wocky_node_get_child_ns (feature, "x", GIBBER_XMPP_NS_DATA);
+  x = wocky_node_get_child_ns (feature, "x", WOCKY_XMPP_NS_DATA);
   if (x == NULL)
     {
       DEBUG ("got a SI request without a X data field");
@@ -234,7 +235,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
   /* check OOB */
   for (l = stream_methods; l != NULL; l = l->next)
     {
-      if (!tp_strdiff (l->data, GIBBER_XMPP_NS_IQ_OOB))
+      if (!tp_strdiff (l->data, WOCKY_XMPP_NS_IQ_OOB))
         {
           DEBUG ("choose OOB in methods list");
           return g_object_new (GIBBER_TYPE_BYTESTREAM_OOB,
@@ -252,7 +253,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
   /* check IBB */
   for (l = stream_methods; l != NULL; l = l->next)
     {
-      if (!tp_strdiff (l->data, GIBBER_XMPP_NS_IBB))
+      if (!tp_strdiff (l->data, WOCKY_XMPP_NS_IBB))
         {
           DEBUG ("choose IBB in methods list");
           return g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
@@ -309,7 +310,7 @@ si_request_cb (WockyPorter *porter,
       return TRUE;
     }
 
-  si = wocky_node_get_child_ns (top_node, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (top_node, "si", WOCKY_XMPP_NS_SI);
   g_assert (si != NULL);
 
   DEBUG ("received a SI request");
@@ -353,7 +354,7 @@ si_request_cb (WockyPorter *porter,
      G_CALLBACK (bytestream_state_changed), contact);
 
   /* We inform the right manager we received a SI request */
-  if (tp_strdiff (profile, GIBBER_TELEPATHY_NS_TUBES))
+  if (tp_strdiff (profile, WOCKY_TELEPATHY_NS_TUBES))
     {
       GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_SI_BAD_PROFILE, "" };
       DEBUG ("SI profile unsupported: %s", profile);
@@ -367,7 +368,7 @@ si_request_cb (WockyPorter *porter,
    */
 
   if ((node = wocky_node_get_child_ns (si, "muc-stream",
-          GIBBER_TELEPATHY_NS_TUBES)))
+          WOCKY_TELEPATHY_NS_TUBES)))
     {
       const gchar *muc;
       TpHandle room_handle;
@@ -623,13 +624,13 @@ salut_si_bytestream_manager_make_stream_init_iq (const gchar *from,
 
               '(', "option",
                 '(', "value",
-                  '$', GIBBER_XMPP_NS_IQ_OOB,
+                  '$', WOCKY_XMPP_NS_IQ_OOB,
                 ')',
               ')',
 
               '(', "option",
                 '(', "value",
-                  '$', GIBBER_XMPP_NS_IBB,
+                  '$', WOCKY_XMPP_NS_IBB,
                 ')',
               ')',
 
@@ -756,7 +757,7 @@ si_request_sent_cb (GObject *source_object,
     }
 
   si = wocky_node_get_child_ns (node, "si",
-      GIBBER_XMPP_NS_SI);
+      WOCKY_XMPP_NS_SI);
   if (si == NULL)
     {
       DEBUG ("got a SI reply without a si field");
@@ -764,14 +765,14 @@ si_request_sent_cb (GObject *source_object,
     }
 
   feature = wocky_node_get_child_ns (si, "feature",
-      GIBBER_XMPP_NS_FEATURENEG);
+      WOCKY_XMPP_NS_FEATURENEG);
   if (feature == NULL)
     {
       DEBUG ("got a SI reply without a feature field");
       goto END;
     }
 
-  x = wocky_node_get_child_ns (feature, "x", GIBBER_XMPP_NS_DATA);
+  x = wocky_node_get_child_ns (feature, "x", WOCKY_XMPP_NS_DATA);
   if (x == NULL)
     {
       DEBUG ("got a SI reply without a x field");
@@ -798,7 +799,7 @@ si_request_sent_cb (GObject *source_object,
 
       stream_method = value->content;
 
-      if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_IQ_OOB))
+      if (!tp_strdiff (stream_method, WOCKY_XMPP_NS_IQ_OOB))
       {
         /* Remote user have accepted the stream */
         DEBUG ("remote user chose a OOB bytestream");
@@ -816,7 +817,7 @@ si_request_sent_cb (GObject *source_object,
             GIBBER_BYTESTREAM_OOB (bytestream), check_bytestream_oob_peer_addr,
             data->self);
       }
-    else if (!tp_strdiff (stream_method, GIBBER_XMPP_NS_IBB))
+    else if (!tp_strdiff (stream_method, WOCKY_XMPP_NS_IBB))
       {
         /* Remote user have accepted the stream */
         DEBUG ("remote user chose a IBB bytestream");

@@ -29,7 +29,7 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 #include <telepathy-glib/dbus.h>
-#include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-namespaces.h>
 #include <wocky/wocky-data-form.h>
 #include <wocky/wocky-xep-0115-capabilities.h>
 
@@ -107,9 +107,9 @@ disco_type_to_xmlns (SalutDiscoType type)
 {
   switch (type) {
     case SALUT_DISCO_TYPE_INFO:
-      return NS_DISCO_INFO;
+      return WOCKY_NS_DISCO_INFO;
     case SALUT_DISCO_TYPE_ITEMS:
-      return NS_DISCO_ITEMS;
+      return WOCKY_NS_DISCO_ITEMS;
     default:
       g_assert_not_reached ();
   }
@@ -240,12 +240,12 @@ send_item_not_found (WockyPorter *porter,
    * anyway. */
   result = wocky_stanza_build_iq_error (iq,
       '(', "query",
-        ':', NS_DISCO_INFO,
+        ':', WOCKY_NS_DISCO_INFO,
         '@', "node", node,
         '(', "error",
           '@', "type", "cancel",
           '(', "item-not-found",
-            ':', GIBBER_XMPP_NS_STANZAS,
+            ':', WOCKY_XMPP_NS_STANZAS,
           ')',
         ')',
       ')',
@@ -294,7 +294,7 @@ caps_req_stanza_callback (WockyPorter *porter,
   const GPtrArray *data_forms;
 
   iq = wocky_stanza_get_top_node (stanza);
-  query = wocky_node_get_child_ns (iq, "query", NS_DISCO_INFO);
+  query = wocky_node_get_child_ns (iq, "query", WOCKY_NS_DISCO_INFO);
   g_assert (query != NULL);
 
   node = wocky_node_get_attribute (query, "node");
@@ -304,14 +304,14 @@ caps_req_stanza_callback (WockyPorter *porter,
       return TRUE;
     }
 
-  if (!g_str_has_prefix (node, GIBBER_TELEPATHY_NS_CAPS "#"))
+  if (!g_str_has_prefix (node, WOCKY_TELEPATHY_NS_CAPS "#"))
     {
       send_item_not_found (porter, stanza, node);
       return TRUE;
     }
   else
     {
-      suffix = node + strlen (GIBBER_TELEPATHY_NS_CAPS) + 1;
+      suffix = node + strlen (WOCKY_TELEPATHY_NS_CAPS) + 1;
     }
 
   DEBUG ("got disco request for node %s", node);
@@ -334,7 +334,7 @@ caps_req_stanza_callback (WockyPorter *porter,
    * caps_hash_compute_from_self_presence(). */
   result = wocky_stanza_build_iq_result (stanza,
       '(', "query",
-        ':', NS_DISCO_INFO,
+        ':', WOCKY_NS_DISCO_INFO,
         '@', "node", node,
         '(', "identity",
           '@', "category", "client",
@@ -385,7 +385,7 @@ salut_disco_constructed (GObject *obj)
       WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
       caps_req_stanza_callback, obj,
       '(', "query",
-        ':', NS_DISCO_INFO,
+        ':', WOCKY_NS_DISCO_INFO,
       ')', NULL);
 
   /* Salut used to send disco requests with <iq type='set' ...> so we
@@ -396,7 +396,7 @@ salut_disco_constructed (GObject *obj)
         WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
         caps_req_stanza_callback, obj,
         '(', "query",
-          ':', NS_DISCO_INFO,
+          ':', WOCKY_NS_DISCO_INFO,
         ')', NULL);
 }
 

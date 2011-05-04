@@ -27,9 +27,9 @@
 #include <wocky/wocky-namespaces.h>
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-porter.h>
+#include <wocky/wocky-namespaces.h>
 
 #include "gibber-muc-connection.h"
-#include "gibber-namespaces.h"
 #include "gibber-xmpp-error.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
@@ -212,7 +212,7 @@ gibber_bytestream_ibb_get_property (GObject *object,
         g_value_set_uint (value, priv->state);
         break;
       case PROP_PROTOCOL:
-        g_value_set_string (value, GIBBER_XMPP_NS_IBB);
+        g_value_set_string (value, WOCKY_XMPP_NS_IBB);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -408,13 +408,13 @@ gibber_bytestream_ibb_send (GibberBytestreamIface *bytestream,
       WOCKY_STANZA_SUB_TYPE_NONE,
       priv->self_id, priv->contact,
       '(', "data",
-        ':', GIBBER_XMPP_NS_IBB,
+        ':', WOCKY_XMPP_NS_IBB,
         '@', "sid", priv->stream_id,
         '@', "seq", seq,
         '$', encoded,
       ')',
       '(', "amp",
-        ':', GIBBER_XMPP_NS_AMP,
+        ':', WOCKY_XMPP_NS_AMP,
         '(', "rule",
           '@', "condition", "deliver-at",
           '@', "value", "stored",
@@ -448,16 +448,16 @@ create_si_accept_iq (GibberBytestreamIBB *self)
       priv->self_id, priv->contact,
       '@', "id", priv->stream_init_id,
       '(', "si",
-        ':', GIBBER_XMPP_NS_SI,
+        ':', WOCKY_XMPP_NS_SI,
         '(', "feature",
-          ':', GIBBER_XMPP_NS_FEATURENEG,
+          ':', WOCKY_XMPP_NS_FEATURENEG,
           '(', "x",
-            ':', GIBBER_XMPP_NS_DATA,
+            ':', WOCKY_XMPP_NS_DATA,
             '@', "type", "submit",
             '(', "field",
               '@', "var", "stream-method",
               '(', "value",
-                '$', GIBBER_XMPP_NS_IBB,
+                '$', WOCKY_XMPP_NS_IBB,
               ')',
             ')',
           ')',
@@ -490,7 +490,7 @@ gibber_bytestream_ibb_accept (GibberBytestreamIface *bytestream,
 
   stanza = create_si_accept_iq (self);
   node = wocky_stanza_get_top_node (stanza);
-  si = wocky_node_get_child_ns (node, "si", GIBBER_XMPP_NS_SI);
+  si = wocky_node_get_child_ns (node, "si", WOCKY_XMPP_NS_SI);
   g_assert (si != NULL);
 
   if (func != NULL)
@@ -572,7 +572,7 @@ gibber_bytestream_ibb_close (GibberBytestreamIface *bytestream,
           WOCKY_STANZA_SUB_TYPE_SET,
           priv->self_id, priv->contact,
           '(', "close",
-            ':', GIBBER_XMPP_NS_IBB,
+            ':', WOCKY_XMPP_NS_IBB,
             '@', "sid", priv->stream_id,
           ')', NULL);
 
@@ -639,7 +639,7 @@ gibber_bytestream_ibb_initiate (GibberBytestreamIface *bytestream)
       WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_SET,
       priv->self_id, priv->contact,
       '(', "open",
-        ':', GIBBER_XMPP_NS_IBB,
+        ':', WOCKY_XMPP_NS_IBB,
         '@', "sid", priv->stream_id,
         '@', "block-size", "4096",
       ')', NULL);

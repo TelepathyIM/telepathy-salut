@@ -28,8 +28,9 @@
 #include <avahi-gobject/ga-service-browser.h>
 #include <avahi-gobject/ga-service-resolver.h>
 
+#include <wocky/wocky-namespaces.h>
+
 #include <gibber/gibber-muc-connection.h>
-#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-xmpp-error.h>
 
 #include "muc-channel.h"

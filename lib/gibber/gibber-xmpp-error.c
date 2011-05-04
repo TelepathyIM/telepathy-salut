@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "gibber-namespaces.h"
+#include <wocky/wocky-namespaces.h>
 
 #define MAX_LEGACY_ERRORS 3
 
@@ -43,7 +43,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "application-specific condition",
       NULL,
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 500, 0, },
     },
     {
@@ -52,7 +52,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "to another entity",
       "modify",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 302, 0, },
     },
 
@@ -61,7 +61,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "the recipient or server can no longer be contacted at this address",
       "modify",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 302, 0, },
     },
 
@@ -70,7 +70,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "the sender has sent XML that is malformed or that cannot be processed",
       "modify",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 400, 0, },
     },
     {
@@ -79,7 +79,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "it at this time",
       "wait",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 400, 0, },
     },
     {
@@ -89,7 +89,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "to the syntax defined in Addressing Scheme (Section 3)",
       "modify",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 400, 0, },
     },
 
@@ -99,7 +99,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "perform the action, or has provided improper credentials",
       "auth",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 401, 0, },
     },
 
@@ -109,7 +109,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "service because payment is required",
       "auth",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 402, 0, },
     },
 
@@ -119,7 +119,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "perform the action",
       "auth",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 403, 0, },
     },
 
@@ -128,7 +128,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "the addressed JID or item requested cannot be found",
       "cancel",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 404, 0, },
     },
     {
@@ -136,7 +136,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "the intended recipient is temporarily unavailable",
       "wait",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 404, 0, },
     },
     {
@@ -146,7 +146,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "contacted within a reasonable amount of time",
       "cancel",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 404, 0, },
     },
 
@@ -155,7 +155,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "the recipient or server does not allow any entity to perform the action",
       "cancel",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 405, 0, },
     },
 
@@ -166,7 +166,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "or server (e.g., a local policy regarding acceptable words in messages)",
       "modify",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 406, 0, },
     },
 
@@ -176,7 +176,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "because registration is required",
       "auth",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 407, 0, },
     },
     {
@@ -185,7 +185,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "because a subscription is required",
       "auth",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 407, 0, },
     },
 
@@ -196,7 +196,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "contacted within a reasonable amount of time",
       "wait",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 408, 504, 0, },
     },
 
@@ -206,7 +206,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "with the same name or address",
       "cancel",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 409, 0, },
     },
 
@@ -216,7 +216,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "or an otherwise-undefined internal server error",
       "wait",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 500, 0, },
     },
     {
@@ -225,7 +225,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "the request",
       "wait",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 500, 0, },
     },
 
@@ -235,7 +235,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "therefore cannot be processed",
       "cancel",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 501, 0, },
     },
 
@@ -245,7 +245,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "service",
       "cancel",
       0,
-      GIBBER_XMPP_NS_STANZAS,
+      WOCKY_XMPP_NS_STANZAS,
       { 502, 503, 510, },
     },
 
@@ -254,7 +254,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "the request cannot occur at this point in the state machine",
       "cancel",
       XMPP_ERROR_UNEXPECTED_REQUEST,
-      GIBBER_XMPP_NS_JINGLE_ERRORS,
+      WOCKY_XMPP_NS_JINGLE_ERRORS,
       { 0, },
     },
 
@@ -264,7 +264,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "recipient",
       "cancel",
       XMPP_ERROR_BAD_REQUEST,
-      GIBBER_XMPP_NS_JINGLE_ERRORS,
+      WOCKY_XMPP_NS_JINGLE_ERRORS,
       { 0, },
     },
 
@@ -274,7 +274,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "methods",
       "cancel",
       XMPP_ERROR_FEATURE_NOT_IMPLEMENTED,
-      GIBBER_XMPP_NS_JINGLE_ERRORS,
+      WOCKY_XMPP_NS_JINGLE_ERRORS,
       { 0, },
     },
 
@@ -284,7 +284,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "formats",
       "cancel",
       XMPP_ERROR_FEATURE_NOT_IMPLEMENTED,
-      GIBBER_XMPP_NS_JINGLE_ERRORS,
+      WOCKY_XMPP_NS_JINGLE_ERRORS,
       { 0, },
     },
 
@@ -293,7 +293,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "None of the available streams are acceptable.",
       "cancel",
       XMPP_ERROR_BAD_REQUEST,
-      GIBBER_XMPP_NS_SI,
+      WOCKY_XMPP_NS_SI,
       { 400, 0 },
     },
 
@@ -302,7 +302,7 @@ static const XmppErrorSpec xmpp_errors[NUM_XMPP_ERRORS] =
       "The profile is not understood or invalid.",
       "modify",
       XMPP_ERROR_BAD_REQUEST,
-      GIBBER_XMPP_NS_SI,
+      WOCKY_XMPP_NS_SI,
       { 400, 0 },
     },
 };
@@ -416,7 +416,7 @@ gibber_xmpp_error_to_node (GibberXmppError error,
     }
 
   node = wocky_node_add_child_ns (error_node, spec->name,
-      GIBBER_XMPP_NS_STANZAS);
+      WOCKY_XMPP_NS_STANZAS);
 
   if (extra != NULL)
     {

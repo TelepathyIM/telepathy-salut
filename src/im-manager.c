@@ -30,7 +30,7 @@
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <wocky/wocky-stanza.h>
-#include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-namespaces.h>
 
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>

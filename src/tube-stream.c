@@ -43,17 +43,18 @@
 #include <telepathy-glib/svc-generic.h>
 
 #include <wocky/wocky-stanza.h>
-#include <gibber/gibber-namespaces.h>
+#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-stanza.h>
+
 #include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-bytestream-iface.h>
 #include <gibber/gibber-bytestream-oob.h>
 #include <gibber/gibber-fd-transport.h>
 #include <gibber/gibber-listener.h>
-#include <gibber/gibber-namespaces.h>
 #include <gibber/gibber-tcp-transport.h>
 #include <gibber/gibber-transport.h>
 #include <gibber/gibber-unix-transport.h>
-#include <wocky/wocky-stanza.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
 
@@ -535,10 +536,10 @@ start_stream_initiation (SalutTubeStream *self,
   stream_id = generate_stream_id (self);
 
   msg = salut_si_bytestream_manager_make_stream_init_iq (priv->conn->name, jid,
-      stream_id, GIBBER_TELEPATHY_NS_TUBES);
+      stream_id, WOCKY_TELEPATHY_NS_TUBES);
   msg_node = wocky_stanza_get_top_node (msg);
 
-  si_node = wocky_node_get_child_ns (msg_node, "si", GIBBER_XMPP_NS_SI);
+  si_node = wocky_node_get_child_ns (msg_node, "si", WOCKY_XMPP_NS_SI);
   g_assert (si_node != NULL);
 
   id_str = g_strdup_printf ("%u", priv->id);
@@ -547,7 +548,7 @@ start_stream_initiation (SalutTubeStream *self,
 
   /* FIXME: this needs standardizing */
   node = wocky_node_add_child_ns (si_node, "muc-stream",
-      GIBBER_TELEPATHY_NS_TUBES);
+      WOCKY_TELEPATHY_NS_TUBES);
   wocky_node_set_attribute (node, "muc", tp_handle_inspect (
         room_repo, priv->handle));
 
@@ -1918,7 +1919,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
           WOCKY_STANZA_SUB_TYPE_SET,
           jid_from, WOCKY_CONTACT (contact),
           '(', "close",
-            ':', GIBBER_TELEPATHY_NS_TUBES,
+            ':', WOCKY_TELEPATHY_NS_TUBES,
             '@', "id", tube_id_str,
           ')', NULL);
 
@@ -1951,7 +1952,7 @@ static void
 augment_si_accept_iq (WockyNode *si,
                       gpointer user_data)
 {
-  wocky_node_add_child_ns (si, "tube", GIBBER_TELEPATHY_NS_TUBES);
+  wocky_node_add_child_ns (si, "tube", WOCKY_TELEPATHY_NS_TUBES);
 }
 
 /**

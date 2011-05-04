@@ -40,10 +40,9 @@
 #include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/util.h>
 
-#include <gibber/gibber-namespaces.h>
-
 #include <salut/caps-channel-manager.h>
 
+#include <wocky/wocky-namespaces.h>
 #include <wocky/wocky-meta-porter.h>
 #include <wocky/wocky-data-form.h>
 #include <wocky/wocky-xep-0115-capabilities.h>
@@ -1057,13 +1056,13 @@ announce_self_caps (SalutConnection *self,
 
   caps_hash = caps_hash_compute_from_self_presence (priv->self);
 
-  ret = salut_self_set_caps (priv->self, GIBBER_TELEPATHY_NS_CAPS, "sha-1",
+  ret = salut_self_set_caps (priv->self, WOCKY_TELEPATHY_NS_CAPS, "sha-1",
         caps_hash, error);
 
   if (ret)
     {
       salut_presence_cache_learn_caps (self->presence_cache,
-          GIBBER_TELEPATHY_NS_CAPS, caps_hash, salut_self_get_caps (priv->self),
+          WOCKY_TELEPATHY_NS_CAPS, caps_hash, salut_self_get_caps (priv->self),
           wocky_xep_0115_capabilities_get_data_forms (WOCKY_XEP_0115_CAPABILITIES (priv->self)));
     }
 
