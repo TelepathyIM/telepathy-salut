@@ -28,9 +28,9 @@
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-porter.h>
 #include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-xmpp-error.h>
 
 #include "gibber-muc-connection.h"
-#include "gibber-xmpp-error.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -58,7 +58,7 @@ enum
   PROP_SELF_ID,
   PROP_PEER_ID,
   PROP_STREAM_ID,
-  PROP_STREAM_INIT_ID,
+  PROP_STREAM_INIT_IQ,
   PROP_STATE,
   PROP_PROTOCOL,
   LAST_PROPERTY
@@ -72,7 +72,7 @@ struct _GibberBytestreamIBBPrivate
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
-  gchar *stream_init_id;
+  WockyStanza *stream_init_iq;
   guint stanza_received_id;
   GibberBytestreamState state;
 
@@ -162,6 +162,12 @@ gibber_bytestream_ibb_dispose (GObject *object)
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
     }
 
+  if (priv->stream_init_iq != NULL)
+    {
+      g_object_unref (priv->stream_init_iq);
+      priv->stream_init_iq = NULL;
+    }
+
   G_OBJECT_CLASS (gibber_bytestream_ibb_parent_class)->dispose (object);
 }
 
@@ -172,7 +178,6 @@ gibber_bytestream_ibb_finalize (GObject *object)
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
   g_free (priv->stream_id);
-  g_free (priv->stream_init_id);
   g_free (priv->self_id);
   g_free (priv->peer_id);
 
@@ -205,8 +210,8 @@ gibber_bytestream_ibb_get_property (GObject *object,
       case PROP_STREAM_ID:
         g_value_set_string (value, priv->stream_id);
         break;
-      case PROP_STREAM_INIT_ID:
-        g_value_set_string (value, priv->stream_init_id);
+      case PROP_STREAM_INIT_IQ:
+        g_value_set_object (value, priv->stream_init_iq);
         break;
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
@@ -264,9 +269,8 @@ gibber_bytestream_ibb_set_property (GObject *object,
         g_free (priv->stream_id);
         priv->stream_id = g_value_dup_string (value);
         break;
-      case PROP_STREAM_INIT_ID:
-        g_free (priv->stream_init_id);
-        priv->stream_init_id = g_value_dup_string (value);
+      case PROP_STREAM_INIT_IQ:
+        priv->stream_init_iq = g_value_dup_object (value);
         break;
       case PROP_STATE:
         if (priv->state != g_value_get_uint (value))
@@ -296,7 +300,7 @@ gibber_bytestream_ibb_constructor (GType type,
 
   g_assert (priv->porter != NULL);
   g_assert (priv->contact != NULL);
-  g_assert (priv->stream_init_id != NULL);
+  g_assert (priv->stream_init_iq != NULL);
   g_assert (priv->self_id != NULL);
   g_assert (priv->peer_id != NULL);
 
@@ -367,14 +371,14 @@ gibber_bytestream_ibb_class_init (
   g_object_class_install_property (object_class, PROP_CONTACT,
       param_spec);
 
-  param_spec = g_param_spec_string (
-      "stream-init-id",
-      "stream init ID",
-      "the iq ID of the SI request, if any",
-      "",
+  param_spec = g_param_spec_object (
+      "stream-init-iq",
+      "stream init IQ",
+      "the iq stanza of the SI request",
+      WOCKY_TYPE_STANZA,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
+  g_object_class_install_property (object_class, PROP_STREAM_INIT_IQ,
       param_spec);
 }
 
@@ -443,10 +447,7 @@ create_si_accept_iq (GibberBytestreamIBB *self)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
 
-  return wocky_stanza_build_to_contact (
-      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_RESULT,
-      priv->self_id, priv->contact,
-      '@', "id", priv->stream_init_id,
+  return wocky_stanza_build_iq_result (priv->stream_init_iq,
       '(', "si",
         ':', WOCKY_XMPP_NS_SI,
         '(', "feature",
@@ -512,31 +513,19 @@ gibber_bytestream_ibb_decline (GibberBytestreamIBB *self,
                                GError *error)
 {
   GibberBytestreamIBBPrivate *priv = GIBBER_BYTESTREAM_IBB_GET_PRIVATE (self);
-  WockyStanza *stanza;
-  WockyNode *node;
 
   g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
-  stanza = wocky_stanza_build_to_contact (
-      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
-      priv->self_id, priv->contact,
-      '@', "id", priv->stream_init_id,
-      NULL);
-  node = wocky_stanza_get_top_node (stanza);
-
-  if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
+  if (error != NULL
+      && (error->domain == WOCKY_XMPP_ERROR || error->domain == WOCKY_SI_ERROR))
     {
-      gibber_xmpp_error_to_node (error->code, node, error->message);
+      wocky_porter_send_iq_gerror (priv->porter, priv->stream_init_iq, error);
     }
   else
     {
-      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, node,
-          "Offer Declined");
+      wocky_porter_send_iq_error (priv->porter, priv->stream_init_iq,
+          WOCKY_XMPP_ERROR_FORBIDDEN, "Offer declined");
     }
-
-  wocky_porter_send (priv->porter, stanza);
-
-  g_object_unref (stanza);
 }
 
 /*

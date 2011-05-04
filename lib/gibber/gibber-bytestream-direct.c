@@ -25,10 +25,11 @@
 
 #include <glib.h>
 
+#include <wocky/wocky-xmpp-error.h>
+
 #include "gibber-sockets.h"
 #include "gibber-linklocal-transport.h"
 #include "gibber-util.h"
-#include "gibber-xmpp-error.h"
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
@@ -353,7 +354,7 @@ transport_disconnected_cb (GibberTransport *transport,
   if (priv->state == GIBBER_BYTESTREAM_STATE_ACCEPTED)
     {
       /* Connection to host failed */
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_ITEM_NOT_FOUND,
           "connection failed" };
 
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
@@ -599,7 +600,7 @@ gibber_bytestream_direct_initiate (GibberBytestreamIface *bytestream)
   g_assert (priv->addresses != NULL);
   if (priv->addresses->len < 1)
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_ITEM_NOT_FOUND,
           "Unsable get socket address for this contact" };
       DEBUG ("Could not get socket address for this contact" );
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);

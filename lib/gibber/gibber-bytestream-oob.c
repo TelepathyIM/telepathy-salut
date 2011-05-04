@@ -32,11 +32,11 @@
 #include <wocky/wocky-porter.h>
 #include <wocky/wocky-meta-porter.h>
 #include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-xmpp-error.h>
 
 #include "gibber-sockets.h"
 #include "gibber-bytestream-iface.h"
 #include "gibber-linklocal-transport.h"
-#include "gibber-xmpp-error.h"
 #include "gibber-util.h"
 #include "gibber-transport.h"
 #include "gibber-fd-transport.h"
@@ -63,7 +63,7 @@ enum
   PROP_SELF_ID,
   PROP_PEER_ID,
   PROP_STREAM_ID,
-  PROP_STREAM_INIT_ID,
+  PROP_STREAM_INIT_IQ,
   PROP_STATE,
   PROP_HOST,
   PROP_PROTOCOL,
@@ -78,7 +78,7 @@ struct _GibberBytestreamIBBPrivate
   gchar *self_id;
   gchar *peer_id;
   gchar *stream_id;
-  gchar *stream_init_id;
+  WockyStanza *stream_init_iq;
   /* ID of the OOB opening stanza. We'll reply to
    * it when we the bytestream is closed */
   gchar *stream_open_id;
@@ -169,7 +169,7 @@ transport_disconnected_cb (GibberTransport *transport,
   if (priv->state == GIBBER_BYTESTREAM_STATE_ACCEPTED)
     {
       /* Connection to host failed */
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_ITEM_NOT_FOUND,
           "connection failed" };
 
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
@@ -270,7 +270,7 @@ connect_to_url (GibberBytestreamOOB *self)
    {
       /* I'm too lazy to create more specific errors for this  as it should
        * never happen while using salut anyway.. */
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_NOT_ACCEPTABLE,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_NOT_ACCEPTABLE,
           "Invalid port number" };
       DEBUG ("Invalid port number: %s", port);
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
@@ -287,7 +287,7 @@ connect_to_url (GibberBytestreamOOB *self)
     {
       /* I'm too lazy to create more specific errors for this  as it should
        * never happen while using salut anyway.. */
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_ITEM_NOT_FOUND,
           "Unsable get socket address for the control connection" };
       DEBUG ("Could not get socket address for the control connection" );
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
@@ -297,7 +297,7 @@ connect_to_url (GibberBytestreamOOB *self)
   if (!g_socket_address_to_native (G_SOCKET_ADDRESS (socket_address), &(addr.storage),
           sizeof (addr.storage), &error))
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_ITEM_NOT_FOUND,
           "Failed to turn socket address into bytes" };
       DEBUG ("Failed to get native socket address: %s", error->message);
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), &e);
@@ -385,7 +385,7 @@ parse_oob_init_iq (GibberBytestreamOOB *self,
 
   if (!g_str_has_prefix (url, "x-tcp://"))
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_ITEM_NOT_FOUND,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_ITEM_NOT_FOUND,
                    "URL is not a TCP URL" };
 
       DEBUG ("URL is not a TCP URL: %s. Close the bytestream", priv->url);
@@ -501,6 +501,12 @@ gibber_bytestream_oob_dispose (GObject *object)
       priv->contact = NULL;
     }
 
+  if (priv->stream_init_iq != NULL)
+    {
+      g_object_unref (priv->stream_init_iq);
+      priv->stream_init_iq = NULL;
+    }
+
   G_OBJECT_CLASS (gibber_bytestream_oob_parent_class)->dispose (object);
 }
 
@@ -511,7 +517,6 @@ gibber_bytestream_oob_finalize (GObject *object)
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
 
   g_free (priv->stream_id);
-  g_free (priv->stream_init_id);
   g_free (priv->stream_open_id);
   g_free (priv->host);
   g_free (priv->self_id);
@@ -546,8 +551,8 @@ gibber_bytestream_oob_get_property (GObject *object,
       case PROP_STREAM_ID:
         g_value_set_string (value, priv->stream_id);
         break;
-      case PROP_STREAM_INIT_ID:
-        g_value_set_string (value, priv->stream_init_id);
+      case PROP_STREAM_INIT_IQ:
+        g_value_set_object (value, priv->stream_init_iq);
         break;
       case PROP_STATE:
         g_value_set_uint (value, priv->state);
@@ -608,9 +613,8 @@ gibber_bytestream_oob_set_property (GObject *object,
         g_free (priv->stream_id);
         priv->stream_id = g_value_dup_string (value);
         break;
-      case PROP_STREAM_INIT_ID:
-        g_free (priv->stream_init_id);
-        priv->stream_init_id = g_value_dup_string (value);
+      case PROP_STREAM_INIT_IQ:
+        priv->stream_init_iq = g_value_dup_object (value);
         break;
       case PROP_STATE:
         if (priv->state != g_value_get_uint (value))
@@ -716,14 +720,14 @@ gibber_bytestream_oob_class_init (
   g_object_class_install_property (object_class, PROP_CONTACT,
       param_spec);
 
-  param_spec = g_param_spec_string (
-      "stream-init-id",
-      "stream init ID",
-      "the iq ID of the SI request, if any",
-      "",
+  param_spec = g_param_spec_object (
+      "stream-init-iq",
+      "stream init IQ",
+      "the iq of the SI request",
+      WOCKY_TYPE_STANZA,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_STREAM_INIT_ID,
+  g_object_class_install_property (object_class, PROP_STREAM_INIT_IQ,
       param_spec);
 
   param_spec = g_param_spec_string (
@@ -789,10 +793,7 @@ create_si_accept_iq (GibberBytestreamOOB *self)
 {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
 
-  return wocky_stanza_build_to_contact (
-      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_RESULT,
-      priv->self_id, priv->contact,
-      '@', "id", priv->stream_init_id,
+  return wocky_stanza_build_iq_result (priv->stream_init_iq,
       '(', "si",
         ':', WOCKY_XMPP_NS_SI,
         '(', "feature",
@@ -894,31 +895,19 @@ gibber_bytestream_oob_decline (GibberBytestreamOOB *self,
                                GError *error)
  {
   GibberBytestreamOOBPrivate *priv = GIBBER_BYTESTREAM_OOB_GET_PRIVATE (self);
-  WockyStanza *stanza;
-  WockyNode *node;
 
   g_return_if_fail (priv->state == GIBBER_BYTESTREAM_STATE_LOCAL_PENDING);
 
-  stanza = wocky_stanza_build_to_contact (
-      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_ERROR,
-      priv->self_id, priv->contact,
-      '@', "id", priv->stream_init_id,
-      NULL);
-  node = wocky_stanza_get_top_node (stanza);
-
-  if (error != NULL && error->domain == GIBBER_XMPP_ERROR)
+  if (error != NULL
+      && (error->domain == WOCKY_XMPP_ERROR || error->domain == WOCKY_SI_ERROR))
     {
-      gibber_xmpp_error_to_node (error->code, node, error->message);
+      wocky_porter_send_iq_gerror (priv->porter, priv->stream_init_iq, error);
     }
   else
     {
-      gibber_xmpp_error_to_node (XMPP_ERROR_FORBIDDEN, node,
-          "Offer Declined");
+      wocky_porter_send_iq_error (priv->porter, priv->stream_init_iq,
+          WOCKY_XMPP_ERROR_FORBIDDEN, "Offer declined");
     }
-
-  wocky_porter_send (priv->porter, stanza);
-
-  g_object_unref (stanza);
 }
 
 static void

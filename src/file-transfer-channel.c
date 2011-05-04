@@ -45,7 +45,6 @@
 #include <wocky/wocky-meta-porter.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
-#include <gibber/gibber-xmpp-error.h>
 
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>

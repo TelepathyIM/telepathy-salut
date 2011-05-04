@@ -31,7 +31,6 @@
 #include <wocky/wocky-namespaces.h>
 
 #include <gibber/gibber-muc-connection.h>
-#include <gibber/gibber-xmpp-error.h>
 
 #include "muc-channel.h"
 #include "contact-manager.h"

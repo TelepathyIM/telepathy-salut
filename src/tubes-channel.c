@@ -38,10 +38,10 @@
 
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-xmpp-error.h>
 
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-bytestream-muc.h>
-#include <gibber/gibber-xmpp-error.h>
 
 #define DEBUG_FLAG DEBUG_TUBES
 #include "debug.h"
@@ -2532,7 +2532,7 @@ salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
   tmp = wocky_node_get_attribute (stream_node, "tube");
   if (tmp == NULL)
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
           "<stream> or <muc-stream> has no tube attribute" };
 
       DEBUG ("%s", e.message);
@@ -2542,7 +2542,7 @@ salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
   tube_id_tmp = strtoul (tmp, &endptr, 10);
   if (!endptr || *endptr || tube_id_tmp > G_MAXUINT32)
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
           "<stream> or <muc-stream> tube attribute not numeric or > 2**32" };
 
       DEBUG ("tube id is not numeric or > 2**32: %s", tmp);
@@ -2554,7 +2554,7 @@ salut_tubes_channel_bytestream_offered (SalutTubesChannel *self,
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
   if (tube == NULL)
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
           "<stream> or <muc-stream> tube attribute points to a nonexistent "
           "tube" };
 

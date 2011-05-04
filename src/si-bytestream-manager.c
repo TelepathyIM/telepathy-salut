@@ -25,12 +25,11 @@
 
 #include <gibber/gibber-bytestream-ibb.h>
 #include <gibber/gibber-bytestream-oob.h>
-#include <gibber/gibber-xmpp-error.h>
 
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
 #include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-xmpp-error.h>
 
 #include "im-manager.h"
 #include "muc-manager.h"
@@ -93,7 +92,8 @@ streaminit_parse_request (WockyStanza *stanza,
 
   iq = wocky_stanza_get_top_node (stanza);
 
-  *stream_init_id = wocky_node_get_attribute (iq, "id");
+  if (stream_init_id != NULL)
+    *stream_init_id = wocky_node_get_attribute (iq, "id");
 
   *from = wocky_node_get_attribute (iq, "from");
   if (*from == NULL)
@@ -223,7 +223,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
                           WockyPorter *porter,
                           SalutContact *contact,
                           const gchar *stream_id,
-                          const gchar *stream_init_id)
+                          WockyStanza *stream_init_iq)
 {
   SalutSiBytestreamManagerPrivate *priv =
     SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
@@ -245,7 +245,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
               "self-id", priv->connection->name,
               "peer-id", contact->name,
               "contact", contact,
-              "stream-init-id", stream_init_id,
+              "stream-init-iq", stream_init_iq,
               NULL);
         }
     }
@@ -263,7 +263,7 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
               "self-id", priv->connection->name,
               "peer-id", contact->name,
               "contact", contact,
-              "stream-init-id", stream_init_id,
+              "stream-init-iq", stream_init_iq,
               NULL);
         }
     }
@@ -287,7 +287,7 @@ si_request_cb (WockyPorter *porter,
   GibberBytestreamIface *bytestream = NULL;
   WockyNode *top_node = wocky_stanza_get_top_node (stanza);
   WockyNode *si, *node;
-  const gchar *profile, *from, *stream_id, *stream_init_id, *mime_type;
+  const gchar *profile, *from, *stream_id, *mime_type;
   GSList *stream_methods = NULL;
   WockyContact *contact = wocky_stanza_get_from_contact (stanza);
 
@@ -295,7 +295,7 @@ si_request_cb (WockyPorter *porter,
    * it or send an error reply */
 
   if (!streaminit_parse_request (stanza, &profile, &from, &stream_id,
-        &stream_init_id, &mime_type, &stream_methods))
+        NULL, &mime_type, &stream_methods))
     {
       GError err = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
                       "failed to parse SI request" };
@@ -323,7 +323,7 @@ si_request_cb (WockyPorter *porter,
 
   /* check stream method */
   bytestream = choose_bytestream_method (self, stream_methods, porter,
-      SALUT_CONTACT (contact), stream_id, stream_init_id);
+      SALUT_CONTACT (contact), stream_id, stanza);
 
   if (bytestream == NULL)
     {
@@ -356,7 +356,7 @@ si_request_cb (WockyPorter *porter,
   /* We inform the right manager we received a SI request */
   if (tp_strdiff (profile, WOCKY_TELEPATHY_NS_TUBES))
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_SI_BAD_PROFILE, "" };
+      GError e = { WOCKY_SI_ERROR, WOCKY_SI_ERROR_BAD_PROFILE, "" };
       DEBUG ("SI profile unsupported: %s", profile);
 
       gibber_bytestream_iface_close (bytestream, &e);
@@ -399,7 +399,7 @@ si_request_cb (WockyPorter *porter,
     }
   else
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
           "Invalid tube SI request: expected <tube>, <stream> or "
           "<muc-stream>" };
 
@@ -810,7 +810,7 @@ si_request_sent_cb (GObject *source_object,
               "self-id", priv->connection->name,
               "peer-id", from,
               "contact", wocky_stanza_get_from_contact (stanza),
-              "stream-init-id", NULL,
+              "stream-init-iq", NULL,
               "host", priv->host_name_fqdn,
               NULL);
         gibber_bytestream_oob_set_check_addr_func (
@@ -828,7 +828,7 @@ si_request_sent_cb (GObject *source_object,
               "self-id", priv->connection->name,
               "peer-id", from,
               "contact", wocky_stanza_get_from_contact (stanza),
-              "stream-init-id", NULL,
+              "stream-init-iq", NULL,
               NULL);
       }
     else

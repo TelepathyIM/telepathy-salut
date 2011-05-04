@@ -26,9 +26,9 @@
 #include "muc-manager.h"
 
 #include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-xmpp-error.h>
 
 #include <gibber/gibber-muc-connection.h>
-#include <gibber/gibber-xmpp-error.h>
 
 #include <salut/caps-channel-manager.h>
 
@@ -1164,7 +1164,7 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
       GUINT_TO_POINTER (room_handle));
   if (chan == NULL)
     {
-      GError e = { GIBBER_XMPP_ERROR, XMPP_ERROR_BAD_REQUEST,
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
           "No tubes channel available for this MUC" };
 
       DEBUG ("tubes channel doesn't exist for muc %d", room_handle);
