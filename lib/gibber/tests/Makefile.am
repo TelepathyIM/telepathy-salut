@@ -65,7 +65,6 @@ check_PROGRAMS = \
 	check-gibber-r-multicast-packet \
 	check-gibber-r-multicast-sender \
 	check-gibber-listener \
-	check-gibber-xmpp-error \
 	check-gibber-unix-transport
 
 test: ${TEST_PROGS}
