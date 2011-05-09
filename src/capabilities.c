@@ -39,7 +39,6 @@ struct _Feature
 static const Feature self_advertised_features[] =
 {
   { FEATURE_FIXED, WOCKY_XMPP_NS_SI},
-  { FEATURE_FIXED, WOCKY_XMPP_NS_IBB},
   { FEATURE_FIXED, WOCKY_TELEPATHY_NS_TUBES},
   { FEATURE_FIXED, WOCKY_XMPP_NS_IQ_OOB},
   { FEATURE_FIXED, WOCKY_XMPP_NS_X_OOB},

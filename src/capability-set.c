@@ -57,7 +57,6 @@ static const Feature self_advertised_features[] =
   { FEATURE_FIXED, NS_NICK },
   { FEATURE_FIXED, NS_NICK "+notify" },
   { FEATURE_FIXED, NS_SI },
-  { FEATURE_FIXED, NS_IBB },
   { FEATURE_FIXED, NS_TUBES },
   { FEATURE_FIXED, NS_BYTESTREAMS },
   { FEATURE_OPTIONAL, NS_FILE_TRANSFER },

@@ -12,8 +12,6 @@ BUILT_SOURCES = \
 HANDWRITTEN_SOURCES =             \
   gibber-muc-connection.c         \
   gibber-muc-connection.h         \
-  gibber-bytestream-ibb.h         \
-  gibber-bytestream-ibb.c         \
   gibber-bytestream-iface.h       \
   gibber-bytestream-iface.c       \
   gibber-bytestream-muc.h         \

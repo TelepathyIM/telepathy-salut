@@ -38,7 +38,6 @@
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-generic.h>
 
-#include <gibber/gibber-bytestream-ibb.h>
 #include <gibber/gibber-bytestream-muc.h>
 #include <gibber/gibber-muc-connection.h>
 

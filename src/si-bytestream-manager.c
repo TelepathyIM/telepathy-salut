@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <gibber/gibber-bytestream-ibb.h>
 #include <gibber/gibber-bytestream-oob.h>
 
 #include <wocky/wocky-stanza.h>
@@ -239,24 +238,6 @@ choose_bytestream_method (SalutSiBytestreamManager *self,
         {
           DEBUG ("choose OOB in methods list");
           return g_object_new (GIBBER_TYPE_BYTESTREAM_OOB,
-              "porter", porter,
-              "stream-id", stream_id,
-              "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
-              "self-id", priv->connection->name,
-              "peer-id", contact->name,
-              "contact", contact,
-              "stream-init-iq", stream_init_iq,
-              NULL);
-        }
-    }
-
-  /* check IBB */
-  for (l = stream_methods; l != NULL; l = l->next)
-    {
-      if (!tp_strdiff (l->data, WOCKY_XMPP_NS_IBB))
-        {
-          DEBUG ("choose IBB in methods list");
-          return g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
               "porter", porter,
               "stream-id", stream_id,
               "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
@@ -628,12 +609,6 @@ salut_si_bytestream_manager_make_stream_init_iq (const gchar *from,
                 ')',
               ')',
 
-              '(', "option",
-                '(', "value",
-                  '$', WOCKY_XMPP_NS_IBB,
-                ')',
-              ')',
-
             ')',
           ')',
         ')',
@@ -816,20 +791,6 @@ si_request_sent_cb (GObject *source_object,
         gibber_bytestream_oob_set_check_addr_func (
             GIBBER_BYTESTREAM_OOB (bytestream), check_bytestream_oob_peer_addr,
             data->self);
-      }
-    else if (!tp_strdiff (stream_method, WOCKY_XMPP_NS_IBB))
-      {
-        /* Remote user have accepted the stream */
-        DEBUG ("remote user chose a IBB bytestream");
-        bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_IBB,
-              "porter", porter,
-              "stream-id", data->stream_id,
-              "state", GIBBER_BYTESTREAM_STATE_INITIATING,
-              "self-id", priv->connection->name,
-              "peer-id", from,
-              "contact", wocky_stanza_get_from_contact (stanza),
-              "stream-init-iq", NULL,
-              NULL);
       }
     else
       {
