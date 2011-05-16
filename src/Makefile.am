@@ -63,8 +63,6 @@ CORE_SOURCES =                                          \
     connection-contact-info.c                     \
     connection-contact-info.h                     \
     presence.h                                    \
-    contact-channel.h                             \
-    contact-channel.c                             \
     si-bytestream-manager.h                       \
     si-bytestream-manager.c                       \
     text-helper.c                                 \
