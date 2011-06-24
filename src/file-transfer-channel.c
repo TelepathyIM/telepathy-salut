@@ -354,8 +354,11 @@ salut_file_transfer_channel_set_property (GObject *object,
         self->priv->connection = g_value_get_object (value);
         break;
       case PROP_HANDLE_TYPE:
+        /* 0 is the old tp-glib value of unset, TP_UNKNOWN_HANDLE_TYPE is the
+         * new version */
         g_assert (g_value_get_uint (value) == 0
-                  || g_value_get_uint (value) == TP_HANDLE_TYPE_CONTACT);
+                  || g_value_get_uint (value) == TP_HANDLE_TYPE_CONTACT
+                  || g_value_get_uint (value) == TP_UNKNOWN_HANDLE_TYPE);
         break;
       case PROP_CHANNEL_TYPE:
         /* these properties are writable in the interface, but not actually
