@@ -225,8 +225,10 @@ salut_contact_channel_set_property (GObject     *object,
       priv->conn = g_value_get_object (value);
       break;
     case PROP_HANDLE_TYPE:
-      g_assert (g_value_get_uint (value) == 0
-               || g_value_get_uint (value) == TP_HANDLE_TYPE_LIST);
+      g_assert (g_value_get_uint (value) == 0 /* old tp-glib value for unset */
+               || g_value_get_uint (value) == TP_HANDLE_TYPE_LIST
+                                              /* new tp-glib value for unset */
+               || g_value_get_uint (value) == TP_UNKNOWN_HANDLE_TYPE);
       break;
     case PROP_CHANNEL_TYPE:
       tmp = g_value_get_string (value);
