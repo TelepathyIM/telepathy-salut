@@ -16,6 +16,8 @@ EXTRA_DIST = \
     glib-signals-marshal-gen.py \
     identity.xsl \
     libglibcodegen.py \
+    make-release-mail.py \
+    telepathy.am \
     xep.xsl
 
 glib-client-marshaller-gen.py: libglibcodegen.py
