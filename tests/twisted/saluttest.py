@@ -220,8 +220,15 @@ def wait_for_contact_in_publish(q, bus, conn, contact_name):
     while handle == 0:
         e = q.expect('dbus-signal', signal='MembersChangedDetailed',
                 path=publish)
+        # Versions of telepathy-glib prior to 0.14.6 incorrectly used the name
+        # 'member-ids'.
+        try:
+            ids = e.args[4]['contact-ids']
+        except KeyError:
+            ids = e.args[4]['member-ids']
+
         for h in e.args[0]:
-            name = e.args[4]['member-ids'][h]
+            name = ids[h]
             if name == contact_name:
                 handle = h
 
