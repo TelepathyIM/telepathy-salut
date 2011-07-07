@@ -1,7 +1,28 @@
-telepathy-salut 0.5.1 (UNRELEASED)
+telepathy-salut 0.5.1 (2011-07-07)
 ==================================
 
-...
+The “nyanit.com is high up in the referrals list” release. This release
+fixes a crash triggered by recent versions of telepathy-glib, and a
+crash triggered by portscanning yourself.
+
+Enhancements:
+
+ • More bits and pieces of Gibber have been replaced by Wocky. (jonny)
+
+Fixes:
+
+ • Assumptions made about the default value of
+   TpChannelIface:handle-type (which changed in a recent telepathy-glib
+   release) are now less specific, fixing assertion failures. (jonny,
+   sjoerd)
+
+ • Salut no longer crashes if you 'nmap localhost'. (fd.o#39018, jonny)
+
+ • The tests now pass with telepathy-glib >= 0.14.6, which corrected a
+   longstanding bug in MembersChangedDetailed which saluttest.py was
+   relying on. The tests should still work with older versions, too.
+   (wjt)
+
 
 telepathy-salut 0.5.0 (2011-05-03)
 ==================================
