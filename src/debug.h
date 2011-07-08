@@ -56,13 +56,14 @@ void debug_free (void);
 
 #ifdef DEBUG_FLAG
 
-#define DEBUG(format, ...) \
-  G_STMT_START { } G_STMT_END
+static inline void
+DEBUG (
+    const gchar *format,
+    ...)
+{
+}
 
 #define DEBUGGING 0
-
-#define NODE_DEBUG(n, s) \
-  G_STMT_START { } G_STMT_END
 
 #endif /* DEBUG_FLAG */
 
