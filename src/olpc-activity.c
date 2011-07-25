@@ -29,6 +29,7 @@
 #include "olpc-activity.h"
 #include "muc-manager.h"
 #include "util.h"
+#include "namespaces.h"
 
 #include "signals-marshal.h"
 
@@ -316,12 +317,12 @@ send_properties_change_msg (SalutOlpcActivity *self,
       WOCKY_STANZA_SUB_TYPE_GROUPCHAT,
       self->connection->name, muc_name,
       WOCKY_NODE_START, "properties",
-        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+        WOCKY_NODE_XMLNS, NS_OLPC_ACTIVITY_PROPS,
       WOCKY_NODE_END, NULL);
   top_node = wocky_stanza_get_top_node (stanza);
 
   properties_node = wocky_node_get_child_ns (top_node, "properties",
-      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+      NS_OLPC_ACTIVITY_PROPS);
 
   salut_wocky_node_add_children_from_properties (properties_node,
       properties, "property");
@@ -620,7 +621,7 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
       WOCKY_STANZA_SUB_TYPE_NONE,
       self->connection->name, NULL,
       WOCKY_NODE_START, "uninvite",
-        WOCKY_NODE_XMLNS, GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+        WOCKY_NODE_XMLNS, NS_OLPC_ACTIVITY_PROPS,
         WOCKY_NODE_ATTRIBUTE, "room", tp_handle_inspect (room_repo,
           self->room),
         WOCKY_NODE_ATTRIBUTE, "id", self->id,
@@ -673,7 +674,7 @@ salut_olpc_activity_augment_invitation (SalutOlpcActivity *self,
   properties = salut_olpc_activity_create_properties_table (self);
 
   properties_node = wocky_node_add_child_ns (invite_node, "properties",
-      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+      NS_OLPC_ACTIVITY_PROPS);
 
   /* add the activity id */
   activity_id_val = g_slice_new0 (GValue);

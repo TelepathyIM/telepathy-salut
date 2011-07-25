@@ -67,6 +67,7 @@
 #include "si-bytestream-manager.h"
 #include "tubes-manager.h"
 #include "util.h"
+#include "namespaces.h"
 
 #include "plugin-loader.h"
 
@@ -3214,7 +3215,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   muc_ready_ctx *ctx;
 
   props_node = wocky_node_get_child_ns (invite_node, "properties",
-      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+      NS_OLPC_ACTIVITY_PROPS);
 
   if (props_node == NULL)
     return;
@@ -3409,7 +3410,7 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
   SalutOlpcActivity *activity;
 
   props_node = wocky_node_get_child_ns (node, "properties",
-      GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+      NS_OLPC_ACTIVITY_PROPS);
 
   if (props_node == NULL)
     return FALSE;
@@ -3455,7 +3456,7 @@ uninvite_stanza_callback (WockyPorter *porter,
   SalutContact *contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
 
   node = wocky_node_get_child_ns (top_node, "uninvite",
-        GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS);
+        NS_OLPC_ACTIVITY_PROPS);
   g_assert (node != NULL);
 
   room = wocky_node_get_attribute (node, "room");
@@ -3514,7 +3515,7 @@ salut_connection_create_channel_factories (TpBaseConnection *base)
       WOCKY_PORTER_HANDLER_PRIORITY_NORMAL,
       uninvite_stanza_callback, self,
       '(', "uninvite",
-        ':', GIBBER_TELEPATHY_NS_OLPC_ACTIVITY_PROPS,
+        ':', NS_OLPC_ACTIVITY_PROPS,
       ')', NULL);
 
   /* create the OLPC activity manager */

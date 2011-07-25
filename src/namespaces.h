@@ -115,4 +115,6 @@
 #define NS_TEMPPRES "urn:xmpp:temppres:0"
 #define NS_GOOGLE_SHARED_STATUS "google:shared-status"
 
+#define NS_OLPC_ACTIVITY_PROPS  "http://laptop.org/xmpp/activity-properties"
+
 #endif /* __GABBLE_NAMESPACES__H__ */
