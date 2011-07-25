@@ -106,6 +106,7 @@ BUILT_SOURCES = config.py
 
 EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
+	$(TWISTED_AVAHI_OLPC_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
 	constants.py \
 	saluttest.py \
