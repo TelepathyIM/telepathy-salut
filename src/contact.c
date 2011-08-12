@@ -341,6 +341,7 @@ salut_contact_finalize (GObject *object)
   g_free (self->status_message);
   g_free (priv->alias);
   g_free (self->avatar_token);
+  g_free (self->email);
   g_free (self->jid);
 
 #ifdef ENABLE_OLPC
@@ -566,6 +567,17 @@ salut_contact_change_avatar_token (SalutContact *self,
       /* Purge the cache */
       purge_cached_avatar (self, avatar_token);
       salut_contact_change (self, SALUT_CONTACT_AVATAR_CHANGED);
+    }
+}
+
+void
+salut_contact_change_email (SalutContact *self, gchar *email)
+{
+  if (tp_strdiff (self->email, email))
+    {
+      g_free (self->email);
+      self->email = g_strdup (email);
+      salut_contact_change (self, SALUT_CONTACT_EMAIL_CHANGED);
     }
 }
 

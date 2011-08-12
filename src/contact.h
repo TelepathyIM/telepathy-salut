@@ -46,6 +46,7 @@ enum {
   SALUT_CONTACT_OLPC_ACTIVITIES = 0x20,
 #endif /* ENABLE_OLPC */
   SALUT_CONTACT_JID_CHANGED = 0x40,
+  SALUT_CONTACT_EMAIL_CHANGED = 0x80,
 };
 
 typedef struct _SalutContact SalutContact;
@@ -70,6 +71,7 @@ struct _SalutContact {
     SalutPresenceId status;
     gchar *avatar_token;
     gchar *status_message;
+    gchar *email;
     gchar *jid;
 
     /* XEP-0115 Capabilities */
@@ -156,6 +158,7 @@ void salut_contact_change_status_message (SalutContact *self,
   const gchar *message);
 void salut_contact_change_avatar_token (SalutContact *self,
   const gchar *avatar_token);
+void salut_contact_change_email (SalutContact *self, gchar *email);
 void salut_contact_change_jid (SalutContact *self, gchar *jid);
 void salut_contact_change_capabilities (SalutContact *self,
   const gchar *hash, const gchar *node, const gchar *ver);

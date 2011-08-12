@@ -726,6 +726,11 @@ contact_resolved_cb (GaServiceResolver *resolver,
   salut_contact_change_avatar_token (contact, s);
   avahi_free (s);
 
+  /* email */
+  s = _avahi_txt_get_keyval (txt, "email");
+  salut_contact_change_email (contact, s);
+  avahi_free (s);
+
   /* jid */
   s = _avahi_txt_get_keyval (txt, "jid");
   salut_contact_change_jid (contact, s);
