@@ -727,11 +727,11 @@ contact_resolved_cb (GaServiceResolver *resolver,
   avahi_free (s);
 
   /* jid */
-#ifdef ENABLE_OLPC
   s = _avahi_txt_get_keyval (txt, "jid");
   salut_contact_change_jid (contact, s);
   avahi_free (s);
 
+#ifdef ENABLE_OLPC
   /* OLPC color */
   s = _avahi_txt_get_keyval (txt, "olpc-color");
   salut_contact_change_olpc_color (contact, s);
