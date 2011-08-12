@@ -47,7 +47,6 @@
 #include <wocky/wocky-data-form.h>
 #include <wocky/wocky-xep-0115-capabilities.h>
 
-#include "capabilities.h"
 #include "avahi-discovery-client.h"
 #include "capabilities.h"
 #include "caps-hash.h"
