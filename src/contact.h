@@ -45,6 +45,7 @@ enum {
   SALUT_CONTACT_OLPC_CURRENT_ACTIVITY = 0x10,
   SALUT_CONTACT_OLPC_ACTIVITIES = 0x20,
 #endif /* ENABLE_OLPC */
+  SALUT_CONTACT_JID_CHANGED = 0x40,
 };
 
 typedef struct _SalutContact SalutContact;

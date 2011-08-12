@@ -576,9 +576,12 @@ salut_contact_change_jid (SalutContact *self, gchar *jid)
     {
       g_free (self->jid);
       self->jid = g_strdup (jid);
+      salut_contact_change (self,
+          SALUT_CONTACT_JID_CHANGED
 #ifdef ENABLE_OLPC
-      salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
+        | SALUT_CONTACT_OLPC_PROPERTIES
 #endif
+          );
     }
 }
 
