@@ -590,15 +590,13 @@ update_alias (SalutAvahiContact *self,
               const gchar *first,
               const gchar *last)
 {
-#define STREMPTY(x) (x == NULL || *x == '\0')
-
-  if (!STREMPTY(nick))
+  if (!tp_str_empty (nick))
     {
       salut_contact_change_alias (SALUT_CONTACT (self), nick);
       return;
     }
 
-  if (!STREMPTY(first) && !STREMPTY(last))
+  if (!tp_str_empty (first) && !tp_str_empty (last))
     {
       gchar *s = g_strdup_printf ("%s %s", first, last);
 
@@ -608,23 +606,20 @@ update_alias (SalutAvahiContact *self,
       return;
     }
 
-  if (!STREMPTY(first))
+  if (!tp_str_empty (first))
     {
       salut_contact_change_alias (SALUT_CONTACT (self), first);
       return;
     }
 
-  if (!STREMPTY(last))
+  if (!tp_str_empty (last))
     {
       salut_contact_change_alias (SALUT_CONTACT (self), last);
       return;
     }
 
   salut_contact_change_alias (SALUT_CONTACT (self), NULL);
-
-#undef STREMPTY
 }
-
 
 /* Returned string needs to be freed with avahi_free ! */
 static char *
