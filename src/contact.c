@@ -341,6 +341,8 @@ salut_contact_finalize (GObject *object)
   g_free (self->status_message);
   g_free (priv->alias);
   g_free (self->avatar_token);
+  g_free (self->first);
+  g_free (self->last);
   g_free (self->email);
   g_free (self->jid);
 
@@ -521,6 +523,22 @@ salut_contact_change (SalutContact *self, guint changes)
         priv->pending_changes);
       priv->pending_changes = 0;
       return;
+    }
+}
+
+void
+salut_contact_change_real_name (
+    SalutContact *self,
+    const gchar *first,
+    const gchar *last)
+{
+  if (tp_strdiff (self->first, first) || tp_strdiff (self->last, last))
+    {
+      g_free (self->first);
+      self->first = g_strdup (first);
+      g_free (self->last);
+      self->last = g_strdup (last);
+      salut_contact_change (self, SALUT_CONTACT_REAL_NAME_CHANGED);
     }
 }
 

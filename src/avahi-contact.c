@@ -702,12 +702,14 @@ contact_resolved_cb (GaServiceResolver *resolver,
   salut_contact_change_status_message (contact, s);
   avahi_free (s);
 
-  /* nick */
+  /* real name and nick */
   nick = _avahi_txt_get_keyval (txt, "nick");
   first = _avahi_txt_get_keyval (txt, "1st");
   last = _avahi_txt_get_keyval (txt, "last");
 
+  salut_contact_change_real_name (contact, first, last);
   update_alias (self, nick, first, last);
+
   avahi_free (nick);
   avahi_free (first);
   avahi_free (last);
