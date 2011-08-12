@@ -80,9 +80,6 @@
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
 
-#define SALUT_TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
-      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
-
 #ifdef ENABLE_OLPC
 
 #define ACTIVITY_PAIR_TYPE \
@@ -1534,9 +1531,9 @@ _contact_manager_contact_alias_changed  (SalutConnection *self,
   GPtrArray *aliases;
   GValue entry = {0, };
 
-  g_value_init (&entry, SALUT_TP_ALIAS_PAIR_TYPE);
+  g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
   g_value_take_boxed (&entry,
-      dbus_g_type_specialized_construct (SALUT_TP_ALIAS_PAIR_TYPE));
+      dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
 
   dbus_g_type_struct_set (&entry,
       0, handle, 1, salut_contact_get_alias (contact), G_MAXUINT);
