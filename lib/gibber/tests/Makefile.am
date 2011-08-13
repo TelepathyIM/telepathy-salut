@@ -15,8 +15,6 @@ AM_LDFLAGS = @GLIB_LIBS@ \
 clean-local:
 	-rm -rf outputs
 
-SUBDIRS = inputs
-
 EXTRA_DIST = \
 	test-transport.h \
 	test-transport.c
