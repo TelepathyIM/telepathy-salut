@@ -22,6 +22,7 @@
 #include <telepathy-glib/interfaces.h>
 /* Slightly sketchy; included for TpContactInfoFieldSpec. */
 #include <telepathy-glib/connection.h>
+#include <telepathy-glib/gtypes.h>
 
 #include "contact-manager.h"
 #include "contact.h"
@@ -109,6 +110,38 @@ salut_conn_contact_info_class_init (
       props);
 }
 
+static GPtrArray *
+build_contact_info (
+    const gchar *first,
+    const gchar *last,
+    const gchar *email,
+    const gchar *jid)
+{
+  GPtrArray *contact_info = dbus_g_type_specialized_construct (
+      TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST);
+
+  if (first != NULL || last != NULL)
+    {
+      const gchar *field_value[] = {
+          last != NULL ? last : "",
+          first != NULL ? first : "",
+          "",
+          "",
+          "",
+          NULL
+      };
+
+      g_ptr_array_add (contact_info,
+          tp_value_array_build (3,
+              G_TYPE_STRING, "n",
+              G_TYPE_STRV, NULL,
+              G_TYPE_STRV, field_value,
+              G_TYPE_INVALID));
+    }
+
+  return contact_info;
+}
+
 static void
 salut_conn_contact_info_fill_contact_attributes (
     GObject *obj,
@@ -125,6 +158,7 @@ salut_conn_contact_info_fill_contact_attributes (
   for (i = 0; i < contacts->len; i++)
     {
       TpHandle handle = g_array_index (contacts, TpHandle, i);
+      GPtrArray *contact_info = NULL;
 
       if (base->self_handle == handle)
         {
@@ -136,10 +170,17 @@ salut_conn_contact_info_fill_contact_attributes (
               contact_manager, handle);
           if (contact != NULL)
             {
-              /* TODO */
+              contact_info = build_contact_info (contact->first, contact->last,
+                  contact->email, contact->jid);
               g_object_unref (contact);
             }
         }
+
+      if (contact_info != NULL)
+        tp_contacts_mixin_set_contact_attribute (attributes_hash,
+            handle, TP_TOKEN_CONNECTION_INTERFACE_CONTACT_INFO_INFO,
+            tp_g_value_slice_new_take_boxed (
+                TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info));
     }
 
   g_object_unref (contact_manager);

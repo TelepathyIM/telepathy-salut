@@ -3,7 +3,7 @@ Test that aliases are built as expected from contacts' TXT records, and that
 the details show up correctly in ContactInfo.
 """
 
-from servicetest import assertContains, assertEquals
+from servicetest import assertContains, assertEquals, assertLength
 from saluttest import exec_test, wait_for_contact_in_publish
 from avahitest import AvahiAnnouncer
 from avahitest import get_host_name
@@ -18,6 +18,12 @@ def wait_for_aliases_changed(q, handle):
             (h, a) = x[0]
             if h == handle:
                 return a
+
+def assertOmitsField(field_name, fields):
+    def matches(field):
+        return field[0] == field_name
+
+    assertLength(0, filter(matches, fields))
 
 def test(q, bus, conn):
     conn.Connect()
@@ -61,6 +67,19 @@ def test(q, bus, conn):
 
         a = wait_for_aliases_changed (q, handle)
         assert a == alias, (a, alias, txt)
+
+        attrs = conn.Contacts.GetContactAttributes([handle],
+            [cs.CONN_IFACE_ALIASING, cs.CONN_IFACE_CONTACT_INFO], True)[handle]
+
+        assertEquals(alias, attrs[cs.CONN_IFACE_ALIASING + "/alias"])
+
+        info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
+
+        if '1st' in dict or 'last' in dict:
+            values = [dict.get('last', ''), dict.get('1st', ''), '', '', '']
+            assertContains(('n', [], values), info)
+        else:
+            assertOmitsField('n', info)
 
 if __name__ == '__main__':
     exec_test(test)
