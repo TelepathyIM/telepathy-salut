@@ -46,6 +46,18 @@ def check_contact_info(info, txt):
     else:
         assertOmitsField('x-jabber', info)
 
+def check_all_contact_info_methods(conn, handle, keys):
+    attrs = conn.Contacts.GetContactAttributes([handle],
+        [cs.CONN_IFACE_CONTACT_INFO], True)[handle]
+    info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
+    check_contact_info(info, keys)
+
+    info = conn.ContactInfo.GetContactInfo([handle])[handle]
+    check_contact_info(info, keys)
+
+    info = conn.ContactInfo.RequestContactInfo(handle)
+    check_contact_info(info, keys)
+
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged',
@@ -96,15 +108,10 @@ def test(q, bus, conn):
             check_contact_info(info, dict)
 
         attrs = conn.Contacts.GetContactAttributes([handle],
-            [cs.CONN_IFACE_ALIASING, cs.CONN_IFACE_CONTACT_INFO], True)[handle]
-
+            [cs.CONN_IFACE_ALIASING], True)[handle]
         assertEquals(alias, attrs[cs.CONN_IFACE_ALIASING + "/alias"])
 
-        info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
-        check_contact_info(info, dict)
-
-        info = conn.ContactInfo.GetContactInfo([handle])[handle]
-        check_contact_info(info, dict)
+        check_all_contact_info_methods(conn, handle, dict)
 
     for keys in [ { "email": "foo@bar.com" },
                   { "jid": "nyan@gmail.com", "email": "foo@bar.com" },
@@ -117,14 +124,7 @@ def test(q, bus, conn):
         info = wait_for_contact_info_changed(q, handle)
         check_contact_info(info, keys)
 
-        attrs = conn.Contacts.GetContactAttributes([handle],
-            [cs.CONN_IFACE_CONTACT_INFO], True)[handle]
-        info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
-        check_contact_info(info, keys)
-
-        info = conn.ContactInfo.GetContactInfo([handle])[handle]
-        check_contact_info(info, keys)
-
+        check_all_contact_info_methods(conn, handle, keys)
 
 if __name__ == '__main__':
     exec_test(test)

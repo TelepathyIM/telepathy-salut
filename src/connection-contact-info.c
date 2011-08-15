@@ -290,6 +290,54 @@ salut_conn_contact_info_get_contact_info (
 }
 
 static void
+salut_conn_contact_info_request_contact_info (
+    TpSvcConnectionInterfaceContactInfo *iface,
+    guint handle,
+    DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *contacts_repo =
+      tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+  GError *error = NULL;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (TP_BASE_CONNECTION (iface),
+      context);
+
+  if (!tp_handle_is_valid (contacts_repo, handle, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+    }
+  else
+    {
+      SalutContactManager *contact_manager;
+      SalutContact *contact;
+
+      g_object_get (self, "contact-manager", &contact_manager, NULL);
+      contact = salut_contact_manager_get_contact (contact_manager, handle);
+      g_object_unref (contact_manager);
+
+      if (contact != NULL)
+        {
+          GPtrArray *contact_info = build_contact_info_for_contact (contact);
+
+          tp_svc_connection_interface_contact_info_return_from_request_contact_info (
+              context, contact_info);
+          g_boxed_free (TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info);
+        }
+      else
+        {
+          error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+              "No information available for '%s'",
+              tp_handle_inspect (contacts_repo, handle));
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+        }
+    }
+}
+
+static void
 salut_conn_contact_info_refresh_contact_info (
     TpSvcConnectionInterfaceContactInfo *iface,
     const GArray *contacts,
@@ -309,6 +357,7 @@ salut_conn_contact_info_iface_init (
 #define IMPLEMENT(x) tp_svc_connection_interface_contact_info_implement_##x \
     (klass, salut_conn_contact_info_##x)
   IMPLEMENT (get_contact_info);
+  IMPLEMENT (request_contact_info);
   IMPLEMENT (refresh_contact_info);
 #undef IMPLEMENT
 }
