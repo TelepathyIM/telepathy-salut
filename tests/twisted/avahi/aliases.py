@@ -1,11 +1,10 @@
+from servicetest import assertContains, assertEquals
 from saluttest import exec_test, wait_for_contact_in_publish
 from avahitest import AvahiAnnouncer
 from avahitest import get_host_name
+import constants as cs
 
 import time
-
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
 
 def wait_for_aliases_changed(q, handle):
     while True:
@@ -17,7 +16,8 @@ def wait_for_aliases_changed(q, handle):
 
 def test(q, bus, conn):
     conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
+    q.expect('dbus-signal', signal='StatusChanged',
+        args=[cs.CONN_STATUS_CONNECTED, cs.CSR_NONE_SPECIFIED])
     basic_txt = { "txtvers": "1", "status": "avail" }
 
     contact_name = "aliastest@" + get_host_name()
@@ -25,7 +25,7 @@ def test(q, bus, conn):
 
     handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
     alias = wait_for_aliases_changed(q, handle)
-    assert alias == contact_name, alias
+    assertEquals(contact_name, alias)
 
     for (alias, dict) in [
       ("last", { "last": "last" }),
