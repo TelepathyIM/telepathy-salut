@@ -36,6 +36,16 @@ def check_contact_info(info, txt):
     else:
         assertOmitsField('n', info)
 
+    if 'email' in txt:
+        assertContains(('email', ['type=internet'], [txt['email']]), info)
+    else:
+        assertOmitsField('email', info)
+
+    if 'jid' in txt:
+        assertContains(('x-jabber', [], [txt['jid']]), info)
+    else:
+        assertOmitsField('x-jabber', info)
+
 def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged',
@@ -92,6 +102,23 @@ def test(q, bus, conn):
 
         info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
         check_contact_info(info, dict)
+
+    for keys in [ { "email": "foo@bar.com" },
+                  { "jid": "nyan@gmail.com", "email": "foo@bar.com" },
+                  { "jid": "orly@example.com" },
+                ]:
+        txt = basic_txt.copy()
+        txt.update(keys)
+
+        announcer.set(txt)
+        info = wait_for_contact_info_changed(q, handle)
+        check_contact_info(info, keys)
+
+        attrs = conn.Contacts.GetContactAttributes([handle],
+            [cs.CONN_IFACE_CONTACT_INFO], True)[handle]
+        info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
+        check_contact_info(info, keys)
+
 
 if __name__ == '__main__':
     exec_test(test)

@@ -31,10 +31,11 @@ enum {
     PROP_SUPPORTED_FIELDS
 };
 
+static gchar *i_heart_the_internet[] = { "type=internet", NULL };
+
 static GPtrArray *
 get_supported_fields (void)
 {
-  static gchar *i_heart_the_internet[] = { "type=internet", NULL };
   static TpContactInfoFieldSpec supported_fields[] = {
       /* We're gonna omit 'fn' because it shows up as the alias. */
       { "n", NULL,
@@ -133,6 +134,30 @@ build_contact_info (
       g_ptr_array_add (contact_info,
           tp_value_array_build (3,
               G_TYPE_STRING, "n",
+              G_TYPE_STRV, NULL,
+              G_TYPE_STRV, field_value,
+              G_TYPE_INVALID));
+    }
+
+  if (email != NULL)
+    {
+      const gchar *field_value[] = { email, NULL };
+
+      g_ptr_array_add (contact_info,
+          tp_value_array_build (3,
+              G_TYPE_STRING, "email",
+              G_TYPE_STRV, i_heart_the_internet,
+              G_TYPE_STRV, field_value,
+              G_TYPE_INVALID));
+    }
+
+  if (jid != NULL)
+    {
+      const gchar *field_value[] = { jid, NULL };
+
+      g_ptr_array_add (contact_info,
+          tp_value_array_build (3,
+              G_TYPE_STRING, "x-jabber",
               G_TYPE_STRV, NULL,
               G_TYPE_STRV, field_value,
               G_TYPE_INVALID));
