@@ -25,7 +25,6 @@
 #include <telepathy-glib/gtypes.h>
 
 #include "contact-manager.h"
-#include "contact.h"
 
 enum {
     PROP_CONTACT_INFO_FLAGS,
@@ -142,6 +141,16 @@ build_contact_info (
   return contact_info;
 }
 
+static GPtrArray *
+build_contact_info_for_contact (
+    SalutContact *contact)
+{
+  g_return_val_if_fail (contact != NULL, NULL);
+
+  return build_contact_info (contact->first, contact->last, contact->email,
+      contact->jid);
+}
+
 static void
 salut_conn_contact_info_fill_contact_attributes (
     GObject *obj,
@@ -170,8 +179,7 @@ salut_conn_contact_info_fill_contact_attributes (
               contact_manager, handle);
           if (contact != NULL)
             {
-              contact_info = build_contact_info (contact->first, contact->last,
-                  contact->email, contact->jid);
+              contact_info = build_contact_info_for_contact (contact);
               g_object_unref (contact);
             }
         }
@@ -193,6 +201,19 @@ void salut_conn_contact_info_init (
       G_OBJECT (self),
       TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
       salut_conn_contact_info_fill_contact_attributes);
+}
+
+void
+salut_conn_contact_info_changed (
+    SalutConnection *self,
+    SalutContact *contact,
+    TpHandle handle)
+{
+  GPtrArray *contact_info = build_contact_info_for_contact (contact);
+
+  tp_svc_connection_interface_contact_info_emit_contact_info_changed (self,
+      handle, contact_info);
+  g_boxed_free (TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info);
 }
 
 static void

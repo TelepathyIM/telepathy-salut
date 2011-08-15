@@ -20,6 +20,7 @@
 #define SALUT_CONNECTION_CONTACT_INFO_H
 
 #include "connection.h"
+#include "contact.h"
 
 void salut_conn_contact_info_iface_init (
     gpointer g_iface,
@@ -28,5 +29,10 @@ void salut_conn_contact_info_class_init (
     SalutConnectionClass *klass);
 void salut_conn_contact_info_init (
     SalutConnection *self);
+
+void salut_conn_contact_info_changed (
+    SalutConnection *self,
+    SalutContact *contact,
+    TpHandle handle);
 
 #endif // SALUT_CONNECTION_CONTACT_INFO_H

@@ -3373,6 +3373,14 @@ _contact_manager_contact_change_cb (SalutContactManager *mgr,
       _contact_manager_contact_avatar_changed (self, contact, handle);
     }
 
+  if (changes & ( SALUT_CONTACT_REAL_NAME_CHANGED
+                | SALUT_CONTACT_EMAIL_CHANGED
+                | SALUT_CONTACT_JID_CHANGED
+                ))
+    {
+      salut_conn_contact_info_changed (self, contact, handle);
+    }
+
 #ifdef ENABLE_OLPC
   if (changes & SALUT_CONTACT_OLPC_PROPERTIES)
     _contact_manager_contact_olpc_properties_changed (self, contact, handle);

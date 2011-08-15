@@ -12,18 +12,29 @@ import constants as cs
 import time
 
 def wait_for_aliases_changed(q, handle):
-    while True:
-        e = q.expect('dbus-signal', signal='AliasesChanged')
-        for x in e.args:
-            (h, a) = x[0]
-            if h == handle:
-                return a
+    e = q.expect('dbus-signal', signal='AliasesChanged',
+            predicate=lambda e: e.args[0][0][0] == handle)
+    _, alias = e.args[0][0]
+    return alias
+
+def wait_for_contact_info_changed(q, handle):
+    e = q.expect('dbus-signal', signal='ContactInfoChanged',
+            predicate=lambda e: e.args[0] == handle)
+    _, info = e.args
+    return info
 
 def assertOmitsField(field_name, fields):
     def matches(field):
         return field[0] == field_name
 
     assertLength(0, filter(matches, fields))
+
+def check_contact_info(info, txt):
+    if '1st' in txt or 'last' in txt:
+        values = [txt.get('last', ''), txt.get('1st', ''), '', '', '']
+        assertContains(('n', [], values), info)
+    else:
+        assertOmitsField('n', info)
 
 def test(q, bus, conn):
     conn.Connect()
@@ -54,12 +65,14 @@ def test(q, bus, conn):
     alias = wait_for_aliases_changed(q, handle)
     assertEquals(contact_name, alias)
 
-    for (alias, dict) in [
-      ("last", { "last": "last" }),
-      ("1st", { "1st": "1st"}),
-      ("1st last", { "1st": "1st", "last": "last" }),
-      ("nickname", { "1st": "1st", "last": "last", "nick": "nickname" }),
-      (contact_name, { }) ]:
+    for (alias, dict, expect_contact_info_changed) in [
+      ("last", { "last": "last" }, True),
+      ("1st", { "1st": "1st"}, True),
+      ("1st last", { "1st": "1st", "last": "last" }, True),
+      ("nickname", { "1st": "1st", "last": "last", "nick": "nickname" },
+       # We don't report 'nick' in ContactInfo, and nothing else has changed.
+       False),
+      (contact_name, {}, True) ]:
         txt = basic_txt.copy()
         txt.update(dict)
 
@@ -68,18 +81,17 @@ def test(q, bus, conn):
         a = wait_for_aliases_changed (q, handle)
         assert a == alias, (a, alias, txt)
 
+        if expect_contact_info_changed:
+            info = wait_for_contact_info_changed(q, handle)
+            check_contact_info(info, dict)
+
         attrs = conn.Contacts.GetContactAttributes([handle],
             [cs.CONN_IFACE_ALIASING, cs.CONN_IFACE_CONTACT_INFO], True)[handle]
 
         assertEquals(alias, attrs[cs.CONN_IFACE_ALIASING + "/alias"])
 
         info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
-
-        if '1st' in dict or 'last' in dict:
-            values = [dict.get('last', ''), dict.get('1st', ''), '', '', '']
-            assertContains(('n', [], values), info)
-        else:
-            assertOmitsField('n', info)
+        check_contact_info(info, dict)
 
 if __name__ == '__main__':
     exec_test(test)
