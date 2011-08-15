@@ -103,6 +103,9 @@ def test(q, bus, conn):
         info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
         check_contact_info(info, dict)
 
+        info = conn.ContactInfo.GetContactInfo([handle])[handle]
+        check_contact_info(info, dict)
+
     for keys in [ { "email": "foo@bar.com" },
                   { "jid": "nyan@gmail.com", "email": "foo@bar.com" },
                   { "jid": "orly@example.com" },
@@ -117,6 +120,9 @@ def test(q, bus, conn):
         attrs = conn.Contacts.GetContactAttributes([handle],
             [cs.CONN_IFACE_CONTACT_INFO], True)[handle]
         info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
+        check_contact_info(info, keys)
+
+        info = conn.ContactInfo.GetContactInfo([handle])[handle]
         check_contact_info(info, keys)
 
 
