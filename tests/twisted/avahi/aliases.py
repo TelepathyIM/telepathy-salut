@@ -3,7 +3,7 @@ Test that aliases are built as expected from contacts' TXT records, and that
 the details show up correctly in ContactInfo.
 """
 
-from servicetest import assertContains, assertEquals, assertLength
+from servicetest import assertContains, assertEquals, assertLength, call_async
 from saluttest import exec_test, wait_for_contact_in_publish
 from avahitest import AvahiAnnouncer
 from avahitest import get_host_name
@@ -125,6 +125,20 @@ def test(q, bus, conn):
         check_contact_info(info, keys)
 
         check_all_contact_info_methods(conn, handle, keys)
+
+    # Try an invalid handle. Both Get and Request should return InvalidHandle.
+    # (Technically so should RefreshContactInfo but I am lazy.)
+    call_async(q, conn.ContactInfo, 'GetContactInfo', [42])
+    q.expect('dbus-error', method='GetContactInfo', name=cs.INVALID_HANDLE)
+    call_async(q, conn.ContactInfo, 'RequestContactInfo', 42)
+    q.expect('dbus-error', method='RequestContactInfo', name=cs.INVALID_HANDLE)
+
+    # Try a valid handle for whom we have no data from the network. Get should
+    # just omit them; Request should fail.
+    h = conn.RequestHandles(cs.HT_CONTACT, ['rthrtha@octopus'])[0]
+    assertEquals({}, conn.ContactInfo.GetContactInfo([h]))
+    call_async(q, conn.ContactInfo, 'RequestContactInfo', h)
+    q.expect('dbus-error', method='RequestContactInfo', name=cs.NOT_AVAILABLE)
 
 if __name__ == '__main__':
     exec_test(test)
