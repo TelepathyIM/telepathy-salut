@@ -20,6 +20,8 @@
 #include "connection-contact-info.h"
 
 #include <telepathy-glib/interfaces.h>
+/* Slightly sketchy; included for TpContactInfoFieldSpec. */
+#include <telepathy-glib/connection.h>
 
 #include "contact-manager.h"
 #include "contact.h"
@@ -28,6 +30,45 @@ enum {
     PROP_CONTACT_INFO_FLAGS,
     PROP_SUPPORTED_FIELDS
 };
+
+static GPtrArray *
+get_supported_fields (void)
+{
+  static gchar *i_heart_the_internet[] = { "type=internet", NULL };
+  static TpContactInfoFieldSpec supported_fields[] = {
+      /* We're gonna omit 'fn' because it shows up as the alias. */
+      { "n", NULL,
+        TP_CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1 },
+      { "email", i_heart_the_internet,
+        TP_CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1 },
+      /* x-jabber is used for compatibility with Gabble */
+      { "x-jabber", NULL,
+        TP_CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1 },
+      /* Heh, we could also include the contact's IP address(es) here. */
+      { NULL }
+  };
+  static gsize supported_fields_ptr_array = 0;
+
+  if (g_once_init_enter (&supported_fields_ptr_array))
+    {
+      GPtrArray *fields = dbus_g_type_specialized_construct (
+          TP_ARRAY_TYPE_FIELD_SPECS);
+      TpContactInfoFieldSpec *spec;
+
+      for (spec = supported_fields; spec->name != NULL; spec++)
+        g_ptr_array_add (fields,
+            tp_value_array_build (4,
+                G_TYPE_STRING, spec->name,
+                G_TYPE_STRV, spec->parameters,
+                G_TYPE_UINT, spec->flags,
+                G_TYPE_UINT, spec->max,
+                G_TYPE_INVALID));
+
+      g_once_init_leave (&supported_fields_ptr_array, (gsize) fields);
+    }
+
+  return (GPtrArray *) supported_fields_ptr_array;
+}
 
 static void
 salut_conn_contact_info_get_property (
@@ -43,8 +84,7 @@ salut_conn_contact_info_get_property (
       g_value_set_uint (value, TP_CONTACT_INFO_FLAG_PUSH);
       break;
     case PROP_SUPPORTED_FIELDS:
-      /* TODO: list supported fields */
-      g_value_take_boxed (value, g_ptr_array_new ());
+      g_value_set_boxed (value, get_supported_fields ());
       break;
     default:
       g_assert_not_reached ();

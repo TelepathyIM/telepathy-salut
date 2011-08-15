@@ -28,6 +28,13 @@ def test(q, bus, conn):
         conn.Properties.Get(cs.CONN, "Interfaces"))
     ci_props = conn.Properties.GetAll(cs.CONN_IFACE_CONTACT_INFO)
     assertEquals(cs.CONTACT_INFO_FLAG_PUSH, ci_props['ContactInfoFlags'])
+    assertEquals(
+        [ ('n', [], cs.CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1),
+          ('email', ['type=internet'],
+           cs.CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1),
+          ('x-jabber', [], cs.CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1),
+        ],
+        ci_props['SupportedFields'])
 
     # Just to verify that RCI does approximately nothing and doesn't crash.
     conn.ContactInfo.RefreshContactInfo([21,42,88])
