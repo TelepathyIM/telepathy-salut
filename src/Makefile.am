@@ -60,6 +60,8 @@ CORE_SOURCES =                                          \
     contact-channel.h                             \
     connection.c                                  \
     connection.h                                  \
+    connection-contact-info.c                     \
+    connection-contact-info.h                     \
     presence.h                                    \
     contact-channel.h                             \
     contact-channel.c                             \

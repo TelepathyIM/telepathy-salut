@@ -50,6 +50,7 @@
 #include "avahi-discovery-client.h"
 #include "capabilities.h"
 #include "caps-hash.h"
+#include "connection-contact-info.h"
 #include "contact-channel.h"
 #include "contact.h"
 #include "contact-manager.h"
@@ -128,6 +129,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     G_IMPLEMENT_INTERFACE
       (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
       salut_conn_contact_caps_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_INFO,
+        salut_conn_contact_info_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CONNECTION_FUTURE,
       salut_conn_future_iface_init);
 #ifdef ENABLE_OLPC
@@ -397,6 +400,8 @@ salut_connection_constructor (GType type,
 
   g_signal_connect (self, "status-changed",
       (GCallback) sidecars_conn_status_changed_cb, NULL);
+
+  salut_conn_contact_info_init (self);
 
   return obj;
 }
@@ -717,6 +722,7 @@ static const gchar *interfaces [] = {
   TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
   TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
   TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+  TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
   SALUT_IFACE_CONNECTION_FUTURE,
 #ifdef ENABLE_OLPC
   SALUT_IFACE_OLPC_BUDDY_INFO,
@@ -784,6 +790,8 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   tp_contacts_mixin_class_init (object_class,
         G_STRUCT_OFFSET (SalutConnectionClass, contacts_mixin));
+
+  salut_conn_contact_info_class_init (salut_connection_class);
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
