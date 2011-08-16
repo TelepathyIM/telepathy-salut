@@ -74,6 +74,8 @@ struct _SalutContact {
     gchar *status_message;
     gchar *first;
     gchar *last;
+    /* synthesized from first and last */
+    gchar *full_name;
     gchar *email;
     gchar *jid;
 

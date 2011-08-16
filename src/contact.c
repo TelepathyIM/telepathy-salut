@@ -343,6 +343,7 @@ salut_contact_finalize (GObject *object)
   g_free (self->avatar_token);
   g_free (self->first);
   g_free (self->last);
+  g_free (self->full_name);
   g_free (self->email);
   g_free (self->jid);
 
@@ -538,6 +539,18 @@ salut_contact_change_real_name (
       self->first = g_strdup (first);
       g_free (self->last);
       self->last = g_strdup (last);
+
+      g_free (self->full_name);
+
+      if (!tp_str_empty (first) && !tp_str_empty (last))
+        self->full_name = g_strdup_printf ("%s %s", first, last);
+      else if (!tp_str_empty (first))
+        self->full_name = g_strdup (first);
+      else if (!tp_str_empty (last))
+        self->full_name = g_strdup (last);
+      else
+        self->full_name = NULL;
+
       salut_contact_change (self, SALUT_CONTACT_REAL_NAME_CHANGED);
     }
 }

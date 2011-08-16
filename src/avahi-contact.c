@@ -586,39 +586,23 @@ find_resolver (SalutAvahiContact *contact,
 
 static void
 update_alias (SalutAvahiContact *self,
-              const gchar *nick,
-              const gchar *first,
-              const gchar *last)
+              const gchar *nick)
 {
+  SalutContact *contact = SALUT_CONTACT (self);
+
   if (!tp_str_empty (nick))
     {
-      salut_contact_change_alias (SALUT_CONTACT (self), nick);
+      salut_contact_change_alias (contact, nick);
       return;
     }
 
-  if (!tp_str_empty (first) && !tp_str_empty (last))
+  if (!tp_str_empty (contact->full_name))
     {
-      gchar *s = g_strdup_printf ("%s %s", first, last);
-
-      salut_contact_change_alias (SALUT_CONTACT (self), s);
-
-      g_free (s);
+      salut_contact_change_alias (contact, contact->full_name);
       return;
     }
 
-  if (!tp_str_empty (first))
-    {
-      salut_contact_change_alias (SALUT_CONTACT (self), first);
-      return;
-    }
-
-  if (!tp_str_empty (last))
-    {
-      salut_contact_change_alias (SALUT_CONTACT (self), last);
-      return;
-    }
-
-  salut_contact_change_alias (SALUT_CONTACT (self), NULL);
+  salut_contact_change_alias (contact, NULL);
 }
 
 /* Returned string needs to be freed with avahi_free ! */
@@ -708,7 +692,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
   last = _avahi_txt_get_keyval (txt, "last");
 
   salut_contact_change_real_name (contact, first, last);
-  update_alias (self, nick, first, last);
+  update_alias (self, nick);
 
   avahi_free (nick);
   avahi_free (first);
