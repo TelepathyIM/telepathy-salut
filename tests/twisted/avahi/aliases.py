@@ -30,14 +30,14 @@ def assertOmitsField(field_name, fields):
     assertLength(0, filter(matches, fields))
 
 def check_contact_info(info, txt):
-    first = txt.get('1st', None)
-    last = txt.get('last', None)
+    first = txt.get('1st', '')
+    last = txt.get('last', '')
 
-    if first or last:
-        values = [last or '', first or '', '', '', '']
+    if first != '' or last != '':
+        values = [last, first, '', '', '']
         assertContains(('n', [], values), info)
 
-        fn = ' '.join([ x for x in [first, last] if x is not None])
+        fn = ' '.join([ x for x in [first, last] if x != ''])
         assertContains(('fn', [], [fn]), info)
     else:
         assertOmitsField('n', info)
@@ -97,12 +97,23 @@ def test(q, bus, conn):
     assertEquals(contact_name, alias)
 
     for (alias, dict, expect_contact_info_changed) in [
+      # Contact publishes just one of 1st and last
       ("last", { "last": "last" }, True),
       ("1st", { "1st": "1st"}, True),
+      # Contact publishes a meaningful value for one of 1st and last, and an
+      # empty value for the other one and for "nick". Empty values should be
+      # treated as if missing.
+      ("last", { "last": "last", "1st": "", "nick": "" }, True),
+      ("1st", { "1st": "1st", "last": "", "nick": "" }, True),
+      # When a contact publishes both 1st and last, we have to join them
+      # together in a stupid anglo-centric way, like iChat does.
       ("1st last", { "1st": "1st", "last": "last" }, True),
-      ("nickname", { "1st": "1st", "last": "last", "nick": "nickname" },
-       # We don't report 'nick' in ContactInfo, and nothing else has changed.
-       False),
+      # Nickname should be preferred as the alias to 1st or last. Since we
+      # don't report nicknames in ContactInfo, and nothing else has changed
+      # from the last update, no ContactInfo changes should be announced.
+      ("nickname", { "1st": "1st", "last": "last", "nick": "nickname" }, False),
+      # If the contact stops publishing any of this stuff, we should fall back
+      # to their JID as their alias.
       (contact_name, {}, True) ]:
         txt = basic_txt.copy()
         txt.update(dict)
