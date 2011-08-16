@@ -43,13 +43,15 @@ def check_contact_info(info, txt):
         assertOmitsField('n', info)
         assertOmitsField('fn', info)
 
-    if 'email' in txt:
-        assertContains(('email', ['type=internet'], [txt['email']]), info)
+    email = txt.get('email', '')
+    if email != '':
+        assertContains(('email', ['type=internet'], [email]), info)
     else:
         assertOmitsField('email', info)
 
-    if 'jid' in txt:
-        assertContains(('x-jabber', [], [txt['jid']]), info)
+    jid = txt.get('jid', '')
+    if jid != '':
+        assertContains(('x-jabber', [], [jid]), info)
     else:
         assertOmitsField('x-jabber', info)
 
@@ -133,9 +135,13 @@ def test(q, bus, conn):
 
         check_all_contact_info_methods(conn, handle, dict)
 
-    for keys in [ { "email": "foo@bar.com" },
+    for keys in [ # Check a few neat transitions, with no empty fields
+                  { "email": "foo@bar.com" },
                   { "jid": "nyan@gmail.com", "email": "foo@bar.com" },
                   { "jid": "orly@example.com" },
+                  # Check that empty fields are treated as if omitted
+                  { "email": "foo@bar.com", "jid": "" },
+                  { "jid": "orly@example.com", "email": "" },
                 ]:
         txt = basic_txt.copy()
         txt.update(keys)
