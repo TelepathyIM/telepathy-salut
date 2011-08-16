@@ -37,8 +37,13 @@ static GPtrArray *
 get_supported_fields (void)
 {
   static TpContactInfoFieldSpec supported_fields[] = {
-      /* We're gonna omit 'fn' because it shows up as the alias. */
+      /* We omit 'nickname' because it shows up, unmodifiably, as the alias. */
       { "n", NULL,
+        TP_CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1 },
+      /* It's a little bit sketchy to expose 1st + ' ' + last as FN. But such
+       * are the limitations of the protocol.
+       */
+      { "fn", NULL,
         TP_CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1 },
       { "email", i_heart_the_internet,
         TP_CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1 },
@@ -131,6 +136,7 @@ static GPtrArray *
 build_contact_info (
     const gchar *first,
     const gchar *last,
+    const gchar *full_name,
     const gchar *email,
     const gchar *jid)
 {
@@ -154,6 +160,9 @@ build_contact_info (
               G_TYPE_STRV, NULL,
               G_TYPE_STRV, field_value,
               G_TYPE_INVALID));
+
+      g_warn_if_fail (full_name != NULL);
+      add_singleton_field (contact_info, "fn", NULL, full_name);
     }
 
   if (email != NULL)
@@ -171,8 +180,8 @@ build_contact_info_for_contact (
 {
   g_return_val_if_fail (contact != NULL, NULL);
 
-  return build_contact_info (contact->first, contact->last, contact->email,
-      contact->jid);
+  return build_contact_info (contact->first, contact->last, contact->full_name,
+      contact->email, contact->jid);
 }
 
 static void

@@ -30,11 +30,18 @@ def assertOmitsField(field_name, fields):
     assertLength(0, filter(matches, fields))
 
 def check_contact_info(info, txt):
-    if '1st' in txt or 'last' in txt:
-        values = [txt.get('last', ''), txt.get('1st', ''), '', '', '']
+    first = txt.get('1st', None)
+    last = txt.get('last', None)
+
+    if first or last:
+        values = [last or '', first or '', '', '', '']
         assertContains(('n', [], values), info)
+
+        fn = ' '.join([ x for x in [first, last] if x is not None])
+        assertContains(('fn', [], [fn]), info)
     else:
         assertOmitsField('n', info)
+        assertOmitsField('fn', info)
 
     if 'email' in txt:
         assertContains(('email', ['type=internet'], [txt['email']]), info)
@@ -69,9 +76,11 @@ def test(q, bus, conn):
     assertEquals(cs.CONTACT_INFO_FLAG_PUSH, ci_props['ContactInfoFlags'])
     assertEquals(
         [ ('n', [], cs.CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1),
+          ('fn', [], cs.CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1),
           ('email', ['type=internet'],
            cs.CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1),
           ('x-jabber', [], cs.CONTACT_INFO_FIELD_FLAG_PARAMETERS_EXACT, 1),
+
         ],
         ci_props['SupportedFields'])
 
