@@ -204,7 +204,11 @@ salut_conn_contact_info_fill_contact_attributes (
 
       if (base->self_handle == handle)
         {
-          /* TODO */
+          /* TODO: dig contact info out of SalutSelf. There's overlap with
+           * connection parameters here … should they be DBus_Property
+           * parameters? Should we have a new flag which means “you set this on
+           * ContactInfo”? What?
+           */
         }
       else
         {
