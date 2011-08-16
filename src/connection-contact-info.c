@@ -110,6 +110,23 @@ salut_conn_contact_info_class_init (
       props);
 }
 
+static void
+add_singleton_field (
+    GPtrArray *contact_info,
+    const gchar *field_name,
+    gchar **parameters,
+    const gchar *value)
+{
+  const gchar *field_value[] = { value, NULL };
+
+  g_ptr_array_add (contact_info,
+      tp_value_array_build (3,
+          G_TYPE_STRING, field_name,
+          G_TYPE_STRV, parameters,
+          G_TYPE_STRV, field_value,
+          G_TYPE_INVALID));
+}
+
 static GPtrArray *
 build_contact_info (
     const gchar *first,
@@ -140,28 +157,10 @@ build_contact_info (
     }
 
   if (email != NULL)
-    {
-      const gchar *field_value[] = { email, NULL };
-
-      g_ptr_array_add (contact_info,
-          tp_value_array_build (3,
-              G_TYPE_STRING, "email",
-              G_TYPE_STRV, i_heart_the_internet,
-              G_TYPE_STRV, field_value,
-              G_TYPE_INVALID));
-    }
+    add_singleton_field (contact_info, "email", i_heart_the_internet, email);
 
   if (jid != NULL)
-    {
-      const gchar *field_value[] = { jid, NULL };
-
-      g_ptr_array_add (contact_info,
-          tp_value_array_build (3,
-              G_TYPE_STRING, "x-jabber",
-              G_TYPE_STRV, NULL,
-              G_TYPE_STRV, field_value,
-              G_TYPE_INVALID));
-    }
+    add_singleton_field (contact_info, "x-jabber", NULL, jid);
 
   return contact_info;
 }
