@@ -47,10 +47,10 @@
 #include <wocky/wocky-data-form.h>
 #include <wocky/wocky-xep-0115-capabilities.h>
 
-#include "capabilities.h"
 #include "avahi-discovery-client.h"
 #include "capabilities.h"
 #include "caps-hash.h"
+#include "connection-contact-info.h"
 #include "contact-channel.h"
 #include "contact.h"
 #include "contact-manager.h"
@@ -79,9 +79,6 @@
 
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
-
-#define SALUT_TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
-      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
 
 #ifdef ENABLE_OLPC
 
@@ -132,6 +129,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     G_IMPLEMENT_INTERFACE
       (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
       salut_conn_contact_caps_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_INFO,
+        salut_conn_contact_info_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CONNECTION_FUTURE,
       salut_conn_future_iface_init);
 #ifdef ENABLE_OLPC
@@ -401,6 +400,8 @@ salut_connection_constructor (GType type,
 
   g_signal_connect (self, "status-changed",
       (GCallback) sidecars_conn_status_changed_cb, NULL);
+
+  salut_conn_contact_info_init (self);
 
   return obj;
 }
@@ -721,6 +722,7 @@ static const gchar *interfaces [] = {
   TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
   TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
   TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+  TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
   SALUT_IFACE_CONNECTION_FUTURE,
 #ifdef ENABLE_OLPC
   SALUT_IFACE_OLPC_BUDDY_INFO,
@@ -788,6 +790,8 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   tp_contacts_mixin_class_init (object_class,
         G_STRUCT_OFFSET (SalutConnectionClass, contacts_mixin));
+
+  salut_conn_contact_info_class_init (salut_connection_class);
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
@@ -1534,9 +1538,9 @@ _contact_manager_contact_alias_changed  (SalutConnection *self,
   GPtrArray *aliases;
   GValue entry = {0, };
 
-  g_value_init (&entry, SALUT_TP_ALIAS_PAIR_TYPE);
+  g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
   g_value_take_boxed (&entry,
-      dbus_g_type_specialized_construct (SALUT_TP_ALIAS_PAIR_TYPE));
+      dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
 
   dbus_g_type_struct_set (&entry,
       0, handle, 1, salut_contact_get_alias (contact), G_MAXUINT);
@@ -3367,6 +3371,14 @@ _contact_manager_contact_change_cb (SalutContactManager *mgr,
   if (changes & SALUT_CONTACT_AVATAR_CHANGED)
     {
       _contact_manager_contact_avatar_changed (self, contact, handle);
+    }
+
+  if (changes & ( SALUT_CONTACT_REAL_NAME_CHANGED
+                | SALUT_CONTACT_EMAIL_CHANGED
+                | SALUT_CONTACT_JID_CHANGED
+                ))
+    {
+      salut_conn_contact_info_changed (self, contact, handle);
     }
 
 #ifdef ENABLE_OLPC

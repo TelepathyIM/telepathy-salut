@@ -341,6 +341,10 @@ salut_contact_finalize (GObject *object)
   g_free (self->status_message);
   g_free (priv->alias);
   g_free (self->avatar_token);
+  g_free (self->first);
+  g_free (self->last);
+  g_free (self->full_name);
+  g_free (self->email);
   g_free (self->jid);
 
 #ifdef ENABLE_OLPC
@@ -524,6 +528,40 @@ salut_contact_change (SalutContact *self, guint changes)
 }
 
 void
+salut_contact_change_real_name (
+    SalutContact *self,
+    const gchar *first,
+    const gchar *last)
+{
+  if (tp_str_empty (first))
+    first = NULL;
+
+  if (tp_str_empty (last))
+    last = NULL;
+
+  if (tp_strdiff (self->first, first) || tp_strdiff (self->last, last))
+    {
+      g_free (self->first);
+      self->first = g_strdup (first);
+      g_free (self->last);
+      self->last = g_strdup (last);
+
+      g_free (self->full_name);
+
+      if (first != NULL && last != NULL)
+        self->full_name = g_strdup_printf ("%s %s", first, last);
+      else if (first != NULL)
+        self->full_name = g_strdup (first);
+      else if (last != NULL)
+        self->full_name = g_strdup (last);
+      else
+        self->full_name = NULL;
+
+      salut_contact_change (self, SALUT_CONTACT_REAL_NAME_CHANGED);
+    }
+}
+
+void
 salut_contact_change_alias (SalutContact *self, const gchar *alias)
 {
   SalutContactPrivate *priv = self->priv;
@@ -570,15 +608,35 @@ salut_contact_change_avatar_token (SalutContact *self,
 }
 
 void
+salut_contact_change_email (SalutContact *self, gchar *email)
+{
+  if (tp_str_empty (email))
+    email = NULL;
+
+  if (tp_strdiff (self->email, email))
+    {
+      g_free (self->email);
+      self->email = g_strdup (email);
+      salut_contact_change (self, SALUT_CONTACT_EMAIL_CHANGED);
+    }
+}
+
+void
 salut_contact_change_jid (SalutContact *self, gchar *jid)
 {
+  if (tp_str_empty (jid))
+    jid = NULL;
+
   if (tp_strdiff (self->jid, jid))
     {
       g_free (self->jid);
       self->jid = g_strdup (jid);
+      salut_contact_change (self,
+          SALUT_CONTACT_JID_CHANGED
 #ifdef ENABLE_OLPC
-      salut_contact_change (self, SALUT_CONTACT_OLPC_PROPERTIES);
+        | SALUT_CONTACT_OLPC_PROPERTIES
 #endif
+          );
     }
 }
 

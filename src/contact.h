@@ -36,14 +36,19 @@
 
 G_BEGIN_DECLS
 
-#define  SALUT_CONTACT_ALIAS_CHANGED  0x1
-#define  SALUT_CONTACT_STATUS_CHANGED 0x2
-#define  SALUT_CONTACT_AVATAR_CHANGED 0x4
+enum {
+  SALUT_CONTACT_ALIAS_CHANGED  = 0x1,
+  SALUT_CONTACT_STATUS_CHANGED = 0x2,
+  SALUT_CONTACT_AVATAR_CHANGED = 0x4,
 #ifdef ENABLE_OLPC
-#define  SALUT_CONTACT_OLPC_PROPERTIES 0x8
-#define  SALUT_CONTACT_OLPC_CURRENT_ACTIVITY 0x10
-#define  SALUT_CONTACT_OLPC_ACTIVITIES 0x20
+  SALUT_CONTACT_OLPC_PROPERTIES = 0x8,
+  SALUT_CONTACT_OLPC_CURRENT_ACTIVITY = 0x10,
+  SALUT_CONTACT_OLPC_ACTIVITIES = 0x20,
 #endif /* ENABLE_OLPC */
+  SALUT_CONTACT_JID_CHANGED = 0x40,
+  SALUT_CONTACT_EMAIL_CHANGED = 0x80,
+  SALUT_CONTACT_REAL_NAME_CHANGED = 0x100,
+};
 
 typedef struct _SalutContact SalutContact;
 typedef struct _SalutContactClass SalutContactClass;
@@ -67,6 +72,11 @@ struct _SalutContact {
     SalutPresenceId status;
     gchar *avatar_token;
     gchar *status_message;
+    gchar *first;
+    gchar *last;
+    /* synthesized from first and last */
+    gchar *full_name;
+    gchar *email;
     gchar *jid;
 
     /* XEP-0115 Capabilities */
@@ -147,12 +157,15 @@ void salut_contact_left_activity (SalutContact *self,
 #endif
 
 /* restricted methods */
+void salut_contact_change_real_name (SalutContact *self, const gchar *first,
+    const gchar *last);
 void salut_contact_change_alias (SalutContact *self, const gchar *alias);
 void salut_contact_change_status (SalutContact *self, SalutPresenceId);
 void salut_contact_change_status_message (SalutContact *self,
   const gchar *message);
 void salut_contact_change_avatar_token (SalutContact *self,
   const gchar *avatar_token);
+void salut_contact_change_email (SalutContact *self, gchar *email);
 void salut_contact_change_jid (SalutContact *self, gchar *jid);
 void salut_contact_change_capabilities (SalutContact *self,
   const gchar *hash, const gchar *node, const gchar *ver);

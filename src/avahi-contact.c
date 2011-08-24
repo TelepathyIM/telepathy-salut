@@ -586,45 +586,24 @@ find_resolver (SalutAvahiContact *contact,
 
 static void
 update_alias (SalutAvahiContact *self,
-              const gchar *nick,
-              const gchar *first,
-              const gchar *last)
+              const gchar *nick)
 {
-#define STREMPTY(x) (x == NULL || *x == '\0')
+  SalutContact *contact = SALUT_CONTACT (self);
 
-  if (!STREMPTY(nick))
+  if (!tp_str_empty (nick))
     {
-      salut_contact_change_alias (SALUT_CONTACT (self), nick);
+      salut_contact_change_alias (contact, nick);
       return;
     }
 
-  if (!STREMPTY(first) && !STREMPTY(last))
+  if (!tp_str_empty (contact->full_name))
     {
-      gchar *s = g_strdup_printf ("%s %s", first, last);
-
-      salut_contact_change_alias (SALUT_CONTACT (self), s);
-
-      g_free (s);
+      salut_contact_change_alias (contact, contact->full_name);
       return;
     }
 
-  if (!STREMPTY(first))
-    {
-      salut_contact_change_alias (SALUT_CONTACT (self), first);
-      return;
-    }
-
-  if (!STREMPTY(last))
-    {
-      salut_contact_change_alias (SALUT_CONTACT (self), last);
-      return;
-    }
-
-  salut_contact_change_alias (SALUT_CONTACT (self), NULL);
-
-#undef STREMPTY
+  salut_contact_change_alias (contact, NULL);
 }
-
 
 /* Returned string needs to be freed with avahi_free ! */
 static char *
@@ -707,12 +686,14 @@ contact_resolved_cb (GaServiceResolver *resolver,
   salut_contact_change_status_message (contact, s);
   avahi_free (s);
 
-  /* nick */
+  /* real name and nick */
   nick = _avahi_txt_get_keyval (txt, "nick");
   first = _avahi_txt_get_keyval (txt, "1st");
   last = _avahi_txt_get_keyval (txt, "last");
 
-  update_alias (self, nick, first, last);
+  salut_contact_change_real_name (contact, first, last);
+  update_alias (self, nick);
+
   avahi_free (nick);
   avahi_free (first);
   avahi_free (last);
@@ -731,12 +712,17 @@ contact_resolved_cb (GaServiceResolver *resolver,
   salut_contact_change_avatar_token (contact, s);
   avahi_free (s);
 
+  /* email */
+  s = _avahi_txt_get_keyval (txt, "email");
+  salut_contact_change_email (contact, s);
+  avahi_free (s);
+
   /* jid */
-#ifdef ENABLE_OLPC
   s = _avahi_txt_get_keyval (txt, "jid");
   salut_contact_change_jid (contact, s);
   avahi_free (s);
 
+#ifdef ENABLE_OLPC
   /* OLPC color */
   s = _avahi_txt_get_keyval (txt, "olpc-color");
   salut_contact_change_olpc_color (contact, s);
