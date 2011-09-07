@@ -344,6 +344,7 @@ salut_send_ll_pep_event (WockySession *session,
   WockyLLContact *self_contact;
   GList *contacts, *l;
   WockyNode *message, *event, *items;
+  const gchar *pep_node;
   gchar *node;
 
   g_return_if_fail (WOCKY_IS_SESSION (session));
@@ -353,10 +354,12 @@ salut_send_ll_pep_event (WockySession *session,
   event = wocky_node_get_first_child (message);
   items = wocky_node_get_first_child (event);
 
-  if (wocky_node_get_ns (items) == NULL)
+  pep_node = wocky_node_get_attribute (items, "node");
+
+  if (pep_node == NULL)
     return;
 
-  node = g_strdup_printf ("%s+notify", wocky_node_get_ns (items));
+  node = g_strdup_printf ("%s+notify", pep_node);
 
   contact_factory = wocky_session_get_contact_factory (session);
   porter = wocky_session_get_porter (session);
