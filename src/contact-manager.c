@@ -132,8 +132,7 @@ salut_contact_manager_init (SalutContactManager *obj)
   obj->contacts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 }
 
-static GObject *salut_contact_manager_constructor (GType type,
-    guint n_props, GObjectConstructParam *props);
+static void salut_contact_manager_constructed (GObject *obj);
 static void salut_contact_manager_dispose (GObject *object);
 static void salut_contact_manager_finalize (GObject *object);
 
@@ -148,7 +147,7 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
   object_class->get_property = salut_contact_manager_get_property;
   object_class->set_property = salut_contact_manager_set_property;
 
-  object_class->constructor = salut_contact_manager_constructor;
+  object_class->constructed = salut_contact_manager_constructed;
   object_class->dispose = salut_contact_manager_dispose;
   object_class->finalize = salut_contact_manager_finalize;
 
@@ -185,25 +184,17 @@ connection_status_changed_cb (SalutConnection *conn,
     }
 }
 
-static GObject *
-salut_contact_manager_constructor (GType type,
-    guint n_props,
-    GObjectConstructParam *props)
+static void
+salut_contact_manager_constructed (GObject *obj)
 {
-  GObject *obj;
-  SalutContactManager *self;
-  SalutContactManagerPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_contact_manager_parent_class)->
-           constructor (type, n_props, props);
-
-  self = SALUT_CONTACT_MANAGER (obj);
-  priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
+  SalutContactManager *self = (SalutContactManager *) obj;
+  SalutContactManagerPrivate *priv = SALUT_CONTACT_MANAGER_GET_PRIVATE (self);
 
   priv->status_changed_id = g_signal_connect (self->connection,
       "status-changed", (GCallback) connection_status_changed_cb, self);
 
-  return obj;
+  if (G_OBJECT_CLASS (salut_contact_manager_parent_class)->constructed)
+    G_OBJECT_CLASS (salut_contact_manager_parent_class)->constructed (obj);
 }
 
 static gboolean

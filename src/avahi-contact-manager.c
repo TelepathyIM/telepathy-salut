@@ -278,6 +278,9 @@ salut_avahi_contact_manager_constructed (GObject *object)
       priv->discovery_client);
 
   priv->presence_browser = ga_service_browser_new ((gchar *) dnssd_name);
+
+  if (G_OBJECT_CLASS (salut_avahi_contact_manager_parent_class)->constructed)
+    G_OBJECT_CLASS (salut_avahi_contact_manager_parent_class)->constructed (object);
 }
 
 static void

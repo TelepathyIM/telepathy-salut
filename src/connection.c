@@ -356,19 +356,10 @@ static void
 sidecars_conn_status_changed_cb (SalutConnection *conn,
     guint status, guint reason, gpointer unused);
 
-static GObject *
-salut_connection_constructor (GType type,
-                              guint n_props,
-                              GObjectConstructParam *props)
+static void
+salut_connection_constructed (GObject *obj)
 {
-  GObject *obj;
-  SalutConnection *self;
-  SalutConnectionPrivate *priv;
-
-  obj = G_OBJECT_CLASS (salut_connection_parent_class)->
-           constructor (type, n_props, props);
-  self = SALUT_CONNECTION (obj);
-  priv = self->priv;
+  SalutConnection *self = (SalutConnection *) obj;
 
   self->disco = salut_disco_new (self);
   self->presence_cache = salut_presence_cache_new (self);
@@ -393,9 +384,9 @@ salut_connection_constructor (GType type,
       TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
           conn_contact_capabilities_fill_contact_attributes);
 
-  priv->sidecars = g_hash_table_new_full (g_str_hash, g_str_equal,
+  self->priv->sidecars = g_hash_table_new_full (g_str_hash, g_str_equal,
       g_free, g_object_unref);
-  priv->pending_sidecars = g_hash_table_new_full (g_str_hash, g_str_equal,
+  self->priv->pending_sidecars = g_hash_table_new_full (g_str_hash, g_str_equal,
       g_free, (GDestroyNotify) g_list_free);
 
   g_signal_connect (self, "status-changed",
@@ -403,7 +394,8 @@ salut_connection_constructor (GType type,
 
   salut_conn_contact_info_init (self);
 
-  return obj;
+  if (G_OBJECT_CLASS (salut_connection_parent_class)->constructed)
+    G_OBJECT_CLASS (salut_connection_parent_class)->constructed (obj);
 }
 
 static void
@@ -758,7 +750,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   g_type_class_add_private (salut_connection_class,
       sizeof (SalutConnectionPrivate));
 
-  object_class->constructor = salut_connection_constructor;
+  object_class->constructed = salut_connection_constructed;
 
   object_class->dispose = salut_connection_dispose;
   object_class->finalize = salut_connection_finalize;
