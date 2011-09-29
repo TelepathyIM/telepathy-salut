@@ -23,6 +23,8 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-contact-list.h>
+
 #include "connection.h"
 #include "contact.h"
 
@@ -32,7 +34,7 @@ typedef struct _SalutContactManager SalutContactManager;
 typedef struct _SalutContactManagerClass SalutContactManagerClass;
 
 struct _SalutContactManagerClass {
-    GObjectClass parent_class;
+    TpBaseContactListClass parent_class;
 
     /* public abstract methods */
     gboolean (*start) (SalutContactManager *self, GError **error);
@@ -46,7 +48,7 @@ struct _SalutContactManagerClass {
 };
 
 struct _SalutContactManager {
-    GObject parent;
+    TpBaseContactList parent;
 
     /* private */
     SalutConnection *connection;

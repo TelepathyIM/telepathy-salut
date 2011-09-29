@@ -56,8 +56,6 @@ CORE_SOURCES =                                          \
     contact.c                                     \
     self.h                                        \
     self.c                                        \
-    contact-channel.c                             \
-    contact-channel.h                             \
     connection.c                                  \
     connection.h                                  \
     connection-contact-info.c                     \

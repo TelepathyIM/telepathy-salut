@@ -30,6 +30,7 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
+#include <telepathy-glib/base-contact-list.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/gtypes.h>
@@ -51,7 +52,6 @@
 #include "capabilities.h"
 #include "caps-hash.h"
 #include "connection-contact-info.h"
-#include "contact-channel.h"
 #include "contact.h"
 #include "contact-manager.h"
 #include "disco.h"
@@ -122,6 +122,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
        tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
        tp_contacts_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST,
+      tp_base_contact_list_mixin_list_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
        tp_presence_mixin_simple_presence_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
@@ -360,6 +362,7 @@ static void
 salut_connection_constructed (GObject *obj)
 {
   SalutConnection *self = (SalutConnection *) obj;
+  TpBaseConnection *base = (TpBaseConnection *) obj;
 
   self->disco = salut_disco_new (self);
   self->presence_cache = salut_presence_cache_new (self);
@@ -369,8 +372,9 @@ salut_connection_constructed (GObject *obj)
   tp_contacts_mixin_init (obj,
       G_STRUCT_OFFSET (SalutConnection, contacts_mixin));
 
-  tp_base_connection_register_with_contacts_mixin (TP_BASE_CONNECTION (obj));
+  tp_base_connection_register_with_contacts_mixin (base);
   tp_presence_mixin_simple_presence_register_with_contacts_mixin (obj);
+  tp_base_contact_list_mixin_register_with_contacts_mixin (base);
 
   tp_contacts_mixin_add_contact_attributes_iface (obj,
       TP_IFACE_CONNECTION_INTERFACE_AVATARS,
@@ -784,6 +788,8 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
         G_STRUCT_OFFSET (SalutConnectionClass, contacts_mixin));
 
   salut_conn_contact_info_class_init (salut_connection_class);
+
+  tp_base_contact_list_mixin_class_init (tp_connection_class);
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
@@ -3322,21 +3328,11 @@ static void
 salut_connection_create_handle_repos (TpBaseConnection *self,
     TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES])
 {
-  static const char *list_handle_strings[] = {
-    "publish",
-    "subscribe",
-    "known",
-    NULL
-  };
-
   repos[TP_HANDLE_TYPE_CONTACT] = tp_dynamic_handle_repo_new
       (TP_HANDLE_TYPE_CONTACT, handle_normalize_require_nonempty, NULL);
 
   repos[TP_HANDLE_TYPE_ROOM] = tp_dynamic_handle_repo_new
       (TP_HANDLE_TYPE_ROOM, handle_normalize_require_nonempty, NULL);
-
-  repos[TP_HANDLE_TYPE_LIST] = tp_static_handle_repo_new (TP_HANDLE_TYPE_LIST,
-      list_handle_strings);
 }
 
 static void

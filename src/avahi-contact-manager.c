@@ -212,6 +212,13 @@ browser_failed (GaServiceBrowser *browser,
   g_warning ("browser failed -> %s", error->message);
 }
 
+static void
+browser_all_for_now (GaServiceBrowser *browser,
+                     SalutAvahiContactManager *self)
+{
+  g_signal_emit_by_name (self, "all-for-now");
+}
+
 static gboolean
 salut_avahi_contact_manager_start (SalutContactManager *mgr,
                                    GError **error)
@@ -226,6 +233,8 @@ salut_avahi_contact_manager_start (SalutContactManager *mgr,
       G_CALLBACK (browser_removed), mgr);
   g_signal_connect (priv->presence_browser, "failure",
       G_CALLBACK (browser_failed), mgr);
+  g_signal_connect (priv->presence_browser, "all-for-now",
+      G_CALLBACK (browser_all_for_now), mgr);
 
   if (!ga_service_browser_attach (priv->presence_browser,
         priv->discovery_client->avahi_client, error))
