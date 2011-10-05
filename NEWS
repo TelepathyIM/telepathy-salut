@@ -1,9 +1,23 @@
-telepathy-salut 0.5.2 (UNRELEASED)
+telepathy-salut 0.5.2 (2011-10-05)
 ==================================
 
- .---.
-~|__(^.^)
-  " "
+Enhancements:
+
+ • fd.o#40035: the ContactInfo Connection interface has been
+   implemented, so extra information about contacts, like first and
+   last names, are now exposed in a nice way and can be shown in
+   clients. (wjt)
+
+Fixes:
+
+ • Ensure OLPC tests are included in releases. (jonny)
+
+ • Fix send_ll_pep_event public utility function to construct PEP
+   messages correctly. (jonny)
+
+Dependencies:
+
+ • xmldiff is no longer required for tests.
 
 telepathy-salut 0.5.1 (2011-07-07)
 ==================================
