@@ -1,7 +1,24 @@
-telepathy-salut 0.5.3 (LOL NOT YET)
+telepathy-salut 0.6.0 (LOL NOT YET)
 ===================================
 
-hi.
+The “the cleaning lady… cleans up… dust. She dusts. And she has weekends
+off, so… Monday. Right?” release. Please enjoy this refreshing stable
+branch.
+
+Enhancements since 0.5.2:
+
+• Salut implements the ContactList interface, which makes
+  TP_CONNECTION_FEATURE_CONTACT_LIST in telepathy-glib work with Salut!
+  (xclaesse)
+
+Big changes since 0.4.0:
+
+• Salut now mostly uses the Wocky XMPP library.
+
+• Protocol, ContactCapabilities and (half of) ContactInfo are
+  implemented.
+
+• Salut has grown a plugin API, rather like Gabble's.
 
 telepathy-salut 0.5.2 (2011-10-05)
 ==================================
