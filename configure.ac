@@ -8,9 +8,9 @@ AC_PREREQ([2.59])
 #   set salut_nano_version to 0.
 
 m4_define([salut_major_version], [0])
-m4_define([salut_minor_version], [5])
-m4_define([salut_micro_version], [2])
-m4_define([salut_nano_version], [1])
+m4_define([salut_minor_version], [6])
+m4_define([salut_micro_version], [0])
+m4_define([salut_nano_version], [0])
 
 # Some magic
 m4_define([salut_base_version],
