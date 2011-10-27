@@ -7,6 +7,9 @@ from twisted.words.xish import domish
 from file_transfer_helper import ReceiveFileTest
 
 class IChatReceiveFile(ReceiveFileTest):
+    service_name = ''
+    metadata = {}
+
     def connect_to_salut(self):
         host, port = self._resolve_salut_presence()
 

@@ -12,7 +12,7 @@ import os
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
 
-from caps_helper import extract_data_forms
+from caps_helper import extract_data_forms, add_dataforms
 
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async
@@ -52,6 +52,10 @@ class File(object):
 
 class FileTransferTest(object):
     CONTACT_NAME = 'test-ft'
+
+    service_name = 'wacky.service.name'
+    metadata = {'loads': 'of',
+                'mental': 'data'}
 
     def __init__(self):
         self.file = File()
@@ -167,6 +171,16 @@ class ReceiveFileTest(FileTransferTest):
         url_node['size'] = str(self.file.size)
         url_node['mimeType'] = self.file.content_type
         query.addElement('desc', content=self.file.description)
+
+        # Metadata
+        if self.service_name:
+            service_form = {ns.TP_FT_METADATA_SERVICE: {'ServiceName': [self.service_name]}}
+            add_dataforms(query, service_form)
+
+        if self.metadata:
+            metadata_form = {ns.TP_FT_METADATA: {k: [v] for k, v in self.metadata.items()}}
+            add_dataforms(query, metadata_form)
+
         self.outbound.send(iq)
 
     def check_new_channel(self):
@@ -204,6 +218,9 @@ class ReceiveFileTest(FileTransferTest):
             {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
         assert props[cs.FT_TRANSFERRED_BYTES] == 0
         assert props[cs.FT_INITIAL_OFFSET] == 0
+
+        assertEquals(self.service_name, props[cs.FT_SERVICE_NAME])
+        assertEquals(self.metadata, props[cs.FT_METADATA])
 
         self.ft_path = path
 
@@ -284,10 +301,6 @@ class ReceiveFileTest(FileTransferTest):
         self._read_file_from_socket(s)
 
 class SendFileTest(FileTransferTest):
-    service_name = 'wacky.service.name'
-    metadata = {'loads': 'of',
-                'mental': 'data'}
-
     def __init__(self):
         FileTransferTest.__init__(self)
 
