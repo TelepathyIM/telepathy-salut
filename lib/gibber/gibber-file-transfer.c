@@ -339,6 +339,13 @@ gibber_file_transfer_dispose (GObject *object)
       self->priv->contact = NULL;
     }
 
+  if (self->dataforms)
+    {
+      g_list_foreach (self->dataforms, (GFunc) g_object_unref, NULL);
+      g_list_free (self->dataforms);
+      self->dataforms = NULL;
+    }
+
   G_OBJECT_CLASS (gibber_file_transfer_parent_class)->dispose (object);
 }
 

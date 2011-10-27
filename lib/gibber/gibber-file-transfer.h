@@ -80,6 +80,8 @@ struct _GibberFileTransfer
   gchar *description;
   gchar *content_type;
 
+  GList *dataforms;
+
   GibberFileTransferDirection direction;
 };
 
