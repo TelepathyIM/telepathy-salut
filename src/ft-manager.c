@@ -291,7 +291,8 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   TpHandle handle;
   const gchar *content_type, *filename, *content_hash, *description;
   guint64 size, date, initial_offset;
-  const gchar *file_uri;
+  const gchar *file_uri, *service_name;
+  const GHashTable *metadata;
   TpFileHashType content_hash_type;
   GError *error = NULL;
   gboolean valid;
@@ -398,6 +399,13 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   file_uri = tp_asv_get_string (request_properties,
       TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI);
 
+  service_name = tp_asv_get_string (request_properties,
+      SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".ServiceName");
+
+  metadata = tp_asv_get_boxed (request_properties,
+      SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".Metadata",
+      TP_HASH_TYPE_STRING_STRING_MAP);
+
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
     {
@@ -416,7 +424,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       handle, base_connection->self_handle,
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
       content_hash_type, content_hash, description, date, initial_offset,
-      file_uri, NULL, NULL);
+      file_uri, service_name, metadata);
 
   g_object_unref (contact);
 
