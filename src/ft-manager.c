@@ -416,7 +416,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       handle, base_connection->self_handle,
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
       content_hash_type, content_hash, description, date, initial_offset,
-      file_uri);
+      file_uri, NULL, NULL);
 
   g_object_unref (contact);
 

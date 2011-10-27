@@ -1621,7 +1621,9 @@ salut_file_transfer_channel_new (SalutConnection *conn,
                                  const gchar *description,
                                  guint64 date,
                                  guint64 initial_offset,
-                                 const gchar *file_uri)
+                                 const gchar *file_uri,
+                                 const gchar *service_name,
+                                 const GHashTable *metadata)
 {
   return g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
       "connection", conn,
@@ -1638,6 +1640,8 @@ salut_file_transfer_channel_new (SalutConnection *conn,
       "date", date,
       "initial-offset", initial_offset,
       "uri", file_uri,
+      "service-name", service_name,
+      "metadata", metadata,
       NULL);
 }
 
