@@ -395,6 +395,12 @@ class ServiceBrowser(dbus.service.Object):
         self.client = client
         self.type = type_
 
+        def send_all_for_now():
+            emit_signal(self.object_path,
+                        AVAHI_IFACE_SERVICE_BROWSER, 'AllForNow',
+                        client, '')
+        gobject.idle_add(send_all_for_now)
+
     @dbus.service.method(dbus_interface=AVAHI_IFACE_SERVICE_BROWSER,
                          in_signature='', out_signature='')
     def Free(self):
