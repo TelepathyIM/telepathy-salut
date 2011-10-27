@@ -30,10 +30,11 @@ import ns
 from constants import *
 
 from caps_helper import compute_caps_hash, ft_fixed_properties, \
-    ft_allowed_properties, text_fixed_properties, text_allowed_properties
+    ft_allowed_properties, ft_allowed_properties_with_metadata
 from config import PACKAGE_STRING
 
 ft_caps = (ft_fixed_properties, ft_allowed_properties)
+ft_metadata_caps = (ft_fixed_properties, ft_allowed_properties_with_metadata)
 
 # last value of the "ver" key we resolved. We use it to be sure that the
 # modified caps has already be announced.
@@ -229,7 +230,7 @@ def test(q, bus, conn):
     self_handle = conn.GetSelfHandle()
     conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPS)
     caps = conn_caps_iface.GetContactCapabilities([self_handle])[self_handle]
-    assertContains(ft_caps, caps)
+    assertContains(ft_metadata_caps, caps)
 
     client = 'http://telepathy.freedesktop.org/fake-client'
     test_ft_caps_from_contact(q, bus, conn, client)

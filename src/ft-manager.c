@@ -463,21 +463,30 @@ static const gchar * const file_transfer_channel_fixed_properties[] = {
     NULL
 };
 
-static const gchar * const file_transfer_channel_allowed_properties[] =
-{
   /* ContentHashType has to be first so we can easily skip it if needed (we
    * currently don't as Salut doesn't support any hash mechanism) */
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH_TYPE,
-  TP_PROP_CHANNEL_TARGET_HANDLE,
-  TP_PROP_CHANNEL_TARGET_ID,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_TYPE,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_FILENAME,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_SIZE,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DESCRIPTION,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DATE,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_INITIAL_OFFSET,
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI,
+#define STANDARD_PROPERTIES \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH_TYPE, \
+  TP_PROP_CHANNEL_TARGET_HANDLE, \
+  TP_PROP_CHANNEL_TARGET_ID, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_TYPE, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_FILENAME, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_SIZE, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DESCRIPTION, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DATE, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_INITIAL_OFFSET, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI
+
+static const gchar * const file_transfer_channel_allowed_properties[] =
+{
+  STANDARD_PROPERTIES,
+  NULL
+};
+
+static const gchar * const file_transfer_channel_allowed_properties_with_metadata[] =
+{
+  STANDARD_PROPERTIES,
   SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".ServiceName",
   SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".Metadata",
   NULL
@@ -502,7 +511,7 @@ salut_ft_manager_type_foreach_channel_class (GType type,
   g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
 
-  func (type, table, file_transfer_channel_allowed_properties,
+  func (type, table, file_transfer_channel_allowed_properties_with_metadata,
       user_data);
 
   g_hash_table_destroy (table);
@@ -550,12 +559,14 @@ salut_ft_manager_new (SalutConnection *connection,
 }
 
 static void
-add_file_transfer_channel_class (GPtrArray *arr)
+add_file_transfer_channel_class (GPtrArray *arr,
+    gboolean metadata)
 {
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
   GValue *target_handle_type_value;
+  const gchar * const *allowed_properties;
 
   g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
   g_value_take_boxed (&monster,
@@ -576,9 +587,13 @@ add_file_transfer_channel_class (GPtrArray *arr)
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetHandleType",
       target_handle_type_value);
 
+  allowed_properties = metadata
+    ? file_transfer_channel_allowed_properties_with_metadata
+    : file_transfer_channel_allowed_properties;
+
   dbus_g_type_struct_set (&monster,
       0, fixed_properties,
-      1, file_transfer_channel_allowed_properties,
+      1, allowed_properties,
       G_MAXUINT);
 
   g_hash_table_destroy (fixed_properties);
@@ -600,7 +615,7 @@ salut_ft_manager_get_contact_caps_from_set (
   if (handle == base->self_handle)
     {
       /* we currently always advertise FT ourselves */
-      add_file_transfer_channel_class (arr);
+      add_file_transfer_channel_class (arr, TRUE);
       return;
     }
 
@@ -609,7 +624,10 @@ salut_ft_manager_get_contact_caps_from_set (
   if (gabble_capability_set_has (caps, WOCKY_XMPP_NS_IQ_OOB) ||
       gabble_capability_set_has (caps, WOCKY_XMPP_NS_X_OOB) ||
       gabble_capability_set_has (caps, QUIRK_NOT_XEP_CAPABILITIES))
-    add_file_transfer_channel_class (arr);
+    {
+      add_file_transfer_channel_class (arr,
+          gabble_capability_set_has (caps, NS_TP_FT_METADATA));
+    }
 }
 
 static void
