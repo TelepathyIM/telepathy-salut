@@ -25,6 +25,8 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-manager.h>
 
+#include "namespaces.h"
+
 typedef struct _Feature Feature;
 
 struct _Feature
@@ -42,6 +44,7 @@ static const Feature self_advertised_features[] =
   { FEATURE_FIXED, WOCKY_TELEPATHY_NS_TUBES},
   { FEATURE_FIXED, WOCKY_XMPP_NS_IQ_OOB},
   { FEATURE_FIXED, WOCKY_XMPP_NS_X_OOB},
+  { FEATURE_FIXED, NS_TP_FT_METADATA},
 
   { 0, NULL}
 };

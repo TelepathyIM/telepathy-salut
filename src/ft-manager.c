@@ -36,6 +36,7 @@
 #include "file-transfer-channel.h"
 #include "contact-manager.h"
 #include "presence-cache.h"
+#include "namespaces.h"
 
 #include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/interfaces.h>
@@ -639,6 +640,7 @@ salut_ft_manager_represent_client (
       DEBUG ("client %s supports file transfer", client_name);
       gabble_capability_set_add (cap_set, WOCKY_XMPP_NS_IQ_OOB);
       gabble_capability_set_add (cap_set, WOCKY_XMPP_NS_X_OOB);
+      gabble_capability_set_add (cap_set, NS_TP_FT_METADATA);
       /* there's no point in looking at the subsequent filters if we've
        * already added the FT capability */
       break;
