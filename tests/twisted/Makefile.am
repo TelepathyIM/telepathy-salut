@@ -6,7 +6,7 @@ TWISTED_BASIC_TESTS = \
 	$(NULL)
 
 TWISTED_AVAHI_TESTS = \
-	avahi/caps_helper.py \
+	caps_helper.py \
 	avahi/register.py \
 	avahi/aliases.py \
 	avahi/request-im.py \
