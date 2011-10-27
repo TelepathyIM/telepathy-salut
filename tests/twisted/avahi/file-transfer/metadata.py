@@ -3,7 +3,7 @@
 import dbus
 
 from saluttest import exec_test
-from file_transfer_helper import SendFileTest
+from file_transfer_helper import ReceiveFileTest, SendFileTest
 
 import constants as cs
 
@@ -13,6 +13,13 @@ class SendFileNoMetadata(SendFileTest):
     service_name = ''
     metadata = {}
 
+class ReceiveFileNoMetadata(ReceiveFileTest):
+    service_name = ''
+    metadata = {}
+
 if __name__ == '__main__':
     test = SendFileNoMetadata()
+    exec_test(test.test)
+
+    test = ReceiveFileNoMetadata()
     exec_test(test.test)
