@@ -305,7 +305,9 @@ class SendFileTest(FileTransferTest):
                  cs.FT_DESCRIPTION,
                  cs.FT_DATE,
                  cs.FT_INITIAL_OFFSET,
-                 cs.FT_URI],
+                 cs.FT_URI,
+                 cs.FT_SERVICE_NAME,
+                 cs.FT_METADATA],
              ) in properties.get('RequestableChannelClasses', []),\
                      properties.get('RequestableChannelClasses')
 
