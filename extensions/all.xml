@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
 <xi:include href="connection.xml"/>
 <xi:include href="Salut_Plugin_Test.xml"/>
 <xi:include href="Connection_Future.xml"/>
+<xi:include href="Channel_Interface_File_Transfer_Metadata.xml"/>
 
 <tp:generic-types>
   <tp:external-type name="Contact_Handle" type="u"
@@ -42,6 +43,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
   <tp:external-type name="Qualified_Property_Value_Map" type="a{sv}"
     from="Telepathy specification"/>
   <tp:external-type name="String_Variant_Map" type="a{sv}"
+    from="Telepathy specification"/>
+  <tp:external-type name="String_String_Map" type="a{ss}"
     from="Telepathy specification"/>
  <tp:external-type name="Unix_Timestamp64" type="t"
     from="Telepathy specification"/>

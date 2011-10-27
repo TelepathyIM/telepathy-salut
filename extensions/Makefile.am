@@ -6,6 +6,7 @@ EXTRA_DIST = \
     connection.xml \
     Salut_Plugin_Test.xml \
     Connection_Future.xml \
+    Channel_Interface_File_Transfer_Metadata.xml \
     all.xml
 
 noinst_LTLIBRARIES = libsalut-extensions.la
