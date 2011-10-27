@@ -281,6 +281,10 @@ class ReceiveFileTest(FileTransferTest):
         self._read_file_from_socket(s)
 
 class SendFileTest(FileTransferTest):
+    service_name = 'wacky.service.name'
+    metadata = {'loads': 'of',
+                'mental': 'data'}
+
     def __init__(self):
         FileTransferTest.__init__(self)
 
@@ -325,7 +329,9 @@ class SendFileTest(FileTransferTest):
             cs.FT_CONTENT_HASH:self.file.hash,
             cs.FT_DESCRIPTION: self.file.description,
             cs.FT_DATE: self.file.date,
-            cs.FT_INITIAL_OFFSET: 0 }
+            cs.FT_INITIAL_OFFSET: 0,
+            cs.FT_SERVICE_NAME: self.service_name,
+            cs.FT_METADATA: dbus.Dictionary(self.metadata, signature='ss')}
 
         if uri:
             request[cs.FT_URI] = self.file.uri
@@ -359,6 +365,8 @@ class SendFileTest(FileTransferTest):
             assertEquals(self.file.uri, props[cs.FT_URI])
         else:
             assertEquals('', props[cs.FT_URI])
+        assertEquals(self.service_name, props[cs.FT_SERVICE_NAME])
+        assertEquals(self.metadata, props[cs.FT_METADATA])
 
     def got_send_iq(self):
         conn_event, iq_event = self.q.expect_many(
