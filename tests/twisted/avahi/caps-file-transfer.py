@@ -23,14 +23,17 @@ import avahi
 
 from twisted.words.xish import xpath
 
-from servicetest import EventPattern
+from servicetest import EventPattern, assertContains, assertDoesNotContain
 from saluttest import exec_test, make_result_iq
 from xmppstream import setup_stream_listener
 import ns
 from constants import *
 
-from caps_helper import compute_caps_hash
+from caps_helper import compute_caps_hash, ft_fixed_properties, \
+    ft_allowed_properties, text_fixed_properties, text_allowed_properties
 from config import PACKAGE_STRING
+
+ft_caps = (ft_fixed_properties, ft_allowed_properties)
 
 # last value of the "ver" key we resolved. We use it to be sure that the
 # modified caps has already be announced.
@@ -133,11 +136,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged',
             predicate=lambda e: contact_handle in e.args[0])
     caps = e.args[0][contact_handle]
-    assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
-             TARGET_HANDLE_TYPE: HT_CONTACT},
-            [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME,
-                FT_SIZE, FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) in caps
+    assertContains(ft_caps, caps)
 
     caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
     assert caps == caps_get
@@ -194,11 +193,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     # the FT capability is not announced
     e = q.expect('dbus-signal', signal='ContactCapabilitiesChanged')
     caps = e.args[0][contact_handle]
-    assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
-             TARGET_HANDLE_TYPE: HT_CONTACT},
-            [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME, FT_SIZE,
-                FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) not in caps
+    assertDoesNotContain(ft_caps, caps)
 
     caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
     assert caps == caps_get
@@ -217,11 +212,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
             predicate=lambda e: contact_handle in e.args[0].keys())
 
     caps = e.args[0][contact_handle]
-    assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
-             TARGET_HANDLE_TYPE: HT_CONTACT},
-            [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME,
-                FT_SIZE, FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) in caps
+    assertContains(ft_caps, caps)
 
     caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
     assert caps == caps_get
@@ -238,11 +229,7 @@ def test(q, bus, conn):
     self_handle = conn.GetSelfHandle()
     conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPS)
     caps = conn_caps_iface.GetContactCapabilities([self_handle])[self_handle]
-    assert ({CHANNEL_TYPE: CHANNEL_TYPE_FILE_TRANSFER,
-             TARGET_HANDLE_TYPE: HT_CONTACT},
-            [FT_CONTENT_HASH_TYPE, TARGET_HANDLE, TARGET_ID, FT_CONTENT_TYPE, FT_FILENAME,
-                FT_SIZE, FT_CONTENT_HASH, FT_DESCRIPTION,
-                FT_DATE, FT_INITIAL_OFFSET, FT_URI]) in caps
+    assertContains(ft_caps, caps)
 
     client = 'http://telepathy.freedesktop.org/fake-client'
     test_ft_caps_from_contact(q, bus, conn, client)
