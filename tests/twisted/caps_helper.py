@@ -190,6 +190,11 @@ def make_caps_disco_reply(stream, req, identities, features, dataforms={}):
         el['var'] = f
         query.addChild(el)
 
+    add_dataforms(query, dataforms)
+
+    return iq
+
+def add_dataforms(query, dataforms):
     for type, fields in dataforms.iteritems():
         x = query.addElement((ns.X_DATA, 'x'))
         x['type'] = 'result'
@@ -205,8 +210,6 @@ def make_caps_disco_reply(stream, req, identities, features, dataforms={}):
 
             for value in values:
                 field.addElement('value', content=value)
-
-    return iq
 
 def receive_presence_and_ask_caps(q, stream, expect_dbus=True):
     # receive presence stanza
