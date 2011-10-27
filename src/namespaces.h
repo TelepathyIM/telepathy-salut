@@ -117,4 +117,7 @@
 
 #define NS_OLPC_ACTIVITY_PROPS  "http://laptop.org/xmpp/activity-properties"
 
+#define NS_TP_FT_METADATA_SERVICE "im:telepathy:file-transfer:service"
+#define NS_TP_FT_METADATA         "im:telepathy:file-transfer:metadata"
+
 #endif /* __GABBLE_NAMESPACES__H__ */

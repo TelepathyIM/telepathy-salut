@@ -40,9 +40,11 @@
 #include "connection.h"
 #include "im-manager.h"
 #include "contact.h"
+#include "namespaces.h"
 
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
+#include <wocky/wocky-data-form.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
 
@@ -1607,6 +1609,88 @@ setup_local_socket (SalutFileTransferChannel *self)
   return TRUE;
 }
 
+static WockyDataForm *
+find_data_form (GibberFileTransfer *ft,
+    const gchar *form_type)
+{
+  GList *l;
+
+  for (l = ft->dataforms; l != NULL; l = l->next)
+    {
+      WockyDataForm *form = l->data;
+      WockyDataFormField *field;
+
+      field = g_hash_table_lookup (form->fields, "FORM_TYPE");
+
+      if (field == NULL)
+        {
+          DEBUG ("Data form doesn't have FORM_TYPE field!");
+          continue;
+        }
+
+      /* found it! */
+      if (!tp_strdiff (field->raw_value_contents[0], form_type))
+        return form;
+    }
+
+  return NULL;
+}
+
+static gchar *
+extract_service_name (GibberFileTransfer *ft)
+{
+  WockyDataForm *form = find_data_form (ft, NS_TP_FT_METADATA_SERVICE);
+  WockyDataFormField *field;
+  gchar *service_name = NULL;
+
+  if (form == NULL)
+    return NULL;
+
+  field = g_hash_table_lookup (form->fields, "ServiceName");
+
+  if (field == NULL)
+    {
+      DEBUG ("ServiceName propery not present in data form; odd...");
+      goto out;
+    }
+
+  service_name = g_strdup (field->raw_value_contents[0]);
+
+out:
+  return service_name;
+}
+
+static GHashTable *
+extract_metadata (GibberFileTransfer *ft)
+{
+  WockyDataForm *form = find_data_form (ft, NS_TP_FT_METADATA);
+  GHashTable *metadata;
+  GHashTableIter iter;
+  gpointer key, value;
+
+  if (form == NULL)
+    return NULL;
+
+  metadata = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, g_free);
+
+  g_hash_table_iter_init (&iter, form->fields);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      const gchar *var = key;
+      WockyDataFormField *field = value;
+
+      if (!tp_strdiff (var, "FORM_TYPE"))
+        continue;
+
+      g_hash_table_insert (metadata,
+          g_strdup (var),
+          g_strdup (field->raw_value_contents[0]));
+    }
+
+  return metadata;
+}
+
 SalutFileTransferChannel *
 salut_file_transfer_channel_new (SalutConnection *conn,
                                  SalutContact *contact,
@@ -1655,6 +1739,8 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
   GError *error = NULL;
   GibberFileTransfer *ft;
   SalutFileTransferChannel *chan;
+  gchar *service_name;
+  GHashTable *metadata;
 
   ft = gibber_file_transfer_new_from_stanza_with_from (stanza, connection->porter,
       WOCKY_CONTACT (contact), contact->name, &error);
@@ -1677,6 +1763,10 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
       return NULL;
     }
 
+  /* Metadata */
+  service_name = extract_service_name (ft);
+  metadata = extract_metadata (ft);
+
   DEBUG ("Received file offer with id '%s'", ft->id);
 
   chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
@@ -1689,7 +1779,13 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
       "size", gibber_file_transfer_get_size (ft),
       "description", ft->description,
       "content-type", ft->content_type,
+      "service-name", service_name,
+      "metadata", metadata,
       NULL);
+
+  g_free (service_name);
+  if (metadata != NULL)
+    g_hash_table_unref (metadata);
 
   chan->priv->ft = ft;
 
