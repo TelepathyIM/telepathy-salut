@@ -12,9 +12,12 @@ import os
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
 
+from caps_helper import extract_data_forms
+
 from xmppstream import setup_stream_listener, connect_to_stream
 from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async
 import constants as cs
+import ns
 
 from twisted.words.xish import domish, xpath
 
@@ -394,6 +397,23 @@ class SendFileTest(FileTransferTest):
         desc_node = xpath.queryForNodes("/iq/query/desc", self.iq)[0]
         self.desc = desc_node.children[0]
         assert self.desc == self.file.description
+
+        # Metadata forms
+        forms = extract_data_forms(xpath.queryForNodes('/iq/query/x', self.iq))
+
+        if self.service_name:
+            assertEquals({'ServiceName': [self.service_name]},
+                         forms[ns.TP_FT_METADATA_SERVICE])
+        else:
+            assert ns.TP_FT_METADATA_SERVICE not in forms
+
+        if self.metadata:
+            # the dataform isn't such a simple a{ss} because it can
+            # have multiple values
+            expected = {k:[v] for k,v in self.metadata.items()}
+            assertEquals(expected, forms[ns.TP_FT_METADATA])
+        else:
+            assert ns.TP_FT_METADATA not in forms
 
     def provide_file(self):
         self.address = self.ft_channel.ProvideFile(cs.SOCKET_ADDRESS_TYPE_UNIX,

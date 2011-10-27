@@ -505,12 +505,14 @@ static WockyStanza *
 create_transfer_offer (GibberOobFileTransfer *self,
                        GError **error)
 {
+  GibberFileTransfer *ft = (GibberFileTransfer *) self;
   WockyMetaPorter *porter;
   WockyContact *contact;
   GSocketConnection *conn;
   GSocketAddress *address;
   GInetAddress *addr;
   GSocketFamily family;
+  GList *l;
 
   /* local host name */
   gchar *host_name;
@@ -608,6 +610,13 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   self->priv->url = url;
   self->priv->served_name = served_name;
+
+  /* dataforms */
+  for (l = ft->dataforms; l != NULL; l = l->next)
+    {
+      WockyDataForm *form = l->data;
+      wocky_data_form_add_to_node (form, query_node);
+    }
 
   return stanza;
 }

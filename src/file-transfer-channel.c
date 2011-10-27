@@ -45,6 +45,7 @@
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
 #include <wocky/wocky-data-form.h>
+#include <wocky/wocky-namespaces.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
 
@@ -1132,6 +1133,102 @@ static gboolean setup_local_socket (SalutFileTransferChannel *self);
 static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count,
     SalutFileTransferChannel *self);
 
+static GList *
+add_metadata_forms (SalutFileTransferChannel *self,
+    GibberFileTransfer *ft)
+{
+  GError *error = NULL;
+  GList *list = NULL;
+
+  if (!tp_str_empty (self->priv->service_name))
+    {
+      WockyStanza *tmp = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_RESULT, NULL, NULL,
+          '(', "x",
+            ':', WOCKY_XMPP_NS_DATA,
+            '@', "type", "result",
+            '(', "field",
+              '@', "var", "FORM_TYPE",
+              '@', "type", "hidden",
+              '(', "value",
+                '$', NS_TP_FT_METADATA_SERVICE,
+              ')',
+            ')',
+            '(', "field",
+              '@', "var", "ServiceName",
+              '(', "value",
+                '$', self->priv->service_name,
+              ')',
+            ')',
+          ')',
+          NULL);
+      WockyNode *x = wocky_node_get_first_child (wocky_stanza_get_top_node (tmp));
+      WockyDataForm *form = wocky_data_form_new_from_node (x, &error);
+
+      if (form == NULL)
+        {
+          DEBUG ("Failed to parse form (wat): %s", error->message);
+          g_clear_error (&error);
+        }
+      else
+        {
+          list = g_list_append (list, form);
+        }
+
+      g_object_unref (tmp);
+    }
+
+  if (self->priv->metadata != NULL
+      && g_hash_table_size (self->priv->metadata) > 0)
+    {
+      WockyStanza *tmp = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_RESULT, NULL, NULL,
+          '(', "x",
+            ':', WOCKY_XMPP_NS_DATA,
+            '@', "type", "result",
+            '(', "field",
+              '@', "var", "FORM_TYPE",
+              '@', "type", "hidden",
+              '(', "value",
+                '$', NS_TP_FT_METADATA,
+              ')',
+            ')',
+          ')',
+          NULL);
+      WockyNode *x = wocky_node_get_first_child (wocky_stanza_get_top_node (tmp));
+      WockyDataForm *form;
+      GHashTableIter iter;
+      gpointer key, val;
+
+      g_hash_table_iter_init (&iter, self->priv->metadata);
+      while (g_hash_table_iter_next (&iter, &key, &val))
+        {
+          WockyNode *field = wocky_node_add_child (x, "field");
+
+          wocky_node_set_attribute (field, "var", (const gchar *) key);
+
+          wocky_node_add_child_with_content (field, "value",
+              (const gchar *) val);
+        }
+
+      form = wocky_data_form_new_from_node (x, &error);
+
+      if (form == NULL)
+        {
+          DEBUG ("Failed to parse form (wat): %s", error->message);
+          g_clear_error (&error);
+        }
+      else
+        {
+          list = g_list_append (list, form);
+        }
+
+      g_object_unref (tmp);
+    }
+
+  return list;
+}
+
 static void
 send_file_offer (SalutFileTransferChannel *self)
 {
@@ -1158,6 +1255,9 @@ send_file_offer (SalutFileTransferChannel *self)
       G_CALLBACK (ft_transferred_chunk_cb), self);
 
   gibber_file_transfer_set_size (ft, self->priv->size);
+
+  g_assert (ft->dataforms == NULL);
+  ft->dataforms = add_metadata_forms (self, ft);
 
   gibber_file_transfer_offer (ft);
 }
