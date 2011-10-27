@@ -406,6 +406,13 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".Metadata",
       TP_HASH_TYPE_STRING_STRING_MAP);
 
+  if (metadata != NULL && g_hash_table_lookup ((GHashTable *) metadata, "FORM_TYPE"))
+    {
+      g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "Metadata cannot contain an item with key 'FORM_TYPE'");
+      goto error;
+    }
+
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL)
     {
