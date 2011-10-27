@@ -203,12 +203,6 @@ def wait_for_contact_list(q, conn):
         cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
         cs.TARGET_ID: 'subscribe'})
     q.expect('dbus-signal', signal='NewChannel')
-    # known
-    requestotron.EnsureChannel({
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-        cs.TARGET_ID: 'known'})
-    q.expect('dbus-signal', signal='NewChannel')
 
 def wait_for_contact_in_publish(q, bus, conn, contact_name):
     publish_handle = conn.RequestHandles(cs.HT_LIST, ["publish"])[0]
