@@ -497,7 +497,14 @@ static const gchar * const file_transfer_channel_allowed_properties[] =
   NULL
 };
 
-static const gchar * const file_transfer_channel_allowed_properties_with_metadata[] =
+static const gchar * const file_transfer_channel_allowed_properties_with_metadata_prop[] =
+{
+  STANDARD_PROPERTIES,
+  SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".Metadata",
+  NULL
+};
+
+static const gchar * const file_transfer_channel_allowed_properties_with_both_metadata_props[] =
 {
   STANDARD_PROPERTIES,
   SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".ServiceName",
@@ -524,7 +531,7 @@ salut_ft_manager_type_foreach_channel_class (GType type,
   g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
 
-  func (type, table, file_transfer_channel_allowed_properties_with_metadata,
+  func (type, table, file_transfer_channel_allowed_properties_with_both_metadata_props,
       user_data);
 
   g_hash_table_destroy (table);
@@ -573,12 +580,14 @@ salut_ft_manager_new (SalutConnection *connection,
 
 static void
 add_file_transfer_channel_class (GPtrArray *arr,
-    gboolean metadata)
+    gboolean metadata,
+    const gchar *service_name_str)
 {
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
   GValue *target_handle_type_value;
+  GValue *service_name_value;
   const gchar * const *allowed_properties;
 
   g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
@@ -600,9 +609,26 @@ add_file_transfer_channel_class (GPtrArray *arr,
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetHandleType",
       target_handle_type_value);
 
-  allowed_properties = metadata
-    ? file_transfer_channel_allowed_properties_with_metadata
-    : file_transfer_channel_allowed_properties;
+  if (service_name_str != NULL)
+    {
+      service_name_value = tp_g_value_slice_new (G_TYPE_STRING);
+      g_value_set_string (service_name_value, service_name_str);
+      g_hash_table_insert (fixed_properties,
+          SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".ServiceName",
+          service_name_value);
+    }
+
+  if (metadata)
+    {
+      if (service_name_str == NULL)
+        allowed_properties = file_transfer_channel_allowed_properties_with_both_metadata_props;
+      else
+        allowed_properties = file_transfer_channel_allowed_properties_with_metadata_prop;
+    }
+  else
+    {
+      allowed_properties = file_transfer_channel_allowed_properties;
+    }
 
   dbus_g_type_struct_set (&monster,
       0, fixed_properties,
@@ -612,6 +638,20 @@ add_file_transfer_channel_class (GPtrArray *arr,
   g_hash_table_destroy (fixed_properties);
 
   g_ptr_array_add (arr, g_value_get_boxed (&monster));
+}
+
+static void
+get_contact_caps_foreach (gpointer data,
+    gpointer user_data)
+{
+  const gchar *ns = data;
+  GPtrArray *arr = user_data;
+
+  if (!g_str_has_prefix (ns, NS_TP_FT_METADATA "#"))
+    return;
+
+  add_file_transfer_channel_class (arr, TRUE,
+      ns + strlen (NS_TP_FT_METADATA "#"));
 }
 
 static void
@@ -628,7 +668,7 @@ salut_ft_manager_get_contact_caps_from_set (
   if (handle == base->self_handle)
     {
       /* we currently always advertise FT ourselves */
-      add_file_transfer_channel_class (arr, TRUE);
+      add_file_transfer_channel_class (arr, TRUE, NULL);
       return;
     }
 
@@ -639,8 +679,10 @@ salut_ft_manager_get_contact_caps_from_set (
       gabble_capability_set_has (caps, QUIRK_NOT_XEP_CAPABILITIES))
     {
       add_file_transfer_channel_class (arr,
-          gabble_capability_set_has (caps, NS_TP_FT_METADATA));
+          gabble_capability_set_has (caps, NS_TP_FT_METADATA), NULL);
     }
+
+  gabble_capability_set_foreach (caps, get_contact_caps_foreach, arr);
 }
 
 static void
@@ -657,6 +699,8 @@ salut_ft_manager_represent_client (
   for (i = 0; i < filters->len; i++)
     {
       GHashTable *channel_class = g_ptr_array_index (filters, i);
+      const gchar *service_name;
+      gchar *ns;
 
       if (tp_strdiff (tp_asv_get_string (channel_class,
               TP_IFACE_CHANNEL ".ChannelType"),
@@ -672,9 +716,27 @@ salut_ft_manager_represent_client (
       gabble_capability_set_add (cap_set, WOCKY_XMPP_NS_IQ_OOB);
       gabble_capability_set_add (cap_set, WOCKY_XMPP_NS_X_OOB);
       gabble_capability_set_add (cap_set, NS_TP_FT_METADATA);
-      /* there's no point in looking at the subsequent filters if we've
-       * already added the FT capability */
-      break;
+
+      /* now look at service names */
+
+      /* capabilities mean being able to RECEIVE said kinds of
+       * FTs. hence, skip Requested=true (locally initiated) channel
+       * classes */
+      if (tp_asv_get_boolean (channel_class,
+              TP_PROP_CHANNEL_REQUESTED, FALSE))
+        continue;
+
+      service_name = tp_asv_get_string (channel_class,
+          SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".ServiceName");
+
+      if (service_name == NULL)
+        continue;
+
+      ns = g_strconcat (NS_TP_FT_METADATA "#", service_name, NULL);
+
+      DEBUG ("%s: adding capability %s", client_name, ns);
+      gabble_capability_set_add (cap_set, ns);
+      g_free (ns);
     }
 }
 
