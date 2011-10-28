@@ -33,6 +33,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/file-transfer/receive-file-ipv6.py \
 	avahi/file-transfer/receive-file-not-found.py \
 	avahi/file-transfer/metadata.py \
+	avahi/file-transfer/ft-client-caps.py \
 	avahi/caps-self.py \
 	avahi/caps-tubes.py \
 	avahi/text-channel.py \
