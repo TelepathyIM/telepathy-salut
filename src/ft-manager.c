@@ -661,17 +661,6 @@ salut_ft_manager_get_contact_caps_from_set (
     const GabbleCapabilitySet *caps,
     GPtrArray *arr)
 {
-  SalutFtManager *self = SALUT_FT_MANAGER (iface);
-  SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base = TP_BASE_CONNECTION (priv->connection);
-
-  if (handle == base->self_handle)
-    {
-      /* we currently always advertise FT ourselves */
-      add_file_transfer_channel_class (arr, TRUE, NULL);
-      return;
-    }
-
   /* If we don't receive any capabilities info (QUIRK_NOT_XEP_CAPABILITIES)
    * we assume FT is supported to ensure interoperability with other clients */
   if (gabble_capability_set_has (caps, WOCKY_XMPP_NS_IQ_OOB) ||
