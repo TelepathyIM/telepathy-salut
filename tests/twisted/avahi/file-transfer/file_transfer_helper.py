@@ -12,10 +12,11 @@ import os
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
 
-from caps_helper import extract_data_forms, add_dataforms
+from caps_helper import extract_data_forms, add_dataforms, compute_caps_hash, \
+    send_disco_reply
 
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async
+from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async, sync_dbus
 import constants as cs
 import ns
 
@@ -59,6 +60,7 @@ class FileTransferTest(object):
 
     def __init__(self):
         self.file = File()
+        self.contact_service = None
 
     def connect(self):
         self.conn.Connect()
@@ -68,7 +70,12 @@ class FileTransferTest(object):
         self.self_handle_name =  self.conn.InspectHandles(cs.HT_CONTACT, [self.self_handle])[0]
 
     def announce_contact(self, name=CONTACT_NAME):
-        basic_txt = { "txtvers": "1", "status": "avail" }
+        client = 'http://telepathy.freedesktop.org/fake-client'
+        features = [ns.IQ_OOB]
+
+        ver = compute_caps_hash([], features, {})
+        txt_record = { "txtvers": "1", "status": "avail",
+                       "node": client, "ver": ver, "hash": "sha-1"}
 
         suffix = '@%s' % get_host_name()
         name += ('-' + os.path.splitext(os.path.basename(sys.argv[0]))[0])
@@ -81,11 +88,33 @@ class FileTransferTest(object):
         self.listener, port = setup_stream_listener(self.q, self.contact_name)
 
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp",
-                port, basic_txt)
+                port, txt_record)
 
-    def wait_for_contact(self):
         self.handle = wait_for_contact_in_publish(self.q, self.bus, self.conn,
                 self.contact_name)
+
+        # expect salut to disco our caps
+        e = self.q.expect('incoming-connection', listener=self.listener)
+        stream = e.connection
+
+        e = self.q.expect('stream-iq', to=self.contact_name, query_ns=ns.DISCO_INFO,
+                     connection=stream)
+        assertEquals(client + '#' + ver, e.query['node'])
+        send_disco_reply(stream, e.stanza, [], features)
+
+        # lose the connection here to ensure connections are created
+        # where necessary; I just wanted salut to know my caps.
+        stream.send('</stream:stream>')
+        # spend a bit of time in the main loop to ensure the last two
+        # stanzas are actually received by salut before closing the
+        # connection.
+        sync_dbus(self.bus, self.q, self.conn)
+        stream.transport.loseConnection()
+
+    def wait_for_contact(self):
+        if not hasattr(self, 'handle'):
+            self.handle = wait_for_contact_in_publish(self.q, self.bus, self.conn,
+                    self.contact_name)
 
     def create_ft_channel(self):
         self.channel = make_channel_proxy(self.conn, self.ft_path, 'Channel')
@@ -106,6 +135,10 @@ class FileTransferTest(object):
             # stop if a function returns True
             if fct():
                 break
+
+        # if we announced the service, let's be sure to get rid of it
+        if self.contact_service:
+            self.contact_service.stop()
 
 class ReceiveFileTest(FileTransferTest):
     def __init__(self):
