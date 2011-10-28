@@ -69,9 +69,12 @@ class FileTransferTest(object):
         self.self_handle = self.conn.GetSelfHandle()
         self.self_handle_name =  self.conn.InspectHandles(cs.HT_CONTACT, [self.self_handle])[0]
 
-    def announce_contact(self, name=CONTACT_NAME):
+    def announce_contact(self, name=CONTACT_NAME, metadata=True):
         client = 'http://telepathy.freedesktop.org/fake-client'
         features = [ns.IQ_OOB]
+
+        if metadata:
+            features += [ns.TP_FT_METADATA]
 
         ver = compute_caps_hash([], features, {})
         txt_record = { "txtvers": "1", "status": "avail",
@@ -378,9 +381,12 @@ class SendFileTest(FileTransferTest):
             cs.FT_CONTENT_HASH:self.file.hash,
             cs.FT_DESCRIPTION: self.file.description,
             cs.FT_DATE: self.file.date,
-            cs.FT_INITIAL_OFFSET: 0,
-            cs.FT_SERVICE_NAME: self.service_name,
-            cs.FT_METADATA: dbus.Dictionary(self.metadata, signature='ss')}
+            cs.FT_INITIAL_OFFSET: 0 }
+
+        if self.service_name:
+            request[cs.FT_SERVICE_NAME] = self.service_name
+        if self.metadata:
+            request[cs.FT_METADATA] = dbus.Dictionary(self.metadata, signature='ss')
 
         if uri:
             request[cs.FT_URI] = self.file.uri

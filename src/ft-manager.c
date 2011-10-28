@@ -425,6 +425,19 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       goto error;
     }
 
+  if (service_name != NULL || metadata != NULL)
+    {
+      if (!gabble_capability_set_has (contact->caps, NS_TP_FT_METADATA))
+        {
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_CAPABLE,
+              "The specified contact does not support the "
+              "Metadata extension; you should ensure both ServiceName and "
+              "Metadata properties are not present in the channel "
+              "request");
+          goto error;
+        }
+    }
+
   DEBUG ("Requested outgoing channel with contact: %s",
       tp_handle_inspect (contact_repo, handle));
 

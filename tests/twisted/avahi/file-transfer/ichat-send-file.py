@@ -10,6 +10,11 @@ from file_transfer_helper import SendFileTest
 class IChatSendFileDeclined(SendFileTest):
     CONTACT_NAME = 'test-ft'
 
+    # we need to unset these so we won't try and send them and then
+    # because we don't have the right caps, salut complains
+    service_name = ''
+    metadata = {}
+
     def announce_contact(self, name=CONTACT_NAME):
         basic_txt = { "txtvers": "1", "status": "avail" }
 
