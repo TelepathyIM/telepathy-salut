@@ -249,18 +249,15 @@ def extract_data_forms(x_nodes):
 
     return dataforms
 
-def disco_caps(q, stream, presence):
-    c_nodes = xpath.queryForNodes('/presence/c', presence.stanza)
-    assert c_nodes is not None
-    assertLength(1, c_nodes)
-    hash = c_nodes[0].attributes['hash']
-    ver = c_nodes[0].attributes['ver']
-    node = c_nodes[0].attributes['node']
+def disco_caps(q, stream, txt):
+    hash = txt_get_key(txt, 'hash')
+    ver = txt_get_key(txt, 'ver')
+    node = txt_get_key(txt, 'node')
     assertEquals('sha-1', hash)
 
     # ask caps
     request = \
-        elem_iq(stream, 'get', from_='fake_contact@jabber.org/resource')(
+        elem_iq(stream, 'get', from_='fake_contact@nearby')(
           elem(ns.DISCO_INFO, 'query', node=(node + '#' + ver))
         )
     stream.send(request)
@@ -274,11 +271,11 @@ def disco_caps(q, stream, presence):
     identity_node = identity_nodes[0]
 
     assertEquals('client', identity_node['category'])
-    assertEquals(config.CLIENT_TYPE, identity_node['type'])
+    assertEquals('pc', identity_node['type'])
     assertEquals(config.PACKAGE_STRING, identity_node['name'])
     assertDoesNotContain('xml:lang', identity_node.attributes)
 
-    identity = 'client/%s//%s' % (config.CLIENT_TYPE, config.PACKAGE_STRING)
+    identity = 'client/%s//%s' % ('pc', config.PACKAGE_STRING)
 
     features = []
     for feature in xpath.queryForNodes('/iq/query/feature', event.stanza):
