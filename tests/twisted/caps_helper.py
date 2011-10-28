@@ -176,7 +176,7 @@ def compute_caps_hash(identities, features, dataforms):
     return base64.b64encode(m.digest())
 
 def make_caps_disco_reply(stream, req, identities, features, dataforms={}):
-    iq = make_result_iq(stream, req)
+    iq = make_result_iq(req)
     query = iq.firstChildElement()
 
     for identity in identities:
