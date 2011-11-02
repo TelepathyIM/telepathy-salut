@@ -16,18 +16,32 @@ fi
 
 autoreconf -i -f
 
-# Fetch Wocky if needed
-if test ! -f lib/ext/wocky/autogen.sh;
-then
-  echo "+ Setting up Wocky submodule"
-  git submodule init
-fi
-git submodule update
+#Check if building submodules
+build_submodules=true
+for arg in $*; do
+    case $arg in
+    --disable-submodules)
+    build_submodules=false
+    ;;
+*)
+;;
+esac
+done
 
-# launch Wocky's autogen.sh
-cd lib/ext/wocky
-sh autogen.sh --no-configure
-cd ../../..
+if test $build_submodules = true; then
+    # Fetch Wocky if needed
+    if test ! -f lib/ext/wocky/autogen.sh;
+    then
+    echo "+ Setting up Wocky submodule"
+    git submodule init
+    fi
+    git submodule update
+
+    # launch Wocky's autogen.sh
+    cd lib/ext/wocky
+    sh autogen.sh --no-configure
+    cd ../../..
+fi
 
 run_configure=true
 for arg in $*; do

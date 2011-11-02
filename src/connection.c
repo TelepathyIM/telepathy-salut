@@ -26,7 +26,6 @@
 #include <ctype.h>
 
 #include <dbus/dbus-protocol.h>
-#include <dbus/dbus-glib-bindings.h>
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 

@@ -21,7 +21,11 @@ salut_create_connection_manager (void)
 }
 
 int
+#ifdef BUILD_AS_ANDROID_SERVICE
+salut_main (int argc, char **argv)
+#else
 main (int argc, char **argv)
+#endif
 {
   GLogLevelFlags fatal_mask;
   gint ret;

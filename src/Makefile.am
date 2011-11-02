@@ -155,6 +155,11 @@ include $(top_srcdir)/tools/check-coding-style.mk
 check-local: check-coding-style
 
 # TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
+telepathy_salut_android_libs = libsalut-convenience.la \
+                               -lgibber-salut \
+                               $(top_builddir)/extensions/libsalut-extensions.la \
+                               -ltelepathy-glib
+
 telepathy_salut_LDADD = libsalut-convenience.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         $(top_builddir)/extensions/libsalut-extensions.la \
@@ -178,6 +183,7 @@ AM_CFLAGS = \
 	@AVAHI_CFLAGS@ \
 	@TELEPATHY_GLIB_CFLAGS@ \
 	@UUID_CFLAGS@ \
+	@LIBSOUP_CFLAGS@ \
 	$(NULL)
 
 AM_LDFLAGS = \
@@ -190,6 +196,7 @@ AM_LDFLAGS = \
 	@AVAHI_LIBS@ \
 	@TELEPATHY_GLIB_LIBS@ \
 	@UUID_LIBS@ \
+	@LIBSOUP_LIBS@ \
 	$(NULL)
 
 # Teach it how to make libgibber.la
@@ -237,3 +244,22 @@ enumtypes.c: $(enumtype_sources) Makefile.in
 	--vprod "      { @VALUENAME@, \"@VALUENAME@\", \"@valuenick@\" }," \
 	--vtail "      { 0, NULL, NULL }\n    };\n    etype = g_@type@_register_static (\"@EnumName@\", values);\n  }\n  return etype;\n}\n" \
 	$(enumtype_sources) > $@
+
+Android.mk: Makefile.am $(BUILT_SOURCES)
+	androgenizer -:PROJECT telepathy-salut -:STATIC salut-convenience \
+	 -:TAGS eng debug \
+	 -:REL_TOP $(top_srcdir) -:ABS_TOP $(abs_top_srcdir) \
+	 -:SOURCES $(libsalut_convenience_la_SOURCES) \
+	 -:CFLAGS $(DEFS) $(CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(AM_CFLAGS) \
+	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) \
+	 -:SHARED telepathy-salut \
+	 -:TAGS eng debug \
+	 -:REL_TOP $(top_srcdir) -:ABS_TOP $(abs_top_srcdir) \
+	 -:SOURCES $(telepathy_salut_SOURCES) \
+	 -:CFLAGS $(DEFS) $(CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(AM_CFLAGS) \
+	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) -DBUILD_AS_ANDROID_SERVICE \
+	 -:LDFLAGS $(telepathy_salut_android_libs) $(AM_LDFLAGS) \
+	 -:LIBFILTER_STATIC salut-convenience \
+	> $@

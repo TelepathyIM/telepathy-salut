@@ -158,7 +158,8 @@ dnl GTK docs
 GTK_DOC_CHECK
 
 dnl Check for Glib
-PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.24, gobject-2.0 >= 2.16, gthread-2.0 >= 2.4])
+PKG_CHECK_MODULES(GLIB,
+    [glib-2.0 >= 2.24, gobject-2.0 >= 2.16, gthread-2.0 >= 2.4, gio-2.0])
 
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
@@ -203,6 +204,12 @@ if test x"$HAVE_UUID" = xyes; then
 else
   AC_MSG_WARN([libuuid not found, falling back to generating random IDs])
 fi
+
+AC_ARG_ENABLE(submodules,
+  AS_HELP_STRING([--disable-submodules],
+                 [Use system version of Wocky rather than a submodule]),
+  build_submodules=$enableval,
+  build_submodules=yes )
 
 dnl plugins
 AC_ARG_ENABLE(plugins,
