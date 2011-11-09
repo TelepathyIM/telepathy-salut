@@ -1138,7 +1138,7 @@ add_metadata_forms (SalutFileTransferChannel *self,
     GibberFileTransfer *ft)
 {
   GError *error = NULL;
-  GList *list = NULL;
+  GQueue queue = G_QUEUE_INIT;
 
   if (!tp_str_empty (self->priv->service_name))
     {
@@ -1172,7 +1172,7 @@ add_metadata_forms (SalutFileTransferChannel *self,
         }
       else
         {
-          list = g_list_append (list, form);
+          g_queue_push_tail (&queue, form);
         }
 
       g_object_unref (tmp);
@@ -1220,13 +1220,13 @@ add_metadata_forms (SalutFileTransferChannel *self,
         }
       else
         {
-          list = g_list_append (list, form);
+          g_queue_push_tail (&queue, form);
         }
 
       g_object_unref (tmp);
     }
 
-  return list;
+  return queue.head;
 }
 
 static void
