@@ -33,6 +33,7 @@
 
 #include <salut/caps-channel-manager.h>
 
+#include <extensions/_gen/gtypes.h>
 #include "file-transfer-channel.h"
 #include "contact-manager.h"
 #include "presence-cache.h"
@@ -405,7 +406,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
 
   metadata = tp_asv_get_boxed (request_properties,
       SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA ".Metadata",
-      TP_HASH_TYPE_STRING_STRING_MAP);
+      SALUT_HASH_TYPE_METADATA);
 
   if (metadata != NULL && g_hash_table_lookup ((GHashTable *) metadata, "FORM_TYPE"))
     {

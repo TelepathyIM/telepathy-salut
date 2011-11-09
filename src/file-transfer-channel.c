@@ -37,6 +37,7 @@
 #include "file-transfer-channel.h"
 #include "signals-marshal.h"
 
+#include <extensions/_gen/gtypes.h>
 #include "connection.h"
 #include "im-manager.h"
 #include "contact.h"
@@ -873,7 +874,7 @@ salut_file_transfer_channel_class_init (
   param_spec = g_param_spec_boxed ("metadata",
       "Metadata",
       "The Metadata.Metadata property of this channel",
-      TP_HASH_TYPE_STRING_STRING_MAP,
+      SALUT_HASH_TYPE_METADATA,
       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_METADATA,
       param_spec);
@@ -1203,13 +1204,15 @@ add_metadata_forms (SalutFileTransferChannel *self,
       g_hash_table_iter_init (&iter, self->priv->metadata);
       while (g_hash_table_iter_next (&iter, &key, &val))
         {
-          wocky_node_add_build (x,
-              '(', "field",
-                '@', "var", key,
-                '(', "value",
-                  '$', val,
-                ')',
-              ')', NULL);
+          const gchar * const *values = val;
+
+          WockyNode *field = wocky_node_add_child (x, "field");
+          wocky_node_set_attribute (field, "var", key);
+
+          for (; values != NULL && *values != NULL; values++)
+            {
+              wocky_node_add_child_with_content (field, "value", *values);
+            }
         }
 
       form = wocky_data_form_new_from_node (x, &error);
@@ -1783,7 +1786,7 @@ extract_metadata (GibberFileTransfer *ft)
     return NULL;
 
   metadata = g_hash_table_new_full (g_str_hash, g_str_equal,
-      g_free, g_free);
+      g_free, (GDestroyNotify) g_strfreev);
 
   g_hash_table_iter_init (&iter, form->fields);
   while (g_hash_table_iter_next (&iter, &key, &value))
@@ -1796,7 +1799,7 @@ extract_metadata (GibberFileTransfer *ft)
 
       g_hash_table_insert (metadata,
           g_strdup (var),
-          g_strdup (field->raw_value_contents[0]));
+          g_strdupv (field->raw_value_contents));
     }
 
   return metadata;

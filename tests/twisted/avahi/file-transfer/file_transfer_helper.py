@@ -55,8 +55,8 @@ class FileTransferTest(object):
     CONTACT_NAME = 'test-ft'
 
     service_name = 'wacky.service.name'
-    metadata = {'loads': 'of',
-                'mental': 'data'}
+    metadata = {'loads': ['of'],
+                'mental': ['data']}
 
     def __init__(self):
         self.file = File()
@@ -214,7 +214,7 @@ class ReceiveFileTest(FileTransferTest):
             add_dataforms(query, service_form)
 
         if self.metadata:
-            metadata_form = {ns.TP_FT_METADATA: {k: [v] for k, v in self.metadata.items()}}
+            metadata_form = {ns.TP_FT_METADATA: self.metadata}
             add_dataforms(query, metadata_form)
 
         self.outbound.send(iq)
@@ -384,7 +384,7 @@ class SendFileTest(FileTransferTest):
         if self.service_name:
             request[cs.FT_SERVICE_NAME] = self.service_name
         if self.metadata:
-            request[cs.FT_METADATA] = dbus.Dictionary(self.metadata, signature='ss')
+            request[cs.FT_METADATA] = dbus.Dictionary(self.metadata, signature='sas')
 
         if uri:
             request[cs.FT_URI] = self.file.uri
@@ -458,10 +458,7 @@ class SendFileTest(FileTransferTest):
             assert ns.TP_FT_METADATA_SERVICE not in forms
 
         if self.metadata:
-            # the dataform isn't such a simple a{ss} because it can
-            # have multiple values
-            expected = {k:[v] for k,v in self.metadata.items()}
-            assertEquals(expected, forms[ns.TP_FT_METADATA])
+            assertEquals(self.metadata, forms[ns.TP_FT_METADATA])
         else:
             assert ns.TP_FT_METADATA not in forms
 
