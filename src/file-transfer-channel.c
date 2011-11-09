@@ -1756,7 +1756,15 @@ extract_service_name (GibberFileTransfer *ft)
       goto out;
     }
 
-  service_name = g_strdup (field->raw_value_contents[0]);
+  if (field->raw_value_contents == NULL
+      || field->raw_value_contents[0] == NULL)
+    {
+      DEBUG ("ServiceName property doesn't have a real value; odd...");
+    }
+  else
+    {
+      service_name = g_strdup (field->raw_value_contents[0]);
+    }
 
 out:
   return service_name;
