@@ -37,7 +37,6 @@
 #include "file-transfer-channel.h"
 #include "signals-marshal.h"
 
-#include <extensions/_gen/gtypes.h>
 #include "connection.h"
 #include "im-manager.h"
 #include "contact.h"
@@ -70,7 +69,7 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
                            file_transfer_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA,
                            NULL);
 );
 
@@ -342,8 +341,8 @@ salut_file_transfer_channel_get_property (GObject *object,
               TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "AvailableSocketTypes",
               TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "TransferredBytes",
               TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "InitialOffset",
-              SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "ServiceName",
-              SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "Metadata",
+              TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "ServiceName",
+              TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "Metadata",
               NULL);
 
           /* URI is immutable only for outgoing transfers */
@@ -630,7 +629,7 @@ salut_file_transfer_channel_class_init (
       file_transfer_channel_properties_setter,
       file_props
     },
-    { SALUT_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA,
+    { TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA,
       tp_dbus_properties_mixin_getter_gobject_properties,
       NULL,
       file_metadata_props
@@ -874,7 +873,7 @@ salut_file_transfer_channel_class_init (
   param_spec = g_param_spec_boxed ("metadata",
       "Metadata",
       "The Metadata.Metadata property of this channel",
-      SALUT_HASH_TYPE_METADATA,
+      TP_HASH_TYPE_METADATA,
       G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_METADATA,
       param_spec);
