@@ -194,7 +194,7 @@ salut_olpc_activity_manager_dispose (GObject *object)
     {
       g_hash_table_foreach_remove (priv->activities_by_room,
           dispose_activity_foreach, self);
-      g_hash_table_destroy (priv->activities_by_room);
+      g_hash_table_unref (priv->activities_by_room);
       priv->activities_by_room = NULL;
     }
 

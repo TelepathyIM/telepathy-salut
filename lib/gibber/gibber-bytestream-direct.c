@@ -135,7 +135,7 @@ gibber_bytestream_direct_finalize (GObject *object)
   g_free (priv->peer_id);
 
   if (priv->addresses != NULL)
-    g_array_free (priv->addresses, TRUE);
+    g_array_unref (priv->addresses);
 
   G_OBJECT_CLASS (gibber_bytestream_direct_parent_class)->finalize (object);
 }

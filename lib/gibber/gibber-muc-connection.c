@@ -257,11 +257,11 @@ gibber_muc_connection_finalize (GObject *object)
   priv->port = NULL;
 
   if (priv->parameters != NULL) {
-    g_hash_table_destroy (priv->parameters);
+    g_hash_table_unref (priv->parameters);
     priv->parameters = NULL;
   }
 
-  g_array_free (priv->streams_used, TRUE);
+  g_array_unref (priv->streams_used);
 
   G_OBJECT_CLASS (gibber_muc_connection_parent_class)->finalize (object);
 }

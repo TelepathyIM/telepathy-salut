@@ -338,7 +338,7 @@ send_properties_change_msg (SalutOlpcActivity *self,
   g_object_unref (stanza);
   g_object_unref (muc_connection);
   g_free (muc_name);
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 
   return result;
 }
@@ -687,7 +687,7 @@ salut_olpc_activity_augment_invitation (SalutOlpcActivity *self,
 
   tp_handle_set_add (priv->invited, contact);
 
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 }
 
 gboolean

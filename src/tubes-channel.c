@@ -423,8 +423,8 @@ d_bus_names_changed_added (SalutTubesChannel *self,
 
   for (i = 0; i < added->len; i++)
     g_boxed_free (DBUS_NAME_PAIR_TYPE, added->pdata[i]);
-  g_ptr_array_free (added, TRUE);
-  g_array_free (removed, TRUE);
+  g_ptr_array_unref (added);
+  g_array_unref (removed);
 }
 
 static void
@@ -447,8 +447,8 @@ d_bus_names_changed_removed (SalutTubesChannel *self,
   tp_svc_channel_type_tubes_emit_d_bus_names_changed (self,
       tube_id, added, removed);
 
-  g_ptr_array_free (added, TRUE);
-  g_array_free (removed, TRUE);
+  g_ptr_array_unref (added);
+  g_array_unref (removed);
 }
 
 static void
@@ -523,7 +523,7 @@ salut_tubes_channel_get_available_tube_types (TpSvcChannelTypeTubes *iface,
   tp_svc_channel_type_tubes_return_from_get_available_tube_types (context,
       ret);
 
-  g_array_free (ret, TRUE);
+  g_array_unref (ret);
 }
 
 struct _add_in_old_dbus_tubes_data
@@ -711,7 +711,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
 
               /* the tube has reffed its initiator, no need to keep a ref */
               tp_handle_unref (contact_repo, initiator_handle);
-              g_hash_table_destroy (parameters);
+              g_hash_table_unref (parameters);
             }
         }
       else
@@ -775,7 +775,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
   g_hash_table_foreach (old_dbus_tubes, emit_d_bus_names_changed_foreach,
       &emit_data);
 
-  g_hash_table_destroy (old_dbus_tubes);
+  g_hash_table_unref (old_dbus_tubes);
 
   return result;
 }
@@ -887,7 +887,7 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
   tube = create_new_tube (self, type, priv->self_handle, FALSE, service,
       parameters, tube_id, 0, NULL);
 
-  g_hash_table_destroy (parameters);
+  g_hash_table_unref (parameters);
   return tube;
 }
 
@@ -940,7 +940,7 @@ muc_connection_lost_senders_cb (GibberMucConnection *conn,
       g_hash_table_foreach (old_dbus_tubes, emit_d_bus_names_changed_foreach,
           &emit_data);
 
-      g_hash_table_destroy (old_dbus_tubes);
+      g_hash_table_unref (old_dbus_tubes);
     }
 }
 
@@ -1022,7 +1022,7 @@ salut_tubes_channel_list_tubes (TpSvcChannelTypeTubes *iface,
   for (i = 0; i < ret->len; i++)
     g_boxed_free (SALUT_CHANNEL_TUBE_TYPE, ret->pdata[i]);
 
-  g_ptr_array_free (ret, TRUE);
+  g_ptr_array_unref (ret);
 }
 
 static void
@@ -1128,7 +1128,7 @@ tube_offered_cb (SalutTubeIface *tube,
   update_tubes_info (self);
 
   g_free (service);
-  g_hash_table_destroy (parameters);
+  g_hash_table_unref (parameters);
 }
 
 static SalutTubeIface *
@@ -1749,7 +1749,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
   for (i = 0; i < ret->len; i++)
     g_boxed_free (DBUS_NAME_PAIR_TYPE, ret->pdata[i]);
   g_hash_table_unref (names);
-  g_ptr_array_free (ret, TRUE);
+  g_ptr_array_unref (ret);
 }
 
 static void
@@ -2185,7 +2185,7 @@ salut_tubes_channel_get_available_stream_tube_types (
   tp_svc_channel_type_tubes_return_from_get_available_stream_tube_types (
       context, ret);
 
-  g_hash_table_destroy (ret);
+  g_hash_table_unref (ret);
 }
 
 static void salut_tubes_channel_dispose (GObject *object);
@@ -2402,7 +2402,7 @@ salut_tubes_channel_close (SalutTubesChannel *self)
   priv->closed = TRUE;
 
   g_hash_table_foreach (priv->tubes, emit_tube_closed_signal, self);
-  g_hash_table_destroy (priv->tubes);
+  g_hash_table_unref (priv->tubes);
 
   priv->tubes = NULL;
 

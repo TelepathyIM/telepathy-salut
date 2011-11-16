@@ -256,10 +256,10 @@ salut_presence_cache_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  g_hash_table_destroy (priv->capabilities);
+  g_hash_table_unref (priv->capabilities);
   priv->capabilities = NULL;
 
-  g_hash_table_destroy (priv->disco_pending);
+  g_hash_table_unref (priv->disco_pending);
   priv->disco_pending = NULL;
 
   tp_clear_pointer (&(priv->not_xep_capabilities.caps),

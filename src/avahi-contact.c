@@ -763,7 +763,7 @@ contact_resolved_cb (GaServiceResolver *resolver,
       while (olpc_key_part != NULL);
 
       salut_contact_change_olpc_key (contact, olpc_key);
-      g_array_free (olpc_key, TRUE);
+      g_array_unref (olpc_key);
     }
 
   /* address */

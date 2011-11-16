@@ -355,7 +355,7 @@ salut_plugin_loader_create_channel_managers (
         continue;
 
       g_ptr_array_foreach (managers, copy_to_other_array, out);
-      g_ptr_array_free (managers, TRUE);
+      g_ptr_array_unref (managers);
     }
 
   return out;

@@ -165,14 +165,14 @@ salut_muc_manager_close_all (SalutMucManager *self)
     {
       GHashTable *tmp = priv->text_channels;
       priv->text_channels = NULL;
-      g_hash_table_destroy (tmp);
+      g_hash_table_unref (tmp);
     }
 
   if (priv->tubes_channels != NULL)
     {
       GHashTable *tmp = priv->tubes_channels;
       priv->tubes_channels = NULL;
-      g_hash_table_destroy (tmp);
+      g_hash_table_unref (tmp);
     }
 }
 
@@ -385,7 +385,7 @@ salut_muc_manager_type_foreach_channel_class (GType type,
   func (type, table, salut_tube_dbus_channel_get_allowed_properties (),
       user_data);
 
-  g_hash_table_destroy (table);
+  g_hash_table_unref (table);
 }
 
 
@@ -594,7 +594,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   connection = _get_connection (mgr, NULL, params, &connection_error);
 
   if (params != NULL)
-    g_hash_table_destroy (params);
+    g_hash_table_unref (params);
 
   if (connection == NULL)
     {
@@ -698,7 +698,7 @@ create_tubes_channel (SalutMucManager *self,
       g_hash_table_insert (channels, tubes_chan, tokens);
       tp_channel_manager_emit_new_channels (self, channels);
 
-      g_hash_table_destroy (channels);
+      g_hash_table_unref (channels);
       g_slist_free (tokens);
     }
 
@@ -763,7 +763,7 @@ handle_tube_channel_request (SalutMucManager *self,
   g_hash_table_insert (channels, new_channel, request_tokens);
   tp_channel_manager_emit_new_channels (self, channels);
 
-  g_hash_table_destroy (channels);
+  g_hash_table_unref (channels);
   g_slist_free (request_tokens);
   return TRUE;
 }
@@ -1122,7 +1122,7 @@ invite_stanza_callback (WockyPorter *porter,
 
 discard:
   if (params_hash != NULL)
-    g_hash_table_destroy (params_hash);
+    g_hash_table_unref (params_hash);
   return TRUE;
 }
 

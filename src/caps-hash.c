@@ -72,7 +72,7 @@ caps_hash_compute_from_self_presence (SalutSelf *self)
   str = wocky_caps_hash_compute_from_lists (features, identities,
       (GPtrArray *) dataforms);
 
-  g_ptr_array_free (features, TRUE);
+  g_ptr_array_unref (features);
   wocky_disco_identity_array_free (identities);
 
   return str;

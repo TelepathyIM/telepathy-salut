@@ -352,7 +352,7 @@ iq_tube_request_cb (WockyPorter *porter,
           {
             DEBUG ("couldn't make new tubes channel: %s", e->message);
             g_error_free (e);
-            g_hash_table_destroy (parameters);
+            g_hash_table_unref (parameters);
             return TRUE;
           }
 
@@ -372,7 +372,7 @@ iq_tube_request_cb (WockyPorter *porter,
                   initiator_handle));
           }
 
-        g_hash_table_destroy (parameters);
+        g_hash_table_unref (parameters);
         return TRUE;
       }
 
@@ -387,8 +387,8 @@ iq_tube_request_cb (WockyPorter *porter,
 
     tp_channel_manager_emit_new_channels (self, channels);
 
-    g_hash_table_destroy (parameters);
-    g_hash_table_destroy (channels);
+    g_hash_table_unref (parameters);
+    g_hash_table_unref (channels);
   }
 
   return TRUE;
@@ -414,7 +414,7 @@ salut_tubes_manager_close_all (SalutTubesManager *self)
 
       tmp = priv->tubes_channels;
       priv->tubes_channels = NULL;
-      g_hash_table_destroy (tmp);
+      g_hash_table_unref (tmp);
     }
 }
 
@@ -746,7 +746,7 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
 
   func (type, table, old_tubes_channel_allowed_properties, user_data);
 
-  g_hash_table_destroy (table);
+  g_hash_table_unref (table);
 
   /* 1-1 Channel.Type.StreamTube */
   table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
@@ -765,7 +765,7 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
   func (type, table, salut_tube_stream_channel_get_allowed_properties (),
       user_data);
 
-  g_hash_table_destroy (table);
+  g_hash_table_unref (table);
 
   /* 1-1 Channel.Type.DBusTube */
   /* Temporarily disabled since the implementation is incomplete. */
@@ -785,7 +785,7 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
 
   func (type, table, dbus_tube_channel_allowed_properties, user_data);
 
-  g_hash_table_destroy (table);
+  g_hash_table_unref (table);
 #endif
 }
 
@@ -958,7 +958,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 
       tp_channel_manager_emit_new_channels (self, channels);
 
-      g_hash_table_destroy (channels);
+      g_hash_table_unref (channels);
       g_slist_free (tokens);
       return TRUE;
     }
@@ -1076,7 +1076,7 @@ add_service_to_array (const gchar *service,
       1, tube_allowed_properties,
       G_MAXUINT);
 
-  g_hash_table_destroy (fixed_properties);
+  g_hash_table_unref (fixed_properties);
 
   g_ptr_array_add (arr, g_value_get_boxed (&monster));
 }
@@ -1115,7 +1115,7 @@ add_generic_tube_caps (GPtrArray *arr)
       1, stream_tube_channel_allowed_properties,
       G_MAXUINT);
 
-  g_hash_table_destroy (fixed_properties);
+  g_hash_table_unref (fixed_properties);
   g_ptr_array_add (arr, g_value_get_boxed (&monster1));
 
   /* FIXME: enable once D-Bus tube new API are implemented */
@@ -1146,7 +1146,7 @@ add_generic_tube_caps (GPtrArray *arr)
       1, gabble_tube_dbus_channel_get_allowed_properties (),
       G_MAXUINT);
 
-  g_hash_table_destroy (fixed_properties);
+  g_hash_table_unref (fixed_properties);
   g_ptr_array_add (arr, g_value_get_boxed (&monster2));
 #endif
 }

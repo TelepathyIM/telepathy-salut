@@ -306,7 +306,7 @@ salut_contact_dispose (GObject *object)
 
   g_hash_table_foreach (priv->olpc_activities,
       (GHFunc) disconnect_activity_signal_foreach, self);
-  g_hash_table_destroy (priv->olpc_activities);
+  g_hash_table_unref (priv->olpc_activities);
 #endif
 
   salut_contact_avatar_request_flush (self, NULL, 0);
@@ -350,7 +350,7 @@ salut_contact_finalize (GObject *object)
 #ifdef ENABLE_OLPC
   if (self->olpc_key != NULL)
     {
-      g_array_free (self->olpc_key, TRUE);
+      g_array_unref (self->olpc_key);
     }
   g_free (self->olpc_color);
   g_free (self->olpc_cur_act);
@@ -674,7 +674,7 @@ salut_contact_change_olpc_key (SalutContact *self, GArray *olpc_key)
         {
           if (self->olpc_key != NULL)
             {
-              g_array_free (self->olpc_key, TRUE);
+              g_array_unref (self->olpc_key);
             }
             self->olpc_key = g_array_sized_new (FALSE, FALSE,
                 sizeof (guint8), olpc_key->len);

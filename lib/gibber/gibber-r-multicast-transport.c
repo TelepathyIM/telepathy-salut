@@ -299,13 +299,13 @@ gibber_r_multicast_transport_flush_state (GibberRMulticastTransport *self)
 
   if (priv->send_join != NULL)
     {
-      g_array_free (priv->send_join, TRUE);
+      g_array_unref (priv->send_join);
       priv->send_join = NULL;
     }
 
   if (priv->send_join_failures != NULL)
     {
-      g_array_free (priv->send_join_failures, TRUE);
+      g_array_unref (priv->send_join_failures);
       priv->send_join_failures = NULL;
     }
 
@@ -351,10 +351,10 @@ gibber_r_multicast_transport_finalize (GObject *object)
      GibberRMulticastTransportPrivate *priv =
         GIBBER_R_MULTICAST_TRANSPORT_GET_PRIVATE (self);
 
-  g_hash_table_destroy (priv->members);
+  g_hash_table_unref (priv->members);
   if (priv->pending_failures != NULL)
     {
-      g_array_free (priv->pending_failures, TRUE);
+      g_array_unref (priv->pending_failures);
       priv->pending_failures = NULL;
     }
 
@@ -447,7 +447,7 @@ free_member_info (gpointer data)
 
   if (info->fail_timeout != 0)
     g_source_remove (info->fail_timeout);
-  g_array_free (info->failures, TRUE);
+  g_array_unref (info->failures);
   g_slice_free (MemberInfo, info);
 }
 
@@ -650,8 +650,8 @@ setup_joining_phase (GibberRMulticastTransport *self)
   else
     {
       g_assert (priv->state == STATE_JOINING);
-      g_array_free (priv->send_join, TRUE);
-      g_array_free (priv->send_join_failures, TRUE);
+      g_array_unref (priv->send_join);
+      g_array_unref (priv->send_join_failures);
 
       priv->send_join = g_array_new (FALSE, FALSE, sizeof (guint32));
       priv->send_join_failures = g_array_new (FALSE, FALSE, sizeof (guint32));
@@ -847,7 +847,7 @@ do_send_attempt_join (gpointer user_data) {
           data.senders, priv->repeating_join);
     priv->send_empty = FALSE;
   }
-  g_array_free (data.senders, TRUE);
+  g_array_unref (data.senders);
 
   return FALSE;
 }
@@ -1148,7 +1148,7 @@ recheck_failures (GibberRMulticastTransport *self)
          g_array_index (array, guint32, i));
     }
 
-  g_array_free (array, TRUE);
+  g_array_unref (array);
 }
 
 static void
@@ -1179,7 +1179,7 @@ check_failure_completion (GibberRMulticastTransport *self, guint32 id)
           id);
       g_array_append_val (lost, sender->name);
       g_signal_emit (self, signals[LOST_SENDERS], 0, lost);
-      g_array_free (lost, TRUE);
+      g_array_unref (lost);
     }
 
   gibber_r_multicast_causal_transport_remove_sender (priv->transport, id);
@@ -1506,12 +1506,12 @@ check_join_agreement (GibberRMulticastTransport *self)
     g_free (g_array_index (lost, gchar *, i));
   }
 
-  g_array_free (lost, TRUE);
-  g_array_free (new, TRUE);
+  g_array_unref (lost);
+  g_array_unref (new);
 
-  g_array_free (priv->send_join, TRUE);
+  g_array_unref (priv->send_join);
   priv->send_join = NULL;
-  g_array_free (priv->send_join_failures, TRUE);
+  g_array_unref (priv->send_join_failures);
   priv->send_join_failures = NULL;
   priv->state = STATE_NORMAL;
 

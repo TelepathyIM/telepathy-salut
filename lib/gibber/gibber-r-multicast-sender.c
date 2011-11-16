@@ -161,7 +161,7 @@ gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
 
   h = group->senders;
   group->senders = NULL;
-  g_hash_table_destroy (h);
+  g_hash_table_unref (h);
 
   for (i = 0; i < group->pending_removal->len ; i++)
     {
@@ -169,7 +169,7 @@ gibber_r_multicast_sender_group_free (GibberRMulticastSenderGroup *group)
         g_ptr_array_index (group->pending_removal, i)));
     }
 
-  g_ptr_array_free (group->pending_removal, TRUE);
+  g_ptr_array_unref (group->pending_removal);
 
   g_queue_free (group->pop_queue);
   g_slice_free (GibberRMulticastSenderGroup, group);
@@ -449,7 +449,7 @@ gibber_r_multicast_sender_group_gc (GibberRMulticastSenderGroup *group)
       gibber_r_multicast_sender_ack (sender, info->packet_id);
     }
 
-  g_array_free (array, TRUE);
+  g_array_unref (array);
 
   /* Check if we can remove pending removals */
   for (i = 0; i < group->pending_removal->len ; i++)
@@ -793,8 +793,8 @@ gibber_r_multicast_sender_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  g_hash_table_destroy (priv->packet_cache);
-  g_hash_table_destroy (priv->acks);
+  g_hash_table_unref (priv->packet_cache);
+  g_hash_table_unref (priv->acks);
 
   if (priv->whois_timer != 0)
     {

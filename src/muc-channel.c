@@ -909,7 +909,7 @@ salut_muc_channel_dispose (GObject *object)
 
   if (priv->senders != NULL)
     {
-      g_hash_table_destroy (priv->senders);
+      g_hash_table_unref (priv->senders);
       priv->senders = NULL;
     }
 
@@ -971,7 +971,7 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
       g_array_append_val (members, base_connection->self_handle);
       r = tp_group_mixin_add_members (G_OBJECT (self), members, "", error);
       g_assert (r);
-      g_array_free (members, TRUE);
+      g_array_unref (members);
     }
   else
     {
@@ -1172,8 +1172,8 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
         }
 
       g_object_unref (tubes_chan);
-      g_ptr_array_free (tubes, TRUE);
-      g_hash_table_destroy (channels);
+      g_ptr_array_unref (tubes);
+      g_hash_table_unref (channels);
     }
 
   if (!text_helper_parse_incoming_message (stanza, &from, &msgtype,

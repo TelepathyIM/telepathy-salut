@@ -387,7 +387,7 @@ rooms_free (SalutRoomlistChannel *self)
       tp_handle_unref (room_repo, handle);
     }
 
-  g_ptr_array_free (priv->rooms, TRUE);
+  g_ptr_array_unref (priv->rooms);
   priv->rooms = NULL;
 }
 
@@ -478,7 +478,7 @@ salut_roomlist_channel_add_room (SalutRoomlistChannel *self,
       2, keys,
       G_MAXUINT);
   g_ptr_array_add (priv->rooms, g_value_get_boxed (&room));
-  g_hash_table_destroy (keys);
+  g_hash_table_unref (keys);
 
   DEBUG ("add room %s", room_name);
 }

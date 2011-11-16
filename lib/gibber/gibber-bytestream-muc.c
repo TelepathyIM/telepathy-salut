@@ -128,7 +128,7 @@ gibber_bytestream_muc_dispose (GObject *object)
       gibber_bytestream_iface_close (GIBBER_BYTESTREAM_IFACE (self), NULL);
     }
 
-  g_hash_table_destroy (priv->senders);
+  g_hash_table_unref (priv->senders);
 
   G_OBJECT_CLASS (gibber_bytestream_muc_parent_class)->dispose (object);
 }

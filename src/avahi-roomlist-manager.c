@@ -79,7 +79,7 @@ room_resolver_removed (gpointer data)
     {
       g_object_unref (g_array_index (arr, GObject *, i));
     }
-  g_array_free (arr, TRUE);
+  g_array_unref (arr);
 }
 
 static void
@@ -403,7 +403,7 @@ salut_avahi_roomlist_manager_dispose (GObject *object)
 
   if (priv->room_resolvers != NULL)
     {
-      g_hash_table_destroy (priv->room_resolvers);
+      g_hash_table_unref (priv->room_resolvers);
       priv->room_resolvers = NULL;
     }
 

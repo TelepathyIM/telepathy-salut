@@ -455,7 +455,7 @@ salut_file_transfer_channel_set_property (GObject *object,
 static void
 free_array (GArray *array)
 {
-  g_array_free (array, TRUE);
+  g_array_unref (array);
 }
 
 static GObject *
@@ -940,7 +940,7 @@ salut_file_transfer_channel_finalize (GObject *object)
   g_free (self->priv->content_type);
   g_free (self->priv->content_hash);
   g_free (self->priv->description);
-  g_hash_table_destroy (self->priv->available_socket_types);
+  g_hash_table_unref (self->priv->available_socket_types);
   g_free (self->priv->uri);
   g_free (self->priv->service_name);
   if (self->priv->metadata != NULL)

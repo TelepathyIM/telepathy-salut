@@ -131,7 +131,7 @@ send_data (gpointer data)
   priv->send (GIBBER_TRANSPORT (self),
       (guint8 *) arr->data, arr->len, NULL, priv->user_data);
 
-  g_array_free (arr, TRUE);
+  g_array_unref (arr);
 
   if (g_queue_is_empty (priv->buffers))
     {

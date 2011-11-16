@@ -129,7 +129,7 @@ gibber_r_multicast_packet_finalize (GObject *object)
     gibber_r_multicast_packet_sender_info_free (
         g_array_index (self->depends, GibberRMulticastPacketSenderInfo *, i));
   }
-  g_array_free (self->depends, TRUE);
+  g_array_unref (self->depends);
 
   /* free any data held directly by the object here */
   switch (self->type) {
@@ -140,13 +140,13 @@ gibber_r_multicast_packet_finalize (GObject *object)
       g_free (self->data.data.payload);
       break;
     case PACKET_TYPE_ATTEMPT_JOIN:
-      g_array_free (self->data.attempt_join.senders, TRUE);
+      g_array_unref (self->data.attempt_join.senders);
       break;
     case PACKET_TYPE_JOIN:
-      g_array_free (self->data.join.failures, TRUE);
+      g_array_unref (self->data.join.failures);
       break;
     case PACKET_TYPE_FAILURE:
-      g_array_free (self->data.failure.failures, TRUE);
+      g_array_unref (self->data.failure.failures);
       break;
     default:
       /* Nothing specific to free */;

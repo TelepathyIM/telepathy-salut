@@ -662,7 +662,7 @@ set_self_presence (SalutConnection *self,
           base->self_handle, &ps);
 
       if (ps.optional_arguments != NULL)
-        g_hash_table_destroy (ps.optional_arguments);
+        g_hash_table_unref (ps.optional_arguments);
     }
 }
 
@@ -1021,7 +1021,7 @@ salut_connection_finalize (GObject *object)
   g_free (priv->jid);
 #ifdef ENABLE_OLPC
   if (priv->olpc_key != NULL)
-    g_array_free (priv->olpc_key, TRUE);
+    g_array_unref (priv->olpc_key);
   g_free (priv->olpc_color);
 #endif
   g_free (priv->dnssd_name);
@@ -1046,7 +1046,7 @@ _contact_manager_contact_status_changed (SalutConnection *self,
       &ps);
 
   if (ps.optional_arguments != NULL)
-    g_hash_table_destroy (ps.optional_arguments);
+    g_hash_table_unref (ps.optional_arguments);
 }
 
 static gboolean
@@ -1391,7 +1391,7 @@ salut_connection_get_aliases (TpSvcConnectionInterfaceAliasing *iface,
    tp_svc_connection_interface_aliasing_return_from_get_aliases (context,
        result);
 
-   g_hash_table_destroy (result);
+   g_hash_table_unref (result);
 }
 
 static void
@@ -1493,7 +1493,7 @@ conn_contact_capabilities_fill_contact_attributes (GObject *obj,
     }
 
     if (array != NULL)
-      g_ptr_array_free (array, TRUE);
+      g_ptr_array_unref (array);
 }
 
 static void
@@ -1550,7 +1550,7 @@ _contact_manager_contact_alias_changed  (SalutConnection *self,
   tp_svc_connection_interface_aliasing_emit_aliases_changed (self, aliases);
 
   g_value_unset (&entry);
-  g_ptr_array_free (aliases, TRUE);
+  g_ptr_array_unref (aliases);
 }
 
 static void
@@ -1739,7 +1739,7 @@ salut_connection_get_known_avatar_tokens (
   tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
      context, ret);
 
-  g_hash_table_destroy (ret);
+  g_hash_table_unref (ret);
 }
 
 static void
@@ -1805,7 +1805,7 @@ _request_avatars_cb (SalutContact *contact, guint8 *avatar, gsize size,
     (GObject *) user_data, contact->handle,
     contact->avatar_token, arr, "");
 
-  g_array_free (arr, TRUE);
+  g_array_unref (arr);
 }
 
 static void
@@ -1851,7 +1851,7 @@ salut_connection_request_avatars (
                tp_svc_connection_interface_avatars_emit_avatar_retrieved (
                   (GObject *) self, base->self_handle,
                     priv->self->avatar_token, arr, "");
-               g_array_free (arr, TRUE);
+               g_array_unref (arr);
              }
         }
       else
@@ -1892,7 +1892,7 @@ _request_avatar_cb (SalutContact *contact, guint8 *avatar, gsize size,
   arr = g_array_append_vals (arr, avatar, size);
   tp_svc_connection_interface_avatars_return_from_request_avatar (context,
       arr, "");
-  g_array_free (arr, TRUE);
+  g_array_unref (arr);
 }
 
 static void
@@ -2003,7 +2003,7 @@ salut_free_enhanced_contact_capabilities (GPtrArray *caps)
       g_value_unset (&monster);
     }
 
-  g_ptr_array_free (caps, TRUE);
+  g_ptr_array_unref (caps);
 }
 
 /**
@@ -2052,7 +2052,7 @@ salut_connection_get_contact_capabilities (
   tp_svc_connection_interface_contact_capabilities_return_from_get_contact_capabilities
       (context, ret);
 
-  g_hash_table_destroy (ret);
+  g_hash_table_unref (ret);
 }
 
 
@@ -2070,7 +2070,7 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
       conn, caps);
 
   salut_free_enhanced_contact_capabilities (ret);
-  g_hash_table_destroy (caps);
+  g_hash_table_unref (caps);
 }
 
 static void
@@ -2344,7 +2344,7 @@ emit_properties_changed (SalutConnection *connection,
   salut_svc_olpc_buddy_info_emit_properties_changed (connection,
       handle, properties);
 
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 }
 
 static void
@@ -2375,7 +2375,7 @@ free_olpc_activities (GPtrArray *arr)
   for (i = 0; i < arr->len; i++)
     g_boxed_free (type, arr->pdata[i]);
 
-  g_ptr_array_free (arr, TRUE);
+  g_ptr_array_unref (arr);
 }
 
 static void
@@ -2479,7 +2479,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
     }
 
   salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 }
 
 
@@ -2861,7 +2861,7 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
     }
 
 finally:
-  g_hash_table_destroy (room_to_act_id);
+  g_hash_table_unref (room_to_act_id);
 }
 
 static void
@@ -2936,7 +2936,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
   properties = salut_olpc_activity_create_properties_table (activity);
 
   salut_svc_olpc_buddy_info_return_from_get_properties (context, properties);
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 
   return;
 
@@ -3247,7 +3247,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   g_signal_connect (muc, "closed", G_CALLBACK (muc_closed_cb), ctx);
 
   g_object_unref (muc);
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
   g_object_unref (inviter);
 }
 
@@ -3393,7 +3393,7 @@ _olpc_activity_manager_activity_modified_cb (SalutOlpcActivityManager *mgr,
   salut_svc_olpc_activity_properties_emit_activity_properties_changed (
       self, activity->room, properties);
 
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 }
 
 gboolean
@@ -3434,7 +3434,7 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self,
   salut_olpc_activity_update (activity, room, activity_id, activity_name,
       activity_type, color, tags, is_private);
 
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 
   return TRUE;
 }
@@ -3649,7 +3649,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   g_object_unref (loader);
 
   g_ptr_array_foreach (tmp, add_to_array, managers);
-  g_ptr_array_free (tmp, TRUE);
+  g_ptr_array_unref (tmp);
 
   return managers;
 }

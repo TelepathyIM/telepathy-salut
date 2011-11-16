@@ -534,7 +534,7 @@ salut_ft_manager_type_foreach_channel_class (GType type,
   func (type, table, file_transfer_channel_allowed_properties_with_both_metadata_props,
       user_data);
 
-  g_hash_table_destroy (table);
+  g_hash_table_unref (table);
 }
 
 static void
@@ -633,7 +633,7 @@ add_file_transfer_channel_class (GPtrArray *arr,
       1, allowed_properties,
       G_MAXUINT);
 
-  g_hash_table_destroy (fixed_properties);
+  g_hash_table_unref (fixed_properties);
 
   g_ptr_array_add (arr, g_value_get_boxed (&monster));
 }

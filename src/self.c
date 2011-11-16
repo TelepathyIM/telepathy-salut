@@ -236,7 +236,7 @@ salut_self_set_property (GObject *object,
         if (arr != NULL)
           {
             if (self->olpc_key != NULL)
-              g_array_free (self->olpc_key, TRUE);
+              g_array_unref (self->olpc_key);
 
             self->olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8),
                 arr->len);
@@ -473,7 +473,7 @@ salut_self_dispose (GObject *object)
     }
 
   if (priv->olpc_activities != NULL)
-    g_hash_table_destroy (priv->olpc_activities);
+    g_hash_table_unref (priv->olpc_activities);
 
   if (self->olpc_cur_act_room != 0)
     {
@@ -519,7 +519,7 @@ salut_self_finalize (GObject *object)
   g_free (self->alias);
 #ifdef ENABLE_OLPC
   if (self->olpc_key != NULL)
-    g_array_free (self->olpc_key, TRUE);
+    g_array_unref (self->olpc_key);
   g_free (self->olpc_color);
   g_free (self->olpc_cur_act);
 #endif

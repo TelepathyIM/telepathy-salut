@@ -133,7 +133,7 @@ test_extract_properties (void)
   g_assert (prop5_value == TRUE);
 
   g_object_unref (stanza);
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
 }
 
 static void
@@ -237,7 +237,7 @@ test_add_children_from_properties (void)
         g_assert_not_reached ();
     }
 
-  g_hash_table_destroy (properties);
+  g_hash_table_unref (properties);
   g_object_unref (stanza);
 }
 

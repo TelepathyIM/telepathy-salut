@@ -336,7 +336,7 @@ salut_contact_manager_close_all (SalutContactManager *mgr)
   if (mgr->contacts)
     {
       g_hash_table_foreach_remove (mgr->contacts, dispose_contact, mgr);
-      g_hash_table_destroy (mgr->contacts);
+      g_hash_table_unref (mgr->contacts);
       mgr->contacts = NULL;
     }
 

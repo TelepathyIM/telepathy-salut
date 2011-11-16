@@ -626,7 +626,7 @@ salut_tube_dbus_dispose (GObject *object)
     {
       g_hash_table_foreach (priv->dbus_names, unref_handle_foreach,
           contact_repo);
-      g_hash_table_destroy (priv->dbus_names);
+      g_hash_table_unref (priv->dbus_names);
     }
 
   if (priv->muc_connection != NULL)
@@ -655,8 +655,8 @@ salut_tube_dbus_finalize (GObject *object)
   g_free (priv->object_path);
   g_free (priv->stream_id);
   g_free (priv->service);
-  g_hash_table_destroy (priv->parameters);
-  g_array_free (priv->supported_access_controls, TRUE);
+  g_hash_table_unref (priv->parameters);
+  g_array_unref (priv->supported_access_controls);
 
   G_OBJECT_CLASS (salut_tube_dbus_parent_class)->finalize (object);
 }
@@ -886,7 +886,7 @@ salut_tube_dbus_set_property (GObject *object,
         break;
       case PROP_PARAMETERS:
         if (priv->parameters != NULL)
-          g_hash_table_destroy (priv->parameters);
+          g_hash_table_unref (priv->parameters);
         priv->parameters = g_value_dup_boxed (value);
         break;
       default:
@@ -1617,8 +1617,8 @@ salut_tube_dbus_add_name (SalutTubeDBus *self,
   tp_svc_channel_type_dbus_tube_emit_dbus_names_changed (self, added,
       removed);
 
-  g_hash_table_destroy (added);
-  g_array_free (removed, TRUE);
+  g_hash_table_unref (added);
+  g_array_unref (removed);
 
   return TRUE;
 }
@@ -1651,8 +1651,8 @@ salut_tube_dbus_remove_name (SalutTubeDBus *self,
   tp_svc_channel_type_dbus_tube_emit_dbus_names_changed (self, added,
       removed);
 
-  g_hash_table_destroy (added);
-  g_array_free (removed, TRUE);
+  g_hash_table_unref (added);
+  g_array_unref (removed);
   tp_handle_unref (contact_repo, handle);
   return TRUE;
 }
