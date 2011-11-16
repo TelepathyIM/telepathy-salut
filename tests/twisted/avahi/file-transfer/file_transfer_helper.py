@@ -12,9 +12,13 @@ import os
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
 
+from caps_helper import extract_data_forms, add_dataforms, compute_caps_hash, \
+    send_disco_reply
+
 from xmppstream import setup_stream_listener, connect_to_stream
-from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async
+from servicetest import make_channel_proxy, EventPattern, assertEquals, call_async, sync_dbus
 import constants as cs
+import ns
 
 from twisted.words.xish import domish, xpath
 
@@ -50,8 +54,13 @@ class File(object):
 class FileTransferTest(object):
     CONTACT_NAME = 'test-ft'
 
+    service_name = 'wacky.service.name'
+    metadata = {'loads': ['of'],
+                'mental': ['data']}
+
     def __init__(self):
         self.file = File()
+        self.contact_service = None
 
     def connect(self):
         self.conn.Connect()
@@ -60,8 +69,16 @@ class FileTransferTest(object):
         self.self_handle = self.conn.GetSelfHandle()
         self.self_handle_name =  self.conn.InspectHandles(cs.HT_CONTACT, [self.self_handle])[0]
 
-    def announce_contact(self, name=CONTACT_NAME):
-        basic_txt = { "txtvers": "1", "status": "avail" }
+    def announce_contact(self, name=CONTACT_NAME, metadata=True):
+        client = 'http://telepathy.freedesktop.org/fake-client'
+        features = [ns.IQ_OOB]
+
+        if metadata:
+            features += [ns.TP_FT_METADATA]
+
+        ver = compute_caps_hash([], features, {})
+        txt_record = { "txtvers": "1", "status": "avail",
+                       "node": client, "ver": ver, "hash": "sha-1"}
 
         suffix = '@%s' % get_host_name()
         name += ('-' + os.path.splitext(os.path.basename(sys.argv[0]))[0])
@@ -74,11 +91,33 @@ class FileTransferTest(object):
         self.listener, port = setup_stream_listener(self.q, self.contact_name)
 
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp",
-                port, basic_txt)
+                port, txt_record)
 
-    def wait_for_contact(self):
         self.handle = wait_for_contact_in_publish(self.q, self.bus, self.conn,
                 self.contact_name)
+
+        # expect salut to disco our caps
+        e = self.q.expect('incoming-connection', listener=self.listener)
+        stream = e.connection
+
+        e = self.q.expect('stream-iq', to=self.contact_name, query_ns=ns.DISCO_INFO,
+                     connection=stream)
+        assertEquals(client + '#' + ver, e.query['node'])
+        send_disco_reply(stream, e.stanza, [], features)
+
+        # lose the connection here to ensure connections are created
+        # where necessary; I just wanted salut to know my caps.
+        stream.send('</stream:stream>')
+        # spend a bit of time in the main loop to ensure the last two
+        # stanzas are actually received by salut before closing the
+        # connection.
+        sync_dbus(self.bus, self.q, self.conn)
+        stream.transport.loseConnection()
+
+    def wait_for_contact(self):
+        if not hasattr(self, 'handle'):
+            self.handle = wait_for_contact_in_publish(self.q, self.bus, self.conn,
+                    self.contact_name)
 
     def create_ft_channel(self):
         self.channel = make_channel_proxy(self.conn, self.ft_path, 'Channel')
@@ -99,6 +138,10 @@ class FileTransferTest(object):
             # stop if a function returns True
             if fct():
                 break
+
+        # if we announced the service, let's be sure to get rid of it
+        if self.contact_service:
+            self.contact_service.stop()
 
 class ReceiveFileTest(FileTransferTest):
     def __init__(self):
@@ -164,6 +207,16 @@ class ReceiveFileTest(FileTransferTest):
         url_node['size'] = str(self.file.size)
         url_node['mimeType'] = self.file.content_type
         query.addElement('desc', content=self.file.description)
+
+        # Metadata
+        if self.service_name:
+            service_form = {ns.TP_FT_METADATA_SERVICE: {'ServiceName': [self.service_name]}}
+            add_dataforms(query, service_form)
+
+        if self.metadata:
+            metadata_form = {ns.TP_FT_METADATA: self.metadata}
+            add_dataforms(query, metadata_form)
+
         self.outbound.send(iq)
 
     def check_new_channel(self):
@@ -201,6 +254,9 @@ class ReceiveFileTest(FileTransferTest):
             {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
         assert props[cs.FT_TRANSFERRED_BYTES] == 0
         assert props[cs.FT_INITIAL_OFFSET] == 0
+
+        assertEquals(self.service_name, props[cs.FT_SERVICE_NAME])
+        assertEquals(self.metadata, props[cs.FT_METADATA])
 
         self.ft_path = path
 
@@ -305,13 +361,13 @@ class SendFileTest(FileTransferTest):
                  cs.FT_DESCRIPTION,
                  cs.FT_DATE,
                  cs.FT_INITIAL_OFFSET,
-                 cs.FT_URI],
+                 cs.FT_URI,
+                 cs.FT_SERVICE_NAME,
+                 cs.FT_METADATA],
              ) in properties.get('RequestableChannelClasses', []),\
                      properties.get('RequestableChannelClasses')
 
     def request_ft_channel(self, uri=True):
-        requests_iface = dbus.Interface(self.conn, cs.CONN_IFACE_REQUESTS)
-
         request = { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_FILE_TRANSFER,
             cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
             cs.TARGET_HANDLE: self.handle,
@@ -325,10 +381,15 @@ class SendFileTest(FileTransferTest):
             cs.FT_DATE: self.file.date,
             cs.FT_INITIAL_OFFSET: 0 }
 
+        if self.service_name:
+            request[cs.FT_SERVICE_NAME] = self.service_name
+        if self.metadata:
+            request[cs.FT_METADATA] = dbus.Dictionary(self.metadata, signature='sas')
+
         if uri:
             request[cs.FT_URI] = self.file.uri
 
-        self.ft_path, props = requests_iface.CreateChannel(request)
+        self.ft_path, props = self.conn.Requests.CreateChannel(request)
 
         # org.freedesktop.Telepathy.Channel D-Bus properties
         assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
@@ -357,6 +418,8 @@ class SendFileTest(FileTransferTest):
             assertEquals(self.file.uri, props[cs.FT_URI])
         else:
             assertEquals('', props[cs.FT_URI])
+        assertEquals(self.service_name, props[cs.FT_SERVICE_NAME])
+        assertEquals(self.metadata, props[cs.FT_METADATA])
 
     def got_send_iq(self):
         conn_event, iq_event = self.q.expect_many(
@@ -384,6 +447,20 @@ class SendFileTest(FileTransferTest):
         desc_node = xpath.queryForNodes("/iq/query/desc", self.iq)[0]
         self.desc = desc_node.children[0]
         assert self.desc == self.file.description
+
+        # Metadata forms
+        forms = extract_data_forms(xpath.queryForNodes('/iq/query/x', self.iq))
+
+        if self.service_name:
+            assertEquals({'ServiceName': [self.service_name]},
+                         forms[ns.TP_FT_METADATA_SERVICE])
+        else:
+            assert ns.TP_FT_METADATA_SERVICE not in forms
+
+        if self.metadata:
+            assertEquals(self.metadata, forms[ns.TP_FT_METADATA])
+        else:
+            assert ns.TP_FT_METADATA not in forms
 
     def provide_file(self):
         self.address = self.ft_channel.ProvideFile(cs.SOCKET_ADDRESS_TYPE_UNIX,

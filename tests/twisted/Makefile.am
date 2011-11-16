@@ -6,7 +6,7 @@ TWISTED_BASIC_TESTS = \
 	$(NULL)
 
 TWISTED_AVAHI_TESTS = \
-	avahi/caps_helper.py \
+	caps_helper.py \
 	avahi/register.py \
 	avahi/aliases.py \
 	avahi/request-im.py \
@@ -32,6 +32,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/file-transfer/receive-file-decline.py \
 	avahi/file-transfer/receive-file-ipv6.py \
 	avahi/file-transfer/receive-file-not-found.py \
+	avahi/file-transfer/metadata.py \
+	avahi/file-transfer/ft-client-caps.py \
 	avahi/caps-self.py \
 	avahi/caps-tubes.py \
 	avahi/text-channel.py \

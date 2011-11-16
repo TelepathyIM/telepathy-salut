@@ -40,9 +40,12 @@
 #include "connection.h"
 #include "im-manager.h"
 #include "contact.h"
+#include "namespaces.h"
 
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
+#include <wocky/wocky-data-form.h>
+#include <wocky/wocky-namespaces.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
 
@@ -50,6 +53,7 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/gtypes.h>
 
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data);
@@ -65,6 +69,8 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
                            file_transfer_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA,
+                           NULL);
 );
 
 #define CHECK_STR_EMPTY(x) ((x) == NULL || (x)[0] == '\0')
@@ -105,6 +111,10 @@ enum
   PROP_INITIAL_OFFSET,
   PROP_URI,
 
+  /* Chan.I.FileTransfer.Metadata */
+  PROP_SERVICE_NAME,
+  PROP_METADATA,
+
   PROP_CONTACT,
   PROP_CONNECTION,
   LAST_PROPERTY
@@ -139,6 +149,8 @@ struct _SalutFileTransferChannelPrivate {
   guint64 initial_offset;
   guint64 date;
   gchar *uri;
+  gchar *service_name;
+  GHashTable *metadata;
 };
 
 static void
@@ -283,7 +295,26 @@ salut_file_transfer_channel_get_property (GObject *object,
         g_value_set_string (value,
             self->priv->uri != NULL ? self->priv->uri : "");
         break;
-     case PROP_CHANNEL_DESTROYED:
+      case PROP_SERVICE_NAME:
+        g_value_set_string (value,
+            self->priv->service_name != NULL ? self->priv->service_name : "");
+        break;
+      case PROP_METADATA:
+        {
+          /* We're fine with priv->metadata being NULL but dbus-glib
+           * doesn't like iterating NULL as if it was a hash table. */
+          if (self->priv->metadata == NULL)
+            {
+              g_value_take_boxed (value,
+                  g_hash_table_new (g_str_hash, g_str_equal));
+            }
+          else
+            {
+              g_value_set_boxed (value, self->priv->metadata);
+            }
+        }
+        break;
+      case PROP_CHANNEL_DESTROYED:
         g_value_set_boolean (value, self->priv->closed);
         break;
       case PROP_CHANNEL_PROPERTIES:
@@ -310,6 +341,8 @@ salut_file_transfer_channel_get_property (GObject *object,
               TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "AvailableSocketTypes",
               TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "TransferredBytes",
               TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "InitialOffset",
+              TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "ServiceName",
+              TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "Metadata",
               NULL);
 
           /* URI is immutable only for outgoing transfers */
@@ -405,6 +438,13 @@ salut_file_transfer_channel_set_property (GObject *object,
       case PROP_URI:
         g_assert (self->priv->uri == NULL); /* construct only */
         self->priv->uri = g_value_dup_string (value);
+        break;
+      case PROP_SERVICE_NAME:
+        g_assert (self->priv->service_name == NULL); /* construct only */
+        self->priv->service_name = g_value_dup_string (value);
+        break;
+      case PROP_METADATA:
+        self->priv->metadata = g_value_dup_boxed (value);
         break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -572,6 +612,12 @@ salut_file_transfer_channel_class_init (
     { NULL }
   };
 
+  static TpDBusPropertiesMixinPropImpl file_metadata_props[] = {
+    { "ServiceName", "service-name", NULL },
+    { "Metadata", "metadata", NULL },
+    { NULL }
+  };
+
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
     { TP_IFACE_CHANNEL,
       tp_dbus_properties_mixin_getter_gobject_properties,
@@ -583,7 +629,11 @@ salut_file_transfer_channel_class_init (
       file_transfer_channel_properties_setter,
       file_props
     },
-    { NULL }
+    { TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA,
+      tp_dbus_properties_mixin_getter_gobject_properties,
+      NULL,
+      file_metadata_props
+    },    { NULL }
   };
 
   g_type_class_add_private (salut_file_transfer_channel_class,
@@ -812,6 +862,22 @@ salut_file_transfer_channel_class_init (
   g_object_class_install_property (object_class, PROP_URI,
       param_spec);
 
+  param_spec = g_param_spec_string ("service-name",
+      "ServiceName",
+      "The Metadata.ServiceName property of this channel",
+      "",
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_SERVICE_NAME,
+      param_spec);
+
+  param_spec = g_param_spec_boxed ("metadata",
+      "Metadata",
+      "The Metadata.Metadata property of this channel",
+      TP_HASH_TYPE_METADATA,
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_METADATA,
+      param_spec);
+
   salut_file_transfer_channel_class->dbus_props_class.interfaces = \
       prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
@@ -876,6 +942,9 @@ salut_file_transfer_channel_finalize (GObject *object)
   g_free (self->priv->description);
   g_hash_table_destroy (self->priv->available_socket_types);
   g_free (self->priv->uri);
+  g_free (self->priv->service_name);
+  if (self->priv->metadata != NULL)
+    g_hash_table_unref (self->priv->metadata);
 
   if (self->priv->path != NULL)
     {
@@ -1064,6 +1133,105 @@ static gboolean setup_local_socket (SalutFileTransferChannel *self);
 static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count,
     SalutFileTransferChannel *self);
 
+static GList *
+add_metadata_forms (SalutFileTransferChannel *self,
+    GibberFileTransfer *ft)
+{
+  GError *error = NULL;
+  GQueue queue = G_QUEUE_INIT;
+
+  if (!tp_str_empty (self->priv->service_name))
+    {
+      WockyStanza *tmp = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_RESULT, NULL, NULL,
+          '(', "x",
+            ':', WOCKY_XMPP_NS_DATA,
+            '@', "type", "result",
+            '(', "field",
+              '@', "var", "FORM_TYPE",
+              '@', "type", "hidden",
+              '(', "value",
+                '$', NS_TP_FT_METADATA_SERVICE,
+              ')',
+            ')',
+            '(', "field",
+              '@', "var", "ServiceName",
+              '(', "value",
+                '$', self->priv->service_name,
+              ')',
+            ')',
+          ')',
+          NULL);
+      WockyNode *x = wocky_node_get_first_child (wocky_stanza_get_top_node (tmp));
+      WockyDataForm *form = wocky_data_form_new_from_node (x, &error);
+
+      if (form == NULL)
+        {
+          DEBUG ("Failed to parse form (wat): %s", error->message);
+          g_clear_error (&error);
+        }
+      else
+        {
+          g_queue_push_tail (&queue, form);
+        }
+
+      g_object_unref (tmp);
+    }
+
+  if (self->priv->metadata != NULL
+      && g_hash_table_size (self->priv->metadata) > 0)
+    {
+      WockyStanza *tmp = wocky_stanza_build (WOCKY_STANZA_TYPE_IQ,
+          WOCKY_STANZA_SUB_TYPE_RESULT, NULL, NULL,
+          '(', "x",
+            ':', WOCKY_XMPP_NS_DATA,
+            '@', "type", "result",
+            '(', "field",
+              '@', "var", "FORM_TYPE",
+              '@', "type", "hidden",
+              '(', "value",
+                '$', NS_TP_FT_METADATA,
+              ')',
+            ')',
+          ')',
+          NULL);
+      WockyNode *x = wocky_node_get_first_child (wocky_stanza_get_top_node (tmp));
+      WockyDataForm *form;
+      GHashTableIter iter;
+      gpointer key, val;
+
+      g_hash_table_iter_init (&iter, self->priv->metadata);
+      while (g_hash_table_iter_next (&iter, &key, &val))
+        {
+          const gchar * const *values = val;
+
+          WockyNode *field = wocky_node_add_child (x, "field");
+          wocky_node_set_attribute (field, "var", key);
+
+          for (; values != NULL && *values != NULL; values++)
+            {
+              wocky_node_add_child_with_content (field, "value", *values);
+            }
+        }
+
+      form = wocky_data_form_new_from_node (x, &error);
+
+      if (form == NULL)
+        {
+          DEBUG ("Failed to parse form (wat): %s", error->message);
+          g_clear_error (&error);
+        }
+      else
+        {
+          g_queue_push_tail (&queue, form);
+        }
+
+      g_object_unref (tmp);
+    }
+
+  return queue.head;
+}
+
 static void
 send_file_offer (SalutFileTransferChannel *self)
 {
@@ -1090,6 +1258,9 @@ send_file_offer (SalutFileTransferChannel *self)
       G_CALLBACK (ft_transferred_chunk_cb), self);
 
   gibber_file_transfer_set_size (ft, self->priv->size);
+
+  g_assert (ft->dataforms == NULL);
+  ft->dataforms = add_metadata_forms (self, ft);
 
   gibber_file_transfer_offer (ft);
 }
@@ -1543,6 +1714,96 @@ setup_local_socket (SalutFileTransferChannel *self)
   return TRUE;
 }
 
+static WockyDataForm *
+find_data_form (GibberFileTransfer *ft,
+    const gchar *form_type)
+{
+  GList *l;
+
+  for (l = ft->dataforms; l != NULL; l = l->next)
+    {
+      WockyDataForm *form = l->data;
+      WockyDataFormField *field;
+
+      field = g_hash_table_lookup (form->fields, "FORM_TYPE");
+
+      if (field == NULL)
+        {
+          DEBUG ("Data form doesn't have FORM_TYPE field!");
+          continue;
+        }
+
+      /* found it! */
+      if (!tp_strdiff (field->raw_value_contents[0], form_type))
+        return form;
+    }
+
+  return NULL;
+}
+
+static gchar *
+extract_service_name (GibberFileTransfer *ft)
+{
+  WockyDataForm *form = find_data_form (ft, NS_TP_FT_METADATA_SERVICE);
+  WockyDataFormField *field;
+  gchar *service_name = NULL;
+
+  if (form == NULL)
+    return NULL;
+
+  field = g_hash_table_lookup (form->fields, "ServiceName");
+
+  if (field == NULL)
+    {
+      DEBUG ("ServiceName propery not present in data form; odd...");
+      goto out;
+    }
+
+  if (field->raw_value_contents == NULL
+      || field->raw_value_contents[0] == NULL)
+    {
+      DEBUG ("ServiceName property doesn't have a real value; odd...");
+    }
+  else
+    {
+      service_name = g_strdup (field->raw_value_contents[0]);
+    }
+
+out:
+  return service_name;
+}
+
+static GHashTable *
+extract_metadata (GibberFileTransfer *ft)
+{
+  WockyDataForm *form = find_data_form (ft, NS_TP_FT_METADATA);
+  GHashTable *metadata;
+  GHashTableIter iter;
+  gpointer key, value;
+
+  if (form == NULL)
+    return NULL;
+
+  metadata = g_hash_table_new_full (g_str_hash, g_str_equal,
+      g_free, (GDestroyNotify) g_strfreev);
+
+  g_hash_table_iter_init (&iter, form->fields);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      const gchar *var = key;
+      WockyDataFormField *field = value;
+
+      if (!tp_strdiff (var, "FORM_TYPE"))
+        continue;
+
+      g_hash_table_insert (metadata,
+          g_strdup (var),
+          g_strdupv (field->raw_value_contents));
+    }
+
+  return metadata;
+}
+
 SalutFileTransferChannel *
 salut_file_transfer_channel_new (SalutConnection *conn,
                                  SalutContact *contact,
@@ -1557,7 +1818,9 @@ salut_file_transfer_channel_new (SalutConnection *conn,
                                  const gchar *description,
                                  guint64 date,
                                  guint64 initial_offset,
-                                 const gchar *file_uri)
+                                 const gchar *file_uri,
+                                 const gchar *service_name,
+                                 const GHashTable *metadata)
 {
   return g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
       "connection", conn,
@@ -1574,6 +1837,8 @@ salut_file_transfer_channel_new (SalutConnection *conn,
       "date", date,
       "initial-offset", initial_offset,
       "uri", file_uri,
+      "service-name", service_name,
+      "metadata", metadata,
       NULL);
 }
 
@@ -1587,6 +1852,8 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
   GError *error = NULL;
   GibberFileTransfer *ft;
   SalutFileTransferChannel *chan;
+  gchar *service_name;
+  GHashTable *metadata;
 
   ft = gibber_file_transfer_new_from_stanza_with_from (stanza, connection->porter,
       WOCKY_CONTACT (contact), contact->name, &error);
@@ -1609,6 +1876,10 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
       return NULL;
     }
 
+  /* Metadata */
+  service_name = extract_service_name (ft);
+  metadata = extract_metadata (ft);
+
   DEBUG ("Received file offer with id '%s'", ft->id);
 
   chan = g_object_new (SALUT_TYPE_FILE_TRANSFER_CHANNEL,
@@ -1621,7 +1892,13 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
       "size", gibber_file_transfer_get_size (ft),
       "description", ft->description,
       "content-type", ft->content_type,
+      "service-name", service_name,
+      "metadata", metadata,
       NULL);
+
+  g_free (service_name);
+  if (metadata != NULL)
+    g_hash_table_unref (metadata);
 
   chan->priv->ft = ft;
 

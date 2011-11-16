@@ -79,7 +79,8 @@ SalutFileTransferChannel * salut_file_transfer_channel_new (
     TpFileTransferState state, const gchar *content_type,
     const gchar *filename, guint64 size, TpFileHashType hash_type,
     const gchar *content_hash, const gchar *description, guint64 date,
-    guint64 initial_offset, const gchar *file_uri);
+    guint64 initial_offset, const gchar *file_uri,
+    const gchar *service_name, const GHashTable *metadata);
 
 SalutFileTransferChannel * salut_file_transfer_channel_new_from_stanza (
     SalutConnection *connection, SalutContact *contact,

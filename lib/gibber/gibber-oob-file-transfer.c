@@ -29,6 +29,7 @@
 #include <wocky/wocky-stanza.h>
 #include <wocky/wocky-meta-porter.h>
 #include <wocky/wocky-namespaces.h>
+#include <wocky/wocky-data-form.h>
 
 #include "gibber-oob-file-transfer.h"
 #include "gibber-fd-transport.h"
@@ -174,6 +175,32 @@ gibber_oob_file_transfer_is_file_offer (WockyStanza *stanza)
     return FALSE;
 
   return TRUE;
+}
+
+static GList *
+extract_dataforms (WockyNode *file)
+{
+  GList *forms = NULL;
+  WockyNodeIter iter;
+  WockyNode *x;
+
+  wocky_node_iter_init (&iter, file, "x", WOCKY_XMPP_NS_DATA);
+  while (wocky_node_iter_next (&iter, &x))
+    {
+      GError *error = NULL;
+      WockyDataForm *form = wocky_data_form_new_from_node (x, &error);
+
+      if (form == NULL)
+        {
+          DEBUG ("Failed to parse data form: %s", error->message);
+          g_clear_error (&error);
+          continue;
+        }
+
+      forms = g_list_append (forms, form);
+    }
+
+  return forms;
 }
 
 GibberFileTransfer *
@@ -323,6 +350,8 @@ gibber_oob_file_transfer_new_from_stanza_with_from (
   self->priv->url = url;
 
   self->priv->transferred_bytes = 0;
+
+  GIBBER_FILE_TRANSFER (self)->dataforms = extract_dataforms (query);
 
   g_free (filename);
 
@@ -476,12 +505,14 @@ static WockyStanza *
 create_transfer_offer (GibberOobFileTransfer *self,
                        GError **error)
 {
+  GibberFileTransfer *ft = (GibberFileTransfer *) self;
   WockyMetaPorter *porter;
   WockyContact *contact;
   GSocketConnection *conn;
   GSocketAddress *address;
   GInetAddress *addr;
   GSocketFamily family;
+  GList *l;
 
   /* local host name */
   gchar *host_name;
@@ -579,6 +610,13 @@ create_transfer_offer (GibberOobFileTransfer *self,
 
   self->priv->url = url;
   self->priv->served_name = served_name;
+
+  /* dataforms */
+  for (l = ft->dataforms; l != NULL; l = l->next)
+    {
+      WockyDataForm *form = l->data;
+      wocky_data_form_add_to_node (form, query_node);
+    }
 
   return stanza;
 }

@@ -124,7 +124,11 @@ ft_allowed_properties = dbus.Array([
     cs.CHANNEL_TYPE_FILE_TRANSFER + '.ContentHash',
     cs.CHANNEL_TYPE_FILE_TRANSFER + '.Description',
     cs.CHANNEL_TYPE_FILE_TRANSFER + '.Date',
+    cs.CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset',
     cs.FT_URI])
+ft_allowed_properties_with_metadata = ft_allowed_properties + [
+    cs.FT_SERVICE_NAME,
+    cs.FT_METADATA]
 
 fake_client_dataforms = {
     'urn:xmpp:dataforms:softwareinfo':
@@ -172,7 +176,7 @@ def compute_caps_hash(identities, features, dataforms):
     return base64.b64encode(m.digest())
 
 def make_caps_disco_reply(stream, req, identities, features, dataforms={}):
-    iq = make_result_iq(stream, req)
+    iq = make_result_iq(req)
     query = iq.firstChildElement()
 
     for identity in identities:
@@ -187,6 +191,11 @@ def make_caps_disco_reply(stream, req, identities, features, dataforms={}):
         el['var'] = f
         query.addChild(el)
 
+    add_dataforms(query, dataforms)
+
+    return iq
+
+def add_dataforms(query, dataforms):
     for type, fields in dataforms.iteritems():
         x = query.addElement((ns.X_DATA, 'x'))
         x['type'] = 'result'
@@ -203,8 +212,6 @@ def make_caps_disco_reply(stream, req, identities, features, dataforms={}):
             for value in values:
                 field.addElement('value', content=value)
 
-    return iq
-
 def receive_presence_and_ask_caps(q, stream, expect_dbus=True):
     # receive presence stanza
     if expect_dbus:
@@ -220,18 +227,37 @@ def receive_presence_and_ask_caps(q, stream, expect_dbus=True):
 
     return disco_caps(q, stream, presence) + (signaled_caps,)
 
-def disco_caps(q, stream, presence):
-    c_nodes = xpath.queryForNodes('/presence/c', presence.stanza)
-    assert c_nodes is not None
-    assertLength(1, c_nodes)
-    hash = c_nodes[0].attributes['hash']
-    ver = c_nodes[0].attributes['ver']
-    node = c_nodes[0].attributes['node']
+def extract_data_forms(x_nodes):
+    dataforms = {}
+
+    if not x_nodes:
+        return dataforms
+
+    for form in x_nodes:
+        name = None
+        fields = {}
+        for field in xpath.queryForNodes('/x/field', form):
+            if field['var'] == 'FORM_TYPE':
+                name = str(field.firstChildElement())
+            else:
+                values = [str(x) for x in xpath.queryForNodes('/field/value', field)]
+
+                fields[field['var']] = values
+
+        if name is not None:
+            dataforms[name] = fields
+
+    return dataforms
+
+def disco_caps(q, stream, txt):
+    hash = txt_get_key(txt, 'hash')
+    ver = txt_get_key(txt, 'ver')
+    node = txt_get_key(txt, 'node')
     assertEquals('sha-1', hash)
 
     # ask caps
     request = \
-        elem_iq(stream, 'get', from_='fake_contact@jabber.org/resource')(
+        elem_iq(stream, 'get', from_='fake_contact@nearby')(
           elem(ns.DISCO_INFO, 'query', node=(node + '#' + ver))
         )
     stream.send(request)
@@ -245,11 +271,11 @@ def disco_caps(q, stream, presence):
     identity_node = identity_nodes[0]
 
     assertEquals('client', identity_node['category'])
-    assertEquals(config.CLIENT_TYPE, identity_node['type'])
+    assertEquals('pc', identity_node['type'])
     assertEquals(config.PACKAGE_STRING, identity_node['name'])
     assertDoesNotContain('xml:lang', identity_node.attributes)
 
-    identity = 'client/%s//%s' % (config.CLIENT_TYPE, config.PACKAGE_STRING)
+    identity = 'client/%s//%s' % ('pc', config.PACKAGE_STRING)
 
     features = []
     for feature in xpath.queryForNodes('/iq/query/feature', event.stanza):

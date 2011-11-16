@@ -16,6 +16,9 @@ from twisted.words.xish import domish
 class TestReceiveFileIPv6(ReceiveFileTest):
     CONTACT_NAME = 'test-ft'
 
+    service_name = ''
+    metadata = {}
+
     def announce_contact(self, name=CONTACT_NAME):
         basic_txt = { "txtvers": "1", "status": "avail" }
 
