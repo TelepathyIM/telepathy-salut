@@ -119,7 +119,9 @@ EXTRA_DIST = \
         config.py \
 	ns.py \
 	avahi/file-transfer/file_transfer_helper.py \
-	avahi/tubes/tubetestutil.py
+	avahi/tubes/tubetestutil.py \
+	xmppstream.py \
+	ipv6.py
 
 CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc config.py
 
