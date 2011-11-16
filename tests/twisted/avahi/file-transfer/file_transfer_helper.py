@@ -55,8 +55,8 @@ class FileTransferTest(object):
     CONTACT_NAME = 'test-ft'
 
     service_name = 'wacky.service.name'
-    metadata = {'loads': ['of'],
-                'mental': ['data']}
+    metadata = {'loads': ['of', 'blahblah', 'stuff'],
+                'mental': ['data', 'sidf']}
 
     def __init__(self):
         self.file = File()
