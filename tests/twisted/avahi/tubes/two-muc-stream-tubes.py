@@ -3,6 +3,7 @@ import dbus
 import os
 import errno
 import string
+import tempfile
 
 from servicetest import make_channel_proxy, Event, call_async, EventPattern
 
@@ -55,7 +56,7 @@ def test(q, bus, conn):
     # create the server
     factory = Factory()
     factory.protocol = TrivialServer
-    server_socket_address = os.getcwd() + '/stream'
+    server_socket_address = tempfile.mkstemp()[1]
     try:
         os.remove(server_socket_address)
     except OSError, e:
@@ -370,6 +371,9 @@ def test(q, bus, conn):
 
     conn.Disconnect()
     conn2.Disconnect()
+
+    # cleanup
+    os.remove(server_socket_address)
 
 if __name__ == '__main__':
     # increase timer because Clique takes some time to join an existing muc
