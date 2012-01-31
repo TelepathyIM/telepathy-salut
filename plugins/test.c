@@ -56,7 +56,7 @@ create_channel_managers (SalutPlugin *plugin,
 }
 
 static void
-test_plugin_create_sidecar (
+test_plugin_create_sidecar_async (
     SalutPlugin *plugin,
     const gchar *sidecar_interface,
     SalutConnection *connection,
@@ -66,10 +66,7 @@ test_plugin_create_sidecar (
 {
   GSimpleAsyncResult *result = g_simple_async_result_new (G_OBJECT (plugin),
       callback, user_data,
-      /* sic: all plugins share salut_plugin_create_sidecar_finish() so we
-       * need to use the same source tag.
-       */
-      salut_plugin_create_sidecar_async);
+      test_plugin_create_sidecar_async);
   SalutSidecar *sidecar = NULL;
 
   if (!tp_strdiff (sidecar_interface, IFACE_TEST))
@@ -89,6 +86,27 @@ test_plugin_create_sidecar (
   g_object_unref (result);
 }
 
+static SalutSidecar *
+test_plugin_create_sidecar_finish (
+    SalutPlugin *plugin,
+    GAsyncResult *result,
+    GError **error)
+{
+  SalutSidecar *sidecar;
+
+  if (g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (result),
+        error))
+    return NULL;
+  
+  g_return_val_if_fail (g_simple_async_result_is_valid (result,
+        G_OBJECT (plugin), test_plugin_create_sidecar_async), NULL);
+
+  sidecar = SALUT_SIDECAR (g_simple_async_result_get_op_res_gpointer (
+        G_SIMPLE_ASYNC_RESULT (result)));
+
+  return g_object_ref (sidecar);
+}
+
 static void
 plugin_iface_init (
     gpointer g_iface,
@@ -101,7 +119,8 @@ plugin_iface_init (
   iface->version = PACKAGE_VERSION;
 
   iface->sidecar_interfaces = sidecar_interfaces;
-  iface->create_sidecar = test_plugin_create_sidecar;
+  iface->create_sidecar_async = test_plugin_create_sidecar_async;
+  iface->create_sidecar_finish = test_plugin_create_sidecar_finish;
   iface->initialize = initialize;
   iface->create_channel_managers = create_channel_managers;
 }

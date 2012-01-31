@@ -53,6 +53,11 @@ typedef void (*SalutPluginCreateSidecarImpl) (
     GAsyncReadyCallback callback,
     gpointer user_data);
 
+typedef SalutSidecar * (*SalutPluginCreateSidecarFinishImpl) (
+    SalutPlugin *plugin,
+    GAsyncResult *result,
+    GError **error);
+
 /* The caller of this function takes ownership of the returned
  * GPtrArray and the channel managers inside the array. This has the
  * same semantics as TpBaseConnectionCreateChannelManagersImpl. */
@@ -94,9 +99,14 @@ struct _SalutPluginInterface
   const gchar * const *sidecar_interfaces;
 
   /**
-   * An implementation of salut_plugin_create_sidecar().
+   * An implementation of salut_plugin_create_sidecar_async().
    */
-  SalutPluginCreateSidecarImpl create_sidecar;
+  SalutPluginCreateSidecarImpl create_sidecar_async;
+
+  /**
+   * An implementation of salut_plugin_create_sidecar_async_finish().
+   */
+  SalutPluginCreateSidecarFinishImpl create_sidecar_finish;
 
   /**
    * An implementation of salut_plugin_initialize().
