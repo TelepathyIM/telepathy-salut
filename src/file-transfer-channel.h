@@ -31,6 +31,8 @@
 #include <extensions/_gen/interfaces.h>
 #include <extensions/_gen/enums.h>
 
+#include <telepathy-glib/base-channel.h>
+
 #include "contact.h"
 #include "connection.h"
 #include "contact.h"
@@ -42,12 +44,12 @@ typedef struct _SalutFileTransferChannelClass SalutFileTransferChannelClass;
 typedef struct _SalutFileTransferChannelPrivate SalutFileTransferChannelPrivate;
 
 struct _SalutFileTransferChannelClass {
-    GObjectClass parent_class;
+    TpBaseChannelClass parent_class;
     TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutFileTransferChannel {
-    GObject parent;
+    TpBaseChannel parent;
 
     SalutFileTransferChannelPrivate *priv;
 };

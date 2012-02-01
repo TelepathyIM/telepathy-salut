@@ -265,6 +265,8 @@ salut_ft_manager_channel_created (SalutFtManager *self,
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
   GSList *requests = NULL;
 
+  tp_base_channel_register (TP_BASE_CHANNEL (chan));
+
   g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), self);
 
   priv->channels = g_list_append (priv->channels, chan);
