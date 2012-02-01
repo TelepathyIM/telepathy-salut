@@ -36,6 +36,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/base-channel.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -555,10 +556,11 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   chan = g_object_new (SALUT_TYPE_IM_CHANNEL,
       "connection", priv->connection,
       "contact", contact,
-      "object-path", path,
       "handle", handle,
       "initiator-handle", initiator,
+      "requested", (handle != initiator),
       NULL);
+  tp_base_channel_register ((TpBaseChannel *) chan);
   g_object_unref (contact);
   g_free (path);
   g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);

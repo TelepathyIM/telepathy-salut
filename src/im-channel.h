@@ -23,22 +23,26 @@
 #include <glib-object.h>
 #include <wocky/wocky-stanza.h>
 
+#include <telepathy-glib/base-channel.h>
 #include <telepathy-glib/message-mixin.h>
 
 G_BEGIN_DECLS
 
 typedef struct _SalutImChannel SalutImChannel;
 typedef struct _SalutImChannelClass SalutImChannelClass;
+typedef struct _SalutImChannelPrivate SalutImChannelPrivate;
 
 struct _SalutImChannelClass {
-    GObjectClass parent_class;
+    TpBaseChannelClass parent_class;
 
     TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutImChannel {
-    GObject parent;
+    TpBaseChannel parent;
     TpMessageMixin message_mixin;
+
+    SalutImChannelPrivate *priv;
 };
 
 GType salut_im_channel_get_type (void);
