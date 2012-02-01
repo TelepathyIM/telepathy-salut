@@ -23,6 +23,7 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-channel.h>
 #include <telepathy-glib/group-mixin.h>
 #include <telepathy-glib/message-mixin.h>
 
@@ -34,9 +35,10 @@ G_BEGIN_DECLS
 
 typedef struct _SalutMucChannel SalutMucChannel;
 typedef struct _SalutMucChannelClass SalutMucChannelClass;
+typedef struct _SalutMucChannelPrivate SalutMucChannelPrivate;
 
 struct _SalutMucChannelClass {
-  GObjectClass parent_class;
+  TpBaseChannelClass parent_class;
   TpGroupMixinClass group_class;
   TpDBusPropertiesMixinClass dbus_props_class;
 
@@ -46,12 +48,12 @@ struct _SalutMucChannelClass {
 };
 
 struct _SalutMucChannel {
-    GObject parent;
+    TpBaseChannel parent;
     TpGroupMixin group;
     TpMessageMixin message_mixin;
 
     /* private */
-    SalutConnection *connection;
+    SalutMucChannelPrivate *priv;
 };
 
 GType salut_muc_channel_get_type (void);
