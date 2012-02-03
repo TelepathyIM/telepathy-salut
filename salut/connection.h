@@ -23,6 +23,8 @@
 
 #include <wocky/wocky.h>
 
+#include <salut/plugin-connection.h>
+
 G_BEGIN_DECLS
 
 #define SALUT_TYPE_CONNECTION (salut_connection_get_type ())
@@ -44,9 +46,9 @@ typedef struct _SalutConnectionClass SalutConnectionClass;
 
 GType salut_connection_get_type (void);
 
-WockySession * salut_connection_get_session (SalutConnection *connection);
+WockySession * salut_connection_get_session (SalutPluginConnection *connection);
 
-const gchar * salut_connection_get_name (SalutConnection *connection);
+const gchar * salut_connection_get_name (SalutPluginConnection *connection);
 
 G_END_DECLS
 

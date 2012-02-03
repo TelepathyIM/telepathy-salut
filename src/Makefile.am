@@ -90,6 +90,8 @@ CORE_SOURCES =                                          \
     plugin.c						\
     $(top_srcdir)/salut/connection.h			\
     $(top_srcdir)/salut/sidecar.h			\
+    $(top_srcdir)/salut/plugin-connection.h             \
+    plugin-connection.c                                 \
     sidecar.c
 
 AVAHI_BACKEND_SOURCES = 				\
