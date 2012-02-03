@@ -28,7 +28,7 @@
 
 #include <wocky/wocky.h>
 
-#include <salut/connection.h>
+#include <salut/plugin-connection.h>
 #include <salut/sidecar.h>
 
 G_BEGIN_DECLS
@@ -48,7 +48,7 @@ typedef struct _SalutPluginInterface SalutPluginInterface;
 typedef void (*SalutPluginCreateSidecarImpl) (
     SalutPlugin *plugin,
     const gchar *sidecar_interface,
-    SalutConnection *connection,
+    SalutPluginConnection *connection,
     WockySession *session,
     GAsyncReadyCallback callback,
     gpointer user_data);
@@ -63,7 +63,7 @@ typedef SalutSidecar * (*SalutPluginCreateSidecarFinishImpl) (
  * same semantics as TpBaseConnectionCreateChannelManagersImpl. */
 typedef GPtrArray * (*SalutPluginCreateChannelManagersImpl) (
     SalutPlugin *plugin,
-    TpBaseConnection *connection);
+    SalutPluginConnection *plugin_connection);
 
 typedef void (*SalutPluginInitializeImpl) (
     SalutPlugin *plugin,
@@ -137,7 +137,7 @@ gboolean salut_plugin_implements_sidecar (
 void salut_plugin_create_sidecar_async (
     SalutPlugin *plugin,
     const gchar *sidecar_interface,
-    SalutConnection *connection,
+    SalutPluginConnection *connection,
     WockySession *session,
     GAsyncReadyCallback callback,
     gpointer user_data);
@@ -153,7 +153,7 @@ void salut_plugin_initialize (
 
 GPtrArray * salut_plugin_create_channel_managers (
     SalutPlugin *plugin,
-    TpBaseConnection *connection);
+    SalutPluginConnection *plugin_connection);
 
 /**
  * salut_plugin_create:

@@ -3607,6 +3607,7 @@ static GPtrArray *
 salut_connection_create_channel_managers (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
+  SalutPluginConnection *plugin_connection = SALUT_PLUGIN_CONNECTION (self);
   SalutConnectionPrivate *priv = self->priv;
   GPtrArray *managers = g_ptr_array_sized_new (1);
   GPtrArray *tmp;
@@ -3646,7 +3647,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
 
   /* plugin channel managers */
   loader = salut_plugin_loader_dup ();
-  tmp = salut_plugin_loader_create_channel_managers (loader, base);
+  tmp = salut_plugin_loader_create_channel_managers (loader, plugin_connection);
   g_object_unref (loader);
 
   g_ptr_array_foreach (tmp, add_to_array, managers);

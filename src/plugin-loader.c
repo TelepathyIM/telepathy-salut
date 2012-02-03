@@ -284,8 +284,11 @@ salut_plugin_loader_create_sidecar_async (
           GSimpleAsyncResult *res = g_simple_async_result_new (G_OBJECT (self),
               callback, user_data, salut_plugin_loader_create_sidecar_async);
 
-          salut_plugin_create_sidecar_async (p, sidecar_interface, connection, session,
-              create_sidecar_cb, res);
+          SalutPluginConnection *plugin_connection =
+            SALUT_PLUGIN_CONNECTION (connection);
+
+          salut_plugin_create_sidecar_async (p, sidecar_interface,
+              plugin_connection, session, create_sidecar_cb, res);
           return;
         }
     }
@@ -339,7 +342,7 @@ copy_to_other_array (gpointer data,
 GPtrArray *
 salut_plugin_loader_create_channel_managers (
     SalutPluginLoader *self,
-    TpBaseConnection *connection)
+    SalutPluginConnection *plugin_connection)
 {
   GPtrArray *out = g_ptr_array_new ();
   guint i;
@@ -349,7 +352,8 @@ salut_plugin_loader_create_channel_managers (
       SalutPlugin *plugin = g_ptr_array_index (self->priv->plugins, i);
       GPtrArray *managers;
 
-      managers = salut_plugin_create_channel_managers (plugin, connection);
+      managers = salut_plugin_create_channel_managers (plugin,
+          plugin_connection);
 
       if (managers == NULL)
         continue;

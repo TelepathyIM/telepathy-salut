@@ -3,6 +3,7 @@
 #include "test.h"
 
 #include <salut/plugin.h>
+#include <salut/plugin-connection.h>
 
 #include "extensions/extensions.h"
 
@@ -48,9 +49,9 @@ initialize (SalutPlugin *plugin,
 
 static GPtrArray *
 create_channel_managers (SalutPlugin *plugin,
-    TpBaseConnection *connection)
+    SalutPluginConnection *plugin_connection)
 {
-  DEBUG ("%p on connection %p", plugin, connection);
+  DEBUG ("%p on connection %p", plugin, plugin_connection);
 
   return NULL;
 }
@@ -59,7 +60,7 @@ static void
 test_plugin_create_sidecar_async (
     SalutPlugin *plugin,
     const gchar *sidecar_interface,
-    SalutConnection *connection,
+    SalutPluginConnection *connection,
     WockySession *session,
     GAsyncReadyCallback callback,
     gpointer user_data)

@@ -70,7 +70,7 @@ void
 salut_plugin_create_sidecar_async (
     SalutPlugin *plugin,
     const gchar *sidecar_interface,
-    SalutConnection *connection,
+    SalutPluginConnection *connection,
     WockySession *session,
     GAsyncReadyCallback callback,
     gpointer user_data)
@@ -134,14 +134,14 @@ salut_plugin_initialize (SalutPlugin *plugin,
 
 GPtrArray *
 salut_plugin_create_channel_managers (SalutPlugin *plugin,
-    TpBaseConnection *connection)
+    SalutPluginConnection *plugin_connection)
 {
   SalutPluginInterface *iface = SALUT_PLUGIN_GET_INTERFACE (plugin);
   SalutPluginCreateChannelManagersImpl func = iface->create_channel_managers;
   GPtrArray *out = NULL;
 
   if (func != NULL)
-    out = func (plugin, connection);
+    out = func (plugin, plugin_connection);
 
   return out;
 }
