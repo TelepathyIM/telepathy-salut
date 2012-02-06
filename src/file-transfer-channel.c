@@ -42,10 +42,7 @@
 #include "contact.h"
 #include "namespaces.h"
 
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-meta-porter.h>
-#include <wocky/wocky-data-form.h>
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
 

@@ -35,9 +35,6 @@
 #include <telepathy-glib/svc-generic.h>
 
 #include <gibber/gibber-linklocal-transport.h>
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-meta-porter.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"

@@ -25,9 +25,7 @@
 #include <string.h>
 #include <glib.h>
 
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-data-form.h>
-#include <wocky/wocky-caps-hash.h>
+#include <wocky/wocky.h>
 
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/intset.h>

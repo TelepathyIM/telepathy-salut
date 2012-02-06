@@ -29,10 +29,6 @@
 
 #include <string.h>
 
-#include <wocky/wocky-caps-hash.h>
-#include <wocky/wocky-disco-identity.h>
-#include <wocky/wocky-xep-0115-capabilities.h>
-
 #define DEBUG_FLAG SALUT_DEBUG_PRESENCE
 
 #include "debug.h"

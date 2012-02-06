@@ -22,8 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 #include "contact-manager.h"
 #include "olpc-activity.h"

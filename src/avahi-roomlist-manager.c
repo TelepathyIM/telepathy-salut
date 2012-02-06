@@ -28,7 +28,7 @@
 #include <avahi-gobject/ga-service-browser.h>
 #include <avahi-gobject/ga-service-resolver.h>
 
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #include <gibber/gibber-muc-connection.h>
 

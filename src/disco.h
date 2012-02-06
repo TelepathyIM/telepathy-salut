@@ -25,7 +25,7 @@
 #define __SALUT_DISCO_H__
 
 #include <glib-object.h>
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 #include "contact.h"
 #include "connection.h"

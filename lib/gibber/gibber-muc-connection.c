@@ -33,9 +33,7 @@
 #include "gibber-r-multicast-transport.h"
 #include "gibber-r-multicast-causal-transport.h"
 
-#include <wocky/wocky-xmpp-reader.h>
-#include <wocky/wocky-xmpp-writer.h>
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #define ADDRESS_KEY "address"
 #define PORT_KEY "port"

@@ -26,10 +26,7 @@
 #include <libsoup/soup-server.h>
 #include <libsoup/soup-message.h>
 
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-meta-porter.h>
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-data-form.h>
+#include <wocky/wocky.h>
 
 #include "gibber-oob-file-transfer.h"
 #include "gibber-fd-transport.h"

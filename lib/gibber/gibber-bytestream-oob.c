@@ -28,11 +28,7 @@
 
 #include <glib.h>
 
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-porter.h>
-#include <wocky/wocky-meta-porter.h>
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-xmpp-error.h>
+#include <wocky/wocky.h>
 
 #include "gibber-sockets.h"
 #include "gibber-bytestream-iface.h"

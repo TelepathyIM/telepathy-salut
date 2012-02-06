@@ -33,8 +33,7 @@
 #include <telepathy-glib/presence-mixin.h>
 #include <telepathy-glib/svc-connection.h>
 
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-session.h>
+#include <wocky/wocky.h>
 
 #include "salut/connection.h"
 

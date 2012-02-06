@@ -20,8 +20,8 @@
 #ifndef SALUT_UTIL_H
 #define SALUT_UTIL_H
 
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-session.h>
+#include <wocky/wocky.h>
+#include <wocky/wocky.h>
 
 void salut_send_ll_pep_event (WockySession *session,
     WockyStanza *stanza);

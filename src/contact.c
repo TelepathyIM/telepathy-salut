@@ -29,8 +29,6 @@
 
 #include <telepathy-glib/util.h>
 
-#include <wocky/wocky-xep-0115-capabilities.h>
-
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include <debug.h>
 

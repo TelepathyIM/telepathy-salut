@@ -29,7 +29,7 @@
 #include "gibber-muc-connection.h"
 #include "gibber-linklocal-transport.h"
 
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"

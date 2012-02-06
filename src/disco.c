@@ -29,9 +29,6 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 #include <telepathy-glib/dbus.h>
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-data-form.h>
-#include <wocky/wocky-xep-0115-capabilities.h>
 
 #define DEBUG_FLAG DEBUG_DISCO
 

@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #include <gibber/gibber-file-transfer.h>
 

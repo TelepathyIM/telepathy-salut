@@ -26,7 +26,7 @@
 #include <string.h>
 #include <dbus/dbus-glib.h>
 
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 #include "util.h"
 
 static WockyStanza *

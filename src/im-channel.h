@@ -21,7 +21,7 @@
 #define __SALUT_IM_CHANNEL_H__
 
 #include <glib-object.h>
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 #include <telepathy-glib/message-mixin.h>
 

@@ -13,50 +13,7 @@
 #include "symbol-hacks.h"
 
 /* First include all the public headers. */
-#include <wocky/wocky-auth-handler.h>
-#include <wocky/wocky-auth-registry.h>
-#include <wocky/wocky-bare-contact.h>
-#include <wocky/wocky-c2s-porter.h>
-#include <wocky/wocky-caps-cache.h>
-#include <wocky/wocky-connector.h>
-#include <wocky/wocky-contact-factory.h>
-#include <wocky/wocky-contact.h>
-#include <wocky/wocky-data-form.h>
 #include <wocky/wocky.h>
-#include <wocky/wocky-heartbeat-source.h>
-#include <wocky/wocky-jabber-auth-digest.h>
-#include <wocky/wocky-jabber-auth.h>
-#include <wocky/wocky-jabber-auth-password.h>
-#include <wocky/wocky-ll-connection-factory.h>
-#include <wocky/wocky-ll-connector.h>
-#include <wocky/wocky-ll-contact.h>
-#include <wocky/wocky-loopback-stream.h>
-#include <wocky/wocky-meta-porter.h>
-#include <wocky/wocky-muc.h>
-#include <wocky/wocky-node.h>
-#include <wocky/wocky-node-tree.h>
-#include <wocky/wocky-pep-service.h>
-#include <wocky/wocky-ping.h>
-#include <wocky/wocky-porter.h>
-#include <wocky/wocky-pubsub-helpers.h>
-#include <wocky/wocky-pubsub-node.h>
-#include <wocky/wocky-pubsub-service.h>
-#include <wocky/wocky-resource-contact.h>
-#include <wocky/wocky-roster.h>
-#include <wocky/wocky-sasl-auth.h>
-#include <wocky/wocky-sasl-digest-md5.h>
-#include <wocky/wocky-sasl-plain.h>
-#include <wocky/wocky-sasl-scram.h>
-#include <wocky/wocky-session.h>
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-tls-connector.h>
-#include <wocky/wocky-tls.h>
-#include <wocky/wocky-tls-handler.h>
-#include <wocky/wocky-utils.h>
-#include <wocky/wocky-xmpp-connection.h>
-#include <wocky/wocky-xmpp-error.h>
-#include <wocky/wocky-xmpp-reader.h>
-#include <wocky/wocky-xmpp-writer.h>
 
 /* Reference one symbol from each of the above headers to include each
  * object in the final binary. */
@@ -71,7 +28,6 @@ static void *hacks[] = {
   wocky_contact_get_type,
   wocky_data_form_get_type,
   wocky_init,
-  wocky_heartbeat_source_new,
   wocky_jabber_auth_digest_get_type,
   wocky_jabber_auth_get_type,
   wocky_jabber_auth_password_get_type,

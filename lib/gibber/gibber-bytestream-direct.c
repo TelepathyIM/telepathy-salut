@@ -25,7 +25,7 @@
 
 #include <glib.h>
 
-#include <wocky/wocky-xmpp-error.h>
+#include <wocky/wocky.h>
 
 #include "gibber-sockets.h"
 #include "gibber-linklocal-transport.h"

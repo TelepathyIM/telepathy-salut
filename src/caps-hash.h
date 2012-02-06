@@ -24,7 +24,7 @@
 
 #include "self.h"
 
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 gchar *caps_hash_compute_from_self_presence (SalutSelf *self);
 

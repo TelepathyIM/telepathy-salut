@@ -24,7 +24,7 @@
 #include <glib-object.h>
 
 #include "gibber-r-multicast-transport.h"
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 G_BEGIN_DECLS
 

@@ -23,7 +23,7 @@
 
 #include <glib.h>
 #include <glib-object.h>
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 /* Mapping a XMPP node with a GHashTable */
 GHashTable *salut_wocky_node_extract_properties (WockyNode *node,

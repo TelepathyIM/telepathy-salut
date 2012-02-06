@@ -26,7 +26,7 @@
 #include <telepathy-glib/base-connection-manager.h>
 #include <telepathy-glib/base-connection.h>
 
-#include <wocky/wocky-session.h>
+#include <wocky/wocky.h>
 
 #include <salut/connection.h>
 #include <salut/sidecar.h>

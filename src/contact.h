@@ -32,7 +32,7 @@
 #include "olpc-activity.h"
 #endif
 
-#include <wocky/wocky-ll-contact.h>
+#include <wocky/wocky.h>
 
 G_BEGIN_DECLS
 

@@ -42,10 +42,7 @@
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-generic.h>
 
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 #include <gibber/gibber-bytestream-direct.h>
 #include <gibber/gibber-bytestream-iface.h>

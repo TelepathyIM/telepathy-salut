@@ -21,7 +21,7 @@
 #ifndef SALUT_PLUGINS_CONNECTION_H
 #define SALUT_PLUGINS_CONNECTION_H
 
-#include <wocky/wocky-session.h>
+#include <wocky/wocky.h>
 
 G_BEGIN_DECLS
 

@@ -25,10 +25,7 @@
 
 #include <gibber/gibber-bytestream-oob.h>
 
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-meta-porter.h>
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-xmpp-error.h>
+#include <wocky/wocky.h>
 
 #include "im-manager.h"
 #include "muc-manager.h"

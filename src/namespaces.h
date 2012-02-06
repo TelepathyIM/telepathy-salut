@@ -22,7 +22,7 @@
 #define __GABBLE_NAMESPACES__H__
 
 #include "gabble_namespaces.h"
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #define NS_AMP                  WOCKY_XMPP_NS_AMP
 #define NS_BYTESTREAMS          "http://jabber.org/protocol/bytestreams"

@@ -29,8 +29,7 @@
 #include "contact.h"
 
 #include <gibber/gibber-linklocal-transport.h>
-#include <wocky/wocky-stanza.h>
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>

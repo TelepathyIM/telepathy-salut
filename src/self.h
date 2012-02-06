@@ -26,7 +26,7 @@
 
 #include <telepathy-glib/handle-repo.h>
 
-#include <wocky/wocky-stanza.h>
+#include <wocky/wocky.h>
 
 #include <salut/capability-set.h>
 

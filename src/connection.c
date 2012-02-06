@@ -42,11 +42,6 @@
 
 #include <salut/caps-channel-manager.h>
 
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-meta-porter.h>
-#include <wocky/wocky-data-form.h>
-#include <wocky/wocky-xep-0115-capabilities.h>
-
 #include "avahi-discovery-client.h"
 #include "capabilities.h"
 #include "caps-hash.h"

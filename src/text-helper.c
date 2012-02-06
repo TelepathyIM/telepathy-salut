@@ -30,9 +30,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <wocky/wocky-namespaces.h>
-#include <wocky/wocky-namespaces.h>
-
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/message-mixin.h>

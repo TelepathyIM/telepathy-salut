@@ -25,7 +25,7 @@
 
 #include "roomlist-manager.h"
 
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #include <gibber/gibber-muc-connection.h>
 

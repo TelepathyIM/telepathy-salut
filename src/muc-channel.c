@@ -33,7 +33,7 @@
 
 #include "muc-channel.h"
 
-#include <wocky/wocky-namespaces.h>
+#include <wocky/wocky.h>
 
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/interfaces.h>
