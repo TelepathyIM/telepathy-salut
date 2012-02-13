@@ -150,7 +150,7 @@ _channel_io_in (GIOChannel *source, GIOCondition condition, gpointer data)
   int ret;
   socklen_t len = sizeof (struct sockaddr_storage);
 
-  ret = recvfrom (priv->fd, buf, BUFSIZE, 0, (struct sockaddr *)&from, &len);
+  ret = recvfrom (priv->fd, (char *)buf, BUFSIZE, 0, (struct sockaddr *)&from, &len);
 
   if (ret < 0)
     {
@@ -214,18 +214,18 @@ _open_multicast (GibberMulticastTransport *self, GError **error)
               goto err;
             }
 
-          SETSOCKOPT (fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes));
+          SETSOCKOPT (fd, SOL_SOCKET, SO_REUSEADDR, (char *)&yes, sizeof (yes));
 #ifdef SO_REUSEPORT
           SETSOCKOPT (fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof (yes));
 #endif
-          SETSOCKOPT (fd, IPPROTO_IP, IP_MULTICAST_LOOP, &yes, sizeof (yes));
-          SETSOCKOPT (fd, IPPROTO_IP, IP_MULTICAST_TTL, &one, sizeof (one));
+          SETSOCKOPT (fd, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&yes, sizeof (yes));
+          SETSOCKOPT (fd, IPPROTO_IP, IP_MULTICAST_TTL, (char *)&one, sizeof (one));
 
           mreq.imr_multiaddr =
               ((struct sockaddr_in *) &(priv->address))->sin_addr;
           mreq.imr_interface.s_addr = htonl (INADDR_ANY);
 
-          SETSOCKOPT (fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof (mreq));
+          SETSOCKOPT (fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq, sizeof (mreq));
 
           memset (&baddr, 0, sizeof (baddr));
           baddr.sin_family = AF_INET;
@@ -259,7 +259,7 @@ _open_multicast (GibberMulticastTransport *self, GError **error)
             ((struct sockaddr_in6 *)&priv->address)->sin6_addr;
           mreq6.ipv6mr_interface = 0;
 
-          SETSOCKOPT (fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6,
+          SETSOCKOPT (fd, IPPROTO_IPV6, IPV6_JOIN_GROUP, (char *)&mreq6,
             sizeof (mreq6));
 
           if (bind (fd, (struct sockaddr *)&(priv->address), priv->addrlen)
@@ -466,7 +466,7 @@ gibber_multicast_transport_send (GibberTransport *transport,
       return FALSE;
     }
 
-  if (sendto (priv->fd, data, size, 0,
+  if (sendto (priv->fd, (const char *)data, size, 0,
       (struct sockaddr *)&(priv->address),
       sizeof (struct sockaddr_storage)) < 0)
     {

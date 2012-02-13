@@ -93,6 +93,11 @@ AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @WOCKY
 
 AM_LDFLAGS = $(GCOV_LIBS) @GLIB_LIBS@ @LIBXML2_LIBS@ @WOCKY_LIBS@ @LIBSOUP_LIBS@
 
+# Required for getnameinfo to work when cross compiling
+if OS_WINDOWS
+  AM_CFLAGS += -D_WIN32_WINNT=0x0501
+endif
+
 # rules for making the glib enum objects
 %-enumtypes.h: %.h Makefile.in
 	$(AM_V_GEN)glib-mkenums \
