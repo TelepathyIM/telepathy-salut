@@ -39,6 +39,21 @@ SALUT_ARG_DEBUG
 SALUT_ARG_VALGRIND
 SALUT_ARG_COVERAGE
 
+dnl Detect Windows Verion
+AC_MSG_CHECKING([for operating system])
+case "$host" in
+  *-*-*mingw*|*-*-*cygwin*)
+    platform=win32
+    ;;
+  *)
+    platform=generic
+    ;;
+esac
+
+AC_MSG_RESULT($platform)
+
+AM_CONDITIONAL([OS_WINDOWS], [test "$platform" = "win32"])
+
 dnl decide error flags
 ifelse(salut_nano_version, 0,
     [ official_release=yes ],
