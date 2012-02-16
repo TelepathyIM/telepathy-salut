@@ -1,7 +1,7 @@
 /*
  * connection.h - Header for SalutConnection
- * Copyright (C) 2005 Collabora Ltd.
- * Copyright (C) 2005 Nokia Corporation
+ * Copyright © 2005-2012 Collabora Ltd.
+ * Copyright © 2005-2010 Nokia Corporation
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,9 +35,28 @@
 
 #include <wocky/wocky.h>
 
-#include "salut/connection.h"
+#include "salut/plugin-connection.h"
 
 G_BEGIN_DECLS
+
+#define SALUT_TYPE_CONNECTION (salut_connection_get_type ())
+#define SALUT_CONNECTION(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST((obj), SALUT_TYPE_CONNECTION, SalutConnection))
+#define SALUT_CONNECTION_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_CAST((klass), SALUT_TYPE_CONNECTION, \
+      SalutConnectionClass))
+#define SALUT_IS_CONNECTION(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj), SALUT_TYPE_CONNECTION))
+#define SALUT_IS_CONNECTION_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_TYPE((klass), SALUT_TYPE_CONNECTION))
+#define SALUT_CONNECTION_GET_CLASS(obj) \
+  (G_TYPE_INSTANCE_GET_CLASS ((obj), SALUT_TYPE_CONNECTION, \
+      SalutConnectionClass))
+
+typedef struct _SalutConnection SalutConnection;
+typedef struct _SalutConnectionClass SalutConnectionClass;
+
+GType salut_connection_get_type (void);
 
 typedef struct _SalutPresenceCache SalutPresenceCache;
 typedef struct _SalutDisco SalutDisco;
@@ -90,6 +109,10 @@ salut_connection_olpc_observe_muc_stanza (SalutConnection *self, TpHandle room,
 const gchar * const *salut_connection_get_implemented_interfaces (void);
 
 gchar *salut_normalize_non_empty (const gchar *id, GError **error);
+
+WockySession * salut_connection_get_session (SalutPluginConnection *connection);
+
+const gchar * salut_connection_get_name (SalutPluginConnection *connection);
 
 G_END_DECLS
 

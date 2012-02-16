@@ -88,7 +88,6 @@ CORE_SOURCES =                                          \
     plugin-loader.h                                     \
     $(top_srcdir)/salut/plugin.h                        \
     plugin.c						\
-    $(top_srcdir)/salut/connection.h			\
     $(top_srcdir)/salut/sidecar.h			\
     $(top_srcdir)/salut/plugin-connection.h             \
     plugin-connection.c                                 \

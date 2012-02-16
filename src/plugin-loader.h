@@ -29,6 +29,8 @@
 
 #include "salut/sidecar.h"
 
+#include "connection.h"
+
 typedef struct _SalutPluginLoader SalutPluginLoader;
 typedef struct _SalutPluginLoaderClass SalutPluginLoaderClass;
 typedef struct _SalutPluginLoaderPrivate SalutPluginLoaderPrivate;
