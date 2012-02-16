@@ -80,8 +80,6 @@ CORE_SOURCES =                                          \
     util.h                                        \
     util.c                                        \
     $(top_srcdir)/salut/util.h                          \
-    debug.c                                             \
-    debug.h                                             \
     protocol.c                                          \
     $(top_srcdir)/salut/protocol.h                      \
     plugin-loader.c                                     \
@@ -132,6 +130,10 @@ libsalut_plugins_la_LDFLAGS =                           \
     -no-undefined                                       \
     -avoid-version
 
+libsalut_plugins_la_LIBADD =                            \
+    @TELEPATHY_GLIB_LIBS@                               \
+    @WOCKY_LIBS@
+
 libsalut_plugins_la_SOURCES =                           \
     $(top_srcdir)/salut/plugin.h                        \
     plugin.c                                            \
@@ -139,6 +141,8 @@ libsalut_plugins_la_SOURCES =                           \
     plugin-connection.c                                 \
     $(top_srcdir)/salut/capability-set.h                \
     capability-set.c                                    \
+    debug.h                                             \
+    debug.c                                             \
     $(top_srcdir)/salut/sidecar.h                       \
     sidecar.c
 
