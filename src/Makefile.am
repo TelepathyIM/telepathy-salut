@@ -137,7 +137,7 @@ write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
-                       -ltelepathy-glib
+                       @TELEPATHY_GLIB_LIBS@
 telepathy_salut_SOURCES = \
     salut.c
 
