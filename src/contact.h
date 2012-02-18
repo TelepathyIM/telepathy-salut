@@ -20,7 +20,6 @@
 #ifndef __SALUT_CONTACT_H__
 #define __SALUT_CONTACT_H__
 
-#include <netinet/in.h>
 #include <glib-object.h>
 
 #include <telepathy-glib/handle-repo.h>
@@ -30,6 +29,17 @@
 #include "connection.h"
 #ifdef ENABLE_OLPC
 #include "olpc-activity.h"
+#endif
+
+#ifdef G_OS_WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+/* Winsock makes some inappropriately-namespaced definitions */
+#undef interface
+#else
+#include <netinet/in.h>
 #endif
 
 #include <wocky/wocky.h>
