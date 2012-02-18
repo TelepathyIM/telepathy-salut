@@ -21,11 +21,16 @@
 #include "im-channel.h"
 
 #include <errno.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <glib.h>
+
+#ifdef G_OS_UNIX
 #include <sys/socket.h>
+#include <netdb.h>
+#endif
 
 #include <dbus/dbus-glib.h>
 #include <telepathy-glib/channel-iface.h>

@@ -6,7 +6,13 @@
 #include <telepathy-glib/debug.h>
 
 #include "connection-manager.h"
+
+#ifdef USE_BACKEND_AVAHI
 #include "avahi-discovery-client.h"
+#elif defined (USE_BACKEND_DUMMY)
+#include "dummy-discovery-client.h"
+#endif
+
 #include "debug.h"
 #include "plugin-loader.h"
 #include "symbol-hacks.h"
@@ -16,7 +22,12 @@ salut_create_connection_manager (void)
 {
   return TP_BASE_CONNECTION_MANAGER (
       g_object_new (SALUT_TYPE_CONNECTION_MANAGER,
-                    "backend-type", SALUT_TYPE_AVAHI_DISCOVERY_CLIENT,
+                    "backend-type",
+#ifdef USE_BACKEND_AVAHI
+                    SALUT_TYPE_AVAHI_DISCOVERY_CLIENT,
+#elif defined (USE_BACKEND_DUMMY)
+                    SALUT_TYPE_DUMMY_DISCOVERY_CLIENT,
+#endif
                     NULL));
 }
 
