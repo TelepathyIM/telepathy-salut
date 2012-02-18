@@ -149,7 +149,11 @@ libsalut_plugins_la_SOURCES =                           \
 libsalut_convenience_la_LIBADD = libsalut-plugins.la
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
-    $(SHA1_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES)
+    $(SHA1_SOURCES) $(DUMMY_BACKEND_SOURCES)
+
+if USE_BACKEND_AVAHI
+  libsalut_convenience_la_SOURCES += $(AVAHI_BACKEND_SOURCES)
+endif
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
