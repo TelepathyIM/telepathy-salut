@@ -142,7 +142,6 @@ AM_CONDITIONAL(ENABLE_OLPC, test "x$enable_olpc" = "xyes")
 
 AC_SUBST(ENABLE_OLPC)
 
-
 AC_HEADER_STDC([])
 AC_C_INLINE
 
@@ -200,10 +199,28 @@ PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.17.1])
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
+dnl check the backend to use
+AC_ARG_WITH(backend,
+  AC_HELP_STRING([--with-backend=[avahi/no]],
+                 [Zeroconf backend to use]),
+  [], [with_backend=avahi])
+
+AM_CONDITIONAL(USE_BACKEND_DUMMY, [test "x$with_backend" = "xno"])
+AM_CONDITIONAL(USE_BACKEND_AVAHI, [test "x$with_backend" = "xavahi"])
+
 dnl Check for Avahi
-PKG_CHECK_MODULES(AVAHI, [avahi-gobject, avahi-client])
-AC_SUBST(AVAHI_CFLAGS)
-AC_SUBST(AVAHI_LIBS)
+if test x$with_backend = xavahi; then
+  PKG_CHECK_MODULES(AVAHI, [avahi-gobject, avahi-client])
+  AC_DEFINE(USE_BACKEND_AVAHI, [], [Use Avahi backend])
+  AC_SUBST(AVAHI_CFLAGS)
+  AC_SUBST(AVAHI_LIBS)
+  AC_SUBST(USE_BACKEND_AVAHI)
+fi
+
+if test x$with_backend = xno; then
+  AC_DEFINE(USE_BACKEND_DUMMY, [], [Use dummy backend])
+  AC_SUBST(USE_BACKEND_DUMMY)
+fi
 
 dnl Check for libsoup
 PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4])
