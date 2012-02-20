@@ -23,7 +23,6 @@
 
 #include <glib-object.h>
 
-#include <salut/connection.h>
 
 G_BEGIN_DECLS
 

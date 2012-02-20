@@ -85,12 +85,7 @@ CORE_SOURCES =                                          \
     protocol.c                                          \
     $(top_srcdir)/salut/protocol.h                      \
     plugin-loader.c                                     \
-    plugin-loader.h                                     \
-    $(top_srcdir)/salut/plugin.h                        \
-    plugin.c						\
-    $(top_srcdir)/salut/connection.h			\
-    $(top_srcdir)/salut/sidecar.h			\
-    sidecar.c
+    plugin-loader.h
 
 AVAHI_BACKEND_SOURCES = 				\
     avahi-discovery-client.h                      \
@@ -130,6 +125,25 @@ SHA1_SOURCES =                                          \
     sha1/sha1-util.h                                    \
     sha1/sha1-util.c
 
+lib_LTLIBRARIES = libsalut-plugins.la
+
+libsalut_plugins_la_LDFLAGS =                           \
+    -shared                                             \
+    -no-undefined                                       \
+    -avoid-version
+
+libsalut_plugins_la_SOURCES =                           \
+    $(top_srcdir)/salut/plugin.h                        \
+    plugin.c                                            \
+    $(top_srcdir)/salut/plugin-connection.h             \
+    plugin-connection.c                                 \
+    $(top_srcdir)/salut/capability-set.h                \
+    capability-set.c                                    \
+    $(top_srcdir)/salut/sidecar.h                       \
+    sidecar.c
+
+libsalut_convenience_la_LIBADD = libsalut-plugins.la
+
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
     $(SHA1_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES)
 
@@ -149,6 +163,7 @@ check_c_sources = \
     $(CORE_SOURCES) \
     $(AVAHI_BACKEND_SOURCES) \
     $(DUMMY_BACKEND_SOURCES) \
+    $(libsalut_plugins_la_SOURCES) \
     $(write_mgr_file_SOURCES)
 
 include $(top_srcdir)/tools/check-coding-style.mk

@@ -41,6 +41,7 @@
 #include <telepathy-glib/util.h>
 
 #include <salut/caps-channel-manager.h>
+#include <salut/plugin-connection.h>
 
 #include "avahi-discovery-client.h"
 #include "capabilities.h"
@@ -101,6 +102,10 @@ salut_connection_avatar_service_iface_init (gpointer g_iface,
 static void
 salut_conn_contact_caps_iface_init (gpointer, gpointer);
 
+static void
+salut_plugin_connection_iface_init (SalutPluginConnectionInterface *iface,
+    gpointer iface_data);
+
 static void salut_conn_future_iface_init (gpointer, gpointer);
 
 #define DISCONNECT_TIMEOUT 5
@@ -129,6 +134,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
         salut_conn_contact_info_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CONNECTION_FUTURE,
       salut_conn_future_iface_init);
+    G_IMPLEMENT_INTERFACE (SALUT_TYPE_PLUGIN_CONNECTION,
+      salut_plugin_connection_iface_init);
 #ifdef ENABLE_OLPC
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_OLPC_BUDDY_INFO,
        salut_connection_olpc_buddy_info_iface_init);
@@ -3600,6 +3607,7 @@ static GPtrArray *
 salut_connection_create_channel_managers (TpBaseConnection *base)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
+  SalutPluginConnection *plugin_connection = SALUT_PLUGIN_CONNECTION (self);
   SalutConnectionPrivate *priv = self->priv;
   GPtrArray *managers = g_ptr_array_sized_new (1);
   GPtrArray *tmp;
@@ -3639,7 +3647,7 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
 
   /* plugin channel managers */
   loader = salut_plugin_loader_dup ();
-  tmp = salut_plugin_loader_create_channel_managers (loader, base);
+  tmp = salut_plugin_loader_create_channel_managers (loader, plugin_connection);
   g_object_unref (loader);
 
   g_ptr_array_foreach (tmp, add_to_array, managers);
@@ -4088,17 +4096,29 @@ salut_conn_future_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-WockySession *
-salut_connection_get_session (SalutConnection *connection)
+static void
+salut_plugin_connection_iface_init (SalutPluginConnectionInterface *iface,
+    gpointer iface_data)
 {
+  iface->get_session = salut_connection_get_session;
+  iface->get_name = salut_connection_get_name;
+}
+
+WockySession *
+salut_connection_get_session (SalutPluginConnection *plugin_connection)
+{
+  SalutConnection *connection = SALUT_CONNECTION (plugin_connection);
+
   g_return_val_if_fail (SALUT_IS_CONNECTION (connection), NULL);
 
   return connection->session;
 }
 
 const gchar *
-salut_connection_get_name (SalutConnection *connection)
+salut_connection_get_name (SalutPluginConnection *plugin_connection)
 {
+  SalutConnection *connection = SALUT_CONNECTION (plugin_connection);
+
   g_return_val_if_fail (SALUT_IS_CONNECTION (connection), NULL);
 
   return connection->name;

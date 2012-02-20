@@ -28,7 +28,7 @@
 
 #include <wocky/wocky.h>
 
-#include <salut/connection.h>
+#include <salut/plugin-connection.h>
 #include <salut/sidecar.h>
 
 G_BEGIN_DECLS
@@ -48,17 +48,22 @@ typedef struct _SalutPluginInterface SalutPluginInterface;
 typedef void (*SalutPluginCreateSidecarImpl) (
     SalutPlugin *plugin,
     const gchar *sidecar_interface,
-    SalutConnection *connection,
+    SalutPluginConnection *connection,
     WockySession *session,
     GAsyncReadyCallback callback,
     gpointer user_data);
+
+typedef SalutSidecar * (*SalutPluginCreateSidecarFinishImpl) (
+    SalutPlugin *plugin,
+    GAsyncResult *result,
+    GError **error);
 
 /* The caller of this function takes ownership of the returned
  * GPtrArray and the channel managers inside the array. This has the
  * same semantics as TpBaseConnectionCreateChannelManagersImpl. */
 typedef GPtrArray * (*SalutPluginCreateChannelManagersImpl) (
     SalutPlugin *plugin,
-    TpBaseConnection *connection);
+    SalutPluginConnection *plugin_connection);
 
 typedef void (*SalutPluginInitializeImpl) (
     SalutPlugin *plugin,
@@ -94,9 +99,14 @@ struct _SalutPluginInterface
   const gchar * const *sidecar_interfaces;
 
   /**
-   * An implementation of salut_plugin_create_sidecar().
+   * An implementation of salut_plugin_create_sidecar_async().
    */
-  SalutPluginCreateSidecarImpl create_sidecar;
+  SalutPluginCreateSidecarImpl create_sidecar_async;
+
+  /**
+   * An implementation of salut_plugin_create_sidecar_async_finish().
+   */
+  SalutPluginCreateSidecarFinishImpl create_sidecar_finish;
 
   /**
    * An implementation of salut_plugin_initialize().
@@ -127,7 +137,7 @@ gboolean salut_plugin_implements_sidecar (
 void salut_plugin_create_sidecar_async (
     SalutPlugin *plugin,
     const gchar *sidecar_interface,
-    SalutConnection *connection,
+    SalutPluginConnection *connection,
     WockySession *session,
     GAsyncReadyCallback callback,
     gpointer user_data);
@@ -143,7 +153,7 @@ void salut_plugin_initialize (
 
 GPtrArray * salut_plugin_create_channel_managers (
     SalutPlugin *plugin,
-    TpBaseConnection *connection);
+    SalutPluginConnection *plugin_connection);
 
 /**
  * salut_plugin_create:

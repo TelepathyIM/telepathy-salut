@@ -29,6 +29,8 @@
 
 #include "salut/sidecar.h"
 
+#include "connection.h"
+
 typedef struct _SalutPluginLoader SalutPluginLoader;
 typedef struct _SalutPluginLoaderClass SalutPluginLoaderClass;
 typedef struct _SalutPluginLoaderPrivate SalutPluginLoaderPrivate;
@@ -83,6 +85,6 @@ void salut_plugin_loader_initialize (
 
 GPtrArray * salut_plugin_loader_create_channel_managers (
     SalutPluginLoader *self,
-    TpBaseConnection *connection);
+    SalutPluginConnection *plugin_connection);
 
 #endif /* #ifndef __PLUGIN_LOADER_H__ */
