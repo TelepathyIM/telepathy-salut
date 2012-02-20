@@ -1,7 +1,18 @@
-telepathy-salut 0.7.1 (UNRELEASED)
+telepathy-salut 0.7.1 (2012-02-20)
 ==================================
 
-y u no fill news file?
+The "y u no fill news file and leave it between me and git log" release.
+
+Enhancements:
+• fd.o#45716 - Salut now has a salut-plugins.so library, similarly to mission-control. This
+  enables plugins to link correctly as DLLs on Windows. This also means that plugins don't directly
+  access SalutConnections anymore, but instead invoke the same functionality through a
+  SalutPluginConnection GInterface. (siraj)
+• fd.o#42515 - Support for building on Android (Hei_Ku)
+• fd.o#45703 - Support for One Big Header Wocky (wjt)
+
+Fixes:
+• fd.o#44020 - Unix socket paths for MUC stream tubes too long
 
 telepathy-salut 0.7.0 (2011-11-16)
 ==================================
