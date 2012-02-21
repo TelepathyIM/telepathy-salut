@@ -20,6 +20,10 @@ class TestReceiveFileIPv6(ReceiveFileTest):
     metadata = {}
 
     def announce_contact(self, name=CONTACT_NAME):
+        if not check_ipv6_enabled():
+            print "Skipped test as IPv6 doesn't seem to be available"
+            return True
+
         basic_txt = { "txtvers": "1", "status": "avail" }
 
         self.contact_name = '%s@%s' % (name, get_host_name())
@@ -27,10 +31,6 @@ class TestReceiveFileIPv6(ReceiveFileTest):
 
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp", port,
                 basic_txt, proto=avahi.PROTO_INET6)
-
-        if not check_ipv6_enabled():
-            print "Skipped test as IPv6 doesn't seem to be available"
-            return True
 
     def _resolve_salut_presence(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
