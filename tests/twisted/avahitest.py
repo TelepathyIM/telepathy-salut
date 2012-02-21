@@ -190,9 +190,8 @@ class AvahiAnnouncer:
         self.entry.Free()
 
 def check_ipv6_enabled():
-    s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-
     try:
+        s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         s.bind(('::1', 0))
     except socket.error:
         return False
