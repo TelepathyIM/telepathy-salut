@@ -57,6 +57,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/gtypes.h>
+#include <telepathy-glib/gnio-util.h>
 
 static void
 file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
@@ -860,7 +861,7 @@ remote_accepted_cb (GibberFileTransfer *ft,
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 }
 
-static gboolean setup_local_socket (SalutFileTransferChannel *self);
+static gboolean setup_local_socket (SalutFileTransferChannel *self, guint address_type, guint access_control);
 static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count,
     SalutFileTransferChannel *self);
 
@@ -1196,7 +1197,7 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
       G_CALLBACK (ft_transferred_chunk_cb), self);
   g_signal_connect (ft, "cancelled", G_CALLBACK (ft_remote_cancelled_cb), self);
 
-  if (!setup_local_socket (self))
+  if (!setup_local_socket (self, address_type, access_control))
     {
       DEBUG ("Could not set up local socket");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
@@ -1262,7 +1263,7 @@ salut_file_transfer_channel_provide_file (
       return;
     }
 
-  if (!setup_local_socket (self))
+  if (!setup_local_socket (self, address_type, access_control))
     {
       DEBUG ("Could not set up local socket");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
@@ -1329,7 +1330,7 @@ get_local_unix_socket_path (SalutFileTransferChannel *self)
  * Return a GIOChannel for the local unix socket path.
  */
 static GIOChannel *
-get_socket_channel (SalutFileTransferChannel *self)
+get_unix_socket_channel (SalutFileTransferChannel *self, guint access_control)
 {
   gint fd;
   gchar *path;
@@ -1388,6 +1389,70 @@ get_socket_channel (SalutFileTransferChannel *self)
 }
 
 /*
+ * Return a GIOChannel for a TCP socket bound to 127.0.0.0:<random-port>
+ */
+static GIOChannel *
+get_tcp_socket_channel (SalutFileTransferChannel *self, GSocketFamily family, guint access_control)
+{
+  GError *error = NULL;
+  GSocket *sock;
+  GSocketAddress *addr;
+  GInetAddress *inetAddr;
+  GIOChannel *io_channel = NULL;
+  GValueArray *array;
+  gchar *addrString;
+  int fd;
+  GType addrType;
+  GValue addrValue = G_VALUE_INIT;
+  GValue portValue = G_VALUE_INIT;
+
+  DEBUG ("TCP Socket!");
+
+  sock = g_socket_new (family, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
+  if (error)
+    return NULL;
+
+  inetAddr = g_inet_address_new_loopback (G_SOCKET_FAMILY_IPV4);
+  addr = g_inet_socket_address_new (inetAddr, 0);
+  g_socket_bind (sock, addr, FALSE, &error);
+  g_object_unref (inetAddr);
+  g_object_unref (addr);
+  if (error)
+    return NULL;
+
+  g_socket_listen (sock, &error);
+  if (error)
+    return NULL;
+
+  addr = g_socket_get_local_address (sock, &error);
+  self->priv->socket_address = tp_address_variant_from_g_socket_address (addr, NULL, NULL);
+  g_object_unref (addr);
+
+  fd = g_socket_get_fd (sock);
+  io_channel = g_io_channel_unix_new (fd);
+  g_io_channel_set_close_on_unref (io_channel, TRUE);
+  return io_channel;
+}
+
+/*
+ * Return a GIOChannel for a local socket
+ */
+static GIOChannel *
+get_socket_channel (SalutFileTransferChannel *self, guint address_type, guint access_control)
+{
+  switch (address_type)
+    {
+      case 0:
+        return get_unix_socket_channel (self, access_control);
+      case 2:
+        return get_tcp_socket_channel (self, G_SOCKET_FAMILY_IPV4, access_control);
+      case 3:
+        return get_tcp_socket_channel (self, G_SOCKET_FAMILY_IPV6, access_control);
+    }
+  return NULL;
+}
+
+/*
  * Some client is connecting to the Unix socket.
  */
 static gboolean
@@ -1433,14 +1498,14 @@ accept_local_socket_connection (GIOChannel *source,
 #endif
 
 static gboolean
-setup_local_socket (SalutFileTransferChannel *self)
+setup_local_socket (SalutFileTransferChannel *self, guint address_type, guint access_control)
 {
 #ifdef G_OS_WIN32
   return FALSE;
 #else
   GIOChannel *io_channel;
 
-  io_channel = get_socket_channel (self);
+  io_channel = get_socket_channel (self, address_type, access_control);
   if (io_channel == NULL)
     {
       return FALSE;

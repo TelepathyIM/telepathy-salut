@@ -19,6 +19,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/file-transfer/send-file-declined.py \
 	avahi/file-transfer/send-file-item-not-found.py \
 	avahi/file-transfer/send-file-ipv6.py \
+	avahi/file-transfer/send-file-ipv4.py \
 	avahi/file-transfer/send-file-provide-immediately.py \
 	avahi/file-transfer/send-file-to-unknown-contact.py \
 	avahi/file-transfer/send-file-wait-to-provide.py \
@@ -31,6 +32,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/file-transfer/receive-file-cancelled-immediately.py \
 	avahi/file-transfer/receive-file-decline.py \
 	avahi/file-transfer/receive-file-ipv6.py \
+	avahi/file-transfer/receive-file-ipv4.py \
 	avahi/file-transfer/receive-file-not-found.py \
 	avahi/file-transfer/metadata.py \
 	avahi/file-transfer/ft-client-caps.py \
