@@ -13,6 +13,11 @@ from xmppstream import connect_to_stream6, setup_stream_listener6
 
 from twisted.words.xish import domish
 
+if not check_ipv6_enabled():
+    print "Skipped test as IPv6 doesn't seem to be available"
+    # exiting 77 causes automake to consider the test to have been skipped
+    raise SystemExit(77)
+
 class TestReceiveFileIPv6(ReceiveFileTest):
     CONTACT_NAME = 'test-ft'
 
@@ -27,10 +32,6 @@ class TestReceiveFileIPv6(ReceiveFileTest):
 
         self.contact_service = AvahiAnnouncer(self.contact_name, "_presence._tcp", port,
                 basic_txt, proto=avahi.PROTO_INET6)
-
-        if not check_ipv6_enabled():
-            print "Skipped test as IPv6 doesn't seem to be available"
-            return True
 
     def _resolve_salut_presence(self):
         AvahiListener(self.q).listen_for_service("_presence._tcp")
