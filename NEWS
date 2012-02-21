@@ -13,6 +13,7 @@ Enhancements:
 
 Fixes:
 • fd.o#44020 - Unix socket paths for MUC stream tubes too long
+• Almost all unit tests failing if IPv6 is not enabled in the kernel
 
 telepathy-salut 0.7.0 (2011-11-16)
 ==================================
