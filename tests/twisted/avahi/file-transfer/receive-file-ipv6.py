@@ -13,6 +13,11 @@ from xmppstream import connect_to_stream6, setup_stream_listener6
 
 from twisted.words.xish import domish
 
+if not check_ipv6_enabled():
+    print "Skipped test as IPv6 doesn't seem to be available"
+    # exiting 77 causes automake to consider the test to have been skipped
+    raise SystemExit(77)
+
 class TestReceiveFileIPv6(ReceiveFileTest):
     CONTACT_NAME = 'test-ft'
 
@@ -20,10 +25,6 @@ class TestReceiveFileIPv6(ReceiveFileTest):
     metadata = {}
 
     def announce_contact(self, name=CONTACT_NAME):
-        if not check_ipv6_enabled():
-            print "Skipped test as IPv6 doesn't seem to be available"
-            return True
-
         basic_txt = { "txtvers": "1", "status": "avail" }
 
         self.contact_name = '%s@%s' % (name, get_host_name())
