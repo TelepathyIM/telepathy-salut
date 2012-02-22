@@ -1,7 +1,9 @@
 telepathy-salut 0.7.2 (UNRELEASED)
 ==================================
 
-...
+Enhancements
+• fd.o#46345 - Salut can now be built on Windows/MinGW32, although only with a
+  no-op dummy backend
 
 telepathy-salut 0.7.1 (2012-02-20)
 ==================================
