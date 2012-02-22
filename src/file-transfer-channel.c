@@ -22,6 +22,7 @@
  */
 
 #include <glib/gstdio.h>
+#include <gio/gunixsocketaddress.h>
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1332,57 +1333,38 @@ get_local_unix_socket_path (SalutFileTransferChannel *self)
 static GIOChannel *
 get_unix_socket_channel (SalutFileTransferChannel *self, guint access_control)
 {
-  gint fd;
+  GError *error = NULL;
+  GSocket *sock;
+  GSocketAddress *addr;
+  GIOChannel *io_channel = NULL;
+  GValueArray *array;
   gchar *path;
-  size_t path_len;
-  struct sockaddr_un addr;
-  GIOChannel *io_channel;
-  GArray *array;
+  int fd;
 
-  /* FIXME: should use the socket type and access control chosen by
-   * the user. */
+  sock = g_socket_new (G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT, &error);
+  if (error)
+    return NULL;
+
   path = get_local_unix_socket_path (self);
-
-  array = g_array_sized_new (TRUE, FALSE, sizeof (gchar), strlen (path));
-  g_array_insert_vals (array, 0, path, strlen (path));
-
-  self->priv->socket_address = tp_g_value_slice_new (
-          DBUS_TYPE_G_UCHAR_ARRAY);
-  g_value_take_boxed (self->priv->socket_address, array);
-
-  DEBUG ("local socket %s", path);
-
-  fd = socket (PF_UNIX, SOCK_STREAM, 0);
-  if (fd < 0)
-    {
-      DEBUG("socket() failed");
-      return NULL;
-    }
-
-  memset (&addr, 0, sizeof (addr));
-  addr.sun_family = AF_UNIX;
-  path_len = strlen (path);
-  strncpy (addr.sun_path, path, path_len);
   g_unlink (path);
-
   /* save this so we can delete the actual socket later if it exists */
   self->priv->path = path;
 
-  if (bind (fd, (struct sockaddr*) &addr,
-        G_STRUCT_OFFSET (struct sockaddr_un, sun_path) + path_len) < 0)
-    {
-      DEBUG ("bind failed");
-      close (fd);
-      return NULL;
-    }
+  addr = g_unix_socket_address_new (path);
+  g_socket_bind (sock, addr, FALSE, &error);
+  g_object_unref (addr);
+  if (error)
+    return NULL;
 
-  if (listen (fd, 1) < 0)
-    {
-      DEBUG ("listen failed");
-      close (fd);
-      return NULL;
-    }
+  g_socket_listen (sock, &error);
+  if (error)
+    return NULL;
 
+  addr = g_socket_get_local_address (sock, &error);
+  self->priv->socket_address = tp_address_variant_from_g_socket_address (addr, NULL, NULL);
+  g_object_unref (addr);
+
+  fd = g_socket_get_fd (sock);
   io_channel = g_io_channel_unix_new (fd);
   g_io_channel_set_close_on_unref (io_channel, TRUE);
   return io_channel;
@@ -1442,6 +1424,7 @@ get_socket_channel (SalutFileTransferChannel *self, guint address_type, guint ac
 {
   switch (address_type)
     {
+      //FIXME: Is there an enum for these magic numbers?
       case 0:
         return get_unix_socket_channel (self, access_control);
       case 2:
