@@ -286,8 +286,8 @@ class ReceiveFileTest(FileTransferTest):
             cs.CHANNEL_TYPE_FILE_TRANSFER, 'URI', 'badger://snake')
         self.q.expect('dbus-error', method='Set', name=cs.INVALID_ARGUMENT)
 
-    def accept_file(self):
-        self.address = self.ft_channel.AcceptFile(cs.SOCKET_ADDRESS_TYPE_UNIX,
+    def accept_file(self, type = cs.SOCKET_ADDRESS_TYPE_UNIX):
+        self.address = self.ft_channel.AcceptFile(type,
                 cs.SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5, byte_arrays=True)
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
@@ -326,9 +326,9 @@ class ReceiveFileTest(FileTransferTest):
         assert state == cs.FT_STATE_COMPLETED
         assert reason == cs.FT_STATE_CHANGE_REASON_NONE
 
-    def receive_file(self):
+    def receive_file(self, type=socket.AF_UNIX):
         # Connect to Salut's socket
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s = socket.socket(type, socket.SOCK_STREAM)
         s.connect(self.address)
 
         self.httpd.handle_request()
@@ -466,8 +466,8 @@ class SendFileTest(FileTransferTest):
         else:
             assert ns.TP_FT_METADATA not in forms
 
-    def provide_file(self):
-        self.address = self.ft_channel.ProvideFile(cs.SOCKET_ADDRESS_TYPE_UNIX,
+    def provide_file(self, type = cs.SOCKET_ADDRESS_TYPE_UNIX):
+        self.address = self.ft_channel.ProvideFile(type,
                 cs.SOCKET_ACCESS_CONTROL_LOCALHOST, "", byte_arrays=True)
 
     def client_request_file(self):
@@ -482,8 +482,8 @@ class SendFileTest(FileTransferTest):
         # Did we received the right file?
         assert data == self.file.data
 
-    def send_file(self):
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    def send_file(self, socketType = socket.AF_UNIX):
+        s = socket.socket(socketType, socket.SOCK_STREAM)
         s.connect(self.address)
         s.send(self.file.data)
 

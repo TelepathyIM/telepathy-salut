@@ -17,6 +17,7 @@ if not check_ipv6_enabled():
     print "Skipped test as IPv6 doesn't seem to be available"
     # exiting 77 causes automake to consider the test to have been skipped
     raise SystemExit(77)
+import constants as cs
 
 class TestReceiveFileIPv6(ReceiveFileTest):
     CONTACT_NAME = 'test-ft'
@@ -43,6 +44,12 @@ class TestReceiveFileIPv6(ReceiveFileTest):
         e = self.q.expect('service-resolved', service = service,
                           protocol = avahi.PROTO_INET6)
         return str(e.pt), e.port
+
+    def accept_file(self):
+        ReceiveFileTest.accept_file(self, cs.SOCKET_ADDRESS_TYPE_IPV6);
+
+    def receive_file(self):
+        ReceiveFileTest.receive_file(self, socket.AF_INET6);
 
     def connect_to_salut(self):
         host, port = self._resolve_salut_presence()

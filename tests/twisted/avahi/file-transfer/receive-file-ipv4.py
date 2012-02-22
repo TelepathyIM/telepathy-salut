@@ -12,6 +12,8 @@ from xmppstream import connect_to_stream, setup_stream_listener
 
 from twisted.words.xish import domish
 
+import constants as cs
+
 class TestReceiveFileIPv4(ReceiveFileTest):
     CONTACT_NAME = 'test-ft'
 
@@ -38,6 +40,12 @@ class TestReceiveFileIPv4(ReceiveFileTest):
         e = self.q.expect('service-resolved', service = service,
                           protocol = avahi.PROTO_INET)
         return str(e.pt), e.port
+
+    def accept_file(self):
+        ReceiveFileTest.accept_file(self, cs.SOCKET_ADDRESS_TYPE_IPV4);
+
+    def receive_file(self):
+        ReceiveFileTest.receive_file(self, socket.AF_INET);
 
     def connect_to_salut(self):
         host, port = self._resolve_salut_presence()

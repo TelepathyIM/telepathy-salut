@@ -3,6 +3,7 @@ from saluttest import exec_test
 from avahitest import AvahiAnnouncer, get_host_name
 from xmppstream import setup_stream_listener6
 from file_transfer_helper import SendFileTest
+import socket
 
 import constants as cs
 
@@ -23,11 +24,14 @@ class SendFileTransferIPv6(SendFileTest):
                 basic_txt, proto=avahi.PROTO_INET6)
 
     def provide_file(self):
-        SendFileTest.provide_file(self)
+        SendFileTest.provide_file(self, cs.SOCKET_ADDRESS_TYPE_IPV6)
 
         # state is still Pending as remote didn't accept the transfer yet
         state = self.ft_props.Get(cs.CHANNEL_TYPE_FILE_TRANSFER, 'State')
         assert state == cs.FT_STATE_PENDING
+
+    def send_file(self):
+      SendFileTest.send_file(socket.AF_INET6);
 
     def client_request_file(self):
         SendFileTest.client_request_file(self)
