@@ -343,6 +343,7 @@ salut_file_transfer_channel_constructed (GObject *obj)
       base_conn, TP_HANDLE_TYPE_CONTACT);
   SalutConnection *conn = SALUT_CONNECTION (base_conn);
   GArray *unix_access;
+  GArray *ip_access;
   TpSocketAccessControl access_control;
 
   /* Parent constructed chain */
@@ -367,6 +368,16 @@ salut_file_transfer_channel_constructed (GObject *obj)
   g_array_append_val (unix_access, access_control);
   g_hash_table_insert (self->priv->available_socket_types,
       GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX), unix_access);
+
+  /* Socket_Address_Type_IPv4 */
+  ip_access = g_array_sized_new (FALSE, FALSE, sizeof (TpSocketAccessControl),
+      1);
+  g_array_append_val (ip_access, access_control);
+  g_hash_table_insert (self->priv->available_socket_types,
+      GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_IPV4), ip_access);
+
+  g_hash_table_insert (self->priv->available_socket_types,
+      GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_IPV6), ip_access);
 
   DEBUG ("New FT channel created: %s (contact: %s, initiator: %s, "
       "file: \"%s\", size: %" G_GUINT64_FORMAT ")",
