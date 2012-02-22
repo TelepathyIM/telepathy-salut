@@ -21,7 +21,9 @@
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef G_OS_UNIX
 #include <arpa/inet.h>
+#endif
 
 #include <string.h>
 

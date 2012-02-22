@@ -80,8 +80,6 @@ CORE_SOURCES =                                          \
     util.h                                        \
     util.c                                        \
     $(top_srcdir)/salut/util.h                          \
-    debug.c                                             \
-    debug.h                                             \
     protocol.c                                          \
     $(top_srcdir)/salut/protocol.h                      \
     plugin-loader.c                                     \
@@ -132,6 +130,10 @@ libsalut_plugins_la_LDFLAGS =                           \
     -no-undefined                                       \
     -avoid-version
 
+libsalut_plugins_la_LIBADD =                            \
+    @TELEPATHY_GLIB_LIBS@                               \
+    @WOCKY_LIBS@
+
 libsalut_plugins_la_SOURCES =                           \
     $(top_srcdir)/salut/plugin.h                        \
     plugin.c                                            \
@@ -139,13 +141,19 @@ libsalut_plugins_la_SOURCES =                           \
     plugin-connection.c                                 \
     $(top_srcdir)/salut/capability-set.h                \
     capability-set.c                                    \
+    debug.h                                             \
+    debug.c                                             \
     $(top_srcdir)/salut/sidecar.h                       \
     sidecar.c
 
 libsalut_convenience_la_LIBADD = libsalut-plugins.la
 
 libsalut_convenience_la_SOURCES = $(CORE_SOURCES) $(BUILT_SOURCES) \
-    $(SHA1_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES)
+    $(SHA1_SOURCES) $(DUMMY_BACKEND_SOURCES)
+
+if USE_BACKEND_AVAHI
+  libsalut_convenience_la_SOURCES += $(AVAHI_BACKEND_SOURCES)
+endif
 
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
@@ -200,6 +208,10 @@ AM_CFLAGS = \
 	@UUID_CFLAGS@ \
 	@LIBSOUP_CFLAGS@ \
 	$(NULL)
+
+if OS_WINDOWS
+  AM_CFLAGS += -D_WIN32_WINNT=0x0501
+endif
 
 AM_LDFLAGS = \
 	$(GCOV_LIBS) \

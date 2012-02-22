@@ -27,9 +27,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#ifdef G_OS_WIN32
+#include <windows.h>
+#undef interface
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif
 
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
@@ -1563,6 +1569,7 @@ file_transfer_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
+#ifdef G_OS_UNIX
 static gchar *
 get_local_unix_socket_path (SalutFileTransferChannel *self)
 {
@@ -1692,10 +1699,14 @@ accept_local_socket_connection (GIOChannel *source,
 
   return FALSE;
 }
+#endif
 
 static gboolean
 setup_local_socket (SalutFileTransferChannel *self)
 {
+#ifdef G_OS_WIN32
+  return FALSE;
+#else
   GIOChannel *io_channel;
 
   io_channel = get_socket_channel (self);
@@ -1709,6 +1720,7 @@ setup_local_socket (SalutFileTransferChannel *self)
   g_io_channel_unref (io_channel);
 
   return TRUE;
+#endif
 }
 
 static WockyDataForm *

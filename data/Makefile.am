@@ -16,7 +16,7 @@ org.freedesktop.Telepathy.ConnectionManager.salut.service: salut.service.in \
 CLEANFILES = $(service_DATA) $(manager_DATA)
 
 $(manager_DATA): always-build
-	$(MAKE) -C ../src write-mgr-file
-	$(AM_V_GEN)../src/write-mgr-file > $@
+	$(MAKE) -C ../src write-mgr-file$(EXEEXT)
+	$(AM_V_GEN)../src/write-mgr-file$(EXEEXT) > $@
 
 .PHONY: always-build

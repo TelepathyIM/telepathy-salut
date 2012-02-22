@@ -19,6 +19,8 @@
 
 #include "connection.h"
 
+#include <config.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,7 +45,9 @@
 #include <salut/caps-channel-manager.h>
 #include <salut/plugin-connection.h>
 
+#ifdef USE_BACKEND_AVAHI
 #include "avahi-discovery-client.h"
+#endif
 #include "capabilities.h"
 #include "caps-hash.h"
 #include "connection-contact-info.h"

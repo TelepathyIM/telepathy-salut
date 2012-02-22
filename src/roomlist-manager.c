@@ -21,7 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef G_OS_UNIX
 #include <arpa/inet.h>
+#endif
 
 #include "roomlist-manager.h"
 

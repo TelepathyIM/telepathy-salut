@@ -22,6 +22,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include <glib.h>
+
+#ifdef G_OS_WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <winbase.h>
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -29,8 +38,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <netdb.h>
+#endif
 
-#include <glib.h>
 #include <glib/gstdio.h>
 #include <telepathy-glib/gtypes.h>
 
@@ -99,8 +108,10 @@ static const gchar * const salut_tube_stream_channel_allowed_properties[] = {
  * not guaranteed to be big enough for AF_UNIX addresses */
 typedef union
 {
+#ifdef GIBBER_TYPE_UNIX_TRANSPORT
   /* we'd call this unix, but gcc predefines that. Thanks, gcc */
   struct sockaddr_un un;
+#endif
   struct sockaddr_in ipv4;
   struct sockaddr_in6 ipv6;
 } SockAddr;
@@ -767,6 +778,7 @@ new_connection_to_socket (SalutTubeStream *self,
 
   g_assert (priv->initiator == priv->self_handle);
 
+#ifdef GIBBER_TYPE_UNIX_TRANSPORT
   if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_UNIX)
     {
       GArray *array;
@@ -777,7 +789,9 @@ new_connection_to_socket (SalutTubeStream *self,
       gibber_unix_transport_connect (GIBBER_UNIX_TRANSPORT (transport),
           array->data, NULL);
     }
-  else if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 ||
+  else
+#endif
+  if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 ||
       priv->address_type == TP_SOCKET_ADDRESS_TYPE_IPV6)
     {
       gchar *ip;
@@ -2010,6 +2024,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
     }
 }
 
+#ifdef GIBBER_TYPE_UNIX_TRANSPORT
 static gboolean
 check_unix_params (TpSocketAddressType address_type,
                    const GValue *address,
@@ -2087,6 +2102,7 @@ check_unix_params (TpSocketAddressType address_type,
 
   return TRUE;
 }
+#endif
 
 static gboolean
 check_ip_params (TpSocketAddressType address_type,
@@ -2171,10 +2187,11 @@ salut_tube_stream_check_params (TpSocketAddressType address_type,
 {
   switch (address_type)
     {
+#ifdef GIBBER_TYPE_UNIX_TRANSPORT
       case TP_SOCKET_ADDRESS_TYPE_UNIX:
         return check_unix_params (address_type, address, access_control,
             access_control_param, error);
-
+#endif
       case TP_SOCKET_ADDRESS_TYPE_IPV4:
       case TP_SOCKET_ADDRESS_TYPE_IPV6:
         return check_ip_params (address_type, address, access_control,

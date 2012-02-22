@@ -19,6 +19,8 @@
 
 #include "protocol.h"
 
+#include <config.h>
+
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-protocol.h>
 #include <telepathy-glib/base-connection-manager.h>
@@ -31,7 +33,12 @@
 #include "muc-manager.h"
 #include "roomlist-manager.h"
 #include "tubes-manager.h"
+
+#ifdef USE_BACKEND_AVAHI
 #include "avahi-discovery-client.h"
+#elif defined (USE_BACKEND_DUMMY)
+#include "dummy-discovery-client.h"
+#endif
 
 /* there is no appropriate vCard field for this protocol */
 #define VCARD_FIELD_NAME ""
@@ -229,7 +236,11 @@ salut_protocol_set_property (GObject *object,
           GType type = g_value_get_gtype (value);
 
           if (type == G_TYPE_NONE)
+#ifdef USE_BACKEND_AVAHI
             type = SALUT_TYPE_AVAHI_DISCOVERY_CLIENT;
+#elif defined (USE_BACKEND_DUMMY)
+            type = SALUT_TYPE_DUMMY_DISCOVERY_CLIENT;
+#endif
 
           self->priv->backend_type = type;
         }

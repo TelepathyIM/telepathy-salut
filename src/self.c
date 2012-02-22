@@ -22,9 +22,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
+#ifdef G_OS_UNIX
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#endif
+
 #include <errno.h>
 
 #include "self.h"
