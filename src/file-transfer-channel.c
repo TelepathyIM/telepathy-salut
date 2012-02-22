@@ -109,9 +109,13 @@ struct _SalutFileTransferChannelPrivate {
   GibberFileTransfer *ft;
   GTimeVal last_transferred_bytes_emitted;
   guint progress_timer;
+<<<<<<< HEAD
   GValue *socket_address;
+=======
+  GSocketAddress *socket_address;
+  TpHandle initiator;
+>>>>>>> Generalize salut_file_transfer_channel_finalize to handle any kind of socket cleanup
   gboolean remote_accepted;
-  gchar *path;
 
   /* properties */
   TpFileTransferState state;
@@ -749,12 +753,20 @@ salut_file_transfer_channel_dispose (GObject *object)
 static void
 salut_file_transfer_channel_finalize (GObject *object)
 {
+  GSocketAddress *addr;
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
 
   /* free any data held directly by the object here */
   g_free (self->priv->filename);
-  if (self->priv->socket_address != NULL)
-    tp_g_value_slice_free (self->priv->socket_address);
+  if (self->priv->socket_address != NULL) {
+    if (g_socket_address_get_family (self->priv->socket_address) == G_SOCKET_FAMILY_UNIX)
+      {
+        const gchar *path;
+        path = g_unix_socket_address_get_path ((GUnixSocketAddress*)self->priv->socket_address);
+        g_unlink (path);
+      }
+    g_object_unref (self->priv->socket_address);
+  }
   g_free (self->priv->content_type);
   g_free (self->priv->content_hash);
   g_free (self->priv->description);
@@ -763,12 +775,6 @@ salut_file_transfer_channel_finalize (GObject *object)
   g_free (self->priv->service_name);
   if (self->priv->metadata != NULL)
     g_hash_table_unref (self->priv->metadata);
-
-  if (self->priv->path != NULL)
-    {
-      g_unlink (self->priv->path);
-      g_free (self->priv->path);
-    }
 
   if (G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize)
     G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
@@ -1210,8 +1216,11 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
       TP_FILE_TRANSFER_STATE_ACCEPTED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
+  GValue *addr;
+  addr = tp_address_variant_from_g_socket_address (self->priv->socket_address, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_accept_file (context,
-      self->priv->socket_address);
+      addr);
+  tp_g_value_slice_free(addr);
 
   self->priv->initial_offset = 0;
 
@@ -1284,8 +1293,11 @@ salut_file_transfer_channel_provide_file (
           TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
     }
 
+  GValue *addr;
+  addr = tp_address_variant_from_g_socket_address (self->priv->socket_address, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_provide_file (context,
-      self->priv->socket_address);
+      addr);
+  tp_g_value_slice_free (addr);
 }
 
 static void
@@ -1347,8 +1359,6 @@ get_unix_socket_channel (SalutFileTransferChannel *self, guint access_control)
 
   path = get_local_unix_socket_path (self);
   g_unlink (path);
-  /* save this so we can delete the actual socket later if it exists */
-  self->priv->path = path;
 
   addr = g_unix_socket_address_new (path);
   g_socket_bind (sock, addr, FALSE, &error);
@@ -1360,9 +1370,7 @@ get_unix_socket_channel (SalutFileTransferChannel *self, guint access_control)
   if (error)
     return NULL;
 
-  addr = g_socket_get_local_address (sock, &error);
-  self->priv->socket_address = tp_address_variant_from_g_socket_address (addr, NULL, NULL);
-  g_object_unref (addr);
+  self->priv->socket_address = g_socket_get_local_address (sock, &error);;
 
   fd = g_socket_get_fd (sock);
   io_channel = g_io_channel_unix_new (fd);
@@ -1406,9 +1414,7 @@ get_tcp_socket_channel (SalutFileTransferChannel *self, GSocketFamily family, gu
   if (error)
     return NULL;
 
-  addr = g_socket_get_local_address (sock, &error);
-  self->priv->socket_address = tp_address_variant_from_g_socket_address (addr, NULL, NULL);
-  g_object_unref (addr);
+  self->priv->socket_address = g_socket_get_local_address (sock, &error);
 
   fd = g_socket_get_fd (sock);
   io_channel = g_io_channel_unix_new (fd);
