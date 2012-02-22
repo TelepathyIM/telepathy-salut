@@ -109,12 +109,7 @@ struct _SalutFileTransferChannelPrivate {
   GibberFileTransfer *ft;
   GTimeVal last_transferred_bytes_emitted;
   guint progress_timer;
-<<<<<<< HEAD
-  GValue *socket_address;
-=======
   GSocketAddress *socket_address;
-  TpHandle initiator;
->>>>>>> Generalize salut_file_transfer_channel_finalize to handle any kind of socket cleanup
   gboolean remote_accepted;
 
   /* properties */
@@ -1326,9 +1321,10 @@ file_transfer_iface_init (gpointer g_iface,
 }
 
 #ifdef G_OS_UNIX
-static gchar *
-get_local_unix_socket_path (SalutFileTransferChannel *self)
+static GSocketAddress *
+get_local_unix_socket_address (SalutFileTransferChannel *self)
 {
+  GUnixSocketAddress *addr = NULL;
   gchar *path = NULL;
   gint32 random_int;
   gchar *random_str;
@@ -1347,76 +1343,53 @@ get_local_unix_socket_path (SalutFileTransferChannel *self)
       g_free (path);
     }
 
-  return path;
-}
-
-/*
- * Return a GIOChannel for the local unix socket path.
- */
-static GIOChannel *
-get_unix_socket_channel (SalutFileTransferChannel *self, guint access_control)
-{
-  GError *error = NULL;
-  GSocket *sock;
-  GSocketAddress *addr;
-  GIOChannel *io_channel = NULL;
-  GValueArray *array;
-  gchar *path;
-  int fd;
-
-  sock = g_socket_new (G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT, &error);
-  if (error)
-    return NULL;
-
-  path = get_local_unix_socket_path (self);
-  g_unlink (path);
-
   addr = g_unix_socket_address_new (path);
-  g_socket_bind (sock, addr, FALSE, &error);
-  g_object_unref (addr);
-  if (error)
-    return NULL;
+  g_free (path);
 
-  g_socket_listen (sock, &error);
-  if (error)
-    return NULL;
+  return (GSocketAddress*)addr;
+}
 
-  self->priv->socket_address = g_socket_get_local_address (sock, &error);;
-
-  fd = g_socket_get_fd (sock);
-  io_channel = g_io_channel_unix_new (fd);
-  g_io_channel_set_close_on_unref (io_channel, TRUE);
-  return io_channel;
+static GSocketAddress *
+get_local_tcp_socket_address (SalutFileTransferChannel *self, GSocketFamily family)
+{
+  GInetAddress *inetAddr;
+  GSocketAddress *addr;
+  inetAddr = g_inet_address_new_loopback (family);
+  addr = g_inet_socket_address_new (inetAddr, 0);
+  g_object_unref (inetAddr);
+  return addr;
 }
 
 /*
- * Return a GIOChannel for a TCP socket bound to 127.0.0.0:<random-port>
+ * Return a GIOChannel for a local socket
  */
 static GIOChannel *
-get_tcp_socket_channel (SalutFileTransferChannel *self, GSocketFamily family, guint access_control)
+get_socket_channel (SalutFileTransferChannel *self, guint address_type, guint access_control)
 {
-  GError *error = NULL;
   GSocket *sock;
   GSocketAddress *addr;
-  GInetAddress *inetAddr;
   GIOChannel *io_channel = NULL;
-  GValueArray *array;
-  gchar *addrString;
+  GError *error = NULL;
   int fd;
-  GType addrType;
-  GValue addrValue = G_VALUE_INIT;
-  GValue portValue = G_VALUE_INIT;
 
-  DEBUG ("TCP Socket!");
+  switch (address_type)
+    {
+      //FIXME: Is there an enum for these magic numbers?
+      case 0:
+        sock = g_socket_new (G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT, &error);
+        addr = get_local_unix_socket_address (self);
+        break;
+      case 2:
+        sock = g_socket_new (G_SOCKET_FAMILY_IPV4, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
+        addr = get_local_tcp_socket_address (self, G_SOCKET_FAMILY_IPV4);
+        break;
+      case 3:
+        sock = g_socket_new (G_SOCKET_FAMILY_IPV6, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
+        addr = get_local_tcp_socket_address (self, G_SOCKET_FAMILY_IPV6);
+        break;
+    }
 
-  sock = g_socket_new (family, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
-  if (error)
-    return NULL;
-
-  inetAddr = g_inet_address_new_loopback (G_SOCKET_FAMILY_IPV4);
-  addr = g_inet_socket_address_new (inetAddr, 0);
   g_socket_bind (sock, addr, FALSE, &error);
-  g_object_unref (inetAddr);
   g_object_unref (addr);
   if (error)
     return NULL;
@@ -1431,25 +1404,6 @@ get_tcp_socket_channel (SalutFileTransferChannel *self, GSocketFamily family, gu
   io_channel = g_io_channel_unix_new (fd);
   g_io_channel_set_close_on_unref (io_channel, TRUE);
   return io_channel;
-}
-
-/*
- * Return a GIOChannel for a local socket
- */
-static GIOChannel *
-get_socket_channel (SalutFileTransferChannel *self, guint address_type, guint access_control)
-{
-  switch (address_type)
-    {
-      //FIXME: Is there an enum for these magic numbers?
-      case 0:
-        return get_unix_socket_channel (self, access_control);
-      case 2:
-        return get_tcp_socket_channel (self, G_SOCKET_FAMILY_IPV4, access_control);
-      case 3:
-        return get_tcp_socket_channel (self, G_SOCKET_FAMILY_IPV6, access_control);
-    }
-  return NULL;
 }
 
 /*
