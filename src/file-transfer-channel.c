@@ -877,7 +877,8 @@ remote_accepted_cb (GibberFileTransfer *ft,
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 }
 
-static gboolean setup_local_socket (SalutFileTransferChannel *self, guint address_type, guint access_control);
+static gboolean setup_local_socket (SalutFileTransferChannel *self,
+    TpSocketAddressType address_type, guint access_control);
 static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count,
     SalutFileTransferChannel *self);
 
@@ -1175,7 +1176,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
  */
 static void
 salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
-                                         guint address_type,
+                                         TpSocketAddressType address_type,
                                          guint access_control,
                                          const GValue *access_control_param,
                                          guint64 offset,
@@ -1184,6 +1185,8 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GError *error = NULL;
   GibberFileTransfer *ft;
+  GValue *addr;
+  GSocketAddress *socket_addr;
 
   ft = self->priv->ft;
   if (ft == NULL)
@@ -1225,8 +1228,6 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
       TP_FILE_TRANSFER_STATE_ACCEPTED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
-  GValue *addr;
-  GSocketAddress *socket_addr;
   socket_addr = g_socket_get_local_address (self->priv->socket, NULL);
   addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_accept_file (context,
@@ -1260,6 +1261,8 @@ salut_file_transfer_channel_provide_file (
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   TpBaseChannel *base = TP_BASE_CHANNEL (self);
   GError *error = NULL;
+  GValue *addr;
+  GSocketAddress *socket_addr;
 
   if (!tp_base_channel_is_requested (base))
     {
@@ -1305,8 +1308,6 @@ salut_file_transfer_channel_provide_file (
           TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
     }
 
-  GValue *addr;
-  GSocketAddress *socket_addr;
   socket_addr = g_socket_get_local_address (self->priv->socket, &error);
   addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_provide_file (context,
@@ -1333,7 +1334,7 @@ file_transfer_iface_init (gpointer g_iface,
 static GSocketAddress *
 get_local_unix_socket_address (SalutFileTransferChannel *self)
 {
-  GUnixSocketAddress *addr = NULL;
+  GSocketAddress *addr = NULL;
   gchar *path = NULL;
   gint32 random_int;
   gchar *random_str;
@@ -1355,17 +1356,17 @@ get_local_unix_socket_address (SalutFileTransferChannel *self)
   addr = g_unix_socket_address_new (path);
   g_free (path);
 
-  return (GSocketAddress*)addr;
+  return addr;
 }
 
 static GSocketAddress *
 get_local_tcp_socket_address (SalutFileTransferChannel *self, GSocketFamily family)
 {
-  GInetAddress *inetAddr;
+  GInetAddress *inet_address;
   GSocketAddress *addr;
-  inetAddr = g_inet_address_new_loopback (family);
-  addr = g_inet_socket_address_new (inetAddr, 0);
-  g_object_unref (inetAddr);
+  inet_address = g_inet_address_new_loopback (family);
+  addr = g_inet_socket_address_new (inet_address, 0);
+  g_object_unref (inet_address);
   return addr;
 }
 
@@ -1373,7 +1374,8 @@ get_local_tcp_socket_address (SalutFileTransferChannel *self, GSocketFamily fami
  * Return a GIOChannel for a local socket
  */
 static GIOChannel *
-get_socket_channel (SalutFileTransferChannel *self, guint address_type, guint access_control)
+get_socket_channel (SalutFileTransferChannel *self,
+    TpSocketAddressType address_type, guint access_control)
 {
   GSocket *sock;
   GSocketAddress *addr;
@@ -1383,29 +1385,49 @@ get_socket_channel (SalutFileTransferChannel *self, guint address_type, guint ac
 
   switch (address_type)
     {
-      //FIXME: Is there an enum for these magic numbers?
-      case 0:
-        sock = g_socket_new (G_SOCKET_FAMILY_UNIX, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_DEFAULT, &error);
+      case TP_SOCKET_ADDRESS_TYPE_UNIX:
+        sock = g_socket_new (G_SOCKET_FAMILY_UNIX,
+                             G_SOCKET_TYPE_STREAM,
+                             G_SOCKET_PROTOCOL_DEFAULT,
+                             &error);
         addr = get_local_unix_socket_address (self);
         break;
-      case 2:
+      case TP_SOCKET_ADDRESS_TYPE_IPV4:
         sock = g_socket_new (G_SOCKET_FAMILY_IPV4, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
         addr = get_local_tcp_socket_address (self, G_SOCKET_FAMILY_IPV4);
         break;
-      case 3:
+      case TP_SOCKET_ADDRESS_TYPE_IPV6:
         sock = g_socket_new (G_SOCKET_FAMILY_IPV6, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
         addr = get_local_tcp_socket_address (self, G_SOCKET_FAMILY_IPV6);
         break;
+      default:
+        return NULL;
     }
 
-  g_socket_bind (sock, addr, FALSE, &error);
-  g_object_unref (addr);
-  if (error)
-    return NULL;
+  if (sock == NULL)
+    {
+      DEBUG ("Socket creation error: %s", error->message);
+      g_error_free(error);
+      return NULL;
+    }
 
-  g_socket_listen (sock, &error);
-  if (error)
+  if (!g_socket_bind (sock, addr, FALSE, &error))
+    {
+      DEBUG ("Bind error: %s", error->message);
+      g_error_free(error);
+      g_object_unref (addr);
+      g_object_unref (sock);
+      return NULL;
+    }
+  g_object_unref (addr);
+
+  if (!g_socket_listen (sock, &error))
+  {
+    DEBUG ("Listen error: %s", error->message);
+    g_error_free (error);
+    g_object_unref (sock);
     return NULL;
+  }
 
   self->priv->socket = sock;
 
@@ -1460,7 +1482,9 @@ accept_local_socket_connection (GIOChannel *source,
 #endif
 
 static gboolean
-setup_local_socket (SalutFileTransferChannel *self, guint address_type, guint access_control)
+setup_local_socket (SalutFileTransferChannel *self,
+    TpSocketAddressType address_type,
+    guint access_control)
 {
 #ifdef G_OS_WIN32
   return FALSE;
