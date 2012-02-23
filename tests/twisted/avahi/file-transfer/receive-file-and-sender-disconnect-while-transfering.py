@@ -15,7 +15,7 @@ class ReceiveFileAndSenderDisconnectWhileTransfering(ReceiveFileTest):
 
     def receive_file(self):
         # Connect to Salut's socket
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s = socket.socket(self._get_socket_address_family(), socket.SOCK_STREAM)
         s.connect(self.address)
 
         self.httpd.handle_request()

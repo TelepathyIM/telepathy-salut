@@ -770,7 +770,7 @@ salut_file_transfer_channel_finalize (GObject *object)
       if (g_socket_address_get_family (addr) == G_SOCKET_FAMILY_UNIX)
         {
           const gchar *path;
-          path = g_unix_socket_address_get_path ((GUnixSocketAddress*)addr);
+          path = g_unix_socket_address_get_path ((GUnixSocketAddress *) addr);
           g_unlink (path);
         }
       g_object_unref (addr);
@@ -1232,7 +1232,7 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
   addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_accept_file (context,
       addr);
-  tp_g_value_slice_free(addr);
+  tp_g_value_slice_free (addr);
   g_object_unref (socket_addr);
 
   self->priv->initial_offset = 0;
@@ -1312,7 +1312,7 @@ salut_file_transfer_channel_provide_file (
   addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_provide_file (context,
       addr);
-  tp_g_value_slice_free(addr);
+  tp_g_value_slice_free (addr);
   g_object_unref (socket_addr);
 }
 
@@ -1407,14 +1407,14 @@ get_socket_channel (SalutFileTransferChannel *self,
   if (sock == NULL)
     {
       DEBUG ("Socket creation error: %s", error->message);
-      g_error_free(error);
+      g_error_free (error);
       return NULL;
     }
 
   if (!g_socket_bind (sock, addr, FALSE, &error))
     {
       DEBUG ("Bind error: %s", error->message);
-      g_error_free(error);
+      g_error_free (error);
       g_object_unref (addr);
       g_object_unref (sock);
       return NULL;
