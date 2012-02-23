@@ -130,6 +130,10 @@ libsalut_plugins_la_LDFLAGS =                           \
     -no-undefined                                       \
     -avoid-version
 
+libsalut_plugins_android_la_LDFLAGS =                   \
+    -shared                                             \
+    -avoid-version
+    
 libsalut_plugins_la_LIBADD =                            \
     @TELEPATHY_GLIB_LIBS@                               \
     @WOCKY_LIBS@
@@ -273,12 +277,19 @@ enumtypes.c: $(enumtype_sources) Makefile.in
 	$(enumtype_sources) > $@
 
 Android.mk: Makefile.am $(BUILT_SOURCES)
-	androgenizer -:PROJECT telepathy-salut -:STATIC salut-convenience \
-	 -:TAGS eng debug \
+	androgenizer -:PROJECT telepathy-salut \
 	 -:REL_TOP $(top_srcdir) -:ABS_TOP $(abs_top_srcdir) \
-	 -:SOURCES $(libsalut_convenience_la_SOURCES) \
+	 -:SHARED salut-plugins -:TAGS eng debug \
+	 -:SOURCES $(libsalut_plugins_la_SOURCES)  \
 	 -:CFLAGS $(DEFS) $(CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(AM_CFLAGS) \
+	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) \
+	 -:LDFLAGS $(libsalut_plugins_android_la_LDFLAGS) $(AM_LDFLAGS) \
+	 $(ALL_LIBS) \
+	 -:STATIC salut-convenience -:TAGS eng debug \
+	 -:SOURCES $(libsalut_convenience_la_SOURCES) \
+	 -:CFLAGS $(DEFS) $(CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	 $(AM_CFLAGS) \
 	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) \
 	 -:SHARED telepathy-salut \
 	 -:TAGS eng debug \
@@ -288,5 +299,6 @@ Android.mk: Makefile.am $(BUILT_SOURCES)
 	  $(AM_CFLAGS) \
 	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) -DBUILD_AS_ANDROID_SERVICE \
 	 -:LDFLAGS $(telepathy_salut_android_libs) $(AM_LDFLAGS) \
+	 $(lib_LTLIBRARIES) \
 	 -:LIBFILTER_STATIC salut-convenience \
 	> $@
