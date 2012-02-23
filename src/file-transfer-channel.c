@@ -109,7 +109,7 @@ struct _SalutFileTransferChannelPrivate {
   GibberFileTransfer *ft;
   GTimeVal last_transferred_bytes_emitted;
   guint progress_timer;
-  GSocketAddress *socket_address;
+  GSocket *socket;
   gboolean remote_accepted;
 
   /* properties */
@@ -764,15 +764,18 @@ salut_file_transfer_channel_finalize (GObject *object)
 
   /* free any data held directly by the object here */
   g_free (self->priv->filename);
-  if (self->priv->socket_address != NULL) {
-    if (g_socket_address_get_family (self->priv->socket_address) == G_SOCKET_FAMILY_UNIX)
-      {
-        const gchar *path;
-        path = g_unix_socket_address_get_path ((GUnixSocketAddress*)self->priv->socket_address);
-        g_unlink (path);
-      }
-    g_object_unref (self->priv->socket_address);
-  }
+  if (self->priv->socket != NULL)
+    {
+      addr = g_socket_get_local_address (self->priv->socket, NULL);
+      if (g_socket_address_get_family (addr) == G_SOCKET_FAMILY_UNIX)
+        {
+          const gchar *path;
+          path = g_unix_socket_address_get_path ((GUnixSocketAddress*)addr);
+          g_unlink (path);
+        }
+      g_object_unref (addr);
+      g_object_unref (self->priv->socket);
+    }
   g_free (self->priv->content_type);
   g_free (self->priv->content_hash);
   g_free (self->priv->description);
@@ -851,7 +854,7 @@ remote_accepted_cb (GibberFileTransfer *ft,
 {
   self->priv->remote_accepted = TRUE;
 
-  if (self->priv->socket_address != NULL)
+  if (self->priv->socket != NULL)
     {
       /* ProvideFile has already been called. Channel is Open */
       tp_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
@@ -1223,10 +1226,13 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
   GValue *addr;
-  addr = tp_address_variant_from_g_socket_address (self->priv->socket_address, NULL, NULL);
+  GSocketAddress *socket_addr;
+  socket_addr = g_socket_get_local_address (self->priv->socket, NULL);
+  addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_accept_file (context,
       addr);
   tp_g_value_slice_free(addr);
+  g_object_unref (socket_addr);
 
   self->priv->initial_offset = 0;
 
@@ -1263,7 +1269,7 @@ salut_file_transfer_channel_provide_file (
       return;
     }
 
-  if (self->priv->socket_address != NULL)
+  if (self->priv->socket != NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "ProvideFile has already been called for this channel");
@@ -1300,10 +1306,13 @@ salut_file_transfer_channel_provide_file (
     }
 
   GValue *addr;
-  addr = tp_address_variant_from_g_socket_address (self->priv->socket_address, NULL, NULL);
+  GSocketAddress *socket_addr;
+  socket_addr = g_socket_get_local_address (self->priv->socket, &error);
+  addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_provide_file (context,
       addr);
-  tp_g_value_slice_free (addr);
+  tp_g_value_slice_free(addr);
+  g_object_unref (socket_addr);
 }
 
 static void
@@ -1398,11 +1407,10 @@ get_socket_channel (SalutFileTransferChannel *self, guint address_type, guint ac
   if (error)
     return NULL;
 
-  self->priv->socket_address = g_socket_get_local_address (sock, &error);
+  self->priv->socket = sock;
 
   fd = g_socket_get_fd (sock);
   io_channel = g_io_channel_unix_new (fd);
-  g_io_channel_set_close_on_unref (io_channel, TRUE);
   return io_channel;
 }
 
