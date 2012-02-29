@@ -271,7 +271,9 @@ salut_muc_channel_constructed (GObject *obj)
       TP_DELIVERY_REPORTING_SUPPORT_FLAG_RECEIVE_SUCCESSES,
       supported_content_types);
 
-  g_object_get (base_conn, "self", &(priv->self), NULL);
+  g_object_get (base_conn,
+      "self", &(priv->self),
+      NULL);
   g_object_unref (priv->self);
   g_assert (priv->self != NULL);
 
@@ -443,8 +445,9 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
   WockyPorter *porter = conn->porter;
   SendInviteData *data;
 
-  g_object_get (G_OBJECT (conn), "contact-manager",
-      &contact_manager, NULL);
+  g_object_get (G_OBJECT (conn),
+      "contact-manager", &contact_manager,
+      NULL);
   g_assert (contact_manager != NULL);
 
   contact = salut_contact_manager_get_contact (contact_manager, handle);
@@ -822,8 +825,9 @@ salut_muc_channel_add_members (SalutMucChannel *self,
   empty = tp_intset_new ();
   changes = tp_intset_new ();
 
-  g_object_get (G_OBJECT (base_conn), "contact-manager",
-      &contact_mgr, NULL);
+  g_object_get (G_OBJECT (base_conn),
+      "contact-manager", &contact_mgr,
+      NULL);
   g_assert (contact_mgr != NULL);
 
   for (i = 0; i < members->len; i++)
