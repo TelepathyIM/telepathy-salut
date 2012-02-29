@@ -59,17 +59,10 @@
 #include <telepathy-glib/gtypes.h>
 
 static void
-channel_iface_init (gpointer g_iface, gpointer iface_data);
-static void
 file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel,
-    G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
-                           tp_dbus_properties_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
+    TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER,
                            file_transfer_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA,
@@ -85,23 +78,7 @@ static const char *salut_file_transfer_channel_interfaces[] = { NULL };
 /* properties */
 enum
 {
-  PROP_OBJECT_PATH = 1,
-
-   /* org.freedesktop.Telepathy.Channel D-Bus properties */
-  PROP_CHANNEL_TYPE,
-  PROP_INTERFACES,
-  PROP_HANDLE,
-  PROP_TARGET_ID,
-  PROP_HANDLE_TYPE,
-  PROP_REQUESTED,
-  PROP_INITIATOR_HANDLE,
-  PROP_INITIATOR_ID,
-
-  PROP_CHANNEL_DESTROYED,
-  PROP_CHANNEL_PROPERTIES,
-
-  /* org.freedesktop.Telepathy.Channel.Type.FileTransfer D-Bus properties */
-  PROP_STATE,
+  PROP_STATE = 1,
   PROP_CONTENT_TYPE,
   PROP_FILENAME,
   PROP_SIZE,
@@ -126,16 +103,11 @@ enum
 /* private structure */
 struct _SalutFileTransferChannelPrivate {
   gboolean dispose_has_run;
-  gboolean closed;
-  gchar *object_path;
-  TpHandle handle;
   SalutContact *contact;
-  SalutConnection *connection;
   GibberFileTransfer *ft;
   GTimeVal last_transferred_bytes_emitted;
   guint progress_timer;
   GValue *socket_address;
-  TpHandle initiator;
   gboolean remote_accepted;
   gchar *path;
 
@@ -156,15 +128,26 @@ struct _SalutFileTransferChannelPrivate {
   GHashTable *metadata;
 };
 
-static void
-salut_file_transfer_channel_do_close (SalutFileTransferChannel *self)
-{
-  if (self->priv->closed)
-    return;
+static void salut_file_transfer_channel_set_state (
+    TpSvcChannelTypeFileTransfer *iface, TpFileTransferState state,
+    TpFileTransferStateChangeReason reason);
 
-  DEBUG ("Emitting closed signal for %s", self->priv->object_path);
-  tp_svc_channel_emit_closed (self);
-  self->priv->closed = TRUE;
+static void
+salut_file_transfer_channel_close (TpBaseChannel *base)
+{
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (base);
+
+  if (self->priv->state != TP_FILE_TRANSFER_STATE_COMPLETED &&
+      self->priv->state != TP_FILE_TRANSFER_STATE_CANCELLED)
+    {
+      gibber_file_transfer_cancel (self->priv->ft, 406);
+      salut_file_transfer_channel_set_state (
+          TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
+          TP_FILE_TRANSFER_STATE_CANCELLED,
+          TP_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
+    }
+
+  tp_base_channel_destroyed (base);
 }
 
 static void
@@ -174,13 +157,8 @@ salut_file_transfer_channel_init (SalutFileTransferChannel *obj)
       SALUT_TYPE_FILE_TRANSFER_CHANNEL, SalutFileTransferChannelPrivate);
 
   /* allocate any data required by the object here */
-  obj->priv->object_path = NULL;
   obj->priv->contact = NULL;
 }
-
-static void salut_file_transfer_channel_set_state (
-    TpSvcChannelTypeFileTransfer *iface, TpFileTransferState state,
-    TpFileTransferStateChangeReason reason);
 
 static void
 contact_lost_cb (SalutContact *contact,
@@ -209,57 +187,11 @@ salut_file_transfer_channel_get_property (GObject *object,
                                           GParamSpec *pspec)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
-  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->connection;
 
   switch (property_id)
     {
-      case PROP_OBJECT_PATH:
-        g_value_set_string (value, self->priv->object_path);
-        break;
-      case PROP_CHANNEL_TYPE:
-        g_value_set_static_string (value,
-            TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
-        break;
-      case PROP_HANDLE_TYPE:
-        g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-        break;
-      case PROP_TARGET_ID:
-        {
-           TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
-             TP_HANDLE_TYPE_CONTACT);
-
-           g_value_set_string (value, tp_handle_inspect (repo,
-                 self->priv->handle));
-        }
-        break;
-      case PROP_HANDLE:
-        g_value_set_uint (value, self->priv->handle);
-        break;
-      case PROP_REQUESTED:
-        g_value_set_boolean (value, (self->priv->initiator ==
-              base_conn->self_handle));
-        break;
-      case PROP_INITIATOR_HANDLE:
-        g_value_set_uint (value, self->priv->initiator);
-        break;
-      case PROP_INITIATOR_ID:
-          {
-            TpHandleRepoIface *repo = tp_base_connection_get_handles (
-                base_conn, TP_HANDLE_TYPE_CONTACT);
-
-            g_assert (self->priv->initiator != 0);
-            g_value_set_string (value,
-                tp_handle_inspect (repo, self->priv->initiator));
-          }
-        break;
       case PROP_CONTACT:
         g_value_set_object (value, self->priv->contact);
-        break;
-      case PROP_CONNECTION:
-        g_value_set_object (value, self->priv->connection);
-        break;
-      case PROP_INTERFACES:
-        g_value_set_boxed (value, salut_file_transfer_channel_interfaces);
         break;
       case PROP_STATE:
         g_value_set_uint (value, self->priv->state);
@@ -317,47 +249,6 @@ salut_file_transfer_channel_get_property (GObject *object,
             }
         }
         break;
-      case PROP_CHANNEL_DESTROYED:
-        g_value_set_boolean (value, self->priv->closed);
-        break;
-      case PROP_CHANNEL_PROPERTIES:
-        {
-          GHashTable *props;
-
-          props = tp_dbus_properties_mixin_make_properties_hash (object,
-              TP_IFACE_CHANNEL, "ChannelType",
-              TP_IFACE_CHANNEL, "Interfaces",
-              TP_IFACE_CHANNEL, "TargetHandle",
-              TP_IFACE_CHANNEL, "TargetID",
-              TP_IFACE_CHANNEL, "TargetHandleType",
-              TP_IFACE_CHANNEL, "Requested",
-              TP_IFACE_CHANNEL, "InitiatorHandle",
-              TP_IFACE_CHANNEL, "InitiatorID",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "State",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentType",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Filename",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Size",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHashType",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHash",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Description",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Date",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "AvailableSocketTypes",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "TransferredBytes",
-              TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "InitialOffset",
-              TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "ServiceName",
-              TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "Metadata",
-              NULL);
-
-          /* URI is immutable only for outgoing transfers */
-          if (self->priv->initiator == base_conn->self_handle)
-            {
-              tp_dbus_properties_mixin_fill_properties_hash (object, props,
-                  TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "URI", NULL);
-            }
-
-          g_value_take_boxed (value, props);
-        }
-        break;
       default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
@@ -374,31 +265,10 @@ salut_file_transfer_channel_set_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_OBJECT_PATH:
-        g_free (self->priv->object_path);
-        self->priv->object_path = g_value_dup_string (value);
-        break;
-      case PROP_HANDLE:
-        self->priv->handle = g_value_get_uint (value);
-        break;
       case PROP_CONTACT:
         self->priv->contact = g_value_dup_object (value);
         g_signal_connect (self->priv->contact, "lost",
             G_CALLBACK (contact_lost_cb), self);
-        break;
-      case PROP_CONNECTION:
-        self->priv->connection = g_value_get_object (value);
-        break;
-      case PROP_HANDLE_TYPE:
-        /* 0 is the old tp-glib value of unset, TP_UNKNOWN_HANDLE_TYPE is the
-         * new version */
-        g_assert (g_value_get_uint (value) == 0
-                  || g_value_get_uint (value) == TP_HANDLE_TYPE_CONTACT
-                  || g_value_get_uint (value) == TP_UNKNOWN_HANDLE_TYPE);
-        break;
-      case PROP_CHANNEL_TYPE:
-        /* these properties are writable in the interface, but not actually
-         * meaningfully changeable on this channel, so we do nothing */
         break;
       case PROP_STATE:
         salut_file_transfer_channel_set_state (
@@ -427,10 +297,6 @@ salut_file_transfer_channel_set_property (GObject *object,
       case PROP_DESCRIPTION:
         g_free (self->priv->description);
         self->priv->description = g_value_dup_string (value);
-        break;
-      case PROP_INITIATOR_HANDLE:
-        self->priv->initiator = g_value_get_uint (value);
-        g_assert (self->priv->initiator != 0);
         break;
       case PROP_DATE:
         self->priv->date = g_value_get_uint64 (value);
@@ -461,43 +327,28 @@ free_array (GArray *array)
   g_array_unref (array);
 }
 
-static GObject *
-salut_file_transfer_channel_constructor (GType type,
-                                         guint n_props,
-                                         GObjectConstructParam *props)
+static void
+salut_file_transfer_channel_constructed (GObject *obj)
 {
-  GObject *obj;
-  SalutFileTransferChannel *self;
-  TpDBusDaemon *bus;
-  TpBaseConnection *base_conn;
-  TpHandleRepoIface *contact_repo;
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (obj);
+  TpBaseChannel *base = TP_BASE_CHANNEL (obj);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_CONTACT);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
   GArray *unix_access;
   TpSocketAccessControl access_control;
 
-  /* Parent constructor chain */
-  obj = G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->
-          constructor (type, n_props, props);
+  /* Parent constructed chain */
+  void (*chain_up) (GObject *) =
+    ((GObjectClass *) salut_file_transfer_channel_parent_class)->constructed;
 
-  self = SALUT_FILE_TRANSFER_CHANNEL (obj);
-
-  /* Ref our handle */
-  base_conn = TP_BASE_CONNECTION (self->priv->connection);
+  if (chain_up != NULL)
+    chain_up (obj);
 
   /* ref our porter */
-  wocky_meta_porter_hold (WOCKY_META_PORTER (self->priv->connection->porter),
+  wocky_meta_porter_hold (WOCKY_META_PORTER (conn->porter),
       WOCKY_CONTACT (self->priv->contact));
-
-  contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
-
-  tp_handle_ref (contact_repo, self->priv->handle);
-
-  self->priv->object_path = g_strdup_printf ("%s/FileTransferChannel/%p",
-      base_conn->object_path, self);
-
-  /* Connect to the bus */
-  bus = tp_base_connection_get_dbus_daemon (base_conn);
-  tp_dbus_daemon_register_object (bus, self->priv->object_path, obj);
 
   /* Initialise the available socket types hash table */
   self->priv->available_socket_types = g_hash_table_new_full (g_direct_hash,
@@ -512,17 +363,15 @@ salut_file_transfer_channel_constructor (GType type,
       GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX), unix_access);
 
   DEBUG ("New FT channel created: %s (contact: %s, initiator: %s, "
-       "file: \"%s\", size: %" G_GUINT64_FORMAT ")",
-       self->priv->object_path,
-       tp_handle_inspect (contact_repo, self->priv->handle),
-       tp_handle_inspect (contact_repo, self->priv->initiator),
-       self->priv->filename, self->priv->size);
+      "file: \"%s\", size: %" G_GUINT64_FORMAT ")",
+      tp_base_channel_get_object_path (base),
+      tp_handle_inspect (contact_repo, tp_base_channel_get_target_handle (base)),
+      tp_handle_inspect (contact_repo, tp_base_channel_get_initiator (base)),
+      self->priv->filename, self->priv->size);
 
-  if (self->priv->initiator != base_conn->self_handle)
+  if (!tp_base_channel_is_requested (base))
     /* Incoming transfer, URI has to be set by the handler */
     g_assert (self->priv->uri == NULL);
-
-  return obj;
 }
 
 static void
@@ -539,7 +388,6 @@ file_transfer_channel_properties_setter (GObject *object,
     GError **error)
 {
   SalutFileTransferChannel *self = (SalutFileTransferChannel *) object;
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->connection);
 
   g_return_val_if_fail (interface == TP_IFACE_QUARK_CHANNEL_TYPE_FILE_TRANSFER,
       FALSE);
@@ -558,7 +406,7 @@ file_transfer_channel_properties_setter (GObject *object,
       return FALSE;
     }
 
-  if (self->priv->initiator == base_conn->self_handle)
+  if (tp_base_channel_is_requested (TP_BASE_CHANNEL (self)))
     {
       g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Channel is not an incoming transfer");
@@ -580,24 +428,55 @@ file_transfer_channel_properties_setter (GObject *object,
 }
 
 static void
+salut_file_transfer_channel_fill_immutable_properties (TpBaseChannel *chan,
+    GHashTable *properties)
+{
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_CLASS (
+      salut_file_transfer_channel_parent_class);
+
+  cls->fill_immutable_properties (chan, properties);
+
+  tp_dbus_properties_mixin_fill_properties_hash (
+      G_OBJECT (chan), properties,
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "State",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentType",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Filename",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Size",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHashType",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "ContentHash",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Description",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "Date",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "AvailableSocketTypes",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "TransferredBytes",
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "InitialOffset",
+      TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "ServiceName",
+      TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA, "Metadata",
+      NULL);
+
+  /* URI is immutable only for outgoing transfers */
+  if (tp_base_channel_is_requested (chan))
+    {
+      tp_dbus_properties_mixin_fill_properties_hash (
+          G_OBJECT (chan), properties,
+          TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER, "URI", NULL);
+    }
+}
+
+static gchar *
+salut_file_transfer_channel_get_object_path_suffix (TpBaseChannel *chan)
+{
+  return g_strdup_printf ("FileTransferChannel/%p", chan);
+}
+
+static void
 salut_file_transfer_channel_class_init (
     SalutFileTransferChannelClass *salut_file_transfer_channel_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (
       salut_file_transfer_channel_class);
+  TpBaseChannelClass *base_class = TP_BASE_CHANNEL_CLASS (
+      salut_file_transfer_channel_class);
   GParamSpec *param_spec;
-
-  static TpDBusPropertiesMixinPropImpl channel_props[] = {
-    { "TargetHandleType", "handle-type", NULL },
-    { "TargetHandle", "handle", NULL },
-    { "TargetID", "target-id", NULL },
-    { "ChannelType", "channel-type", NULL },
-    { "Interfaces", "interfaces", NULL },
-    { "Requested", "requested", NULL },
-    { "InitiatorHandle", "initiator-handle", NULL },
-    { "InitiatorID", "initiator-id", NULL },
-    { NULL }
-  };
 
   static TpDBusPropertiesMixinPropImpl file_props[] = {
     { "State", "state", NULL },
@@ -622,11 +501,6 @@ salut_file_transfer_channel_class_init (
   };
 
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-    { TP_IFACE_CHANNEL,
-      tp_dbus_properties_mixin_getter_gobject_properties,
-      NULL,
-      channel_props
-    },
     { TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER,
       tp_dbus_properties_mixin_getter_gobject_properties,
       file_transfer_channel_properties_setter,
@@ -644,51 +518,18 @@ salut_file_transfer_channel_class_init (
 
   object_class->dispose = salut_file_transfer_channel_dispose;
   object_class->finalize = salut_file_transfer_channel_finalize;
-
-  object_class->constructor = salut_file_transfer_channel_constructor;
+  object_class->constructed = salut_file_transfer_channel_constructed;
   object_class->get_property = salut_file_transfer_channel_get_property;
   object_class->set_property = salut_file_transfer_channel_set_property;
 
-  g_object_class_override_property (object_class, PROP_OBJECT_PATH,
-      "object-path");
-  g_object_class_override_property (object_class, PROP_CHANNEL_TYPE,
-      "channel-type");
-  g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
-      "handle-type");
-  g_object_class_override_property (object_class, PROP_HANDLE, "handle");
-  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
-      "channel-destroyed");
-  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
-      "channel-properties");
-
-  param_spec = g_param_spec_string ("target-id", "Target JID",
-      "The string obtained by inspecting this channel's handle",
-      NULL,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
-
-  param_spec = g_param_spec_boolean ("requested", "Requested?",
-      "True if this channel was requested by the local user",
-      FALSE,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
-  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
-
- param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
-      "The contact who initiated the channel",
-      0, G_MAXUINT32, 0,
-      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
-  g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
-      param_spec);
-
-  param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
-      "The string obtained by inspecting the initiator-handle",
-      NULL,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
-  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
-      param_spec);
+  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER;
+  base_class->interfaces = salut_file_transfer_channel_interfaces;
+  base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
+  base_class->close = salut_file_transfer_channel_close;
+  base_class->fill_immutable_properties =
+    salut_file_transfer_channel_fill_immutable_properties;
+  base_class->get_object_path_suffix =
+    salut_file_transfer_channel_get_object_path_suffix;
 
   param_spec = g_param_spec_object ("contact",
       "SalutContact object",
@@ -699,26 +540,6 @@ salut_file_transfer_channel_class_init (
       G_PARAM_STATIC_NICK |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_CONTACT, param_spec);
-
-  param_spec = g_param_spec_object ("connection",
-      "SalutConnection object",
-      "Salut Connection that owns the"
-      "connection for this IM channel",
-      SALUT_TYPE_CONNECTION,
-      G_PARAM_CONSTRUCT_ONLY |
-      G_PARAM_READWRITE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB);
-  g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
-
-  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
-      "Additional Channel.Interface.* interfaces",
-      G_TYPE_STRV,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK |
-      G_PARAM_STATIC_BLURB |
-      G_PARAM_STATIC_NAME);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   param_spec = g_param_spec_uint (
       "state",
@@ -891,18 +712,11 @@ void
 salut_file_transfer_channel_dispose (GObject *object)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
-  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->connection);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
 
   if (self->priv->dispose_has_run)
     return;
 
   self->priv->dispose_has_run = TRUE;
-
-  tp_handle_unref (handle_repo, self->priv->handle);
-
-  salut_file_transfer_channel_do_close (self);
 
   if (self->priv->progress_timer != 0)
     {
@@ -936,7 +750,6 @@ salut_file_transfer_channel_finalize (GObject *object)
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
 
   /* free any data held directly by the object here */
-  g_free (self->priv->object_path);
   g_free (self->priv->filename);
   if (self->priv->socket_address != NULL)
     tp_g_value_slice_free (self->priv->socket_address);
@@ -955,92 +768,8 @@ salut_file_transfer_channel_finalize (GObject *object)
       g_free (self->priv->path);
     }
 
-  G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
-}
-
-
-/**
- * salut_file_transfer_channel_close
- *
- * Implements DBus method Close
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_file_transfer_channel_close (TpSvcChannel *iface,
-                                   DBusGMethodInvocation *context)
-{
-  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
-
-  if (self->priv->state != TP_FILE_TRANSFER_STATE_COMPLETED &&
-      self->priv->state != TP_FILE_TRANSFER_STATE_CANCELLED)
-    {
-      gibber_file_transfer_cancel (self->priv->ft, 406);
-      salut_file_transfer_channel_set_state (
-          TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (iface),
-          TP_FILE_TRANSFER_STATE_CANCELLED,
-          TP_FILE_TRANSFER_STATE_CHANGE_REASON_LOCAL_STOPPED);
-    }
-
-  salut_file_transfer_channel_do_close (SALUT_FILE_TRANSFER_CHANNEL (iface));
-  tp_svc_channel_return_from_close (context);
-}
-
-/**
- * salut_file_transfer_channel_get_channel_type
- *
- * Implements DBus method GetChannelType
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_file_transfer_channel_get_channel_type (TpSvcChannel *iface,
-                                              DBusGMethodInvocation *context)
-{
-  tp_svc_channel_return_from_get_channel_type (context,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
-}
-
-/**
- * salut_file_transfer_channel_get_handle
- *
- * Implements DBus method GetHandle
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_file_transfer_channel_get_handle (TpSvcChannel *iface,
-                                        DBusGMethodInvocation *context)
-{
-  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
-
-  tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_CONTACT,
-                                         self->priv->handle);
-}
-
-/**
- * salut_file_transfer_channel_get_interfaces
- *
- * Implements DBus method GetInterfaces
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_file_transfer_channel_get_interfaces (TpSvcChannel *iface,
-                                            DBusGMethodInvocation *context)
-{
-  tp_svc_channel_return_from_get_interfaces (context,
-      salut_file_transfer_channel_interfaces);
-}
-
-static void
-channel_iface_init (gpointer g_iface, gpointer iface_data)
-{
-  TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
-
-#define IMPLEMENT(x) tp_svc_channel_implement_##x (\
-    klass, salut_file_transfer_channel_##x)
-  IMPLEMENT (close);
-  IMPLEMENT (get_channel_type);
-  IMPLEMENT (get_handle);
-  IMPLEMENT (get_interfaces);
-#undef IMPLEMENT
+  if (G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize)
+    G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
 }
 
 static void
@@ -1050,10 +779,7 @@ error_cb (GibberFileTransfer *ft,
           const gchar *message,
           SalutFileTransferChannel *self)
 {
-  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->connection;
-  gboolean receiver;
-
-  receiver = (self->priv->initiator != base_conn->self_handle);
+  gboolean receiver = !tp_base_channel_is_requested (TP_BASE_CHANNEL (self));
 
   if (domain == GIBBER_FILE_TRANSFER_ERROR && code ==
       GIBBER_FILE_TRANSFER_ERROR_NOT_FOUND && receiver)
@@ -1074,8 +800,9 @@ static void
 ft_finished_cb (GibberFileTransfer *ft,
                 SalutFileTransferChannel *self)
 {
-  SalutFileTransferChannelPrivate *priv = self->priv;
-  WockyPorter *porter = priv->connection->porter;
+  SalutConnection *conn = SALUT_CONNECTION (
+      tp_base_channel_get_connection (TP_BASE_CHANNEL (self)));
+  WockyPorter *porter = conn->porter;
 
   salut_file_transfer_channel_set_state (
       TP_SVC_CHANNEL_TYPE_FILE_TRANSFER (self),
@@ -1090,8 +817,9 @@ static void
 ft_remote_cancelled_cb (GibberFileTransfer *ft,
                         SalutFileTransferChannel *self)
 {
-  SalutFileTransferChannelPrivate *priv = self->priv;
-  WockyPorter *porter = priv->connection->porter;
+  SalutConnection *conn = SALUT_CONNECTION (
+      tp_base_channel_get_connection (TP_BASE_CHANNEL (self)));
+  WockyPorter *porter = conn->porter;
 
   gibber_file_transfer_cancel (ft, 406);
   salut_file_transfer_channel_set_state (
@@ -1239,12 +967,15 @@ static void
 send_file_offer (SalutFileTransferChannel *self)
 {
   GibberFileTransfer *ft;
+  SalutConnection *conn = SALUT_CONNECTION (
+      tp_base_channel_get_connection (TP_BASE_CHANNEL (self)));
+  WockyPorter *porter = conn->porter;
 
   ft = g_object_new (GIBBER_TYPE_OOB_FILE_TRANSFER,
-      "self-id", self->priv->connection->name,
+      "self-id", conn->name,
       "peer-id", self->priv->contact->name,
       "filename", self->priv->filename,
-      "porter", self->priv->connection->porter,
+      "porter", porter,
       "contact", self->priv->contact,
       "description", self->priv->description,
       "content-type", self->priv->content_type,
@@ -1504,10 +1235,10 @@ salut_file_transfer_channel_provide_file (
     DBusGMethodInvocation *context)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
-  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->connection;
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
   GError *error = NULL;
 
-  if (self->priv->initiator != base_conn->self_handle)
+  if (!tp_base_channel_is_requested (base))
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Channel is not an outgoing transfer");
@@ -1836,6 +1567,7 @@ salut_file_transfer_channel_new (SalutConnection *conn,
       "contact", contact,
       "handle", handle,
       "initiator-handle", initiator_handle,
+      "requested", TRUE,
       "state", state,
       "content-type", content_type,
       "filename", filename,
@@ -1896,6 +1628,7 @@ salut_file_transfer_channel_new_from_stanza (SalutConnection *connection,
       "contact", contact,
       "handle", handle,
       "initiator-handle", handle,
+      "requested", FALSE,
       "state", state,
       "filename", ft->filename,
       "size", gibber_file_transfer_get_size (ft),

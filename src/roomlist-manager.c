@@ -44,6 +44,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/util.h>
+#include <telepathy-glib/base-channel.h>
 
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
@@ -357,6 +358,8 @@ make_roomlist_channel (SalutRoomlistManager *self)
 
   roomlist_channel = salut_roomlist_channel_new (priv->connection,
       object_path);
+
+  tp_base_channel_register (TP_BASE_CHANNEL (roomlist_channel));
 
   rooms = SALUT_ROOMLIST_MANAGER_GET_CLASS (self)->get_rooms (self);
   for (l = rooms; l != NULL; l = g_slist_next (l))

@@ -22,22 +22,25 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-channel.h>
+
 #include "connection.h"
 
 G_BEGIN_DECLS
 
 typedef struct _SalutRoomlistChannel SalutRoomlistChannel;
 typedef struct _SalutRoomlistChannelClass SalutRoomlistChannelClass;
+typedef struct _SalutRoomlistChannelPrivate SalutRoomlistChannelPrivate;
 
 struct _SalutRoomlistChannelClass {
-    GObjectClass parent_class;
+    TpBaseChannelClass parent_class;
     TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutRoomlistChannel {
-    GObject parent;
+    TpBaseChannel parent;
 
-    gpointer priv;
+    SalutRoomlistChannelPrivate *priv;
 };
 
 GType salut_roomlist_channel_get_type (void);

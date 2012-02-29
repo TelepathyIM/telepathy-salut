@@ -495,6 +495,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
       new_connection, requested);
   g_free (path);
 
+  tp_base_channel_register ((TpBaseChannel *) chan);
+
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
