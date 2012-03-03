@@ -87,9 +87,6 @@ enum
   LAST_PROPERTY
 };
 
-/* private structure */
-typedef struct _SalutMucChannelPrivate SalutMucChannelPrivate;
-
 struct _SalutMucChannelPrivate
 {
   gboolean dispose_has_run;
