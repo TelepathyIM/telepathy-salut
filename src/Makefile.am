@@ -102,6 +102,8 @@ AVAHI_BACKEND_SOURCES = 				\
     avahi-self.c
 
 BONJOUR_BACKEND_SOURCES =                         \
+    bonjour-contact-manager.h                     \
+    bonjour-contact-manager.c                     \
     bonjour-discovery-client.h                    \
     bonjour-discovery-client.c
 
