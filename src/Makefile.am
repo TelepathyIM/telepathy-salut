@@ -101,7 +101,9 @@ AVAHI_BACKEND_SOURCES = 				\
     avahi-self.h                                  \
     avahi-self.c
 
-BONJOUR_BACKEND_SOURCES =
+BONJOUR_BACKEND_SOURCES =                         \
+    bonjour-discovery-client.h                    \
+    bonjour-discovery-client.c
 
 if ENABLE_OLPC
   CORE_SOURCES +=                                       \
