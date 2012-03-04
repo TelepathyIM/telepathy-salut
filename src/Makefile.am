@@ -102,6 +102,8 @@ AVAHI_BACKEND_SOURCES = 				\
     avahi-self.c
 
 BONJOUR_BACKEND_SOURCES =                         \
+    bonjour-self.h                                \
+    bonjour-self.c                                \
     bonjour-contact-manager.h                     \
     bonjour-contact-manager.c                     \
     bonjour-discovery-client.h                    \
@@ -219,7 +221,6 @@ AM_CFLAGS = \
 	@GMODULE_CFLAGS@ \
 	@WOCKY_CFLAGS@ \
 	@DBUS_CFLAGS@ \
-	@AVAHI_CFLAGS@ \
 	@TELEPATHY_GLIB_CFLAGS@ \
 	@UUID_CFLAGS@ \
 	@LIBSOUP_CFLAGS@ \
@@ -237,11 +238,21 @@ AM_LDFLAGS = \
 	@GMODULE_LIBS@ \
 	@WOCKY_LIBS@ \
 	@DBUS_LIBS@ \
-	@AVAHI_LIBS@ \
 	@TELEPATHY_GLIB_LIBS@ \
 	@UUID_LIBS@ \
 	@LIBSOUP_LIBS@ \
 	$(NULL)
+
+if USE_BACKEND_AVAHI
+  AM_LDFLAGS += @AVAHI_LIBS@
+  AM_CFLAGS += @AVAHI_CFLAGS@
+endif
+
+if USE_BACKEND_BONJOUR
+  AM_LDFLAGS += @BONJOUR_LIBS@
+  AM_CFLAGS += -DNOT_HAVE_GETOPT \
+      @BONJOUR_CFLAGS@
+endif
 
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:
@@ -255,10 +266,10 @@ SIGNAL_MARSHAL_SOURCES = \
 
 if USE_BACKEND_AVAHI
   SIGNAL_MARSHAL_SOURCES += $(AVAHI_BACKEND_SOURCES)
-else
+endif
+
 if USE_BACKEND_BONJOUR
     SIGNAL_MARSHAL_SOURCES += $(BONJOUR_BACKEND_SOURCES)
-endif
 endif
 
 signals-marshal.list: $(SIGNAL_Marshal_SOURCES) Makefile.am
