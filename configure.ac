@@ -205,13 +205,21 @@ AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
 dnl check the backend to use
+if test "$platform" = "win32"; then
 AC_ARG_WITH(backend,
-  AC_HELP_STRING([--with-backend=[avahi/no]],
+  AC_HELP_STRING([--with-backend=[bonjour/no]],
+                 [Zeroconf backend to use]),
+  [], [with_backend=bonjour])
+else
+AC_ARG_WITH(backend,
+  AC_HELP_STRING([--with-backend=[avahi/bonjour/no]],
                  [Zeroconf backend to use]),
   [], [with_backend=avahi])
+fi
 
-AM_CONDITIONAL(USE_BACKEND_DUMMY, [test "x$with_backend" = "xno"])
 AM_CONDITIONAL(USE_BACKEND_AVAHI, [test "x$with_backend" = "xavahi"])
+AM_CONDITIONAL(USE_BACKEND_BONJOUR, [test "x$with_backend" = "xbonjour"])
+AM_CONDITIONAL(USE_BACKEND_DUMMY, [test "x$with_backend" = "xno"])
 
 dnl Check for Avahi
 if test x$with_backend = xavahi; then
@@ -220,6 +228,15 @@ if test x$with_backend = xavahi; then
   AC_SUBST(AVAHI_CFLAGS)
   AC_SUBST(AVAHI_LIBS)
   AC_SUBST(USE_BACKEND_AVAHI)
+fi
+
+dnl Check for Bonjour Client Library libdns_sd
+if test x$with_backend = xbonjour; then
+  PKG_CHECK_MODULES(BONJOUR, [libdns_sd])
+  AC_DEFINE(USE_BACKEND_BONJOUR, [], [Use Bonjour backend])
+  AC_SUBST(BONJOUR_CFLAGS)
+  AC_SUBST(BONJOUR_LIBS)
+  AC_SUBST(USE_BACKEND_BONJOUR)
 fi
 
 if test x$with_backend = xno; then
