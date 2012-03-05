@@ -11,6 +11,8 @@
 #include "avahi-discovery-client.h"
 #elif defined (USE_BACKEND_DUMMY)
 #include "dummy-discovery-client.h"
+#elif defined (USE_BACKEND_BONJOUR)
+#include "bonjour-discovery-client.h"
 #endif
 
 #include "debug.h"
@@ -27,6 +29,8 @@ salut_create_connection_manager (void)
                     SALUT_TYPE_AVAHI_DISCOVERY_CLIENT,
 #elif defined (USE_BACKEND_DUMMY)
                     SALUT_TYPE_DUMMY_DISCOVERY_CLIENT,
+#elif defined (USE_BACKEND_BONJOUR)
+                    SALUT_TYPE_BONJOUR_DISCOVERY_CLIENT,
 #endif
                     NULL));
 }

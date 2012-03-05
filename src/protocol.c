@@ -38,6 +38,8 @@
 #include "avahi-discovery-client.h"
 #elif defined (USE_BACKEND_DUMMY)
 #include "dummy-discovery-client.h"
+#elif defined (USE_BACKEND_BONJOUR)
+#include "bonjour-discovery-client.h"
 #endif
 
 /* there is no appropriate vCard field for this protocol */

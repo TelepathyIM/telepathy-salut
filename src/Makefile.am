@@ -250,8 +250,7 @@ endif
 
 if USE_BACKEND_BONJOUR
   AM_LDFLAGS += @BONJOUR_LIBS@
-  AM_CFLAGS += -DNOT_HAVE_GETOPT \
-      @BONJOUR_CFLAGS@
+  AM_CFLAGS += @BONJOUR_CFLAGS@
 endif
 
 # Teach it how to make libgibber.la
