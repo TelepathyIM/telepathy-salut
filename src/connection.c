@@ -222,8 +222,10 @@ struct _SalutConnectionPrivate
   /* Tubes channel manager */
   SalutTubesManager *tubes_manager;
 
+#ifndef USE_BACKEND_BONJOUR
   /* Bytestream manager for stream initiation (XEP-0095) */
   SalutSiBytestreamManager *si_bytestream_manager;
+#endif
 
   /* Sidecars */
   /* gchar *interface → SalutSidecar */
@@ -454,9 +456,11 @@ salut_connection_get_property (GObject *object,
     case PROP_SELF:
       g_value_set_object (value, priv->self);
       break;
+#ifndef USE_BACKEND_BONJOUR
     case PROP_SI_BYTESTREAM_MANAGER:
       g_value_set_object (value, priv->si_bytestream_manager);
       break;
+#endif
 #ifdef ENABLE_OLPC
     case PROP_OLPC_ACTIVITY_MANAGER:
       g_value_set_object (value, priv->olpc_activity_manager);
@@ -993,11 +997,13 @@ salut_connection_dispose (GObject *object)
       priv->discovery_client = NULL;
     }
 
+#ifndef USE_BACKEND_BONJOUR
   if (priv->si_bytestream_manager != NULL)
     {
       g_object_unref (priv->si_bytestream_manager);
       priv->si_bytestream_manager = NULL;
     }
+#endif
 
   g_warn_if_fail (g_hash_table_size (priv->sidecars) == 0);
   tp_clear_pointer (&priv->sidecars, g_hash_table_unref);
@@ -1218,9 +1224,12 @@ discovery_client_running (SalutConnection *self)
       return;
     }
 
+  /* Tubes are not currently supported by bonjour backend */
+#ifndef USE_BACKEND_BONJOUR
   /* Create the bytestream manager */
   priv->si_bytestream_manager = salut_si_bytestream_manager_new (self,
     salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
+#endif
 }
 
 static void
