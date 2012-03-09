@@ -22,6 +22,7 @@
  */
 
 #include <glib/gstdio.h>
+#include <gio/gunixsocketaddress.h>
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +58,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/svc-generic.h>
 #include <telepathy-glib/gtypes.h>
+#include <telepathy-glib/gnio-util.h>
 
 static void
 file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
@@ -107,9 +109,8 @@ struct _SalutFileTransferChannelPrivate {
   GibberFileTransfer *ft;
   GTimeVal last_transferred_bytes_emitted;
   guint progress_timer;
-  GValue *socket_address;
+  GSocket *socket;
   gboolean remote_accepted;
-  gchar *path;
 
   /* properties */
   TpFileTransferState state;
@@ -337,6 +338,7 @@ salut_file_transfer_channel_constructed (GObject *obj)
       base_conn, TP_HANDLE_TYPE_CONTACT);
   SalutConnection *conn = SALUT_CONNECTION (base_conn);
   GArray *unix_access;
+  GArray *ip_access;
   TpSocketAccessControl access_control;
 
   /* Parent constructed chain */
@@ -361,6 +363,16 @@ salut_file_transfer_channel_constructed (GObject *obj)
   g_array_append_val (unix_access, access_control);
   g_hash_table_insert (self->priv->available_socket_types,
       GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_UNIX), unix_access);
+
+  /* Socket_Address_Type_IPv4 */
+  ip_access = g_array_sized_new (FALSE, FALSE, sizeof (TpSocketAccessControl),
+      1);
+  g_array_append_val (ip_access, access_control);
+  g_hash_table_insert (self->priv->available_socket_types,
+      GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_IPV4), ip_access);
+
+  g_hash_table_insert (self->priv->available_socket_types,
+      GUINT_TO_POINTER (TP_SOCKET_ADDRESS_TYPE_IPV6), ip_access);
 
   DEBUG ("New FT channel created: %s (contact: %s, initiator: %s, "
       "file: \"%s\", size: %" G_GUINT64_FORMAT ")",
@@ -747,12 +759,23 @@ salut_file_transfer_channel_dispose (GObject *object)
 static void
 salut_file_transfer_channel_finalize (GObject *object)
 {
+  GSocketAddress *addr;
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
 
   /* free any data held directly by the object here */
   g_free (self->priv->filename);
-  if (self->priv->socket_address != NULL)
-    tp_g_value_slice_free (self->priv->socket_address);
+  if (self->priv->socket != NULL)
+    {
+      addr = g_socket_get_local_address (self->priv->socket, NULL);
+      if (g_socket_address_get_family (addr) == G_SOCKET_FAMILY_UNIX)
+        {
+          const gchar *path;
+          path = g_unix_socket_address_get_path ((GUnixSocketAddress *) addr);
+          g_unlink (path);
+        }
+      g_object_unref (addr);
+      g_object_unref (self->priv->socket);
+    }
   g_free (self->priv->content_type);
   g_free (self->priv->content_hash);
   g_free (self->priv->description);
@@ -761,12 +784,6 @@ salut_file_transfer_channel_finalize (GObject *object)
   g_free (self->priv->service_name);
   if (self->priv->metadata != NULL)
     g_hash_table_unref (self->priv->metadata);
-
-  if (self->priv->path != NULL)
-    {
-      g_unlink (self->priv->path);
-      g_free (self->priv->path);
-    }
 
   if (G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize)
     G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->finalize (object);
@@ -837,7 +854,7 @@ remote_accepted_cb (GibberFileTransfer *ft,
 {
   self->priv->remote_accepted = TRUE;
 
-  if (self->priv->socket_address != NULL)
+  if (self->priv->socket != NULL)
     {
       /* ProvideFile has already been called. Channel is Open */
       tp_svc_channel_type_file_transfer_emit_initial_offset_defined (self,
@@ -860,7 +877,8 @@ remote_accepted_cb (GibberFileTransfer *ft,
   g_signal_connect (ft, "finished", G_CALLBACK (ft_finished_cb), self);
 }
 
-static gboolean setup_local_socket (SalutFileTransferChannel *self);
+static gboolean setup_local_socket (SalutFileTransferChannel *self,
+    TpSocketAddressType address_type, guint access_control);
 static void ft_transferred_chunk_cb (GibberFileTransfer *ft, guint64 count,
     SalutFileTransferChannel *self);
 
@@ -1158,7 +1176,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
  */
 static void
 salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
-                                         guint address_type,
+                                         TpSocketAddressType address_type,
                                          guint access_control,
                                          const GValue *access_control_param,
                                          guint64 offset,
@@ -1167,6 +1185,8 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GError *error = NULL;
   GibberFileTransfer *ft;
+  GValue *addr;
+  GSocketAddress *socket_addr;
 
   ft = self->priv->ft;
   if (ft == NULL)
@@ -1196,7 +1216,7 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
       G_CALLBACK (ft_transferred_chunk_cb), self);
   g_signal_connect (ft, "cancelled", G_CALLBACK (ft_remote_cancelled_cb), self);
 
-  if (!setup_local_socket (self))
+  if (!setup_local_socket (self, address_type, access_control))
     {
       DEBUG ("Could not set up local socket");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
@@ -1208,8 +1228,12 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
       TP_FILE_TRANSFER_STATE_ACCEPTED,
       TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
 
+  socket_addr = g_socket_get_local_address (self->priv->socket, NULL);
+  addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_accept_file (context,
-      self->priv->socket_address);
+      addr);
+  tp_g_value_slice_free (addr);
+  g_object_unref (socket_addr);
 
   self->priv->initial_offset = 0;
 
@@ -1237,6 +1261,8 @@ salut_file_transfer_channel_provide_file (
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   TpBaseChannel *base = TP_BASE_CHANNEL (self);
   GError *error = NULL;
+  GValue *addr;
+  GSocketAddress *socket_addr;
 
   if (!tp_base_channel_is_requested (base))
     {
@@ -1246,7 +1272,7 @@ salut_file_transfer_channel_provide_file (
       return;
     }
 
-  if (self->priv->socket_address != NULL)
+  if (self->priv->socket != NULL)
     {
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "ProvideFile has already been called for this channel");
@@ -1262,7 +1288,7 @@ salut_file_transfer_channel_provide_file (
       return;
     }
 
-  if (!setup_local_socket (self))
+  if (!setup_local_socket (self, address_type, access_control))
     {
       DEBUG ("Could not set up local socket");
       g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
@@ -1282,8 +1308,12 @@ salut_file_transfer_channel_provide_file (
           TP_FILE_TRANSFER_STATE_CHANGE_REASON_REQUESTED);
     }
 
+  socket_addr = g_socket_get_local_address (self->priv->socket, &error);
+  addr = tp_address_variant_from_g_socket_address (socket_addr, NULL, NULL);
   tp_svc_channel_type_file_transfer_return_from_provide_file (context,
-      self->priv->socket_address);
+      addr);
+  tp_g_value_slice_free (addr);
+  g_object_unref (socket_addr);
 }
 
 static void
@@ -1301,9 +1331,10 @@ file_transfer_iface_init (gpointer g_iface,
 }
 
 #ifdef G_OS_UNIX
-static gchar *
-get_local_unix_socket_path (SalutFileTransferChannel *self)
+static GSocketAddress *
+get_local_unix_socket_address (SalutFileTransferChannel *self)
 {
+  GSocketAddress *addr = NULL;
   gchar *path = NULL;
   gint32 random_int;
   gchar *random_str;
@@ -1322,68 +1353,86 @@ get_local_unix_socket_path (SalutFileTransferChannel *self)
       g_free (path);
     }
 
-  return path;
+  addr = g_unix_socket_address_new (path);
+  g_free (path);
+
+  return addr;
+}
+
+static GSocketAddress *
+get_local_tcp_socket_address (SalutFileTransferChannel *self, GSocketFamily family)
+{
+  GInetAddress *inet_address;
+  GSocketAddress *addr;
+  inet_address = g_inet_address_new_loopback (family);
+  addr = g_inet_socket_address_new (inet_address, 0);
+  g_object_unref (inet_address);
+  return addr;
 }
 
 /*
- * Return a GIOChannel for the local unix socket path.
+ * Return a GIOChannel for a local socket
  */
 static GIOChannel *
-get_socket_channel (SalutFileTransferChannel *self)
+get_socket_channel (SalutFileTransferChannel *self,
+    TpSocketAddressType address_type, guint access_control)
 {
-  gint fd;
-  gchar *path;
-  size_t path_len;
-  struct sockaddr_un addr;
-  GIOChannel *io_channel;
-  GArray *array;
+  GSocket *sock;
+  GSocketAddress *addr;
+  GIOChannel *io_channel = NULL;
+  GError *error = NULL;
+  int fd;
 
-  /* FIXME: should use the socket type and access control chosen by
-   * the user. */
-  path = get_local_unix_socket_path (self);
-
-  array = g_array_sized_new (TRUE, FALSE, sizeof (gchar), strlen (path));
-  g_array_insert_vals (array, 0, path, strlen (path));
-
-  self->priv->socket_address = tp_g_value_slice_new (
-          DBUS_TYPE_G_UCHAR_ARRAY);
-  g_value_take_boxed (self->priv->socket_address, array);
-
-  DEBUG ("local socket %s", path);
-
-  fd = socket (PF_UNIX, SOCK_STREAM, 0);
-  if (fd < 0)
+  switch (address_type)
     {
-      DEBUG("socket() failed");
+      case TP_SOCKET_ADDRESS_TYPE_UNIX:
+        sock = g_socket_new (G_SOCKET_FAMILY_UNIX,
+                             G_SOCKET_TYPE_STREAM,
+                             G_SOCKET_PROTOCOL_DEFAULT,
+                             &error);
+        addr = get_local_unix_socket_address (self);
+        break;
+      case TP_SOCKET_ADDRESS_TYPE_IPV4:
+        sock = g_socket_new (G_SOCKET_FAMILY_IPV4, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
+        addr = get_local_tcp_socket_address (self, G_SOCKET_FAMILY_IPV4);
+        break;
+      case TP_SOCKET_ADDRESS_TYPE_IPV6:
+        sock = g_socket_new (G_SOCKET_FAMILY_IPV6, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
+        addr = get_local_tcp_socket_address (self, G_SOCKET_FAMILY_IPV6);
+        break;
+      default:
+        return NULL;
+    }
+
+  if (sock == NULL)
+    {
+      DEBUG ("Socket creation error: %s", error->message);
+      g_error_free (error);
       return NULL;
     }
 
-  memset (&addr, 0, sizeof (addr));
-  addr.sun_family = AF_UNIX;
-  path_len = strlen (path);
-  strncpy (addr.sun_path, path, path_len);
-  g_unlink (path);
-
-  /* save this so we can delete the actual socket later if it exists */
-  self->priv->path = path;
-
-  if (bind (fd, (struct sockaddr*) &addr,
-        G_STRUCT_OFFSET (struct sockaddr_un, sun_path) + path_len) < 0)
+  if (!g_socket_bind (sock, addr, FALSE, &error))
     {
-      DEBUG ("bind failed");
-      close (fd);
+      DEBUG ("Bind error: %s", error->message);
+      g_error_free (error);
+      g_object_unref (addr);
+      g_object_unref (sock);
       return NULL;
     }
+  g_object_unref (addr);
 
-  if (listen (fd, 1) < 0)
-    {
-      DEBUG ("listen failed");
-      close (fd);
-      return NULL;
-    }
+  if (!g_socket_listen (sock, &error))
+  {
+    DEBUG ("Listen error: %s", error->message);
+    g_error_free (error);
+    g_object_unref (sock);
+    return NULL;
+  }
 
+  self->priv->socket = sock;
+
+  fd = g_socket_get_fd (sock);
   io_channel = g_io_channel_unix_new (fd);
-  g_io_channel_set_close_on_unref (io_channel, TRUE);
   return io_channel;
 }
 
@@ -1433,14 +1482,16 @@ accept_local_socket_connection (GIOChannel *source,
 #endif
 
 static gboolean
-setup_local_socket (SalutFileTransferChannel *self)
+setup_local_socket (SalutFileTransferChannel *self,
+    TpSocketAddressType address_type,
+    guint access_control)
 {
 #ifdef G_OS_WIN32
   return FALSE;
 #else
   GIOChannel *io_channel;
 
-  io_channel = get_socket_channel (self);
+  io_channel = get_socket_channel (self, address_type, access_control);
   if (io_channel == NULL)
     {
       return FALSE;

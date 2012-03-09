@@ -8,6 +8,7 @@ import httplib
 import urlparse
 import sys
 import os
+import SocketServer
 
 from avahitest import AvahiAnnouncer, AvahiListener, get_host_name
 from saluttest import wait_for_contact_in_publish
@@ -58,9 +59,20 @@ class FileTransferTest(object):
     metadata = {'loads': ['of', 'blahblah', 'stuff'],
                 'mental': ['data', 'sidf']}
 
-    def __init__(self):
+    def __init__(self, ft_protocol=cs.SOCKET_ADDRESS_TYPE_UNIX):
         self.file = File()
         self.contact_service = None
+        self.ft_proto = ft_protocol
+
+    def _get_socket_address_family(self):
+        if self.ft_proto == cs.SOCKET_ADDRESS_TYPE_IPV4:
+            return socket.AF_INET
+        elif self.ft_proto == cs.SOCKET_ADDRESS_TYPE_IPV6:
+            return socket.AF_INET6
+        elif self.ft_proto == cs.SOCKET_ADDRESS_TYPE_UNIX:
+            return socket.AF_UNIX
+
+        assert False
 
     def connect(self):
         self.conn.Connect()
@@ -144,8 +156,8 @@ class FileTransferTest(object):
             self.contact_service.stop()
 
 class ReceiveFileTest(FileTransferTest):
-    def __init__(self):
-        FileTransferTest.__init__(self)
+    def __init__(self, ft_protocol = cs.SOCKET_ADDRESS_TYPE_UNIX):
+        FileTransferTest.__init__(self, ft_protocol)
 
         self._actions = [self.connect, self.announce_contact, self.wait_for_contact,
             self.connect_to_salut, self.setup_http_server, self.send_ft_offer_iq,
@@ -191,7 +203,12 @@ class ReceiveFileTest(FileTransferTest):
         self.httpd = self._get_http_server_class()(('', 0), HTTPHandler)
 
     def _get_http_server_class(self):
-        return BaseHTTPServer.HTTPServer
+        if self.ft_proto == cs.SOCKET_ADDRESS_TYPE_UNIX:
+            return BaseHTTPServer.HTTPServer
+        class HTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
+            address_family = self._get_socket_address_family()
+
+        return HTTPServer
 
     def send_ft_offer_iq(self):
         iq = domish.Element((None, 'iq'))
@@ -251,7 +268,9 @@ class ReceiveFileTest(FileTransferTest):
         # FT's protocol doesn't allow us the send the date info
         assert props[cs.FT_DATE] == 0
         assert props[cs.FT_AVAILABLE_SOCKET_TYPES] == \
-            {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
+            {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST],
+             cs.SOCKET_ADDRESS_TYPE_IPV4: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST],
+             cs.SOCKET_ADDRESS_TYPE_IPV6: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
         assert props[cs.FT_TRANSFERRED_BYTES] == 0
         assert props[cs.FT_INITIAL_OFFSET] == 0
 
@@ -285,7 +304,7 @@ class ReceiveFileTest(FileTransferTest):
         self.q.expect('dbus-error', method='Set', name=cs.INVALID_ARGUMENT)
 
     def accept_file(self):
-        self.address = self.ft_channel.AcceptFile(cs.SOCKET_ADDRESS_TYPE_UNIX,
+        self.address = self.ft_channel.AcceptFile(self.ft_proto,
                 cs.SOCKET_ACCESS_CONTROL_LOCALHOST, "", 5, byte_arrays=True)
 
         e = self.q.expect('dbus-signal', signal='FileTransferStateChanged')
@@ -326,7 +345,7 @@ class ReceiveFileTest(FileTransferTest):
 
     def receive_file(self):
         # Connect to Salut's socket
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s = socket.socket(self._get_socket_address_family(), socket.SOCK_STREAM)
         s.connect(self.address)
 
         self.httpd.handle_request()
@@ -337,8 +356,8 @@ class ReceiveFileTest(FileTransferTest):
         self._read_file_from_socket(s)
 
 class SendFileTest(FileTransferTest):
-    def __init__(self):
-        FileTransferTest.__init__(self)
+    def __init__(self, ft_protocol=cs.SOCKET_ADDRESS_TYPE_UNIX):
+        FileTransferTest.__init__(self, ft_protocol)
 
         self._actions = [self.connect, self.announce_contact, self.wait_for_contact,
             self.check_ft_available, self.request_ft_channel, self.create_ft_channel,
@@ -411,7 +430,9 @@ class SendFileTest(FileTransferTest):
         assert props[cs.FT_DESCRIPTION] == self.file.description
         assert props[cs.FT_DATE] == self.file.date
         assert props[cs.FT_AVAILABLE_SOCKET_TYPES] == \
-            {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
+            {cs.SOCKET_ADDRESS_TYPE_UNIX: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST],
+             cs.SOCKET_ADDRESS_TYPE_IPV4: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST],
+             cs.SOCKET_ADDRESS_TYPE_IPV6: [cs.SOCKET_ACCESS_CONTROL_LOCALHOST]}
         assert props[cs.FT_TRANSFERRED_BYTES] == 0
         assert props[cs.FT_INITIAL_OFFSET] == 0
         if uri:
@@ -463,8 +484,9 @@ class SendFileTest(FileTransferTest):
             assert ns.TP_FT_METADATA not in forms
 
     def provide_file(self):
-        self.address = self.ft_channel.ProvideFile(cs.SOCKET_ADDRESS_TYPE_UNIX,
+        self.address = self.ft_channel.ProvideFile(self.ft_proto,
                 cs.SOCKET_ACCESS_CONTROL_LOCALHOST, "", byte_arrays=True)
+
 
     def client_request_file(self):
         # Connect HTTP client to the CM and request the file
@@ -479,7 +501,7 @@ class SendFileTest(FileTransferTest):
         assert data == self.file.data
 
     def send_file(self):
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s = socket.socket(self._get_socket_address_family(), socket.SOCK_STREAM)
         s.connect(self.address)
         s.send(self.file.data)
 

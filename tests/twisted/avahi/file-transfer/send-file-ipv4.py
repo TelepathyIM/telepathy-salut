@@ -2,13 +2,9 @@ from saluttest import exec_test
 from file_transfer_helper import SendFileTest
 import constants as cs
 
-print "FIXME: disabled because of a bug in Python's httplib. http://bugs.python.org/issue5111"
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
-
-class SendFileTransferIPv6(SendFileTest):
+class SendFileTransferIPv4(SendFileTest):
     def __init__(self):
-        SendFileTest.__init__(self, cs.SOCKET_ADDRESS_TYPE_IPV6)
+        SendFileTest.__init__(self, cs.SOCKET_ADDRESS_TYPE_IPV4)
 
     def provide_file(self):
         SendFileTest.provide_file(self)
@@ -29,5 +25,5 @@ class SendFileTransferIPv6(SendFileTest):
         assert reason == cs.FT_STATE_CHANGE_REASON_NONE
 
 if __name__ == '__main__':
-    test = SendFileTransferIPv6()
+    test = SendFileTransferIPv4()
     exec_test(test.test)
