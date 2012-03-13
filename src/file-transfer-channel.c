@@ -22,7 +22,6 @@
  */
 
 #include <glib/gstdio.h>
-#include <gio/gunixsocketaddress.h>
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <gio/gunixsocketaddress.h>
 #endif
 
 #define DEBUG_FLAG DEBUG_FT
@@ -759,11 +759,14 @@ salut_file_transfer_channel_dispose (GObject *object)
 static void
 salut_file_transfer_channel_finalize (GObject *object)
 {
+#ifdef G_OS_UNIX
   GSocketAddress *addr;
+#endif
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (object);
 
   /* free any data held directly by the object here */
   g_free (self->priv->filename);
+#ifdef G_OS_UNIX
   if (self->priv->socket != NULL)
     {
       addr = g_socket_get_local_address (self->priv->socket, NULL);
@@ -776,6 +779,7 @@ salut_file_transfer_channel_finalize (GObject *object)
       g_object_unref (addr);
       g_object_unref (self->priv->socket);
     }
+#endif
   g_free (self->priv->content_type);
   g_free (self->priv->content_hash);
   g_free (self->priv->description);
