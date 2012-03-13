@@ -387,6 +387,7 @@ salut_bonjour_self_set_presence (SalutSelf *self,
               strlen (self->status_message), self->status_message);
     }
   else
+    {
       error_type = TXTRecordRemoveValue (&priv->txt_record_presence, "msg");
     }
 
