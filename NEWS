@@ -2,9 +2,11 @@ telepathy-salut 0.7.2 (UNRELEASED)
 ==================================
 
 Enhancements
-• fd.o#46345 - Salut can now be built on Windows/MinGW32, although only with a
-  no-op dummy backend (siraj)
-• fd.o#18530 - Support for IPv4 and IPv6 types for the local socket for file transfer (tdfischer)
+• fd.o#46345 - Salut can now be built on Windows/MinGW32 (siraj)
+• fd.o#18530 - Support for IPv4 and IPv6 types for the local socket for
+  file transfer (tdfischer)
+• fd.o#47072 - Salut can now advertise itself on the network on Windows
+  using Apple's mDNSResponder (siraj)
 
 telepathy-salut 0.7.1 (2012-02-20)
 ==================================
