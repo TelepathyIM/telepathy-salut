@@ -100,6 +100,8 @@ AVAHI_BACKEND_SOURCES = 				\
 BONJOUR_BACKEND_SOURCES =                         \
     bonjour-self.h                                \
     bonjour-self.c                                \
+    bonjour-contact.h                             \
+    bonjour-contact.c                             \
     bonjour-contact-manager.h                     \
     bonjour-contact-manager.c                     \
     bonjour-discovery-client.h                    \
