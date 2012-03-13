@@ -38,6 +38,8 @@
 #include "avahi-discovery-client.h"
 #elif defined (USE_BACKEND_DUMMY)
 #include "dummy-discovery-client.h"
+#elif defined (USE_BACKEND_BONJOUR)
+#include "bonjour-discovery-client.h"
 #endif
 
 /* there is no appropriate vCard field for this protocol */
@@ -240,6 +242,8 @@ salut_protocol_set_property (GObject *object,
             type = SALUT_TYPE_AVAHI_DISCOVERY_CLIENT;
 #elif defined (USE_BACKEND_DUMMY)
             type = SALUT_TYPE_DUMMY_DISCOVERY_CLIENT;
+#elif defined (USE_BACKEND_BONJOUR)
+            type = SALUT_TYPE_BONJOUR_DISCOVERY_CLIENT;
 #endif
 
           self->priv->backend_type = type;

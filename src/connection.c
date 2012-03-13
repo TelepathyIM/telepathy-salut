@@ -222,8 +222,10 @@ struct _SalutConnectionPrivate
   /* Tubes channel manager */
   SalutTubesManager *tubes_manager;
 
+#ifndef USE_BACKEND_BONJOUR
   /* Bytestream manager for stream initiation (XEP-0095) */
   SalutSiBytestreamManager *si_bytestream_manager;
+#endif
 
   /* Sidecars */
   /* gchar *interface → SalutSidecar */
@@ -439,9 +441,11 @@ salut_connection_get_property (GObject *object,
     case PROP_IM_MANAGER:
       g_value_set_object (value, priv->im_manager);
       break;
+#ifndef USE_BACKEND_BONJOUR
     case PROP_MUC_MANAGER:
       g_value_set_object (value, priv->muc_manager);
       break;
+#endif
     case PROP_TUBES_MANAGER:
       g_value_set_object (value, priv->tubes_manager);
       break;
@@ -454,9 +458,11 @@ salut_connection_get_property (GObject *object,
     case PROP_SELF:
       g_value_set_object (value, priv->self);
       break;
+#ifndef USE_BACKEND_BONJOUR
     case PROP_SI_BYTESTREAM_MANAGER:
       g_value_set_object (value, priv->si_bytestream_manager);
       break;
+#endif
 #ifdef ENABLE_OLPC
     case PROP_OLPC_ACTIVITY_MANAGER:
       g_value_set_object (value, priv->olpc_activity_manager);
@@ -993,11 +999,13 @@ salut_connection_dispose (GObject *object)
       priv->discovery_client = NULL;
     }
 
+#ifndef USE_BACKEND_BONJOUR
   if (priv->si_bytestream_manager != NULL)
     {
       g_object_unref (priv->si_bytestream_manager);
       priv->si_bytestream_manager = NULL;
     }
+#endif
 
   g_warn_if_fail (g_hash_table_size (priv->sidecars) == 0);
   tp_clear_pointer (&priv->sidecars, g_hash_table_unref);
@@ -1120,6 +1128,7 @@ _self_established_cb (SalutSelf *s, gpointer data)
       return;
   }
 
+#ifndef USE_BACKEND_BONJOUR
   if (!salut_roomlist_manager_start (priv->roomlist_manager, &error))
     {
       DEBUG ("failed to start roomlist manager: %s", error->message);
@@ -1130,6 +1139,7 @@ _self_established_cb (SalutSelf *s, gpointer data)
           TP_CONNECTION_STATUS_REASON_NETWORK_ERROR);
       return;
     }
+#endif
 
 #ifdef ENABLE_OLPC
   if (!salut_olpc_activity_manager_start (priv->olpc_activity_manager, &error))
@@ -1218,9 +1228,12 @@ discovery_client_running (SalutConnection *self)
       return;
     }
 
+  /* Tubes are not currently supported by bonjour backend */
+#ifndef USE_BACKEND_BONJOUR
   /* Create the bytestream manager */
   priv->si_bytestream_manager = salut_si_bytestream_manager_new (self,
     salut_discovery_client_get_host_name_fqdn (priv->discovery_client));
+#endif
 }
 
 static void
@@ -3243,7 +3256,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
       priv->olpc_activity_manager,
       room, inviter, activity_id, activity_name, activity_type,
       color, tags);
-
+#ifndef USE_BACKEND_BONJOUR
   muc = salut_muc_manager_get_text_channel (priv->muc_manager, room);
   g_assert (muc != NULL);
 
@@ -3252,6 +3265,7 @@ salut_connection_olpc_observe_invitation (SalutConnection *self,
   g_signal_connect (muc, "closed", G_CALLBACK (muc_closed_cb), ctx);
 
   g_object_unref (muc);
+#endif
   g_hash_table_unref (properties);
   g_object_unref (inviter);
 }
@@ -3625,11 +3639,13 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
 
   priv->ft_manager = salut_ft_manager_new (self, priv->contact_manager);
 
+#ifndef USE_BACKEND_BONJOUR
   priv->muc_manager = salut_discovery_client_create_muc_manager (
       priv->discovery_client, self);
 
   priv->roomlist_manager = salut_discovery_client_create_roomlist_manager (
       priv->discovery_client, self);
+#endif
 
 #if 0
   priv->tubes_manager = salut_tubes_manager_new (self, priv->contact_manager);
@@ -3638,8 +3654,11 @@ salut_connection_create_channel_managers (TpBaseConnection *base)
   g_ptr_array_add (managers, priv->im_manager);
   g_ptr_array_add (managers, priv->contact_manager);
   g_ptr_array_add (managers, priv->ft_manager);
+#ifndef USE_BACKEND_BONJOUR
   g_ptr_array_add (managers, priv->muc_manager);
   g_ptr_array_add (managers, priv->roomlist_manager);
+#endif
+
 #if 0
   g_ptr_array_add (managers, priv->tubes_manager);
 #endif

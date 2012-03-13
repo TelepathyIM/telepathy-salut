@@ -35,7 +35,7 @@ GDebugKey keys[] = {
   { "tubes",          DEBUG_TUBES },
   { "xmpp-connection-manager",  DEBUG_XCM },
   { "si-bytestream-manager",    DEBUG_SI_BYTESTREAM_MGR },
-  { "discovery",      DEBUG_DISCO },
+  { "discovery",      DEBUG_DISCOVERY },
   { "olpc-activity",      DEBUG_OLPC_ACTIVITY },
   { "ft",             DEBUG_FT },
   { "plugin",         DEBUG_PLUGIN },

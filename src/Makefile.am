@@ -101,6 +101,14 @@ AVAHI_BACKEND_SOURCES = 				\
     avahi-self.h                                  \
     avahi-self.c
 
+BONJOUR_BACKEND_SOURCES =                         \
+    bonjour-self.h                                \
+    bonjour-self.c                                \
+    bonjour-contact-manager.h                     \
+    bonjour-contact-manager.c                     \
+    bonjour-discovery-client.h                    \
+    bonjour-discovery-client.c
+
 if ENABLE_OLPC
   CORE_SOURCES +=                                       \
     olpc-activity.h                               \
@@ -159,6 +167,10 @@ if USE_BACKEND_AVAHI
   libsalut_convenience_la_SOURCES += $(AVAHI_BACKEND_SOURCES)
 endif
 
+if USE_BACKEND_BONJOUR
+  libsalut_convenience_la_SOURCES += $(BONJOUR_BACKEND_SOURCES)
+endif
+
 write_mgr_file_SOURCES = write-mgr-file.c
 write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
@@ -174,6 +186,7 @@ check_c_sources = \
     $(telepathy_salut_SOURCES) \
     $(CORE_SOURCES) \
     $(AVAHI_BACKEND_SOURCES) \
+    $(BONJOUR_BACKEND_SOURCES) \
     $(DUMMY_BACKEND_SOURCES) \
     $(libsalut_plugins_la_SOURCES) \
     $(write_mgr_file_SOURCES)
@@ -208,29 +221,41 @@ AM_CFLAGS = \
 	@GMODULE_CFLAGS@ \
 	@WOCKY_CFLAGS@ \
 	@DBUS_CFLAGS@ \
-	@AVAHI_CFLAGS@ \
 	@TELEPATHY_GLIB_CFLAGS@ \
 	@UUID_CFLAGS@ \
 	@LIBSOUP_CFLAGS@ \
 	$(NULL)
 
-if OS_WINDOWS
-  AM_CFLAGS += -D_WIN32_WINNT=0x0501
-endif
-
 AM_LDFLAGS = \
 	$(GCOV_LIBS) \
 	@LIBXML2_LIBS@ \
 	@GLIB_LIBS@ \
-	@GIO_UNIX_CFLAGS@ \
 	@GMODULE_LIBS@ \
 	@WOCKY_LIBS@ \
 	@DBUS_LIBS@ \
-	@AVAHI_LIBS@ \
 	@TELEPATHY_GLIB_LIBS@ \
 	@UUID_LIBS@ \
 	@LIBSOUP_LIBS@ \
 	$(NULL)
+
+if OS_WINDOWS
+  AM_CFLAGS += -D_WIN32_WINNT=0x0501 \
+      @GIO_WINDOWS_CFLAGS@
+  AM_LDFLAGS += @GIO_WINDOWS_LIBS@
+else
+  AM_CFLAGS += @GIO_UNIX_CFLAGS@
+  AM_LDFLAGS += @GIO_UNIX_LIBS@
+endif
+
+if USE_BACKEND_AVAHI
+  AM_LDFLAGS += @AVAHI_LIBS@
+  AM_CFLAGS += @AVAHI_CFLAGS@
+endif
+
+if USE_BACKEND_BONJOUR
+  AM_LDFLAGS += @BONJOUR_LIBS@
+  AM_CFLAGS += @BONJOUR_CFLAGS@
+endif
 
 # Teach it how to make libgibber.la
 $(top_builddir)/lib/gibber/libgibber.la:
@@ -238,10 +263,22 @@ $(top_builddir)/lib/gibber/libgibber.la:
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
 
-signals-marshal.list: $(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) Makefile.am
+SIGNAL_MARSHAL_SOURCES = \
+    $(CORE_SOURCES) \
+    $(DUMMY_BACKEND_SOURCES)
+
+if USE_BACKEND_AVAHI
+  SIGNAL_MARSHAL_SOURCES += $(AVAHI_BACKEND_SOURCES)
+endif
+
+if USE_BACKEND_BONJOUR
+    SIGNAL_MARSHAL_SOURCES += $(BONJOUR_BACKEND_SOURCES)
+endif
+
+signals-marshal.list: $(SIGNAL_Marshal_SOURCES) Makefile.am
 	$(AM_V_GEN)( cd $(srcdir) && \
 	sed -n -e 's/.*salut_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
-	$(CORE_SOURCES) $(AVAHI_BACKEND_SOURCES) $(DUMMY_BACKEND_SOURCES) ) \
+	$(SIGNAL_MARSHAL_SOURCES) ) \
 	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
 	if cmp -s $@.tmp $@; then \
 		rm $@.tmp; \
