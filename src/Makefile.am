@@ -79,7 +79,6 @@ CORE_SOURCES =                                          \
     tubes-channel.c                               \
     util.h                                        \
     util.c                                        \
-    $(top_srcdir)/salut/util.h                          \
     protocol.c                                          \
     $(top_srcdir)/salut/protocol.h                      \
     plugin-loader.c                                     \
@@ -148,9 +147,13 @@ libsalut_plugins_la_LIBADD =                            \
 
 libsalut_plugins_la_SOURCES =                           \
     $(top_srcdir)/salut/plugin.h                        \
+    plugin-util.c                                       \
+    $(top_srcdir)/salut/util.h                          \
     plugin.c                                            \
     $(top_srcdir)/salut/plugin-connection.h             \
     plugin-connection.c                                 \
+    $(top_srcdir)/salut/plugin-contact.h                \
+    plugin-contact.c                                    \
     $(top_srcdir)/salut/capability-set.h                \
     capability-set.c                                    \
     debug.h                                             \

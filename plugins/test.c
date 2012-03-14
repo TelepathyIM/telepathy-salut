@@ -38,7 +38,8 @@ test_plugin_class_init (TestPluginClass *klass)
 
 static void
 initialize (SalutPlugin *plugin,
-    TpBaseConnectionManager *connection_manager)
+            TpBaseConnectionManager *connection_manager,
+            SalutCreateProtocolImpl callback)
 {
   DEBUG ("%p on connection manager %p", plugin, connection_manager);
 

@@ -1,5 +1,5 @@
 /*
- * util.h - Headers for Salut utility functions
+ * plugin-util.h - Headers for Salut plugins utility functions
  * Copyright (C) 2011 Collabora Ltd.
  *
  * This library is free software; you can redistribute it and/or
@@ -20,7 +20,6 @@
 #ifndef SALUT_UTIL_H
 #define SALUT_UTIL_H
 
-#include <wocky/wocky.h>
 #include <wocky/wocky.h>
 
 void salut_send_ll_pep_event (WockySession *session,

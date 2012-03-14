@@ -27,6 +27,9 @@
 #include <salut/capability-set.h>
 #include "presence.h"
 #include "connection.h"
+
+#include "salut/plugin-contact.h"
+
 #ifdef ENABLE_OLPC
 #include "olpc-activity.h"
 #endif
@@ -151,6 +154,8 @@ void salut_contact_get_avatar (SalutContact *contact,
 void salut_contact_set_capabilities (SalutContact *contact,
     const GabbleCapabilitySet *caps,
     const GPtrArray *data_forms);
+
+GabbleCapabilitySet *salut_contact_get_capabilities (SalutPluginContact *plugin_contact);
 
 #ifdef ENABLE_OLPC
 typedef void (*SalutContactOLPCActivityFunc)
