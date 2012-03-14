@@ -22,6 +22,8 @@
 
 #include <telepathy-glib/util.h>
 
+#include <salut/protocol.h>
+
 #define DEBUG_FLAG DEBUG_PLUGINS
 #include "debug.h"
 
@@ -129,7 +131,7 @@ salut_plugin_initialize (SalutPlugin *plugin,
   SalutPluginInitializeImpl func = iface->initialize;
 
   if (func != NULL)
-    func (plugin, connection_manager);
+    func (plugin, connection_manager, salut_protocol_new);
 }
 
 GPtrArray *

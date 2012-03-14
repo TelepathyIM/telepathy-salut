@@ -65,9 +65,16 @@ typedef GPtrArray * (*SalutPluginCreateChannelManagersImpl) (
     SalutPlugin *plugin,
     SalutPluginConnection *plugin_connection);
 
+typedef TpBaseProtocol * (*SalutCreateProtocolImpl) (GType backend_type,
+    const gchar *dnssd_name,
+    const gchar *protocol_name,
+    const gchar *english_name,
+    const gchar *icon_name);
+
 typedef void (*SalutPluginInitializeImpl) (
     SalutPlugin *plugin,
-    TpBaseConnectionManager *connection_manager);
+    TpBaseConnectionManager *connection_manager,
+    SalutCreateProtocolImpl callback);
 
 #define SALUT_PLUGIN_CURRENT_VERSION 1
 
