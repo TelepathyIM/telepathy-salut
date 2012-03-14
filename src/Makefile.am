@@ -20,8 +20,6 @@ CORE_SOURCES =                                          \
     capability-set.c \
     $(top_srcdir)/salut/capabilities.h \
     $(top_srcdir)/salut/capability-set.h \
-    caps-channel-manager.c \
-    $(top_srcdir)/salut/caps-channel-manager.h \
     gabble_namespaces.h \
     namespaces.h \
     capabilities.c                                \
@@ -146,6 +144,8 @@ libsalut_plugins_la_LIBADD =                            \
     @WOCKY_LIBS@
 
 libsalut_plugins_la_SOURCES =                           \
+    caps-channel-manager.c                              \
+    $(top_srcdir)/salut/caps-channel-manager.h          \
     $(top_srcdir)/salut/plugin.h                        \
     plugin-util.c                                       \
     $(top_srcdir)/salut/util.h                          \
