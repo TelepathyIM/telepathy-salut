@@ -133,7 +133,7 @@ lib_LTLIBRARIES = libsalut-plugins.la
 libsalut_plugins_la_LDFLAGS =                           \
     -shared                                             \
     -no-undefined                                       \
-    -avoid-version
+    -release $(VERSION)
 
 libsalut_plugins_android_la_LDFLAGS =                   \
     -shared                                             \

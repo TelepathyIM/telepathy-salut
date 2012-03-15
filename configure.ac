@@ -310,7 +310,7 @@ AM_CONDITIONAL(ENABLE_PLUGIN_API, test x$enable_plugin_api = xyes)
 # submodule's configure.
 
 prev_ac_configure_args=$ac_configure_args
-ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir}"
+ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir} --enable-shared-suffix=${PACKAGE}-${VERSION}"
 
 if test "x$ENABLE_CODING_STYLE_CHECKS" = xyes ; then
   ac_configure_args+=" --enable-coding-style-checks"
