@@ -86,7 +86,7 @@ salut_send_ll_pep_event (WockySession *session,
 
       contact = l->data;
 
-      if (gabble_capability_set_has (salut_plugin_contact_get_caps(contact), node))
+      if (gabble_capability_set_has (salut_plugin_contact_get_caps (contact), node))
         send_stanza_to_contact (porter, WOCKY_CONTACT (contact), stanza);
     }
 

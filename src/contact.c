@@ -918,9 +918,9 @@ GabbleCapabilitySet *
 salut_contact_get_capabilities (SalutPluginContact *plugin_contact)
 {
   SalutContact *contact = SALUT_CONTACT (plugin_contact);
-  
+
   g_return_val_if_fail (SALUT_IS_CONTACT (contact), NULL);
-  
+
   return contact->caps;
 }
 
