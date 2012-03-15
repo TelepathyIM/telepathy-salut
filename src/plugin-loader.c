@@ -33,7 +33,7 @@
 #define DEBUG_FLAG DEBUG_PLUGIN
 #include "debug.h"
 #include "salut/plugin.h"
-#include "salut/protocol.h"
+#include "protocol.h"
 
 G_DEFINE_TYPE(SalutPluginLoader,
     salut_plugin_loader,

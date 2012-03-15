@@ -77,9 +77,9 @@ CORE_SOURCES =                                          \
     tubes-channel.c                               \
     util.h                                        \
     util.c                                        \
-    protocol.c                                          \
-    $(top_srcdir)/salut/protocol.h                      \
-    plugin-loader.c                                     \
+    protocol.c                                    \
+    protocol.h                                    \
+    plugin-loader.c                               \
     plugin-loader.h
 
 AVAHI_BACKEND_SOURCES = 				\

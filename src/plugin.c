@@ -22,10 +22,9 @@
 
 #include <telepathy-glib/util.h>
 
-#include <salut/protocol.h>
-
 #define DEBUG_FLAG DEBUG_PLUGINS
 #include "debug.h"
+#include "protocol.h"
 
 G_DEFINE_INTERFACE (SalutPlugin, salut_plugin, G_TYPE_OBJECT)
 
