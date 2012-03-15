@@ -8,6 +8,9 @@ Enhancements
 • fd.o#47072 - Salut can now advertise itself on the network on Windows
   using Apple's mDNSResponder (siraj)
 
+Fixes:
+• fd.o#31729 - The ContactList interface is now actually advertised as supported
+
 telepathy-salut 0.7.1 (2012-02-20)
 ==================================
 
