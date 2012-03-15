@@ -125,13 +125,14 @@ salut_plugin_create_sidecar_finish (
 
 void
 salut_plugin_initialize (SalutPlugin *plugin,
-    TpBaseConnectionManager *connection_manager)
+    TpBaseConnectionManager *connection_manager,
+    SalutCreateProtocolImpl proto_ctor)
 {
   SalutPluginInterface *iface = SALUT_PLUGIN_GET_INTERFACE (plugin);
   SalutPluginInitializeImpl func = iface->initialize;
 
   if (func != NULL)
-    func (plugin, connection_manager, salut_protocol_new);
+    func (plugin, connection_manager, proto_ctor);
 }
 
 GPtrArray *

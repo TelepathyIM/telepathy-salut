@@ -156,7 +156,8 @@ SalutSidecar * salut_plugin_create_sidecar_finish (
 
 void salut_plugin_initialize (
     SalutPlugin *plugin,
-    TpBaseConnectionManager *connection_manager);
+    TpBaseConnectionManager *connection_manager,
+    SalutCreateProtocolImpl proto_ctor);
 
 GPtrArray * salut_plugin_create_channel_managers (
     SalutPlugin *plugin,
