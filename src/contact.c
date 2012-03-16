@@ -38,15 +38,9 @@
 
 static void xep_0115_capabilities_iface_init (gpointer, gpointer);
 
-static void
-salut_plugin_contact_iface_init (SalutPluginContactInterface *iface,
-                                    gpointer iface_data);
-
 G_DEFINE_TYPE_WITH_CODE (SalutContact, salut_contact, WOCKY_TYPE_LL_CONTACT,
     G_IMPLEMENT_INTERFACE (WOCKY_TYPE_XEP_0115_CAPABILITIES,
         xep_0115_capabilities_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_PLUGIN_CONTACT,
-                           salut_plugin_contact_iface_init);
 )
 
 /* properties */
@@ -922,21 +916,4 @@ xep_0115_capabilities_iface_init (gpointer g_iface,
 
   iface->get_data_forms = salut_contact_get_data_forms;
   iface->has_feature = salut_contact_has_feature;
-}
-
-GabbleCapabilitySet *
-salut_contact_get_capabilities (SalutPluginContact *plugin_contact)
-{
-  SalutContact *contact = SALUT_CONTACT (plugin_contact);
-
-  g_return_val_if_fail (SALUT_IS_CONTACT (contact), NULL);
-
-  return contact->caps;
-}
-
-static void
-salut_plugin_contact_iface_init (SalutPluginContactInterface *iface,
-                                    gpointer iface_data)
-{
-  iface->get_caps = salut_contact_get_capabilities;
 }

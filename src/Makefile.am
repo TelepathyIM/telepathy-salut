@@ -147,13 +147,9 @@ libsalut_plugins_la_SOURCES =                           \
     caps-channel-manager.c                              \
     $(top_srcdir)/salut/caps-channel-manager.h          \
     $(top_srcdir)/salut/plugin.h                        \
-    plugin-util.c                                       \
-    $(top_srcdir)/salut/util.h                          \
     plugin.c                                            \
     $(top_srcdir)/salut/plugin-connection.h             \
     plugin-connection.c                                 \
-    $(top_srcdir)/salut/plugin-contact.h                \
-    plugin-contact.c                                    \
     $(top_srcdir)/salut/capability-set.h                \
     capability-set.c                                    \
     debug.h                                             \
