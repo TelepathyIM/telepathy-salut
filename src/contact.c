@@ -905,6 +905,15 @@ salut_contact_get_data_forms (WockyXep0115Capabilities *caps)
   return self->data_forms;
 }
 
+static gboolean
+salut_contact_has_feature (WockyXep0115Capabilities *caps,
+    const gchar *feature)
+{
+  SalutContact *self = SALUT_CONTACT (caps);
+
+  return gabble_capability_set_has (self->caps, feature);
+}
+
 static void
 xep_0115_capabilities_iface_init (gpointer g_iface,
     gpointer iface_data)
@@ -912,6 +921,7 @@ xep_0115_capabilities_iface_init (gpointer g_iface,
   WockyXep0115CapabilitiesInterface *iface = g_iface;
 
   iface->get_data_forms = salut_contact_get_data_forms;
+  iface->has_feature = salut_contact_has_feature;
 }
 
 GabbleCapabilitySet *
