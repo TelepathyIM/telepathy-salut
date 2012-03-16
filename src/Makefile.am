@@ -20,8 +20,6 @@ CORE_SOURCES =                                          \
     capability-set.c \
     $(top_srcdir)/salut/capabilities.h \
     $(top_srcdir)/salut/capability-set.h \
-    caps-channel-manager.c \
-    $(top_srcdir)/salut/caps-channel-manager.h \
     gabble_namespaces.h \
     namespaces.h \
     capabilities.c                                \
@@ -79,10 +77,9 @@ CORE_SOURCES =                                          \
     tubes-channel.c                               \
     util.h                                        \
     util.c                                        \
-    $(top_srcdir)/salut/util.h                          \
-    protocol.c                                          \
-    $(top_srcdir)/salut/protocol.h                      \
-    plugin-loader.c                                     \
+    protocol.c                                    \
+    protocol.h                                    \
+    plugin-loader.c                               \
     plugin-loader.h
 
 AVAHI_BACKEND_SOURCES = 				\
@@ -136,7 +133,7 @@ lib_LTLIBRARIES = libsalut-plugins.la
 libsalut_plugins_la_LDFLAGS =                           \
     -shared                                             \
     -no-undefined                                       \
-    -avoid-version
+    -release $(VERSION)
 
 libsalut_plugins_android_la_LDFLAGS =                   \
     -shared                                             \
@@ -147,6 +144,8 @@ libsalut_plugins_la_LIBADD =                            \
     @WOCKY_LIBS@
 
 libsalut_plugins_la_SOURCES =                           \
+    caps-channel-manager.c                              \
+    $(top_srcdir)/salut/caps-channel-manager.h          \
     $(top_srcdir)/salut/plugin.h                        \
     plugin.c                                            \
     $(top_srcdir)/salut/plugin-connection.h             \

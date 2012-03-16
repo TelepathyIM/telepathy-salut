@@ -38,13 +38,14 @@ test_plugin_class_init (TestPluginClass *klass)
 
 static void
 initialize (SalutPlugin *plugin,
-    TpBaseConnectionManager *connection_manager)
+            TpBaseConnectionManager *connection_manager,
+            const SalutPluginInitializeCallbacks *callbacks)
 {
   DEBUG ("%p on connection manager %p", plugin, connection_manager);
 
   /* If you wanted to add another protocol you could do it here by
-   * creating the protocol object and then calling
-   * tp_base_connection_manager_add_protocol(). */
+   * creating the protocol object with callbacks->create_protocol
+   * and then calling tp_base_connection_manager_add_protocol(). */
 }
 
 static GPtrArray *

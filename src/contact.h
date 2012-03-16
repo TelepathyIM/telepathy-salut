@@ -27,6 +27,7 @@
 #include <salut/capability-set.h>
 #include "presence.h"
 #include "connection.h"
+
 #ifdef ENABLE_OLPC
 #include "olpc-activity.h"
 #endif

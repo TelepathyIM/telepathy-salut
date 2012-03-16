@@ -33,6 +33,7 @@
 #define DEBUG_FLAG DEBUG_PLUGIN
 #include "debug.h"
 #include "salut/plugin.h"
+#include "protocol.h"
 
 G_DEFINE_TYPE(SalutPluginLoader,
     salut_plugin_loader,
@@ -322,13 +323,19 @@ void
 salut_plugin_loader_initialize (SalutPluginLoader *self,
     TpBaseConnectionManager *connection_manager)
 {
+  static const SalutPluginInitializeCallbacks callbacks = {
+    salut_protocol_new,
+    { NULL, }
+  };
+
   guint i;
 
   for (i = 0; i < self->priv->plugins->len; i++)
     {
       SalutPlugin *plugin = g_ptr_array_index (self->priv->plugins, i);
 
-      salut_plugin_initialize (plugin, connection_manager);
+      salut_plugin_initialize (plugin, connection_manager,
+          &callbacks);
     }
 }
 

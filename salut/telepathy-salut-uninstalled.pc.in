@@ -12,5 +12,5 @@ Description: Link-local XMPP backend for the Telepathy framework (uninstalled)
 Version: @VERSION@
 Requires: pkg-config >= 0.21
 Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib >= 0.13.12
-Libs: ${abs_top_builddir}/src/libsalut-plugins.la
+Libs: ${abs_top_builddir}/src/libsalut-plugins.la ${abs_top_builddir}/lib/ext/wocky/wocky/libwocky.la
 Cflags: -I${abs_top_srcdir} -I${abs_top_srcdir}/lib/ext/wocky

@@ -24,6 +24,7 @@
 
 #define DEBUG_FLAG DEBUG_PLUGINS
 #include "debug.h"
+#include "protocol.h"
 
 G_DEFINE_INTERFACE (SalutPlugin, salut_plugin, G_TYPE_OBJECT)
 
@@ -123,13 +124,14 @@ salut_plugin_create_sidecar_finish (
 
 void
 salut_plugin_initialize (SalutPlugin *plugin,
-    TpBaseConnectionManager *connection_manager)
+    TpBaseConnectionManager *connection_manager,
+    const SalutPluginInitializeCallbacks *callbacks)
 {
   SalutPluginInterface *iface = SALUT_PLUGIN_GET_INTERFACE (plugin);
   SalutPluginInitializeImpl func = iface->initialize;
 
   if (func != NULL)
-    func (plugin, connection_manager);
+    func (plugin, connection_manager, callbacks);
 }
 
 GPtrArray *
