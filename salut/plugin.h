@@ -65,16 +65,23 @@ typedef GPtrArray * (*SalutPluginCreateChannelManagersImpl) (
     SalutPlugin *plugin,
     SalutPluginConnection *plugin_connection);
 
+typedef struct _SalutPluginInitializeCallbacks SalutPluginInitializeCallbacks;
+
 typedef TpBaseProtocol * (*SalutCreateProtocolImpl) (GType backend_type,
     const gchar *dnssd_name,
     const gchar *protocol_name,
     const gchar *english_name,
     const gchar *icon_name);
 
+struct _SalutPluginInitializeCallbacks {
+  SalutCreateProtocolImpl create_protocol;
+  GCallback _padding[7];
+};
+
 typedef void (*SalutPluginInitializeImpl) (
     SalutPlugin *plugin,
     TpBaseConnectionManager *connection_manager,
-    SalutCreateProtocolImpl callback);
+    const SalutPluginInitializeCallbacks *callbacks);
 
 #define SALUT_PLUGIN_CURRENT_VERSION 1
 
@@ -157,7 +164,7 @@ SalutSidecar * salut_plugin_create_sidecar_finish (
 void salut_plugin_initialize (
     SalutPlugin *plugin,
     TpBaseConnectionManager *connection_manager,
-    SalutCreateProtocolImpl proto_ctor);
+    const SalutPluginInitializeCallbacks *callbacks);
 
 GPtrArray * salut_plugin_create_channel_managers (
     SalutPlugin *plugin,
