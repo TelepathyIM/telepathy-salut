@@ -66,12 +66,19 @@ struct _SalutBonjourDiscoveryClientPrivate
 
   gchar *dnssd_name;
 
+  GHashTable *svc_ref_table;
+  GHashTable *svc_source_table;
+
   gboolean dispose_has_run;
 };
 
 #define SALUT_BONJOUR_DISCOVERY_CLIENT_GET_PRIVATE(obj) \
     ((SalutBonjourDiscoveryClientPrivate *) \
       ((SalutBonjourDiscoveryClient *) obj)->priv)
+
+static void _destroy_source_id (gpointer ptr);
+static void _destroy_channel (gpointer ptr);
+static void _destroy_service (gpointer ptr);
 
 static void
 salut_bonjour_discovery_client_init (SalutBonjourDiscoveryClient *self)
@@ -81,6 +88,11 @@ salut_bonjour_discovery_client_init (SalutBonjourDiscoveryClient *self)
 
   self->priv = priv;
   priv->dispose_has_run = FALSE;
+  priv->svc_ref_table = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, _destroy_service, _destroy_channel);
+
+  priv->svc_source_table = g_hash_table_new_full (g_direct_hash,
+      g_direct_equal, NULL, _destroy_source_id);
 
   priv->state = SALUT_DISCOVERY_CLIENT_STATE_DISCONNECTED;
 }
@@ -108,6 +120,12 @@ salut_bonjour_discovery_client_dispose (GObject *object)
 
   if (priv->dispose_has_run)
     return;
+
+  g_hash_table_remove_all (priv->svc_source_table);
+  g_hash_table_remove_all (priv->svc_ref_table);
+
+  g_hash_table_unref (priv->svc_source_table);
+  g_hash_table_unref (priv->svc_ref_table);
 
   priv->dispose_has_run = TRUE;
 
@@ -252,6 +270,95 @@ salut_bonjour_discovery_client_get_host_name_fqdn (SalutDiscoveryClient *clt)
 {
   g_warning ("FQDN not supported by Bonjour discovery client");
   return NULL;
+}
+
+static gboolean
+_bonjour_socket_process_cb (GIOChannel *source,
+                            GIOCondition condition,
+                            gpointer data)
+{
+  DNSServiceRef *service_ref = data;
+  DNSServiceErrorType error_type = kDNSServiceErr_NoError;
+
+  error_type = DNSServiceProcessResult ((*service_ref));
+
+  if (error_type != kDNSServiceErr_NoError)
+    {
+      g_warning ("Socket Processing Failed with : (%d)", error_type);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static void
+_destroy_service (gpointer service_ptr)
+{
+  DNSServiceRef *service = service_ptr;
+
+  if (service)
+    DNSServiceRefDeallocate (*service);
+}
+
+static void
+_destroy_channel (gpointer channel_ptr)
+{
+  g_io_channel_unref (channel_ptr);
+}
+
+static void
+_destroy_source_id (gpointer source_id)
+{
+  if (!g_source_remove (GPOINTER_TO_UINT (source_id)))
+    {
+      g_warning ("Error removing source");
+    }
+}
+
+void
+salut_bonjour_discovery_client_watch_svc_ref (SalutBonjourDiscoveryClient *self,
+                                              DNSServiceRef *service)
+{
+  SalutBonjourDiscoveryClientPrivate *priv =
+    SALUT_BONJOUR_DISCOVERY_CLIENT_GET_PRIVATE (self);
+  GIOChannel *channel = NULL;
+  guint source_id;
+
+
+  channel = g_io_channel_win32_new_socket (
+      DNSServiceRefSockFD ((*service)));
+
+  source_id = g_io_add_watch (channel, G_IO_IN,
+      _bonjour_socket_process_cb, service);
+
+  g_hash_table_insert (priv->svc_ref_table, service, channel);
+  g_hash_table_insert (priv->svc_source_table, channel,
+      GUINT_TO_POINTER (source_id));
+}
+
+void
+salut_bonjour_discovery_client_drop_svc_ref (SalutBonjourDiscoveryClient *self,
+                                             DNSServiceRef *service)
+{
+  SalutBonjourDiscoveryClientPrivate *priv =
+    SALUT_BONJOUR_DISCOVERY_CLIENT_GET_PRIVATE (self);
+  gpointer channel = NULL;
+
+  if (!priv->svc_ref_table)
+    return;
+
+  if (!priv->svc_source_table)
+    return;
+
+  if (!g_hash_table_lookup_extended (
+      priv->svc_ref_table, service, NULL, &channel))
+    return;
+
+  if (!channel)
+    return;
+
+  g_hash_table_remove (priv->svc_source_table, channel);
+  g_hash_table_remove (priv->svc_ref_table, service);
 }
 
 const gchar *
