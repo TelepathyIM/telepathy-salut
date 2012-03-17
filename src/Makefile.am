@@ -141,6 +141,7 @@ libsalut_plugins_android_la_LDFLAGS =                   \
     
 libsalut_plugins_la_LIBADD =                            \
     @TELEPATHY_GLIB_LIBS@                               \
+    @GLIB_LIBS@                                         \
     @WOCKY_LIBS@
 
 libsalut_plugins_la_SOURCES =                           \
