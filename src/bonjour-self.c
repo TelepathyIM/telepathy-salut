@@ -324,9 +324,6 @@ _bonjour_service_register_cb (DNSServiceRef service_ref,
            return;
          }
 
-       _self->name = g_strdup_printf ("%s@%s", _self->published_name,
-          g_get_host_name ());
-
        salut_self_established (_self);
     }
 }
@@ -351,8 +348,11 @@ salut_bonjour_self_announce (SalutSelf *_self,
 
   RETURN_ERROR_IF_FAIL (error_type, error);
 
+  _self->name = g_strdup_printf ("%s@%s", _self->published_name,
+          g_get_host_name ());
+
   error_type = DNSServiceRegister (&priv->bonjour_service,
-      kDNSServiceInterfaceIndexAny, 0, NULL,
+      kDNSServiceInterfaceIndexAny, 0, _self->name,
       dnssd_name, NULL, NULL,
       htons (port), 0, NULL, _bonjour_service_register_cb, self);
 
