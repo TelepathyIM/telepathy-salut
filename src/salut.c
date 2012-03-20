@@ -47,8 +47,7 @@ main (int argc, char **argv)
   SalutPluginLoader *loader;
 
   g_type_init ();
-  g_thread_init (NULL);
-
+  
   salut_symbol_hacks ();
 
   /* treat criticals as, well, critical */
