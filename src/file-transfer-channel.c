@@ -1362,6 +1362,7 @@ get_local_unix_socket_address (SalutFileTransferChannel *self)
 
   return addr;
 }
+#endif
 
 static GSocketAddress *
 get_local_tcp_socket_address (SalutFileTransferChannel *self, GSocketFamily family)
@@ -1389,6 +1390,7 @@ get_socket_channel (SalutFileTransferChannel *self,
 
   switch (address_type)
     {
+#ifdef G_OS_UNIX
       case TP_SOCKET_ADDRESS_TYPE_UNIX:
         sock = g_socket_new (G_SOCKET_FAMILY_UNIX,
                              G_SOCKET_TYPE_STREAM,
@@ -1396,6 +1398,7 @@ get_socket_channel (SalutFileTransferChannel *self,
                              &error);
         addr = get_local_unix_socket_address (self);
         break;
+#endif
       case TP_SOCKET_ADDRESS_TYPE_IPV4:
         sock = g_socket_new (G_SOCKET_FAMILY_IPV4, G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP, &error);
         addr = get_local_tcp_socket_address (self, G_SOCKET_FAMILY_IPV4);
@@ -1450,8 +1453,6 @@ accept_local_socket_connection (GIOChannel *source,
 {
   GibberFileTransfer *ft;
   int new_fd;
-  struct sockaddr_un addr;
-  socklen_t addrlen;
   GIOChannel *channel;
 
   ft = SALUT_FILE_TRANSFER_CHANNEL (user_data)->priv->ft;
@@ -1462,16 +1463,18 @@ accept_local_socket_connection (GIOChannel *source,
     {
       DEBUG ("Client connected to local socket");
 
-      addrlen = sizeof (addr);
       new_fd = accept (g_io_channel_unix_get_fd (source),
-          (struct sockaddr *) &addr, &addrlen);
+          NULL, NULL);
       if (new_fd < 0)
         {
           DEBUG ("accept() failed");
           return FALSE;
         }
-
+#ifdef G_OS_WIN32
+      channel = g_io_channel_win32_new_fd (new_fd);
+#else
       channel = g_io_channel_unix_new (new_fd);
+#endif
       g_io_channel_set_close_on_unref (channel, TRUE);
       g_io_channel_set_encoding (channel, NULL, NULL);
       if (ft->direction == GIBBER_FILE_TRANSFER_DIRECTION_INCOMING)
@@ -1483,16 +1486,12 @@ accept_local_socket_connection (GIOChannel *source,
 
   return FALSE;
 }
-#endif
 
 static gboolean
 setup_local_socket (SalutFileTransferChannel *self,
     TpSocketAddressType address_type,
     guint access_control)
 {
-#ifdef G_OS_WIN32
-  return FALSE;
-#else
   GIOChannel *io_channel;
 
   io_channel = get_socket_channel (self, address_type, access_control);
@@ -1506,7 +1505,6 @@ setup_local_socket (SalutFileTransferChannel *self,
   g_io_channel_unref (io_channel);
 
   return TRUE;
-#endif
 }
 
 static WockyDataForm *
