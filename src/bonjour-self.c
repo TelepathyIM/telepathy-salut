@@ -267,25 +267,6 @@ _bonjour_self_init_txt_record_presence (SalutBonjourSelf *self,
   return kDNSServiceErr_NoError;
 }
 
-static gboolean
-_bonjour_socket_process_cb (GIOChannel *source,
-                             GIOCondition condition,
-                             gpointer data)
-{
-  DNSServiceRef service_ref = data;
-  DNSServiceErrorType error_type = kDNSServiceErr_NoError;
-
-  error_type = DNSServiceProcessResult (service_ref);
-
-  if (error_type != kDNSServiceErr_NoError)
-    {
-      DEBUG ("Socket processing failed with : (%d)", error_type);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
 static void DNSSD_API
 _bonjour_service_register_cb (DNSServiceRef service_ref,
                               DNSServiceFlags service_flags,
@@ -304,6 +285,8 @@ _bonjour_service_register_cb (DNSServiceRef service_ref,
   if (!self || error_type != kDNSServiceErr_NoError)
     {
       DEBUG ("Service Registration Failed with : (%d)", error_type);
+      salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
+          &priv->bonjour_service);
     }
    else
      {
@@ -336,7 +319,6 @@ salut_bonjour_self_announce (SalutSelf *_self,
   SalutBonjourSelf *self = SALUT_BONJOUR_SELF (_self);
   SalutBonjourSelfPrivate *priv = self->priv;
   DNSServiceErrorType error_type = kDNSServiceErr_NoError;
-  GIOChannel *bonjour_service_channel = NULL;
   const gchar *dnssd_name;
 
   dnssd_name =
@@ -358,11 +340,8 @@ salut_bonjour_self_announce (SalutSelf *_self,
 
   RETURN_ERROR_IF_FAIL (error_type, error);
 
-  bonjour_service_channel = g_io_channel_win32_new_socket (
-      DNSServiceRefSockFD (priv->bonjour_service));
-
-  g_io_add_watch (bonjour_service_channel, G_IO_IN, _bonjour_socket_process_cb,
-      priv->bonjour_service);
+  salut_bonjour_discovery_client_watch_svc_ref (priv->discovery_client,
+      &priv->bonjour_service);
 
   return TRUE;
 }
@@ -564,6 +543,9 @@ salut_bonjour_self_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
+
+  salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
+      &priv->bonjour_service);
 
   if (priv->discovery_client != NULL)
     {
