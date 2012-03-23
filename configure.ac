@@ -281,6 +281,11 @@ if test "x$pluginexeclibdir" = x; then
   pluginexeclibdir='${libdir}/telepathy/salut-0/lib'
 fi
 AC_ARG_VAR([pluginexeclibdir])
+# The actual plugins
+if test "x$pluginexecdir" = x; then
+  pluginexecdir='${libdir}/telepathy/salut-0/plugins'
+fi
+AC_ARG_VAR([pluginexecdir])
 
 dnl plugins
 AC_ARG_ENABLE(plugins,

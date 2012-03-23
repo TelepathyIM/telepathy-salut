@@ -4,7 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
 libexecdir=@libexecdir@
 
-plugindir=${libdir}/telepathy/salut-0
+pluginexecdir=@pluginexecdir@
 pluginexeclibdir=@pluginexeclibdir@
 salutpath=${libexecdir}/telepathy-salut
 

@@ -1,5 +1,3 @@
-plugindir = $(libdir)/telepathy/salut-0
-
 # testing-only plugins
 noinst_LTLIBRARIES = \
 	test.la
@@ -8,7 +6,7 @@ installable_plugins =
 	$(NULL)
 
 if ENABLE_PLUGINS
-plugin_LTLIBRARIES = $(installable_plugins)
+pluginexec_LTLIBRARIES = $(installable_plugins)
 else
 # we still compile the plugin (just to make sure it compiles!) but we don't
 # install it
@@ -23,7 +21,7 @@ test_la_SOURCES = \
 
 # because test.la is not installed, libtool will want to compile it as static
 # despite -shared (a convenience library), unless we also use -rpath
-test_la_LDFLAGS = $(AM_LDFLAGS) -rpath $(plugindir)
+test_la_LDFLAGS = $(AM_LDFLAGS) -rpath $(pluginexecdir)
 
 AM_CFLAGS = $(ERROR_CFLAGS) \
     -I $(top_srcdir) -I $(top_builddir) \

@@ -211,7 +211,7 @@ AM_CFLAGS = \
 	-I $(top_srcdir)/lib -I $(top_builddir)/lib \
 	-I $(top_srcdir)/salut \
 	-DG_LOG_DOMAIN=\"salut\" \
-	-DPLUGIN_DIR=\"$(libdir)/telepathy/salut-0\" \
+	-DPLUGIN_DIR=\"$(pluginexecdir)\" \
 	$(ERROR_CFLAGS) \
 	$(GCOV_CFLAGS) \
 	@LIBXML2_CFLAGS@ \
