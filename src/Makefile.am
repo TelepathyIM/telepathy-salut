@@ -17,7 +17,6 @@ noinst_PROGRAMS = write-mgr-file
 CORE_SOURCES =                                          \
     symbol-hacks.c \
     symbol-hacks.h \
-    capability-set.c \
     $(top_srcdir)/salut/capabilities.h \
     $(top_srcdir)/salut/capability-set.h \
     gabble_namespaces.h \
