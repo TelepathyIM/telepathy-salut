@@ -128,7 +128,7 @@ SHA1_SOURCES =                                          \
     sha1/sha1-util.h                                    \
     sha1/sha1-util.c
 
-lib_LTLIBRARIES = libsalut-plugins.la
+pluginexeclib_LTLIBRARIES = libsalut-plugins.la
 
 libsalut_plugins_la_LDFLAGS =                           \
     -shared                                             \
@@ -337,6 +337,6 @@ Android.mk: Makefile.am $(BUILT_SOURCES)
 	  $(AM_CFLAGS) \
 	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) -DBUILD_AS_ANDROID_SERVICE \
 	 -:LDFLAGS $(telepathy_salut_android_libs) $(AM_LDFLAGS) \
-	 $(lib_LTLIBRARIES) \
+	 $(pluginexeclib_LTLIBRARIES) \
 	 -:LIBFILTER_STATIC salut-convenience \
 	> $@

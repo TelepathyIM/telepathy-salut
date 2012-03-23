@@ -273,6 +273,15 @@ AC_ARG_ENABLE(submodules,
   build_submodules=$enableval,
   build_submodules=yes )
 
+# These must contain "exec" for automake to work right (install-exec,
+# not install-data).
+#
+# Private directory for Wocky and the salut-plugins library
+if test "x$pluginexeclibdir" = x; then
+  pluginexeclibdir='${libdir}/telepathy/salut-0/lib'
+fi
+AC_ARG_VAR([pluginexeclibdir])
+
 dnl plugins
 AC_ARG_ENABLE(plugins,
   AC_HELP_STRING([--disable-plugins],
@@ -317,7 +326,7 @@ fi
 # submodule's configure.
 
 prev_ac_configure_args=$ac_configure_args
-ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir} --enable-shared-suffix=${PACKAGE}-${VERSION}"
+ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir} --enable-shared-suffix=${PACKAGE}-${VERSION} --libdir=${pluginexeclibdir}"
 
 if test "x$ENABLE_CODING_STYLE_CHECKS" = xyes ; then
   ac_configure_args="$ac_configure_args --enable-coding-style-checks"
