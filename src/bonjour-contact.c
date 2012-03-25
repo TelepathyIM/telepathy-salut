@@ -487,7 +487,7 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
 
   /* status */
   tmp = (char *) TXTRecordGetValuePtr
-        (txt_length, &txt_record, "status", &txt_len);
+        (txt_length, txt_record, "status", &txt_len);
   status = g_strndup (tmp, txt_len);
 
   if (status != NULL)
@@ -504,20 +504,20 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
     }
 
   /* status message */
-  tmp = (char *) TXTRecordGetValuePtr (txt_length, &txt_record,
+  tmp = (char *) TXTRecordGetValuePtr (txt_length, txt_record,
       "msg", &txt_len);
   status_message = g_strndup (tmp, txt_len);
   salut_contact_change_status_message (contact, status_message);
   free (status_message);
 
   /* real name and nick */
-  tmp = (char *) TXTRecordGetValuePtr (txt_length, &txt_record,
+  tmp = (char *) TXTRecordGetValuePtr (txt_length, txt_record,
       "nick", &txt_len);
   nick = g_strndup (tmp, txt_len);
-  tmp = (char *) TXTRecordGetValuePtr (txt_length, &txt_record,
+  tmp = (char *) TXTRecordGetValuePtr (txt_length, txt_record,
       "1st", &txt_len);
   first = g_strndup (tmp, txt_len);
-  tmp = (char *) TXTRecordGetValuePtr (txt_length, &txt_record,
+  tmp = (char *) TXTRecordGetValuePtr (txt_length, txt_record,
       "last", &txt_len);
   last = g_strndup (tmp, txt_len);
 
@@ -543,16 +543,15 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
 
   salut_contact_change_capabilities (contact, hash, node, ver);
 
-  DEBUG ("%s", txt_record);
   free (hash);
   free (node);
   free (ver);
 
   /* email */
-  tmp = (char *) TXTRecordGetValuePtr (txt_length, &txt_record,
+  tmp = (char *) TXTRecordGetValuePtr (txt_length, txt_record,
       "email", &txt_len);
   email = g_strndup (tmp, txt_len);
-  tmp = (char *) TXTRecordGetValuePtr (txt_length, &txt_record,
+  tmp = (char *) TXTRecordGetValuePtr (txt_length, txt_record,
       "jid", &txt_len);
   jid = g_strndup (tmp, txt_len);
 
