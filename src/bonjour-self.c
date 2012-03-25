@@ -365,7 +365,8 @@ salut_bonjour_self_set_presence (SalutSelf *self,
       error_type = TXTRecordSetValue (&priv->txt_record_presence, "msg",
               strlen (self->status_message), self->status_message);
     }
-  else
+  else if ((TXTRecordContainsKey (TXTRecordGetLength (&priv->txt_record_presence),
+          &priv->txt_record_presence, "msg")) == TRUE)
     {
       error_type = TXTRecordRemoveValue (&priv->txt_record_presence, "msg");
     }
