@@ -91,6 +91,38 @@ salut_bonjour_contact_init (SalutBonjourContact *self)
 }
 
 static void
+_salut_bonjour_resolve_ctx_free (SalutBonjourContact *self,
+                                 SalutBonjourResolveCtx *ctx)
+{
+  SalutBonjourContactPrivate *priv = self->priv;
+
+  if (ctx->address_ref != NULL)
+    {
+      salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
+          ctx->address_ref);
+    }
+
+  if (ctx->txt_record)
+    {
+      g_free (ctx->txt_record);
+    }
+
+  if (ctx->address)
+    g_free (ctx->address);
+
+  if (ctx->name)
+    g_free (ctx->name);
+
+  if (ctx->type)
+    g_free (ctx->type);
+
+  if (ctx->domain)
+    g_free (ctx->domain);
+
+  g_slice_free (SalutBonjourResolveCtx, ctx);
+}
+
+static void
 salut_bonjour_contact_get_property (GObject *object,
                                     guint property_id,
                                     GValue *value,
@@ -381,7 +413,7 @@ salut_bonjour_contact_dispose (GObject *object)
 
       salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
           ctx->resolve_ref);
-      g_slice_free (SalutBonjourResolveCtx, ctx);
+      _salut_bonjour_resolve_ctx_free (self, ctx);
     }
 
   g_slist_free (priv->resolvers);
@@ -466,11 +498,18 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
   if (error_type != kDNSServiceErr_NoError)
     {
       DEBUG ("Resolver failed with : (%d)", error_type);
-      g_free (ctx->txt_record);
-      ctx->txt_length = 0;
       salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
           ctx->address_ref);
-      return;
+      ctx->address_ref = NULL;
+      g_free (ctx->txt_record);
+      ctx->txt_record = NULL;
+        return;
+    }
+
+  if (ctx->address)
+    {
+      g_free (ctx->address);
+      ctx->address = NULL;
     }
 
   if (address->sa_family == AF_INET)
@@ -482,6 +521,7 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
 
   salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
       ctx->address_ref);
+  ctx->address_ref = NULL;
 
   salut_contact_freeze (contact);
 
@@ -567,6 +607,7 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
 
   g_free (ctx->txt_record);
   ctx->txt_length = 0;
+  ctx->txt_record = NULL;
 }
 
 static void DNSSD_API
@@ -585,6 +626,19 @@ _bonjour_service_resolve_cb (DNSServiceRef service_ref,
   SalutBonjourContact *self = SALUT_BONJOUR_CONTACT (ctx->contact);
   SalutBonjourContactPrivate *priv = self->priv;
   DNSServiceErrorType _error_type = kDNSServiceErr_NoError;
+
+  if (ctx->address_ref != NULL)
+    {
+      salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
+          ctx->address_ref);
+      ctx->address_ref = NULL;
+    }
+
+  if (ctx->txt_record != NULL)
+    {
+      g_free (ctx->txt_record);
+      ctx->txt_record = NULL;
+    }
 
   ctx->txt_record = g_strndup ((const gchar *) txt_record, (guint) txt_length);
   ctx->txt_length = txt_length;
@@ -624,11 +678,7 @@ salut_bonjour_contact_remove_service (SalutBonjourContact *self,
 
   priv->resolvers = g_slist_remove (priv->resolvers, ctx);
 
-  g_free (ctx->address);
-  g_free (ctx->name);
-  g_free (ctx->type);
-  g_free (ctx->domain);
-  g_slice_free (SalutBonjourResolveCtx, ctx);
+  _salut_bonjour_resolve_ctx_free (self, ctx);
 
   if (priv->resolvers == NULL)
     salut_contact_lost (SALUT_CONTACT (self));
@@ -658,6 +708,7 @@ salut_bonjour_contact_add_service (SalutBonjourContact *self,
   ctx->address = NULL;
   ctx->txt_length = 0;
   ctx->txt_record = NULL;
+  ctx->address_ref = NULL;
 
   error_type = DNSServiceResolve (&ctx->resolve_ref,
       0, interface, name, type, domain, _bonjour_service_resolve_cb, ctx);
@@ -665,7 +716,7 @@ salut_bonjour_contact_add_service (SalutBonjourContact *self,
   if (error_type != kDNSServiceErr_NoError)
     {
       DEBUG ("ServiceResolve failed with : (%d)", error_type);
-      g_slice_free (SalutBonjourResolveCtx, ctx);
+      _salut_bonjour_resolve_ctx_free (self, ctx);
       return FALSE;
     }
 
