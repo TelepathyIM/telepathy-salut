@@ -196,7 +196,6 @@ salut_bonjour_contact_ll_get_addresses (WockyLLContact *contact)
              port = ctx->port;
              addr = g_inet_address_new_from_bytes (
                  (guint8 *) &(address->sin_addr), G_SOCKET_FAMILY_IPV4);
-             DEBUG ("%s", g_inet_address_to_string (addr));
            }
          else if (ctx->address->sa_family == AF_INET6)
            {
