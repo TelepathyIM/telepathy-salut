@@ -67,9 +67,9 @@ typedef struct _SalutBonjourResolveCtx
 
   SalutBonjourContact *contact;
 
-  const char *name;
-  const char *type;
-  const char *domain;
+  char *name;
+  char *type;
+  char *domain;
   uint32_t interface;
   struct sockaddr *address;
   uint16_t port;
@@ -625,6 +625,9 @@ salut_bonjour_contact_remove_service (SalutBonjourContact *self,
   priv->resolvers = g_slist_remove (priv->resolvers, ctx);
 
   g_free (ctx->address);
+  g_free (ctx->name);
+  g_free (ctx->type);
+  g_free (ctx->domain);
   g_slice_free (SalutBonjourResolveCtx, ctx);
 
   if (priv->resolvers == NULL)
@@ -648,9 +651,9 @@ salut_bonjour_contact_add_service (SalutBonjourContact *self,
 
   ctx = g_slice_new0 (SalutBonjourResolveCtx);
   ctx->interface = interface;
-  ctx->name = name;
-  ctx->type = type;
-  ctx->domain = domain;
+  ctx->name = g_strdup (name);
+  ctx->type = g_strdup (type);
+  ctx->domain = g_strdup (domain);
   ctx->contact = self;
   ctx->address = NULL;
   ctx->txt_length = 0;
