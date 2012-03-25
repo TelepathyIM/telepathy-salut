@@ -200,7 +200,11 @@ _salut_bonjour_service_browse_cb (DNSServiceRef service,
         {
           salut_bonjour_contact_remove_service (SALUT_BONJOUR_CONTACT (contact),
               interfaceIndex, name, regtype, domain);
-          g_object_unref (contact);
+          if (!salut_bonjour_contact_has_services
+              (SALUT_BONJOUR_CONTACT (contact)))
+            {
+              g_object_unref (contact);
+            }
         }
       else
         {
