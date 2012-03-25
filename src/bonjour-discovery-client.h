@@ -50,11 +50,11 @@ const gchar * salut_bonjour_discovery_client_get_dnssd_name (
 
 void salut_bonjour_discovery_client_watch_svc_ref (
     SalutBonjourDiscoveryClient *self,
-    DNSServiceRef *service);
+    DNSServiceRef service);
 
 void salut_bonjour_discovery_client_drop_svc_ref (
     SalutBonjourDiscoveryClient *self,
-    DNSServiceRef *service);
+    DNSServiceRef service);
 
 /* TYPE MACROS */
 #define SALUT_TYPE_BONJOUR_DISCOVERY_CLIENT \

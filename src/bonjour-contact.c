@@ -380,7 +380,7 @@ salut_bonjour_contact_dispose (GObject *object)
       SalutBonjourResolveCtx *ctx = l->data;
 
       salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-          &ctx->resolve_ref);
+          ctx->resolve_ref);
       g_slice_free (SalutBonjourResolveCtx, ctx);
     }
 
@@ -469,7 +469,7 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
       g_free (ctx->txt_record);
       ctx->txt_length = 0;
       salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-          &ctx->address_ref);
+          ctx->address_ref);
       return;
     }
 
@@ -481,7 +481,7 @@ _bonjour_getaddr_cb (DNSServiceRef service_ref,
     g_assert_not_reached ();
 
   salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-      &ctx->address_ref);
+      ctx->address_ref);
 
   salut_contact_freeze (contact);
 
@@ -602,7 +602,7 @@ _bonjour_service_resolve_cb (DNSServiceRef service_ref,
     }
 
   salut_bonjour_discovery_client_watch_svc_ref (priv->discovery_client,
-      &ctx->address_ref);
+      ctx->address_ref);
 }
 
 void
@@ -621,7 +621,7 @@ salut_bonjour_contact_remove_service (SalutBonjourContact *self,
     return;
 
   salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-      &ctx->resolve_ref);
+      ctx->resolve_ref);
 
   priv->resolvers = g_slist_remove (priv->resolvers, ctx);
 
@@ -668,7 +668,7 @@ salut_bonjour_contact_add_service (SalutBonjourContact *self,
     }
 
   salut_bonjour_discovery_client_watch_svc_ref (priv->discovery_client,
-      &ctx->resolve_ref);
+      ctx->resolve_ref);
 
   priv->resolvers = g_slist_prepend (priv->resolvers, ctx);
 

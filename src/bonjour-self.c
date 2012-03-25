@@ -286,7 +286,7 @@ _bonjour_service_register_cb (DNSServiceRef service_ref,
     {
       DEBUG ("Service Registration Failed with : (%d)", error_type);
       salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-          &priv->bonjour_service);
+          priv->bonjour_service);
     }
    else
      {
@@ -341,7 +341,7 @@ salut_bonjour_self_announce (SalutSelf *_self,
   RETURN_ERROR_IF_FAIL (error_type, error);
 
   salut_bonjour_discovery_client_watch_svc_ref (priv->discovery_client,
-      &priv->bonjour_service);
+      priv->bonjour_service);
 
   return TRUE;
 }
@@ -546,7 +546,7 @@ salut_bonjour_self_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
   salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-      &priv->bonjour_service);
+      priv->bonjour_service);
 
   if (priv->discovery_client != NULL)
     {

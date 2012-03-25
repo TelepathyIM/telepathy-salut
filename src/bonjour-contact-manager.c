@@ -146,7 +146,7 @@ _salut_bonjour_service_browse_cb (DNSServiceRef service,
     {
       DEBUG ("Browser Failed with : (%d)", error_type);
       salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-          &priv->presence_browser);
+          priv->presence_browser);
       return;
     }
 
@@ -242,7 +242,7 @@ salut_bonjour_contact_manager_start (SalutContactManager *mgr,
     }
 
   salut_bonjour_discovery_client_watch_svc_ref (priv->discovery_client,
-      &priv->presence_browser);
+      priv->presence_browser);
 
   return TRUE;
 }
@@ -266,7 +266,7 @@ salut_bonjour_contact_manager_close_all (SalutContactManager *mgr)
     SALUT_BONJOUR_CONTACT_MANAGER_GET_PRIVATE (self);
 
   salut_bonjour_discovery_client_drop_svc_ref (priv->discovery_client,
-      &priv->presence_browser);
+      priv->presence_browser);
 
   if (priv->discovery_client != NULL)
     {

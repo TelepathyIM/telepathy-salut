@@ -277,10 +277,10 @@ _bonjour_socket_process_cb (GIOChannel *source,
                             GIOCondition condition,
                             gpointer data)
 {
-  DNSServiceRef *service_ref = data;
+  DNSServiceRef service_ref = data;
   DNSServiceErrorType error_type = kDNSServiceErr_NoError;
 
-  error_type = DNSServiceProcessResult ((*service_ref));
+  error_type = DNSServiceProcessResult (service_ref);
 
   if (error_type != kDNSServiceErr_NoError)
     {
@@ -294,10 +294,9 @@ _bonjour_socket_process_cb (GIOChannel *source,
 static void
 _destroy_service (gpointer service_ptr)
 {
-  DNSServiceRef *service = service_ptr;
+  DNSServiceRef service = service_ptr;
 
-  if (service)
-    DNSServiceRefDeallocate (*service);
+  DNSServiceRefDeallocate (service);
 }
 
 static void
@@ -317,7 +316,7 @@ _destroy_source_id (gpointer source_id)
 
 void
 salut_bonjour_discovery_client_watch_svc_ref (SalutBonjourDiscoveryClient *self,
-                                              DNSServiceRef *service)
+                                              DNSServiceRef service)
 {
   SalutBonjourDiscoveryClientPrivate *priv =
     SALUT_BONJOUR_DISCOVERY_CLIENT_GET_PRIVATE (self);
@@ -326,7 +325,7 @@ salut_bonjour_discovery_client_watch_svc_ref (SalutBonjourDiscoveryClient *self,
 
 
   channel = g_io_channel_win32_new_socket (
-      DNSServiceRefSockFD ((*service)));
+      DNSServiceRefSockFD ((service)));
 
   source_id = g_io_add_watch (channel, G_IO_IN,
       _bonjour_socket_process_cb, service);
@@ -338,7 +337,7 @@ salut_bonjour_discovery_client_watch_svc_ref (SalutBonjourDiscoveryClient *self,
 
 void
 salut_bonjour_discovery_client_drop_svc_ref (SalutBonjourDiscoveryClient *self,
-                                             DNSServiceRef *service)
+                                             DNSServiceRef service)
 {
   SalutBonjourDiscoveryClientPrivate *priv =
     SALUT_BONJOUR_DISCOVERY_CLIENT_GET_PRIVATE (self);
