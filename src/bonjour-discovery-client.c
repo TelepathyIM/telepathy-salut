@@ -343,12 +343,6 @@ salut_bonjour_discovery_client_drop_svc_ref (SalutBonjourDiscoveryClient *self,
     SALUT_BONJOUR_DISCOVERY_CLIENT_GET_PRIVATE (self);
   gpointer channel = NULL;
 
-  if (!priv->svc_ref_table)
-    return;
-
-  if (!priv->svc_source_table)
-    return;
-
   if (!g_hash_table_lookup_extended (
       priv->svc_ref_table, service, NULL, &channel))
     return;
