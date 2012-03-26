@@ -18,12 +18,18 @@ Requirements
 telepathy-salut requires:
   telepathy-glib <http://telepathy.freedesktop.org/releases/telepathy-glib/>
   libxml2 <http://xmlsoft.org/>
-  avahi-gobject <http://avahi.org/download/>
   GLib, GObject <http://ftp.gnome.org/pub/GNOME/sources/glib/>
   libdbus <http://dbus.freedesktop.org/releases/dbus/>
   The D-Bus GLib bindings <http://dbus.freedesktop.org/releases/dbus-glib/>
 and optionally uses:
   libasyncns <http://0pointer.de/lennart/projects/libasyncns/>
+
+For the Avahi backend on Linux:
+  avahi-gobject <http://avahi.org/download/>
+
+For the Bonjour backend on Windows/mingw32:
+  dns-sd client library with mingw support
+    <http://cgit.collabora.com/git/libdnssd-ytstenut.git/>
 
 At build time, it also requires:
   GNU make <http://www.gnu.org/software/make/>
@@ -33,7 +39,7 @@ At build time, it also requires:
 
 See configure.ac for full details, including versions required.
 
-Building from Darcs also requires the GNU build system (Autoconf, Automake,
+Building from Git also requires the GNU build system (Autoconf, Automake,
 libtool).
 
 Bugs, feature requests and to-do list
@@ -70,8 +76,5 @@ Hacking
 
 The current version of telepathy-salut is always available from:
   <http://git.collabora.co.uk/?p=telepathy-salut.git>
-
-Proposed patches awaiting review can usually be found in Merge Monkey:
-  <http://monkey.collabora.co.uk/>
 
 Please follow <http://telepathy.freedesktop.org/wiki/Style> in new code.
