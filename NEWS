@@ -7,10 +7,11 @@ Enhancements
   file transfer (tdfischer)
 • fd.o#47072 - Salut can now advertise itself on the network on Windows
   using Apple's mDNSResponder (siraj)
-• fd.o#47429 - Can discover remote contacts from the network on Windows
-  using Apple's mDNSResponder (siraj)
 • fd.o#45716 - The plugin interface has been further adjusted to comply
   with requirements of real-world plugins on Windows (Hei_Ku, oggis)
+• fd.o#47429 - Can discover remote contacts from the network on Windows
+  using Apple's mDNSResponder (siraj)
+• fd.o#47729 - File transfer support is now enabled on Windows (siraj)
 
 Fixes:
 • fd.o#31729 - The ContactList interface is now actually advertised as supported
