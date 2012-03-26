@@ -48,6 +48,14 @@ GType salut_bonjour_discovery_client_get_type (void);
 const gchar * salut_bonjour_discovery_client_get_dnssd_name (
     SalutBonjourDiscoveryClient *self);
 
+void salut_bonjour_discovery_client_watch_svc_ref (
+    SalutBonjourDiscoveryClient *self,
+    DNSServiceRef service);
+
+void salut_bonjour_discovery_client_drop_svc_ref (
+    SalutBonjourDiscoveryClient *self,
+    DNSServiceRef service);
+
 /* TYPE MACROS */
 #define SALUT_TYPE_BONJOUR_DISCOVERY_CLIENT \
   (salut_bonjour_discovery_client_get_type ())

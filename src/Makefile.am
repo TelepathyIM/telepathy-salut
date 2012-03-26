@@ -17,7 +17,6 @@ noinst_PROGRAMS = write-mgr-file
 CORE_SOURCES =                                          \
     symbol-hacks.c \
     symbol-hacks.h \
-    capability-set.c \
     $(top_srcdir)/salut/capabilities.h \
     $(top_srcdir)/salut/capability-set.h \
     gabble_namespaces.h \
@@ -101,6 +100,8 @@ AVAHI_BACKEND_SOURCES = 				\
 BONJOUR_BACKEND_SOURCES =                         \
     bonjour-self.h                                \
     bonjour-self.c                                \
+    bonjour-contact.h                             \
+    bonjour-contact.c                             \
     bonjour-contact-manager.h                     \
     bonjour-contact-manager.c                     \
     bonjour-discovery-client.h                    \
@@ -141,6 +142,7 @@ libsalut_plugins_android_la_LDFLAGS =                   \
     
 libsalut_plugins_la_LIBADD =                            \
     @TELEPATHY_GLIB_LIBS@                               \
+    @GLIB_LIBS@                                         \
     @WOCKY_LIBS@
 
 libsalut_plugins_la_SOURCES =                           \
