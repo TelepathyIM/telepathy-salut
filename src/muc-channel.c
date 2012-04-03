@@ -933,7 +933,8 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
     }
 
 #ifdef ENABLE_OLPC
-  if (salut_connection_olpc_observe_muc_stanza (self->connection,
+  if (salut_connection_olpc_observe_muc_stanza (
+          SALUT_CONNECTION (base_connection),
           tp_base_channel_get_target_handle (base_chan),
           from_handle, stanza))
     return;
