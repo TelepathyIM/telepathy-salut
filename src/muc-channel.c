@@ -84,6 +84,7 @@ enum
 {
   PROP_MUC_CONNECTION = 1,
   PROP_NAME,
+  PROP_CREATOR,
   LAST_PROPERTY
 };
 
@@ -94,6 +95,7 @@ struct _SalutMucChannelPrivate
   GibberMucConnection *muc_connection;
   gchar *muc_name;
   gboolean connected;
+  gboolean creator;
   guint timeout;
   /* (gchar *) -> (SalutContact *) */
   GHashTable *senders;
@@ -137,6 +139,9 @@ salut_muc_channel_get_property (GObject    *object,
     case PROP_MUC_CONNECTION:
       g_value_set_object (value, priv->muc_connection);
       break;
+    case PROP_CREATOR:
+      g_value_set_boolean (value, priv->creator);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -159,6 +164,9 @@ salut_muc_channel_set_property (GObject     *object,
       break;
     case PROP_MUC_CONNECTION:
       priv->muc_connection = g_value_get_object (value);
+      break;
+    case PROP_CREATOR:
+      priv->creator = g_value_get_boolean (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -217,7 +225,7 @@ muc_connection_connected_cb (GibberMucConnection *connection,
 {
   SalutMucChannelPrivate *priv = self->priv;
 
-  if (tp_base_channel_is_requested (TP_BASE_CHANNEL (self)))
+  if (priv->creator)
     {
       DEBUG ("I created this muc. Adding myself as member now");
       salut_muc_channel_add_self_to_members (self);
@@ -655,6 +663,17 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
                                     G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class,
                                    PROP_MUC_CONNECTION, param_spec);
+
+  param_spec = g_param_spec_boolean (
+      "creator",
+      "creator",
+      "Whether or not we created this muc",
+      FALSE,
+      G_PARAM_CONSTRUCT_ONLY |
+      G_PARAM_READWRITE |
+      G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class,
+      PROP_CREATOR, param_spec);
 
   signals[READY] = g_signal_new (
         "ready",

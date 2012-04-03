@@ -327,5 +327,6 @@ salut_avahi_muc_channel_new (SalutConnection *connection,
       "discovery-client", discovery_client,
       "initiator-handle", initiator,
       "requested", requested,
+      "creator", creator,
       NULL);
 }
