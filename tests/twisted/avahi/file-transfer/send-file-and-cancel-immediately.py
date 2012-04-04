@@ -29,7 +29,9 @@ class SendFileAndCancelImmediatelyTest(SendFileTest):
             http.request('GET', self.filename)
         except socket.error, e:
             code, msg = e.args
-            assert errno.errorcode[code] == 'ECONNREFUSED'
+            assert errno.errorcode[code] == 'ECONNREFUSED', '%r' % e
+        except Exception, e:
+            assert False, 'Should raise a socket error, not: %r' % e
         else:
             assert False, "Should raise a socket error"
 
