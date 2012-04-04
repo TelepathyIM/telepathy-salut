@@ -1,11 +1,25 @@
-telepathy-salut 0.7.3 (UNRELEASED)
+telepathy-salut 0.8.0 (UNRELEASED)
 ==================================
 
-Enhancements:
-• ...
+This is the start of a new stable branch.
 
-Fixes:
-• ...
+Changes since 0.7.2:
+
+• Fix build with OLPC code enabled. (Jonny)
+
+• Fix MUC code to announce the user as a member of the MUC if it is
+  the creator. (Jonny)
+
+• Fix race in file transfer code which was giving the IO channel to
+  Gibber before it knew how to deal with it.. (Jonny)
+
+Summary of particularly noteworthy changes since 0.6.x:
+
+• The FileTransfer Metadata interface has been implemented.
+
+• Salut now builds on Android using 'androgenizer'.
+
+• Salut can now be built and used on Windows/MinGW32.
 
 telepathy-salut 0.7.2 (2012-03-26)
 ==================================
