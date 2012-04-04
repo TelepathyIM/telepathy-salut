@@ -111,6 +111,7 @@ struct _SalutFileTransferChannelPrivate {
   guint progress_timer;
   GSocket *socket;
   gboolean remote_accepted;
+  GIOChannel *channel;
 
   /* properties */
   TpFileTransferState state;
@@ -750,6 +751,12 @@ salut_file_transfer_channel_dispose (GObject *object)
       self->priv->ft = NULL;
     }
 
+  if (self->priv->channel != NULL)
+    {
+      g_io_channel_unref (self->priv->channel);
+      self->priv->channel = NULL;
+    }
+
   /* release any references held by the object here */
 
   if (G_OBJECT_CLASS (salut_file_transfer_channel_parent_class)->dispose)
@@ -857,6 +864,18 @@ remote_accepted_cb (GibberFileTransfer *ft,
                     SalutFileTransferChannel *self)
 {
   self->priv->remote_accepted = TRUE;
+
+  /* if we've got the IO channel here then gibber_file_transfer_send
+   * hasn't been called so let's call it now before doing anything
+   * else. */
+  if (self->priv->channel != NULL)
+    {
+      gibber_file_transfer_send (ft, self->priv->channel);
+
+      /* we have no need for this anymore */
+      g_io_channel_unref (self->priv->channel);
+      self->priv->channel = NULL;
+    }
 
   if (self->priv->socket != NULL)
     {
@@ -1451,11 +1470,12 @@ accept_local_socket_connection (GIOChannel *source,
                                 GIOCondition condition,
                                 gpointer user_data)
 {
+  SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (user_data);
   GibberFileTransfer *ft;
   int new_fd;
   GIOChannel *channel;
 
-  ft = SALUT_FILE_TRANSFER_CHANNEL (user_data)->priv->ft;
+  ft = self->priv->ft;
 
   g_assert (ft != NULL);
 
@@ -1478,10 +1498,25 @@ accept_local_socket_connection (GIOChannel *source,
       g_io_channel_set_close_on_unref (channel, TRUE);
       g_io_channel_set_encoding (channel, NULL, NULL);
       if (ft->direction == GIBBER_FILE_TRANSFER_DIRECTION_INCOMING)
-        gibber_file_transfer_receive (ft, channel);
+        {
+          gibber_file_transfer_receive (ft, channel);
+          g_io_channel_unref (channel);
+        }
       else
-        gibber_file_transfer_send (ft, channel);
-      g_io_channel_unref (channel);
+        {
+          /* gibber_file_transfer_send needs ::remote-accepted to have
+           * already been fired, so let's wait for that, keeping
+           * around the GIOChannel, if it hasn't already happened. */
+          if (self->priv->remote_accepted)
+            {
+              gibber_file_transfer_send (ft, channel);
+              g_io_channel_unref (channel);
+            }
+          else
+            {
+              self->priv->channel = channel;
+            }
+        }
     }
 
   return FALSE;
