@@ -929,6 +929,8 @@ gibber_oob_file_transfer_send (GibberFileTransfer *ft,
 {
   GibberOobFileTransfer *self = GIBBER_OOB_FILE_TRANSFER (ft);
 
+  g_return_if_fail (self->priv->msg != NULL);
+
   DEBUG("Starting HTTP chunked file transfer");
   self->priv->channel = src;
   g_io_channel_ref (src);
