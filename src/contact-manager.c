@@ -397,15 +397,19 @@ salut_contact_manager_start (SalutContactManager *self,
 SalutContact *
 salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle)
 {
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
-      TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_CONTACT);
-  const char *name = tp_handle_inspect (handle_repo, handle);
+  TpHandleRepoIface *handle_repo;
+  const char *name;
   SalutContact *ret;
 
-  g_return_val_if_fail (name, NULL);
-
-  if (mgr->contacts == NULL)
+  /* have we already closed everything? */
+  if (mgr->connection == NULL || mgr->contacts == NULL)
     return NULL;
+
+  handle_repo = tp_base_connection_get_handles (
+      TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_CONTACT);
+  name = tp_handle_inspect (handle_repo, handle);
+
+  g_return_val_if_fail (name, NULL);
 
   DEBUG ("Getting contact for: %s", name);
   ret = g_hash_table_lookup (mgr->contacts, name);
