@@ -180,8 +180,8 @@ salut_muc_channel_add_self_to_members (SalutMucChannel *self)
   SalutMucChannelPrivate *priv = self->priv;
   TpBaseConnection *base_conn = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
-  TpIntSet *empty;
-  TpIntSet *add;
+  TpIntset *empty;
+  TpIntset *add;
 
   priv->connected = TRUE;
   g_signal_emit (self, signals[READY], 0);
@@ -409,7 +409,7 @@ send_invite_cb (GObject *source_object,
       TP_BASE_CHANNEL (data->self));
   GError *error = NULL;
   TpHandle handle;
-  TpIntSet *empty, *removed;
+  TpIntset *empty, *removed;
 
   if (wocky_porter_send_finish (porter, result, &error))
     /* success */
@@ -492,13 +492,13 @@ salut_muc_channel_add_member (GObject *iface,
   SalutMucChannel *self = SALUT_MUC_CHANNEL (iface);
   TpBaseConnection *base_connection = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
-  TpIntSet *empty, *remote_pending;
+  TpIntset *empty, *remote_pending;
 
   if (handle == base_connection->self_handle)
     {
       /* adding yourself, let's join the muc */
-      TpIntSet *empty_;
-      TpIntSet *add;
+      TpIntset *empty_;
+      TpIntset *add;
       gboolean ret = TRUE;
 
       if (tp_handle_set_is_member (self->group.remote_pending,
@@ -792,8 +792,8 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
     }
   else
     {
-      TpIntSet *empty = tp_intset_new ();
-      TpIntSet *local_pending = tp_intset_new ();
+      TpIntset *empty = tp_intset_new ();
+      TpIntset *local_pending = tp_intset_new ();
 
       g_assert (stanza != NULL);
 
@@ -836,7 +836,7 @@ salut_muc_channel_add_members (SalutMucChannel *self,
   SalutMucChannelPrivate *priv = self->priv;
   TpBaseConnection *base_conn = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
-  TpIntSet *empty, *changes;
+  TpIntset *empty, *changes;
   guint i;
   SalutContactManager *contact_mgr;
 
@@ -881,7 +881,7 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
       base_chan);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       base_connection, TP_HANDLE_TYPE_CONTACT);
-  TpIntSet *empty, *changes;
+  TpIntset *empty, *changes;
   guint i;
 
   empty = tp_intset_new ();
