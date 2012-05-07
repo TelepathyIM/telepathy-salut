@@ -1481,7 +1481,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
     && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,
         priv->self_handle))
     {
-      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      GError error = { TP_ERROR, TP_ERROR_NOT_AVAILABLE,
          "Tube channel isn't connected" };
 
       dbus_g_method_return_error (context, &error);
@@ -1530,7 +1530,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
   if (tube == NULL)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
 
       dbus_g_method_return_error (context, &error);
 
@@ -1544,7 +1544,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
 
   if (type != TP_TUBE_TYPE_DBUS)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not a D-Bus tube" };
 
       dbus_g_method_return_error (context, &error);
@@ -1553,7 +1553,7 @@ salut_tubes_channel_accept_d_bus_tube (TpSvcChannelTypeTubes *iface,
 
   if (state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the local pending state" };
 
       dbus_g_method_return_error (context, &error);
@@ -1595,7 +1595,7 @@ salut_tubes_channel_close_tube (TpSvcChannelTypeTubes *iface,
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
   if (tube == NULL)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
 
       dbus_g_method_return_error (context, &error);
       return;
@@ -1632,7 +1632,7 @@ salut_tubes_channel_get_d_bus_tube_address (TpSvcChannelTypeTubes *iface,
 
   if (tube == NULL)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
 
       dbus_g_method_return_error (context, &error);
       return;
@@ -1645,7 +1645,7 @@ salut_tubes_channel_get_d_bus_tube_address (TpSvcChannelTypeTubes *iface,
 
   if (type != TP_TUBE_TYPE_DBUS)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not a D-Bus tube" };
 
       dbus_g_method_return_error (context, &error);
@@ -1654,7 +1654,7 @@ salut_tubes_channel_get_d_bus_tube_address (TpSvcChannelTypeTubes *iface,
 
   if (state != TP_TUBE_CHANNEL_STATE_OPEN)
     {
-      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      GError error = { TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Tube is not open" };
 
       dbus_g_method_return_error (context, &error);
@@ -1711,7 +1711,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
 
   if (tube == NULL)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
 
       dbus_g_method_return_error (context, &error);
       return;
@@ -1724,7 +1724,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
 
   if (type != TP_TUBE_TYPE_DBUS)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not a D-Bus tube" };
 
       dbus_g_method_return_error (context, &error);
@@ -1733,7 +1733,7 @@ salut_tubes_channel_get_d_bus_names (TpSvcChannelTypeTubes *iface,
 
   if (state != TP_TUBE_CHANNEL_STATE_OPEN)
     {
-      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      GError error = { TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Tube is not open" };
 
       dbus_g_method_return_error (context, &error);
@@ -1963,7 +1963,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
     && !tp_handle_set_is_member (TP_GROUP_MIXIN (self->muc)->members,
         priv->self_handle))
     {
-      GError err = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      GError err = { TP_ERROR, TP_ERROR_NOT_AVAILABLE,
          "Tube channel isn't connected" };
 
       dbus_g_method_return_error (context, &err);
@@ -2034,7 +2034,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
   if (tube == NULL)
     {
-      GError err = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+      GError err = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
 
       dbus_g_method_return_error (context, &err);
       return;
@@ -2046,7 +2046,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
     {
       GError *err = NULL;
 
-      err = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      err = g_error_new (TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Address type %d not implemented", address_type);
 
       dbus_g_method_return_error (context, err);
@@ -2059,7 +2059,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
     {
       GError *err = NULL;
 
-      err = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      err = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Unix sockets only support localhost control access");
 
       dbus_g_method_return_error (context, err);
@@ -2075,7 +2075,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
 
   if (type != TP_TUBE_TYPE_STREAM)
     {
-      GError err = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError err = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not a stream tube" };
 
       dbus_g_method_return_error (context, &err);
@@ -2084,7 +2084,7 @@ salut_tubes_channel_accept_stream_tube (TpSvcChannelTypeTubes *iface,
 
   if (state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     {
-      GError err = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError err = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the local pending state" };
 
       dbus_g_method_return_error (context, &err);
@@ -2131,7 +2131,7 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (id));
   if (tube == NULL)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT, "Unknown tube" };
 
       dbus_g_method_return_error (context, &error);
       return;
@@ -2144,7 +2144,7 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
 
   if (type != TP_TUBE_TYPE_STREAM)
     {
-      GError error = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      GError error = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not a Stream tube" };
 
       dbus_g_method_return_error (context, &error);
@@ -2153,7 +2153,7 @@ salut_tubes_channel_get_stream_tube_socket_address (TpSvcChannelTypeTubes *iface
 
   if (state != TP_TUBE_CHANNEL_STATE_OPEN)
     {
-      GError error = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      GError error = { TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Tube is not open" };
 
       dbus_g_method_return_error (context, &error);

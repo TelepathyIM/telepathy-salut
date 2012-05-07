@@ -236,7 +236,7 @@ salut_bonjour_contact_manager_start (SalutContactManager *mgr,
 
   if (error_type != kDNSServiceErr_NoError)
     {
-      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      *error = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Service Browse Failed with : (%d)", error_type);
       return FALSE;
     }

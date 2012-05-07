@@ -462,7 +462,7 @@ salut_muc_channel_send_invitation (SalutMucChannel *self,
 
   if (contact == NULL)
     {
-      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      *error = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Couldn't contact the contact");
       return FALSE;
     }
@@ -524,7 +524,7 @@ salut_muc_channel_add_member (GObject *iface,
         }
       else
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+          g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR,
               "Failed to connect to the group");
           ret = FALSE;
         }
@@ -593,7 +593,7 @@ salut_muc_channel_remove_member_with_reason (GObject *object,
 
   if (handle != base_connection->self_handle)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Contacts cannot be kicked from Clique chatrooms");
       return FALSE;
     }
@@ -1084,7 +1084,7 @@ salut_muc_channel_disconnected (GibberTransport *transport, gpointer user_data)
   if (!priv->connected)
     {
       /* FIXME the disconnected signal should give us an error */
-      GError error = { TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+      GError error = { TP_ERROR, TP_ERROR_NETWORK_ERROR,
           "can't join the muc" };
       g_signal_emit (self, signals[JOIN_ERROR], 0, &error);
     }

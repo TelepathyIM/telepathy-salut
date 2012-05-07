@@ -701,7 +701,7 @@ set_own_status (GObject *obj,
               /* TpPresenceMixin should validate this for us, but doesn't */
               if (!G_VALUE_HOLDS_STRING (value))
                 {
-                  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                  g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                       "Status argument 'message' requires a string");
                   return FALSE;
                 }
@@ -714,7 +714,7 @@ set_own_status (GObject *obj,
 
   if (err != NULL)
     {
-      *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+      *error = g_error_new_literal (TP_ERROR, TP_ERROR_NETWORK_ERROR,
           err->message);
     }
 
@@ -1530,7 +1530,7 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
 
   if (alias == NULL || g_hash_table_size (aliases) != 1)
     {
-      GError e = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      GError e = { TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
                    "In Salut you can only set your own alias" };
 
       dbus_g_method_return_error (context, &e);
@@ -1900,7 +1900,7 @@ _request_avatar_cb (SalutContact *contact, guint8 *avatar, gsize size,
 
   if (size == 0)
     {
-      err = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      err = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE,
                          "Unable to get avatar");
       dbus_g_method_return_error (context, err);
       g_error_free (err);
@@ -1947,7 +1947,7 @@ salut_connection_request_avatar (TpSvcConnectionInterfaceAvatars *iface,
   contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
   if (contact == NULL || contact->avatar_token == NULL)
     {
-      err = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "No known avatar");
+      err = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE, "No known avatar");
       dbus_g_method_return_error (context, err);
       g_error_free (err);
       if (contact != NULL)
@@ -2488,7 +2488,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
       if (contact == NULL)
         {
           /* FIXME: should this be InvalidHandle? */
-          GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
+          GError e = { TP_ERROR, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
           dbus_g_method_return_error (context, &e);
           return;
         }
@@ -2540,7 +2540,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
   if (g_hash_table_find (properties, find_unknown_properties, known_properties)
       != NULL)
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Unknown property given");
       goto error;
     }
@@ -2550,7 +2550,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
     {
       if (G_VALUE_TYPE (val) != G_TYPE_STRING)
         {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "Color value should be of type s");
           goto error;
         }
@@ -2590,7 +2590,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
 
           if (!correct)
             {
-              error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                   "Color value has an incorrect format");
               goto error;
             }
@@ -2601,7 +2601,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
     {
       if (G_VALUE_TYPE (val) != DBUS_TYPE_G_UCHAR_ARRAY)
         {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "Key value should be of type ay");
           goto error;
         }
@@ -2610,7 +2610,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
           key = g_value_get_boxed (val);
           if (key->len == 0)
             {
-              error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                   "Key value of length 0 not allowed");
               goto error;
             }
@@ -2622,7 +2622,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
     {
       if (G_VALUE_TYPE (val) != G_TYPE_STRING)
         {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "JID value should be of type s");
           goto error;
         }
@@ -2631,7 +2631,7 @@ salut_connection_olpc_set_properties (SalutSvcOLPCBuddyInfo *iface,
 
       if (strchr (jid, '@') == NULL)
         {
-          error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "JID value has an incorrect format");
           goto error;
         }
@@ -2712,7 +2712,7 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
       if (contact == NULL)
         {
           /* FIXME: should this be InvalidHandle? */
-          GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
+          GError e = { TP_ERROR, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
           DEBUG ("Returning error: unknown contact");
           dbus_g_method_return_error (context, &e);
           return;
@@ -2747,7 +2747,7 @@ salut_connection_olpc_set_current_activity (SalutSvcOLPCBuddyInfo *iface,
     {
       if (room_handle != 0)
         {
-          GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          GError e = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "If activity ID is empty, room handle must be 0" };
 
           dbus_g_method_return_error (context, &e);
@@ -2801,7 +2801,7 @@ salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
       if (contact == NULL)
         {
           /* FIXME: should this be InvalidHandle? */
-          GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
+          GError e = { TP_ERROR, TP_ERROR_NOT_AVAILABLE, "Unknown contact" };
           DEBUG ("Returning error: unknown contact");
           dbus_g_method_return_error (context, &e);
           return;
@@ -2848,7 +2848,7 @@ salut_connection_olpc_set_activities (SalutSvcOLPCBuddyInfo *iface,
 
       if (activity[0] == '\0')
         {
-          GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          GError e = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "Invalid empty activity ID" };
 
           DEBUG ("%s", e.message);
@@ -2947,7 +2947,7 @@ salut_connection_act_get_properties (SalutSvcOLPCActivityProperties *iface,
       priv->olpc_activity_manager, handle);
   if (activity == NULL)
     {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Activity unknown: %u", handle);
       goto error;
     }
@@ -3017,7 +3017,7 @@ extract_properties_from_hash (GHashTable *properties,
     {
       if (G_VALUE_TYPE (activity_id_val) != G_TYPE_STRING)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "Activity ID value should be of type s");
           return FALSE;
         }
@@ -3032,7 +3032,7 @@ extract_properties_from_hash (GHashTable *properties,
     {
       if (G_VALUE_TYPE (color_val) != G_TYPE_STRING)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "Color value should be of type s");
           return FALSE;
         }
@@ -3043,7 +3043,7 @@ extract_properties_from_hash (GHashTable *properties,
 
            if (!check_color (*color))
             {
-              g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                   "Color value has an incorrect format");
               return FALSE;
             }
@@ -3056,7 +3056,7 @@ extract_properties_from_hash (GHashTable *properties,
     {
       if (G_VALUE_TYPE (activity_name_val) != G_TYPE_STRING)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "name value should be of type s");
           return FALSE;
         }
@@ -3071,7 +3071,7 @@ extract_properties_from_hash (GHashTable *properties,
     {
       if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "type value should be of type s");
           return FALSE;
         }
@@ -3082,7 +3082,7 @@ extract_properties_from_hash (GHashTable *properties,
 
           if (*type[0] == '\0')
             {
-              g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+              g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                   "type value must be non-empty");
               return FALSE;
             }
@@ -3095,7 +3095,7 @@ extract_properties_from_hash (GHashTable *properties,
     {
       if (G_VALUE_TYPE (activity_type_val) != G_TYPE_STRING)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "tags value should be of type s");
           return FALSE;
         }
@@ -3110,7 +3110,7 @@ extract_properties_from_hash (GHashTable *properties,
     {
      if (G_VALUE_TYPE (is_private_val) != G_TYPE_BOOLEAN)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "private value should be of type b");
           return FALSE;
         }
@@ -3145,7 +3145,7 @@ salut_connection_act_set_properties (SalutSvcOLPCActivityProperties *iface,
   if (g_hash_table_find (properties, find_unknown_properties, known_properties)
       != NULL)
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Unknown property given");
       goto error;
     }
@@ -3288,7 +3288,7 @@ salut_connection_act_get_activity (SalutSvcOLPCActivityProperties *iface,
       priv->olpc_activity_manager, activity_id);
   if (activity == NULL)
     {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Activity unknown: %s", activity_id);
       goto error;
     }
@@ -3326,7 +3326,7 @@ salut_normalize_non_empty (const gchar *id,
 
   if (*id == '\0')
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_HANDLE,
+      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_HANDLE,
           "Salut handle names may not be the empty string");
       return NULL;
     }
@@ -3812,7 +3812,7 @@ salut_connection_start_connecting (TpBaseConnection *base, GError **error)
 
   if (!salut_discovery_client_start (priv->discovery_client, &client_error))
     {
-      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      *error = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Unable to initialize the avahi client: %s",
           client_error->message);
       DEBUG ("%s", (*error)->message);
@@ -3925,7 +3925,7 @@ create_sidecar_cb (
         {
           /* TODO: maybe this lives in the loader? It knows what the plugin is
            * called. */
-          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
               "A buggy plugin created a %s sidecar when asked to create %s",
               actual_iface, ctx->sidecar_iface);
         }
@@ -3979,7 +3979,7 @@ salut_connection_ensure_sidecar (
 
   if (base_conn->status == TP_CONNECTION_STATUS_DISCONNECTED)
     {
-      GError e = { TP_ERRORS, TP_ERROR_DISCONNECTED,
+      GError e = { TP_ERROR, TP_ERROR_DISCONNECTED,
           "This connection has already disconnected" };
 
       DEBUG ("already disconnected, declining request for %s", sidecar_iface);
@@ -3989,7 +3989,7 @@ salut_connection_ensure_sidecar (
 
   if (!tp_dbus_check_valid_interface_name (sidecar_iface, &error))
     {
-      error->domain = TP_ERRORS;
+      error->domain = TP_ERROR;
       error->code = TP_ERROR_INVALID_ARGUMENT;
       DEBUG ("%s is malformed: %s", sidecar_iface, error->message);
       dbus_g_method_return_error (context, error);
@@ -4075,7 +4075,7 @@ sidecars_conn_status_changed_cb (
         {
           const gchar *sidecar_iface = key;
           GList *contexts = value;
-          GError *error = g_error_new (TP_ERRORS, TP_ERROR_CANCELLED,
+          GError *error = g_error_new (TP_ERROR, TP_ERROR_CANCELLED,
               "Disconnected before %s could be created", sidecar_iface);
 
           DEBUG ("failing all %u requests for %s", g_list_length (contexts),
