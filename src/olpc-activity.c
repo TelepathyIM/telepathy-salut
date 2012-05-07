@@ -329,7 +329,7 @@ send_properties_change_msg (SalutOlpcActivity *self,
   result = gibber_muc_connection_send (muc_connection, stanza, &err);
   if (!result)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, "%s",
+      g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR, "%s",
           err->message);
       g_error_free (err);
     }
@@ -408,7 +408,7 @@ salut_olpc_activity_announce (SalutOlpcActivity *self,
 
   if (!SALUT_OLPC_ACTIVITY_GET_CLASS (self)->announce (self, &err))
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, "%s",
+      g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR, "%s",
           err->message);
       g_error_free (err);
       return FALSE;
@@ -563,7 +563,7 @@ salut_olpc_activity_joined (SalutOlpcActivity *self,
 
   if (priv->muc == NULL)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Can't find muc channel for room %s", tp_handle_inspect (
             room_repo, self->room));
       return FALSE;

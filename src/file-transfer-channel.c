@@ -414,21 +414,21 @@ file_transfer_channel_properties_setter (GObject *object,
 
   if (self->priv->uri != NULL)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "URI has already be set");
       return FALSE;
     }
 
   if (tp_base_channel_is_requested (TP_BASE_CHANNEL (self)))
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Channel is not an incoming transfer");
       return FALSE;
     }
 
   if (self->priv->state != TP_FILE_TRANSFER_STATE_PENDING)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
         "State is not pending; cannot set URI");
       return FALSE;
     }
@@ -1155,7 +1155,7 @@ check_address_and_access_control (SalutFileTransferChannel *self,
       GUINT_TO_POINTER (address_type));
   if (access_arr == NULL)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "AddressType %u is not implemented", address_type);
       return FALSE;
     }
@@ -1170,7 +1170,7 @@ check_address_and_access_control (SalutFileTransferChannel *self,
         return TRUE;
     }
 
-  g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+  g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
       "AccesControl %u is not implemented with AddressType %u",
       access_control, address_type);
 
@@ -1220,7 +1220,7 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
 
   if (self->priv->state != TP_FILE_TRANSFER_STATE_PENDING)
     {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
         "State is not pending; cannot accept file");
       dbus_g_method_return_error (context, error);
       return;
@@ -1242,7 +1242,7 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
   if (!setup_local_socket (self, address_type, access_control))
     {
       DEBUG ("Could not set up local socket");
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Could not set up local socket");
       dbus_g_method_return_error (context, error);
     }
@@ -1289,7 +1289,7 @@ salut_file_transfer_channel_provide_file (
 
   if (!tp_base_channel_is_requested (base))
     {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Channel is not an outgoing transfer");
       dbus_g_method_return_error (context, error);
       return;
@@ -1297,7 +1297,7 @@ salut_file_transfer_channel_provide_file (
 
   if (self->priv->socket != NULL)
     {
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "ProvideFile has already been called for this channel");
       dbus_g_method_return_error (context, error);
       return;
@@ -1314,7 +1314,7 @@ salut_file_transfer_channel_provide_file (
   if (!setup_local_socket (self, address_type, access_control))
     {
       DEBUG ("Could not set up local socket");
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Could not set up local socket");
       dbus_g_method_return_error (context, error);
     }

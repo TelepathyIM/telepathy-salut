@@ -604,7 +604,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
     {
       DEBUG ("get connection failed: %s", connection_error->message);
       if (error != NULL)
-        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+        *error = g_error_new_literal (TP_ERROR, TP_ERROR_NETWORK_ERROR,
             connection_error->message);
       g_error_free (connection_error);
       return NULL;
@@ -615,7 +615,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
     {
       DEBUG ("Connect failed: %s", connection_error->message);
       if (error != NULL)
-        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
+        *error = g_error_new_literal (TP_ERROR, TP_ERROR_NETWORK_ERROR,
             connection_error->message);
       g_error_free (connection_error);
       g_object_unref (connection);
@@ -793,7 +793,7 @@ handle_stream_tube_channel_request (SalutMucManager *self,
             TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
   if (service == NULL)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Request does not contain the mandatory property '%s'",
           TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
       return FALSE;
@@ -824,7 +824,7 @@ handle_dbus_tube_channel_request (SalutMucManager *self,
       TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
   if (service == NULL)
     {
-      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Request does not contain the mandatory property '%s'",
           TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
       return FALSE;
@@ -880,7 +880,7 @@ salut_muc_manager_request (SalutMucManager *self,
         {
           if (require_new)
             {
-              g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+              g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
                   "That channel has already been created (or requested)");
               goto error;
             }
@@ -913,7 +913,7 @@ salut_muc_manager_request (SalutMucManager *self,
         {
           if (require_new)
             {
-              g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+              g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
                   "That channel has already been created (or requested)");
               goto error;
             }

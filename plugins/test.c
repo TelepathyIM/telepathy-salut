@@ -77,7 +77,7 @@ test_plugin_create_sidecar_async (
     }
   else
     {
-      g_simple_async_result_set_error (result, TP_ERRORS,
+      g_simple_async_result_set_error (result, TP_ERROR,
           TP_ERROR_NOT_IMPLEMENTED, "'%s' not implemented", sidecar_interface);
     }
 
