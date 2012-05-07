@@ -608,8 +608,8 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
       (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
       (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
-  TpIntSetIter iter = TP_INTSET_ITER_INIT (tp_handle_set_peek (
-        priv->invited));
+  TpIntsetFastIter iter;
+  guint contact_handle;
   SalutContactManager *contact_mgr;
   WockyNode *top_node;
 
@@ -632,14 +632,14 @@ salut_olpc_activity_revoke_invitations (SalutOlpcActivity *self)
       NULL);
   g_assert (contact_mgr != NULL);
 
+  tp_intset_fast_iter_init (&iter, tp_handle_set_peek (priv->invited));
+
   DEBUG ("revoke invitations for activity %s", self->id);
-  while (tp_intset_iter_next (&iter))
+  while (tp_intset_fast_iter_next (&iter, &contact_handle))
     {
-      TpHandle contact_handle;
       SalutContact *contact;
       const gchar *to;
 
-      contact_handle = iter.element;
       contact = salut_contact_manager_get_contact (contact_mgr, contact_handle);
       if (contact == NULL)
         {
