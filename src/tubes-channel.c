@@ -196,7 +196,6 @@ salut_tubes_channel_constructor (GType type,
   SalutTubesChannelPrivate *priv;
   TpDBusDaemon *bus;
   TpBaseConnection *base_conn;
-  TpHandleRepoIface *handle_repo;
 
   obj = G_OBJECT_CLASS (salut_tubes_channel_parent_class)->
         constructor (type, n_props, props);
@@ -205,10 +204,6 @@ salut_tubes_channel_constructor (GType type,
   priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
 
   base_conn = TP_BASE_CONNECTION (priv->conn);
-  handle_repo = tp_base_connection_get_handles (
-      base_conn, priv->handle_type);
-
-  tp_handle_ref (handle_repo, priv->handle);
 
   switch (priv->handle_type)
     {
@@ -693,12 +688,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                     break;
                   case TP_TUBE_TYPE_STREAM:
                     {
-                      if (initiator_handle != 0)
-                        /* ignore it */
-                        tp_handle_unref (contact_repo, initiator_handle);
-
                       initiator_handle = contact;
-                      tp_handle_ref (contact_repo, initiator_handle);
                     }
                     break;
                   default:
@@ -712,7 +702,6 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
               g_ptr_array_add (result, tube);
 
               /* the tube has reffed its initiator, no need to keep a ref */
-              tp_handle_unref (contact_repo, initiator_handle);
               g_hash_table_unref (parameters);
             }
         }
@@ -2315,8 +2304,6 @@ salut_tubes_channel_dispose (GObject *object)
 {
   SalutTubesChannel *self = SALUT_TUBES_CHANNEL (object);
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
-  TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, priv->handle_type);
 
   if (priv->dispose_has_run)
     return;
@@ -2337,8 +2324,6 @@ salut_tubes_channel_dispose (GObject *object)
     }
 
   priv->dispose_has_run = TRUE;
-
-  tp_handle_unref (handle_repo, priv->handle);
 
   if (self->muc != NULL)
       tp_external_group_mixin_finalize (object);

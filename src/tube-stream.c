@@ -1010,8 +1010,6 @@ salut_tube_stream_dispose (GObject *object)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (object);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
   if (priv->dispose_has_run)
     return;
@@ -1054,8 +1052,6 @@ salut_tube_stream_dispose (GObject *object)
       g_hash_table_unref (priv->transport_to_id);
       priv->transport_to_id = NULL;
     }
-
-  tp_handle_unref (contact_repo, priv->initiator);
 
   if (priv->local_listener != NULL)
     {
@@ -1362,7 +1358,6 @@ salut_tube_stream_constructor (GType type,
 {
   GObject *obj;
   SalutTubeStreamPrivate *priv;
-  TpHandleRepoIface *contact_repo;
   TpDBusDaemon *bus;
   TpBaseConnection *base_conn;
 
@@ -1374,9 +1369,6 @@ salut_tube_stream_constructor (GType type,
   /* Ref the initiator handle */
   base_conn = TP_BASE_CONNECTION (priv->conn);
   g_assert (priv->initiator != 0);
-  contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
-  tp_handle_ref (contact_repo, priv->initiator);
 
   if (priv->initiator == priv->self_handle)
     {
@@ -2015,7 +2007,6 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 
       fire_new_remote_connection (self, transport, contact);
 
-      tp_handle_unref (contact_repo, contact);
       g_free (peer_id);
     }
   else

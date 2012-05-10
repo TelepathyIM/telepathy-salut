@@ -1099,7 +1099,6 @@ invite_stanza_callback (WockyPorter *porter,
 
       if (connection == NULL)
         {
-          tp_handle_unref (room_repo, room_handle);
           /* FIXME some kinda error to the user maybe ? Ignore for now */
           goto discard;
         }
@@ -1120,7 +1119,6 @@ invite_stanza_callback (WockyPorter *porter,
 #endif
 
   salut_muc_channel_invited (chan, inviter_handle, reason, NULL);
-  tp_handle_unref (contact_repo, inviter_handle);
 
   return TRUE;
 

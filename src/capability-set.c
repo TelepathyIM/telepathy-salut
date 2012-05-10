@@ -514,7 +514,6 @@ gabble_capability_set_add (GabbleCapabilitySet *caps,
   handle = tp_handle_ensure (feature_handles, cap, NULL, NULL);
 
   tp_handle_set_add (caps->handles, handle);
-  tp_handle_unref (feature_handles, handle);
 }
 
 gboolean
