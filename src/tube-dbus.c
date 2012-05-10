@@ -496,17 +496,6 @@ salut_tube_dbus_init (SalutTubeDBus *self)
   self->priv = priv;
 }
 
-static void
-unref_handle_foreach (gpointer key,
-                      gpointer value,
-                      gpointer user_data)
-{
-  TpHandle handle = GPOINTER_TO_UINT (key);
-  TpHandleRepoIface *contact_repo = (TpHandleRepoIface *) user_data;
-
-  tp_handle_unref (contact_repo, handle);
-}
-
 static TpTubeChannelState
 get_tube_state (SalutTubeDBus *self)
 {
@@ -574,8 +563,6 @@ salut_tube_dbus_dispose (GObject *object)
 {
   SalutTubeDBus *self = SALUT_TUBE_DBUS (object);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
 
   if (priv->dispose_has_run)
     return;
@@ -624,8 +611,6 @@ salut_tube_dbus_dispose (GObject *object)
 
   if (priv->dbus_names)
     {
-      g_hash_table_foreach (priv->dbus_names, unref_handle_foreach,
-          contact_repo);
       g_hash_table_unref (priv->dbus_names);
     }
 
@@ -637,8 +622,6 @@ salut_tube_dbus_dispose (GObject *object)
 
   if (priv->reassembly_buffer)
     g_string_free (priv->reassembly_buffer, TRUE);
-
-  tp_handle_unref (contact_repo, priv->initiator);
 
   priv->dispose_has_run = TRUE;
 
@@ -905,7 +888,6 @@ salut_tube_dbus_constructor (GType type,
   SalutTubeDBusPrivate *priv;
   TpDBusDaemon *bus;
   TpBaseConnection *base_conn;
-  TpHandleRepoIface *contact_repo;
   TpHandleRepoIface *handles_repo;
   TpSocketAccessControl access_control;
 
@@ -921,9 +903,6 @@ salut_tube_dbus_constructor (GType type,
   /* Ref the initiator handle */
   g_assert (priv->conn != NULL);
   g_assert (priv->initiator != 0);
-  contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
-  tp_handle_ref (contact_repo, priv->initiator);
 
   bus = tp_base_connection_get_dbus_daemon (base_conn);
   tp_dbus_daemon_register_object (bus, priv->object_path, obj);
@@ -1606,7 +1585,6 @@ salut_tube_dbus_add_name (SalutTubeDBus *self,
 
   g_hash_table_insert (priv->dbus_names, GUINT_TO_POINTER (handle),
       g_strdup (name));
-  tp_handle_ref (contact_repo, handle);
 
   /* Fire DBusNamesChanged (new API) */
   added = g_hash_table_new (g_direct_hash, g_direct_equal);
@@ -1628,8 +1606,6 @@ salut_tube_dbus_remove_name (SalutTubeDBus *self,
                              TpHandle handle)
 {
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
-  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
   const gchar *name;
   GHashTable *added;
   GArray *removed;
@@ -1653,7 +1629,6 @@ salut_tube_dbus_remove_name (SalutTubeDBus *self,
 
   g_hash_table_unref (added);
   g_array_unref (removed);
-  tp_handle_unref (contact_repo, handle);
   return TRUE;
 }
 

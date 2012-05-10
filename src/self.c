@@ -475,12 +475,6 @@ salut_self_dispose (GObject *object)
 
   if (priv->olpc_activities != NULL)
     g_hash_table_unref (priv->olpc_activities);
-
-  if (self->olpc_cur_act_room != 0)
-    {
-      tp_handle_unref (priv->room_repo, self->olpc_cur_act_room);
-      self->olpc_cur_act_room = 0;
-    }
 #endif
 
   priv->room_repo = NULL;
@@ -829,12 +823,7 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
 
   g_free (self->olpc_cur_act);
   self->olpc_cur_act = g_strdup (id);
-
-  if (self->olpc_cur_act_room != 0)
-    tp_handle_unref (self->priv->room_repo, self->olpc_cur_act_room);
   self->olpc_cur_act_room = room;
-  if (room != 0)
-    tp_handle_ref (self->priv->room_repo, room);
 
   if (!SALUT_SELF_GET_CLASS (self)->update_current_activity (self, room_name,
         &err))
