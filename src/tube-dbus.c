@@ -1455,7 +1455,8 @@ salut_tube_dbus_new (SalutConnection *conn,
                      TpHandle initiator,
                      const gchar *service,
                      GHashTable *parameters,
-                     guint id)
+                     guint id,
+                     gboolean requested)
 {
   SalutTubeDBus *tube;
   gchar *object_path;
@@ -1475,6 +1476,7 @@ salut_tube_dbus_new (SalutConnection *conn,
       "service", service,
       "parameters", parameters,
       "id", id,
+      "requested", requested,
       NULL);
 
   return tube;

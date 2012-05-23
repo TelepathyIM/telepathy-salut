@@ -166,7 +166,7 @@ static gboolean extract_tube_information (SalutTubesChannel *self,
 static SalutTubeIface * create_new_tube (SalutTubesChannel *self,
     TpTubeType type, TpHandle initiator, gboolean offered,
     const gchar *service, GHashTable *parameters, guint tube_id, guint portnum,
-    WockyStanza *iq_req);
+    WockyStanza *iq_req, gboolean requested);
 
 static void
 salut_tubes_channel_init (SalutTubesChannel *self)
@@ -698,7 +698,7 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
                 }
 
               tube = create_new_tube (self, type, initiator_handle, FALSE,
-                  service, parameters, id, 0, NULL);
+                  service, parameters, id, 0, NULL, FALSE);
               g_ptr_array_add (result, tube);
 
               /* the tube has reffed its initiator, no need to keep a ref */
@@ -794,7 +794,7 @@ salut_tubes_channel_message_received (SalutTubesChannel *self,
   if (tube == NULL)
     {
       tube = create_new_tube (self, tube_type, initiator_handle, FALSE,
-          service, parameters, tube_id, portnum, iq_req);
+          service, parameters, tube_id, portnum, iq_req, FALSE);
       return tube;
     }
 
@@ -876,7 +876,7 @@ salut_tubes_channel_tube_request (SalutTubesChannel *self,
           (GDestroyNotify) tp_g_value_slice_free);
 
   tube = create_new_tube (self, type, priv->self_handle, FALSE, service,
-      parameters, tube_id, 0, NULL);
+      parameters, tube_id, 0, NULL, TRUE);
 
   g_hash_table_unref (parameters);
   return tube;
@@ -1131,7 +1131,8 @@ create_new_tube (SalutTubesChannel *self,
                  GHashTable *parameters,
                  guint tube_id,
                  guint portnum,
-                 WockyStanza *iq_req)
+                 WockyStanza *iq_req,
+                 gboolean requested)
 {
   SalutTubesChannelPrivate *priv = SALUT_TUBES_CHANNEL_GET_PRIVATE (self);
   SalutTubeIface *tube;
@@ -1146,7 +1147,7 @@ create_new_tube (SalutTubesChannel *self,
     case TP_TUBE_TYPE_DBUS:
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn, self,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
-          initiator, service, parameters, tube_id));
+          initiator, service, parameters, tube_id, requested));
       break;
     case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, self,
@@ -1480,7 +1481,7 @@ salut_tubes_channel_offer_d_bus_tube (TpSvcChannelTypeTubes *iface,
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_DBUS, priv->self_handle,
-      TRUE, service, parameters, tube_id, 0, NULL);
+      TRUE, service, parameters, tube_id, 0, NULL, TRUE);
 
   if (!salut_tube_dbus_offer (SALUT_TUBE_DBUS (tube), &err))
     {
@@ -1970,7 +1971,7 @@ salut_tubes_channel_offer_stream_tube (TpSvcChannelTypeTubes *iface,
   tube_id = generate_tube_id ();
 
   tube = create_new_tube (self, TP_TUBE_TYPE_STREAM, priv->self_handle,
-      TRUE, service, parameters, tube_id, 0, NULL);
+      TRUE, service, parameters, tube_id, 0, NULL, TRUE);
 
   g_object_set (tube,
       "address-type", address_type,
