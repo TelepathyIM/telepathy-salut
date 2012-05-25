@@ -841,12 +841,10 @@ salut_muc_manager_request (SalutMucManager *self,
                            gboolean require_new)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
   GError *error = NULL;
   TpHandle handle;
   const gchar *channel_type;
   SalutMucChannel *text_chan;
-  SalutTubesChannel *tubes_chan;
 
   if (tp_asv_get_uint32 (request_properties,
       TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_ROOM)
@@ -856,7 +854,6 @@ salut_muc_manager_request (SalutMucManager *self,
       TP_IFACE_CHANNEL ".ChannelType");
 
   if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TEXT) &&
-      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
       tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
       tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     return FALSE;
@@ -894,41 +891,6 @@ salut_muc_manager_request (SalutMucManager *self,
         {
           text_chan = salut_muc_manager_request_new_muc_channel (self,
               handle, request_token, TRUE, NULL);
-        }
-
-      return TRUE;
-    }
-  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
-    {
-      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
-              muc_tubes_channel_fixed_properties,
-              muc_tubes_channel_allowed_properties,
-              &error))
-        goto error;
-
-      tubes_chan = g_hash_table_lookup (priv->tubes_channels,
-          GUINT_TO_POINTER (handle));
-
-      if (tubes_chan != NULL)
-        {
-          if (require_new)
-            {
-              g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
-                  "That channel has already been created (or requested)");
-              goto error;
-            }
-          else
-            {
-              tp_channel_manager_emit_request_already_satisfied (self,
-                  request_token, TP_EXPORTABLE_CHANNEL (tubes_chan));
-            }
-        }
-      else
-        {
-          tubes_chan = create_tubes_channel (self, handle,
-              base_conn->self_handle, request_token, TRUE, NULL, TRUE, &error);
-          if (tubes_chan == NULL)
-            goto error;
         }
 
       return TRUE;

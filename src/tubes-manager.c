@@ -891,8 +891,6 @@ new_channel_from_request (SalutTubesManager *self,
               handle, handle_type,
               base_conn->self_handle, base_conn->self_handle, FALSE, service,
               parameters, tube_id, 0, NULL, TRUE));
-
-      tube = SALUT_TUBE_IFACE (NULL);
     }
   else if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
