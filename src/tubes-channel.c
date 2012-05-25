@@ -659,8 +659,10 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
 
       stream_id = wocky_node_get_attribute (tube_node, "stream-id");
 
-      extract_tube_information (self, tube_node, NULL,
-          NULL, NULL, NULL, &tube_id);
+      if (!extract_tube_information (self, tube_node, NULL,
+              NULL, NULL, NULL, &tube_id))
+        continue;
+
       tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
 
       if (tube == NULL)
