@@ -1150,6 +1150,8 @@ create_new_tube (SalutTubesChannel *self,
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn, self,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
           initiator, service, parameters, tube_id, requested));
+
+      tp_base_channel_register ((TpBaseChannel *) tube);
       break;
     case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, self,

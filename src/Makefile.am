@@ -45,6 +45,8 @@ CORE_SOURCES =                                          \
     file-transfer-channel.c                       \
     file-transfer-channel.h                       \
     muc-channel.h                                 \
+    muc-tube-dbus.c                               \
+    muc-tube-dbus.h                                 \
     presence-cache.c                              \
     presence-cache.h                              \
     tubes-manager.c                               \

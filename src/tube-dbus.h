@@ -22,6 +22,7 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-channel.h>
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/interfaces.h>
 
@@ -36,13 +37,13 @@ typedef struct _SalutTubeDBus SalutTubeDBus;
 typedef struct _SalutTubeDBusClass SalutTubeDBusClass;
 
 struct _SalutTubeDBusClass {
-  GObjectClass parent_class;
+  TpBaseChannelClass parent_class;
 
   TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutTubeDBus {
-  GObject parent;
+  TpBaseChannel parent;
 
   gpointer priv;
 };

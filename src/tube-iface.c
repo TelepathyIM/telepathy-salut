@@ -96,7 +96,7 @@ salut_tube_iface_base_init (gpointer klass)
           "connection",
           "SalutConnection object",
           "Salut connection object that owns this D-Bus tube object.",
-          SALUT_TYPE_CONNECTION,
+          TP_TYPE_BASE_CONNECTION,
           G_PARAM_CONSTRUCT_ONLY |
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
