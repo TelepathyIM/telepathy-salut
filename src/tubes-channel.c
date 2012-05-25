@@ -1150,18 +1150,18 @@ create_new_tube (SalutTubesChannel *self,
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn, self,
           priv->handle, priv->handle_type, priv->self_handle, muc_connection,
           initiator, service, parameters, tube_id, requested));
-
-      tp_base_channel_register ((TpBaseChannel *) tube);
       break;
     case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, self,
           priv->handle, priv->handle_type,
           priv->self_handle, initiator, offered, service, parameters,
-          tube_id, portnum, iq_req));
+          tube_id, portnum, iq_req, requested));
       break;
     default:
       g_assert_not_reached ();
     }
+
+  tp_base_channel_register ((TpBaseChannel *) tube);
 
   DEBUG ("create tube %u", tube_id);
   g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);

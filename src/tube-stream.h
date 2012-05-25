@@ -22,6 +22,7 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-channel.h>
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/interfaces.h>
 
@@ -35,13 +36,13 @@ typedef struct _SalutTubeStream SalutTubeStream;
 typedef struct _SalutTubeStreamClass SalutTubeStreamClass;
 
 struct _SalutTubeStreamClass {
-  GObjectClass parent_class;
+  TpBaseChannelClass parent_class;
 
   TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutTubeStream {
-  GObject parent;
+  TpBaseChannel parent;
 
   gpointer priv;
 };
@@ -70,7 +71,7 @@ SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
     TpHandleType handle_type, TpHandle self_handle, TpHandle initiator,
     gboolean offered, const gchar *service,
     GHashTable *parameters, guint id, guint portnum,
-    WockyStanza *iq_req);
+    WockyStanza *iq_req, gboolean requested);
 
 gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,
     const GValue *address, TpSocketAccessControl access_control,
