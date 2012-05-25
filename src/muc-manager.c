@@ -87,6 +87,9 @@ struct _SalutMucManagerPrivate
    /* GUINT_TO_POINTER(room_handle) => (SalutTubesChannel *) */
   GHashTable *tubes_channels;
 
+  /* tube ID => owned SalutTubeIface */
+  GHashTable *tubes;
+
   gboolean dispose_has_run;
 };
 
@@ -163,19 +166,8 @@ salut_muc_manager_close_all (SalutMucManager *self)
       priv->status_changed_id = 0;
     }
 
-  if (priv->text_channels)
-    {
-      GHashTable *tmp = priv->text_channels;
-      priv->text_channels = NULL;
-      g_hash_table_unref (tmp);
-    }
-
-  if (priv->tubes_channels != NULL)
-    {
-      GHashTable *tmp = priv->tubes_channels;
-      priv->tubes_channels = NULL;
-      g_hash_table_unref (tmp);
-    }
+  tp_clear_pointer (&priv->text_channels, g_hash_table_unref);
+  tp_clear_pointer (&priv->tubes_channels, g_hash_table_unref);
 }
 
 static void
