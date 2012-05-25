@@ -5,7 +5,7 @@ import errno
 import string
 import tempfile
 
-from servicetest import make_channel_proxy, Event, call_async, EventPattern
+from servicetest import wrap_channel, Event, call_async, EventPattern
 
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
@@ -56,13 +56,18 @@ def test(q, bus, conn):
     # create the server
     factory = Factory()
     factory.protocol = TrivialServer
-    server_socket_address = tempfile.mkstemp()[1]
-    try:
-        os.remove(server_socket_address)
-    except OSError, e:
-        if e.errno != errno.ENOENT:
-            raise
-    l = reactor.listenUNIX(server_socket_address, factory)
+
+    def listen_for_connections():
+        server_socket_address = tempfile.mkstemp()[1]
+        try:
+            os.remove(server_socket_address)
+        except OSError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        reactor.listenUNIX(server_socket_address, factory)
+        return server_socket_address
+
+    server_socket_address = listen_for_connections()
 
     contact1_name, conn2, contact2_name, contact2_handle_on_conn1,\
         contact1_handle_on_conn2 = t.connect_two_accounts(q, bus, conn)
@@ -77,13 +82,14 @@ def test(q, bus, conn):
     # first connection: offer a muc stream tube (old API)
     tubes1_path = conn.RequestChannel(CHANNEL_TYPE_TUBES, HT_ROOM, muc_handle1,
         True)
-    contact1_tubes_channel = make_channel_proxy(conn, tubes1_path,
-        "Channel.Type.Tubes")
+    contact1_tubes = wrap_channel(
+        bus.get_object(conn.bus_name, tubes1_path),
+        'Tubes')
 
     q.expect('dbus-signal', signal='NewChannel',
         args=[tubes1_path, CHANNEL_TYPE_TUBES, HT_ROOM, muc_handle1, True])
 
-    conn1_tube_id = contact1_tubes_channel.OfferStreamTube("http",
+    conn1_tube_id = contact1_tubes.Tubes.OfferStreamTube("http",
             sample_parameters, SOCKET_ADDRESS_TYPE_UNIX,
             dbus.ByteArray(server_socket_address),
             SOCKET_ACCESS_CONTROL_LOCALHOST, "")
@@ -104,12 +110,13 @@ def test(q, bus, conn):
             tubes2_path = e.args[0]
             contact2_channeltype = e.args[1]
 
-    contact2_tubes_channel = make_channel_proxy(conn2, tubes2_path,
-        "Channel.Type.Tubes")
+    contact2_tubes = wrap_channel(
+        bus.get_object(conn2.bus_name, tubes2_path),
+        'Tubes')
 
-    contact2_tubes = contact2_tubes_channel.ListTubes()
-    assert len(contact2_tubes) == 1
-    contact2_tube = contact2_tubes[0]
+    contact2_tubes_list = contact2_tubes.Tubes.ListTubes()
+    assert len(contact2_tubes_list) == 1
+    contact2_tube = contact2_tubes_list[0]
     assert contact2_tube[0] is not None # tube id
     conn2_tube_id = contact2_tube[0]
     assert contact2_tube[1] is not None # initiator
@@ -119,7 +126,7 @@ def test(q, bus, conn):
     assert contact2_tube[5] == 0, contact2_tube[5] # status = local pending
 
     # second connection: accept the tube (old API)
-    unix_socket_adr = contact2_tubes_channel.AcceptStreamTube(
+    unix_socket_adr = contact2_tubes.Tubes.AcceptStreamTube(
             contact2_tube[0], 0, 0, '', byte_arrays=True)
 
     e = q.expect('dbus-signal', signal='TubeStateChanged', path=tubes2_path)
@@ -159,19 +166,20 @@ def test(q, bus, conn):
     assert client_received.data == string.swapcase(test_string)
 
     # contact1 closes the tube
-    contact1_tubes_channel.CloseTube(conn1_tube_id)
+    contact1_tubes.Close(conn1_tube_id)
     q.expect('dbus-signal', signal='TubeClosed', args=[conn1_tube_id])
 
     # contact2 closes the tube
-    contact2_tubes_channel.CloseTube(conn2_tube_id)
+    contact2_tubes.Tubes.CloseTube(conn2_tube_id)
     q.expect('dbus-signal', signal='TubeClosed', args=[conn2_tube_id])
 
     # Now contact1 will create a new muc stream tube to another room using the
     # new API
 
+    server_socket_address = listen_for_connections()
+
     # Can we request muc stream tubes?
-    properties = conn.GetAll(CONN_IFACE_REQUESTS,
-        dbus_interface=PROPERTIES_IFACE)
+    properties = conn.Properties.GetAll(CONN_IFACE_REQUESTS)
 
     assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
              TARGET_HANDLE_TYPE: HT_ROOM},
@@ -180,20 +188,18 @@ def test(q, bus, conn):
                  properties['RequestableChannelClasses']
 
     # request a stream tube channel (new API)
-    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
-
-    requestotron.CreateChannel({
+    conn.Requests.CreateChannel({
         CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
         TARGET_HANDLE_TYPE: HT_ROOM,
         TARGET_ID: muc2_name,
         STREAM_TUBE_SERVICE: 'test'})
 
-    e = q.expect('dbus-signal', signal='NewChannels')
+    e = q.expect('dbus-signal', signal='NewChannels',
+                 predicate=lambda e: len(e.args[0]) == 3)
     channels = e.args[0]
-    assert len(channels) == 3
 
     # get the list of all channels to check that newly announced ones are in it
-    all_channels = conn.Get(CONN_IFACE_REQUESTS, 'Channels', dbus_interface=PROPERTIES_IFACE,
+    all_channels = conn.Properties.Get(CONN_IFACE_REQUESTS, 'Channels',
         byte_arrays=True)
 
     got_text, got_tubes, got_tube = False, False, False
@@ -201,7 +207,7 @@ def test(q, bus, conn):
         if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
             got_text = True
             assert props[REQUESTED] == False
-            group1 = make_channel_proxy(conn, path, "Channel.Interface.Group")
+            text1 = wrap_channel(bus.get_object(conn.bus_name, path), 'Text')
             txt_path = path
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
             got_tubes = True
@@ -214,10 +220,7 @@ def test(q, bus, conn):
                 CHANNEL_IFACE_TUBE]
             assert props[STREAM_TUBE_SERVICE] == 'test'
 
-            contact1_tube = bus.get_object(conn.bus_name, path)
-            contact1_stream_tube = make_channel_proxy(conn, path,
-                "Channel.Type.StreamTube")
-            contact1_tube_channel = make_channel_proxy(conn, path, "Channel")
+            contact1_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'StreamTube')
             tube1_path = path
         else:
             assert False
@@ -232,15 +235,14 @@ def test(q, bus, conn):
     assert got_tubes
     assert got_tube
 
-    state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=PROPERTIES_IFACE)
+    state = contact1_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
     assert state == TUBE_CHANNEL_STATE_NOT_OFFERED
 
     # added as member
     q.expect('dbus-signal', signal='MembersChanged', path=txt_path,
         args=['', [conn1_self_handle], [], [], [], conn1_self_handle, 0])
 
-    call_async(q, contact1_stream_tube, 'Offer',
+    call_async(q, contact1_tube.StreamTube, 'Offer',
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
             SOCKET_ACCESS_CONTROL_LOCALHOST, sample_parameters)
 
@@ -249,11 +251,10 @@ def test(q, bus, conn):
             args=[TUBE_CHANNEL_STATE_OPEN]),
         EventPattern('dbus-return', method='Offer'))
 
-    state = contact1_stream_tube.Get(CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=PROPERTIES_IFACE)
+    state = contact1_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
     assert state == TUBE_CHANNEL_STATE_OPEN
 
-    t.invite_to_muc(q, group1, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
+    t.invite_to_muc(q, text1.Group, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
 
     # tubes channel is created
     e = q.expect('dbus-signal', signal='NewChannels')
@@ -261,7 +262,7 @@ def test(q, bus, conn):
     assert len(channels) == 2
 
     # get the list of all channels to check that newly announced ones are in it
-    all_channels = conn2.Get(CONN_IFACE_REQUESTS, 'Channels', dbus_interface=PROPERTIES_IFACE,
+    all_channels = conn2.Properties.Get(CONN_IFACE_REQUESTS, 'Channels',
         byte_arrays=True)
 
     got_tubes, got_tube = False, False
@@ -278,10 +279,8 @@ def test(q, bus, conn):
             assert props[STREAM_TUBE_SERVICE] == 'test'
             assert props[TUBE_PARAMETERS] == sample_parameters
 
-            contact2_tube = bus.get_object(conn.bus_name, path)
-            contact2_stream_tube = make_channel_proxy(conn, path,
-                "Channel.Type.StreamTube")
-            contact2_tube_channel = make_channel_proxy(conn, path, "Channel")
+            contact2_tube = wrap_channel(bus.get_object(conn.bus_name, path),
+                                         'StreamTube')
             tube2_path = path
         else:
             assert False
@@ -295,17 +294,15 @@ def test(q, bus, conn):
     assert got_tubes
     assert got_tube
 
-    state = contact2_tube.Get(CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=PROPERTIES_IFACE)
+    state = contact2_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
     assert state == TUBE_CHANNEL_STATE_LOCAL_PENDING
 
     # second connection: accept the tube (new API)
-    unix_socket_adr = contact2_stream_tube.Accept(
+    unix_socket_adr = contact2_tube.StreamTube.Accept(
         SOCKET_ADDRESS_TYPE_UNIX, SOCKET_ACCESS_CONTROL_LOCALHOST, '',
         byte_arrays=True)
 
-    state = contact2_tube.Get(CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=PROPERTIES_IFACE)
+    state = contact2_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
     assert state == TUBE_CHANNEL_STATE_OPEN
 
     e = q.expect('dbus-signal', signal='TubeChannelStateChanged',
@@ -345,7 +342,7 @@ def test(q, bus, conn):
     assert server_received.data == test_string
     assert client_received.data == string.swapcase(test_string)
 
-    call_async(q, contact1_tube_channel, 'Close')
+    call_async(q, contact1_tube, 'Close')
     _, e1, e2, _, _, _ = q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='ConnectionClosed', path=tube1_path),
@@ -362,7 +359,7 @@ def test(q, bus, conn):
     assert conn_id == contact2_tube_conn_id
     assert error == CONNECTION_LOST
 
-    call_async(q, contact2_tube_channel, 'Close')
+    call_async(q, contact2_tube, 'Close')
     q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='Closed'),
@@ -373,7 +370,10 @@ def test(q, bus, conn):
     conn2.Disconnect()
 
     # cleanup
-    os.remove(server_socket_address)
+    try:
+        os.remove(server_socket_address)
+    except OSError:
+        pass # idgaf
 
 if __name__ == '__main__':
     # increase timer because Clique takes some time to join an existing muc
