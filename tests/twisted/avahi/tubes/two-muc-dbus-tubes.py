@@ -2,7 +2,7 @@ from saluttest import exec_test
 import dbus
 from dbus.service import method, signal, Object
 
-from servicetest import make_channel_proxy, call_async, EventPattern, Event
+from servicetest import wrap_channel, call_async, EventPattern, Event
 
 import constants as cs
 import tubetestutil as t
@@ -17,8 +17,7 @@ sample_parameters = dbus.Dictionary({
 muc_name = "test-two-muc-stream-tubes"
 
 def check_dbus_names(tube, members):
-    names = tube.Get(cs.CHANNEL_TYPE_DBUS_TUBE, 'DBusNames',
-        dbus_interface=cs.PROPERTIES_IFACE)
+    names = tube.Properties.Get(cs.CHANNEL_TYPE_DBUS_TUBE, 'DBusNames')
     assert set(names.keys()) == set(members), names.keys()
 
 SERVICE = "org.freedesktop.Telepathy.Tube.Test"
@@ -93,10 +92,7 @@ def test(q, bus, conn):
             assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
                 cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
 
-            contact1_tube = bus.get_object(conn.bus_name, path)
-            contact1_dbus_tube = make_channel_proxy(conn, path,
-                "Channel.Type.DBusTube")
-            contact1_tube_channel = make_channel_proxy(conn, path, "Channel")
+            contact1_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'DBusTube')
             tube1_path = path
         else:
             assert False
@@ -110,11 +106,10 @@ def test(q, bus, conn):
     assert got_tubes
     assert got_tube
 
-    state = contact1_dbus_tube.Get(cs.CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=cs.PROPERTIES_IFACE)
+    state = contact1_tube.Properties.Get(cs.CHANNEL_IFACE_TUBE, 'State')
     assert state == cs.TUBE_CHANNEL_STATE_NOT_OFFERED
 
-    call_async(q, contact1_dbus_tube, 'Offer', sample_parameters,
+    call_async(q, contact1_tube.DBusTube, 'Offer', sample_parameters,
         cs.SOCKET_ACCESS_CONTROL_CREDENTIALS)
 
     _, e = q.expect_many(
@@ -124,11 +119,10 @@ def test(q, bus, conn):
 
     tube_addr1 = e.value[0]
 
-    state = contact1_dbus_tube.Get(cs.CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=cs.PROPERTIES_IFACE)
+    state = contact1_tube.Properties.Get(cs.CHANNEL_IFACE_TUBE, 'State')
     assert state == cs.TUBE_CHANNEL_STATE_OPEN
 
-    check_dbus_names(contact1_dbus_tube, [conn1_self_handle])
+    check_dbus_names(contact1_tube, [conn1_self_handle])
 
     t.invite_to_muc(q, group1, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
 
@@ -160,10 +154,7 @@ def test(q, bus, conn):
             assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
                 cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
 
-            contact2_tube = bus.get_object(conn.bus_name, path)
-            contact2_dbus_tube = make_channel_proxy(conn, path,
-                "Channel.Type.DBusTube")
-            contact2_tube_channel = make_channel_proxy(conn, path, "Channel")
+            contact2_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'DBusTube')
             tube2_path = path
         else:
             assert False
@@ -183,18 +174,16 @@ def test(q, bus, conn):
     assert added.keys() == [contact1_handle_on_conn2]
     assert removed == []
 
-    state = contact2_tube.Get(cs.CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=cs.PROPERTIES_IFACE)
+    state = contact2_tube.Properties.Get(cs.CHANNEL_IFACE_TUBE, 'State')
     assert state == cs.TUBE_CHANNEL_STATE_LOCAL_PENDING
 
     # first connection: contact2 is not in the tube yet
-    check_dbus_names(contact1_dbus_tube, [conn1_self_handle])
+    check_dbus_names(contact1_tube, [conn1_self_handle])
 
     # second connection: accept the tube (new API)
-    tube_addr2 = unix_socket_adr = contact2_dbus_tube.Accept(cs.SOCKET_ACCESS_CONTROL_CREDENTIALS)
+    tube_addr2 = unix_socket_adr = contact2_tube.DBusTube.Accept(cs.SOCKET_ACCESS_CONTROL_CREDENTIALS)
 
-    state = contact2_tube.Get(cs.CHANNEL_IFACE_TUBE, 'State',
-        dbus_interface=cs.PROPERTIES_IFACE)
+    state = contact2_tube.Properties.Get(cs.CHANNEL_IFACE_TUBE, 'State')
     assert state == cs.TUBE_CHANNEL_STATE_OPEN
 
     e, dbus_names_e = q.expect_many(
@@ -207,10 +196,10 @@ def test(q, bus, conn):
     assert added.keys() == [contact2_handle_on_conn1]
     assert removed == []
 
-    check_dbus_names(contact1_dbus_tube, [conn1_self_handle, contact2_handle_on_conn1])
-    check_dbus_names(contact2_dbus_tube, [conn2_self_handle, contact1_handle_on_conn2])
+    check_dbus_names(contact1_tube, [conn1_self_handle, contact2_handle_on_conn1])
+    check_dbus_names(contact2_tube, [conn2_self_handle, contact1_handle_on_conn2])
 
-    tube2_names = contact2_dbus_tube.Get(cs.CHANNEL_TYPE_DBUS_TUBE, 'DBusNames',
+    tube2_names = contact2_tube.Get(cs.CHANNEL_TYPE_DBUS_TUBE, 'DBusNames',
         dbus_interface=cs.PROPERTIES_IFACE)
 
     tube_conn1 = dbus.connection.Connection(tube_addr1)
@@ -244,7 +233,7 @@ def test(q, bus, conn):
     q.expect('tube-dbus-call', method='MyMethod', args=[42])
     q.expect('tube-dbus-return', method='MyMethod', value=[420])
 
-    call_async(q, contact1_tube_channel, 'Close')
+    call_async(q, contact1_tube, 'Close')
     _, _, _, _, dbus_names_e = q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='Closed'),
@@ -258,9 +247,9 @@ def test(q, bus, conn):
     assert added == {}
     assert removed == [contact1_handle_on_conn2]
 
-    check_dbus_names(contact2_dbus_tube, [conn2_self_handle])
+    check_dbus_names(contact2_tube, [conn2_self_handle])
 
-    call_async(q, contact2_tube_channel, 'Close')
+    call_async(q, contact2_tube, 'Close')
     q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='Closed'),
