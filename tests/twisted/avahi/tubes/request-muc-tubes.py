@@ -9,7 +9,7 @@ import avahitest
 from twisted.words.xish import domish
 
 from saluttest import exec_test, wait_for_contact_list
-from servicetest import call_async, EventPattern, make_channel_proxy
+from servicetest import call_async, EventPattern, wrap_channel
 from constants import *
 
 def test(q, bus, conn):
@@ -24,67 +24,19 @@ def test(q, bus, conn):
     wait_for_contact_list(q, conn)
 
     # check if we can request roomlist channels
-    properties = conn.GetAll(CONN_IFACE_REQUESTS, dbus_interface=PROPERTIES_IFACE)
+    properties = conn.Properties.GetAll(CONN_IFACE_REQUESTS)
     assert ({CHANNEL_TYPE: CHANNEL_TYPE_TUBES,
              TARGET_HANDLE_TYPE: HT_ROOM},
              [TARGET_HANDLE, TARGET_ID],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
-    # request a muc tubes channel using the old API
-    handle = conn.RequestHandles(HT_ROOM, ['my-first-room'])[0]
-    call_async(q, conn, 'RequestChannel', CHANNEL_TYPE_TUBES, HT_ROOM, handle, True)
-
-    ret, old_sig, new_sig = q.expect_many(
-        EventPattern('dbus-return', method='RequestChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
-        EventPattern('dbus-signal', signal='NewChannels'),
-        )
-
-    path1 = ret.value[0]
-    chan = make_channel_proxy(conn, path1, "Channel")
-
-    # text and tubes channels are announced
-    channels = new_sig.args[0]
-    assert len(channels) == 2
-    got_text, got_tubes = False, False
-
-    for path, props in channels:
-        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
-            got_text = True
-            assert props[REQUESTED] == False
-        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
-            got_tubes = True
-            assert props[REQUESTED] == True
-        else:
-            assert False
-
-        assert props[TARGET_HANDLE_TYPE] == HT_ROOM
-        assert props[TARGET_HANDLE] == handle
-        assert props[TARGET_ID] == 'my-first-room'
-        assert props[INITIATOR_HANDLE] == conn.GetSelfHandle()
-        assert props[INITIATOR_ID] == self_name
-
-    # Exercise basic Channel Properties from spec 0.17.7
-    channel_props = chan.GetAll(CHANNEL, dbus_interface=PROPERTIES_IFACE)
-    assert channel_props.get('TargetHandle') == handle,\
-            channel_props.get('TargetHandle')
-    assert channel_props['TargetID'] == 'my-first-room', channel_props
-    assert channel_props.get('TargetHandleType') == HT_ROOM,\
-            channel_props.get('TargetHandleType')
-    assert channel_props.get('ChannelType') == \
-            CHANNEL_TYPE_TUBES, channel_props.get('ChannelType')
-    assert channel_props['Requested'] == True
-    assert channel_props['InitiatorID'] == self_name
-    assert channel_props['InitiatorHandle'] == conn.GetSelfHandle()
-
-    requestotron = dbus.Interface(conn, CONN_IFACE_REQUESTS)
-
     # create muc channel using new API
-    call_async(q, requestotron, 'CreateChannel',
-            { CHANNEL_TYPE: CHANNEL_TYPE_TUBES,
+    call_async(q, conn.Requests, 'CreateChannel',
+            { CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
               TARGET_HANDLE_TYPE: HT_ROOM,
               TARGET_ID: 'my-second-room',
+              STREAM_TUBE_SERVICE: 'loldongs',
               })
 
     ret, old_sig, new_sig = q.expect_many(
@@ -93,23 +45,24 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='NewChannels'),
         )
     path2 = ret.value[0]
-    chan = make_channel_proxy(conn, path2, "Channel")
+    chan = wrap_channel(bus.get_object(conn.bus_name, path2),
+                        'StreamTube')
 
     handle = conn.RequestHandles(HT_ROOM, ['my-second-room'])[0]
 
-    tubes_props = ret.value[1]
-    assert tubes_props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES
-    assert tubes_props[TARGET_HANDLE_TYPE] == HT_ROOM
-    assert tubes_props[TARGET_HANDLE] == handle
-    assert tubes_props[TARGET_ID] == 'my-second-room'
-    assert tubes_props[REQUESTED] == True
-    assert tubes_props[INITIATOR_HANDLE] == conn.GetSelfHandle()
-    assert tubes_props[INITIATOR_ID] == self_name
+    tube_props = ret.value[1]
+    assert tube_props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE
+    assert tube_props[TARGET_HANDLE_TYPE] == HT_ROOM
+    assert tube_props[TARGET_HANDLE] == handle
+    assert tube_props[TARGET_ID] == 'my-second-room'
+    assert tube_props[REQUESTED] == True
+    assert tube_props[INITIATOR_HANDLE] == conn.GetSelfHandle()
+    assert tube_props[INITIATOR_ID] == self_name
 
-    # text and tubes channels are announced
+    # text and tube channels are announced
     channels = new_sig.args[0]
-    assert len(channels) == 2
-    got_text, got_tubes = False, False
+    assert len(channels) == 3
+    got_text, got_tubes, got_tube = False, False, False
 
     for path, props in channels:
         if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
@@ -117,8 +70,11 @@ def test(q, bus, conn):
             assert props[REQUESTED] == False
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
             got_tubes = True
-            assert props == tubes_props
+            assert props[REQUESTED] == False
+        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
+            got_tube = True
             assert path == path2
+            assert props == tube_props
         else:
             assert False
 
@@ -128,12 +84,16 @@ def test(q, bus, conn):
         assert props[INITIATOR_HANDLE] == conn.GetSelfHandle()
         assert props[INITIATOR_ID] == self_name
 
-    # ensure roomlist channel
-    yours, ensured_path, ensured_props = requestotron.EnsureChannel(
-            { CHANNEL_TYPE: CHANNEL_TYPE_TUBES,
+    # ensure the same channel
+    yours, ensured_path, ensured_props = conn.Requests.EnsureChannel(
+            { CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
               TARGET_HANDLE_TYPE: HT_ROOM,
               TARGET_HANDLE: handle,
+              STREAM_TUBE_SERVICE: 'loldongs',
               })
+
+    # TODO: get rid of Tubes and this'll start making more sense
+    return
 
     assert not yours
     assert ensured_path == path2, (ensured_path, path2)
@@ -142,10 +102,7 @@ def test(q, bus, conn):
 
     q.expect_many(
             EventPattern('dbus-signal', signal='Closed',
-                path=path1),
-            EventPattern('dbus-signal', signal='Closed',
                 path=path2),
-            EventPattern('dbus-signal', signal='ChannelClosed', args=[path1]),
             EventPattern('dbus-signal', signal='ChannelClosed', args=[path2]),
             EventPattern('dbus-signal', signal='StatusChanged', args=[2, 1]),
             )
