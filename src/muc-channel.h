@@ -30,6 +30,7 @@
 #include <gibber/gibber-muc-connection.h>
 
 #include "connection.h"
+#include "tube-iface.h"
 
 G_BEGIN_DECLS
 
@@ -88,6 +89,9 @@ gboolean salut_muc_channel_publish_service (SalutMucChannel *self);
  * We shouldn't export this function */
 gboolean salut_muc_channel_add_member (GObject *iface, TpHandle handle,
     const gchar *message, GError **error);
+
+SalutTubeIface * salut_muc_channel_tube_request (SalutMucChannel *self,
+    GHashTable *request_properties);
 
 G_END_DECLS
 

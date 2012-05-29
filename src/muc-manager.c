@@ -444,6 +444,26 @@ tubes_channel_closed_cb (SalutTubesChannel *chan,
     }
 }
 
+static void
+muc_channel_tube_closed_cb (SalutTubeIface *tube,
+    SalutMucManager *mgr)
+{
+  tp_channel_manager_emit_channel_closed_for_object (mgr,
+      TP_EXPORTABLE_CHANNEL (tube));
+}
+
+static void
+muc_channel_new_tube_cb (SalutMucChannel *channel,
+    SalutTubeIface *tube,
+    SalutMucManager *mgr)
+{
+  tp_channel_manager_emit_new_channel (mgr,
+      TP_EXPORTABLE_CHANNEL (tube), NULL);
+
+  g_signal_connect (tube, "closed",
+      G_CALLBACK (muc_channel_tube_closed_cb), mgr);
+}
+
 static GibberMucConnection *
 _get_connection (SalutMucManager *mgr,
                  const gchar *protocol,
@@ -490,6 +510,7 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   tp_base_channel_register ((TpBaseChannel *) chan);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
+  g_signal_connect (chan, "new-tube", G_CALLBACK (muc_channel_new_tube_cb), mgr);
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
 

@@ -53,6 +53,7 @@
 
 #include "text-helper.h"
 #include "tube-stream.h"
+#include "tube-dbus.h"
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
@@ -74,6 +75,7 @@ enum
 {
     READY,
     JOIN_ERROR,
+    NEW_TUBE,
     LAST_SIGNAL
 };
 
@@ -100,6 +102,8 @@ struct _SalutMucChannelPrivate
   /* (gchar *) -> (SalutContact *) */
   GHashTable *senders;
   SalutMucManager *muc_manager;
+
+  GHashTable *tubes;
 };
 
 /* Callback functions */
@@ -306,6 +310,9 @@ salut_muc_channel_constructed (GObject *obj)
       TP_CHANNEL_GROUP_FLAG_CAN_ADD |
       TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD,
       0);
+
+  priv->tubes = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) g_object_unref);
 }
 
 static void
@@ -693,6 +700,17 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
         g_cclosure_marshal_VOID__POINTER,
         G_TYPE_NONE, 1, G_TYPE_POINTER);
 
+  signals[NEW_TUBE] = g_signal_new (
+      "new-tube",
+      G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
+      G_SIGNAL_RUN_LAST,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__OBJECT,
+      /* this should be SALUT_TYPE_TUBE_IFACE but GObject
+       * wants a value type, not an interface. */
+      G_TYPE_NONE, 1, TP_TYPE_BASE_CHANNEL);
+
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
       salut_muc_channel_add_member, NULL);
@@ -736,6 +754,8 @@ salut_muc_channel_dispose (GObject *object)
       g_hash_table_unref (priv->senders);
       priv->senders = NULL;
     }
+
+  tp_clear_pointer (&priv->tubes, g_hash_table_unref);
 
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
@@ -1144,5 +1164,137 @@ error:
   g_free (text);
   g_free (token);
   return;
+}
+
+static void
+tube_closed_cb (SalutTubeIface *tube,
+    SalutMucChannel *self)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  guint id;
+
+  g_object_get (tube,
+      "id", &id,
+      NULL);
+
+  if (priv->tubes != NULL)
+    g_hash_table_remove (priv->tubes, GUINT_TO_POINTER (id));
+}
+
+static guint
+generate_tube_id (SalutMucChannel *self)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  guint out;
+
+  /* probably totally overkill */
+  do
+    {
+      out = g_random_int_range (0, G_MAXINT);
+    }
+  while (g_hash_table_lookup (priv->tubes,
+          GUINT_TO_POINTER (out)) != NULL);
+
+  return out;
+}
+
+static SalutTubeIface *
+create_new_tube (SalutMucChannel *self,
+    TpTubeType type,
+    TpHandle initiator,
+    const gchar *service,
+    GHashTable *parameters,
+    guint tube_id,
+    guint portnum,
+    WockyStanza *iq_req,
+    gboolean requested)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
+  TpHandle self_handle = TP_GROUP_MIXIN (self)->self_handle;
+  TpHandle handle = tp_base_channel_get_target_handle (base);
+  SalutTubeIface *tube;
+
+  switch (type)
+    {
+    case TP_TUBE_TYPE_DBUS:
+      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (conn, NULL,
+              handle, TP_HANDLE_TYPE_ROOM, self_handle, priv->muc_connection,
+              initiator, service, parameters, tube_id, requested));
+      break;
+    case TP_TUBE_TYPE_STREAM:
+      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (conn, NULL,
+              handle, TP_HANDLE_TYPE_ROOM,
+              self_handle, initiator, FALSE, service,
+              parameters, tube_id, portnum, iq_req, requested));
+      break;
+    default:
+      g_return_val_if_reached (NULL);
+    }
+
+  tp_base_channel_register ((TpBaseChannel *) tube);
+
+  DEBUG ("create tube %u", tube_id);
+  g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);
+
+  g_signal_connect (tube, "closed", G_CALLBACK (tube_closed_cb), self);
+
+  return tube;
+}
+
+SalutTubeIface *
+salut_muc_channel_tube_request (SalutMucChannel *self,
+    GHashTable *request_properties)
+{
+  SalutTubeIface *tube;
+  const gchar *channel_type;
+  const gchar *service;
+  GHashTable *parameters = NULL;
+  guint tube_id;
+  TpTubeType type;
+
+  tube_id = generate_tube_id (self);
+
+  channel_type = tp_asv_get_string (request_properties,
+      TP_PROP_CHANNEL_CHANNEL_TYPE);
+
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      type = TP_TUBE_TYPE_STREAM;
+      service = tp_asv_get_string (request_properties,
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
+
+    }
+  else if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      type = TP_TUBE_TYPE_DBUS;
+      service = tp_asv_get_string (request_properties,
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
+    }
+  else
+    /* This assertion is safe: this function's caller only calls it in one of
+     * the above cases.
+     * FIXME: but it would be better to pass an enum member or something maybe.
+     */
+    g_assert_not_reached ();
+
+  /* requested tubes have an empty parameters dict */
+  parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  /* if the service property is missing, the requestotron rejects the request
+   */
+  g_assert (service != NULL);
+
+  DEBUG ("Request a tube channel with type='%s' and service='%s'",
+      channel_type, service);
+
+  tube = create_new_tube (self, type, TP_GROUP_MIXIN (self)->self_handle,
+      service, parameters, tube_id, 0, NULL, TRUE);
+  g_hash_table_unref (parameters);
+
+  return tube;
 }
 
