@@ -271,23 +271,6 @@ salut_muc_manager_dispose (GObject *object)
 
 /* Channel Manager interface */
 
-struct _ForeachData
-{
-  TpExportableChannelFunc foreach;
-  gpointer user_data;
-};
-
-static void
-_foreach_slave (gpointer key,
-                gpointer value,
-                gpointer user_data)
-{
-  struct _ForeachData *data = (struct _ForeachData *) user_data;
-  TpExportableChannel *channel = TP_EXPORTABLE_CHANNEL (value);
-
-  data->foreach (channel, data->user_data);
-}
-
 static void
 salut_muc_manager_foreach_channel (TpChannelManager *iface,
                                    TpExportableChannelFunc foreach,
@@ -295,14 +278,21 @@ salut_muc_manager_foreach_channel (TpChannelManager *iface,
 {
   SalutMucManager *fac = SALUT_MUC_MANAGER (iface);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (fac);
-  struct _ForeachData data;
   GHashTableIter iter;
   gpointer value;
 
-  data.user_data = user_data;
-  data.foreach = foreach;
+  g_hash_table_iter_init (&iter, priv->text_channels);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
 
-  g_hash_table_foreach (priv->text_channels, _foreach_slave, &data);
+      /* do the text channel */
+      foreach (chan, user_data);
+
+      /* now its tube channels */
+      salut_muc_channel_foreach (SALUT_MUC_CHANNEL (chan),
+          foreach, user_data);
+    }
 
   g_hash_table_iter_init (&iter, priv->tubes_channels);
   while (g_hash_table_iter_next (&iter, NULL, &value))

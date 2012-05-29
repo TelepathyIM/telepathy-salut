@@ -93,6 +93,9 @@ gboolean salut_muc_channel_add_member (GObject *iface, TpHandle handle,
 SalutTubeIface * salut_muc_channel_tube_request (SalutMucChannel *self,
     GHashTable *request_properties);
 
+void salut_muc_channel_foreach (SalutMucChannel *self,
+    TpExportableChannelFunc func, gpointer user_data);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_MUC_CHANNEL_H__*/

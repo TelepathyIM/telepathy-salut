@@ -1298,3 +1298,18 @@ salut_muc_channel_tube_request (SalutMucChannel *self,
   return tube;
 }
 
+void
+salut_muc_channel_foreach (SalutMucChannel *self,
+    TpExportableChannelFunc func,
+    gpointer user_data)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  GHashTableIter iter;
+  gpointer value;
+
+  g_hash_table_iter_init (&iter, priv->tubes);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      func (TP_EXPORTABLE_CHANNEL (value), user_data);
+    }
+}
