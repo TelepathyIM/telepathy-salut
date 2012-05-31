@@ -9,7 +9,7 @@ import avahitest
 from twisted.words.xish import domish
 
 from saluttest import exec_test, wait_for_contact_list
-from servicetest import call_async, EventPattern, wrap_channel
+from servicetest import call_async, EventPattern, wrap_channel, pretty
 from constants import *
 
 def test(q, bus, conn):
@@ -23,11 +23,11 @@ def test(q, bus, conn):
     # announced so they won't interfere with the muc ones announces.
     wait_for_contact_list(q, conn)
 
-    # check if we can request roomlist channels
+    # check if we can request tube channels
     properties = conn.Properties.GetAll(CONN_IFACE_REQUESTS)
-    assert ({CHANNEL_TYPE: CHANNEL_TYPE_TUBES,
+    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
              TARGET_HANDLE_TYPE: HT_ROOM},
-             [TARGET_HANDLE, TARGET_ID],
+             [TARGET_HANDLE, TARGET_ID, STREAM_TUBE_SERVICE],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 

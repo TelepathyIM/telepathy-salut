@@ -74,11 +74,6 @@ void salut_muc_manager_handle_si_stream_request (SalutMucManager *muc_manager,
     GibberBytestreamIface *bytestream, TpHandle room_handle,
     const gchar *stream_id, WockyStanza *msg);
 
-SalutTubesChannel * salut_muc_manager_ensure_tubes_channel (
-    SalutMucManager *muc_manager, TpHandle handle, TpHandle actor,
-    gboolean *created);
-
-
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_MUC_MANAGER_H__*/
