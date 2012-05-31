@@ -724,47 +724,40 @@ handle_tube_channel_request (SalutMucManager *self,
                              GError **error)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
-  TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
   SalutMucChannel *text_chan;
-  SalutTubesChannel *tubes_chan;
   SalutTubeIface *new_channel;
   GHashTable *channels;
   GSList *request_tokens;
-  gboolean announce_text = FALSE, announce_tubes = FALSE;
+  gboolean announce_text = FALSE;
 
-  tubes_chan = g_hash_table_lookup (priv->tubes_channels,
+  text_chan = g_hash_table_lookup (priv->text_channels,
       GUINT_TO_POINTER (handle));
-  if (tubes_chan == NULL)
+
+  if (text_chan == NULL)
     {
-      tubes_chan = create_tubes_channel (self, handle,
-          base_conn->self_handle, NULL, FALSE, &announce_text,
-          FALSE, error);
-      if (tubes_chan == NULL)
+      DEBUG ("have to create the text channel before the tube one");
+      text_chan = salut_muc_manager_request_new_muc_channel (self,
+          handle, NULL, FALSE, error);
+
+      announce_text = TRUE;
+
+      if (text_chan == NULL)
         return FALSE;
-      announce_tubes = TRUE;
     }
 
-  g_assert (tubes_chan != NULL);
-  new_channel = salut_tubes_channel_tube_request (tubes_chan, request_token,
-      request_properties, require_new);
+  new_channel = salut_muc_channel_tube_request (text_chan,
+      request_properties);
   g_assert (new_channel != NULL);
+
+  g_signal_connect (new_channel, "closed",
+      G_CALLBACK (muc_channel_tube_closed_cb), self);
 
   /* announce channels */
   channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, NULL);
 
   if (announce_text)
-    {
-      text_chan = g_hash_table_lookup (priv->text_channels,
-          GINT_TO_POINTER (handle));
-      g_assert (text_chan != NULL);
-      g_hash_table_insert (channels, text_chan, NULL);
-    }
-
-  if (announce_tubes)
-    {
-      g_hash_table_insert (channels, tubes_chan, NULL);
-    }
+    g_hash_table_insert (channels, text_chan, NULL);
 
   request_tokens = g_slist_prepend (NULL, request_token);
   g_hash_table_insert (channels, new_channel, request_tokens);
