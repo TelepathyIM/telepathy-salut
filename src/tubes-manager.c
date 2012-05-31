@@ -65,6 +65,15 @@ static void salut_tubes_manager_iface_init (gpointer g_iface,
 static void gabble_caps_channel_manager_iface_init (
     GabbleCapsChannelManagerIface *);
 
+static SalutTubeIface * create_new_tube (SalutTubesManager *self,
+    TpTubeType type,
+    TpHandle handle,
+    const gchar *service,
+    GHashTable *parameters,
+    guint tube_id,
+    guint portnum,
+    WockyStanza *iq_req);
+
 G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     salut_tubes_manager,
     G_TYPE_OBJECT,
@@ -307,7 +316,7 @@ iq_tube_request_cb (WockyPorter *porter,
   gboolean close_;
   GError *error = NULL;
 
-  SalutTubesChannel *chan;
+  SalutTubeIface *chan;
 
   /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
@@ -332,70 +341,31 @@ iq_tube_request_cb (WockyPorter *porter,
 
   DEBUG ("received a tube request, tube id %d", tube_id);
 
-  chan = g_hash_table_lookup (priv->tubes_channels,
-      GUINT_TO_POINTER (initiator_handle));
+  chan = g_hash_table_lookup (priv->tubes,
+      GUINT_TO_POINTER (tube_id));
+
   if (close_)
   {
     if (chan != NULL)
       {
-        salut_tubes_channel_message_close_received (chan, initiator_handle,
-            tube_id);
+        DEBUG ("received a tube close message");
+        salut_tube_iface_close (chan, TRUE);
       }
   }
   else
   {
-    SalutTubeIface *tube;
-    GHashTable *channels;
-    gboolean tubes_channel_created = FALSE;
-
     if (chan == NULL)
       {
-        GError *e = NULL;
-
-        chan = new_tubes_channel (self, initiator_handle, initiator_handle,
-            NULL, FALSE, &e);
-
-        if (chan == NULL)
-          {
-            DEBUG ("couldn't make new tubes channel: %s", e->message);
-            g_error_free (e);
-            g_hash_table_unref (parameters);
-            return TRUE;
-          }
-
-        tubes_channel_created = TRUE;
+        /* create new tube here */
+        chan = create_new_tube (self, tube_type,
+            initiator_handle, service, parameters, tube_id, portnum, stanza);
       }
 
-    tube = salut_tubes_channel_message_received (chan, service, tube_type,
-        initiator_handle, parameters, tube_id, portnum, stanza);
-
-    if (tube == NULL)
-      {
-        if (tubes_channel_created)
-          {
-            /* Destroy the tubes channel we just created as it's now
-             * useless */
-            g_hash_table_remove (priv->tubes_channels, GUINT_TO_POINTER (
-                  initiator_handle));
-          }
-
-        g_hash_table_unref (parameters);
-        return TRUE;
-      }
-
-    /* announce tubes and tube channels */
-    channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-        NULL, NULL);
-
-    if (tubes_channel_created)
-      g_hash_table_insert (channels, chan, NULL);
-
-    g_hash_table_insert (channels, tube, NULL);
-
-    tp_channel_manager_emit_new_channels (self, channels);
+    /* announce tube channel */
+    tp_channel_manager_emit_new_channel (self,
+        TP_EXPORTABLE_CHANNEL (chan), NULL);
 
     g_hash_table_unref (parameters);
-    g_hash_table_unref (channels);
   }
 
   return TRUE;
@@ -857,48 +827,31 @@ generate_tube_id (SalutTubesManager *self)
 }
 
 static SalutTubeIface *
-new_channel_from_request (SalutTubesManager *self,
-    GHashTable *request)
+create_new_tube (SalutTubesManager *self,
+    TpTubeType type,
+    TpHandle handle,
+    const gchar *service,
+    GHashTable *parameters,
+    guint tube_id,
+    guint portnum,
+    WockyStanza *iq_req)
 {
   SalutTubesManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       SALUT_TYPE_TUBES_MANAGER, SalutTubesManagerPrivate);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
   SalutTubeIface *tube;
 
-  const gchar *ctype, *service;
-  TpHandle handle;
-  TpHandleType handle_type;
-  guint tube_id;
-  GHashTable *parameters;
-
-  ctype = tp_asv_get_string (request, TP_PROP_CHANNEL_CHANNEL_TYPE);
-  handle = tp_asv_get_uint32 (request, TP_PROP_CHANNEL_TARGET_HANDLE, NULL);
-  handle_type = tp_asv_get_uint32 (request,
-      TP_PROP_CHANNEL_TARGET_HANDLE_TYPE, NULL);
-
-  tube_id = generate_tube_id (self);
-
-  /* requested tubes have an empty parameters dict */
-  parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
-      (GDestroyNotify) tp_g_value_slice_free);
-
-  if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  if (type == TP_TUBE_TYPE_STREAM)
     {
-      service = tp_asv_get_string (request,
-          TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
-
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, NULL,
-              handle, handle_type,
+              handle, TP_HANDLE_TYPE_CONTACT,
               base_conn->self_handle, base_conn->self_handle, FALSE, service,
-              parameters, tube_id, 0, NULL, TRUE));
+              parameters, tube_id, portnum, iq_req, TRUE));
     }
-  else if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (type == TP_TUBE_TYPE_DBUS)
     {
-      service = tp_asv_get_string (request,
-          TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
-
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn, NULL,
-              handle, handle_type, base_conn->self_handle, NULL,
+              handle, TP_HANDLE_TYPE_CONTACT, base_conn->self_handle, NULL,
               base_conn->self_handle, service, parameters, tube_id, TRUE));
     }
   else
@@ -913,6 +866,53 @@ new_channel_from_request (SalutTubesManager *self,
 
   g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id),
       tube);
+
+  return tube;
+}
+
+static SalutTubeIface *
+new_channel_from_request (SalutTubesManager *self,
+    GHashTable *request)
+{
+  SalutTubeIface *tube;
+
+  TpTubeType type;
+  const gchar *ctype, *service;
+  TpHandle handle;
+  guint tube_id;
+  GHashTable *parameters;
+
+  ctype = tp_asv_get_string (request, TP_PROP_CHANNEL_CHANNEL_TYPE);
+  handle = tp_asv_get_uint32 (request, TP_PROP_CHANNEL_TARGET_HANDLE, NULL);
+
+  tube_id = generate_tube_id (self);
+
+  /* requested tubes have an empty parameters dict */
+  parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+
+  if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      service = tp_asv_get_string (request,
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
+
+      type = TP_TUBE_TYPE_STREAM;
+    }
+  else if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      service = tp_asv_get_string (request,
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
+
+      type = TP_TUBE_TYPE_DBUS;
+    }
+  else
+    {
+      g_return_val_if_reached (NULL);
+    }
+
+  tube = create_new_tube (self, type, handle, service,
+      parameters, tube_id, 0, NULL);
 
   g_hash_table_unref (parameters);
 
