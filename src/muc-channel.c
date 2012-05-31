@@ -1748,3 +1748,76 @@ salut_muc_channel_foreach (SalutMucChannel *self,
       func (TP_EXPORTABLE_CHANNEL (value), user_data);
     }
 }
+
+void
+salut_muc_channel_bytestream_offered (SalutMucChannel *self,
+    GibberBytestreamIface *bytestream,
+    WockyStanza *msg)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  WockyNode *node = wocky_stanza_get_top_node (msg);
+  const gchar *stream_id, *tmp;
+  gchar *endptr;
+  WockyNode *si_node, *stream_node;
+  guint tube_id;
+  unsigned long tube_id_tmp;
+  SalutTubeIface *tube;
+  WockyStanzaType type;
+  WockyStanzaSubType sub_type;
+
+  /* Caller is expected to have checked that we have a stream or muc-stream
+   * node with a stream ID and the TUBES profile
+   */
+  wocky_stanza_get_type_info (msg, &type, &sub_type);
+  g_return_if_fail (type == WOCKY_STANZA_TYPE_IQ);
+  g_return_if_fail (sub_type == WOCKY_STANZA_SUB_TYPE_SET);
+
+  si_node = wocky_node_get_child_ns (node, "si",
+      WOCKY_XMPP_NS_SI);
+  g_return_if_fail (si_node != NULL);
+
+  stream_node = wocky_node_get_child_ns (si_node,
+      "muc-stream", WOCKY_TELEPATHY_NS_TUBES);
+  g_return_if_fail (stream_node != NULL);
+
+  stream_id = wocky_node_get_attribute (si_node, "id");
+  g_return_if_fail (stream_id != NULL);
+
+  tmp = wocky_node_get_attribute (stream_node, "tube");
+  if (tmp == NULL)
+    {
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<muc-stream> has no tube attribute" };
+
+      DEBUG ("%s", e.message);
+      gibber_bytestream_iface_close (bytestream, &e);
+      return;
+    }
+  tube_id_tmp = strtoul (tmp, &endptr, 10);
+  if (!endptr || *endptr || tube_id_tmp > G_MAXUINT32)
+    {
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<muc-stream> tube attribute not numeric or > 2**32" };
+
+      DEBUG ("tube id is not numeric or > 2**32: %s", tmp);
+      gibber_bytestream_iface_close (bytestream, &e);
+      return;
+    }
+  tube_id = (guint) tube_id_tmp;
+
+  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+  if (tube == NULL)
+    {
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<muc-stream> tube attribute points to a nonexistent "
+          "tube" };
+
+      DEBUG ("tube %u doesn't exist", tube_id);
+      gibber_bytestream_iface_close (bytestream, &e);
+      return;
+    }
+
+  DEBUG ("received new bytestream request for existing tube: %u", tube_id);
+
+  salut_tube_iface_add_bytestream (tube, bytestream);
+}
