@@ -22,7 +22,6 @@ sample_parameters = dbus.Dictionary({
 test_string = "This string travels on a tube !"
 
 muc_name = "test-two-muc-stream-tubes"
-muc2_name = "test-two-muc-stream-tubes-2"
 
 SERVER_WELCOME_MSG = "Welcome!"
 
@@ -78,28 +77,24 @@ def test(q, bus, conn):
     conn.Requests.CreateChannel({
         CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
         TARGET_HANDLE_TYPE: HT_ROOM,
-        TARGET_ID: muc2_name,
+        TARGET_ID: muc_name,
         STREAM_TUBE_SERVICE: 'test'})
 
     e = q.expect('dbus-signal', signal='NewChannels',
-                 predicate=lambda e: len(e.args[0]) == 3)
+                 predicate=lambda e: len(e.args[0]) == 2)
     channels = e.args[0]
 
     # get the list of all channels to check that newly announced ones are in it
     all_channels = conn.Properties.Get(CONN_IFACE_REQUESTS, 'Channels',
         byte_arrays=True)
 
-    got_text, got_tubes, got_tube = False, False, False
+    got_text, got_tube = False, False
     for path, props in channels:
         if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
             got_text = True
             assert props[REQUESTED] == False
             text1 = wrap_channel(bus.get_object(conn.bus_name, path), 'Text')
             txt_path = path
-        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
-            got_tubes = True
-            assert props[REQUESTED] == False
-            assert props[INTERFACES] == [CHANNEL_IFACE_GROUP]
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
             got_tube = True
             assert props[REQUESTED] == True
@@ -114,12 +109,11 @@ def test(q, bus, conn):
 
         assert props[INITIATOR_HANDLE] == conn1_self_handle
         assert props[INITIATOR_ID] == contact1_name
-        assert props[TARGET_ID] == muc2_name
+        assert props[TARGET_ID] == muc_name
 
         assert (path, props) in all_channels, (path, props)
 
     assert got_text
-    assert got_tubes
     assert got_tube
 
     state = contact1_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
@@ -146,40 +140,24 @@ def test(q, bus, conn):
     # tubes channel is created
     e = q.expect('dbus-signal', signal='NewChannels')
     channels = e.args[0]
-    assert len(channels) == 2
+    assert len(channels) == 1
 
     # get the list of all channels to check that newly announced ones are in it
     all_channels = conn2.Properties.Get(CONN_IFACE_REQUESTS, 'Channels',
         byte_arrays=True)
 
-    got_tubes, got_tube = False, False
-    for path, props in channels:
-        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
-            got_tubes = True
-            assert props[REQUESTED] == False
-            assert props[INTERFACES] == [CHANNEL_IFACE_GROUP]
-        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
-            got_tube = True
-            assert props[REQUESTED] == False
-            assert props[INTERFACES] == [CHANNEL_IFACE_GROUP,
-                CHANNEL_IFACE_TUBE]
-            assert props[STREAM_TUBE_SERVICE] == 'test'
-            assert props[TUBE_PARAMETERS] == sample_parameters
+    path, props = channels[0]
+    assert props[REQUESTED] == False
+    assert props[INTERFACES] == [CHANNEL_IFACE_GROUP,
+                                 CHANNEL_IFACE_TUBE]
+    assert props[STREAM_TUBE_SERVICE] == 'test'
+    assert props[TUBE_PARAMETERS] == sample_parameters
 
-            contact2_tube = wrap_channel(bus.get_object(conn.bus_name, path),
+    assert (path, props) in all_channels, (path, props)
+
+    contact2_tube = wrap_channel(bus.get_object(conn.bus_name, path),
                                          'StreamTube')
-            tube2_path = path
-        else:
-            assert False
-
-        assert props[INITIATOR_HANDLE] == contact1_handle_on_conn2
-        assert props[INITIATOR_ID] == contact1_name
-        assert props[TARGET_ID] == muc2_name
-
-        assert (path, props) in all_channels, (path, props)
-
-    assert got_tubes
-    assert got_tube
+    tube2_path = path
 
     state = contact2_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
     assert state == TUBE_CHANNEL_STATE_LOCAL_PENDING
@@ -230,12 +208,11 @@ def test(q, bus, conn):
     assert client_received.data == string.swapcase(test_string)
 
     call_async(q, contact1_tube, 'Close')
-    _, e1, e2, _, _, _ = q.expect_many(
+    _, e1, e2, _, _ = q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='ConnectionClosed', path=tube1_path),
         EventPattern('dbus-signal', signal='ConnectionClosed', path=tube2_path),
         EventPattern('dbus-signal', signal='Closed'),
-        EventPattern('dbus-signal', signal='TubeClosed'),
         EventPattern('dbus-signal', signal='ChannelClosed'))
 
     conn_id, error, dbus_msg = e1.args
@@ -250,7 +227,6 @@ def test(q, bus, conn):
     q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='Closed'),
-        EventPattern('dbus-signal', signal='TubeClosed'),
         EventPattern('dbus-signal', signal='ChannelClosed'))
 
     conn.Disconnect()

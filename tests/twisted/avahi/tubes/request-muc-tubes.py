@@ -44,8 +44,8 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
-    path2 = ret.value[0]
-    chan = wrap_channel(bus.get_object(conn.bus_name, path2),
+    tube_path = ret.value[0]
+    chan = wrap_channel(bus.get_object(conn.bus_name, tube_path),
                         'StreamTube')
 
     handle = conn.RequestHandles(HT_ROOM, ['my-second-room'])[0]
@@ -61,19 +61,16 @@ def test(q, bus, conn):
 
     # text and tube channels are announced
     channels = new_sig.args[0]
-    assert len(channels) == 3
-    got_text, got_tubes, got_tube = False, False, False
+    assert len(channels) == 2
+    got_text, got_tube = False, False
 
     for path, props in channels:
         if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
             got_text = True
             assert props[REQUESTED] == False
-        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_TUBES:
-            got_tubes = True
-            assert props[REQUESTED] == False
         elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
             got_tube = True
-            assert path == path2
+            assert path == tube_path
             assert props == tube_props
         else:
             assert False
@@ -85,25 +82,22 @@ def test(q, bus, conn):
         assert props[INITIATOR_ID] == self_name
 
     # ensure the same channel
-    yours, ensured_path, ensured_props = conn.Requests.EnsureChannel(
-            { CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
-              TARGET_HANDLE_TYPE: HT_ROOM,
-              TARGET_HANDLE: handle,
-              STREAM_TUBE_SERVICE: 'loldongs',
-              })
+#    yours, ensured_path, ensured_props = conn.Requests.EnsureChannel(
+#            { CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
+#              TARGET_HANDLE_TYPE: HT_ROOM,
+#              TARGET_HANDLE: handle,
+#              STREAM_TUBE_SERVICE: 'loldongs',
+#              })
 
-    # TODO: get rid of Tubes and this'll start making more sense
-    return
-
-    assert not yours
-    assert ensured_path == path2, (ensured_path, path2)
+#    assert not yours
+#    assert ensured_path == tube_path, (ensured_path, tube_path2)
 
     conn.Disconnect()
 
     q.expect_many(
             EventPattern('dbus-signal', signal='Closed',
-                path=path2),
-            EventPattern('dbus-signal', signal='ChannelClosed', args=[path2]),
+                path=tube_path),
+            EventPattern('dbus-signal', signal='ChannelClosed', args=[tube_path]),
             EventPattern('dbus-signal', signal='StatusChanged', args=[2, 1]),
             )
 

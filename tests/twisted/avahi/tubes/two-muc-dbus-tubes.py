@@ -71,40 +71,26 @@ def test(q, bus, conn):
 
     e = q.expect('dbus-signal', signal='NewChannels')
     channels = e.args[0]
-    assert len(channels) == 2
+    assert len(channels) == 1
 
     # get the list of all channels to check that newly announced ones are in it
     all_channels = conn.Get(cs.CONN_IFACE_REQUESTS, 'Channels', dbus_interface=cs.PROPERTIES_IFACE,
         byte_arrays=True)
 
-    got_tubes, got_tube = False, False
-    for path, props in channels:
-        if props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TUBES:
-            got_tubes = True
-            assert props[cs.REQUESTED] == False
-            assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP]
-        elif props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_DBUS_TUBE:
-            got_tube = True
-            assert props[cs.REQUESTED] == True
-            assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP,
-                cs.CHANNEL_IFACE_TUBE]
-            assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
-            assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
-                cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
+    path, props = channels[0]
 
-            contact1_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'DBusTube')
-            tube1_path = path
-        else:
-            assert False
+    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_DBUS_TUBE
+    assert props[cs.REQUESTED] == True
+    assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP,
+                                    cs.CHANNEL_IFACE_TUBE]
+    assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
+    assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
+        cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
 
-        assert props[cs.INITIATOR_HANDLE] == conn1_self_handle
-        assert props[cs.INITIATOR_ID] == contact1_name
-        assert props[cs.TARGET_ID] == muc_name
+    contact1_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'DBusTube')
+    tube1_path = path
 
-        assert (path, props) in all_channels, (path, props)
-
-    assert got_tubes
-    assert got_tube
+    assert (path, props) in all_channels, (path, props)
 
     state = contact1_tube.Properties.Get(cs.CHANNEL_IFACE_TUBE, 'State')
     assert state == cs.TUBE_CHANNEL_STATE_NOT_OFFERED
@@ -132,41 +118,27 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='DBusNamesChanged', interface=cs.CHANNEL_TYPE_DBUS_TUBE))
 
     channels = e.args[0]
-    assert len(channels) == 2
+    assert len(channels) == 1
 
     # get the list of all channels to check that newly announced ones are in it
     all_channels = conn2.Get(cs.CONN_IFACE_REQUESTS, 'Channels', dbus_interface=cs.PROPERTIES_IFACE,
         byte_arrays=True)
 
-    got_tubes, got_tube = False, False
-    for path, props in channels:
-        if props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TUBES:
-            got_tubes = True
-            assert props[cs.REQUESTED] == False
-            assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP]
-        elif props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_DBUS_TUBE:
-            got_tube = True
-            assert props[cs.REQUESTED] == False
-            assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP,
-                cs.CHANNEL_IFACE_TUBE]
-            assert props[cs.TUBE_PARAMETERS] == sample_parameters
-            assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
-            assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
-                cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
+    path, props = channels[0]
 
-            contact2_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'DBusTube')
-            tube2_path = path
-        else:
-            assert False
+    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_DBUS_TUBE
+    assert props[cs.REQUESTED] == False
+    assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP,
+                                    cs.CHANNEL_IFACE_TUBE]
+    assert props[cs.TUBE_PARAMETERS] == sample_parameters
+    assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
+    assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
+        cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
 
-        assert props[cs.INITIATOR_HANDLE] == contact1_handle_on_conn2
-        assert props[cs.INITIATOR_ID] == contact1_name
-        assert props[cs.TARGET_ID] == muc_name
+    contact2_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'DBusTube')
+    tube2_path = path
 
-        assert (path, props) in all_channels, (path, props)
-
-    assert got_tubes
-    assert got_tube
+    assert (path, props) in all_channels, (path, props)
 
     # second connection: check DBusNamesChanged signal
     assert dbus_names_e.path == tube2_path
@@ -234,10 +206,9 @@ def test(q, bus, conn):
     q.expect('tube-dbus-return', method='MyMethod', value=[420])
 
     call_async(q, contact1_tube, 'Close')
-    _, _, _, _, dbus_names_e = q.expect_many(
+    _, _, _, dbus_names_e = q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='Closed'),
-        EventPattern('dbus-signal', signal='TubeClosed'),
         EventPattern('dbus-signal', signal='ChannelClosed'),
         EventPattern('dbus-signal', signal='DBusNamesChanged',
             interface=cs.CHANNEL_TYPE_DBUS_TUBE, path=tube2_path))
@@ -253,7 +224,6 @@ def test(q, bus, conn):
     q.expect_many(
         EventPattern('dbus-return', method='Close'),
         EventPattern('dbus-signal', signal='Closed'),
-        EventPattern('dbus-signal', signal='TubeClosed'),
         EventPattern('dbus-signal', signal='ChannelClosed'))
 
     conn.Disconnect()
