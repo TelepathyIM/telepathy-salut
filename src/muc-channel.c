@@ -936,6 +936,105 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
   tp_intset_destroy (empty);
 }
 
+/* tube_node is a MUC <message> */
+static gboolean
+extract_tube_information (SalutMucChannel *self,
+                          WockyNode *tube_node,
+                          TpTubeType *type,
+                          TpHandle *initiator_handle,
+                          const gchar **service,
+                          GHashTable **parameters,
+                          guint *tube_id)
+{
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_CONTACT);
+
+  if (type != NULL)
+    {
+      const gchar *_type;
+
+      _type = wocky_node_get_attribute (tube_node, "type");
+
+
+      if (!tp_strdiff (_type, "stream"))
+        {
+          *type = TP_TUBE_TYPE_STREAM;
+        }
+      else if (!tp_strdiff (_type, "dbus"))
+        {
+          *type = TP_TUBE_TYPE_DBUS;
+        }
+      else
+        {
+          DEBUG ("Unknown tube type: %s", _type);
+          return FALSE;
+        }
+    }
+
+  if (initiator_handle != NULL)
+    {
+      const gchar *initiator;
+
+      initiator = wocky_node_get_attribute (tube_node, "initiator");
+
+      if (initiator != NULL)
+        {
+          *initiator_handle = tp_handle_ensure (contact_repo, initiator, NULL,
+              NULL);
+
+          if (*initiator_handle == 0)
+            {
+              DEBUG ("invalid initiator ID %s", initiator);
+              return FALSE;
+            }
+        }
+      else
+        {
+          *initiator_handle = 0;
+        }
+    }
+
+  if (service != NULL)
+    {
+      *service = wocky_node_get_attribute (tube_node, "service");
+    }
+
+  if (parameters != NULL)
+    {
+      WockyNode *node;
+
+      node = wocky_node_get_child (tube_node, "parameters");
+      *parameters = salut_wocky_node_extract_properties (node,
+          "parameter");
+    }
+
+  if (tube_id != NULL)
+    {
+      const gchar *str;
+      gchar *endptr;
+      long int tmp;
+
+      str = wocky_node_get_attribute (tube_node, "id");
+      if (str == NULL)
+        {
+          DEBUG ("no tube id in SI request");
+          return FALSE;
+        }
+
+      tmp = strtol (str, &endptr, 10);
+      if (!endptr || *endptr)
+        {
+          DEBUG ("tube id is not numeric: %s", str);
+          return FALSE;
+        }
+      *tube_id = (int) tmp;
+    }
+
+  return TRUE;
+}
+
 static void
 salut_muc_channel_received_stanza (GibberMucConnection *conn,
                                    const gchar *sender,
