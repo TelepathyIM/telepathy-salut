@@ -42,6 +42,7 @@
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
+#include <gibber/gibber-bytestream-muc.h>
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-transport.h>
 
@@ -127,6 +128,15 @@ static void salut_muc_channel_send (GObject *channel,
 static void salut_muc_channel_close (TpBaseChannel *base);
 
 static void update_tube_info (SalutMucChannel *self);
+static SalutTubeIface * create_new_tube (SalutMucChannel *self,
+    TpTubeType type,
+    TpHandle initiator,
+    const gchar *service,
+    GHashTable *parameters,
+    guint tube_id,
+    guint portnum,
+    WockyStanza *iq_req,
+    gboolean requested);
 
 static void
 salut_muc_channel_get_property (GObject    *object,
@@ -1036,6 +1046,191 @@ extract_tube_information (SalutMucChannel *self,
 }
 
 static void
+muc_channel_handle_tubes (SalutMucChannel *self,
+    TpHandle contact,
+    WockyStanza *stanza)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  TpHandleRepoIface *contact_repo =
+      tp_base_connection_get_handles (base_conn,
+          TP_HANDLE_TYPE_CONTACT);
+  const gchar *sender;
+  WockyStanzaType stanza_type;
+  WockyStanzaSubType sub_type;
+  GHashTable *old_dbus_tubes;
+  GHashTableIter iter;
+  gpointer key, value;
+  GSList *l;
+  WockyNode *tubes_node;
+
+  if (contact == TP_GROUP_MIXIN (self)->self_handle)
+    /* we don't need to inspect our own tubes */
+    return;
+
+  sender = tp_handle_inspect (contact_repo, contact);
+
+  wocky_stanza_get_type_info (stanza, &stanza_type, &sub_type);
+  if (stanza_type != WOCKY_STANZA_TYPE_MESSAGE
+      || sub_type != WOCKY_STANZA_SUB_TYPE_GROUPCHAT)
+    return;
+
+  tubes_node = wocky_node_get_child_ns (
+      wocky_stanza_get_top_node (stanza), "tubes",
+      WOCKY_TELEPATHY_NS_TUBES);
+  g_assert (tubes_node != NULL);
+
+  /* fill old_dbus_tubes with D-Bus tubes previously announced by the
+   * contact */
+  old_dbus_tubes = g_hash_table_new (NULL, NULL);
+  g_hash_table_iter_init (&iter, priv->tubes);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      guint tube_id = GPOINTER_TO_UINT (key);
+      SalutTubeIface *tube = value;
+      TpTubeType type;
+
+      g_object_get (tube,
+          "type", &type,
+          NULL);
+
+      if (type != TP_TUBE_TYPE_DBUS)
+        return;
+
+      if (salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
+              contact))
+        {
+          g_hash_table_insert (old_dbus_tubes, GUINT_TO_POINTER (tube_id), tube);
+        }
+    }
+
+  for (l = tubes_node->children; l != NULL; l = l->next)
+    {
+      WockyNode *tube_node = (WockyNode *) l->data;
+      const gchar *stream_id;
+      SalutTubeIface *tube;
+      guint tube_id;
+      TpTubeType type;
+      GibberBytestreamIface *bytestream;
+
+      stream_id = wocky_node_get_attribute (tube_node, "stream-id");
+
+      if (!extract_tube_information (self, tube_node, NULL,
+              NULL, NULL, NULL, &tube_id))
+        continue;
+
+      tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+
+      if (tube == NULL)
+        {
+          /* a new tube */
+          const gchar *service;
+          TpHandle initiator_handle;
+          GHashTable *parameters;
+          guint id;
+
+          if (extract_tube_information (self, tube_node, &type,
+                  &initiator_handle, &service, &parameters, &id))
+            {
+              switch (type)
+                {
+                case TP_TUBE_TYPE_DBUS:
+                  {
+                    if (initiator_handle == 0)
+                      {
+                        DEBUG ("D-Bus tube initiator missing");
+                        continue;
+                      }
+                  }
+                  break;
+                case TP_TUBE_TYPE_STREAM:
+                  initiator_handle = contact;
+                  break;
+                default:
+                  g_assert_not_reached ();
+                }
+
+              tube = create_new_tube (self, type, initiator_handle, service, parameters,
+                  id, 0, NULL, FALSE);
+
+              g_signal_emit (self, signals[NEW_TUBE], 0, tube);
+
+              g_hash_table_unref (parameters);
+            }
+        }
+      else
+        {
+          /* the contact is in the tube.
+           * remove it from old_dbus_tubes if needed. */
+          g_hash_table_remove (old_dbus_tubes, GUINT_TO_POINTER (tube_id));
+        }
+
+      if (tube == NULL)
+        continue;
+
+      g_object_get (tube,
+          "type", &type,
+          NULL);
+
+      if (type == TP_TUBE_TYPE_DBUS
+          && !salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
+              contact))
+        {
+          /* contact just joined the tube */
+          const gchar *new_name;
+
+          new_name = wocky_node_get_attribute (tube_node, "dbus-name");
+
+          if (new_name == NULL)
+            {
+              DEBUG ("Contact %u isn't announcing his or her D-Bus name", contact);
+              continue;
+            }
+
+          salut_tube_dbus_add_name (SALUT_TUBE_DBUS (tube), contact, new_name);
+
+          g_object_get (tube,
+              "bytestream", &bytestream,
+              NULL);
+          g_assert (bytestream != NULL);
+
+          if (GIBBER_IS_BYTESTREAM_MUC (bytestream))
+            {
+              guint16 tmp = (guint16) atoi (stream_id);
+
+              gibber_bytestream_muc_add_sender (
+                  GIBBER_BYTESTREAM_MUC (bytestream), sender, tmp);
+            }
+
+          g_object_unref (bytestream);
+        }
+    }
+
+  g_hash_table_iter_init (&iter, old_dbus_tubes);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      SalutTubeDBus *tube = SALUT_TUBE_DBUS (value);
+      GibberBytestreamIface *bytestream;
+
+      salut_tube_dbus_remove_name (tube, contact);
+
+      g_object_get (tube,
+          "bytestream", &bytestream,
+          NULL);
+      g_assert (bytestream != NULL);
+
+      if (GIBBER_IS_BYTESTREAM_MUC (bytestream) && sender != NULL)
+        {
+          gibber_bytestream_muc_remove_sender (
+              GIBBER_BYTESTREAM_MUC (bytestream), sender);
+        }
+
+      g_object_unref (bytestream);
+    }
+}
+
+static void
 salut_muc_channel_received_stanza (GibberMucConnection *conn,
                                    const gchar *sender,
                                    WockyStanza *stanza,
@@ -1083,43 +1278,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
       WOCKY_TELEPATHY_NS_TUBES);
   if (tubes_node != NULL)
     {
-      SalutTubesChannel *tubes_chan;
-      GPtrArray *tubes;
-      guint i;
-      GHashTable *channels;
-      gboolean created;
-
-      tubes_chan = salut_muc_manager_ensure_tubes_channel (priv->muc_manager,
-          tp_base_channel_get_target_handle (base_chan), from_handle, &created);
-      g_assert (tubes_chan != NULL);
-
-      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-        NULL, NULL);
-
-      if (created)
-        {
-          g_hash_table_insert (channels, tubes_chan, NULL);
-        }
-
-      tubes = salut_tubes_channel_muc_message_received (tubes_chan, sender,
-          stanza);
-
-      for (i = 0; i < tubes->len; i++)
-        {
-          SalutTubeIface *tube;
-
-          tube = g_ptr_array_index (tubes, i);
-          g_hash_table_insert (channels, tube, NULL);
-        }
-
-      if (g_hash_table_size (channels) > 0)
-        {
-          tp_channel_manager_emit_new_channels (priv->muc_manager, channels);
-        }
-
-      g_object_unref (tubes_chan);
-      g_ptr_array_unref (tubes);
-      g_hash_table_unref (channels);
+      muc_channel_handle_tubes (self, from_handle, stanza);
     }
 
   if (!text_helper_parse_incoming_message (stanza, &from, &msgtype,
