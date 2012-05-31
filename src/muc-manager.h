@@ -26,7 +26,6 @@
 
 #include <connection.h>
 #include "muc-channel.h"
-#include "tubes-channel.h"
 #include "muc-channel.h"
 
 G_BEGIN_DECLS

@@ -76,8 +76,6 @@ CORE_SOURCES =                                          \
     tube-iface.c                                  \
     tube-stream.h                                 \
     tube-stream.c                                 \
-    tubes-channel.h                               \
-    tubes-channel.c                               \
     util.h                                        \
     util.c                                        \
     protocol.c                                    \

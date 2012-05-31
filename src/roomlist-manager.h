@@ -25,7 +25,6 @@
 #include <gibber/gibber-bytestream-iface.h>
 
 #include <connection.h>
-#include "tubes-channel.h"
 #include "roomlist-channel.h"
 
 G_BEGIN_DECLS

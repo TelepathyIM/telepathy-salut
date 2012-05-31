@@ -34,7 +34,6 @@
 
 #include "muc-channel.h"
 #include "contact-manager.h"
-#include "tubes-channel.h"
 #include "roomlist-channel.h"
 #include "avahi-muc-channel.h"
 
