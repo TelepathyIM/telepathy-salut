@@ -1116,23 +1116,23 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
-  SalutTubesChannel *chan = NULL;
+  SalutMucChannel *chan = NULL;
 
   g_return_if_fail (tp_handle_is_valid (room_repo, room_handle, NULL));
 
-  chan = g_hash_table_lookup (priv->tubes_channels,
+  chan = g_hash_table_lookup (priv->text_channels,
       GUINT_TO_POINTER (room_handle));
   if (chan == NULL)
     {
       GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
-          "No tubes channel available for this MUC" };
+          "No channel available for this MUC" };
 
-      DEBUG ("tubes channel doesn't exist for muc %d", room_handle);
+      DEBUG ("MUC channel doesn't exist for muc %d", room_handle);
       gibber_bytestream_iface_close (bytestream, &e);
       return;
     }
 
-  salut_tubes_channel_bytestream_offered (chan, bytestream, msg);
+  salut_muc_channel_bytestream_offered (chan, bytestream, msg);
 }
 
 /* Caller is reponsible of announcing the channel if created */
