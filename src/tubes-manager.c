@@ -43,7 +43,6 @@
 #include "extensions/extensions.h"
 #include "connection.h"
 #include "capabilities.h"
-#include "tubes-channel.h"
 #include "muc-manager.h"
 #include "muc-channel.h"
 #include "self.h"
@@ -52,13 +51,6 @@
 #include "tube-dbus.h"
 #include "tube-stream.h"
 
-
-static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
-    TpHandle handle, TpHandle initiator, gpointer request_token,
-    gboolean requested, GError **error);
-
-static void tubes_channel_closed_cb (SalutTubesChannel *chan,
-    gpointer user_data);
 
 static void salut_tubes_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
@@ -99,8 +91,6 @@ struct _SalutTubesManagerPrivate
   guint iq_tube_handler_id;
   SalutContactManager *contact_manager;
 
-  GHashTable *tubes_channels;
-
   /* guint tube ID => (owned) (SalutTubeIface *) */
   GHashTable *tubes;
 
@@ -117,9 +107,6 @@ salut_tubes_manager_init (SalutTubesManager *self)
       SALUT_TYPE_TUBES_MANAGER, SalutTubesManagerPrivate);
 
   self->priv = priv;
-
-  priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-      NULL, g_object_unref);
 
   priv->tubes = g_hash_table_new_full (g_direct_hash, g_direct_equal,
       NULL, (GDestroyNotify) g_object_unref);
@@ -385,7 +372,6 @@ salut_tubes_manager_close_all (SalutTubesManager *self)
       priv->status_changed_id = 0;
     }
 
-  tp_clear_pointer (&priv->tubes_channels, g_hash_table_unref);
   tp_clear_pointer (&priv->tubes, g_hash_table_unref);
 }
 
@@ -552,93 +538,6 @@ salut_tubes_manager_class_init (
 }
 
 
-/**
- * tubes_channel_closed_cb:
- *
- * Signal callback for when a Tubes channel is closed. Removes the references
- * that TubesManager holds to them.
- */
-static void
-tubes_channel_closed_cb (SalutTubesChannel *chan,
-                         gpointer user_data)
-{
-  SalutTubesManager *conn = SALUT_TUBES_MANAGER (user_data);
-  SalutTubesManagerPrivate *priv =
-    SALUT_TUBES_MANAGER_GET_PRIVATE (conn);
-  TpHandle contact_handle;
-
-  if (priv->tubes_channels == NULL)
-    return;
-
-  g_object_get (chan, "handle", &contact_handle, NULL);
-
-  DEBUG ("removing tubes channel with handle %d", contact_handle);
-
-  g_hash_table_remove (priv->tubes_channels, GUINT_TO_POINTER (contact_handle));
-}
-
-/**
- * new_tubes_channel
- *
- * Creates the SalutTubes object associated with the given parameters
- */
-static SalutTubesChannel *
-new_tubes_channel (SalutTubesManager *fac,
-                   TpHandle handle,
-                   TpHandle initiator,
-                   gpointer request_token,
-                   gboolean requested,
-                   GError **error)
-{
-  SalutTubesManagerPrivate *priv;
-  TpBaseConnection *conn;
-  SalutTubesChannel *chan;
-  char *object_path;
-  SalutContact *contact;
-
-  g_assert (SALUT_IS_TUBES_MANAGER (fac));
-
-  priv = SALUT_TUBES_MANAGER_GET_PRIVATE (fac);
-  conn = (TpBaseConnection *) priv->conn;
-
-  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
-
-  if (contact == NULL)
-    {
-      TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
-      TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          base_conn, TP_HANDLE_TYPE_CONTACT);
-
-      g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
-          "%s is not online", tp_handle_inspect (contact_repo, handle));
-      return NULL;
-    }
-
-  object_path = g_strdup_printf ("%s/TubesChannel%u", conn->object_path,
-      handle);
-
-  chan = g_object_new (SALUT_TYPE_TUBES_CHANNEL,
-                       "connection", priv->conn,
-                       "object-path", object_path,
-                       "handle", handle,
-                       "handle-type", TP_HANDLE_TYPE_CONTACT,
-                       "contact", contact,
-                       "initiator-handle", initiator,
-                       "requested", requested,
-                       NULL);
-
-  DEBUG ("object path %s", object_path);
-
-  g_signal_connect (chan, "closed", G_CALLBACK (tubes_channel_closed_cb), fac);
-
-  g_hash_table_insert (priv->tubes_channels, GUINT_TO_POINTER (handle), chan);
-
-  g_object_unref (contact);
-  g_free (object_path);
-
-  return chan;
-}
-
 static void
 salut_tubes_manager_foreach_channel (TpChannelManager *manager,
                                      TpExportableChannelFunc foreach,
@@ -650,20 +549,6 @@ salut_tubes_manager_foreach_channel (TpChannelManager *manager,
   GHashTableIter iter;
   gpointer value;
 
-  g_hash_table_iter_init (&iter, priv->tubes_channels);
-  while (g_hash_table_iter_next (&iter, NULL, &value))
-  {
-    TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
-
-    /* Add channels of type Channel.Type.Tubes */
-    foreach (chan, user_data);
-
-    /* Add channels of type Channel.Type.{Stream|DBus}Tube which live in the
-     * SalutTubesChannel object */
-    salut_tubes_channel_foreach (SALUT_TUBES_CHANNEL (chan), foreach,
-        user_data);
-  }
-
   g_hash_table_iter_init (&iter, priv->tubes);
   while (g_hash_table_iter_next (&iter, NULL, &value))
   {
@@ -674,11 +559,6 @@ salut_tubes_manager_foreach_channel (TpChannelManager *manager,
 static const gchar * const tubes_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
     TP_IFACE_CHANNEL ".TargetHandleType",
-    NULL
-};
-
-static const gchar * const old_tubes_channel_allowed_properties[] = {
-    TP_IFACE_CHANNEL ".TargetHandle",
     NULL
 };
 
