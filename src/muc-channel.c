@@ -1653,12 +1653,12 @@ create_new_tube (SalutMucChannel *self,
   switch (type)
     {
     case TP_TUBE_TYPE_DBUS:
-      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (conn, NULL,
+      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (conn,
               handle, TP_HANDLE_TYPE_ROOM, self_handle, priv->muc_connection,
               initiator, service, parameters, tube_id, requested));
       break;
     case TP_TUBE_TYPE_STREAM:
-      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (conn, NULL,
+      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (conn,
               handle, TP_HANDLE_TYPE_ROOM,
               self_handle, initiator, FALSE, service,
               parameters, tube_id, portnum, iq_req, requested));

@@ -28,7 +28,6 @@
 
 #include "extensions/extensions.h"
 #include "connection.h"
-#include "tubes-channel.h"
 
 G_BEGIN_DECLS
 
@@ -66,7 +65,6 @@ GType salut_tube_stream_get_type (void);
                               SalutTubeStreamClass))
 
 SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
-    SalutTubesChannel *tubes_channel,
     TpHandle handle,
     TpHandleType handle_type, TpHandle self_handle, TpHandle initiator,
     gboolean offered, const gchar *service,

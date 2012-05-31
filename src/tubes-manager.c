@@ -723,14 +723,14 @@ create_new_tube (SalutTubesManager *self,
 
   if (type == TP_TUBE_TYPE_STREAM)
     {
-      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn, NULL,
+      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
               handle, TP_HANDLE_TYPE_CONTACT,
               base_conn->self_handle, base_conn->self_handle, FALSE, service,
               parameters, tube_id, portnum, iq_req, TRUE));
     }
   else if (type == TP_TUBE_TYPE_DBUS)
     {
-      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn, NULL,
+      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
               handle, TP_HANDLE_TYPE_CONTACT, base_conn->self_handle, NULL,
               base_conn->self_handle, service, parameters, tube_id, TRUE));
     }

@@ -93,8 +93,7 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum
 {
-  PROP_TUBES_CHANNEL = 1,
-  PROP_SELF_HANDLE,
+  PROP_SELF_HANDLE = 1,
   PROP_MUC_CONNECTION,
   PROP_ID,
   PROP_BYTESTREAM,
@@ -113,7 +112,6 @@ enum
 typedef struct _SalutTubeDBusPrivate SalutTubeDBusPrivate;
 struct _SalutTubeDBusPrivate
 {
-  SalutTubesChannel *tubes_channel;
   TpHandle self_handle;
   GibberMucConnection *muc_connection;
   guint id;
@@ -631,9 +629,6 @@ salut_tube_dbus_get_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_TUBES_CHANNEL:
-        g_value_set_object (value, priv->tubes_channel);
-        break;
       case PROP_SELF_HANDLE:
         g_value_set_uint (value, priv->self_handle);
         break;
@@ -690,9 +685,6 @@ salut_tube_dbus_set_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_TUBES_CHANNEL:
-        priv->tubes_channel = g_value_get_object (value);
-        break;
       case PROP_SELF_HANDLE:
         priv->self_handle = g_value_get_uint (value);
         break;
@@ -937,8 +929,6 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
   object_class->dispose = salut_tube_dbus_dispose;
   object_class->finalize = salut_tube_dbus_finalize;
 
-  g_object_class_override_property (object_class, PROP_TUBES_CHANNEL,
-    "tubes-channel");
   g_object_class_override_property (object_class, PROP_SELF_HANDLE,
     "self-handle");
   g_object_class_override_property (object_class, PROP_ID,
@@ -1310,7 +1300,6 @@ data_received_cb (GibberBytestreamIface *stream,
 
 SalutTubeDBus *
 salut_tube_dbus_new (SalutConnection *conn,
-                     SalutTubesChannel *tubes_channel,
                      TpHandle handle,
                      TpHandleType handle_type,
                      TpHandle self_handle,
@@ -1329,7 +1318,6 @@ salut_tube_dbus_new (SalutConnection *conn,
 
   tube = g_object_new (gtype,
       "connection", conn,
-      "tubes-channel", tubes_channel,
       "handle", handle,
       "self-handle", self_handle,
       "muc-connection", muc_connection,

@@ -71,7 +71,6 @@
 #include "tube-iface.h"
 #include "si-bytestream-manager.h"
 #include "contact-manager.h"
-#include "tubes-channel.h"
 
 static void tube_iface_init (gpointer g_iface, gpointer iface_data);
 static void streamtube_iface_init (gpointer g_iface, gpointer iface_data);
@@ -123,8 +122,7 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum
 {
-  PROP_TUBES_CHANNEL = 1,
-  PROP_SELF_HANDLE,
+  PROP_SELF_HANDLE = 1,
   PROP_ID,
   PROP_TYPE,
   PROP_SERVICE,
@@ -144,7 +142,6 @@ enum
 typedef struct _SalutTubeStreamPrivate SalutTubeStreamPrivate;
 struct _SalutTubeStreamPrivate
 {
-  SalutTubesChannel *tubes_channel;
   TpHandle self_handle;
   guint id;
   guint port;
@@ -1095,9 +1092,6 @@ salut_tube_stream_get_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_TUBES_CHANNEL:
-        g_value_set_object (value, priv->tubes_channel);
-        break;
       case PROP_SELF_HANDLE:
         g_value_set_uint (value, priv->self_handle);
         break;
@@ -1158,9 +1152,6 @@ salut_tube_stream_set_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_TUBES_CHANNEL:
-        priv->tubes_channel = g_value_get_object (value);
-        break;
       case PROP_SELF_HANDLE:
         priv->self_handle = g_value_get_uint (value);
         break;
@@ -1342,8 +1333,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   object_class->dispose = salut_tube_stream_dispose;
   object_class->finalize = salut_tube_stream_finalize;
 
-  g_object_class_override_property (object_class, PROP_TUBES_CHANNEL,
-    "tubes-channel");
   g_object_class_override_property (object_class, PROP_SELF_HANDLE,
     "self-handle");
   g_object_class_override_property (object_class, PROP_ID,
@@ -1522,7 +1511,6 @@ data_received_cb (GibberBytestreamIface *bytestream,
 
 SalutTubeStream *
 salut_tube_stream_new (SalutConnection *conn,
-                       SalutTubesChannel *tubes_channel,
                        TpHandle handle,
                        TpHandleType handle_type,
                        TpHandle self_handle,
@@ -1543,7 +1531,6 @@ salut_tube_stream_new (SalutConnection *conn,
 
   obj = g_object_new (gtype,
       "connection", conn,
-      "tubes-channel", tubes_channel,
       "handle", handle,
       "self-handle", self_handle,
       "initiator-handle", initiator,
@@ -2249,7 +2236,6 @@ salut_tube_stream_offer (SalutTubeStream *self,
   if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       priv->state = TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
-      salut_tubes_channel_send_iq_offer (priv->tubes_channel);
 
       tp_svc_channel_interface_tube_emit_tube_channel_state_changed (
           self, TP_TUBE_CHANNEL_STATE_REMOTE_PENDING);

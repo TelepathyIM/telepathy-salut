@@ -27,7 +27,6 @@
 #include <telepathy-glib/interfaces.h>
 
 #include "connection.h"
-#include "tubes-channel.h"
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-bytestream-iface.h>
 
@@ -67,7 +66,7 @@ GType salut_tube_dbus_get_type (void);
                               SalutTubeDBusClass))
 
 SalutTubeDBus *
-salut_tube_dbus_new (SalutConnection *conn, SalutTubesChannel *tubes_channel,
+salut_tube_dbus_new (SalutConnection *conn,
     TpHandle handle, TpHandleType handle_type, TpHandle self_handle,
     GibberMucConnection *muc_connection, TpHandle initiator,
     const gchar *service, GHashTable *parameters, guint id,
