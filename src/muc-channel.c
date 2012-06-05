@@ -102,7 +102,6 @@ struct _SalutMucChannelPrivate
   guint timeout;
   /* (gchar *) -> (SalutContact *) */
   GHashTable *senders;
-  SalutMucManager *muc_manager;
 
   GHashTable *tubes;
 };
@@ -304,14 +303,6 @@ salut_muc_channel_constructed (GObject *obj)
   priv->connected = FALSE;
   g_signal_connect (priv->muc_connection, "connected",
       G_CALLBACK (muc_connection_connected_cb), obj);
-
-  g_object_get (base_conn,
-      "muc-manager", &(priv->muc_manager),
-      NULL);
-  g_assert (priv->muc_manager != NULL);
-
-  /* no need to keep a ref on the muc manager as it keeps a ref on us */
-  g_object_unref (priv->muc_manager);
 
   tp_group_mixin_init (obj, G_STRUCT_OFFSET(SalutMucChannel, group),
       contact_repo, base_conn->self_handle);
