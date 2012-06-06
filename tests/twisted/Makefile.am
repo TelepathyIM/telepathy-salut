@@ -13,6 +13,7 @@ TWISTED_AVAHI_TESTS = \
 	avahi/muc-invite.py \
 	avahi/caps-file-transfer.py \
 	avahi/close-local-pending-room.py \
+	avahi/only-text-muc-when-needed.py \
 	avahi/tubes/disabled-1-1-tubes.py \
 	avahi/file-transfer/send-file-and-cancel-immediately.py \
 	avahi/file-transfer/send-file-and-disconnect.py \
