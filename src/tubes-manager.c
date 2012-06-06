@@ -816,7 +816,6 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   const gchar *service = NULL;
   SalutTubeIface *new_channel;
   GSList *tokens = NULL;
-  GHashTable *channels;
 
   if (tp_asv_get_uint32 (request_properties,
         TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
@@ -907,16 +906,12 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           request_properties);
       g_assert (new_channel != NULL);
 
-      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-          NULL, NULL);
-
       if (request_token != NULL)
         tokens = g_slist_prepend (NULL, request_token);
 
-      g_hash_table_insert (channels, new_channel, tokens);
-      tp_channel_manager_emit_new_channels (self, channels);
+      tp_channel_manager_emit_new_channel (self,
+          TP_EXPORTABLE_CHANNEL (new_channel), tokens);
 
-      g_hash_table_unref (channels);
       g_slist_free (tokens);
     }
   else
