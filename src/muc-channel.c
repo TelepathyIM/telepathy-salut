@@ -1812,3 +1812,9 @@ salut_muc_channel_bytestream_offered (SalutMucChannel *self,
 
   salut_tube_iface_add_bytestream (tube, bytestream);
 }
+
+gboolean
+salut_muc_channel_is_ready (SalutMucChannel *self)
+{
+  return self->priv->connected;
+}

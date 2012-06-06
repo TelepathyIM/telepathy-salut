@@ -100,6 +100,8 @@ void salut_muc_channel_bytestream_offered (SalutMucChannel *self,
     GibberBytestreamIface *bytestream,
     WockyStanza *msg);
 
+gboolean salut_muc_channel_is_ready (SalutMucChannel *self);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_MUC_CHANNEL_H__*/

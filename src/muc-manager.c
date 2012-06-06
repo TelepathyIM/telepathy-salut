@@ -87,6 +87,12 @@ struct _SalutMucManagerPrivate
   /* tube ID => owned SalutTubeIface */
   GHashTable *tubes;
 
+  /* borrowed TpExportableChannel => owned GSList of gpointer  */
+  GHashTable *queued_requests;
+
+  /* borrowed SalutMucChannel => owned GSList of borrowed SalutTubeIface */
+  GHashTable *text_needed_for_tube;
+
   gboolean dispose_has_run;
 };
 
@@ -106,6 +112,11 @@ salut_muc_manager_init (SalutMucManager *obj)
   /* allocate any data required by the object here */
   priv->text_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
                                                NULL, g_object_unref);
+
+  priv->queued_requests = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) g_slist_free);
+  priv->text_needed_for_tube = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) g_slist_free);
 }
 
 static void
@@ -149,6 +160,23 @@ salut_muc_manager_set_property (GObject *object,
 }
 
 static void
+cancel_queued_requests (gpointer k,
+    gpointer v,
+    gpointer d)
+{
+  SalutMucManager *self = SALUT_MUC_MANAGER (d);
+  GSList *requests_satisfied = v;
+  GSList *iter;
+
+  for (iter = requests_satisfied; iter != NULL; iter = iter->next)
+    {
+      tp_channel_manager_emit_request_failed (self,
+          iter->data, TP_ERROR, TP_ERROR_DISCONNECTED,
+          "Unable to complete this channel request, we're disconnecting!");
+    }
+}
+
+static void
 salut_muc_manager_close_all (SalutMucManager *self)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
@@ -160,6 +188,13 @@ salut_muc_manager_close_all (SalutMucManager *self)
       g_signal_handler_disconnect (priv->connection, priv->status_changed_id);
       priv->status_changed_id = 0;
     }
+
+  if (priv->queued_requests != NULL)
+    g_hash_table_foreach (priv->queued_requests,
+        cancel_queued_requests, self);
+
+  tp_clear_pointer (&priv->queued_requests, g_hash_table_unref);
+  tp_clear_pointer (&priv->text_needed_for_tube, g_hash_table_unref);
 
   tp_clear_pointer (&priv->text_channels, g_hash_table_unref);
 }
@@ -255,6 +290,8 @@ salut_muc_manager_dispose (GObject *object)
 
   salut_muc_manager_close_all (self);
   g_assert (priv->text_channels == NULL);
+  g_assert (priv->queued_requests == NULL);
+  g_assert (priv->text_needed_for_tube == NULL);
 
   /* release any references held by the object here */
 
@@ -342,6 +379,32 @@ salut_muc_manager_type_foreach_channel_class (GType type,
   g_hash_table_unref (table);
 }
 
+static void
+associate_channel_to_data (GHashTable *table,
+    gpointer channel,
+    gpointer data)
+{
+  GSList *list;
+
+  if (data == NULL)
+    return;
+
+  /* yes it might be more 'efficient' to use prepend, then reverse the
+   * list before use but that's just annoying. I doubt there'll ever
+   * be more than one item in the list anyway. */
+
+  /* get the old list */
+  list = g_hash_table_lookup (table, channel);
+
+  /* add the data to it */
+  list = g_slist_append (list, data);
+
+  /* steal it so it doesn't get freed */
+  g_hash_table_steal (table, channel);
+
+  /* throw it back in */
+  g_hash_table_insert (table, channel, list);
+}
 
 static void
 muc_channel_closed_cb (SalutMucChannel *chan,
@@ -395,6 +458,80 @@ _get_connection (SalutMucManager *mgr,
       protocol, parameters, error);
 }
 
+static void
+muc_channel_ready_cb (SalutMucChannel *chan,
+    SalutMucManager *mgr)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
+  GSList *satisfied;
+  GSList *tube_channels;
+  GSList *l;
+
+  /* announce the text channel finally */
+  satisfied = g_hash_table_lookup (priv->queued_requests, chan);
+  tp_channel_manager_emit_new_channel (mgr,
+      TP_EXPORTABLE_CHANNEL (chan), satisfied);
+  g_hash_table_remove (priv->queued_requests, chan);
+
+  /* announce tube channels now */
+  tube_channels = g_hash_table_lookup (priv->text_needed_for_tube, chan);
+
+  for (l = tube_channels; l != NULL; l = l->next)
+    {
+      SalutTubeIface *tube = SALUT_TUBE_IFACE (l->data);
+      GSList *requests_satisfied;
+
+      requests_satisfied = g_hash_table_lookup (priv->queued_requests, tube);
+
+      tp_channel_manager_emit_new_channel (mgr,
+          TP_EXPORTABLE_CHANNEL (tube), requests_satisfied);
+
+      g_hash_table_remove (priv->queued_requests, tube);
+    }
+
+  g_hash_table_remove (priv->text_needed_for_tube, chan);
+}
+
+static void
+muc_channel_join_error_cb (SalutMucChannel *chan,
+    GError *error,
+    SalutMucManager *mgr)
+{
+  SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
+  GSList *requests_satisfied;
+  GSList *tube_channels;
+  GSList *l;
+
+#define FAIL_REQUESTS(requests) \
+  { \
+    GSList *_l; \
+    for (_l = requests; _l != NULL; _l = _l->next) \
+      { \
+        tp_channel_manager_emit_request_failed (mgr, _l->data, \
+            error->domain, error->code, error->message); \
+      } \
+  }
+
+  /* first fail the text channel itself */
+  requests_satisfied = g_hash_table_lookup (priv->queued_requests, chan);
+  FAIL_REQUESTS(requests_satisfied);
+  g_hash_table_remove (priv->queued_requests, chan);
+
+  /* now fail all tube channel requests */
+  tube_channels = g_hash_table_lookup (priv->text_needed_for_tube, chan);
+
+  for (l = tube_channels; l != NULL; l = l->next)
+    {
+      TpExportableChannel *tube = TP_EXPORTABLE_CHANNEL (l->data);
+
+      requests_satisfied = g_hash_table_lookup (priv->queued_requests, tube);
+      FAIL_REQUESTS (requests_satisfied);
+      g_hash_table_remove (priv->queued_requests, tube);
+    }
+
+  g_hash_table_remove (priv->text_needed_for_tube, chan);
+}
+
 static SalutMucChannel *
 salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
                                    TpHandle handle,
@@ -432,6 +569,13 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   g_signal_connect (chan, "new-tube", G_CALLBACK (muc_channel_new_tube_cb), mgr);
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
+
+  if (salut_muc_channel_is_ready (chan))
+    muc_channel_ready_cb (chan, mgr);
+  else
+    g_signal_connect (chan, "ready", G_CALLBACK (muc_channel_ready_cb), mgr);
+
+  g_signal_connect (chan, "join-error", G_CALLBACK (muc_channel_join_error_cb), mgr);
 
   return chan;
 }
@@ -522,13 +666,21 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
    * succeed */
   g_assert (r);
 
-  if (request_token != NULL)
-    tokens = g_slist_prepend (tokens, request_token);
-
   if (announce)
     {
-      tp_channel_manager_emit_new_channel (mgr,
-          TP_EXPORTABLE_CHANNEL (text_chan), tokens);
+      if (salut_muc_channel_is_ready (text_chan))
+        {
+          if (request_token != NULL)
+            tokens = g_slist_prepend (tokens, request_token);
+
+          tp_channel_manager_emit_new_channel (mgr,
+              TP_EXPORTABLE_CHANNEL (text_chan), tokens);
+        }
+      else
+        {
+          associate_channel_to_data (priv->queued_requests,
+              text_chan, request_token);
+        }
     }
 
   g_slist_free (tokens);
