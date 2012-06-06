@@ -100,6 +100,13 @@ void salut_muc_channel_bytestream_offered (SalutMucChannel *self,
     GibberBytestreamIface *bytestream,
     WockyStanza *msg);
 
+void salut_muc_channel_set_autoclose (SalutMucChannel *chan,
+    gboolean autoclose);
+
+gboolean salut_muc_channel_get_autoclose (SalutMucChannel *chan);
+
+gboolean salut_muc_channel_can_be_closed (SalutMucChannel *chan);
+
 gboolean salut_muc_channel_is_ready (SalutMucChannel *self);
 
 G_END_DECLS

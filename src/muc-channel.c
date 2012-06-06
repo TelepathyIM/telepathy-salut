@@ -77,6 +77,7 @@ enum
     READY,
     JOIN_ERROR,
     NEW_TUBE,
+    APPEARED,
     LAST_SIGNAL
 };
 
@@ -102,6 +103,8 @@ struct _SalutMucChannelPrivate
   guint timeout;
   /* (gchar *) -> (SalutContact *) */
   GHashTable *senders;
+
+  gboolean autoclose;
 
   GHashTable *tubes;
 };
@@ -713,6 +716,15 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
        * wants a value type, not an interface. */
       G_TYPE_NONE, 1, TP_TYPE_BASE_CHANNEL);
 
+  signals[APPEARED] = g_signal_new (
+      "appeared",
+      G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
+      G_SIGNAL_RUN_LAST,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__VOID,
+      G_TYPE_NONE, 0);
+
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
       salut_muc_channel_add_member, NULL);
@@ -1257,6 +1269,17 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
       return;
     }
 
+  /* are we actually hidden? */
+  if (!tp_base_channel_is_registered (base_chan))
+    {
+      DEBUG ("making MUC channel reappear!");
+      tp_base_channel_reopened_with_requested (base_chan, FALSE, from_handle);
+      g_signal_emit (self, signals[APPEARED], 0);
+    }
+
+  /* let's not autoclose now */
+  priv->autoclose = FALSE;
+
 #ifdef ENABLE_OLPC
   if (salut_connection_olpc_observe_muc_stanza (
           SALUT_CONNECTION (base_connection),
@@ -1364,10 +1387,42 @@ salut_muc_channel_disconnected (GibberTransport *transport, gpointer user_data)
   tp_base_channel_destroyed (TP_BASE_CHANNEL (self));
 }
 
+gboolean
+salut_muc_channel_can_be_closed (SalutMucChannel *self)
+{
+  if (self->priv->tubes == NULL)
+    return TRUE;
+
+  return (g_hash_table_size (self->priv->tubes) == 0);
+}
+
+gboolean
+salut_muc_channel_get_autoclose (SalutMucChannel *self)
+{
+  return self->priv->autoclose;
+}
+
+void
+salut_muc_channel_set_autoclose (SalutMucChannel *self,
+    gboolean autoclose)
+{
+  self->priv->autoclose = autoclose;
+}
+
 static void
 salut_muc_channel_close (TpBaseChannel *base)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL (base);
+
+  /* if we have some tubes around then don't close yet and just
+   * disappear from the bus, faking having closed, otherwise
+   * cheerio! */
+  if (!salut_muc_channel_can_be_closed (self))
+    {
+      self->priv->autoclose = TRUE;
+      tp_base_channel_disappear (base);
+      return;
+    }
 
   salut_muc_channel_leave (self, TP_CHANNEL_GROUP_CHANGE_REASON_NONE, "");
 

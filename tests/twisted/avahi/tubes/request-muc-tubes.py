@@ -61,25 +61,17 @@ def test(q, bus, conn):
 
     # text and tube channels are announced
     channels = new_sig.args[0]
-    assert len(channels) == 2
-    got_text, got_tube = False, False
+    assert len(channels) == 1
 
-    for path, props in channels:
-        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
-            got_text = True
-            assert props[REQUESTED] == False
-        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
-            got_tube = True
-            assert path == tube_path
-            assert props == tube_props
-        else:
-            assert False
-
-        assert props[TARGET_HANDLE_TYPE] == HT_ROOM
-        assert props[TARGET_HANDLE] == handle
-        assert props[TARGET_ID] == 'my-second-room'
-        assert props[INITIATOR_HANDLE] == conn.GetSelfHandle()
-        assert props[INITIATOR_ID] == self_name
+    path, props = channels[0]
+    assert props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE
+    assert path == tube_path
+    assert props == tube_props
+    assert props[TARGET_HANDLE_TYPE] == HT_ROOM
+    assert props[TARGET_HANDLE] == handle
+    assert props[TARGET_ID] == 'my-second-room'
+    assert props[INITIATOR_HANDLE] == conn.GetSelfHandle()
+    assert props[INITIATOR_ID] == self_name
 
     # ensure the same channel
 #    yours, ensured_path, ensured_props = conn.Requests.EnsureChannel(

@@ -99,6 +99,9 @@ struct _SalutMucManagerPrivate
 #define SALUT_MUC_MANAGER_GET_PRIVATE(obj) \
   ((SalutMucManagerPrivate *) ((SalutMucManager *) obj)->priv)
 
+#define TUBE_TEXT_QUARK (g_quark_from_static_string (\
+          "salut-muc-manager-tube-text-channel"))
+
 static void
 salut_muc_manager_init (SalutMucManager *obj)
 {
@@ -412,12 +415,17 @@ muc_channel_closed_cb (SalutMucChannel *chan,
 {
   SalutMucManager *self = SALUT_MUC_MANAGER (user_data);
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (chan);
   TpHandle handle;
 
-  tp_channel_manager_emit_channel_closed_for_object (self,
-      TP_EXPORTABLE_CHANNEL (chan));
+  if (tp_base_channel_is_registered (base))
+    {
+      tp_channel_manager_emit_channel_closed_for_object (self,
+          TP_EXPORTABLE_CHANNEL (chan));
+    }
 
-  if (priv->text_channels)
+  if (tp_base_channel_is_destroyed (base)
+      && priv->text_channels)
     {
       g_object_get (chan, "handle", &handle, NULL);
       DEBUG ("Removing channel with handle %u", handle);
@@ -430,8 +438,27 @@ static void
 muc_channel_tube_closed_cb (SalutTubeIface *tube,
     SalutMucManager *mgr)
 {
+  SalutMucChannel *channel;
+
   tp_channel_manager_emit_channel_closed_for_object (mgr,
       TP_EXPORTABLE_CHANNEL (tube));
+
+  channel = g_object_get_qdata (G_OBJECT (tube), TUBE_TEXT_QUARK);
+  g_assert (channel != NULL);
+
+  if (salut_muc_channel_can_be_closed (channel)
+      && salut_muc_channel_get_autoclose (channel))
+    {
+      tp_base_channel_close (TP_BASE_CHANNEL (channel));
+    }
+}
+
+static void
+muc_channel_appeared_cb (SalutMucChannel *chan,
+    SalutMucManager *mgr)
+{
+  tp_channel_manager_emit_new_channel (mgr,
+      TP_EXPORTABLE_CHANNEL (chan), NULL);
 }
 
 static void
@@ -444,6 +471,9 @@ muc_channel_new_tube_cb (SalutMucChannel *channel,
 
   g_signal_connect (tube, "closed",
       G_CALLBACK (muc_channel_tube_closed_cb), mgr);
+
+  g_object_set_qdata (G_OBJECT (tube), TUBE_TEXT_QUARK,
+      channel);
 }
 
 static GibberMucConnection *
@@ -463,14 +493,17 @@ muc_channel_ready_cb (SalutMucChannel *chan,
     SalutMucManager *mgr)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
-  GSList *satisfied;
   GSList *tube_channels;
   GSList *l;
 
-  /* announce the text channel finally */
-  satisfied = g_hash_table_lookup (priv->queued_requests, chan);
-  tp_channel_manager_emit_new_channel (mgr,
-      TP_EXPORTABLE_CHANNEL (chan), satisfied);
+  /* announce the text channel finally, but only if it is on the bus */
+  if (tp_base_channel_is_registered (TP_BASE_CHANNEL (chan)))
+    {
+      GSList *satisfied = g_hash_table_lookup (priv->queued_requests, chan);
+
+      tp_channel_manager_emit_new_channel (mgr,
+          TP_EXPORTABLE_CHANNEL (chan), satisfied);
+    }
   g_hash_table_remove (priv->queued_requests, chan);
 
   /* announce tube channels now */
@@ -538,7 +571,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
                                    GibberMucConnection *connection,
                                    TpHandle initiator,
                                    gboolean new_connection,
-                                   gboolean requested)
+                                   gboolean requested,
+                                   gboolean initially_register)
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
@@ -563,10 +597,12 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
       new_connection, requested);
   g_free (path);
 
-  tp_base_channel_register ((TpBaseChannel *) chan);
+  if (initially_register)
+    tp_base_channel_register ((TpBaseChannel *) chan);
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
   g_signal_connect (chan, "new-tube", G_CALLBACK (muc_channel_new_tube_cb), mgr);
+  g_signal_connect (chan, "appeared", G_CALLBACK (muc_channel_appeared_cb), mgr);
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
 
@@ -659,13 +695,17 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
 
   text_chan = salut_muc_manager_new_muc_channel (mgr, handle,
       connection, base_connection->self_handle, params == NULL,
-      requested);
+      requested, announce);
   r = salut_muc_channel_invited (text_chan,
         base_connection->self_handle, NULL, NULL);
   /* Inviting ourselves to a connected channel should always
    * succeed */
   g_assert (r);
 
+  /* only signal the creation of the text channel if we're asked for
+   * it to happen. note that in the case of announce=FALSE,
+   * muc_channel_ready_cb will still get fired, but because it isn't
+   * registered on the bus, it will not be signalled then either. */
   if (announce)
     {
       if (salut_muc_channel_is_ready (text_chan))
@@ -699,9 +739,6 @@ handle_tube_channel_request (SalutMucManager *self,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   SalutMucChannel *text_chan;
   SalutTubeIface *new_channel;
-  GHashTable *channels;
-  GSList *request_tokens;
-  gboolean announce_text = FALSE;
 
   text_chan = g_hash_table_lookup (priv->text_channels,
       GUINT_TO_POINTER (handle));
@@ -711,8 +748,6 @@ handle_tube_channel_request (SalutMucManager *self,
       DEBUG ("have to create the text channel before the tube one");
       text_chan = salut_muc_manager_request_new_muc_channel (self,
           handle, NULL, FALSE, error);
-
-      announce_text = TRUE;
 
       if (text_chan == NULL)
         return FALSE;
@@ -725,19 +760,29 @@ handle_tube_channel_request (SalutMucManager *self,
   g_signal_connect (new_channel, "closed",
       G_CALLBACK (muc_channel_tube_closed_cb), self);
 
-  /* announce channels */
-  channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-      NULL, NULL);
+  g_object_set_qdata (G_OBJECT (new_channel), TUBE_TEXT_QUARK,
+      text_chan);
 
-  if (announce_text)
-    g_hash_table_insert (channels, text_chan, NULL);
+  if (salut_muc_channel_is_ready (text_chan))
+    {
+      GSList *request_tokens = g_slist_append (NULL, request_token);
 
-  request_tokens = g_slist_prepend (NULL, request_token);
-  g_hash_table_insert (channels, new_channel, request_tokens);
-  tp_channel_manager_emit_new_channels (self, channels);
+      tp_channel_manager_emit_new_channel (self,
+          TP_EXPORTABLE_CHANNEL (new_channel), request_tokens);
 
-  g_hash_table_unref (channels);
-  g_slist_free (request_tokens);
+      g_slist_free (request_tokens);
+    }
+  else
+    {
+      associate_channel_to_data (priv->text_needed_for_tube,
+          text_chan, new_channel);
+
+      /* we need to do this so when the muc channel is ready, the tube
+       * can be announced and satisfy this request */
+      associate_channel_to_data (priv->queued_requests,
+          new_channel, request_token);
+    }
+
   return TRUE;
 }
 
@@ -844,7 +889,8 @@ salut_muc_manager_request (SalutMucManager *self,
 
       if (text_chan != NULL)
         {
-          if (require_new)
+          if (require_new
+              && tp_base_channel_is_registered (TP_BASE_CHANNEL (text_chan)))
             {
               g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
                   "That channel has already been created (or requested)");
@@ -852,8 +898,28 @@ salut_muc_manager_request (SalutMucManager *self,
             }
           else
             {
-              tp_channel_manager_emit_request_already_satisfied (self,
-                  request_token, TP_EXPORTABLE_CHANNEL (text_chan));
+              if (tp_base_channel_is_registered (TP_BASE_CHANNEL (text_chan)))
+                {
+                  tp_channel_manager_emit_request_already_satisfied (self,
+                      request_token, TP_EXPORTABLE_CHANNEL (text_chan));
+                }
+              else
+                {
+                  tp_base_channel_register (TP_BASE_CHANNEL (text_chan));
+
+                  if (salut_muc_channel_is_ready (text_chan))
+                    {
+                      GSList *tokens = g_slist_append (NULL, request_token);
+                      tp_channel_manager_emit_new_channel (self,
+                          TP_EXPORTABLE_CHANNEL (text_chan), tokens);
+                      g_slist_free (tokens);
+                    }
+                  else
+                    {
+                      associate_channel_to_data (priv->queued_requests,
+                          text_chan, request_token);
+                    }
+                }
             }
         }
       else
@@ -1035,7 +1101,7 @@ invite_stanza_callback (WockyPorter *porter,
         }
       /* Need to create a new one */
       chan = salut_muc_manager_new_muc_channel (self, room_handle,
-          connection, inviter_handle, FALSE, FALSE);
+          connection, inviter_handle, FALSE, FALSE, TRUE);
 
       tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
           NULL);

@@ -80,48 +80,31 @@ def test(q, bus, conn):
         TARGET_ID: muc_name,
         STREAM_TUBE_SERVICE: 'test'})
 
-    e = q.expect('dbus-signal', signal='NewChannels',
-                 predicate=lambda e: len(e.args[0]) == 2)
+    e = q.expect('dbus-signal', signal='NewChannels')
     channels = e.args[0]
+    assert len(channels) == 1
 
     # get the list of all channels to check that newly announced ones are in it
     all_channels = conn.Properties.Get(CONN_IFACE_REQUESTS, 'Channels',
         byte_arrays=True)
 
-    got_text, got_tube = False, False
-    for path, props in channels:
-        if props[CHANNEL_TYPE] == CHANNEL_TYPE_TEXT:
-            got_text = True
-            assert props[REQUESTED] == False
-            text1 = wrap_channel(bus.get_object(conn.bus_name, path), 'Text')
-            txt_path = path
-        elif props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE:
-            got_tube = True
-            assert props[REQUESTED] == True
-            assert props[INTERFACES] == [CHANNEL_IFACE_GROUP,
-                CHANNEL_IFACE_TUBE]
-            assert props[STREAM_TUBE_SERVICE] == 'test'
+    path, props = channels[0]
+    assert props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE
+    assert props[REQUESTED] == True
+    assert props[INTERFACES] == [CHANNEL_IFACE_GROUP,
+                                 CHANNEL_IFACE_TUBE]
+    assert props[STREAM_TUBE_SERVICE] == 'test'
+    assert props[INITIATOR_HANDLE] == conn1_self_handle
+    assert props[INITIATOR_ID] == contact1_name
+    assert props[TARGET_ID] == muc_name
 
-            contact1_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'StreamTube')
-            tube1_path = path
-        else:
-            assert False
+    assert (path, props) in all_channels, (path, props)
 
-        assert props[INITIATOR_HANDLE] == conn1_self_handle
-        assert props[INITIATOR_ID] == contact1_name
-        assert props[TARGET_ID] == muc_name
-
-        assert (path, props) in all_channels, (path, props)
-
-    assert got_text
-    assert got_tube
+    contact1_tube = wrap_channel(bus.get_object(conn.bus_name, path), 'StreamTube')
+    tube1_path = path
 
     state = contact1_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
     assert state == TUBE_CHANNEL_STATE_NOT_OFFERED
-
-    # added as member
-    q.expect('dbus-signal', signal='MembersChanged', path=txt_path,
-        args=['', [conn1_self_handle], [], [], [], conn1_self_handle, 0])
 
     call_async(q, contact1_tube.StreamTube, 'Offer',
             SOCKET_ADDRESS_TYPE_UNIX, dbus.ByteArray(server_socket_address),
@@ -134,6 +117,14 @@ def test(q, bus, conn):
 
     state = contact1_tube.Properties.Get(CHANNEL_IFACE_TUBE, 'State')
     assert state == TUBE_CHANNEL_STATE_OPEN
+
+    # now let's get the text channel so we can invite contact2 using
+    # the utility t.invite_to_muc
+    _, path, _ = conn.Requests.EnsureChannel({
+            CHANNEL_TYPE: CHANNEL_TYPE_TEXT,
+            TARGET_HANDLE_TYPE: HT_ROOM,
+            TARGET_ID: muc_name})
+    text1 = wrap_channel(bus.get_object(conn.bus_name, path), 'Text')
 
     t.invite_to_muc(q, text1.Group, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
 
