@@ -10,7 +10,8 @@ from twisted.words.xish import domish
 
 from saluttest import exec_test, wait_for_contact_list
 from servicetest import call_async, EventPattern, \
-        tp_name_prefix, tp_path_prefix, make_channel_proxy
+        tp_name_prefix, tp_path_prefix, wrap_channel
+import constants as cs
 
 CHANNEL_TYPE_ROOMLIST = 'org.freedesktop.Telepathy.Channel.Type.RoomList'
 
@@ -47,7 +48,7 @@ def test(q, bus, conn):
         )
 
     path1 = ret.value[0]
-    chan = make_channel_proxy(conn, path1, "Channel.Type.RoomList")
+    chan = wrap_channel(bus.get_object(conn.bus_name, path1), "RoomList")
 
     assert new_sig.args[0][0][0] == path1
 
@@ -71,7 +72,7 @@ def test(q, bus, conn):
     assert old_sig.args[4] == 1     # suppress handler
 
     # Exercise basic Channel Properties from spec 0.17.7
-    channel_props = chan.GetAll(
+    channel_props = chan.Properties.GetAll(
             tp_name_prefix + '.Channel',
             dbus_interface='org.freedesktop.DBus.Properties')
     assert channel_props.get('TargetHandle') == 0,\
@@ -90,7 +91,7 @@ def test(q, bus, conn):
             dbus_interface='org.freedesktop.DBus.Properties') == ''
 
     # list rooms
-    chan.ListRooms()
+    chan.RoomList.ListRooms()
 
     q.expect('dbus-signal', signal='ListingRooms', args=[True])
 
@@ -119,7 +120,7 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='NewChannels'),
         )
     path2 = ret.value[0]
-    chan = make_channel_proxy(conn, path2, "Channel.Type.RoomList")
+    chan2 = wrap_channel(bus.get_object(conn.bus_name, path2), "RoomList")
 
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
@@ -143,9 +144,7 @@ def test(q, bus, conn):
     assert old_sig.args[3] == 0     # handle
     assert old_sig.args[4] == 1     # suppress handler
 
-    assert chan.Get(
-            CHANNEL_TYPE_ROOMLIST, 'Server',
-            dbus_interface='org.freedesktop.DBus.Properties') == ''
+    assert chan2.Properties.Get(CHANNEL_TYPE_ROOMLIST, 'Server') == ''
 
     # ensure roomlist channel
     yours, ensured_path, ensured_props = requestotron.EnsureChannel(
@@ -157,15 +156,20 @@ def test(q, bus, conn):
     assert not yours
     assert ensured_path == path2, (ensured_path, path2)
 
+    # Closing roomlist channels crashed Salut for a while.
+    chan2.Close()
+    q.expect_many(
+            EventPattern('dbus-signal', signal='Closed',
+                path=path2),
+            EventPattern('dbus-signal', signal='ChannelClosed', args=[path2]),
+            )
+
     conn.Disconnect()
 
     q.expect_many(
             EventPattern('dbus-signal', signal='Closed',
                 path=path1),
-            EventPattern('dbus-signal', signal='Closed',
-                path=path2),
             EventPattern('dbus-signal', signal='ChannelClosed', args=[path1]),
-            EventPattern('dbus-signal', signal='ChannelClosed', args=[path2]),
             EventPattern('dbus-signal', signal='StatusChanged', args=[2, 1]),
             )
 

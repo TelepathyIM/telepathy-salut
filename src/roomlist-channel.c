@@ -135,6 +135,7 @@ salut_roomlist_channel_class_init (
   base_class->target_handle_type = TP_HANDLE_TYPE_NONE;
   base_class->fill_immutable_properties =
     salut_roomlist_channel_fill_immutable_properties;
+  base_class->close = tp_base_channel_destroyed;
 
   param_spec = g_param_spec_string ("conference-server",
       "Name of conference server to use",
