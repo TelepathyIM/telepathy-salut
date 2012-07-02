@@ -653,14 +653,19 @@ salut_tubes_channel_muc_message_received (SalutTubesChannel *self,
     {
       WockyNode *tube_node = (WockyNode *) l->data;
       const gchar *stream_id;
-      SalutTubeIface *tube;
+      SalutTubeIface *tube = NULL;
       guint tube_id;
       TpTubeType type;
 
       stream_id = wocky_node_get_attribute (tube_node, "stream-id");
 
-      extract_tube_information (self, tube_node, NULL,
-          NULL, NULL, NULL, &tube_id);
+      if (!extract_tube_information (self, tube_node, NULL,
+            NULL, NULL, NULL, &tube_id))
+        {
+          DEBUG ("can't find a tube ID; never mind then.");
+          continue;
+        }
+
       tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
 
       if (tube == NULL)
