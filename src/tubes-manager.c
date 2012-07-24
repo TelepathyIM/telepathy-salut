@@ -551,9 +551,9 @@ salut_tubes_manager_foreach_channel (TpChannelManager *manager,
 
   g_hash_table_iter_init (&iter, priv->tubes);
   while (g_hash_table_iter_next (&iter, NULL, &value))
-  {
-    foreach (TP_EXPORTABLE_CHANNEL (value), user_data);
-  }
+    {
+      foreach (TP_EXPORTABLE_CHANNEL (value), user_data);
+    }
 }
 
 static const gchar * const tubes_channel_fixed_properties[] = {
