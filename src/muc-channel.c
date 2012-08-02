@@ -77,7 +77,6 @@ enum
     READY,
     JOIN_ERROR,
     NEW_TUBE,
-    APPEARED,
     LAST_SIGNAL
 };
 
@@ -716,15 +715,6 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
        * wants a value type, not an interface. */
       G_TYPE_NONE, 1, TP_TYPE_BASE_CHANNEL);
 
-  signals[APPEARED] = g_signal_new (
-      "appeared",
-      G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
-      G_SIGNAL_RUN_LAST,
-      0,
-      NULL, NULL,
-      g_cclosure_marshal_VOID__VOID,
-      G_TYPE_NONE, 0);
-
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
       salut_muc_channel_add_member, NULL);
@@ -1276,7 +1266,6 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
     {
       DEBUG ("making MUC channel reappear!");
       tp_base_channel_reopened_with_requested (base_chan, FALSE, from_handle);
-      g_signal_emit (self, signals[APPEARED], 0);
     }
 
   /* let's not autoclose now */

@@ -418,6 +418,14 @@ muc_channel_closed_cb (SalutMucChannel *chan,
   TpBaseChannel *base = TP_BASE_CHANNEL (chan);
   TpHandle handle;
 
+  /* channel is actually reappearing, announce it */
+  if (tp_base_channel_is_respawning (base))
+    {
+      tp_channel_manager_emit_new_channel (self,
+          TP_EXPORTABLE_CHANNEL (chan), NULL);
+      return;
+    }
+
   if (tp_base_channel_is_registered (base))
     {
       tp_channel_manager_emit_channel_closed_for_object (self,
@@ -451,14 +459,6 @@ muc_channel_tube_closed_cb (SalutTubeIface *tube,
     {
       tp_base_channel_close (TP_BASE_CHANNEL (channel));
     }
-}
-
-static void
-muc_channel_appeared_cb (SalutMucChannel *chan,
-    SalutMucManager *mgr)
-{
-  tp_channel_manager_emit_new_channel (mgr,
-      TP_EXPORTABLE_CHANNEL (chan), NULL);
 }
 
 static void
@@ -602,7 +602,6 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
 
   g_signal_connect (chan, "closed", G_CALLBACK (muc_channel_closed_cb), mgr);
   g_signal_connect (chan, "new-tube", G_CALLBACK (muc_channel_new_tube_cb), mgr);
-  g_signal_connect (chan, "appeared", G_CALLBACK (muc_channel_appeared_cb), mgr);
 
   g_hash_table_insert (priv->text_channels, GUINT_TO_POINTER (handle), chan);
 
