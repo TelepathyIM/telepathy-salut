@@ -130,7 +130,7 @@ salut_tube_iface_base_init (gpointer klass)
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
-      param_spec = g_param_spec_uint (
+      param_spec = g_param_spec_uint64 (
           "id",
           "id",
           "The unique identifier of this tube",

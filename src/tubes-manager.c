@@ -62,7 +62,7 @@ static SalutTubeIface * create_new_tube (SalutTubesManager *self,
     TpHandle handle,
     const gchar *service,
     GHashTable *parameters,
-    guint tube_id,
+    guint64 tube_id,
     guint portnum,
     WockyStanza *iq_req);
 
@@ -125,7 +125,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
                           TpHandle *initiator_handle,
                           const gchar **service,
                           GHashTable **parameters,
-                          guint *tube_id,
+                          guint64 *tube_id,
                           guint *portnum,
                           GError **error)
 {
@@ -191,8 +191,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
   if (tube_id != NULL)
     {
       const gchar *str;
-      gchar *endptr;
-      long int tmp;
+      guint64 tmp;
 
       str = wocky_node_get_attribute (node, "id");
       if (str == NULL)
@@ -202,14 +201,14 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
           return FALSE;
         }
 
-      tmp = strtol (str, &endptr, 10);
-      if (!endptr || *endptr)
+      tmp = g_ascii_strtoull (str, NULL, 10);
+      if (tmp == 0 || tmp > G_MAXUINT32)
         {
           g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
-              "tube id is not numeric: %s", str);
+              "tube id is non-numeric or out of range: %s", str);
           return FALSE;
         }
-      *tube_id = (int) tmp;
+      *tube_id = tmp;
     }
 
   /* next fields are not in the close stanza */
@@ -298,7 +297,7 @@ iq_tube_request_cb (WockyPorter *porter,
   TpTubeType tube_type;
   TpHandle initiator_handle;
   GHashTable *parameters;
-  guint tube_id;
+  guint64 tube_id;
   guint portnum = 0;
   gboolean close_;
   GError *error = NULL;
@@ -326,7 +325,7 @@ iq_tube_request_cb (WockyPorter *porter,
       return TRUE;
     }
 
-  DEBUG ("received a tube request, tube id %d", tube_id);
+  DEBUG ("received a tube request, tube id %" G_GUINT64_FORMAT, tube_id);
 
   chan = g_hash_table_lookup (priv->tubes,
       GUINT_TO_POINTER (tube_id));
@@ -688,17 +687,17 @@ channel_closed_cb (SalutTubeIface *tube,
     g_hash_table_remove (priv->tubes, GUINT_TO_POINTER (id));
 }
 
-static guint
+static guint64
 generate_tube_id (SalutTubesManager *self)
 {
   SalutTubesManagerPrivate *priv =
     SALUT_TUBES_MANAGER_GET_PRIVATE (self);
-  guint out;
+  guint64 out;
 
   /* probably totally overkill */
   do
     {
-      out = g_random_int_range (0, G_MAXINT);
+      out = g_random_int_range (1, G_MAXINT32);
     }
   while (g_hash_table_lookup (priv->tubes,
           GUINT_TO_POINTER (out)) != NULL);
@@ -712,7 +711,7 @@ create_new_tube (SalutTubesManager *self,
     TpHandle handle,
     const gchar *service,
     GHashTable *parameters,
-    guint tube_id,
+    guint64 tube_id,
     guint portnum,
     WockyStanza *iq_req)
 {
@@ -759,7 +758,7 @@ new_channel_from_request (SalutTubesManager *self,
   TpTubeType type;
   const gchar *ctype, *service;
   TpHandle handle;
-  guint tube_id;
+  guint64 tube_id;
   GHashTable *parameters;
 
   ctype = tp_asv_get_string (request, TP_PROP_CHANNEL_CHANNEL_TYPE);

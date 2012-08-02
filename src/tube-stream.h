@@ -68,7 +68,7 @@ SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
     TpHandle handle,
     TpHandleType handle_type, TpHandle self_handle, TpHandle initiator,
     gboolean offered, const gchar *service,
-    GHashTable *parameters, guint id, guint portnum,
+    GHashTable *parameters, guint64 id, guint portnum,
     WockyStanza *iq_req, gboolean requested);
 
 gboolean salut_tube_stream_check_params (TpSocketAddressType address_type,

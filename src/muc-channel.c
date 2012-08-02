@@ -135,7 +135,7 @@ static SalutTubeIface * create_new_tube (SalutMucChannel *self,
     TpHandle initiator,
     const gchar *service,
     GHashTable *parameters,
-    guint tube_id,
+    guint64 tube_id,
     guint portnum,
     WockyStanza *iq_req,
     gboolean requested);
@@ -1488,7 +1488,7 @@ publish_tube_in_node (SalutMucChannel *self,
   GHashTable *parameters;
   TpTubeType type;
   gchar *service, *id_str;
-  guint tube_id;
+  guint64 tube_id;
   TpHandle initiator_handle;
 
   g_object_get (tube,
@@ -1499,7 +1499,7 @@ publish_tube_in_node (SalutMucChannel *self,
       "id", &tube_id,
       NULL);
 
-  id_str = g_strdup_printf ("%u", tube_id);
+  id_str = g_strdup_printf ("%" G_GUINT64_FORMAT, tube_id);
 
   wocky_node_set_attribute (node, "service", service);
   wocky_node_set_attribute (node, "id", id_str);
@@ -1650,7 +1650,7 @@ tube_closed_cb (SalutTubeIface *tube,
     SalutMucChannel *self)
 {
   SalutMucChannelPrivate *priv = self->priv;
-  guint id;
+  guint64 id;
 
   g_object_get (tube,
       "id", &id,
@@ -1671,7 +1671,7 @@ generate_tube_id (SalutMucChannel *self)
   /* probably totally overkill */
   do
     {
-      out = g_random_int_range (0, G_MAXINT);
+      out = g_random_int_range (1, G_MAXINT32);
     }
   while (g_hash_table_lookup (priv->tubes,
           GUINT_TO_POINTER (out)) != NULL);
@@ -1685,7 +1685,7 @@ create_new_tube (SalutMucChannel *self,
     TpHandle initiator,
     const gchar *service,
     GHashTable *parameters,
-    guint tube_id,
+    guint64 tube_id,
     guint portnum,
     WockyStanza *iq_req,
     gboolean requested)
@@ -1717,7 +1717,7 @@ create_new_tube (SalutMucChannel *self,
 
   tp_base_channel_register ((TpBaseChannel *) tube);
 
-  DEBUG ("create tube %u", tube_id);
+  DEBUG ("create tube %" G_GUINT64_FORMAT, tube_id);
   g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);
 
   g_signal_connect (tube, "tube-opened", G_CALLBACK (tube_opened_cb), self);
@@ -1735,7 +1735,7 @@ salut_muc_channel_tube_request (SalutMucChannel *self,
   const gchar *channel_type;
   const gchar *service;
   GHashTable *parameters = NULL;
-  guint tube_id;
+  guint64 tube_id;
   TpTubeType type;
 
   tube_id = generate_tube_id (self);
@@ -1805,10 +1805,8 @@ salut_muc_channel_bytestream_offered (SalutMucChannel *self,
   SalutMucChannelPrivate *priv = self->priv;
   WockyNode *node = wocky_stanza_get_top_node (msg);
   const gchar *stream_id, *tmp;
-  gchar *endptr;
   WockyNode *si_node, *stream_node;
-  guint tube_id;
-  unsigned long tube_id_tmp;
+  guint64 tube_id;
   SalutTubeIface *tube;
   WockyStanzaType type;
   WockyStanzaSubType sub_type;
@@ -1841,17 +1839,16 @@ salut_muc_channel_bytestream_offered (SalutMucChannel *self,
       gibber_bytestream_iface_close (bytestream, &e);
       return;
     }
-  tube_id_tmp = strtoul (tmp, &endptr, 10);
-  if (!endptr || *endptr || tube_id_tmp > G_MAXUINT32)
+  tube_id = g_ascii_strtoull (tmp, NULL, 10);
+  if (tube_id == 0 || tube_id > G_MAXUINT32)
     {
       GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
-          "<muc-stream> tube attribute not numeric or > 2**32" };
+          "<muc-stream> tube attribute is non-numeric or out of range" };
 
-      DEBUG ("tube id is not numeric or > 2**32: %s", tmp);
+      DEBUG ("tube id is non-numeric or out of range: %s", tmp);
       gibber_bytestream_iface_close (bytestream, &e);
       return;
     }
-  tube_id = (guint) tube_id_tmp;
 
   tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
   if (tube == NULL)
@@ -1860,12 +1857,13 @@ salut_muc_channel_bytestream_offered (SalutMucChannel *self,
           "<muc-stream> tube attribute points to a nonexistent "
           "tube" };
 
-      DEBUG ("tube %u doesn't exist", tube_id);
+      DEBUG ("tube %" G_GUINT64_FORMAT " doesn't exist", tube_id);
       gibber_bytestream_iface_close (bytestream, &e);
       return;
     }
 
-  DEBUG ("received new bytestream request for existing tube: %u", tube_id);
+  DEBUG ("received new bytestream request for existing tube: %" G_GUINT64_FORMAT,
+      tube_id);
 
   salut_tube_iface_add_bytestream (tube, bytestream);
 }

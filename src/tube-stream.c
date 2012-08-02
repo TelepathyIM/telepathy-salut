@@ -143,7 +143,7 @@ typedef struct _SalutTubeStreamPrivate SalutTubeStreamPrivate;
 struct _SalutTubeStreamPrivate
 {
   TpHandle self_handle;
-  guint id;
+  guint64 id;
   guint port;
   WockyStanza *iq_req;
 
@@ -526,7 +526,7 @@ start_stream_initiation (SalutTubeStream *self,
   si_node = wocky_node_get_child_ns (msg_node, "si", WOCKY_XMPP_NS_SI);
   g_assert (si_node != NULL);
 
-  id_str = g_strdup_printf ("%u", priv->id);
+  id_str = g_strdup_printf ("%" G_GUINT64_FORMAT, priv->id);
 
   g_assert (cls->target_handle_type == TP_HANDLE_TYPE_ROOM);
 
@@ -1096,7 +1096,7 @@ salut_tube_stream_get_property (GObject *object,
         g_value_set_uint (value, priv->self_handle);
         break;
       case PROP_ID:
-        g_value_set_uint (value, priv->id);
+        g_value_set_uint64 (value, priv->id);
         break;
       case PROP_TYPE:
         g_value_set_uint (value, TP_TUBE_TYPE_STREAM);
@@ -1156,7 +1156,7 @@ salut_tube_stream_set_property (GObject *object,
         priv->self_handle = g_value_get_uint (value);
         break;
       case PROP_ID:
-        priv->id = g_value_get_uint (value);
+        priv->id = g_value_get_uint64 (value);
         break;
       case PROP_SERVICE:
         g_free (priv->service);
@@ -1272,7 +1272,7 @@ salut_tube_stream_get_object_path_suffix (TpBaseChannel *base)
   SalutTubeStream *self = SALUT_TUBE_STREAM (base);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
 
-  return g_strdup_printf ("StreamTubeChannel/%u/%u",
+  return g_strdup_printf ("StreamTubeChannel/%u/%" G_GUINT64_FORMAT,
       tp_base_channel_get_target_handle (base),
       priv->id);
 }
@@ -1518,7 +1518,7 @@ salut_tube_stream_new (SalutConnection *conn,
                        gboolean offered,
                        const gchar *service,
                        GHashTable *parameters,
-                       guint id,
+                       guint64 id,
                        guint portnum,
                        WockyStanza *iq_req,
                        gboolean requested)
@@ -1758,7 +1758,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
       SalutContact *contact;
 
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
-      tube_id_str = g_strdup_printf ("%u", priv->id);
+      tube_id_str = g_strdup_printf ("%" G_GUINT64_FORMAT, priv->id);
 
       g_object_get (conn, "contact-manager", &contact_mgr, NULL);
       g_assert (contact_mgr != NULL);

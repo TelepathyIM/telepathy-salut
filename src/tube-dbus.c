@@ -114,7 +114,7 @@ struct _SalutTubeDBusPrivate
 {
   TpHandle self_handle;
   GibberMucConnection *muc_connection;
-  guint id;
+  guint64 id;
   GibberBytestreamIface *bytestream;
   gchar *stream_id;
   TpHandle initiator;
@@ -636,7 +636,7 @@ salut_tube_dbus_get_property (GObject *object,
         g_value_set_object (value, priv->muc_connection);
         break;
       case PROP_ID:
-        g_value_set_uint (value, priv->id);
+        g_value_set_uint64 (value, priv->id);
         break;
       case PROP_BYTESTREAM:
         g_value_set_object (value, priv->bytestream);
@@ -693,7 +693,7 @@ salut_tube_dbus_set_property (GObject *object,
         g_object_ref (priv->muc_connection);
         break;
       case PROP_ID:
-        priv->id = g_value_get_uint (value);
+        priv->id = g_value_get_uint64 (value);
         break;
       case PROP_BYTESTREAM:
         if (priv->bytestream == NULL)
@@ -868,7 +868,7 @@ salut_tube_dbus_get_object_path_suffix (TpBaseChannel *base)
   SalutTubeDBus *self = SALUT_TUBE_DBUS (base);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (self);
 
-  return g_strdup_printf ("DBusTubeChannel/%u/%u",
+  return g_strdup_printf ("DBusTubeChannel/%u/%" G_GUINT64_FORMAT,
       tp_base_channel_get_target_handle (base),
       priv->id);
 }
@@ -1307,7 +1307,7 @@ salut_tube_dbus_new (SalutConnection *conn,
                      TpHandle initiator,
                      const gchar *service,
                      GHashTable *parameters,
-                     guint id,
+                     guint64 id,
                      gboolean requested)
 {
   SalutTubeDBus *tube;
