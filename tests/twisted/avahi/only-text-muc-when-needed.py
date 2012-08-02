@@ -289,98 +289,6 @@ def test_channels(q, bus, conn):
     call_async(q, tube_chan.Properties, 'GetAll', cs.CHANNEL_TYPE_STREAM_TUBE)
     q.expect('dbus-return', method='GetAll')
 
-def test_message(q, bus, conn):
-    jid = 'test-muc'
-
-    connect(q, bus, conn)
-
-    tube_chan, tube_path, _ = stream_tube(q, bus, conn, 'CreateChannel', jid)
-
-    bob_jid = '%s/bob' % jid
-    bob_handle = conn.RequestHandles(cs.HT_CONTACT, [bob_jid])[0]
-
-    # now let's send a message
-    stream.send(
-        elem('message', from_=bob_jid, type='groupchat')(
-          elem('body')(
-            u'oh hey i didnt see you there'
-          ),
-        )
-      )
-
-    # the text channel appears!
-    e = q.expect('dbus-signal', signal='NewChannels')
-    channels = e.args[0]
-    assertEquals(1, len(channels))
-    path, props = channels[0]
-    assertEquals(cs.CHANNEL_TYPE_TEXT, props[cs.CHANNEL_TYPE])
-    # make sure we didn't request it
-    assertEquals(False, props[cs.REQUESTED])
-    assertEquals(bob_handle, props[cs.INITIATOR_HANDLE])
-
-    # and the message is then signalled
-    e = q.expect('dbus-signal', signal='MessageReceived', path=path)
-    parts = e.args[0]
-
-    header = parts[0]
-    assertEquals(bob_handle, header['message-sender'])
-    assertEquals(bob_jid, header['message-sender-id'])
-
-    body = parts[1]
-    assertEquals('oh hey i didnt see you there', body['content'])
-
-def test_requested_message(q, bus, conn):
-    jid = 'test-muc'
-
-    connect(q, bus, conn)
-
-    self_handle = conn.Properties.Get(cs.CONN, 'SelfHandle')
-
-    text_chan, text_path, _ = text_channel(q, bus, conn,'CreateChannel', jid)
-    tube_chan, tube_path, _ = stream_tube(q, bus, conn, 'CreateChannel', jid)
-
-    bob_jid = '%s/bob' % jid
-    bob_handle = conn.RequestHandles(cs.HT_CONTACT, [bob_jid])[0]
-
-    # make sure it says we requested it
-    props = text_chan.Properties.GetAll(cs.CHANNEL)
-    assertEquals(True, props['Requested'])
-    assertEquals(self_handle, props['InitiatorHandle'])
-
-    text_chan.Close()
-    expect_close(q, text_path)
-
-    assert_on_bus(q, tube_chan)
-    assert_not_on_bus(q, text_chan)
-
-    # now let's send a message
-    stream.send(
-        elem('message', from_=bob_jid, type='groupchat')(
-          elem('body')(
-            u'hello again'
-          ),
-        )
-      )
-
-    e = q.expect('dbus-signal', signal='NewChannels')
-    channels = e.args[0]
-    assertEquals(1, len(channels))
-    path, props = channels[0]
-    assertEquals(cs.CHANNEL_TYPE_TEXT, props[cs.CHANNEL_TYPE])
-    # now make sure we didn't request it
-    assertEquals(False, props[cs.REQUESTED])
-    assertEquals(bob_handle, props[cs.INITIATOR_HANDLE])
-
-    e = q.expect('dbus-signal', signal='MessageReceived', path=path)
-    parts = e.args[0]
-
-    header = parts[0]
-    assertEquals(bob_handle, header['message-sender'])
-    assertEquals(bob_jid, header['message-sender-id'])
-
-    body = parts[1]
-    assertEquals('hello again', body['content'])
-
 if __name__ == '__main__':
     # request tube, assert no text appears
     exec_test(tube_no_text)
@@ -408,9 +316,3 @@ if __name__ == '__main__':
     # works on tube
     exec_test(test_channels)
 
-    # request tube, incoming message, assert text channel appears
-#    exec_test(test_message)
-
-    # request text & tube, close text, incoming message, assert text
-    # reappears with correct props
-#    exec_test(test_requested_message)
