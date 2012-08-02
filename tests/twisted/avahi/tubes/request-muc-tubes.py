@@ -74,7 +74,10 @@ def test(q, bus, conn):
     assert props[INITIATOR_ID] == self_name
 
     # ensure the same channel
-#    yours, ensured_path, ensured_props = conn.Requests.EnsureChannel(
+
+# TODO: the muc channel doesn't bother to look at existing tubes
+# before creating a new one. once that's fixed, uncomment this.
+#    yours, ensured_path, _ = conn.Requests.EnsureChannel(
 #            { CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
 #              TARGET_HANDLE_TYPE: HT_ROOM,
 #              TARGET_HANDLE: handle,
@@ -82,7 +85,7 @@ def test(q, bus, conn):
 #              })
 
 #    assert not yours
-#    assert ensured_path == tube_path, (ensured_path, tube_path2)
+#    assert ensured_path == tube_path, (ensured_path, tube_path)
 
     conn.Disconnect()
 
