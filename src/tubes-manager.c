@@ -749,6 +749,8 @@ create_new_tube (SalutTubesManager *self,
   return tube;
 }
 
+/* Returns: (transfer none): new tube channel. the channel manager
+ * holds the ref to this channel, so don't unref it! */
 static SalutTubeIface *
 new_channel_from_request (SalutTubesManager *self,
     GHashTable *request)
