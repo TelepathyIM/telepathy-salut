@@ -36,7 +36,6 @@
 #include "roomlist-channel.h"
 #include "contact-manager.h"
 #include "muc-manager.h"
-#include "tubes-channel.h"
 #include "roomlist-channel.h"
 #include "discovery-client.h"
 

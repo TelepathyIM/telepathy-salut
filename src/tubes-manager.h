@@ -25,7 +25,6 @@
 #include <telepathy-glib/base-connection.h>
 #include "connection.h"
 #include "contact-manager.h"
-#include "tubes-channel.h"
 
 G_BEGIN_DECLS
 

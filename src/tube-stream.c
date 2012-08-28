@@ -67,32 +67,23 @@
 #include "debug.h"
 #include "signals-marshal.h"
 #include "connection.h"
+#include "muc-tube-stream.h"
 #include "tube-iface.h"
 #include "si-bytestream-manager.h"
 #include "contact-manager.h"
-#include "tubes-channel.h"
 
 static void tube_iface_init (gpointer g_iface, gpointer iface_data);
-static void channel_iface_init (gpointer g_iface, gpointer iface_data);
 static void streamtube_iface_init (gpointer g_iface, gpointer iface_data);
 
-G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream, G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
-      tp_dbus_properties_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
+G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream,
+    TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_STREAM_TUBE,
       streamtube_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE,
-      NULL);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL));
+      NULL));
 
 static const gchar *salut_tube_stream_interfaces[] = {
-    TP_IFACE_CHANNEL_INTERFACE_GROUP,
-    /* If more interfaces are added, either keep Tube as the first, or change
-     * the implementations of salut_tube_stream_get_interfaces () and
-     * salut_tube_stream_get_property () too */
     TP_IFACE_CHANNEL_INTERFACE_TUBE,
     NULL
 };
@@ -131,15 +122,9 @@ static guint signals[LAST_SIGNAL] = {0};
 /* properties */
 enum
 {
-  PROP_CONNECTION = 1,
-  PROP_TUBES_CHANNEL,
-  PROP_INTERFACES,
-  PROP_HANDLE,
-  PROP_HANDLE_TYPE,
-  PROP_SELF_HANDLE,
+  PROP_SELF_HANDLE = 1,
   PROP_ID,
   PROP_TYPE,
-  PROP_INITIATOR_HANDLE,
   PROP_SERVICE,
   PROP_PARAMETERS,
   PROP_STATE,
@@ -150,13 +135,6 @@ enum
   PROP_ACCESS_CONTROL_PARAM,
   PROP_PORT,
   PROP_IQ_REQ,
-  PROP_CHANNEL_DESTROYED,
-  PROP_CHANNEL_PROPERTIES,
-  PROP_OBJECT_PATH,
-  PROP_CHANNEL_TYPE,
-  PROP_TARGET_ID,
-  PROP_REQUESTED,
-  PROP_INITIATOR_ID,
   PROP_SUPPORTED_SOCKET_TYPES,
   LAST_PROPERTY
 };
@@ -164,15 +142,10 @@ enum
 typedef struct _SalutTubeStreamPrivate SalutTubeStreamPrivate;
 struct _SalutTubeStreamPrivate
 {
-  SalutConnection *conn;
-  SalutTubesChannel *tubes_channel;
-  TpHandle handle;
-  TpHandleType handle_type;
   TpHandle self_handle;
-  guint id;
+  guint64 id;
   guint port;
   WockyStanza *iq_req;
-  gchar *object_path;
 
   /* Bytestreams for MUC tubes (using stream initiation) or 1-1 tubes (using
    * direct TCP connections). One tube can have several bytestreams. The
@@ -200,7 +173,6 @@ struct _SalutTubeStreamPrivate
   GHashTable *transport_to_id;
   guint last_connection_id;
 
-  TpHandle initiator;
   gchar *service;
   GHashTable *parameters;
   TpTubeChannelState state;
@@ -218,8 +190,6 @@ struct _SalutTubeStreamPrivate
 
   /* listen for connections from the remote CM */
   GibberListener *contact_listener;
-
-  gboolean closed;
 
   gboolean offer_needed;
 
@@ -499,10 +469,11 @@ extra_bytestream_negotiate_cb (GibberBytestreamIface *bytestream,
 static gchar *
 generate_stream_id (SalutTubeStream *self)
 {
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
   gchar *stream_id;
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       stream_id = g_strdup_printf ("%lu-%u", (unsigned long) time (NULL),
           g_random_int ());
@@ -522,10 +493,13 @@ start_stream_initiation (SalutTubeStream *self,
                          GError **error)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
+  TpHandle initiator = tp_base_channel_get_initiator (base);
   WockyNode *node, *si_node;
   WockyStanza *msg;
   WockyNode *msg_node;
-  TpHandleRepoIface *contact_repo;
+  TpHandleRepoIface *contact_repo, *room_repo;
   const gchar *jid;
   gchar *stream_id, *id_str;
   gboolean result;
@@ -533,32 +507,34 @@ start_stream_initiation (SalutTubeStream *self,
   SalutContact *contact;
   SalutContactManager *contact_mgr;
   SalutSiBytestreamManager *si_bytestream_mgr;
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_ROOM);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
 
-  contact_repo = tp_base_connection_get_handles (
-     (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+  contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
+  room_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_ROOM);
 
-  jid = tp_handle_inspect (contact_repo, priv->initiator);
+  jid = tp_handle_inspect (contact_repo, initiator);
 
   stream_id = generate_stream_id (self);
 
-  msg = salut_si_bytestream_manager_make_stream_init_iq (priv->conn->name, jid,
+  msg = salut_si_bytestream_manager_make_stream_init_iq (conn->name, jid,
       stream_id, WOCKY_TELEPATHY_NS_TUBES);
   msg_node = wocky_stanza_get_top_node (msg);
 
   si_node = wocky_node_get_child_ns (msg_node, "si", WOCKY_XMPP_NS_SI);
   g_assert (si_node != NULL);
 
-  id_str = g_strdup_printf ("%u", priv->id);
+  id_str = g_strdup_printf ("%" G_GUINT64_FORMAT, priv->id);
 
-  g_assert (priv->handle_type == TP_HANDLE_TYPE_ROOM);
+  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_ROOM);
 
   /* FIXME: this needs standardizing */
   node = wocky_node_add_child_ns (si_node, "muc-stream",
       WOCKY_TELEPATHY_NS_TUBES);
   wocky_node_set_attribute (node, "muc", tp_handle_inspect (
-        room_repo, priv->handle));
+          room_repo, tp_base_channel_get_target_handle (base)));
 
   wocky_node_set_attribute (node, "tube", id_str);
 
@@ -566,19 +542,19 @@ start_stream_initiation (SalutTubeStream *self,
   data->self = self;
   data->transport = g_object_ref (transport);
 
-  g_object_get (priv->conn,
+  g_object_get (conn,
       "si-bytestream-manager", &si_bytestream_mgr,
       "contact-manager", &contact_mgr,
       NULL);
   g_assert (si_bytestream_mgr != NULL);
   g_assert (contact_mgr != NULL);
 
-  contact = salut_contact_manager_get_contact (contact_mgr, priv->initiator);
+  contact = salut_contact_manager_get_contact (contact_mgr, initiator);
   if (contact == NULL)
     {
       result = FALSE;
       g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR,
-          "can't find contact with handle %d", priv->initiator);
+          "can't find contact with handle %d", initiator);
       g_object_unref (transport);
       g_slice_free (struct _extra_bytestream_negotiate_cb_data, data);
     }
@@ -623,22 +599,25 @@ start_stream_direct (SalutTubeStream *self,
                      GError **error)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
+  TpHandle initiator = tp_base_channel_get_initiator (base);
   SalutContact *contact;
   SalutContactManager *contact_mgr;
   GibberBytestreamIface *bytestream;
 
-  g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
+  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT);
 
-  g_object_get (priv->conn,
+  g_object_get (tp_base_channel_get_connection (base),
       "contact-manager", &contact_mgr,
       NULL);
   g_assert (contact_mgr != NULL);
 
-  contact = salut_contact_manager_get_contact (contact_mgr, priv->initiator);
+  contact = salut_contact_manager_get_contact (contact_mgr, initiator);
   if (contact == NULL)
     {
       g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR,
-          "can't find contact with handle %d", priv->initiator);
+          "can't find contact with handle %d", initiator);
 
       g_object_unref (contact_mgr);
 
@@ -713,7 +692,8 @@ local_new_connection_cb (GibberListener *listener,
                          gpointer user_data)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
 
   /* Block the transport while there is no open bytestream to transfer
    * its data. */
@@ -725,7 +705,7 @@ local_new_connection_cb (GibberListener *listener,
    * Streams in P2P tubes are established directly with a TCP connection. We
    * use SalutDirectBytestreamManager.
    */
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       if (!start_stream_direct (self, transport, NULL))
         {
@@ -774,9 +754,10 @@ new_connection_to_socket (SalutTubeStream *self,
                           GibberBytestreamIface *bytestream)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
   GibberTransport *transport;
 
-  g_assert (priv->initiator == priv->self_handle);
+  g_assert (tp_base_channel_is_requested (base));
 
 #ifdef GIBBER_TYPE_UNIX_TRANSPORT
   if (priv->address_type == TP_SOCKET_ADDRESS_TYPE_UNIX)
@@ -837,10 +818,11 @@ tube_stream_open (SalutTubeStream *self,
                   GError **error)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
 
   DEBUG ("called");
 
-  if (priv->initiator == priv->self_handle)
+  if (tp_base_channel_is_requested (base))
     /* Nothing to do if we are the initiator of this tube.
      * We'll connect to the socket each time request a new bytestream. */
     return TRUE;
@@ -970,7 +952,6 @@ salut_tube_stream_init (SalutTubeStream *self)
   priv->address = NULL;
   priv->access_control = TP_SOCKET_ACCESS_CONTROL_LOCALHOST;
   priv->access_control_param = NULL;
-  priv->closed = FALSE;
   priv->offer_needed = FALSE;
 
   priv->dispose_has_run = FALSE;
@@ -1010,13 +991,14 @@ salut_tube_stream_dispose (GObject *object)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (object);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
 
   if (priv->dispose_has_run)
     return;
 
   salut_tube_iface_close (SALUT_TUBE_IFACE (self), FALSE);
 
-  if (priv->initiator != priv->self_handle &&
+  if (tp_base_channel_is_requested (base) &&
       priv->address_type == TP_SOCKET_ADDRESS_TYPE_UNIX &&
       priv->address != NULL)
     {
@@ -1077,7 +1059,6 @@ salut_tube_stream_finalize (GObject *object)
   SalutTubeStream *self = SALUT_TUBE_STREAM (object);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
 
-  g_free (priv->object_path);
   g_free (priv->service);
   if (priv->parameters != NULL)
     {
@@ -1108,51 +1089,17 @@ salut_tube_stream_get_property (GObject *object,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (object);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-  TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
 
   switch (property_id)
     {
-      case PROP_TUBES_CHANNEL:
-        g_value_set_object (value, priv->tubes_channel);
-        break;
-      case PROP_CONNECTION:
-        g_value_set_object (value, priv->conn);
-        break;
-      case PROP_OBJECT_PATH:
-        g_value_set_string (value, priv->object_path);
-        break;
-      case PROP_INTERFACES:
-        if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
-          {
-            /* MUC tubes */
-            g_value_set_boxed (value, salut_tube_stream_interfaces);
-          }
-        else
-          {
-            /* 1-1 tubes - omit the Group interface */
-            g_value_set_boxed (value, salut_tube_stream_interfaces + 1);
-          }
-        break;
-      case PROP_CHANNEL_TYPE:
-        g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
-        break;
-      case PROP_HANDLE:
-        g_value_set_uint (value, priv->handle);
-        break;
-      case PROP_HANDLE_TYPE:
-        g_value_set_uint (value, priv->handle_type);
-        break;
       case PROP_SELF_HANDLE:
         g_value_set_uint (value, priv->self_handle);
         break;
       case PROP_ID:
-        g_value_set_uint (value, priv->id);
+        g_value_set_uint64 (value, priv->id);
         break;
       case PROP_TYPE:
         g_value_set_uint (value, TP_TUBE_TYPE_STREAM);
-        break;
-      case PROP_INITIATOR_HANDLE:
-        g_value_set_uint (value, priv->initiator);
         break;
       case PROP_SERVICE:
         g_value_set_string (value, priv->service);
@@ -1184,72 +1131,6 @@ salut_tube_stream_get_property (GObject *object,
       case PROP_IQ_REQ:
         g_value_set_pointer (value, priv->iq_req);
         break;
-      case PROP_CHANNEL_DESTROYED:
-        g_value_set_boolean (value, priv->closed);
-        break;
-      case PROP_CHANNEL_PROPERTIES:
-        {
-          GHashTable *properties;
-
-          properties = tp_dbus_properties_mixin_make_properties_hash (object,
-              TP_IFACE_CHANNEL, "TargetHandle",
-              TP_IFACE_CHANNEL, "TargetHandleType",
-              TP_IFACE_CHANNEL, "ChannelType",
-              TP_IFACE_CHANNEL, "TargetID",
-              TP_IFACE_CHANNEL, "InitiatorHandle",
-              TP_IFACE_CHANNEL, "InitiatorID",
-              TP_IFACE_CHANNEL, "Requested",
-              TP_IFACE_CHANNEL, "Interfaces",
-              TP_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
-              TP_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
-              NULL);
-
-          if (priv->initiator != priv->self_handle)
-            {
-              /* channel has not been requested so Parameters is immutable */
-              GValue *prop_value = g_slice_new0 (GValue);
-
-              /* FIXME: use tp_dbus_properties_mixin_add_properties once it's
-               * added in tp-glib */
-              tp_dbus_properties_mixin_get (object,
-                  TP_IFACE_CHANNEL_INTERFACE_TUBE, "Parameters",
-                  prop_value, NULL);
-              g_assert (G_IS_VALUE (prop_value));
-
-              g_hash_table_insert (properties,
-                  g_strdup_printf ("%s.%s", TP_IFACE_CHANNEL_INTERFACE_TUBE,
-                    "Parameters"), prop_value);
-            }
-
-          g_value_take_boxed (value, properties);
-        }
-        break;
-      case PROP_REQUESTED:
-        g_value_set_boolean (value,
-            (priv->initiator == priv->self_handle));
-        break;
-      case PROP_INITIATOR_ID:
-          {
-            TpHandleRepoIface *repo = tp_base_connection_get_handles (
-                base_conn, TP_HANDLE_TYPE_CONTACT);
-
-            /* some channel can have o.f.T.Channel.InitiatorHandle == 0 but
-             * tubes always have an initiator */
-            g_assert (priv->initiator != 0);
-
-            g_value_set_string (value,
-                tp_handle_inspect (repo, priv->initiator));
-          }
-        break;
-      case PROP_TARGET_ID:
-          {
-            TpHandleRepoIface *repo = tp_base_connection_get_handles (
-                base_conn, priv->handle_type);
-
-            g_value_set_string (value,
-                tp_handle_inspect (repo, priv->handle));
-          }
-        break;
       case PROP_SUPPORTED_SOCKET_TYPES:
         g_value_take_boxed (value,
             salut_tube_stream_get_supported_socket_types ());
@@ -1271,34 +1152,11 @@ salut_tube_stream_set_property (GObject *object,
 
   switch (property_id)
     {
-      case PROP_TUBES_CHANNEL:
-        priv->tubes_channel = g_value_get_object (value);
-        break;
-      case PROP_CONNECTION:
-        priv->conn = g_value_get_object (value);
-        break;
-      case PROP_OBJECT_PATH:
-        g_free (priv->object_path);
-        priv->object_path = g_value_dup_string (value);
-        break;
-      case PROP_CHANNEL_TYPE:
-      /* this property is writable in the interface, but not actually
-       * meaningfully changeable on this channel, so we do nothing */
-      break;
-      case PROP_HANDLE:
-        priv->handle = g_value_get_uint (value);
-        break;
-      case PROP_HANDLE_TYPE:
-        priv->handle_type = g_value_get_uint (value);
-        break;
       case PROP_SELF_HANDLE:
         priv->self_handle = g_value_get_uint (value);
         break;
       case PROP_ID:
-        priv->id = g_value_get_uint (value);
-        break;
-      case PROP_INITIATOR_HANDLE:
-        priv->initiator = g_value_get_uint (value);
+        priv->id = g_value_get_uint64 (value);
         break;
       case PROP_SERVICE:
         g_free (priv->service);
@@ -1358,19 +1216,16 @@ salut_tube_stream_constructor (GType type,
 {
   GObject *obj;
   SalutTubeStreamPrivate *priv;
-  TpDBusDaemon *bus;
-  TpBaseConnection *base_conn;
+  TpBaseChannel *base;
 
   obj = G_OBJECT_CLASS (salut_tube_stream_parent_class)->
            constructor (type, n_props, props);
 
   priv = SALUT_TUBE_STREAM_GET_PRIVATE (SALUT_TUBE_STREAM (obj));
 
-  /* Ref the initiator handle */
-  base_conn = TP_BASE_CONNECTION (priv->conn);
-  g_assert (priv->initiator != 0);
+  base = TP_BASE_CHANNEL (obj);
 
-  if (priv->initiator == priv->self_handle)
+  if (tp_base_channel_get_initiator (base) == priv->self_handle)
     {
       /* We initiated this tube */
       priv->state = TP_TUBE_CHANNEL_STATE_NOT_OFFERED;
@@ -1382,28 +1237,55 @@ salut_tube_stream_constructor (GType type,
       priv->state = TP_TUBE_CHANNEL_STATE_LOCAL_PENDING;
     }
 
-  bus = tp_base_connection_get_dbus_daemon (base_conn);
-  tp_dbus_daemon_register_object (bus, priv->object_path, obj);
-
-  DEBUG ("Registering at '%s'", priv->object_path);
+  DEBUG ("Registering at '%s'", tp_base_channel_get_object_path (base));
 
   return obj;
 }
 
 static void
+salut_tube_stream_fill_immutable_properties (TpBaseChannel *chan,
+    GHashTable *properties)
+{
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_CLASS (
+      salut_tube_stream_parent_class);
+
+  cls->fill_immutable_properties (chan, properties);
+
+  tp_dbus_properties_mixin_fill_properties_hash (
+      G_OBJECT (chan), properties,
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
+      NULL);
+
+  if (!tp_base_channel_is_requested (chan))
+    {
+      tp_dbus_properties_mixin_fill_properties_hash (
+          G_OBJECT (chan), properties,
+          TP_IFACE_CHANNEL_INTERFACE_TUBE, "Parameters",
+          NULL);
+    }
+}
+
+static gchar *
+salut_tube_stream_get_object_path_suffix (TpBaseChannel *base)
+{
+  SalutTubeStream *self = SALUT_TUBE_STREAM (base);
+  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+
+  return g_strdup_printf ("StreamTubeChannel/%u/%" G_GUINT64_FORMAT,
+      tp_base_channel_get_target_handle (base),
+      priv->id);
+}
+
+static void
+salut_tube_stream_close_dbus (TpBaseChannel *base)
+{
+  salut_tube_iface_close ((SalutTubeIface *) base, FALSE);
+}
+
+static void
 salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 {
-  static TpDBusPropertiesMixinPropImpl channel_props[] = {
-      { "TargetHandleType", "handle-type", NULL },
-      { "TargetHandle", "handle", NULL },
-      { "ChannelType", "channel-type", NULL },
-      { "TargetID", "target-id", NULL },
-      { "Interfaces", "interfaces", NULL },
-      { "Requested", "requested", NULL },
-      { "InitiatorHandle", "initiator-handle", NULL },
-      { "InitiatorID", "initiator-id", NULL },
-      { NULL }
-  };
   static TpDBusPropertiesMixinPropImpl stream_tube_props[] = {
       { "Service", "service", NULL },
       { "SupportedSocketTypes", "supported-socket-types", NULL },
@@ -1415,11 +1297,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       { NULL }
   };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-      { TP_IFACE_CHANNEL,
-        tp_dbus_properties_mixin_getter_gobject_properties,
-        NULL,
-        channel_props,
-      },
       { TP_IFACE_CHANNEL_TYPE_STREAM_TUBE,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
@@ -1434,11 +1311,21 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   };
 
   GObjectClass *object_class = G_OBJECT_CLASS (salut_tube_stream_class);
+  TpBaseChannelClass *base_class = TP_BASE_CHANNEL_CLASS (salut_tube_stream_class);
   GParamSpec *param_spec;
 
   object_class->get_property = salut_tube_stream_get_property;
   object_class->set_property = salut_tube_stream_set_property;
   object_class->constructor = salut_tube_stream_constructor;
+
+  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_STREAM_TUBE;
+  base_class->interfaces = salut_tube_stream_interfaces;
+  base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
+  base_class->close = salut_tube_stream_close_dbus;
+  base_class->fill_immutable_properties =
+    salut_tube_stream_fill_immutable_properties;
+  base_class->get_object_path_suffix =
+    salut_tube_stream_get_object_path_suffix;
 
   g_type_class_add_private (salut_tube_stream_class,
       sizeof (SalutTubeStreamPrivate));
@@ -1446,45 +1333,18 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   object_class->dispose = salut_tube_stream_dispose;
   object_class->finalize = salut_tube_stream_finalize;
 
-  g_object_class_override_property (object_class, PROP_CONNECTION,
-    "connection");
-  g_object_class_override_property (object_class, PROP_TUBES_CHANNEL,
-    "tubes-channel");
-  g_object_class_override_property (object_class, PROP_HANDLE,
-    "handle");
-  g_object_class_override_property (object_class, PROP_HANDLE_TYPE,
-    "handle-type");
   g_object_class_override_property (object_class, PROP_SELF_HANDLE,
     "self-handle");
   g_object_class_override_property (object_class, PROP_ID,
     "id");
   g_object_class_override_property (object_class, PROP_TYPE,
     "type");
-  g_object_class_override_property (object_class, PROP_INITIATOR_HANDLE,
-    "initiator-handle");
   g_object_class_override_property (object_class, PROP_SERVICE,
     "service");
   g_object_class_override_property (object_class, PROP_PARAMETERS,
     "parameters");
   g_object_class_override_property (object_class, PROP_STATE,
     "state");
-
-  g_object_class_override_property (object_class, PROP_OBJECT_PATH,
-      "object-path");
-  g_object_class_override_property (object_class, PROP_CHANNEL_TYPE,
-      "channel-type");
-
-  g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
-      "channel-destroyed");
-  g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
-      "channel-properties");
-
-  param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
-      "Additional Channel.Interface.* interfaces",
-      G_TYPE_STRV,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
-  g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
   param_spec = g_param_spec_uint (
       "address-type",
@@ -1525,13 +1385,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   g_object_class_install_property (object_class, PROP_ACCESS_CONTROL_PARAM,
       param_spec);
 
-  param_spec = g_param_spec_string ("target-id", "Target JID",
-      "The string obtained by inspecting the target handle",
-      NULL,
-      G_PARAM_READABLE |
-      G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
-  g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
-
   param_spec = g_param_spec_uint (
       "port",
       "port on the initiator's CM",
@@ -1564,19 +1417,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       FALSE,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OFFERED, param_spec);
-
-  param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
-      "The string obtained by inspecting the initiator-handle",
-      NULL,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_INITIATOR_ID,
-      param_spec);
-
-  param_spec = g_param_spec_boolean ("requested", "Requested?",
-      "True if this channel was requested by the local user",
-      FALSE,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
 
   param_spec = g_param_spec_boxed (
       "supported-socket-types",
@@ -1671,7 +1511,6 @@ data_received_cb (GibberBytestreamIface *bytestream,
 
 SalutTubeStream *
 salut_tube_stream_new (SalutConnection *conn,
-                       SalutTubesChannel *tubes_channel,
                        TpHandle handle,
                        TpHandleType handle_type,
                        TpHandle self_handle,
@@ -1679,22 +1518,20 @@ salut_tube_stream_new (SalutConnection *conn,
                        gboolean offered,
                        const gchar *service,
                        GHashTable *parameters,
-                       guint id,
+                       guint64 id,
                        guint portnum,
-                       WockyStanza *iq_req)
+                       WockyStanza *iq_req,
+                       gboolean requested)
 {
   SalutTubeStream *obj;
-  char *object_path;
+  GType gtype = SALUT_TYPE_TUBE_STREAM;
 
-  object_path = g_strdup_printf ("%s/StreamTubeChannel_%u_%u",
-      conn->parent.object_path, handle, id);
+  if (handle_type == TP_HANDLE_TYPE_ROOM)
+    gtype = SALUT_TYPE_MUC_TUBE_STREAM;
 
-  obj = g_object_new (SALUT_TYPE_TUBE_STREAM,
+  obj = g_object_new (gtype,
       "connection", conn,
-      "tubes-channel", tubes_channel,
-      "object-path", object_path,
       "handle", handle,
-      "handle-type", handle_type,
       "self-handle", self_handle,
       "initiator-handle", initiator,
       "offered", offered,
@@ -1703,9 +1540,8 @@ salut_tube_stream_new (SalutConnection *conn,
       "id", id,
       "port", portnum,
       "iq-req", iq_req,
+      "requested", requested,
       NULL);
-
-  g_free (object_path);
 
   return obj;
 }
@@ -1721,6 +1557,10 @@ salut_tube_stream_accept (SalutTubeIface *tube,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
   WockyStanza *reply;
 
   if (priv->state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
@@ -1732,10 +1572,10 @@ salut_tube_stream_accept (SalutTubeIface *tube,
       return FALSE;
     }
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       reply = wocky_stanza_build_iq_result (priv->iq_req, NULL);
-      wocky_porter_send (priv->conn->porter, reply);
+      wocky_porter_send (conn->porter, reply);
 
       g_object_unref (priv->iq_req);
       priv->iq_req = NULL;
@@ -1798,29 +1638,34 @@ contact_new_connection_cb (GibberListener *listener,
                           gpointer user_data)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (user_data);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
   GibberBytestreamIface *bytestream;
   SalutContactManager *contact_mgr;
   SalutContact *contact;
 
-  g_assert (priv->handle_type == TP_HANDLE_TYPE_CONTACT);
+  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT);
 
-  g_object_get (priv->conn,
+  g_object_get (conn,
       "contact-manager", &contact_mgr,
       NULL);
   g_assert (contact_mgr != NULL);
 
-  contact = salut_contact_manager_get_contact (contact_mgr, priv->handle);
+  contact = salut_contact_manager_get_contact (contact_mgr,
+      tp_base_channel_get_target_handle (base));
   if (contact == NULL)
     {
-      DEBUG ("can't find contact with handle %d", priv->handle);
+      DEBUG ("can't find contact with handle %d",
+          tp_base_channel_get_target_handle (base));
       g_object_unref (contact_mgr);
       return;
     }
 
   bytestream = g_object_new (GIBBER_TYPE_BYTESTREAM_DIRECT,
       "state", GIBBER_BYTESTREAM_STATE_LOCAL_PENDING,
-      "self-id", priv->conn->name,
+      "self-id", conn->name,
       "peer-id", contact->name,
       NULL);
 
@@ -1889,34 +1734,37 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
 
-  if (priv->closed)
+  if (tp_base_channel_is_destroyed (base))
     return;
-  priv->closed = TRUE;
 
   g_hash_table_foreach_remove (priv->bytestream_to_transport,
       close_each_extra_bytestream, self);
 
   /* do not send the close stanza if the tube was closed due to the remote
    * contact */
-  if (!closed_remotely && priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (!closed_remotely && cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       WockyStanza *stanza;
       const gchar *jid_from;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+          base_conn, TP_HANDLE_TYPE_CONTACT);
       gchar *tube_id_str;
       SalutContactManager *contact_mgr;
       SalutContact *contact;
 
       jid_from = tp_handle_inspect (contact_repo, priv->self_handle);
-      tube_id_str = g_strdup_printf ("%u", priv->id);
+      tube_id_str = g_strdup_printf ("%" G_GUINT64_FORMAT, priv->id);
 
-      g_object_get (priv->conn, "contact-manager", &contact_mgr, NULL);
+      g_object_get (conn, "contact-manager", &contact_mgr, NULL);
       g_assert (contact_mgr != NULL);
 
       contact = salut_contact_manager_get_contact (contact_mgr,
-          priv->handle);
+          tp_base_channel_get_target_handle (base));
 
       stanza = wocky_stanza_build_to_contact (WOCKY_STANZA_TYPE_IQ,
           WOCKY_STANZA_SUB_TYPE_SET,
@@ -1926,7 +1774,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
             '@', "id", tube_id_str,
           ')', NULL);
 
-      wocky_porter_send_iq_async (priv->conn->porter, stanza,
+      wocky_porter_send_iq_async (conn->porter, stanza,
           NULL, iq_close_reply_cb, tube);
 
       g_free (tube_id_str);
@@ -1936,19 +1784,26 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
       g_object_unref (contact_mgr);
     }
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
     {
-      if (priv->initiator == priv->self_handle)
+      if (priv->contact_listener != NULL)
         {
-          if (priv->contact_listener != NULL)
-            {
-              g_object_unref (priv->contact_listener);
-              priv->contact_listener = NULL;
-            }
+          g_object_unref (priv->contact_listener);
+          priv->contact_listener = NULL;
         }
     }
 
+  /* Take a ref to ourselves as when we emit tube-closed
+   * SalutTubesChannel will drop our last ref but we still need to
+   * declare ourselves as destroyed. this is rubbish, but will
+   * disappear when we finally remove the Tubes channel type. */
+  g_object_ref (self);
+
   g_signal_emit (G_OBJECT (self), signals[CLOSED], 0);
+
+  tp_base_channel_destroyed (base);
+
+  g_object_unref (self);
 }
 
 static void
@@ -1969,9 +1824,11 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (tube);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
   GibberTransport *transport;
 
-  if (priv->initiator != priv->self_handle)
+  if (!tp_base_channel_is_requested (base))
     {
       DEBUG ("I'm not the initiator of this tube, can't accept "
           "an extra bytestream");
@@ -1987,7 +1844,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
       TpHandle contact;
       gchar *peer_id;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+          base_conn, TP_HANDLE_TYPE_CONTACT);
 
       if (priv->state == TP_TUBE_CHANNEL_STATE_REMOTE_PENDING)
         {
@@ -2314,83 +2171,12 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube *iface,
 
 #if 0
   /* TODO: add a property "muc" and set it at initialization */
-  if (priv->handle_type == TP_HANDLE_TYPE_ROOM)
+  if (cls->target_handle_type == TP_HANDLE_TYPE_ROOM)
     salut_muc_channel_send_presence (self->muc, NULL);
 #endif
 
   tp_svc_channel_type_stream_tube_return_from_accept (context,
       priv->address);
-}
-
-/**
- * salut_tube_stream_close_async:
- *
- * Implements D-Bus method Close
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_tube_stream_close_async (TpSvcChannel *iface,
-                               DBusGMethodInvocation *context)
-{
-  salut_tube_stream_close (SALUT_TUBE_IFACE (iface), FALSE);
-  tp_svc_channel_return_from_close (context);
-}
-
-/**
- * salut_tube_stream_get_channel_type
- *
- * Implements D-Bus method GetChannelType
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_tube_stream_get_channel_type (TpSvcChannel *iface,
-                                    DBusGMethodInvocation *context)
-{
-  tp_svc_channel_return_from_get_channel_type (context,
-      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
-}
-
-/**
- * salut_tube_stream_get_handle
- *
- * Implements D-Bus method GetHandle
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_tube_stream_get_handle (TpSvcChannel *iface,
-                              DBusGMethodInvocation *context)
-{
-  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  tp_svc_channel_return_from_get_handle (context, priv->handle_type,
-      priv->handle);
-}
-
-/**
- * salut_tube_stream_get_interfaces
- *
- * Implements D-Bus method GetInterfaces
- * on interface org.freedesktop.Telepathy.Channel
- */
-static void
-salut_tube_stream_get_interfaces (TpSvcChannel *iface,
-                                  DBusGMethodInvocation *context)
-{
-  SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
-  SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
-
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
-    {
-      /* omit the Group interface */
-      tp_svc_channel_return_from_get_interfaces (context,
-          salut_tube_stream_interfaces + 1);
-    }
-  else
-    {
-      tp_svc_channel_return_from_get_interfaces (context,
-          salut_tube_stream_interfaces);
-    }
 }
 
 static void
@@ -2442,13 +2228,14 @@ salut_tube_stream_offer (SalutTubeStream *self,
                          GError **error)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
 
   g_assert (priv->state == TP_TUBE_CHANNEL_STATE_NOT_OFFERED);
 
-  if (priv->handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
     {
       priv->state = TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
-      salut_tubes_channel_send_iq_offer (priv->tubes_channel);
 
       tp_svc_channel_interface_tube_emit_tube_channel_state_changed (
           self, TP_TUBE_CHANNEL_STATE_REMOTE_PENDING);
@@ -2497,20 +2284,5 @@ streamtube_iface_init (gpointer g_iface,
     klass, salut_tube_stream_##x##suffix)
   IMPLEMENT(offer,_async);
   IMPLEMENT(accept,_async);
-#undef IMPLEMENT
-}
-
-static void
-channel_iface_init (gpointer g_iface,
-                    gpointer iface_data)
-{
-  TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
-
-#define IMPLEMENT(x, suffix) tp_svc_channel_implement_##x (\
-    klass, salut_tube_stream_##x##suffix)
-  IMPLEMENT(close,_async);
-  IMPLEMENT(get_channel_type,);
-  IMPLEMENT(get_handle,);
-  IMPLEMENT(get_interfaces,);
 #undef IMPLEMENT
 }

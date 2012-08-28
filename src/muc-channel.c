@@ -42,6 +42,7 @@
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/util.h>
 
+#include <gibber/gibber-bytestream-muc.h>
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-transport.h>
 
@@ -53,6 +54,7 @@
 
 #include "text-helper.h"
 #include "tube-stream.h"
+#include "tube-dbus.h"
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
@@ -74,6 +76,7 @@ enum
 {
     READY,
     JOIN_ERROR,
+    NEW_TUBE,
     LAST_SIGNAL
 };
 
@@ -99,7 +102,10 @@ struct _SalutMucChannelPrivate
   guint timeout;
   /* (gchar *) -> (SalutContact *) */
   GHashTable *senders;
-  SalutMucManager *muc_manager;
+
+  gboolean autoclose;
+
+  GHashTable *tubes;
 };
 
 /* Callback functions */
@@ -122,6 +128,16 @@ static void salut_muc_channel_send (GObject *channel,
                                     TpMessageSendingFlags flags);
 static void salut_muc_channel_close (TpBaseChannel *base);
 
+static void update_tube_info (SalutMucChannel *self);
+static SalutTubeIface * create_new_tube (SalutMucChannel *self,
+    TpTubeType type,
+    TpHandle initiator,
+    const gchar *service,
+    GHashTable *parameters,
+    guint64 tube_id,
+    guint portnum,
+    WockyStanza *iq_req,
+    gboolean requested);
 
 static void
 salut_muc_channel_get_property (GObject    *object,
@@ -290,14 +306,6 @@ salut_muc_channel_constructed (GObject *obj)
   g_signal_connect (priv->muc_connection, "connected",
       G_CALLBACK (muc_connection_connected_cb), obj);
 
-  g_object_get (base_conn,
-      "muc-manager", &(priv->muc_manager),
-      NULL);
-  g_assert (priv->muc_manager != NULL);
-
-  /* no need to keep a ref on the muc manager as it keeps a ref on us */
-  g_object_unref (priv->muc_manager);
-
   tp_group_mixin_init (obj, G_STRUCT_OFFSET(SalutMucChannel, group),
       contact_repo, base_conn->self_handle);
 
@@ -306,6 +314,9 @@ salut_muc_channel_constructed (GObject *obj)
       TP_CHANNEL_GROUP_FLAG_CAN_ADD |
       TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD,
       0);
+
+  priv->tubes = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) g_object_unref);
 }
 
 static void
@@ -693,6 +704,17 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
         g_cclosure_marshal_VOID__POINTER,
         G_TYPE_NONE, 1, G_TYPE_POINTER);
 
+  signals[NEW_TUBE] = g_signal_new (
+      "new-tube",
+      G_OBJECT_CLASS_TYPE (salut_muc_channel_class),
+      G_SIGNAL_RUN_LAST,
+      0,
+      NULL, NULL,
+      g_cclosure_marshal_VOID__OBJECT,
+      /* this should be SALUT_TYPE_TUBE_IFACE but GObject
+       * wants a value type, not an interface. */
+      G_TYPE_NONE, 1, TP_TYPE_BASE_CHANNEL);
+
   tp_group_mixin_class_init (object_class,
       G_STRUCT_OFFSET(SalutMucChannelClass, group_class),
       salut_muc_channel_add_member, NULL);
@@ -716,6 +738,8 @@ salut_muc_channel_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  priv->connected = FALSE;
+
   g_signal_handlers_disconnect_matched (priv->muc_connection,
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, self);
 
@@ -736,6 +760,8 @@ salut_muc_channel_dispose (GObject *object)
       g_hash_table_unref (priv->senders);
       priv->senders = NULL;
     }
+
+  tp_clear_pointer (&priv->tubes, g_hash_table_unref);
 
   /* release any references held by the object here */
   if (G_OBJECT_CLASS (salut_muc_channel_parent_class)->dispose)
@@ -915,6 +941,290 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
   tp_intset_destroy (empty);
 }
 
+/* tube_node is a MUC <message> */
+static gboolean
+extract_tube_information (SalutMucChannel *self,
+                          WockyNode *tube_node,
+                          TpTubeType *type,
+                          TpHandle *initiator_handle,
+                          const gchar **service,
+                          GHashTable **parameters,
+                          guint *tube_id)
+{
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_CONTACT);
+
+  if (type != NULL)
+    {
+      const gchar *_type;
+
+      _type = wocky_node_get_attribute (tube_node, "type");
+
+
+      if (!tp_strdiff (_type, "stream"))
+        {
+          *type = TP_TUBE_TYPE_STREAM;
+        }
+      else if (!tp_strdiff (_type, "dbus"))
+        {
+          *type = TP_TUBE_TYPE_DBUS;
+        }
+      else
+        {
+          DEBUG ("Unknown tube type: %s", _type);
+          return FALSE;
+        }
+    }
+
+  if (initiator_handle != NULL)
+    {
+      const gchar *initiator;
+
+      initiator = wocky_node_get_attribute (tube_node, "initiator");
+
+      if (initiator != NULL)
+        {
+          *initiator_handle = tp_handle_ensure (contact_repo, initiator, NULL,
+              NULL);
+
+          if (*initiator_handle == 0)
+            {
+              DEBUG ("invalid initiator ID %s", initiator);
+              return FALSE;
+            }
+        }
+      else
+        {
+          *initiator_handle = 0;
+        }
+    }
+
+  if (service != NULL)
+    {
+      *service = wocky_node_get_attribute (tube_node, "service");
+    }
+
+  if (parameters != NULL)
+    {
+      WockyNode *node;
+
+      node = wocky_node_get_child (tube_node, "parameters");
+      *parameters = salut_wocky_node_extract_properties (node,
+          "parameter");
+    }
+
+  if (tube_id != NULL)
+    {
+      const gchar *str;
+      gchar *endptr;
+      long int tmp;
+
+      str = wocky_node_get_attribute (tube_node, "id");
+      if (str == NULL)
+        {
+          DEBUG ("no tube id in SI request");
+          return FALSE;
+        }
+
+      tmp = strtol (str, &endptr, 10);
+      if (!endptr || *endptr)
+        {
+          DEBUG ("tube id is not numeric: %s", str);
+          return FALSE;
+        }
+      *tube_id = (int) tmp;
+    }
+
+  return TRUE;
+}
+
+static void
+muc_channel_handle_tubes (SalutMucChannel *self,
+    TpHandle contact,
+    WockyStanza *stanza)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  TpHandleRepoIface *contact_repo =
+      tp_base_connection_get_handles (base_conn,
+          TP_HANDLE_TYPE_CONTACT);
+  const gchar *sender;
+  WockyStanzaType stanza_type;
+  WockyStanzaSubType sub_type;
+  GHashTable *old_dbus_tubes;
+  GHashTableIter iter;
+  gpointer key, value;
+  GSList *l;
+  WockyNode *tubes_node;
+
+  if (contact == TP_GROUP_MIXIN (self)->self_handle)
+    /* we don't need to inspect our own tubes */
+    return;
+
+  sender = tp_handle_inspect (contact_repo, contact);
+
+  wocky_stanza_get_type_info (stanza, &stanza_type, &sub_type);
+  if (stanza_type != WOCKY_STANZA_TYPE_MESSAGE
+      || sub_type != WOCKY_STANZA_SUB_TYPE_GROUPCHAT)
+    return;
+
+  tubes_node = wocky_node_get_child_ns (
+      wocky_stanza_get_top_node (stanza), "tubes",
+      WOCKY_TELEPATHY_NS_TUBES);
+  g_assert (tubes_node != NULL);
+
+  /* fill old_dbus_tubes with D-Bus tubes previously announced by the
+   * contact */
+  old_dbus_tubes = g_hash_table_new (NULL, NULL);
+  g_hash_table_iter_init (&iter, priv->tubes);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      guint tube_id = GPOINTER_TO_UINT (key);
+      SalutTubeIface *tube = value;
+      TpTubeType type;
+
+      g_object_get (tube,
+          "type", &type,
+          NULL);
+
+      if (type != TP_TUBE_TYPE_DBUS)
+        return;
+
+      if (salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
+              contact))
+        {
+          g_hash_table_insert (old_dbus_tubes, GUINT_TO_POINTER (tube_id), tube);
+        }
+    }
+
+  for (l = tubes_node->children; l != NULL; l = l->next)
+    {
+      WockyNode *tube_node = (WockyNode *) l->data;
+      const gchar *stream_id;
+      SalutTubeIface *tube;
+      guint tube_id;
+      TpTubeType type;
+      GibberBytestreamIface *bytestream;
+
+      stream_id = wocky_node_get_attribute (tube_node, "stream-id");
+
+      if (!extract_tube_information (self, tube_node, NULL,
+              NULL, NULL, NULL, &tube_id))
+        continue;
+
+      tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+
+      if (tube == NULL)
+        {
+          /* a new tube */
+          const gchar *service;
+          TpHandle initiator_handle;
+          GHashTable *parameters;
+          guint id;
+
+          if (extract_tube_information (self, tube_node, &type,
+                  &initiator_handle, &service, &parameters, &id))
+            {
+              switch (type)
+                {
+                case TP_TUBE_TYPE_DBUS:
+                  {
+                    if (initiator_handle == 0)
+                      {
+                        DEBUG ("D-Bus tube initiator missing");
+                        continue;
+                      }
+                  }
+                  break;
+                case TP_TUBE_TYPE_STREAM:
+                  initiator_handle = contact;
+                  break;
+                default:
+                  g_assert_not_reached ();
+                }
+
+              tube = create_new_tube (self, type, initiator_handle, service, parameters,
+                  id, 0, NULL, FALSE);
+
+              g_signal_emit (self, signals[NEW_TUBE], 0, tube);
+
+              g_hash_table_unref (parameters);
+            }
+        }
+      else
+        {
+          /* the contact is in the tube.
+           * remove it from old_dbus_tubes if needed. */
+          g_hash_table_remove (old_dbus_tubes, GUINT_TO_POINTER (tube_id));
+        }
+
+      if (tube == NULL)
+        continue;
+
+      g_object_get (tube,
+          "type", &type,
+          NULL);
+
+      if (type == TP_TUBE_TYPE_DBUS
+          && !salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
+              contact))
+        {
+          /* contact just joined the tube */
+          const gchar *new_name;
+
+          new_name = wocky_node_get_attribute (tube_node, "dbus-name");
+
+          if (new_name == NULL)
+            {
+              DEBUG ("Contact %u isn't announcing his or her D-Bus name", contact);
+              continue;
+            }
+
+          salut_tube_dbus_add_name (SALUT_TUBE_DBUS (tube), contact, new_name);
+
+          g_object_get (tube,
+              "bytestream", &bytestream,
+              NULL);
+          g_assert (bytestream != NULL);
+
+          if (GIBBER_IS_BYTESTREAM_MUC (bytestream))
+            {
+              guint16 tmp = (guint16) atoi (stream_id);
+
+              gibber_bytestream_muc_add_sender (
+                  GIBBER_BYTESTREAM_MUC (bytestream), sender, tmp);
+            }
+
+          g_object_unref (bytestream);
+        }
+    }
+
+  g_hash_table_iter_init (&iter, old_dbus_tubes);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      SalutTubeDBus *tube = SALUT_TUBE_DBUS (value);
+      GibberBytestreamIface *bytestream;
+
+      salut_tube_dbus_remove_name (tube, contact);
+
+      g_object_get (tube,
+          "bytestream", &bytestream,
+          NULL);
+      g_assert (bytestream != NULL);
+
+      if (GIBBER_IS_BYTESTREAM_MUC (bytestream) && sender != NULL)
+        {
+          gibber_bytestream_muc_remove_sender (
+              GIBBER_BYTESTREAM_MUC (bytestream), sender);
+        }
+
+      g_object_unref (bytestream);
+    }
+}
+
 static void
 salut_muc_channel_received_stanza (GibberMucConnection *conn,
                                    const gchar *sender,
@@ -951,6 +1261,16 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
       return;
     }
 
+  /* are we actually hidden? */
+  if (!tp_base_channel_is_registered (base_chan))
+    {
+      DEBUG ("making MUC channel reappear!");
+      tp_base_channel_reopened_with_requested (base_chan, FALSE, from_handle);
+    }
+
+  /* let's not autoclose now */
+  priv->autoclose = FALSE;
+
 #ifdef ENABLE_OLPC
   if (salut_connection_olpc_observe_muc_stanza (
           SALUT_CONNECTION (base_connection),
@@ -963,43 +1283,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
       WOCKY_TELEPATHY_NS_TUBES);
   if (tubes_node != NULL)
     {
-      SalutTubesChannel *tubes_chan;
-      GPtrArray *tubes;
-      guint i;
-      GHashTable *channels;
-      gboolean created;
-
-      tubes_chan = salut_muc_manager_ensure_tubes_channel (priv->muc_manager,
-          tp_base_channel_get_target_handle (base_chan), from_handle, &created);
-      g_assert (tubes_chan != NULL);
-
-      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-        NULL, NULL);
-
-      if (created)
-        {
-          g_hash_table_insert (channels, tubes_chan, NULL);
-        }
-
-      tubes = salut_tubes_channel_muc_message_received (tubes_chan, sender,
-          stanza);
-
-      for (i = 0; i < tubes->len; i++)
-        {
-          SalutTubeIface *tube;
-
-          tube = g_ptr_array_index (tubes, i);
-          g_hash_table_insert (channels, tube, NULL);
-        }
-
-      if (g_hash_table_size (channels) > 0)
-        {
-          tp_channel_manager_emit_new_channels (priv->muc_manager, channels);
-        }
-
-      g_object_unref (tubes_chan);
-      g_ptr_array_unref (tubes);
-      g_hash_table_unref (channels);
+      muc_channel_handle_tubes (self, from_handle, stanza);
     }
 
   if (!text_helper_parse_incoming_message (stanza, &from, &msgtype,
@@ -1037,6 +1321,8 @@ salut_muc_channel_new_senders (GibberMucConnection *connection,
       DEBUG ("Got new senders. Adding myself as member");
       salut_muc_channel_add_self_to_members (self);
     }
+
+  update_tube_info (self);
 }
 
 static void
@@ -1092,10 +1378,42 @@ salut_muc_channel_disconnected (GibberTransport *transport, gpointer user_data)
   tp_base_channel_destroyed (TP_BASE_CHANNEL (self));
 }
 
+gboolean
+salut_muc_channel_can_be_closed (SalutMucChannel *self)
+{
+  if (self->priv->tubes == NULL)
+    return TRUE;
+
+  return (g_hash_table_size (self->priv->tubes) == 0);
+}
+
+gboolean
+salut_muc_channel_get_autoclose (SalutMucChannel *self)
+{
+  return self->priv->autoclose;
+}
+
+void
+salut_muc_channel_set_autoclose (SalutMucChannel *self,
+    gboolean autoclose)
+{
+  self->priv->autoclose = autoclose;
+}
+
 static void
 salut_muc_channel_close (TpBaseChannel *base)
 {
   SalutMucChannel *self = SALUT_MUC_CHANNEL (base);
+
+  /* if we have some tubes around then don't close yet and just
+   * disappear from the bus, faking having closed, otherwise
+   * cheerio! */
+  if (!salut_muc_channel_can_be_closed (self))
+    {
+      self->priv->autoclose = TRUE;
+      tp_base_channel_disappear (base);
+      return;
+    }
 
   salut_muc_channel_leave (self, TP_CHANNEL_GROUP_CHANGE_REASON_NONE, "");
 
@@ -1146,3 +1464,401 @@ error:
   return;
 }
 
+static void
+publish_tube_in_node (SalutMucChannel *self,
+    WockyNode *node,
+    SalutTubeIface *tube)
+{
+  TpBaseChannel *base = TP_BASE_CHANNEL (tube);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_CONTACT);
+  WockyNode *parameters_node;
+  GHashTable *parameters;
+  TpTubeType type;
+  gchar *service, *id_str;
+  guint64 tube_id;
+  TpHandle initiator_handle;
+
+  g_object_get (tube,
+      "type", &type,
+      "initiator-handle", &initiator_handle,
+      "service", &service,
+      "parameters", &parameters,
+      "id", &tube_id,
+      NULL);
+
+  id_str = g_strdup_printf ("%" G_GUINT64_FORMAT, tube_id);
+
+  wocky_node_set_attribute (node, "service", service);
+  wocky_node_set_attribute (node, "id", id_str);
+
+  g_free (id_str);
+
+  switch (type)
+    {
+      case TP_TUBE_TYPE_DBUS:
+        {
+          gchar *name, *stream_id;
+
+          g_object_get (G_OBJECT (tube),
+              "dbus-name", &name,
+              "stream-id", &stream_id,
+              NULL);
+
+          wocky_node_set_attribute (node, "type", "dbus");
+          wocky_node_set_attribute (node, "stream-id", stream_id);
+          wocky_node_set_attribute (node, "initiator",
+              tp_handle_inspect (contact_repo, initiator_handle));
+
+          if (name != NULL)
+            wocky_node_set_attribute (node, "dbus-name", name);
+
+          g_free (name);
+          g_free (stream_id);
+
+        }
+        break;
+      case TP_TUBE_TYPE_STREAM:
+        wocky_node_set_attribute (node, "type", "stream");
+        break;
+      default:
+        g_assert_not_reached ();
+    }
+
+  parameters_node = wocky_node_add_child (node, "parameters");
+  salut_wocky_node_add_children_from_properties (parameters_node,
+      parameters, "parameter");
+
+  g_free (service);
+  g_hash_table_unref (parameters);
+}
+
+static void
+update_tube_info (SalutMucChannel *self)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
+  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
+      base_conn, TP_HANDLE_TYPE_ROOM);
+  GHashTableIter iter;
+  gpointer value;
+  WockyStanza *msg;
+  WockyNode *msg_node;
+  WockyNode *node;
+  const gchar *jid;
+  GError *error = NULL;
+
+  if (priv->tubes == NULL)
+    return;
+
+  /* build the message */
+  jid = tp_handle_inspect (room_repo,
+      tp_base_channel_get_target_handle (base));
+
+  msg = wocky_stanza_build (WOCKY_STANZA_TYPE_MESSAGE,
+      WOCKY_STANZA_SUB_TYPE_GROUPCHAT,
+      conn->name, jid,
+      WOCKY_NODE_START, "tubes",
+        WOCKY_NODE_XMLNS, WOCKY_TELEPATHY_NS_TUBES,
+      WOCKY_NODE_END, NULL);
+  msg_node = wocky_stanza_get_top_node (msg);
+
+  node = wocky_node_get_child_ns (msg_node, "tubes",
+      WOCKY_TELEPATHY_NS_TUBES);
+
+  g_hash_table_iter_init (&iter, priv->tubes);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      TpTubeChannelState state;
+      TpTubeType type;
+      TpHandle initiator;
+      WockyNode *tube_node;
+
+      g_object_get (value,
+          "state", &state,
+          "type", &type,
+          "initiator-handle", &initiator,
+          NULL);
+
+      if (state != TP_TUBE_CHANNEL_STATE_OPEN)
+        continue;
+
+      if (type == TP_TUBE_TYPE_STREAM
+          && initiator != TP_GROUP_MIXIN (self)->self_handle)
+        /* We only announce stream tubes we initiated */
+        return;
+
+      tube_node = wocky_node_add_child (node, "tube");
+      publish_tube_in_node (self, tube_node, value);
+    }
+
+  /* Send it */
+  if (!gibber_muc_connection_send (priv->muc_connection, msg, &error))
+    {
+      g_warning ("%s: sending tubes info failed: %s", G_STRFUNC,
+          error->message);
+      g_error_free (error);
+    }
+
+  g_object_unref (msg);
+}
+
+static void
+tube_opened_cb (SalutTubeIface *tube,
+    SalutMucChannel *self)
+{
+  if (SALUT_IS_TUBE_DBUS (tube))
+    {
+      gchar *dbus_name;
+
+      g_object_get (tube,
+          "dbus-name", &dbus_name,
+          NULL);
+
+      salut_tube_dbus_add_name (SALUT_TUBE_DBUS (tube),
+          TP_GROUP_MIXIN (self)->self_handle, dbus_name);
+
+      g_free (dbus_name);
+    }
+
+  update_tube_info (self);
+}
+
+static void
+tube_offered_cb (SalutTubeIface *tube,
+    SalutMucChannel *self)
+{
+  update_tube_info (self);
+}
+
+static void
+tube_closed_cb (SalutTubeIface *tube,
+    SalutMucChannel *self)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  guint64 id;
+
+  g_object_get (tube,
+      "id", &id,
+      NULL);
+
+  update_tube_info (self);
+
+  if (priv->tubes != NULL)
+    g_hash_table_remove (priv->tubes, GUINT_TO_POINTER (id));
+}
+
+static guint
+generate_tube_id (SalutMucChannel *self)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  guint out;
+
+  /* probably totally overkill */
+  do
+    {
+      out = g_random_int_range (1, G_MAXINT32);
+    }
+  while (g_hash_table_lookup (priv->tubes,
+          GUINT_TO_POINTER (out)) != NULL);
+
+  return out;
+}
+
+static SalutTubeIface *
+create_new_tube (SalutMucChannel *self,
+    TpTubeType type,
+    TpHandle initiator,
+    const gchar *service,
+    GHashTable *parameters,
+    guint64 tube_id,
+    guint portnum,
+    WockyStanza *iq_req,
+    gboolean requested)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  TpBaseChannel *base = TP_BASE_CHANNEL (self);
+  TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
+  SalutConnection *conn = SALUT_CONNECTION (base_conn);
+  TpHandle self_handle = TP_GROUP_MIXIN (self)->self_handle;
+  TpHandle handle = tp_base_channel_get_target_handle (base);
+  SalutTubeIface *tube;
+
+  switch (type)
+    {
+    case TP_TUBE_TYPE_DBUS:
+      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (conn,
+              handle, TP_HANDLE_TYPE_ROOM, self_handle, priv->muc_connection,
+              initiator, service, parameters, tube_id, requested));
+      break;
+    case TP_TUBE_TYPE_STREAM:
+      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (conn,
+              handle, TP_HANDLE_TYPE_ROOM,
+              self_handle, initiator, FALSE, service,
+              parameters, tube_id, portnum, iq_req, requested));
+      break;
+    default:
+      g_return_val_if_reached (NULL);
+    }
+
+  tp_base_channel_register ((TpBaseChannel *) tube);
+
+  DEBUG ("create tube %" G_GUINT64_FORMAT, tube_id);
+  g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id), tube);
+
+  g_signal_connect (tube, "tube-opened", G_CALLBACK (tube_opened_cb), self);
+  g_signal_connect (tube, "tube-offered", G_CALLBACK (tube_offered_cb), self);
+  g_signal_connect (tube, "closed", G_CALLBACK (tube_closed_cb), self);
+
+  return tube;
+}
+
+SalutTubeIface *
+salut_muc_channel_tube_request (SalutMucChannel *self,
+    GHashTable *request_properties)
+{
+  SalutTubeIface *tube;
+  const gchar *channel_type;
+  const gchar *service;
+  GHashTable *parameters = NULL;
+  guint64 tube_id;
+  TpTubeType type;
+
+  tube_id = generate_tube_id (self);
+
+  channel_type = tp_asv_get_string (request_properties,
+      TP_PROP_CHANNEL_CHANNEL_TYPE);
+
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      type = TP_TUBE_TYPE_STREAM;
+      service = tp_asv_get_string (request_properties,
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
+
+    }
+  else if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      type = TP_TUBE_TYPE_DBUS;
+      service = tp_asv_get_string (request_properties,
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
+    }
+  else
+    /* This assertion is safe: this function's caller only calls it in one of
+     * the above cases.
+     * FIXME: but it would be better to pass an enum member or something maybe.
+     */
+    g_assert_not_reached ();
+
+  /* requested tubes have an empty parameters dict */
+  parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+  /* if the service property is missing, the requestotron rejects the request
+   */
+  g_assert (service != NULL);
+
+  DEBUG ("Request a tube channel with type='%s' and service='%s'",
+      channel_type, service);
+
+  tube = create_new_tube (self, type, TP_GROUP_MIXIN (self)->self_handle,
+      service, parameters, tube_id, 0, NULL, TRUE);
+  g_hash_table_unref (parameters);
+
+  return tube;
+}
+
+void
+salut_muc_channel_foreach (SalutMucChannel *self,
+    TpExportableChannelFunc func,
+    gpointer user_data)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  GHashTableIter iter;
+  gpointer value;
+
+  g_hash_table_iter_init (&iter, priv->tubes);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      func (TP_EXPORTABLE_CHANNEL (value), user_data);
+    }
+}
+
+void
+salut_muc_channel_bytestream_offered (SalutMucChannel *self,
+    GibberBytestreamIface *bytestream,
+    WockyStanza *msg)
+{
+  SalutMucChannelPrivate *priv = self->priv;
+  WockyNode *node = wocky_stanza_get_top_node (msg);
+  const gchar *stream_id, *tmp;
+  WockyNode *si_node, *stream_node;
+  guint64 tube_id;
+  SalutTubeIface *tube;
+  WockyStanzaType type;
+  WockyStanzaSubType sub_type;
+
+  /* Caller is expected to have checked that we have a stream or muc-stream
+   * node with a stream ID and the TUBES profile
+   */
+  wocky_stanza_get_type_info (msg, &type, &sub_type);
+  g_return_if_fail (type == WOCKY_STANZA_TYPE_IQ);
+  g_return_if_fail (sub_type == WOCKY_STANZA_SUB_TYPE_SET);
+
+  si_node = wocky_node_get_child_ns (node, "si",
+      WOCKY_XMPP_NS_SI);
+  g_return_if_fail (si_node != NULL);
+
+  stream_node = wocky_node_get_child_ns (si_node,
+      "muc-stream", WOCKY_TELEPATHY_NS_TUBES);
+  g_return_if_fail (stream_node != NULL);
+
+  stream_id = wocky_node_get_attribute (si_node, "id");
+  g_return_if_fail (stream_id != NULL);
+
+  tmp = wocky_node_get_attribute (stream_node, "tube");
+  if (tmp == NULL)
+    {
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<muc-stream> has no tube attribute" };
+
+      DEBUG ("%s", e.message);
+      gibber_bytestream_iface_close (bytestream, &e);
+      return;
+    }
+  tube_id = g_ascii_strtoull (tmp, NULL, 10);
+  if (tube_id == 0 || tube_id > G_MAXUINT32)
+    {
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<muc-stream> tube attribute is non-numeric or out of range" };
+
+      DEBUG ("tube id is non-numeric or out of range: %s", tmp);
+      gibber_bytestream_iface_close (bytestream, &e);
+      return;
+    }
+
+  tube = g_hash_table_lookup (priv->tubes, GUINT_TO_POINTER (tube_id));
+  if (tube == NULL)
+    {
+      GError e = { WOCKY_XMPP_ERROR, WOCKY_XMPP_ERROR_BAD_REQUEST,
+          "<muc-stream> tube attribute points to a nonexistent "
+          "tube" };
+
+      DEBUG ("tube %" G_GUINT64_FORMAT " doesn't exist", tube_id);
+      gibber_bytestream_iface_close (bytestream, &e);
+      return;
+    }
+
+  DEBUG ("received new bytestream request for existing tube: %" G_GUINT64_FORMAT,
+      tube_id);
+
+  salut_tube_iface_add_bytestream (tube, bytestream);
+}
+
+gboolean
+salut_muc_channel_is_ready (SalutMucChannel *self)
+{
+  return self->priv->connected;
+}

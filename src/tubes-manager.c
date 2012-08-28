@@ -43,26 +43,28 @@
 #include "extensions/extensions.h"
 #include "connection.h"
 #include "capabilities.h"
-#include "tubes-channel.h"
 #include "muc-manager.h"
 #include "muc-channel.h"
 #include "self.h"
 #include "util.h"
 #include "tube-iface.h"
+#include "tube-dbus.h"
 #include "tube-stream.h"
 
-
-static SalutTubesChannel *new_tubes_channel (SalutTubesManager *fac,
-    TpHandle handle, TpHandle initiator, gpointer request_token,
-    gboolean requested, GError **error);
-
-static void tubes_channel_closed_cb (SalutTubesChannel *chan,
-    gpointer user_data);
 
 static void salut_tubes_manager_iface_init (gpointer g_iface,
     gpointer iface_data);
 static void gabble_caps_channel_manager_iface_init (
     GabbleCapsChannelManagerIface *);
+
+static SalutTubeIface * create_new_tube (SalutTubesManager *self,
+    TpTubeType type,
+    TpHandle handle,
+    const gchar *service,
+    GHashTable *parameters,
+    guint64 tube_id,
+    guint portnum,
+    WockyStanza *iq_req);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubesManager,
     salut_tubes_manager,
@@ -89,7 +91,8 @@ struct _SalutTubesManagerPrivate
   guint iq_tube_handler_id;
   SalutContactManager *contact_manager;
 
-  GHashTable *tubes_channels;
+  /* guint tube ID => (owned) (SalutTubeIface *) */
+  GHashTable *tubes;
 
   gboolean dispose_has_run;
 };
@@ -105,8 +108,8 @@ salut_tubes_manager_init (SalutTubesManager *self)
 
   self->priv = priv;
 
-  priv->tubes_channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-      NULL, g_object_unref);
+  priv->tubes = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      NULL, (GDestroyNotify) g_object_unref);
 
   priv->conn = NULL;
   priv->dispose_has_run = FALSE;
@@ -122,7 +125,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
                           TpHandle *initiator_handle,
                           const gchar **service,
                           GHashTable **parameters,
-                          guint *tube_id,
+                          guint64 *tube_id,
                           guint *portnum,
                           GError **error)
 {
@@ -188,8 +191,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
   if (tube_id != NULL)
     {
       const gchar *str;
-      gchar *endptr;
-      long int tmp;
+      guint64 tmp;
 
       str = wocky_node_get_attribute (node, "id");
       if (str == NULL)
@@ -199,14 +201,14 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
           return FALSE;
         }
 
-      tmp = strtol (str, &endptr, 10);
-      if (!endptr || *endptr)
+      tmp = g_ascii_strtoull (str, NULL, 10);
+      if (tmp == 0 || tmp > G_MAXUINT32)
         {
           g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
-              "tube id is not numeric: %s", str);
+              "tube id is non-numeric or out of range: %s", str);
           return FALSE;
         }
-      *tube_id = (int) tmp;
+      *tube_id = tmp;
     }
 
   /* next fields are not in the close stanza */
@@ -295,12 +297,12 @@ iq_tube_request_cb (WockyPorter *porter,
   TpTubeType tube_type;
   TpHandle initiator_handle;
   GHashTable *parameters;
-  guint tube_id;
+  guint64 tube_id;
   guint portnum = 0;
   gboolean close_;
   GError *error = NULL;
 
-  SalutTubesChannel *chan;
+  SalutTubeIface *chan;
 
   /* after this point, the message is for us, so in all cases we either handle
    * it or send an error reply */
@@ -323,72 +325,33 @@ iq_tube_request_cb (WockyPorter *porter,
       return TRUE;
     }
 
-  DEBUG ("received a tube request, tube id %d", tube_id);
+  DEBUG ("received a tube request, tube id %" G_GUINT64_FORMAT, tube_id);
 
-  chan = g_hash_table_lookup (priv->tubes_channels,
-      GUINT_TO_POINTER (initiator_handle));
+  chan = g_hash_table_lookup (priv->tubes,
+      GUINT_TO_POINTER (tube_id));
+
   if (close_)
   {
     if (chan != NULL)
       {
-        salut_tubes_channel_message_close_received (chan, initiator_handle,
-            tube_id);
+        DEBUG ("received a tube close message");
+        salut_tube_iface_close (chan, TRUE);
       }
   }
   else
   {
-    SalutTubeIface *tube;
-    GHashTable *channels;
-    gboolean tubes_channel_created = FALSE;
-
     if (chan == NULL)
       {
-        GError *e = NULL;
-
-        chan = new_tubes_channel (self, initiator_handle, initiator_handle,
-            NULL, FALSE, &e);
-
-        if (chan == NULL)
-          {
-            DEBUG ("couldn't make new tubes channel: %s", e->message);
-            g_error_free (e);
-            g_hash_table_unref (parameters);
-            return TRUE;
-          }
-
-        tubes_channel_created = TRUE;
+        /* create new tube here */
+        chan = create_new_tube (self, tube_type,
+            initiator_handle, service, parameters, tube_id, portnum, stanza);
       }
 
-    tube = salut_tubes_channel_message_received (chan, service, tube_type,
-        initiator_handle, parameters, tube_id, portnum, stanza);
-
-    if (tube == NULL)
-      {
-        if (tubes_channel_created)
-          {
-            /* Destroy the tubes channel we just created as it's now
-             * useless */
-            g_hash_table_remove (priv->tubes_channels, GUINT_TO_POINTER (
-                  initiator_handle));
-          }
-
-        g_hash_table_unref (parameters);
-        return TRUE;
-      }
-
-    /* announce tubes and tube channels */
-    channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-        NULL, NULL);
-
-    if (tubes_channel_created)
-      g_hash_table_insert (channels, chan, NULL);
-
-    g_hash_table_insert (channels, tube, NULL);
-
-    tp_channel_manager_emit_new_channels (self, channels);
+    /* announce tube channel */
+    tp_channel_manager_emit_new_channel (self,
+        TP_EXPORTABLE_CHANNEL (chan), NULL);
 
     g_hash_table_unref (parameters);
-    g_hash_table_unref (channels);
   }
 
   return TRUE;
@@ -408,14 +371,7 @@ salut_tubes_manager_close_all (SalutTubesManager *self)
       priv->status_changed_id = 0;
     }
 
-  if (priv->tubes_channels != NULL)
-    {
-      GHashTable *tmp;
-
-      tmp = priv->tubes_channels;
-      priv->tubes_channels = NULL;
-      g_hash_table_unref (tmp);
-    }
+  tp_clear_pointer (&priv->tubes, g_hash_table_unref);
 }
 
 static void
@@ -581,93 +537,6 @@ salut_tubes_manager_class_init (
 }
 
 
-/**
- * tubes_channel_closed_cb:
- *
- * Signal callback for when a Tubes channel is closed. Removes the references
- * that TubesManager holds to them.
- */
-static void
-tubes_channel_closed_cb (SalutTubesChannel *chan,
-                         gpointer user_data)
-{
-  SalutTubesManager *conn = SALUT_TUBES_MANAGER (user_data);
-  SalutTubesManagerPrivate *priv =
-    SALUT_TUBES_MANAGER_GET_PRIVATE (conn);
-  TpHandle contact_handle;
-
-  if (priv->tubes_channels == NULL)
-    return;
-
-  g_object_get (chan, "handle", &contact_handle, NULL);
-
-  DEBUG ("removing tubes channel with handle %d", contact_handle);
-
-  g_hash_table_remove (priv->tubes_channels, GUINT_TO_POINTER (contact_handle));
-}
-
-/**
- * new_tubes_channel
- *
- * Creates the SalutTubes object associated with the given parameters
- */
-static SalutTubesChannel *
-new_tubes_channel (SalutTubesManager *fac,
-                   TpHandle handle,
-                   TpHandle initiator,
-                   gpointer request_token,
-                   gboolean requested,
-                   GError **error)
-{
-  SalutTubesManagerPrivate *priv;
-  TpBaseConnection *conn;
-  SalutTubesChannel *chan;
-  char *object_path;
-  SalutContact *contact;
-
-  g_assert (SALUT_IS_TUBES_MANAGER (fac));
-
-  priv = SALUT_TUBES_MANAGER_GET_PRIVATE (fac);
-  conn = (TpBaseConnection *) priv->conn;
-
-  contact = salut_contact_manager_get_contact (priv->contact_manager, handle);
-
-  if (contact == NULL)
-    {
-      TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
-      TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          base_conn, TP_HANDLE_TYPE_CONTACT);
-
-      g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
-          "%s is not online", tp_handle_inspect (contact_repo, handle));
-      return NULL;
-    }
-
-  object_path = g_strdup_printf ("%s/TubesChannel%u", conn->object_path,
-      handle);
-
-  chan = g_object_new (SALUT_TYPE_TUBES_CHANNEL,
-                       "connection", priv->conn,
-                       "object-path", object_path,
-                       "handle", handle,
-                       "handle-type", TP_HANDLE_TYPE_CONTACT,
-                       "contact", contact,
-                       "initiator-handle", initiator,
-                       "requested", requested,
-                       NULL);
-
-  DEBUG ("object path %s", object_path);
-
-  g_signal_connect (chan, "closed", G_CALLBACK (tubes_channel_closed_cb), fac);
-
-  g_hash_table_insert (priv->tubes_channels, GUINT_TO_POINTER (handle), chan);
-
-  g_object_unref (contact);
-  g_free (object_path);
-
-  return chan;
-}
-
 static void
 salut_tubes_manager_foreach_channel (TpChannelManager *manager,
                                      TpExportableChannelFunc foreach,
@@ -679,29 +548,16 @@ salut_tubes_manager_foreach_channel (TpChannelManager *manager,
   GHashTableIter iter;
   gpointer value;
 
-  g_hash_table_iter_init (&iter, priv->tubes_channels);
+  g_hash_table_iter_init (&iter, priv->tubes);
   while (g_hash_table_iter_next (&iter, NULL, &value))
-  {
-    TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
-
-    /* Add channels of type Channel.Type.Tubes */
-    foreach (chan, user_data);
-
-    /* Add channels of type Channel.Type.{Stream|DBus}Tube which live in the
-     * SalutTubesChannel object */
-    salut_tubes_channel_foreach (SALUT_TUBES_CHANNEL (chan), foreach,
-        user_data);
-  }
+    {
+      foreach (TP_EXPORTABLE_CHANNEL (value), user_data);
+    }
 }
 
 static const gchar * const tubes_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
     TP_IFACE_CHANNEL ".TargetHandleType",
-    NULL
-};
-
-static const gchar * const old_tubes_channel_allowed_properties[] = {
-    TP_IFACE_CHANNEL ".TargetHandle",
     NULL
 };
 
@@ -729,24 +585,6 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
 {
   GHashTable *table;
   GValue *value;
-
-  /* 1-1 Channel.Type.Tubes */
-  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-      (GDestroyNotify) tp_g_value_slice_free);
-
-  value = tp_g_value_slice_new (G_TYPE_STRING);
-  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TUBES);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
-      value);
-
-  value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
-      value);
-
-  func (type, table, old_tubes_channel_allowed_properties, user_data);
-
-  g_hash_table_unref (table);
 
   /* 1-1 Channel.Type.StreamTube */
   table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
@@ -789,6 +627,179 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
 #endif
 }
 
+static SalutTubeIface *
+salut_tubes_manager_lookup (SalutTubesManager *self,
+    const gchar *type,
+    TpHandle handle,
+    const gchar *service)
+{
+  SalutTubesManagerPrivate *priv =
+    SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  GHashTableIter iter;
+  gpointer value;
+
+  g_hash_table_iter_init (&iter, priv->tubes);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      SalutTubeIface *tube = value;
+      gboolean match = FALSE;
+
+      gchar *channel_type, *channel_service;
+      TpHandle channel_handle;
+
+      g_object_get (tube,
+          "channel-type", &channel_type,
+          "handle", &channel_handle,
+          "service", &channel_service,
+          NULL);
+
+      if (!tp_strdiff (type, channel_type)
+          && handle == channel_handle
+          && !tp_strdiff (service, channel_service))
+        match = TRUE;
+
+      g_free (channel_type);
+      g_free (channel_service);
+
+      if (match)
+        return tube;
+    }
+
+  return NULL;
+}
+
+static void
+channel_closed_cb (SalutTubeIface *tube,
+    SalutTubesManager *self)
+{
+  SalutTubesManagerPrivate *priv =
+    SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  guint id;
+
+  g_object_get (tube,
+      "id", &id,
+      NULL);
+
+  tp_channel_manager_emit_channel_closed_for_object (self,
+      TP_EXPORTABLE_CHANNEL (tube));
+
+  if (priv->tubes != NULL)
+    g_hash_table_remove (priv->tubes, GUINT_TO_POINTER (id));
+}
+
+static guint64
+generate_tube_id (SalutTubesManager *self)
+{
+  SalutTubesManagerPrivate *priv =
+    SALUT_TUBES_MANAGER_GET_PRIVATE (self);
+  guint64 out;
+
+  /* probably totally overkill */
+  do
+    {
+      out = g_random_int_range (1, G_MAXINT32);
+    }
+  while (g_hash_table_lookup (priv->tubes,
+          GUINT_TO_POINTER (out)) != NULL);
+
+  return out;
+}
+
+static SalutTubeIface *
+create_new_tube (SalutTubesManager *self,
+    TpTubeType type,
+    TpHandle handle,
+    const gchar *service,
+    GHashTable *parameters,
+    guint64 tube_id,
+    guint portnum,
+    WockyStanza *iq_req)
+{
+  SalutTubesManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+      SALUT_TYPE_TUBES_MANAGER, SalutTubesManagerPrivate);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+  SalutTubeIface *tube;
+
+  if (type == TP_TUBE_TYPE_STREAM)
+    {
+      tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
+              handle, TP_HANDLE_TYPE_CONTACT,
+              base_conn->self_handle, base_conn->self_handle, FALSE, service,
+              parameters, tube_id, portnum, iq_req, TRUE));
+    }
+  else if (type == TP_TUBE_TYPE_DBUS)
+    {
+      tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
+              handle, TP_HANDLE_TYPE_CONTACT, base_conn->self_handle, NULL,
+              base_conn->self_handle, service, parameters, tube_id, TRUE));
+    }
+  else
+    {
+      g_return_val_if_reached (NULL);
+    }
+
+  tp_base_channel_register ((TpBaseChannel *) tube);
+
+  g_signal_connect (tube, "closed",
+      G_CALLBACK (channel_closed_cb), self);
+
+  g_hash_table_insert (priv->tubes, GUINT_TO_POINTER (tube_id),
+      tube);
+
+  return tube;
+}
+
+/* Returns: (transfer none): new tube channel. the channel manager
+ * holds the ref to this channel, so don't unref it! */
+static SalutTubeIface *
+new_channel_from_request (SalutTubesManager *self,
+    GHashTable *request)
+{
+  SalutTubeIface *tube;
+
+  TpTubeType type;
+  const gchar *ctype, *service;
+  TpHandle handle;
+  guint64 tube_id;
+  GHashTable *parameters;
+
+  ctype = tp_asv_get_string (request, TP_PROP_CHANNEL_CHANNEL_TYPE);
+  handle = tp_asv_get_uint32 (request, TP_PROP_CHANNEL_TARGET_HANDLE, NULL);
+
+  tube_id = generate_tube_id (self);
+
+  /* requested tubes have an empty parameters dict */
+  parameters = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+      (GDestroyNotify) tp_g_value_slice_free);
+
+
+  if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+    {
+      service = tp_asv_get_string (request,
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
+
+      type = TP_TUBE_TYPE_STREAM;
+    }
+  else if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+    {
+      service = tp_asv_get_string (request,
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
+
+      type = TP_TUBE_TYPE_DBUS;
+    }
+  else
+    {
+      g_return_val_if_reached (NULL);
+    }
+
+  tube = create_new_tube (self, type, handle, service,
+      parameters, tube_id, 0, NULL);
+
+  g_hash_table_unref (parameters);
+
+  return tube;
+}
+
 static gboolean
 salut_tubes_manager_requestotron (SalutTubesManager *self,
                                   gpointer request_token,
@@ -803,8 +814,9 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   TpHandle handle;
   GError *error = NULL;
   const gchar *channel_type;
-  SalutTubesChannel *tubes_channel;
   const gchar *service = NULL;
+  SalutTubeIface *new_channel;
+  GSList *tokens = NULL;
 
   if (tp_asv_get_uint32 (request_properties,
         TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
@@ -813,21 +825,13 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   channel_type = tp_asv_get_string (request_properties,
             TP_IFACE_CHANNEL ".ChannelType");
 
-  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
+  if (
   /* Temporarily disabled since the implementation is incomplete. */
   /*  tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE) && */
       tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     return FALSE;
 
-  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
-    {
-      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
-              tubes_channel_fixed_properties,
-              old_tubes_channel_allowed_properties,
-              &error))
-        goto error;
-    }
-  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
@@ -894,74 +898,38 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       goto error;
     }
 
-  tubes_channel = g_hash_table_lookup (priv->tubes_channels,
-      GUINT_TO_POINTER (handle));
+  new_channel = salut_tubes_manager_lookup (self, channel_type,
+      handle, service);
 
-  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES))
+  if (new_channel == NULL)
     {
-      if (tubes_channel == NULL)
-        {
-          GSList *tokens = NULL;
-
-          tubes_channel = new_tubes_channel (self, handle,
-              base_conn->self_handle, request_token, TRUE, &error);
-
-          if (tubes_channel == NULL)
-            goto error;
-
-          tokens = g_slist_prepend (tokens, request_token);
-
-          tp_channel_manager_emit_new_channel (self,
-              TP_EXPORTABLE_CHANNEL (tubes_channel), tokens);
-
-          g_slist_free (tokens);
-          return TRUE;
-        }
-
-      if (require_new)
-        {
-          g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
-              "A tube channel with contact #%u already exists", handle);
-          DEBUG ("A tube channel with contact #%u already exists", handle);
-          goto error;
-        }
-
-      tp_channel_manager_emit_request_already_satisfied (self,
-          request_token, TP_EXPORTABLE_CHANNEL (tubes_channel));
-      return TRUE;
-    }
-  else
-    {
-      SalutTubeIface *new_channel;
-      GSList *tokens = NULL;
-      GHashTable *channels;
-
-      if (tubes_channel == NULL)
-        {
-          tubes_channel = new_tubes_channel (self, handle,
-              base_conn->self_handle, NULL, FALSE, &error);
-          if (tubes_channel == NULL)
-            goto error;
-        }
-
-      new_channel = salut_tubes_channel_tube_request (tubes_channel,
-          request_token, request_properties, require_new);
+      new_channel = new_channel_from_request (self,
+          request_properties);
       g_assert (new_channel != NULL);
 
       if (request_token != NULL)
         tokens = g_slist_prepend (NULL, request_token);
 
-      channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-          NULL, NULL);
-      g_hash_table_insert (channels, tubes_channel, NULL);
-      g_hash_table_insert (channels, new_channel, tokens);
+      tp_channel_manager_emit_new_channel (self,
+          TP_EXPORTABLE_CHANNEL (new_channel), tokens);
 
-      tp_channel_manager_emit_new_channels (self, channels);
-
-      g_hash_table_unref (channels);
       g_slist_free (tokens);
-      return TRUE;
     }
+  else
+    {
+      if (require_new)
+        {
+          g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+              "A channel to #%u (service: %s) is already open",
+              handle, service);
+          goto error;
+        }
+
+      tp_channel_manager_emit_request_already_satisfied (self,
+          request_token, TP_EXPORTABLE_CHANNEL (new_channel));
+    }
+
+  return TRUE;
 
 error:
   tp_channel_manager_emit_request_failed (self, request_token,
@@ -1215,8 +1183,7 @@ gabble_private_tubes_factory_add_cap (GabbleCapsChannelManager *manager,
             TP_IFACE_CHANNEL ".ChannelType");
 
   /* this channel is not for this factory */
-  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TUBES) &&
-      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
+  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
       tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     return;
 

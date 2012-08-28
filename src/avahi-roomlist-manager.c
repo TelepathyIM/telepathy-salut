@@ -33,7 +33,6 @@
 #include <gibber/gibber-muc-connection.h>
 
 #include "contact-manager.h"
-#include "tubes-channel.h"
 #include "roomlist-channel.h"
 
 #include <telepathy-glib/channel-factory-iface.h>

@@ -22,11 +22,11 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-channel.h>
 #include <telepathy-glib/enums.h>
 #include <telepathy-glib/interfaces.h>
 
 #include "connection.h"
-#include "tubes-channel.h"
 #include <gibber/gibber-muc-connection.h>
 #include <gibber/gibber-bytestream-iface.h>
 
@@ -36,13 +36,13 @@ typedef struct _SalutTubeDBus SalutTubeDBus;
 typedef struct _SalutTubeDBusClass SalutTubeDBusClass;
 
 struct _SalutTubeDBusClass {
-  GObjectClass parent_class;
+  TpBaseChannelClass parent_class;
 
   TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutTubeDBus {
-  GObject parent;
+  TpBaseChannel parent;
 
   gpointer priv;
 };
@@ -66,10 +66,11 @@ GType salut_tube_dbus_get_type (void);
                               SalutTubeDBusClass))
 
 SalutTubeDBus *
-salut_tube_dbus_new (SalutConnection *conn, SalutTubesChannel *tubes_channel,
+salut_tube_dbus_new (SalutConnection *conn,
     TpHandle handle, TpHandleType handle_type, TpHandle self_handle,
     GibberMucConnection *muc_connection, TpHandle initiator,
-    const gchar *service, GHashTable *parameters, guint id);
+    const gchar *service, GHashTable *parameters, guint64 id,
+    gboolean requested);
 
 gboolean salut_tube_dbus_add_name (SalutTubeDBus *self, TpHandle handle,
     const gchar *name);

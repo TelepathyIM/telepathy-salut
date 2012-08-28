@@ -22,7 +22,6 @@
 #include <telepathy-glib/gtypes.h>
 
 #include "connection.h"
-#include "tubes-channel.h"
 
 #include <glib.h>
 
@@ -96,21 +95,9 @@ salut_tube_iface_base_init (gpointer klass)
           "connection",
           "SalutConnection object",
           "Salut connection object that owns this D-Bus tube object.",
-          SALUT_TYPE_CONNECTION,
+          TP_TYPE_BASE_CONNECTION,
           G_PARAM_CONSTRUCT_ONLY |
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-      g_object_interface_install_property (klass, param_spec);
-
-      param_spec = g_param_spec_object (
-          "tubes-channel",
-          "SalutTubesChannel object",
-          "Salut tubes object that implements the old interface.",
-          SALUT_TYPE_TUBES_CHANNEL,
-          G_PARAM_CONSTRUCT_ONLY |
-          G_PARAM_READWRITE |
-          G_PARAM_STATIC_NAME |
-          G_PARAM_STATIC_NICK |
-          G_PARAM_STATIC_BLURB);
       g_object_interface_install_property (klass, param_spec);
 
      param_spec = g_param_spec_uint (
@@ -143,7 +130,7 @@ salut_tube_iface_base_init (gpointer klass)
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 
-      param_spec = g_param_spec_uint (
+      param_spec = g_param_spec_uint64 (
           "id",
           "id",
           "The unique identifier of this tube",
