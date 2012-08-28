@@ -1,7 +1,15 @@
 telepathy-salut 0.9.0 (UNRELEASED)
 ==================================
 
-...
+Dependencies:
+
+• telepathy-glib 0.19.7 is now required. (sorry about that)
+
+Enhancements:
+
+• fd.o#50828: Old-style Tubes channels have been removed. (Jonny)
+
+• Tube and Text channels are no longer announced together. (Jonny)
 
 telepathy-salut 0.8.0 (2012-04-04)
 ==================================
