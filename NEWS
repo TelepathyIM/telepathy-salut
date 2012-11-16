@@ -1,5 +1,8 @@
-telepathy-salut 0.8.1 (UNRELEASED)
+telepathy-salut 0.8.1 (2012-11-16)
 ==================================
+
+Here are some crash fixes, and a pretty important fix which means we can
+talk to iChat again.
 
 • Fix an assertion failure in the OLPC activity manager on disconnect.
   (Jonny)
@@ -8,6 +11,10 @@ telepathy-salut 0.8.1 (UNRELEASED)
   uninitialized variable. (Will)
 
 • Don't crash when closing a roomlist channel. (Will)
+
+• fd.o#51527: fix interoperability with iChat (oops). This also fixes
+  fd.o#51528, a crash when messaged by a malformed JID such as
+  "wjt@bael (2)".  (Will)
 
 
 telepathy-salut 0.8.0 (2012-04-04)
