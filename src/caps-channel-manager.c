@@ -21,6 +21,7 @@
  */
 
 #include "config.h"
+
 #include <salut/caps-channel-manager.h>
 
 #include <telepathy-glib/dbus.h>

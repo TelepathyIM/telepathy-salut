@@ -21,8 +21,6 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "config.h"
-
 #include <glib/gstdio.h>
 #include <dbus/dbus-glib.h>
 #include <stdio.h>

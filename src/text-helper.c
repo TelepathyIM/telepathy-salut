@@ -23,7 +23,6 @@
  */
 
 #define _GNU_SOURCE /* Needed for strptime (_XOPEN_SOURCE can also be used). */
-#include "config.h"
 
 #include <dbus/dbus-glib.h>
 #include <stdio.h>

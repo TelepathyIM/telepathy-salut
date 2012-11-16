@@ -17,8 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "config.h"
 #include "protocol.h"
+
+#include <config.h>
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-protocol.h>
