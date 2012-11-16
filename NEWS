@@ -11,6 +11,19 @@ Enhancements:
 
 • Tube and Text channels are no longer announced together. (Jonny)
 
+• Fix an assertion failure in the OLPC activity manager on disconnect.
+  (Jonny)
+
+• Check parsing tube messages in a MUC succeeds, to avoid using an
+  uninitialized variable. (Will)
+
+• Don't crash when closing a roomlist channel. (Will)
+
+• fd.o#51527: fix interoperability with iChat (oops). This also fixes
+  fd.o#51528, a crash when messaged by a malformed JID such as
+  "wjt@bael (2)".  (Will)
+
+
 telepathy-salut 0.8.0 (2012-04-04)
 ==================================
 
