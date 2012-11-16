@@ -605,7 +605,7 @@ salut_self_set_alias (SalutSelf *self, const gchar *alias, GError **error)
   if (!ret)
     {
       if (error != NULL)
-        *error = g_error_new_literal (TP_ERROR, TP_ERROR_NETWORK_ERROR,
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
             err->message);
       g_error_free (err);
     }
@@ -648,7 +648,7 @@ salut_self_set_avatar (SalutSelf *self, guint8 *data,
     {
       salut_self_remove_avatar (self);
       if (err != NULL)
-        *error = g_error_new_literal (TP_ERROR, TP_ERROR_NETWORK_ERROR,
+        *error = g_error_new_literal (TP_ERRORS, TP_ERROR_NETWORK_ERROR,
             err->message);
       g_error_free (err);
     }
@@ -670,7 +670,7 @@ salut_self_add_olpc_activity (SalutSelf *self, const gchar *activity_id,
 
   if (strchr (activity_id, ':') != NULL)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Activity IDs may not contain ':'");
       return FALSE;
     }
@@ -808,7 +808,7 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
 
       if (id[0] != '\0')
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "In SetCurrentActivity, activity ID must be \"\" if room handle "
               "is 0");
           return FALSE;
@@ -820,7 +820,7 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
 
       if (id[0] == '\0')
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "In SetCurrentActivity, activity ID must not be \"\" if room "
               "handle is non-zero");
           return FALSE;
@@ -839,7 +839,7 @@ salut_self_set_olpc_current_activity (SalutSelf *self,
   if (!SALUT_SELF_GET_CLASS (self)->update_current_activity (self, room_name,
         &err))
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR, "%s",
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, "%s",
           err->message);
       g_error_free (err);
       return FALSE;
@@ -872,7 +872,7 @@ salut_self_set_olpc_activity_properties (SalutSelf *self,
     {
       /* User have to call org.laptop.Telepathy.BuddyInfo.SetActivities
        * to create the activity */
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "No activity associated with room having handle %d", handle);
       return FALSE;
     }
@@ -922,7 +922,7 @@ salut_self_set_olpc_properties (SalutSelf *self,
   if (!SALUT_SELF_GET_CLASS (self)->set_olpc_properties (self, key, color, jid,
         &err))
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR, "%s",
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR, "%s",
           err->message);
       g_error_free (err);
       return FALSE;

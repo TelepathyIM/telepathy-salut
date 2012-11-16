@@ -340,7 +340,7 @@ salut_conn_contact_info_request_contact_info (
         }
       else
         {
-          error = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+          error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
               "No information available for '%s'",
               tp_handle_inspect (contacts_repo, handle));
           dbus_g_method_return_error (context, error);

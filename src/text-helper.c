@@ -68,7 +68,7 @@ create_message_stanza (const gchar *from, const gchar *to,
     {
       DEBUG ("invalid message type %u", type);
 
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "invalid message type: %u", type);
 
       return NULL;
@@ -248,7 +248,7 @@ text_helper_validate_tp_message (TpMessage *message,
 
   if (tp_message_count_parts (message) != 2)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Invalid number of message parts, expected 2, got %d",
           tp_message_count_parts (message));
       return FALSE;
@@ -261,7 +261,7 @@ text_helper_validate_tp_message (TpMessage *message,
 
   if (!valid || msgtype > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Invalid message type");
       return FALSE;
     }
@@ -271,7 +271,7 @@ text_helper_validate_tp_message (TpMessage *message,
 
   if (msgtext == NULL)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Empty message content");
       return FALSE;
     }

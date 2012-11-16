@@ -127,7 +127,7 @@ update_activity_service (SalutAvahiOlpcActivity *self,
 
   if (!activity_is_announced (self))
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
         "Trying to update an activity that's not announced");
       return FALSE;
     }

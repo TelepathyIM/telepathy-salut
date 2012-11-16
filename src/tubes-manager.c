@@ -138,7 +138,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       from = wocky_node_get_attribute (iq, "from");
       if (from == NULL)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "got a message without a from field");
           return FALSE;
         }
@@ -147,7 +147,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
 
       if (*initiator_handle == 0)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "invalid initiator ID %s", from);
           return FALSE;
         }
@@ -160,13 +160,13 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
 
   if (tube_node == NULL && close_node == NULL)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "The <iq> does not have a <tube> nor a <close>");
       return FALSE;
     }
   if (tube_node != NULL && close_node != NULL)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "The <iq> has both a <tube> nor a <close>");
       return FALSE;
     }
@@ -194,7 +194,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       str = wocky_node_get_attribute (node, "id");
       if (str == NULL)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "no tube id in tube request");
           return FALSE;
         }
@@ -202,7 +202,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       tmp = strtol (str, &endptr, 10);
       if (!endptr || *endptr)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "tube id is not numeric: %s", str);
           return FALSE;
         }
@@ -224,7 +224,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
         *type = TP_TUBE_TYPE_DBUS;
       else
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "The <iq><tube> does not have a correct type: '%s'", tube_type);
           return FALSE;
         }
@@ -254,7 +254,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       transport_node = wocky_node_get_child (tube_node, "transport");
       if (transport_node == NULL)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "no transport to connect to in the tube request");
           return FALSE;
         }
@@ -262,7 +262,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       str = wocky_node_get_attribute (transport_node, "port");
       if (str == NULL)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "no port to connect to in the tube request");
           return FALSE;
         }
@@ -270,7 +270,7 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
       tmp = strtol (str, &endptr, 10);
       if (!endptr || *endptr)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "port is not numeric: %s", str);
           return FALSE;
         }
@@ -638,7 +638,7 @@ new_tubes_channel (SalutTubesManager *fac,
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
           base_conn, TP_HANDLE_TYPE_CONTACT);
 
-      g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "%s is not online", tp_handle_inspect (contact_repo, handle));
       return NULL;
     }
@@ -840,7 +840,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
                 TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
       if (service == NULL)
         {
-          g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "StreamTube requests must include '%s'",
               TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
           goto error;
@@ -863,7 +863,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
                 TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
       if (service == NULL)
         {
-          g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
               "Request missed a mandatory property '%s'",
               TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
           goto error;
@@ -872,7 +872,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       if (!tp_dbus_check_valid_bus_name (service, TP_DBUS_NAME_TYPE_WELL_KNOWN,
             &err))
         {
-          g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "Invalid ServiceName: %s", err->message);
           g_error_free (err);
           goto error;
@@ -889,7 +889,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   /* Don't support opening a channel to our self handle */
   if (handle == base_conn->self_handle)
     {
-      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Can't open a channel to your self handle");
       goto error;
     }
@@ -920,7 +920,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 
       if (require_new)
         {
-          g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
               "A tube channel with contact #%u already exists", handle);
           DEBUG ("A tube channel with contact #%u already exists", handle);
           goto error;

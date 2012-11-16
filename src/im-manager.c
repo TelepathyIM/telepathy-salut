@@ -414,7 +414,7 @@ salut_im_manager_requestotron (SalutImManager *self,
   /* Don't support opening a channel to our self handle */
   if (handle == base_conn->self_handle)
     {
-      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
           "Can't open a text channel to yourself");
       goto error;
     }
@@ -430,7 +430,7 @@ salut_im_manager_requestotron (SalutImManager *self,
 
   if (require_new)
     {
-      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Already chatting with contact #%u in another channel", handle);
       goto error;
     }
@@ -544,7 +544,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   if (contact == NULL)
     {
       gchar *message = g_strdup_printf ("%s is not online", name);
-      tp_channel_manager_emit_request_failed (mgr, request, TP_ERROR,
+      tp_channel_manager_emit_request_failed (mgr, request, TP_ERRORS,
           TP_ERROR_NOT_AVAILABLE, message);
       g_free (message);
       return NULL;

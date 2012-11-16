@@ -443,10 +443,10 @@ error:
   if (stanza != NULL)
     g_object_unref (G_OBJECT (stanza));
 
-  if (error != NULL && error->domain != TP_ERROR)
+  if (error != NULL && error->domain != TP_ERRORS)
     {
       GError *e = NULL;
-      g_set_error_literal (&e, TP_ERROR,
+      g_set_error_literal (&e, TP_ERRORS,
         TP_ERROR_NETWORK_ERROR,
         error->message);
       g_error_free (error);

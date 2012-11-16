@@ -401,7 +401,7 @@ salut_roomlist_manager_request (TpChannelManager *manager,
   if (tp_asv_get_uint32 (request_properties,
        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != 0)
     {
-      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
           "RoomList channels can't have a target handle");
       goto error;
     }

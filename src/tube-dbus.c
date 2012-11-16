@@ -457,7 +457,7 @@ create_dbus_server (SalutTubeDBus *self,
       g_free (priv->socket_path);
       priv->socket_path = NULL;
 
-      g_set_error (err, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+      g_set_error (err, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "Can't create D-Bus server");
       return FALSE;
     }
@@ -1218,7 +1218,7 @@ salut_tube_dbus_offer (SalutTubeDBus *self,
 
   if (priv->offered)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Tube has already been offered");
       return FALSE;
     }
@@ -1758,7 +1758,7 @@ salut_tube_dbus_check_access_control (SalutTubeDBus *self,
         break;
 
       default:
-        g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+        g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
             "%u socket access control is not supported", access_control);
         return FALSE;
     }

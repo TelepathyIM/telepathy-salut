@@ -577,7 +577,7 @@ start_stream_initiation (SalutTubeStream *self,
   if (contact == NULL)
     {
       result = FALSE;
-      g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR,
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           "can't find contact with handle %d", priv->initiator);
       g_object_unref (transport);
       g_slice_free (struct _extra_bytestream_negotiate_cb_data, data);
@@ -637,7 +637,7 @@ start_stream_direct (SalutTubeStream *self,
   contact = salut_contact_manager_get_contact (contact_mgr, priv->initiator);
   if (contact == NULL)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_NETWORK_ERROR,
+      g_set_error (error, TP_ERRORS, TP_ERROR_NETWORK_ERROR,
           "can't find contact with handle %d", priv->initiator);
 
       g_object_unref (contact_mgr);
@@ -2043,7 +2043,7 @@ check_unix_params (TpSocketAddressType address_type,
   /* Check address type */
   if (G_VALUE_TYPE (address) != DBUS_TYPE_G_UCHAR_ARRAY)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Unix socket address is supposed to be ay");
       return FALSE;
     }
@@ -2052,7 +2052,7 @@ check_unix_params (TpSocketAddressType address_type,
 
   if (array->len > sizeof (dummy.sun_path) - 1)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Unix socket path is too long (max length allowed: %"
           G_GSIZE_FORMAT ")",
           sizeof (dummy.sun_path) - 1);
@@ -2063,7 +2063,7 @@ check_unix_params (TpSocketAddressType address_type,
     {
       if (g_array_index (array, gchar , i) == '\0')
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "Unix socket path can't contain zero bytes");
           return FALSE;
         }
@@ -2075,7 +2075,7 @@ check_unix_params (TpSocketAddressType address_type,
   {
     DEBUG ("Error calling stat on socket: %s", g_strerror (errno));
 
-    g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT, "%s: %s",
+    g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, "%s: %s",
         socket_path->str, g_strerror (errno));
     g_string_free (socket_path, TRUE);
     return FALSE;
@@ -2085,7 +2085,7 @@ check_unix_params (TpSocketAddressType address_type,
   {
     DEBUG ("%s is not a socket", socket_path->str);
 
-    g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+    g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
         "%s is not a socket", socket_path->str);
     g_string_free (socket_path, TRUE);
     return FALSE;
@@ -2095,7 +2095,7 @@ check_unix_params (TpSocketAddressType address_type,
 
   if (access_control != TP_SOCKET_ACCESS_CONTROL_LOCALHOST)
   {
-    g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+    g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
         "Unix sockets only support localhost control access");
     return FALSE;
   }
@@ -2121,7 +2121,7 @@ check_ip_params (TpSocketAddressType address_type,
     {
       if (G_VALUE_TYPE (address) != TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV4)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "IPv4 socket address is supposed to be sq");
           return FALSE;
         }
@@ -2130,7 +2130,7 @@ check_ip_params (TpSocketAddressType address_type,
     {
       if (G_VALUE_TYPE (address) != TP_STRUCT_TYPE_SOCKET_ADDRESS_IPV6)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "IPv6 socket address is supposed to be sq");
           return FALSE;
         }
@@ -2158,7 +2158,7 @@ check_ip_params (TpSocketAddressType address_type,
   ret = getaddrinfo (ip, NULL, &req, &result);
   if (ret != 0)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Invalid address: %s", gai_strerror (ret));
       g_free (ip);
       return FALSE;
@@ -2169,7 +2169,7 @@ check_ip_params (TpSocketAddressType address_type,
 
   if (access_control != TP_SOCKET_ACCESS_CONTROL_LOCALHOST)
     {
-      g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "%s sockets only support localhost control access",
           (address_type == TP_SOCKET_ADDRESS_TYPE_IPV4 ? "IPv4" : "IPv6"));
       return FALSE;
@@ -2198,7 +2198,7 @@ salut_tube_stream_check_params (TpSocketAddressType address_type,
             access_control_param, error);
 
       default:
-        g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
+        g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
             "Address type %d not implemented", address_type);
         return FALSE;
     }
@@ -2224,7 +2224,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube *iface,
 
   if (priv->state != TP_TUBE_CHANNEL_STATE_NOT_OFFERED)
     {
-      g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the not offered state");
       dbus_g_method_return_error (context, error);
       g_error_free (error);
@@ -2280,7 +2280,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube *iface,
 
   if (priv->state != TP_TUBE_CHANNEL_STATE_LOCAL_PENDING)
     {
-      GError e = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the local pending state" };
 
       dbus_g_method_return_error (context, &e);
@@ -2291,7 +2291,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube *iface,
       address_type != TP_SOCKET_ADDRESS_TYPE_IPV4 &&
       address_type != TP_SOCKET_ADDRESS_TYPE_IPV6)
     {
-      error = g_error_new (TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
+      error = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
           "Address type %d not implemented", address_type);
 
       dbus_g_method_return_error (context, error);
@@ -2301,7 +2301,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube *iface,
 
   if (access_control != TP_SOCKET_ACCESS_CONTROL_LOCALHOST)
     {
-      GError e = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
+      GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
           "Unix sockets only support localhost control access" };
 
       dbus_g_method_return_error (context, &e);

@@ -295,7 +295,7 @@ salut_plugin_loader_create_sidecar_async (
     }
 
   g_simple_async_report_error_in_idle (G_OBJECT (self), callback, user_data,
-      TP_ERROR, TP_ERROR_NOT_IMPLEMENTED, "No plugin implements sidecar '%s'",
+      TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED, "No plugin implements sidecar '%s'",
       sidecar_interface);
 }
 

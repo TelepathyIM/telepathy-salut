@@ -39,7 +39,7 @@
 #define RETURN_ERROR_IF_FAIL(error_type, error) \
    if (error_type != kDNSServiceErr_NoError) \
    { \
-      *error = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE, \
+      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE, \
           "bonjour-self failed with (%d)", error_type); \
       return FALSE; \
     }
@@ -472,7 +472,7 @@ salut_bonjour_self_set_avatar (SalutSelf *_self,
 
   if (!salut_bonjour_self_publish_avatar (self, data, size, error))
     {
-      *error = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+      *error = g_error_new (TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "bonjour-self failed with (%d)", error_type);
       return FALSE;
     }
