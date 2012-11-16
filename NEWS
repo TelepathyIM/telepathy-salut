@@ -1,20 +1,7 @@
 telepathy-salut 0.8.1 (UNRELEASED)
 ==================================
 
-Fixes:
-
-• Fix an assertion failure in the OLPC activity manager on disconnect.
-  (Jonny)
-
-• fd.o#49594: Stop using deprecated tp-glib APIs (Simon, Xavier)
-
-• Check parsing tube messages in a MUC succeeds. (Will)
-
-• Don't crash when closing a roomlist channel. (Will)
-
-• fd.o#37701: Update the Wocky snapshot to fix an uninitialized variable
-  warning in code which Salut doesn't even use. (Will)
-
+...
 
 telepathy-salut 0.8.0 (2012-04-04)
 ==================================
