@@ -212,6 +212,9 @@ PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.17.1])
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
+AC_DEFINE(TP_VERSION_MIN_REQUIRED, TP_VERSION_0_18, [Ignore post 0.18 deprecations])
+AC_DEFINE(TP_VERSION_MAX_REQUIRED, TP_VERSION_0_18, [Prevent post 0.18 APIs])
+
 dnl check the backend to use
 if test "$platform" = "win32"; then
 AC_ARG_WITH(backend,

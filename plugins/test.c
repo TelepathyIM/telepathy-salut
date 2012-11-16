@@ -1,5 +1,4 @@
 #include "config.h"
-
 #include "test.h"
 
 #include <salut/plugin.h>

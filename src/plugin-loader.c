@@ -19,7 +19,6 @@
  */
 
 #include "config.h"
-
 #include "plugin-loader.h"
 
 #include <glib.h>

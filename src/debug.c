@@ -1,4 +1,6 @@
 
+#include "config.h"
+
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/types.h>
