@@ -5,8 +5,6 @@ cd "@abs_top_builddir@/tests/twisted/tools"
 export SALUT_DEBUG=all GIBBER_DEBUG=all WOCKY_DEBUG=all
 export SALUT_PLUGIN_DIR="@abs_top_builddir@/plugins/.libs"
 export G_SLICE=debug-blocks
-G_MESSAGES_DEBUG=all
-export G_MESSAGES_DEBUG
 ulimit -c unlimited
 exec >> salut-testing.log 2>&1
 
