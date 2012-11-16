@@ -72,8 +72,7 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$official_release" = xno],
    format-security \
    init-self],
   [missing-field-initializers \
-   unused-parameter \
-   deprecated-declarations])
+   unused-parameter])
 AC_SUBST([ERROR_CFLAGS])
 
 ifelse(salut_nano_version, 0,
