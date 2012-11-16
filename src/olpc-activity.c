@@ -194,6 +194,12 @@ salut_olpc_activity_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  if (self->room != 0)
+    {
+      tp_handle_unref (room_repo, self->room);
+      self->room = 0;
+    }
+
   if (priv->muc != NULL)
     {
       g_signal_handlers_disconnect_matched (priv->muc, G_SIGNAL_MATCH_DATA,
@@ -437,7 +443,13 @@ salut_olpc_activity_update (SalutOlpcActivity *self,
 
   if (room != 0 && room != self->room)
     {
+      if (self->room != 0)
+        {
+          tp_handle_unref (room_repo, self->room);
+        }
+
       self->room = room;
+      tp_handle_ref (room_repo, room);
     }
 
   if (id != NULL && tp_strdiff (id, self->id))

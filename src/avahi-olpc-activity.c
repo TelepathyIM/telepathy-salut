@@ -482,6 +482,7 @@ activity_resolved_cb (GaServiceResolver *resolver,
   salut_olpc_activity_update (SALUT_OLPC_ACTIVITY (self), room,
       activity_id, activity_name, activity_type, color, tags, FALSE);
 
+  tp_handle_unref (room_repo, room);
   avahi_free (activity_id);
   avahi_free (activity_type);
   avahi_free (activity_name);

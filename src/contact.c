@@ -293,6 +293,15 @@ salut_contact_dispose (GObject *object)
   priv->dispose_has_run = TRUE;
 
 #ifdef ENABLE_OLPC
+  if (self->olpc_cur_act_room != 0 && self->connection != NULL)
+    {
+      TpHandleRepoIface *room_repo = tp_base_connection_get_handles
+          ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
+
+      tp_handle_unref (room_repo, self->olpc_cur_act_room);
+      self->olpc_cur_act_room = 0;
+    }
+
   g_hash_table_foreach (priv->olpc_activities,
       (GHFunc) disconnect_activity_signal_foreach, self);
   g_hash_table_unref (priv->olpc_activities);
@@ -301,6 +310,13 @@ salut_contact_dispose (GObject *object)
   salut_contact_avatar_request_flush (self, NULL, 0);
 
   /* release any references held by the object here */
+
+  if (self->handle != 0 && self->connection != NULL)
+    {
+      TpHandleRepoIface *contact_repo = tp_base_connection_get_handles
+        ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
+      tp_handle_unref (contact_repo, self->handle);
+    }
 
   if (self->data_forms != NULL)
     {
@@ -721,10 +737,18 @@ salut_contact_change_current_activity (SalutContact *self,
       if (self->olpc_cur_act != NULL || self->olpc_cur_act_room != 0)
         {
           g_free (self->olpc_cur_act);
+          if (self->olpc_cur_act_room != 0)
+            tp_handle_unref (room_repo, self->olpc_cur_act_room);
           self->olpc_cur_act = NULL;
           self->olpc_cur_act_room = 0;
            salut_contact_change (self, SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
         }
+      if (room_handle != 0)
+        {
+          /* tp_handle_ensure gave us a ref */
+          tp_handle_unref (room_repo, room_handle);
+        }
+
      }
    else
      {
@@ -734,9 +758,16 @@ salut_contact_change_current_activity (SalutContact *self,
            self->olpc_cur_act_room != room_handle)
          {
            g_free (self->olpc_cur_act);
+           if (self->olpc_cur_act_room != 0)
+             tp_handle_unref (room_repo, self->olpc_cur_act_room);
            self->olpc_cur_act_room = room_handle;
            self->olpc_cur_act = g_strdup (current_activity_id);
            salut_contact_change (self, SALUT_CONTACT_OLPC_CURRENT_ACTIVITY);
+         }
+       else
+         {
+           /* tp_handle_ensure gave us a ref */
+           tp_handle_unref (room_repo, room_handle);
          }
      }
 }
