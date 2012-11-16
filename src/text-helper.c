@@ -313,18 +313,16 @@ text_helper_report_delivery_error (TpSvcChannel *self,
       "handle-type", &handle_type,
       NULL);
 
-  delivery_echo = tp_cm_message_new (base_conn, 2);
-  tp_cm_message_set_sender (delivery_echo, base_conn->self_handle);
+  delivery_echo = tp_message_new (base_conn, 2, 2);
+  tp_message_set_handle (delivery_echo, 0, "message-sender",
+      TP_HANDLE_TYPE_CONTACT, base_conn->self_handle);
   tp_message_set_uint32 (delivery_echo, 0, "message-type", type);
   tp_message_set_int64 (delivery_echo, 0, "message-sent", (gint64)timestamp);
   tp_message_set_string (delivery_echo, 1, "content-type", "text/plain");
   tp_message_set_string (delivery_echo, 1, "content", text);
 
-  message = tp_cm_message_new (base_conn, 1);
-
-  if (handle_type == TP_HANDLE_TYPE_CONTACT)
-    tp_cm_message_set_sender (message, handle);
-
+  message = tp_message_new (base_conn, 1, 1);
+  tp_message_set_handle (message, 0, "message-sender", handle_type, handle);
   tp_message_set_uint32 (message, 0, "message-type",
       TP_CHANNEL_TEXT_MESSAGE_TYPE_DELIVERY_REPORT);
   tp_message_set_uint32 (message, 0, "delivery-status",
@@ -332,7 +330,7 @@ text_helper_report_delivery_error (TpSvcChannel *self,
   tp_message_set_uint32 (message, 0, "delivery-error",
       TP_CHANNEL_TEXT_SEND_ERROR_OFFLINE);
   tp_message_set_string (message, 0, "delivery-token", token);
-  tp_cm_message_take_message (message, 0, "delivery-echo", delivery_echo);
+  tp_message_take_message (message, 0, "delivery-echo", delivery_echo);
 
   g_object_unref (base_conn);
 
@@ -346,10 +344,11 @@ text_helper_create_received_message (TpBaseConnection *base_conn,
                                      guint type,
                                      const gchar *text)
 {
-  TpMessage *message = tp_cm_message_new (base_conn, 2);
+  TpMessage *message = tp_message_new (base_conn, 2, 2);
 
   tp_message_set_uint32 (message, 0, "message-type", type);
-  tp_cm_message_set_sender (message, sender_handle);
+  tp_message_set_handle (message, 0, "message-sender",
+      TP_HANDLE_TYPE_CONTACT, sender_handle);
   tp_message_set_int64 (message, 0, "message-received", timestamp);
 
   tp_message_set_string (message, 1, "content-type", "text/plain");
