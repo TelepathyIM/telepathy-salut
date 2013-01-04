@@ -16,10 +16,13 @@ EXTRA_DIST = \
     glib-signals-marshal-gen.py \
     identity.xsl \
     libglibcodegen.py \
+    libtpcodegen.py \
     make-release-mail.py \
     telepathy.am \
     xep.xsl
 
+libglibcodegen.py: libtpcodegen.py
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 glib-client-marshaller-gen.py: libglibcodegen.py
 	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 glib-ginterface-gen.py: libglibcodegen.py
