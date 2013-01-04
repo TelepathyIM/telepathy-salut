@@ -54,12 +54,29 @@ AC_MSG_RESULT($platform)
 
 AM_CONDITIONAL([OS_WINDOWS], [test "$platform" = "win32"])
 
-dnl decide error flags
 ifelse(salut_nano_version, 0,
-    [ official_release=yes ],
-    [ official_release=no ])
+[ # version x.y.z - "official release",
+  # disable extra checks by default
+  official_release=yes
+  AC_ARG_ENABLE([fatal-warnings],
+    [AC_HELP_STRING([--enable-fatal-warnings],
+                    [make various warnings fatal])],
+    [],
+    [enable_fatal_warnings=no])
+],
+[ # version x.y.z.1 - development snapshot,
+  # enable extra checks by default
+  official_release=no
+  AC_ARG_ENABLE([fatal-warnings],
+    [AC_HELP_STRING([--disable-fatal-warnings],
+                    [make various warnings non-fatal])],
+    [],
+    [enable_fatal_warnings=yes])
+])
 
-TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$official_release" = xno],
+AC_SUBST([enable_fatal_warnings])
+
+TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$enable_fatal_warnings" = xyes],
   [all \
    extra \
    declaration-after-statement \
@@ -75,25 +92,9 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$official_release" = xno],
    unused-parameter])
 AC_SUBST([ERROR_CFLAGS])
 
-ifelse(salut_nano_version, 0,
-    [ # Salut is version x.y.z - disable coding style checks by default
-AC_ARG_ENABLE(coding-style-checks,
-  AC_HELP_STRING([--enable-coding-style-checks],
-                 [check coding style using grep]),
-    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=no] )
-    ],
-    [ # Salut is version x.y.z.1 - enable coding style checks by default
-AC_ARG_ENABLE(coding-style-checks,
-  AC_HELP_STRING([--disable-coding-style-checks],
-                 [do not check coding style using grep]),
-    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=yes])
-    ])
-
 if test x$enable_debug = xyes; then
   AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
 fi
-
-AC_SUBST([ENABLE_CODING_STYLE_CHECKS])
 
 dnl Check for code generation tools
 XSLTPROC=
@@ -333,13 +334,13 @@ fi
 prev_ac_configure_args=$ac_configure_args
 ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir} --enable-shared-suffix=${PACKAGE}-${VERSION} --libdir=${pluginexeclibdir}"
 
-if test "x$ENABLE_CODING_STYLE_CHECKS" = xyes ; then
+if test "x$enable_fatal_warnings" = xyes ; then
   ac_configure_args="$ac_configure_args --enable-coding-style-checks"
 else
   ac_configure_args="$ac_configure_args --disable-coding-style-checks"
 fi
 
-if test "x$tp_werror" = xyes && test "x$official_release" = xno; then
+if test "x$tp_werror" = xyes && test "x$enable_fatal_warnings" = xyes; then
   ac_configure_args="$ac_configure_args --enable-Werror"
 else
   ac_configure_args="$ac_configure_args --disable-Werror"
