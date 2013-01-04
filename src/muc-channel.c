@@ -18,6 +18,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "muc-channel.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,8 +35,6 @@
 
 /* Maximum time to wait for others joining the group  */
 #define CONNECTED_TIMEOUT 60 * 1000
-
-#include "muc-channel.h"
 
 #include <wocky/wocky.h>
 

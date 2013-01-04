@@ -24,6 +24,9 @@
 
 #define _GNU_SOURCE /* Needed for strptime (_XOPEN_SOURCE can also be used). */
 
+#include "config.h"
+#include "text-helper.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,8 +39,6 @@
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
-
-#include "text-helper.h"
 
 #include "util.h"
 

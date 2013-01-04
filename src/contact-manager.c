@@ -18,6 +18,7 @@
  */
 
 #include "config.h"
+#include "contact-manager.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +27,6 @@
 #include <salut/caps-channel-manager.h>
 
 #include "connection.h"
-#include "contact-manager.h"
 #include "contact.h"
 #include "enumtypes.h"
 

@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "bonjour-contact-manager.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +32,6 @@
 #include "debug.h"
 
 #include "bonjour-contact.h"
-#include "bonjour-contact-manager.h"
 #include "plugin-connection.h"
 #include "connection.h"
 

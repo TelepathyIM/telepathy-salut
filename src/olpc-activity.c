@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "olpc-activity.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +28,6 @@
 #include <wocky/wocky.h>
 
 #include "contact-manager.h"
-#include "olpc-activity.h"
 #include "muc-manager.h"
 #include "util.h"
 #include "namespaces.h"

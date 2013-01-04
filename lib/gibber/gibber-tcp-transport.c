@@ -19,6 +19,7 @@
  */
 
 #include <config.h>
+#include "gibber-tcp-transport.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +32,6 @@
 #endif
 
 #include "gibber-sockets.h"
-#include "gibber-tcp-transport.h"
 
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"

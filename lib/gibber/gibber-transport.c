@@ -18,11 +18,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "gibber-transport.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "gibber-transport.h"
 
 #define DEBUG_FLAG DEBUG_TRANSPORT
 #include "gibber-debug.h"

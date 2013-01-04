@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "im-manager.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +28,6 @@
 
 #include "extensions/extensions.h"
 #include "im-channel.h"
-#include "im-manager.h"
 #include "contact.h"
 
 #include <gibber/gibber-linklocal-transport.h>

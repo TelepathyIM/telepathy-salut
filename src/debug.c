@@ -1,3 +1,5 @@
+#include "config.h"
+#include "debug.h"
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -11,8 +13,6 @@
 
 #include <telepathy-glib/debug.h>
 #include <telepathy-glib/debug-sender.h>
-
-#include "debug.h"
 
 #ifdef ENABLE_DEBUG
 

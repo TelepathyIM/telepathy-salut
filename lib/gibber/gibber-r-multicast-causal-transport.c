@@ -20,6 +20,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "gibber-r-multicast-causal-transport.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +30,6 @@
 #define DEBUG_FLAG DEBUG_RMULTICAST
 #include "gibber-debug.h"
 
-#include "gibber-r-multicast-causal-transport.h"
 #include "gibber-r-multicast-packet.h"
 #include "gibber-r-multicast-sender.h"
 

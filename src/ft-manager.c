@@ -19,6 +19,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "ft-manager.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,8 +30,6 @@
 #include <wocky/wocky.h>
 
 #include <gibber/gibber-file-transfer.h>
-
-#include "ft-manager.h"
 
 #include <salut/caps-channel-manager.h>
 

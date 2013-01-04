@@ -18,6 +18,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "avahi-olpc-activity-manager.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +28,6 @@
 
 #include <avahi-gobject/ga-service-browser.h>
 
-#include "avahi-olpc-activity-manager.h"
 #include "avahi-olpc-activity.h"
 #include "avahi-discovery-client.h"
 #include "olpc-activity.h"

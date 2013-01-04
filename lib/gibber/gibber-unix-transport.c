@@ -22,6 +22,9 @@
 /* needed for struct ucred */
 #define _GNU_SOURCE
 
+#include "config.h"
+#include "gibber-unix-transport.h"
+
 #include <glib.h>
 
 #ifdef G_OS_UNIX
@@ -38,7 +41,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "gibber-unix-transport.h"
 #include "gibber-util.h"
 
 #define DEBUG_FLAG DEBUG_NET

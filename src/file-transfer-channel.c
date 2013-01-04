@@ -21,6 +21,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "file-transfer-channel.h"
+
 #include <glib/gstdio.h>
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
@@ -40,8 +43,6 @@
 
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
-
-#include "file-transfer-channel.h"
 
 #include "connection.h"
 #include "im-manager.h"

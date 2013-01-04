@@ -17,12 +17,13 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "gibber-file-transfer.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "gibber-file-transfer.h"
 #include "gibber-oob-file-transfer.h"
 
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
