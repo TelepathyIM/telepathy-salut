@@ -29,7 +29,6 @@
 #include "debug.h"
 
 #include "presence.h"
-#include "signals-marshal.h"
 #include "bonjour-contact-manager.h"
 #include "bonjour-self.h"
 

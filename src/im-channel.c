@@ -41,7 +41,6 @@
 #include "debug.h"
 #include "connection.h"
 #include "contact.h"
-#include "signals-marshal.h"
 #include "util.h"
 #include "text-helper.h"
 
