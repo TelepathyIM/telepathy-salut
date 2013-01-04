@@ -25,7 +25,6 @@
 
 #include "gibber-r-multicast-sender.h"
 #include "gibber-util.h"
-#include "gibber-signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_RMULTICAST_SENDER
 #include "gibber-debug.h"
@@ -725,8 +724,7 @@ gibber_r_multicast_sender_class_init (
       G_OBJECT_CLASS_TYPE(gibber_r_multicast_sender_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
       0,
-      NULL, NULL,
-      _gibber_signals_marshal_VOID__UINT_POINTER_ULONG,
+      NULL, NULL, NULL,
       G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_ULONG);
 
   signals[RECEIVED_CONTROL_PACKET] = g_signal_new ("received-control-packet",

@@ -18,7 +18,6 @@
  */
 
 #include "gibber-bytestream-iface.h"
-#include "gibber-signals-marshal.h"
 
 #include <glib.h>
 
@@ -134,8 +133,7 @@ gibber_bytestream_iface_base_init (gpointer klass)
           G_TYPE_FROM_INTERFACE (klass),
           G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
           0,
-          NULL, NULL,
-          _gibber_signals_marshal_VOID__STRING_POINTER,
+          NULL, NULL, NULL,
           G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_POINTER);
 
       g_signal_new ("state-changed",

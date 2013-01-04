@@ -28,7 +28,6 @@
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
 #include "gibber-debug.h"
 
-#include "gibber-signals-marshal.h"
 #include "gibber-file-transfer-enumtypes.h"
 
 
@@ -301,15 +300,13 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
   signals[ERROR] = g_signal_new ("error",
       G_OBJECT_CLASS_TYPE (gibber_file_transfer_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-      0, NULL, NULL,
-      _gibber_signals_marshal_VOID__UINT_INT_STRING,
+      0, NULL, NULL, NULL,
       G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
 
   signals[TRANSFERRED_CHUNK] = g_signal_new ("transferred-chunk",
       G_OBJECT_CLASS_TYPE (gibber_file_transfer_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
-      0, NULL, NULL,
-      _gibber_signals_marshal_VOID__UINT64,
+      0, NULL, NULL, NULL,
       G_TYPE_NONE, 1, G_TYPE_UINT64);
 
   signals[CANCELLED] = g_signal_new ("cancelled",

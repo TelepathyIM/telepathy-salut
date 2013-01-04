@@ -34,8 +34,6 @@
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
 
-#include "gibber-signals-marshal.h"
-
 static void bytestream_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (GibberBytestreamMuc, gibber_bytestream_muc,

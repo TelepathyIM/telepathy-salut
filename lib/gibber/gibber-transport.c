@@ -23,7 +23,6 @@
 #include <stdlib.h>
 
 #include "gibber-transport.h"
-#include "gibber-signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_TRANSPORT
 #include "gibber-debug.h"
@@ -124,8 +123,7 @@ gibber_transport_class_init (GibberTransportClass *gibber_transport_class)
                   G_OBJECT_CLASS_TYPE (gibber_transport_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  _gibber_signals_marshal_VOID__UINT_INT_STRING,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 3, G_TYPE_UINT, G_TYPE_INT, G_TYPE_STRING);
 }
 

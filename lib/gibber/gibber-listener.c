@@ -42,8 +42,6 @@
 #define DEBUG_FLAG DEBUG_NET
 #include "gibber-debug.h"
 
-#include "gibber-signals-marshal.h"
-
 G_DEFINE_TYPE (GibberListener, gibber_listener, \
     G_TYPE_OBJECT);
 
@@ -160,8 +158,7 @@ gibber_listener_class_init (
         G_OBJECT_CLASS_TYPE (gibber_listener_class),
         G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
         0,
-        NULL, NULL,
-        _gibber_signals_marshal_VOID__OBJECT_POINTER_UINT,
+        NULL, NULL, NULL,
         G_TYPE_NONE, 3, GIBBER_TYPE_TRANSPORT, G_TYPE_POINTER, G_TYPE_UINT);
 }
 

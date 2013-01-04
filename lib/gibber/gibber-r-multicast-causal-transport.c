@@ -32,8 +32,6 @@
 #include "gibber-r-multicast-packet.h"
 #include "gibber-r-multicast-sender.h"
 
-#include "gibber-signals-marshal.h"
-
 #define SESSION_TIMEOUT_MIN 1500
 #define SESSION_TIMEOUT_MAX 3000
 
@@ -230,8 +228,7 @@ gibber_r_multicast_causal_transport_class_init (
         G_OBJECT_CLASS_TYPE (gibber_r_multicast_causal_transport_class),
         G_SIGNAL_RUN_LAST,
         0,
-        NULL, NULL,
-        _gibber_signals_marshal_VOID__OBJECT_OBJECT,
+        NULL, NULL, NULL,
         G_TYPE_NONE, 2, GIBBER_TYPE_R_MULTICAST_SENDER,
         GIBBER_TYPE_R_MULTICAST_PACKET);
 
