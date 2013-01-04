@@ -27,7 +27,6 @@
 
 #include "connection.h"
 #include "contact-manager.h"
-#include "signals-marshal.h"
 #include "contact.h"
 #include "enumtypes.h"
 
@@ -140,8 +139,7 @@ salut_contact_manager_class_init (SalutContactManagerClass *salut_contact_manage
       G_OBJECT_CLASS_TYPE(salut_contact_manager_class),
       G_SIGNAL_RUN_LAST,
       0,
-      NULL, NULL,
-      salut_signals_marshal_VOID__OBJECT_INT,
+      NULL, NULL, NULL,
       G_TYPE_NONE, 2,
       SALUT_TYPE_CONTACT,
       G_TYPE_INT);

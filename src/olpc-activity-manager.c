@@ -25,7 +25,6 @@
 #include "olpc-activity-manager.h"
 
 #include "connection.h"
-#include "signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_OLPC_ACTIVITY
 #include "debug.h"
@@ -140,8 +139,7 @@ salut_olpc_activity_manager_class_init (SalutOlpcActivityManagerClass *salut_olp
 
   signals[ACTIVITY_MODIFIED] = g_signal_new ("activity-modified",
       G_OBJECT_CLASS_TYPE (salut_olpc_activity_manager_class),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_signals_marshal_VOID__OBJECT,
+      G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
       G_TYPE_NONE, 1, SALUT_TYPE_OLPC_ACTIVITY);
 }
 

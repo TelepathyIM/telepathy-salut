@@ -65,7 +65,6 @@
 #define DEBUG_FLAG DEBUG_TUBES
 
 #include "debug.h"
-#include "signals-marshal.h"
 #include "connection.h"
 #include "muc-tube-stream.h"
 #include "tube-iface.h"
@@ -1432,8 +1431,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__VOID,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
   signals[NEW_CONNECTION] =
@@ -1441,8 +1439,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__UINT,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 
   signals[CLOSED] =
@@ -1450,8 +1447,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__VOID,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
   signals[OFFERED] =
@@ -1459,8 +1455,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__VOID,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
   salut_tube_stream_class->dbus_props_class.interfaces = prop_interfaces;

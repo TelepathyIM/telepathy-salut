@@ -45,7 +45,6 @@
 #endif
 
 #include "presence.h"
-#include "signals-marshal.h"
 
 static void
 discovery_client_init (gpointer g_iface, gpointer iface_data);
@@ -214,8 +213,7 @@ salut_avahi_discovery_client_class_init (
                   G_OBJECT_CLASS_TYPE (salut_avahi_discovery_client_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__UINT,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 

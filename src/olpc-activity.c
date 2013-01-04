@@ -30,8 +30,6 @@
 #include "util.h"
 #include "namespaces.h"
 
-#include "signals-marshal.h"
-
 #define DEBUG_FLAG DEBUG_OLPC_ACTIVITY
 #include "debug.h"
 
@@ -170,14 +168,12 @@ salut_olpc_activity_class_init (SalutOlpcActivityClass *salut_olpc_activity_clas
 
   signals[MODIFIED] = g_signal_new ("modified",
       G_OBJECT_CLASS_TYPE (salut_olpc_activity_class),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_signals_marshal_VOID__VOID,
+      G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
       G_TYPE_NONE, 0);
 
   signals[VALID] = g_signal_new ("valid",
       G_OBJECT_CLASS_TYPE (salut_olpc_activity_class),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_signals_marshal_VOID__VOID,
+      G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
       G_TYPE_NONE, 0);
 }
 

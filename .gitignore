@@ -106,9 +106,6 @@ lib/gibber/examples/test_tcp
 libtool
 ltmain.sh
 missing
-src/signals-marshal.c
-src/signals-marshal.h
-src/signals-marshal.list
 src/*-enumtypes.c
 src/*-enumtypes.h
 src/telepathy-salut

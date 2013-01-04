@@ -37,7 +37,6 @@
 #include "debug.h"
 #include "caps-hash.h"
 #include "disco.h"
-#include "signals-marshal.h"
 
 G_DEFINE_TYPE (SalutPresenceCache, salut_presence_cache, G_TYPE_OBJECT);
 

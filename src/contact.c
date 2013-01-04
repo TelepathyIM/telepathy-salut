@@ -22,7 +22,6 @@
 #include <string.h>
 
 #include "contact.h"
-#include "signals-marshal.h"
 #include "presence.h"
 #include "presence-cache.h"
 #include "enumtypes.h"

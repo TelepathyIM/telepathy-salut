@@ -42,7 +42,6 @@
 #include "debug.h"
 
 #include "file-transfer-channel.h"
-#include "signals-marshal.h"
 
 #include "connection.h"
 #include "im-manager.h"

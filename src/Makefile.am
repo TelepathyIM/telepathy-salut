@@ -1,7 +1,4 @@
 BUILT_SOURCES = \
-    signals-marshal.list \
-    signals-marshal.h \
-    signals-marshal.c \
     enumtypes.h \
     enumtypes.c
 
@@ -265,37 +262,6 @@ $(top_builddir)/lib/gibber/libgibber.la:
 	${MAKE} -C $(top_builddir)/lib/gibber libgibber.la
 
 .PHONY: $(top_builddir)/lib/gibber/libgibber.la
-
-SIGNAL_MARSHAL_SOURCES = \
-    $(CORE_SOURCES) \
-    $(DUMMY_BACKEND_SOURCES)
-
-if USE_BACKEND_AVAHI
-  SIGNAL_MARSHAL_SOURCES += $(AVAHI_BACKEND_SOURCES)
-endif
-
-if USE_BACKEND_BONJOUR
-    SIGNAL_MARSHAL_SOURCES += $(BONJOUR_BACKEND_SOURCES)
-endif
-
-signals-marshal.list: $(SIGNAL_Marshal_SOURCES) Makefile.am
-	$(AM_V_GEN)( cd $(srcdir) && \
-	sed -n -e 's/.*salut_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
-	$(SIGNAL_MARSHAL_SOURCES) ) \
-	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
-	if cmp -s $@.tmp $@; then \
-		rm $@.tmp; \
-	else \
-		mv $@.tmp $@; \
-	fi
-
-signals-marshal.h: signals-marshal.list Makefile.am
-	$(AM_V_GEN)glib-genmarshal --header --prefix=salut_signals_marshal $< > $@
-
-signals-marshal.c: signals-marshal.list Makefile.am
-	$(AM_V_GEN){ echo '#include "signals-marshal.h"' && \
-	glib-genmarshal --body --prefix=salut_signals_marshal $< ; \
-	} > $@
 
 # rules for making the glib enum objects
 enumtype_sources = \

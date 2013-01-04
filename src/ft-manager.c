@@ -29,7 +29,6 @@
 #include <gibber/gibber-file-transfer.h>
 
 #include "ft-manager.h"
-#include "signals-marshal.h"
 
 #include <salut/caps-channel-manager.h>
 
