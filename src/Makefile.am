@@ -135,7 +135,7 @@ libsalut_plugins_la_LDFLAGS =                           \
     -no-undefined                                       \
     -release $(VERSION)
 
-libsalut_plugins_android_la_LDFLAGS =                   \
+libsalut_plugins_la_android_ldflags =                   \
     -shared                                             \
     -avoid-version
     
@@ -292,7 +292,7 @@ Android.mk: Makefile.am $(BUILT_SOURCES)
 	 -:CFLAGS $(DEFS) $(CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(AM_CFLAGS) \
 	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) \
-	 -:LDFLAGS $(libsalut_plugins_android_la_LDFLAGS) $(AM_LDFLAGS) \
+	 -:LDFLAGS $(libsalut_plugins_la_android_ldflags) $(AM_LDFLAGS) \
 	 $(ALL_LIBS) \
 	 -:STATIC salut-convenience -:TAGS eng debug \
 	 -:SOURCES $(libsalut_convenience_la_SOURCES) \
