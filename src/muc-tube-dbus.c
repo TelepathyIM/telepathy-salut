@@ -24,15 +24,19 @@
 G_DEFINE_TYPE (SalutMucTubeDBus, salut_muc_tube_dbus,
     SALUT_TYPE_TUBE_DBUS)
 
-static const gchar *salut_muc_tube_dbus_interfaces[] = {
-    TP_IFACE_CHANNEL_INTERFACE_GROUP,
-    TP_IFACE_CHANNEL_INTERFACE_TUBE,
-    NULL
-};
-
 static void
 salut_muc_tube_dbus_init (SalutMucTubeDBus *self)
 {
+}
+
+static GPtrArray *
+salut_muc_tube_dbus_get_interfaces (TpBaseChannel *chan)
+{
+  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_muc_tube_dbus_parent_class)
+    ->get_interfaces (chan);
+
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP);
+  return interfaces;
 }
 
 static void
@@ -42,6 +46,6 @@ salut_muc_tube_dbus_class_init (
   TpBaseChannelClass *base_class = TP_BASE_CHANNEL_CLASS (
       salut_muc_tube_dbus_class);
 
-  base_class->interfaces = salut_muc_tube_dbus_interfaces;
+  base_class->get_interfaces = salut_muc_tube_dbus_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_ROOM;
 }

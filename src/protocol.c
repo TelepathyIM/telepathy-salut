@@ -137,12 +137,6 @@ identify_account (TpBaseProtocol *self G_GNUC_UNUSED,
   return g_strdup ("");
 }
 
-static GStrv
-get_interfaces (TpBaseProtocol *self)
-{
-  return g_new0 (gchar *, 1);
-}
-
 static void
 get_connection_details (TpBaseProtocol *self,
     GStrv *connection_interfaces,
@@ -293,7 +287,6 @@ salut_protocol_class_init (SalutProtocolClass *klass)
   base_class->new_connection = new_connection;
   base_class->normalize_contact = normalize_contact;
   base_class->identify_account = identify_account;
-  base_class->get_interfaces = get_interfaces;
   base_class->get_connection_details = get_connection_details;
 
   object_class->get_property = salut_protocol_get_property;

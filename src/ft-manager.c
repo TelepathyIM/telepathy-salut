@@ -320,7 +320,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     goto error;
 
   /* Don't support opening a channel to our self handle */
-  if (handle == base_connection->self_handle)
+  if (handle == tp_base_connection_get_self_handle (base_connection))
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Can't open a file transfer channel to yourself");
@@ -442,7 +442,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       tp_handle_inspect (contact_repo, handle));
 
   chan = salut_file_transfer_channel_new (priv->connection, contact,
-      handle, base_connection->self_handle,
+      handle, tp_base_connection_get_self_handle (base_connection),
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
       content_hash_type, content_hash, description, date, initial_offset,
       file_uri, service_name, metadata);

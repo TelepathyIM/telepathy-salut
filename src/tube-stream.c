@@ -77,11 +77,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE,
       NULL));
 
-static const gchar *salut_tube_stream_interfaces[] = {
-    TP_IFACE_CHANNEL_INTERFACE_TUBE,
-    NULL
-};
-
 static const gchar * const salut_tube_stream_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     TP_IFACE_CHANNEL ".TargetID",
@@ -1277,6 +1272,16 @@ salut_tube_stream_close_dbus (TpBaseChannel *base)
   salut_tube_iface_close ((SalutTubeIface *) base, FALSE);
 }
 
+static GPtrArray *
+salut_tube_stream_get_interfaces (TpBaseChannel *chan)
+{
+  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_tube_stream_parent_class)
+    ->get_interfaces (chan);
+
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE);
+  return interfaces;
+}
+
 static void
 salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 {
@@ -1313,7 +1318,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   object_class->constructor = salut_tube_stream_constructor;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_STREAM_TUBE;
-  base_class->interfaces = salut_tube_stream_interfaces;
+  base_class->get_interfaces = salut_tube_stream_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_tube_stream_close_dbus;
   base_class->fill_immutable_properties =

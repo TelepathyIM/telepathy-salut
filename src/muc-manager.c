@@ -587,7 +587,8 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   /* FIXME The name of the muc and the handle might need to be different at
    * some point.. E.g. if two rooms are called the same */
   name = tp_handle_inspect (room_repo, handle);
-  path = g_strdup_printf ("%s/MucChannel/%u", base_connection->object_path,
+  path = g_strdup_printf ("%s/MucChannel/%u",
+      tp_base_connection_get_object_path (base_connection),
       handle);
 
   chan = SALUT_MUC_MANAGER_GET_CLASS (mgr)->create_muc_channel (mgr,
@@ -691,10 +692,10 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   requested = (request_token != NULL);
 
   text_chan = salut_muc_manager_new_muc_channel (mgr, handle,
-      connection, base_connection->self_handle, params == NULL,
-      requested, announce);
+      connection, tp_base_connection_get_self_handle (base_connection),
+      (params == NULL), requested, announce);
   r = salut_muc_channel_invited (text_chan,
-        base_connection->self_handle, NULL, NULL);
+        tp_base_connection_get_self_handle (base_connection), NULL, NULL);
   /* Inviting ourselves to a connected channel should always
    * succeed */
   g_assert (r);

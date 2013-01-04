@@ -2,7 +2,8 @@ from saluttest import exec_test
 import dbus
 from dbus.service import method, signal, Object
 
-from servicetest import wrap_channel, call_async, EventPattern, Event
+from servicetest import (wrap_channel, call_async, EventPattern, Event,
+        assertSameSets)
 
 import constants as cs
 import tubetestutil as t
@@ -81,8 +82,8 @@ def test(q, bus, conn):
 
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_DBUS_TUBE
     assert props[cs.REQUESTED] == True
-    assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP,
-                                    cs.CHANNEL_IFACE_TUBE]
+    assertSameSets([cs.CHANNEL_IFACE_GROUP, cs.CHANNEL_IFACE_TUBE],
+            props[cs.INTERFACES])
     assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
     assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [
         cs.SOCKET_ACCESS_CONTROL_CREDENTIALS, cs.SOCKET_ACCESS_CONTROL_LOCALHOST]
@@ -128,8 +129,8 @@ def test(q, bus, conn):
 
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_DBUS_TUBE
     assert props[cs.REQUESTED] == False
-    assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_GROUP,
-                                    cs.CHANNEL_IFACE_TUBE]
+    assertSameSets([cs.CHANNEL_IFACE_GROUP, cs.CHANNEL_IFACE_TUBE],
+            props[cs.INTERFACES])
     assert props[cs.TUBE_PARAMETERS] == sample_parameters
     assert props[cs.DBUS_TUBE_SERVICE_NAME] == 'com.example.TestCase'
     assert props[cs.DBUS_TUBE_SUPPORTED_ACCESS_CONTROLS] == [

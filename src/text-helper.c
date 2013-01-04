@@ -313,7 +313,8 @@ text_helper_report_delivery_error (TpSvcChannel *self,
       NULL);
 
   delivery_echo = tp_cm_message_new (base_conn, 2);
-  tp_cm_message_set_sender (delivery_echo, base_conn->self_handle);
+  tp_cm_message_set_sender (delivery_echo,
+      tp_base_connection_get_self_handle (base_conn));
   tp_message_set_uint32 (delivery_echo, 0, "message-type", type);
   tp_message_set_int64 (delivery_echo, 0, "message-sent", (gint64)timestamp);
   tp_message_set_string (delivery_echo, 1, "content-type", "text/plain");

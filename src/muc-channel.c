@@ -64,12 +64,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, TP_TYPE_BASE_CHANNEL
       tp_message_mixin_messages_iface_init);
 )
 
-static const char *salut_muc_channel_interfaces[] = {
-  TP_IFACE_CHANNEL_INTERFACE_GROUP,
-  TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
-  NULL
-};
-
 /* signal enum */
 enum
 {
@@ -210,10 +204,11 @@ salut_muc_channel_add_self_to_members (SalutMucChannel *self)
   /* Now we are connected, move yourself to members */
   empty = tp_intset_new ();
   add = tp_intset_new ();
-  tp_intset_add (add, base_conn->self_handle);
+  tp_intset_add (add, tp_base_connection_get_self_handle (base_conn));
 
   tp_group_mixin_change_members (G_OBJECT (self),
-      "", add, empty, empty, empty, base_conn->self_handle,
+      "", add, empty, empty, empty,
+      tp_base_connection_get_self_handle (base_conn),
       TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
 
   tp_intset_destroy (empty);
@@ -306,7 +301,7 @@ salut_muc_channel_constructed (GObject *obj)
       G_CALLBACK (muc_connection_connected_cb), obj);
 
   tp_group_mixin_init (obj, G_STRUCT_OFFSET(SalutMucChannel, group),
-      contact_repo, base_conn->self_handle);
+      contact_repo, tp_base_connection_get_self_handle (base_conn));
 
   tp_group_mixin_change_flags (obj,
       TP_CHANNEL_GROUP_FLAG_PROPERTIES |
@@ -436,7 +431,7 @@ send_invite_cb (GObject *source_object,
   tp_intset_add (removed, handle);
 
   tp_group_mixin_change_members (G_OBJECT (data->self), "", empty, removed, empty,
-      empty, base_connection->self_handle,
+      empty, tp_base_connection_get_self_handle (base_connection),
       TP_CHANNEL_GROUP_CHANGE_REASON_ERROR);
 
   tp_intset_destroy (empty);
@@ -504,7 +499,7 @@ salut_muc_channel_add_member (GObject *iface,
       TP_BASE_CHANNEL (self));
   TpIntset *empty, *remote_pending;
 
-  if (handle == base_connection->self_handle)
+  if (handle == tp_base_connection_get_self_handle (base_connection))
     {
       /* adding yourself, let's join the muc */
       TpIntset *empty_;
@@ -512,7 +507,7 @@ salut_muc_channel_add_member (GObject *iface,
       gboolean ret = TRUE;
 
       if (tp_handle_set_is_member (self->group.remote_pending,
-          base_connection->self_handle))
+          tp_base_connection_get_self_handle (base_connection)))
         {
           /* Already in remote pending, no need to redo */
           return TRUE;
@@ -529,7 +524,7 @@ salut_muc_channel_add_member (GObject *iface,
            * is not connected */
           tp_group_mixin_change_members (G_OBJECT (self),
               message, empty_, empty_, empty_, add,
-              base_connection->self_handle,
+              tp_base_connection_get_self_handle (base_connection),
               TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
         }
       else
@@ -557,7 +552,7 @@ salut_muc_channel_add_member (GObject *iface,
   remote_pending = tp_intset_new ();
   tp_intset_add (remote_pending, handle);
   tp_group_mixin_change_members (G_OBJECT(self), "", empty, empty, empty,
-      remote_pending, base_connection->self_handle,
+      remote_pending, tp_base_connection_get_self_handle (base_connection),
       TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
   tp_intset_destroy (empty);
   tp_intset_destroy (remote_pending);
@@ -601,7 +596,7 @@ salut_muc_channel_remove_member_with_reason (GObject *object,
   TpBaseConnection *base_connection = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
 
-  if (handle != base_connection->self_handle)
+  if (handle != tp_base_connection_get_self_handle (base_connection))
     {
       g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Contacts cannot be kicked from Clique chatrooms");
@@ -630,6 +625,17 @@ salut_muc_channel_fill_immutable_properties (TpBaseChannel *chan,
       NULL);
 }
 
+static GPtrArray *
+salut_muc_channel_get_interfaces (TpBaseChannel *chan)
+{
+  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_muc_channel_parent_class)
+    ->get_interfaces (chan);
+
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP);
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_MESSAGES);
+  return interfaces;
+}
+
 static void
 salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
 {
@@ -648,7 +654,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
   object_class->set_property = salut_muc_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
-  base_class->interfaces = salut_muc_channel_interfaces;
+  base_class->get_interfaces = salut_muc_channel_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_ROOM;
   base_class->close = salut_muc_channel_close;
   base_class->fill_immutable_properties =
@@ -789,6 +795,7 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
 {
   TpBaseConnection *base_connection = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
+  TpHandle self_handle = tp_base_connection_get_self_handle (base_connection);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
   gboolean ret = TRUE;
@@ -800,17 +807,15 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
       tp_handle_inspect (contact_repo, inviter));
 
   /* If we are already a member, no further actions are needed */
-  if (tp_handle_set_is_member (self->group.members,
-      base_connection->self_handle)) {
+  if (tp_handle_set_is_member (self->group.members, self_handle))
     return TRUE;
-  }
 
-  if (inviter == base_connection->self_handle)
+  if (inviter == self_handle)
     {
       /* Invited ourselves, go straight to members */
       gboolean r;
       GArray *members = g_array_sized_new (FALSE, FALSE, sizeof (TpHandle), 1);
-      g_array_append_val (members, base_connection->self_handle);
+      g_array_append_val (members, self_handle);
       r = tp_group_mixin_add_members (G_OBJECT (self), members, "", error);
       g_assert (r);
       g_array_unref (members);
@@ -822,7 +827,7 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
 
       g_assert (stanza != NULL);
 
-      tp_intset_add (local_pending, base_connection->self_handle);
+      tp_intset_add (local_pending, self_handle);
       tp_group_mixin_change_members (G_OBJECT(self), stanza,
                                      empty, empty,
                                      local_pending, empty,
@@ -1315,7 +1320,7 @@ salut_muc_channel_new_senders (GibberMucConnection *connection,
 
   salut_muc_channel_add_members (self, senders);
   if (!tp_handle_set_is_member (self->group.members,
-      base_connection->self_handle))
+      tp_base_connection_get_self_handle (base_connection)))
     {
       DEBUG ("Got new senders. Adding myself as member");
       salut_muc_channel_add_self_to_members (self);

@@ -351,7 +351,7 @@ make_roomlist_channel (SalutRoomlistManager *self)
   /* FIXME: this is not optimal as all the Connection will share the same cpt
    * and we could have problem if we overflow the guint. */
   object_path = g_strdup_printf ("%s/RoomlistChannel%u",
-      conn->object_path, cpt++);
+      tp_base_connection_get_object_path (conn), cpt++);
 
   roomlist_channel = salut_roomlist_channel_new (priv->connection,
       object_path);

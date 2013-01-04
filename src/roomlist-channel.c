@@ -41,8 +41,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutRoomlistChannel, salut_roomlist_channel,
       roomlist_iface_init);
     );
 
-static const char *salut_roomlist_channel_interfaces[] = { NULL };
-
 /* properties */
 enum
 {
@@ -130,7 +128,6 @@ salut_roomlist_channel_class_init (
   object_class->finalize = salut_roomlist_channel_finalize;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_ROOM_LIST;
-  base_class->interfaces = salut_roomlist_channel_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_NONE;
   base_class->fill_immutable_properties =
     salut_roomlist_channel_fill_immutable_properties;

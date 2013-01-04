@@ -201,7 +201,7 @@ salut_conn_contact_info_fill_contact_attributes (
       TpHandle handle = g_array_index (contacts, TpHandle, i);
       GPtrArray *contact_info = NULL;
 
-      if (base->self_handle == handle)
+      if (tp_base_connection_get_self_handle (base) == handle)
         {
           /* TODO: dig contact info out of SalutSelf. There's overlap with
            * connection parameters here … should they be DBus_Property

@@ -717,20 +717,21 @@ create_new_tube (SalutTubesManager *self,
   SalutTubesManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       SALUT_TYPE_TUBES_MANAGER, SalutTubesManagerPrivate);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+  TpHandle self_handle = tp_base_connection_get_self_handle (base_conn);
   SalutTubeIface *tube;
 
   if (type == TP_TUBE_TYPE_STREAM)
     {
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
               handle, TP_HANDLE_TYPE_CONTACT,
-              base_conn->self_handle, base_conn->self_handle, FALSE, service,
+              self_handle, self_handle, FALSE, service,
               parameters, tube_id, portnum, iq_req, TRUE));
     }
   else if (type == TP_TUBE_TYPE_DBUS)
     {
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
-              handle, TP_HANDLE_TYPE_CONTACT, base_conn->self_handle, NULL,
-              base_conn->self_handle, service, parameters, tube_id, TRUE));
+              handle, TP_HANDLE_TYPE_CONTACT, self_handle, NULL,
+              self_handle, service, parameters, tube_id, TRUE));
     }
   else
     {
@@ -890,7 +891,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
     goto error;
 
   /* Don't support opening a channel to our self handle */
-  if (handle == base_conn->self_handle)
+  if (handle == tp_base_connection_get_self_handle (base_conn))
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "Can't open a channel to your self handle");
@@ -1160,7 +1161,7 @@ salut_tubes_manager_get_contact_caps_from_set (
   GetContactCapsClosure closure = { FALSE, arr, handle };
 
   /* Always claim that we support tubes. */
-  closure.supports_tubes = (handle == base->self_handle);
+  closure.supports_tubes = (handle == tp_base_connection_get_self_handle (base));
 
   gabble_capability_set_foreach (caps, get_contact_caps_foreach, &closure);
 

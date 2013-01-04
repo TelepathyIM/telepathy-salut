@@ -155,7 +155,7 @@ browser_found (GaServiceBrowser *browser,
   if (flags & AVAHI_LOOKUP_RESULT_OUR_OWN)
     return;
 
-  if (base_conn->status == TP_CONNECTION_STATUS_DISCONNECTED)
+  if (tp_base_connection_is_destroyed (base_conn))
     return;
 
   if (!split_activity_name (name, &room_name, &contact_name))

@@ -198,6 +198,7 @@ PKG_CHECK_MODULES(LIBXML2, [libxml-2.0])
 AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
+AC_DEFINE([TP_SEAL_ENABLE], [], [Prevent to use sealed variables])
 AC_DEFINE([TP_DISABLE_SINGLE_INCLUDE], [], [Disable single header include])
 AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_0_20], [Ignore post 0.20 deprecations])
 AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_0_20], [Prevent post 0.20 APIs])

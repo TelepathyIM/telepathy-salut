@@ -71,8 +71,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel,
 
 #define SALUT_UNDEFINED_FILE_SIZE G_MAXUINT64
 
-static const char *salut_file_transfer_channel_interfaces[] = { NULL };
-
 /* properties */
 enum
 {
@@ -532,7 +530,6 @@ salut_file_transfer_channel_class_init (
   object_class->set_property = salut_file_transfer_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER;
-  base_class->interfaces = salut_file_transfer_channel_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_file_transfer_channel_close;
   base_class->fill_immutable_properties =
