@@ -12,6 +12,6 @@ Name: Telepathy-Salut
 Description: Link-local XMPP backend for the Telepathy framework
 Version: @VERSION@
 Requires: pkg-config >= 0.21
-Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib >= 0.13.12
+Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib >= 0.20
 Libs: -L${pluginexeclibdir} -lsalut-plugins -lwocky
 Cflags: -I${includedir}/telepathy-salut-0
