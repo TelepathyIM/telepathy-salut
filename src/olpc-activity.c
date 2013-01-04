@@ -182,8 +182,6 @@ salut_olpc_activity_dispose (GObject *object)
 {
   SalutOlpcActivity *self = SALUT_OLPC_ACTIVITY (object);
   SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
 
   if (priv->dispose_has_run)
     return;
@@ -424,9 +422,6 @@ salut_olpc_activity_update (SalutOlpcActivity *self,
                             gboolean is_private)
 {
   SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
-  TpBaseConnection *base_conn = (TpBaseConnection *) (self->connection);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base_conn,
-       TP_HANDLE_TYPE_ROOM);
   gboolean changed = FALSE;
   GError *error = NULL;
   gboolean become_valid = FALSE;
