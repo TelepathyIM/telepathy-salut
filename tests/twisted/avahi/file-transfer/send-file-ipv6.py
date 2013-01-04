@@ -1,5 +1,6 @@
 import sys
 
+from avahitest import check_ipv6_enabled
 from saluttest import exec_test
 from file_transfer_helper import SendFileTest
 import constants as cs
