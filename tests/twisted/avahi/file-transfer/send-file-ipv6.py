@@ -1,10 +1,17 @@
+import sys
+
 from saluttest import exec_test
 from file_transfer_helper import SendFileTest
 import constants as cs
 
-print "FIXME: disabled because of a bug in Python's httplib. http://bugs.python.org/issue5111"
-# exiting 77 causes automake to consider the test to have been skipped
-raise SystemExit(77)
+if not check_ipv6_enabled():
+    print "Skipped test as IPv6 doesn't seem to be available"
+    # exiting 77 causes automake to consider the test to have been skipped
+    raise SystemExit(77)
+
+if sys.version_info < (2, 7, 1):
+    print "FIXME: disabled because of a bug in Python's httplib. http://bugs.python.org/issue5111"
+    raise SystemExit(77)
 
 class SendFileTransferIPv6(SendFileTest):
     def __init__(self):
