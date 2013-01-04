@@ -53,6 +53,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
     from="Telepathy specification"/>
   <tp:external-type name="Channel_Class" type="a{sv}"
     from="Telepathy specification"/>
+  <tp:external-type name="Connection_Status" type="u"
+    from="Telepathy specification"/>
 
   <!-- use types from Channel_Type_Tubes -->
   <tp:external-type name="DBus_Tube_Member" type="(us)"

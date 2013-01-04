@@ -50,7 +50,9 @@ _gen/%.xml: %.xml $(wildcard *.xml) $(tools_dir)/identity.xsl
 		$< > $@
 
 extensions.html: _gen/all.xml $(tools_dir)/doc-generator.xsl
-	$(AM_V_GEN)$(XSLTPROC) $(XSLTPROCFLAGS) --xinclude \
+	$(AM_V_GEN)$(XSLTPROC) $(XSLTPROCFLAGS) \
+		--param allow-undefined-interfaces 'true()' \
+		--xinclude \
 		$(tools_dir)/doc-generator.xsl \
 		$< > $@
 
