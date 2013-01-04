@@ -33,8 +33,8 @@
 #include <netdb.h>
 #endif
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <gibber/gibber-linklocal-transport.h>
 

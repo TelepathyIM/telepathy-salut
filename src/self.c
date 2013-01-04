@@ -37,8 +37,7 @@
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-muc-connection.h>
 
-#include <telepathy-glib/errors.h>
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "capabilities.h"
 #include "contact-manager.h"

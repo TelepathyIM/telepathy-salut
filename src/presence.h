@@ -21,7 +21,8 @@
 #define __SALUT_PRESENCE_H__
 
 #include <glib-object.h>
-#include <telepathy-glib/enums.h>
+
+#include <telepathy-glib/telepathy-glib.h>
 
 G_BEGIN_DECLS
 

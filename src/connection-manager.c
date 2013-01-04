@@ -26,8 +26,8 @@
 #include <stdlib.h>
 
 #include <dbus/dbus-protocol.h>
-#include <telepathy-glib/util.h>
-#include <telepathy-glib/debug-sender.h>
+
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "protocol.h"
 #include "connection.h"

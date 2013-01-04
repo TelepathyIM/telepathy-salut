@@ -22,7 +22,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/handle.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
 #include "contact.h"

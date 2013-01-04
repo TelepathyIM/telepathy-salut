@@ -21,7 +21,7 @@
 #include "config.h"
 #include "salut/plugin.h"
 
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #define DEBUG_FLAG DEBUG_PLUGINS
 #include "debug.h"

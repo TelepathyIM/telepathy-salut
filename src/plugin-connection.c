@@ -21,7 +21,9 @@
 #include "salut/plugin-connection.h"
 
 #include <glib-object.h>
-#include <telepathy-glib/errors.h>
+
+#include <telepathy-glib/telepathy-glib.h>
+
 #include <debug.h>
 
 /**

@@ -28,7 +28,7 @@
 #include "presence-cache.h"
 #include "enumtypes.h"
 
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include <debug.h>

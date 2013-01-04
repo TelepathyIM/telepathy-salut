@@ -30,16 +30,8 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
-#include <telepathy-glib/base-contact-list.h>
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/handle-repo-dynamic.h>
-#include <telepathy-glib/handle-repo.h>
-#include <telepathy-glib/handle-repo-static.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-generic.h>
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <salut/caps-channel-manager.h>
 #include <salut/plugin-connection.h>

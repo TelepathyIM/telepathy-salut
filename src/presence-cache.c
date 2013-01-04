@@ -27,8 +27,8 @@
 
 #include <wocky/wocky.h>
 
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/intset.h>
+#include <telepathy-glib/telepathy-glib.h>
+
 #include <salut/capabilities.h>
 
 #define DEBUG_FLAG DEBUG_PRESENCE

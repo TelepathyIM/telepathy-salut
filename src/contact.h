@@ -22,7 +22,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/handle-repo.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <salut/capability-set.h>
 #include "presence.h"

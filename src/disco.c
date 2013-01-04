@@ -28,7 +28,8 @@
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
-#include <telepathy-glib/dbus.h>
+
+#include <telepathy-glib/telepathy-glib.h>
 
 #define DEBUG_FLAG DEBUG_DISCO
 

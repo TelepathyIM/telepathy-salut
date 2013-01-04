@@ -33,9 +33,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/errors.h>
-#include <telepathy-glib/message-mixin.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"

@@ -38,10 +38,8 @@
 
 #include <wocky/wocky.h>
 
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/errors.h>
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <gibber/gibber-bytestream-muc.h>
 #include <gibber/gibber-muc-connection.h>

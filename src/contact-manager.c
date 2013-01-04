@@ -30,8 +30,7 @@
 #include "contact.h"
 #include "enumtypes.h"
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #define DEBUG_FLAG DEBUG_CONTACTS
 #include "debug.h"

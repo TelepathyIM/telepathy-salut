@@ -20,10 +20,8 @@
 #include "config.h"
 #include "connection-contact-info.h"
 
-#include <telepathy-glib/interfaces.h>
-/* Slightly sketchy; included for TpContactInfoFieldSpec. */
-#include <telepathy-glib/connection.h>
-#include <telepathy-glib/gtypes.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "contact-manager.h"
 

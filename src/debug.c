@@ -11,8 +11,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-#include <telepathy-glib/debug.h>
-#include <telepathy-glib/debug-sender.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #ifdef ENABLE_DEBUG
 

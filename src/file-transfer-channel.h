@@ -31,7 +31,7 @@
 #include <extensions/_gen/interfaces.h>
 #include <extensions/_gen/enums.h>
 
-#include <telepathy-glib/base-channel.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "contact.h"
 #include "connection.h"
