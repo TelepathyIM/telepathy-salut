@@ -27,8 +27,8 @@
 
 #include <wocky/wocky.h>
 
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/intset.h>
+#include <telepathy-glib/telepathy-glib.h>
+
 #include <salut/capabilities.h>
 
 #define DEBUG_FLAG DEBUG_PRESENCE
@@ -37,7 +37,6 @@
 #include "debug.h"
 #include "caps-hash.h"
 #include "disco.h"
-#include "signals-marshal.h"
 
 G_DEFINE_TYPE (SalutPresenceCache, salut_presence_cache, G_TYPE_OBJECT);
 

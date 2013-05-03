@@ -17,9 +17,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "connection.h"
-
-#include <config.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,16 +30,8 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
-#include <telepathy-glib/base-contact-list.h>
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/handle-repo-dynamic.h>
-#include <telepathy-glib/handle-repo.h>
-#include <telepathy-glib/handle-repo-static.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-generic.h>
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <salut/caps-channel-manager.h>
 #include <salut/plugin-connection.h>
@@ -600,6 +591,7 @@ get_contact_statuses (GObject *obj,
   SalutConnection *self = SALUT_CONNECTION (obj);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base,
     TP_HANDLE_TYPE_CONTACT);
   GHashTable *ret;
@@ -620,7 +612,7 @@ get_contact_statuses (GObject *obj,
           (SALUT_PRESENCE_OFFLINE, NULL);
       const gchar *message = NULL;
 
-      if (handle == base->self_handle)
+      if (handle == self_handle)
         {
           ps->index = priv->self->status;
           message = priv->self->status_message;
@@ -665,12 +657,13 @@ set_self_presence (SalutConnection *self,
 
   if (salut_self_set_presence (priv->self, presence, message, error))
     {
+      TpHandle self_handle = tp_base_connection_get_self_handle (base);
       TpPresenceStatus ps = { priv->self->status,
           make_presence_opt_args (priv->self->status,
               priv->self->status_message) };
 
       tp_presence_mixin_emit_one_presence_update ((GObject *) self,
-          base->self_handle, &ps);
+          self_handle, &ps);
 
       if (ps.optional_arguments != NULL)
         g_hash_table_unref (ps.optional_arguments);
@@ -738,6 +731,21 @@ static const gchar *interfaces [] = {
 #endif
   NULL };
 
+static GPtrArray *
+get_interfaces (TpBaseConnection *base)
+{
+  GPtrArray *arr;
+  const gchar **iter;
+
+  arr = TP_BASE_CONNECTION_CLASS (
+      salut_connection_parent_class)->get_interfaces_always_present (base);
+
+  for (iter = interfaces; *iter != NULL; iter++)
+    g_ptr_array_add (arr, (gchar *) *iter);
+
+  return arr;
+}
+
 const gchar * const *
 salut_connection_get_implemented_interfaces (void)
 {
@@ -783,7 +791,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_shut_down;
   tp_connection_class->start_connecting =
       salut_connection_start_connecting;
-  tp_connection_class->interfaces_always_present = interfaces;
+  tp_connection_class->get_interfaces_always_present = get_interfaces;
 
   salut_connection_class->properties_mixin.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
@@ -1102,7 +1110,8 @@ _self_established_cb (SalutSelf *s, gpointer data)
   g_free (self->name);
   self->name = g_strdup (s->name);
 
-  base->self_handle = tp_handle_ensure (handle_repo, self->name, NULL, NULL);
+  tp_base_connection_set_self_handle (base,
+      tp_handle_ensure (handle_repo, self->name, NULL, NULL));
 
   wocky_session_set_jid (self->session, self->name);
 
@@ -1310,7 +1319,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
     TP_HANDLE_TYPE_CONTACT);
   const gchar *alias;
 
-  if (handle == base->self_handle)
+  if (handle == tp_base_connection_get_self_handle (base))
     {
       alias = salut_self_get_alias (priv->self);
     }
@@ -1447,7 +1456,7 @@ salut_connection_get_handle_contact_capabilities (SalutConnection *self,
   const GabbleCapabilitySet *set;
   SalutContact *contact = NULL;
 
-  if (handle == base_conn->self_handle)
+  if (handle == tp_base_connection_get_self_handle (base_conn))
     {
       if (self->priv->self == NULL)
         return;
@@ -1521,10 +1530,11 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   SalutConnectionPrivate *priv = self->priv;
   GError *error = NULL;
   const gchar *alias = g_hash_table_lookup (aliases,
-      GUINT_TO_POINTER (base->self_handle));
+      GUINT_TO_POINTER (self_handle));
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1626,6 +1636,7 @@ salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars *iface,
   SalutConnectionPrivate *priv = self->priv;
   GError *error = NULL;
   TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -1638,7 +1649,7 @@ salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars *iface,
     }
 
   tp_svc_connection_interface_avatars_emit_avatar_updated (self,
-      base->self_handle, priv->self->avatar_token);
+      self_handle, priv->self->avatar_token);
   tp_svc_connection_interface_avatars_return_from_set_avatar (context,
       priv->self->avatar_token);
 }
@@ -1654,6 +1665,7 @@ salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   TpHandleRepoIface *handle_repo;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -1673,7 +1685,7 @@ salut_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *iface,
   for (i = 0; i < contacts->len ; i++)
     {
       TpHandle handle = g_array_index (contacts, TpHandle, i);
-      if (base->self_handle == handle)
+      if (self_handle == handle)
         {
           ret[i] = priv->self->avatar_token;
         }
@@ -1710,6 +1722,7 @@ salut_connection_get_known_avatar_tokens (
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   TpHandleRepoIface *handle_repo;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -1731,7 +1744,7 @@ salut_connection_get_known_avatar_tokens (
       TpHandle handle = g_array_index (contacts, TpHandle, i);
       gchar *tokens = NULL;
 
-      if (base->self_handle == handle)
+      if (self_handle == handle)
         {
           tokens = g_strdup (priv->self->avatar_token);
         }
@@ -1768,6 +1781,7 @@ salut_connection_avatars_fill_contact_attributes (GObject *obj,
   guint i;
   SalutConnection *self = SALUT_CONNECTION (obj);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   SalutConnectionPrivate *priv = self->priv;
 
   for (i = 0; i < contacts->len; i++)
@@ -1775,7 +1789,7 @@ salut_connection_avatars_fill_contact_attributes (GObject *obj,
       TpHandle handle = g_array_index (contacts, TpHandle, i);
       gchar *token = NULL;
 
-      if (base->self_handle == handle)
+      if (self_handle == handle)
         {
           token = g_strdup (priv->self->avatar_token);
         }
@@ -1838,6 +1852,7 @@ salut_connection_request_avatars (
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   TpHandleRepoIface *handle_repo;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -1856,7 +1871,7 @@ salut_connection_request_avatars (
     {
       TpHandle handle = g_array_index (contacts, TpHandle, i);
 
-      if (base->self_handle == handle)
+      if (self_handle == handle)
         {
            GArray *arr;
 
@@ -1868,7 +1883,7 @@ salut_connection_request_avatars (
                  priv->self->avatar_size);
 
                tp_svc_connection_interface_avatars_emit_avatar_retrieved (
-                  (GObject *) self, base->self_handle,
+                  (GObject *) self, self_handle,
                     priv->self->avatar_token, arr, "");
                g_array_unref (arr);
              }
@@ -1921,6 +1936,7 @@ salut_connection_request_avatar (TpSvcConnectionInterfaceAvatars *iface,
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   SalutContact *contact;
   GError *err = NULL;
   TpHandleRepoIface *handle_repo;
@@ -1937,7 +1953,7 @@ salut_connection_request_avatar (TpSvcConnectionInterfaceAvatars *iface,
       return;
     }
 
-  if (handle == base->self_handle)
+  if (handle == self_handle)
     {
       _request_avatar_cb (NULL, priv->self->avatar, priv->self->avatar_size,
         context);
@@ -2248,6 +2264,8 @@ salut_connection_update_capabilities (
   if ((before != NULL && !gabble_capability_set_equals (before, after))
       || (before_forms != NULL && !data_forms_equal (before_forms, after_forms)))
     {
+      TpHandle self_handle = tp_base_connection_get_self_handle (base);
+
       if (DEBUGGING)
         {
           gchar *dump = gabble_capability_set_dump (after, "  ");
@@ -2263,7 +2281,7 @@ salut_connection_update_capabilities (
           return;
         }
 
-      _emit_contact_capabilities_changed (self, base->self_handle);
+      _emit_contact_capabilities_changed (self, self_handle);
     }
 
   /* after now belongs to SalutSelf, or priv->pre_connect_caps */
@@ -2468,6 +2486,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   GHashTable *properties = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -2475,7 +2494,7 @@ salut_connection_olpc_get_properties (SalutSvcOLPCBuddyInfo *iface,
   if (!check_contact (base, handle, context))
     return;
 
-  if (handle == base->self_handle)
+  if (handle == self_handle)
     {
       properties = get_properties_hash (priv->self->olpc_key,
           priv->self->olpc_color, priv->self->jid, NULL, NULL);
@@ -2686,6 +2705,7 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   SalutConnectionPrivate *priv = self->priv;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -2695,7 +2715,7 @@ salut_connection_olpc_get_current_activity (SalutSvcOLPCBuddyInfo *iface,
   if (!check_contact (base, handle, context))
     return;
 
-  if (handle == base->self_handle)
+  if (handle == self_handle)
     {
       DEBUG ("Returning my own cur.act.: %s -> %u",
           priv->self->olpc_cur_act ? priv->self->olpc_cur_act : "",
@@ -2779,6 +2799,7 @@ salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandle self_handle = tp_base_connection_get_self_handle (base);
   GPtrArray *arr;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
@@ -2788,7 +2809,7 @@ salut_connection_olpc_get_activities (SalutSvcOLPCBuddyInfo *iface,
   if (!check_contact (base, handle, context))
     return;
 
-  if (handle == base->self_handle)
+  if (handle == self_handle)
     {
       arr = g_ptr_array_new ();
       salut_self_foreach_olpc_activity (priv->self, append_activity, arr);
@@ -3557,6 +3578,7 @@ muc_channel_closed_cb (SalutMucChannel *chan,
   SalutConnection *conn;
   SalutConnectionPrivate *priv;
   TpBaseConnection *base;
+  TpHandle self_handle;
   GPtrArray *activities = g_ptr_array_new ();
 
   g_signal_handlers_disconnect_by_func (chan,
@@ -3568,11 +3590,12 @@ muc_channel_closed_cb (SalutMucChannel *chan,
 
   priv = conn->priv;
   base = (TpBaseConnection *) conn;
+  self_handle = tp_base_connection_get_self_handle (base);
 
   salut_self_remove_olpc_activity (priv->self, activity);
 
   salut_self_foreach_olpc_activity (priv->self, append_activity, activities);
-  salut_svc_olpc_buddy_info_emit_activities_changed (conn, base->self_handle,
+  salut_svc_olpc_buddy_info_emit_activities_changed (conn, self_handle,
       activities);
   free_olpc_activities (activities);
 
@@ -3839,7 +3862,8 @@ make_sidecar_path (
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
 
   return g_strdelimit (
-      g_strdup_printf ("%s/Sidecar/%s", base_conn->object_path, sidecar_iface),
+      g_strdup_printf ("%s/Sidecar/%s",
+        tp_base_connection_get_object_path (base_conn), sidecar_iface),
       ".", '/');
 }
 
@@ -3977,7 +4001,7 @@ salut_connection_ensure_sidecar (
   gpointer key, value;
   GError *error = NULL;
 
-  if (base_conn->status == TP_CONNECTION_STATUS_DISCONNECTED)
+  if (tp_base_connection_is_destroyed (base_conn))
     {
       GError e = { TP_ERROR, TP_ERROR_DISCONNECTED,
           "This connection has already disconnected" };
@@ -4031,7 +4055,8 @@ salut_connection_ensure_sidecar (
   g_hash_table_insert (priv->pending_sidecars, g_strdup (sidecar_iface),
       g_list_prepend (NULL, context));
 
-  if (base_conn->status == TP_CONNECTION_STATUS_CONNECTED)
+  if (tp_base_connection_get_status (base_conn) ==
+      TP_CONNECTION_STATUS_CONNECTED)
     {
       SalutPluginLoader *loader = salut_plugin_loader_dup ();
 

@@ -23,8 +23,7 @@
 #include <glib-object.h>
 #include <wocky/wocky.h>
 
-#include <telepathy-glib/base-channel.h>
-#include <telepathy-glib/message-mixin.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 G_BEGIN_DECLS
 

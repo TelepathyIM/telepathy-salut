@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "bonjour-discovery-client.h"
 
 #include <stdlib.h>
@@ -29,7 +30,6 @@
 #include "debug.h"
 
 #include "presence.h"
-#include "signals-marshal.h"
 #include "bonjour-contact-manager.h"
 #include "bonjour-self.h"
 
@@ -204,8 +204,7 @@ salut_bonjour_discovery_client_class_init (
                   G_OBJECT_CLASS_TYPE (salut_bonjour_discovery_client_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__UINT,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 

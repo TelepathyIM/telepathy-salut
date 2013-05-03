@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "roomlist-channel.h"
 
 #include <dbus/dbus-glib.h>
@@ -25,11 +26,9 @@
 #include <string.h>
 
 #include "connection.h"
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/enums.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-channel.h>
+
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #define DEBUG_FLAG DEBUG_ROOMLIST
 #include "debug.h"
@@ -41,8 +40,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutRoomlistChannel, salut_roomlist_channel,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_ROOM_LIST,
       roomlist_iface_init);
     );
-
-static const char *salut_roomlist_channel_interfaces[] = { NULL };
 
 /* properties */
 enum
@@ -131,7 +128,6 @@ salut_roomlist_channel_class_init (
   object_class->finalize = salut_roomlist_channel_finalize;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_ROOM_LIST;
-  base_class->interfaces = salut_roomlist_channel_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_NONE;
   base_class->fill_immutable_properties =
     salut_roomlist_channel_fill_immutable_properties;

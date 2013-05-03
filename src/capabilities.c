@@ -22,8 +22,8 @@
 #include "capabilities.h"
 
 #include <wocky/wocky.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/channel-manager.h>
+
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "namespaces.h"
 

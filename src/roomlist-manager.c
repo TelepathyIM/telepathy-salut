@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "roomlist-manager.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,8 +27,6 @@
 #ifdef G_OS_UNIX
 #include <arpa/inet.h>
 #endif
-
-#include "roomlist-manager.h"
 
 #include <wocky/wocky.h>
 
@@ -39,11 +40,8 @@
 #include "roomlist-channel.h"
 #include "discovery-client.h"
 
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/util.h>
-#include <telepathy-glib/base-channel.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
@@ -353,7 +351,7 @@ make_roomlist_channel (SalutRoomlistManager *self)
   /* FIXME: this is not optimal as all the Connection will share the same cpt
    * and we could have problem if we overflow the guint. */
   object_path = g_strdup_printf ("%s/RoomlistChannel%u",
-      conn->object_path, cpt++);
+      tp_base_connection_get_object_path (conn), cpt++);
 
   roomlist_channel = salut_roomlist_channel_new (priv->connection,
       object_path);

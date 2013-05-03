@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "avahi-self.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,8 +29,6 @@
 
 #define DEBUG_FLAG DEBUG_SELF
 #include "debug.h"
-
-#include "avahi-self.h"
 
 #include "sha1/sha1-util.h"
 

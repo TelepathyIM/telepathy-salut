@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "self.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,13 +34,10 @@
 
 #include <errno.h>
 
-#include "self.h"
-
 #include <gibber/gibber-linklocal-transport.h>
 #include <gibber/gibber-muc-connection.h>
 
-#include <telepathy-glib/errors.h>
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "capabilities.h"
 #include "contact-manager.h"

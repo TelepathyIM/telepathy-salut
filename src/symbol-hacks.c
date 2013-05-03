@@ -10,6 +10,7 @@
  * http://cgit.freedesktop.org/xorg/xserver/tree/hw/xfree86/loader/sdksyms.sh
  */
 
+#include "config.h"
 #include "symbol-hacks.h"
 
 /* First include all the public headers. */

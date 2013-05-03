@@ -5,9 +5,7 @@ noinst_LTLIBRARIES = libgibber.la
 BUILT_SOURCES = \
   gibber-file-transfer-enumtypes.c \
   gibber-file-transfer-enumtypes.h \
-  gibber-signals-marshal.list \
-  gibber-signals-marshal.h \
-  gibber-signals-marshal.c
+  $(NULL)
 
 HANDWRITTEN_SOURCES =             \
   gibber-muc-connection.c         \
@@ -68,26 +66,6 @@ check-local: check-coding-style
 CLEANFILES=$(BUILT_SOURCES)
 dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
-
-gibber-signals-marshal.list: $(HANDWRITTEN_SOURCES) Makefile.am
-	$(AM_V_GEN)( cd $(srcdir) && \
-	sed -n -e 's/.*_gibber_signals_marshal_\([[:upper:][:digit:]]*__[[:upper:][:digit:]_]*\).*/\1/p' \
-	$(HANDWRITTEN_SOURCES) ) \
-	| sed -e 's/__/:/' -e 'y/_/,/' | sort -u > $@.tmp
-	if cmp -s $@.tmp $@; then \
-		rm $@.tmp; \
-	else \
-		mv $@.tmp $@; \
-	fi
-
-%-signals-marshal.h: %-signals-marshal.list Makefile.am
-	$(AM_V_GEN)glib-genmarshal --header --prefix=_$(subst -,_,$*)_signals_marshal $< > $@
-
-%-signals-marshal.c: %-signals-marshal.list Makefile.am
-	$(AM_V_GEN){ echo '#include "$*-signals-marshal.h"' && \
-	glib-genmarshal --body --prefix=_$(subst -,_,$*)_signals_marshal $< ; \
-	} > $@
-
 
 AM_CFLAGS = $(ERROR_CFLAGS) $(GCOV_CFLAGS) @GLIB_CFLAGS@ @LIBXML2_CFLAGS@ @WOCKY_CFLAGS@ @LIBSOUP_CFLAGS@
 

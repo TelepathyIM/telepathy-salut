@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "gibber-bytestream-muc.h"
 
 #include <stdlib.h>
@@ -33,8 +34,6 @@
 
 #define DEBUG_FLAG DEBUG_BYTESTREAM
 #include "gibber-debug.h"
-
-#include "gibber-signals-marshal.h"
 
 static void bytestream_iface_init (gpointer g_iface, gpointer iface_data);
 

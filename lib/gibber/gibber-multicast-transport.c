@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include <gibber-multicast-transport.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -24,8 +27,6 @@
 #include <string.h>
 
 #include "gibber-sockets.h"
-
-#include <gibber-multicast-transport.h>
 
 #define DEBUG_FLAG DEBUG_NET
 #include <gibber-debug.h>

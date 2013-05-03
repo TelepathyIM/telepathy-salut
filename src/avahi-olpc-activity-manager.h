@@ -23,7 +23,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/handle.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "olpc-activity-manager.h"
 #include "connection.h"

@@ -21,6 +21,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "file-transfer-channel.h"
+
 #include <glib/gstdio.h>
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
@@ -41,9 +44,6 @@
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
 
-#include "file-transfer-channel.h"
-#include "signals-marshal.h"
-
 #include "connection.h"
 #include "im-manager.h"
 #include "contact.h"
@@ -53,12 +53,8 @@
 #include <gibber/gibber-file-transfer.h>
 #include <gibber/gibber-oob-file-transfer.h>
 
-#include <telepathy-glib/channel-iface.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/svc-generic.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/gnio-util.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 static void
 file_transfer_iface_init (gpointer g_iface, gpointer iface_data);
@@ -74,8 +70,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutFileTransferChannel, salut_file_transfer_channel,
 #define CHECK_STR_EMPTY(x) ((x) == NULL || (x)[0] == '\0')
 
 #define SALUT_UNDEFINED_FILE_SIZE G_MAXUINT64
-
-static const char *salut_file_transfer_channel_interfaces[] = { NULL };
 
 /* properties */
 enum
@@ -536,7 +530,6 @@ salut_file_transfer_channel_class_init (
   object_class->set_property = salut_file_transfer_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER;
-  base_class->interfaces = salut_file_transfer_channel_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_file_transfer_channel_close;
   base_class->fill_immutable_properties =

@@ -18,6 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "util.h"
 
 #include <stdlib.h>
@@ -25,7 +26,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <dbus/dbus-glib.h>
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "contact.h"
 

@@ -21,8 +21,8 @@
 #ifndef __TEXT_HELPER_H__
 #define __TEXT_HELPER_H__
 
-#include <telepathy-glib/enums.h>
-#include <telepathy-glib/channel.h>
+#include <telepathy-glib/telepathy-glib.h>
+
 #include <wocky/wocky.h>
 
 #include "contact.h"

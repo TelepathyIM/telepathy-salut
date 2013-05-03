@@ -26,6 +26,7 @@
  */
 
 #include "config.h"
+#include "caps-hash.h"
 
 #include <string.h>
 
@@ -33,7 +34,6 @@
 
 #include "debug.h"
 #include "capabilities.h"
-#include "caps-hash.h"
 #include "self.h"
 
 static void

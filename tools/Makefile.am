@@ -16,23 +16,26 @@ EXTRA_DIST = \
     glib-signals-marshal-gen.py \
     identity.xsl \
     libglibcodegen.py \
+    libtpcodegen.py \
     make-release-mail.py \
     telepathy.am \
     xep.xsl
 
+libglibcodegen.py: libtpcodegen.py
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 glib-client-marshaller-gen.py: libglibcodegen.py
-	@touch $@
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 glib-ginterface-gen.py: libglibcodegen.py
-	@touch $@
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 glib-gtypes-generator.py: libglibcodegen.py
-	@touch $@
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 glib-signals-marshal-gen.py: libglibcodegen.py
-	@touch $@
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 
 glib-interfaces-generator.xsl: c-interfaces-generator.xsl
-	@touch $@
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 glib-interfaces-body-generator.xsl: c-interfaces-generator.xsl
-	@touch $@
+	$(AM_V_GEN)test -e ${srcdir}/$@ && touch ${srcdir}/$@
 
 maintainer-update-from-xmpp.org:
 	set -e; \

@@ -22,9 +22,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/base-channel.h>
-#include <telepathy-glib/enums.h>
-#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "extensions/extensions.h"
 #include "connection.h"

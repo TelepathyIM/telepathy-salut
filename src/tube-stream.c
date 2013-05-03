@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "tube-stream.h"
 
 #include <stdlib.h>
@@ -41,15 +42,9 @@
 #endif
 
 #include <glib/gstdio.h>
-#include <telepathy-glib/gtypes.h>
 
-#include <telepathy-glib/channel-iface.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/exportable-channel.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-channel.h>
-#include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <wocky/wocky.h>
 
@@ -65,7 +60,6 @@
 #define DEBUG_FLAG DEBUG_TUBES
 
 #include "debug.h"
-#include "signals-marshal.h"
 #include "connection.h"
 #include "muc-tube-stream.h"
 #include "tube-iface.h"
@@ -82,11 +76,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream,
       streamtube_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE,
       NULL));
-
-static const gchar *salut_tube_stream_interfaces[] = {
-    TP_IFACE_CHANNEL_INTERFACE_TUBE,
-    NULL
-};
 
 static const gchar * const salut_tube_stream_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
@@ -1283,6 +1272,16 @@ salut_tube_stream_close_dbus (TpBaseChannel *base)
   salut_tube_iface_close ((SalutTubeIface *) base, FALSE);
 }
 
+static GPtrArray *
+salut_tube_stream_get_interfaces (TpBaseChannel *chan)
+{
+  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_tube_stream_parent_class)
+    ->get_interfaces (chan);
+
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE);
+  return interfaces;
+}
+
 static void
 salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 {
@@ -1319,7 +1318,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   object_class->constructor = salut_tube_stream_constructor;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_STREAM_TUBE;
-  base_class->interfaces = salut_tube_stream_interfaces;
+  base_class->get_interfaces = salut_tube_stream_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_tube_stream_close_dbus;
   base_class->fill_immutable_properties =
@@ -1432,8 +1431,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__VOID,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
   signals[NEW_CONNECTION] =
@@ -1441,8 +1439,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__UINT,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 1, G_TYPE_UINT);
 
   signals[CLOSED] =
@@ -1450,8 +1447,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__VOID,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
   signals[OFFERED] =
@@ -1459,8 +1455,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   G_OBJECT_CLASS_TYPE (salut_tube_stream_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   0,
-                  NULL, NULL,
-                  salut_signals_marshal_VOID__VOID,
+                  NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
   salut_tube_stream_class->dbus_props_class.interfaces = prop_interfaces;

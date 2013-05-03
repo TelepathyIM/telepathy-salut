@@ -18,15 +18,14 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "gibber-muc-connection.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <string.h>
 #include <sys/types.h>
-
-#include "gibber-muc-connection.h"
-#include "gibber-signals-marshal.h"
 
 #include "gibber-sockets.h"
 #include "gibber-multicast-transport.h"
@@ -138,8 +137,7 @@ gibber_muc_connection_class_init (
       G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
       0,
-      NULL, NULL,
-      _gibber_signals_marshal_VOID__STRING_OBJECT,
+      NULL, NULL, NULL,
       G_TYPE_NONE, 2, G_TYPE_STRING, WOCKY_TYPE_STANZA);
   /*  UINT: 16 bit stream id
    *  POINTER: guint8 * data buffer
@@ -149,8 +147,7 @@ gibber_muc_connection_class_init (
       G_OBJECT_CLASS_TYPE(gibber_muc_connection_class),
       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
       0,
-      NULL, NULL,
-      _gibber_signals_marshal_VOID__STRING_UINT_POINTER_ULONG,
+      NULL, NULL, NULL,
       G_TYPE_NONE, 4, G_TYPE_STRING,
       G_TYPE_UINT, G_TYPE_POINTER, G_TYPE_ULONG);
 

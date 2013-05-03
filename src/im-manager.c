@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "im-manager.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,17 +28,13 @@
 
 #include "extensions/extensions.h"
 #include "im-channel.h"
-#include "im-manager.h"
 #include "contact.h"
 
 #include <gibber/gibber-linklocal-transport.h>
 #include <wocky/wocky.h>
 
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/base-channel.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
@@ -412,7 +411,7 @@ salut_im_manager_requestotron (SalutImManager *self,
     }
 
   /* Don't support opening a channel to our self handle */
-  if (handle == base_conn->self_handle)
+  if (handle == tp_base_connection_get_self_handle (base_conn))
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Can't open a text channel to yourself");
@@ -423,8 +422,8 @@ salut_im_manager_requestotron (SalutImManager *self,
 
   if (channel == NULL)
     {
-      salut_im_manager_new_channel (self, handle, base_conn->self_handle,
-          request_token);
+      salut_im_manager_new_channel (self, handle,
+          tp_base_connection_get_self_handle (base_conn), request_token);
       return TRUE;
     }
 
@@ -531,7 +530,6 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   SalutImChannel *chan;
   SalutContact *contact;
   const gchar *name;
-  gchar *path = NULL;
   GSList *requests = NULL;
 
   g_assert (g_hash_table_lookup (priv->channels, GUINT_TO_POINTER (handle))
@@ -550,8 +548,6 @@ salut_im_manager_new_channel (SalutImManager *mgr,
       return NULL;
     }
 
-  path = g_strdup_printf ("%s/IMChannel/%u",
-      base_connection->object_path, handle);
   chan = g_object_new (SALUT_TYPE_IM_CHANNEL,
       "connection", priv->connection,
       "contact", contact,
@@ -561,7 +557,6 @@ salut_im_manager_new_channel (SalutImManager *mgr,
       NULL);
   tp_base_channel_register ((TpBaseChannel *) chan);
   g_object_unref (contact);
-  g_free (path);
   g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);
 
   if (request != NULL)

@@ -23,9 +23,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/base-channel.h>
-#include <telepathy-glib/group-mixin.h>
-#include <telepathy-glib/message-mixin.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <gibber/gibber-muc-connection.h>
 

@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "avahi-olpc-activity.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,8 +27,6 @@
 #include <avahi-gobject/ga-entry-group.h>
 #include <avahi-gobject/ga-service-resolver.h>
 #include <avahi-common/malloc.h>
-
-#include "avahi-olpc-activity.h"
 
 #define DEBUG_FLAG DEBUG_OLPC_ACTIVITY
 #include "debug.h"

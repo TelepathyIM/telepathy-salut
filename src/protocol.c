@@ -17,13 +17,11 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "protocol.h"
-
-#include <config.h>
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-protocol.h>
-#include <telepathy-glib/base-connection-manager.h>
 #include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
@@ -137,12 +135,6 @@ identify_account (TpBaseProtocol *self G_GNUC_UNUSED,
    * name is part of our identifier, but can be changed at any time;
    * the best an account manager can do is to number accounts. */
   return g_strdup ("");
-}
-
-static GStrv
-get_interfaces (TpBaseProtocol *self)
-{
-  return g_new0 (gchar *, 1);
 }
 
 static void
@@ -295,7 +287,6 @@ salut_protocol_class_init (SalutProtocolClass *klass)
   base_class->new_connection = new_connection;
   base_class->normalize_contact = normalize_contact;
   base_class->identify_account = identify_account;
-  base_class->get_interfaces = get_interfaces;
   base_class->get_connection_details = get_connection_details;
 
   object_class->get_property = salut_protocol_get_property;

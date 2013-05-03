@@ -24,20 +24,19 @@
 
 #define _GNU_SOURCE /* Needed for strptime (_XOPEN_SOURCE can also be used). */
 
+#include "config.h"
+#include "text-helper.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/errors.h>
-#include <telepathy-glib/message-mixin.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #define DEBUG_FLAG DEBUG_IM
 #include "debug.h"
-
-#include "text-helper.h"
 
 #include "util.h"
 
@@ -314,7 +313,8 @@ text_helper_report_delivery_error (TpSvcChannel *self,
       NULL);
 
   delivery_echo = tp_cm_message_new (base_conn, 2);
-  tp_cm_message_set_sender (delivery_echo, base_conn->self_handle);
+  tp_cm_message_set_sender (delivery_echo,
+      tp_base_connection_get_self_handle (base_conn));
   tp_message_set_uint32 (delivery_echo, 0, "message-type", type);
   tp_message_set_int64 (delivery_echo, 0, "message-sent", (gint64)timestamp);
   tp_message_set_string (delivery_echo, 1, "content-type", "text/plain");

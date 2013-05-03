@@ -41,25 +41,39 @@ SALUT_ARG_COVERAGE
 
 dnl Detect Windows Verion
 AC_MSG_CHECKING([for operating system])
-case "$host" in
-  *-*-*mingw*|*-*-*cygwin*)
-    platform=win32
-    ;;
-  *)
-    platform=generic
-    ;;
-esac
+AS_CASE([$host],
+  [*-*-*mingw*|*-*-*cygwin*],
+    [platform=win32],
+  [*],
+    [platform=generic])
 
 AC_MSG_RESULT($platform)
 
 AM_CONDITIONAL([OS_WINDOWS], [test "$platform" = "win32"])
 
-dnl decide error flags
 ifelse(salut_nano_version, 0,
-    [ official_release=yes ],
-    [ official_release=no ])
+[ # version x.y.z - "official release",
+  # disable extra checks by default
+  official_release=yes
+  AC_ARG_ENABLE([fatal-warnings],
+    [AC_HELP_STRING([--enable-fatal-warnings],
+                    [make various warnings fatal])],
+    [],
+    [enable_fatal_warnings=no])
+],
+[ # version x.y.z.1 - development snapshot,
+  # enable extra checks by default
+  official_release=no
+  AC_ARG_ENABLE([fatal-warnings],
+    [AC_HELP_STRING([--disable-fatal-warnings],
+                    [make various warnings non-fatal])],
+    [],
+    [enable_fatal_warnings=yes])
+])
 
-TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$official_release" = xno],
+AC_SUBST([enable_fatal_warnings])
+
+TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$enable_fatal_warnings" = xyes],
   [all \
    extra \
    declaration-after-statement \
@@ -75,42 +89,22 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$official_release" = xno],
    unused-parameter])
 AC_SUBST([ERROR_CFLAGS])
 
-ifelse(salut_nano_version, 0,
-    [ # Salut is version x.y.z - disable coding style checks by default
-AC_ARG_ENABLE(coding-style-checks,
-  AC_HELP_STRING([--enable-coding-style-checks],
-                 [check coding style using grep]),
-    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=no] )
-    ],
-    [ # Salut is version x.y.z.1 - enable coding style checks by default
-AC_ARG_ENABLE(coding-style-checks,
-  AC_HELP_STRING([--disable-coding-style-checks],
-                 [do not check coding style using grep]),
-    [ENABLE_CODING_STYLE_CHECKS=$enableval], [ENABLE_CODING_STYLE_CHECKS=yes])
-    ])
-
-if test x$enable_debug = xyes; then
-  AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
-fi
-
-AC_SUBST([ENABLE_CODING_STYLE_CHECKS])
+AS_IF([test x$enable_debug = xyes],
+  [AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])])
 
 dnl Check for code generation tools
 XSLTPROC=
 AC_CHECK_PROGS([XSLTPROC], [xsltproc])
-if test -z "$XSLTPROC"; then
-  AC_MSG_ERROR([xsltproc (from the libxslt source package) is required])
-fi
+AS_IF([test -z "$XSLTPROC"],
+  [AC_MSG_ERROR([xsltproc (from the libxslt source package) is required])])
 
 AM_PATH_PYTHON([2.5])
 
 # Check for a python >= 2.5 with twisted to run python tests
 AC_MSG_CHECKING([for Python with Avahi, Twisted and XMPP protocol support])
-if $PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor, avahi" >/dev/null 2>&1; then
-    TEST_PYTHON="$PYTHON"
-else
-    TEST_PYTHON=false
-fi
+AS_IF([$PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor, avahi" >/dev/null 2>&1],
+    [TEST_PYTHON="$PYTHON"],
+    [TEST_PYTHON=false])
 AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
@@ -121,12 +115,10 @@ AC_ARG_ENABLE(avahi-tests,
     [Enable tests that use the system avahi to hit the network ]),
     enable_avahi_tests=$enableval, enable_avahi_tests=yes)
 
-if test x$enable_avahi_tests = xyes; then
-  if test false = "$TEST_PYTHON"; then
-    AC_MSG_ERROR(
-      [Python with twisted support is needed for avahi twisted tests])
-  fi
-fi
+AS_IF([test x$enable_avahi_tests = xyes],
+  [AS_IF([test false = "$TEST_PYTHON"],
+    [AC_MSG_ERROR(
+      [Python with twisted support is needed for avahi twisted tests])])])
 AM_CONDITIONAL(WANT_TWISTED_AVAHI_TESTS, test "x$enable_avahi_tests" = "xyes")
 
 dnl olpc specific code switch
@@ -134,10 +126,8 @@ AC_ARG_ENABLE(olpc,
   AC_HELP_STRING([--enable-olpc],[compile with olpc specific code]),
     enable_olpc=$enableval, enable_olpc=no )
 
-if test x$enable_olpc = xyes; then
-  AC_DEFINE(ENABLE_OLPC, [], [Enable olpc code])
-fi
-
+AS_IF([test x$enable_olpc = xyes],
+  [AC_DEFINE(ENABLE_OLPC, [], [Enable olpc code])])
 AM_CONDITIONAL(ENABLE_OLPC, test "x$enable_olpc" = "xyes")
 
 AC_SUBST(ENABLE_OLPC)
@@ -179,17 +169,19 @@ AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
 
-if test "$platform" = "win32"; then
+AS_IF([test "$platform" = "win32"],
+[
 PKG_CHECK_MODULES(GIO_WINDOWS,
     [gio-windows-2.0])
 AC_SUBST(GIO_WINDOWS_CFLAGS)
 AC_SUBST(GIO_WINDOWS_LIBS)
-else
+],
+[
 PKG_CHECK_MODULES(GIO_UNIX,
     [gio-unix-2.0])
 AC_SUBST(GIO_UNIX_CFLAGS)
 AC_SUBST(GIO_UNIX_LIBS)
-fi
+])
 
 GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
 AC_SUBST(GLIB_GENMARSHAL)
@@ -206,51 +198,59 @@ PKG_CHECK_MODULES(LIBXML2, [libxml-2.0])
 AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
-dnl Check for telepathy-glib
-PKG_CHECK_MODULES(TELEPATHY_GLIB, [telepathy-glib >= 0.19.7])
+AC_DEFINE([TP_SEAL_ENABLE], [], [Prevent to use sealed variables])
+AC_DEFINE([TP_DISABLE_SINGLE_INCLUDE], [], [Disable single header include])
+AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_0_20], [Ignore post 0.20 deprecations])
+AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_0_20], [Prevent post 0.20 APIs])
+PKG_CHECK_MODULES([TELEPATHY_GLIB], [telepathy-glib >= 0.20])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
 
 dnl check the backend to use
-if test "$platform" = "win32"; then
+AS_IF([test "$platform" = "win32"],
+[
 AC_ARG_WITH(backend,
   AC_HELP_STRING([--with-backend=[bonjour/no]],
                  [Zeroconf backend to use]),
   [], [with_backend=bonjour])
-else
+],
+[
 AC_ARG_WITH(backend,
   AC_HELP_STRING([--with-backend=[avahi/bonjour/no]],
                  [Zeroconf backend to use]),
   [], [with_backend=avahi])
-fi
+])
 
 AM_CONDITIONAL(USE_BACKEND_AVAHI, [test "x$with_backend" = "xavahi"])
 AM_CONDITIONAL(USE_BACKEND_BONJOUR, [test "x$with_backend" = "xbonjour"])
 AM_CONDITIONAL(USE_BACKEND_DUMMY, [test "x$with_backend" = "xno"])
 
 dnl Check for Avahi
-if test x$with_backend = xavahi; then
+AS_IF([test x$with_backend = xavahi],
+[
   PKG_CHECK_MODULES(AVAHI, [avahi-gobject, avahi-client])
   AC_DEFINE(USE_BACKEND_AVAHI, [], [Use Avahi backend])
   AC_SUBST(AVAHI_CFLAGS)
   AC_SUBST(AVAHI_LIBS)
   AC_SUBST(USE_BACKEND_AVAHI)
-fi
+])
 
 dnl Check for Bonjour Client Library libdns_sd
-if test x$with_backend = xbonjour; then
+AS_IF([test x$with_backend = xbonjour],
+[
   PKG_CHECK_MODULES(BONJOUR, [libdns_sd])
   AC_DEFINE(USE_BACKEND_BONJOUR, [], [Use Bonjour backend])
   AC_SUBST(BONJOUR_CFLAGS)
   AC_SUBST(BONJOUR_LIBS)
   AC_SUBST(USE_BACKEND_BONJOUR)
-fi
+])
 
-if test x$with_backend = xno; then
+AS_IF([test x$with_backend = xno],
+[
   AC_DEFINE(USE_BACKEND_DUMMY, [], [Use dummy backend])
   AC_SUBST(USE_BACKEND_DUMMY)
-fi
+])
 
 dnl Check for libsoup
 PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4])
@@ -261,11 +261,9 @@ dnl check for libuuid
 PKG_CHECK_MODULES([UUID], [uuid], [HAVE_UUID=yes], [HAVE_UUID=no])
 AC_SUBST([UUID_CFLAGS])
 AC_SUBST([UUID_LIBS])
-if test x"$HAVE_UUID" = xyes; then
-  AC_DEFINE([HAVE_UUID], [1], [Define if libuuid is available])
-else
-  AC_MSG_WARN([libuuid not found, falling back to generating random IDs])
-fi
+AS_IF([test x"$HAVE_UUID" = xyes],
+  [AC_DEFINE([HAVE_UUID], [1], [Define if libuuid is available])],
+  [AC_MSG_WARN([libuuid not found, falling back to generating random IDs])])
 
 AC_ARG_ENABLE(submodules,
   AS_HELP_STRING([--disable-submodules],
@@ -277,14 +275,12 @@ AC_ARG_ENABLE(submodules,
 # not install-data).
 #
 # Private directory for Wocky and the salut-plugins library
-if test "x$pluginexeclibdir" = x; then
-  pluginexeclibdir='${libdir}/telepathy/salut-0/lib'
-fi
+AS_IF([test "x$pluginexeclibdir" = x],
+  [pluginexeclibdir='${libdir}/telepathy/salut-0/lib'])
 AC_ARG_VAR([pluginexeclibdir])
 # The actual plugins
-if test "x$pluginexecdir" = x; then
-  pluginexecdir='${libdir}/telepathy/salut-0/plugins'
-fi
+AS_IF([test "x$pluginexecdir" = x],
+  [pluginexecdir='${libdir}/telepathy/salut-0/plugins'])
 AC_ARG_VAR([pluginexecdir])
 
 dnl plugins
@@ -293,7 +289,8 @@ AC_ARG_ENABLE(plugins,
                  [disable plugin loader]),
     [enable_plugins=$enableval], [enable_plugins=yes])
 
-if test x$enable_plugins = xyes; then
+AS_IF([test x$enable_plugins = xyes],
+[
   AC_DEFINE(ENABLE_PLUGINS, [], [Enable plugins])
   PKG_CHECK_MODULES(GMODULE, [gmodule-2.0])
 
@@ -305,7 +302,7 @@ if test x$enable_plugins = xyes; then
       wocky_install_headers_dir="${includedir}/telepathy-salut-0"
     ],
     [enable_plugin_api=no])
-fi
+])
 
 AC_SUBST(GMODULE_CFLAGS)
 AC_SUBST(GMODULE_LIBS)
@@ -321,9 +318,7 @@ AM_CONDITIONAL(ENABLE_PLUGIN_API, test x$enable_plugin_api = xyes)
 # If you don't specify --prefix, it starts off as NONE. Autoconf
 # would normally do this defaulting for us later, but that's too
 # late to help Wocky.
-if test "x${prefix}" = "xNONE"; then
-  prefix=/usr/local
-fi
+AS_IF([test "x${prefix}" = "xNONE"], [prefix=/usr/local])
 
 # We tell Wocky to install its headers alongside gabble's so that an actual
 # separate Wocky installation won't clash with them. This is a bit of a hack.
@@ -333,17 +328,13 @@ fi
 prev_ac_configure_args=$ac_configure_args
 ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir} --enable-shared-suffix=${PACKAGE}-${VERSION} --libdir=${pluginexeclibdir}"
 
-if test "x$ENABLE_CODING_STYLE_CHECKS" = xyes ; then
-  ac_configure_args="$ac_configure_args --enable-coding-style-checks"
-else
-  ac_configure_args="$ac_configure_args --disable-coding-style-checks"
-fi
+AS_IF([test "x$enable_fatal_warnings" = xyes],
+  [ac_configure_args="$ac_configure_args --enable-coding-style-checks"],
+  [ac_configure_args="$ac_configure_args --disable-coding-style-checks"])
 
-if test "x$tp_werror" = xyes && test "x$official_release" = xno; then
-  ac_configure_args="$ac_configure_args --enable-Werror"
-else
-  ac_configure_args="$ac_configure_args --disable-Werror"
-fi
+AS_IF([test "x$tp_werror" = xyes && test "x$enable_fatal_warnings" = xyes],
+  [ac_configure_args="$ac_configure_args --enable-Werror"],
+  [ac_configure_args="$ac_configure_args --disable-Werror"])
 
 prev_top_build_prefix=$ac_top_build_prefix
 AX_CONFIG_DIR([lib/ext/wocky])

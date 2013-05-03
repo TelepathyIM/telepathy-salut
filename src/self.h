@@ -24,7 +24,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/handle-repo.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <wocky/wocky.h>
 

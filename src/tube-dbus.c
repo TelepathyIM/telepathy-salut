@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "tube-dbus.h"
 
 #include <stdlib.h>
@@ -30,13 +31,8 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-lowlevel.h>
 
-#include <telepathy-glib/channel-iface.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/exportable-channel.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-channel.h>
-#include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <gibber/gibber-bytestream-muc.h>
 #include <gibber/gibber-muc-connection.h>
@@ -66,11 +62,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutTubeDBus, salut_tube_dbus, TP_TYPE_BASE_CHANNEL,
       dbustube_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE,
         NULL))
-
-static const gchar *salut_tube_dbus_interfaces[] = {
-    TP_IFACE_CHANNEL_INTERFACE_TUBE,
-    NULL
-};
 
 static const gchar * const salut_tube_dbus_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
@@ -879,6 +870,16 @@ salut_tube_dbus_close_dbus (TpBaseChannel *base)
   do_close ((SalutTubeDBus *) base);
 }
 
+static GPtrArray *
+salut_tube_dbus_get_interfaces (TpBaseChannel *chan)
+{
+  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_tube_dbus_parent_class)
+    ->get_interfaces (chan);
+
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE);
+  return interfaces;
+}
+
 static void
 salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 {
@@ -915,7 +916,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
   object_class->constructor = salut_tube_dbus_constructor;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_DBUS_TUBE;
-  base_class->interfaces = salut_tube_dbus_interfaces;
+  base_class->get_interfaces = salut_tube_dbus_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_tube_dbus_close_dbus;
   base_class->fill_immutable_properties =

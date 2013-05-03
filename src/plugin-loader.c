@@ -28,7 +28,7 @@
 # include <gmodule.h>
 #endif
 
-#include <telepathy-glib/util.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #define DEBUG_FLAG DEBUG_PLUGIN
 #include "debug.h"

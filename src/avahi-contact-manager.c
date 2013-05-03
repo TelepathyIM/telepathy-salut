@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "avahi-contact-manager.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +33,6 @@
 #define DEBUG_FLAG DEBUG_MUC
 #include "debug.h"
 
-#include "avahi-contact-manager.h"
 #include "avahi-contact.h"
 
 G_DEFINE_TYPE (SalutAvahiContactManager, salut_avahi_contact_manager,

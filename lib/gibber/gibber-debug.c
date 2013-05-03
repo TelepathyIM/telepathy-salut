@@ -1,9 +1,9 @@
+#include "config.h"
+#include "gibber-debug.h"
 
 #include <stdarg.h>
 
 #include <glib.h>
-
-#include "gibber-debug.h"
 
 #ifdef ENABLE_DEBUG
 

@@ -5,7 +5,8 @@ import errno
 import string
 import tempfile
 
-from servicetest import wrap_channel, Event, call_async, EventPattern
+from servicetest import (wrap_channel, Event, call_async, EventPattern,
+        assertSameSets)
 
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
@@ -91,8 +92,8 @@ def test(q, bus, conn):
     path, props = channels[0]
     assert props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE
     assert props[REQUESTED] == True
-    assert props[INTERFACES] == [CHANNEL_IFACE_GROUP,
-                                 CHANNEL_IFACE_TUBE]
+    assertSameSets([CHANNEL_IFACE_GROUP, CHANNEL_IFACE_TUBE],
+            props[INTERFACES])
     assert props[STREAM_TUBE_SERVICE] == 'test'
     assert props[INITIATOR_HANDLE] == conn1_self_handle
     assert props[INITIATOR_ID] == contact1_name
@@ -139,8 +140,8 @@ def test(q, bus, conn):
 
     path, props = channels[0]
     assert props[REQUESTED] == False
-    assert props[INTERFACES] == [CHANNEL_IFACE_GROUP,
-                                 CHANNEL_IFACE_TUBE]
+    assertSameSets([CHANNEL_IFACE_GROUP, CHANNEL_IFACE_TUBE],
+            props[INTERFACES])
     assert props[STREAM_TUBE_SERVICE] == 'test'
     assert props[TUBE_PARAMETERS] == sample_parameters
 

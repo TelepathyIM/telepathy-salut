@@ -23,8 +23,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/base-connection-manager.h>
-#include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <wocky/wocky.h>
 

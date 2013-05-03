@@ -17,6 +17,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "olpc-activity.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,12 +28,9 @@
 #include <wocky/wocky.h>
 
 #include "contact-manager.h"
-#include "olpc-activity.h"
 #include "muc-manager.h"
 #include "util.h"
 #include "namespaces.h"
-
-#include "signals-marshal.h"
 
 #define DEBUG_FLAG DEBUG_OLPC_ACTIVITY
 #include "debug.h"
@@ -170,14 +170,12 @@ salut_olpc_activity_class_init (SalutOlpcActivityClass *salut_olpc_activity_clas
 
   signals[MODIFIED] = g_signal_new ("modified",
       G_OBJECT_CLASS_TYPE (salut_olpc_activity_class),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_signals_marshal_VOID__VOID,
+      G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
       G_TYPE_NONE, 0);
 
   signals[VALID] = g_signal_new ("valid",
       G_OBJECT_CLASS_TYPE (salut_olpc_activity_class),
-      G_SIGNAL_RUN_LAST, 0, NULL, NULL,
-      salut_signals_marshal_VOID__VOID,
+      G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL,
       G_TYPE_NONE, 0);
 }
 
@@ -186,8 +184,6 @@ salut_olpc_activity_dispose (GObject *object)
 {
   SalutOlpcActivity *self = SALUT_OLPC_ACTIVITY (object);
   SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles
-    ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
 
   if (priv->dispose_has_run)
     return;
@@ -428,9 +424,6 @@ salut_olpc_activity_update (SalutOlpcActivity *self,
                             gboolean is_private)
 {
   SalutOlpcActivityPrivate *priv = SALUT_OLPC_ACTIVITY_GET_PRIVATE (self);
-  TpBaseConnection *base_conn = (TpBaseConnection *) (self->connection);
-  TpHandleRepoIface *room_repo = tp_base_connection_get_handles (base_conn,
-       TP_HANDLE_TYPE_ROOM);
   gboolean changed = FALSE;
   GError *error = NULL;
   gboolean become_valid = FALSE;

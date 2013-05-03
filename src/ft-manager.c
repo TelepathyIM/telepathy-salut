@@ -19,6 +19,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
+#include "ft-manager.h"
+
 #include <dbus/dbus-glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,9 +31,6 @@
 
 #include <gibber/gibber-file-transfer.h>
 
-#include "ft-manager.h"
-#include "signals-marshal.h"
-
 #include <salut/caps-channel-manager.h>
 
 #include "file-transfer-channel.h"
@@ -38,10 +38,8 @@
 #include "presence-cache.h"
 #include "namespaces.h"
 
-#include <telepathy-glib/channel-factory-iface.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/gtypes.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #define DEBUG_FLAG DEBUG_FT
 #include "debug.h"
@@ -322,7 +320,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     goto error;
 
   /* Don't support opening a channel to our self handle */
-  if (handle == base_connection->self_handle)
+  if (handle == tp_base_connection_get_self_handle (base_connection))
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Can't open a file transfer channel to yourself");
@@ -444,7 +442,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       tp_handle_inspect (contact_repo, handle));
 
   chan = salut_file_transfer_channel_new (priv->connection, contact,
-      handle, base_connection->self_handle,
+      handle, tp_base_connection_get_self_handle (base_connection),
       TP_FILE_TRANSFER_STATE_PENDING, content_type, filename, size,
       content_hash_type, content_hash, description, date, initial_offset,
       file_uri, service_name, metadata);

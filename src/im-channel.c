@@ -18,6 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include "config.h"
 #include "im-channel.h"
 
 #include <errno.h>
@@ -32,8 +33,8 @@
 #include <netdb.h>
 #endif
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <gibber/gibber-linklocal-transport.h>
 
@@ -41,7 +42,6 @@
 #include "debug.h"
 #include "connection.h"
 #include "contact.h"
-#include "signals-marshal.h"
 #include "util.h"
 #include "text-helper.h"
 
@@ -51,11 +51,6 @@ G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MESSAGES,
       tp_message_mixin_messages_iface_init);
 );
-
-static const gchar *salut_im_channel_interfaces[] = {
-    TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
-    NULL
-};
 
 /* properties */
 enum
@@ -229,6 +224,16 @@ salut_im_channel_get_object_path_suffix (TpBaseChannel *chan)
       tp_base_channel_get_target_handle (chan));
 }
 
+static GPtrArray *
+salut_im_channel_get_interfaces (TpBaseChannel *chan)
+{
+  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_im_channel_parent_class)
+    ->get_interfaces (chan);
+
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_MESSAGES);
+  return interfaces;
+}
+
 static void
 salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
 {
@@ -246,7 +251,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   object_class->set_property = salut_im_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
-  base_class->interfaces = salut_im_channel_interfaces;
+  base_class->get_interfaces = salut_im_channel_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_im_channel_close;
   base_class->fill_immutable_properties =

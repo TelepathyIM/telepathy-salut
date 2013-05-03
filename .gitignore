@@ -96,9 +96,6 @@ lib/gibber/examples/test_{ssl,tcp}
 
 tests/telepathy-salut-debug
 install-sh
-lib/gibber/gibber-signals-marshal.c
-lib/gibber/gibber-signals-marshal.h
-lib/gibber/gibber-signals-marshal.list
 lib/gibber/*-enumtypes.c
 lib/gibber/*-enumtypes.h
 lib/gibber/examples/test_ssl
@@ -106,9 +103,6 @@ lib/gibber/examples/test_tcp
 libtool
 ltmain.sh
 missing
-src/signals-marshal.c
-src/signals-marshal.h
-src/signals-marshal.list
 src/*-enumtypes.c
 src/*-enumtypes.h
 src/telepathy-salut
