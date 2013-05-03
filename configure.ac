@@ -328,6 +328,9 @@ AS_IF([test "x${prefix}" = "xNONE"], [prefix=/usr/local])
 prev_ac_configure_args=$ac_configure_args
 ac_configure_args="$ac_configure_args --with-installed-headers=${wocky_install_headers_dir} --enable-shared-suffix=${PACKAGE}-${VERSION} --libdir=${pluginexeclibdir}"
 
+# meaningless for Salut's use
+ac_configure_args="$ac_configure_args --disable-google-relay"
+
 AS_IF([test "x$enable_fatal_warnings" = xyes],
   [ac_configure_args="$ac_configure_args --enable-coding-style-checks"],
   [ac_configure_args="$ac_configure_args --disable-coding-style-checks"])
