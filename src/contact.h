@@ -32,16 +32,7 @@
 #include "olpc-activity.h"
 #endif
 
-#ifdef G_OS_WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-
-/* Winsock makes some inappropriately-namespaced definitions */
-#undef interface
-#else
-#include <netinet/in.h>
-#endif
+#include <gibber/gibber-sockets.h>
 
 #include <wocky/wocky.h>
 
