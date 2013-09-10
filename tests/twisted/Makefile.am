@@ -114,6 +114,7 @@ EXTRA_DIST = \
 	$(TWISTED_AVAHI_OLPC_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
 	constants.py \
+	run-test.sh.in \
 	saluttest.py \
 	servicetest.py \
         trivialstream.py \
