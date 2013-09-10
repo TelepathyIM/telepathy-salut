@@ -67,6 +67,7 @@ ltmain.sh
 missing
 stamp-h1
 depcomp
+/test-driver
 
 enumtypes.c
 enumtypes.h
