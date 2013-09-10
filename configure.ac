@@ -163,7 +163,11 @@ GTK_DOC_CHECK
 
 dnl Check for Glib
 PKG_CHECK_MODULES(GLIB,
-    [glib-2.0 >= 2.24, gobject-2.0 >= 2.16, gthread-2.0 >= 2.4, gio-2.0])
+    [glib-2.0 >= 2.32.0, gobject-2.0 >= 2.32.0, gthread-2.0 >= 2.32.0, gio-2.0 >= 2.32.0])
+
+dnl MIN_REQUIRED must stay to 2.30 because of GValueArray
+AC_DEFINE([GLIB_VERSION_MIN_REQUIRED], [GLIB_VERSION_2_30], [Ignore post 2.32 deprecations])
+AC_DEFINE([GLIB_VERSION_MAX_ALLOWED], [GLIB_VERSION_2_32], [Prevent post 2.32 APIs])
 
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
