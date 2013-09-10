@@ -61,11 +61,6 @@ TWISTED_AVAHI_TESTS = \
 TWISTED_AVAHI_OLPC_TESTS = \
 	avahi/olpc-activity-announcements.py
 
-TESTS =
-
-TESTS_ENVIRONMENT = \
-	PYTHONPATH=@abs_top_srcdir@/tests/twisted:@abs_top_builddir@/tests/twisted:$(PYTHONPATH)
-
 if WANT_TWISTED_TESTS
   TWISTED_TESTS += $(TWISTED_BASIC_TESTS)
 endif
@@ -80,20 +75,20 @@ endif
 
 check-local: check-coding-style check-twisted
 
-check-twisted:
+CHECK_TWISTED_SLEEP=0
+
+check-twisted: $(BUILT_SOURCES)
 	$(MAKE) -C tools
-	rm -f tools/core
-	rm -f tools/salut-testing.log
-	if ! test -n "$$SALUT_TEST_REAL_AVAHI"; then \
-		also_for_system="--also-for-system"; \
+	if test "x$(CHECK_TWISTED_SLEEP)" = x0; then \
+		salut_test_sleep= ; \
+	else \
+		salut_test_sleep=--sleep=$(CHECK_TWISTED_SLEEP); \
 	fi; \
-	sh $(srcdir)/tools/with-session-bus.sh $$also_for_system --config-file=tools/tmp-session-bus.conf -- $(MAKE) check-TESTS \
-		TESTS="$(TWISTED_TESTS)" \
-		TESTS_ENVIRONMENT="$(TESTS_ENVIRONMENT) $(TEST_PYTHON)"
-	@if test -e tools/core; then\
-		echo "Core dump exists: tools/core";\
-		exit 1;\
-	fi
+	SALUT_TEST_UNINSTALLED=1 \
+	  SALUT_ABS_TOP_SRCDIR=@abs_top_srcdir@ \
+	  SALUT_ABS_TOP_BUILDDIR=@abs_top_builddir@ \
+	  SALUT_TEST_SLEEP=$$salut_test_sleep \
+	  ./run-test.sh "$(TWISTED_TESTS)"
 
 if ENABLE_PLUGINS
 PLUGINS_ENABLED_PYBOOL = True
@@ -107,7 +102,25 @@ config.py: Makefile
 		echo "PLUGINS_ENABLED = $(PLUGINS_ENABLED_PYBOOL)"; \
 	} > $@
 
-BUILT_SOURCES = config.py
+salut-twisted-tests.list: Makefile
+	$(AM_V_GEN)echo $(TWISTED_TESTS) > $@
+
+BUILT_SOURCES = \
+	config.py \
+	salut-twisted-tests.list \
+	run-test.sh \
+	$(NULL)
+
+# We don't really use saluttestsdir yet - we only support uninstalled testing
+# so far - but I'm substituting it to keep the script more similar to Gabble's.
+# ${pkglibexecdir}/tests is what GNOME's InstalledTests goal recommends.
+run-test.sh: run-test.sh.in Makefile
+	$(AM_V_GEN)sed \
+			-e 's![@]saluttestsdir[@]!${pkglibexecdir}/tests!' \
+			-e 's![@]TEST_PYTHON[@]!$(TEST_PYTHON)!' \
+			< $< > $@.tmp && \
+		chmod +x $@.tmp && \
+		mv $@.tmp $@
 
 EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
@@ -127,7 +140,12 @@ EXTRA_DIST = \
 	xmppstream.py \
 	ipv6.py
 
-CLEANFILES = salut-[1-9]*.log *.pyc */*.pyc config.py
+CLEANFILES = \
+	$(BUILT_SOURCES) \
+	salut-[1-9]*.log \
+	*.pyc \
+	*/*.pyc \
+	$(NULL)
 
 check_misc_sources = $(TESTS)
 
