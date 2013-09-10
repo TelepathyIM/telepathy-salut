@@ -89,6 +89,10 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$enable_fatal_warnings" = xyes],
    unused-parameter])
 AC_SUBST([ERROR_CFLAGS])
 
+AC_ARG_ENABLE([debug],
+      [AC_HELP_STRING([--disable-debug], [compile without debug code])],
+      [], [enable_debug=yes])
+
 AS_IF([test x$enable_debug = xyes],
   [AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])])
 
