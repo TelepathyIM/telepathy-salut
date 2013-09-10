@@ -2,11 +2,11 @@ TWISTED_TESTS =
 
 TWISTED_BASIC_TESTS = \
 	cm/protocol.py \
-	sidecars.py \
 	$(NULL)
 
 TWISTED_AVAHI_TESTS = \
 	caps_helper.py \
+	sidecars.py \
 	avahi/register.py \
 	avahi/aliases.py \
 	avahi/request-im.py \
