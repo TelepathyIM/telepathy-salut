@@ -242,6 +242,7 @@ AS_IF([test x$with_backend = xavahi],
   AC_SUBST(AVAHI_CFLAGS)
   AC_SUBST(AVAHI_LIBS)
   AC_SUBST(USE_BACKEND_AVAHI)
+  backend="Avahi"
 ])
 
 dnl Check for Bonjour Client Library libdns_sd
@@ -252,12 +253,14 @@ AS_IF([test x$with_backend = xbonjour],
   AC_SUBST(BONJOUR_CFLAGS)
   AC_SUBST(BONJOUR_LIBS)
   AC_SUBST(USE_BACKEND_BONJOUR)
+  backend="Bonjour"
 ])
 
 AS_IF([test x$with_backend = xno],
 [
   AC_DEFINE(USE_BACKEND_DUMMY, [], [Use dummy backend])
   AC_SUBST(USE_BACKEND_DUMMY)
+  backend="Dummy"
 ])
 
 dnl Check for libsoup
@@ -382,3 +385,27 @@ AC_OUTPUT( Makefile                       \
            salut/telepathy-salut-uninstalled.pc \
            salut/telepathy-salut.pc
 )
+
+if test false != "$TEST_PYTHON"; then
+  tests_enabled=yes
+else
+  tests_enabled=no
+fi
+
+echo "
+Configure summary:
+
+        Compiler....................:  ${CC}
+        Compiler Flags..............:  ${CFLAGS} ${ERROR_CFLAGS}
+        Prefix......................:  ${prefix}
+        Backend.....................:  ${backend}
+        Enable debug................:  ${enable_debug}
+        Python tests................:  ${tests_enabled}
+        Avahi tests.................:  ${enable_avahi_tests}
+        Plugins.....................:  ${enable_plugins}
+
+Features:
+
+        OLPC support................:  ${enable_olpc}
+
+"
