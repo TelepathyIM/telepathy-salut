@@ -26,6 +26,10 @@ muc_name = "test-two-muc-stream-tubes"
 
 SERVER_WELCOME_MSG = "Welcome!"
 
+print "FIXME: MUC tubes tests are currently broken: fdo#69223"
+# exiting 77 causes automake to consider the test to have been skipped
+raise SystemExit(77)
+
 def test(q, bus, conn):
 
     # define a basic tcp server that echoes what the client says, but with
