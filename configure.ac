@@ -113,18 +113,6 @@ AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
-dnl enable avahi tests
-AC_ARG_ENABLE(avahi-tests,
-  AC_HELP_STRING([ --enable-avahi-tests],
-    [Enable tests that use the system avahi to hit the network ]),
-    enable_avahi_tests=$enableval, enable_avahi_tests=yes)
-
-AS_IF([test x$enable_avahi_tests = xyes],
-  [AS_IF([test false = "$TEST_PYTHON"],
-    [AC_MSG_ERROR(
-      [Python with twisted support is needed for avahi twisted tests])])])
-AM_CONDITIONAL(WANT_TWISTED_AVAHI_TESTS, test "x$enable_avahi_tests" = "xyes")
-
 dnl olpc specific code switch
 AC_ARG_ENABLE(olpc,
   AC_HELP_STRING([--enable-olpc],[compile with olpc specific code]),
@@ -401,7 +389,6 @@ Configure summary:
         Backend.....................:  ${backend}
         Enable debug................:  ${enable_debug}
         Python tests................:  ${tests_enabled}
-        Avahi tests.................:  ${enable_avahi_tests}
         Plugins.....................:  ${enable_plugins}
 
 Features:
