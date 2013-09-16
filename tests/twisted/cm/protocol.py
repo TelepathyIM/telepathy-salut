@@ -44,7 +44,6 @@ def test(q, bus, conn):
     assertContains(cs.CONN_IFACE_ALIASING, proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_AVATARS, proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_CONTACTS, proto_props['ConnectionInterfaces'])
-    assertContains(cs.CONN_IFACE_PRESENCE, proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_SIMPLE_PRESENCE,
             proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_REQUESTS, proto_props['ConnectionInterfaces'])
