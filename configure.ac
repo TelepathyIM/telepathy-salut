@@ -252,7 +252,7 @@ AS_IF([test x$with_backend = xno],
 ])
 
 dnl Check for libsoup
-PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4 >= 2.24])
+PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4 >= 2.26.1])
 AC_SUBST(LIBSOUP_CFLAGS)
 AC_SUBST(LIBSOUP_LIBS)
 AC_DEFINE([SOUP_VERSION_MIN_REQUIRED], [SOUP_VERSION_2_24], [Ignore post 2.24 deprecations])

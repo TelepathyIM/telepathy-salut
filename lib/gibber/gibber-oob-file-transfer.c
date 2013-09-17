@@ -722,7 +722,7 @@ http_server_cb (SoupServer *server,
 
   /* iChat accepts only AppleSingle encoding, i.e. file's contents and
    * attributes are stored in the same stream */
-  accept_encoding = soup_message_headers_get (msg->request_headers,
+  accept_encoding = soup_message_headers_get_one (msg->request_headers,
       "Accept-Encoding");
   if (accept_encoding != NULL && strcmp (accept_encoding, "AppleSingle") == 0)
     {
