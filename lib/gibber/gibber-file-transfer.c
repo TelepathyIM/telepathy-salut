@@ -29,8 +29,6 @@
 #define DEBUG_FLAG DEBUG_FILE_TRANSFER
 #include "gibber-debug.h"
 
-#include "gibber-file-transfer-enumtypes.h"
-
 
 G_DEFINE_TYPE(GibberFileTransfer, gibber_file_transfer, G_TYPE_OBJECT)
 
@@ -116,7 +114,7 @@ gibber_file_transfer_get_property (GObject *object,
         g_value_set_string (value, self->filename);
         break;
       case PROP_DIRECTION:
-        g_value_set_enum (value, self->direction);
+        g_value_set_uint (value, self->direction);
         break;
       case PROP_PORTER:
         g_value_set_object (value, self->priv->porter);
@@ -176,7 +174,7 @@ gibber_file_transfer_set_property (GObject *object,
         self->filename = g_value_dup_string (value);
         break;
       case PROP_DIRECTION:
-        self->direction = g_value_get_enum (value);
+        self->direction = g_value_get_uint (value);
         break;
       case PROP_PORTER:
         {
@@ -248,9 +246,9 @@ gibber_file_transfer_class_init (GibberFileTransferClass *gibber_file_transfer_c
       G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_FILENAME, param_spec);
 
-  param_spec = g_param_spec_enum ("direction",
+  param_spec = g_param_spec_uint ("direction",
       "Direction", "File transfer direction",
-      GIBBER_TYPE_FILE_TRANSFER_DIRECTION,
+      0, G_MAXUINT,
       GIBBER_FILE_TRANSFER_DIRECTION_OUTGOING,
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
       G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB);
