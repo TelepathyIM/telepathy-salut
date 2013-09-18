@@ -130,17 +130,13 @@ write_rcc_property (GKeyFile *keyfile,
           break;
         }
 
-      /* FIXME: when we depend on Glib 2.26, we can use
-       * g_key_file_set_[u]int64 (g.o #614864). */
       case G_TYPE_UINT64:
         {
           gchar *kf_key = g_strconcat (key,
               " " DBUS_TYPE_UINT64_AS_STRING, NULL);
-          gchar *kf_val = g_strdup_printf ("%" G_GUINT64_FORMAT,
+          g_key_file_set_uint64 (keyfile, group_name, kf_key,
               g_value_get_uint64 (val));
-          g_key_file_set_value (keyfile, group_name, kf_key, kf_val);
           g_free (kf_key);
-          g_free (kf_val);
           break;
         }
 
@@ -158,11 +154,9 @@ write_rcc_property (GKeyFile *keyfile,
         {
           gchar *kf_key = g_strconcat (key,
               " " DBUS_TYPE_UINT64_AS_STRING, NULL);
-          gchar *kf_val = g_strdup_printf ("%" G_GINT64_FORMAT,
+          g_key_file_set_int64 (keyfile, group_name, kf_key,
               g_value_get_int64 (val));
-          g_key_file_set_value (keyfile, group_name, kf_key, kf_val);
           g_free (kf_key);
-          g_free (kf_val);
           break;
         }
 
