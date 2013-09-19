@@ -273,6 +273,18 @@ salut_protocol_finalize (GObject *object)
     G_OBJECT_CLASS (salut_protocol_parent_class)->finalize (object);
 }
 
+static GPtrArray *
+get_interfaces_array (TpBaseProtocol *self)
+{
+  GPtrArray *interfaces;
+
+  interfaces = TP_BASE_PROTOCOL_CLASS (
+      salut_protocol_parent_class)->get_interfaces_array (self);
+
+  g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS);
+
+  return interfaces;
+}
 
 static void
 salut_protocol_class_init (SalutProtocolClass *klass)
@@ -288,6 +300,7 @@ salut_protocol_class_init (SalutProtocolClass *klass)
   base_class->normalize_contact = normalize_contact;
   base_class->identify_account = identify_account;
   base_class->get_connection_details = get_connection_details;
+  base_class->get_interfaces_array = get_interfaces_array;
 
   object_class->get_property = salut_protocol_get_property;
   object_class->set_property = salut_protocol_set_property;

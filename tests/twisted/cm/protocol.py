@@ -61,5 +61,7 @@ def test(q, bus, conn):
     acc_name = unwrap(proto_iface.IdentifyAccount(test_params))
     assertEquals('', acc_name)
 
+    assertContains(cs.PROTOCOL_IFACE_AVATARS, proto_props['Interfaces'])
+
 if __name__ == '__main__':
     exec_test(test)
