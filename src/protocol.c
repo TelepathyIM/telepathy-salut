@@ -287,6 +287,21 @@ get_interfaces_array (TpBaseProtocol *self)
 }
 
 static void
+get_avatar_details (TpBaseProtocol *base,
+    GStrv *supported_mime_types,
+    guint *min_height,
+    guint *min_width,
+    guint *rec_height,
+    guint *rec_width,
+    guint *max_height,
+    guint *max_width,
+    guint *max_bytes)
+{
+  salut_connection_dup_avatar_requirements (supported_mime_types, min_height,
+      min_width, rec_height, rec_width, max_height, max_width, max_bytes);
+}
+
+static void
 salut_protocol_class_init (SalutProtocolClass *klass)
 {
   TpBaseProtocolClass *base_class = (TpBaseProtocolClass *) klass;
@@ -301,6 +316,7 @@ salut_protocol_class_init (SalutProtocolClass *klass)
   base_class->identify_account = identify_account;
   base_class->get_connection_details = get_connection_details;
   base_class->get_interfaces_array = get_interfaces_array;
+  base_class->get_avatar_details = get_avatar_details;
 
   object_class->get_property = salut_protocol_get_property;
   object_class->set_property = salut_protocol_set_property;

@@ -109,6 +109,15 @@ WockySession * salut_connection_get_session (SalutPluginConnection *connection);
 
 const gchar * salut_connection_get_name (SalutPluginConnection *connection);
 
+void salut_connection_dup_avatar_requirements (GStrv *supported_mime_types,
+    guint *min_height,
+    guint *min_width,
+    guint *rec_height,
+    guint *rec_width,
+    guint *max_height,
+    guint *max_width,
+    guint *max_bytes);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_CONNECTION_H__*/

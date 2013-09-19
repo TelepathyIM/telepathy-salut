@@ -62,6 +62,15 @@ def test(q, bus, conn):
     assertEquals('', acc_name)
 
     assertContains(cs.PROTOCOL_IFACE_AVATARS, proto_props['Interfaces'])
+    avatar_props = unwrap(proto_prop_iface.GetAll(cs.PROTOCOL_IFACE_AVATARS))
+    assertEquals(65535, avatar_props['MaximumAvatarBytes'])
+    assertEquals(0, avatar_props['MaximumAvatarHeight'])
+    assertEquals(0, avatar_props['MaximumAvatarWidth'])
+    assertEquals(0, avatar_props['MinimumAvatarHeight'])
+    assertEquals(0, avatar_props['MinimumAvatarWidth'])
+    assertEquals(64, avatar_props['RecommendedAvatarHeight'])
+    assertEquals(64, avatar_props['RecommendedAvatarWidth'])
+    assertEquals(['image/png', 'image/jpeg'], avatar_props['SupportedAvatarMIMETypes'])
 
 if __name__ == '__main__':
     exec_test(test)
