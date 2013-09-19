@@ -74,5 +74,13 @@ def test(q, bus, conn):
 
     assertContains(cs.PROTOCOL_IFACE_PRESENCES, proto_props['Interfaces'])
 
+    expected_status = {'available': (cs.PRESENCE_AVAILABLE,     True,  True),
+                       'dnd'      : (cs.PRESENCE_BUSY,          True,  True),
+                       'away'     : (cs.PRESENCE_AWAY,          True,  True),
+                       'offline'  : (cs.PRESENCE_OFFLINE,       False, False)}
+
+    presences = proto_prop_iface.Get(cs.PROTOCOL_IFACE_PRESENCES, 'Statuses');
+    assertEquals(expected_status, presences)
+
 if __name__ == '__main__':
     exec_test(test)

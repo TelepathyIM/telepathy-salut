@@ -118,6 +118,8 @@ void salut_connection_dup_avatar_requirements (GStrv *supported_mime_types,
     guint *max_width,
     guint *max_bytes);
 
+const TpPresenceStatusSpec * salut_connection_get_presence_statuses (void);
+
 G_END_DECLS
 
 #endif /* #ifndef __SALUT_CONNECTION_H__*/

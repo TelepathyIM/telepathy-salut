@@ -302,6 +302,12 @@ get_avatar_details (TpBaseProtocol *base,
       min_width, rec_height, rec_width, max_height, max_width, max_bytes);
 }
 
+static const TpPresenceStatusSpec *
+get_presence_statuses (TpBaseProtocol *self)
+{
+  return salut_connection_get_presence_statuses ();
+}
+
 static void
 salut_protocol_class_init (SalutProtocolClass *klass)
 {
@@ -318,6 +324,7 @@ salut_protocol_class_init (SalutProtocolClass *klass)
   base_class->get_connection_details = get_connection_details;
   base_class->get_interfaces_array = get_interfaces_array;
   base_class->get_avatar_details = get_avatar_details;
+  base_class->get_statuses = get_presence_statuses;
 
   object_class->get_property = salut_protocol_get_property;
   object_class->set_property = salut_protocol_set_property;

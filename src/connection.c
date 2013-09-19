@@ -4203,3 +4203,9 @@ salut_connection_dup_avatar_requirements (GStrv *supported_mime_types,
   if (max_bytes != NULL)
     *max_bytes = AVATAR_MAX_BYTES;
 }
+
+const TpPresenceStatusSpec *
+salut_connection_get_presence_statuses (void)
+{
+  return presence_statuses;
+}
