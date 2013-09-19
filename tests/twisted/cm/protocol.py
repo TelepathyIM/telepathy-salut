@@ -72,5 +72,7 @@ def test(q, bus, conn):
     assertEquals(64, avatar_props['RecommendedAvatarWidth'])
     assertEquals(['image/png', 'image/jpeg'], avatar_props['SupportedAvatarMIMETypes'])
 
+    assertContains(cs.PROTOCOL_IFACE_PRESENCES, proto_props['Interfaces'])
+
 if __name__ == '__main__':
     exec_test(test)
