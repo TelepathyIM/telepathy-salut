@@ -18,8 +18,8 @@ from twisted.internet import reactor
 
 import constants as cs
 
-tp_name_prefix = 'org.freedesktop.Telepathy'
-tp_path_prefix = '/org/freedesktop/Telepathy'
+tp_name_prefix = 'im.telepathy1'
+tp_path_prefix = '/im/telepathy1'
 
 class DictionarySupersetOf (object):
     """Utility class for expecting "a dictionary with at least these keys"."""
@@ -419,7 +419,7 @@ def sync_dbus(bus, q, conn):
     assert conn.object.bus_name.startswith(':')
     root_object = bus.get_object(conn.object.bus_name, '/')
     call_async(
-        q, dbus.Interface(root_object, 'org.freedesktop.Telepathy.Tests'), 'DummySyncDBus')
+        q, dbus.Interface(root_object, 'im.telepathy1.Tests'), 'DummySyncDBus')
     q.expect('dbus-error', method='DummySyncDBus')
 
 class ProxyWrapper:
@@ -445,7 +445,7 @@ def wrap_connection(conn):
         dict([
             (name, tp_name_prefix + '.Connection.Interface.' + name)
             for name in ['Aliasing', 'Avatars', 'Capabilities', 'Contacts',
-              'Presence', 'SimplePresence', 'Requests']] +
+              'Presence', 'Requests']] +
         [('Peer', 'org.freedesktop.DBus.Peer'),
          ('ContactCapabilities', cs.CONN_IFACE_CONTACT_CAPS),
          ('ContactInfo', cs.CONN_IFACE_CONTACT_INFO),

@@ -40,9 +40,8 @@ static void salut_contact_manager_close_all (SalutContactManager *mgr);
 static void
 _contact_finalized_cb (gpointer data, GObject *old_object);
 
-G_DEFINE_TYPE_WITH_CODE(SalutContactManager, salut_contact_manager,
-    TP_TYPE_BASE_CONTACT_LIST,
-     G_IMPLEMENT_INTERFACE (GABBLE_TYPE_CAPS_CHANNEL_MANAGER, NULL))
+G_DEFINE_TYPE(SalutContactManager, salut_contact_manager,
+    TP_TYPE_BASE_CONTACT_LIST)
 
 /* signal enum */
 enum

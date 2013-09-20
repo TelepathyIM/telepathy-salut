@@ -4,54 +4,43 @@ Some handy constants for other tests to share and enjoy.
 
 from dbus import PROPERTIES_IFACE
 
-PREFIX = "org.freedesktop.Telepathy"
+PREFIX = "im.telepathy1"
 
 CM = PREFIX + ".ConnectionManager"
 
 HT_NONE = 0
 HT_CONTACT = 1
 HT_ROOM = 2
-HT_LIST = 3
-HT_GROUP = 4
 
 CHANNEL = PREFIX + ".Channel"
 
-CHANNEL_IFACE_CALL_STATE = CHANNEL + ".Interface.CallState"
-CHANNEL_IFACE_CHAT_STATE = CHANNEL + '.Interface.ChatState'
-CHANNEL_IFACE_DESTROYABLE = CHANNEL + ".Interface.Destroyable"
-CHANNEL_IFACE_DTMF = CHANNEL + ".Interface.DTMF"
-CHANNEL_IFACE_GROUP = CHANNEL + ".Interface.Group"
-CHANNEL_IFACE_HOLD = CHANNEL + ".Interface.Hold"
-CHANNEL_IFACE_MEDIA_SIGNALLING = CHANNEL + ".Interface.MediaSignalling"
-CHANNEL_IFACE_MESSAGES = CHANNEL + ".Interface.Messages"
-CHANNEL_IFACE_PASSWORD = CHANNEL + ".Interface.Password"
-CHANNEL_IFACE_TUBE = CHANNEL + ".Interface.Tube"
-CHANNEL_IFACE_SASL_AUTH = CHANNEL + ".Interface.SASLAuthentication"
-CHANNEL_IFACE_CONFERENCE = CHANNEL + '.Interface.Conference'
-CHANNEL_IFACE_ROOM = CHANNEL + '.Interface.Room2'
+CHANNEL_IFACE_CHAT_STATE = CHANNEL + '.Interface.ChatState1'
+CHANNEL_IFACE_DESTROYABLE = CHANNEL + ".Interface.Destroyable1"
+CHANNEL_IFACE_DTMF = CHANNEL + ".Interface.DTMF1"
+CHANNEL_IFACE_GROUP = CHANNEL + ".Interface.Group1"
+CHANNEL_IFACE_HOLD = CHANNEL + ".Interface.Hold1"
+CHANNEL_IFACE_PASSWORD = CHANNEL + ".Interface.Password1"
+CHANNEL_IFACE_TUBE = CHANNEL + ".Interface.Tube1"
+CHANNEL_IFACE_SASL_AUTH = CHANNEL + ".Interface.SASLAuthentication1"
+CHANNEL_IFACE_CONFERENCE = CHANNEL + '.Interface.Conference1'
+CHANNEL_IFACE_ROOM = CHANNEL + '.Interface.Room1'
 CHANNEL_IFACE_ROOM_CONFIG = CHANNEL + '.Interface.RoomConfig1'
-CHANNEL_IFACE_SUBJECT = CHANNEL + '.Interface.Subject2'
-CHANNEL_IFACE_FILE_TRANSFER_METADATA = CHANNEL + '.Interface.FileTransfer.Metadata'
+CHANNEL_IFACE_SUBJECT = CHANNEL + '.Interface.Subject1'
+CHANNEL_IFACE_FILE_TRANSFER_METADATA = CHANNEL + '.Interface.FileTransfer.Metadata1'
 
 CHANNEL_TYPE_CALL = CHANNEL + ".Type.Call1"
-CHANNEL_TYPE_CONTACT_LIST = CHANNEL + ".Type.ContactList"
-CHANNEL_TYPE_CONTACT_SEARCH = CHANNEL + ".Type.ContactSearch"
+CHANNEL_TYPE_CONTACT_LIST = CHANNEL + ".Type.ContactList1"
+CHANNEL_TYPE_CONTACT_SEARCH = CHANNEL + ".Type.ContactSearch1"
+CHANNEL_TYPE_TEXT = CHANNEL + ".Type.Text1"
+CHANNEL_TYPE_STREAM_TUBE = CHANNEL + ".Type.StreamTube1"
+CHANNEL_TYPE_DBUS_TUBE = CHANNEL + ".Type.DBusTube1"
 CHANNEL_TYPE_TEXT = CHANNEL + ".Type.Text"
-CHANNEL_TYPE_TUBES = CHANNEL + ".Type.Tubes"
-CHANNEL_TYPE_STREAM_TUBE = CHANNEL + ".Type.StreamTube"
-CHANNEL_TYPE_DBUS_TUBE = CHANNEL + ".Type.DBusTube"
-CHANNEL_TYPE_TEXT = CHANNEL + ".Type.Text"
-CHANNEL_TYPE_FILE_TRANSFER = CHANNEL + ".Type.FileTransfer"
-CHANNEL_TYPE_ROOM_LIST = CHANNEL + ".Type.RoomList"
+CHANNEL_TYPE_FILE_TRANSFER = CHANNEL + ".Type.FileTransfer1"
+CHANNEL_TYPE_ROOM_LIST = CHANNEL + ".Type.RoomList1"
 CHANNEL_TYPE_SERVER_AUTHENTICATION = \
-    CHANNEL + ".Type.ServerAuthentication"
+    CHANNEL + ".Type.ServerAuthentication1"
 CHANNEL_TYPE_SERVER_TLS_CONNECTION = \
-    CHANNEL + ".Type.ServerTLSConnection"
-
-TP_AWKWARD_PROPERTIES = PREFIX + ".Properties"
-PROPERTY_FLAG_READ = 1
-PROPERTY_FLAG_WRITE = 2
-PROPERTY_FLAGS_RW = PROPERTY_FLAG_READ | PROPERTY_FLAG_WRITE
+    CHANNEL + ".Type.ServerTLSConnection1"
 
 CHANNEL_TYPE = CHANNEL + '.ChannelType'
 TARGET_HANDLE_TYPE = CHANNEL + '.TargetHandleType'
@@ -165,28 +154,26 @@ CONTACT_LIST_STATE_FAILURE = 2
 CONTACT_LIST_STATE_SUCCESS = 3
 
 CONN = PREFIX + ".Connection"
-CONN_IFACE_AVATARS = CONN + '.Interface.Avatars'
-CONN_IFACE_ALIASING = CONN + '.Interface.Aliasing'
-CONN_IFACE_CAPS = CONN + '.Interface.Capabilities'
+CONN_IFACE_AVATARS = CONN + '.Interface.Avatars1'
+CONN_IFACE_ALIASING = CONN + '.Interface.Aliasing1'
 CONN_IFACE_CONTACTS = CONN + '.Interface.Contacts'
-CONN_IFACE_CONTACT_CAPS = CONN + '.Interface.ContactCapabilities'
-CONN_IFACE_CONTACT_INFO = CONN + ".Interface.ContactInfo"
-CONN_IFACE_PRESENCE = CONN + '.Interface.Presence'
-CONN_IFACE_SIMPLE_PRESENCE = CONN + '.Interface.SimplePresence'
+CONN_IFACE_CONTACT_CAPS = CONN + '.Interface.ContactCapabilities1'
+CONN_IFACE_CONTACT_INFO = CONN + ".Interface.ContactInfo1"
+CONN_IFACE_PRESENCE = CONN + '.Interface.Presence1'
 CONN_IFACE_REQUESTS = CONN + '.Interface.Requests'
-CONN_IFACE_LOCATION = CONN + '.Interface.Location'
+CONN_IFACE_LOCATION = CONN + '.Interface.Location1'
 CONN_IFACE_GABBLE_DECLOAK = CONN + '.Interface.Gabble.Decloak'
-CONN_IFACE_MAIL_NOTIFICATION = CONN + '.Interface.MailNotification'
-CONN_IFACE_CONTACT_LIST = CONN + '.Interface.ContactList'
-CONN_IFACE_CONTACT_GROUPS = CONN + '.Interface.ContactGroups'
-CONN_IFACE_CLIENT_TYPES = CONN + '.Interface.ClientTypes'
-CONN_IFACE_POWER_SAVING = CONN + '.Interface.PowerSaving'
-CONN_IFACE_CONTACT_BLOCKING = CONN + '.Interface.ContactBlocking'
+CONN_IFACE_MAIL_NOTIFICATION = CONN + '.Interface.MailNotification1'
+CONN_IFACE_CONTACT_LIST = CONN + '.Interface.ContactList1'
+CONN_IFACE_CONTACT_GROUPS = CONN + '.Interface.ContactGroups1'
+CONN_IFACE_CLIENT_TYPES = CONN + '.Interface.ClientTypes1'
+CONN_IFACE_POWER_SAVING = CONN + '.Interface.PowerSaving1'
+CONN_IFACE_CONTACT_BLOCKING = CONN + '.Interface.ContactBlocking1'
 CONN_IFACE_ADDRESSING = CONN + '.Interface.Addressing1'
 
 ATTR_CONTACT_ID = CONN + '/contact-id'
 ATTR_CONTACT_CAPABILITIES = CONN_IFACE_CONTACT_CAPS + '/capabilities'
-ATTR_PRESENCE = CONN_IFACE_SIMPLE_PRESENCE + '/presence'
+ATTR_PRESENCE = CONN_IFACE_PRESENCE + '/presence'
 
 STREAM_HANDLER = PREFIX + '.Media.StreamHandler'
 
@@ -470,9 +457,9 @@ class SendError(object):
     NOT_IMPLEMENTED = 5
 
 PROTOCOL = PREFIX + '.Protocol'
-PROTOCOL_IFACE_PRESENCES = PROTOCOL + '.Interface.Presence'
-PROTOCOL_IFACE_ADDRESSING = PROTOCOL + '.Interface.Addressing'
-PROTOCOL_IFACE_AVATARS = PROTOCOL + '.Interface.Avatars'
+PROTOCOL_IFACE_PRESENCES = PROTOCOL + '.Interface.Presence1'
+PROTOCOL_IFACE_ADDRESSING = PROTOCOL + '.Interface.Addressing1'
+PROTOCOL_IFACE_AVATARS = PROTOCOL + '.Interface.Avatars1'
 
 PARAM_REQUIRED = 1
 PARAM_REGISTER = 2
@@ -492,9 +479,9 @@ TLS_REJECT_REASON_UNTRUSTED = 1
 
 # Channel.Interface.Messages
 
-MESSAGE_PART_SUPPORT_FLAGS = CHANNEL_IFACE_MESSAGES + '.MessagePartSupportFlags'
-DELIVERY_REPORTING_SUPPORT = CHANNEL_IFACE_MESSAGES + '.DeliveryReportingSupport'
-SUPPORTED_CONTENT_TYPES = CHANNEL_IFACE_MESSAGES + '.SupportedContentTypes'
+MESSAGE_PART_SUPPORT_FLAGS = CHANNEL_TYPE_TEXT + '.MessagePartSupportFlags'
+DELIVERY_REPORTING_SUPPORT = CHANNEL_TYPE_TEXT + '.DeliveryReportingSupport'
+SUPPORTED_CONTENT_TYPES = CHANNEL_TYPE_TEXT + '.SupportedContentTypes'
 
 MSG_SENDING_FLAGS_REPORT_DELIVERY = 1
 MSG_SENDING_FLAGS_REPORT_READ = 2

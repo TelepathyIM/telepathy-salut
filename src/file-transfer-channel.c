@@ -1188,7 +1188,7 @@ salut_file_transfer_channel_offer_file (SalutFileTransferChannel *self,
  * salut_file_transfer_channel_accept_file
  *
  * Implements D-Bus method AcceptFile
- * on interface org.freedesktop.Telepathy.Channel.Type.FileTransfer
+ * on interface im.telepathy1.Channel.Type.FileTransfer
  */
 static void
 salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
@@ -1264,7 +1264,7 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer *iface,
  * salut_file_transfer_channel_provide_file
  *
  * Implements D-Bus method ProvideFile
- * on interface org.freedesktop.Telepathy.Channel.Type.FileTransfer
+ * on interface im.telepathy1.Channel.Type.FileTransfer
  */
 static void
 salut_file_transfer_channel_provide_file (

@@ -1,6 +1,6 @@
 """
 Basic test of SetSelfCapabilities on interface
-org.freedesktop.Telepathy.Connection.Interface.ContactCapabilities
+im.telepathy1.Connection.Interface.ContactCapabilities
 """
 
 from saluttest import exec_test

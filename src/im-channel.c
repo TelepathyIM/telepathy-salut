@@ -47,9 +47,7 @@
 
 G_DEFINE_TYPE_WITH_CODE (SalutImChannel, salut_im_channel, TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT,
-      tp_message_mixin_text_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MESSAGES,
-      tp_message_mixin_messages_iface_init);
+      tp_message_mixin_iface_init)
 );
 
 /* properties */
@@ -210,10 +208,10 @@ salut_im_channel_fill_immutable_properties (TpBaseChannel *chan,
 
   tp_dbus_properties_mixin_fill_properties_hash (
       G_OBJECT (chan), properties,
-      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessagePartSupportFlags",
-      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "DeliveryReportingSupport",
-      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "SupportedContentTypes",
-      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessageTypes",
+      TP_IFACE_CHANNEL_TYPE_TEXT, "MessagePartSupportFlags",
+      TP_IFACE_CHANNEL_TYPE_TEXT, "DeliveryReportingSupport",
+      TP_IFACE_CHANNEL_TYPE_TEXT, "SupportedContentTypes",
+      TP_IFACE_CHANNEL_TYPE_TEXT, "MessageTypes",
       NULL);
 }
 
@@ -222,16 +220,6 @@ salut_im_channel_get_object_path_suffix (TpBaseChannel *chan)
 {
   return g_strdup_printf ("ImChannel%u",
       tp_base_channel_get_target_handle (chan));
-}
-
-static GPtrArray *
-salut_im_channel_get_interfaces (TpBaseChannel *chan)
-{
-  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_im_channel_parent_class)
-    ->get_interfaces (chan);
-
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_MESSAGES);
-  return interfaces;
 }
 
 static void
@@ -251,7 +239,6 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   object_class->set_property = salut_im_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
-  base_class->get_interfaces = salut_im_channel_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_im_channel_close;
   base_class->fill_immutable_properties =

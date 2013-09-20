@@ -61,18 +61,18 @@ def test(q, bus, conn):
     xmpp_connection.send(message)
 
     # group channel is created
-    e = q.expect('dbus-signal', signal='NewChannel',
+    e = q.expect('dbus-signal', signal='NewChannels',
             predicate=lambda e:
-                e.args[1] == cs.CHANNEL_TYPE_TEXT and
-                e.args[2] == cs.HT_ROOM)
-    path = e.args[0]
+                e.args[0][0][1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT and
+                e.args[0][0][1][cs.TARGET_HANDLE_TYPE] == cs.HT_ROOM)
+    path = e.args[0][0][0]
     channel = make_channel_proxy(conn, path, 'Channel')
     props_iface = dbus.Interface(bus.get_object(conn.object.bus_name, path),
         dbus.PROPERTIES_IFACE)
 
     q.expect('dbus-signal', signal='MembersChanged', path=path)
 
-    lp_members = props_iface.Get('org.freedesktop.Telepathy.Channel.Interface.Group',
+    lp_members = props_iface.Get('im.telepathy1.Channel.Interface.Group1',
         'LocalPendingMembers')
 
     assert len(lp_members) == 1

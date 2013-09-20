@@ -32,4 +32,10 @@ void salut_wocky_node_add_children_from_properties (WockyNode *node,
     GHashTable *properties, const gchar *prop);
 gchar *salut_generate_id (void);
 
+typedef enum
+{
+  SALUT_TUBE_TYPE_STREAM,
+  SALUT_TUBE_TYPE_DBUS,
+} SalutTubeType;
+
 #endif /* __SALUT_UTIL_H__ */

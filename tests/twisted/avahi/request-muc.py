@@ -8,7 +8,7 @@ import avahitest
 
 from twisted.words.xish import domish
 
-from saluttest import exec_test, wait_for_contact_list
+from saluttest import exec_test
 from servicetest import call_async, EventPattern, \
         tp_name_prefix, tp_path_prefix, make_channel_proxy
 
@@ -20,10 +20,6 @@ def test(q, bus, conn):
     conn.Connect()
 
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
-
-    # FIXME: this is a hack to be sure to have all the contact list channels
-    # announced so they won't interfere with the muc ones announces.
-    wait_for_contact_list(q, conn)
 
     # check if we can request roomlist channels
     properties = conn.GetAll(
