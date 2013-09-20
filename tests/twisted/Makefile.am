@@ -14,7 +14,6 @@ TWISTED_AVAHI_TESTS = \
 	avahi/caps-file-transfer.py \
 	avahi/close-local-pending-room.py \
 	avahi/only-text-muc-when-needed.py \
-	avahi/tubes/disabled-1-1-tubes.py \
 	avahi/file-transfer/send-file-and-cancel-immediately.py \
 	avahi/file-transfer/send-file-and-disconnect.py \
 	avahi/file-transfer/send-file-declined.py \
@@ -38,7 +37,6 @@ TWISTED_AVAHI_TESTS = \
 	avahi/file-transfer/metadata.py \
 	avahi/file-transfer/ft-client-caps.py \
 	avahi/caps-self.py \
-	avahi/caps-tubes.py \
 	avahi/text-channel.py \
 	avahi/ichat-composing.py \
 	avahi/ichat-incoming-msg.py \
@@ -46,16 +44,11 @@ TWISTED_AVAHI_TESTS = \
 	avahi/file-transfer/ichat-receive-file.py \
 	avahi/file-transfer/ichat-send-file.py \
 	avahi/file-transfer/ichat-send-file-declined.py  \
-	avahi/tubes/request-invalid-dbus-tube.py \
 	avahi/request-muc.py \
 	avahi/tubes/request-muc-tubes.py \
 	avahi/roomlist.py \
 	avahi/set-presence.py \
-	avahi/tubes/offer-private-stream-tube.py \
 	avahi/tubes/two-muc-stream-tubes.py \
-	avahi/tubes/two-private-stream-tubes.py \
-	avahi/tubes/tube-close.py \
-	avahi/tubes/tubes-to-nonexistant-ids.py \
 	avahi/tubes/two-muc-dbus-tubes.py
 
 TWISTED_AVAHI_OLPC_TESTS = \
