@@ -206,25 +206,14 @@ def wait_for_contact_list(q, conn):
     q.expect('dbus-signal', signal='NewChannel')
 
 def wait_for_contact_in_publish(q, bus, conn, contact_name):
-    publish_handle = conn.RequestHandles(cs.HT_LIST, ["publish"])[0]
-    publish = conn.RequestChannel(cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.HT_LIST, publish_handle, False)
-
     handle = 0
     # Wait until the record shows up in publish
     while handle == 0:
-        e = q.expect('dbus-signal', signal='MembersChangedDetailed',
-                path=publish)
-        # Versions of telepathy-glib prior to 0.14.6 incorrectly used the name
-        # 'member-ids'.
-        try:
-            ids = e.args[4]['contact-ids']
-        except KeyError:
-            ids = e.args[4]['member-ids']
-
-        for h in e.args[0]:
-            name = ids[h]
-            if name == contact_name:
+        e = q.expect('dbus-signal', signal='ContactsChangedWithID',
+                path=conn.object_path)
+        for h, state in e.args[0].items():
+            name = e.args[1][h]
+            if name == contact_name and state[1] == cs.SUBSCRIPTION_STATE_YES:
                 handle = h
 
     return handle
