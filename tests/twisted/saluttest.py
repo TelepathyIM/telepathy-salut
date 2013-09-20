@@ -145,7 +145,7 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None,
     if bus.name_has_owner(conn.object.bus_name):
         # Connection hasn't already been disconnected and destroyed
         try:
-            if conn.GetStatus() == cs.CONN_STATUS_CONNECTED:
+            if conn.Properties.Get(cs.CONN, 'Status') == cs.CONN_STATUS_CONNECTED:
                 # Connection is connected, properly disconnect it
                 call_async(queue, conn, 'Disconnect')
                 queue.expect_many(EventPattern('dbus-signal', signal='StatusChanged',
