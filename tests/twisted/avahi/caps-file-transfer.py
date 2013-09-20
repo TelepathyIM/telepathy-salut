@@ -27,7 +27,7 @@ from servicetest import EventPattern, assertContains, assertDoesNotContain
 from saluttest import exec_test, make_result_iq
 from xmppstream import setup_stream_listener
 import ns
-from constants import *
+import constants as cs
 
 from caps_helper import compute_caps_hash, ft_fixed_properties, \
     ft_allowed_properties, ft_allowed_properties_with_metadata
@@ -99,8 +99,8 @@ def caps_contain(event, cap):
 
 def test_ft_caps_from_contact(q, bus, conn, client):
 
-    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPS)
-    conn_contacts_iface = dbus.Interface(conn, CONN_IFACE_CONTACTS)
+    conn_caps_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACT_CAPS)
+    conn_contacts_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACTS)
 
     # send presence with FT capa
     ver = compute_caps_hash([], [ns.IQ_OOB], {})
@@ -122,7 +122,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assert query_node.attributes['node'] == \
         client + '#' + ver, (query_node.attributes['node'], client, ver)
 
-    contact_handle = conn.RequestHandles(HT_CONTACT, [contact_name])[0]
+    contact_handle = conn.RequestHandles(cs.HT_CONTACT, [contact_name])[0]
 
     # send good reply
     result = make_result_iq(event.stanza)
@@ -144,13 +144,13 @@ def test_ft_caps_from_contact(q, bus, conn, client):
 
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [CONN_IFACE_CONTACT_CAPS], False) \
-            [contact_handle][CONN_IFACE_CONTACT_CAPS + '/capabilities']
+            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
+            [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # check if Salut announces the OOB capa
     self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
 
     AvahiListener(q).listen_for_service("_presence._tcp")
     e = q.expect('service-added', name = self_handle_name,
@@ -180,7 +180,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assert query_node.attributes['node'] == \
         client + '#' + ver, (query_node.attributes['node'], client, ver)
 
-    contact_handle = conn.RequestHandles(HT_CONTACT, [contact_name])[0]
+    contact_handle = conn.RequestHandles(cs.HT_CONTACT, [contact_name])[0]
 
     # send good reply
     result = make_result_iq(event.stanza)
@@ -203,7 +203,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     # no capabilites announced (assume FT is supported to insure interop)
     txt_record = { "txtvers": "1", "status": "avail"}
     contact_name = "test-caps-ft-no-capa2@" + get_host_name()
-    contact_handle = conn.RequestHandles(HT_CONTACT, [contact_name])[0]
+    contact_handle = conn.RequestHandles(cs.HT_CONTACT, [contact_name])[0]
     listener, port = setup_stream_listener(q, contact_name)
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
             txt_record)
@@ -228,7 +228,7 @@ def test(q, bus, conn):
 
     # check our own capabilities
     self_handle = conn.GetSelfHandle()
-    conn_caps_iface = dbus.Interface(conn, CONN_IFACE_CONTACT_CAPS)
+    conn_caps_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACT_CAPS)
     caps = conn_caps_iface.GetContactCapabilities([self_handle])[self_handle]
     assertContains(ft_metadata_caps, caps)
 

@@ -12,10 +12,7 @@ from twisted.words.xish import xpath, domish
 import time
 import dbus
 
-CHANNEL_TYPE_TEXT = "org.freedesktop.Telepathy.Channel.Type.Text"
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
-TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
+import constants as cs
 
 INCOMING_MESSAGE = "Test 123"
 OUTGOING_MESSAGE = "Test 321"
@@ -32,10 +29,10 @@ def test(q, bus, conn):
 
     handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
-    t = conn.RequestChannel(CHANNEL_TYPE_TEXT, HT_CONTACT, handle,
+    t = conn.RequestChannel(cs.CHANNEL_TYPE_TEXT, cs.HT_CONTACT, handle,
         True)
     text_channel = make_channel_proxy(conn, t, "Channel.Type.Text")
-    text_channel.Send(TEXT_MESSAGE_TYPE_NORMAL, INCOMING_MESSAGE)
+    text_channel.Send(cs.MT_NORMAL, INCOMING_MESSAGE)
 
     e = q.expect('incoming-connection', listener = listener)
     incoming = e.connection
@@ -50,7 +47,7 @@ def test(q, bus, conn):
 
     # Now send a message to salut
     self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
 
 
     AvahiListener(q).listen_for_service("_presence._tcp")
@@ -79,7 +76,7 @@ def test(q, bus, conn):
 
     e = q.expect('dbus-signal', signal='Received')
     assert e.args[2] == handle
-    assert e.args[3] == TEXT_MESSAGE_TYPE_NORMAL
+    assert e.args[3] == cs.MT_NORMAL
     assert e.args[5] == OUTGOING_MESSAGE
 
 

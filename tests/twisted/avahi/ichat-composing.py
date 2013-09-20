@@ -12,9 +12,8 @@ from twisted.words.xish import xpath, domish
 import time
 import dbus
 
-CHANNEL_TYPE_TEXT = "org.freedesktop.Telepathy.Channel.Type.Text"
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
+import constants as cs
+
 OUTGOING_MESSAGE = "This is a message"
 
 def test(q, bus, conn):
@@ -30,7 +29,7 @@ def test(q, bus, conn):
     handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
     self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
 
     AvahiListener(q).listen_for_service("_presence._tcp")
     e = q.expect('service-added', name = self_handle_name,

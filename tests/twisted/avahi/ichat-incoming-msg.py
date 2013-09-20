@@ -12,10 +12,7 @@ from twisted.words.xish import xpath, domish
 import time
 import dbus
 
-CHANNEL_TYPE_TEXT = "org.freedesktop.Telepathy.Channel.Type.Text"
-HT_CONTACT = 1
-HT_CONTACT_LIST = 3
-TEXT_MESSAGE_TYPE_NORMAL = dbus.UInt32(0)
+import constants as cs
 
 INCOMING_MESSAGE = "Test 123"
 
@@ -25,7 +22,7 @@ def test(q, bus, conn):
     basic_txt = { "txtvers": "1", "status": "avail" }
 
     self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
 
     contact_name = "test-ichat-incoming-msg@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
@@ -58,7 +55,7 @@ def test(q, bus, conn):
 
     e = q.expect('dbus-signal', signal='Received')
     assert e.args[2] == handle
-    assert e.args[3] == TEXT_MESSAGE_TYPE_NORMAL
+    assert e.args[3] == cs.MT_NORMAL
     assert e.args[5] == "hi"
 
 if __name__ == '__main__':

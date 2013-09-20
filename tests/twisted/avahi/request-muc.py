@@ -12,9 +12,7 @@ from saluttest import exec_test, wait_for_contact_list
 from servicetest import call_async, EventPattern, \
         tp_name_prefix, tp_path_prefix, make_channel_proxy
 
-CHANNEL_TYPE_TEXT = 'org.freedesktop.Telepathy.Channel.Type.Text'
-
-HT_ROOM = 2
+import constants as cs
 
 def test(q, bus, conn):
     self_name = 'testsuite' + '@' + avahitest.get_host_name()
@@ -32,8 +30,8 @@ def test(q, bus, conn):
             tp_name_prefix + '.Connection.Interface.Requests',
             dbus_interface='org.freedesktop.DBus.Properties')
     assert ({tp_name_prefix + '.Channel.ChannelType':
-                CHANNEL_TYPE_TEXT,
-             tp_name_prefix + '.Channel.TargetHandleType': HT_ROOM,
+                cs.CHANNEL_TYPE_TEXT,
+             tp_name_prefix + '.Channel.TargetHandleType': cs.HT_ROOM,
              },
              [tp_name_prefix + '.Channel.TargetHandle',
               tp_name_prefix + '.Channel.TargetID'],
@@ -41,8 +39,8 @@ def test(q, bus, conn):
                      properties['RequestableChannelClasses']
 
     # request a muc channel using the old API
-    handle = conn.RequestHandles(HT_ROOM, ['my-first-room'])[0]
-    call_async(q, conn, 'RequestChannel', CHANNEL_TYPE_TEXT, HT_ROOM, handle, True)
+    handle = conn.RequestHandles(cs.HT_ROOM, ['my-first-room'])[0]
+    call_async(q, conn, 'RequestChannel', cs.CHANNEL_TYPE_TEXT, cs.HT_ROOM, handle, True)
 
     ret, old_sig, new_sig = q.expect_many(
         EventPattern('dbus-return', method='RequestChannel'),
@@ -57,8 +55,8 @@ def test(q, bus, conn):
 
     props = new_sig.args[0][0][1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            CHANNEL_TYPE_TEXT
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
+            cs.CHANNEL_TYPE_TEXT
+    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == cs.HT_ROOM
     assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
     assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-first-room'
     assert props[tp_name_prefix + '.Channel.Requested'] == True
@@ -68,8 +66,8 @@ def test(q, bus, conn):
             == self_name
 
     assert old_sig.args[0] == path1
-    assert old_sig.args[1] == CHANNEL_TYPE_TEXT
-    assert old_sig.args[2] == HT_ROOM     # handle type
+    assert old_sig.args[1] == cs.CHANNEL_TYPE_TEXT
+    assert old_sig.args[2] == cs.HT_ROOM     # handle type
     assert old_sig.args[3] == handle      # handle
 
     # Exercise basic Channel Properties from spec 0.17.7
@@ -79,10 +77,10 @@ def test(q, bus, conn):
     assert channel_props.get('TargetHandle') == handle,\
             channel_props.get('TargetHandle')
     assert channel_props['TargetID'] == 'my-first-room', channel_props
-    assert channel_props.get('TargetHandleType') == HT_ROOM,\
+    assert channel_props.get('TargetHandleType') == cs.HT_ROOM,\
             channel_props.get('TargetHandleType')
     assert channel_props.get('ChannelType') == \
-            CHANNEL_TYPE_TEXT, channel_props.get('ChannelType')
+            cs.CHANNEL_TYPE_TEXT, channel_props.get('ChannelType')
     assert channel_props['Requested'] == True
     assert channel_props['InitiatorID'] == self_name
     assert channel_props['InitiatorHandle'] == conn.GetSelfHandle()
@@ -93,8 +91,8 @@ def test(q, bus, conn):
     # create muc channel using new API
     call_async(q, requestotron, 'CreateChannel',
             { tp_name_prefix + '.Channel.ChannelType':
-                CHANNEL_TYPE_TEXT,
-              tp_name_prefix + '.Channel.TargetHandleType': HT_ROOM,
+                cs.CHANNEL_TYPE_TEXT,
+              tp_name_prefix + '.Channel.TargetHandleType': cs.HT_ROOM,
               tp_name_prefix + '.Channel.TargetID': 'my-second-room',
               })
 
@@ -106,12 +104,12 @@ def test(q, bus, conn):
     path2 = ret.value[0]
     chan = make_channel_proxy(conn, path2, "Channel")
 
-    handle = conn.RequestHandles(HT_ROOM, ['my-second-room'])[0]
+    handle = conn.RequestHandles(cs.HT_ROOM, ['my-second-room'])[0]
 
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
-            CHANNEL_TYPE_TEXT
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == HT_ROOM
+            cs.CHANNEL_TYPE_TEXT
+    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == cs.HT_ROOM
     assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
     assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
     assert props[tp_name_prefix + '.Channel.Requested'] == True
@@ -124,16 +122,16 @@ def test(q, bus, conn):
     assert new_sig.args[0][0][1] == props
 
     assert old_sig.args[0] == path2
-    assert old_sig.args[1] == CHANNEL_TYPE_TEXT
-    assert old_sig.args[2] == HT_ROOM     # handle type
+    assert old_sig.args[1] == cs.CHANNEL_TYPE_TEXT
+    assert old_sig.args[2] == cs.HT_ROOM     # handle type
     assert old_sig.args[3] == handle      # handle
     assert old_sig.args[4] == True        # suppress handler
 
     # ensure roomlist channel
     yours, ensured_path, ensured_props = ret.value = requestotron.EnsureChannel(
             { tp_name_prefix + '.Channel.ChannelType':
-                CHANNEL_TYPE_TEXT,
-              tp_name_prefix + '.Channel.TargetHandleType': HT_ROOM,
+                cs.CHANNEL_TYPE_TEXT,
+              tp_name_prefix + '.Channel.TargetHandleType': cs.HT_ROOM,
               tp_name_prefix + '.Channel.TargetHandle': handle,
               })
 

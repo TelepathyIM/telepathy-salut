@@ -10,7 +10,7 @@ from twisted.words.xish import domish
 
 from saluttest import exec_test, wait_for_contact_list
 from servicetest import call_async, EventPattern, wrap_channel, pretty
-from constants import *
+import constants as cs
 
 def test(q, bus, conn):
     self_name = 'testsuite' + '@' + avahitest.get_host_name()
@@ -24,19 +24,19 @@ def test(q, bus, conn):
     wait_for_contact_list(q, conn)
 
     # check if we can request tube channels
-    properties = conn.Properties.GetAll(CONN_IFACE_REQUESTS)
-    assert ({CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
-             TARGET_HANDLE_TYPE: HT_ROOM},
-             [TARGET_HANDLE, TARGET_ID, STREAM_TUBE_SERVICE],
+    properties = conn.Properties.GetAll(cs.CONN_IFACE_REQUESTS)
+    assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAM_TUBE,
+             cs.TARGET_HANDLE_TYPE: cs.HT_ROOM},
+             [cs.TARGET_HANDLE, cs.TARGET_ID, cs.STREAM_TUBE_SERVICE],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
     # create muc channel using new API
     call_async(q, conn.Requests, 'CreateChannel',
-            { CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
-              TARGET_HANDLE_TYPE: HT_ROOM,
-              TARGET_ID: 'my-second-room',
-              STREAM_TUBE_SERVICE: 'loldongs',
+            { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAM_TUBE,
+              cs.TARGET_HANDLE_TYPE: cs.HT_ROOM,
+              cs.TARGET_ID: 'my-second-room',
+              cs.STREAM_TUBE_SERVICE: 'loldongs',
               })
 
     ret, old_sig, new_sig = q.expect_many(
@@ -48,40 +48,40 @@ def test(q, bus, conn):
     chan = wrap_channel(bus.get_object(conn.bus_name, tube_path),
                         'StreamTube')
 
-    handle = conn.RequestHandles(HT_ROOM, ['my-second-room'])[0]
+    handle = conn.RequestHandles(cs.HT_ROOM, ['my-second-room'])[0]
 
     tube_props = ret.value[1]
-    assert tube_props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE
-    assert tube_props[TARGET_HANDLE_TYPE] == HT_ROOM
-    assert tube_props[TARGET_HANDLE] == handle
-    assert tube_props[TARGET_ID] == 'my-second-room'
-    assert tube_props[REQUESTED] == True
-    assert tube_props[INITIATOR_HANDLE] == conn.GetSelfHandle()
-    assert tube_props[INITIATOR_ID] == self_name
+    assert tube_props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_STREAM_TUBE
+    assert tube_props[cs.TARGET_HANDLE_TYPE] == cs.HT_ROOM
+    assert tube_props[cs.TARGET_HANDLE] == handle
+    assert tube_props[cs.TARGET_ID] == 'my-second-room'
+    assert tube_props[cs.REQUESTED] == True
+    assert tube_props[cs.INITIATOR_HANDLE] == conn.GetSelfHandle()
+    assert tube_props[cs.INITIATOR_ID] == self_name
 
     # text and tube channels are announced
     channels = new_sig.args[0]
     assert len(channels) == 1
 
     path, props = channels[0]
-    assert props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE
+    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_STREAM_TUBE
     assert path == tube_path
     assert props == tube_props
-    assert props[TARGET_HANDLE_TYPE] == HT_ROOM
-    assert props[TARGET_HANDLE] == handle
-    assert props[TARGET_ID] == 'my-second-room'
-    assert props[INITIATOR_HANDLE] == conn.GetSelfHandle()
-    assert props[INITIATOR_ID] == self_name
+    assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_ROOM
+    assert props[cs.TARGET_HANDLE] == handle
+    assert props[cs.TARGET_ID] == 'my-second-room'
+    assert props[cs.INITIATOR_HANDLE] == conn.GetSelfHandle()
+    assert props[cs.INITIATOR_ID] == self_name
 
     # ensure the same channel
 
 # TODO: the muc channel doesn't bother to look at existing tubes
 # before creating a new one. once that's fixed, uncomment this.
 #    yours, ensured_path, _ = conn.Requests.EnsureChannel(
-#            { CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
-#              TARGET_HANDLE_TYPE: HT_ROOM,
-#              TARGET_HANDLE: handle,
-#              STREAM_TUBE_SERVICE: 'loldongs',
+#            { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAM_TUBE,
+#              cs.TARGET_HANDLE_TYPE: cs.HT_ROOM,
+#              cs.TARGET_HANDLE: handle,
+#              cs.STREAM_TUBE_SERVICE: 'loldongs',
 #              })
 
 #    assert not yours

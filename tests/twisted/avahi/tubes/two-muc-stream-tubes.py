@@ -10,7 +10,7 @@ from servicetest import (wrap_channel, Event, call_async, EventPattern,
 
 from twisted.internet.protocol import Factory, Protocol, ClientCreator
 from twisted.internet import reactor
-from constants import *
+import constants as cs
 import tubetestutil as t
 
 sample_parameters = dbus.Dictionary({
@@ -80,28 +80,28 @@ def test(q, bus, conn):
 
     # request a stream tube channel (new API)
     conn.Requests.CreateChannel({
-        CHANNEL_TYPE: CHANNEL_TYPE_STREAM_TUBE,
-        TARGET_HANDLE_TYPE: HT_ROOM,
-        TARGET_ID: muc_name,
-        STREAM_TUBE_SERVICE: 'test'})
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAM_TUBE,
+        cs.TARGET_HANDLE_TYPE: cs.HT_ROOM,
+        cs.TARGET_ID: muc_name,
+        cs.STREAM_TUBE_SERVICE: 'test'})
 
     e = q.expect('dbus-signal', signal='NewChannels')
     channels = e.args[0]
     assert len(channels) == 1
 
     # get the list of all channels to check that newly announced ones are in it
-    all_channels = conn.Properties.Get(CONN_IFACE_REQUESTS, 'Channels',
+    all_channels = conn.Properties.Get(cs.CONN_IFACE_REQUESTS, 'Channels',
         byte_arrays=True)
 
     path, props = channels[0]
-    assert props[CHANNEL_TYPE] == CHANNEL_TYPE_STREAM_TUBE
-    assert props[REQUESTED] == True
-    assertSameSets([CHANNEL_IFACE_GROUP, CHANNEL_IFACE_TUBE],
-            props[INTERFACES])
-    assert props[STREAM_TUBE_SERVICE] == 'test'
-    assert props[INITIATOR_HANDLE] == conn1_self_handle
-    assert props[INITIATOR_ID] == contact1_name
-    assert props[TARGET_ID] == muc_name
+    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_STREAM_TUBE
+    assert props[cs.REQUESTED] == True
+    assertSameSets([cs.CHANNEL_IFACE_GROUP, cs.CHANNEL_IFACE_TUBE],
+            props[cs.INTERFACES])
+    assert props[cs.STREAM_TUBE_SERVICE] == 'test'
+    assert props[cs.INITIATOR_HANDLE] == conn1_self_handle
+    assert props[cs.INITIATOR_ID] == contact1_name
+    assert props[cs.TARGET_ID] == muc_name
 
     assert (path, props) in all_channels, (path, props)
 
@@ -126,9 +126,9 @@ def test(q, bus, conn):
     # now let's get the text channel so we can invite contact2 using
     # the utility t.invite_to_muc
     _, path, _ = conn.Requests.EnsureChannel({
-            CHANNEL_TYPE: CHANNEL_TYPE_TEXT,
-            TARGET_HANDLE_TYPE: HT_ROOM,
-            TARGET_ID: muc_name})
+            cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+            cs.TARGET_HANDLE_TYPE: cs.HT_ROOM,
+            cs.TARGET_ID: muc_name})
     text1 = wrap_channel(bus.get_object(conn.bus_name, path), 'Text')
 
     t.invite_to_muc(q, text1.Group, conn2, contact2_handle_on_conn1, contact1_handle_on_conn2)
@@ -139,15 +139,15 @@ def test(q, bus, conn):
     assert len(channels) == 1
 
     # get the list of all channels to check that newly announced ones are in it
-    all_channels = conn2.Properties.Get(CONN_IFACE_REQUESTS, 'Channels',
+    all_channels = conn2.Properties.Get(cs.CONN_IFACE_REQUESTS, 'Channels',
         byte_arrays=True)
 
     path, props = channels[0]
-    assert props[REQUESTED] == False
-    assertSameSets([CHANNEL_IFACE_GROUP, CHANNEL_IFACE_TUBE],
-            props[INTERFACES])
-    assert props[STREAM_TUBE_SERVICE] == 'test'
-    assert props[TUBE_PARAMETERS] == sample_parameters
+    assert props[cs.REQUESTED] == False
+    assertSameSets([cs.CHANNEL_IFACE_GROUP, cs.CHANNEL_IFACE_TUBE],
+            props[cs.INTERFACES])
+    assert props[cs.STREAM_TUBE_SERVICE] == 'test'
+    assert props[cs.TUBE_PARAMETERS] == sample_parameters
 
     assert (path, props) in all_channels, (path, props)
 
