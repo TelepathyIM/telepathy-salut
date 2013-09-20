@@ -32,13 +32,13 @@ def test(q, bus, conn):
     assert status == 'avail', status
     assert msg is None, msg
 
-    statuses = conn.Get(cs.CONN_IFACE_SIMPLE_PRESENCE, 'Statuses', dbus_interface=dbus.PROPERTIES_IFACE)
+    statuses = conn.Get(cs.CONN_IFACE_PRESENCE, 'Statuses', dbus_interface=dbus.PROPERTIES_IFACE)
     assert 'available' in statuses
     assert 'dnd' in statuses
     assert 'away' in statuses
 
 
-    simple_presence = dbus.Interface(conn, cs.CONN_IFACE_SIMPLE_PRESENCE)
+    simple_presence = dbus.Interface(conn, cs.CONN_IFACE_PRESENCE)
     # set your status to away
     simple_presence.SetPresence('away', 'At the pub')
 

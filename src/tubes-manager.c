@@ -57,7 +57,7 @@ static void gabble_caps_channel_manager_iface_init (
     GabbleCapsChannelManagerIface *);
 
 static SalutTubeIface * create_new_tube (SalutTubesManager *self,
-    TpTubeType type,
+    SalutTubeType type,
     TpHandle handle,
     const gchar *service,
     GHashTable *parameters,
@@ -120,7 +120,7 @@ static gboolean
 extract_tube_information (TpHandleRepoIface *contact_repo,
                           WockyStanza *stanza,
                           gboolean *close_out,
-                          TpTubeType *type,
+                          SalutTubeType *type,
                           TpHandle *initiator_handle,
                           const gchar **service,
                           GHashTable **parameters,
@@ -220,9 +220,9 @@ extract_tube_information (TpHandleRepoIface *contact_repo,
 
       tube_type = wocky_node_get_attribute (tube_node, "type");
       if (!tp_strdiff (tube_type, "stream"))
-        *type = TP_TUBE_TYPE_STREAM;
+        *type = SALUT_TUBE_TYPE_STREAM;
       else if (!tp_strdiff (tube_type, "dbus"))
-        *type = TP_TUBE_TYPE_DBUS;
+        *type = SALUT_TUBE_TYPE_DBUS;
       else
         {
           g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
@@ -293,7 +293,7 @@ iq_tube_request_cb (WockyPorter *porter,
 
   /* tube informations */
   const gchar *service;
-  TpTubeType tube_type;
+  SalutTubeType tube_type;
   TpHandle initiator_handle;
   GHashTable *parameters;
   guint64 tube_id;
@@ -706,7 +706,7 @@ generate_tube_id (SalutTubesManager *self)
 
 static SalutTubeIface *
 create_new_tube (SalutTubesManager *self,
-    TpTubeType type,
+    SalutTubeType type,
     TpHandle handle,
     const gchar *service,
     GHashTable *parameters,
@@ -720,14 +720,14 @@ create_new_tube (SalutTubesManager *self,
   TpHandle self_handle = tp_base_connection_get_self_handle (base_conn);
   SalutTubeIface *tube;
 
-  if (type == TP_TUBE_TYPE_STREAM)
+  if (type == SALUT_TUBE_TYPE_STREAM)
     {
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
               handle, TP_HANDLE_TYPE_CONTACT,
               self_handle, self_handle, FALSE, service,
               parameters, tube_id, portnum, iq_req, TRUE));
     }
-  else if (type == TP_TUBE_TYPE_DBUS)
+  else if (type == SALUT_TUBE_TYPE_DBUS)
     {
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
               handle, TP_HANDLE_TYPE_CONTACT, self_handle, NULL,
@@ -757,7 +757,7 @@ new_channel_from_request (SalutTubesManager *self,
 {
   SalutTubeIface *tube;
 
-  TpTubeType type;
+  SalutTubeType type;
   const gchar *ctype, *service;
   TpHandle handle;
   guint64 tube_id;
@@ -778,14 +778,14 @@ new_channel_from_request (SalutTubesManager *self,
       service = tp_asv_get_string (request,
           TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
 
-      type = TP_TUBE_TYPE_STREAM;
+      type = SALUT_TUBE_TYPE_STREAM;
     }
   else if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
       service = tp_asv_get_string (request,
           TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
 
-      type = TP_TUBE_TYPE_DBUS;
+      type = SALUT_TUBE_TYPE_DBUS;
     }
   else
     {
@@ -991,7 +991,7 @@ salut_tubes_manager_iface_init (gpointer g_iface,
 static void
 add_service_to_array (const gchar *service,
                       GPtrArray *arr,
-                      TpTubeType type)
+                      SalutTubeType type)
 {
   GValue monster = {0, };
   GHashTable *fixed_properties;
@@ -1003,7 +1003,7 @@ add_service_to_array (const gchar *service,
         NULL
       };
 
-  g_assert (type == TP_TUBE_TYPE_STREAM || type == TP_TUBE_TYPE_DBUS);
+  g_assert (type == SALUT_TUBE_TYPE_STREAM || type == SALUT_TUBE_TYPE_DBUS);
 
   g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
   g_value_take_boxed (&monster,
@@ -1014,7 +1014,7 @@ add_service_to_array (const gchar *service,
       (GDestroyNotify) tp_g_value_slice_free);
 
   channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
-  if (type == TP_TUBE_TYPE_STREAM)
+  if (type == SALUT_TUBE_TYPE_STREAM)
     g_value_set_static_string (channel_type_value,
         TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
   else
@@ -1030,7 +1030,7 @@ add_service_to_array (const gchar *service,
 
   target_handle_type_value = tp_g_value_slice_new (G_TYPE_STRING);
   g_value_set_string (target_handle_type_value, service);
-  if (type == TP_TUBE_TYPE_STREAM)
+  if (type == SALUT_TUBE_TYPE_STREAM)
     g_hash_table_insert (fixed_properties,
         TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
         target_handle_type_value);
@@ -1142,10 +1142,10 @@ get_contact_caps_foreach (gpointer data,
 
   if (g_str_has_prefix (ns, STREAM_CAP_PREFIX))
     add_service_to_array (ns + strlen (STREAM_CAP_PREFIX), closure->arr,
-        TP_TUBE_TYPE_STREAM);
+        SALUT_TUBE_TYPE_STREAM);
   else if (g_str_has_prefix (ns, DBUS_CAP_PREFIX))
     add_service_to_array (ns + strlen (DBUS_CAP_PREFIX), closure->arr,
-        TP_TUBE_TYPE_DBUS);
+        SALUT_TUBE_TYPE_DBUS);
 }
 
 static void

@@ -43,6 +43,7 @@
 #include "muc-tube-dbus.h"
 #include "tube-iface.h"
 #include "sha1/sha1-util.h"
+#include "util.h"
 
 /* When we receive D-Bus messages to be delivered to the application and the
  * application is not yet connected to the D-Bus tube, theses D-Bus messages
@@ -472,21 +473,21 @@ get_tube_state (SalutTubeDBus *self)
 
   if (priv->bytestream == NULL)
     /* bytestream not yet created as we're waiting for the SI reply */
-    return TP_TUBE_STATE_REMOTE_PENDING;
+    return TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
 
   g_object_get (priv->bytestream, "state", &bytestream_state, NULL);
 
   switch (bytestream_state)
     {
       case GIBBER_BYTESTREAM_STATE_OPEN:
-        return TP_TUBE_STATE_OPEN;
+        return TP_TUBE_CHANNEL_STATE_OPEN;
         break;
       case GIBBER_BYTESTREAM_STATE_LOCAL_PENDING:
       case GIBBER_BYTESTREAM_STATE_ACCEPTED:
-        return TP_TUBE_STATE_LOCAL_PENDING;
+        return TP_TUBE_CHANNEL_STATE_LOCAL_PENDING;
         break;
       case GIBBER_BYTESTREAM_STATE_INITIATING:
-        return TP_TUBE_STATE_REMOTE_PENDING;
+        return TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
         break;
       default:
         g_assert_not_reached ();
@@ -636,7 +637,7 @@ salut_tube_dbus_get_property (GObject *object,
         g_value_set_string (value, priv->stream_id);
         break;
       case PROP_TYPE:
-        g_value_set_uint (value, TP_TUBE_TYPE_DBUS);
+        g_value_set_uint (value, SALUT_TUBE_TYPE_DBUS);
         break;
       case PROP_SERVICE:
         g_value_set_string (value, priv->service);
@@ -1535,7 +1536,7 @@ salut_tube_dbus_check_access_control (SalutTubeDBus *self,
  * salut_tube_dbus_offer_async
  *
  * Implement D-Bus method Offer on interface
- * org.freedesktop.Telepathy.Channel.Type.DBusTube
+ * im.telepathy1.Channel.Type.DBusTube
  */
 static void
 salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
@@ -1575,7 +1576,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
  * salut_tube_dbus_accept_async
  *
  * Implements D-Bus method Accept on interface
- * org.freedesktop.Telepathy.Channel.Type.DBusTube
+ * im.telepathy1.Channel.Type.DBusTube
  */
 static void
 salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube *self,

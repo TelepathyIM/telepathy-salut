@@ -65,6 +65,7 @@
 #include "tube-iface.h"
 #include "si-bytestream-manager.h"
 #include "contact-manager.h"
+#include "util.h"
 
 static void tube_iface_init (gpointer g_iface, gpointer iface_data);
 static void streamtube_iface_init (gpointer g_iface, gpointer iface_data);
@@ -717,7 +718,8 @@ local_new_connection_cb (GibberListener *listener,
 static void
 fire_new_remote_connection (SalutTubeStream *self,
     GibberTransport *transport,
-    TpHandle contact)
+    TpHandle contact,
+    const gchar *contact_id)
 {
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
   GValue access_control_param = {0,};
@@ -734,7 +736,7 @@ fire_new_remote_connection (SalutTubeStream *self,
   g_assert (connection_id != 0);
 
   tp_svc_channel_type_stream_tube_emit_new_remote_connection (self,
-      contact, &access_control_param, connection_id);
+      contact, contact_id, &access_control_param, connection_id);
   g_value_unset (&access_control_param);
 }
 
@@ -1088,7 +1090,7 @@ salut_tube_stream_get_property (GObject *object,
         g_value_set_uint64 (value, priv->id);
         break;
       case PROP_TYPE:
-        g_value_set_uint (value, TP_TUBE_TYPE_STREAM);
+        g_value_set_uint (value, SALUT_TUBE_TYPE_STREAM);
         break;
       case PROP_SERVICE:
         g_value_set_string (value, priv->service);
@@ -1857,7 +1859,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
 
       g_signal_emit (G_OBJECT (self), signals[NEW_CONNECTION], 0, contact);
 
-      fire_new_remote_connection (self, transport, contact);
+      fire_new_remote_connection (self, transport, contact, peer_id);
 
       g_free (peer_id);
     }
@@ -2051,7 +2053,7 @@ salut_tube_stream_check_params (TpSocketAddressType address_type,
  * salut_tube_stream_offer_async
  *
  * Implements D-Bus method Offer
- * on org.freedesktop.Telepathy.Channel.Type.StreamTube
+ * on im.telepathy1.Channel.Type.StreamTube
  */
 static void
 salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube *iface,
@@ -2108,7 +2110,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube *iface,
  * salut_tube_stream_accept_async
  *
  * Implements D-Bus method Accept
- * on org.freedesktop.Telepathy.Channel.Type.StreamTube
+ * on im.telepathy1.Channel.Type.StreamTube
  */
 static void
 salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube *iface,

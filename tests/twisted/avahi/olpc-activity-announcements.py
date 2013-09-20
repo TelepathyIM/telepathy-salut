@@ -13,7 +13,7 @@ import time
 import dbus
 import socket
 
-CHANNEL_TYPE_TEXT = "org.freedesktop.Telepathy.Channel.Type.Text"
+CHANNEL_TYPE_TEXT = "im.telepathy1.Channel.Type.Text"
 HT_CONTACT = 1
 HT_ROOM = 2
 HT_CONTACT_LIST = 3

@@ -66,9 +66,11 @@ def test(q, bus, conn):
     event.addElement('composing')
     xmpp_connection.send(message)
 
-    e = q.expect('dbus-signal', signal='Received')
-    assert e.args[2] == handle
-    assert e.args[5] == OUTGOING_MESSAGE
+    e = q.expect('dbus-signal', signal='MessageReceived')
+    assert len(e.args[0]) == 2
+    assert e.args[0][0]['message-sender-id'] == contact_name
+    assert e.args[0][0]['message-sender'] == handle
+    assert e.args[0][1]['content'] == OUTGOING_MESSAGE
 
 if __name__ == '__main__':
     exec_test(test)

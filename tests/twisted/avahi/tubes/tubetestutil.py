@@ -1,4 +1,4 @@
-from saluttest import make_connection, wait_for_contact_list
+from saluttest import make_connection
 from avahitest import get_host_name
 from servicetest import make_channel_proxy
 
@@ -10,10 +10,6 @@ def connect_two_accounts(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[cs.CONN_STATUS_CONNECTED, cs.CSR_NONE_SPECIFIED])
 
-    # FIXME: this is a hack to be sure to have all the contact list channels
-    # announced so they won't interfere with other channels announces.
-    wait_for_contact_list(q, conn)
-
     # second connection: connect
     conn2_params = {
         'published-name': 'testsuite2',
@@ -24,8 +20,6 @@ def connect_two_accounts(q, bus, conn):
     conn2 = make_connection(bus, lambda x: None, conn2_params)
     conn2.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[cs.CONN_STATUS_CONNECTED, cs.CSR_NONE_SPECIFIED])
-
-    wait_for_contact_list(q, conn2)
 
     # first connection: get the contact list
     publish_handle = conn.RequestHandles(cs.HT_LIST, ["publish"])[0]
@@ -62,7 +56,7 @@ def connect_two_accounts(q, bus, conn):
     # property first
     contact1_handle_on_conn2 = 0
     conn2_members = conn2_publish_proxy.Get(
-            'org.freedesktop.Telepathy.Channel.Interface.Group', 'Members',
+            'im.telepathy1.Channel.Interface.Group', 'Members',
             dbus_interface='org.freedesktop.DBus.Properties')
     for h in conn2_members:
         name = conn2.InspectHandles(cs.HT_CONTACT, [h])[0]

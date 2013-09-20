@@ -14,7 +14,7 @@ static void plugin_iface_init (
     gpointer g_iface,
     gpointer data);
 
-#define IFACE_TEST "org.freedesktop.Telepathy.Salut.Plugin.Test"
+#define IFACE_TEST "im.telepathy1.Salut.Plugin.Test"
 
 static const gchar * const sidecar_interfaces[] = {
   IFACE_TEST,
