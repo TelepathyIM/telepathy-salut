@@ -164,6 +164,7 @@ def exec_test_deferred (fun, params, protocol=None, timeout=None,
         except dbus.DBusException, e:
             pass
         except Exception, e:
+            import traceback
             traceback.print_exc()
             error = e
 
