@@ -39,29 +39,27 @@ def test(q, bus, conn):
               cs.STREAM_TUBE_SERVICE: 'loldongs',
               })
 
-    ret, old_sig, new_sig = q.expect_many(
+    ret, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
     tube_path = ret.value[0]
     chan = wrap_channel(bus.get_object(conn.bus_name, tube_path),
                         'StreamTube')
 
-    handle = conn.RequestHandles(cs.HT_ROOM, ['my-second-room'])[0]
-
     tube_props = ret.value[1]
     assert tube_props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_STREAM_TUBE
     assert tube_props[cs.TARGET_HANDLE_TYPE] == cs.HT_ROOM
-    assert tube_props[cs.TARGET_HANDLE] == handle
     assert tube_props[cs.TARGET_ID] == 'my-second-room'
     assert tube_props[cs.REQUESTED] == True
-    assert tube_props[cs.INITIATOR_HANDLE] == conn.GetSelfHandle()
+    assert tube_props[cs.INITIATOR_HANDLE] == conn.Properties.Get(cs.CONN, "SelfHandle")
     assert tube_props[cs.INITIATOR_ID] == self_name
 
     # text and tube channels are announced
     channels = new_sig.args[0]
     assert len(channels) == 1
+
+    handle = tube_props[cs.TARGET_HANDLE]
 
     path, props = channels[0]
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_STREAM_TUBE
@@ -70,7 +68,7 @@ def test(q, bus, conn):
     assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_ROOM
     assert props[cs.TARGET_HANDLE] == handle
     assert props[cs.TARGET_ID] == 'my-second-room'
-    assert props[cs.INITIATOR_HANDLE] == conn.GetSelfHandle()
+    assert props[cs.INITIATOR_HANDLE] == conn.Properties.Get(cs.CONN, "SelfHandle")
     assert props[cs.INITIATOR_ID] == self_name
 
     # ensure the same channel

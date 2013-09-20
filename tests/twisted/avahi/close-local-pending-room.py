@@ -18,8 +18,8 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
     basic_txt = { "txtvers": "1", "status": "avail" }
 
-    self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    self_handle_name =  conn.Properties.Get(cs.CONN, "SelfID")
 
     contact_name = "test-text-channel@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)

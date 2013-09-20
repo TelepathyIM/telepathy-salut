@@ -27,8 +27,8 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
     basic_txt = { "txtvers": "1", "status": "avail" }
 
-    self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    self_handle_name =  conn.Properties.Get(cs.CONN, "SelfID")
 
     contact_name = "test-muc@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
@@ -79,14 +79,11 @@ def test(q, bus, conn):
     channel = make_channel_proxy(conn, path, "Channel")
     channel_group = make_channel_proxy(conn, path, "Channel.Interface.Group")
 
-    muc_handle = conn.RequestHandles(HT_ROOM, ['my-room'])[0]
-
     # check channel properties
     # org.freedesktop.Telepathy.Channel D-Bus properties
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
     assertContains(cs.CHANNEL_IFACE_GROUP, props[cs.INTERFACES])
     assertContains(cs.CHANNEL_IFACE_MESSAGES, props[cs.INTERFACES])
-    assert props[cs.TARGET_HANDLE] == muc_handle
     assert props[cs.TARGET_ID] == 'my-room'
     assert props[cs.TARGET_HANDLE_TYPE] == HT_ROOM
     assert props[cs.REQUESTED] == False

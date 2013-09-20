@@ -79,7 +79,7 @@ def connect_two_accounts(q, bus, conn):
     return contact1_name, conn2, contact2_name, contact2_handle_on_conn1, contact1_handle_on_conn2
 
 def join_muc(q, conn, muc_name):
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
     muc_handle = conn.RequestHandles(cs.HT_ROOM, [muc_name])[0]
     path = conn.RequestChannel(cs.CHANNEL_TYPE_TEXT, cs.HT_ROOM, muc_handle, True)
     # added as remote pending
@@ -103,7 +103,7 @@ def invite_to_muc(q, group1, conn2, invited_handle, inviter_handle):
 
     # we are invited to the muc
     # added as local pending
-    conn2_self_handle = conn2.GetSelfHandle()
+    conn2_self_handle = conn2.Properties.Get(cs.CONN, "SelfHandle")
     q.expect('dbus-signal', signal='MembersChanged', path=path,
         args=["Let's tube!", [], [], [conn2_self_handle], [],
             inviter_handle, 4])

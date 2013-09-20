@@ -76,7 +76,7 @@ def test(q, bus, conn):
     contact1_name, conn2, contact2_name, contact2_handle_on_conn1,\
         contact1_handle_on_conn2 = t.connect_two_accounts(q, bus, conn)
 
-    conn1_self_handle = conn.GetSelfHandle()
+    conn1_self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     # request a stream tube channel (new API)
     conn.Requests.CreateChannel({

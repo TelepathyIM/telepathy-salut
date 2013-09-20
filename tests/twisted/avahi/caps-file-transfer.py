@@ -5,9 +5,8 @@ Test tubes capabilities with Connection.Interface.ContactCapabilities.DRAFT
 1. Check if Salut advertise the OOB caps
 
 2. Receive presence and caps from contacts and check that
-GetContactCapabilities works correctly and that ContactCapabilitiesChanged is
-correctly received. Also check that GetContactAttributes gives the same
-results.
+GetContactAttributes works correctly and that ContactCapabilitiesChanged is
+correctly received.
 
 - capa announced with FT
 - capa announced without FT
@@ -122,7 +121,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assert query_node.attributes['node'] == \
         client + '#' + ver, (query_node.attributes['node'], client, ver)
 
-    contact_handle = conn.RequestHandles(cs.HT_CONTACT, [contact_name])[0]
+    contact_handle = conn_contacts_iface.GetContactByID(contact_name, [])[0]
 
     # send good reply
     result = make_result_iq(event.stanza)
@@ -139,9 +138,6 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     caps = e.args[0][contact_handle]
     assertContains(ft_caps, caps)
 
-    caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
-    assert caps == caps_get
-
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
             [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
@@ -149,8 +145,8 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # check if Salut announces the OOB capa
-    self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    self_handle_name =  conn.Properties.Get(cs.CONN, "SelfID")
 
     AvahiListener(q).listen_for_service("_presence._tcp")
     e = q.expect('service-added', name = self_handle_name,
@@ -180,7 +176,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assert query_node.attributes['node'] == \
         client + '#' + ver, (query_node.attributes['node'], client, ver)
 
-    contact_handle = conn.RequestHandles(cs.HT_CONTACT, [contact_name])[0]
+    contact_handle = conn_contacts_iface.GetContactByID(contact_name, [])[0]
 
     # send good reply
     result = make_result_iq(event.stanza)
@@ -196,14 +192,16 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     caps = e.args[0][contact_handle]
     assertDoesNotContain(ft_caps, caps)
 
-    caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
-    assert caps == caps_get
-
+    # check the Contacts interface give the same caps
+    caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
+            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
+            [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
+    assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
     # no capabilites announced (assume FT is supported to insure interop)
     txt_record = { "txtvers": "1", "status": "avail"}
     contact_name = "test-caps-ft-no-capa2@" + get_host_name()
-    contact_handle = conn.RequestHandles(cs.HT_CONTACT, [contact_name])[0]
+    contact_handle = conn_contacts_iface.GetContactByID(contact_name, [])[0]
     listener, port = setup_stream_listener(q, contact_name)
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
             txt_record)
@@ -215,8 +213,11 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     caps = e.args[0][contact_handle]
     assertContains(ft_caps, caps)
 
-    caps_get = conn_caps_iface.GetContactCapabilities([contact_handle])[contact_handle]
-    assert caps == caps_get
+    # check the Contacts interface give the same caps
+    caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
+            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
+            [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
+    assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
 def test(q, bus, conn):
     # last value of the "ver" key we resolved. We use it to be sure that the
@@ -227,9 +228,11 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 0])
 
     # check our own capabilities
-    self_handle = conn.GetSelfHandle()
-    conn_caps_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACT_CAPS)
-    caps = conn_caps_iface.GetContactCapabilities([self_handle])[self_handle]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    conn_contacts_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACTS)
+    caps = conn_contacts_iface.GetContactAttributes(
+            [self_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
+            [self_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assertContains(ft_metadata_caps, caps)
 
     client = 'http://telepathy.freedesktop.org/fake-client'

@@ -18,13 +18,8 @@ def test(q, bus, conn):
     protocols = unwrap(cm_prop_iface.Get(cs.CM, 'Protocols'))
     assertEquals(set(['local-xmpp']), set(protocols.keys()))
 
-    protocol_names = unwrap(cm_iface.ListProtocols())
-    assertEquals(set(['local-xmpp']), set(protocol_names))
-
-    cm_params = cm_iface.GetParameters('local-xmpp')
     local_props = protocols['local-xmpp']
     local_params = local_props[cs.PROTOCOL + '.Parameters']
-    assertEquals(cm_params, local_params)
 
     proto = bus.get_object(cm.bus_name, cm.object_path + '/local_xmpp')
     proto_iface = dbus.Interface(proto, cs.PROTOCOL)

@@ -61,9 +61,6 @@ def check_all_contact_info_methods(conn, handle, keys):
     info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
     check_contact_info(info, keys)
 
-    info = conn.ContactInfo.GetContactInfo([handle])[handle]
-    check_contact_info(info, keys)
-
     info = conn.ContactInfo.RequestContactInfo(handle)
     check_contact_info(info, keys)
 
@@ -152,17 +149,14 @@ def test(q, bus, conn):
 
         check_all_contact_info_methods(conn, handle, keys)
 
-    # Try an invalid handle. Both Get and Request should return InvalidHandle.
+    # Try an invalid handle. Request should return InvalidHandle.
     # (Technically so should RefreshContactInfo but I am lazy.)
-    call_async(q, conn.ContactInfo, 'GetContactInfo', [42])
-    q.expect('dbus-error', method='GetContactInfo', name=cs.INVALID_HANDLE)
     call_async(q, conn.ContactInfo, 'RequestContactInfo', 42)
     q.expect('dbus-error', method='RequestContactInfo', name=cs.INVALID_HANDLE)
 
-    # Try a valid handle for whom we have no data from the network. Get should
-    # just omit them; Request should fail.
-    h = conn.RequestHandles(cs.HT_CONTACT, ['rthrtha@octopus'])[0]
-    assertEquals({}, conn.ContactInfo.GetContactInfo([h]))
+    # Try a valid handle for whom we have no data from the network.
+    # Request should fail.
+    h = conn.Contacts.GetContactByID('rthrtha@octopus', [])[0]
     call_async(q, conn.ContactInfo, 'RequestContactInfo', h)
     q.expect('dbus-error', method='RequestContactInfo', name=cs.NOT_AVAILABLE)
 

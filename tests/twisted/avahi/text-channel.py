@@ -29,8 +29,10 @@ def test(q, bus, conn):
 
     handle = wait_for_contact_in_publish(q, bus, conn, contact_name)
 
-    t = conn.RequestChannel(cs.CHANNEL_TYPE_TEXT, cs.HT_CONTACT, handle,
-        True)
+    t = conn.Requests.CreateChannel({
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+        cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+        cs.TARGET_HANDLE: handle})[0]
     text_channel = make_channel_proxy(conn, t, "Channel.Type.Text")
     text_channel.Send(cs.MT_NORMAL, INCOMING_MESSAGE)
 
@@ -46,8 +48,8 @@ def test(q, bus, conn):
     incoming.transport.loseConnection()
 
     # Now send a message to salut
-    self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(cs.HT_CONTACT, [self_handle])[0]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    self_handle_name =  conn.Properties.Get(cs.CONN, "SelfID")
 
 
     AvahiListener(q).listen_for_service("_presence._tcp")

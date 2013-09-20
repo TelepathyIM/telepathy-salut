@@ -129,18 +129,11 @@ def receive_caps(q, bus, conn, service, contact, contact_handle, features,
             # Make sure Salut's got the caps
             sync_stream(q, stream)
 
-    caps = conn.ContactCapabilities.GetContactCapabilities([contact_handle])
-    assertSameElements(expected_caps, caps[contact_handle])
-
-    # test again, to check GetContactCapabilities does not have side effect
-    caps = conn.ContactCapabilities.GetContactCapabilities([contact_handle])
-    assertSameElements(expected_caps, caps[contact_handle])
-
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn.Contacts.GetContactAttributes(
             [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [contact_handle][cs.ATTR_CONTACT_CAPABILITIES]
-    assertSameElements(caps[contact_handle], caps_via_contacts_iface)
+    assertSameElements(expected_caps, caps_via_contacts_iface)
 
     # close the connection and expect a new one to be opened by Salut
     # the next time we need some discoing doing
@@ -153,17 +146,19 @@ def receive_caps(q, bus, conn, service, contact, contact_handle, features,
         sync_dbus(bus, q, conn)
 
 def test_ft_caps_from_contact(q, bus, conn, service, contact):
-    contact_handle = conn.RequestHandles(cs.HT_CONTACT, [contact])[0]
+    contact_handle = conn.Contacts.GetContactByID(contact, [])[0]
 
     # Check that we don't crash if we haven't seen any caps/presence for this
     # contact yet.
-    caps = conn.ContactCapabilities.GetContactCapabilities([contact_handle])
+    caps = conn.Contacts.GetContactAttributes(
+            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
+            [contact_handle]
 
     basic_caps = [(text_fixed_properties, text_allowed_properties)]
 
     # Since we don't know their caps, they should be omitted from the dict,
     # rather than present with no caps, but all contacts have text chat caps.
-    assertEquals([], caps[contact_handle])
+    assert cs.ATTR_CONTACT_CAPABILITIES not in caps
 
     # send presence with no FT cap
     # We don't expect ContactCapabilitiesChanged to be emitted here: we always
@@ -213,8 +208,8 @@ def advertise_caps(q, bus, conn, service, filters, expected_features, unexpected
     # make sure nothing from a previous update is still running
     sync_dbus(bus, q, conn)
 
-    self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(1, [self_handle])[0]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    self_handle_name =  conn.Properties.Get(cs.CONN, "SelfID")
     ret_caps = conn.ContactCapabilities.UpdateCapabilities(
             [(cs.CLIENT + '.Foo', filters, [])])
 
@@ -246,15 +241,11 @@ def advertise_caps(q, bus, conn, service, filters, expected_features, unexpected
     for var in unexpected_features:
         assertDoesNotContain(var, namespaces)
 
-    # Check our own caps
-    caps = conn.ContactCapabilities.GetContactCapabilities([self_handle])
-    assertSameElements(expected_caps, caps[self_handle])
-
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn.Contacts.GetContactAttributes(
             [self_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [self_handle][cs.ATTR_CONTACT_CAPABILITIES]
-    assertSameElements(caps[self_handle], caps_via_contacts_iface)
+    assertSameElements(expected_caps, caps_via_contacts_iface)
 
     # close things...
     outbound.send('</stream:stream>')
@@ -262,7 +253,7 @@ def advertise_caps(q, bus, conn, service, filters, expected_features, unexpected
     outbound.transport.loseConnection()
 
 def test_ft_caps_to_contact(q, bus, conn, service):
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     basic_caps = [
         (text_fixed_properties, text_allowed_properties),
@@ -284,14 +275,10 @@ def test_ft_caps_to_contact(q, bus, conn, service):
     #
     # Check our own caps
     #
-    caps = conn.ContactCapabilities.GetContactCapabilities([self_handle])
-    assertEquals(basic_caps, caps[self_handle])
-
-    # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn.Contacts.GetContactAttributes(
             [self_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [self_handle][cs.ATTR_CONTACT_CAPABILITIES]
-    assertEquals(caps[self_handle], caps_via_contacts_iface)
+    assertEquals(basic_caps, caps_via_contacts_iface)
 
     #
     # Advertise nothing
@@ -300,15 +287,10 @@ def test_ft_caps_to_contact(q, bus, conn, service):
             [(cs.CLIENT + '.Foo', {}, [])])
 
     # Check our own caps
-    caps = conn.ContactCapabilities.GetContactCapabilities([self_handle])
-    assertLength(1, caps)
-    assertEquals(basic_caps, caps[self_handle])
-
-    # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn.Contacts.GetContactAttributes(
             [self_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [self_handle][cs.ATTR_CONTACT_CAPABILITIES]
-    assertEquals(caps[self_handle], caps_via_contacts_iface)
+    assertEquals(basic_caps, caps_via_contacts_iface)
 
     sync_dbus(bus, q, conn)
 
@@ -319,15 +301,10 @@ def test_ft_caps_to_contact(q, bus, conn, service):
             [(cs.CLIENT + '.Foo', [no_service_fixed_properties], [])])
 
     # Check our own caps
-    caps = conn.ContactCapabilities.GetContactCapabilities([self_handle])
-    assertLength(1, caps)
-    assertEquals(basic_caps, caps[self_handle])
-
-    # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn.Contacts.GetContactAttributes(
             [self_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [self_handle][cs.ATTR_CONTACT_CAPABILITIES]
-    assertEquals(caps[self_handle], caps_via_contacts_iface)
+    assertEquals(basic_caps, caps_via_contacts_iface)
 
     sync_dbus(bus, q, conn)
 
@@ -338,15 +315,10 @@ def test_ft_caps_to_contact(q, bus, conn, service):
             [(cs.CLIENT + '.Foo', [outgoing_daap_fixed_properties], [])])
 
     # Check our own caps
-    caps = conn.ContactCapabilities.GetContactCapabilities([self_handle])
-    assertLength(1, caps)
-    assertEquals(basic_caps, caps[self_handle])
-
-    # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn.Contacts.GetContactAttributes(
             [self_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [self_handle][cs.ATTR_CONTACT_CAPABILITIES]
-    assertEquals(caps[self_handle], caps_via_contacts_iface)
+    assertEquals(basic_caps, caps_via_contacts_iface)
 
     advertise_caps(q, bus, conn, service,
         [bidir_daap_fixed_properties],
@@ -394,8 +366,8 @@ def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 0])
 
-    self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(1, [self_handle])[0]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    self_handle_name =  conn.Properties.Get(cs.CONN, "SelfID")
 
     AvahiListener(q).listen_for_service("_presence._tcp")
     e = q.expect('service-added', name = self_handle_name,

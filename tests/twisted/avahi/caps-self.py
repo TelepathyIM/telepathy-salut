@@ -32,8 +32,8 @@ def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
-    self_handle = conn.GetSelfHandle()
-    self_handle_name =  conn.InspectHandles(HT_CONTACT, [self_handle])[0]
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    self_handle_name =  conn.Properties.Get(cs.CONN, "SelfID")
 
     AvahiListener(q).listen_for_service("_presence._tcp")
     e = q.expect('service-added', name = self_handle_name,

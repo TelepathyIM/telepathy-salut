@@ -78,8 +78,8 @@ class FileTransferTest(object):
         self.conn.Connect()
         self.q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
-        self.self_handle = self.conn.GetSelfHandle()
-        self.self_handle_name =  self.conn.InspectHandles(cs.HT_CONTACT, [self.self_handle])[0]
+        self.self_handle = self.conn.Properties.Get(cs.CONN, "SelfHandle")
+        self.self_handle_name = self.conn.Properties.Get(cs.CONN, "SelfID")
 
     def announce_contact(self, name=CONTACT_NAME, metadata=True):
         client = 'http://telepathy.freedesktop.org/fake-client'

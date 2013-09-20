@@ -49,8 +49,8 @@ def test(q, bus, conn):
     contact1_name, conn2, contact2_name, contact2_handle_on_conn1,\
         contact1_handle_on_conn2 = t.connect_two_accounts(q, bus, conn)
 
-    conn1_self_handle = conn.GetSelfHandle()
-    conn2_self_handle = conn2.GetSelfHandle()
+    conn1_self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
+    conn2_self_handle = conn2.Properties.Get(cs.CONN, "SelfHandle")
 
     # first connection: join muc
     muc_handle1, group1 = t.join_muc(q, conn, muc_name)
