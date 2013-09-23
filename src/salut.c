@@ -1,5 +1,7 @@
 #include "config.h"
 
+#include <dbus/dbus.h>
+
 #include <glib.h>
 
 #include <telepathy-glib/telepathy-glib.h>
@@ -44,6 +46,9 @@ main (int argc, char **argv)
   GLogLevelFlags fatal_mask;
   gint ret;
   SalutPluginLoader *loader;
+
+  if (!dbus_threads_init_default ())
+    g_error ("Unable to initialize libdbus thread-safety (out of memory?)");
 
   g_type_init ();
 
