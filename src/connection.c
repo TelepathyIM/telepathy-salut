@@ -253,7 +253,7 @@ static void _salut_connection_disconnect (SalutConnection *self);
 
 static void
 salut_connection_create_handle_repos (TpBaseConnection *self,
-    TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES]);
+    TpHandleRepoIface *repos[TP_NUM_HANDLE_TYPES]);
 
 static GPtrArray *
 salut_connection_create_channel_factories (TpBaseConnection *self);
@@ -3364,7 +3364,7 @@ handle_normalize_require_nonempty (TpHandleRepoIface *repo G_GNUC_UNUSED,
 /* Connection baseclass function implementations */
 static void
 salut_connection_create_handle_repos (TpBaseConnection *self,
-    TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES])
+    TpHandleRepoIface *repos[TP_NUM_HANDLE_TYPES])
 {
   repos[TP_HANDLE_TYPE_CONTACT] = tp_dynamic_handle_repo_new
       (TP_HANDLE_TYPE_CONTACT, handle_normalize_require_nonempty, NULL);
