@@ -252,11 +252,11 @@ AS_IF([test x$with_backend = xno],
 ])
 
 dnl Check for libsoup
-PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4 >= 2.26.1])
+PKG_CHECK_MODULES(LIBSOUP, [libsoup-2.4 >= 2.28])
 AC_SUBST(LIBSOUP_CFLAGS)
 AC_SUBST(LIBSOUP_LIBS)
-AC_DEFINE([SOUP_VERSION_MIN_REQUIRED], [SOUP_VERSION_2_24], [Ignore post 2.24 deprecations])
-AC_DEFINE([SOUP_VERSION_MAX_ALLOWED], [SOUP_VERSION_2_24], [Prevent post 2.24 APIs])
+AC_DEFINE([SOUP_VERSION_MIN_REQUIRED], [SOUP_VERSION_2_28], [Ignore post 2.28 deprecations])
+AC_DEFINE([SOUP_VERSION_MAX_ALLOWED], [SOUP_VERSION_2_28], [Prevent post 2.28 APIs])
 
 dnl check for libuuid
 PKG_CHECK_MODULES([UUID], [uuid], [HAVE_UUID=yes], [HAVE_UUID=no])
