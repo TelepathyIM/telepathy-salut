@@ -304,6 +304,21 @@ static TpDBusPropertiesMixinPropImpl conn_avatars_properties[] = {
       { NULL }
 };
 
+static TpDBusPropertiesMixinPropImpl conn_aliasing_properties[] = {
+    { "AliasFlags", GUINT_TO_POINTER (0), NULL },
+    { NULL }
+};
+
+static void
+conn_aliasing_properties_getter (GObject *object,
+    GQuark interface,
+    GQuark name,
+    GValue *value,
+    gpointer getter_data)
+{
+  g_value_set_uint (value, GPOINTER_TO_UINT (getter_data));
+}
+
 static void
 salut_connection_init (SalutConnection *obj)
 {
@@ -762,6 +777,11 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
           conn_avatars_properties_getter,
           NULL,
           conn_avatars_properties,
+        },
+        { TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+          conn_aliasing_properties_getter,
+          NULL,
+          conn_aliasing_properties,
         },
         { NULL }
   };

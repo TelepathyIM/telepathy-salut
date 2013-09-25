@@ -69,6 +69,9 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged',
         args=[cs.CONN_STATUS_CONNECTED, cs.CSR_NONE_SPECIFIED])
 
+    flags = conn.Properties.Get(cs.CONN_IFACE_ALIASING, "AliasFlags")
+    assertEquals(flags, 0)
+
     assertContains(cs.CONN_IFACE_CONTACT_INFO,
         conn.Properties.Get(cs.CONN, "Interfaces"))
     ci_props = conn.Properties.GetAll(cs.CONN_IFACE_CONTACT_INFO)
