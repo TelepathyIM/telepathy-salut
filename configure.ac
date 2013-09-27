@@ -8,9 +8,9 @@ AC_PREREQ([2.59])
 #   set salut_nano_version to 0.
 
 m4_define([salut_major_version], [0])
-m4_define([salut_minor_version], [8])
-m4_define([salut_micro_version], [999])
-m4_define([salut_nano_version], [1])
+m4_define([salut_minor_version], [99])
+m4_define([salut_micro_version], [2])
+m4_define([salut_nano_version], [0])
 
 # Some magic
 m4_define([salut_base_version],
@@ -195,7 +195,7 @@ PKG_CHECK_MODULES(LIBXML2, [libxml-2.0])
 AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
-TELEPATHY_GLIB_REQUIRED=0.99.1.1
+TELEPATHY_GLIB_REQUIRED=0.99.2
 AC_DEFINE([TP_SEAL_ENABLE], [], [Prevent to use sealed variables])
 AC_DEFINE([TP_DISABLE_SINGLE_INCLUDE], [], [Disable single header include])
 AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_1_0], [Ignore post 1.0 deprecations])
