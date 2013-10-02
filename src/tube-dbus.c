@@ -472,21 +472,21 @@ get_tube_state (SalutTubeDBus *self)
 
   if (priv->bytestream == NULL)
     /* bytestream not yet created as we're waiting for the SI reply */
-    return TP_TUBE_STATE_REMOTE_PENDING;
+    return TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
 
   g_object_get (priv->bytestream, "state", &bytestream_state, NULL);
 
   switch (bytestream_state)
     {
       case GIBBER_BYTESTREAM_STATE_OPEN:
-        return TP_TUBE_STATE_OPEN;
+        return TP_TUBE_CHANNEL_STATE_OPEN;
         break;
       case GIBBER_BYTESTREAM_STATE_LOCAL_PENDING:
       case GIBBER_BYTESTREAM_STATE_ACCEPTED:
-        return TP_TUBE_STATE_LOCAL_PENDING;
+        return TP_TUBE_CHANNEL_STATE_LOCAL_PENDING;
         break;
       case GIBBER_BYTESTREAM_STATE_INITIATING:
-        return TP_TUBE_STATE_REMOTE_PENDING;
+        return TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
         break;
       default:
         g_assert_not_reached ();
