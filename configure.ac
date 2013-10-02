@@ -24,7 +24,7 @@ AC_INIT([Telepathy Salut], [salut_version],
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_LANG([C])
-AM_INIT_AUTOMAKE([1.9 -Wno-portability tar-ustar])
+AM_INIT_AUTOMAKE([1.9 -Wno-portability tar-ustar subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AM_PROG_LIBTOOL
 AM_CONFIG_HEADER(config.h)
