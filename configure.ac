@@ -33,7 +33,7 @@ dnl check for tools
 AC_PROG_CC
 AC_PROG_CC_STDC
 AM_PROG_AS
-AM_PROG_MKDIR_P
+AC_PROG_MKDIR_P
 
 dnl add common command line switches
 SALUT_ARG_DEBUG
