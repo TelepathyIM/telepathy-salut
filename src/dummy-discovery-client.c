@@ -112,9 +112,7 @@ salut_dummy_discovery_client_create_self (SalutDiscoveryClient *client,
                                           const gchar *last_name,
                                           const gchar *jid,
                                           const gchar *email,
-                                          const gchar *published_name,
-                                          const GArray *olpc_key,
-                                          const gchar *olpc_color)
+                                          const gchar *published_name)
 {
   return NULL;
 }
@@ -128,8 +126,5 @@ discovery_client_init (gpointer g_iface,
   klass->start = NULL;
   klass->create_muc_manager = NULL;
   klass->create_contact_manager = NULL;
-#ifdef ENABLE_OLPC
-  klass->create_olpc_activity_manager = NULL;
-#endif
   klass->create_self = salut_dummy_discovery_client_create_self;
 }

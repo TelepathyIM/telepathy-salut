@@ -41,9 +41,6 @@
 #include "avahi-contact-manager.h"
 #include "avahi-roomlist-manager.h"
 #include "avahi-self.h"
-#ifdef ENABLE_OLPC
-#include "avahi-olpc-activity-manager.h"
-#endif
 
 #include "presence.h"
 
@@ -305,25 +302,6 @@ salut_avahi_discovery_client_create_contact_manager (
         self));
 }
 
-#ifdef ENABLE_OLPC
-/*
- * salut_avahi_discovery_client_create_olpc_activity_manager
- *
- * Implements salut_discovery_client_create_olpc_activity_manager on
- * SalutDiscoveryClient
- */
-static SalutOlpcActivityManager *
-salut_avahi_discovery_client_create_olpc_activity_manager (
-    SalutDiscoveryClient *client,
-    SalutConnection *connection)
-{
-  SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (client);
-
-  return SALUT_OLPC_ACTIVITY_MANAGER (salut_avahi_olpc_activity_manager_new (
-        connection, self));
-}
-#endif
-
 /*
  * salut_avahi_discovery_client_create_self
  *
@@ -337,14 +315,12 @@ salut_avahi_discovery_client_create_self (SalutDiscoveryClient *client,
                                           const gchar *last_name,
                                           const gchar *jid,
                                           const gchar *email,
-                                          const gchar *published_name,
-                                          const GArray *olpc_key,
-                                          const gchar *olpc_color)
+                                          const gchar *published_name)
 {
   SalutAvahiDiscoveryClient *self = SALUT_AVAHI_DISCOVERY_CLIENT (client);
 
   return SALUT_SELF (salut_avahi_self_new (connection, self, nickname, first_name,
-      last_name, jid, email, published_name, olpc_key, olpc_color));
+      last_name, jid, email, published_name));
 }
 
 static const gchar *
@@ -378,10 +354,6 @@ discovery_client_init (gpointer g_iface,
     salut_avahi_discovery_client_create_roomlist_manager;
   klass->create_contact_manager =
     salut_avahi_discovery_client_create_contact_manager;
-#ifdef ENABLE_OLPC
-  klass->create_olpc_activity_manager =
-    salut_avahi_discovery_client_create_olpc_activity_manager;
-#endif
   klass->create_self = salut_avahi_discovery_client_create_self;
   klass->get_host_name_fqdn = salut_avahi_discovery_client_get_host_name_fqdn;
 }

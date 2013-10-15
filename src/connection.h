@@ -91,16 +91,6 @@ typedef enum {
   LIST_HANDLE_LAST = LIST_HANDLE_KNOWN
 } SalutConnectionListHandle;
 
-#ifdef ENABLE_OLPC
-void
-salut_connection_olpc_observe_invitation (SalutConnection *connection,
-    TpHandle room, TpHandle invitor_handle, WockyNode *invite_node);
-
-gboolean
-salut_connection_olpc_observe_muc_stanza (SalutConnection *self, TpHandle room,
-    TpHandle sender, WockyStanza *stanza);
-#endif
-
 const gchar * const *salut_connection_get_implemented_interfaces (void);
 
 gchar *salut_normalize_non_empty (const gchar *id, GError **error);

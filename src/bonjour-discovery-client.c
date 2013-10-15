@@ -254,14 +254,12 @@ salut_bonjour_discovery_client_create_self (SalutDiscoveryClient *client,
                                             const gchar *last_name,
                                             const gchar *jid,
                                             const gchar *email,
-                                            const gchar *published_name,
-                                            const GArray *olpc_key,
-                                            const gchar *olpc_color)
+                                            const gchar *published_name)
 {
   SalutBonjourDiscoveryClient *self = SALUT_BONJOUR_DISCOVERY_CLIENT (client);
 
   return SALUT_SELF (salut_bonjour_self_new (connection, self, nickname,
-      first_name, last_name, jid, email, published_name, olpc_key, olpc_color));
+      first_name, last_name, jid, email, published_name);
 }
 
 static const gchar *

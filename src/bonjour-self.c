@@ -30,10 +30,6 @@
 
 #include "sha1/sha1-util.h"
 
-#ifdef ENABLE_OLPC
-#define KEY_SEGMENT_SIZE 200
-#endif
-
 #define RETURN_FALSE_IF_FAIL(error_type) \
    if (error_type != kDNSServiceErr_NoError) return FALSE;
 
@@ -567,9 +563,7 @@ salut_bonjour_self_new (SalutConnection *connection,
                         const gchar *last_name,
                         const gchar *jid,
                         const gchar *email,
-                        const gchar *published_name,
-                        const GArray *olpc_key,
-                        const gchar *olpc_color)
+                        const gchar *published_name)
 {
   return g_object_new (SALUT_TYPE_BONJOUR_SELF,
       "connection", connection,
@@ -580,9 +574,5 @@ salut_bonjour_self_new (SalutConnection *connection,
       "jid", jid,
       "email", email,
       "published-name", published_name,
-#ifdef ENABLE_OLPC
-      "olpc-key", olpc_key,
-      "olpc-color", olpc_color,
-#endif
       NULL);
 }

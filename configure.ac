@@ -114,17 +114,6 @@ AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
-dnl olpc specific code switch
-AC_ARG_ENABLE(olpc,
-  AC_HELP_STRING([--enable-olpc],[compile with olpc specific code]),
-    enable_olpc=$enableval, enable_olpc=no )
-
-AS_IF([test x$enable_olpc = xyes],
-  [AC_DEFINE(ENABLE_OLPC, [], [Enable olpc code])])
-AM_CONDITIONAL(ENABLE_OLPC, test "x$enable_olpc" = "xyes")
-
-AC_SUBST(ENABLE_OLPC)
-
 AC_HEADER_STDC([])
 AC_C_INLINE
 
@@ -396,9 +385,4 @@ Configure summary:
         Enable debug................:  ${enable_debug}
         Python tests................:  ${tests_enabled}
         Plugins.....................:  ${enable_plugins}
-
-Features:
-
-        OLPC support................:  ${enable_olpc}
-
 "

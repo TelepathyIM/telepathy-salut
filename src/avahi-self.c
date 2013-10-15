@@ -32,10 +32,6 @@
 
 #include "sha1/sha1-util.h"
 
-#ifdef ENABLE_OLPC
-#define KEY_SEGMENT_SIZE 200
-#endif
-
 G_DEFINE_TYPE (SalutAvahiSelf, salut_avahi_self, SALUT_TYPE_SELF);
 
 /* properties */
@@ -143,30 +139,6 @@ create_txt_record (SalutAvahiSelf *self,
     ret = avahi_string_list_add_printf (ret, "email=%s", _self->email);
   if (_self->jid != NULL)
     ret = avahi_string_list_add_printf (ret, "jid=%s", _self->jid);
-
-#ifdef ENABLE_OLPC
-  if (_self->olpc_color)
-    ret = avahi_string_list_add_printf (ret, "olpc-color=%s",
-        _self->olpc_color);
-
-  if (_self->olpc_key != NULL)
-    {
-      uint8_t *key = (uint8_t *) _self->olpc_key->data;
-      size_t key_len = _self->olpc_key->len;
-      guint i = 0;
-
-      while (key_len > 0)
-        {
-          size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
-          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
-
-          ret = avahi_string_list_add_pair_arbitrary (ret, name, key, step);
-          key += step;
-          key_len -= step;
-          i++;
-        }
-    }
-#endif
 
   ret = avahi_string_list_add_printf (ret, "status=%s",
       salut_presence_status_txt_names[_self->status]);
@@ -362,99 +334,6 @@ salut_avahi_self_set_avatar (SalutSelf *_self,
       _self->avatar_token, error);
 }
 
-#ifdef ENABLE_OLPC
-static gboolean
-salut_avahi_self_update_current_activity (SalutSelf *_self,
-                                          const gchar *room_name,
-                                          GError **error)
-{
-  SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = self->priv;
-
-  ga_entry_group_service_freeze (priv->presence);
-
-  ga_entry_group_service_set (priv->presence,
-      "olpc-current-activity", _self->olpc_cur_act, NULL);
-
-  ga_entry_group_service_set (priv->presence,
-      "olpc-current-activity-room", room_name, NULL);
-
-  return ga_entry_group_service_thaw (priv->presence, error);
-}
-
-static gboolean
-salut_avahi_self_set_olpc_properties (SalutSelf *_self,
-                                      const GArray *key,
-                                      const gchar *color,
-                                      const gchar *jid,
-                                      GError **error)
-{
-  SalutAvahiSelf *self = SALUT_AVAHI_SELF (_self);
-  SalutAvahiSelfPrivate *priv = self->priv;
-
-  ga_entry_group_service_freeze (priv->presence);
-
-  if (key != NULL)
-    {
-      size_t key_len = key->len;
-      const guint8 *key_data = (const guint8 *) key->data;
-      guint i;
-      guint to_remove;
-
-      if (_self->olpc_key == NULL)
-        {
-          to_remove = 0;
-        }
-      else
-        {
-          to_remove = (_self->olpc_key->len + KEY_SEGMENT_SIZE - 1) /
-            KEY_SEGMENT_SIZE;
-        }
-
-      i = 0;
-      while (key_len > 0)
-        {
-          size_t step = MIN (key_len, KEY_SEGMENT_SIZE);
-          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
-
-          ga_entry_group_service_set_arbitrary (priv->presence, name,
-              key_data, step, NULL);
-          g_free (name);
-
-          key_data += step;
-          key_len -= step;
-          i++;
-        }
-
-      /* if the new key is shorter than the old, clean up any stray segments */
-      while (i < to_remove)
-        {
-          gchar *name = g_strdup_printf ("olpc-key-part%u", i);
-
-          ga_entry_group_service_remove_key (priv->presence, name,
-              NULL);
-          g_free (name);
-
-          i++;
-        }
-    }
-
-  if (color != NULL)
-    {
-      ga_entry_group_service_set (priv->presence, "olpc-color",
-          color, NULL);
-    }
-
-  if (jid != NULL)
-    {
-      ga_entry_group_service_set (priv->presence, "jid",
-          jid, NULL);
-    }
-
-  return ga_entry_group_service_thaw (priv->presence, error);
-}
-#endif
-
 static void salut_avahi_self_dispose (GObject *object);
 
 static void
@@ -479,11 +358,6 @@ salut_avahi_self_class_init (
   self_class->set_alias = salut_avahi_self_set_alias;
   self_class->remove_avatar = salut_avahi_self_remove_avatar;
   self_class->set_avatar = salut_avahi_self_set_avatar;
-#ifdef ENABLE_OLPC
-  self_class->update_current_activity =
-    salut_avahi_self_update_current_activity;
-  self_class->set_olpc_properties = salut_avahi_self_set_olpc_properties;
-#endif
 
   param_spec = g_param_spec_object (
       "discovery-client",
@@ -537,9 +411,7 @@ salut_avahi_self_new (SalutConnection *connection,
                       const gchar *last_name,
                       const gchar *jid,
                       const gchar *email,
-                      const gchar *published_name,
-                      const GArray *olpc_key,
-                      const gchar *olpc_color)
+                      const gchar *published_name)
 {
   return g_object_new (SALUT_TYPE_AVAHI_SELF,
       "connection", connection,
@@ -550,9 +422,5 @@ salut_avahi_self_new (SalutConnection *connection,
       "jid", jid,
       "email", email,
       "published-name", published_name,
-#ifdef ENABLE_OLPC
-      "olpc-key", olpc_key,
-      "olpc-color", olpc_color,
-#endif
       NULL);
 }

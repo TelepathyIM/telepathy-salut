@@ -86,12 +86,6 @@
 #define NS_MUC_OWNER            "http://jabber.org/protocol/muc#owner"
 #define NS_NICK                 "http://jabber.org/protocol/nick"
 #define NS_OOB                  "jabber:iq:oob"
-#define NS_OLPC_BUDDY_PROPS     "http://laptop.org/xmpp/buddy-properties"
-#define NS_OLPC_ACTIVITIES      "http://laptop.org/xmpp/activities"
-#define NS_OLPC_CURRENT_ACTIVITY    "http://laptop.org/xmpp/current-activity"
-#define NS_OLPC_ACTIVITY_PROPS      "http://laptop.org/xmpp/activity-properties"
-#define NS_OLPC_BUDDY           "http://laptop.org/xmpp/buddy"
-#define NS_OLPC_ACTIVITY        "http://laptop.org/xmpp/activity"
 #define NS_PUBSUB               "http://jabber.org/protocol/pubsub"
 #define NS_PRESENCE_INVISIBLE   "presence-invisible"
 #define NS_PRIVACY              "jabber:iq:privacy"
@@ -114,8 +108,6 @@
 
 #define NS_TEMPPRES "urn:xmpp:temppres:0"
 #define NS_GOOGLE_SHARED_STATUS "google:shared-status"
-
-#define NS_OLPC_ACTIVITY_PROPS  "http://laptop.org/xmpp/activity-properties"
 
 #define NS_TP_FT_METADATA_SERVICE "http://telepathy.freedesktop.org/xmpp/file-transfer-service"
 #define NS_TP_FT_METADATA       "http://telepathy.freedesktop.org/xmpp/file-transfer-metadata"

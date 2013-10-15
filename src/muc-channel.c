@@ -405,12 +405,6 @@ create_invitation (SalutMucChannel *self,
           priv->muc_connection),
       invitation_append_parameter, invite_node);
 
-#ifdef ENABLE_OLPC
-  salut_self_olpc_augment_invitation (priv->self,
-      tp_base_channel_get_target_handle (base_chan), contact->handle,
-      invite_node);
-#endif
-
   return msg;
 }
 
@@ -1288,14 +1282,6 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
 
   /* let's not autoclose now */
   priv->autoclose = FALSE;
-
-#ifdef ENABLE_OLPC
-  if (salut_connection_olpc_observe_muc_stanza (
-          SALUT_CONNECTION (base_connection),
-          tp_base_channel_get_target_handle (base_chan),
-          from_handle, stanza))
-    return;
-#endif
 
   tubes_node = wocky_node_get_child_ns (node, "tubes",
       WOCKY_TELEPATHY_NS_TUBES);

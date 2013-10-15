@@ -1108,11 +1108,6 @@ invite_stanza_callback (WockyPorter *porter,
   /* FIXME handle properly */
   g_assert (chan != NULL);
 
-#ifdef ENABLE_OLPC
-  salut_connection_olpc_observe_invitation (priv->connection, room_handle,
-      inviter_handle, invite);
-#endif
-
   salut_muc_channel_invited (chan, inviter_handle, reason, NULL);
 
   return TRUE;

@@ -31,9 +31,8 @@ typedef enum
   DEBUG_TUBES          = 1 << 16,
   DEBUG_XCM            = 1 << 17,
   DEBUG_DISCOVERY      = 1 << 18,
-  DEBUG_OLPC_ACTIVITY  = 1 << 19,
-  DEBUG_FT             = 1 << 20,
-  DEBUG_PLUGIN         = 1 << 21,
+  DEBUG_FT             = 1 << 19,
+  DEBUG_PLUGIN         = 1 << 20,
 } DebugFlags;
 
 void debug_set_flags_from_env (void);
