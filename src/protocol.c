@@ -280,8 +280,8 @@ get_interfaces_array (TpBaseProtocol *self)
   interfaces = TP_BASE_PROTOCOL_CLASS (
       salut_protocol_parent_class)->get_interfaces_array (self);
 
-  g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS);
-  g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_PRESENCE);
+  g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS1);
+  g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_PRESENCE1);
 
   return interfaces;
 }

@@ -57,7 +57,7 @@
 #include "util.h"
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, TP_TYPE_BASE_CHANNEL,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP1,
         tp_group_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT,
       tp_message_mixin_iface_init);
@@ -657,7 +657,7 @@ salut_muc_channel_get_interfaces (TpBaseChannel *chan)
   GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_muc_channel_parent_class)
     ->get_interfaces (chan);
 
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP);
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP1);
 
   return interfaces;
 }
@@ -1750,18 +1750,18 @@ salut_muc_channel_tube_request (SalutMucChannel *self,
   channel_type = tp_asv_get_string (request_properties,
       TP_PROP_CHANNEL_CHANNEL_TYPE);
 
-  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1))
     {
       type = SALUT_TUBE_TYPE_STREAM;
       service = tp_asv_get_string (request_properties,
-          TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE);
 
     }
-  else if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1))
     {
       type = SALUT_TUBE_TYPE_DBUS;
       service = tp_asv_get_string (request_properties,
-          TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME);
     }
   else
     /* This assertion is safe: this function's caller only calls it in one of

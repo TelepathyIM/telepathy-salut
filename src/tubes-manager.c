@@ -563,7 +563,7 @@ static const gchar * const tubes_channel_fixed_properties[] = {
 static const gchar * const stream_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     TP_IFACE_CHANNEL ".TargetID",
-    TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
+    TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE,
     NULL
 };
 
@@ -572,7 +572,7 @@ static const gchar * const stream_tube_channel_allowed_properties[] = {
 static const gchar * const dbus_tube_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     TP_IFACE_CHANNEL ".TargetID",
-    TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
+    TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME,
     NULL
 };
 #endif
@@ -590,7 +590,7 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
       (GDestroyNotify) tp_g_value_slice_free);
 
   value = tp_g_value_slice_new (G_TYPE_STRING);
-  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
       value);
 
@@ -773,17 +773,17 @@ new_channel_from_request (SalutTubesManager *self,
       (GDestroyNotify) tp_g_value_slice_free);
 
 
-  if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1))
     {
       service = tp_asv_get_string (request,
-          TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE);
 
       type = SALUT_TUBE_TYPE_STREAM;
     }
-  else if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (!tp_strdiff (ctype, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1))
     {
       service = tp_asv_get_string (request,
-          TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME);
 
       type = SALUT_TUBE_TYPE_DBUS;
     }
@@ -827,11 +827,11 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 
   if (
   /* Temporarily disabled since the implementation is incomplete. */
-  /*  tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE) && */
-      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  /*  tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1) && */
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1))
     return FALSE;
 
-  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1))
     {
       if (tp_channel_manager_asv_has_unknown_properties (request_properties,
               tubes_channel_fixed_properties,
@@ -841,18 +841,18 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 
       /* "Service" is a mandatory, not-fixed property */
       service = tp_asv_get_string (request_properties,
-                TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+                TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE);
       if (service == NULL)
         {
           g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "StreamTube requests must include '%s'",
-              TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+              TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE);
           goto error;
         }
     }
 /* Temporarily disabled since the implementation is incomplete. */
 #if 0
-  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1))
     {
       GError *err = NULL;
 
@@ -864,12 +864,12 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 
       /* "ServiceName" is a mandatory, not-fixed property */
       service = tp_asv_get_string (request_properties,
-                TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+                TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME);
       if (service == NULL)
         {
           g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
               "Request missed a mandatory property '%s'",
-              TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+              TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME);
           goto error;
         }
 
@@ -1016,10 +1016,10 @@ add_service_to_array (const gchar *service,
   channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
   if (type == SALUT_TUBE_TYPE_STREAM)
     g_value_set_static_string (channel_type_value,
-        TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+        TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1);
   else
     g_value_set_static_string (channel_type_value,
-        TP_IFACE_CHANNEL_TYPE_DBUS_TUBE);
+        TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1);
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
@@ -1032,11 +1032,11 @@ add_service_to_array (const gchar *service,
   g_value_set_string (target_handle_type_value, service);
   if (type == SALUT_TUBE_TYPE_STREAM)
     g_hash_table_insert (fixed_properties,
-        TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
+        TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE,
         target_handle_type_value);
   else
     g_hash_table_insert (fixed_properties,
-        TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
+        TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME,
         target_handle_type_value);
 
   dbus_g_type_struct_set (&monster,
@@ -1068,7 +1068,7 @@ add_generic_tube_caps (GPtrArray *arr)
 
   channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
   g_value_set_static_string (channel_type_value,
-      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1);
 
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
@@ -1183,26 +1183,26 @@ gabble_private_tubes_factory_add_cap (GabbleCapsChannelManager *manager,
             TP_IFACE_CHANNEL ".ChannelType");
 
   /* this channel is not for this factory */
-  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
-      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1) &&
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1))
     return;
 
   if (tp_asv_get_uint32 (cap,
         TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
     return;
 
-  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1))
     {
       service = tp_asv_get_string (cap,
-          TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE);
 
       if (service != NULL)
         ns = g_strconcat (STREAM_CAP_PREFIX, service, NULL);
     }
-  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1))
     {
       service = tp_asv_get_string (cap,
-          TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME);
 
       if (service != NULL)
         ns = g_strconcat (DBUS_CAP_PREFIX, service, NULL);

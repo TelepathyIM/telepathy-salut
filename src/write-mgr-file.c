@@ -271,7 +271,7 @@ write_presence (GKeyFile *f,
   gpointer k, v;
 
   statuses = tp_asv_get_boxed (props,
-      TP_PROP_PROTOCOL_INTERFACE_PRESENCE_STATUSES,
+      TP_PROP_PROTOCOL_INTERFACE_PRESENCE1_STATUSES,
       TP_HASH_TYPE_STATUS_SPEC_MAP);
   g_return_if_fail (statuses != NULL);
 
@@ -342,37 +342,37 @@ mgr_file_contents (const char *busname,
 
       /* Avatars */
       mime_types = tp_asv_get_strv (props,
-          TP_PROP_PROTOCOL_INTERFACE_AVATARS_SUPPORTED_AVATAR_MIME_TYPES);
+          TP_PROP_PROTOCOL_INTERFACE_AVATARS1_SUPPORTED_AVATAR_MIME_TYPES);
 
       g_key_file_set_string_list (f, section_name, "SupportedAvatarMIMETypes",
           mime_types, g_strv_length ((gchar **) mime_types));
       g_key_file_set_integer (f, section_name, "MinimumAvatarHeight",
           tp_asv_get_uint32 (props,
-              TP_PROP_PROTOCOL_INTERFACE_AVATARS_MINIMUM_AVATAR_HEIGHT,
+              TP_PROP_PROTOCOL_INTERFACE_AVATARS1_MINIMUM_AVATAR_HEIGHT,
               NULL));
       g_key_file_set_integer (f, section_name, "RecommendedAvatarHeight",
           tp_asv_get_uint32 (props,
-              TP_PROP_PROTOCOL_INTERFACE_AVATARS_RECOMMENDED_AVATAR_HEIGHT,
+              TP_PROP_PROTOCOL_INTERFACE_AVATARS1_RECOMMENDED_AVATAR_HEIGHT,
               NULL));
       g_key_file_set_integer (f, section_name, "MaximumAvatarHeight",
           tp_asv_get_uint32 (props,
-              TP_PROP_PROTOCOL_INTERFACE_AVATARS_MAXIMUM_AVATAR_HEIGHT,
+              TP_PROP_PROTOCOL_INTERFACE_AVATARS1_MAXIMUM_AVATAR_HEIGHT,
               NULL));
       g_key_file_set_integer (f, section_name, "MinimumAvatarWidth",
           tp_asv_get_uint32 (props,
-              TP_PROP_PROTOCOL_INTERFACE_AVATARS_MINIMUM_AVATAR_WIDTH,
+              TP_PROP_PROTOCOL_INTERFACE_AVATARS1_MINIMUM_AVATAR_WIDTH,
               NULL));
       g_key_file_set_integer (f, section_name, "RecommendedAvatarWidth",
           tp_asv_get_uint32 (props,
-              TP_PROP_PROTOCOL_INTERFACE_AVATARS_RECOMMENDED_AVATAR_WIDTH,
+              TP_PROP_PROTOCOL_INTERFACE_AVATARS1_RECOMMENDED_AVATAR_WIDTH,
               NULL));
       g_key_file_set_integer (f, section_name, "MaximumAvatarWidth",
           tp_asv_get_uint32 (props,
-              TP_PROP_PROTOCOL_INTERFACE_AVATARS_MAXIMUM_AVATAR_WIDTH,
+              TP_PROP_PROTOCOL_INTERFACE_AVATARS1_MAXIMUM_AVATAR_WIDTH,
               NULL));
       g_key_file_set_integer (f, section_name, "MaximumAvatarBytes",
           tp_asv_get_uint32 (props,
-              TP_PROP_PROTOCOL_INTERFACE_AVATARS_MAXIMUM_AVATAR_BYTES,
+              TP_PROP_PROTOCOL_INTERFACE_AVATARS1_MAXIMUM_AVATAR_BYTES,
               NULL));
 
       write_presence (f, section_name, props);

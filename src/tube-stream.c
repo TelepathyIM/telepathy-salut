@@ -73,15 +73,15 @@ static void streamtube_iface_init (gpointer g_iface, gpointer iface_data);
 G_DEFINE_TYPE_WITH_CODE (SalutTubeStream, salut_tube_stream,
     TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_STREAM_TUBE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_STREAM_TUBE1,
       streamtube_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE1,
       NULL));
 
 static const gchar * const salut_tube_stream_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     TP_IFACE_CHANNEL ".TargetID",
-    TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service",
+    TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE,
     NULL
 };
 
@@ -253,7 +253,7 @@ fire_connection_closed (SalutTubeStream *self,
    * same connection. */
   g_hash_table_remove (priv->transport_to_id, transport);
 
-  tp_svc_channel_type_stream_tube_emit_connection_closed (self,
+  tp_svc_channel_type_stream_tube1_emit_connection_closed (self,
       connection_id, error, debug_msg);
 }
 
@@ -669,7 +669,7 @@ fire_new_local_connection (SalutTubeStream *self,
 
   connection_id = generate_connection_id (self, transport);
 
-  tp_svc_channel_type_stream_tube_emit_new_local_connection (self,
+  tp_svc_channel_type_stream_tube1_emit_new_local_connection (self,
       connection_id);
 }
 
@@ -735,7 +735,7 @@ fire_new_remote_connection (SalutTubeStream *self,
         transport));
   g_assert (connection_id != 0);
 
-  tp_svc_channel_type_stream_tube_emit_new_remote_connection (self,
+  tp_svc_channel_type_stream_tube1_emit_new_remote_connection (self,
       contact, contact_id, &access_control_param, connection_id);
   g_value_unset (&access_control_param);
 }
@@ -1244,15 +1244,15 @@ salut_tube_stream_fill_immutable_properties (TpBaseChannel *chan,
 
   tp_dbus_properties_mixin_fill_properties_hash (
       G_OBJECT (chan), properties,
-      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE, "Service",
-      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE, "SupportedSocketTypes",
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1, "Service",
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1, "SupportedSocketTypes",
       NULL);
 
   if (!tp_base_channel_is_requested (chan))
     {
       tp_dbus_properties_mixin_fill_properties_hash (
           G_OBJECT (chan), properties,
-          TP_IFACE_CHANNEL_INTERFACE_TUBE, "Parameters",
+          TP_IFACE_CHANNEL_INTERFACE_TUBE1, "Parameters",
           NULL);
     }
 }
@@ -1280,7 +1280,7 @@ salut_tube_stream_get_interfaces (TpBaseChannel *chan)
   GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_tube_stream_parent_class)
     ->get_interfaces (chan);
 
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE);
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE1);
   return interfaces;
 }
 
@@ -1298,12 +1298,12 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
       { NULL }
   };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-      { TP_IFACE_CHANNEL_TYPE_STREAM_TUBE,
+      { TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         stream_tube_props,
       },
-      { TP_IFACE_CHANNEL_INTERFACE_TUBE,
+      { TP_IFACE_CHANNEL_INTERFACE_TUBE1,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         tube_iface_props,
@@ -1319,7 +1319,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   object_class->set_property = salut_tube_stream_set_property;
   object_class->constructor = salut_tube_stream_constructor;
 
-  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_STREAM_TUBE;
+  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1;
   base_class->get_interfaces = salut_tube_stream_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_tube_stream_close_dbus;
@@ -1582,7 +1582,7 @@ salut_tube_stream_accept (SalutTubeIface *tube,
   priv->state = TP_TUBE_CHANNEL_STATE_OPEN;
   g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
 
-  tp_svc_channel_interface_tube_emit_tube_channel_state_changed (
+  tp_svc_channel_interface_tube1_emit_tube_channel_state_changed (
       self, TP_TUBE_CHANNEL_STATE_OPEN);
 
   return TRUE;
@@ -1605,7 +1605,7 @@ salut_tube_stream_accepted (SalutTubeIface *tube)
   priv->state = TP_TUBE_CHANNEL_STATE_OPEN;
   g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
 
-  tp_svc_channel_interface_tube_emit_tube_channel_state_changed (
+  tp_svc_channel_interface_tube1_emit_tube_channel_state_changed (
       self, TP_TUBE_CHANNEL_STATE_OPEN);
 }
 
@@ -2056,7 +2056,7 @@ salut_tube_stream_check_params (TpSocketAddressType address_type,
  * on im.telepathy1.Channel.Type.StreamTube
  */
 static void
-salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube *iface,
+salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube1 *iface,
     guint address_type,
     const GValue *address,
     guint access_control,
@@ -2103,7 +2103,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube *iface,
       return;
     }
 
-  tp_svc_channel_type_stream_tube_return_from_offer (context);
+  tp_svc_channel_type_stream_tube1_return_from_offer (context);
 }
 
 /**
@@ -2113,7 +2113,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube *iface,
  * on im.telepathy1.Channel.Type.StreamTube
  */
 static void
-salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube *iface,
+salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,
     guint address_type,
     guint access_control,
     const GValue *access_control_param,
@@ -2172,7 +2172,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube *iface,
     salut_muc_channel_send_presence (self->muc, NULL);
 #endif
 
-  tp_svc_channel_type_stream_tube_return_from_accept (context,
+  tp_svc_channel_type_stream_tube1_return_from_accept (context,
       priv->address);
 }
 
@@ -2234,14 +2234,14 @@ salut_tube_stream_offer (SalutTubeStream *self,
     {
       priv->state = TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
 
-      tp_svc_channel_interface_tube_emit_tube_channel_state_changed (
+      tp_svc_channel_interface_tube1_emit_tube_channel_state_changed (
           self, TP_TUBE_CHANNEL_STATE_REMOTE_PENDING);
     }
   else
     {
       /* muc tube is open as soon it's offered */
       priv->state = TP_TUBE_CHANNEL_STATE_OPEN;
-      tp_svc_channel_interface_tube_emit_tube_channel_state_changed (
+      tp_svc_channel_interface_tube1_emit_tube_channel_state_changed (
           self, TP_TUBE_CHANNEL_STATE_OPEN);
       g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
     }
@@ -2274,10 +2274,9 @@ static void
 streamtube_iface_init (gpointer g_iface,
                        gpointer iface_data)
 {
-  TpSvcChannelTypeStreamTubeClass *klass =
-      (TpSvcChannelTypeStreamTubeClass *) g_iface;
+  TpSvcChannelTypeStreamTube1Class *klass = g_iface;
 
-#define IMPLEMENT(x, suffix) tp_svc_channel_type_stream_tube_implement_##x (\
+#define IMPLEMENT(x, suffix) tp_svc_channel_type_stream_tube1_implement_##x (\
     klass, salut_tube_stream_##x##suffix)
   IMPLEMENT(offer,_async);
   IMPLEMENT(accept,_async);

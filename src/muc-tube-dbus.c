@@ -37,7 +37,7 @@ salut_muc_tube_dbus_get_interfaces (TpBaseChannel *chan)
   GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_muc_tube_dbus_parent_class)
     ->get_interfaces (chan);
 
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP);
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP1);
   return interfaces;
 }
 

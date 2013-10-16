@@ -108,22 +108,22 @@ static void salut_conn_future_iface_init (gpointer, gpointer);
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
-    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING1,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_DBUS_PROPERTIES,
        tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
        tp_contacts_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST1,
       tp_base_contact_list_mixin_list_iface_init);
-    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE1,
        tp_presence_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
+    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS1,
        salut_connection_avatar_service_iface_init);
     G_IMPLEMENT_INTERFACE
-      (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+      (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
       salut_conn_contact_caps_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_INFO,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_INFO1,
         salut_conn_contact_info_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CONNECTION_FUTURE,
       salut_conn_future_iface_init);
@@ -397,15 +397,15 @@ salut_connection_constructed (GObject *obj)
       TP_BASE_CONTACT_LIST (self->priv->contact_manager), base);
 
   tp_contacts_mixin_add_contact_attributes_iface (obj,
-      TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+      TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
       salut_connection_avatars_fill_contact_attributes);
 
   tp_contacts_mixin_add_contact_attributes_iface (obj,
-      TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+      TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
       salut_connection_aliasing_fill_contact_attributes);
 
   tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (self),
-      TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+      TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
           conn_contact_capabilities_fill_contact_attributes);
 
   self->priv->sidecars = g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -729,14 +729,14 @@ set_own_status (GObject *obj,
 }
 
 static const gchar *interfaces [] = {
-  TP_IFACE_CONNECTION_INTERFACE_ALIASING,
-  TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+  TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
+  TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
   TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
-  TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+  TP_IFACE_CONNECTION_INTERFACE_PRESENCE1,
   TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
-  TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
-  TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
-  TP_IFACE_CONNECTION_INTERFACE_CONTACT_LIST,
+  TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
+  TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO1,
+  TP_IFACE_CONNECTION_INTERFACE_CONTACT_LIST1,
   SALUT_IFACE_CONNECTION_FUTURE,
 #ifdef ENABLE_OLPC
   SALUT_IFACE_OLPC_BUDDY_INFO,
@@ -773,12 +773,12 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
   GParamSpec *param_spec;
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-        { TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+        { TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
           conn_avatars_properties_getter,
           NULL,
           conn_avatars_properties,
         },
-        { TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+        { TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
           conn_aliasing_properties_getter,
           NULL,
           conn_aliasing_properties,
@@ -1350,7 +1350,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
  *
  */
 static void
-salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
+salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
     const GArray *contacts, DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
@@ -1380,7 +1380,7 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing *iface,
       aliases[i] = salut_connection_get_alias (self, handle);
     }
 
-  tp_svc_connection_interface_aliasing_return_from_request_aliases (context,
+  tp_svc_connection_interface_aliasing1_return_from_request_aliases (context,
     aliases);
 
   g_free (aliases);
@@ -1402,7 +1402,7 @@ salut_connection_aliasing_fill_contact_attributes (GObject *obj,
       g_value_set_string (val, salut_connection_get_alias (self, handle));
 
       tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
-         TP_IFACE_CONNECTION_INTERFACE_ALIASING"/alias", val);
+         TP_TOKEN_CONNECTION_INTERFACE_ALIASING1_ALIAS, val);
     }
 }
 
@@ -1478,7 +1478,7 @@ conn_contact_capabilities_fill_contact_attributes (GObject *obj,
           g_value_take_boxed (val, array);
           tp_contacts_mixin_set_contact_attribute (attributes_hash,
               handle,
-              TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES"/capabilities",
+              TP_TOKEN_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1_CAPABILITIES,
               val);
 
           array = NULL;
@@ -1490,7 +1490,7 @@ conn_contact_capabilities_fill_contact_attributes (GObject *obj,
 }
 
 static void
-salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
+salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
     GHashTable *aliases, DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
@@ -1520,7 +1520,7 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing *iface,
       g_error_free (error);
       return;
     }
-  tp_svc_connection_interface_aliasing_return_from_set_aliases (context);
+  tp_svc_connection_interface_aliasing1_return_from_set_aliases (context);
 }
 
 static void
@@ -1536,7 +1536,7 @@ _contact_manager_contact_alias_changed  (SalutConnection *self,
       GUINT_TO_POINTER (handle),
       (gchar *) salut_contact_get_alias (contact));
 
-  tp_svc_connection_interface_aliasing_emit_aliases_changed (self, aliases);
+  tp_svc_connection_interface_aliasing1_emit_aliases_changed (self, aliases);
 
   g_hash_table_unref (aliases);
 }
@@ -1545,10 +1545,9 @@ static void
 salut_connection_aliasing_service_iface_init (gpointer g_iface,
     gpointer iface_data)
 {
-  TpSvcConnectionInterfaceAliasingClass *klass =
-    (TpSvcConnectionInterfaceAliasingClass *) g_iface;
+  TpSvcConnectionInterfaceAliasing1Class *klass = g_iface;
 
-#define IMPLEMENT(x) tp_svc_connection_interface_aliasing_implement_##x \
+#define IMPLEMENT(x) tp_svc_connection_interface_aliasing1_implement_##x \
     (klass, salut_connection_##x)
   IMPLEMENT (request_aliases);
   IMPLEMENT (set_aliases);
@@ -1560,12 +1559,12 @@ static void
 _contact_manager_contact_avatar_changed (SalutConnection *self,
     SalutContact *contact, TpHandle handle)
 {
-  tp_svc_connection_interface_avatars_emit_avatar_updated (self,
+  tp_svc_connection_interface_avatars1_emit_avatar_updated (self,
       (guint)handle, contact->avatar_token);
 }
 
 static void
-salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *iface,
+salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars1 *iface,
     DBusGMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
@@ -1581,11 +1580,11 @@ salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *iface,
       g_error_free (error);
       return;
     }
-  tp_svc_connection_interface_avatars_return_from_clear_avatar (context);
+  tp_svc_connection_interface_avatars1_return_from_clear_avatar (context);
 }
 
 static void
-salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars *iface,
+salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars1 *iface,
     const GArray *avatar, const gchar *mime_type,
     DBusGMethodInvocation *context)
 {
@@ -1605,16 +1604,17 @@ salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars *iface,
       return;
     }
 
-  tp_svc_connection_interface_avatars_emit_avatar_updated (self,
+  tp_svc_connection_interface_avatars1_emit_avatar_updated (self,
       self_handle, priv->self->avatar_token);
-  tp_svc_connection_interface_avatars_return_from_set_avatar (context,
+  tp_svc_connection_interface_avatars1_return_from_set_avatar (context,
       priv->self->avatar_token);
 }
 
 
 static void
 salut_connection_get_known_avatar_tokens (
-    TpSvcConnectionInterfaceAvatars *iface, const GArray *contacts,
+    TpSvcConnectionInterfaceAvatars1 *iface,
+    const GArray *contacts,
     DBusGMethodInvocation *context)
 {
   guint i;
@@ -1669,7 +1669,7 @@ salut_connection_get_known_avatar_tokens (
         g_hash_table_insert (ret, GUINT_TO_POINTER (handle), tokens);
     }
 
-  tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
+  tp_svc_connection_interface_avatars1_return_from_get_known_avatar_tokens (
      context, ret);
 
   g_hash_table_unref (ret);
@@ -1717,7 +1717,7 @@ salut_connection_avatars_fill_contact_attributes (GObject *obj,
           g_value_take_string (val, token);
 
           tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
-            TP_IFACE_CONNECTION_INTERFACE_AVATARS"/token", val);
+            TP_TOKEN_CONNECTION_INTERFACE_AVATARS1_TOKEN, val);
         }
     }
 }
@@ -1735,7 +1735,7 @@ _request_avatars_cb (SalutContact *contact, guint8 *avatar, gsize size,
   arr = g_array_sized_new (FALSE, FALSE, sizeof (guint8), size);
   arr = g_array_append_vals (arr, avatar, size);
 
-  tp_svc_connection_interface_avatars_emit_avatar_retrieved (
+  tp_svc_connection_interface_avatars1_emit_avatar_retrieved (
     (GObject *) user_data, contact->handle,
     contact->avatar_token, arr, "");
 
@@ -1744,7 +1744,7 @@ _request_avatars_cb (SalutContact *contact, guint8 *avatar, gsize size,
 
 static void
 salut_connection_request_avatars (
-    TpSvcConnectionInterfaceAvatars *iface,
+    TpSvcConnectionInterfaceAvatars1 *iface,
     const GArray *contacts,
     DBusGMethodInvocation *context)
 {
@@ -1783,7 +1783,7 @@ salut_connection_request_avatars (
                arr = g_array_append_vals (arr, priv->self->avatar,
                  priv->self->avatar_size);
 
-               tp_svc_connection_interface_avatars_emit_avatar_retrieved (
+               tp_svc_connection_interface_avatars1_emit_avatar_retrieved (
                   (GObject *) self, self_handle,
                     priv->self->avatar_token, arr, "");
                g_array_unref (arr);
@@ -1802,7 +1802,7 @@ salut_connection_request_avatars (
         }
     }
 
-  tp_svc_connection_interface_avatars_return_from_request_avatars (context);
+  tp_svc_connection_interface_avatars1_return_from_request_avatars (context);
 }
 
 static void
@@ -1829,10 +1829,9 @@ static void
 salut_connection_avatar_service_iface_init (gpointer g_iface,
     gpointer iface_data)
 {
-  TpSvcConnectionInterfaceAvatarsClass *klass =
-       (TpSvcConnectionInterfaceAvatarsClass *) g_iface;
+  TpSvcConnectionInterfaceAvatars1Class *klass = g_iface;
 
-#define IMPLEMENT(x) tp_svc_connection_interface_avatars_implement_##x \
+#define IMPLEMENT(x) tp_svc_connection_interface_avatars1_implement_##x \
     (klass, salut_connection_##x)
   IMPLEMENT (get_known_avatar_tokens);
   IMPLEMENT (request_avatars);
@@ -1868,7 +1867,7 @@ _emit_contact_capabilities_changed (SalutConnection *conn,
   salut_connection_get_handle_contact_capabilities (conn, handle, ret);
   g_hash_table_insert (caps, GUINT_TO_POINTER (handle), ret);
 
-  tp_svc_connection_interface_contact_capabilities_emit_contact_capabilities_changed (
+  tp_svc_connection_interface_contact_capabilities1_emit_contact_capabilities_changed (
       conn, caps);
 
   salut_free_enhanced_contact_capabilities (ret);
@@ -1943,7 +1942,7 @@ data_forms_equal (GPtrArray *one,
  */
 static void
 salut_connection_update_capabilities (
-    TpSvcConnectionInterfaceContactCapabilities *iface,
+    TpSvcConnectionInterfaceContactCapabilities1 *iface,
     const GPtrArray *clients,
     DBusGMethodInvocation *context)
 {
@@ -2058,18 +2057,17 @@ salut_connection_update_capabilities (
   if (before_forms != NULL)
     g_ptr_array_unref (before_forms);
 
-  tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
+  tp_svc_connection_interface_contact_capabilities1_return_from_update_capabilities (
       context);
 }
 
 static void
 salut_conn_contact_caps_iface_init (gpointer g_iface, gpointer iface_data)
 {
-  TpSvcConnectionInterfaceContactCapabilitiesClass *klass =
-    (TpSvcConnectionInterfaceContactCapabilitiesClass *) g_iface;
+  TpSvcConnectionInterfaceContactCapabilities1Class *klass = g_iface;
 
 #define IMPLEMENT(x) \
-    tp_svc_connection_interface_contact_capabilities_implement_##x (\
+    tp_svc_connection_interface_contact_capabilities1_implement_##x (\
     klass, salut_connection_##x)
   IMPLEMENT(update_capabilities);
 #undef IMPLEMENT

@@ -37,7 +37,7 @@ static void roomlist_iface_init (gpointer, gpointer);
 
 G_DEFINE_TYPE_WITH_CODE (SalutRoomlistChannel, salut_roomlist_channel,
     TP_TYPE_BASE_CHANNEL,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_ROOM_LIST,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_ROOM_LIST1,
       roomlist_iface_init);
     );
 
@@ -96,7 +96,7 @@ salut_roomlist_channel_fill_immutable_properties (TpBaseChannel *chan,
 
   tp_dbus_properties_mixin_fill_properties_hash (
       G_OBJECT (chan), properties,
-      TP_IFACE_CHANNEL_TYPE_ROOM_LIST, "Server",
+      TP_IFACE_CHANNEL_TYPE_ROOM_LIST1, "Server",
       NULL);
 }
 
@@ -112,7 +112,7 @@ salut_roomlist_channel_class_init (
       { NULL }
   };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-      { TP_IFACE_CHANNEL_TYPE_ROOM_LIST,
+      { TP_IFACE_CHANNEL_TYPE_ROOM_LIST1,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         roomlist_props,
@@ -127,7 +127,7 @@ salut_roomlist_channel_class_init (
   object_class->dispose = salut_roomlist_channel_dispose;
   object_class->finalize = salut_roomlist_channel_finalize;
 
-  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_ROOM_LIST;
+  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_ROOM_LIST1;
   base_class->target_handle_type = TP_HANDLE_TYPE_NONE;
   base_class->fill_immutable_properties =
     salut_roomlist_channel_fill_immutable_properties;
@@ -308,14 +308,14 @@ salut_roomlist_channel_remove_room (SalutRoomlistChannel *self,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
-salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList *iface,
+salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList1 *iface,
                                           DBusGMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
 
   g_assert (SALUT_IS_ROOMLIST_CHANNEL (self));
 
-  tp_svc_channel_type_room_list_return_from_get_listing_rooms (
+  tp_svc_channel_type_room_list1_return_from_get_listing_rooms (
       context, FALSE);
 }
 
@@ -333,17 +333,17 @@ salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList *iface,
  * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
-salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList *iface,
+salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList1 *iface,
                                    DBusGMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
   SalutRoomlistChannelPrivate *priv = self->priv;
 
-  tp_svc_channel_type_room_list_emit_listing_rooms (iface, TRUE);
-  tp_svc_channel_type_room_list_emit_got_rooms (iface, priv->rooms);
-  tp_svc_channel_type_room_list_emit_listing_rooms (iface, FALSE);
+  tp_svc_channel_type_room_list1_emit_listing_rooms (iface, TRUE);
+  tp_svc_channel_type_room_list1_emit_got_rooms (iface, priv->rooms);
+  tp_svc_channel_type_room_list1_emit_listing_rooms (iface, FALSE);
 
-  tp_svc_channel_type_room_list_return_from_list_rooms (context);
+  tp_svc_channel_type_room_list1_return_from_list_rooms (context);
 }
 
 /**
@@ -353,20 +353,19 @@ salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList *iface,
  * on interface im.telepathy1.Channel.Type.RoomList
  */
 static void
-salut_roomlist_channel_stop_listing (TpSvcChannelTypeRoomList *iface,
+salut_roomlist_channel_stop_listing (TpSvcChannelTypeRoomList1 *iface,
                                      DBusGMethodInvocation *context)
 {
-  tp_svc_channel_type_room_list_return_from_stop_listing (context);
+  tp_svc_channel_type_room_list1_return_from_stop_listing (context);
 }
 
 static void
 roomlist_iface_init (gpointer g_iface,
                      gpointer iface_data)
 {
-  TpSvcChannelTypeRoomListClass *klass =
-    (TpSvcChannelTypeRoomListClass *) g_iface;
+  TpSvcChannelTypeRoomList1Class *klass = g_iface;
 
-#define IMPLEMENT(x) tp_svc_channel_type_room_list_implement_##x (\
+#define IMPLEMENT(x) tp_svc_channel_type_room_list1_implement_##x (\
     klass, salut_roomlist_channel_##x)
   IMPLEMENT(get_listing_rooms);
   IMPLEMENT(list_rooms);

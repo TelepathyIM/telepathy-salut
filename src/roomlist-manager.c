@@ -301,7 +301,7 @@ salut_roomlist_manager_type_foreach_channel_class (GType type,
 
   channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
   g_value_set_static_string (channel_type_value,
-      TP_IFACE_CHANNEL_TYPE_ROOM_LIST);
+      TP_IFACE_CHANNEL_TYPE_ROOM_LIST1);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
@@ -392,7 +392,7 @@ salut_roomlist_manager_request (TpChannelManager *manager,
 
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"),
-        TP_IFACE_CHANNEL_TYPE_ROOM_LIST))
+        TP_IFACE_CHANNEL_TYPE_ROOM_LIST1))
     return FALSE;
 
   if (tp_asv_get_uint32 (request_properties,

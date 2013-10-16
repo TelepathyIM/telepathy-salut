@@ -59,15 +59,15 @@ static void dbustube_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE (SalutTubeDBus, salut_tube_dbus, TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_TUBE_IFACE, tube_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_DBUS_TUBE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_DBUS_TUBE1,
       dbustube_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE1,
         NULL))
 
 static const gchar * const salut_tube_dbus_channel_allowed_properties[] = {
     TP_IFACE_CHANNEL ".TargetHandle",
     TP_IFACE_CHANNEL ".TargetID",
-    TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName",
+    TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME,
     NULL
 };
 
@@ -518,7 +518,7 @@ bytestream_state_changed_cb (GibberBytestreamIface *bytestream,
     {
       tube_dbus_open (self);
 
-      tp_svc_channel_interface_tube_emit_tube_channel_state_changed (self,
+      tp_svc_channel_interface_tube1_emit_tube_channel_state_changed (self,
           TP_TUBE_CHANNEL_STATE_OPEN);
 
       g_signal_emit (G_OBJECT (self), signals[OPENED], 0);
@@ -841,15 +841,15 @@ salut_tube_dbus_fill_immutable_properties (TpBaseChannel *chan,
 
   tp_dbus_properties_mixin_fill_properties_hash (
       G_OBJECT (chan), properties,
-      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE, "ServiceName",
-      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE, "SupportedAccessControls",
+      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1, "ServiceName",
+      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1, "SupportedAccessControls",
       NULL);
 
   if (!tp_base_channel_is_requested (chan))
     {
       tp_dbus_properties_mixin_fill_properties_hash (
           G_OBJECT (chan), properties,
-          TP_IFACE_CHANNEL_INTERFACE_TUBE, "Parameters",
+          TP_IFACE_CHANNEL_INTERFACE_TUBE1, "Parameters",
           NULL);
     }
 }
@@ -877,7 +877,7 @@ salut_tube_dbus_get_interfaces (TpBaseChannel *chan)
   GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_tube_dbus_parent_class)
     ->get_interfaces (chan);
 
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE);
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE1);
   return interfaces;
 }
 
@@ -896,12 +896,12 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       { NULL }
   };
   static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-      { TP_IFACE_CHANNEL_TYPE_DBUS_TUBE,
+      { TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         dbus_tube_props,
       },
-      { TP_IFACE_CHANNEL_INTERFACE_TUBE,
+      { TP_IFACE_CHANNEL_INTERFACE_TUBE1,
         tp_dbus_properties_mixin_getter_gobject_properties,
         NULL,
         tube_iface_props,
@@ -916,7 +916,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
   object_class->set_property = salut_tube_dbus_set_property;
   object_class->constructor = salut_tube_dbus_constructor;
 
-  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_DBUS_TUBE;
+  base_class->channel_type = TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1;
   base_class->get_interfaces = salut_tube_dbus_get_interfaces;
   base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
   base_class->close = salut_tube_dbus_close_dbus;
@@ -1450,7 +1450,7 @@ salut_tube_dbus_add_name (SalutTubeDBus *self,
 
   g_hash_table_insert (added, GUINT_TO_POINTER (handle), (gchar *) name);
 
-  tp_svc_channel_type_dbus_tube_emit_dbus_names_changed (self, added,
+  tp_svc_channel_type_dbus_tube1_emit_dbus_names_changed (self, added,
       removed);
 
   g_hash_table_unref (added);
@@ -1484,7 +1484,7 @@ salut_tube_dbus_remove_name (SalutTubeDBus *self,
 
   g_array_append_val (removed, handle);
 
-  tp_svc_channel_type_dbus_tube_emit_dbus_names_changed (self, added,
+  tp_svc_channel_type_dbus_tube1_emit_dbus_names_changed (self, added,
       removed);
 
   g_hash_table_unref (added);
@@ -1539,7 +1539,7 @@ salut_tube_dbus_check_access_control (SalutTubeDBus *self,
  * im.telepathy1.Channel.Type.DBusTube
  */
 static void
-salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
+salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube1 *self,
     GHashTable *parameters,
     guint access_control,
     DBusGMethodInvocation *context)
@@ -1561,7 +1561,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
 
   if (salut_tube_dbus_offer (tube, &error))
     {
-      tp_svc_channel_type_dbus_tube_return_from_offer (context,
+      tp_svc_channel_type_dbus_tube1_return_from_offer (context,
           priv->dbus_srv_addr);
     }
   else
@@ -1579,7 +1579,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
  * im.telepathy1.Channel.Type.DBusTube
  */
 static void
-salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube *self,
+salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube1 *self,
     guint access_control,
     DBusGMethodInvocation *context)
 {
@@ -1596,7 +1596,7 @@ salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube *self,
 
   if (salut_tube_dbus_accept (SALUT_TUBE_IFACE (tube), &error))
     {
-      tp_svc_channel_type_dbus_tube_return_from_accept (context,
+      tp_svc_channel_type_dbus_tube1_return_from_accept (context,
           priv->dbus_srv_addr);
     }
   else
@@ -1623,10 +1623,9 @@ static void
 dbustube_iface_init (gpointer g_iface,
                      gpointer iface_data)
 {
-  TpSvcChannelTypeDBusTubeClass *klass =
-      (TpSvcChannelTypeDBusTubeClass *) g_iface;
+  TpSvcChannelTypeDBusTube1Class *klass = g_iface;
 
-#define IMPLEMENT(x, suffix) tp_svc_channel_type_dbus_tube_implement_##x (\
+#define IMPLEMENT(x, suffix) tp_svc_channel_type_dbus_tube1_implement_##x (\
     klass, salut_tube_dbus_##x##suffix)
   IMPLEMENT(offer,_async);
   IMPLEMENT(accept,_async);

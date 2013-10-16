@@ -367,13 +367,13 @@ salut_muc_manager_type_foreach_channel_class (GType type,
 
   /* im.telepathy1.Channel.Type.StreamTube */
   g_value_set_static_string (channel_type_value,
-      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE);
+      TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1);
   func (type, table, salut_tube_stream_channel_get_allowed_properties (),
       user_data);
 
   /* Muc Channel.Type.DBusTube */
   g_value_set_static_string (channel_type_value,
-      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE);
+      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1);
   func (type, table, salut_tube_dbus_channel_get_allowed_properties (),
       user_data);
 
@@ -802,12 +802,12 @@ handle_stream_tube_channel_request (SalutMucManager *self,
 
   /* "Service" is a mandatory, not-fixed property */
   service = tp_asv_get_string (request_properties,
-            TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+            TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE);
   if (service == NULL)
     {
       g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Request does not contain the mandatory property '%s'",
-          TP_IFACE_CHANNEL_TYPE_STREAM_TUBE ".Service");
+          TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE);
       return FALSE;
     }
 
@@ -833,12 +833,12 @@ handle_dbus_tube_channel_request (SalutMucManager *self,
 
   /* "ServiceName" is a mandatory, not-fixed property */
   service = tp_asv_get_string (request_properties,
-      TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+      TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME);
   if (service == NULL)
     {
       g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Request does not contain the mandatory property '%s'",
-          TP_IFACE_CHANNEL_TYPE_DBUS_TUBE ".ServiceName");
+          TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME);
       return FALSE;
     }
 
@@ -866,8 +866,8 @@ salut_muc_manager_request (SalutMucManager *self,
       TP_IFACE_CHANNEL ".ChannelType");
 
   if (tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_TEXT) &&
-      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE) &&
-      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1) &&
+      tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1))
     return FALSE;
 
   /* validity already checked by TpBaseConnection */
@@ -928,13 +928,13 @@ salut_muc_manager_request (SalutMucManager *self,
 
       return TRUE;
     }
-  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1))
     {
       if (handle_stream_tube_channel_request (self, request_token,
           request_properties, require_new, handle, &error))
         return TRUE;
     }
-  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
+  else if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1))
     {
       if (handle_dbus_tube_channel_request (self, request_token,
           request_properties, require_new, handle, &error))

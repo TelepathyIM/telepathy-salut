@@ -304,7 +304,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   /* We only support file transfer channels */
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"),
-        TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
+        TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER1))
     return FALSE;
 
   /* And only contact handles */
@@ -328,7 +328,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   content_type = tp_asv_get_string (request_properties,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentType");
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_CONTENT_TYPE);
   if (content_type == NULL)
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
@@ -337,7 +337,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   filename = tp_asv_get_string (request_properties,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Filename");
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_FILENAME);
   if (filename == NULL)
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
@@ -346,7 +346,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   size = tp_asv_get_uint64 (request_properties,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Size", NULL);
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_SIZE, NULL);
   if (size == 0)
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
@@ -355,7 +355,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   content_hash_type = tp_asv_get_uint32 (request_properties,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHashType", &valid);
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_CONTENT_HASH_TYPE, &valid);
   if (!valid)
     {
       /* Assume File_Hash_Type_None */
@@ -374,7 +374,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   if (content_hash_type != TP_FILE_HASH_TYPE_NONE)
     {
       content_hash = tp_asv_get_string (request_properties,
-          TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".ContentHash");
+          TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_CONTENT_HASH);
       if (content_hash == NULL)
         {
           g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
@@ -389,22 +389,22 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
     }
 
   description = tp_asv_get_string (request_properties,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Description");
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_DESCRIPTION);
 
   date = tp_asv_get_uint64 (request_properties,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".Date", NULL);
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_DATE, NULL);
 
   initial_offset = tp_asv_get_uint64 (request_properties,
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER ".InitialOffset", NULL);
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_INITIAL_OFFSET, NULL);
 
   file_uri = tp_asv_get_string (request_properties,
-      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI);
+      TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_URI);
 
   service_name = tp_asv_get_string (request_properties,
-      TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA_SERVICE_NAME);
+      TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1_SERVICE_NAME);
 
   metadata = tp_asv_get_boxed (request_properties,
-      TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA_METADATA,
+      TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1_METADATA,
       TP_HASH_TYPE_METADATA);
 
   if (metadata != NULL && g_hash_table_lookup ((GHashTable *) metadata, "FORM_TYPE"))
@@ -479,17 +479,17 @@ static const gchar * const file_transfer_channel_fixed_properties[] = {
   /* ContentHashType has to be first so we can easily skip it if needed (we
    * currently don't as Salut doesn't support any hash mechanism) */
 #define STANDARD_PROPERTIES \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH_TYPE, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_CONTENT_HASH_TYPE, \
   TP_PROP_CHANNEL_TARGET_HANDLE, \
   TP_PROP_CHANNEL_TARGET_ID, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_TYPE, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_FILENAME, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_SIZE, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_CONTENT_HASH, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DESCRIPTION, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_DATE, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_INITIAL_OFFSET, \
-  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER_URI
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_CONTENT_TYPE, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_FILENAME, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_SIZE, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_CONTENT_HASH, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_DESCRIPTION, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_DATE, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_INITIAL_OFFSET, \
+  TP_PROP_CHANNEL_TYPE_FILE_TRANSFER1_URI
 
 static const gchar * const file_transfer_channel_allowed_properties[] =
 {
@@ -500,15 +500,15 @@ static const gchar * const file_transfer_channel_allowed_properties[] =
 static const gchar * const file_transfer_channel_allowed_properties_with_metadata_prop[] =
 {
   STANDARD_PROPERTIES,
-  TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA_METADATA,
+  TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1_METADATA,
   NULL
 };
 
 static const gchar * const file_transfer_channel_allowed_properties_with_both_metadata_props[] =
 {
   STANDARD_PROPERTIES,
-  TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA_SERVICE_NAME,
-  TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA_METADATA,
+  TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1_SERVICE_NAME,
+  TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1_METADATA,
   NULL
 };
 
@@ -524,7 +524,7 @@ salut_ft_manager_type_foreach_channel_class (GType type,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
 
   value = tp_g_value_slice_new (G_TYPE_STRING);
-  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER1);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType" , value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
@@ -599,7 +599,7 @@ add_file_transfer_channel_class (GPtrArray *arr,
       (GDestroyNotify) tp_g_value_slice_free);
 
   channel_type_value = tp_g_value_slice_new_static_string (
-      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER);
+      TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER1);
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
@@ -612,7 +612,7 @@ add_file_transfer_channel_class (GPtrArray *arr,
     {
       service_name_value = tp_g_value_slice_new_string (service_name_str);
       g_hash_table_insert (fixed_properties,
-          TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA_SERVICE_NAME,
+          TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1_SERVICE_NAME,
           service_name_value);
     }
 
@@ -691,7 +691,7 @@ salut_ft_manager_represent_client (
 
       if (tp_strdiff (tp_asv_get_string (channel_class,
               TP_IFACE_CHANNEL ".ChannelType"),
-            TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER))
+            TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER1))
         continue;
 
       if (tp_asv_get_uint32 (channel_class,
@@ -714,7 +714,7 @@ salut_ft_manager_represent_client (
         continue;
 
       service_name = tp_asv_get_string (channel_class,
-          TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA_SERVICE_NAME);
+          TP_PROP_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1_SERVICE_NAME);
 
       if (service_name == NULL)
         continue;

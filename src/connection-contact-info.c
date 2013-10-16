@@ -108,7 +108,7 @@ salut_conn_contact_info_class_init (
 
   tp_dbus_properties_mixin_implement_interface (
       G_OBJECT_CLASS (klass),
-      TP_IFACE_QUARK_CONNECTION_INTERFACE_CONTACT_INFO,
+      TP_IFACE_QUARK_CONNECTION_INTERFACE_CONTACT_INFO1,
       salut_conn_contact_info_get_property,
       NULL,
       props);
@@ -222,7 +222,7 @@ salut_conn_contact_info_fill_contact_attributes (
 
       if (contact_info != NULL)
         tp_contacts_mixin_set_contact_attribute (attributes_hash,
-            handle, TP_TOKEN_CONNECTION_INTERFACE_CONTACT_INFO_INFO,
+            handle, TP_TOKEN_CONNECTION_INTERFACE_CONTACT_INFO1_INFO,
             tp_g_value_slice_new_take_boxed (
                 TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info));
     }
@@ -235,7 +235,7 @@ void salut_conn_contact_info_init (
 {
   tp_contacts_mixin_add_contact_attributes_iface (
       G_OBJECT (self),
-      TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
+      TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO1,
       salut_conn_contact_info_fill_contact_attributes);
 }
 
@@ -247,14 +247,14 @@ salut_conn_contact_info_changed (
 {
   GPtrArray *contact_info = build_contact_info_for_contact (contact);
 
-  tp_svc_connection_interface_contact_info_emit_contact_info_changed (self,
+  tp_svc_connection_interface_contact_info1_emit_contact_info_changed (self,
       handle, contact_info);
   g_boxed_free (TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info);
 }
 
 static void
 salut_conn_contact_info_request_contact_info (
-    TpSvcConnectionInterfaceContactInfo *iface,
+    TpSvcConnectionInterfaceContactInfo1 *iface,
     guint handle,
     DBusGMethodInvocation *context)
 {
@@ -285,7 +285,7 @@ salut_conn_contact_info_request_contact_info (
         {
           GPtrArray *contact_info = build_contact_info_for_contact (contact);
 
-          tp_svc_connection_interface_contact_info_return_from_request_contact_info (
+          tp_svc_connection_interface_contact_info1_return_from_request_contact_info (
               context, contact_info);
           g_boxed_free (TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info);
         }
@@ -302,12 +302,12 @@ salut_conn_contact_info_request_contact_info (
 
 static void
 salut_conn_contact_info_refresh_contact_info (
-    TpSvcConnectionInterfaceContactInfo *iface,
+    TpSvcConnectionInterfaceContactInfo1 *iface,
     const GArray *contacts,
     DBusGMethodInvocation *context)
 {
   /* This is a no-op on link-local XMPP: everything's always pushed to us. */
-  tp_svc_connection_interface_contact_info_return_from_refresh_contact_info (context);
+  tp_svc_connection_interface_contact_info1_return_from_refresh_contact_info (context);
 }
 
 void
@@ -315,9 +315,9 @@ salut_conn_contact_info_iface_init (
     gpointer g_iface,
     gpointer iface_data)
 {
-  TpSvcConnectionInterfaceContactInfoClass *klass = g_iface;
+  TpSvcConnectionInterfaceContactInfo1Class *klass = g_iface;
 
-#define IMPLEMENT(x) tp_svc_connection_interface_contact_info_implement_##x \
+#define IMPLEMENT(x) tp_svc_connection_interface_contact_info1_implement_##x \
     (klass, salut_conn_contact_info_##x)
   IMPLEMENT (request_contact_info);
   IMPLEMENT (refresh_contact_info);
