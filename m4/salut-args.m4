@@ -1,26 +1,7 @@
 dnl configure-time options for Telepathy Salut
 
-dnl SALUT_ARG_DEBUG
 dnl SALUT_ARG_VALGRIND
 dnl SALUT_ARG_COVERAGE
-
-AC_DEFUN([SALUT_ARG_DEBUG],
-[
-  dnl debugging stuff
-  AC_ARG_ENABLE(debug,
-    AC_HELP_STRING([--disable-debug],[compile without debug code]),
-    [
-      case "${enableval}" in
-        yes|no) enable="${enableval}" ;;
-        *)   AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
-      esac
-    ],
-    [enable=yes])
-
-  if test "$enable" = yes; then
-    AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])
-  fi
-])
 
 AC_DEFUN([SALUT_ARG_VALGRIND],
 [

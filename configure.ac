@@ -36,7 +36,6 @@ AM_PROG_AS
 AC_PROG_MKDIR_P
 
 dnl add common command line switches
-SALUT_ARG_DEBUG
 SALUT_ARG_VALGRIND
 SALUT_ARG_COVERAGE
 
@@ -89,13 +88,6 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$enable_fatal_warnings" = xyes],
   [missing-field-initializers \
    unused-parameter])
 AC_SUBST([ERROR_CFLAGS])
-
-AC_ARG_ENABLE([debug],
-      [AC_HELP_STRING([--disable-debug], [compile without debug code])],
-      [], [enable_debug=yes])
-
-AS_IF([test x$enable_debug = xyes],
-  [AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])])
 
 dnl Check for code generation tools
 XSLTPROC=

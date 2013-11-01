@@ -8,8 +8,6 @@
 
 #include <wocky/wocky.h>
 
-#ifdef ENABLE_DEBUG
-
 typedef enum
 {
   DEBUG_PRESENCE       = 1 << 0,
@@ -51,25 +49,6 @@ void debug_free (void);
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)
 
 #endif /* DEBUG_FLAG */
-
-#else /* ENABLE_DEBUG */
-
-#ifdef DEBUG_FLAG
-
-static inline void
-DEBUG (
-    const gchar *format,
-    ...)
-{
-}
-
-#define DEBUGGING 0
-
-#endif /* DEBUG_FLAG */
-
-#define debug_free() G_STMT_START { } G_STMT_END
-
-#endif /* ENABLE_DEBUG */
 
 G_END_DECLS
 
