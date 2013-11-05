@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = tools extensions lib src data m4 salut plugins tests docs
 
-DISTCHECK_CONFIGURE_FLAGS = --disable-debug --enable-gtk-doc
+DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc
 
 valgrind:
 	cd tests && $(MAKE) valgrind

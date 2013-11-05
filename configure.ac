@@ -1,4 +1,4 @@
-AC_PREREQ([2.59])
+AC_PREREQ([2.60])
 
 # Making releases:
 #   set the new version number:
@@ -24,7 +24,7 @@ AC_INIT([Telepathy Salut], [salut_version],
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_LANG([C])
-AM_INIT_AUTOMAKE([1.9 -Wno-portability tar-ustar])
+AM_INIT_AUTOMAKE([1.9 -Wno-portability tar-ustar subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AM_PROG_LIBTOOL
 AM_CONFIG_HEADER(config.h)
@@ -33,10 +33,9 @@ dnl check for tools
 AC_PROG_CC
 AC_PROG_CC_STDC
 AM_PROG_AS
-AM_PROG_MKDIR_P
+AC_PROG_MKDIR_P
 
 dnl add common command line switches
-SALUT_ARG_DEBUG
 SALUT_ARG_VALGRIND
 SALUT_ARG_COVERAGE
 
@@ -89,13 +88,6 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test "x$enable_fatal_warnings" = xyes],
   [missing-field-initializers \
    unused-parameter])
 AC_SUBST([ERROR_CFLAGS])
-
-AC_ARG_ENABLE([debug],
-      [AC_HELP_STRING([--disable-debug], [compile without debug code])],
-      [], [enable_debug=yes])
-
-AS_IF([test x$enable_debug = xyes],
-  [AC_DEFINE(ENABLE_DEBUG, [], [Enable debug code])])
 
 dnl Check for code generation tools
 XSLTPROC=

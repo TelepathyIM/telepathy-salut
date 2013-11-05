@@ -13,8 +13,6 @@
 
 #include <telepathy-glib/telepathy-glib.h>
 
-#ifdef ENABLE_DEBUG
-
 static DebugFlags flags = 0;
 
 GDebugKey keys[] = {
@@ -138,5 +136,3 @@ void debug (DebugFlags flag,
 
   g_free (message);
 }
-
-#endif /* ENABLE_DEBUG */

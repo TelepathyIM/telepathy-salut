@@ -59,13 +59,11 @@ main (int argc, char **argv)
   fatal_mask |= G_LOG_LEVEL_CRITICAL;
   g_log_set_always_fatal (fatal_mask);
 
-#ifdef ENABLE_DEBUG
   tp_debug_divert_messages (g_getenv ("SALUT_LOGFILE"));
   debug_set_flags_from_env ();
 
   if (g_getenv ("SALUT_PERSIST"))
     tp_debug_set_persistent (TRUE);
-#endif
 
   loader = salut_plugin_loader_dup ();
 

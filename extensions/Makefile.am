@@ -47,7 +47,7 @@ AM_LDFLAGS = $(GCOV_LIBS) @DBUS_LIBS@ @GLIB_LIBS@ @TELEPATHY_GLIB_LIBS@
 XSLTPROCFLAGS = --nonet --novalid
 
 _gen/%.xml: %.xml $(wildcard *.xml) $(tools_dir)/identity.xsl
-	$(mkdir_p) _gen
+	$(MKDIR_P) _gen
 	$(AM_V_GEN)$(XSLTPROC) $(XSLTPROCFLAGS) --xinclude $(tools_dir)/identity.xsl \
 		$< > $@
 

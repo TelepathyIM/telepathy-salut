@@ -10,8 +10,6 @@
 
 G_BEGIN_DECLS
 
-#ifdef ENABLE_DEBUG
-
 typedef enum
 {
   DEBUG_TRANSPORT         = 1 << 0,
@@ -50,31 +48,6 @@ void gibber_debug_stanza (DebugFlags flag, WockyStanza *stanza,
 #define DEBUGGING debug_flag_is_set(DEBUG_FLAG)
 
 #endif /* DEBUG_FLAG */
-
-#else /* ENABLE_DEBUG */
-
-#ifdef DEBUG_FLAG
-
-static inline void
-DEBUG (
-    const gchar *format,
-    ...)
-{
-}
-
-static inline void
-DEBUG_STANZA (
-    WockyStanza *stanza,
-    const gchar *format,
-    ...)
-{
-}
-
-#define DEBUGGING 0
-
-#endif /* DEBUG_FLAG */
-
-#endif /* ENABLE_DEBUG */
 
 G_END_DECLS
 

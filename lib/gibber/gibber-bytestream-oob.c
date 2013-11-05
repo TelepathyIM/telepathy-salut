@@ -573,7 +573,7 @@ make_porter_connections (GibberBytestreamOOB *self)
   jid = wocky_contact_dup_jid (priv->contact);
 
   priv->stanza_received_id = wocky_porter_register_handler_from (priv->porter,
-      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_TYPE_NONE, jid,
+      WOCKY_STANZA_TYPE_IQ, WOCKY_STANZA_SUB_TYPE_NONE, jid,
       WOCKY_PORTER_HANDLER_PRIORITY_NORMAL, received_stanza_cb, self, NULL);
 
   g_free (jid);
