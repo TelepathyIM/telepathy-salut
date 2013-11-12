@@ -1,6 +1,6 @@
 EXTRA_DIST = salut.service.in
 
-managerdir = $(datadir)/telepathy/managers
+managerdir = $(datadir)/telepathy-1/managers
 manager_DATA = salut.manager
 
 servicedir = $(datadir)/dbus-1/services
