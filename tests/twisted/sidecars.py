@@ -9,7 +9,7 @@ from saluttest import exec_test
 import constants as cs
 from config import PLUGINS_ENABLED
 
-TEST_PLUGIN_IFACE = "im.telepathy1.Salut.Plugin.Test"
+TEST_PLUGIN_IFACE = "im.telepathy.v1.Salut.Plugin.Test"
 
 if not PLUGINS_ENABLED:
     print "NOTE: built without --enable-plugins, not testing plugins"

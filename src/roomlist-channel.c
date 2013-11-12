@@ -247,7 +247,7 @@ salut_roomlist_channel_add_room (SalutRoomlistChannel *self,
       dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ROOM_INFO));
   dbus_g_type_struct_set (&room,
       0, handle,
-      1, "im.telepathy1.Channel.Type.Text",
+      1, "im.telepathy.v1.Channel.Type.Text",
       2, keys,
       G_MAXUINT);
   g_ptr_array_add (priv->rooms, g_value_get_boxed (&room));
@@ -299,7 +299,7 @@ salut_roomlist_channel_remove_room (SalutRoomlistChannel *self,
  * salut_roomlist_channel_get_listing_rooms
  *
  * Implements D-Bus method GetListingRooms
- * on interface im.telepathy1.Channel.Type.RoomList
+ * on interface im.telepathy.v1.Channel.Type.RoomList
  *
  * @error: Used to return a pointer to a GError detailing any error
  *         that occurred, D-Bus will throw the error only if this
@@ -324,7 +324,7 @@ salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList1 *iface,
  * salut_roomlist_channel_list_rooms
  *
  * Implements D-Bus method ListRooms
- * on interface im.telepathy1.Channel.Type.RoomList
+ * on interface im.telepathy.v1.Channel.Type.RoomList
  *
  * @error: Used to return a pointer to a GError detailing any error
  *         that occurred, D-Bus will throw the error only if this
@@ -350,7 +350,7 @@ salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList1 *iface,
  * salut_roomlist_channel_stop_listing
  *
  * Implements D-Bus method StopListing
- * on interface im.telepathy1.Channel.Type.RoomList
+ * on interface im.telepathy.v1.Channel.Type.RoomList
  */
 static void
 salut_roomlist_channel_stop_listing (TpSvcChannelTypeRoomList1 *iface,

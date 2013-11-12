@@ -1536,7 +1536,7 @@ salut_tube_dbus_check_access_control (SalutTubeDBus *self,
  * salut_tube_dbus_offer_async
  *
  * Implement D-Bus method Offer on interface
- * im.telepathy1.Channel.Type.DBusTube
+ * im.telepathy.v1.Channel.Type.DBusTube
  */
 static void
 salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube1 *self,
@@ -1576,7 +1576,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube1 *self,
  * salut_tube_dbus_accept_async
  *
  * Implements D-Bus method Accept on interface
- * im.telepathy1.Channel.Type.DBusTube
+ * im.telepathy.v1.Channel.Type.DBusTube
  */
 static void
 salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube1 *self,

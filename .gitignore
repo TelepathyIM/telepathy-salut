@@ -81,7 +81,7 @@ m4/lt~obsolete.m4
 
 /coverage/
 
-data/im.telepathy1.ConnectionManager.salut.service
+data/im.telepathy.v1.ConnectionManager.salut.service
 data/*.service
 data/salut.manager
 
@@ -118,7 +118,7 @@ tests/twisted/tools/core
 tests/twisted/tools/exec-with-log.sh
 tests/twisted/tools/salut-testing.log*
 tests/twisted/tools/tmp-session-bus.conf
-tests/twisted/tools/im.telepathy1.ConnectionManager.salut.service
+tests/twisted/tools/im.telepathy.v1.ConnectionManager.salut.service
 tests/twisted/tools/refdbg.log
 /tests/twisted/with-session-bus*.address
 /tests/twisted/with-session-bus*.pid

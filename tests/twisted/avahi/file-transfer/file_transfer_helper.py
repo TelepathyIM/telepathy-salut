@@ -246,7 +246,7 @@ class ReceiveFileTest(FileTransferTest):
         path, props = channels[0]
 
         # check channel properties
-        # im.telepathy1.Channel D-Bus properties
+        # im.telepathy.v1.Channel D-Bus properties
         assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
         assert props[cs.INTERFACES] == []
         assert props[cs.TARGET_HANDLE] == self.handle
@@ -256,7 +256,7 @@ class ReceiveFileTest(FileTransferTest):
         assert props[cs.INITIATOR_HANDLE] == self.handle
         assert props[cs.INITIATOR_ID] == self.contact_name
 
-        # im.telepathy1.Channel.Type.FileTransfer D-Bus properties
+        # im.telepathy.v1.Channel.Type.FileTransfer D-Bus properties
         assert props[cs.FT_STATE] == cs.FT_STATE_PENDING
         assert props[cs.FT_CONTENT_TYPE] == self.file.content_type
         assert props[cs.FT_FILENAME] == self.file.name
@@ -410,7 +410,7 @@ class SendFileTest(FileTransferTest):
 
         self.ft_path, props = self.conn.Requests.CreateChannel(request)
 
-        # im.telepathy1.Channel D-Bus properties
+        # im.telepathy.v1.Channel D-Bus properties
         assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
         assert props[cs.INTERFACES] == []
         assert props[cs.TARGET_HANDLE] == self.handle
@@ -420,7 +420,7 @@ class SendFileTest(FileTransferTest):
         assert props[cs.INITIATOR_HANDLE] == self.self_handle
         assert props[cs.INITIATOR_ID] == self.self_handle_name
 
-        # im.telepathy1.Channel.Type.FileTransfer D-Bus properties
+        # im.telepathy.v1.Channel.Type.FileTransfer D-Bus properties
         assert props[cs.FT_STATE] == cs.FT_STATE_PENDING
         assert props[cs.FT_CONTENT_TYPE] == self.file.content_type
         assert props[cs.FT_FILENAME] == self.file.name

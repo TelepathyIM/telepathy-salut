@@ -360,12 +360,12 @@ salut_muc_manager_type_foreach_channel_class (GType type,
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
       handle_type_value);
 
-  /* im.telepathy1.Channel.Type.Text */
+  /* im.telepathy.v1.Channel.Type.Text */
   g_value_set_static_string (channel_type_value, TP_IFACE_CHANNEL_TYPE_TEXT);
   func (type, table, muc_channel_allowed_properties,
       user_data);
 
-  /* im.telepathy1.Channel.Type.StreamTube */
+  /* im.telepathy.v1.Channel.Type.StreamTube */
   g_value_set_static_string (channel_type_value,
       TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1);
   func (type, table, salut_tube_stream_channel_get_allowed_properties (),

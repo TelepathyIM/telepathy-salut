@@ -2053,7 +2053,7 @@ salut_tube_stream_check_params (TpSocketAddressType address_type,
  * salut_tube_stream_offer_async
  *
  * Implements D-Bus method Offer
- * on im.telepathy1.Channel.Type.StreamTube
+ * on im.telepathy.v1.Channel.Type.StreamTube
  */
 static void
 salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube1 *iface,
@@ -2110,7 +2110,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube1 *iface,
  * salut_tube_stream_accept_async
  *
  * Implements D-Bus method Accept
- * on im.telepathy1.Channel.Type.StreamTube
+ * on im.telepathy.v1.Channel.Type.StreamTube
  */
 static void
 salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,

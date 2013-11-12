@@ -72,7 +72,7 @@ def test(q, bus, conn):
 
     q.expect('dbus-signal', signal='MembersChanged', path=path)
 
-    lp_members = props_iface.Get('im.telepathy1.Channel.Interface.Group1',
+    lp_members = props_iface.Get('im.telepathy.v1.Channel.Interface.Group1',
         'LocalPendingMembers')
 
     assert len(lp_members) == 1

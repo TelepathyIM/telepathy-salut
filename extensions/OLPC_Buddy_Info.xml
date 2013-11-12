@@ -17,7 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
   </tp:license>
   <interface name="org.laptop.Telepathy.BuddyInfo">
-    <tp:requires interface="im.telepathy1.Connection"/>
+    <tp:requires interface="im.telepathy.v1.Connection"/>
 
     <method name="SetProperties" tp:name-for-bindings="Set_Properties">
       <arg direction="in" name="properties" type="a{sv}">
@@ -35,7 +35,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
         (possibly immediately).</p>
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="im.telepathy1.Error.InvalidArgument"/>
+        <tp:error name="im.telepathy.v1.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
 
@@ -54,8 +54,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
         Get the properties of a particular contact.
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="im.telepathy1.Error.Disconnected"/>
-        <tp:error name="im.telepathy1.Error.InvalidArgument"/>
+        <tp:error name="im.telepathy.v1.Error.Disconnected"/>
+        <tp:error name="im.telepathy.v1.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
 
@@ -103,8 +103,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
         Set the activities of the local user for this connection.
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="im.telepathy1.Error.Disconnected"/>
-        <tp:error name="im.telepathy1.Error.InvalidArgument"/>
+        <tp:error name="im.telepathy.v1.Error.Disconnected"/>
+        <tp:error name="im.telepathy.v1.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
 
@@ -128,8 +128,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
         </tp:rationale>
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="im.telepathy1.Error.Disconnected"/>
-        <tp:error name="im.telepathy1.Error.InvalidArgument"/>
+        <tp:error name="im.telepathy.v1.Error.Disconnected"/>
+        <tp:error name="im.telepathy.v1.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
 
@@ -152,8 +152,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
         Get the activities of a particular contact.
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="im.telepathy1.Error.Disconnected"/>
-        <tp:error name="im.telepathy1.Error.InvalidArgument"/>
+        <tp:error name="im.telepathy.v1.Error.Disconnected"/>
+        <tp:error name="im.telepathy.v1.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
 
@@ -196,8 +196,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
         Set the current activity of the local user for this connection.
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="im.telepathy1.Error.Disconnected"/>
-        <tp:error name="im.telepathy1.Error.InvalidArgument"/>
+        <tp:error name="im.telepathy.v1.Error.Disconnected"/>
+        <tp:error name="im.telepathy.v1.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
 
@@ -223,8 +223,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA</p>
         Get the current activity of a particular contact.
       </tp:docstring>
       <tp:possible-errors>
-        <tp:error name="im.telepathy1.Error.Disconnected"/>
-        <tp:error name="im.telepathy1.Error.InvalidArgument"/>
+        <tp:error name="im.telepathy.v1.Error.Disconnected"/>
+        <tp:error name="im.telepathy.v1.Error.InvalidArgument"/>
       </tp:possible-errors>
     </method>
 

@@ -1346,7 +1346,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
  * salut_connection_request_aliases
  *
  * Implements D-Bus method RequestAliases
- * on interface im.telepathy1.Connection.Interface.Aliasing
+ * on interface im.telepathy.v1.Connection.Interface.Aliasing
  *
  */
 static void
@@ -1938,7 +1938,7 @@ data_forms_equal (GPtrArray *one,
  *
  * Implements D-Bus method UpdateCapabilities
  * on interface
- * im.telepathy1.Connection.Interface.ContactCapabilities
+ * im.telepathy.v1.Connection.Interface.ContactCapabilities
  */
 static void
 salut_connection_update_capabilities (

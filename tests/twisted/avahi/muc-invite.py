@@ -80,7 +80,7 @@ def test(q, bus, conn):
     channel_group = make_channel_proxy(conn, path, "Channel.Interface.Group")
 
     # check channel properties
-    # im.telepathy1.Channel D-Bus properties
+    # im.telepathy.v1.Channel D-Bus properties
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
     assertContains(cs.CHANNEL_IFACE_GROUP, props[cs.INTERFACES])
     assert props[cs.TARGET_ID] == 'my-room'

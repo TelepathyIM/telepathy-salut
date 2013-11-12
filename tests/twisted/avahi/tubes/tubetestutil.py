@@ -56,7 +56,7 @@ def connect_two_accounts(q, bus, conn):
     # property first
     contact1_handle_on_conn2 = 0
     conn2_members = conn2_publish_proxy.Get(
-            'im.telepathy1.Channel.Interface.Group', 'Members',
+            'im.telepathy.v1.Channel.Interface.Group', 'Members',
             dbus_interface='org.freedesktop.DBus.Properties')
     for h in conn2_members:
         name = conn2.InspectHandles(cs.HT_CONTACT, [h])[0]
