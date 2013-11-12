@@ -1,8 +1,8 @@
 if ENABLE_PLUGIN_API
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = telepathy-salut.pc
+pkgconfig_DATA = telepathy-salut-1.pc
 
-salutincludedir = $(includedir)/telepathy-salut-0/salut
+salutincludedir = $(includedir)/telepathy-salut-1/salut
 salutinclude_HEADERS = \
     plugin.h \
     plugin-connection.h \

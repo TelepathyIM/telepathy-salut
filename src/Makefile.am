@@ -8,7 +8,7 @@ CLEANFILES = $(BUILT_SOURCES)
 dist-hook:
 	$(shell for x in $(BUILT_SOURCES); do rm -f $(distdir)/$$x ; done)
 
-libexec_PROGRAMS=telepathy-salut
+libexec_PROGRAMS = telepathy-salut-1
 noinst_PROGRAMS = write-mgr-file
 
 CORE_SOURCES =                                          \
@@ -176,14 +176,14 @@ write_mgr_file_LDADD = libsalut-convenience.la \
                        $(top_builddir)/lib/gibber/libgibber.la \
                        $(top_builddir)/extensions/libsalut-extensions.la \
                        @TELEPATHY_GLIB_LIBS@
-telepathy_salut_SOURCES = \
+telepathy_salut_1_SOURCES = \
     salut.c
 
-telepathy_salut_LDFLAGS = -export-dynamic
+telepathy_salut_1_LDFLAGS = -export-dynamic
 
 # Coding style checks
 check_c_sources = \
-    $(telepathy_salut_SOURCES) \
+    $(telepathy_salut_1_SOURCES) \
     $(CORE_SOURCES) \
     $(AVAHI_BACKEND_SOURCES) \
     $(BONJOUR_BACKEND_SOURCES) \
@@ -200,7 +200,7 @@ telepathy_salut_android_libs = libsalut-convenience.la \
                                $(top_builddir)/extensions/libsalut-extensions.la \
                                -ltelepathy-glib
 
-telepathy_salut_LDADD = libsalut-convenience.la \
+telepathy_salut_1_LDADD = libsalut-convenience.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
                         $(top_builddir)/extensions/libsalut-extensions.la \
                         -ltelepathy-glib
@@ -299,10 +299,10 @@ Android.mk: Makefile.am $(BUILT_SOURCES)
 	 -:CFLAGS $(DEFS) $(CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	 $(AM_CFLAGS) \
 	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) \
-	 -:SHARED telepathy-salut \
+	 -:SHARED telepathy-salut-1 \
 	 -:TAGS eng debug \
 	 -:REL_TOP $(top_srcdir) -:ABS_TOP $(abs_top_srcdir) \
-	 -:SOURCES $(telepathy_salut_SOURCES) \
+	 -:SOURCES $(telepathy_salut_1_SOURCES) \
 	 -:CFLAGS $(DEFS) $(CFLAGS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(AM_CFLAGS) \
 	 -:CPPFLAGS $(CPPFLAGS) $(AM_CPPFLAGS) -DBUILD_AS_ANDROID_SERVICE \

@@ -1,6 +1,6 @@
 tools_dir = $(top_srcdir)/tools
 
-man_MANS = telepathy-salut.8
+man_MANS = telepathy-salut-1.8
 html_DATA = clique.html
 
 EXTRA_DIST = \

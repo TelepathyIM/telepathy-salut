@@ -31,4 +31,4 @@ if ! test -n "$SALUT_TEST_REAL_AVAHI"; then
 fi
 
 export G_DEBUG=fatal-warnings" ${G_DEBUG}"
-exec @abs_top_builddir@/libtool --mode=execute $SALUT_WRAPPER @abs_top_builddir@/src/telepathy-salut
+exec @abs_top_builddir@/libtool --mode=execute $SALUT_WRAPPER @abs_top_builddir@/src/telepathy-salut-1

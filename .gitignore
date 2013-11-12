@@ -88,7 +88,7 @@ data/salut.manager
 depcomp
 docs/xep.xsl
 docs/clique.html
-docs/telepathy-salut.8
+docs/telepathy-salut-1.8
 
 docs/clique.html
 extensions/_gen
@@ -107,7 +107,7 @@ ltmain.sh
 missing
 src/*-enumtypes.c
 src/*-enumtypes.h
-src/telepathy-salut
+src/telepathy-salut-1
 src/write-mgr-file
 stamp-h1
 telepathy-salut-*.tar.gz
@@ -125,7 +125,7 @@ tests/twisted/tools/refdbg.log
 
 tools/libglibcodegen.pyc
 
-src/telepathy-salut
+src/telepathy-salut-1
 src/write-mgr-file
 
 /telepathy-salut-*/
@@ -148,5 +148,5 @@ lib/gibber/tests/check-gibber-r-multicast-packet
 lib/gibber/tests/check-gibber-r-multicast-sender
 lib/gibber/tests/check-gibber-unix-transport
 
-salut/telepathy-salut.pc
-salut/telepathy-salut-uninstalled.pc
+salut/telepathy-salut-1.pc
+salut/telepathy-salut-1-uninstalled.pc

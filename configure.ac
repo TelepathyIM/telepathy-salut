@@ -275,11 +275,11 @@ AC_ARG_ENABLE(submodules,
 #
 # Private directory for Wocky and the salut-plugins library
 AS_IF([test "x$pluginexeclibdir" = x],
-  [pluginexeclibdir='${libdir}/telepathy/salut-0/lib'])
+  [pluginexeclibdir='${libdir}/telepathy/salut-1'])
 AC_ARG_VAR([pluginexeclibdir])
 # The actual plugins
 AS_IF([test "x$pluginexecdir" = x],
-  [pluginexecdir='${libdir}/telepathy/salut-0/plugins'])
+  [pluginexecdir='${libdir}/telepathy/salut-1/plugins'])
 AC_ARG_VAR([pluginexecdir])
 
 dnl plugins
@@ -298,7 +298,7 @@ AS_IF([test x$enable_plugins = xyes],
                    [install headers for third-party plugins (experimental)]),
     [
       enable_plugin_api=$enableval
-      wocky_install_headers_dir="${includedir}/telepathy-salut-0"
+      wocky_install_headers_dir="${includedir}/telepathy-salut-1"
     ],
     [enable_plugin_api=no])
 ])
@@ -368,8 +368,8 @@ AC_OUTPUT( Makefile                       \
            tests/twisted/tools/Makefile   \
            plugins/Makefile               \
            salut/Makefile                 \
-           salut/telepathy-salut-uninstalled.pc \
-           salut/telepathy-salut.pc
+           salut/telepathy-salut-1-uninstalled.pc \
+           salut/telepathy-salut-1.pc
 )
 
 if test false != "$TEST_PYTHON"; then

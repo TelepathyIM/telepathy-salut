@@ -6,12 +6,12 @@ libexecdir=@libexecdir@
 
 pluginexecdir=@pluginexecdir@
 pluginexeclibdir=@pluginexeclibdir@
-salutpath=${libexecdir}/telepathy-salut
+salutpath=${libexecdir}/telepathy-salut-1
 
 Name: Telepathy-Salut
 Description: Link-local XMPP backend for the Telepathy framework
 Version: @VERSION@
 Requires: pkg-config >= 0.21
-Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib >= 0.20
+Requires.private: glib-2.0 >= 2.16, gobject-2.0 >= 2.16, telepathy-glib-1, telepathy-glib-1-dbus
 Libs: -L${pluginexeclibdir} -lsalut-plugins -lwocky
-Cflags: -I${includedir}/telepathy-salut-0
+Cflags: -I${includedir}/telepathy-salut-1
