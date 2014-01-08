@@ -40,7 +40,6 @@ def test(q, bus, conn):
     assertContains(cs.CONN_IFACE_AVATARS, proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_PRESENCE,
             proto_props['ConnectionInterfaces'])
-    assertContains(cs.CONN_IFACE_REQUESTS, proto_props['ConnectionInterfaces'])
 
     # local-xmpp has case-sensitive literals as identifiers
     assertEquals('SMcV@Reptile',
