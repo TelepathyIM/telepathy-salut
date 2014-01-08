@@ -571,51 +571,46 @@ make_presence_opt_args (SalutPresenceId presence, const gchar *message)
   return ret;
 }
 
-static GHashTable *
-get_contact_statuses (GObject *obj,
-                      const GArray *handles)
+static TpPresenceStatus *
+get_contact_status (GObject *obj,
+    TpHandle handle)
 {
   SalutConnection *self = SALUT_CONNECTION (obj);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandle self_handle = tp_base_connection_get_self_handle (base);
-  GHashTable *ret;
-  guint i;
+  TpPresenceStatus *ps;
+  SalutPresenceId presence;
+  const gchar *message = NULL;
+  GHashTable *optional_arguments;
 
-  ret = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-      NULL, (GDestroyNotify) tp_presence_status_free);
-
-  for (i = 0; i < handles->len; i++)
+  if (handle == self_handle)
     {
-      TpHandle handle = g_array_index (handles, TpHandle, i);
-      TpPresenceStatus *ps = tp_presence_status_new
-          (SALUT_PRESENCE_OFFLINE, NULL);
-      const gchar *message = NULL;
+      presence = priv->self->status;
+      message = priv->self->status_message;
+    }
+  else
+    {
+      SalutContact *contact = salut_contact_manager_get_contact
+          (priv->contact_manager, handle);
 
-      if (handle == self_handle)
+      if (contact == NULL)
         {
-          ps->index = priv->self->status;
-          message = priv->self->status_message;
+          presence = SALUT_PRESENCE_OFFLINE;
+          message = "";
         }
       else
         {
-          SalutContact *contact = salut_contact_manager_get_contact
-              (priv->contact_manager, handle);
-
-          if (contact != NULL)
-            {
-              ps->index = contact->status;
-              message = contact->status_message;
-              g_object_unref (contact);
-            }
+          presence = contact->status;
+          message = contact->status_message;
+          g_object_unref (contact);
         }
-
-      ps->optional_arguments = make_presence_opt_args (ps->index, message);
-
-      g_hash_table_insert (ret, GUINT_TO_POINTER (handle), ps);
     }
 
-  return ret;
+  optional_arguments = make_presence_opt_args (presence, message);
+  ps = tp_presence_status_new (presence, optional_arguments);
+  g_hash_table_unref (optional_arguments);
+  return ps;
 }
 
 static void
@@ -787,7 +782,7 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
 
   tp_presence_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, presence_mixin),
-      is_presence_status_available, get_contact_statuses, set_own_status,
+      is_presence_status_available, get_contact_status, set_own_status,
       presence_statuses);
 
   tp_presence_mixin_init_dbus_properties (object_class);
