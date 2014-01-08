@@ -197,7 +197,14 @@ class BaseEventQueue:
         t = time.time()
 
         while True:
-            event = self.wait([pattern.subqueue])
+            try:
+                event = self.wait([pattern.subqueue])
+            except TimeoutError:
+                self.log('timeout')
+                self.log('still expecting:')
+                self.log(' - %r' % pattern)
+                raise
+
             self._check_forbidden(event)
 
             if pattern.match(event):
@@ -575,8 +582,7 @@ def sync_dbus(bus, q, proxy):
     # dbus-glib and thence the application, which means that Ping()ing the
     # application doesn't ensure that it's processed all D-Bus messages prior
     # to our ping.
-    call_async(q, dbus.Interface(proxy, 'org.freedesktop.Telepathy.Tests'),
-        'DummySyncDBus')
+    call_async(q, dbus.Interface(proxy, cs.TESTS), 'DummySyncDBus')
     q.expect('dbus-error', method='DummySyncDBus')
 
 class ProxyWrapper:
@@ -632,14 +638,33 @@ def wrap_connection(conn):
          ('MailNotification', cs.CONN_IFACE_MAIL_NOTIFICATION),
          ('ContactList', cs.CONN_IFACE_CONTACT_LIST),
          ('ContactGroups', cs.CONN_IFACE_CONTACT_GROUPS),
+         ('ContactBlocking', cs.CONN_IFACE_CONTACT_BLOCKING),
          ('PowerSaving', cs.CONN_IFACE_POWER_SAVING),
          ('Addressing', cs.CONN_IFACE_ADDRESSING),
+         ('ClientTypes', cs.CONN_IFACE_CLIENT_TYPES),
+         ('Renaming', cs.CONN_IFACE_RENAMING),
+         ('Sidecars1', cs.CONN_IFACE_SIDECARS1),
         ]))
+
+class ChannelWrapper(ProxyWrapper):
+    def send_msg_sync(self, txt):
+        message = [
+                { 'message-type': cs.MT_NORMAL, },
+                { 'content-type': 'text/plain',
+                  'content': txt
+                }]
+        self.Text.SendMessage(message, 0)
 
 def wrap_channel(chan, type_, extra=None):
     interfaces = {
         type_: tp_name_prefix + '.Channel.Type.' + type_,
+        'Channel': cs.CHANNEL,
         'Group': cs.CHANNEL_IFACE_GROUP,
+        'Hold': cs.CHANNEL_IFACE_HOLD,
+        'RoomConfig1': cs.CHANNEL_IFACE_ROOM_CONFIG,
+        'ChatState': cs.CHANNEL_IFACE_CHAT_STATE,
+        'Destroyable': cs.CHANNEL_IFACE_DESTROYABLE,
+        'Password': cs.CHANNEL_IFACE_PASSWORD,
         }
 
     if extra:
@@ -647,11 +672,14 @@ def wrap_channel(chan, type_, extra=None):
             (name, tp_name_prefix + '.Channel.Interface.' + name)
             for name in extra]))
 
-    return ProxyWrapper(chan, tp_name_prefix + '.Channel', interfaces)
+    return ChannelWrapper(chan, tp_name_prefix + '.Channel', interfaces)
 
 
 def wrap_content(chan, extra=None):
-    interfaces = { }
+    interfaces = {
+        'DTMF': cs.CALL_CONTENT_IFACE_DTMF,
+        'Media': cs.CALL_CONTENT_IFACE_MEDIA,
+        }
 
     if extra:
         interfaces.update(dict([
