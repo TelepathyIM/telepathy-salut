@@ -99,7 +99,6 @@ def caps_contain(event, cap):
 def test_ft_caps_from_contact(q, bus, conn, client):
 
     conn_caps_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACT_CAPS)
-    conn_contacts_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACTS)
 
     # send presence with FT capa
     ver = compute_caps_hash([], [ns.IQ_OOB], {})
@@ -121,7 +120,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assert query_node.attributes['node'] == \
         client + '#' + ver, (query_node.attributes['node'], client, ver)
 
-    contact_handle = conn_contacts_iface.GetContactByID(contact_name, [])[0]
+    contact_handle = conn.GetContactByID(contact_name, [])[0]
 
     # send good reply
     result = make_result_iq(event.stanza)
@@ -139,7 +138,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assertContains(ft_caps, caps)
 
     # check the Contacts interface give the same caps
-    caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
+    caps_via_contacts_iface = conn.GetContactAttributes(
             [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
             [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
@@ -176,7 +175,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assert query_node.attributes['node'] == \
         client + '#' + ver, (query_node.attributes['node'], client, ver)
 
-    contact_handle = conn_contacts_iface.GetContactByID(contact_name, [])[0]
+    contact_handle = conn.GetContactByID(contact_name, [])[0]
 
     # send good reply
     result = make_result_iq(event.stanza)
@@ -193,7 +192,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assertDoesNotContain(ft_caps, caps)
 
     # check the Contacts interface give the same caps
-    caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
+    caps_via_contacts_iface = conn.GetContactAttributes(
             [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
             [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
@@ -201,7 +200,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     # no capabilites announced (assume FT is supported to insure interop)
     txt_record = { "txtvers": "1", "status": "avail"}
     contact_name = "test-caps-ft-no-capa2@" + get_host_name()
-    contact_handle = conn_contacts_iface.GetContactByID(contact_name, [])[0]
+    contact_handle = conn.GetContactByID(contact_name, [])[0]
     listener, port = setup_stream_listener(q, contact_name)
     announcer = AvahiAnnouncer(contact_name, "_presence._tcp", port,
             txt_record)
@@ -214,7 +213,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
     assertContains(ft_caps, caps)
 
     # check the Contacts interface give the same caps
-    caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
+    caps_via_contacts_iface = conn.GetContactAttributes(
             [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
             [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
@@ -229,8 +228,7 @@ def test(q, bus, conn):
 
     # check our own capabilities
     self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
-    conn_contacts_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACTS)
-    caps = conn_contacts_iface.GetContactAttributes(
+    caps = conn.GetContactAttributes(
             [self_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
             [self_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assertContains(ft_metadata_caps, caps)
