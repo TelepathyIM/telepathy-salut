@@ -10,7 +10,7 @@ AC_PREREQ([2.60])
 m4_define([salut_major_version], [0])
 m4_define([salut_minor_version], [99])
 m4_define([salut_micro_version], [6])
-m4_define([salut_nano_version], [0])
+m4_define([salut_nano_version], [1])
 
 # Some magic
 m4_define([salut_base_version],
