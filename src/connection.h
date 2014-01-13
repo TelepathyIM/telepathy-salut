@@ -62,13 +62,11 @@ struct _SalutConnectionClass {
   TpBaseConnectionClass parent_class;
   TpDBusPropertiesMixinClass properties_mixin;
   TpPresenceMixinClass presence_mixin;
-  TpContactsMixinClass contacts_mixin;
 };
 
 struct _SalutConnection {
   TpBaseConnection parent;
   TpPresenceMixin presence_mixin;
-  TpContactsMixin contacts_mixin;
 
   SalutPresenceCache *presence_cache;
   SalutDisco *disco;

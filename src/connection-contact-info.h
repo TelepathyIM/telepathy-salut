@@ -27,12 +27,16 @@ void salut_conn_contact_info_iface_init (
     gpointer iface_data);
 void salut_conn_contact_info_class_init (
     SalutConnectionClass *klass);
-void salut_conn_contact_info_init (
-    SalutConnection *self);
 
 void salut_conn_contact_info_changed (
     SalutConnection *self,
     SalutContact *contact,
     TpHandle handle);
+
+gboolean salut_conn_contact_info_fill_contact_attributes (
+    SalutConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes);
 
 #endif // SALUT_CONNECTION_CONTACT_INFO_H

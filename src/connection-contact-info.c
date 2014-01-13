@@ -183,23 +183,20 @@ build_contact_info_for_contact (
       contact->email, contact->jid);
 }
 
-static void
+gboolean
 salut_conn_contact_info_fill_contact_attributes (
-    GObject *obj,
-    const GArray *contacts,
-    GHashTable *attributes_hash)
+    SalutConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes)
 {
-  guint i;
-  SalutConnection *self = SALUT_CONNECTION (obj);
-  TpBaseConnection *base = TP_BASE_CONNECTION (self);
-  SalutContactManager *contact_manager;
-
-  g_object_get (self, "contact-manager", &contact_manager, NULL);
-
-  for (i = 0; i < contacts->len; i++)
+  if (!tp_strdiff (dbus_interface, TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO1))
     {
-      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      TpBaseConnection *base = TP_BASE_CONNECTION (self);
+      SalutContactManager *contact_manager;
       GPtrArray *contact_info = NULL;
+
+      g_object_get (self, "contact-manager", &contact_manager, NULL);
 
       if (tp_base_connection_get_self_handle (base) == handle)
         {
@@ -221,22 +218,16 @@ salut_conn_contact_info_fill_contact_attributes (
         }
 
       if (contact_info != NULL)
-        tp_contacts_mixin_set_contact_attribute (attributes_hash,
+        tp_contact_attribute_map_take_sliced_gvalue (attributes,
             handle, TP_TOKEN_CONNECTION_INTERFACE_CONTACT_INFO1_INFO,
             tp_g_value_slice_new_take_boxed (
                 TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info));
+
+      g_object_unref (contact_manager);
+      return TRUE;
     }
 
-  g_object_unref (contact_manager);
-}
-
-void salut_conn_contact_info_init (
-    SalutConnection *self)
-{
-  tp_contacts_mixin_add_contact_attributes_iface (
-      G_OBJECT (self),
-      TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO1,
-      salut_conn_contact_info_fill_contact_attributes);
+  return FALSE;
 }
 
 void

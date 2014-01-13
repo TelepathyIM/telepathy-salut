@@ -112,8 +112,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
         salut_connection_aliasing_service_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_DBUS_PROPERTIES,
        tp_dbus_properties_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
-       tp_contacts_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST1,
       tp_base_contact_list_mixin_list_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE1,
@@ -267,15 +265,6 @@ salut_connection_shut_down (TpBaseConnection *self);
 static gboolean
 salut_connection_start_connecting (TpBaseConnection *self, GError **error);
 
-static void salut_connection_avatars_fill_contact_attributes (GObject *obj,
-    const GArray *contacts, GHashTable *attributes_hash);
-
-static void salut_connection_aliasing_fill_contact_attributes (GObject *obj,
-    const GArray *contacts, GHashTable *attributes_hash);
-
-static void conn_contact_capabilities_fill_contact_attributes (GObject *obj,
-  const GArray *contacts, GHashTable *attributes_hash);
-
 static void connection_capabilities_update_cb (SalutPresenceCache *cache,
     TpHandle handle, gpointer user_data);
 
@@ -377,7 +366,6 @@ static void
 salut_connection_constructed (GObject *obj)
 {
   SalutConnection *self = (SalutConnection *) obj;
-  TpBaseConnection *base = (TpBaseConnection *) obj;
 
   self->disco = salut_disco_new (self);
   self->presence_cache = salut_presence_cache_new (self);
@@ -388,26 +376,6 @@ salut_connection_constructed (GObject *obj)
   setup_olpc_activity_manager (self);
 #endif
 
-  tp_contacts_mixin_init (obj,
-      G_STRUCT_OFFSET (SalutConnection, contacts_mixin));
-
-  tp_base_connection_register_with_contacts_mixin (base);
-  tp_presence_mixin_register_with_contacts_mixin (obj);
-  tp_base_contact_list_mixin_register_with_contacts_mixin (
-      TP_BASE_CONTACT_LIST (self->priv->contact_manager), base);
-
-  tp_contacts_mixin_add_contact_attributes_iface (obj,
-      TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
-      salut_connection_avatars_fill_contact_attributes);
-
-  tp_contacts_mixin_add_contact_attributes_iface (obj,
-      TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
-      salut_connection_aliasing_fill_contact_attributes);
-
-  tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (self),
-      TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
-          conn_contact_capabilities_fill_contact_attributes);
-
   self->priv->sidecars = g_hash_table_new_full (g_str_hash, g_str_equal,
       g_free, g_object_unref);
   self->priv->pending_sidecars = g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -415,8 +383,6 @@ salut_connection_constructed (GObject *obj)
 
   g_signal_connect (self, "status-changed",
       (GCallback) sidecars_conn_status_changed_cb, NULL);
-
-  salut_conn_contact_info_init (self);
 
   if (G_OBJECT_CLASS (salut_connection_parent_class)->constructed)
     G_OBJECT_CLASS (salut_connection_parent_class)->constructed (obj);
@@ -731,7 +697,6 @@ set_own_status (GObject *obj,
 static const gchar *interfaces [] = {
   TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
   TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
-  TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
   TP_IFACE_CONNECTION_INTERFACE_PRESENCE1,
   TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
   TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
@@ -764,6 +729,11 @@ salut_connection_get_implemented_interfaces (void)
 {
   return interfaces;
 }
+
+static void salut_connection_fill_contact_attributes (TpBaseConnection *base,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes);
 
 static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
@@ -808,6 +778,8 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   tp_connection_class->start_connecting =
       salut_connection_start_connecting;
   tp_connection_class->get_interfaces_always_present = get_interfaces;
+  tp_connection_class->fill_contact_attributes =
+      salut_connection_fill_contact_attributes;
 
   salut_connection_class->properties_mixin.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
@@ -819,9 +791,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       presence_statuses);
 
   tp_presence_mixin_init_dbus_properties (object_class);
-
-  tp_contacts_mixin_class_init (object_class,
-        G_STRUCT_OFFSET (SalutConnectionClass, contacts_mixin));
 
   salut_conn_contact_info_class_init (salut_connection_class);
 
@@ -1063,8 +1032,6 @@ salut_connection_finalize (GObject *object)
   g_free (priv->olpc_color);
 #endif
   g_free (priv->dnssd_name);
-
-  tp_contacts_mixin_finalize (G_OBJECT(self));
 
   gabble_capabilities_finalize (self);
 
@@ -1387,23 +1354,24 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
   return;
 }
 
-static void
-salut_connection_aliasing_fill_contact_attributes (GObject *obj,
-    const GArray *contacts, GHashTable *attributes_hash)
+static gboolean
+salut_connection_aliasing_fill_contact_attributes (SalutConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes)
 {
-  SalutConnection *self = SALUT_CONNECTION (obj);
-  guint i;
-
-  for (i = 0; i < contacts->len; i++)
+  if (!tp_strdiff (dbus_interface, TP_IFACE_CONNECTION_INTERFACE_ALIASING1))
     {
-      TpHandle handle = g_array_index (contacts, TpHandle, i);
       GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
 
       g_value_set_string (val, salut_connection_get_alias (self, handle));
 
-      tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
+      tp_contact_attribute_map_take_sliced_gvalue (attributes, handle,
          TP_TOKEN_CONNECTION_INTERFACE_ALIASING1_ALIAS, val);
+      return TRUE;
     }
+
+  return FALSE;
 }
 
 /**
@@ -1453,20 +1421,16 @@ salut_connection_get_handle_contact_capabilities (SalutConnection *self,
   tp_clear_object (&contact);
 }
 
-static void
-conn_contact_capabilities_fill_contact_attributes (GObject *obj,
-  const GArray *contacts, GHashTable *attributes_hash)
+static gboolean
+conn_contact_capabilities_fill_contact_attributes (SalutConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes)
 {
-  SalutConnection *self = SALUT_CONNECTION (obj);
-  guint i;
-  GPtrArray *array = NULL;
-
-  for (i = 0; i < contacts->len; i++)
+  if (!tp_strdiff (dbus_interface,
+        TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1))
     {
-      TpHandle handle = g_array_index (contacts, TpHandle, i);
-
-      if (array == NULL)
-        array = g_ptr_array_new ();
+      GPtrArray *array = g_ptr_array_new ();
 
       salut_connection_get_handle_contact_capabilities (self, handle, array);
 
@@ -1476,17 +1440,20 @@ conn_contact_capabilities_fill_contact_attributes (GObject *obj,
             TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST);
 
           g_value_take_boxed (val, array);
-          tp_contacts_mixin_set_contact_attribute (attributes_hash,
+          tp_contact_attribute_map_take_sliced_gvalue (attributes,
               handle,
               TP_TOKEN_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1_CAPABILITIES,
               val);
-
-          array = NULL;
         }
+      else
+        {
+          g_ptr_array_unref (array);
+        }
+
+      return TRUE;
     }
 
-    if (array != NULL)
-      g_ptr_array_unref (array);
+  return FALSE;
 }
 
 static void
@@ -1675,19 +1642,17 @@ salut_connection_get_known_avatar_tokens (
   g_hash_table_unref (ret);
 }
 
-static void
-salut_connection_avatars_fill_contact_attributes (GObject *obj,
-    const GArray *contacts, GHashTable *attributes_hash)
+static gboolean
+salut_connection_avatars_fill_contact_attributes (SalutConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes)
 {
-  guint i;
-  SalutConnection *self = SALUT_CONNECTION (obj);
-  TpBaseConnection *base = TP_BASE_CONNECTION (self);
-  TpHandle self_handle = tp_base_connection_get_self_handle (base);
-  SalutConnectionPrivate *priv = self->priv;
-
-  for (i = 0; i < contacts->len; i++)
+  if (!tp_strdiff (dbus_interface, TP_IFACE_CONNECTION_INTERFACE_AVATARS1))
     {
-      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      TpBaseConnection *base = TP_BASE_CONNECTION (self);
+      TpHandle self_handle = tp_base_connection_get_self_handle (base);
+      SalutConnectionPrivate *priv = self->priv;
       gchar *token = NULL;
 
       if (self_handle == handle)
@@ -1716,10 +1681,14 @@ salut_connection_avatars_fill_contact_attributes (GObject *obj,
 
           g_value_take_string (val, token);
 
-          tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
+          tp_contact_attribute_map_take_sliced_gvalue (attributes, handle,
             TP_TOKEN_CONNECTION_INTERFACE_AVATARS1_TOKEN, val);
         }
+
+      return TRUE;
     }
+
+  return FALSE;
 }
 
 
@@ -3963,4 +3932,41 @@ const TpPresenceStatusSpec *
 salut_connection_get_presence_statuses (void)
 {
   return presence_statuses;
+}
+
+static void
+salut_connection_fill_contact_attributes (TpBaseConnection *base,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes)
+{
+  SalutConnection *self = SALUT_CONNECTION (base);
+
+  if (salut_connection_aliasing_fill_contact_attributes (self,
+        dbus_interface, handle, attributes))
+    return;
+
+  if (salut_connection_avatars_fill_contact_attributes (self,
+        dbus_interface, handle, attributes))
+    return;
+
+  if (conn_contact_capabilities_fill_contact_attributes (self,
+        dbus_interface, handle, attributes))
+    return;
+
+  if (salut_conn_contact_info_fill_contact_attributes (self,
+        dbus_interface, handle, attributes))
+    return;
+
+  if (tp_base_contact_list_fill_contact_attributes (
+        TP_BASE_CONTACT_LIST (self->priv->contact_manager),
+        dbus_interface, handle, attributes))
+    return;
+
+  if (tp_presence_mixin_fill_contact_attributes ((GObject *) self,
+        dbus_interface, handle, attributes))
+    return;
+
+  TP_BASE_CONNECTION_CLASS (salut_connection_parent_class)->
+    fill_contact_attributes (base, dbus_interface, handle, attributes);
 }
