@@ -20,10 +20,8 @@ class ReceiveFileDeclineTest(ReceiveFileTest):
         # point)
         self.send_ft_offer_iq()
 
-        e = self.q.expect('dbus-signal', signal='NewChannels')
-        channels = e.args[0]
-        assert len(channels) == 1
-        path, props = channels[0]
+        e = self.q.expect('dbus-signal', signal='NewChannel')
+        path, props = e.args
 
         channel = make_channel_proxy(self.conn, path, 'Channel')
 

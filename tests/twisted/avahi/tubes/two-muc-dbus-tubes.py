@@ -56,7 +56,7 @@ def test(q, bus, conn):
     muc_handle1, group1 = t.join_muc(q, conn, muc_name)
 
     # Can we request muc D-Bus tubes?
-    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
+    properties = conn.GetAll(cs.CONN,
         dbus_interface=cs.PROPERTIES_IFACE)
 
     assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_DBUS_TUBE,
@@ -74,15 +74,13 @@ def test(q, bus, conn):
         cs.TARGET_ID: muc_name,
         cs.DBUS_TUBE_SERVICE_NAME: 'com.example.TestCase'})
 
-    e = q.expect('dbus-signal', signal='NewChannels')
-    channels = e.args[0]
-    assert len(channels) == 1
+    e = q.expect('dbus-signal', signal='NewChannel')
 
     # get the list of all channels to check that newly announced ones are in it
     all_channels = conn.Get(cs.CONN_IFACE_REQUESTS, 'Channels', dbus_interface=cs.PROPERTIES_IFACE,
         byte_arrays=True)
 
-    path, props = channels[0]
+    path, props = e.args
 
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_DBUS_TUBE
     assert props[cs.REQUESTED] == True

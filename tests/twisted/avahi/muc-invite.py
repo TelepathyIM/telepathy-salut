@@ -70,12 +70,10 @@ def test(q, bus, conn):
     invite.addElement('port', content='62472')
     outbound.send(msg)
 
-    e = q.expect('dbus-signal', signal='NewChannels',
+    e = q.expect('dbus-signal', signal='NewChannel',
             predicate=lambda e:
-                e.args[0][0][1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT)
-    channels = e.args[0]
-    assert len(channels) == 1
-    path, props = channels[0]
+                e.args[1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT)
+    path, props = e.args
     channel = make_channel_proxy(conn, path, "Channel")
     channel_group = make_channel_proxy(conn, path, "Channel.Interface.Group")
 

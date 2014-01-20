@@ -237,13 +237,11 @@ class ReceiveFileTest(FileTransferTest):
         self.outbound.send(iq)
 
     def check_new_channel(self):
-        e = self.q.expect('dbus-signal', signal='NewChannels',
+        e = self.q.expect('dbus-signal', signal='NewChannel',
             predicate=lambda e:
-                e.args[0][0][1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER)
+                e.args[1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER)
 
-        channels = e.args[0]
-        assert len(channels) == 1
-        path, props = channels[0]
+        path, props = e.args
 
         # check channel properties
         # im.telepathy.v1.Channel D-Bus properties
@@ -365,7 +363,7 @@ class SendFileTest(FileTransferTest):
             self.close_channel]
 
     def check_ft_available(self):
-        properties = self.conn.GetAll(cs.CONN_IFACE_REQUESTS,
+        properties = self.conn.GetAll(cs.CONN,
                 dbus_interface=PROPERTIES_IFACE)
 
         assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_FILE_TRANSFER,

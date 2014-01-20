@@ -21,8 +21,7 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
     # check if we can request roomlist channels
-    properties = conn.GetAll(
-            tp_name_prefix + '.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN,
             dbus_interface='org.freedesktop.DBus.Properties')
 
     assert ({tp_name_prefix + '.Channel.ChannelType':
@@ -45,7 +44,7 @@ def test(q, bus, conn):
 
     ret, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
-        EventPattern('dbus-signal', signal='NewChannels'),
+        EventPattern('dbus-signal', signal='NewChannel'),
         )
     path2 = ret.value[0]
     chan2 = wrap_channel(bus.get_object(conn.bus_name, path2), "RoomList1")
@@ -63,8 +62,8 @@ def test(q, bus, conn):
             == self_name
     assert props[tp_name_prefix + '.Channel.Type.RoomList1.Server'] == ''
 
-    assert new_sig.args[0][0][0] == path2
-    assert new_sig.args[0][0][1] == props
+    assert new_sig.args[0] == path2
+    assert new_sig.args[1] == props
 
     assert chan2.Properties.Get(cs.CHANNEL_TYPE_ROOM_LIST, 'Server') == ''
 

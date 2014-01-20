@@ -20,7 +20,7 @@ def test(q, bus, conn):
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
     # check if we can request tube channels
-    properties = conn.Properties.GetAll(cs.CONN_IFACE_REQUESTS)
+    properties = conn.Properties.GetAll(cs.CONN)
     assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAM_TUBE,
              cs.TARGET_HANDLE_TYPE: cs.HT_ROOM},
              [cs.TARGET_HANDLE, cs.TARGET_ID, cs.STREAM_TUBE_SERVICE],
@@ -37,7 +37,7 @@ def test(q, bus, conn):
 
     ret, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
-        EventPattern('dbus-signal', signal='NewChannels'),
+        EventPattern('dbus-signal', signal='NewChannel'),
         )
     tube_path = ret.value[0]
     chan = wrap_channel(bus.get_object(conn.bus_name, tube_path),
@@ -51,13 +51,9 @@ def test(q, bus, conn):
     assert tube_props[cs.INITIATOR_HANDLE] == conn.Properties.Get(cs.CONN, "SelfHandle")
     assert tube_props[cs.INITIATOR_ID] == self_name
 
-    # text and tube channels are announced
-    channels = new_sig.args[0]
-    assert len(channels) == 1
-
     handle = tube_props[cs.TARGET_HANDLE]
 
-    path, props = channels[0]
+    path, props = new_sig.args
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_STREAM_TUBE
     assert path == tube_path
     assert props == tube_props

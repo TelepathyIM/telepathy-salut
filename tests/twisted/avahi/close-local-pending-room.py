@@ -61,11 +61,11 @@ def test(q, bus, conn):
     xmpp_connection.send(message)
 
     # group channel is created
-    e = q.expect('dbus-signal', signal='NewChannels',
+    e = q.expect('dbus-signal', signal='NewChannel',
             predicate=lambda e:
-                e.args[0][0][1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT and
-                e.args[0][0][1][cs.TARGET_HANDLE_TYPE] == cs.HT_ROOM)
-    path = e.args[0][0][0]
+                e.args[1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT and
+                e.args[1][cs.TARGET_HANDLE_TYPE] == cs.HT_ROOM)
+    path = e.args[0]
     channel = make_channel_proxy(conn, path, 'Channel')
     props_iface = dbus.Interface(bus.get_object(conn.object.bus_name, path),
         dbus.PROPERTIES_IFACE)
