@@ -376,9 +376,9 @@ salut_im_manager_type_foreach_channel_class (GType type,
 
 static gboolean
 salut_im_manager_requestotron (SalutImManager *self,
-                               gpointer request_token,
-                               GHashTable *request_properties,
-                               gboolean require_new)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties,
+    gboolean require_new)
 {
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
@@ -423,7 +423,7 @@ salut_im_manager_requestotron (SalutImManager *self,
   if (channel == NULL)
     {
       salut_im_manager_new_channel (self, handle,
-          tp_base_connection_get_self_handle (base_conn), request_token);
+          tp_base_connection_get_self_handle (base_conn), request);
       return TRUE;
     }
 
@@ -434,13 +434,13 @@ salut_im_manager_requestotron (SalutImManager *self,
       goto error;
     }
 
-  tp_channel_manager_emit_request_already_satisfied (self, request_token,
-      channel);
+  tp_channel_manager_emit_request_already_satisfied (TP_CHANNEL_MANAGER (self),
+      request, channel);
   return TRUE;
 
 error:
-  tp_channel_manager_emit_request_failed (self, request_token,
-      error->domain, error->code, error->message);
+  tp_channel_manager_emit_request_failed (TP_CHANNEL_MANAGER (self),
+      request, error->domain, error->code, error->message);
   g_error_free (error);
   return TRUE;
 }
@@ -448,36 +448,24 @@ error:
 
 static gboolean
 salut_im_manager_create_channel (TpChannelManager *manager,
-                                 gpointer request_token,
-                                 GHashTable *request_properties)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties)
 {
   SalutImManager *self = SALUT_IM_MANAGER (manager);
 
-  return salut_im_manager_requestotron (self, request_token,
+  return salut_im_manager_requestotron (self, request,
       request_properties, TRUE);
 }
 
 
 static gboolean
-salut_im_manager_request_channel (TpChannelManager *manager,
-                                  gpointer request_token,
-                                  GHashTable *request_properties)
-{
-  SalutImManager *self = SALUT_IM_MANAGER (manager);
-
-  return salut_im_manager_requestotron (self, request_token,
-      request_properties, FALSE);
-}
-
-
-static gboolean
 salut_im_manager_ensure_channel (TpChannelManager *manager,
-                                 gpointer request_token,
-                                GHashTable *request_properties)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties)
 {
   SalutImManager *self = SALUT_IM_MANAGER (manager);
 
-  return salut_im_manager_requestotron (self, request_token,
+  return salut_im_manager_requestotron (self, request,
       request_properties, FALSE);
 }
 
@@ -492,7 +480,6 @@ salut_im_manager_channel_manager_iface_init (gpointer g_iface,
   iface->type_foreach_channel_class =
     salut_im_manager_type_foreach_channel_class;
   iface->create_channel = salut_im_manager_create_channel;
-  iface->request_channel = salut_im_manager_request_channel;
   iface->ensure_channel = salut_im_manager_ensure_channel;
 }
 
@@ -506,7 +493,7 @@ im_channel_closed_cb (SalutImChannel *chan,
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
   TpHandle handle;
 
-  tp_channel_manager_emit_channel_closed_for_object (self,
+  tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
     TP_EXPORTABLE_CHANNEL (chan));
 
   if (priv->channels)
@@ -542,8 +529,8 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   if (contact == NULL)
     {
       gchar *message = g_strdup_printf ("%s is not online", name);
-      tp_channel_manager_emit_request_failed (mgr, request, TP_ERROR,
-          TP_ERROR_NOT_AVAILABLE, message);
+      tp_channel_manager_emit_request_failed (TP_CHANNEL_MANAGER (mgr), request,
+          TP_ERROR, TP_ERROR_NOT_AVAILABLE, message);
       g_free (message);
       return NULL;
     }
@@ -562,8 +549,8 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   if (request != NULL)
     requests = g_slist_prepend (requests, request);
 
-  tp_channel_manager_emit_new_channel (mgr, TP_EXPORTABLE_CHANNEL (chan),
-    requests);
+  tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (mgr),
+      TP_EXPORTABLE_CHANNEL (chan), requests);
 
   g_slist_free (requests);
 

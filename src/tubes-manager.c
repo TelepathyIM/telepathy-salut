@@ -347,7 +347,7 @@ iq_tube_request_cb (WockyPorter *porter,
       }
 
     /* announce tube channel */
-    tp_channel_manager_emit_new_channel (self,
+    tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
         TP_EXPORTABLE_CHANNEL (chan), NULL);
 
     g_hash_table_unref (parameters);
@@ -679,7 +679,7 @@ channel_closed_cb (SalutTubeIface *tube,
       "id", &id,
       NULL);
 
-  tp_channel_manager_emit_channel_closed_for_object (self,
+  tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
       TP_EXPORTABLE_CHANNEL (tube));
 
   if (priv->tubes != NULL)
@@ -802,9 +802,9 @@ new_channel_from_request (SalutTubesManager *self,
 
 static gboolean
 salut_tubes_manager_requestotron (SalutTubesManager *self,
-                                  gpointer request_token,
-                                  GHashTable *request_properties,
-                                  gboolean require_new)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties,
+    gboolean require_new)
 {
   SalutTubesManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       SALUT_TYPE_TUBES_MANAGER, SalutTubesManagerPrivate);
@@ -907,10 +907,10 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           request_properties);
       g_assert (new_channel != NULL);
 
-      if (request_token != NULL)
-        tokens = g_slist_prepend (NULL, request_token);
+      if (request != NULL)
+        tokens = g_slist_prepend (NULL, request);
 
-      tp_channel_manager_emit_new_channel (self,
+      tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
           TP_EXPORTABLE_CHANNEL (new_channel), tokens);
 
       g_slist_free (tokens);
@@ -925,14 +925,15 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
           goto error;
         }
 
-      tp_channel_manager_emit_request_already_satisfied (self,
-          request_token, TP_EXPORTABLE_CHANNEL (new_channel));
+      tp_channel_manager_emit_request_already_satisfied (
+          TP_CHANNEL_MANAGER (self), request,
+          TP_EXPORTABLE_CHANNEL (new_channel));
     }
 
   return TRUE;
 
 error:
-  tp_channel_manager_emit_request_failed (self, request_token,
+  tp_channel_manager_emit_request_failed (TP_CHANNEL_MANAGER (self), request,
       error->domain, error->code, error->message);
   g_error_free (error);
   return TRUE;
@@ -940,24 +941,13 @@ error:
 
 static gboolean
 salut_tubes_manager_create_channel (TpChannelManager *manager,
-                                    gpointer request_token,
-                                    GHashTable *request_properties)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties)
 {
   SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
 
-  return salut_tubes_manager_requestotron (self, request_token,
+  return salut_tubes_manager_requestotron (self, request,
       request_properties, TRUE);
-}
-
-static gboolean
-salut_tubes_manager_request_channel (TpChannelManager *manager,
-                                  gpointer request_token,
-                                  GHashTable *request_properties)
-{
-  SalutTubesManager *self = SALUT_TUBES_MANAGER (manager);
-
-  return salut_tubes_manager_requestotron (self, request_token,
-      request_properties, FALSE);
 }
 
 SalutTubesManager *
@@ -985,7 +975,6 @@ salut_tubes_manager_iface_init (gpointer g_iface,
   iface->type_foreach_channel_class =
     salut_tubes_manager_type_foreach_channel_class;
   iface->create_channel = salut_tubes_manager_create_channel;
-  iface->request_channel = salut_tubes_manager_request_channel;
 }
 
 static void

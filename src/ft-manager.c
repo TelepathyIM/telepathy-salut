@@ -272,16 +272,16 @@ salut_ft_manager_channel_created (SalutFtManager *self,
   if (request_token != NULL)
     requests = g_slist_prepend (requests, request_token);
 
-  tp_channel_manager_emit_new_channel (self, TP_EXPORTABLE_CHANNEL (chan),
-      requests);
+  tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
+      TP_EXPORTABLE_CHANNEL (chan), requests);
 
   g_slist_free (requests);
 }
 
 static gboolean
 salut_ft_manager_handle_request (TpChannelManager *manager,
-                                 gpointer request_token,
-                                 GHashTable *request_properties)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties)
 {
   SalutFtManager *self = SALUT_FT_MANAGER (manager);
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
@@ -457,13 +457,13 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
       goto error;
     }
 
-  salut_ft_manager_channel_created (self, chan, request_token);
+  salut_ft_manager_channel_created (self, chan, request);
 
   return TRUE;
 
 error:
-  tp_channel_manager_emit_request_failed (self, request_token,
-      error->domain, error->code, error->message);
+  tp_channel_manager_emit_request_failed (TP_CHANNEL_MANAGER (self),
+      request, error->domain, error->code, error->message);
   g_error_free (error);
   return TRUE;
 }
@@ -546,7 +546,6 @@ channel_manager_iface_init (gpointer g_iface,
   iface->foreach_channel = salut_ft_manager_foreach_channel;
   iface->type_foreach_channel_class =
     salut_ft_manager_type_foreach_channel_class;
-  iface->request_channel = salut_ft_manager_handle_request;
   iface->create_channel = salut_ft_manager_handle_request;
   iface->ensure_channel = salut_ft_manager_handle_request;
 }
