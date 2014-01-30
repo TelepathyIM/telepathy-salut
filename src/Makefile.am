@@ -197,13 +197,11 @@ check-local: check-coding-style
 # TELEPATHY_GLIB_LIBS is only here so compiling against a static lib succeeds
 telepathy_salut_android_libs = libsalut-convenience.la \
                                -lgibber-salut \
-                               $(top_builddir)/extensions/libsalut-extensions.la \
-                               -ltelepathy-glib
+                               $(top_builddir)/extensions/libsalut-extensions.la
 
 telepathy_salut_1_LDADD = libsalut-convenience.la \
                         $(top_builddir)/lib/gibber/libgibber.la \
-                        $(top_builddir)/extensions/libsalut-extensions.la \
-                        -ltelepathy-glib
+                        $(top_builddir)/extensions/libsalut-extensions.la
 
 noinst_LTLIBRARIES = libsalut-convenience.la
 
