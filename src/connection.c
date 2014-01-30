@@ -609,7 +609,8 @@ get_contact_status (GObject *obj,
 
   optional_arguments = make_presence_opt_args (presence, message);
   ps = tp_presence_status_new (presence, optional_arguments);
-  g_hash_table_unref (optional_arguments);
+  if (optional_arguments != NULL)
+    g_hash_table_unref (optional_arguments);
   return ps;
 }
 
