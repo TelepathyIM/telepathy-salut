@@ -51,15 +51,8 @@ TWISTED_AVAHI_TESTS = \
 	avahi/tubes/two-muc-stream-tubes.py \
 	avahi/tubes/two-muc-dbus-tubes.py
 
-TWISTED_AVAHI_OLPC_TESTS = \
-	avahi/olpc-activity-announcements.py
-
 if WANT_TWISTED_TESTS
   TWISTED_TESTS += $(TWISTED_BASIC_TESTS)
-endif
-
-if ENABLE_OLPC
-  TWISTED_AVAHI_TESTS += $(TWISTED_AVAHI_OLPC_TESTS)
 endif
 
 if USE_BACKEND_AVAHI
@@ -117,7 +110,6 @@ run-test.sh: run-test.sh.in Makefile
 
 EXTRA_DIST = \
 	$(TWISTED_AVAHI_TESTS) \
-	$(TWISTED_AVAHI_OLPC_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
 	constants.py \
 	run-test.sh.in \

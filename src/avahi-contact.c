@@ -649,11 +649,6 @@ contact_resolved_cb (GaServiceResolver *resolver,
   char *nick, *first, *last;
   /* node, hash and ver as defined by XEP-0115 */
   char *node, *hash, *ver;
-#ifdef ENABLE_OLPC
-  char *activity_id, *room_id;
-  char *olpc_key_part;
-  gsize size;
-#endif
 
   DEBUG_RESOLVER (self, resolver, "contact %s resolved", contact->name);
 
@@ -722,73 +717,6 @@ contact_resolved_cb (GaServiceResolver *resolver,
   s = _avahi_txt_get_keyval (txt, "jid");
   salut_contact_change_jid (contact, s);
   avahi_free (s);
-
-#ifdef ENABLE_OLPC
-  /* OLPC color */
-  s = _avahi_txt_get_keyval (txt, "olpc-color");
-  salut_contact_change_olpc_color (contact, s);
-  avahi_free (s);
-
-  /* current activity */
-  activity_id = _avahi_txt_get_keyval (txt, "olpc-current-activity");
-  room_id = _avahi_txt_get_keyval (txt, "olpc-current-activity-room");
-
-  salut_contact_change_current_activity (contact, room_id, activity_id);
-  avahi_free (activity_id);
-  avahi_free (room_id);
-
-  /* OLPC key */
-  olpc_key_part = _avahi_txt_get_keyval_with_size (txt,
-      "olpc-key-part0", &size);
-
-  if (olpc_key_part != NULL)
-    {
-      guint i = 0;
-      gchar *olpc_key_part_name = NULL;
-      GArray *olpc_key;
-
-      /* FIXME: how big are OLPC keys anyway? */
-      olpc_key = g_array_sized_new (FALSE, FALSE, sizeof (guint8), 512);
-
-      do
-        {
-          g_array_append_vals (olpc_key, olpc_key_part, size);
-          avahi_free (olpc_key_part);
-
-          i++;
-          olpc_key_part_name = g_strdup_printf ("olpc-key-part%u", i);
-          olpc_key_part = _avahi_txt_get_keyval_with_size (txt,
-              olpc_key_part_name, &size);
-          g_free (olpc_key_part_name);
-        }
-      while (olpc_key_part != NULL);
-
-      salut_contact_change_olpc_key (contact, olpc_key);
-      g_array_unref (olpc_key);
-    }
-
-  /* address */
-  if (address != NULL)
-    {
-      gchar* saddr = g_malloc0 (AVAHI_ADDRESS_STR_MAX);
-
-      if (avahi_address_snprint (saddr, AVAHI_ADDRESS_STR_MAX, address))
-        {
-          switch (address->proto)
-            {
-              case AVAHI_PROTO_INET:
-                salut_contact_change_ipv4_addr (contact, saddr);
-                break;
-              case AVAHI_PROTO_INET6:
-                salut_contact_change_ipv6_addr (contact, saddr);
-                break;
-              default:
-                break;
-            }
-        }
-      g_free (saddr);
-    }
-#endif
 
   salut_contact_found (contact);
   salut_contact_thaw (contact);
