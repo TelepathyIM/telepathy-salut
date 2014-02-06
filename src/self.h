@@ -32,6 +32,9 @@
 
 #include "connection.h"
 #include "presence.h"
+#ifdef ENABLE_OLPC
+#include "olpc-activity.h"
+#endif
 
 G_BEGIN_DECLS
 
@@ -49,6 +52,10 @@ struct _SalutSelfClass {
     gboolean (*set_alias) (SalutSelf *self, GError **error);
     gboolean (*set_avatar) (SalutSelf *self, guint8 *data, gsize size,
         GError **error);
+#ifdef ENABLE_OLPC
+    gboolean (*set_olpc_properties) (SalutSelf *self, const GArray *key,
+          const gchar *color, const gchar *jid, GError **error);
+#endif
 
     /* private abstract methods */
     void (*remove_avatar) (SalutSelf *self);
@@ -65,6 +72,12 @@ struct _SalutSelf {
     guint8 *avatar;
     gsize avatar_size;
     gchar *jid;
+#ifdef ENABLE_OLPC
+    GArray *olpc_key;
+    gchar *olpc_cur_act;
+    TpHandle olpc_cur_act_room;
+    gchar *olpc_color;
+#endif
     gchar *node;
     gchar *hash;
     gchar *ver;
@@ -113,6 +126,37 @@ gboolean salut_self_set_alias (SalutSelf *self, const gchar *alias,
     GError **error);
 
 const gchar *salut_self_get_alias (SalutSelf *self);
+
+#ifdef ENABLE_OLPC
+gboolean salut_self_set_olpc_properties (SalutSelf *self,
+    const GArray *key, const gchar *color, const gchar *jid, GError **error);
+
+gboolean salut_self_set_olpc_activity_properties (SalutSelf *self,
+    TpHandle handle,
+    const gchar *color, const gchar *name, const gchar *type,
+    const gchar *tags, gboolean is_private, GError **error);
+
+gboolean salut_self_set_olpc_activities (SalutSelf *self,
+    GHashTable *act_id_to_room, GError **error);
+
+gboolean salut_self_add_olpc_activity (SalutSelf *self,
+    const gchar *activity_id, TpHandle room, GError **error);
+
+gboolean salut_self_remove_olpc_activity (SalutSelf *self,
+    SalutOlpcActivity *activity);
+
+gboolean salut_self_set_olpc_current_activity (SalutSelf *self,
+    const gchar *id, TpHandle room, GError **error);
+
+typedef void (*SalutSelfOLPCActivityFunc)
+  (SalutOlpcActivity *activity, gpointer user_data);
+
+void salut_self_foreach_olpc_activity (SalutSelf *self,
+    SalutSelfOLPCActivityFunc foreach, gpointer user_data);
+
+void salut_self_olpc_augment_invitation (SalutSelf *self,
+    TpHandle room, TpHandle contact, WockyNode *invite_node);
+#endif
 
 const GabbleCapabilitySet *salut_self_get_caps (SalutSelf *self);
 

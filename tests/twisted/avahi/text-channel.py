@@ -34,9 +34,7 @@ def test(q, bus, conn):
         cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
         cs.TARGET_HANDLE: handle})[0]
     text_channel = make_channel_proxy(conn, t, "Channel.Type.Text")
-    text_channel.SendMessage([{'message-type': cs.MT_NORMAL},
-        {'content-type': 'text/plain',
-         'content': INCOMING_MESSAGE}], 0)
+    text_channel.Send(cs.MT_NORMAL, INCOMING_MESSAGE)
 
     e = q.expect('incoming-connection', listener = listener)
     incoming = e.connection
@@ -78,12 +76,11 @@ def test(q, bus, conn):
 
     e.connection.send(message)
 
-    e = q.expect('dbus-signal', signal='MessageReceived')
-    assert len(e.args[0]) == 2
-    assert e.args[0][0]['message-sender-id'] == contact_name
-    assert e.args[0][0]['message-sender'] == handle
-    assert e.args[0][0]['message-type'] == cs.MT_NORMAL
-    assert e.args[0][1]['content'] == OUTGOING_MESSAGE
+    e = q.expect('dbus-signal', signal='Received')
+    assert e.args[2] == handle
+    assert e.args[3] == cs.MT_NORMAL
+    assert e.args[5] == OUTGOING_MESSAGE
+
 
 if __name__ == '__main__':
     exec_test(test)

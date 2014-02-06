@@ -21,7 +21,7 @@
 #ifndef __TEXT_HELPER_H__
 #define __TEXT_HELPER_H__
 
-#include <telepathy-glib/telepathy-glib-dbus.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <wocky/wocky.h>
 

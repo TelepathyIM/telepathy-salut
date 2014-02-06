@@ -5,11 +5,13 @@ Test requesting of text 1-1 channels using the old and new request API.
 
 import dbus
 
-from saluttest import (exec_test, wait_for_contact_in_publish)
+from saluttest import (exec_test, wait_for_contact_list,
+        wait_for_contact_in_publish)
 from servicetest import call_async, EventPattern, \
         tp_name_prefix, make_channel_proxy
 from avahitest import get_host_name, AvahiAnnouncer
 from xmppstream import setup_stream_listener
+
 import constants as cs
 
 def test(q, bus, conn):
@@ -21,6 +23,10 @@ def test(q, bus, conn):
     basic_txt = { "txtvers": "1", "status": "avail" }
     contact_name = "test-request-im@" + get_host_name()
     listener, port = setup_stream_listener(q, contact_name)
+
+    # FIXME: this is a hack to be sure to have all the contact list channels
+    # announced so they won't interfere with the muc ones announces.
+    wait_for_contact_list(q, conn)
 
     AvahiAnnouncer(contact_name, "_presence._tcp", port, basic_txt)
 

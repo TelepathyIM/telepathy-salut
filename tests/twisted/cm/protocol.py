@@ -16,9 +16,9 @@ def test(q, bus, conn):
     cm_prop_iface = dbus.Interface(cm, cs.PROPERTIES_IFACE)
 
     protocols = unwrap(cm_prop_iface.Get(cs.CM, 'Protocols'))
-    assertEquals(set(['local_xmpp']), set(protocols.keys()))
+    assertEquals(set(['local-xmpp']), set(protocols.keys()))
 
-    local_props = protocols['local_xmpp']
+    local_props = protocols['local-xmpp']
     local_params = local_props[cs.PROTOCOL + '.Parameters']
 
     proto = bus.get_object(cm.bus_name, cm.object_path + '/local_xmpp')
@@ -39,7 +39,7 @@ def test(q, bus, conn):
     assertContains(cs.CONN_IFACE_ALIASING, proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_AVATARS, proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_CONTACTS, proto_props['ConnectionInterfaces'])
-    assertContains(cs.CONN_IFACE_PRESENCE,
+    assertContains(cs.CONN_IFACE_SIMPLE_PRESENCE,
             proto_props['ConnectionInterfaces'])
     assertContains(cs.CONN_IFACE_REQUESTS, proto_props['ConnectionInterfaces'])
 

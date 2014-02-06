@@ -144,7 +144,7 @@ salut_tube_iface_base_init (gpointer klass)
       param_spec = g_param_spec_uint (
           "type",
           "Tube type",
-          "The SalutTubeType this D-Bus tube object.",
+          "The TpTubeType this D-Bus tube object.",
           0, G_MAXUINT32, 0,
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
@@ -179,7 +179,7 @@ salut_tube_iface_base_init (gpointer klass)
           "state",
           "Tube state",
           "The TpTubeChannelState of this DBUS tube object",
-          0, G_MAXUINT32, TP_TUBE_CHANNEL_STATE_REMOTE_PENDING,
+          0, G_MAXUINT32, TP_TUBE_STATE_REMOTE_PENDING,
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
       g_object_interface_install_property (klass, param_spec);
 

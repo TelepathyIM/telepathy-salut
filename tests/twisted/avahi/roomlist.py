@@ -8,7 +8,7 @@ import avahitest
 
 from twisted.words.xish import domish
 
-from saluttest import exec_test
+from saluttest import exec_test, wait_for_contact_list
 from servicetest import call_async, EventPattern, \
         tp_name_prefix, tp_path_prefix, wrap_channel
 import constants as cs
@@ -20,11 +20,14 @@ def test(q, bus, conn):
 
     q.expect('dbus-signal', signal='StatusChanged', args=[0L, 0L])
 
+    # FIXME: this is a hack to be sure to have all the contact list channels
+    # announced so they won't interfere with the roomlist ones announces.
+    wait_for_contact_list(q, conn)
+
     # check if we can request roomlist channels
     properties = conn.GetAll(
             tp_name_prefix + '.Connection.Interface.Requests',
             dbus_interface='org.freedesktop.DBus.Properties')
-
     assert ({tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_ROOM_LIST,
              tp_name_prefix + '.Channel.TargetHandleType': 0,
@@ -48,7 +51,7 @@ def test(q, bus, conn):
         EventPattern('dbus-signal', signal='NewChannels'),
         )
     path2 = ret.value[0]
-    chan2 = wrap_channel(bus.get_object(conn.bus_name, path2), "RoomList1")
+    chan2 = wrap_channel(bus.get_object(conn.bus_name, path2), "RoomList")
 
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
@@ -61,7 +64,7 @@ def test(q, bus, conn):
             == conn.Properties.Get(cs.CONN, "SelfHandle")
     assert props[tp_name_prefix + '.Channel.InitiatorID'] \
             == self_name
-    assert props[tp_name_prefix + '.Channel.Type.RoomList1.Server'] == ''
+    assert props[tp_name_prefix + '.Channel.Type.RoomList.Server'] == ''
 
     assert new_sig.args[0][0][0] == path2
     assert new_sig.args[0][0][1] == props

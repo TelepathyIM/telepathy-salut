@@ -21,8 +21,6 @@
 
 #include "muc-tube-stream.h"
 
-#include <telepathy-glib/telepathy-glib-dbus.h>
-
 G_DEFINE_TYPE (SalutMucTubeStream, salut_muc_tube_stream,
     SALUT_TYPE_TUBE_STREAM)
 

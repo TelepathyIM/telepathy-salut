@@ -13,8 +13,8 @@ import time
 
 def wait_for_aliases_changed(q, handle):
     e = q.expect('dbus-signal', signal='AliasesChanged',
-            predicate=lambda e: handle in e.args[0])
-    alias = e.args[0][handle]
+            predicate=lambda e: e.args[0][0][0] == handle)
+    _, alias = e.args[0][0]
     return alias
 
 def wait_for_contact_info_changed(q, handle):
@@ -57,7 +57,7 @@ def check_contact_info(info, txt):
 
 def check_all_contact_info_methods(conn, handle, keys):
     attrs = conn.Contacts.GetContactAttributes([handle],
-        [cs.CONN_IFACE_CONTACT_INFO])[handle]
+        [cs.CONN_IFACE_CONTACT_INFO], True)[handle]
     info = attrs[cs.CONN_IFACE_CONTACT_INFO + "/info"]
     check_contact_info(info, keys)
 
@@ -68,9 +68,6 @@ def test(q, bus, conn):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged',
         args=[cs.CONN_STATUS_CONNECTED, cs.CSR_NONE_SPECIFIED])
-
-    flags = conn.Properties.Get(cs.CONN_IFACE_ALIASING, "AliasFlags")
-    assertEquals(flags, 0)
 
     assertContains(cs.CONN_IFACE_CONTACT_INFO,
         conn.Properties.Get(cs.CONN, "Interfaces"))
@@ -130,7 +127,7 @@ def test(q, bus, conn):
             check_contact_info(info, dict)
 
         attrs = conn.Contacts.GetContactAttributes([handle],
-            [cs.CONN_IFACE_ALIASING])[handle]
+            [cs.CONN_IFACE_ALIASING], True)[handle]
         assertEquals(alias, attrs[cs.CONN_IFACE_ALIASING + "/alias"])
 
         check_all_contact_info_methods(conn, handle, dict)

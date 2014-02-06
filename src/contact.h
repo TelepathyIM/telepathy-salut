@@ -28,6 +28,10 @@
 #include "presence.h"
 #include "connection.h"
 
+#ifdef ENABLE_OLPC
+#include "olpc-activity.h"
+#endif
+
 #include <gibber/gibber-sockets.h>
 
 #include <wocky/wocky.h>
@@ -38,6 +42,11 @@ enum {
   SALUT_CONTACT_ALIAS_CHANGED  = 0x1,
   SALUT_CONTACT_STATUS_CHANGED = 0x2,
   SALUT_CONTACT_AVATAR_CHANGED = 0x4,
+#ifdef ENABLE_OLPC
+  SALUT_CONTACT_OLPC_PROPERTIES = 0x8,
+  SALUT_CONTACT_OLPC_CURRENT_ACTIVITY = 0x10,
+  SALUT_CONTACT_OLPC_ACTIVITIES = 0x20,
+#endif /* ENABLE_OLPC */
   SALUT_CONTACT_JID_CHANGED = 0x40,
   SALUT_CONTACT_EMAIL_CHANGED = 0x80,
   SALUT_CONTACT_REAL_NAME_CHANGED = 0x100,
@@ -80,6 +89,14 @@ struct _SalutContact {
     GPtrArray *data_forms; /* of owned WockyDataForm*s */
 
     TpHandle handle;
+#ifdef ENABLE_OLPC
+    GArray *olpc_key;
+    gchar *olpc_color;
+    gchar *olpc_cur_act;
+    TpHandle olpc_cur_act_room;
+    gchar *olpc_ip4;
+    gchar *olpc_ip6;
+#endif /* ENABLE_OLPC */
 
     /* private */
     SalutConnection *connection;
@@ -127,6 +144,20 @@ void salut_contact_set_capabilities (SalutContact *contact,
     const GabbleCapabilitySet *caps,
     const GPtrArray *data_forms);
 
+#ifdef ENABLE_OLPC
+typedef void (*SalutContactOLPCActivityFunc)
+    (SalutOlpcActivity *activity, gpointer user_data);
+
+void salut_contact_foreach_olpc_activity (SalutContact *self,
+    SalutContactOLPCActivityFunc foreach, gpointer user_data);
+
+gboolean salut_contact_joined_activity (SalutContact *self,
+    SalutOlpcActivity *activity);
+
+void salut_contact_left_activity (SalutContact *self,
+    SalutOlpcActivity *activity);
+#endif
+
 /* restricted methods */
 void salut_contact_change_real_name (SalutContact *self, const gchar *first,
     const gchar *last);
@@ -140,6 +171,18 @@ void salut_contact_change_email (SalutContact *self, gchar *email);
 void salut_contact_change_jid (SalutContact *self, gchar *jid);
 void salut_contact_change_capabilities (SalutContact *self,
   const gchar *hash, const gchar *node, const gchar *ver);
+
+#ifdef ENABLE_OLPC
+void salut_contact_change_olpc_color (SalutContact *self,
+  const gchar *olpc_color);
+void salut_contact_change_olpc_key (SalutContact *self, GArray *olpc_key);
+void salut_contact_change_ipv4_addr (SalutContact *self,
+  const gchar *ipv4_addr);
+void salut_contact_change_ipv6_addr (SalutContact *self,
+  const gchar *ipv4_addr);
+void salut_contact_change_current_activity (SalutContact *self,
+  const gchar *current_activity_id, const gchar *current_activity_room);
+#endif
 
 void salut_contact_avatar_request_flush (SalutContact *self, guint8 *data,
     gsize size);

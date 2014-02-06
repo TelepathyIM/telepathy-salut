@@ -21,9 +21,9 @@ def check_dbus_names(tube, members):
     names = tube.Properties.Get(cs.CHANNEL_TYPE_DBUS_TUBE, 'DBusNames')
     assert set(names.keys()) == set(members), names.keys()
 
-SERVICE = "im.telepathy1.Tube.Test"
+SERVICE = "org.freedesktop.Telepathy.Tube.Test"
 IFACE = SERVICE
-PATH = "/im/telepathy1/Tube/Test"
+PATH = "/org/freedesktop/Telepathy/Tube/Test"
 
 print "FIXME: MUC tubes tests are currently broken: fdo#69223"
 # exiting 77 causes automake to consider the test to have been skipped

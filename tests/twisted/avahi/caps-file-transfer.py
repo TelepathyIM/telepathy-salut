@@ -140,7 +140,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
 
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
+            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
@@ -194,7 +194,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
 
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
+            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
@@ -215,7 +215,7 @@ def test_ft_caps_from_contact(q, bus, conn, client):
 
     # check the Contacts interface give the same caps
     caps_via_contacts_iface = conn_contacts_iface.GetContactAttributes(
-            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
+            [contact_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [contact_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assert caps_via_contacts_iface == caps, caps_via_contacts_iface
 
@@ -231,7 +231,7 @@ def test(q, bus, conn):
     self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
     conn_contacts_iface = dbus.Interface(conn, cs.CONN_IFACE_CONTACTS)
     caps = conn_contacts_iface.GetContactAttributes(
-            [self_handle], [cs.CONN_IFACE_CONTACT_CAPS]) \
+            [self_handle], [cs.CONN_IFACE_CONTACT_CAPS], False) \
             [self_handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     assertContains(ft_metadata_caps, caps)
 

@@ -25,7 +25,7 @@
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-protocol.h>
-#include <telepathy-glib/telepathy-glib-dbus.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "protocol.h"
 
@@ -206,6 +206,14 @@ generate_group_name (GHashTable *props)
       handle_type_name = "-multi";
       break;
 
+    case TP_HANDLE_TYPE_GROUP:
+      handle_type_name = "-group";
+      break;
+
+    case TP_HANDLE_TYPE_LIST:
+      handle_type_name = "-list";
+      break;
+
     default:
       handle_type_name = "";
     }
@@ -272,7 +280,7 @@ write_presence (GKeyFile *f,
 
   statuses = tp_asv_get_boxed (props,
       TP_PROP_PROTOCOL_INTERFACE_PRESENCE_STATUSES,
-      TP_HASH_TYPE_STATUS_SPEC_MAP);
+      TP_HASH_TYPE_SIMPLE_STATUS_SPEC_MAP);
   g_return_if_fail (statuses != NULL);
 
   g_hash_table_iter_init (&iter, statuses);

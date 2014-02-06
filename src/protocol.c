@@ -22,7 +22,7 @@
 
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-protocol.h>
-#include <telepathy-glib/telepathy-glib-dbus.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
 #include "contact-manager.h"
@@ -156,6 +156,7 @@ get_connection_details (TpBaseProtocol *self,
   if (channel_managers != NULL)
     {
       GType types[] = {
+          SALUT_TYPE_CONTACT_MANAGER,
           SALUT_TYPE_FT_MANAGER,
           SALUT_TYPE_IM_MANAGER,
           SALUT_TYPE_MUC_MANAGER,

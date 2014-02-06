@@ -63,6 +63,7 @@ GType salut_bonjour_self_get_type (void);
 SalutBonjourSelf * salut_bonjour_self_new (SalutConnection *connection,
     SalutBonjourDiscoveryClient *discovery_client, const gchar *nickname,
     const gchar *first_name, const gchar *last_name, const gchar *jid,
-    const gchar *email, const gchar *published_name);
+    const gchar *email, const gchar *published_name, const GArray *olpc_key,
+    const gchar *olpc_color);
 
 #endif /* #ifndef __SALUT_BONJOUR_SELF_H__*/

@@ -21,8 +21,6 @@
 
 #include "muc-tube-dbus.h"
 
-#include <telepathy-glib/telepathy-glib-dbus.h>
-
 G_DEFINE_TYPE (SalutMucTubeDBus, salut_muc_tube_dbus,
     SALUT_TYPE_TUBE_DBUS)
 

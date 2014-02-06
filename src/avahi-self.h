@@ -63,6 +63,7 @@ GType salut_avahi_self_get_type (void);
 SalutAvahiSelf * salut_avahi_self_new (SalutConnection *connection,
     SalutAvahiDiscoveryClient *discovery_client, const gchar *nickname,
     const gchar *first_name, const gchar *last_name, const gchar *jid,
-    const gchar *email, const gchar *published_name);
+    const gchar *email, const gchar *published_name, const GArray *olpc_key,
+    const gchar *olpc_color);
 
 #endif /* #ifndef __SALUT_AVAHI_SELF_H__*/

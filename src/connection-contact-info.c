@@ -253,6 +253,54 @@ salut_conn_contact_info_changed (
 }
 
 static void
+salut_conn_contact_info_get_contact_info (
+    TpSvcConnectionInterfaceContactInfo *iface,
+    const GArray *contacts,
+    DBusGMethodInvocation *context)
+{
+  SalutConnection *self = SALUT_CONNECTION (iface);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+  TpHandleRepoIface *contacts_repo =
+      tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+  SalutContactManager *contact_manager;
+  guint i;
+  GHashTable *ret;
+  GError *error = NULL;
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (TP_BASE_CONNECTION (iface),
+      context);
+
+  if (!tp_handles_are_valid (contacts_repo, contacts, FALSE, &error))
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+      return;
+    }
+
+  g_object_get (self, "contact-manager", &contact_manager, NULL);
+  ret = dbus_g_type_specialized_construct (TP_HASH_TYPE_CONTACT_INFO_MAP);
+
+  for (i = 0; i < contacts->len; i++)
+    {
+      TpHandle handle = g_array_index (contacts, TpHandle, i);
+      SalutContact *contact = salut_contact_manager_get_contact (
+          contact_manager, handle);
+
+      if (contact != NULL)
+        {
+          g_hash_table_insert (ret, GUINT_TO_POINTER (handle),
+              build_contact_info_for_contact (contact));
+          g_object_unref (contact);
+        }
+    }
+
+  tp_svc_connection_interface_contact_info_return_from_get_contact_info (
+      context, ret);
+  g_boxed_free (TP_HASH_TYPE_CONTACT_INFO_MAP, ret);
+  g_object_unref (contact_manager);
+}
+
+static void
 salut_conn_contact_info_request_contact_info (
     TpSvcConnectionInterfaceContactInfo *iface,
     guint handle,
@@ -319,6 +367,7 @@ salut_conn_contact_info_iface_init (
 
 #define IMPLEMENT(x) tp_svc_connection_interface_contact_info_implement_##x \
     (klass, salut_conn_contact_info_##x)
+  IMPLEMENT (get_contact_info);
   IMPLEMENT (request_contact_info);
   IMPLEMENT (refresh_contact_info);
 #undef IMPLEMENT

@@ -8,8 +8,8 @@ AC_PREREQ([2.60])
 #   set salut_nano_version to 0.
 
 m4_define([salut_major_version], [0])
-m4_define([salut_minor_version], [99])
-m4_define([salut_micro_version], [2])
+m4_define([salut_minor_version], [8])
+m4_define([salut_micro_version], [999])
 m4_define([salut_nano_version], [1])
 
 # Some magic
@@ -114,6 +114,17 @@ AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
+dnl olpc specific code switch
+AC_ARG_ENABLE(olpc,
+  AC_HELP_STRING([--enable-olpc],[compile with olpc specific code]),
+    enable_olpc=$enableval, enable_olpc=no )
+
+AS_IF([test x$enable_olpc = xyes],
+  [AC_DEFINE(ENABLE_OLPC, [], [Enable olpc code])])
+AM_CONDITIONAL(ENABLE_OLPC, test "x$enable_olpc" = "xyes")
+
+AC_SUBST(ENABLE_OLPC)
+
 AC_HEADER_STDC([])
 AC_C_INLINE
 
@@ -184,16 +195,11 @@ PKG_CHECK_MODULES(LIBXML2, [libxml-2.0])
 AC_SUBST(LIBXML2_CFLAGS)
 AC_SUBST(LIBXML2_LIBS)
 
-TELEPATHY_GLIB_REQUIRED=0.99.2
 AC_DEFINE([TP_SEAL_ENABLE], [], [Prevent to use sealed variables])
 AC_DEFINE([TP_DISABLE_SINGLE_INCLUDE], [], [Disable single header include])
-AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_1_0], [Ignore post 1.0 deprecations])
-AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_1_0], [Prevent post 1.0 APIs])
-PKG_CHECK_MODULES([TELEPATHY_GLIB],
-  [
-    telepathy-glib-1 >= $TELEPATHY_GLIB_REQUIRED
-    telepathy-glib-1-dbus >= $TELEPATHY_GLIB_REQUIRED
-  ])
+AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_0_22], [Ignore post 0.22 deprecations])
+AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_0_22], [Prevent post 0.22 APIs])
+PKG_CHECK_MODULES([TELEPATHY_GLIB], [telepathy-glib >= 0.21.2])
 
 AC_SUBST(TELEPATHY_GLIB_CFLAGS)
 AC_SUBST(TELEPATHY_GLIB_LIBS)
@@ -385,4 +391,9 @@ Configure summary:
         Enable debug................:  ${enable_debug}
         Python tests................:  ${tests_enabled}
         Plugins.....................:  ${enable_plugins}
+
+Features:
+
+        OLPC support................:  ${enable_olpc}
+
 "

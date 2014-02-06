@@ -54,13 +54,14 @@
 #include "text-helper.h"
 #include "tube-stream.h"
 #include "tube-dbus.h"
-#include "util.h"
 
 G_DEFINE_TYPE_WITH_CODE(SalutMucChannel, salut_muc_channel, TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
         tp_group_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT,
-      tp_message_mixin_iface_init);
+      tp_message_mixin_text_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MESSAGES,
+      tp_message_mixin_messages_iface_init);
 )
 
 /* signal enum */
@@ -122,7 +123,7 @@ static void salut_muc_channel_close (TpBaseChannel *base);
 
 static void update_tube_info (SalutMucChannel *self);
 static SalutTubeIface * create_new_tube (SalutMucChannel *self,
-    SalutTubeType type,
+    TpTubeType type,
     TpHandle initiator,
     const gchar *service,
     GHashTable *parameters,
@@ -182,34 +183,6 @@ salut_muc_channel_set_property (GObject     *object,
   }
 }
 
-/* This is helper function with the signature of tp_group_mixin_change_members()
- * from tp-glib 0.x */
-static void
-change_members (GObject *obj,
-    const gchar *message,
-    const TpIntset *add,
-    const TpIntset *del,
-    const TpIntset *add_local_pending,
-    const TpIntset *add_remote_pending,
-    TpHandle actor,
-    TpChannelGroupChangeReason reason)
-{
-  GHashTable *details;
-
-  details = tp_asv_new (
-      "actor", G_TYPE_UINT, actor,
-      "change-reason", G_TYPE_UINT, reason,
-      NULL);
-
-  if (message != NULL)
-    tp_asv_set_string (details, "message", message);
-
-  tp_group_mixin_change_members (obj,
-      add, del, add_local_pending, add_remote_pending, details);
-
-  g_hash_table_unref (details);
-}
-
 static void
 salut_muc_channel_add_self_to_members (SalutMucChannel *self)
 {
@@ -233,7 +206,7 @@ salut_muc_channel_add_self_to_members (SalutMucChannel *self)
   add = tp_intset_new ();
   tp_intset_add (add, tp_base_connection_get_self_handle (base_conn));
 
-  change_members (G_OBJECT (self),
+  tp_group_mixin_change_members (G_OBJECT (self),
       "", add, empty, empty, empty,
       tp_base_connection_get_self_handle (base_conn),
       TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
@@ -331,6 +304,7 @@ salut_muc_channel_constructed (GObject *obj)
       contact_repo, tp_base_connection_get_self_handle (base_conn));
 
   tp_group_mixin_change_flags (obj,
+      TP_CHANNEL_GROUP_FLAG_PROPERTIES |
       TP_CHANNEL_GROUP_FLAG_CAN_ADD |
       TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD,
       0);
@@ -405,6 +379,12 @@ create_invitation (SalutMucChannel *self,
           priv->muc_connection),
       invitation_append_parameter, invite_node);
 
+#ifdef ENABLE_OLPC
+  salut_self_olpc_augment_invitation (priv->self,
+      tp_base_channel_get_target_handle (base_chan), contact->handle,
+      invite_node);
+#endif
+
   return msg;
 }
 
@@ -450,7 +430,7 @@ send_invite_cb (GObject *source_object,
   removed = tp_intset_new ();
   tp_intset_add (removed, handle);
 
-  change_members (G_OBJECT (data->self), "", empty, removed, empty,
+  tp_group_mixin_change_members (G_OBJECT (data->self), "", empty, removed, empty,
       empty, tp_base_connection_get_self_handle (base_connection),
       TP_CHANNEL_GROUP_CHANGE_REASON_ERROR);
 
@@ -542,7 +522,7 @@ salut_muc_channel_add_member (GObject *iface,
         {
           /* We are considered as remote-pending while the muc connection
            * is not connected */
-          change_members (G_OBJECT (self),
+          tp_group_mixin_change_members (G_OBJECT (self),
               message, empty_, empty_, empty_, add,
               tp_base_connection_get_self_handle (base_connection),
               TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
@@ -571,7 +551,7 @@ salut_muc_channel_add_member (GObject *iface,
   empty = tp_intset_new ();
   remote_pending = tp_intset_new ();
   tp_intset_add (remote_pending, handle);
-  change_members (G_OBJECT(self), "", empty, empty, empty,
+  tp_group_mixin_change_members (G_OBJECT(self), "", empty, empty, empty,
       remote_pending, tp_base_connection_get_self_handle (base_connection),
       TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
   tp_intset_destroy (empty);
@@ -638,10 +618,10 @@ salut_muc_channel_fill_immutable_properties (TpBaseChannel *chan,
 
   tp_dbus_properties_mixin_fill_properties_hash (
       G_OBJECT (chan), properties,
-      TP_IFACE_CHANNEL_TYPE_TEXT, "MessagePartSupportFlags",
-      TP_IFACE_CHANNEL_TYPE_TEXT, "DeliveryReportingSupport",
-      TP_IFACE_CHANNEL_TYPE_TEXT, "SupportedContentTypes",
-      TP_IFACE_CHANNEL_TYPE_TEXT, "MessageTypes",
+      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessagePartSupportFlags",
+      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "DeliveryReportingSupport",
+      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "SupportedContentTypes",
+      TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessageTypes",
       NULL);
 }
 
@@ -652,7 +632,7 @@ salut_muc_channel_get_interfaces (TpBaseChannel *chan)
     ->get_interfaces (chan);
 
   g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP);
-
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_MESSAGES);
   return interfaces;
 }
 
@@ -848,9 +828,11 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
       g_assert (stanza != NULL);
 
       tp_intset_add (local_pending, self_handle);
-      change_members (G_OBJECT(self), stanza,
-          empty, empty, local_pending, empty,
-          inviter, TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
+      tp_group_mixin_change_members (G_OBJECT(self), stanza,
+                                     empty, empty,
+                                     local_pending, empty,
+                                     inviter,
+                                     TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
       tp_intset_destroy (local_pending);
       tp_intset_destroy (empty);
     }
@@ -907,8 +889,13 @@ salut_muc_channel_add_members (SalutMucChannel *self,
       tp_intset_add (changes, contact->handle);
     }
 
-  change_members (G_OBJECT(self), "", changes, empty, empty, empty,
-      0, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+  tp_group_mixin_change_members (G_OBJECT(self),
+                                 "",
+                                 changes,
+                                 empty,
+                                 empty, empty,
+                                 0,
+                                 TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (changes);
   tp_intset_destroy (empty);
   g_object_unref (contact_mgr);
@@ -947,8 +934,13 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
       tp_intset_add (changes, handle);
     }
 
-  change_members (G_OBJECT(self), "", empty, changes, empty, empty,
-      0, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+  tp_group_mixin_change_members (G_OBJECT(self),
+                                 "",
+                                 empty,
+                                 changes,
+                                 empty, empty,
+                                 0,
+                                 TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (changes);
   tp_intset_destroy (empty);
 }
@@ -957,7 +949,7 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
 static gboolean
 extract_tube_information (SalutMucChannel *self,
                           WockyNode *tube_node,
-                          SalutTubeType *type,
+                          TpTubeType *type,
                           TpHandle *initiator_handle,
                           const gchar **service,
                           GHashTable **parameters,
@@ -977,11 +969,11 @@ extract_tube_information (SalutMucChannel *self,
 
       if (!tp_strdiff (_type, "stream"))
         {
-          *type = SALUT_TUBE_TYPE_STREAM;
+          *type = TP_TUBE_TYPE_STREAM;
         }
       else if (!tp_strdiff (_type, "dbus"))
         {
-          *type = SALUT_TUBE_TYPE_DBUS;
+          *type = TP_TUBE_TYPE_DBUS;
         }
       else
         {
@@ -1096,13 +1088,13 @@ muc_channel_handle_tubes (SalutMucChannel *self,
     {
       guint tube_id = GPOINTER_TO_UINT (key);
       SalutTubeIface *tube = value;
-      SalutTubeType type;
+      TpTubeType type;
 
       g_object_get (tube,
           "type", &type,
           NULL);
 
-      if (type != SALUT_TUBE_TYPE_DBUS)
+      if (type != TP_TUBE_TYPE_DBUS)
         return;
 
       if (salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
@@ -1118,7 +1110,7 @@ muc_channel_handle_tubes (SalutMucChannel *self,
       const gchar *stream_id;
       SalutTubeIface *tube;
       guint tube_id;
-      SalutTubeType type;
+      TpTubeType type;
       GibberBytestreamIface *bytestream;
 
       stream_id = wocky_node_get_attribute (tube_node, "stream-id");
@@ -1142,7 +1134,7 @@ muc_channel_handle_tubes (SalutMucChannel *self,
             {
               switch (type)
                 {
-                case SALUT_TUBE_TYPE_DBUS:
+                case TP_TUBE_TYPE_DBUS:
                   {
                     if (initiator_handle == 0)
                       {
@@ -1151,7 +1143,7 @@ muc_channel_handle_tubes (SalutMucChannel *self,
                       }
                   }
                   break;
-                case SALUT_TUBE_TYPE_STREAM:
+                case TP_TUBE_TYPE_STREAM:
                   initiator_handle = contact;
                   break;
                 default:
@@ -1180,7 +1172,7 @@ muc_channel_handle_tubes (SalutMucChannel *self,
           "type", &type,
           NULL);
 
-      if (type == SALUT_TUBE_TYPE_DBUS
+      if (type == TP_TUBE_TYPE_DBUS
           && !salut_tube_dbus_handle_in_names (SALUT_TUBE_DBUS (tube),
               contact))
         {
@@ -1282,6 +1274,14 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
 
   /* let's not autoclose now */
   priv->autoclose = FALSE;
+
+#ifdef ENABLE_OLPC
+  if (salut_connection_olpc_observe_muc_stanza (
+          SALUT_CONNECTION (base_connection),
+          tp_base_channel_get_target_handle (base_chan),
+          from_handle, stanza))
+    return;
+#endif
 
   tubes_node = wocky_node_get_child_ns (node, "tubes",
       WOCKY_TELEPATHY_NS_TUBES);
@@ -1479,7 +1479,7 @@ publish_tube_in_node (SalutMucChannel *self,
       base_conn, TP_HANDLE_TYPE_CONTACT);
   WockyNode *parameters_node;
   GHashTable *parameters;
-  SalutTubeType type;
+  TpTubeType type;
   gchar *service, *id_str;
   guint64 tube_id;
   TpHandle initiator_handle;
@@ -1501,7 +1501,7 @@ publish_tube_in_node (SalutMucChannel *self,
 
   switch (type)
     {
-      case SALUT_TUBE_TYPE_DBUS:
+      case TP_TUBE_TYPE_DBUS:
         {
           gchar *name, *stream_id;
 
@@ -1523,7 +1523,7 @@ publish_tube_in_node (SalutMucChannel *self,
 
         }
         break;
-      case SALUT_TUBE_TYPE_STREAM:
+      case TP_TUBE_TYPE_STREAM:
         wocky_node_set_attribute (node, "type", "stream");
         break;
       default:
@@ -1577,7 +1577,7 @@ update_tube_info (SalutMucChannel *self)
   while (g_hash_table_iter_next (&iter, NULL, &value))
     {
       TpTubeChannelState state;
-      SalutTubeType type;
+      TpTubeType type;
       TpHandle initiator;
       WockyNode *tube_node;
 
@@ -1590,7 +1590,7 @@ update_tube_info (SalutMucChannel *self)
       if (state != TP_TUBE_CHANNEL_STATE_OPEN)
         continue;
 
-      if (type == SALUT_TUBE_TYPE_STREAM
+      if (type == TP_TUBE_TYPE_STREAM
           && initiator != TP_GROUP_MIXIN (self)->self_handle)
         /* We only announce stream tubes we initiated */
         return;
@@ -1674,7 +1674,7 @@ generate_tube_id (SalutMucChannel *self)
 
 static SalutTubeIface *
 create_new_tube (SalutMucChannel *self,
-    SalutTubeType type,
+    TpTubeType type,
     TpHandle initiator,
     const gchar *service,
     GHashTable *parameters,
@@ -1693,12 +1693,12 @@ create_new_tube (SalutMucChannel *self,
 
   switch (type)
     {
-    case SALUT_TUBE_TYPE_DBUS:
+    case TP_TUBE_TYPE_DBUS:
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (conn,
               handle, TP_HANDLE_TYPE_ROOM, self_handle, priv->muc_connection,
               initiator, service, parameters, tube_id, requested));
       break;
-    case SALUT_TUBE_TYPE_STREAM:
+    case TP_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (conn,
               handle, TP_HANDLE_TYPE_ROOM,
               self_handle, initiator, FALSE, service,
@@ -1729,7 +1729,7 @@ salut_muc_channel_tube_request (SalutMucChannel *self,
   const gchar *service;
   GHashTable *parameters = NULL;
   guint64 tube_id;
-  SalutTubeType type;
+  TpTubeType type;
 
   tube_id = generate_tube_id (self);
 
@@ -1738,14 +1738,14 @@ salut_muc_channel_tube_request (SalutMucChannel *self,
 
   if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE))
     {
-      type = SALUT_TUBE_TYPE_STREAM;
+      type = TP_TUBE_TYPE_STREAM;
       service = tp_asv_get_string (request_properties,
           TP_PROP_CHANNEL_TYPE_STREAM_TUBE_SERVICE);
 
     }
   else if (! tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_DBUS_TUBE))
     {
-      type = SALUT_TUBE_TYPE_DBUS;
+      type = TP_TUBE_TYPE_DBUS;
       service = tp_asv_get_string (request_properties,
           TP_PROP_CHANNEL_TYPE_DBUS_TUBE_SERVICE_NAME);
     }

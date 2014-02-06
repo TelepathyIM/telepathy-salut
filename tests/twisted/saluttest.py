@@ -54,7 +54,7 @@ def make_connection(bus, event_func, params=None):
         default_params.update(params)
 
     return servicetest.make_connection(bus, event_func, 'salut',
-        'local_xmpp', default_params)
+        'local-xmpp', default_params)
 
 def ensure_avahi_is_running():
     bus = dbus.SystemBus()
@@ -185,11 +185,31 @@ def exec_test(fun, params=None, protocol=None, timeout=None,
           make_conn)
   reactor.run()
 
+def wait_for_contact_list(q, conn):
+    """Request contact list channels and wait for their NewChannel signals.
+    This is useful to avoid these signals to interfere with your test."""
+
+    #FIXME: this maybe racy if there are other contacts connected
+    requestotron = dbus.Interface(conn, cs.CONN_IFACE_REQUESTS)
+
+    # publish
+    requestotron.EnsureChannel({
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
+        cs.TARGET_ID: 'publish'})
+    q.expect('dbus-signal', signal='NewChannel')
+    # subscribe
+    requestotron.EnsureChannel({
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
+        cs.TARGET_ID: 'subscribe'})
+    q.expect('dbus-signal', signal='NewChannel')
+
 def wait_for_contact_in_publish(q, bus, conn, contact_name):
     handle = 0
     # Wait until the record shows up in publish
     while handle == 0:
-        e = q.expect('dbus-signal', signal='ContactsChanged',
+        e = q.expect('dbus-signal', signal='ContactsChangedWithID',
                 path=conn.object_path)
         for h, state in e.args[0].items():
             name = e.args[1][h]

@@ -53,12 +53,10 @@ def test(q, bus, conn):
     boddy = msg.addElement('body', content='hi')
     outbound.send(msg)
 
-    e = q.expect('dbus-signal', signal='MessageReceived')
-    assert len(e.args[0]) == 2
-    assert e.args[0][0]['message-sender-id'] == contact_name
-    assert e.args[0][0]['message-sender'] == handle
-    assert e.args[0][0]['message-type'] == cs.MT_NORMAL
-    assert e.args[0][1]['content'] == "hi"
+    e = q.expect('dbus-signal', signal='Received')
+    assert e.args[2] == handle
+    assert e.args[3] == cs.MT_NORMAL
+    assert e.args[5] == "hi"
 
 if __name__ == '__main__':
     skip_if_another_llxmpp()

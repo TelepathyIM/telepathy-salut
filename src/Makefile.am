@@ -106,6 +106,20 @@ BONJOUR_BACKEND_SOURCES =                         \
     bonjour-discovery-client.h                    \
     bonjour-discovery-client.c
 
+if ENABLE_OLPC
+  CORE_SOURCES +=                                       \
+    olpc-activity.h                               \
+    olpc-activity.c                               \
+    olpc-activity-manager.h                       \
+    olpc-activity-manager.c
+
+  AVAHI_BACKEND_SOURCES +=                              \
+    avahi-olpc-activity-manager.h                 \
+    avahi-olpc-activity-manager.c                 \
+    avahi-olpc-activity.h                         \
+    avahi-olpc-activity.c
+endif
+
 DUMMY_BACKEND_SOURCES = 				\
     dummy-discovery-client.h                      \
     dummy-discovery-client.c

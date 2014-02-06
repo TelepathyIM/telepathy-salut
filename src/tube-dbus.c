@@ -43,7 +43,6 @@
 #include "muc-tube-dbus.h"
 #include "tube-iface.h"
 #include "sha1/sha1-util.h"
-#include "util.h"
 
 /* When we receive D-Bus messages to be delivered to the application and the
  * application is not yet connected to the D-Bus tube, theses D-Bus messages
@@ -637,7 +636,7 @@ salut_tube_dbus_get_property (GObject *object,
         g_value_set_string (value, priv->stream_id);
         break;
       case PROP_TYPE:
-        g_value_set_uint (value, SALUT_TUBE_TYPE_DBUS);
+        g_value_set_uint (value, TP_TUBE_TYPE_DBUS);
         break;
       case PROP_SERVICE:
         g_value_set_string (value, priv->service);
@@ -1536,7 +1535,7 @@ salut_tube_dbus_check_access_control (SalutTubeDBus *self,
  * salut_tube_dbus_offer_async
  *
  * Implement D-Bus method Offer on interface
- * im.telepathy1.Channel.Type.DBusTube
+ * org.freedesktop.Telepathy.Channel.Type.DBusTube
  */
 static void
 salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
@@ -1576,7 +1575,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube *self,
  * salut_tube_dbus_accept_async
  *
  * Implements D-Bus method Accept on interface
- * im.telepathy1.Channel.Type.DBusTube
+ * org.freedesktop.Telepathy.Channel.Type.DBusTube
  */
 static void
 salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube *self,

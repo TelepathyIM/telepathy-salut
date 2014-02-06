@@ -63,9 +63,9 @@ GType salut_protocol_get_type (void);
         SALUT_TYPE_PROTOCOL, \
         SalutProtocolClass))
 
-#define SALUT_PROTOCOL_LOCAL_XMPP_NAME "local_xmpp"
+#define SALUT_PROTOCOL_LOCAL_XMPP_NAME "local-xmpp"
 #define SALUT_PROTOCOL_LOCAL_XMPP_ENGLISH_NAME "Link-local XMPP"
-#define SALUT_PROTOCOL_LOCAL_XMPP_ICON_NAME "im-local-xmpp"
+#define SALUT_PROTOCOL_LOCAL_XMPP_ICON_NAME "im-" SALUT_PROTOCOL_LOCAL_XMPP_NAME
 
 /**
  * salut_protocol_new:

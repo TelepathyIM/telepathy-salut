@@ -80,9 +80,10 @@ def test(q, bus, conn):
     channel_group = make_channel_proxy(conn, path, "Channel.Interface.Group")
 
     # check channel properties
-    # im.telepathy1.Channel D-Bus properties
+    # org.freedesktop.Telepathy.Channel D-Bus properties
     assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
     assertContains(cs.CHANNEL_IFACE_GROUP, props[cs.INTERFACES])
+    assertContains(cs.CHANNEL_IFACE_MESSAGES, props[cs.INTERFACES])
     assert props[cs.TARGET_ID] == 'my-room'
     assert props[cs.TARGET_HANDLE_TYPE] == HT_ROOM
     assert props[cs.REQUESTED] == False
@@ -91,14 +92,14 @@ def test(q, bus, conn):
 
     # we are added to local pending
     e = q.expect('dbus-signal', signal='MembersChanged')
-    added, removed, lp, rp, details = e.args
-    assert details['message'] == 'Inviting to this room'
+    msg, added, removed, lp, rp, actor, reason = e.args
+    assert msg == 'Inviting to this room'
     assert added == []
     assert removed == []
     assert lp == [self_handle]
     assert rp == []
-    assert details['actor'] == handle
-    assert details['change-reason'] == 4       # invited
+    assert actor == handle
+    assert reason == 4       # invited
 
     # TODO: join the muc, check if we are added to remote-pending and then
     # to members. This would need some tweak in Salut and/or the test framework
