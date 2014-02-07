@@ -1,10 +1,32 @@
+# Copyright (C) 2009 Nokia Corporation
+# Copyright (C) 2009-2013 Collabora Ltd.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+
 """
 Some handy constants for other tests to share and enjoy.
 """
 
-from dbus import PROPERTIES_IFACE
+from dbus import PROPERTIES_IFACE, INTROSPECTABLE_IFACE
 
 PREFIX = "org.freedesktop.Telepathy"
+PATH_PREFIX = '/' + PREFIX.replace('.', '/')
+
+tp_name_prefix = PREFIX
+tp_path_prefix = PATH_PREFIX
 
 CM = PREFIX + ".ConnectionManager"
 
@@ -32,6 +54,7 @@ CHANNEL_IFACE_ROOM = CHANNEL + '.Interface.Room2'
 CHANNEL_IFACE_ROOM_CONFIG = CHANNEL + '.Interface.RoomConfig1'
 CHANNEL_IFACE_SUBJECT = CHANNEL + '.Interface.Subject2'
 CHANNEL_IFACE_FILE_TRANSFER_METADATA = CHANNEL + '.Interface.FileTransfer.Metadata'
+CHANNEL_IFACE_SMS = CHANNEL + '.Interface.SMS'
 
 CHANNEL_TYPE_CALL = CHANNEL + ".Type.Call1"
 CHANNEL_TYPE_CONTACT_LIST = CHANNEL + ".Type.ContactList"
@@ -62,6 +85,15 @@ INITIATOR_HANDLE = CHANNEL + '.InitiatorHandle'
 INITIATOR_ID = CHANNEL + '.InitiatorID'
 INTERFACES = CHANNEL + '.Interfaces'
 
+CALL_CONTENTS = CHANNEL_TYPE_CALL + '.Contents'
+CALL_CALL_STATE_DETAILS = CHANNEL_TYPE_CALL + '.CallStateDetails'
+CALL_CALL_STATE = CHANNEL_TYPE_CALL + '.CallState'
+CALL_CALL_FLAGS = CHANNEL_TYPE_CALL + '.CallFlags'
+CALL_CALL_STATE_REASON = CHANNEL_TYPE_CALL + '.CallStateReason'
+CALL_HARDWARE_STREAMING = CHANNEL_TYPE_CALL + '.HardwareStreaming'
+CALL_CALL_MEMBERS = CHANNEL_TYPE_CALL + '.CallMembers'
+CALL_MEMBER_IDENTIFIERS = CHANNEL_TYPE_CALL + '.MemberIdentifiers'
+CALL_INITIAL_TRANSPORT = CHANNEL_TYPE_CALL + '.InitialTransport'
 CALL_INITIAL_AUDIO = CHANNEL_TYPE_CALL + '.InitialAudio'
 CALL_INITIAL_AUDIO_NAME = CHANNEL_TYPE_CALL + '.InitialAudioName'
 CALL_INITIAL_VIDEO = CHANNEL_TYPE_CALL + '.InitialVideo'
@@ -72,7 +104,7 @@ CALL_CONTENT = PREFIX + '.Call1.Content'
 CALL_CONTENT_IFACE_MEDIA = CALL_CONTENT + '.Interface.Media'
 CALL_CONTENT_IFACE_DTMF = CALL_CONTENT + '.Interface.DTMF'
 
-CALL_CONTENT_MEDIADESCRIPTION = CALL_CONTENT + '.MediaDescription'
+CALL_CONTENT_MEDIA_DESCRIPTION = CALL_CONTENT + '.MediaDescription'
 
 CALL_STREAM = PREFIX + '.Call1.Stream'
 CALL_STREAM_IFACE_MEDIA = CALL_STREAM + '.Interface.Media'
@@ -172,6 +204,8 @@ CONN_IFACE_CONTACTS = CONN + '.Interface.Contacts'
 CONN_IFACE_CONTACT_CAPS = CONN + '.Interface.ContactCapabilities'
 CONN_IFACE_CONTACT_INFO = CONN + ".Interface.ContactInfo"
 CONN_IFACE_PRESENCE = CONN + '.Interface.Presence'
+CONN_IFACE_RENAMING = CONN + '.Interface.Renaming'
+CONN_IFACE_SIDECARS1 = CONN + '.Interface.Sidecars1'
 CONN_IFACE_SIMPLE_PRESENCE = CONN + '.Interface.SimplePresence'
 CONN_IFACE_REQUESTS = CONN + '.Interface.Requests'
 CONN_IFACE_LOCATION = CONN + '.Interface.Location'
@@ -183,10 +217,19 @@ CONN_IFACE_CLIENT_TYPES = CONN + '.Interface.ClientTypes'
 CONN_IFACE_POWER_SAVING = CONN + '.Interface.PowerSaving'
 CONN_IFACE_CONTACT_BLOCKING = CONN + '.Interface.ContactBlocking'
 CONN_IFACE_ADDRESSING = CONN + '.Interface.Addressing1'
+CONN_IFACE_SERVICE_POINT = CONN + '.Interface.ServicePoint'
 
-ATTR_CONTACT_ID = CONN + '/contact-id'
+ATTR_ALIAS = CONN_IFACE_ALIASING + '/alias'
+ATTR_AVATAR_TOKEN = CONN_IFACE_AVATARS + '/token'
+ATTR_CLIENT_TYPES = CONN_IFACE_CLIENT_TYPES + '/client-types'
 ATTR_CONTACT_CAPABILITIES = CONN_IFACE_CONTACT_CAPS + '/capabilities'
+ATTR_CONTACT_ID = CONN + '/contact-id'
+ATTR_CONTACT_INFO = CONN_IFACE_CONTACT_INFO + '/info'
+ATTR_GROUPS = CONN_IFACE_CONTACT_GROUPS + '/groups'
+ATTR_LOCATION = CONN_IFACE_LOCATION + '/location'
 ATTR_PRESENCE = CONN_IFACE_SIMPLE_PRESENCE + '/presence'
+ATTR_PUBLISH = CONN_IFACE_CONTACT_LIST + '/publish'
+ATTR_SUBSCRIBE = CONN_IFACE_CONTACT_LIST + '/subscribe'
 
 STREAM_HANDLER = PREFIX + '.Media.StreamHandler'
 
@@ -201,6 +244,7 @@ CONNECTION_REFUSED = ERROR + '.ConnectionRefused'
 CONNECTION_FAILED = ERROR + '.ConnectionFailed'
 CONNECTION_LOST = ERROR + '.ConnectionLost'
 CANCELLED = ERROR + '.Cancelled'
+NOT_YOURS = ERROR + '.NotYours'
 DISCONNECTED = ERROR + '.Disconnected'
 REGISTRATION_EXISTS = ERROR + '.RegistrationExists'
 AUTHENTICATION_FAILED = ERROR + '.AuthenticationFailed'
@@ -212,10 +256,12 @@ INVALID_HANDLE = ERROR + '.InvalidHandle'
 CERT_UNTRUSTED = ERROR + '.Cert.Untrusted'
 SERVICE_BUSY = ERROR + '.ServiceBusy'
 SERVICE_CONFUSED = ERROR + '.ServiceConfused'
+SOFTWARE_UPGRADE_REQUIRED = ERROR + '.SoftwareUpgradeRequired'
 
 BANNED = ERROR + '.Channel.Banned'
 
-UNKNOWN_METHOD = 'org.freedesktop.DBus.Error.UnknownMethod'
+DBUS_ERROR_UNKNOWN_METHOD = 'org.freedesktop.DBus.Error.UnknownMethod'
+DBUS_ERROR_NO_REPLY = 'org.freedesktop.DBus.Error.NoReply'
 
 TUBE_PARAMETERS = CHANNEL_IFACE_TUBE + '.Parameters'
 TUBE_STATE = CHANNEL_IFACE_TUBE + '.State'
@@ -322,7 +368,7 @@ FT_DATE = CHANNEL_TYPE_FILE_TRANSFER + '.Date'
 FT_AVAILABLE_SOCKET_TYPES = CHANNEL_TYPE_FILE_TRANSFER + '.AvailableSocketTypes'
 FT_TRANSFERRED_BYTES = CHANNEL_TYPE_FILE_TRANSFER + '.TransferredBytes'
 FT_INITIAL_OFFSET = CHANNEL_TYPE_FILE_TRANSFER + '.InitialOffset'
-FT_FILE_COLLECTION = CHANNEL_TYPE_FILE_TRANSFER + '.FUTURE.FileCollection'
+FT_FILE_COLLECTION = CHANNEL_TYPE_FILE_TRANSFER + '.FileCollection'
 FT_URI = CHANNEL_TYPE_FILE_TRANSFER + '.URI'
 FT_SERVICE_NAME = CHANNEL_IFACE_FILE_TRANSFER_METADATA + '.ServiceName'
 FT_METADATA = CHANNEL_IFACE_FILE_TRANSFER_METADATA + '.Metadata'
@@ -401,6 +447,7 @@ MEDIA_CAP_IMMUTABLE_STREAMS = 32
 
 CLIENT = PREFIX + '.Client'
 
+PRESENCE_UNSET = 0
 PRESENCE_OFFLINE = 1
 PRESENCE_AVAILABLE = 2
 PRESENCE_AWAY = 3
@@ -534,4 +581,56 @@ SUBJECT_PRESENT = 1
 SUBJECT_CAN_SET = 2
 
 DEBUG_IFACE = PREFIX + '.Debug'
-DEBUG_PATH = '/' + PREFIX.replace('.', '/') + '/debug'
+DEBUG_PATH = PATH_PREFIX + '/debug'
+
+SERVICE_POINT_TYPE_NONE = 0
+SERVICE_POINT_TYPE_EMERGENCY = 1
+SERVICE_POINT_TYPE_COUNSELING = 2
+
+CLIENT = PREFIX + '.Client'
+CLIENT_PATH = PATH_PREFIX + '/Client'
+OBSERVER = PREFIX + '.Client.Observer'
+APPROVER = PREFIX + '.Client.Approver'
+HANDLER = PREFIX + '.Client.Handler'
+CLIENT_IFACE_REQUESTS = CLIENT + '.Interface.Requests'
+
+ACCOUNT = PREFIX + '.Account'
+ACCOUNT_IFACE_AVATAR = ACCOUNT + '.Interface.Avatar'
+ACCOUNT_IFACE_ADDRESSING = ACCOUNT + '.Interface.Addressing'
+ACCOUNT_IFACE_HIDDEN = ACCOUNT + '.Interface.Hidden.DRAFT1'
+ACCOUNT_IFACE_NOKIA_CONDITIONS = 'com.nokia.Account.Interface.Conditions'
+ACCOUNT_PATH_PREFIX = PATH_PREFIX + '/Account/'
+
+AM = PREFIX + '.AccountManager'
+AM_IFACE_HIDDEN = AM + '.Interface.Hidden.DRAFT1'
+AM_PATH = PATH_PREFIX + '/AccountManager'
+
+CR = PREFIX + '.ChannelRequest'
+CDO = PREFIX + '.ChannelDispatchOperation'
+
+CD = PREFIX + '.ChannelDispatcher'
+CD_IFACE_MESSAGES1 = PREFIX + '.ChannelDispatcher.Interface.Messages1'
+CD_IFACE_OP_LIST = PREFIX + '.ChannelDispatcher.Interface.OperationList'
+CD_PATH = PATH_PREFIX + '/ChannelDispatcher'
+CD_REDISPATCH = CD + '.Interface.Redispatch.DRAFT'
+
+MC = PREFIX + '.MissionControl5'
+MC_PATH = PATH_PREFIX + '/MissionControl5'
+
+DTMF_CURRENTLY_SENDING_TONES = CHANNEL_IFACE_DTMF + '.CurrentlySendingTones'
+DTMF_INITIAL_TONES = CHANNEL_IFACE_DTMF + '.InitialTones'
+DTMF_DEFERRED_TONES = CHANNEL_IFACE_DTMF + '.DeferredTones'
+
+TESTDOT = PREFIX + ".Test."
+TESTSLASH = PATH_PREFIX + "/Test/"
+
+TEST_DBUS_ACCOUNT_SERVICE = TESTDOT + "DBusAccountService"
+TEST_DBUS_ACCOUNT_SERVICE_PATH = TESTSLASH + "DBusAccountService"
+TEST_DBUS_ACCOUNT_SERVICE_IFACE = TEST_DBUS_ACCOUNT_SERVICE
+
+TEST_DBUS_ACCOUNT_PLUGIN_PATH = TESTSLASH + "DBusAccountPlugin"
+TEST_DBUS_ACCOUNT_PLUGIN_IFACE = TESTDOT + "DBusAccountPlugin"
+
+# Channel.Interface.SMS
+SMS_FLASH = CHANNEL_IFACE_SMS + '.Flash'
+SMS_CHANNEL = CHANNEL_IFACE_SMS + '.SMSChannel'
