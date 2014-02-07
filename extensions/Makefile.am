@@ -3,7 +3,6 @@ tools_dir = $(top_srcdir)/tools
 EXTRA_DIST = \
     connection.xml \
     Salut_Plugin_Test.xml \
-    Connection_Future.xml \
     all.xml
 
 noinst_LTLIBRARIES = libsalut-extensions.la

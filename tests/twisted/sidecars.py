@@ -18,7 +18,7 @@ if not PLUGINS_ENABLED:
 def test(q, bus, conn):
     # Request a sidecar thate we support before we're connected; it should just
     # wait around until we're connected.
-    call_async(q, conn.Future, 'EnsureSidecar', TEST_PLUGIN_IFACE)
+    call_async(q, conn.Sidecars1, 'EnsureSidecar', TEST_PLUGIN_IFACE)
 
     conn.Connect()
 
@@ -30,18 +30,18 @@ def test(q, bus, conn):
         assertEquals({}, props)
 
         # We should get the same sidecar if we request it again
-        path2, props2 = conn.Future.EnsureSidecar(TEST_PLUGIN_IFACE)
+        path2, props2 = conn.Sidecars1.EnsureSidecar(TEST_PLUGIN_IFACE)
         assertEquals((path, props), (path2, props2))
     else:
         # Only now does it fail.
         q.expect('dbus-error', method='EnsureSidecar')
 
     # This is not a valid interface name
-    call_async(q, conn.Future, 'EnsureSidecar', 'not an interface')
+    call_async(q, conn.Sidecars1, 'EnsureSidecar', 'not an interface')
     q.expect('dbus-error', name=cs.INVALID_ARGUMENT)
 
     # The test plugin makes no reference to this interface.
-    call_async(q, conn.Future, 'EnsureSidecar', 'unsupported.sidecar')
+    call_async(q, conn.Sidecars1, 'EnsureSidecar', 'unsupported.sidecar')
     q.expect('dbus-error', name=cs.NOT_IMPLEMENTED)
 
     call_async(q, conn, 'Disconnect')
@@ -51,7 +51,7 @@ def test(q, bus, conn):
             args=[cs.CONN_STATUS_DISCONNECTED, cs.CSR_REQUESTED]),
         )
 
-    call_async(q, conn.Future, 'EnsureSidecar', 'zomg.what')
+    call_async(q, conn.Sidecars1, 'EnsureSidecar', 'zomg.what')
     # With older telepathy-glib this would be DISCONNECTED;
     # with newer telepathy-glib the Connection disappears from the bus
     # sooner, and you get UnknownMethod or something from dbus-glib.
