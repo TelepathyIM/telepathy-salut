@@ -5,7 +5,6 @@ EXTRA_DIST = \
     OLPC_Activity_Properties.xml \
     connection.xml \
     Salut_Plugin_Test.xml \
-    Connection_Future.xml \
     all.xml
 
 noinst_LTLIBRARIES = libsalut-extensions.la

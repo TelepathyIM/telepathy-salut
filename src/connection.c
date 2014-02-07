@@ -101,7 +101,7 @@ static void
 salut_plugin_connection_iface_init (SalutPluginConnectionInterface *iface,
     gpointer iface_data);
 
-static void salut_conn_future_iface_init (gpointer, gpointer);
+static void salut_conn_sidecars_iface_init (gpointer, gpointer);
 
 #define DISCONNECT_TIMEOUT 5
 
@@ -125,8 +125,8 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
       salut_conn_contact_caps_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_INFO,
         salut_conn_contact_info_iface_init);
-    G_IMPLEMENT_INTERFACE (SALUT_TYPE_SVC_CONNECTION_FUTURE,
-      salut_conn_future_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_SIDECARS1,
+      salut_conn_sidecars_iface_init);
     G_IMPLEMENT_INTERFACE (SALUT_TYPE_PLUGIN_CONNECTION,
       salut_plugin_connection_iface_init);
 #ifdef ENABLE_OLPC
@@ -721,7 +721,7 @@ static const gchar *interfaces [] = {
   TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
   TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO,
   TP_IFACE_CONNECTION_INTERFACE_CONTACT_LIST,
-  SALUT_IFACE_CONNECTION_FUTURE,
+  TP_IFACE_CONNECTION_INTERFACE_SIDECARS1,
 #ifdef ENABLE_OLPC
   SALUT_IFACE_OLPC_BUDDY_INFO,
   SALUT_IFACE_OLPC_ACTIVITY_PROPERTIES,
@@ -3965,7 +3965,7 @@ create_sidecar_cb (
       GList *l;
 
       for (l = contexts; l != NULL; l = l->next)
-        salut_svc_connection_future_return_from_ensure_sidecar (l->data,
+        tp_svc_connection_interface_sidecars1_return_from_ensure_sidecar (l->data,
             path, props);
 
       g_hash_table_unref (props);
@@ -3987,7 +3987,7 @@ out:
 
 static void
 salut_connection_ensure_sidecar (
-    SalutSvcConnectionFUTURE *iface,
+    TpSvcConnectionInterfaceSidecars1 *iface,
     const gchar *sidecar_iface,
     DBusGMethodInvocation *context)
 {
@@ -4026,7 +4026,7 @@ salut_connection_ensure_sidecar (
       GHashTable *props = salut_sidecar_get_immutable_properties (sidecar);
 
       DEBUG ("sidecar %s already exists at %s", sidecar_iface, path);
-      salut_svc_connection_future_return_from_ensure_sidecar (context, path,
+      tp_svc_connection_interface_sidecars1_return_from_ensure_sidecar (context, path,
           props);
 
       g_free (path);
@@ -4130,13 +4130,13 @@ sidecars_conn_status_changed_cb (
 }
 
 static void
-salut_conn_future_iface_init (gpointer g_iface,
+salut_conn_sidecars_iface_init (gpointer g_iface,
     gpointer iface_data)
 {
-  SalutSvcConnectionFUTUREClass *klass = g_iface;
+  TpSvcConnectionInterfaceSidecars1Class *klass = g_iface;
 
 #define IMPLEMENT(x) \
-    salut_svc_connection_future_implement_##x (\
+    tp_svc_connection_interface_sidecars1_implement_##x (\
     klass, salut_connection_##x)
   IMPLEMENT(ensure_sidecar);
 #undef IMPLEMENT
