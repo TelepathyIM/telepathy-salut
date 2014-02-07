@@ -1,11 +1,11 @@
 /* This is pretty horrible. If we don't use a symbol in a wocky object
  * from its static library then libtool will not include said object
  * from the binary, so we can't use any symbols from that object in a
- * plugin.
+ * plugin. The extensions/ static library has the same problem.
  *
  * This is a hack that X does. They can generate their file though as
  * they have an _X_EXPORT macro. This'll all disappear when Wocky
- * becomes a shared library...
+ * becomes a shared library... except for the extensions/ bit.
  *
  * http://cgit.freedesktop.org/xorg/xserver/tree/hw/xfree86/loader/sdksyms.sh
  */
@@ -15,6 +15,8 @@
 
 /* First include all the public headers. */
 #include <wocky/wocky.h>
+
+#include <extensions/extensions.h>
 
 /* Reference one symbol from each of the above headers to include each
  * object in the final binary. */
@@ -62,6 +64,7 @@ static void *hacks[] = {
   wocky_xmpp_error_quark,
   wocky_xmpp_reader_get_type,
   wocky_xmpp_writer_get_type,
+  salut_svc_salut_plugin_test_get_type,
   NULL,
 };
 
