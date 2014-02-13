@@ -747,10 +747,10 @@ salut_tube_dbus_constructor (GType type,
   conn = SALUT_CONNECTION (tp_base_channel_get_connection (base));
   base_conn = TP_BASE_CONNECTION (conn);
   handles_repo = tp_base_connection_get_handles (base_conn,
-      cls->target_handle_type);
+      cls->target_entity_type);
 
   g_assert (priv->self_handle != 0);
-  if (cls->target_handle_type == TP_HANDLE_TYPE_ROOM)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_ROOM)
     {
       /*
        * We have to create an MUC bytestream that will be
@@ -918,7 +918,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1;
   base_class->get_interfaces = salut_tube_dbus_get_interfaces;
-  base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
+  base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
   base_class->close = salut_tube_dbus_close_dbus;
   base_class->fill_immutable_properties =
     salut_tube_dbus_fill_immutable_properties;
@@ -1052,7 +1052,7 @@ salut_tube_dbus_offer (SalutTubeDBus *self,
       return FALSE;
     }
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       /* TODO: we don't implement 1-1 D-Bus tube atm */
       ;
@@ -1097,7 +1097,7 @@ message_received (SalutTubeDBus *tube,
       return;
     }
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_ROOM)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_ROOM)
     {
       const gchar *destination;
       const gchar *sender_name;
@@ -1187,7 +1187,7 @@ data_received_cb (GibberBytestreamIface *stream,
   TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       tp_base_channel_get_connection (base),
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   TpHandle sender;
 
   sender = tp_handle_lookup (contact_repo, from, NULL, NULL);
@@ -1197,7 +1197,7 @@ data_received_cb (GibberBytestreamIface *stream,
       return;
     }
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       GString *buf = priv->reassembly_buffer;
 
@@ -1303,7 +1303,7 @@ data_received_cb (GibberBytestreamIface *stream,
 SalutTubeDBus *
 salut_tube_dbus_new (SalutConnection *conn,
                      TpHandle handle,
-                     TpHandleType handle_type,
+                     TpEntityType handle_type,
                      TpHandle self_handle,
                      GibberMucConnection *muc_connection,
                      TpHandle initiator,
@@ -1315,7 +1315,7 @@ salut_tube_dbus_new (SalutConnection *conn,
   SalutTubeDBus *tube;
   GType gtype = SALUT_TYPE_TUBE_DBUS;
 
-  if (handle_type == TP_HANDLE_TYPE_ROOM)
+  if (handle_type == TP_ENTITY_TYPE_ROOM)
     gtype = SALUT_TYPE_MUC_TUBE_DBUS;
 
   tube = g_object_new (gtype,
@@ -1357,7 +1357,7 @@ salut_tube_dbus_accept (SalutTubeIface *tube,
   if (state != GIBBER_BYTESTREAM_STATE_LOCAL_PENDING)
     return TRUE;
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       /* TODO: SI reply */
     }
@@ -1410,11 +1410,11 @@ salut_tube_dbus_add_name (SalutTubeDBus *self,
   TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
       tp_base_channel_get_connection (base),
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   GHashTable *added;
   GArray *removed;
 
-  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_ROOM);
+  g_assert (cls->target_entity_type == TP_ENTITY_TYPE_ROOM);
 
   if (g_hash_table_lookup (priv->dbus_names, GUINT_TO_POINTER (handle))
       != NULL)
@@ -1470,7 +1470,7 @@ salut_tube_dbus_remove_name (SalutTubeDBus *self,
   GHashTable *added;
   GArray *removed;
 
-  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_ROOM);
+  g_assert (cls->target_entity_type == TP_ENTITY_TYPE_ROOM);
 
   name = g_hash_table_lookup (priv->dbus_names, GUINT_TO_POINTER (handle));
   if (name == NULL)
@@ -1500,7 +1500,7 @@ salut_tube_dbus_handle_in_names (SalutTubeDBus *self,
   TpBaseChannel *base = TP_BASE_CHANNEL (self);
   TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
 
-  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_ROOM);
+  g_assert (cls->target_entity_type == TP_ENTITY_TYPE_ROOM);
 
   return (g_hash_table_lookup (priv->dbus_names, GUINT_TO_POINTER (handle))
       != NULL);

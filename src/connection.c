@@ -208,7 +208,7 @@ static void _salut_connection_disconnect (SalutConnection *self);
 
 static void
 salut_connection_create_handle_repos (TpBaseConnection *self,
-    TpHandleRepoIface *repos[TP_NUM_HANDLE_TYPES]);
+    TpHandleRepoIface *repos[TP_NUM_ENTITY_TYPES]);
 
 static GPtrArray *
 salut_connection_create_channel_managers (TpBaseConnection *self);
@@ -987,7 +987,7 @@ _self_established_cb (SalutSelf *s, gpointer data)
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
-      TP_BASE_CONNECTION (self), TP_HANDLE_TYPE_CONTACT);
+      TP_BASE_CONNECTION (self), TP_ENTITY_TYPE_CONTACT);
   GError *error = NULL;
 
   priv->self_established = TRUE;
@@ -1165,7 +1165,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base,
-    TP_HANDLE_TYPE_CONTACT);
+    TP_ENTITY_TYPE_CONTACT);
   const gchar *alias;
 
   if (handle == tp_base_connection_get_self_handle (base))
@@ -1209,7 +1209,7 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
   const gchar **aliases;
   GError *error = NULL;
   TpHandleRepoIface *contact_handles =
-      tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base, TP_ENTITY_TYPE_CONTACT);
 
   DEBUG ("Alias requested");
 
@@ -1479,7 +1479,7 @@ salut_connection_get_known_avatar_tokens (
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   handle_repo = tp_base_connection_get_handles (base,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
 
   if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
     {
@@ -1611,7 +1611,7 @@ salut_connection_request_avatars (
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
   handle_repo = tp_base_connection_get_handles (base,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
 
   if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
     {
@@ -1953,13 +1953,13 @@ handle_normalize_require_nonempty (TpHandleRepoIface *repo G_GNUC_UNUSED,
 /* Connection baseclass function implementations */
 static void
 salut_connection_create_handle_repos (TpBaseConnection *self,
-    TpHandleRepoIface *repos[TP_NUM_HANDLE_TYPES])
+    TpHandleRepoIface *repos[TP_NUM_ENTITY_TYPES])
 {
-  repos[TP_HANDLE_TYPE_CONTACT] = tp_dynamic_handle_repo_new
-      (TP_HANDLE_TYPE_CONTACT, handle_normalize_require_nonempty, NULL);
+  repos[TP_ENTITY_TYPE_CONTACT] = tp_dynamic_handle_repo_new
+      (TP_ENTITY_TYPE_CONTACT, handle_normalize_require_nonempty, NULL);
 
-  repos[TP_HANDLE_TYPE_ROOM] = tp_dynamic_handle_repo_new
-      (TP_HANDLE_TYPE_ROOM, handle_normalize_require_nonempty, NULL);
+  repos[TP_ENTITY_TYPE_ROOM] = tp_dynamic_handle_repo_new
+      (TP_ENTITY_TYPE_ROOM, handle_normalize_require_nonempty, NULL);
 }
 
 static void
@@ -1968,7 +1968,7 @@ _contact_manager_contact_change_cb (SalutContactManager *mgr,
 {
   SalutConnection *self = SALUT_CONNECTION(data);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (
-      TP_BASE_CONNECTION(self), TP_HANDLE_TYPE_CONTACT);
+      TP_BASE_CONNECTION(self), TP_ENTITY_TYPE_CONTACT);
   TpHandle handle;
 
   handle = tp_handle_lookup (handle_repo, contact->name, NULL, NULL);

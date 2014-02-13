@@ -288,7 +288,7 @@ salut_muc_channel_constructed (GObject *obj)
   TpBaseConnection *base_conn = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      base_conn, TP_HANDLE_TYPE_CONTACT);
+      base_conn, TP_ENTITY_TYPE_CONTACT);
   TpChannelTextMessageType types[NUM_SUPPORTED_MESSAGE_TYPES] = {
       TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
       TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
@@ -374,7 +374,7 @@ create_invitation (SalutMucChannel *self,
       base_chan);
   SalutConnection *conn = SALUT_CONNECTION (base_connection);
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_ROOM);
   WockyStanza *msg;
   WockyNode *invite_node;
   const gchar *target_id = tp_handle_inspect (room_repo,
@@ -675,7 +675,7 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
   base_class->get_interfaces = salut_muc_channel_get_interfaces;
-  base_class->target_handle_type = TP_HANDLE_TYPE_ROOM;
+  base_class->target_entity_type = TP_ENTITY_TYPE_ROOM;
   base_class->close = salut_muc_channel_close;
   base_class->fill_immutable_properties =
     salut_muc_channel_fill_immutable_properties;
@@ -817,7 +817,7 @@ salut_muc_channel_invited (SalutMucChannel *self, TpHandle inviter,
       TP_BASE_CHANNEL (self));
   TpHandle self_handle = tp_base_connection_get_self_handle (base_connection);
   TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_CONTACT);
   gboolean ret = TRUE;
 
   /* Got invited to this muc channel */
@@ -923,7 +923,7 @@ salut_muc_channel_remove_members (SalutMucChannel *self,
   TpBaseConnection *base_connection = tp_base_channel_get_connection (
       base_chan);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      base_connection, TP_HANDLE_TYPE_CONTACT);
+      base_connection, TP_ENTITY_TYPE_CONTACT);
   TpIntset *empty, *changes;
   guint i;
 
@@ -966,7 +966,7 @@ extract_tube_information (SalutMucChannel *self,
   TpBaseChannel *base = TP_BASE_CHANNEL (self);
   TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      base_conn, TP_HANDLE_TYPE_CONTACT);
+      base_conn, TP_ENTITY_TYPE_CONTACT);
 
   if (type != NULL)
     {
@@ -1062,7 +1062,7 @@ muc_channel_handle_tubes (SalutMucChannel *self,
   TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_conn,
-          TP_HANDLE_TYPE_CONTACT);
+          TP_ENTITY_TYPE_CONTACT);
   const gchar *sender;
   WockyStanzaType stanza_type;
   WockyStanzaSubType sub_type;
@@ -1249,7 +1249,7 @@ salut_muc_channel_received_stanza (GibberMucConnection *conn,
   TpBaseConnection *base_connection = tp_base_channel_get_connection (
       base_chan);
   TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_CONTACT);
 
   const gchar *from, *to, *body, *body_offset;
   TpChannelTextMessageType msgtype;
@@ -1476,7 +1476,7 @@ publish_tube_in_node (SalutMucChannel *self,
   TpBaseChannel *base = TP_BASE_CHANNEL (tube);
   TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      base_conn, TP_HANDLE_TYPE_CONTACT);
+      base_conn, TP_ENTITY_TYPE_CONTACT);
   WockyNode *parameters_node;
   GHashTable *parameters;
   SalutTubeType type;
@@ -1546,7 +1546,7 @@ update_tube_info (SalutMucChannel *self)
   TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
   SalutConnection *conn = SALUT_CONNECTION (base_conn);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-      base_conn, TP_HANDLE_TYPE_ROOM);
+      base_conn, TP_ENTITY_TYPE_ROOM);
   GHashTableIter iter;
   gpointer value;
   WockyStanza *msg;
@@ -1695,12 +1695,12 @@ create_new_tube (SalutMucChannel *self,
     {
     case SALUT_TUBE_TYPE_DBUS:
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (conn,
-              handle, TP_HANDLE_TYPE_ROOM, self_handle, priv->muc_connection,
+              handle, TP_ENTITY_TYPE_ROOM, self_handle, priv->muc_connection,
               initiator, service, parameters, tube_id, requested));
       break;
     case SALUT_TUBE_TYPE_STREAM:
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (conn,
-              handle, TP_HANDLE_TYPE_ROOM,
+              handle, TP_ENTITY_TYPE_ROOM,
               self_handle, initiator, FALSE, service,
               parameters, tube_id, portnum, iq_req, requested));
       break;

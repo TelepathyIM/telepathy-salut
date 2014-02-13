@@ -463,7 +463,7 @@ generate_stream_id (SalutTubeStream *self)
   TpBaseChannelClass *cls = TP_BASE_CHANNEL_GET_CLASS (base);
   gchar *stream_id;
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       stream_id = g_strdup_printf ("%lu-%u", (unsigned long) time (NULL),
           g_random_int ());
@@ -501,9 +501,9 @@ start_stream_initiation (SalutTubeStream *self,
   SalutConnection *conn = SALUT_CONNECTION (base_conn);
 
   contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   room_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_ROOM);
+      TP_ENTITY_TYPE_ROOM);
 
   jid = tp_handle_inspect (contact_repo, initiator);
 
@@ -518,7 +518,7 @@ start_stream_initiation (SalutTubeStream *self,
 
   id_str = g_strdup_printf ("%" G_GUINT64_FORMAT, priv->id);
 
-  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_ROOM);
+  g_assert (cls->target_entity_type == TP_ENTITY_TYPE_ROOM);
 
   /* FIXME: this needs standardizing */
   node = wocky_node_add_child_ns (si_node, "muc-stream",
@@ -596,7 +596,7 @@ start_stream_direct (SalutTubeStream *self,
   SalutContactManager *contact_mgr;
   GibberBytestreamIface *bytestream;
 
-  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT);
+  g_assert (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT);
 
   g_object_get (tp_base_channel_get_connection (base),
       "contact-manager", &contact_mgr,
@@ -695,7 +695,7 @@ local_new_connection_cb (GibberListener *listener,
    * Streams in P2P tubes are established directly with a TCP connection. We
    * use SalutDirectBytestreamManager.
    */
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       if (!start_stream_direct (self, transport, NULL))
         {
@@ -1321,7 +1321,7 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1;
   base_class->get_interfaces = salut_tube_stream_get_interfaces;
-  base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
+  base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
   base_class->close = salut_tube_stream_close_dbus;
   base_class->fill_immutable_properties =
     salut_tube_stream_fill_immutable_properties;
@@ -1509,7 +1509,7 @@ data_received_cb (GibberBytestreamIface *bytestream,
 SalutTubeStream *
 salut_tube_stream_new (SalutConnection *conn,
                        TpHandle handle,
-                       TpHandleType handle_type,
+                       TpEntityType handle_type,
                        TpHandle self_handle,
                        TpHandle initiator,
                        gboolean offered,
@@ -1523,7 +1523,7 @@ salut_tube_stream_new (SalutConnection *conn,
   SalutTubeStream *obj;
   GType gtype = SALUT_TYPE_TUBE_STREAM;
 
-  if (handle_type == TP_HANDLE_TYPE_ROOM)
+  if (handle_type == TP_ENTITY_TYPE_ROOM)
     gtype = SALUT_TYPE_MUC_TUBE_STREAM;
 
   obj = g_object_new (gtype,
@@ -1569,7 +1569,7 @@ salut_tube_stream_accept (SalutTubeIface *tube,
       return FALSE;
     }
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       reply = wocky_stanza_build_iq_result (priv->iq_req, NULL);
       wocky_porter_send (conn->porter, reply);
@@ -1643,7 +1643,7 @@ contact_new_connection_cb (GibberListener *listener,
   SalutContactManager *contact_mgr;
   SalutContact *contact;
 
-  g_assert (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT);
+  g_assert (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT);
 
   g_object_get (conn,
       "contact-manager", &contact_mgr,
@@ -1744,12 +1744,12 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
 
   /* do not send the close stanza if the tube was closed due to the remote
    * contact */
-  if (!closed_remotely && cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (!closed_remotely && cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       WockyStanza *stanza;
       const gchar *jid_from;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          base_conn, TP_HANDLE_TYPE_CONTACT);
+          base_conn, TP_ENTITY_TYPE_CONTACT);
       gchar *tube_id_str;
       SalutContactManager *contact_mgr;
       SalutContact *contact;
@@ -1781,7 +1781,7 @@ salut_tube_stream_close (SalutTubeIface *tube, gboolean closed_remotely)
       g_object_unref (contact_mgr);
     }
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       if (priv->contact_listener != NULL)
         {
@@ -1841,7 +1841,7 @@ salut_tube_stream_add_bytestream (SalutTubeIface *tube,
       TpHandle contact;
       gchar *peer_id;
       TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-          base_conn, TP_HANDLE_TYPE_CONTACT);
+          base_conn, TP_ENTITY_TYPE_CONTACT);
 
       if (priv->state == TP_TUBE_CHANNEL_STATE_REMOTE_PENDING)
         {
@@ -2168,7 +2168,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,
 
 #if 0
   /* TODO: add a property "muc" and set it at initialization */
-  if (cls->target_handle_type == TP_HANDLE_TYPE_ROOM)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_ROOM)
     salut_muc_channel_send_presence (self->muc, NULL);
 #endif
 
@@ -2230,7 +2230,7 @@ salut_tube_stream_offer (SalutTubeStream *self,
 
   g_assert (priv->state == TP_TUBE_CHANNEL_STATE_NOT_OFFERED);
 
-  if (cls->target_handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (cls->target_entity_type == TP_ENTITY_TYPE_CONTACT)
     {
       priv->state = TP_TUBE_CHANNEL_STATE_REMOTE_PENDING;
 

@@ -31,7 +31,7 @@ def test(q, bus, conn):
             dbus_interface='org.freedesktop.DBus.Properties')
     assert ({tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_TEXT,
-             tp_name_prefix + '.Channel.TargetHandleType': cs.HT_CONTACT,
+             tp_name_prefix + '.Channel.TargetEntityType': cs.HT_CONTACT,
              },
              [tp_name_prefix + '.Channel.TargetHandle',
               tp_name_prefix + '.Channel.TargetID'],
@@ -44,7 +44,7 @@ def test(q, bus, conn):
     call_async(q, requestotron, 'CreateChannel',
             { tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_TEXT,
-              tp_name_prefix + '.Channel.TargetHandleType': cs.HT_CONTACT,
+              tp_name_prefix + '.Channel.TargetEntityType': cs.HT_CONTACT,
               tp_name_prefix + '.Channel.TargetID': contact_name,
               })
 
@@ -58,7 +58,7 @@ def test(q, bus, conn):
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
             cs.CHANNEL_TYPE_TEXT
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == cs.HT_CONTACT
+    assert props[tp_name_prefix + '.Channel.TargetEntityType'] == cs.HT_CONTACT
     assert props[tp_name_prefix + '.Channel.TargetHandle'] == handle
     assert props[tp_name_prefix + '.Channel.TargetID'] == contact_name
     assert props[tp_name_prefix + '.Channel.Requested'] == True
@@ -74,7 +74,7 @@ def test(q, bus, conn):
     yours, ensured_path, ensured_props = requestotron.EnsureChannel(
             { tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_TEXT,
-              tp_name_prefix + '.Channel.TargetHandleType': cs.HT_CONTACT,
+              tp_name_prefix + '.Channel.TargetEntityType': cs.HT_CONTACT,
               tp_name_prefix + '.Channel.TargetHandle': handle,
               })
 

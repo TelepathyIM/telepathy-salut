@@ -102,7 +102,7 @@ message_stanza_callback (WockyPorter *porter,
   TpHandle handle;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
-       TP_HANDLE_TYPE_CONTACT);
+       TP_ENTITY_TYPE_CONTACT);
   SalutContact *contact;
 
   /* make sure we can support this kind of ft */
@@ -288,7 +288,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
   SalutFileTransferChannel *chan;
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_CONTACT);
   TpHandle handle;
   const gchar *content_type, *filename, *content_hash, *description;
   guint64 size, date, initial_offset;
@@ -309,7 +309,7 @@ salut_ft_manager_handle_request (TpChannelManager *manager,
 
   /* And only contact handles */
   if (tp_asv_get_uint32 (request_properties,
-        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+        TP_IFACE_CHANNEL ".TargetEntityType", NULL) != TP_ENTITY_TYPE_CONTACT)
     return FALSE;
 
   handle = tp_asv_get_uint32 (request_properties,
@@ -472,7 +472,7 @@ error:
  * salut_ft_manager_type_foreach_channel_class */
 static const gchar * const file_transfer_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
-    TP_IFACE_CHANNEL ".TargetHandleType",
+    TP_IFACE_CHANNEL ".TargetEntityType",
     NULL
 };
 
@@ -528,8 +528,8 @@ salut_ft_manager_type_foreach_channel_class (GType type,
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType" , value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
+  g_value_set_uint (value, TP_ENTITY_TYPE_CONTACT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetEntityType", value);
 
   func (type, table, file_transfer_channel_allowed_properties_with_both_metadata_props,
       user_data);
@@ -585,7 +585,7 @@ add_file_transfer_channel_class (GPtrArray *arr,
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
-  GValue *target_handle_type_value;
+  GValue *target_entity_type_value;
   GValue *service_name_value;
   const gchar * const *allowed_properties;
 
@@ -602,10 +602,10 @@ add_file_transfer_channel_class (GPtrArray *arr,
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
-  target_handle_type_value = tp_g_value_slice_new_uint (
-      TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetHandleType",
-      target_handle_type_value);
+  target_entity_type_value = tp_g_value_slice_new_uint (
+      TP_ENTITY_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetEntityType",
+      target_entity_type_value);
 
   if (service_name_str != NULL)
     {
@@ -694,8 +694,8 @@ salut_ft_manager_represent_client (
         continue;
 
       if (tp_asv_get_uint32 (channel_class,
-            TP_IFACE_CHANNEL ".TargetHandleType", NULL)
-          != TP_HANDLE_TYPE_CONTACT)
+            TP_IFACE_CHANNEL ".TargetEntityType", NULL)
+          != TP_ENTITY_TYPE_CONTACT)
         continue;
 
       DEBUG ("client %s supports file transfer", client_name);

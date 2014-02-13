@@ -330,7 +330,7 @@ salut_file_transfer_channel_constructed (GObject *obj)
   TpBaseChannel *base = TP_BASE_CHANNEL (obj);
   TpBaseConnection *base_conn = tp_base_channel_get_connection (base);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      base_conn, TP_HANDLE_TYPE_CONTACT);
+      base_conn, TP_ENTITY_TYPE_CONTACT);
   SalutConnection *conn = SALUT_CONNECTION (base_conn);
   GArray *unix_access;
   GArray *ip_access;
@@ -530,7 +530,7 @@ salut_file_transfer_channel_class_init (
   object_class->set_property = salut_file_transfer_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER1;
-  base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
+  base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
   base_class->close = salut_file_transfer_channel_close;
   base_class->fill_immutable_properties =
     salut_file_transfer_channel_fill_immutable_properties;

@@ -239,7 +239,7 @@ salut_im_channel_class_init (SalutImChannelClass *salut_im_channel_class)
   object_class->set_property = salut_im_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
-  base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
+  base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
   base_class->close = salut_im_channel_close;
   base_class->fill_immutable_properties =
     salut_im_channel_fill_immutable_properties;

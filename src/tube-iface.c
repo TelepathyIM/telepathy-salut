@@ -115,7 +115,7 @@ salut_tube_iface_base_init (gpointer klass)
       param_spec = g_param_spec_uint (
           "handle-type",
           "Handle type",
-          "The TpHandleType of the handle associated with the tubes channel"
+          "The TpEntityType of the handle associated with the tubes channel"
           "that owns this D-Bus tube object.",
           0, G_MAXUINT32, 0,
           G_PARAM_CONSTRUCT_ONLY |

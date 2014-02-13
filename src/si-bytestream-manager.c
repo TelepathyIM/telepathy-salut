@@ -259,9 +259,9 @@ si_request_cb (WockyPorter *porter,
   SalutSiBytestreamManagerPrivate *priv =
     SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+      (TpBaseConnection *) priv->connection, TP_ENTITY_TYPE_CONTACT);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+      (TpBaseConnection *) priv->connection, TP_ENTITY_TYPE_ROOM);
   TpHandle peer_handle;
   GibberBytestreamIface *bytestream = NULL;
   WockyNode *top_node = wocky_stanza_get_top_node (stanza);
@@ -653,7 +653,7 @@ check_bytestream_oob_peer_addr (GibberBytestreamOOB *bytestream,
   SalutSiBytestreamManagerPrivate *priv = SALUT_SI_BYTESTREAM_MANAGER_GET_PRIVATE (
       self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_CONTACT);
+      (TpBaseConnection *) priv->connection, TP_ENTITY_TYPE_CONTACT);
   TpHandle handle;
   SalutContactManager *contact_mgr;
   SalutContact *contact;

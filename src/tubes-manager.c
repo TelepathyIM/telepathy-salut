@@ -289,7 +289,7 @@ iq_tube_request_cb (WockyPorter *porter,
   SalutTubesManager *self = SALUT_TUBES_MANAGER (user_data);
   SalutTubesManagerPrivate *priv = SALUT_TUBES_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+      (TpBaseConnection *) priv->conn, TP_ENTITY_TYPE_CONTACT);
 
   /* tube informations */
   const gchar *service;
@@ -556,7 +556,7 @@ salut_tubes_manager_foreach_channel (TpChannelManager *manager,
 
 static const gchar * const tubes_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
-    TP_IFACE_CHANNEL ".TargetHandleType",
+    TP_IFACE_CHANNEL ".TargetEntityType",
     NULL
 };
 
@@ -595,8 +595,8 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
       value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+  g_value_set_uint (value, TP_ENTITY_TYPE_CONTACT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetEntityType",
       value);
 
   func (type, table, salut_tube_stream_channel_get_allowed_properties (),
@@ -616,8 +616,8 @@ salut_tubes_manager_type_foreach_channel_class (GType type,
       value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+  g_value_set_uint (value, TP_ENTITY_TYPE_CONTACT);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetEntityType",
       value);
 
   func (type, table, dbus_tube_channel_allowed_properties, user_data);
@@ -723,14 +723,14 @@ create_new_tube (SalutTubesManager *self,
   if (type == SALUT_TUBE_TYPE_STREAM)
     {
       tube = SALUT_TUBE_IFACE (salut_tube_stream_new (priv->conn,
-              handle, TP_HANDLE_TYPE_CONTACT,
+              handle, TP_ENTITY_TYPE_CONTACT,
               self_handle, self_handle, FALSE, service,
               parameters, tube_id, portnum, iq_req, TRUE));
     }
   else if (type == SALUT_TUBE_TYPE_DBUS)
     {
       tube = SALUT_TUBE_IFACE (salut_tube_dbus_new (priv->conn,
-              handle, TP_HANDLE_TYPE_CONTACT, self_handle, NULL,
+              handle, TP_ENTITY_TYPE_CONTACT, self_handle, NULL,
               self_handle, service, parameters, tube_id, TRUE));
     }
   else
@@ -810,7 +810,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
       SALUT_TYPE_TUBES_MANAGER, SalutTubesManagerPrivate);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      base_conn, TP_HANDLE_TYPE_CONTACT);
+      base_conn, TP_ENTITY_TYPE_CONTACT);
   TpHandle handle;
   GError *error = NULL;
   const gchar *channel_type;
@@ -819,7 +819,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
   GSList *tokens = NULL;
 
   if (tp_asv_get_uint32 (request_properties,
-        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+        TP_IFACE_CHANNEL ".TargetEntityType", NULL) != TP_ENTITY_TYPE_CONTACT)
     return FALSE;
 
   channel_type = tp_asv_get_string (request_properties,
@@ -985,7 +985,7 @@ add_service_to_array (const gchar *service,
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
-  GValue *target_handle_type_value;
+  GValue *target_entity_type_value;
   gchar *tube_allowed_properties[] =
       {
         TP_IFACE_CHANNEL ".TargetHandle",
@@ -1012,21 +1012,21 @@ add_service_to_array (const gchar *service,
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
-  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  target_entity_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_entity_type_value, TP_ENTITY_TYPE_CONTACT);
   g_hash_table_insert (fixed_properties,
-      TP_IFACE_CHANNEL ".TargetHandleType", target_handle_type_value);
+      TP_IFACE_CHANNEL ".TargetEntityType", target_entity_type_value);
 
-  target_handle_type_value = tp_g_value_slice_new (G_TYPE_STRING);
-  g_value_set_string (target_handle_type_value, service);
+  target_entity_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+  g_value_set_string (target_entity_type_value, service);
   if (type == SALUT_TUBE_TYPE_STREAM)
     g_hash_table_insert (fixed_properties,
         TP_PROP_CHANNEL_TYPE_STREAM_TUBE1_SERVICE,
-        target_handle_type_value);
+        target_entity_type_value);
   else
     g_hash_table_insert (fixed_properties,
         TP_PROP_CHANNEL_TYPE_DBUS_TUBE1_SERVICE_NAME,
-        target_handle_type_value);
+        target_entity_type_value);
 
   dbus_g_type_struct_set (&monster,
       0, fixed_properties,
@@ -1044,7 +1044,7 @@ add_generic_tube_caps (GPtrArray *arr)
   GValue monster1 = {0,};
   GHashTable *fixed_properties;
   GValue *channel_type_value;
-  GValue *target_handle_type_value;
+  GValue *target_entity_type_value;
 
   /* StreamTube */
   g_value_init (&monster1, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
@@ -1062,10 +1062,10 @@ add_generic_tube_caps (GPtrArray *arr)
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
-  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  target_entity_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_entity_type_value, TP_ENTITY_TYPE_CONTACT);
   g_hash_table_insert (fixed_properties,
-      TP_IFACE_CHANNEL ".TargetHandleType", target_handle_type_value);
+      TP_IFACE_CHANNEL ".TargetEntityType", target_entity_type_value);
 
   dbus_g_type_struct_set (&monster1,
       0, fixed_properties,
@@ -1093,10 +1093,10 @@ add_generic_tube_caps (GPtrArray *arr)
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
-  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+  target_entity_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_entity_type_value, TP_ENTITY_TYPE_CONTACT);
   g_hash_table_insert (fixed_properties,
-      TP_IFACE_CHANNEL ".TargetHandleType", target_handle_type_value);
+      TP_IFACE_CHANNEL ".TargetEntityType", target_entity_type_value);
 
   dbus_g_type_struct_set (&monster2,
       0, fixed_properties,
@@ -1177,7 +1177,7 @@ gabble_private_tubes_factory_add_cap (GabbleCapsChannelManager *manager,
     return;
 
   if (tp_asv_get_uint32 (cap,
-        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+        TP_IFACE_CHANNEL ".TargetEntityType", NULL) != TP_ENTITY_TYPE_CONTACT)
     return;
 
   if (!tp_strdiff (channel_type, TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1))

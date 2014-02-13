@@ -96,7 +96,7 @@ salut_contact_constructor (GType type,
   g_assert (self->name != NULL);
 
   contact_repo = tp_base_connection_get_handles
-      ((TpBaseConnection *) self->connection, TP_HANDLE_TYPE_CONTACT);
+      ((TpBaseConnection *) self->connection, TP_ENTITY_TYPE_CONTACT);
 
   self->handle = tp_handle_ensure (contact_repo, self->name, NULL, NULL);
 

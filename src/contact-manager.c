@@ -176,7 +176,7 @@ salut_contact_manager_constructed (GObject *obj)
   self->connection = g_object_ref (base_connection);
 
   contact_repo = tp_base_connection_get_handles (base_connection,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   priv->handles = tp_handle_set_new (contact_repo);
 
   priv->status_changed_id = g_signal_connect (self->connection,
@@ -402,7 +402,7 @@ salut_contact_manager_get_contact (SalutContactManager *mgr, TpHandle handle)
     return NULL;
 
   handle_repo = tp_base_connection_get_handles (
-      TP_BASE_CONNECTION (mgr->connection), TP_HANDLE_TYPE_CONTACT);
+      TP_BASE_CONNECTION (mgr->connection), TP_ENTITY_TYPE_CONTACT);
   name = tp_handle_inspect (handle_repo, handle);
 
   g_return_val_if_fail (name, NULL);

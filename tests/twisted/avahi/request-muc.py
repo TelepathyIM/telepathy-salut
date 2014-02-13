@@ -26,7 +26,7 @@ def test(q, bus, conn):
             dbus_interface='org.freedesktop.DBus.Properties')
     assert ({tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_TEXT,
-             tp_name_prefix + '.Channel.TargetHandleType': cs.HT_ROOM,
+             tp_name_prefix + '.Channel.TargetEntityType': cs.HT_ROOM,
              },
              [tp_name_prefix + '.Channel.TargetHandle',
               tp_name_prefix + '.Channel.TargetID'],
@@ -40,7 +40,7 @@ def test(q, bus, conn):
     call_async(q, requestotron, 'CreateChannel',
             { tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_TEXT,
-              tp_name_prefix + '.Channel.TargetHandleType': cs.HT_ROOM,
+              tp_name_prefix + '.Channel.TargetEntityType': cs.HT_ROOM,
               tp_name_prefix + '.Channel.TargetID': 'my-second-room',
               })
 
@@ -54,7 +54,7 @@ def test(q, bus, conn):
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
             cs.CHANNEL_TYPE_TEXT
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == cs.HT_ROOM
+    assert props[tp_name_prefix + '.Channel.TargetEntityType'] == cs.HT_ROOM
     assert props[tp_name_prefix + '.Channel.TargetID'] == 'my-second-room'
     assert props[tp_name_prefix + '.Channel.Requested'] == True
     assert props[tp_name_prefix + '.Channel.InitiatorHandle'] \
@@ -70,7 +70,7 @@ def test(q, bus, conn):
     yours, ensured_path, ensured_props = ret.value = requestotron.EnsureChannel(
             { tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_TEXT,
-              tp_name_prefix + '.Channel.TargetHandleType': cs.HT_ROOM,
+              tp_name_prefix + '.Channel.TargetEntityType': cs.HT_ROOM,
               tp_name_prefix + '.Channel.TargetHandle': handle,
               })
 

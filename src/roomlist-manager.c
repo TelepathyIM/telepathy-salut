@@ -281,7 +281,7 @@ salut_roomlist_manager_foreach_channel (TpChannelManager *iface,
 
 static const gchar * const roomlist_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
-    TP_IFACE_CHANNEL ".TargetHandleType",
+    TP_IFACE_CHANNEL ".TargetEntityType",
     NULL
 };
 
@@ -306,8 +306,8 @@ salut_roomlist_manager_type_foreach_channel_class (GType type,
       channel_type_value);
 
   handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_NONE);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+  g_value_set_uint (handle_type_value, TP_ENTITY_TYPE_NONE);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetEntityType",
       handle_type_value);
 
   func (type, table, roomlist_channel_allowed_properties,
@@ -396,7 +396,7 @@ salut_roomlist_manager_request (TpChannelManager *manager,
     return FALSE;
 
   if (tp_asv_get_uint32 (request_properties,
-       TP_IFACE_CHANNEL ".TargetHandleType", NULL) != 0)
+       TP_IFACE_CHANNEL ".TargetEntityType", NULL) != 0)
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "RoomList channels can't have a target handle");
@@ -514,7 +514,7 @@ salut_roomlist_manager_room_removed (SalutRoomlistManager *self,
   SalutRoomlistManagerPrivate *priv = SALUT_ROOMLIST_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_ROOM);
   TpHandle handle;
   SalutMucChannel *muc;
   SalutMucManager *muc_manager;

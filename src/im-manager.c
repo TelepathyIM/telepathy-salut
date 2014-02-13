@@ -99,7 +99,7 @@ message_stanza_callback (WockyPorter *porter,
   TpHandle handle;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo = tp_base_connection_get_handles (base_conn,
-       TP_HANDLE_TYPE_CONTACT);
+       TP_ENTITY_TYPE_CONTACT);
   SalutContact *contact;
 
   contact = SALUT_CONTACT (wocky_stanza_get_from_contact (stanza));
@@ -338,7 +338,7 @@ salut_im_manager_foreach_channel (TpChannelManager *iface,
 
 static const gchar * const im_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
-    TP_IFACE_CHANNEL ".TargetHandleType",
+    TP_IFACE_CHANNEL ".TargetEntityType",
     NULL
 };
 
@@ -364,7 +364,7 @@ salut_im_manager_type_foreach_channel_class (GType type,
       value);
 
   value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
+  g_value_set_uint (value, TP_ENTITY_TYPE_CONTACT);
   g_hash_table_insert (table, (gchar *) im_channel_fixed_properties[1],
       value);
 
@@ -383,7 +383,7 @@ salut_im_manager_requestotron (SalutImManager *self,
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *base_conn = (TpBaseConnection *) priv->connection;
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-      base_conn, TP_HANDLE_TYPE_CONTACT);
+      base_conn, TP_ENTITY_TYPE_CONTACT);
   TpHandle handle;
   GError *error = NULL;
   TpExportableChannel *channel;
@@ -393,7 +393,7 @@ salut_im_manager_requestotron (SalutImManager *self,
     return FALSE;
 
   if (tp_asv_get_uint32 (request_properties,
-        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+        TP_IFACE_CHANNEL ".TargetEntityType", NULL) != TP_ENTITY_TYPE_CONTACT)
     return FALSE;
 
   handle = tp_asv_get_uint32 (request_properties,
@@ -513,7 +513,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *handle_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_CONTACT);
   SalutImChannel *chan;
   SalutContact *contact;
   const gchar *name;
@@ -576,7 +576,7 @@ salut_im_manager_add_contact_caps (GPtrArray *arr)
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
-  GValue *target_handle_type_value;
+  GValue *target_entity_type_value;
   gchar *text_allowed_properties[] =
       {
         TP_IFACE_CHANNEL ".TargetHandle",
@@ -596,10 +596,10 @@ salut_im_manager_add_contact_caps (GPtrArray *arr)
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
-  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetHandleType",
-      target_handle_type_value);
+  target_entity_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_entity_type_value, TP_ENTITY_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetEntityType",
+      target_entity_type_value);
 
   dbus_g_type_struct_set (&monster,
       0, fixed_properties,

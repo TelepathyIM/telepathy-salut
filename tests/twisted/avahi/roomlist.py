@@ -26,7 +26,7 @@ def test(q, bus, conn):
 
     assert ({tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_ROOM_LIST,
-             tp_name_prefix + '.Channel.TargetHandleType': 0,
+             tp_name_prefix + '.Channel.TargetEntityType': 0,
              },
              [],
              ) in properties.get('RequestableChannelClasses'),\
@@ -39,7 +39,7 @@ def test(q, bus, conn):
     call_async(q, requestotron, 'CreateChannel',
             { tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_ROOM_LIST,
-              tp_name_prefix + '.Channel.TargetHandleType': 0,
+              tp_name_prefix + '.Channel.TargetEntityType': 0,
               })
 
     ret, new_sig = q.expect_many(
@@ -52,7 +52,7 @@ def test(q, bus, conn):
     props = ret.value[1]
     assert props[tp_name_prefix + '.Channel.ChannelType'] ==\
             cs.CHANNEL_TYPE_ROOM_LIST
-    assert props[tp_name_prefix + '.Channel.TargetHandleType'] == 0
+    assert props[tp_name_prefix + '.Channel.TargetEntityType'] == 0
     assert props[tp_name_prefix + '.Channel.TargetHandle'] == 0
     assert props[tp_name_prefix + '.Channel.TargetID'] == ''
     assert props[tp_name_prefix + '.Channel.Requested'] == True
@@ -71,7 +71,7 @@ def test(q, bus, conn):
     yours, ensured_path, ensured_props = requestotron.EnsureChannel(
             { tp_name_prefix + '.Channel.ChannelType':
                 cs.CHANNEL_TYPE_ROOM_LIST,
-              tp_name_prefix + '.Channel.TargetHandleType': 0,
+              tp_name_prefix + '.Channel.TargetEntityType': 0,
               })
 
     assert not yours

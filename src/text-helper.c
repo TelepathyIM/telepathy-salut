@@ -322,7 +322,7 @@ text_helper_report_delivery_error (TpSvcChannel *self,
 
   message = tp_cm_message_new (base_conn, 1);
 
-  if (handle_type == TP_HANDLE_TYPE_CONTACT)
+  if (handle_type == TP_ENTITY_TYPE_CONTACT)
     tp_cm_message_set_sender (message, handle);
 
   tp_message_set_uint32 (message, 0, "message-type",

@@ -252,7 +252,7 @@ salut_conn_contact_info_request_contact_info (
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandleRepoIface *contacts_repo =
-      tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base, TP_ENTITY_TYPE_CONTACT);
   GError *error = NULL;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (TP_BASE_CONNECTION (iface),

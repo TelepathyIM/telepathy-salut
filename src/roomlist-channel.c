@@ -128,7 +128,7 @@ salut_roomlist_channel_class_init (
   object_class->finalize = salut_roomlist_channel_finalize;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_ROOM_LIST1;
-  base_class->target_handle_type = TP_HANDLE_TYPE_NONE;
+  base_class->target_entity_type = TP_ENTITY_TYPE_NONE;
   base_class->fill_immutable_properties =
     salut_roomlist_channel_fill_immutable_properties;
   base_class->close = tp_base_channel_destroyed;
@@ -225,7 +225,7 @@ salut_roomlist_channel_add_room (SalutRoomlistChannel *self,
   TpBaseConnection *base_connection = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_ROOM);
   GValue room = {0,};
   TpHandle handle;
   GHashTable *keys;
@@ -264,7 +264,7 @@ salut_roomlist_channel_remove_room (SalutRoomlistChannel *self,
   TpBaseConnection *base_connection = tp_base_channel_get_connection (
       TP_BASE_CHANNEL (self));
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_ROOM);
   TpHandle handle;
   guint i;
 

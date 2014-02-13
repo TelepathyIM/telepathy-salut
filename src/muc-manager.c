@@ -328,7 +328,7 @@ salut_muc_manager_foreach_channel (TpChannelManager *iface,
 
 static const gchar * const muc_channel_fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
-    TP_IFACE_CHANNEL ".TargetHandleType",
+    TP_IFACE_CHANNEL ".TargetEntityType",
     NULL
 };
 
@@ -356,8 +356,8 @@ salut_muc_manager_type_foreach_channel_class (GType type,
       channel_type_value);
 
   handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_ROOM);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+  g_value_set_uint (handle_type_value, TP_ENTITY_TYPE_ROOM);
+  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetEntityType",
       handle_type_value);
 
   /* im.telepathy.v1.Channel.Type.Text */
@@ -575,7 +575,7 @@ salut_muc_manager_new_muc_channel (SalutMucManager *mgr,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE(mgr);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION(priv->connection);
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_ROOM);
   SalutMucChannel *chan;
   const gchar *name;
   gchar *path = NULL;
@@ -624,7 +624,7 @@ salut_muc_manager_request_new_muc_channel (SalutMucManager *mgr,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (mgr);
   TpBaseConnection *base_connection = (TpBaseConnection *) (priv->connection);
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_ROOM);
   GibberMucConnection *connection;
   SalutMucChannel *text_chan;
   GError *connection_error = NULL;
@@ -859,7 +859,7 @@ salut_muc_manager_request (SalutMucManager *self,
   SalutMucChannel *text_chan;
 
   if (tp_asv_get_uint32 (request_properties,
-      TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_ROOM)
+      TP_IFACE_CHANNEL ".TargetEntityType", NULL) != TP_ENTITY_TYPE_ROOM)
     return FALSE;
 
   channel_type = tp_asv_get_string (request_properties,
@@ -996,9 +996,9 @@ invite_stanza_callback (WockyPorter *porter,
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpBaseConnection *base_connection = TP_BASE_CONNECTION (priv->connection);
   TpHandleRepoIface *room_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_ROOM);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_ROOM);
   TpHandleRepoIface *contact_repo =
-      tp_base_connection_get_handles (base_connection, TP_HANDLE_TYPE_CONTACT);
+      tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_CONTACT);
   WockyNode *invite, *room_node, *reason_node;
   SalutMucChannel *chan;
   const gchar *room = NULL;
@@ -1133,7 +1133,7 @@ salut_muc_manager_handle_si_stream_request (SalutMucManager *self,
 {
   SalutMucManagerPrivate *priv = SALUT_MUC_MANAGER_GET_PRIVATE (self);
   TpHandleRepoIface *room_repo = tp_base_connection_get_handles (
-     (TpBaseConnection *) priv->connection, TP_HANDLE_TYPE_ROOM);
+     (TpBaseConnection *) priv->connection, TP_ENTITY_TYPE_ROOM);
   SalutMucChannel *chan = NULL;
 
   g_return_if_fail (tp_handle_is_valid (room_repo, room_handle, NULL));

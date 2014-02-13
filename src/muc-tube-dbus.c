@@ -49,5 +49,5 @@ salut_muc_tube_dbus_class_init (
       salut_muc_tube_dbus_class);
 
   base_class->get_interfaces = salut_muc_tube_dbus_get_interfaces;
-  base_class->target_handle_type = TP_HANDLE_TYPE_ROOM;
+  base_class->target_entity_type = TP_ENTITY_TYPE_ROOM;
 }

@@ -215,7 +215,7 @@ salut_self_constructor (GType type,
   g_assert (priv->contact_manager != NULL);
 
   priv->room_repo = tp_base_connection_get_handles (
-      (TpBaseConnection *) self->connection, TP_HANDLE_TYPE_ROOM);
+      (TpBaseConnection *) self->connection, TP_ENTITY_TYPE_ROOM);
 
   /* Prefer using the nickname as alias */
   if (self->nickname != NULL)
