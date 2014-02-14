@@ -286,6 +286,7 @@ gibber_r_multicast_causal_transport_dispose (GObject *object)
   if (priv->keepalive_timer != 0)
     {
       g_source_remove (priv->keepalive_timer);
+      priv->keepalive_timer = 0;
     }
 
   if (priv->self != NULL)
@@ -1223,6 +1224,7 @@ do_disconnect (GibberRMulticastCausalTransport *transport)
   if (priv->keepalive_timer != 0)
     {
       g_source_remove (priv->keepalive_timer);
+      priv->keepalive_timer = 0;
     }
 
   gibber_transport_set_state (GIBBER_TRANSPORT (self),
