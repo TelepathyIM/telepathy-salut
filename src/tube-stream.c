@@ -2071,7 +2071,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube1 *iface,
     {
       g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the not offered state");
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -2079,7 +2079,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube1 *iface,
   if (!salut_tube_stream_check_params (address_type, address,
         access_control, NULL, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -2098,7 +2098,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube1 *iface,
 
   if (!salut_tube_stream_offer (self, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -2128,7 +2128,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,
       GError e = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Tube is not in the local pending state" };
 
-      dbus_g_method_return_error (context, &e);
+      g_dbus_method_invocation_return_gerror (context, &e);
       return;
     }
 
@@ -2139,7 +2139,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,
       error = g_error_new (TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Address type %d not implemented", address_type);
 
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -2149,7 +2149,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,
       GError e = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Unix sockets only support localhost control access" };
 
-      dbus_g_method_return_error (context, &e);
+      g_dbus_method_invocation_return_gerror (context, &e);
       return;
     }
 
@@ -2161,7 +2161,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,
 
   if (!salut_tube_stream_accept (SALUT_TUBE_IFACE (self), &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }

@@ -1550,7 +1550,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube1 *self,
 
   if (!salut_tube_dbus_check_access_control (tube, access_control, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -1567,7 +1567,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube1 *self,
   else
     {
       g_assert (error != NULL);
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
     }
 }
@@ -1589,7 +1589,7 @@ salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube1 *self,
 
   if (!salut_tube_dbus_check_access_control (tube, access_control, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -1602,7 +1602,7 @@ salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube1 *self,
   else
     {
       g_assert (error != NULL);
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
     }
 }

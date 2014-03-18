@@ -1217,7 +1217,7 @@ salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
 
   if (!tp_handles_are_valid (contact_handles, contacts, FALSE, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -1358,7 +1358,7 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
       GError e = { TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
                    "In Salut you can only set your own alias" };
 
-      dbus_g_method_return_error (context, &e);
+      g_dbus_method_invocation_return_gerror (context, &e);
       return;
     }
 
@@ -1366,7 +1366,7 @@ salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
 
   if (!salut_self_set_alias (priv->self, alias, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -1426,7 +1426,7 @@ salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars1 *iface,
 
   if (!salut_self_set_avatar (priv->self, NULL, 0, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -1449,7 +1449,7 @@ salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars1 *iface,
   if (!salut_self_set_avatar (priv->self, (guint8 *) avatar->data,
         avatar->len, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
       return;
     }
@@ -1483,7 +1483,7 @@ salut_connection_get_known_avatar_tokens (
 
   if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
     {
-      dbus_g_method_return_error (context, err);
+      g_dbus_method_invocation_return_gerror (context, err);
       g_error_free (err);
       return;
     }
@@ -1615,7 +1615,7 @@ salut_connection_request_avatars (
 
   if (!tp_handles_are_valid (handle_repo, contacts, FALSE, &err))
     {
-      dbus_g_method_return_error (context, err);
+      g_dbus_method_invocation_return_gerror (context, err);
       g_error_free (err);
       return;
     }
@@ -1894,7 +1894,7 @@ salut_connection_update_capabilities (
       if (!announce_self_caps (self, &error))
         {
           gabble_capability_set_free (before);
-          dbus_g_method_return_error (context, error);
+          g_dbus_method_invocation_return_gerror (context, error);
           g_error_free (error);
           return;
         }
@@ -2333,7 +2333,7 @@ create_sidecar_cb (
     }
   else
     {
-      g_list_foreach (contexts, (GFunc) dbus_g_method_return_error, error);
+      g_list_foreach (contexts, (GFunc) g_dbus_method_invocation_return_gerror, error);
     }
 
   g_hash_table_remove (ctx->conn->priv->pending_sidecars, ctx->sidecar_iface);
@@ -2364,7 +2364,7 @@ salut_connection_ensure_sidecar (
           "This connection has already disconnected" };
 
       DEBUG ("already disconnected, declining request for %s", sidecar_iface);
-      dbus_g_method_return_error (context, &e);
+      g_dbus_method_invocation_return_gerror (context, &e);
       return;
     }
 
@@ -2373,7 +2373,7 @@ salut_connection_ensure_sidecar (
       error->domain = TP_ERROR;
       error->code = TP_ERROR_INVALID_ARGUMENT;
       DEBUG ("%s is malformed: %s", sidecar_iface, error->message);
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_clear_error (&error);
       return;
     }
@@ -2462,7 +2462,7 @@ sidecars_conn_status_changed_cb (
 
           DEBUG ("failing all %u requests for %s", g_list_length (contexts),
               sidecar_iface);
-          g_list_foreach (contexts, (GFunc) dbus_g_method_return_error, error);
+          g_list_foreach (contexts, (GFunc) g_dbus_method_invocation_return_gerror, error);
           g_error_free (error);
         }
 

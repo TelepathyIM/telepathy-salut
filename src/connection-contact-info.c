@@ -260,7 +260,7 @@ salut_conn_contact_info_request_contact_info (
 
   if (!tp_handle_is_valid (contacts_repo, handle, &error))
     {
-      dbus_g_method_return_error (context, error);
+      g_dbus_method_invocation_return_gerror (context, error);
       g_error_free (error);
     }
   else
@@ -285,7 +285,7 @@ salut_conn_contact_info_request_contact_info (
           error = g_error_new (TP_ERROR, TP_ERROR_NOT_AVAILABLE,
               "No information available for '%s'",
               tp_handle_inspect (contacts_repo, handle));
-          dbus_g_method_return_error (context, error);
+          g_dbus_method_invocation_return_gerror (context, error);
           g_error_free (error);
         }
     }
