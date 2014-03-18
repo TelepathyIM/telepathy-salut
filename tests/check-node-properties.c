@@ -83,6 +83,8 @@ test_extract_properties (void)
   GArray *prop4_value;
   gboolean prop5_value;
 
+  dbus_g_type_specialized_init ();
+
   stanza = create_sample_stanza ();
   node = wocky_node_get_child (wocky_stanza_get_top_node (stanza),
       "properties");
@@ -150,6 +152,8 @@ create_sample_properties (void)
   GHashTable *properties;
   GValue *prop1, *prop2, *prop3, *prop4, *prop5;
   GArray *arr;
+
+  dbus_g_type_specialized_init ();
 
   properties = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
       (GDestroyNotify) test_g_value_slice_free);
@@ -248,9 +252,6 @@ main (int argc,
 {
   g_test_init (&argc, &argv, NULL);
   g_type_init ();
-
-  /* to initiate D-Bus types */
-  dbus_g_bus_get (DBUS_BUS_STARTER, NULL);
 
   g_test_add_func ("/node-properties/extract-properties",
       test_extract_properties);
