@@ -239,7 +239,7 @@ text_helper_validate_tp_message (TpMessage *message,
                                  gchar **text,
                                  GError **error)
 {
-  const GHashTable *part;
+  GVariant *part;
   guint msgtype = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
   const gchar *msgtext;
   gchar *msgtoken;
@@ -253,10 +253,11 @@ text_helper_validate_tp_message (TpMessage *message,
       return FALSE;
     }
 
-  part = tp_message_peek (message, 0);
+  part = tp_message_dup_part (message, 0);
 
-  if (tp_asv_lookup (part, "message-type"))
-    msgtype = tp_asv_get_uint32 (part, "message-type", &valid);
+  if (tp_vardict_has_key (part, "message-type"))
+    msgtype = tp_vardict_get_uint32 (part, "message-type", &valid);
+  g_variant_unref (part);
 
   if (!valid || msgtype > TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE)
     {
@@ -265,11 +266,12 @@ text_helper_validate_tp_message (TpMessage *message,
       return FALSE;
     }
 
-  part = tp_message_peek (message, 1);
-  msgtext = tp_asv_get_string (part, "content");
+  part = tp_message_dup_part (message, 1);
+  g_variant_lookup (part, "content", "&s", &msgtext);
 
   if (msgtext == NULL)
     {
+      g_variant_unref (part);
       g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "Empty message content");
       return FALSE;
@@ -289,6 +291,7 @@ text_helper_validate_tp_message (TpMessage *message,
   else
     g_free (msgtoken);
 
+  g_variant_unref (part);
   return TRUE;
 }
 
