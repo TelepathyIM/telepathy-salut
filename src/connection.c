@@ -180,7 +180,7 @@ struct _SalutConnectionPrivate
   /* gchar *interface → SalutSidecar */
   GHashTable *sidecars;
 
-  /* gchar *interface → GList<DBusGMethodInvocation> */
+  /* gchar *interface → GList<GDBusMethodInvocation> */
   GHashTable *pending_sidecars;
 
   /* timer used when trying to properly disconnect */
@@ -197,7 +197,7 @@ typedef struct _ChannelRequest ChannelRequest;
 
 struct _ChannelRequest
 {
-  DBusGMethodInvocation *context;
+  GDBusMethodInvocation *context;
   gchar *channel_type;
   guint handle_type;
   guint handle;
@@ -1201,7 +1201,7 @@ salut_connection_get_alias (SalutConnection *self, TpHandle handle)
  */
 static void
 salut_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
-    const GArray *contacts, DBusGMethodInvocation *context)
+    const GArray *contacts, GDBusMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = TP_BASE_CONNECTION (self);
@@ -1341,7 +1341,7 @@ conn_contact_capabilities_fill_contact_attributes (SalutConnection *self,
 
 static void
 salut_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *iface,
-    GHashTable *aliases, DBusGMethodInvocation *context)
+    GHashTable *aliases, GDBusMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
@@ -1415,7 +1415,7 @@ _contact_manager_contact_avatar_changed (SalutConnection *self,
 
 static void
 salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars1 *iface,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
@@ -1436,7 +1436,7 @@ salut_connection_clear_avatar (TpSvcConnectionInterfaceAvatars1 *iface,
 static void
 salut_connection_set_avatar (TpSvcConnectionInterfaceAvatars1 *iface,
     const GArray *avatar, const gchar *mime_type,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = self->priv;
@@ -1465,7 +1465,7 @@ static void
 salut_connection_get_known_avatar_tokens (
     TpSvcConnectionInterfaceAvatars1 *iface,
     const GArray *contacts,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   guint i;
   GHashTable *ret;
@@ -1598,7 +1598,7 @@ static void
 salut_connection_request_avatars (
     TpSvcConnectionInterfaceAvatars1 *iface,
     const GArray *contacts,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   guint i;
   GError *err = NULL;
@@ -1796,7 +1796,7 @@ static void
 salut_connection_update_capabilities (
     TpSvcConnectionInterfaceContactCapabilities1 *iface,
     const GPtrArray *clients,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
@@ -2349,7 +2349,7 @@ static void
 salut_connection_ensure_sidecar (
     TpSvcConnectionInterfaceSidecars1 *iface,
     const gchar *sidecar_iface,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutConnection *conn = SALUT_CONNECTION (iface);
   SalutConnectionPrivate *priv = conn->priv;

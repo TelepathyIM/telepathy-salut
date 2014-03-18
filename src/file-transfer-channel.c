@@ -1196,7 +1196,7 @@ salut_file_transfer_channel_accept_file (TpSvcChannelTypeFileTransfer1 *iface,
                                          guint access_control,
                                          const GValue *access_control_param,
                                          guint64 offset,
-                                         DBusGMethodInvocation *context)
+                                         GDBusMethodInvocation *context)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   GError *error = NULL;
@@ -1272,7 +1272,7 @@ salut_file_transfer_channel_provide_file (
     guint address_type,
     guint access_control,
     const GValue *access_control_param,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutFileTransferChannel *self = SALUT_FILE_TRANSFER_CHANNEL (iface);
   TpBaseChannel *base = TP_BASE_CHANNEL (self);

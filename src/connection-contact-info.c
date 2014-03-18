@@ -247,7 +247,7 @@ static void
 salut_conn_contact_info_request_contact_info (
     TpSvcConnectionInterfaceContactInfo1 *iface,
     guint handle,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutConnection *self = SALUT_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
@@ -295,7 +295,7 @@ static void
 salut_conn_contact_info_refresh_contact_info (
     TpSvcConnectionInterfaceContactInfo1 *iface,
     const GArray *contacts,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   /* This is a no-op on link-local XMPP: everything's always pushed to us. */
   tp_svc_connection_interface_contact_info1_return_from_refresh_contact_info (context);

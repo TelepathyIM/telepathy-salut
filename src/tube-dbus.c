@@ -1542,7 +1542,7 @@ static void
 salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube1 *self,
     GHashTable *parameters,
     guint access_control,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutTubeDBus *tube = SALUT_TUBE_DBUS (self);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);
@@ -1581,7 +1581,7 @@ salut_tube_dbus_offer_async (TpSvcChannelTypeDBusTube1 *self,
 static void
 salut_tube_dbus_accept_async (TpSvcChannelTypeDBusTube1 *self,
     guint access_control,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutTubeDBus *tube = SALUT_TUBE_DBUS (self);
   SalutTubeDBusPrivate *priv = SALUT_TUBE_DBUS_GET_PRIVATE (tube);

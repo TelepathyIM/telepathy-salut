@@ -309,7 +309,7 @@ salut_roomlist_channel_remove_room (SalutRoomlistChannel *self,
  */
 static void
 salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList1 *iface,
-                                          DBusGMethodInvocation *context)
+                                          GDBusMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
 
@@ -334,7 +334,7 @@ salut_roomlist_channel_get_listing_rooms (TpSvcChannelTypeRoomList1 *iface,
  */
 static void
 salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList1 *iface,
-                                   DBusGMethodInvocation *context)
+                                   GDBusMethodInvocation *context)
 {
   SalutRoomlistChannel *self = SALUT_ROOMLIST_CHANNEL (iface);
   SalutRoomlistChannelPrivate *priv = self->priv;
@@ -354,7 +354,7 @@ salut_roomlist_channel_list_rooms (TpSvcChannelTypeRoomList1 *iface,
  */
 static void
 salut_roomlist_channel_stop_listing (TpSvcChannelTypeRoomList1 *iface,
-                                     DBusGMethodInvocation *context)
+                                     GDBusMethodInvocation *context)
 {
   tp_svc_channel_type_room_list1_return_from_stop_listing (context);
 }

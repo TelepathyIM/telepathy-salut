@@ -2061,7 +2061,7 @@ salut_tube_stream_offer_async (TpSvcChannelTypeStreamTube1 *iface,
     const GValue *address,
     guint access_control,
     GHashTable *parameters,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
@@ -2117,7 +2117,7 @@ salut_tube_stream_accept_async (TpSvcChannelTypeStreamTube1 *iface,
     guint address_type,
     guint access_control,
     const GValue *access_control_param,
-    DBusGMethodInvocation *context)
+    GDBusMethodInvocation *context)
 {
   SalutTubeStream *self = SALUT_TUBE_STREAM (iface);
   SalutTubeStreamPrivate *priv = SALUT_TUBE_STREAM_GET_PRIVATE (self);
