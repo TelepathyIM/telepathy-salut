@@ -2231,11 +2231,11 @@ connection_install_sidecar (
     const gchar *sidecar_iface)
 {
   SalutConnectionPrivate *priv = conn->priv;
-  TpDBusDaemon *bus = tp_base_connection_get_dbus_daemon (
+  GDBusConnection *bus = tp_base_connection_get_dbus_connection (
       (TpBaseConnection *) conn);
   gchar *path = make_sidecar_path (conn, sidecar_iface);
 
-  tp_dbus_daemon_register_object (bus, path, G_OBJECT (sidecar));
+  tp_dbus_connection_register_object (bus, path, G_OBJECT (sidecar));
   g_hash_table_insert (priv->sidecars, g_strdup (sidecar_iface),
       g_object_ref (sidecar));
 
@@ -2436,7 +2436,7 @@ sidecars_conn_status_changed_cb (
     gpointer unused)
 {
   SalutConnectionPrivate *priv = conn->priv;
-  TpDBusDaemon *bus = tp_base_connection_get_dbus_daemon (
+  GDBusConnection *bus = tp_base_connection_get_dbus_connection (
       (TpBaseConnection *) conn);
   GHashTableIter iter;
   gpointer key, value;
@@ -2448,7 +2448,7 @@ sidecars_conn_status_changed_cb (
       while (g_hash_table_iter_next (&iter, NULL, &value))
         {
           DEBUG ("removing %s from the bus", salut_sidecar_get_interface (value));
-          tp_dbus_daemon_unregister_object (bus, G_OBJECT (value));
+          tp_dbus_connection_unregister_object (bus, G_OBJECT (value));
         }
 
       g_hash_table_iter_init (&iter, priv->pending_sidecars);
