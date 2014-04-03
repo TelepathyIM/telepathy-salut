@@ -1,18 +1,26 @@
-telepathy-salut 0.9.0 (UNRELEASED)
-==================================
+telepathy-salut 0.99.10 (2014-04-03)
+====================================
 
 Dependencies:
 
-• telepathy-glib 0.19.7 is now required. (sorry about that)
+• telepathy-glib 0.99.10 is now required
 
-Enhancements:
+• GLib 2.32 is now required
+
+• libsoup 2.28 is required
+
+Incompatible changes:
+
+• Telepathy 1 D-Bus API
+
+• Remove OLPC-specific interfaces; if you need them, please upgrade
+  them to Telepathy 1 and provide patches, preferably as a plugin/sidecar
 
 • fd.o#50828: Old-style Tubes channels have been removed. (Jonny)
 
-• Tube and Text channels are no longer announced together. (Jonny)
+Fixes:
 
-• Fix an assertion failure in the OLPC activity manager on disconnect.
-  (Jonny)
+• Tube and Text channels are no longer announced together. (Jonny)
 
 • Check parsing tube messages in a MUC succeeds, to avoid using an
   uninitialized variable. (Will)
@@ -23,6 +31,8 @@ Enhancements:
   fd.o#51528, a crash when messaged by a malformed JID such as
   "wjt@bael (2)".  (Will)
 
+• Make sure we remove the keepalive timer when it expires, avoiding
+  a critical warning with GLib 2.40 (Guillaume)
 
 telepathy-salut 0.8.0 (2012-04-04)
 ==================================
