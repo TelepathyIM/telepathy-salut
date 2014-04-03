@@ -27,6 +27,7 @@
 #include <glib-object.h>
 #include <dbus/dbus-glib.h>
 #include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "contact.h"
 
