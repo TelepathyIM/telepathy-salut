@@ -65,7 +65,7 @@ GType salut_tube_dbus_get_type (void);
 
 SalutTubeDBus *
 salut_tube_dbus_new (SalutConnection *conn,
-    TpHandle handle, TpEntityType handle_type, TpHandle self_handle,
+    TpHandle handle, TpEntityType entity_type, TpHandle self_handle,
     GibberMucConnection *muc_connection, TpHandle initiator,
     const gchar *service, GHashTable *parameters, guint64 id,
     gboolean requested);

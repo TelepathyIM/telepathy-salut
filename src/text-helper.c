@@ -305,14 +305,14 @@ text_helper_report_delivery_error (TpSvcChannel *self,
 {
   TpBaseConnection *base_conn;
   TpHandle handle;
-  guint handle_type;
+  guint entity_type;
   TpMessage *message;
   TpMessage *delivery_echo;
 
   g_object_get (self,
       "connection", &base_conn,
       "handle", &handle,
-      "handle-type", &handle_type,
+      "entity-type", &entity_type,
       NULL);
 
   delivery_echo = tp_cm_message_new (base_conn, 2);
@@ -325,7 +325,7 @@ text_helper_report_delivery_error (TpSvcChannel *self,
 
   message = tp_cm_message_new (base_conn, 1);
 
-  if (handle_type == TP_ENTITY_TYPE_CONTACT)
+  if (entity_type == TP_ENTITY_TYPE_CONTACT)
     tp_cm_message_set_sender (message, handle);
 
   tp_message_set_uint32 (message, 0, "message-type",

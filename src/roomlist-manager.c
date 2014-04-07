@@ -297,7 +297,7 @@ salut_roomlist_manager_type_foreach_channel_class (GType type,
 {
   GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
-  GValue *channel_type_value, *handle_type_value;
+  GValue *channel_type_value, *entity_type_value;
 
   channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
   g_value_set_static_string (channel_type_value,
@@ -305,10 +305,10 @@ salut_roomlist_manager_type_foreach_channel_class (GType type,
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
-  handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (handle_type_value, TP_ENTITY_TYPE_NONE);
+  entity_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (entity_type_value, TP_ENTITY_TYPE_NONE);
   g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetEntityType",
-      handle_type_value);
+      entity_type_value);
 
   func (type, table, roomlist_channel_allowed_properties,
       user_data);

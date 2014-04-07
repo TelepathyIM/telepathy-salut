@@ -64,7 +64,7 @@ GType salut_tube_stream_get_type (void);
 
 SalutTubeStream *salut_tube_stream_new (SalutConnection *conn,
     TpHandle handle,
-    TpEntityType handle_type, TpHandle self_handle, TpHandle initiator,
+    TpEntityType entity_type, TpHandle self_handle, TpHandle initiator,
     gboolean offered, const gchar *service,
     GHashTable *parameters, guint64 id, guint portnum,
     WockyStanza *iq_req, gboolean requested);

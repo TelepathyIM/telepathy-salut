@@ -1509,7 +1509,7 @@ data_received_cb (GibberBytestreamIface *bytestream,
 SalutTubeStream *
 salut_tube_stream_new (SalutConnection *conn,
                        TpHandle handle,
-                       TpEntityType handle_type,
+                       TpEntityType entity_type,
                        TpHandle self_handle,
                        TpHandle initiator,
                        gboolean offered,
@@ -1523,7 +1523,7 @@ salut_tube_stream_new (SalutConnection *conn,
   SalutTubeStream *obj;
   GType gtype = SALUT_TYPE_TUBE_STREAM;
 
-  if (handle_type == TP_ENTITY_TYPE_ROOM)
+  if (entity_type == TP_ENTITY_TYPE_ROOM)
     gtype = SALUT_TYPE_MUC_TUBE_STREAM;
 
   obj = g_object_new (gtype,

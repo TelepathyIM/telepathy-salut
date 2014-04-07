@@ -948,7 +948,7 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
       "muc-connection",
       "GibberMucConnection object",
       "Gibber MUC connection object used to carry messages for this "
-      "tube if it has a HANDLE_TYPE_ROOM handle",
+      "tube if it has a TP_ENTITY_TYPE_ROOM handle",
       GIBBER_TYPE_MUC_CONNECTION,
       G_PARAM_CONSTRUCT_ONLY |
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
@@ -1303,7 +1303,7 @@ data_received_cb (GibberBytestreamIface *stream,
 SalutTubeDBus *
 salut_tube_dbus_new (SalutConnection *conn,
                      TpHandle handle,
-                     TpEntityType handle_type,
+                     TpEntityType entity_type,
                      TpHandle self_handle,
                      GibberMucConnection *muc_connection,
                      TpHandle initiator,
@@ -1315,7 +1315,7 @@ salut_tube_dbus_new (SalutConnection *conn,
   SalutTubeDBus *tube;
   GType gtype = SALUT_TYPE_TUBE_DBUS;
 
-  if (handle_type == TP_ENTITY_TYPE_ROOM)
+  if (entity_type == TP_ENTITY_TYPE_ROOM)
     gtype = SALUT_TYPE_MUC_TUBE_DBUS;
 
   tube = g_object_new (gtype,
