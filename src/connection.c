@@ -193,17 +193,6 @@ struct _SalutConnectionPrivate
   gchar *dnssd_name;
 };
 
-typedef struct _ChannelRequest ChannelRequest;
-
-struct _ChannelRequest
-{
-  GDBusMethodInvocation *context;
-  gchar *channel_type;
-  guint handle_type;
-  guint handle;
-  gboolean suppress_handler;
-};
-
 static void _salut_connection_disconnect (SalutConnection *self);
 
 static void
