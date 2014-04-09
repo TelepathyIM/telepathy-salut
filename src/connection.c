@@ -443,18 +443,12 @@ static void salut_connection_finalize (GObject *object);
 
 /* presence bits and pieces */
 
-static const TpPresenceStatusOptionalArgumentSpec presence_args[] = {
-      { "message", "s" },
-      { NULL }
-};
-
 /* keep these in the same order as SalutPresenceId... */
 static const TpPresenceStatusSpec presence_statuses[] = {
-      { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
-        presence_args },
-      { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE, presence_args },
-      { "dnd", TP_CONNECTION_PRESENCE_TYPE_BUSY, TRUE, presence_args },
-      { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL },
+      { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE, TRUE },
+      { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE, TRUE },
+      { "dnd", TP_CONNECTION_PRESENCE_TYPE_BUSY, TRUE, TRUE },
+      { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, FALSE },
       { NULL }
 };
 /* ... and these too (declared in presence.h) */
@@ -473,31 +467,6 @@ is_presence_status_available (GObject *obj,
   return (index_ < SALUT_PRESENCE_OFFLINE);
 }
 
-static GHashTable *
-make_presence_opt_args (SalutPresenceId presence, const gchar *message)
-{
-  GHashTable *ret;
-  GValue *value;
-
-  /* Omit missing or empty messages from the hash table.
-   * Also, offline has no message in Salut, it wouldn't make sense. */
-  if (presence == SALUT_PRESENCE_OFFLINE || message == NULL ||
-      *message == '\0')
-    {
-      return NULL;
-    }
-
-  ret = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-      (GDestroyNotify) tp_g_value_slice_free);
-
-  value = g_slice_new0 (GValue);
-  g_value_init (value, G_TYPE_STRING);
-  g_value_set_string (value, message);
-  g_hash_table_insert (ret, "message", value);
-
-  return ret;
-}
-
 static TpPresenceStatus *
 get_contact_status (GObject *obj,
     TpHandle handle)
@@ -506,10 +475,8 @@ get_contact_status (GObject *obj,
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandle self_handle = tp_base_connection_get_self_handle (base);
-  TpPresenceStatus *ps;
   SalutPresenceId presence;
   const gchar *message = NULL;
-  GHashTable *optional_arguments;
 
   if (handle == self_handle)
     {
@@ -534,11 +501,7 @@ get_contact_status (GObject *obj,
         }
     }
 
-  optional_arguments = make_presence_opt_args (presence, message);
-  ps = tp_presence_status_new (presence, optional_arguments);
-  if (optional_arguments != NULL)
-    g_hash_table_unref (optional_arguments);
-  return ps;
+  return tp_presence_status_new (presence, message);
 }
 
 static void
@@ -562,14 +525,10 @@ set_self_presence (SalutConnection *self,
     {
       TpHandle self_handle = tp_base_connection_get_self_handle (base);
       TpPresenceStatus ps = { priv->self->status,
-          make_presence_opt_args (priv->self->status,
-              priv->self->status_message) };
+              priv->self->status_message };
 
       tp_presence_mixin_emit_one_presence_update ((GObject *) self,
           self_handle, &ps);
-
-      if (ps.optional_arguments != NULL)
-        g_hash_table_unref (ps.optional_arguments);
     }
 }
 
@@ -580,7 +539,6 @@ set_own_status (GObject *obj,
 {
   SalutConnection *self = SALUT_CONNECTION (obj);
   GError *err = NULL;
-  const GValue *value;
   const gchar *message = NULL;
   SalutPresenceId presence = SALUT_PRESENCE_AVAILABLE;
 
@@ -588,22 +546,7 @@ set_own_status (GObject *obj,
     {
       /* mixin has already validated the index */
       presence = status->index;
-
-      if (status->optional_arguments != NULL)
-        {
-          value = g_hash_table_lookup (status->optional_arguments, "message");
-          if (value)
-            {
-              /* TpPresenceMixin should validate this for us, but doesn't */
-              if (!G_VALUE_HOLDS_STRING (value))
-                {
-                  g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
-                      "Status argument 'message' requires a string");
-                  return FALSE;
-                }
-              message = g_value_get_string (value);
-            }
-        }
+      message = status->message;
     }
 
   set_self_presence (self, presence, message, &err);
@@ -933,14 +876,10 @@ static void
 _contact_manager_contact_status_changed (SalutConnection *self,
     SalutContact *contact, TpHandle handle)
 {
-  TpPresenceStatus ps = { contact->status,
-    make_presence_opt_args (contact->status, contact->status_message) };
+  TpPresenceStatus ps = { contact->status, contact->status_message };
 
   tp_presence_mixin_emit_one_presence_update ((GObject *) self, handle,
       &ps);
-
-  if (ps.optional_arguments != NULL)
-    g_hash_table_unref (ps.optional_arguments);
 }
 
 static gboolean
