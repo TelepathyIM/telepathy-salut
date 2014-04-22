@@ -197,7 +197,7 @@ salut_ft_manager_finalize (GObject *object)
 /* Channel Manager interface */
 
 struct foreach_data {
-  TpExportableChannelFunc func;
+  TpBaseChannelFunc func;
   gpointer data;
 };
 
@@ -205,20 +205,20 @@ static void
 salut_ft_manager_iface_foreach_one (gpointer value,
                                     gpointer data)
 {
-  TpExportableChannel *chan;
+  TpBaseChannel *chan;
   struct foreach_data *f = (struct foreach_data *) data;
 
   if (!value)
     return;
 
-  chan = TP_EXPORTABLE_CHANNEL (value);
+  chan = TP_BASE_CHANNEL (value);
 
   f->func (chan, f->data);
 }
 
 static void
 salut_ft_manager_foreach_channel (TpChannelManager *iface,
-                                  TpExportableChannelFunc func,
+                                  TpBaseChannelFunc func,
                                   gpointer data)
 {
   SalutFtManager *mgr = SALUT_FT_MANAGER (iface);
@@ -262,8 +262,9 @@ salut_ft_manager_channel_created (SalutFtManager *self,
 {
   SalutFtManagerPrivate *priv = SALUT_FT_MANAGER_GET_PRIVATE (self);
   GSList *requests = NULL;
+  TpBaseChannel *base = TP_BASE_CHANNEL (chan);
 
-  tp_base_channel_register (TP_BASE_CHANNEL (chan));
+  tp_base_channel_register (base);
 
   g_signal_connect (chan, "closed", G_CALLBACK (file_channel_closed_cb), self);
 
@@ -273,7 +274,7 @@ salut_ft_manager_channel_created (SalutFtManager *self,
     requests = g_slist_prepend (requests, request_token);
 
   tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
-      TP_EXPORTABLE_CHANNEL (chan), requests);
+      base, requests);
 
   g_slist_free (requests);
 }

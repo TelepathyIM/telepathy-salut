@@ -74,7 +74,7 @@ struct _SalutRoomlistManagerPrivate
 
   /* Map from channels to the request-tokens of requests that they will
    * satisfy when they're ready.
-   * Borrowed TpExportableChannel => GSList of gpointer */
+   * Borrowed TpBaseChannel => GSList of gpointer */
   GHashTable *queued_requests;
 
   gboolean dispose_has_run;
@@ -247,7 +247,7 @@ salut_roomlist_manager_finalize (GObject *object)
 
 struct _ForeachData
 {
-  TpExportableChannelFunc foreach;
+  TpBaseChannelFunc foreach;
   gpointer user_data;
 };
 
@@ -257,7 +257,7 @@ salut_roomlist_manager_foreach_one_list (TpChannelManager *chan,
                                          gpointer user_data)
 {
   struct _ForeachData *data = (struct _ForeachData *) user_data;
-  TpExportableChannel *channel = TP_EXPORTABLE_CHANNEL (chan);
+  TpBaseChannel *channel = TP_BASE_CHANNEL (chan);
 
   data->foreach (channel, data->user_data);
 }
@@ -265,7 +265,7 @@ salut_roomlist_manager_foreach_one_list (TpChannelManager *chan,
 
 static void
 salut_roomlist_manager_foreach_channel (TpChannelManager *iface,
-                                   TpExportableChannelFunc foreach,
+                                   TpBaseChannelFunc foreach,
                                    gpointer user_data)
 {
   SalutRoomlistManager *fac = SALUT_ROOMLIST_MANAGER (iface);
@@ -326,7 +326,7 @@ roomlist_channel_closed_cb (SalutRoomlistChannel *channel,
     SALUT_ROOMLIST_MANAGER_GET_PRIVATE (self);
 
   tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
-      TP_EXPORTABLE_CHANNEL (channel));
+      TP_BASE_CHANNEL (channel));
 
   if (priv->roomlist_channels != NULL)
     {
@@ -416,7 +416,7 @@ salut_roomlist_manager_request (TpChannelManager *manager,
 
       tp_channel_manager_emit_request_already_satisfied (
           TP_CHANNEL_MANAGER (self), request_token,
-          TP_EXPORTABLE_CHANNEL (roomlist_channel));
+          TP_BASE_CHANNEL (roomlist_channel));
       return TRUE;
     }
 
@@ -429,7 +429,7 @@ salut_roomlist_manager_request (TpChannelManager *manager,
 
   request_tokens = g_slist_prepend (NULL, request_token);
   tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
-      TP_EXPORTABLE_CHANNEL (roomlist_channel), request_tokens);
+      TP_BASE_CHANNEL (roomlist_channel), request_tokens);
   g_slist_free (request_tokens);
 
   return TRUE;

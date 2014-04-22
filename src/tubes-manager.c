@@ -348,7 +348,7 @@ iq_tube_request_cb (WockyPorter *porter,
 
     /* announce tube channel */
     tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
-        TP_EXPORTABLE_CHANNEL (chan), NULL);
+        TP_BASE_CHANNEL (chan), NULL);
 
     g_hash_table_unref (parameters);
   }
@@ -538,7 +538,7 @@ salut_tubes_manager_class_init (
 
 static void
 salut_tubes_manager_foreach_channel (TpChannelManager *manager,
-                                     TpExportableChannelFunc foreach,
+                                     TpBaseChannelFunc foreach,
                                      gpointer user_data)
 {
   SalutTubesManager *fac = SALUT_TUBES_MANAGER (manager);
@@ -550,7 +550,7 @@ salut_tubes_manager_foreach_channel (TpChannelManager *manager,
   g_hash_table_iter_init (&iter, priv->tubes);
   while (g_hash_table_iter_next (&iter, NULL, &value))
     {
-      foreach (TP_EXPORTABLE_CHANNEL (value), user_data);
+      foreach (TP_BASE_CHANNEL (value), user_data);
     }
 }
 
@@ -680,7 +680,7 @@ channel_closed_cb (SalutTubeIface *tube,
       NULL);
 
   tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
-      TP_EXPORTABLE_CHANNEL (tube));
+      TP_BASE_CHANNEL (tube));
 
   if (priv->tubes != NULL)
     g_hash_table_remove (priv->tubes, GUINT_TO_POINTER (id));
@@ -911,7 +911,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
         tokens = g_slist_prepend (NULL, request);
 
       tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
-          TP_EXPORTABLE_CHANNEL (new_channel), tokens);
+          TP_BASE_CHANNEL (new_channel), tokens);
 
       g_slist_free (tokens);
     }
@@ -927,7 +927,7 @@ salut_tubes_manager_requestotron (SalutTubesManager *self,
 
       tp_channel_manager_emit_request_already_satisfied (
           TP_CHANNEL_MANAGER (self), request,
-          TP_EXPORTABLE_CHANNEL (new_channel));
+          TP_BASE_CHANNEL (new_channel));
     }
 
   return TRUE;

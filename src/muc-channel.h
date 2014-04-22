@@ -91,7 +91,7 @@ SalutTubeIface * salut_muc_channel_tube_request (SalutMucChannel *self,
     GHashTable *request_properties);
 
 void salut_muc_channel_foreach (SalutMucChannel *self,
-    TpExportableChannelFunc func, gpointer user_data);
+    TpBaseChannelFunc func, gpointer user_data);
 
 void salut_muc_channel_bytestream_offered (SalutMucChannel *self,
     GibberBytestreamIface *bytestream,

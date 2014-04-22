@@ -305,7 +305,7 @@ salut_im_manager_finalize (GObject *object)
 
 struct foreach_data
 {
-  TpExportableChannelFunc func;
+  TpBaseChannelFunc func;
   gpointer data;
 };
 
@@ -314,7 +314,7 @@ salut_im_manager_iface_foreach_one (gpointer key,
                                     gpointer value,
                                     gpointer data)
 {
-  TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
+  TpBaseChannel *chan = TP_BASE_CHANNEL (value);
   struct foreach_data *f = (struct foreach_data *) data;
 
   f->func (chan, f->data);
@@ -322,7 +322,7 @@ salut_im_manager_iface_foreach_one (gpointer key,
 
 static void
 salut_im_manager_foreach_channel (TpChannelManager *iface,
-                                  TpExportableChannelFunc func,
+                                  TpBaseChannelFunc func,
                                   gpointer user_data)
 {
   SalutImManager *mgr = SALUT_IM_MANAGER (iface);
@@ -386,7 +386,7 @@ salut_im_manager_requestotron (SalutImManager *self,
       base_conn, TP_ENTITY_TYPE_CONTACT);
   TpHandle handle;
   GError *error = NULL;
-  TpExportableChannel *channel;
+  TpBaseChannel *channel;
 
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"), TP_IFACE_CHANNEL_TYPE_TEXT))
@@ -494,7 +494,7 @@ im_channel_closed_cb (SalutImChannel *chan,
   TpHandle handle;
 
   tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
-    TP_EXPORTABLE_CHANNEL (chan));
+    TP_BASE_CHANNEL (chan));
 
   if (priv->channels)
     {
@@ -515,6 +515,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
   TpHandleRepoIface *handle_repo =
       tp_base_connection_get_handles (base_connection, TP_ENTITY_TYPE_CONTACT);
   SalutImChannel *chan;
+  TpBaseChannel *base;
   SalutContact *contact;
   const gchar *name;
   GSList *requests = NULL;
@@ -542,7 +543,8 @@ salut_im_manager_new_channel (SalutImManager *mgr,
       "initiator-handle", initiator,
       "requested", (handle != initiator),
       NULL);
-  tp_base_channel_register ((TpBaseChannel *) chan);
+  base = TP_BASE_CHANNEL (chan);
+  tp_base_channel_register (base);
   g_object_unref (contact);
   g_hash_table_insert (priv->channels, GUINT_TO_POINTER (handle), chan);
 
@@ -550,7 +552,7 @@ salut_im_manager_new_channel (SalutImManager *mgr,
     requests = g_slist_prepend (requests, request);
 
   tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (mgr),
-      TP_EXPORTABLE_CHANNEL (chan), requests);
+      base, requests);
 
   g_slist_free (requests);
 

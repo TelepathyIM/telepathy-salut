@@ -1778,7 +1778,7 @@ salut_muc_channel_tube_request (SalutMucChannel *self,
 
 void
 salut_muc_channel_foreach (SalutMucChannel *self,
-    TpExportableChannelFunc func,
+    TpBaseChannelFunc func,
     gpointer user_data)
 {
   SalutMucChannelPrivate *priv = self->priv;
@@ -1788,7 +1788,7 @@ salut_muc_channel_foreach (SalutMucChannel *self,
   g_hash_table_iter_init (&iter, priv->tubes);
   while (g_hash_table_iter_next (&iter, NULL, &value))
     {
-      func (TP_EXPORTABLE_CHANNEL (value), user_data);
+      func (TP_BASE_CHANNEL (value), user_data);
     }
 }
 
