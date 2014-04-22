@@ -34,7 +34,6 @@ typedef struct _SalutRoomlistChannelPrivate SalutRoomlistChannelPrivate;
 
 struct _SalutRoomlistChannelClass {
     TpBaseChannelClass parent_class;
-    TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutRoomlistChannel {

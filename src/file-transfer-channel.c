@@ -507,19 +507,6 @@ salut_file_transfer_channel_class_init (
     { NULL }
   };
 
-  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-    { TP_IFACE_CHANNEL_TYPE_FILE_TRANSFER1,
-      tp_dbus_properties_mixin_getter_gobject_properties,
-      file_transfer_channel_properties_setter,
-      file_props
-    },
-    { TP_IFACE_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1,
-      tp_dbus_properties_mixin_getter_gobject_properties,
-      NULL,
-      file_metadata_props
-    },    { NULL }
-  };
-
   g_type_class_add_private (salut_file_transfer_channel_class,
       sizeof (SalutFileTransferChannelPrivate));
 
@@ -708,10 +695,15 @@ salut_file_transfer_channel_class_init (
   g_object_class_install_property (object_class, PROP_METADATA,
       param_spec);
 
-  salut_file_transfer_channel_class->dbus_props_class.interfaces = \
-      prop_interfaces;
-  tp_dbus_properties_mixin_class_init (object_class,
-      G_STRUCT_OFFSET (SalutFileTransferChannelClass, dbus_props_class));
+  tp_dbus_properties_mixin_class_init (object_class, 0);
+  tp_dbus_properties_mixin_implement_interface (object_class,
+      TP_IFACE_QUARK_CHANNEL_TYPE_FILE_TRANSFER1,
+      tp_dbus_properties_mixin_getter_gobject_properties,
+      file_transfer_channel_properties_setter, file_props);
+  tp_dbus_properties_mixin_implement_interface (object_class,
+      TP_IFACE_QUARK_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1,
+      tp_dbus_properties_mixin_getter_gobject_properties, NULL,
+      file_metadata_props);
 }
 
 void

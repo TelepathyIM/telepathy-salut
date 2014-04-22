@@ -34,8 +34,6 @@ typedef struct _SalutTubeStreamClass SalutTubeStreamClass;
 
 struct _SalutTubeStreamClass {
   TpBaseChannelClass parent_class;
-
-  TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutTubeStream {

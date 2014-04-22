@@ -616,19 +616,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   TpBaseConnectionClass *tp_connection_class =
       TP_BASE_CONNECTION_CLASS(salut_connection_class);
   GParamSpec *param_spec;
-  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-        { TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
-          conn_avatars_properties_getter,
-          NULL,
-          conn_avatars_properties,
-        },
-        { TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
-          conn_aliasing_properties_getter,
-          NULL,
-          conn_aliasing_properties,
-        },
-        { NULL }
-  };
 
   object_class->get_property = salut_connection_get_property;
   object_class->set_property = salut_connection_set_property;
@@ -654,9 +641,13 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   tp_connection_class->fill_contact_attributes =
       salut_connection_fill_contact_attributes;
 
-  salut_connection_class->properties_mixin.interfaces = prop_interfaces;
-  tp_dbus_properties_mixin_class_init (object_class,
-      G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
+  tp_dbus_properties_mixin_class_init (object_class, 0);
+  tp_dbus_properties_mixin_implement_interface (object_class,
+      TP_IFACE_QUARK_CONNECTION_INTERFACE_AVATARS1,
+      conn_avatars_properties_getter, NULL, conn_avatars_properties);
+  tp_dbus_properties_mixin_implement_interface (object_class,
+      TP_IFACE_QUARK_CONNECTION_INTERFACE_ALIASING1,
+      conn_aliasing_properties_getter, NULL, conn_aliasing_properties);
 
   salut_conn_contact_info_class_init (salut_connection_class);
 

@@ -39,7 +39,6 @@ typedef struct _SalutMucChannelPrivate SalutMucChannelPrivate;
 struct _SalutMucChannelClass {
   TpBaseChannelClass parent_class;
   TpGroupMixinClass group_class;
-  TpDBusPropertiesMixinClass dbus_props_class;
 
   /* Virtual method */
   gboolean (*publish_service) (SalutMucChannel *self,

@@ -60,7 +60,6 @@ typedef struct _SalutConnectionPrivate SalutConnectionPrivate;
 
 struct _SalutConnectionClass {
   TpBaseConnectionClass parent_class;
-  TpDBusPropertiesMixinClass properties_mixin;
 };
 
 struct _SalutConnection {

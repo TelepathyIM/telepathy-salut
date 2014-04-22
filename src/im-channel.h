@@ -33,8 +33,6 @@ typedef struct _SalutImChannelPrivate SalutImChannelPrivate;
 
 struct _SalutImChannelClass {
     TpBaseChannelClass parent_class;
-
-    TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _SalutImChannel {

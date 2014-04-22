@@ -111,14 +111,6 @@ salut_roomlist_channel_class_init (
       { "Server", "conference-server", NULL },
       { NULL }
   };
-  static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-      { TP_IFACE_CHANNEL_TYPE_ROOM_LIST1,
-        tp_dbus_properties_mixin_getter_gobject_properties,
-        NULL,
-        roomlist_props,
-      },
-      { NULL }
-  };
 
   g_type_class_add_private (salut_roomlist_channel_class,
       sizeof (SalutRoomlistChannelPrivate));
@@ -141,10 +133,11 @@ salut_roomlist_channel_class_init (
   g_object_class_install_property (object_class, PROP_CONFERENCE_SERVER,
       param_spec);
 
-  salut_roomlist_channel_class->dbus_props_class.interfaces = prop_interfaces;
-  tp_dbus_properties_mixin_class_init (object_class,
-      G_STRUCT_OFFSET (SalutRoomlistChannelClass, dbus_props_class));
-
+  tp_dbus_properties_mixin_class_init (object_class, 0);
+  tp_dbus_properties_mixin_implement_interface (object_class,
+      TP_IFACE_QUARK_CHANNEL_TYPE_ROOM_LIST1,
+      tp_dbus_properties_mixin_getter_gobject_properties, NULL,
+      roomlist_props);
 }
 
 static void
