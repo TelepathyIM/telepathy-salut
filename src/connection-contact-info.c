@@ -188,7 +188,7 @@ salut_conn_contact_info_fill_contact_attributes (
     SalutConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes)
+    GVariantDict *attributes)
 {
   if (!tp_strdiff (dbus_interface, TP_IFACE_CONNECTION_INTERFACE_CONTACT_INFO1))
     {
@@ -218,10 +218,16 @@ salut_conn_contact_info_fill_contact_attributes (
         }
 
       if (contact_info != NULL)
-        tp_contact_attribute_map_take_sliced_gvalue (attributes,
-            handle, TP_TOKEN_CONNECTION_INTERFACE_CONTACT_INFO1_INFO,
-            tp_g_value_slice_new_take_boxed (
-                TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST, contact_info));
+        {
+          GValue value = G_VALUE_INIT;
+
+          g_value_init (&value, TP_ARRAY_TYPE_CONTACT_INFO_FIELD_LIST);
+          g_value_take_boxed (&value, contact_info);
+          g_variant_dict_insert_value (attributes,
+              TP_TOKEN_CONNECTION_INTERFACE_CONTACT_INFO1_INFO,
+              dbus_g_value_build_g_variant (&value));
+          g_value_unset (&value);
+        }
 
       g_object_unref (contact_manager);
       return TRUE;

@@ -607,7 +607,7 @@ salut_connection_get_implemented_interfaces (void)
 static void salut_connection_fill_contact_attributes (TpBaseConnection *base,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes);
+    GVariantDict *attributes);
 
 static void
 salut_connection_class_init (SalutConnectionClass *salut_connection_class)
@@ -1169,16 +1169,16 @@ static gboolean
 salut_connection_aliasing_fill_contact_attributes (SalutConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes)
+    GVariantDict *attributes)
 {
   if (!tp_strdiff (dbus_interface, TP_IFACE_CONNECTION_INTERFACE_ALIASING1))
     {
-      GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
+      const gchar *alias = salut_connection_get_alias (self, handle);
 
-      g_value_set_string (val, salut_connection_get_alias (self, handle));
-
-      tp_contact_attribute_map_take_sliced_gvalue (attributes, handle,
-         TP_TOKEN_CONNECTION_INTERFACE_ALIASING1_ALIAS, val);
+      g_assert (alias != NULL);
+      g_variant_dict_insert_value (attributes,
+          TP_TOKEN_CONNECTION_INTERFACE_ALIASING1_ALIAS,
+          g_variant_new_string (alias));
       return TRUE;
     }
 
@@ -1236,7 +1236,7 @@ static gboolean
 conn_contact_capabilities_fill_contact_attributes (SalutConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes)
+    GVariantDict *attributes)
 {
   if (!tp_strdiff (dbus_interface,
         TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1))
@@ -1247,14 +1247,14 @@ conn_contact_capabilities_fill_contact_attributes (SalutConnection *self,
 
       if (array->len > 0)
         {
-          GValue *val =  tp_g_value_slice_new (
-            TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST);
+          GValue value = G_VALUE_INIT;
 
-          g_value_take_boxed (val, array);
-          tp_contact_attribute_map_take_sliced_gvalue (attributes,
-              handle,
+          g_value_init (&value, TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST);
+          g_value_take_boxed (&value, array);
+          g_variant_dict_insert_value (attributes,
               TP_TOKEN_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1_CAPABILITIES,
-              val);
+              dbus_g_value_build_g_variant (&value));
+          g_value_unset (&value);
         }
       else
         {
@@ -1457,7 +1457,7 @@ static gboolean
 salut_connection_avatars_fill_contact_attributes (SalutConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes)
+    GVariantDict *attributes)
 {
   if (!tp_strdiff (dbus_interface, TP_IFACE_CONNECTION_INTERFACE_AVATARS1))
     {
@@ -1488,12 +1488,9 @@ salut_connection_avatars_fill_contact_attributes (SalutConnection *self,
 
       if (token != NULL)
         {
-          GValue *val = tp_g_value_slice_new (G_TYPE_STRING);
-
-          g_value_take_string (val, token);
-
-          tp_contact_attribute_map_take_sliced_gvalue (attributes, handle,
-            TP_TOKEN_CONNECTION_INTERFACE_AVATARS1_TOKEN, val);
+          g_variant_dict_insert_value (attributes,
+              TP_TOKEN_CONNECTION_INTERFACE_AVATARS1_TOKEN,
+              g_variant_new_string (token));
         }
 
       return TRUE;
@@ -2502,7 +2499,7 @@ static void
 salut_connection_fill_contact_attributes (TpBaseConnection *base,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes)
+    GVariantDict *attributes)
 {
   SalutConnection *self = SALUT_CONNECTION (base);
 

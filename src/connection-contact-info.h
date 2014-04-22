@@ -37,6 +37,6 @@ gboolean salut_conn_contact_info_fill_contact_attributes (
     SalutConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes);
+    GVariantDict *attributes);
 
 #endif // SALUT_CONNECTION_CONTACT_INFO_H
