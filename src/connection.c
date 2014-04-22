@@ -66,6 +66,9 @@
 #define DEBUG_FLAG DEBUG_CONNECTION
 #include "debug.h"
 
+static void salut_connection_presence_mixin_iface_init (
+    TpPresenceMixinInterface *iface);
+
 static void
 salut_connection_aliasing_service_iface_init (gpointer g_iface,
     gpointer iface_data);
@@ -88,10 +91,10 @@ static void salut_conn_sidecars_iface_init (gpointer, gpointer);
 G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     salut_connection,
     TP_TYPE_BASE_CONNECTION,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_PRESENCE_MIXIN,
+      salut_connection_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING1,
         salut_connection_aliasing_service_iface_init);
-    G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE1,
-       tp_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS1,
        salut_connection_avatar_service_iface_init);
     G_IMPLEMENT_INTERFACE
@@ -262,8 +265,7 @@ salut_connection_init (SalutConnection *obj)
 
   gabble_capabilities_init (obj);
 
-  tp_presence_mixin_init ((GObject *) obj,
-      G_STRUCT_OFFSET (SalutConnection, presence_mixin));
+  tp_presence_mixin_init (TP_PRESENCE_MIXIN (obj));
 
   /* create this now so channel managers can use it when created from
    * parent->constructor */
@@ -487,17 +489,17 @@ const char *salut_presence_status_txt_names[] = {
 };
 
 static gboolean
-is_presence_status_available (GObject *obj,
+is_presence_status_available (TpPresenceMixin *mixin,
                               guint index_)
 {
   return (index_ < SALUT_PRESENCE_OFFLINE);
 }
 
 static TpPresenceStatus *
-get_contact_status (GObject *obj,
+get_contact_status (TpPresenceMixin *mixin,
     TpHandle handle)
 {
-  SalutConnection *self = SALUT_CONNECTION (obj);
+  SalutConnection *self = SALUT_CONNECTION (mixin);
   SalutConnectionPrivate *priv = self->priv;
   TpBaseConnection *base = (TpBaseConnection *) self;
   TpHandle self_handle = tp_base_connection_get_self_handle (base);
@@ -553,17 +555,17 @@ set_self_presence (SalutConnection *self,
       TpPresenceStatus ps = { priv->self->status,
               priv->self->status_message };
 
-      tp_presence_mixin_emit_one_presence_update ((GObject *) self,
+      tp_presence_mixin_emit_one_presence_update (TP_PRESENCE_MIXIN (self),
           self_handle, &ps);
     }
 }
 
 static gboolean
-set_own_status (GObject *obj,
+set_own_status (TpPresenceMixin *mixin,
                 const TpPresenceStatus *status,
                 GError **error)
 {
-  SalutConnection *self = SALUT_CONNECTION (obj);
+  SalutConnection *self = SALUT_CONNECTION (mixin);
   GError *err = NULL;
   const gchar *message = NULL;
   SalutPresenceId presence = SALUT_PRESENCE_AVAILABLE;
@@ -655,13 +657,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   salut_connection_class->properties_mixin.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
       G_STRUCT_OFFSET (SalutConnectionClass, properties_mixin));
-
-  tp_presence_mixin_class_init (object_class,
-      G_STRUCT_OFFSET (SalutConnectionClass, presence_mixin),
-      is_presence_status_available, get_contact_status, set_own_status,
-      presence_statuses);
-
-  tp_presence_mixin_init_dbus_properties (object_class);
 
   salut_conn_contact_info_class_init (salut_connection_class);
 
@@ -776,6 +771,15 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       param_spec);
 }
 
+static void
+salut_connection_presence_mixin_iface_init (TpPresenceMixinInterface *iface)
+{
+  iface->status_available = is_presence_status_available;
+  iface->get_contact_status = get_contact_status;
+  iface->set_own_status = set_own_status;
+  iface->statuses = presence_statuses;
+}
+
 void
 salut_connection_dispose (GObject *object)
 {
@@ -864,7 +868,6 @@ salut_connection_finalize (GObject *object)
   SalutConnectionPrivate *priv = self->priv;
 
   /* free any data held directly by the object here */
-  tp_presence_mixin_finalize (object);
   g_free (self->name);
   g_free (priv->published_name);
   g_free (priv->first_name);
@@ -886,7 +889,7 @@ _contact_manager_contact_status_changed (SalutConnection *self,
 {
   TpPresenceStatus ps = { contact->status, contact->status_message };
 
-  tp_presence_mixin_emit_one_presence_update ((GObject *) self, handle,
+  tp_presence_mixin_emit_one_presence_update (TP_PRESENCE_MIXIN (self), handle,
       &ps);
 }
 
@@ -2533,7 +2536,7 @@ salut_connection_fill_contact_attributes (TpBaseConnection *base,
         dbus_interface, handle, attributes))
     return;
 
-  if (tp_presence_mixin_fill_contact_attributes ((GObject *) self,
+  if (tp_presence_mixin_fill_contact_attributes (TP_PRESENCE_MIXIN (self),
         dbus_interface, handle, attributes))
     return;
 
