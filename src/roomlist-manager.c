@@ -325,15 +325,15 @@ roomlist_channel_closed_cb (SalutRoomlistChannel *channel,
   SalutRoomlistManagerPrivate *priv =
     SALUT_ROOMLIST_MANAGER_GET_PRIVATE (self);
 
-  tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
-      TP_BASE_CHANNEL (channel));
-
   if (priv->roomlist_channels != NULL)
     {
       priv->roomlist_channels = g_slist_remove (priv->roomlist_channels,
           channel);
       g_object_unref (channel);
     }
+
+  tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
+      TP_BASE_CHANNEL (channel));
 }
 
 

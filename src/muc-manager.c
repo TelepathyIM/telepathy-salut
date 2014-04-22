@@ -419,15 +419,13 @@ muc_channel_closed_cb (SalutMucChannel *chan,
   /* channel is actually reappearing, announce it */
   if (tp_base_channel_is_respawning (base))
     {
+      if (tp_base_channel_is_registered (base))
+        tp_channel_manager_emit_channel_closed_for_object (
+            TP_CHANNEL_MANAGER (self), base);
+
       tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
           base, NULL);
       return;
-    }
-
-  if (tp_base_channel_is_registered (base))
-    {
-      tp_channel_manager_emit_channel_closed_for_object (
-          TP_CHANNEL_MANAGER (self), base);
     }
 
   if (tp_base_channel_is_destroyed (base)
@@ -437,6 +435,12 @@ muc_channel_closed_cb (SalutMucChannel *chan,
       DEBUG ("Removing channel with handle %u", handle);
 
       g_hash_table_remove (priv->text_channels, GUINT_TO_POINTER (handle));
+    }
+
+  if (tp_base_channel_is_registered (base))
+    {
+      tp_channel_manager_emit_channel_closed_for_object (
+          TP_CHANNEL_MANAGER (self), base);
     }
 }
 

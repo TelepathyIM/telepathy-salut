@@ -679,11 +679,11 @@ channel_closed_cb (SalutTubeIface *tube,
       "id", &id,
       NULL);
 
-  tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
-      TP_BASE_CHANNEL (tube));
-
   if (priv->tubes != NULL)
     g_hash_table_remove (priv->tubes, GUINT_TO_POINTER (id));
+
+  tp_channel_manager_emit_channel_closed_for_object (TP_CHANNEL_MANAGER (self),
+      TP_BASE_CHANNEL (tube));
 }
 
 static guint64
