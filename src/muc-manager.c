@@ -312,6 +312,9 @@ salut_muc_manager_foreach_channel (TpChannelManager *iface,
   GHashTableIter iter;
   gpointer value;
 
+  if (priv->text_channels == NULL)
+    return;
+
   g_hash_table_iter_init (&iter, priv->text_channels);
   while (g_hash_table_iter_next (&iter, NULL, &value))
     {

@@ -329,6 +329,9 @@ salut_im_manager_foreach_channel (TpChannelManager *iface,
   SalutImManagerPrivate *priv = SALUT_IM_MANAGER_GET_PRIVATE (mgr);
   struct foreach_data f;
 
+  if (priv->channels == NULL)
+    return;
+
   f.func = func;
   f.data = user_data;
 

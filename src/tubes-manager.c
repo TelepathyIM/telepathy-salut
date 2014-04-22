@@ -547,6 +547,9 @@ salut_tubes_manager_foreach_channel (TpChannelManager *manager,
   GHashTableIter iter;
   gpointer value;
 
+  if (priv->tubes == NULL)
+    return;
+
   g_hash_table_iter_init (&iter, priv->tubes);
   while (g_hash_table_iter_next (&iter, NULL, &value))
     {
