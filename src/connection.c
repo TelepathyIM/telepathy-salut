@@ -90,8 +90,6 @@ G_DEFINE_TYPE_WITH_CODE(SalutConnection,
     TP_TYPE_BASE_CONNECTION,
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING1,
         salut_connection_aliasing_service_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST1,
-      tp_base_contact_list_mixin_list_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE1,
        tp_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE(TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS1,
@@ -654,8 +652,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   tp_presence_mixin_init_dbus_properties (object_class);
 
   salut_conn_contact_info_class_init (salut_connection_class);
-
-  tp_base_contact_list_mixin_class_init (tp_connection_class);
 
   param_spec = g_param_spec_string ("nickname", "nickname",
       "Nickname used in the published data", NULL,
