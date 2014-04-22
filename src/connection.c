@@ -297,9 +297,26 @@ static void _contact_manager_contact_change_cb (SalutContactManager *mgr,
     SalutContact *contact, int changes, gpointer data);
 
 static void
+object_skeleton_take_interface (GDBusObjectSkeleton *skel,
+    GDBusInterfaceSkeleton *iface)
+{
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
+}
+
+static void
+object_skeleton_take_svc_interface (GDBusObjectSkeleton *skel,
+    GType type)
+{
+  object_skeleton_take_interface (skel,
+      tp_svc_interface_skeleton_new (skel, type));
+}
+
+static void
 salut_connection_constructed (GObject *obj)
 {
   SalutConnection *self = (SalutConnection *) obj;
+  GDBusObjectSkeleton *skel = G_DBUS_OBJECT_SKELETON (obj);
 
   self->disco = salut_disco_new (self);
   self->presence_cache = salut_presence_cache_new (self);
@@ -316,6 +333,17 @@ salut_connection_constructed (GObject *obj)
 
   if (G_OBJECT_CLASS (salut_connection_parent_class)->constructed)
     G_OBJECT_CLASS (salut_connection_parent_class)->constructed (obj);
+
+  object_skeleton_take_svc_interface (skel,
+      TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING1);
+  object_skeleton_take_svc_interface (skel,
+      TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS1);
+  object_skeleton_take_svc_interface (skel,
+      TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1);
+  object_skeleton_take_svc_interface (skel,
+      TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_INFO1);
+  object_skeleton_take_svc_interface (skel,
+      TP_TYPE_SVC_CONNECTION_INTERFACE_SIDECARS1);
 }
 
 static void
