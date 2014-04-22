@@ -596,21 +596,6 @@ static const gchar *interfaces [] = {
   TP_IFACE_CONNECTION_INTERFACE_SIDECARS1,
   NULL };
 
-static GPtrArray *
-get_interfaces (TpBaseConnection *base)
-{
-  GPtrArray *arr;
-  const gchar **iter;
-
-  arr = TP_BASE_CONNECTION_CLASS (
-      salut_connection_parent_class)->get_interfaces_always_present (base);
-
-  for (iter = interfaces; *iter != NULL; iter++)
-    g_ptr_array_add (arr, (gchar *) *iter);
-
-  return arr;
-}
-
 const gchar * const *
 salut_connection_get_implemented_interfaces (void)
 {
@@ -664,7 +649,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
       salut_connection_shut_down;
   tp_connection_class->start_connecting =
       salut_connection_start_connecting;
-  tp_connection_class->get_interfaces_always_present = get_interfaces;
   tp_connection_class->fill_contact_attributes =
       salut_connection_fill_contact_attributes;
 
