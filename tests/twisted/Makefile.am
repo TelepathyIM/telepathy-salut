@@ -104,6 +104,7 @@ twistedtestsdir = ${testsdir}/twisted
 
 if ENABLE_INSTALLED_TESTS
 nobase_dist_twistedtests_DATA = ${dist_test_data}
+nobase_dist_twistedtests_SCRIPTS = ${dist_test_scripts}
 twistedtests_DATA = ${built_test_data}
 twistedtests_SCRIPTS = ${built_test_scripts}
 endif
@@ -121,7 +122,6 @@ dist_test_data = \
 	$(TWISTED_BASIC_TESTS) \
 	avahi/file-transfer/file_transfer_helper.py \
 	avahi/tubes/tubetestutil.py \
-	avahimock.py \
 	avahitest.py \
 	constants.py \
 	ipv6.py \
@@ -132,8 +132,13 @@ dist_test_data = \
 	xmppstream.py \
 	$(NULL)
 
+dist_test_scripts = \
+	avahimock.py \
+	$(NULL)
+
 EXTRA_DIST = \
 	$(dist_test_data) \
+	$(dist_test_scripts) \
 	run-test.sh.in \
 	$(NULL)
 
