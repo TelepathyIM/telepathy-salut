@@ -2,7 +2,7 @@ exec-with-log.sh: exec-with-log.sh.in
 	$(AM_V_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
 	@chmod +x $@
 
-%.conf: %.conf.in
+tmp-session-bus.conf: tmp-session-bus.conf.in
 	$(AM_V_GEN)sed -e "s|[@]servicedir[@]|@abs_top_builddir@/tests/twisted/tools|g" $< > $@
 
 servicedir = $(datadir)/dbus-1/services

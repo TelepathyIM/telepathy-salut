@@ -124,7 +124,7 @@ dist_test_data = \
 	avahimock.py \
 	avahitest.py \
 	constants.py \
-	ipv6.py
+	ipv6.py \
 	ns.py \
 	saluttest.py \
 	servicetest.py \
@@ -158,3 +158,28 @@ check_misc_sources = $(TESTS)
 include $(top_srcdir)/tools/check-coding-style.mk
 
 SUBDIRS = tools
+
+real-avahi/%.test: Makefile
+	@$(MKDIR_P) $(dir $@)
+	$(AM_V_GEN)( echo '[Test]'; \
+		echo 'Exec=env SALUT_TEST_REAL_AVAHI=1 ${twistedtestsdir}/run-test.sh $*.py'; \
+		echo 'Type=session'; \
+		echo 'Output=TAP' ) > $@.tmp
+	@mv $@.tmp $@
+
+mock-avahi/%.test: Makefile
+	@$(MKDIR_P) $(dir $@)
+	$(AM_V_GEN)( echo '[Test]'; \
+		echo 'Exec=env -u SALUT_TEST_REAL_AVAHI ${twistedtestsdir}/run-test.sh $*.py'; \
+		echo 'Type=session'; \
+		echo 'Output=TAP' ) > $@.tmp
+	@mv $@.tmp $@
+
+insttestdir = ${datadir}/installed-tests/telepathy-salut-1
+
+if ENABLE_INSTALLED_TESTS
+nobase_nodist_insttest_DATA = \
+	$(patsubst %.py,mock-avahi/%.test,$(TWISTED_TESTS)) \
+	$(patsubst %.py,real-avahi/%.test,$(TWISTED_TESTS)) \
+	$(NULL)
+endif
