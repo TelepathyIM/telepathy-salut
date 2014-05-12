@@ -34,7 +34,7 @@ fi
 if [ -n "$1" ] ; then
   list="$1"
 else
-  list=$(cat "${test_build}"/twisted/salut-twisted-tests.list)
+  list=$(cat "${test_build}"/twisted/twisted-tests.list)
 fi
 
 if [ -z "$SALUT_TEST_REAL_AVAHI" ]; then

@@ -91,7 +91,7 @@ config.py: Makefile
 		echo "PLUGINS_ENABLED = $(PLUGINS_ENABLED_PYBOOL)"; \
 	} > $@
 
-salut-twisted-tests.list: Makefile
+twisted-tests.list: Makefile
 	$(AM_V_GEN)echo $(TWISTED_TESTS) > $@
 
 BUILT_SOURCES = \
@@ -139,7 +139,7 @@ EXTRA_DIST = \
 
 built_test_data = \
 	config.py \
-	salut-twisted-tests.list \
+	twisted-tests.list \
 	$(NULL)
 
 built_test_scripts = \
