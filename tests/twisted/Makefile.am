@@ -73,10 +73,10 @@ check-twisted: $(BUILT_SOURCES)
 	else \
 		salut_test_sleep=--sleep=$(CHECK_TWISTED_SLEEP); \
 	fi; \
-	SALUT_TEST_UNINSTALLED=1 \
+	CHECK_TWISTED_UNINSTALLED=1 \
 	  SALUT_ABS_TOP_SRCDIR=@abs_top_srcdir@ \
 	  SALUT_ABS_TOP_BUILDDIR=@abs_top_builddir@ \
-	  SALUT_TEST_SLEEP=$$salut_test_sleep \
+	  CHECK_TWISTED_SLEEP=$$salut_test_sleep \
 	  ./run-test.sh "$(TWISTED_TESTS)"
 
 if ENABLE_PLUGINS
