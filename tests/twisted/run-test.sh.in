@@ -67,6 +67,7 @@ fi
 
 if [ -z "$SALUT_TEST_REAL_AVAHI" ]; then
   also_for_system="--also-for-system";
+  config_file="${G_TEST_BUILDDIR}/tools/mock-avahi/tmp-session-bus.conf"
 fi
 
 n=0
