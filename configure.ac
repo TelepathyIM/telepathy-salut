@@ -106,6 +106,14 @@ AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
+AC_ARG_ENABLE([installed-tests],
+  [AC_HELP_STRING([--enable-installed-tests],
+    [enable as-installed regression tests])],
+  [],
+  [enable_installed_tests=no])
+AM_CONDITIONAL([ENABLE_INSTALLED_TESTS],
+  [test "x$enable_installed_tests" = xyes])
+
 AC_HEADER_STDC([])
 AC_C_INLINE
 

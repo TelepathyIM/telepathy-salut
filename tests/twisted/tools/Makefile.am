@@ -3,7 +3,13 @@ exec-with-log.sh: exec-with-log.sh.in
 	@chmod +x $@
 
 %.conf: %.conf.in
-	$(AM_V_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
+	$(AM_V_GEN)sed -e "s|[@]servicedir[@]|@abs_top_builddir@/tests/twisted/tools|g" $< > $@
+
+servicedir = $(datadir)/dbus-1/services
+
+installed/%.conf: %.conf.in Makefile
+	@$(MKDIR_P) installed
+	$(AM_V_GEN)sed -e 's|[@]servicedir[@]|$(servicedir)|g' $< > $@
 
 # We don't use the full filename for the .in because > 99 character filenames
 # in tarballs are non-portable (and automake 1.8 doesn't let us build
@@ -19,15 +25,42 @@ service_files = im.telepathy.v1.ConnectionManager.salut.service
 conf_in_files = tmp-session-bus.conf.in
 conf_files = $(conf_in_files:.conf.in=.conf)
 
-BUILT_SOURCES = $(service_files) $(conf_files) exec-with-log.sh
+BUILT_SOURCES = \
+	$(built_test_data) \
+	$(conf_files) \
+	$(service_files) \
+	exec-with-log.sh \
+	$(NULL)
+
+dist_test_scripts = \
+	with-session-bus.sh \
+	$(NULL)
+
+dist_test_data = \
+	$(NULL)
+
+built_test_data = \
+	installed/tmp-session-bus.conf \
+	$(NULL)
 
 EXTRA_DIST = \
-	$(service_in_files) \
 	$(conf_in_files) \
+	$(dist_test_data) \
+	$(dist_test_scripts) \
+	$(service_in_files) \
 	exec-with-log.sh.in \
-	with-session-bus.sh \
 	run_and_bt.gdb
 
 CLEANFILES = \
     $(BUILT_SOURCES) \
     salut-testing.log
+
+testsdir = ${datadir}/telepathy-haze-1-tests
+twistedtestsdir = ${testsdir}/twisted
+twistedtoolsdir = ${twistedtestsdir}/tools
+
+if ENABLE_INSTALLED_TESTS
+dist_twistedtools_SCRIPTS = ${dist_test_scripts}
+dist_twistedtools_DATA = ${dist_test_data}
+twistedtools_DATA = ${built_test_data}
+endif

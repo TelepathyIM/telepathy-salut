@@ -53,13 +53,16 @@ TWISTED_AVAHI_TESTS = \
 
 if WANT_TWISTED_TESTS
   TWISTED_TESTS += $(TWISTED_BASIC_TESTS)
-endif
-
 if USE_BACKEND_AVAHI
   TWISTED_TESTS += $(TWISTED_AVAHI_TESTS)
 endif
+endif
 
+if WANT_TWISTED_TESTS
 check-local: check-coding-style check-twisted
+else
+check-local: check-coding-style
+endif
 
 CHECK_TWISTED_SLEEP=0
 
@@ -92,38 +95,56 @@ salut-twisted-tests.list: Makefile
 	$(AM_V_GEN)echo $(TWISTED_TESTS) > $@
 
 BUILT_SOURCES = \
-	config.py \
-	salut-twisted-tests.list \
-	run-test.sh \
+	$(built_test_data) \
+	$(built_test_scripts) \
 	$(NULL)
 
-# We don't really use saluttestsdir yet - we only support uninstalled testing
-# so far - but I'm substituting it to keep the script more similar to Gabble's.
-# ${pkglibexecdir}/tests is what GNOME's InstalledTests goal recommends.
+testsdir = ${datadir}/telepathy-salut-1-tests
+twistedtestsdir = ${testsdir}/twisted
+
+if ENABLE_INSTALLED_TESTS
+nobase_dist_twistedtests_DATA = ${dist_test_data}
+twistedtests_DATA = ${built_test_data}
+twistedtests_SCRIPTS = ${built_test_scripts}
+endif
+
 run-test.sh: run-test.sh.in Makefile
 	$(AM_V_GEN)sed \
-			-e 's![@]saluttestsdir[@]!${pkglibexecdir}/tests!' \
+			-e 's![@]saluttestsdir[@]!${testsdir}!' \
 			-e 's![@]TEST_PYTHON[@]!$(TEST_PYTHON)!' \
 			< $< > $@.tmp && \
 		chmod +x $@.tmp && \
 		mv $@.tmp $@
 
-EXTRA_DIST = \
+dist_test_data = \
 	$(TWISTED_AVAHI_TESTS) \
 	$(TWISTED_BASIC_TESTS) \
-	constants.py \
-	run-test.sh.in \
-	saluttest.py \
-	servicetest.py \
-        trivialstream.py \
-	avahitest.py \
-	avahimock.py \
-        config.py \
-	ns.py \
 	avahi/file-transfer/file_transfer_helper.py \
 	avahi/tubes/tubetestutil.py \
-	xmppstream.py \
+	avahimock.py \
+	avahitest.py \
+	constants.py \
 	ipv6.py
+	ns.py \
+	saluttest.py \
+	servicetest.py \
+	trivialstream.py \
+	xmppstream.py \
+	$(NULL)
+
+EXTRA_DIST = \
+	$(dist_test_data) \
+	run-test.sh.in \
+	$(NULL)
+
+built_test_data = \
+	config.py \
+	salut-twisted-tests.list \
+	$(NULL)
+
+built_test_scripts = \
+	run-test.sh \
+	$(NULL)
 
 CLEANFILES = \
 	$(BUILT_SOURCES) \
