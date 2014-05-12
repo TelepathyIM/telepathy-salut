@@ -99,7 +99,7 @@ BUILT_SOURCES = \
 	$(built_test_scripts) \
 	$(NULL)
 
-testsdir = ${datadir}/telepathy-salut-1-tests
+testsdir = ${libdir}/telepathy-salut-1-tests
 twistedtestsdir = ${testsdir}/twisted
 
 if ENABLE_INSTALLED_TESTS

@@ -30,6 +30,9 @@ if test "x$CHECK_TWISTED_UNINSTALLED" = x; then
 
   PYTHONPATH="${G_TEST_SRCDIR}"
   export PYTHONPATH
+
+  SALUT_PLUGIN_DIR="${G_TEST_BUILDDIR}"
+  export SALUT_PLUGIN_DIR
 else
   if ! test -d "$G_TEST_SRCDIR"; then
     echo "Bail out! G_TEST_SRCDIR must be set and absolute"

@@ -1,6 +1,16 @@
+testsdir = ${libdir}/telepathy-salut-1-tests
+twistedtestsdir = ${testsdir}/twisted
+
+noinst_LTLIBRARIES =
+
 # testing-only plugins
-noinst_LTLIBRARIES = \
+if ENABLE_INSTALLED_TESTS
+twistedtests_LTLIBRARIES = \
 	test.la
+else
+noinst_LTLIBRARIES += \
+	test.la
+endif
 
 installable_plugins =
 	$(NULL)
@@ -19,8 +29,9 @@ test_la_SOURCES = \
     test.c \
     test.h
 
-# because test.la is not installed, libtool will want to compile it as static
-# despite -shared (a convenience library), unless we also use -rpath
+# because test.la is not necessarily installed, libtool will want to compile
+# it as static despite -shared (a convenience library), unless we also
+# use -rpath
 test_la_LDFLAGS = $(AM_LDFLAGS) -rpath $(pluginexecdir)
 
 AM_CFLAGS = $(ERROR_CFLAGS) \

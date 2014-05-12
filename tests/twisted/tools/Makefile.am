@@ -71,7 +71,7 @@ CLEANFILES = \
     $(BUILT_SOURCES) \
     salut-testing.log
 
-testsdir = ${datadir}/telepathy-salut-1-tests
+testsdir = ${libdir}/telepathy-salut-1-tests
 twistedtestsdir = ${testsdir}/twisted
 twistedtoolsdir = ${twistedtestsdir}/tools
 
