@@ -182,9 +182,11 @@ mock-avahi/%.test: Makefile
 
 insttestdir = ${datadir}/installed-tests/telepathy-salut-1
 
+# FIXME: make the installed-tests work with the real Avahi and install them:
+# $(patsubst %.py,real-avahi/%.test,$(TWISTED_TESTS))
+
 if ENABLE_INSTALLED_TESTS
 nobase_nodist_insttest_DATA = \
 	$(patsubst %.py,mock-avahi/%.test,$(TWISTED_TESTS)) \
-	$(patsubst %.py,real-avahi/%.test,$(TWISTED_TESTS)) \
 	$(NULL)
 endif
