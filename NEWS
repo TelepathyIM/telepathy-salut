@@ -1,7 +1,17 @@
-telepathy-salut 0.99.11 (UNRELEASED)
+telepathy-salut 0.99.11 (2014-05-14)
 ====================================
 
-...
+The “electioneering” release.
+
+Dependencies:
+
+• telepathy-glib ≥ 0.99.11
+
+• GLib ≥ 2.40
+
+Enhancements:
+
+• GNOME-style installed-tests (configure with --enable-installed-tests)
 
 telepathy-salut 0.99.10 (2014-04-03)
 ====================================
