@@ -272,7 +272,7 @@ salut_protocol_finalize (GObject *object)
     G_OBJECT_CLASS (salut_protocol_parent_class)->finalize (object);
 }
 
-static void
+static gboolean
 get_avatar_details (TpBaseProtocol *base,
     GStrv *supported_mime_types,
     guint *min_height,
@@ -285,6 +285,8 @@ get_avatar_details (TpBaseProtocol *base,
 {
   salut_connection_dup_avatar_requirements (supported_mime_types, min_height,
       min_width, rec_height, rec_width, max_height, max_width, max_bytes);
+
+  return TRUE;
 }
 
 static const TpPresenceStatusSpec *
