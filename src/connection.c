@@ -641,7 +641,6 @@ salut_connection_class_init (SalutConnectionClass *salut_connection_class)
   tp_connection_class->fill_contact_attributes =
       salut_connection_fill_contact_attributes;
 
-  tp_dbus_properties_mixin_class_init (object_class, 0);
   tp_dbus_properties_mixin_implement_interface (object_class,
       TP_IFACE_QUARK_CONNECTION_INTERFACE_AVATARS1,
       conn_avatars_properties_getter, NULL, conn_avatars_properties);

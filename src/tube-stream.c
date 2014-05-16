@@ -1446,7 +1446,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
                   NULL, NULL, NULL,
                   G_TYPE_NONE, 0);
 
-  tp_dbus_properties_mixin_class_init (object_class, 0);
   tp_dbus_properties_mixin_implement_interface (object_class,
       TP_IFACE_QUARK_CHANNEL_TYPE_STREAM_TUBE1,
       tp_dbus_properties_mixin_getter_gobject_properties, NULL,

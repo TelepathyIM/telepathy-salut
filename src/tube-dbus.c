@@ -1019,7 +1019,6 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE, 0);
 
-  tp_dbus_properties_mixin_class_init (object_class, 0);
   tp_dbus_properties_mixin_implement_interface (object_class,
       TP_IFACE_QUARK_CHANNEL_TYPE_DBUS_TUBE1,
       tp_dbus_properties_mixin_getter_gobject_properties, NULL,
