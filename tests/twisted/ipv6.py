@@ -34,7 +34,6 @@ from zope.interface import implements
 from twisted.internet.interfaces import IAddress
 from twisted.internet import base, address, error
 from twisted.internet.tcp import Client
-from twisted.python.util import unsignedID
 import types
 
 class IPv6Address(object):
@@ -119,7 +118,7 @@ class Client6(Client):
         return IPv6Address('TCP', *(self.addr))
 
     def __repr__(self):
-        s = '<%s to %s at %x>' % (self.__class__, self.addr, unsignedID(self))
+        s = '<%s to %s at %x>' % (self.__class__, self.addr, id(self))
         return s
 
 class Connector6(base.BaseConnector):
