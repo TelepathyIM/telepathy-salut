@@ -246,7 +246,7 @@ class ReceiveFileTest(FileTransferTest):
         # check channel properties
         # im.telepathy.v1.Channel D-Bus properties
         assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
-        assert props[cs.INTERFACES] == []
+        assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_FILE_TRANSFER_METADATA]
         assert props[cs.TARGET_HANDLE] == self.handle
         assert props[cs.TARGET_ID] == self.contact_name
         assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_CONTACT
@@ -410,7 +410,7 @@ class SendFileTest(FileTransferTest):
 
         # im.telepathy.v1.Channel D-Bus properties
         assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_FILE_TRANSFER
-        assert props[cs.INTERFACES] == []
+        assert props[cs.INTERFACES] == [cs.CHANNEL_IFACE_FILE_TRANSFER_METADATA]
         assert props[cs.TARGET_HANDLE] == self.handle
         assert props[cs.TARGET_ID] == self.contact_name
         assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_CONTACT
