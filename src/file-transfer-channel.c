@@ -335,6 +335,8 @@ salut_file_transfer_channel_constructed (GObject *obj)
   GArray *unix_access;
   GArray *ip_access;
   TpSocketAccessControl access_control;
+  GDBusObjectSkeleton *skel = G_DBUS_OBJECT_SKELETON (self);
+  GDBusInterfaceSkeleton *iface;
 
   /* Parent constructed chain */
   void (*chain_up) (GObject *) =
@@ -342,6 +344,16 @@ salut_file_transfer_channel_constructed (GObject *obj)
 
   if (chain_up != NULL)
     chain_up (obj);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_TYPE_FILE_TRANSFER1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_INTERFACE_FILE_TRANSFER_METADATA1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
 
   /* ref our porter */
   wocky_meta_porter_hold (WOCKY_META_PORTER (conn->porter),

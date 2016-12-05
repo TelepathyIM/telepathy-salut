@@ -31,16 +31,6 @@ salut_muc_tube_stream_init (SalutMucTubeStream *self)
 {
 }
 
-static GPtrArray *
-salut_muc_tube_stream_get_interfaces (TpBaseChannel *chan)
-{
-  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_muc_tube_stream_parent_class)
-    ->get_interfaces (chan);
-
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP1);
-  return interfaces;
-}
-
 static void
 salut_muc_tube_stream_class_init (
     SalutMucTubeStreamClass *salut_muc_tube_stream_class)
@@ -48,6 +38,5 @@ salut_muc_tube_stream_class_init (
   TpBaseChannelClass *base_class = TP_BASE_CHANNEL_CLASS (
       salut_muc_tube_stream_class);
 
-  base_class->get_interfaces = salut_muc_tube_stream_get_interfaces;
   base_class->target_entity_type = TP_ENTITY_TYPE_ROOM;
 }

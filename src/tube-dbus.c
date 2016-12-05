@@ -734,6 +734,8 @@ salut_tube_dbus_constructor (GType type,
   TpBaseConnection *base_conn;
   TpHandleRepoIface *handles_repo;
   TpSocketAccessControl access_control;
+  GDBusObjectSkeleton *skel;
+  GDBusInterfaceSkeleton *iface;
 
   obj = G_OBJECT_CLASS (salut_tube_dbus_parent_class)->
            constructor (type, n_props, props);
@@ -748,6 +750,18 @@ salut_tube_dbus_constructor (GType type,
   base_conn = TP_BASE_CONNECTION (conn);
   handles_repo = tp_base_connection_get_handles (base_conn,
       cls->target_entity_type);
+
+  skel = G_DBUS_OBJECT_SKELETON (obj);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_TYPE_DBUS_TUBE1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
 
   g_assert (priv->self_handle != 0);
   if (cls->target_entity_type == TP_ENTITY_TYPE_ROOM)
@@ -871,16 +885,6 @@ salut_tube_dbus_close_dbus (TpBaseChannel *base)
   do_close ((SalutTubeDBus *) base);
 }
 
-static GPtrArray *
-salut_tube_dbus_get_interfaces (TpBaseChannel *chan)
-{
-  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_tube_dbus_parent_class)
-    ->get_interfaces (chan);
-
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE1);
-  return interfaces;
-}
-
 static void
 salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
 {
@@ -904,7 +908,6 @@ salut_tube_dbus_class_init (SalutTubeDBusClass *salut_tube_dbus_class)
   object_class->constructor = salut_tube_dbus_constructor;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_DBUS_TUBE1;
-  base_class->get_interfaces = salut_tube_dbus_get_interfaces;
   base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
   base_class->close = salut_tube_dbus_close_dbus;
   base_class->fill_immutable_properties =

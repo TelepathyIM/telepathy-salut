@@ -300,6 +300,8 @@ salut_muc_channel_constructed (GObject *obj)
       "text/plain",
       NULL
   };
+  GDBusObjectSkeleton *skel = G_DBUS_OBJECT_SKELETON (self);
+  GDBusInterfaceSkeleton *iface;
 
   /* Parent constructed chain */
   void (*chain_up) (GObject *) =
@@ -307,6 +309,16 @@ salut_muc_channel_constructed (GObject *obj)
 
   if (chain_up != NULL)
     chain_up (obj);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_TYPE_TEXT);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
 
   /* Message mixin initialisation */
   tp_message_mixin_init (obj, G_STRUCT_OFFSET (SalutMucChannel, message_mixin),
@@ -647,17 +659,6 @@ salut_muc_channel_fill_immutable_properties (TpBaseChannel *chan,
       NULL);
 }
 
-static GPtrArray *
-salut_muc_channel_get_interfaces (TpBaseChannel *chan)
-{
-  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_muc_channel_parent_class)
-    ->get_interfaces (chan);
-
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_GROUP1);
-
-  return interfaces;
-}
-
 static void
 salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
 {
@@ -676,7 +677,6 @@ salut_muc_channel_class_init (SalutMucChannelClass *salut_muc_channel_class)
   object_class->set_property = salut_muc_channel_set_property;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
-  base_class->get_interfaces = salut_muc_channel_get_interfaces;
   base_class->target_entity_type = TP_ENTITY_TYPE_ROOM;
   base_class->close = salut_muc_channel_close;
   base_class->fill_immutable_properties =

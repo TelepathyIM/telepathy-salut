@@ -151,6 +151,8 @@ salut_im_channel_constructed (GObject *obj)
       TP_BASE_CHANNEL (obj));
   WockyPorter *porter = SALUT_CONNECTION (base_conn)->porter;
   gchar *jid;
+  GDBusObjectSkeleton *skel = G_DBUS_OBJECT_SKELETON (self);
+  GDBusInterfaceSkeleton *iface;
 
   TpChannelTextMessageType types[NUM_SUPPORTED_MESSAGE_TYPES] = {
       TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
@@ -169,6 +171,11 @@ salut_im_channel_constructed (GObject *obj)
 
   if (chain_up != NULL)
     chain_up (obj);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_TYPE_TEXT);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
 
   /* Initialize message mixin */
   tp_message_mixin_init (obj, G_STRUCT_OFFSET (SalutImChannel, message_mixin),

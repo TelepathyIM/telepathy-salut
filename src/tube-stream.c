@@ -1208,6 +1208,8 @@ salut_tube_stream_constructor (GType type,
   GObject *obj;
   SalutTubeStreamPrivate *priv;
   TpBaseChannel *base;
+  GDBusObjectSkeleton *skel;
+  GDBusInterfaceSkeleton *iface;
 
   obj = G_OBJECT_CLASS (salut_tube_stream_parent_class)->
            constructor (type, n_props, props);
@@ -1215,6 +1217,17 @@ salut_tube_stream_constructor (GType type,
   priv = SALUT_TUBE_STREAM_GET_PRIVATE (SALUT_TUBE_STREAM (obj));
 
   base = TP_BASE_CHANNEL (obj);
+  skel = G_DBUS_OBJECT_SKELETON (obj);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_TYPE_STREAM_TUBE1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_INTERFACE_TUBE1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
 
   if (tp_base_channel_get_initiator (base) == priv->self_handle)
     {
@@ -1274,16 +1287,6 @@ salut_tube_stream_close_dbus (TpBaseChannel *base)
   salut_tube_iface_close ((SalutTubeIface *) base, FALSE);
 }
 
-static GPtrArray *
-salut_tube_stream_get_interfaces (TpBaseChannel *chan)
-{
-  GPtrArray *interfaces = TP_BASE_CHANNEL_CLASS (salut_tube_stream_parent_class)
-    ->get_interfaces (chan);
-
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_TUBE1);
-  return interfaces;
-}
-
 static void
 salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
 {
@@ -1306,7 +1309,6 @@ salut_tube_stream_class_init (SalutTubeStreamClass *salut_tube_stream_class)
   object_class->constructor = salut_tube_stream_constructor;
 
   base_class->channel_type = TP_IFACE_CHANNEL_TYPE_STREAM_TUBE1;
-  base_class->get_interfaces = salut_tube_stream_get_interfaces;
   base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
   base_class->close = salut_tube_stream_close_dbus;
   base_class->fill_immutable_properties =

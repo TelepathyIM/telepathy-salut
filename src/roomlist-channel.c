@@ -59,10 +59,18 @@ struct _SalutRoomlistChannelPrivate
 static void
 salut_roomlist_channel_init (SalutRoomlistChannel *self)
 {
+  GDBusObjectSkeleton *skel = G_DBUS_OBJECT_SKELETON (self);
+  GDBusInterfaceSkeleton *iface;
+
   self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       SALUT_TYPE_ROOMLIST_CHANNEL, SalutRoomlistChannelPrivate);
 
   self->priv->rooms = g_ptr_array_new ();
+
+  iface = tp_svc_interface_skeleton_new (skel,
+      TP_TYPE_SVC_CHANNEL_TYPE_ROOM_LIST1);
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
 }
 
 static void
